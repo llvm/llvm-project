@@ -25,12 +25,6 @@
 //  * the loop depth
 //  * etc...
 //
-// Note that this analysis specifically identifies *Loops* not cycles or SCCs
-// in the CFG.  There can be strongly connected compontents in the CFG which
-// this analysis will not recognize and that will not be represented by a Loop
-// instance.  In particular, a Loop might be inside such a non-loop SCC, or a
-// non-loop SCC might contain a sub-SCC which is a Loop. 
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_LOOPINFO_H
@@ -352,9 +346,6 @@ raw_ostream& operator<<(raw_ostream &OS, const LoopBase<BlockT, LoopT> &Loop) {
 // Implementation in LoopInfoImpl.h
 extern template class LoopBase<BasicBlock, Loop>;
 
-
-/// Represents a single loop in the control flow graph.  Note that not all SCCs
-/// in the CFG are neccessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
   Loop() {}

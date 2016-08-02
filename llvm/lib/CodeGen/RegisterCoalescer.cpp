@@ -939,13 +939,11 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  DebugLoc DL = CopyMI->getDebugLoc();
   MachineBasicBlock *MBB = CopyMI->getParent();
   MachineBasicBlock::iterator MII =
     std::next(MachineBasicBlock::iterator(CopyMI));
   TII->reMaterialize(*MBB, MII, DstReg, SrcIdx, DefMI, *TRI);
   MachineInstr *NewMI = std::prev(MII);
-  NewMI->setDebugLoc(DL);
 
   // In a situation like the following:
   //     %vreg0:subreg = instr              ; DefMI, subreg = DstIdx
@@ -966,23 +964,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         DstIdx = 0;
         DefMO.setSubReg(0);
       }
-    }
-  }
-
-  // CopyMI may have implicit operands, save them so that we can transfer them
-  // over to the newly materialized instruction after CopyMI is removed.
-  SmallVector<MachineOperand, 4> ImplicitOps;
-  ImplicitOps.reserve(CopyMI->getNumOperands() -
-                      CopyMI->getDesc().getNumOperands());
-  for (unsigned I = CopyMI->getDesc().getNumOperands(),
-                E = CopyMI->getNumOperands();
-       I != E; ++I) {
-    MachineOperand &MO = CopyMI->getOperand(I);
-    if (MO.isReg()) {
-      assert(MO.isImplicit() && "No explicit operands after implict operands.");
-      // Discard VReg implicit defs.
-      if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
-        ImplicitOps.push_back(MO);
     }
   }
 
@@ -1054,9 +1035,19 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (NewMI->getOperand(0).getSubReg())
     NewMI->getOperand(0).setIsUndef();
 
-  // Transfer over implicit operands to the rematerialized instruction.
-  for (MachineOperand &MO : ImplicitOps)
-    NewMI->addOperand(MO);
+  // CopyMI may have implicit operands, transfer them over to the newly
+  // rematerialized instruction. And update implicit def interval valnos.
+  for (unsigned i = CopyMI->getDesc().getNumOperands(),
+         e = CopyMI->getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = CopyMI->getOperand(i);
+    if (MO.isReg()) {
+      assert(MO.isImplicit() && "No explicit operands after implict operands.");
+      // Discard VReg implicit defs.
+      if (TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+        NewMI->addOperand(MO);
+      }
+    }
+  }
 
   SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
   for (unsigned i = 0, e = NewMIImplDefs.size(); i != e; ++i) {

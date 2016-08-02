@@ -145,10 +145,10 @@ private:
 
   relocation_iterator
   processSubtractRelocation(unsigned SectionID, relocation_iterator RelI,
-                            const MachOObjectFile &BaseObj,
+                            const ObjectFile &BaseObjT,
                             ObjSectionToIDMap &ObjSectionToID) {
     const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile&>(BaseObj);
+        static_cast<const MachOObjectFile&>(BaseObjT);
     MachO::any_relocation_info RE =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 
@@ -156,60 +156,23 @@ private:
     uint64_t Offset = RelI->getOffset();
     uint8_t *LocalAddress = Sections[SectionID].getAddressWithOffset(Offset);
     unsigned NumBytes = 1 << Size;
+
+    ErrorOr<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
+    if (auto EC = SubtrahendNameOrErr.getError())
+      report_fatal_error(EC.message());
+    auto SubtrahendI = GlobalSymbolTable.find(*SubtrahendNameOrErr);
+    unsigned SectionBID = SubtrahendI->second.getSectionID();
+    uint64_t SectionBOffset = SubtrahendI->second.getOffset();
     int64_t Addend =
       SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
 
-    unsigned SectionBID = ~0U;
-    uint64_t SectionBOffset = 0;
-
-    MachO::any_relocation_info RelInfo =
-      Obj.getRelocation(RelI->getRawDataRefImpl());
-
-    bool AIsExternal = BaseObj.getPlainRelocationExternal(RelInfo);
-
-    if (AIsExternal) {
-      ErrorOr<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
-      if (auto EC = SubtrahendNameOrErr.getError())
-        report_fatal_error(EC.message());
-      auto SubtrahendI = GlobalSymbolTable.find(*SubtrahendNameOrErr);
-      SectionBID = SubtrahendI->second.getSectionID();
-      SectionBOffset = SubtrahendI->second.getOffset();
-    } else {
-      SectionRef SecB = Obj.getAnyRelocationSection(RelInfo);
-      bool IsCode = SecB.isText();
-      ErrorOr<unsigned> SectionBIDOrErr =
-        findOrEmitSection(Obj, SecB, IsCode, ObjSectionToID);
-      if (auto EC = SectionBIDOrErr.getError())
-        report_fatal_error(EC.message());
-      SectionBID = *SectionBIDOrErr;
-      Addend += SecB.getAddress();
-    }
-
     ++RelI;
-
-    unsigned SectionAID = ~0U;
-    uint64_t SectionAOffset = 0;
-
-    RelInfo = Obj.getRelocation(RelI->getRawDataRefImpl());
-
-    bool BIsExternal = BaseObj.getPlainRelocationExternal(RelInfo);
-    if (BIsExternal) {
-      ErrorOr<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
-      if (auto EC = MinuendNameOrErr.getError())
-        report_fatal_error(EC.message());
-      auto MinuendI = GlobalSymbolTable.find(*MinuendNameOrErr);
-      SectionAID = MinuendI->second.getSectionID();
-      SectionAOffset = MinuendI->second.getOffset();
-    } else {
-      SectionRef SecA = Obj.getAnyRelocationSection(RelInfo);
-      bool IsCode = SecA.isText();
-      ErrorOr<unsigned> SectionAIDOrErr =
-        findOrEmitSection(Obj, SecA, IsCode, ObjSectionToID);
-      if (auto EC = SectionAIDOrErr.getError())
-        report_fatal_error(EC.message());
-      SectionAID = *SectionAIDOrErr;
-      Addend -= SecA.getAddress();
-    }
+    ErrorOr<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
+    if (auto EC = MinuendNameOrErr.getError())
+      report_fatal_error(EC.message());
+    auto MinuendI = GlobalSymbolTable.find(*MinuendNameOrErr);
+    unsigned SectionAID = MinuendI->second.getSectionID();
+    uint64_t SectionAOffset = MinuendI->second.getOffset();
 
     RelocationEntry R(SectionID, Offset, MachO::X86_64_RELOC_SUBTRACTOR, (uint64_t)Addend,
                       SectionAID, SectionAOffset, SectionBID, SectionBOffset,

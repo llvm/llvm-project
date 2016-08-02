@@ -28,11 +28,11 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -156,17 +156,10 @@ private:
   unsigned HadError : 1;
 
   /// The values from the last parsed cpp hash file line comment if any.
-  struct CppHashInfoTy {
-    StringRef Filename;
-    int64_t LineNumber;
-    SMLoc Loc;
-    unsigned Buf;
-  };
-  CppHashInfoTy CppHashInfo;
-
-  /// \brief List of forward directional labels for diagnosis at the end.
-  SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
-
+  StringRef CppHashFilename;
+  int64_t CppHashLineNumber;
+  SMLoc CppHashLoc;
+  unsigned CppHashBuf;
   /// When generating dwarf for assembly source files we need to calculate the
   /// logical line number based on the last parsed cpp hash file line comment
   /// and current line. Since this is slow and messes up the SourceMgr's
@@ -513,7 +506,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI)
     : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
       PlatformParser(nullptr), CurBuffer(SM.getMainFileID()),
-      MacrosEnabledFlag(true), HadError(false), CppHashInfo(),
+      MacrosEnabledFlag(true), HadError(false), CppHashLineNumber(0),
       AssemblerDialect(~0U), IsDarwin(false), ParsingInlineAsm(false) {
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -690,32 +683,18 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Targets that don't do subsections via symbols may not want this, though,
   // so conservatively exclude them. Only do this if we're finalizing, though,
   // as otherwise we won't necessarilly have seen everything yet.
-  if (!NoFinalize) {
-    if (MAI.hasSubsectionsViaSymbols()) {
-      for (const auto &TableEntry : getContext().getSymbols()) {
-        MCSymbol *Sym = TableEntry.getValue();
-        // Variable symbols may not be marked as defined, so check those
-        // explicitly. If we know it's a variable, we have a definition for
-        // the purposes of this check.
-        if (Sym->isTemporary() && !Sym->isVariable() && !Sym->isDefined())
-          // FIXME: We would really like to refer back to where the symbol was
-          // first referenced for a source location. We need to add something
-          // to track that. Currently, we just point to the end of the file.
-          HadError |=
-              Error(getLexer().getLoc(), "assembler local symbol '" +
-                                             Sym->getName() + "' not defined");
-      }
-    }
-
-    // Temporary symbols like the ones for directional jumps don't go in the
-    // symbol table. They also need to be diagnosed in all (final) cases.
-    for (std::tuple<SMLoc, CppHashInfoTy, MCSymbol *> &LocSym : DirLabels) {
-      if (std::get<2>(LocSym)->isUndefined()) {
-        // Reset the state of any "# line file" directives we've seen to the
-        // context as it was at the diagnostic site.
-        CppHashInfo = std::get<1>(LocSym);
-        HadError |= Error(std::get<0>(LocSym), "directional label undefined");
-      }
+  if (!NoFinalize && MAI.hasSubsectionsViaSymbols()) {
+    for (const auto &TableEntry : getContext().getSymbols()) {
+      MCSymbol *Sym = TableEntry.getValue();
+      // Variable symbols may not be marked as defined, so check those
+      // explicitly. If we know it's a variable, we have a definition for
+      // the purposes of this check.
+      if (Sym->isTemporary() && !Sym->isVariable() && !Sym->isDefined())
+        // FIXME: We would really like to refer back to where the symbol was
+        // first referenced for a source location. We need to add something
+        // to track that. Currently, we just point to the end of the file.
+        return Error(getLexer().getLoc(), "assembler local symbol '" +
+                                              Sym->getName() + "' not defined");
     }
   }
 
@@ -925,8 +904,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
             Ctx.getDirectionalLocalSymbol(IntVal, IDVal == "b");
         Res = MCSymbolRefExpr::create(Sym, Variant, getContext());
         if (IDVal == "b" && Sym->isUndefined())
-          return Error(Loc, "directional label undefined");
-        DirLabels.push_back(std::make_tuple(Loc, CppHashInfo, Sym));
+          return Error(Loc, "invalid reference to undefined symbol");
         EndLoc = Lexer.getTok().getEndLoc();
         Lex(); // Eat identifier.
       }
@@ -1779,26 +1757,24 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // If we previously parsed a cpp hash file line comment then make sure the
     // current Dwarf File is for the CppHashFilename if not then emit the
     // Dwarf File table for it and adjust the line number for the .loc.
-    if (CppHashInfo.Filename.size()) {
+    if (CppHashFilename.size()) {
       unsigned FileNumber = getStreamer().EmitDwarfFileDirective(
-          0, StringRef(), CppHashInfo.Filename);
+          0, StringRef(), CppHashFilename);
       getContext().setGenDwarfFileNumber(FileNumber);
 
       // Since SrcMgr.FindLineNumber() is slow and messes up the SourceMgr's
       // cache with the different Loc from the call above we save the last
       // info we queried here with SrcMgr.FindLineNumber().
       unsigned CppHashLocLineNo;
-      if (LastQueryIDLoc == CppHashInfo.Loc &&
-          LastQueryBuffer == CppHashInfo.Buf)
+      if (LastQueryIDLoc == CppHashLoc && LastQueryBuffer == CppHashBuf)
         CppHashLocLineNo = LastQueryLine;
       else {
-        CppHashLocLineNo =
-            SrcMgr.FindLineNumber(CppHashInfo.Loc, CppHashInfo.Buf);
+        CppHashLocLineNo = SrcMgr.FindLineNumber(CppHashLoc, CppHashBuf);
         LastQueryLine = CppHashLocLineNo;
-        LastQueryIDLoc = CppHashInfo.Loc;
-        LastQueryBuffer = CppHashInfo.Buf;
+        LastQueryIDLoc = CppHashLoc;
+        LastQueryBuffer = CppHashBuf;
       }
-      Line = CppHashInfo.LineNumber - 1 + (Line - CppHashLocLineNo);
+      Line = CppHashLineNumber - 1 + (Line - CppHashLocLineNo);
     }
 
     getStreamer().EmitDwarfLocDirective(
@@ -1855,10 +1831,10 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L) {
   Filename = Filename.substr(1, Filename.size() - 2);
 
   // Save the SMLoc, Filename and LineNumber for later use by diagnostics.
-  CppHashInfo.Loc = L;
-  CppHashInfo.Filename = Filename;
-  CppHashInfo.LineNumber = LineNumber;
-  CppHashInfo.Buf = CurBuffer;
+  CppHashLoc = L;
+  CppHashFilename = Filename;
+  CppHashLineNumber = LineNumber;
+  CppHashBuf = CurBuffer;
 
   // Ignore any trailing characters, they're just comment.
   eatToEndOfLine();
@@ -1875,7 +1851,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   SMLoc DiagLoc = Diag.getLoc();
   unsigned DiagBuf = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
   unsigned CppHashBuf =
-      Parser->SrcMgr.FindBufferContainingLoc(Parser->CppHashInfo.Loc);
+      Parser->SrcMgr.FindBufferContainingLoc(Parser->CppHashLoc);
 
   // Like SourceMgr::printMessage() we need to print the include stack if any
   // before printing the message.
@@ -1889,7 +1865,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   // If we have not parsed a cpp hash line filename comment or the source
   // manager changed or buffer changed (like in a nested include) then just
   // print the normal diagnostic using its Filename and LineNo.
-  if (!Parser->CppHashInfo.LineNumber || &DiagSrcMgr != &Parser->SrcMgr ||
+  if (!Parser->CppHashLineNumber || &DiagSrcMgr != &Parser->SrcMgr ||
       DiagBuf != CppHashBuf) {
     if (Parser->SavedDiagHandler)
       Parser->SavedDiagHandler(Diag, Parser->SavedDiagContext);
@@ -1899,15 +1875,15 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   }
 
   // Use the CppHashFilename and calculate a line number based on the
-  // CppHashInfo.Loc and CppHashInfo.LineNumber relative to this Diag's SMLoc
-  // for the diagnostic.
-  const std::string &Filename = Parser->CppHashInfo.Filename;
+  // CppHashLoc and CppHashLineNumber relative to this Diag's SMLoc for
+  // the diagnostic.
+  const std::string &Filename = Parser->CppHashFilename;
 
   int DiagLocLineNo = DiagSrcMgr.FindLineNumber(DiagLoc, DiagBuf);
   int CppHashLocLineNo =
-      Parser->SrcMgr.FindLineNumber(Parser->CppHashInfo.Loc, CppHashBuf);
+      Parser->SrcMgr.FindLineNumber(Parser->CppHashLoc, CppHashBuf);
   int LineNo =
-      Parser->CppHashInfo.LineNumber - 1 + (DiagLocLineNo - CppHashLocLineNo);
+      Parser->CppHashLineNumber - 1 + (DiagLocLineNo - CppHashLocLineNo);
 
   SMDiagnostic NewDiag(*Diag.getSourceMgr(), Diag.getLoc(), Filename, LineNo,
                        Diag.getColumnNo(), Diag.getKind(), Diag.getMessage(),

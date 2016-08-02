@@ -415,15 +415,6 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
   }
 }
 
-void TemplateArgument::dump(raw_ostream &Out) const {
-  LangOptions LO; // FIXME! see also TemplateName::dump().
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(PrintingPolicy(LO), Out);
-}
-
-LLVM_DUMP_METHOD void TemplateArgument::dump() const { dump(llvm::errs()); }
-
 //===----------------------------------------------------------------------===//
 // TemplateArgumentLoc Implementation
 //===----------------------------------------------------------------------===//

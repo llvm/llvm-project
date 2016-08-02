@@ -20,7 +20,6 @@
 
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/MD5.h"
 #include <system_error>
 
 namespace llvm {
@@ -76,9 +75,9 @@ protected:
   }
 
   Type *ValueType;
-  // All bitfields use unsigned as the underlying type so that MSVC will pack
-  // them.
-  unsigned Linkage : 4;       // The linkage of this global
+  // Note: VC++ treats enums as signed, so an extra bit is required to prevent
+  // Linkage and Visibility from turning into negative values.
+  LinkageTypes Linkage : 5;   // The linkage of this global
   unsigned Visibility : 2;    // The visibility style of this global
   unsigned UnnamedAddr : 1;   // This value's address is not significant
   unsigned DllStorageClass : 2; // DLL storage class
@@ -260,40 +259,44 @@ public:
            Linkage == CommonLinkage || Linkage == ExternalWeakLinkage;
   }
 
-  bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
+  bool hasExternalLinkage() const { return isExternalLinkage(Linkage); }
   bool hasAvailableExternallyLinkage() const {
-    return isAvailableExternallyLinkage(getLinkage());
+    return isAvailableExternallyLinkage(Linkage);
   }
-  bool hasLinkOnceLinkage() const { return isLinkOnceLinkage(getLinkage()); }
-  bool hasLinkOnceODRLinkage() const {
-    return isLinkOnceODRLinkage(getLinkage());
+  bool hasLinkOnceLinkage() const {
+    return isLinkOnceLinkage(Linkage);
   }
-  bool hasWeakLinkage() const { return isWeakLinkage(getLinkage()); }
-  bool hasWeakAnyLinkage() const { return isWeakAnyLinkage(getLinkage()); }
-  bool hasWeakODRLinkage() const { return isWeakODRLinkage(getLinkage()); }
-  bool hasAppendingLinkage() const { return isAppendingLinkage(getLinkage()); }
-  bool hasInternalLinkage() const { return isInternalLinkage(getLinkage()); }
-  bool hasPrivateLinkage() const { return isPrivateLinkage(getLinkage()); }
-  bool hasLocalLinkage() const { return isLocalLinkage(getLinkage()); }
-  bool hasExternalWeakLinkage() const {
-    return isExternalWeakLinkage(getLinkage());
+  bool hasLinkOnceODRLinkage() const { return isLinkOnceODRLinkage(Linkage); }
+  bool hasWeakLinkage() const {
+    return isWeakLinkage(Linkage);
   }
-  bool hasCommonLinkage() const { return isCommonLinkage(getLinkage()); }
+  bool hasWeakAnyLinkage() const {
+    return isWeakAnyLinkage(Linkage);
+  }
+  bool hasWeakODRLinkage() const {
+    return isWeakODRLinkage(Linkage);
+  }
+  bool hasAppendingLinkage() const { return isAppendingLinkage(Linkage); }
+  bool hasInternalLinkage() const { return isInternalLinkage(Linkage); }
+  bool hasPrivateLinkage() const { return isPrivateLinkage(Linkage); }
+  bool hasLocalLinkage() const { return isLocalLinkage(Linkage); }
+  bool hasExternalWeakLinkage() const { return isExternalWeakLinkage(Linkage); }
+  bool hasCommonLinkage() const { return isCommonLinkage(Linkage); }
 
   void setLinkage(LinkageTypes LT) {
     if (isLocalLinkage(LT))
       Visibility = DefaultVisibility;
     Linkage = LT;
   }
-  LinkageTypes getLinkage() const { return LinkageTypes(Linkage); }
+  LinkageTypes getLinkage() const { return Linkage; }
 
   bool isDiscardableIfUnused() const {
-    return isDiscardableIfUnused(getLinkage());
+    return isDiscardableIfUnused(Linkage);
   }
 
-  bool mayBeOverridden() const { return mayBeOverridden(getLinkage()); }
+  bool mayBeOverridden() const { return mayBeOverridden(Linkage); }
 
-  bool isWeakForLinker() const { return isWeakForLinker(getLinkage()); }
+  bool isWeakForLinker() const { return isWeakForLinker(Linkage); }
 
   /// Copy all additional attributes (those not needed to create a GlobalValue)
   /// from the GlobalValue Src to this one.
@@ -308,37 +311,11 @@ public:
     return Name;
   }
 
-  /// Return the modified name for a global value suitable to be
-  /// used as the key for a global lookup (e.g. profile or ThinLTO).
-  /// The value's original name is \c Name and has linkage of type
-  /// \c Linkage. The value is defined in module \c FileName.
-  static std::string getGlobalIdentifier(StringRef Name,
-                                         GlobalValue::LinkageTypes Linkage,
-                                         StringRef FileName);
-
-  /// Return the modified name for this global value suitable to be
-  /// used as the key for a global lookup (e.g. profile or ThinLTO).
-  std::string getGlobalIdentifier() const;
-
-  /// Declare a type to represent a global unique identifier for a global value.
-  /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
-  /// unique way to identify a symbol.
-  using GUID = uint64_t;
-
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  static GUID getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
-
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const { return getGUID(getGlobalIdentifier()); }
-
-  /// @name Materialization
-  /// Materialization is used to construct functions only as they're needed.
-  /// This
-  /// is useful to reduce memory usage in LLVM or parsing work done by the
-  /// BitcodeReader to load the Module.
-  /// @{
+/// @name Materialization
+/// Materialization is used to construct functions only as they're needed. This
+/// is useful to reduce memory usage in LLVM or parsing work done by the
+/// BitcodeReader to load the Module.
+/// @{
 
   /// If this function's Module is being lazily streamed in functions from disk
   /// or some other source, this method can be used to check to see if the

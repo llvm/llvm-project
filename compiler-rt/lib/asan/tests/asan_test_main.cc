@@ -26,12 +26,6 @@ extern "C" const char* __asan_default_options() {
 #endif
 }
 
-namespace __sanitizer {
-bool ReexecDisabled() {
-  return true;
-}
-}
-
 int main(int argc, char **argv) {
   testing::GTEST_FLAG(death_test_style) = "threadsafe";
   testing::InitGoogleTest(&argc, argv);

@@ -75,10 +75,6 @@ void *AsanDoesNotSupportStaticLinkage() {
   return &_DYNAMIC;  // defined in link.h
 }
 
-void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
-  UNIMPLEMENTED();
-}
-
 #if SANITIZER_ANDROID
 // FIXME: should we do anything for Android?
 void AsanCheckDynamicRTPrereqs() {}

@@ -191,6 +191,9 @@ namespace llvm {
       /// Bitwise Logical AND NOT of Packed FP values.
       ANDNP,
 
+      /// Copy integer sign.
+      PSIGN,
+
       /// Blend where the selector is an immediate.
       BLENDI,
 
@@ -390,21 +393,11 @@ namespace llvm {
       UNPCKH,
       VPERMILPV,
       VPERMILPI,
+      VPERMV,
+      VPERMV3,
+      VPERMIV3,
       VPERMI,
       VPERM2X128,
-
-      // Variable Permute (VPERM)
-      // Res = VPERMV MaskV, V0
-      VPERMV,
-
-      // 3-op Variable Permute (VPERMT2)
-      // Res = VPERMV3 V0, MaskV, V1
-      VPERMV3,
-
-      // 3-op Variable Permute overwriting the index (VPERMI2)
-      // Res = VPERMIV3 V0, MaskV, V1
-      VPERMIV3,
-
       // Bitwise ternary logic
       VPTERNLOG,
       // Fix Up Special Packed Float32/64 values
@@ -517,12 +510,6 @@ namespace llvm {
       LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
       LCMPXCHG8_DAG,
       LCMPXCHG16_DAG,
-      LCMPXCHG8_SAVE_EBX_DAG,
-      LCMPXCHG16_SAVE_RBX_DAG,
-
-      /// LOCK-prefixed arithmetic read-modify-write instructions.
-      /// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
-      LADD, LSUB, LOR, LXOR, LAND,
 
       // Load, scalar_to_vector, and zero extend.
       VZEXT_LOAD,
@@ -564,8 +551,8 @@ namespace llvm {
       VAARG_64
 
       // WARNING: Do not add anything in the end unless you want the node to
-      // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
-      // opcodes will be thought as target memory ops!
+      // have memop! In fact, starting from ATOMADD64_DAG all opcodes will be
+      // thought as target memory ops!
     };
   }
 
@@ -954,10 +941,6 @@ namespace llvm {
 
     bool isIntDivCheap(EVT VT, AttributeSet Attr) const override;
 
-    bool supportSwiftError() const override {
-      return true;
-    }
-
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -1069,6 +1052,10 @@ namespace llvm {
     SDValue LowerGC_TRANSITION_START(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGC_TRANSITION_END(SDValue Op, SelectionDAG &DAG) const;
 
+    bool supportSwiftError() const override {
+      return true;
+    }
+
     SDValue
       LowerFormalArguments(SDValue Chain,
                            CallingConv::ID CallConv, bool isVarArg,
@@ -1145,9 +1132,6 @@ namespace llvm {
 
     MachineBasicBlock *EmitLoweredSegAlloca(MachineInstr *MI,
                                             MachineBasicBlock *BB) const;
-
-    MachineBasicBlock *EmitLoweredTLSAddr(MachineInstr *MI,
-                                          MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr *MI,
                                           MachineBasicBlock *BB) const;

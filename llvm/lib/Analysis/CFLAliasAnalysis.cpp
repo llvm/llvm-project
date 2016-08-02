@@ -33,6 +33,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstVisitor.h"
@@ -52,7 +53,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cfl-aa"
 
-CFLAAResult::CFLAAResult() : AAResultBase() {}
+CFLAAResult::CFLAAResult(const TargetLibraryInfo &TLI) : AAResultBase(TLI) {}
 CFLAAResult::CFLAAResult(CFLAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
 
 // \brief Information we have about a function and would like to keep around
@@ -910,7 +911,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
   buildGraphFrom(*this, Fn, ReturnedValues, Map, Graph);
 
   DenseMap<GraphT::Node, Value *> NodeValueMap;
-  NodeValueMap.reserve(Map.size());
+  NodeValueMap.resize(Map.size());
   for (const auto &Pair : Map)
     NodeValueMap.insert(std::make_pair(Pair.second, Pair.first));
 
@@ -936,10 +937,6 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
       if (canSkipAddingToSets(CurValue))
         continue;
 
-      Optional<StratifiedAttr> MaybeCurIndex = valueToAttrIndex(CurValue);
-      if (MaybeCurIndex)
-        Builder.noteAttributes(CurValue, *MaybeCurIndex);
-
       for (const auto &EdgeTuple : Graph.edgesFor(Node)) {
         auto Weight = std::get<0>(EdgeTuple);
         auto Label = Weight.first;
@@ -963,7 +960,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
         }
 
         auto Aliasing = Weight.second;
-        if (MaybeCurIndex)
+        if (auto MaybeCurIndex = valueToAttrIndex(CurValue))
           Aliasing.set(*MaybeCurIndex);
         if (auto MaybeOtherIndex = valueToAttrIndex(OtherValue))
           Aliasing.set(*MaybeOtherIndex);
@@ -1087,14 +1084,17 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
 }
 
 CFLAAResult CFLAA::run(Function &F, AnalysisManager<Function> *AM) {
-  return CFLAAResult();
+  return CFLAAResult(AM->getResult<TargetLibraryAnalysis>(F));
 }
 
 char CFLAA::PassID;
 
 char CFLAAWrapperPass::ID = 0;
-INITIALIZE_PASS(CFLAAWrapperPass, "cfl-aa", "CFL-Based Alias Analysis", false,
-                true)
+INITIALIZE_PASS_BEGIN(CFLAAWrapperPass, "cfl-aa", "CFL-Based Alias Analysis",
+                      false, true)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(CFLAAWrapperPass, "cfl-aa", "CFL-Based Alias Analysis",
+                    false, true)
 
 ImmutablePass *llvm::createCFLAAWrapperPass() { return new CFLAAWrapperPass(); }
 
@@ -1103,7 +1103,8 @@ CFLAAWrapperPass::CFLAAWrapperPass() : ImmutablePass(ID) {
 }
 
 bool CFLAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new CFLAAResult());
+  Result.reset(
+      new CFLAAResult(getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()));
   return false;
 }
 
@@ -1114,4 +1115,5 @@ bool CFLAAWrapperPass::doFinalization(Module &M) {
 
 void CFLAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }

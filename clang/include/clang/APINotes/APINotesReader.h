@@ -38,7 +38,7 @@ public:
   /// contains the contents of a binary API notes file.
   ///
   /// \returns the new API notes reader, or null if an error occurred.
-  static std::unique_ptr<APINotesReader>
+  static std::unique_ptr<APINotesReader> 
   get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer);
 
   ~APINotesReader();
@@ -49,9 +49,6 @@ public:
   /// Retrieve the name of the module for which this reader is providing API
   /// notes.
   StringRef getModuleName() const;
-
-  /// Retrieve the module options
-  ModuleOptions getModuleOptions() const;
 
   /// Look for information regarding the given Objective-C class.
   ///
@@ -105,28 +102,6 @@ public:
   /// \returns information about the global function, if known.
   Optional<GlobalFunctionInfo> lookupGlobalFunction(StringRef name);
 
-  /// Look for information regarding the given enumerator.
-  ///
-  /// \param name The name of the enumerator.
-  ///
-  /// \returns information about the enumerator, if known.
-  Optional<EnumConstantInfo> lookupEnumConstant(StringRef name);
-
-  /// Look for information regarding the given tag
-  /// (struct/union/enum/C++ class).
-  ///
-  /// \param name The name of the tag.
-  ///
-  /// \returns information about the tag, if known.
-  Optional<TagInfo> lookupTag(StringRef name);
-
-  /// Look for information regarding the given typedef.
-  ///
-  /// \param name The name of the typedef.
-  ///
-  /// \returns information about the typedef, if known.
-  Optional<TypedefInfo> lookupTypedef(StringRef name);
-
   /// Visitor used when walking the contents of the API notes file.
   class Visitor {
   public:
@@ -156,16 +131,6 @@ public:
     /// Visit a global function.
     virtual void visitGlobalFunction(StringRef name,
                                      const GlobalFunctionInfo &info);
-
-    /// Visit an enumerator.
-    virtual void visitEnumConstant(StringRef name,
-                                   const EnumConstantInfo &info);
-
-    /// Visit a tag.
-    virtual void visitTag(StringRef name, const TagInfo &info);
-
-    /// Visit a typedef.
-    virtual void visitTypedef(StringRef name, const TypedefInfo &info);
   };
 
   /// Visit the contents of the API notes file, passing each entity to the

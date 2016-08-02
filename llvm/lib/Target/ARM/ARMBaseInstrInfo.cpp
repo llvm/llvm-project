@@ -2684,24 +2684,14 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr *UseMI,
     Commute = UseMI->getOperand(2).getReg() != Reg;
     switch (UseOpc) {
     default: break;
-    case ARM::ADDrr:
     case ARM::SUBrr: {
-      if (UseOpc == ARM::SUBrr && Commute)
+      if (Commute)
         return false;
-
-      // ADD/SUB are special because they're essentially the same operation, so
-      // we can handle a larger range of immediates.
-      if (ARM_AM::isSOImmTwoPartVal(ImmVal))
-        NewUseOpc = UseOpc == ARM::ADDrr ? ARM::ADDri : ARM::SUBri;
-      else if (ARM_AM::isSOImmTwoPartVal(-ImmVal)) {
-        ImmVal = -ImmVal;
-        NewUseOpc = UseOpc == ARM::ADDrr ? ARM::SUBri : ARM::ADDri;
-      } else
-        return false;
-      SOImmValV1 = (uint32_t)ARM_AM::getSOImmTwoPartFirst(ImmVal);
-      SOImmValV2 = (uint32_t)ARM_AM::getSOImmTwoPartSecond(ImmVal);
-      break;
+      ImmVal = -ImmVal;
+      NewUseOpc = ARM::SUBri;
+      // Fallthrough
     }
+    case ARM::ADDrr:
     case ARM::ORRrr:
     case ARM::EORrr: {
       if (!ARM_AM::isSOImmTwoPartVal(ImmVal))
@@ -2710,29 +2700,20 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr *UseMI,
       SOImmValV2 = (uint32_t)ARM_AM::getSOImmTwoPartSecond(ImmVal);
       switch (UseOpc) {
       default: break;
+      case ARM::ADDrr: NewUseOpc = ARM::ADDri; break;
       case ARM::ORRrr: NewUseOpc = ARM::ORRri; break;
       case ARM::EORrr: NewUseOpc = ARM::EORri; break;
       }
       break;
     }
-    case ARM::t2ADDrr:
     case ARM::t2SUBrr: {
-      if (UseOpc == ARM::t2SUBrr && Commute)
+      if (Commute)
         return false;
-
-      // ADD/SUB are special because they're essentially the same operation, so
-      // we can handle a larger range of immediates.
-      if (ARM_AM::isT2SOImmTwoPartVal(ImmVal))
-        NewUseOpc = UseOpc == ARM::t2ADDrr ? ARM::t2ADDri : ARM::t2SUBri;
-      else if (ARM_AM::isT2SOImmTwoPartVal(-ImmVal)) {
-        ImmVal = -ImmVal;
-        NewUseOpc = UseOpc == ARM::t2ADDrr ? ARM::t2SUBri : ARM::t2ADDri;
-      } else
-        return false;
-      SOImmValV1 = (uint32_t)ARM_AM::getT2SOImmTwoPartFirst(ImmVal);
-      SOImmValV2 = (uint32_t)ARM_AM::getT2SOImmTwoPartSecond(ImmVal);
-      break;
+      ImmVal = -ImmVal;
+      NewUseOpc = ARM::t2SUBri;
+      // Fallthrough
     }
+    case ARM::t2ADDrr:
     case ARM::t2ORRrr:
     case ARM::t2EORrr: {
       if (!ARM_AM::isT2SOImmTwoPartVal(ImmVal))
@@ -2741,6 +2722,7 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr *UseMI,
       SOImmValV2 = (uint32_t)ARM_AM::getT2SOImmTwoPartSecond(ImmVal);
       switch (UseOpc) {
       default: break;
+      case ARM::t2ADDrr: NewUseOpc = ARM::t2ADDri; break;
       case ARM::t2ORRrr: NewUseOpc = ARM::t2ORRri; break;
       case ARM::t2EORrr: NewUseOpc = ARM::t2EORri; break;
       }

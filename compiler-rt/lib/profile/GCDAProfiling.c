@@ -35,11 +35,7 @@
 #include <sys/file.h>
 #endif
 
-#if defined(__FreeBSD__) && defined(__i386__)
-#define I386_FREEBSD 1
-#else
-#define I386_FREEBSD 0
-#endif
+#define I386_FREEBSD (defined(__FreeBSD__) && defined(__i386__))
 
 #if !defined(_MSC_VER) && !I386_FREEBSD
 #include <stdint.h>
@@ -486,8 +482,8 @@ void llvm_gcda_end_file() {
       unmap_file();
     }
 
-    flock(fd, LOCK_UN);
     fclose(output_file);
+    flock(fd, LOCK_UN);
     output_file = NULL;
     write_buffer = NULL;
   }

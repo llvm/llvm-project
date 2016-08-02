@@ -37,17 +37,16 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
-
-#define DEBUG_TYPE "basicaa"
-
 using namespace llvm;
 
 /// Enable analysis of recursive PHI nodes.
 static cl::opt<bool> EnableRecPhiAnalysis("basicaa-recphi", cl::Hidden,
                                           cl::init(false));
+
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
 /// of basic alias analysis.
+#define DEBUG_TYPE "basicaa"
 STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
@@ -320,16 +319,6 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
   return V;
 }
 
-/// To ensure a pointer offset fits in an integer of size PointerSize
-/// (in bits) when that size is smaller than 64. This is an issue in
-/// particular for 32b programs with negative indices that rely on two's
-/// complement wrap-arounds for correct alias information.
-static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
-  assert(PointerSize <= 64 && "Invalid PointerSize!");
-  unsigned ShiftBits = 64 - PointerSize;
-  return (int64_t)((uint64_t)Offset << ShiftBits) >> ShiftBits;
-}
-
 /// If V is a symbolic pointer expression, decompose it into a base pointer
 /// with a constant offset and a number of scaled symbolic offsets.
 ///
@@ -398,7 +387,6 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
-    unsigned PointerSize = DL.getPointerSizeInBits(AS);
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();
          I != E; ++I) {
       const Value *Index = *I;
@@ -427,6 +415,7 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
       // If the integer type is smaller than the pointer size, it is implicitly
       // sign extended to pointer size.
       unsigned Width = Index->getType()->getIntegerBitWidth();
+      unsigned PointerSize = DL.getPointerSizeInBits(AS);
       if (PointerSize > Width)
         SExtBits += PointerSize - Width;
 
@@ -456,7 +445,10 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
 
       // Make sure that we have a scale that makes sense for this target's
       // pointer size.
-      Scale = adjustToPointerSize(Scale, PointerSize);
+      if (unsigned ShiftBits = 64 - PointerSize) {
+        Scale <<= ShiftBits;
+        Scale = (int64_t)Scale >> ShiftBits;
+      }
 
       if (Scale) {
         VariableGEPIndex Entry = {Index, ZExtBits, SExtBits,
@@ -464,9 +456,6 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
         VarIndices.push_back(Entry);
       }
     }
-
-    // Take care of wrap-arounds
-    BaseOffs = adjustToPointerSize(BaseOffs, PointerSize);
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
@@ -541,6 +530,22 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return Worklist.empty();
 }
 
+// FIXME: This code is duplicated with MemoryLocation and should be hoisted to
+// some common utility location.
+static bool isMemsetPattern16(const Function *MS,
+                              const TargetLibraryInfo &TLI) {
+  if (TLI.has(LibFunc::memset_pattern16) &&
+      MS->getName() == "memset_pattern16") {
+    FunctionType *MemsetType = MS->getFunctionType();
+    if (!MemsetType->isVarArg() && MemsetType->getNumParams() == 3 &&
+        isa<PointerType>(MemsetType->getParamType(0)) &&
+        isa<PointerType>(MemsetType->getParamType(1)) &&
+        isa<IntegerType>(MemsetType->getParamType(2)))
+      return true;
+  }
+  return false;
+}
+
 /// Returns the behavior when calling the given call site.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(ImmutableCallSite CS) {
   if (CS.doesNotAccessMemory())
@@ -557,15 +562,8 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(ImmutableCallSite CS) {
   if (CS.onlyAccessesArgMemory())
     Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
 
-  // If CS has operand bundles then aliasing attributes from the function it
-  // calls do not directly apply to the CallSite.  This can be made more
-  // precise in the future.
-  if (!CS.hasOperandBundles())
-    if (const Function *F = CS.getCalledFunction())
-      Min =
-          FunctionModRefBehavior(Min & getBestAAResults().getModRefBehavior(F));
-
-  return Min;
+  // The AAResultBase base class has some smarts, lets use them.
+  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(CS) & Min);
 }
 
 /// Returns the behavior when calling the given function. For use when the call
@@ -584,7 +582,8 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   if (F->onlyAccessesArgMemory())
     Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
 
-  return Min;
+  // Otherwise be conservative.
+  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(F) & Min);
 }
 
 /// Returns true if this is a writeonly (i.e Mod only) parameter.  Currently,
@@ -613,9 +612,7 @@ static bool isWriteOnlyParam(ImmutableCallSite CS, unsigned ArgIdx,
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.  Note that all but the missing writeonly attribute are
   // handled via InferFunctionAttr.
-  LibFunc::Func F;
-  if (CS.getCalledFunction() && TLI.getLibFunc(*CS.getCalledFunction(), F) &&
-      F == LibFunc::memset_pattern16 && TLI.has(F))
+  if (CS.getCalledFunction() && isMemsetPattern16(CS.getCalledFunction(), TLI))
     if (ArgIdx == 0)
       return true;
 

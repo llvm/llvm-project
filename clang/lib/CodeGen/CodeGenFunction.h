@@ -68,6 +68,7 @@ class ObjCMethodDecl;
 class ObjCImplementationDecl;
 class ObjCPropertyImplDecl;
 class TargetInfo;
+class TargetCodeGenInfo;
 class VarDecl;
 class ObjCForCollectionStmt;
 class ObjCAtTryStmt;
@@ -85,7 +86,6 @@ class BlockByrefHelpers;
 class BlockByrefInfo;
 class BlockFlags;
 class BlockFieldFlags;
-class TargetCodeGenInfo;
 
 /// The kind of evaluation to perform on values of a particular
 /// type.  Basically, is the code in CGExprScalar, CGExprComplex, or
@@ -2797,25 +2797,19 @@ public:
   llvm::Value *EmitARCAutoreleaseReturnValue(llvm::Value *value);
   llvm::Value *EmitARCRetainAutoreleaseReturnValue(llvm::Value *value);
   llvm::Value *EmitARCRetainAutoreleasedReturnValue(llvm::Value *value);
-  llvm::Value *EmitARCUnsafeClaimAutoreleasedReturnValue(llvm::Value *value);
 
   std::pair<LValue,llvm::Value*>
   EmitARCStoreAutoreleasing(const BinaryOperator *e);
   std::pair<LValue,llvm::Value*>
   EmitARCStoreStrong(const BinaryOperator *e, bool ignored);
-  std::pair<LValue,llvm::Value*>
-  EmitARCStoreUnsafeUnretained(const BinaryOperator *e, bool ignored);
 
   llvm::Value *EmitObjCThrowOperand(const Expr *expr);
   llvm::Value *EmitObjCConsumeObject(QualType T, llvm::Value *Ptr);
   llvm::Value *EmitObjCExtendObjectLifetime(QualType T, llvm::Value *Ptr);
 
   llvm::Value *EmitARCExtendBlockObject(const Expr *expr);
-  llvm::Value *EmitARCReclaimReturnedObject(const Expr *e,
-                                            bool allowUnsafeClaim);
   llvm::Value *EmitARCRetainScalarExpr(const Expr *expr);
   llvm::Value *EmitARCRetainAutoreleaseScalarExpr(const Expr *expr);
-  llvm::Value *EmitARCUnsafeUnretainedScalarExpr(const Expr *expr);
 
   void EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values);
 
@@ -3067,7 +3061,7 @@ private:
   ///
   /// \param AI - The first function argument of the expansion.
   void ExpandTypeFromArgs(QualType Ty, LValue Dst,
-                          SmallVectorImpl<llvm::Value *>::iterator &AI);
+                          SmallVectorImpl<llvm::Argument *>::iterator &AI);
 
   /// ExpandTypeToArgs - Expand an RValue \arg RV, with the LLVM type for \arg
   /// Ty, into individual arguments on the provided vector \arg IRCallArgs,

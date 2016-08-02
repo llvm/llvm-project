@@ -216,8 +216,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i32, Custom);
 
-  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
-
   // z10 has instructions for signed but not unsigned FP conversion.
   // Handle unsigned 32-bit types as signed 64-bit types.
   if (!Subtarget.hasFPExtension()) {
@@ -439,7 +437,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::STORE);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::FP_ROUND);
-  setTargetDAGCombine(ISD::BSWAP);
 
   // Handle intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -990,11 +987,9 @@ LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
 }
 
 static bool canUseSiblingCall(const CCState &ArgCCInfo,
-                              SmallVectorImpl<CCValAssign> &ArgLocs,
-                              SmallVectorImpl<ISD::OutputArg> &Outs) {
+                              SmallVectorImpl<CCValAssign> &ArgLocs) {
   // Punt if there are any indirect or stack arguments, or if the call
-  // needs the callee-saved argument register R6, or if the call uses
-  // the callee-saved register arguments SwiftSelf and SwiftError.
+  // needs the call-saved argument register R6.
   for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
     CCValAssign &VA = ArgLocs[I];
     if (VA.getLocInfo() == CCValAssign::Indirect)
@@ -1003,8 +998,6 @@ static bool canUseSiblingCall(const CCState &ArgCCInfo,
       return false;
     unsigned Reg = VA.getLocReg();
     if (Reg == SystemZ::R6H || Reg == SystemZ::R6L || Reg == SystemZ::R6D)
-      return false;
-    if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftError())
       return false;
   }
   return true;
@@ -1039,7 +1032,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected
   // sibling calls.
-  if (IsTailCall && !canUseSiblingCall(ArgCCInfo, ArgLocs, Outs))
+  if (IsTailCall && !canUseSiblingCall(ArgCCInfo, ArgLocs))
     IsTailCall = false;
 
   // Get a count of how many bytes are to be pushed on the stack.
@@ -1856,7 +1849,7 @@ static unsigned getTestUnderMaskCond(unsigned BitSize, unsigned CCMask,
     if (CCMask == SystemZ::CCMASK_CMP_NE)
       return SystemZ::CCMASK_TM_SOME_1;
   }
-  if (EffectivelyUnsigned && CmpVal > 0 && CmpVal <= Low) {
+  if (EffectivelyUnsigned && CmpVal <= Low) {
     if (CCMask == SystemZ::CCMASK_CMP_LT)
       return SystemZ::CCMASK_TM_ALL_0;
     if (CCMask == SystemZ::CCMASK_CMP_GE)
@@ -2647,57 +2640,6 @@ SDValue SystemZTargetLowering::lowerConstantPool(ConstantPoolSDNode *CP,
   return DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
 }
 
-SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
-                                              SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setFrameAddressIsTaken(true);
-
-  SDLoc DL(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-
-  // If the back chain frame index has not been allocated yet, do so.
-  SystemZMachineFunctionInfo *FI = MF.getInfo<SystemZMachineFunctionInfo>();
-  int BackChainIdx = FI->getFramePointerSaveIndex();
-  if (!BackChainIdx) {
-    // By definition, the frame address is the address of the back chain.
-    BackChainIdx = MFI->CreateFixedObject(8, -SystemZMC::CallFrameSize, false);
-    FI->setFramePointerSaveIndex(BackChainIdx);
-  }
-  SDValue BackChain = DAG.getFrameIndex(BackChainIdx, PtrVT);
-
-  // FIXME The frontend should detect this case.
-  if (Depth > 0) {
-    report_fatal_error("Unsupported stack frame traversal count");
-  }
-
-  return BackChain;
-}
-
-SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
-  SDLoc DL(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-
-  // FIXME The frontend should detect this case.
-  if (Depth > 0) {
-    report_fatal_error("Unsupported stack frame traversal count");
-  }
-
-  // Return R14D, which has the return address. Mark it an implicit live-in.
-  unsigned LinkReg = MF.addLiveIn(SystemZ::R14D, &SystemZ::GR64BitRegClass);
-  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, LinkReg, PtrVT);
-}
-
 SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -3087,25 +3029,6 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
                      DAG.getConstant(BitSize - 8, DL, VT));
 
   return Op;
-}
-
-SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
-                                                 SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  AtomicOrdering FenceOrdering = static_cast<AtomicOrdering>(
-    cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
-  SynchronizationScope FenceScope = static_cast<SynchronizationScope>(
-    cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
-
-  // The only fence that needs an instruction is a sequentially-consistent
-  // cross-thread fence.
-  if (FenceOrdering == SequentiallyConsistent && FenceScope == CrossThread) {
-    return SDValue(DAG.getMachineNode(SystemZ::Serialize, DL, MVT::Other,
-                                      Op.getOperand(0)), 0);
-  }
-
-  // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-  return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
 // Op is an atomic load.  Lower it into a normal volatile load.
@@ -4389,10 +4312,6 @@ SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
 SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  case ISD::FRAMEADDR:
-    return lowerFRAMEADDR(Op, DAG);
-  case ISD::RETURNADDR:
-    return lowerRETURNADDR(Op, DAG);
   case ISD::BR_CC:
     return lowerBR_CC(Op, DAG);
   case ISD::SELECT_CC:
@@ -4435,8 +4354,6 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTTZ_ZERO_UNDEF:
     return DAG.getNode(ISD::CTTZ, SDLoc(Op),
                        Op.getValueType(), Op.getOperand(0));
-  case ISD::ATOMIC_FENCE:
-    return lowerATOMIC_FENCE(Op, DAG);
   case ISD::ATOMIC_SWAP:
     return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_SWAPW);
   case ISD::ATOMIC_STORE:
@@ -4540,7 +4457,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(SEARCH_STRING);
     OPCODE(IPM);
     OPCODE(SERIALIZE);
-    OPCODE(MEMBARRIER);
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);
@@ -4602,8 +4518,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(ATOMIC_LOADW_UMIN);
     OPCODE(ATOMIC_LOADW_UMAX);
     OPCODE(ATOMIC_CMP_SWAPW);
-    OPCODE(LRV);
-    OPCODE(STRV);
     OPCODE(PREFETCH);
   }
   return nullptr;
@@ -4900,74 +4814,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
       }
     }
   }
-
-  // Combine BSWAP (LOAD) into LRVH/LRV/LRVG
-  // These loads are allowed to access memory multiple times, and so we must check
-  // that the loads are not volatile before performing the combine.
-  if (Opcode == ISD::BSWAP &&
-       ISD::isNON_EXTLoad(N->getOperand(0).getNode()) &&
-        N->getOperand(0).hasOneUse() &&
-         (N->getValueType(0) == MVT::i16 || N->getValueType(0) == MVT::i32 ||
-          N->getValueType(0) == MVT::i64) &&
-          !cast<LoadSDNode>(N->getOperand(0))->isVolatile()) {
-      SDValue Load = N->getOperand(0);
-      LoadSDNode *LD = cast<LoadSDNode>(Load);
-
-      // Create the byte-swapping load.
-      SDValue Ops[] = {
-        LD->getChain(),    // Chain
-        LD->getBasePtr(),  // Ptr
-        DAG.getValueType(N->getValueType(0)) // VT
-      };
-      SDValue BSLoad =
-        DAG.getMemIntrinsicNode(SystemZISD::LRV, SDLoc(N),
-                                DAG.getVTList(N->getValueType(0) == MVT::i64 ?
-                                              MVT::i64 : MVT::i32, MVT::Other),
-                                Ops, LD->getMemoryVT(), LD->getMemOperand());
-
-      // If this is an i16 load, insert the truncate.
-      SDValue ResVal = BSLoad;
-      if (N->getValueType(0) == MVT::i16)
-        ResVal = DAG.getNode(ISD::TRUNCATE, SDLoc(N), MVT::i16, BSLoad);
-
-      // First, combine the bswap away.  This makes the value produced by the
-      // load dead.
-      DCI.CombineTo(N, ResVal);
-
-      // Next, combine the load away, we give it a bogus result value but a real
-      // chain result.  The result value is dead because the bswap is dead.
-      DCI.CombineTo(Load.getNode(), ResVal, BSLoad.getValue(1));
-
-      // Return N so it doesn't get rechecked!
-      return SDValue(N, 0);
-    }
-
-  // Combine STORE (BSWAP) into STRVH/STRV/STRVG
-  // See comment above about volatile accesses.
-  if (Opcode == ISD::STORE &&
-       !cast<StoreSDNode>(N)->isVolatile() &&
-        N->getOperand(1).getOpcode() == ISD::BSWAP &&
-        N->getOperand(1).getNode()->hasOneUse() &&
-        (N->getOperand(1).getValueType() == MVT::i16 ||
-         N->getOperand(1).getValueType() == MVT::i32 ||
-         N->getOperand(1).getValueType() == MVT::i64)) {
-
-      SDValue BSwapOp = N->getOperand(1).getOperand(0);
-
-      if (BSwapOp.getValueType() == MVT::i16)
-        BSwapOp = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), MVT::i32, BSwapOp);
-
-      SDValue Ops[] = {
-        N->getOperand(0), BSwapOp, N->getOperand(2),
-        DAG.getValueType(N->getOperand(1).getValueType())
-      };
-
-      return
-        DAG.getMemIntrinsicNode(SystemZISD::STRV, SDLoc(N), DAG.getVTList(MVT::Other),
-                                Ops, cast<StoreSDNode>(N)->getMemoryVT(),
-                                cast<StoreSDNode>(N)->getMemOperand());
-    }
-
   return SDValue();
 }
 
@@ -5372,7 +5218,6 @@ SystemZTargetLowering::emitAtomicLoadMinMax(MachineInstr *MI,
 MachineBasicBlock *
 SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr *MI,
                                           MachineBasicBlock *MBB) const {
-
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());

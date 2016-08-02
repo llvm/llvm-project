@@ -137,8 +137,9 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
 
   // If debug info or coverage generation is enabled, create the CGDebugInfo
   // object.
-  if (CodeGenOpts.getDebugInfo() != codegenoptions::NoDebugInfo ||
-      CodeGenOpts.EmitGcovArcs || CodeGenOpts.EmitGcovNotes)
+  if (CodeGenOpts.getDebugInfo() != CodeGenOptions::NoDebugInfo ||
+      CodeGenOpts.EmitGcovArcs ||
+      CodeGenOpts.EmitGcovNotes)
     DebugInfo = new CGDebugInfo(*this);
 
   Block.GlobalUniqueCount = 0;
@@ -1228,13 +1229,13 @@ void CodeGenModule::EmitDeferred() {
   if (!DeferredVTables.empty()) {
     EmitDeferredVTables();
 
-    // Emitting a vtable doesn't directly cause more vtables to
+    // Emitting a v-table doesn't directly cause more v-tables to
     // become deferred, although it can cause functions to be
-    // emitted that then need those vtables.
+    // emitted that then need those v-tables.
     assert(DeferredVTables.empty());
   }
 
-  // Stop if we're out of both deferred vtables and deferred declarations.
+  // Stop if we're out of both deferred v-tables and deferred declarations.
   if (DeferredDeclsToEmit.empty())
     return;
 
@@ -1695,7 +1696,7 @@ void CodeGenModule::CompleteDIClassType(const CXXMethodDecl* D) {
     return;
 
   if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo) {
+    if (getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo) {
       const auto *ThisPtr = cast<PointerType>(D->getThisType(getContext()));
       DI->getOrCreateRecordType(ThisPtr->getPointeeType(), D->getLocation());
     }
@@ -2499,7 +2500,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // Emit global variable debug information.
   if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
+    if (getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo)
       DI->EmitGlobalVariable(GV, D);
 }
 
@@ -3657,7 +3658,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     ObjCRuntime->GenerateClass(OMD);
     // Emit global variable debug information.
     if (CGDebugInfo *DI = getModuleDebugInfo())
-      if (getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
+      if (getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo)
         DI->getOrCreateInterfaceType(getContext().getObjCInterfaceType(
             OMD->getClassInterface()), OMD->getLocation());
     break;

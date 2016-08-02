@@ -44,8 +44,6 @@ FunctionPass *createAArch64A53Fix835769();
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
-
-void initializeAArch64ExpandPseudoPass(PassRegistry&);
 } // end namespace llvm
 
 #endif

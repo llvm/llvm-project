@@ -15,11 +15,9 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -65,31 +63,6 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
 
   // Check if the only use is a function return node.
   return isUsedByReturnOnly(Node, Chain);
-}
-
-bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
-    const uint32_t *CallerPreservedMask,
-    const SmallVectorImpl<CCValAssign> &ArgLocs,
-    const SmallVectorImpl<SDValue> &OutVals) const {
-  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
-    const CCValAssign &ArgLoc = ArgLocs[I];
-    if (!ArgLoc.isRegLoc())
-      continue;
-    unsigned Reg = ArgLoc.getLocReg();
-    // Only look at callee saved registers.
-    if (MachineOperand::clobbersPhysReg(CallerPreservedMask, Reg))
-      continue;
-    // Check that we pass the value used for the caller.
-    // (We look for a CopyFromReg reading a virtual register that is used
-    //  for the function live-in value of register Reg)
-    SDValue Value = OutVals[I];
-    if (Value->getOpcode() != ISD::CopyFromReg)
-      return false;
-    unsigned ArgReg = cast<RegisterSDNode>(Value->getOperand(1))->getReg();
-    if (MRI.getLiveInPhysReg(ArgReg) != Reg)
-      return false;
-  }
-  return true;
 }
 
 /// \brief Set CallLoweringInfo attribute flags based on a call instruction
@@ -3116,102 +3089,6 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
   Result = DAG.getSelectCC(dl, Exponent, DAG.getConstant(0, dl, IntVT),
       DAG.getConstant(0, dl, NVT), Ret, ISD::SETLT);
   return true;
-}
-
-SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
-                                            SelectionDAG &DAG) const {
-  SDLoc SL(LD);
-  SDValue Chain = LD->getChain();
-  SDValue BasePTR = LD->getBasePtr();
-  EVT SrcVT = LD->getMemoryVT();
-  ISD::LoadExtType ExtType = LD->getExtensionType();
-
-  unsigned NumElem = SrcVT.getVectorNumElements();
-
-  EVT SrcEltVT = SrcVT.getScalarType();
-  EVT DstEltVT = LD->getValueType(0).getScalarType();
-
-  unsigned Stride = SrcEltVT.getSizeInBits() / 8;
-  assert(SrcEltVT.isByteSized());
-
-  EVT PtrVT = BasePTR.getValueType();
-
-  SmallVector<SDValue, 8> Vals;
-  SmallVector<SDValue, 8> LoadChains;
-
-  for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
-    SDValue ScalarLoad = DAG.getExtLoad(
-      ExtType, SL, DstEltVT,
-      Chain, BasePTR, LD->getPointerInfo().getWithOffset(Idx * Stride),
-      SrcEltVT,
-      LD->isVolatile(), LD->isNonTemporal(), LD->isInvariant(),
-      MinAlign(LD->getAlignment(), Idx * Stride), LD->getAAInfo());
-
-    BasePTR = DAG.getNode(ISD::ADD, SL, PtrVT, BasePTR,
-                          DAG.getConstant(Stride, SL, PtrVT));
-
-    Vals.push_back(ScalarLoad.getValue(0));
-    LoadChains.push_back(ScalarLoad.getValue(1));
-  }
-
-  SDValue NewChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoadChains);
-  SDValue Value = DAG.getNode(ISD::BUILD_VECTOR, SL, LD->getValueType(0), Vals);
-
-  return DAG.getMergeValues({ Value, NewChain }, SL);
-}
-
-// FIXME: This relies on each element having a byte size, otherwise the stride
-// is 0 and just overwrites the same location. ExpandStore currently expects
-// this broken behavior.
-SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
-                                             SelectionDAG &DAG) const {
-  SDLoc SL(ST);
-
-  SDValue Chain = ST->getChain();
-  SDValue BasePtr = ST->getBasePtr();
-  SDValue Value = ST->getValue();
-  EVT StVT = ST->getMemoryVT();
-
-  unsigned Alignment = ST->getAlignment();
-  bool isVolatile = ST->isVolatile();
-  bool isNonTemporal = ST->isNonTemporal();
-  AAMDNodes AAInfo = ST->getAAInfo();
-
-  // The type of the data we want to save
-  EVT RegVT = Value.getValueType();
-  EVT RegSclVT = RegVT.getScalarType();
-
-  // The type of data as saved in memory.
-  EVT MemSclVT = StVT.getScalarType();
-
-  EVT PtrVT = BasePtr.getValueType();
-
-  // Store Stride in bytes
-  unsigned Stride = MemSclVT.getSizeInBits() / 8;
-  EVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
-  unsigned NumElem = StVT.getVectorNumElements();
-
-  // Extract each of the elements from the original vector and save them into
-  // memory individually.
-  SmallVector<SDValue, 8> Stores;
-  for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
-    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, RegSclVT, Value,
-                              DAG.getConstant(Idx, SL, IdxVT));
-
-    SDValue Ptr = DAG.getNode(ISD::ADD, SL, PtrVT, BasePtr,
-                              DAG.getConstant(Idx * Stride, SL, PtrVT));
-
-    // This scalar TruncStore may be illegal, but we legalize it later.
-    SDValue Store = DAG.getTruncStore(
-      Chain, SL, Elt, Ptr,
-      ST->getPointerInfo().getWithOffset(Idx * Stride), MemSclVT,
-      isVolatile, isNonTemporal, MinAlign(Alignment, Idx * Stride),
-      AAInfo);
-
-    Stores.push_back(Store);
-  }
-
-  return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, Stores);
 }
 
 //===----------------------------------------------------------------------===//

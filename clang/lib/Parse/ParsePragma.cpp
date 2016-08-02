@@ -824,7 +824,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
-                      .Default(false) || OptionUnroll;
+                      .Case("unroll", true)
+                      .Default(false);
   }
 
   // Verify loop hint has an argument.
@@ -840,14 +841,10 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     ConsumeToken(); // The annotation token.
     SourceLocation StateLoc = Toks[0].getLocation();
     IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
-
-    bool Valid = StateInfo &&
-                 llvm::StringSwitch<bool>(StateInfo->getName())
-                     .Cases("enable", "disable", true)
-                     .Case("full", OptionUnroll)
-                     .Case("assume_safety", !OptionUnroll)
-                     .Default(false);
-    if (!Valid) {
+    if (!StateInfo ||
+        (!StateInfo->isStr("enable") && !StateInfo->isStr("disable") &&
+         ((OptionUnroll && !StateInfo->isStr("full")) ||
+          (!OptionUnroll && !StateInfo->isStr("assume_safety"))))) {
       Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
           << /*FullKeyword=*/OptionUnroll;
       return false;

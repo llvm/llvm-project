@@ -31,7 +31,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
@@ -89,7 +88,6 @@ namespace {
       (void) llvm::createPGOInstrumentationGenPass();
       (void) llvm::createPGOInstrumentationUsePass();
       (void) llvm::createInstrProfilingPass();
-      (void) llvm::createPGOIndirectCallPromotionPass();
       (void) llvm::createFunctionImportPass();
       (void) llvm::createFunctionInliningPass();
       (void) llvm::createAlwaysInlinerPass();
@@ -192,9 +190,7 @@ namespace {
       (void)new llvm::ScalarEvolutionWrapperPass();
       llvm::Function::Create(nullptr, llvm::GlobalValue::ExternalLinkage)->viewCFGOnly();
       llvm::RGPassManager RGM;
-      llvm::TargetLibraryInfoImpl TLII;
-      llvm::TargetLibraryInfo TLI(TLII);
-      llvm::AliasAnalysis AA(TLI);
+      llvm::AliasAnalysis AA;
       llvm::AliasSetTracker X(AA);
       X.add(nullptr, 0, llvm::AAMDNodes()); // for -print-alias-sets
       (void) llvm::AreStatisticsEnabled();

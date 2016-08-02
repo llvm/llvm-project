@@ -86,10 +86,10 @@ namespace ISD {
     void setInAlloca() { Flags |= One << InAllocaOffs; }
 
     bool isSwiftSelf() const { return Flags & SwiftSelf; }
-    void setSwiftSelf() { Flags |= One << SwiftSelfOffs; }
+    void setSwiftSelf() { Flags = One << SwiftSelfOffs; }
 
     bool isSwiftError() const { return Flags & SwiftError; }
-    void setSwiftError() { Flags |= One << SwiftErrorOffs; }
+    void setSwiftError() { Flags = One << SwiftErrorOffs; }
 
     bool isNest()      const { return Flags & Nest; }
     void setNest()     { Flags |= One << NestOffs; }

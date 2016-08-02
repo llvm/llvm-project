@@ -76,10 +76,6 @@ STATISTIC(NumExpand,    "Number of expansions");
 STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
 
-static cl::opt<bool>
-EnableExpensiveCombines("expensive-combines",
-                        cl::desc("Enable expensive instruction combines"));
-
 Value *InstCombiner::EmitGEPOffset(User *GEP) {
   return llvm::EmitGEPOffset(Builder, DL, GEP);
 }
@@ -2756,9 +2752,9 @@ bool InstCombiner::run() {
       }
     }
 
-    // In general, it is possible for computeKnownBits to determine all bits in
-    // a value even when the operands are not all constants.
-    if (ExpensiveCombines && !I->use_empty() && I->getType()->isIntegerTy()) {
+    // In general, it is possible for computeKnownBits to determine all bits in a
+    // value even when the operands are not all constants.
+    if (!I->use_empty() && I->getType()->isIntegerTy()) {
       unsigned BitWidth = I->getType()->getScalarSizeInBits();
       APInt KnownZero(BitWidth, 0);
       APInt KnownOne(BitWidth, 0);
@@ -3006,7 +3002,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   // Do a depth-first traversal of the function, populate the worklist with
   // the reachable instructions.  Ignore blocks that are not reachable.  Keep
   // track of which blocks we visit.
-  SmallPtrSet<BasicBlock *, 32> Visited;
+  SmallPtrSet<BasicBlock *, 64> Visited;
   MadeIRChange |=
       AddReachableCodeToWorklist(&F.front(), DL, Visited, ICWorklist, TLI);
 
@@ -3044,14 +3040,12 @@ static bool
 combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
                                 AliasAnalysis *AA, AssumptionCache &AC,
                                 TargetLibraryInfo &TLI, DominatorTree &DT,
-                                bool ExpensiveCombines = true,
                                 LoopInfo *LI = nullptr) {
   auto &DL = F.getParent()->getDataLayout();
-  ExpensiveCombines |= EnableExpensiveCombines;
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
-  IRBuilder<TargetFolder, InstCombineIRInserter> Builder(
+  IRBuilder<true, TargetFolder, InstCombineIRInserter> Builder(
       F.getContext(), TargetFolder(DL), InstCombineIRInserter(Worklist, &AC));
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
@@ -3069,7 +3063,7 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
     if (prepareICWorklistFromFunction(F, DL, &TLI, Worklist))
       Changed = true;
 
-    InstCombiner IC(Worklist, &Builder, F.optForMinSize(), ExpensiveCombines,
+    InstCombiner IC(Worklist, &Builder, F.optForMinSize(),
                     AA, &AC, &TLI, &DT, DL, LI);
     if (IC.run())
       Changed = true;
@@ -3090,8 +3084,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto *LI = AM->getCachedResult<LoopAnalysis>(F);
 
   // FIXME: The AliasAnalysis is not yet supported in the new pass manager
-  if (!combineInstructionsOverFunction(F, Worklist, nullptr, AC, TLI, DT,
-                                       ExpensiveCombines, LI))
+  if (!combineInstructionsOverFunction(F, Worklist, nullptr, AC, TLI, DT, LI))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -3109,13 +3102,11 @@ namespace {
 /// will try to combine all instructions in the function.
 class InstructionCombiningPass : public FunctionPass {
   InstCombineWorklist Worklist;
-  const bool ExpensiveCombines;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  InstructionCombiningPass(bool ExpensiveCombines = true)
-      : FunctionPass(ID), ExpensiveCombines(ExpensiveCombines) {
+  InstructionCombiningPass() : FunctionPass(ID) {
     initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -3148,8 +3139,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
 
-  return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, DT,
-                                         ExpensiveCombines, LI);
+  return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, DT, LI);
 }
 
 char InstructionCombiningPass::ID = 0;
@@ -3172,6 +3162,6 @@ void LLVMInitializeInstCombine(LLVMPassRegistryRef R) {
   initializeInstructionCombiningPassPass(*unwrap(R));
 }
 
-FunctionPass *llvm::createInstructionCombiningPass(bool ExpensiveCombines) {
-  return new InstructionCombiningPass(ExpensiveCombines);
+FunctionPass *llvm::createInstructionCombiningPass() {
+  return new InstructionCombiningPass();
 }

@@ -23,7 +23,6 @@
 
 namespace clang {
   class ASTContext;
-  class CXXCtorInitializer;
   class Decl;
   class DeclContext;
   class DiagnosticsEngine;
@@ -205,14 +204,6 @@ namespace clang {
     /// \returns the equivalent file ID in the source manager of the "to"
     /// context.
     FileID Import(FileID);
-
-    /// \brief Import the given C++ constructor initializer from the "from"
-    /// context into the "to" context.
-    ///
-    /// \returns the equivalent initializer in the "to" context.
-    CXXCtorInitializer *Import(CXXCtorInitializer *FromInit);
-
-
     
     /// \brief Import the definition of the given declaration, including all of
     /// the declarations it contains.

@@ -40,7 +40,6 @@ class BasicAAResult : public AAResultBase<BasicAAResult> {
   friend AAResultBase<BasicAAResult>;
 
   const DataLayout &DL;
-  const TargetLibraryInfo &TLI;
   AssumptionCache &AC;
   DominatorTree *DT;
   LoopInfo *LI;
@@ -49,14 +48,13 @@ public:
   BasicAAResult(const DataLayout &DL, const TargetLibraryInfo &TLI,
                 AssumptionCache &AC, DominatorTree *DT = nullptr,
                 LoopInfo *LI = nullptr)
-      : AAResultBase(), DL(DL), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
+      : AAResultBase(TLI), DL(DL), AC(AC), DT(DT), LI(LI) {}
 
   BasicAAResult(const BasicAAResult &Arg)
-      : AAResultBase(Arg), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
-        LI(Arg.LI) {}
+      : AAResultBase(Arg), DL(Arg.DL), AC(Arg.AC), DT(Arg.DT), LI(Arg.LI) {}
   BasicAAResult(BasicAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC),
-        DT(Arg.DT), LI(Arg.LI) {}
+      : AAResultBase(std::move(Arg)), DL(Arg.DL), AC(Arg.AC), DT(Arg.DT),
+        LI(Arg.LI) {}
 
   /// Handle invalidation events from the new pass manager.
   ///

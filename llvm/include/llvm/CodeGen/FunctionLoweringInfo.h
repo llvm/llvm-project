@@ -81,19 +81,17 @@ public:
 
   /// Track the virtual register for each swifterror value in a given basic
   /// block. Entries in SwiftErrorVRegs have the same ordering as entries
-  /// in SwiftErrorVals.
+  /// in SwiftErrorValues.
   /// Note that another choice that is more straight-forward is to use
   /// Map<const MachineBasicBlock*, Map<Value*, unsigned/*VReg*/>>. It
   /// maintains a map from swifterror values to virtual registers for each
   /// machine basic block. This choice does not require a one-to-one
-  /// correspondence between SwiftErrorValues and SwiftErrorVRegs. But because
-  /// of efficiency concern, we do not choose it.
+  /// corresponse between SwiftErrorValues and SwiftErrorVRegs. But because of
+  /// efficiency concern, we do not choose it.
   llvm::DenseMap<const MachineBasicBlock*, SwiftErrorVRegs> SwiftErrorMap;
 
-  /// Track the virtual register for each swifterror value at the end of a basic
-  /// block when we need the assignment of a virtual register before the basic
-  /// block is visited. When we actually visit the basic block, we will make
-  /// sure the swifterror value is in the correct virtual register.
+  /// Track the virtual register for a swifterror value at the end of a basic
+  /// block when the basic block is not yet visited.
   llvm::DenseMap<const MachineBasicBlock*, SwiftErrorVRegs>
       SwiftErrorWorklist;
 

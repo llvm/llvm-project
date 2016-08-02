@@ -894,95 +894,11 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return RetCode;
 }
 
-bool llvm::UpgradeModuleFlags(Module &M) {
-  const NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
-  if (!ModFlags)
-    return false;
-
-  bool HasObjCFlag = false, HasClassProperties = false;
-  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
-    MDNode *Op = ModFlags->getOperand(I);
-    if (Op->getNumOperands() < 2)
-      continue;
-    MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
-    if (!ID)
-      continue;
-    if (ID->getString() == "Objective-C Image Info Version")
-      HasObjCFlag = true;
-    if (ID->getString() == "Objective-C Class Properties")
-      HasClassProperties = true;
+void llvm::UpgradeMDStringConstant(std::string &String) {
+  const std::string OldPrefix = "llvm.vectorizer.";
+  if (String == "llvm.vectorizer.unroll") {
+    String = "llvm.loop.interleave.count";
+  } else if (String.find(OldPrefix) == 0) {
+    String.replace(0, OldPrefix.size(), "llvm.loop.vectorize.");
   }
-  // "Objective-C Class Properties" is recently added for Objective-C. We
-  // upgrade ObjC bitcodes to contain a "Objective-C Class Properties" module
-  // flag of value 0, so we can correclty report error when trying to link
-  // an ObjC bitcode without this module flag with an ObjC bitcode with this
-  // module flag.
-  if (HasObjCFlag && !HasClassProperties) {
-    M.addModuleFlag(llvm::Module::Error, "Objective-C Class Properties",
-                    (uint32_t)0);
-    return true;
-  }
-  return false;
-}
-
-static bool isOldLoopArgument(Metadata *MD) {
-  auto *T = dyn_cast_or_null<MDTuple>(MD);
-  if (!T)
-    return false;
-  if (T->getNumOperands() < 1)
-    return false;
-  auto *S = dyn_cast_or_null<MDString>(T->getOperand(0));
-  if (!S)
-    return false;
-  return S->getString().startswith("llvm.vectorizer.");
-}
-
-static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
-  StringRef OldPrefix = "llvm.vectorizer.";
-  assert(OldTag.startswith(OldPrefix) && "Expected old prefix");
-
-  if (OldTag == "llvm.vectorizer.unroll")
-    return MDString::get(C, "llvm.loop.interleave.count");
-
-  return MDString::get(
-      C, (Twine("llvm.loop.vectorize.") + OldTag.drop_front(OldPrefix.size()))
-             .str());
-}
-
-static Metadata *upgradeLoopArgument(Metadata *MD) {
-  auto *T = dyn_cast_or_null<MDTuple>(MD);
-  if (!T)
-    return MD;
-  if (T->getNumOperands() < 1)
-    return MD;
-  auto *OldTag = dyn_cast_or_null<MDString>(T->getOperand(0));
-  if (!OldTag)
-    return MD;
-  if (!OldTag->getString().startswith("llvm.vectorizer."))
-    return MD;
-
-  // This has an old tag.  Upgrade it.
-  SmallVector<Metadata *, 8> Ops;
-  Ops.reserve(T->getNumOperands());
-  Ops.push_back(upgradeLoopTag(T->getContext(), OldTag->getString()));
-  for (unsigned I = 1, E = T->getNumOperands(); I != E; ++I)
-    Ops.push_back(T->getOperand(I));
-
-  return MDTuple::get(T->getContext(), Ops);
-}
-
-MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
-  auto *T = dyn_cast<MDTuple>(&N);
-  if (!T)
-    return &N;
-
-  if (!llvm::any_of(T->operands(), isOldLoopArgument))
-    return &N;
-
-  SmallVector<Metadata *, 8> Ops;
-  Ops.reserve(T->getNumOperands());
-  for (Metadata *MD : T->operands())
-    Ops.push_back(upgradeLoopArgument(MD));
-
-  return MDTuple::get(T->getContext(), Ops);
 }

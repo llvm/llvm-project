@@ -103,7 +103,7 @@ namespace bad_args {
 namespace default_args {
 #ifdef CPP11ONLY
 namespace lambdas {
-template<int I = ([] { return 5; }())> //expected-error {{constant expression}}
+template<int I = ([] { return 5; }())> //expected-error 2{{constant expression}} expected-note{{constant expression}}
 int f();
 }
 #endif // CPP11ONLY

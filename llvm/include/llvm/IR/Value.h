@@ -106,11 +106,10 @@ protected:
   enum : unsigned { NumUserOperandsBits = 28 };
   unsigned NumUserOperands : NumUserOperandsBits;
 
-  // Use the same type as the bitfield above so that MSVC will pack them.
-  unsigned IsUsedByMD : 1;
-  unsigned HasName : 1;
-  unsigned HasHungOffUses : 1;
-  unsigned HasDescriptor : 1;
+  bool IsUsedByMD : 1;
+  bool HasName : 1;
+  bool HasHungOffUses : 1;
+  bool HasDescriptor : 1;
 
 private:
   template <typename UseT> // UseT == 'Use' or 'const Use'
@@ -281,7 +280,11 @@ public:
   // when using them since you might not get all uses.
   // The methods that don't start with materialized_ assert that modules is
   // fully materialized.
+#ifdef NDEBUG
+  void assertModuleIsMaterialized() const {}
+#else
   void assertModuleIsMaterialized() const;
+#endif
 
   bool use_empty() const {
     assertModuleIsMaterialized();

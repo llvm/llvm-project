@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -350,18 +349,14 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     AttachDependencyGraphGen(*PP, DepOpts.DOTOutputFile,
                              getHeaderSearchOpts().Sysroot);
 
-  // If we don't have a collector, but we are collecting module dependencies,
-  // then we're the top level compiler instance and need to create one.
-  if (!ModuleDepCollector && !DepOpts.ModuleDependencyOutputDir.empty()) {
-    ModuleDepCollector = std::make_shared<ModuleDependencyCollector>(
-        DepOpts.ModuleDependencyOutputDir);
-  }
-
-  if (ModuleDepCollector)
-    addDependencyCollector(ModuleDepCollector);
-
   for (auto &Listener : DependencyCollectors)
     Listener->attachToPreprocessor(*PP);
+
+  // If we don't have a collector, but we are collecting module dependencies,
+  // then we're the top level compiler instance and need to create one.
+  if (!ModuleDepCollector && !DepOpts.ModuleDependencyOutputDir.empty())
+    ModuleDepCollector = std::make_shared<ModuleDependencyCollector>(
+        DepOpts.ModuleDependencyOutputDir);
 
   // Handle generating header include information, if requested.
   if (DepOpts.ShowHeaderIncludes)
@@ -536,24 +531,6 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
-
-  // If we're building a module, notify the API notes manager.
-  StringRef currentModuleName = getLangOpts().CurrentModule;
-  if (!currentModuleName.empty()) {
-    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
-            currentModuleName,
-            getAPINotesOpts().ModuleSearchPaths);
-    // Check for any attributes we should add to the module
-    if (auto curReader = TheSema->APINotes.getCurrentModuleReader()) {
-      auto currentModule = getPreprocessor().getCurrentModule();
-      assert(currentModule && "how can we have a reader for it?");
-
-      // swift_infer_import_as_member
-      if (curReader->getModuleOptions().SwiftInferImportAsMember) {
-        currentModule->IsSwiftInferImportAsMember = true;
-      }
-    }
-  }
 }
 
 // Output Files
@@ -1073,7 +1050,7 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
     switch (Locked) {
     case llvm::LockFileManager::LFS_Error:
       Diags.Report(ModuleNameLoc, diag::err_module_lock_failure)
-          << Module->Name << Locked.getErrorMessage();
+          << Module->Name;
       return false;
 
     case llvm::LockFileManager::LFS_Owned:
@@ -1313,6 +1290,8 @@ void CompilerInstance::createModuleManager() {
 
     if (TheDependencyFileGenerator)
       TheDependencyFileGenerator->AttachToASTReader(*ModuleManager);
+    if (ModuleDepCollector)
+      ModuleDepCollector->attachToASTReader(*ModuleManager);
     for (auto &Listener : DependencyCollectors)
       Listener->attachToASTReader(*ModuleManager);
   }

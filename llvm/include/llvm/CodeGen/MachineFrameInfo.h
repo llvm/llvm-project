@@ -122,17 +122,11 @@ class MachineFrameInfo {
     // arguments have ABI-prescribed offsets).
     bool isAliased;
 
-    /// If true, the object has been zero-extended.
-    bool isZExt;
-
-    /// If true, the object has been zero-extended.
-    bool isSExt;
-
     StackObject(uint64_t Sz, unsigned Al, int64_t SP, bool IM,
                 bool isSS, const AllocaInst *Val, bool A)
       : SPOffset(SP), Size(Sz), Alignment(Al), isImmutable(IM),
         isSpillSlot(isSS), isStatepointSpillSlot(false), Alloca(Val),
-        PreAllocated(false), isAliased(A), isZExt(false), isSExt(false) {}
+        PreAllocated(false), isAliased(A) {}
   };
 
   /// The alignment of the stack.
@@ -454,30 +448,6 @@ public:
     assert(!isDeadObjectIndex(ObjectIdx) &&
            "Getting frame offset for a dead object?");
     return Objects[ObjectIdx+NumFixedObjects].SPOffset;
-  }
-
-  bool isObjectZExt(int ObjectIdx) const {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    return Objects[ObjectIdx+NumFixedObjects].isZExt;
-  }
-
-  void setObjectZExt(int ObjectIdx, bool IsZExt) {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    Objects[ObjectIdx+NumFixedObjects].isZExt = IsZExt;
-  }
-
-  bool isObjectSExt(int ObjectIdx) const {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    return Objects[ObjectIdx+NumFixedObjects].isSExt;
-  }
-
-  void setObjectSExt(int ObjectIdx, bool IsSExt) {
-    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
-           "Invalid Object Idx!");
-    Objects[ObjectIdx+NumFixedObjects].isSExt = IsSExt;
   }
 
   /// Set the stack frame offset of the specified object. The

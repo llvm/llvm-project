@@ -84,11 +84,7 @@ int convertForTestingMain(int argc, const char *argv[]) {
   OS << "llvmcovmtestdata";
   encodeULEB128(ProfileNamesData.size(), OS);
   encodeULEB128(ProfileNamesAddress, OS);
-  OS << ProfileNamesData;
-  // Coverage mapping data is expected to have an alignment of 8.
-  for (unsigned Pad = OffsetToAlignment(OS.tell(), 8); Pad; --Pad)
-    OS.write(uint8_t(0));
-  OS << CoverageMappingData;
+  OS << ProfileNamesData << CoverageMappingData;
 
   return 0;
 }

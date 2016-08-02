@@ -9,13 +9,13 @@
 
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
 
-namespace llvm {
-namespace orc {
-namespace remote {
-
 #define PROCNAME(X) \
   case X ## Id: \
   return #X
+
+namespace llvm {
+namespace orc {
+namespace remote {
 
 const char *OrcRemoteTargetRPCAPI::getJITProcIdName(JITProcId Id) {
   switch (Id) {
@@ -55,9 +55,6 @@ const char *OrcRemoteTargetRPCAPI::getJITProcIdName(JITProcId Id) {
   };
   return nullptr;
 }
-
-#undef PROCNAME
-
-} // end namespace remote
-} // end namespace orc
-} // end namespace llvm
+}
+}
+}

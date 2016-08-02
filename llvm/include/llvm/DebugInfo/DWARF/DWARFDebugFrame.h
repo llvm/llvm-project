@@ -19,13 +19,11 @@ namespace llvm {
 
 class FrameEntry;
 
-/// \brief A parsed .debug_frame or .eh_frame section
+/// \brief A parsed .debug_frame section
 ///
 class DWARFDebugFrame {
-  // True if this is parsing an eh_frame section.
-  bool IsEH;
 public:
-  DWARFDebugFrame(bool IsEH);
+  DWARFDebugFrame();
   ~DWARFDebugFrame();
 
   /// \brief Dump the section data into the given stream.

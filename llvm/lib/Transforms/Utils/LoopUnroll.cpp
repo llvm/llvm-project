@@ -44,9 +44,9 @@ using namespace llvm;
 STATISTIC(NumCompletelyUnrolled, "Number of loops completely unrolled");
 STATISTIC(NumUnrolled, "Number of loops unrolled (completely or otherwise)");
 
-/// Convert the instruction operands from referencing the current values into
-/// those specified by VMap.
-static inline void remapInstruction(Instruction *I,
+/// RemapInstruction - Convert the instruction operands from referencing the
+/// current values into those specified by VMap.
+static inline void RemapInstruction(Instruction *I,
                                     ValueToValueMapTy &VMap) {
   for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
     Value *Op = I->getOperand(op);
@@ -73,9 +73,8 @@ static inline void remapInstruction(Instruction *I,
 /// of loops that have already been forgotten to prevent redundant, expensive
 /// calls to ScalarEvolution::forgetLoop.  Returns the new combined block.
 static BasicBlock *
-foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
-                         SmallPtrSetImpl<Loop *> &ForgottenLoops,
-                         DominatorTree *DT) {
+FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, ScalarEvolution *SE,
+                         SmallPtrSetImpl<Loop *> &ForgottenLoops) {
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
   // if there are no PHI nodes.
@@ -107,16 +106,7 @@ foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
   // OldName will be valid until erased.
   StringRef OldName = BB->getName();
 
-  // Erase the old block and update dominator info.
-  if (DT)
-    if (DomTreeNode *DTN = DT->getNode(BB)) {
-      DomTreeNode *PredDTN = DT->getNode(OnlyPred);
-      SmallVector<DomTreeNode *, 8> Children(DTN->begin(), DTN->end());
-      for (auto *DI : Children)
-        DT->changeImmediateDominator(DI, PredDTN);
-
-      DT->eraseNode(BB);
-    }
+  // Erase basic block from the function...
 
   // ScalarEvolution holds references to loop exit blocks.
   if (SE) {
@@ -134,35 +124,6 @@ foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
   BB->eraseFromParent();
 
   return OnlyPred;
-}
-
-/// Check if unrolling created a situation where we need to insert phi nodes to
-/// preserve LCSSA form.
-/// \param Blocks is a vector of basic blocks representing unrolled loop.
-/// \param L is the outer loop.
-/// It's possible that some of the blocks are in L, and some are not. In this
-/// case, if there is a use is outside L, and definition is inside L, we need to
-/// insert a phi-node, otherwise LCSSA will be broken.
-/// The function is just a helper function for llvm::UnrollLoop that returns
-/// true if this situation occurs, indicating that LCSSA needs to be fixed.
-static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
-                                     LoopInfo *LI) {
-  for (BasicBlock *BB : Blocks) {
-    if (LI->getLoopFor(BB) == L)
-      continue;
-    for (Instruction &I : *BB) {
-      for (Use &U : I.operands()) {
-        if (auto Def = dyn_cast<Instruction>(U)) {
-          Loop *DefLoop = LI->getLoopFor(Def->getParent());
-          if (!DefLoop)
-            continue;
-          if (DefLoop->contains(L))
-            return true;
-        }
-      }
-    }
-  }
-  return false;
 }
 
 /// Unroll the given loop by Count. The loop must be in LCSSA form. Returns true
@@ -257,17 +218,10 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   bool CompletelyUnroll = Count == TripCount;
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock*> OriginalLoopBlocks = L->getBlocks();
-
-  // Go through all exits of L and see if there are any phi-nodes there. We just
-  // conservatively assume that they're inserted to preserve LCSSA form, which
-  // means that complete unrolling might break this form. We need to either fix
-  // it in-place after the transformation, or entirely rebuild LCSSA. TODO: For
-  // now we just recompute LCSSA for the outer loop, but it should be possible
-  // to fix it in-place.
-  bool NeedToFixLCSSA = PreserveLCSSA && CompletelyUnroll &&
-      std::any_of(ExitBlocks.begin(), ExitBlocks.end(),
-                  [&](BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
+  Loop *ParentL = L->getParentLoop();
+  bool AllExitsAreInsideParentLoop = !ParentL ||
+      std::all_of(ExitBlocks.begin(), ExitBlocks.end(),
+                  [&](BasicBlock *BB) { return ParentL->contains(BB); });
 
   // We assume a run-time trip count if the compiler cannot
   // figure out the loop trip count and the unroll-runtime
@@ -354,7 +308,6 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   LoopBlocksDFS::RPOIterator BlockBegin = DFS.beginRPO();
   LoopBlocksDFS::RPOIterator BlockEnd = DFS.endRPO();
 
-  std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
   for (unsigned It = 1; It != Count; ++It) {
     std::vector<BasicBlock*> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -396,13 +349,13 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       if (*BB == Header)
         // Loop over all of the PHI nodes in the block, changing them to use
         // the incoming values from the previous block.
-        for (PHINode *OrigPHI : OrigPHINode) {
-          PHINode *NewPHI = cast<PHINode>(VMap[OrigPHI]);
+        for (unsigned i = 0, e = OrigPHINode.size(); i != e; ++i) {
+          PHINode *NewPHI = cast<PHINode>(VMap[OrigPHINode[i]]);
           Value *InVal = NewPHI->getIncomingValueForBlock(LatchBlock);
           if (Instruction *InValI = dyn_cast<Instruction>(InVal))
             if (It > 1 && L->contains(InValI))
               InVal = LastValueMap[InValI];
-          VMap[OrigPHI] = InVal;
+          VMap[OrigPHINode[i]] = InVal;
           New->getInstList().erase(NewPHI);
         }
 
@@ -413,10 +366,11 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         LastValueMap[VI->first] = VI->second;
 
       // Add phi entries for newly created values to all exit blocks.
-      for (BasicBlock *Succ : successors(*BB)) {
-        if (L->contains(Succ))
+      for (succ_iterator SI = succ_begin(*BB), SE = succ_end(*BB);
+           SI != SE; ++SI) {
+        if (L->contains(*SI))
           continue;
-        for (BasicBlock::iterator BBI = Succ->begin();
+        for (BasicBlock::iterator BBI = (*SI)->begin();
              PHINode *phi = dyn_cast<PHINode>(BBI); ++BBI) {
           Value *Incoming = phi->getIncomingValueForBlock(*BB);
           ValueToValueMapTy::iterator It = LastValueMap.find(Incoming);
@@ -433,33 +387,18 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         Latches.push_back(New);
 
       NewBlocks.push_back(New);
-      UnrolledLoopBlocks.push_back(New);
-
-      // Update DomTree: since we just copy the loop body, and each copy has a
-      // dedicated entry block (copy of the header block), this header's copy
-      // dominates all copied blocks. That means, dominance relations in the
-      // copied body are the same as in the original body.
-      if (DT) {
-        if (*BB == Header)
-          DT->addNewBlock(New, Latches[It - 1]);
-        else {
-          auto BBDomNode = DT->getNode(*BB);
-          auto BBIDom = BBDomNode->getIDom();
-          BasicBlock *OriginalBBIDom = BBIDom->getBlock();
-          DT->addNewBlock(
-              New, cast<BasicBlock>(LastValueMap[cast<Value>(OriginalBBIDom)]));
-        }
-      }
     }
 
     // Remap all instructions in the most recent iteration
-    for (BasicBlock *NewBlock : NewBlocks)
-      for (Instruction &I : *NewBlock)
-        ::remapInstruction(&I, LastValueMap);
+    for (unsigned i = 0; i < NewBlocks.size(); ++i)
+      for (BasicBlock::iterator I = NewBlocks[i]->begin(),
+           E = NewBlocks[i]->end(); I != E; ++I)
+        ::RemapInstruction(&*I, LastValueMap);
   }
 
   // Loop over the PHI nodes in the original block, setting incoming values.
-  for (PHINode *PN : OrigPHINode) {
+  for (unsigned i = 0, e = OrigPHINode.size(); i != e; ++i) {
+    PHINode *PN = OrigPHINode[i];
     if (CompletelyUnroll) {
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       Header->getInstList().erase(PN);
@@ -514,10 +453,11 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       // Remove phi operands at this loop exit
       if (Dest != LoopExit) {
         BasicBlock *BB = Latches[i];
-        for (BasicBlock *Succ: successors(BB)) {
-          if (Succ == Headers[i])
+        for (succ_iterator SI = succ_begin(BB), SE = succ_end(BB);
+             SI != SE; ++SI) {
+          if (*SI == Headers[i])
             continue;
-          for (BasicBlock::iterator BBI = Succ->begin();
+          for (BasicBlock::iterator BBI = (*SI)->begin();
                PHINode *Phi = dyn_cast<PHINode>(BBI); ++BBI) {
             Phi->removeIncomingValue(BB, false);
           }
@@ -528,43 +468,16 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       Term->eraseFromParent();
     }
   }
-  // Update dominators of blocks we might reach through exits.
-  // Immediate dominator of such block might change, because we add more
-  // routes which can lead to the exit: we can now reach it from the copied
-  // iterations too. Thus, the new idom of the block will be the nearest
-  // common dominator of the previous idom and common dominator of all copies of
-  // the previous idom. This is equivalent to the nearest common dominator of
-  // the previous idom and the first latch, which dominates all copies of the
-  // previous idom.
-  if (DT && Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
-      auto *BBDomNode = DT->getNode(BB);
-      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
-      for (auto *ChildDomNode : BBDomNode->getChildren()) {
-        auto *ChildBB = ChildDomNode->getBlock();
-        if (!L->contains(ChildBB))
-          ChildrenToUpdate.push_back(ChildBB);
-      }
-      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latches[0]);
-      for (auto *ChildBB : ChildrenToUpdate)
-        DT->changeImmediateDominator(ChildBB, NewIDom);
-    }
-  }
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<Loop *, 4> ForgottenLoops;
-  for (BasicBlock *Latch : Latches) {
-    BranchInst *Term = cast<BranchInst>(Latch->getTerminator());
+  for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
+    BranchInst *Term = cast<BranchInst>(Latches[i]->getTerminator());
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold =
-              foldBlockIntoPredecessor(Dest, LI, SE, ForgottenLoops, DT)) {
-        // Dest has been folded into Fold. Update our worklists accordingly.
+      if (BasicBlock *Fold = FoldBlockIntoPredecessor(Dest, LI, SE,
+                                                      ForgottenLoops))
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
-        UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),
-                                             UnrolledLoopBlocks.end(), Dest),
-                                 UnrolledLoopBlocks.end());
-      }
     }
   }
 
@@ -572,12 +485,10 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   // whole function's cache.
   AC->clear();
 
-  // FIXME: We only preserve DT info for complete unrolling now. Incrementally
-  // updating domtree after partial loop unrolling should also be easy.
-  if (DT && !CompletelyUnroll)
+  // FIXME: Reconstruct dom info, because it is not preserved properly.
+  // Incrementally updating domtree after loop unrolling would be easy.
+  if (DT)
     DT->recalculate(*L->getHeader()->getParent());
-  else
-    DEBUG(DT->verifyDomTree());
 
   // Simplify any new induction variables in the partially unrolled loop.
   if (SE && !CompletelyUnroll) {
@@ -597,16 +508,17 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   // go.
   const DataLayout &DL = Header->getModule()->getDataLayout();
   const std::vector<BasicBlock*> &NewLoopBlocks = L->getBlocks();
-  for (BasicBlock *BB : NewLoopBlocks)
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ) {
+  for (std::vector<BasicBlock*>::const_iterator BB = NewLoopBlocks.begin(),
+       BBE = NewLoopBlocks.end(); BB != BBE; ++BB)
+    for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end(); I != E; ) {
       Instruction *Inst = &*I++;
 
       if (isInstructionTriviallyDead(Inst))
-        BB->getInstList().erase(Inst);
+        (*BB)->getInstList().erase(Inst);
       else if (Value *V = SimplifyInstruction(Inst, DL))
         if (LI->replacementPreservesLCSSAForm(Inst, V)) {
           Inst->replaceAllUsesWith(V);
-          BB->getInstList().erase(Inst);
+          (*BB)->getInstList().erase(Inst);
         }
     }
 
@@ -618,17 +530,6 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   if (CompletelyUnroll)
     LI->markAsRemoved(L);
 
-  // After complete unrolling most of the blocks should be contained in OuterL.
-  // However, some of them might happen to be out of OuterL (e.g. if they
-  // precede a loop exit). In this case we might need to insert PHI nodes in
-  // order to preserve LCSSA form.
-  // We don't need to check this if we already know that we need to fix LCSSA
-  // form.
-  // TODO: For now we just recompute LCSSA for the outer loop in this case, but
-  // it should be possible to fix it in-place.
-  if (PreserveLCSSA && OuterL && CompletelyUnroll && !NeedToFixLCSSA)
-    NeedToFixLCSSA |= ::needToInsertPhisForLCSSA(OuterL, UnrolledLoopBlocks, LI);
-
   // If we have a pass and a DominatorTree we should re-simplify impacted loops
   // to ensure subsequent analyses can rely on this form. We want to simplify
   // at least one layer outside of the loop that was unrolled so that any
@@ -637,7 +538,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (!OuterL && !CompletelyUnroll)
       OuterL = L;
     if (OuterL) {
-      simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
+      bool Simplified = simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
@@ -647,7 +548,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         while (OuterL->getParentLoop() != LatchLoop)
           OuterL = OuterL->getParentLoop();
 
-      if (NeedToFixLCSSA)
+      if (CompletelyUnroll && (!AllExitsAreInsideParentLoop || Simplified))
         formLCSSARecursively(*OuterL, *DT, LI, SE);
       else
         assert(OuterL->isLCSSAForm(*DT) &&

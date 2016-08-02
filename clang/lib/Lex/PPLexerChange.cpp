@@ -622,8 +622,8 @@ void Preprocessor::HandleMicrosoftCommentPaste(Token &Tok) {
 void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc) {
   if (!getLangOpts().ModulesLocalVisibility) {
     // Just track that we entered this submodule.
-    BuildingSubmoduleStack.push_back(BuildingSubmoduleInfo(
-        M, ImportLoc, CurSubmoduleState, PendingModuleMacroNames.size()));
+    BuildingSubmoduleStack.push_back(
+        BuildingSubmoduleInfo(M, ImportLoc, CurSubmoduleState));
     return;
   }
 
@@ -664,8 +664,8 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc) {
   }
 
   // Track that we entered this module.
-  BuildingSubmoduleStack.push_back(BuildingSubmoduleInfo(
-      M, ImportLoc, CurSubmoduleState, PendingModuleMacroNames.size()));
+  BuildingSubmoduleStack.push_back(
+      BuildingSubmoduleInfo(M, ImportLoc, CurSubmoduleState));
 
   // Switch to this submodule as the current submodule.
   CurSubmoduleState = &State;
@@ -675,79 +675,42 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc) {
     makeModuleVisible(M, ImportLoc);
 }
 
-bool Preprocessor::needModuleMacros() const {
-  // If we're not within a submodule, we never need to create ModuleMacros.
-  if (BuildingSubmoduleStack.empty())
-    return false;
-  // If we are tracking module macro visibility even for textually-included
-  // headers, we need ModuleMacros.
-  if (getLangOpts().ModulesLocalVisibility)
-    return true;
-  // Otherwise, we only need module macros if we're actually compiling a module
-  // interface.
-  return !getLangOpts().CurrentModule.empty();
-}
-
 void Preprocessor::LeaveSubmodule() {
   auto &Info = BuildingSubmoduleStack.back();
 
   Module *LeavingMod = Info.M;
   SourceLocation ImportLoc = Info.ImportLoc;
 
-  if (!needModuleMacros() || 
-      (!getLangOpts().ModulesLocalVisibility &&
-       LeavingMod->getTopLevelModuleName() != getLangOpts().CurrentModule)) {
-    // If we don't need module macros, or this is not a module for which we
-    // are tracking macro visibility, don't build any, and preserve the list
-    // of pending names for the surrounding submodule.
-    BuildingSubmoduleStack.pop_back();
-    makeModuleVisible(LeavingMod, ImportLoc);
-    return;
-  }
-
   // Create ModuleMacros for any macros defined in this submodule.
-  llvm::SmallPtrSet<const IdentifierInfo*, 8> VisitedMacros;
-  for (unsigned I = Info.OuterPendingModuleMacroNames;
-       I != PendingModuleMacroNames.size(); ++I) {
-    auto *II = const_cast<IdentifierInfo*>(PendingModuleMacroNames[I]);
-    if (!VisitedMacros.insert(II).second)
-      continue;
-
-    auto MacroIt = CurSubmoduleState->Macros.find(II);
-    if (MacroIt == CurSubmoduleState->Macros.end())
-      continue;
-    auto &Macro = MacroIt->second;
+  for (auto &Macro : CurSubmoduleState->Macros) {
+    auto *II = const_cast<IdentifierInfo*>(Macro.first);
 
     // Find the starting point for the MacroDirective chain in this submodule.
     MacroDirective *OldMD = nullptr;
-    auto *OldState = Info.OuterSubmoduleState;
-    if (getLangOpts().ModulesLocalVisibility)
-      OldState = &NullSubmoduleState;
-    if (OldState && OldState != CurSubmoduleState) {
+    if (getLangOpts().ModulesLocalVisibility) {
       // FIXME: It'd be better to start at the state from when we most recently
       // entered this submodule, but it doesn't really matter.
-      auto &OldMacros = OldState->Macros;
-      auto OldMacroIt = OldMacros.find(II);
-      if (OldMacroIt == OldMacros.end())
+      auto &PredefMacros = NullSubmoduleState.Macros;
+      auto PredefMacroIt = PredefMacros.find(Macro.first);
+      if (PredefMacroIt == PredefMacros.end())
         OldMD = nullptr;
       else
-        OldMD = OldMacroIt->second.getLatest();
+        OldMD = PredefMacroIt->second.getLatest();
     }
 
     // This module may have exported a new macro. If so, create a ModuleMacro
     // representing that fact.
     bool ExplicitlyPublic = false;
-    for (auto *MD = Macro.getLatest(); MD != OldMD; MD = MD->getPrevious()) {
+    for (auto *MD = Macro.second.getLatest(); MD != OldMD;
+         MD = MD->getPrevious()) {
       assert(MD && "broken macro directive chain");
 
-      // Stop on macros defined in other submodules of this module that we
-      // #included along the way. There's no point doing this if we're
-      // tracking local submodule visibility, since there can be no such
-      // directives in our list.
+      // Stop on macros defined in other submodules we #included along the way.
+      // There's no point doing this if we're tracking local submodule
+      // visibility, since there can be no such directives in our list.
       if (!getLangOpts().ModulesLocalVisibility) {
         Module *Mod = getModuleContainingLocation(MD->getLocation());
-        if (Mod != LeavingMod &&
-            Mod->getTopLevelModule() == LeavingMod->getTopLevelModule())
+        if (Mod != LeavingMod)
           break;
       }
 
@@ -769,14 +732,13 @@ void Preprocessor::LeaveSubmodule() {
         bool IsNew;
         // Don't bother creating a module macro if it would represent a #undef
         // that doesn't override anything.
-        if (Def || !Macro.getOverriddenMacros().empty())
+        if (Def || !Macro.second.getOverriddenMacros().empty())
           addModuleMacro(LeavingMod, II, Def,
-                         Macro.getOverriddenMacros(), IsNew);
+                         Macro.second.getOverriddenMacros(), IsNew);
         break;
       }
     }
   }
-  PendingModuleMacroNames.resize(Info.OuterPendingModuleMacroNames);
 
   // FIXME: Before we leave this submodule, we should parse all the other
   // headers within it. Otherwise, we're left with an inconsistent state

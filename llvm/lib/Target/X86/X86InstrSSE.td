@@ -5659,15 +5659,15 @@ let isCommutable = 0 in {
   defm VPHSUBD    : SS3I_binop_rm<0x06, "vphsubd", X86hsub, v4i32, VR128,
                                   loadv2i64, i128mem,
                                   SSE_PHADDSUBD, 0>, VEX_4V;
-  defm VPSIGNB    : SS3I_binop_rm_int<0x08, "vpsignb",
-                                      int_x86_ssse3_psign_b_128,
-                                      SSE_PSIGN, loadv2i64, 0>, VEX_4V;
-  defm VPSIGNW    : SS3I_binop_rm_int<0x09, "vpsignw",
-                                      int_x86_ssse3_psign_w_128,
-                                      SSE_PSIGN, loadv2i64, 0>, VEX_4V;
-  defm VPSIGND    : SS3I_binop_rm_int<0x0A, "vpsignd",
-                                      int_x86_ssse3_psign_d_128,
-                                      SSE_PSIGN, loadv2i64, 0>, VEX_4V;
+  defm VPSIGNB    : SS3I_binop_rm<0x08, "vpsignb", X86psign, v16i8, VR128,
+                                  loadv2i64, i128mem,
+                                  SSE_PSIGN, 0>, VEX_4V;
+  defm VPSIGNW    : SS3I_binop_rm<0x09, "vpsignw", X86psign, v8i16, VR128,
+                                  loadv2i64, i128mem,
+                                  SSE_PSIGN, 0>, VEX_4V;
+  defm VPSIGND    : SS3I_binop_rm<0x0A, "vpsignd", X86psign, v4i32, VR128,
+                                  loadv2i64, i128mem,
+                                  SSE_PSIGN, 0>, VEX_4V;
   defm VPSHUFB    : SS3I_binop_rm<0x00, "vpshufb", X86pshufb, v16i8, VR128,
                                   loadv2i64, i128mem,
                                   SSE_PSHUFB, 0>, VEX_4V;
@@ -5700,12 +5700,15 @@ let isCommutable = 0 in {
   defm VPHSUBDY   : SS3I_binop_rm<0x06, "vphsubd", X86hsub, v8i32, VR256,
                                   loadv4i64, i256mem,
                                   SSE_PHADDSUBW, 0>, VEX_4V, VEX_L;
-  defm VPSIGNBY   : SS3I_binop_rm_int_y<0x08, "vpsignb", int_x86_avx2_psign_b,
-                                        WriteVecALU>, VEX_4V, VEX_L;
-  defm VPSIGNWY   : SS3I_binop_rm_int_y<0x09, "vpsignw", int_x86_avx2_psign_w,
-                                        WriteVecALU>, VEX_4V, VEX_L;
-  defm VPSIGNDY   : SS3I_binop_rm_int_y<0x0A, "vpsignd", int_x86_avx2_psign_d,
-                                        WriteVecALU>, VEX_4V, VEX_L;
+  defm VPSIGNBY   : SS3I_binop_rm<0x08, "vpsignb", X86psign, v32i8, VR256,
+                                  loadv4i64, i256mem,
+                                  SSE_PHADDSUBW, 0>, VEX_4V, VEX_L;
+  defm VPSIGNWY   : SS3I_binop_rm<0x09, "vpsignw", X86psign, v16i16, VR256,
+                                  loadv4i64, i256mem,
+                                  SSE_PHADDSUBW, 0>, VEX_4V, VEX_L;
+  defm VPSIGNDY   : SS3I_binop_rm<0x0A, "vpsignd", X86psign, v8i32, VR256,
+                                  loadv4i64, i256mem,
+                                  SSE_PHADDSUBW, 0>, VEX_4V, VEX_L;
   defm VPSHUFBY   : SS3I_binop_rm<0x00, "vpshufb", X86pshufb, v32i8, VR256,
                                   loadv4i64, i256mem,
                                   SSE_PSHUFB, 0>, VEX_4V, VEX_L;
@@ -5735,12 +5738,12 @@ let isCommutable = 0 in {
                                  memopv2i64, i128mem, SSE_PHADDSUBW>;
   defm PHSUBD    : SS3I_binop_rm<0x06, "phsubd", X86hsub, v4i32, VR128,
                                  memopv2i64, i128mem, SSE_PHADDSUBD>;
-  defm PSIGNB    : SS3I_binop_rm_int<0x08, "psignb", int_x86_ssse3_psign_b_128,
-                                     SSE_PSIGN, memopv2i64>;
-  defm PSIGNW    : SS3I_binop_rm_int<0x09, "psignw", int_x86_ssse3_psign_w_128,
-                                     SSE_PSIGN, memopv2i64>;
-  defm PSIGND    : SS3I_binop_rm_int<0x0A, "psignd", int_x86_ssse3_psign_d_128,
-                                     SSE_PSIGN, memopv2i64>;
+  defm PSIGNB    : SS3I_binop_rm<0x08, "psignb", X86psign, v16i8, VR128,
+                                 memopv2i64, i128mem, SSE_PSIGN>;
+  defm PSIGNW    : SS3I_binop_rm<0x09, "psignw", X86psign, v8i16, VR128,
+                                 memopv2i64, i128mem, SSE_PSIGN>;
+  defm PSIGND    : SS3I_binop_rm<0x0A, "psignd", X86psign, v4i32, VR128,
+                                 memopv2i64, i128mem, SSE_PSIGN>;
   defm PSHUFB    : SS3I_binop_rm<0x00, "pshufb", X86pshufb, v16i8, VR128,
                                  memopv2i64, i128mem, SSE_PSHUFB>;
   defm PHADDSW   : SS3I_binop_rm_int<0x03, "phaddsw",
@@ -8273,14 +8276,9 @@ let Predicates = [HasF16C] in {
 
 // Patterns for  matching conversions from float to half-float and vice versa.
 let Predicates = [HasF16C] in {
-  // Use MXCSR.RC for rounding instead of explicitly specifying the default
-  // rounding mode (Nearest-Even, encoded as 0). Both are equivalent in the
-  // configurations we support (the default). However, falling back to MXCSR is
-  // more consistent with other instructions, which are always controlled by it.
-  // It's encoded as 0b100.
   def : Pat<(fp_to_f16 FR32:$src),
             (i16 (EXTRACT_SUBREG (VMOVPDI2DIrr (VCVTPS2PHrr
-              (COPY_TO_REGCLASS FR32:$src, VR128), 4)), sub_16bit))>;
+              (COPY_TO_REGCLASS FR32:$src, VR128), 0)), sub_16bit))>;
 
   def : Pat<(f16_to_fp GR16:$src),
             (f32 (COPY_TO_REGCLASS (VCVTPH2PSrr
@@ -8288,7 +8286,7 @@ let Predicates = [HasF16C] in {
 
   def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32:$src))),
             (f32 (COPY_TO_REGCLASS (VCVTPH2PSrr
-              (VCVTPS2PHrr (COPY_TO_REGCLASS FR32:$src, VR128), 4)), FR32)) >;
+              (VCVTPS2PHrr (COPY_TO_REGCLASS FR32:$src, VR128), 0)), FR32)) >;
 }
 
 //===----------------------------------------------------------------------===//

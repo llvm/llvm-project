@@ -26,7 +26,6 @@ namespace ento {
 
 class EnvironmentManager;
 class SValBuilder;
-class SymbolReaper;
 
 /// An entry in the environment consists of a Stmt and an LocationContext.
 /// This allows the environment to manage context-sensitive bindings,

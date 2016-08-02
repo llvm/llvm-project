@@ -496,9 +496,3 @@ namespace TrailingReturnTypeForConversionOperator {
     }
   };
 };
-
-namespace PR24989 {
-  auto x = [](auto){};
-  using T = decltype(x);
-  void (T::*p)(int) const = &T::operator();
-}

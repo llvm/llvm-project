@@ -69,14 +69,15 @@ class DbgVariable {
   unsigned DebugLocListIndex = ~0u;          /// Offset in DebugLocs.
   const MachineInstr *MInsn = nullptr;       /// DBG_VALUE instruction.
   SmallVector<int, 1> FrameIndex;            /// Frame index.
+  DwarfDebug *DD;
 
 public:
   /// Construct a DbgVariable.
   ///
   /// Creates a variable without any DW_AT_location.  Call \a initializeMMI()
   /// for MMI entries, or \a initializeDbgValue() for DBG_VALUE instructions.
-  DbgVariable(const DILocalVariable *V, const DILocation *IA)
-      : Var(V), IA(IA) {}
+  DbgVariable(const DILocalVariable *V, const DILocation *IA, DwarfDebug *DD)
+      : Var(V), IA(IA), DD(DD) {}
 
   /// Initialize from the MMI table.
   void initializeMMI(const DIExpression *E, int FI) {
@@ -110,10 +111,6 @@ public:
   const DILocalVariable *getVariable() const { return Var; }
   const DILocation *getInlinedAt() const { return IA; }
   ArrayRef<const DIExpression *> getExpression() const { return Expr; }
-  const DIExpression *getSingleExpression() const {
-    assert(MInsn && Expr.size() <= 1);
-    return Expr.size() ? Expr[0] : nullptr;
-  }
   void setDIE(DIE &D) { TheDIE = &D; }
   DIE *getDIE() const { return TheDIE; }
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
@@ -177,9 +174,9 @@ public:
   const DIType *getType() const;
 
 private:
-  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve();
-  }
+  /// Look in the DwarfDebug map for the MDNode that
+  /// corresponds to the reference.
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const;
 };
 
 
@@ -203,6 +200,9 @@ class DwarfDebug : public AsmPrinterHandler {
 
   /// Maps MDNode with its corresponding DwarfCompileUnit.
   MapVector<const MDNode *, DwarfCompileUnit *> CUMap;
+
+  /// Maps subprogram MDNode with its corresponding DwarfCompileUnit.
+  MapVector<const MDNode *, DwarfCompileUnit *> SPMap;
 
   /// Maps a CU DIE with its corresponding DwarfCompileUnit.
   DenseMap<const DIE *, DwarfCompileUnit *> CUDieMap;
@@ -286,6 +286,9 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Version of dwarf we're emitting.
   unsigned DwarfVersion;
 
+  /// Maps from a type identifier to the actual MDNode.
+  DITypeIdentifierMap TypeIdentifierMap;
+
   /// DWARF5 Experimental Options
   /// @{
   bool HasDwarfAccelTables;
@@ -343,6 +346,9 @@ class DwarfDebug : public AsmPrinterHandler {
 
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
+
+  /// Collect info for variables that were optimized out.
+  void collectDeadVariables();
 
   void finishVariableDefinitions();
 
@@ -408,9 +414,11 @@ class DwarfDebug : public AsmPrinterHandler {
 
   /// Emit macros into a debug macinfo section.
   void emitDebugMacinfo();
-  void emitMacro(DIMacro &M);
-  void emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U);
-  void handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U);
+  unsigned emitMacro(AsmStreamerBase *AS, DIMacro &M);
+  unsigned emitMacroFile(AsmStreamerBase *AS, DIMacroFile &F,
+                         DwarfCompileUnit &U);
+  unsigned handleMacroNodes(AsmStreamerBase *AS, DIMacroNodeArray Nodes,
+                            DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
 
@@ -569,7 +577,12 @@ public:
 
   /// Find the MDNode for the given reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve();
+    return Ref.resolve(TypeIdentifierMap);
+  }
+
+  /// Return the TypeIdentifierMap.
+  const DITypeIdentifierMap &getTypeIdentifierMap() const {
+    return TypeIdentifierMap;
   }
 
   /// Find the DwarfCompileUnit for the given CU Die.

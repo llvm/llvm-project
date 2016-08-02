@@ -154,7 +154,6 @@ static bool isBuiltinHeader(StringRef FileName) {
            .Case("limits.h", true)
            .Case("stdalign.h", true)
            .Case("stdarg.h", true)
-           .Case("stdatomic.h", true)
            .Case("stdbool.h", true)
            .Case("stddef.h", true)
            .Case("stdint.h", true)
@@ -743,15 +742,13 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     = StringRef(FrameworkDir->getName());
   llvm::sys::path::append(SubframeworksDirName, "Frameworks");
   llvm::sys::path::native(SubframeworksDirName);
-  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-  for (vfs::directory_iterator Dir = FS.dir_begin(SubframeworksDirName, EC),
-                               DirEnd;
+  for (llvm::sys::fs::directory_iterator Dir(SubframeworksDirName, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    if (!StringRef(Dir->getName()).endswith(".framework"))
+    if (!StringRef(Dir->path()).endswith(".framework"))
       continue;
 
-    if (const DirectoryEntry *SubframeworkDir =
-            FileMgr.getDirectory(Dir->getName())) {
+    if (const DirectoryEntry *SubframeworkDir
+          = FileMgr.getDirectory(Dir->path())) {
       // Note: as an egregious but useful hack, we use the real path here and
       // check whether it is actually a subdirectory of the parent directory.
       // This will not be the case if the 'subframework' is actually a symlink
@@ -794,10 +791,6 @@ void ModuleMap::setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
   Mod->Umbrella = UmbrellaHeader;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   UmbrellaDirs[UmbrellaHeader->getDir()] = Mod;
-
-  // Notify callbacks that we just added a new header.
-  for (const auto &Cb : Callbacks)
-    Cb->moduleMapAddUmbrellaHeader(&SourceMgr.getFileManager(), UmbrellaHeader);
 }
 
 void ModuleMap::setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
@@ -843,10 +836,6 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
     HeaderInfo.MarkFileModuleHeader(Header.Entry, Role,
                                     isCompilingModuleHeader);
   }
-
-  // Notify callbacks that we just added a new header.
-  for (const auto &Cb : Callbacks)
-    Cb->moduleMapAddHeader(Header.Entry->getName());
 }
 
 void ModuleMap::excludeHeader(Module *Mod, Module::Header Header) {
@@ -881,7 +870,7 @@ void ModuleMap::setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap) {
   InferredModuleAllowedBy[M] = ModMap;
 }
 
-LLVM_DUMP_METHOD void ModuleMap::dump() {
+void ModuleMap::dump() {
   llvm::errs() << "Modules:";
   for (llvm::StringMap<Module *>::iterator M = Modules.begin(), 
                                         MEnd = Modules.end(); 
@@ -1316,9 +1305,7 @@ namespace {
     /// \brief The 'extern_c' attribute.
     AT_extern_c,
     /// \brief The 'exhaustive' attribute.
-    AT_exhaustive,
-    // \brief The 'swift_infer_import_as_member' attribute.
-    AT_swift_infer_import_as_member,
+    AT_exhaustive
   };
 }
 
@@ -1977,13 +1964,11 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     // uncommonly used Tcl module on Darwin platforms.
     std::error_code EC;
     SmallVector<Module::Header, 6> Headers;
-    vfs::FileSystem &FS = *SourceMgr.getFileManager().getVirtualFileSystem();
-    for (vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
+    for (llvm::sys::fs::recursive_directory_iterator I(Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
-      if (const FileEntry *FE =
-              SourceMgr.getFileManager().getFile(I->getName())) {
+      if (const FileEntry *FE = SourceMgr.getFileManager().getFile(I->path())) {
 
-        Module::Header Header = {I->getName(), FE};
+        Module::Header Header = {I->path(), FE};
         Headers.push_back(std::move(Header));
       }
     }
@@ -2393,7 +2378,6 @@ bool ModuleMapParser::parseOptionalAttributes(Attributes &Attrs) {
           .Case("exhaustive", AT_exhaustive)
           .Case("extern_c", AT_extern_c)
           .Case("system", AT_system)
-          .Case("swift_infer_import_as_member", AT_swift_infer_import_as_member)
           .Default(AT_unknown);
     switch (Attribute) {
     case AT_unknown:
@@ -2407,10 +2391,6 @@ bool ModuleMapParser::parseOptionalAttributes(Attributes &Attrs) {
 
     case AT_extern_c:
       Attrs.IsExternC = true;
-      break;
-
-    case AT_swift_infer_import_as_member:
-      Attrs.IsSwiftInferImportAsMember = true;
       break;
 
     case AT_exhaustive:

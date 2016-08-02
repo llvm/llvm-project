@@ -1,6 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWON %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=0 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -addr-sink-using-gep=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -addr-sink-using-gep=1 < %s | FileCheck %s
 
 %struct.A = type { i8, i8, i8, i8, i8, i8, i8, i8 }
 %struct.B = type { i32, i32, i32, i32, i32, i32, i32, i32 }
@@ -148,8 +147,7 @@ define void @merge_nonconst_store(i32 %count, i8 %zz, %struct.A* nocapture %p) n
 
 ; CHECK-LABEL: merge_loads_i16:
 ;  load:
-; BWON:  movzwl
-; BWOFF: movw
+; CHECK: movw
 ;  store:
 ; CHECK: movw
 ; CHECK: ret
@@ -182,11 +180,9 @@ define void @merge_loads_i16(i32 %count, %struct.A* noalias nocapture %q, %struc
 
 ; The loads and the stores are interleaved. Can't merge them.
 ; CHECK-LABEL: no_merge_loads:
-; BWON:  movzbl
-; BWOFF: movb
 ; CHECK: movb
-; BWON:  movzbl
-; BWOFF: movb
+; CHECK: movb
+; CHECK: movb
 ; CHECK: movb
 ; CHECK: ret
 define void @no_merge_loads(i32 %count, %struct.A* noalias nocapture %q, %struct.A* noalias nocapture %p) nounwind uwtable noinline ssp {
@@ -341,9 +337,8 @@ block4:                                       ; preds = %4, %.lr.ph
 ; Make sure that we merge the consecutive load/store sequence below and use a
 ; word (16 bit) instead of a byte copy.
 ; CHECK-LABEL: MergeLoadStoreBaseIndexOffset:
-; BWON: movzwl   (%{{.*}},%{{.*}}), %e[[REG:[a-z]+]]
-; BWOFF: movw    (%{{.*}},%{{.*}}), %[[REG:[a-z]+]]
-; CHECK: movw    %[[REG]], (%{{.*}})
+; CHECK: movw    (%{{.*}},%{{.*}}), [[REG:%[a-z]+]]
+; CHECK: movw    [[REG]], (%{{.*}})
 define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
   br label %1
 
@@ -374,9 +369,8 @@ define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 ; word (16 bit) instead of a byte copy even if there are intermediate sign
 ; extensions.
 ; CHECK-LABEL: MergeLoadStoreBaseIndexOffsetSext:
-; BWON: movzwl   (%{{.*}},%{{.*}}), %e[[REG:[a-z]+]]
-; BWOFF: movw    (%{{.*}},%{{.*}}), %[[REG:[a-z]+]]
-; CHECK: movw    %[[REG]], (%{{.*}})
+; CHECK: movw    (%{{.*}},%{{.*}}), [[REG:%[a-z]+]]
+; CHECK: movw    [[REG]], (%{{.*}})
 define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
   br label %1
 

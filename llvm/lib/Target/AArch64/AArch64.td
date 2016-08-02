@@ -120,6 +120,7 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    [FeatureFPARMv8,
                                    FeatureNEON,
                                    FeatureCrypto,
+                                   FeatureCRC,
                                    FeaturePerfMon,
                                    FeatureZCRegMove, FeatureZCZeroing]>;
 

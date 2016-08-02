@@ -803,7 +803,7 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
   // fadd X, 0 ==> X, when we know X is not -0
   if (match(Op1, m_Zero()) &&
-      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0)))
     return Op0;
 
   // fadd [nnan ninf] X, (fsub [nnan ninf] 0, X) ==> 0
@@ -842,18 +842,17 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
   // fsub X, -0 ==> X, when we know X is not -0
   if (match(Op1, m_NegZero()) &&
-      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+      (FMF.noSignedZeros() || CannotBeNegativeZero(Op0)))
     return Op0;
 
-  // fsub -0.0, (fsub -0.0, X) ==> X
+  // fsub 0, (fsub -0.0, X) ==> X
   Value *X;
-  if (match(Op0, m_NegZero()) && match(Op1, m_FSub(m_NegZero(), m_Value(X))))
-    return X;
-
-  // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
-  if (FMF.noSignedZeros() && match(Op0, m_AnyZero()) &&
-      match(Op1, m_FSub(m_AnyZero(), m_Value(X))))
-    return X;
+  if (match(Op0, m_AnyZero())) {
+    if (match(Op1, m_FSub(m_NegZero(), m_Value(X))))
+      return X;
+    if (FMF.noSignedZeros() && match(Op1, m_FSub(m_AnyZero(), m_Value(X))))
+      return X;
+  }
 
   // fsub nnan x, x ==> 0.0
   if (FMF.noNaNs() && Op0 == Op1)
@@ -3146,14 +3145,7 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   }
 
   // Handle fcmp with constant RHS
-  const ConstantFP *CFP = nullptr;
-  if (const auto *RHSC = dyn_cast<Constant>(RHS)) {
-    if (RHS->getType()->isVectorTy())
-      CFP = dyn_cast_or_null<ConstantFP>(RHSC->getSplatValue());
-    else
-      CFP = dyn_cast<ConstantFP>(RHSC);
-  }
-  if (CFP) {
+  if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS)) {
     // If the constant is a nan, see if we can fold the comparison based on it.
     if (CFP->getValueAPF().isNaN()) {
       if (FCmpInst::isOrdered(Pred)) // True "if ordered and foo"
@@ -3161,7 +3153,7 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       assert(FCmpInst::isUnordered(Pred) &&
              "Comparison must be either ordered or unordered!");
       // True if unordered.
-      return ConstantInt::get(GetCompareTy(LHS), 1);
+      return ConstantInt::getTrue(CFP->getContext());
     }
     // Check whether the constant is an infinity.
     if (CFP->getValueAPF().isInfinity()) {
@@ -3169,10 +3161,10 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         switch (Pred) {
         case FCmpInst::FCMP_OLT:
           // No value is ordered and less than negative infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 0);
+          return ConstantInt::getFalse(CFP->getContext());
         case FCmpInst::FCMP_UGE:
           // All values are unordered with or at least negative infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 1);
+          return ConstantInt::getTrue(CFP->getContext());
         default:
           break;
         }
@@ -3180,10 +3172,10 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         switch (Pred) {
         case FCmpInst::FCMP_OGT:
           // No value is ordered and greater than infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 0);
+          return ConstantInt::getFalse(CFP->getContext());
         case FCmpInst::FCMP_ULE:
           // All values are unordered with and at most infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 1);
+          return ConstantInt::getTrue(CFP->getContext());
         default:
           break;
         }
@@ -3192,13 +3184,13 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     if (CFP->getValueAPF().isZero()) {
       switch (Pred) {
       case FCmpInst::FCMP_UGE:
-        if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return ConstantInt::get(GetCompareTy(LHS), 1);
+        if (CannotBeOrderedLessThanZero(LHS))
+          return ConstantInt::getTrue(CFP->getContext());
         break;
       case FCmpInst::FCMP_OLT:
         // X < 0
-        if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return ConstantInt::get(GetCompareTy(LHS), 0);
+        if (CannotBeOrderedLessThanZero(LHS))
+          return ConstantInt::getFalse(CFP->getContext());
         break;
       default:
         break;

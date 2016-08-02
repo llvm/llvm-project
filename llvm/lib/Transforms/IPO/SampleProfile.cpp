@@ -163,10 +163,10 @@ protected:
   EdgeWeightMap EdgeWeights;
 
   /// \brief Set of visited blocks during propagation.
-  SmallPtrSet<const BasicBlock *, 32> VisitedBlocks;
+  SmallPtrSet<const BasicBlock *, 128> VisitedBlocks;
 
   /// \brief Set of visited edges during propagation.
-  SmallSet<Edge, 32> VisitedEdges;
+  SmallSet<Edge, 128> VisitedEdges;
 
   /// \brief Equivalence classes for block weights.
   ///
@@ -1084,7 +1084,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
 /// \returns the line number where \p F is defined. If it returns 0,
 ///          it means that there is no debug information available for \p F.
 unsigned SampleProfileLoader::getFunctionLoc(Function &F) {
-  if (DISubprogram *S = F.getSubprogram())
+  if (DISubprogram *S = getDISubprogram(&F))
     return S->getLine();
 
   // If the start of \p F is missing, emit a diagnostic to inform the user
@@ -1190,7 +1190,7 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
     if (Coverage < SampleProfileRecordCoverage) {
       F.getContext().diagnose(DiagnosticInfoSampleProfile(
-          F.getSubprogram()->getFilename(), getFunctionLoc(F),
+          getDISubprogram(&F)->getFilename(), getFunctionLoc(F),
           Twine(Used) + " of " + Twine(Total) + " available profile records (" +
               Twine(Coverage) + "%) were applied",
           DS_Warning));
@@ -1203,7 +1203,7 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
     if (Coverage < SampleProfileSampleCoverage) {
       F.getContext().diagnose(DiagnosticInfoSampleProfile(
-          F.getSubprogram()->getFilename(), getFunctionLoc(F),
+          getDISubprogram(&F)->getFilename(), getFunctionLoc(F),
           Twine(Used) + " of " + Twine(Total) + " available profile samples (" +
               Twine(Coverage) + "%) were applied",
           DS_Warning));

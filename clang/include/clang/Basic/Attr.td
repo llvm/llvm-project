@@ -341,11 +341,6 @@ class TargetSpecificAttr<TargetArch target> {
 /// redeclarations, even when it's written on a parameter.
 class InheritableParamAttr : InheritableAttr;
 
-/// An attribute which changes the ABI rules for a specific parameter.
-class ParameterABIAttr : InheritableParamAttr {
-  let Subjects = SubjectList<[ParmVar]>;
-}
-
 /// An ignored attribute, which we parse but discard with no checking.
 class IgnoredAttr : Attr {
   let Ignored = 1;
@@ -458,18 +453,17 @@ def Availability : InheritableAttr {
   let Spellings = [GNU<"availability">];
   let Args = [IdentifierArgument<"platform">, VersionArgument<"introduced">,
               VersionArgument<"deprecated">, VersionArgument<"obsoleted">,
-              BoolArgument<"unavailable">, StringArgument<"message">,
-              BoolArgument<"strict">, StringArgument<"replacement">];
+              BoolArgument<"unavailable">, StringArgument<"message">];
   let AdditionalMembers =
 [{static llvm::StringRef getPrettyPlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
              .Case("android", "Android")
              .Case("ios", "iOS")
-             .Case("macos", "macOS")
+             .Case("macosx", "OS X")
              .Case("tvos", "tvOS")
              .Case("watchos", "watchOS")
              .Case("ios_app_extension", "iOS (App Extension)")
-             .Case("macos_app_extension", "macOS (App Extension)")
+             .Case("macosx_app_extension", "OS X (App Extension)")
              .Case("tvos_app_extension", "tvOS (App Extension)")
              .Case("watchos_app_extension", "watchOS (App Extension)")
              .Case("swift", "Swift")
@@ -709,11 +703,8 @@ def OpenCLGenericAddressSpace : TypeAttr {
 def Deprecated : InheritableAttr {
   let Spellings = [GCC<"deprecated">, Declspec<"deprecated">,
                    CXX11<"","deprecated", 201309>];
-  let Args = [StringArgument<"Message", 1>,
-              // An optional string argument that enables us to provide a
-              // Fix-It.
-              StringArgument<"Replacement", 1>];
-  let Documentation = [DeprecatedDocs];
+  let Args = [StringArgument<"Message", 1>];
+  let Documentation = [Undocumented];
 }
 
 def Destructor : InheritableAttr {
@@ -892,8 +883,8 @@ def MipsInterrupt : InheritableAttr, TargetSpecificAttr<TargetMips> {
 
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
-  let Subjects = SubjectList<[Var, TypedefName, Field], ErrorDiag,
-                             "ExpectedVariableFieldOrTypedef">;
+  let Subjects = SubjectList<[Var, TypedefName], ErrorDiag,
+                             "ExpectedVariableOrTypedef">;
   let Args = [IdentifierArgument<"Mode">];
   let Documentation = [Undocumented];
 }
@@ -1124,12 +1115,6 @@ def ObjCBridgeRelated : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def NSErrorDomain : Attr {
-  let Spellings = [GNU<"ns_error_domain">];
-  let Args = [IdentifierArgument<"ErrorDomain">];
-  let Documentation = [NSErrorDomainDocs];
-}
-
 def NSReturnsRetained : InheritableAttr {
   let Spellings = [GNU<"ns_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
@@ -1242,12 +1227,6 @@ def ObjCRuntimeName : Attr {
   let Documentation = [ObjCRuntimeNameDocs];
 }
 
-def ObjCRuntimeVisible : Attr {
-  let Spellings = [GNU<"objc_runtime_visible">];
-  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
-  let Documentation = [ObjCRuntimeVisibleDocs];
-}
-
 def ObjCBoxable : Attr {
   let Spellings = [GNU<"objc_boxable">];
   let Subjects = SubjectList<[Record], ErrorDiag, "ExpectedStructOrUnion">;
@@ -1324,14 +1303,6 @@ def Regparm : TypeAttr {
   let Documentation = [RegparmDocs];
 }
 
-def SwiftBridge : Attr {
-  let Spellings = [GNU<"swift_bridge">];
-  let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
-                             ErrorDiag, "ExpectedType">;
-  let Args = [StringArgument<"SwiftType">];
-  let Documentation = [SwiftBridgeDocs];
-}
-
 def SwiftError : InheritableAttr {
   let Spellings = [GCC<"swift_error">];
   let Args = [EnumArgument<"Convention", "ConventionKind",
@@ -1351,25 +1322,8 @@ def SwiftName : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def SwiftNewtype : Attr {
-  let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
-  let Subjects = SubjectList<[TypedefName], ErrorDiag, "ExpectedType">;
-  let Args = [EnumArgument<"NewtypeKind", "NewtypeKind",
-               ["struct", "enum"],
-               ["NK_Struct", "NK_Enum"]>];
-  let Documentation = [SwiftNewtypeDocs];
-}
-
 def SwiftPrivate : InheritableAttr {
   let Spellings = [GCC<"swift_private">];
-  let Documentation = [Undocumented];
-}
-
-def SwiftSuppressFactoryAsInit : InheritableAttr { 
-  // This attribute has no spellings as it is only ever created implicitly
-  // from API notes.
-  let Spellings = [];
-  let SemaHandler = 0; 
   let Documentation = [Undocumented];
 }
 
@@ -1420,27 +1374,6 @@ def StdCall : InheritableAttr {
   let Documentation = [StdCallDocs];
 }
 
-def SwiftCall : InheritableAttr {
-  let Spellings = [GCC<"swiftcall">];
-//  let Subjects = SubjectList<[Function]>;
-  let Documentation = [SwiftCallDocs];
-}
-
-def SwiftContext : ParameterABIAttr {
-  let Spellings = [GCC<"swift_context">];
-  let Documentation = [SwiftContextDocs];
-}
-
-def SwiftErrorResult : ParameterABIAttr {
-  let Spellings = [GCC<"swift_error_result">];
-  let Documentation = [SwiftErrorResultDocs];
-}
-
-def SwiftIndirectResult : ParameterABIAttr {
-  let Spellings = [GCC<"swift_indirect_result">];
-  let Documentation = [SwiftIndirectResultDocs];
-}
-
 def SysVABI : InheritableAttr {
   let Spellings = [GCC<"sysv_abi">];
 //  let Subjects = [Function, ObjCMethod];
@@ -1465,16 +1398,6 @@ def Pascal : InheritableAttr {
   let Spellings = [GNU<"pascal">, Keyword<"__pascal">, Keyword<"_pascal">];
 //  let Subjects = [Function, ObjCMethod];
   let Documentation = [Undocumented];
-}
-
-def PreserveMost : InheritableAttr {
-  let Spellings = [GNU<"preserve_most">];
-  let Documentation = [PreserveMostDocs];
-}
-
-def PreserveAll : InheritableAttr {
-  let Spellings = [GNU<"preserve_all">];
-  let Documentation = [PreserveAllDocs];
 }
 
 def Target : InheritableAttr {

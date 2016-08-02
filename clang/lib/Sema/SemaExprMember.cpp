@@ -380,8 +380,7 @@ static Decl *FindGetterSetterNameDeclFromProtocolList(const ObjCProtocolDecl*PDe
                                                 const Selector &Sel,
                                                 ASTContext &Context) {
   if (Member)
-    if (ObjCPropertyDecl *PD = PDecl->FindPropertyDeclaration(
-            Member, ObjCPropertyQueryKind::OBJC_PR_query_instance))
+    if (ObjCPropertyDecl *PD = PDecl->FindPropertyDeclaration(Member))
       return PD;
   if (ObjCMethodDecl *OMD = PDecl->getInstanceMethod(Sel))
     return OMD;
@@ -402,8 +401,7 @@ static Decl *FindGetterSetterNameDecl(const ObjCObjectPointerType *QIdTy,
   Decl *GDecl = nullptr;
   for (const auto *I : QIdTy->quals()) {
     if (Member)
-      if (ObjCPropertyDecl *PD = I->FindPropertyDeclaration(
-              Member, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
+      if (ObjCPropertyDecl *PD = I->FindPropertyDeclaration(Member)) {
         GDecl = PD;
         break;
       }
@@ -902,32 +900,6 @@ static bool IsInFnTryBlockHandler(const Scope *S) {
   return false;
 }
 
-static VarDecl *
-getVarTemplateSpecialization(Sema &S, VarTemplateDecl *VarTempl,
-                      const TemplateArgumentListInfo *TemplateArgs,
-                      const DeclarationNameInfo &MemberNameInfo,
-                      SourceLocation TemplateKWLoc) {
-
-  if (!TemplateArgs) {
-    S.Diag(MemberNameInfo.getBeginLoc(), diag::err_template_decl_ref)
-        << /*Variable template*/ 1 << MemberNameInfo.getName()
-        << MemberNameInfo.getSourceRange();
-
-    S.Diag(VarTempl->getLocation(), diag::note_template_decl_here);
-
-    return nullptr;
-  }
-  DeclResult VDecl = S.CheckVarTemplateId(
-      VarTempl, TemplateKWLoc, MemberNameInfo.getLoc(), *TemplateArgs);
-  if (VDecl.isInvalid())
-    return nullptr;
-  VarDecl *Var = cast<VarDecl>(VDecl.get());
-  if (!Var->getTemplateSpecializationKind())
-    Var->setTemplateSpecializationKind(TSK_ImplicitInstantiation,
-                                       MemberNameInfo.getLoc());
-  return Var;
-}
-
 ExprResult
 Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                SourceLocation OpLoc, bool IsArrow,
@@ -1095,23 +1067,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // Handle the implicit-member-access case.
   if (!BaseExpr) {
     // If this is not an instance member, convert to a non-member access.
-    if (!MemberDecl->isCXXInstanceMember()) {
-      // If this is a variable template, get the instantiated variable
-      // declaration corresponding to the supplied template arguments
-      // (while emitting diagnostics as necessary) that will be referenced
-      // by this expression.
-      assert((!TemplateArgs || isa<VarTemplateDecl>(MemberDecl)) &&
-             "How did we get template arguments here sans a variable template");
-      if (isa<VarTemplateDecl>(MemberDecl)) {
-        MemberDecl = getVarTemplateSpecialization(
-            *this, cast<VarTemplateDecl>(MemberDecl), TemplateArgs,
-            R.getLookupNameInfo(), TemplateKWLoc);
-        if (!MemberDecl)
-          return ExprError();
-      }
-      return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), MemberDecl,
-                                      FoundDecl, TemplateArgs);
-    }
+    if (!MemberDecl->isCXXInstanceMember())
+      return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), MemberDecl);
+
     SourceLocation Loc = R.getNameLoc();
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
@@ -1166,15 +1124,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
                            TemplateKWLoc, Enum, FoundDecl, MemberNameInfo,
                            Enum->getType(), VK_RValue, OK_Ordinary);
-  }
-  if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
-    if (VarDecl *Var = getVarTemplateSpecialization(
-            *this, VarTempl, TemplateArgs, MemberNameInfo, TemplateKWLoc))
-      return BuildMemberExpr(*this, Context, BaseExpr, IsArrow, OpLoc, SS,
-                             TemplateKWLoc, Var, FoundDecl, MemberNameInfo,
-                             Var->getType().getNonReferenceType(), VK_LValue,
-                             OK_Ordinary);
-    return ExprError();
   }
 
   // We found something that we didn't expect. Complain.
@@ -1375,9 +1324,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
           D = CAT->getClassInterface();
         ClassDeclared = cast<ObjCInterfaceDecl>(D);
       } else {
-        if (IsArrow &&
-            IDecl->FindPropertyDeclaration(
-                Member, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
+        if (IsArrow && IDecl->FindPropertyDeclaration(Member)) {
           S.Diag(MemberLoc, diag::err_property_found_suggest)
               << Member << BaseExpr.get()->getType()
               << FixItHint::CreateReplacement(OpLoc, ".");

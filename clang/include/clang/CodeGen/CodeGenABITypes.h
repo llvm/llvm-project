@@ -48,27 +48,42 @@ namespace CodeGen {
 class CGFunctionInfo;
 class CodeGenModule;
 
-const CGFunctionInfo &arrangeObjCMessageSendSignature(CodeGenModule &CGM,
-                                                      const ObjCMethodDecl *MD,
-                                                      QualType receiverType);
+class CodeGenABITypes
+{
+public:
+  CodeGenABITypes(ASTContext &C, llvm::Module &M,
+                  CoverageSourceInfo *CoverageInfo = nullptr);
+  ~CodeGenABITypes();
 
-const CGFunctionInfo &arrangeFreeFunctionType(CodeGenModule &CGM,
-                                              CanQual<FunctionProtoType> Ty,
-                                              const FunctionDecl *FD);
+  /// These methods all forward to methods in the private implementation class
+  /// CodeGenTypes.
 
-const CGFunctionInfo &arrangeFreeFunctionType(CodeGenModule &CGM,
-                                              CanQual<FunctionNoProtoType> Ty);
+  const CGFunctionInfo &arrangeObjCMessageSendSignature(
+                                                     const ObjCMethodDecl *MD,
+                                                     QualType receiverType);
+  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty,
+                                                const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFreeFunctionType(
+                                             CanQual<FunctionNoProtoType> Ty);
+  const CGFunctionInfo &arrangeCXXMethodType(const CXXRecordDecl *RD,
+                                             const FunctionProtoType *FTP,
+                                             const CXXMethodDecl *MD);
+  const CGFunctionInfo &arrangeFreeFunctionCall(CanQualType returnType,
+                                                ArrayRef<CanQualType> argTypes,
+                                                FunctionType::ExtInfo info,
+                                                RequiredArgs args);
 
-const CGFunctionInfo &arrangeCXXMethodType(CodeGenModule &CGM,
-                                           const CXXRecordDecl *RD,
-                                           const FunctionProtoType *FTP,
-                                           const CXXMethodDecl *MD);
+private:
+  /// Default CodeGenOptions object used to initialize the
+  /// CodeGenModule and otherwise not used. More specifically, it is
+  /// not used in ABI type generation, so none of the options matter.
+  std::unique_ptr<CodeGenOptions> CGO;
+  std::unique_ptr<HeaderSearchOptions> HSO;
+  std::unique_ptr<PreprocessorOptions> PPO;
 
-const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
-                                              CanQualType returnType,
-                                              ArrayRef<CanQualType> argTypes,
-                                              FunctionType::ExtInfo info,
-                                              RequiredArgs args);
+  /// The CodeGenModule we use get to the CodeGenTypes object.
+  std::unique_ptr<CodeGen::CodeGenModule> CGM;
+};
 
 }  // end namespace CodeGen
 }  // end namespace clang

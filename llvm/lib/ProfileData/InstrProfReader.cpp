@@ -109,26 +109,8 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
                      [](char c) { return ::isprint(c) || ::isspace(c); });
 }
 
-// Read the profile variant flag from the header: ":FE" means this is a FE
-// generated profile. ":IR" means this is an IR level profile. Other strings
-// with a leading ':' will be reported an error format.
 std::error_code TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
-  bool IsIRInstr = false;
-  if (!Line->startswith(":")) {
-    IsIRLevelProfile = false;
-    return success();
-  }
-  StringRef Str = (Line)->substr(1);
-  if (Str.equals_lower("ir"))
-    IsIRInstr = true;
-  else if (Str.equals_lower("fe"))
-    IsIRInstr = false;
-  else
-    return instrprof_error::bad_header;
-
-  ++Line;
-  IsIRLevelProfile = IsIRInstr;
   return success();
 }
 
@@ -298,12 +280,13 @@ RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 void RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
-  Symtab.create(StringRef(NamesStart, NamesSize));
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
+    StringRef FunctionName(getName(I->NamePtr), swap(I->NameSize));
+    Symtab.addFuncName(FunctionName);
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
-    Symtab.mapAddress(FPtr, I->NameRef);
+    Symtab.mapAddress(FPtr, IndexedInstrProf::ComputeHash(FunctionName));
   }
   Symtab.finalizeSymtab();
 }
@@ -311,15 +294,14 @@ void RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
 template <class IntPtrT>
 std::error_code
 RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
-  Version = swap(Header.Version);
-  if (GET_VERSION(Version) != RawInstrProf::Version)
+  if (swap(Header.Version) != RawInstrProf::Version)
     return error(instrprof_error::unsupported_version);
 
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
   auto CountersSize = swap(Header.CountersSize);
-  NamesSize = swap(Header.NamesSize);
+  auto NamesSize = swap(Header.NamesSize);
   auto ValueDataSize = swap(Header.ValueDataSize);
   ValueKindLast = swap(Header.ValueKindLast);
 
@@ -352,7 +334,11 @@ RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
 
 template <class IntPtrT>
 std::error_code RawInstrProfReader<IntPtrT>::readName(InstrProfRecord &Record) {
-  Record.Name = getName(Data->NameRef);
+  Record.Name = StringRef(getName(Data->NamePtr), swap(Data->NameSize));
+  if (Record.Name.data() < NamesStart ||
+      Record.Name.data() + Record.Name.size() >
+          reinterpret_cast<const char *>(ValueDataStart))
+    return error(instrprof_error::malformed);
   return success();
 }
 
@@ -489,10 +475,10 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
       return data_type();
     uint64_t Hash = endian::readNext<uint64_t, little, unaligned>(D);
 
-    // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
+    // Initialize number of counters for FormatVersion == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
     // If format version is different then read the number of counters.
-    if (GET_VERSION(FormatVersion) != IndexedInstrProf::ProfVersion::Version1) {
+    if (FormatVersion != IndexedInstrProf::ProfVersion::Version1) {
       if (D + sizeof(uint64_t) > End)
         return data_type();
       CountsSize = endian::readNext<uint64_t, little, unaligned>(D);
@@ -509,7 +495,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer));
 
     // Read value profiling data.
-    if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&
+    if (FormatVersion > IndexedInstrProf::ProfVersion::Version2 &&
         !readValueProfilingData(D, End)) {
       DataBuffer.clear();
       return data_type();
@@ -568,41 +554,6 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
   return Magic == IndexedInstrProf::Magic;
 }
 
-const unsigned char *
-IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
-                                    const unsigned char *Cur) {
-  using namespace support;
-  if (Version >= IndexedInstrProf::Version4) {
-    const IndexedInstrProf::Summary *SummaryInLE =
-        reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
-    uint64_t NFields =
-        endian::byte_swap<uint64_t, little>(SummaryInLE->NumSummaryFields);
-    uint64_t NEntries =
-        endian::byte_swap<uint64_t, little>(SummaryInLE->NumCutoffEntries);
-    uint32_t SummarySize =
-        IndexedInstrProf::Summary::getSize(NFields, NEntries);
-    std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
-        IndexedInstrProf::allocSummary(SummarySize);
-
-    const uint64_t *Src = reinterpret_cast<const uint64_t *>(SummaryInLE);
-    uint64_t *Dst = reinterpret_cast<uint64_t *>(SummaryData.get());
-    for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
-      Dst[I] = endian::byte_swap<uint64_t, little>(Src[I]);
-
-    // initialize ProfileSummary using the SummaryData from disk.
-    this->Summary = llvm::make_unique<ProfileSummary>(*(SummaryData.get()));
-    return Cur + SummarySize;
-  } else {
-    // For older version of profile data, we need to compute on the fly:
-    using namespace IndexedInstrProf;
-    std::vector<uint32_t> Cutoffs(&SummaryCutoffs[0],
-                                  &SummaryCutoffs[NumSummaryCutoffs]);
-    this->Summary = llvm::make_unique<ProfileSummary>(Cutoffs);
-    this->Summary->computeDetailedSummary();
-    return Cur;
-  }
-}
-
 std::error_code IndexedInstrProfReader::readHeader() {
   const unsigned char *Start =
       (const unsigned char *)DataBuffer->getBufferStart();
@@ -622,11 +573,12 @@ std::error_code IndexedInstrProfReader::readHeader() {
 
   // Read the version.
   uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
-  if (GET_VERSION(FormatVersion) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (FormatVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur);
+  // Read the maximal function count.
+  MaxFunctionCount =
+      endian::byte_swap<uint64_t, little>(Header->MaxFunctionCount);
 
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(

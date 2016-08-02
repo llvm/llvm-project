@@ -394,10 +394,6 @@ public:
       MachineBasicBlock *Entry,
       const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
 
-  bool supportSwiftError() const override {
-    return true;
-  }
-
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
@@ -408,6 +404,10 @@ private:
   void addTypeForNEON(EVT VT, EVT PromotedBitwiseVT);
   void addDRTypeForNEON(MVT VT);
   void addQRTypeForNEON(MVT VT);
+
+  bool supportSwiftError() const override {
+    return true;
+  }
 
   SDValue
   LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -428,6 +428,7 @@ private:
 
   bool isEligibleForTailCallOptimization(
       SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
+      bool isCalleeStructRet, bool isCallerStructRet,
       const SmallVectorImpl<ISD::OutputArg> &Outs,
       const SmallVectorImpl<SDValue> &OutVals,
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;

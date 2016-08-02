@@ -729,22 +729,6 @@ static void BitcodeInlineAsmDiagHandler(const llvm::SMDiagnostic &SM,
                                          void *Context,
                                          unsigned LocCookie) {
   SM.print(nullptr, llvm::errs());
-
-  auto Diags = static_cast<DiagnosticsEngine *>(Context);
-  unsigned DiagID;
-  switch (SM.getKind()) {
-  case llvm::SourceMgr::DK_Error:
-    DiagID = diag::err_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Warning:
-    DiagID = diag::warn_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Note:
-    DiagID = diag::note_fe_inline_asm;
-    break;
-  }
-
-  Diags->Report(DiagID).AddString("cannot compile inline asm");
 }
 
 void CodeGenAction::ExecuteAction() {
@@ -796,8 +780,7 @@ void CodeGenAction::ExecuteAction() {
     }
 
     LLVMContext &Ctx = TheModule->getContext();
-    Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler,
-                                      &CI.getDiagnostics());
+    Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler);
     EmitBackendOutput(CI.getDiagnostics(), CI.getCodeGenOpts(), TargetOpts,
                       CI.getLangOpts(), CI.getTarget().getDataLayoutString(),
                       TheModule.get(), BA, OS);

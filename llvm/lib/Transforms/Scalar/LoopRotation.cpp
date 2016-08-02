@@ -238,7 +238,7 @@ static bool rotateLoop(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
 
     // Eagerly remap the operands of the instruction.
     RemapInstruction(C, ValueMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+                     RF_NoModuleLevelChanges|RF_IgnoreMissingEntries);
 
     // With the operands remapped, see if the instruction constant folds or is
     // otherwise simplifyable.  This commonly occurs because the entry from PHI

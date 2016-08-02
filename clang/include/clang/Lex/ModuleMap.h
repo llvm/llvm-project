@@ -50,18 +50,6 @@ public:
   /// \param IsSystem Whether this is a module map from a system include path.
   virtual void moduleMapFileRead(SourceLocation FileStart,
                                  const FileEntry &File, bool IsSystem) {}
-
-  /// \brief Called when a header is added during module map parsing.
-  ///
-  /// \param Filename The header file itself.
-  virtual void moduleMapAddHeader(StringRef Filename) {}
-
-  /// \brief Called when an umbrella header is added during module map parsing.
-  ///
-  /// \param FileMgr FileManager instance
-  /// \param Header The umbreall header to collect.
-  virtual void moduleMapAddUmbrellaHeader(FileManager *FileMgr,
-                                          const FileEntry *Header) {}
 };
   
 class ModuleMap {
@@ -188,9 +176,6 @@ private:
 
     /// \brief Whether this is an exhaustive set of configuration macros.
     unsigned IsExhaustive : 1;
-
-    /// \brief Whether this is a module who has its swift_names inferred.
-    unsigned IsSwiftInferImportAsMember : 1;
   };
 
   /// \brief A directory for which framework modules can be inferred.

@@ -19,7 +19,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -37,8 +36,6 @@
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
-#include <array>
 #include <cstring>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -82,45 +79,35 @@ static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
   return DL.getPointerTypeSizeInBits(Ty);
 }
 
+// Many of these functions have internal versions that take an assumption
+// exclusion set. This is because of the potential for mutual recursion to
+// cause computeKnownBits to repeatedly visit the same assume intrinsic. The
+// classic case of this is assume(x = y), which will attempt to determine
+// bits in x from bits in y, which will attempt to determine bits in y from
+// bits in x, etc. Regarding the mutual recursion, computeKnownBits can call
+// isKnownNonZero, which calls computeKnownBits and ComputeSignBit and
+// isKnownToBeAPowerOfTwo (all of which can call computeKnownBits), and so on.
+typedef SmallPtrSet<const Value *, 8> ExclInvsSet;
+
 namespace {
 // Simplifying using an assume can only be done in a particular control-flow
 // context (the context instruction provides that context). If an assume and
 // the context instruction are not in the same block then the DT helps in
 // figuring out if we can use it.
 struct Query {
+  ExclInvsSet ExclInvs;
   const DataLayout &DL;
   AssumptionCache *AC;
   const Instruction *CxtI;
   const DominatorTree *DT;
 
-  /// Set of assumptions that should be excluded from further queries.
-  /// This is because of the potential for mutual recursion to cause
-  /// computeKnownBits to repeatedly visit the same assume intrinsic. The
-  /// classic case of this is assume(x = y), which will attempt to determine
-  /// bits in x from bits in y, which will attempt to determine bits in y from
-  /// bits in x, etc. Regarding the mutual recursion, computeKnownBits can call
-  /// isKnownNonZero, which calls computeKnownBits and ComputeSignBit and
-  /// isKnownToBeAPowerOfTwo (all of which can call computeKnownBits), and so
-  /// on.
-  std::array<const Value*, MaxDepth> Excluded;
-  unsigned NumExcluded;
-
   Query(const DataLayout &DL, AssumptionCache *AC, const Instruction *CxtI,
         const DominatorTree *DT)
-      : DL(DL), AC(AC), CxtI(CxtI), DT(DT), NumExcluded(0) {}
+      : DL(DL), AC(AC), CxtI(CxtI), DT(DT) {}
 
   Query(const Query &Q, const Value *NewExcl)
-      : DL(Q.DL), AC(Q.AC), CxtI(Q.CxtI), DT(Q.DT), NumExcluded(Q.NumExcluded) {
-    Excluded = Q.Excluded;
-    Excluded[NumExcluded++] = NewExcl;
-    assert(NumExcluded <= Excluded.size());
-  }
-
-  bool isExcluded(const Value *Value) const {
-    if (NumExcluded == 0)
-      return false;
-    auto End = Excluded.begin() + NumExcluded;
-    return std::find(Excluded.begin(), End, Value) != End;
+      : ExclInvs(Q.ExclInvs), DL(Q.DL), AC(Q.AC), CxtI(Q.CxtI), DT(Q.DT) {
+    ExclInvs.insert(NewExcl);
   }
 };
 } // end anonymous namespace
@@ -743,7 +730,7 @@ static void computeKnownBitsFromAssume(Value *V, APInt &KnownZero,
     CallInst *I = cast<CallInst>(AssumeVH);
     assert(I->getParent()->getParent() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
-    if (Q.isExcluded(I))
+    if (Q.ExclInvs.count(I))
       continue;
 
     // Warning: This loop can end up being somewhat performance sensetive.
@@ -2496,8 +2483,7 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
 /// NOTE: this function will need to be revisited when we support non-default
 /// rounding modes!
 ///
-bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
-                                unsigned Depth) {
+bool llvm::CannotBeNegativeZero(const Value *V, unsigned Depth) {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegZero();
 
@@ -2525,26 +2511,30 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   if (isa<SIToFPInst>(I) || isa<UIToFPInst>(I))
     return true;
 
-  if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-    Intrinsic::ID IID = getIntrinsicIDForCall(CI, TLI);
-    switch (IID) {
-    default:
-      break;
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
     // sqrt(-0.0) = -0.0, no other negative results are possible.
-    case Intrinsic::sqrt:
-      return CannotBeNegativeZero(CI->getArgOperand(0), TLI, Depth + 1);
-    // fabs(x) != -0.0
-    case Intrinsic::fabs:
-      return true;
+    if (II->getIntrinsicID() == Intrinsic::sqrt)
+      return CannotBeNegativeZero(II->getArgOperand(0), Depth+1);
+
+  if (const CallInst *CI = dyn_cast<CallInst>(I))
+    if (const Function *F = CI->getCalledFunction()) {
+      if (F->isDeclaration()) {
+        // abs(x) != -0.0
+        if (F->getName() == "abs") return true;
+        // fabs[lf](x) != -0.0
+        if (F->getName() == "fabs") return true;
+        if (F->getName() == "fabsf") return true;
+        if (F->getName() == "fabsl") return true;
+        if (F->getName() == "sqrt" || F->getName() == "sqrtf" ||
+            F->getName() == "sqrtl")
+          return CannotBeNegativeZero(CI->getArgOperand(0), Depth+1);
+      }
     }
-  }
 
   return false;
 }
 
-bool llvm::CannotBeOrderedLessThanZero(const Value *V,
-                                       const TargetLibraryInfo *TLI,
-                                       unsigned Depth) {
+bool llvm::CannotBeOrderedLessThanZero(const Value *V, unsigned Depth) {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegative() || CFP->getValueAPF().isZero();
 
@@ -2570,44 +2560,43 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
   case Instruction::FAdd:
   case Instruction::FDiv:
   case Instruction::FRem:
-    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+    return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) &&
+           CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
   case Instruction::Select:
-    return CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
+    return CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1) &&
+           CannotBeOrderedLessThanZero(I->getOperand(2), Depth+1);
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     // Widening/narrowing never change sign.
-    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
-  case Instruction::Call:
-    Intrinsic::ID IID = getIntrinsicIDForCall(cast<CallInst>(I), TLI);
-    switch (IID) {
-    default:
-      break;
-    case Intrinsic::maxnum:
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) ||
-             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
-    case Intrinsic::minnum:
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
-             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
-    case Intrinsic::exp:
-    case Intrinsic::exp2:
-    case Intrinsic::fabs:
-    case Intrinsic::sqrt:
-      return true;
-    case Intrinsic::powi:
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
-        // powi(x,n) is non-negative if n is even.
-        if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
-          return true;
+    return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1);
+  case Instruction::Call: 
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) 
+      switch (II->getIntrinsicID()) {
+      default: break;
+      case Intrinsic::maxnum:
+        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) ||
+               CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
+      case Intrinsic::minnum:
+        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) &&
+               CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::fabs:
+      case Intrinsic::sqrt:
+        return true;
+      case Intrinsic::powi: 
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
+          // powi(x,n) is non-negative if n is even.
+          if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
+            return true;
+        }
+        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1);
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+        // x*x+y is non-negative if y is non-negative.
+        return I->getOperand(0) == I->getOperand(1) && 
+               CannotBeOrderedLessThanZero(I->getOperand(2), Depth+1);
       }
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
-    case Intrinsic::fma:
-    case Intrinsic::fmuladd:
-      // x*x+y is non-negative if y is non-negative.
-      return I->getOperand(0) == I->getOperand(1) &&
-             CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
-    }
     break;
   }
   return false; 
@@ -3986,8 +3975,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     
     // Y >s C ? ~Y : ~C == ~Y <s ~C ? ~Y : ~C = SMIN(~Y, ~C)
     if (const auto *C2 = dyn_cast<ConstantInt>(FalseVal)) {
-      if (Pred == ICmpInst::ICMP_SGT && C1->getType() == C2->getType() &&
-          ~C1->getValue() == C2->getValue() &&
+      if (C1->getType() == C2->getType() && ~C1->getValue() == C2->getValue() &&
           (match(TrueVal, m_Not(m_Specific(CmpLHS))) ||
            match(CmpLHS, m_Not(m_Specific(TrueVal))))) {
         LHS = TrueVal;

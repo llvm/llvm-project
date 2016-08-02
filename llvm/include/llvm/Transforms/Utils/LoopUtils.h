@@ -377,14 +377,6 @@ void computeLICMSafetyInfo(LICMSafetyInfo *, Loop *);
 
 /// \brief Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
-
-/// \brief Find string metadata for loop
-///
-/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
-/// operand or null otherwise.  If the string metadata is not found return
-/// Optional's not-a-value.
-Optional<const MDOperand *> findStringMetadataForLoop(Loop *TheLoop,
-                                                      StringRef Name);
 }
 
 #endif

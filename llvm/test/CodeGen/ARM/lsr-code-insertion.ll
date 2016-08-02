@@ -9,8 +9,8 @@
 ;
 ; CHECK: ldr [[R6:r[0-9*]+]], LCP
 ; CHECK: cmp {{.*}}, [[R6]]
-; CHECK-NOT: lt
-; CHECK: strlt
+; CHECK: ldrle
+; CHECK-NEXT: strle
 
 target triple = "arm-apple-darwin8"
 

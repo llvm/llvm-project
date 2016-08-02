@@ -64,12 +64,17 @@
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
-                ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
-		IndexedInstrProf::ComputeHash(getPGOFuncNameVarInitializer(Inc->getName()))))
+
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
+                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
+                NamePtr->getType()->getPointerElementType()->getArrayNumElements()))
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
+                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
+INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), NamePtr, \
+                ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)))
 INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt64PtrTy(Ctx), CounterPtr, \
                 ConstantExpr::getBitCast(CounterPtr, \
                 llvm::Type::getInt64PtrTy(Ctx)))
@@ -77,8 +82,6 @@ INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
                 FunctionAddr)
 INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
                 ConstantPointerNull::get(Int8PtrTy))
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
-                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
                 ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
 #undef INSTR_PROF_DATA
@@ -129,15 +132,6 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-/* For indirect function call value profiling, the addresses of the target
- * functions are profiled by the instrumented code. The target addresses are
- * written in the raw profile data and converted to target function name's MD5
- * hash by the profile reader during deserialization.  Typically, this happens
- * when the the raw profile data is read during profile merging.
- *
- * For this remapping the ProfData is used.  ProfData contains both the function
- * name hash and the function address.
- */
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0)
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
@@ -159,18 +153,12 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_IndirectCallTarget)
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-#ifdef COVMAP_V1
 COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
                    NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
                    llvm::Type::getInt8PtrTy(Ctx)))
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
-                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
+                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\
                    NameValue.size()))
-#else
-COVMAP_FUNC_RECORD(const int64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
-                   llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
-	           llvm::IndexedInstrProf::ComputeHash(NameValue)))
-#endif
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), DataSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\
                    CoverageMapping.size()))
@@ -355,7 +343,7 @@ typedef struct ValueProfRecordClosure {
    */
   uint64_t (*RemapValueData)(uint32_t, uint64_t Value);
   void (*GetValueForSite)(const void *R, InstrProfValueData *Dst, uint32_t K,
-                          uint32_t S);
+                          uint32_t S, uint64_t (*Mapper)(uint32_t, uint64_t));
   ValueProfData *(*AllocValueProfData)(size_t TotalSizeInBytes);
 } ValueProfRecordClosure;
 
@@ -516,7 +504,8 @@ void serializeValueProfRecordFrom(ValueProfRecord *This,
   for (S = 0; S < NumValueSites; S++) {
     uint32_t ND = Closure->GetNumValueDataForSite(Record, ValueKind, S);
     This->SiteCountArray[S] = ND;
-    Closure->GetValueForSite(Record, DstVD, ValueKind, S);
+    Closure->GetValueForSite(Record, DstVD, ValueKind, S,
+                             Closure->RemapValueData);
     DstVD += ND;
   }
 }
@@ -625,7 +614,7 @@ uint32_t getNumValueDataRT(const void *R, uint32_t VK) {
 }
 
 void getValueForSiteRT(const void *R, InstrProfValueData *Dst, uint32_t VK,
-                       uint32_t S) {
+                       uint32_t S, uint64_t (*Mapper)(uint32_t, uint64_t)) {
   unsigned I, N = 0;
   const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
   N = getNumValueDataForSiteRT(R, VK, S);
@@ -706,14 +695,12 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
        (uint64_t)'p' << 40 | (uint64_t)'r' << 32 | (uint64_t)'o' << 24 |  \
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
-/* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 3
-/* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 4
-/* Coverage mapping format vresion (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 1
+/* Raw profile format version. */
+#define INSTR_PROF_RAW_VERSION 2
+#define INSTR_PROF_INDEX_VERSION 3
+#define INSTR_PROF_COVMAP_VERSION 0
 
-/* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
+/* Profile version is always of type uint_64_t. Reserve the upper 8 bits in the
  * version for other variants of profile. We set the lowest bit of the upper 8
  * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentaiton
  * generated profile, and 0 if this is a Clang FE generated profile.

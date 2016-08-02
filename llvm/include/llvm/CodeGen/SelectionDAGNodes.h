@@ -328,7 +328,6 @@ private:
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
   bool AllowReciprocal : 1;
-  bool VectorReduction : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
@@ -341,7 +340,6 @@ public:
     NoInfs = false;
     NoSignedZeros = false;
     AllowReciprocal = false;
-    VectorReduction = false;
   }
 
   // These are mutators for each flag.
@@ -353,7 +351,6 @@ public:
   void setNoInfs(bool b) { NoInfs = b; }
   void setNoSignedZeros(bool b) { NoSignedZeros = b; }
   void setAllowReciprocal(bool b) { AllowReciprocal = b; }
-  void setVectorReduction(bool b) { VectorReduction = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -364,7 +361,6 @@ public:
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
-  bool hasVectorReduction() const { return VectorReduction; }
 
   /// Return a raw encoding of the flags.
   /// This function should only be used to add data to the NodeID value.
@@ -625,32 +621,18 @@ public:
   /// NOTE: This is an expensive method. Use it carefully.
   bool hasPredecessor(const SDNode *N) const;
 
-  /// Returns true if N is a predecessor of any node in Worklist. This
-  /// helper keeps Visited and Worklist sets externally to allow unions
-  /// searches to be performed in parallel, caching of results across
-  /// queries and incremental addition to Worklist. Stops early if N is
-  /// found but will resume. Remember to clear Visited and Worklists
-  /// if DAG changes.
-  static bool hasPredecessorHelper(const SDNode *N,
-                                   SmallPtrSetImpl<const SDNode *> &Visited,
-                                   SmallVectorImpl<const SDNode *> &Worklist) {
-    if (Visited.count(N))
-      return true;
-    while (!Worklist.empty()) {
-      const SDNode *M = Worklist.pop_back_val();
-      bool Found = false;
-      for (const SDValue &OpV : M->op_values()) {
-        SDNode *Op = OpV.getNode();
-        if (Visited.insert(Op).second)
-          Worklist.push_back(Op);
-        if (Op == N)
-          Found = true;
-      }
-      if (Found)
-        return true;
-    }
-    return false;
-  }
+  /// Return true if N is a predecessor of this node.
+  /// N is either an operand of this node, or can be reached by recursively
+  /// traversing up the operands.
+  /// In this helper the Visited and worklist sets are held externally to
+  /// cache predecessors over multiple invocations. If you want to test for
+  /// multiple predecessors this method is preferable to multiple calls to
+  /// hasPredecessor. Be sure to clear Visited and Worklist if the DAG
+  /// changes.
+  /// NOTE: This is still very expensive. Use carefully.
+  bool hasPredecessorHelper(const SDNode *N,
+                            SmallPtrSetImpl<const SDNode *> &Visited,
+                            SmallVectorImpl<const SDNode *> &Worklist) const;
 
   /// Return the number of values used by this operation.
   unsigned getNumOperands() const { return NumOperands; }
@@ -916,20 +898,40 @@ protected:
 /// be used by the DAGBuilder, the other to be used by others.
 class SDLoc {
 private:
-  DebugLoc DL;
-  int IROrder = 0;
+  // Ptr could be used for either Instruction* or SDNode*. It is used for
+  // Instruction* if IROrder is not -1.
+  const void *Ptr;
+  int IROrder;
 
 public:
-  SDLoc() = default;
-  SDLoc(const SDNode *N) : DL(N->getDebugLoc()), IROrder(N->getIROrder()) {}
-  SDLoc(const SDValue V) : SDLoc(V.getNode()) {}
-  SDLoc(const Instruction *I, int Order) : IROrder(Order) {
-    assert(Order >= 0 && "bad IROrder");
-    if (I)
-      DL = I->getDebugLoc();
+  SDLoc() : Ptr(nullptr), IROrder(0) {}
+  SDLoc(const SDNode *N) : Ptr(N), IROrder(-1) {
+    assert(N && "null SDNode");
   }
-  unsigned getIROrder() { return IROrder; }
-  DebugLoc getDebugLoc() { return DL; }
+  SDLoc(const SDValue V) : Ptr(V.getNode()), IROrder(-1) {
+    assert(Ptr && "null SDNode");
+  }
+  SDLoc(const Instruction *I, int Order) : Ptr(I), IROrder(Order) {
+    assert(Order >= 0 && "bad IROrder");
+  }
+  unsigned getIROrder() {
+    if (IROrder >= 0 || Ptr == nullptr) {
+      return (unsigned)IROrder;
+    }
+    const SDNode *N = (const SDNode*)(Ptr);
+    return N->getIROrder();
+  }
+  DebugLoc getDebugLoc() {
+    if (!Ptr) {
+      return DebugLoc();
+    }
+    if (IROrder >= 0) {
+      const Instruction *I = (const Instruction*)(Ptr);
+      return I->getDebugLoc();
+    }
+    const SDNode *N = (const SDNode*)(Ptr);
+    return N->getDebugLoc();
+  }
 };
 
 

@@ -413,22 +413,9 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                            const TemplateArgumentListInfo *TemplateArgs) {
   DeclContext *DC = getFunctionLevelDeclContext();
 
-  // C++11 [expr.prim.general]p12:
-  //   An id-expression that denotes a non-static data member or non-static
-  //   member function of a class can only be used:
-  //   (...)
-  //   - if that id-expression denotes a non-static data member and it
-  //     appears in an unevaluated operand.
-  //
-  // If this might be the case, form a DependentScopeDeclRefExpr instead of a
-  // CXXDependentScopeMemberExpr. The former can instantiate to either
-  // DeclRefExpr or MemberExpr depending on lookup results, while the latter is
-  // always a MemberExpr.
-  bool MightBeCxx11UnevalField =
-      getLangOpts().CPlusPlus11 && isUnevaluatedContext();
-
-  if (!MightBeCxx11UnevalField && !isAddressOfOperand &&
-      isa<CXXMethodDecl>(DC) && cast<CXXMethodDecl>(DC)->isInstance()) {
+  if (!isAddressOfOperand &&
+      isa<CXXMethodDecl>(DC) &&
+      cast<CXXMethodDecl>(DC)->isInstance()) {
     QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType(Context);
 
     // Since the 'this' expression is synthesized, we don't need to
@@ -7283,20 +7270,14 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   assert(Kind != TTK_Enum &&
          "Invalid enum tag in class template explicit instantiation!");
 
-  ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(TD);
-
-  if (!ClassTemplate) {
-    unsigned ErrorKind = 0;
-    if (isa<TypeAliasTemplateDecl>(TD)) {
-      ErrorKind = 4;
-    } else if (isa<TemplateTemplateParmDecl>(TD)) {
-      ErrorKind = 5;
-    }
-
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << ErrorKind;
-    Diag(TD->getLocation(), diag::note_previous_use);
+  if (isa<TypeAliasTemplateDecl>(TD)) {
+      Diag(KWLoc, diag::err_tag_reference_non_tag) << Kind;
+      Diag(TD->getTemplatedDecl()->getLocation(),
+           diag::note_previous_use);
     return true;
   }
+
+  ClassTemplateDecl *ClassTemplate = cast<ClassTemplateDecl>(TD);
 
   if (!isAcceptableTagRedeclaration(ClassTemplate->getTemplatedDecl(),
                                     Kind, /*isDefinition*/false, KWLoc,
@@ -7426,7 +7407,7 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   // Set source locations for keywords.
   Specialization->setExternLoc(ExternLoc);
   Specialization->setTemplateKeywordLoc(TemplateLoc);
-  Specialization->setBraceRange(SourceRange());
+  Specialization->setRBraceLoc(SourceLocation());
 
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);

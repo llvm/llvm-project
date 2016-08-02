@@ -729,11 +729,6 @@ namespace {
       }
       
       SemaRef.CurrentInstantiationScope->InstantiatedLocal(Old, New);
-
-      // We recreated a local declaration, but not by instantiating it. There
-      // may be pending dependent diagnostics to produce.
-      if (auto *DC = dyn_cast<DeclContext>(Old))
-        SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
     
     /// \brief Transform the definition of the given declaration by
@@ -1725,11 +1720,9 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
 /// from such a substitution.
 bool Sema::SubstParmTypes(SourceLocation Loc, 
                           ParmVarDecl **Params, unsigned NumParams,
-                    const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           SmallVectorImpl<QualType> &ParamTypes,
-                          SmallVectorImpl<ParmVarDecl *> *OutParams,
-                          ExtParameterInfoBuilder &ParamInfos) {
+                          SmallVectorImpl<ParmVarDecl *> *OutParams) {
   assert(!ActiveTemplateInstantiations.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
@@ -1737,9 +1730,8 @@ bool Sema::SubstParmTypes(SourceLocation Loc,
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, 
                                     DeclarationName());
   return Instantiator.TransformFunctionTypeParams(Loc, Params, NumParams,
-                                                  nullptr, ExtParamInfos,
-                                                  ParamTypes, OutParams,
-                                                  ParamInfos);
+                                                  nullptr, ParamTypes,
+                                                  OutParams);
 }
 
 /// \brief Perform substitution on the base class specifiers of the
@@ -2082,7 +2074,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   if (TSK == TSK_ImplicitInstantiation) {
     Instantiation->setLocation(Pattern->getLocation());
     Instantiation->setLocStart(Pattern->getInnerLocStart());
-    Instantiation->setBraceRange(Pattern->getBraceRange());
+    Instantiation->setRBraceLoc(Pattern->getRBraceLoc());
   }
 
   if (!Instantiation->isInvalidDecl()) {

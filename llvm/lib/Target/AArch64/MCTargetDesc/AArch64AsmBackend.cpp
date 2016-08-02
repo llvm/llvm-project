@@ -12,7 +12,6 @@
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -130,16 +129,14 @@ static unsigned AdrImmBits(unsigned Value) {
   return (hi19 << 5) | (lo2 << 29);
 }
 
-static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
-                                 MCContext *Ctx) {
-  unsigned Kind = Fixup.getKind();
+static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   int64_t SignedValue = static_cast<int64_t>(Value);
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case AArch64::fixup_aarch64_pcrel_adr_imm21:
-    if (Ctx && (SignedValue > 2097151 || SignedValue < -2097152))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
+    if (SignedValue > 2097151 || SignedValue < -2097152)
+      report_fatal_error("fixup value out of range");
     return AdrImmBits(Value & 0x1fffffULL);
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
     return AdrImmBits((Value & 0x1fffff000ULL) >> 12);
@@ -147,66 +144,54 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case AArch64::fixup_aarch64_pcrel_branch19:
     // Signed 21-bit immediate
     if (SignedValue > 2097151 || SignedValue < -2097152)
-      if (Ctx) Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Ctx && (Value & 0x3))
-      Ctx->reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
+      report_fatal_error("fixup value out of range");
     // Low two bits are not encoded.
     return (Value >> 2) & 0x7ffff;
   case AArch64::fixup_aarch64_add_imm12:
   case AArch64::fixup_aarch64_ldst_imm12_scale1:
     // Unsigned 12-bit immediate
-    if (Ctx && Value >= 0x1000)
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value >= 0x1000)
+      report_fatal_error("invalid imm12 fixup value");
     return Value;
   case AArch64::fixup_aarch64_ldst_imm12_scale2:
     // Unsigned 12-bit immediate which gets multiplied by 2
-    if (Ctx && (Value >= 0x2000))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Ctx && (Value & 0x1))
-      Ctx->reportError(Fixup.getLoc(), "fixup must be 2-byte aligned");
+    if (Value & 1 || Value >= 0x2000)
+      report_fatal_error("invalid imm12 fixup value");
     return Value >> 1;
   case AArch64::fixup_aarch64_ldst_imm12_scale4:
     // Unsigned 12-bit immediate which gets multiplied by 4
-    if (Ctx && (Value >= 0x4000))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Ctx && (Value & 0x3))
-      Ctx->reportError(Fixup.getLoc(), "fixup must be 4-byte aligned");
+    if (Value & 3 || Value >= 0x4000)
+      report_fatal_error("invalid imm12 fixup value");
     return Value >> 2;
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
     // Unsigned 12-bit immediate which gets multiplied by 8
-    if (Ctx && (Value >= 0x8000))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Ctx && (Value & 0x7))
-      Ctx->reportError(Fixup.getLoc(), "fixup must be 8-byte aligned");
+    if (Value & 7 || Value >= 0x8000)
+      report_fatal_error("invalid imm12 fixup value");
     return Value >> 3;
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
     // Unsigned 12-bit immediate which gets multiplied by 16
-    if (Ctx && (Value >= 0x10000))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Ctx && (Value & 0xf))
-      Ctx->reportError(Fixup.getLoc(), "fixup must be 16-byte aligned");
+    if (Value & 15 || Value >= 0x10000)
+      report_fatal_error("invalid imm12 fixup value");
     return Value >> 4;
   case AArch64::fixup_aarch64_movw:
-    if (Ctx)
-      Ctx->reportError(Fixup.getLoc(),
-                       "no resolvable MOVZ/MOVK fixups supported yet");
+    report_fatal_error("no resolvable MOVZ/MOVK fixups supported yet");
     return Value;
   case AArch64::fixup_aarch64_pcrel_branch14:
     // Signed 16-bit immediate
-    if (Ctx && (SignedValue > 32767 || SignedValue < -32768))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
+    if (SignedValue > 32767 || SignedValue < -32768)
+      report_fatal_error("fixup value out of range");
     // Low two bits are not encoded (4-byte alignment assumed).
-    if (Ctx && (Value & 0x3))
-      Ctx->reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
+    if (Value & 0x3)
+      report_fatal_error("fixup not sufficiently aligned");
     return (Value >> 2) & 0x3fff;
   case AArch64::fixup_aarch64_pcrel_branch26:
   case AArch64::fixup_aarch64_pcrel_call26:
     // Signed 28-bit immediate
-    if (Ctx && (SignedValue > 134217727 || SignedValue < -134217728))
-      Ctx->reportError(Fixup.getLoc(), "fixup value out of range");
+    if (SignedValue > 134217727 || SignedValue < -134217728)
+      report_fatal_error("fixup value out of range");
     // Low two bits are not encoded (4-byte alignment assumed).
-    if (Ctx && (Value & 0x3))
-      Ctx->reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
+    if (Value & 0x3)
+      report_fatal_error("fixup not sufficiently aligned");
     return (Value >> 2) & 0x3ffffff;
   case FK_Data_1:
   case FK_Data_2:
@@ -224,7 +209,7 @@ void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
     return; // Doesn't change encoding.
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   // Apply any target-specific value adjustments.
-  Value = adjustFixupValue(Fixup, Value, nullptr);
+  Value = adjustFixupValue(Fixup.getKind(), Value);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;
@@ -504,12 +489,6 @@ void ELFAArch64AsmBackend::processFixupValue(
   // to the linker -- a relocation!
   if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21)
     IsResolved = false;
-
-  // Try to get the encoded value for the fixup as-if we're mapping it into
-  // the instruction. This allows adjustFixupValue() to issue a diagnostic
-  // if the value is invalid.
-  if (IsResolved)
-    (void)adjustFixupValue(Fixup, Value, &Asm.getContext());
 }
 
 // Returns whether this fixup is based on an address in the .eh_frame section,

@@ -95,7 +95,7 @@ CodeGenModule::getDynamicOffsetAlignment(CharUnits actualBaseAlign,
   // unless we someday add some sort of attribute to change the
   // assumed alignment of 'this'.  So our goal here is pretty much
   // just to allow the user to explicitly say that a pointer is
-  // under-aligned and then safely access its fields and vtables.
+  // under-aligned and then safely access its fields and v-tables.
   if (actualBaseAlign >= expectedBaseAlign) {
     return expectedTargetAlign;
   }
@@ -1608,7 +1608,6 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
 
   LexicalScope Scope(*this, RootCS->getSourceRange());
 
-  incrementProfileCounter(RootCS);
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);

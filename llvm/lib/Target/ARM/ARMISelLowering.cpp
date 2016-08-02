@@ -240,7 +240,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
     // Set the correct calling convention for ARMv7k WatchOS. It's just
     // AAPCS_VFP for functions as simple as libcalls.
-    if (Subtarget->isTargetWatchABI()) {
+    if (Subtarget->isTargetWatchOS()) {
       for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i)
         setLibcallCallingConv((RTLIB::Libcall)i, CallingConv::ARM_AAPCS_VFP);
     }
@@ -410,19 +410,17 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
   }
 
-  // The half <-> float conversion functions are always soft-float on
-  // non-watchos platforms, but are needed for some targets which use a
-  // hard-float calling convention by default.
-  if (!Subtarget->isTargetWatchABI()) {
-    if (Subtarget->isAAPCS_ABI()) {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
-    } else {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
-    }
+  // The half <-> float conversion functions are always soft-float, but are
+  // needed for some targets which use a hard-float calling convention by
+  // default.
+  if (Subtarget->isAAPCS_ABI()) {
+    setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
+    setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
+    setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
+  } else {
+    setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
+    setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
+    setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
   }
 
   // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
@@ -583,8 +581,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP,      MVT::v4i32, Custom);
     setOperationAction(ISD::CTPOP,      MVT::v4i16, Custom);
     setOperationAction(ISD::CTPOP,      MVT::v8i16, Custom);
-    setOperationAction(ISD::CTPOP,      MVT::v1i64, Expand);
-    setOperationAction(ISD::CTPOP,      MVT::v2i64, Expand);
 
     // NEON does not have single instruction CTTZ for vectors.
     setOperationAction(ISD::CTTZ, MVT::v8i8, Custom);
@@ -848,12 +844,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // ATOMIC_FENCE needs custom lowering; the others should have been expanded
     // to ldrex/strex loops already.
     setOperationAction(ISD::ATOMIC_FENCE,     MVT::Other, Custom);
-    if (!Subtarget->isThumb() || !Subtarget->isMClass())
-      setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i64, Custom);
 
     // On v8, we have particularly efficient implementations of atomic fences
     // if they can be combined with nearby atomic loads and stores.
-    if (!Subtarget->hasV8Ops() || getTargetMachine().getOptLevel() == 0) {
+    if (!Subtarget->hasV8Ops()) {
       // Automatically insert fences (dmb ish) around ATOMIC_SWAP etc.
       setInsertFencesForAtomic(true);
     }
@@ -964,7 +958,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (Subtarget->hasSinCos()) {
     setLibcallName(RTLIB::SINCOS_F32, "sincosf");
     setLibcallName(RTLIB::SINCOS_F64, "sincos");
-    if (Subtarget->isTargetWatchABI()) {
+    if (Subtarget->isTargetWatchOS()) {
       setLibcallCallingConv(RTLIB::SINCOS_F32, CallingConv::ARM_AAPCS_VFP);
       setLibcallCallingConv(RTLIB::SINCOS_F64, CallingConv::ARM_AAPCS_VFP);
     }
@@ -1114,6 +1108,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::CALL:          return "ARMISD::CALL";
   case ARMISD::CALL_PRED:     return "ARMISD::CALL_PRED";
   case ARMISD::CALL_NOLINK:   return "ARMISD::CALL_NOLINK";
+  case ARMISD::tCALL:         return "ARMISD::tCALL";
   case ARMISD::BRCOND:        return "ARMISD::BRCOND";
   case ARMISD::BR_JT:         return "ARMISD::BR_JT";
   case ARMISD::BR2_JT:        return "ARMISD::BR2_JT";
@@ -1380,10 +1375,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
   case CallingConv::ARM_APCS:
   case CallingConv::GHC:
     return CC;
-  case CallingConv::PreserveMost:
-    return CallingConv::PreserveMost;
   case CallingConv::ARM_AAPCS_VFP:
-  case CallingConv::Swift:
     return isVarArg ? CallingConv::ARM_AAPCS : CallingConv::ARM_AAPCS_VFP;
   case CallingConv::C:
     if (!Subtarget->isAAPCS_ABI())
@@ -1395,6 +1387,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     else
       return CallingConv::ARM_AAPCS;
   case CallingConv::Fast:
+  case CallingConv::Swift:
   case CallingConv::CXX_FAST_TLS:
     if (!Subtarget->isAAPCS_ABI()) {
       if (Subtarget->hasVFP2() && !Subtarget->isThumb1Only() && !isVarArg)
@@ -1425,8 +1418,6 @@ CCAssignFn *ARMTargetLowering::CCAssignFnForNode(CallingConv::ID CC,
     return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
   case CallingConv::GHC:
     return (Return ? RetCC_ARM_APCS : CC_ARM_APCS_GHC);
-  case CallingConv::PreserveMost:
-    return (Return ? RetCC_ARM_AAPCS : CC_ARM_AAPCS);
   }
 }
 
@@ -1910,7 +1901,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if ((!isDirect || isARMFunc) && !Subtarget->hasV5TOps())
       CallOpc = ARMISD::CALL_NOLINK;
     else
-      CallOpc = ARMISD::CALL;
+      CallOpc = isARMFunc ? ARMISD::CALL : ARMISD::tCALL;
   } else {
     if (!isDirect && !Subtarget->hasV5TOps())
       CallOpc = ARMISD::CALL_NOLINK;
@@ -2094,9 +2085,9 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
                                     const SmallVectorImpl<SDValue> &OutVals,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
                                                      SelectionDAG& DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
-  const Function *CallerF = MF.getFunction();
+  const Function *CallerF = DAG.getMachineFunction().getFunction();
   CallingConv::ID CallerCC = CallerF->getCallingConv();
+  bool CCMatch = CallerCC == CalleeCC;
 
   assert(Subtarget->supportsTailCall());
 
@@ -2134,25 +2125,41 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
       return false;
   }
 
-  // Check that the call results are passed in the same way.
-  LLVMContext &C = *DAG.getContext();
-  if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
-                                  CCAssignFnForNode(CalleeCC, true, isVarArg),
-                                  CCAssignFnForNode(CallerCC, true, isVarArg)))
-    return false;
-  // The callee has to preserve all registers the caller needs to preserve.
-  const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
-  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
-  if (CalleeCC != CallerCC) {
-    const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
-    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
+  // If the calling conventions do not match, then we'd better make sure the
+  // results are returned in the same way as what the caller expects.
+  if (!CCMatch) {
+    SmallVector<CCValAssign, 16> RVLocs1;
+    ARMCCState CCInfo1(CalleeCC, false, DAG.getMachineFunction(), RVLocs1,
+                       *DAG.getContext(), Call);
+    CCInfo1.AnalyzeCallResult(Ins, CCAssignFnForNode(CalleeCC, true, isVarArg));
+
+    SmallVector<CCValAssign, 16> RVLocs2;
+    ARMCCState CCInfo2(CallerCC, false, DAG.getMachineFunction(), RVLocs2,
+                       *DAG.getContext(), Call);
+    CCInfo2.AnalyzeCallResult(Ins, CCAssignFnForNode(CallerCC, true, isVarArg));
+
+    if (RVLocs1.size() != RVLocs2.size())
       return false;
+    for (unsigned i = 0, e = RVLocs1.size(); i != e; ++i) {
+      if (RVLocs1[i].isRegLoc() != RVLocs2[i].isRegLoc())
+        return false;
+      if (RVLocs1[i].getLocInfo() != RVLocs2[i].getLocInfo())
+        return false;
+      if (RVLocs1[i].isRegLoc()) {
+        if (RVLocs1[i].getLocReg() != RVLocs2[i].getLocReg())
+          return false;
+      } else {
+        if (RVLocs1[i].getLocMemOffset() != RVLocs2[i].getLocMemOffset())
+          return false;
+      }
+    }
   }
 
   // If Caller's vararg or byval argument has been split between registers and
   // stack, do not perform tail call, since part of the argument is in caller's
   // local frame.
-  const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
+  const ARMFunctionInfo *AFI_Caller = DAG.getMachineFunction().
+                                      getInfo<ARMFunctionInfo>();
   if (AFI_Caller->getArgRegsSaveSize())
     return false;
 
@@ -2162,10 +2169,13 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
     // Check if stack adjustment is needed. For now, do not do this if any
     // argument is passed on the stack.
     SmallVector<CCValAssign, 16> ArgLocs;
-    ARMCCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C, Call);
+    ARMCCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
+                      *DAG.getContext(), Call);
     CCInfo.AnalyzeCallOperands(Outs,
                                CCAssignFnForNode(CalleeCC, false, isVarArg));
     if (CCInfo.getNextStackOffset()) {
+      MachineFunction &MF = DAG.getMachineFunction();
+
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
       MachineFrameInfo *MFI = MF.getFrameInfo();
@@ -2202,10 +2212,6 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
         }
       }
     }
-
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
-      return false;
   }
 
   return true;
@@ -6896,46 +6902,6 @@ static void ReplaceREADCYCLECOUNTER(SDNode *N,
   Results.push_back(Cycles32.getValue(1));
 }
 
-static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
-  SDLoc dl(V.getNode());
-  SDValue VLo = DAG.getAnyExtOrTrunc(V, dl, MVT::i32);
-  SDValue VHi = DAG.getAnyExtOrTrunc(
-      DAG.getNode(ISD::SRL, dl, MVT::i64, V, DAG.getConstant(32, dl, MVT::i32)),
-      dl, MVT::i32);
-  SDValue RegClass =
-      DAG.getTargetConstant(ARM::GPRPairRegClassID, dl, MVT::i32);
-  SDValue SubReg0 = DAG.getTargetConstant(ARM::gsub_0, dl, MVT::i32);
-  SDValue SubReg1 = DAG.getTargetConstant(ARM::gsub_1, dl, MVT::i32);
-  const SDValue Ops[] = { RegClass, VLo, SubReg0, VHi, SubReg1 };
-  return SDValue(
-      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, dl, MVT::Untyped, Ops), 0);
-}
-
-static void ReplaceCMP_SWAP_64Results(SDNode *N,
-                                       SmallVectorImpl<SDValue> & Results,
-                                       SelectionDAG &DAG) {
-  assert(N->getValueType(0) == MVT::i64 &&
-         "AtomicCmpSwap on types less than 64 should be legal");
-  SDValue Ops[] = {N->getOperand(1),
-                   createGPRPairNode(DAG, N->getOperand(2)),
-                   createGPRPairNode(DAG, N->getOperand(3)),
-                   N->getOperand(0)};
-  SDNode *CmpSwap = DAG.getMachineNode(
-      ARM::CMP_SWAP_64, SDLoc(N),
-      DAG.getVTList(MVT::Untyped, MVT::i32, MVT::Other), Ops);
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
-
-  Results.push_back(DAG.getTargetExtractSubreg(ARM::gsub_0, SDLoc(N), MVT::i32,
-                                               SDValue(CmpSwap, 0)));
-  Results.push_back(DAG.getTargetExtractSubreg(ARM::gsub_1, SDLoc(N), MVT::i32,
-                                               SDValue(CmpSwap, 0)));
-  Results.push_back(SDValue(CmpSwap, 2));
-}
-
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Don't know how to custom lower this!");
@@ -7050,9 +7016,6 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(Subtarget->isTargetWindows() && "can only expand DIV on Windows");
     return ExpandDIV_Windows(SDValue(N, 0), DAG, N->getOpcode() == ISD::SDIV,
                              Results);
-  case ISD::ATOMIC_CMP_SWAP:
-    ReplaceCMP_SWAP_64Results(N, Results, DAG);
-    return;
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -7222,7 +7185,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
 
   // Get an ordered list of the machine basic blocks for the jump table.
   std::vector<MachineBasicBlock*> LPadList;
-  SmallPtrSet<MachineBasicBlock*, 32> InvokeBBs;
+  SmallPtrSet<MachineBasicBlock*, 64> InvokeBBs;
   LPadList.reserve(CallSiteNumToLPad.size());
   for (unsigned I = 1; I <= MaxCSNum; ++I) {
     SmallVectorImpl<MachineBasicBlock*> &MBBList = CallSiteNumToLPad[I];
@@ -10106,8 +10069,7 @@ static SDValue PerformVCVTCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue Op = N->getOperand(0);
-  if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
-      Op.getOpcode() != ISD::FMUL)
+  if (!Op.getValueType().isVector() || Op.getOpcode() != ISD::FMUL)
     return SDValue();
 
   SDValue ConstVec = Op->getOperand(1);
@@ -10164,7 +10126,7 @@ static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
 
   SDValue Op = N->getOperand(0);
   unsigned OpOpcode = Op.getNode()->getOpcode();
-  if (!N->getValueType(0).isVector() || !N->getValueType(0).isSimple() ||
+  if (!N->getValueType(0).isVector() ||
       (OpOpcode != ISD::SINT_TO_FP && OpOpcode != ISD::UINT_TO_FP))
     return SDValue();
 
@@ -12072,12 +12034,7 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 bool ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
-  // At -O0, fast-regalloc cannot cope with the live vregs necessary to
-  // implement cmpxchg without spilling. If the address being exchanged is also
-  // on the stack and close enough to the spill slot, this can lead to a
-  // situation where the monitor always gets cleared and the atomic operation
-  // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  return getTargetMachine().getOptLevel() != 0;
+  return true;
 }
 
 // This has so far only been implemented for MachO.

@@ -71,12 +71,12 @@ static inline char *utohex_buffer(IntTy X, char *BufferEnd, bool LowerCase = fal
 
 static inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
   char Buffer[17];
-  return utohex_buffer(X, std::end(Buffer), LowerCase);
+  return utohex_buffer(X, Buffer+17, LowerCase);
 }
 
 static inline std::string utostr_32(uint32_t X, bool isNeg = false) {
   char Buffer[11];
-  char *BufPtr = std::end(Buffer);
+  char *BufPtr = Buffer+11;
 
   if (X == 0) *--BufPtr = '0';  // Handle special case...
 
@@ -87,28 +87,12 @@ static inline std::string utostr_32(uint32_t X, bool isNeg = false) {
 
   if (isNeg) *--BufPtr = '-';   // Add negative sign...
 
-  return std::string(BufPtr, std::end(Buffer));
-}
-
-/// Convert buffer \p Input to its hexadecimal representation.
-/// The returned string is double the size of \p Input.
-static inline std::string toHex(StringRef Input) {
-  static const char *const LUT = "0123456789ABCDEF";
-  size_t Length = Input.size();
-
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4]);
-    Output.push_back(LUT[c & 15]);
-  }
-  return Output;
+  return std::string(BufPtr, Buffer+11);
 }
 
 static inline std::string utostr(uint64_t X, bool isNeg = false) {
   char Buffer[21];
-  char *BufPtr = std::end(Buffer);
+  char *BufPtr = Buffer+21;
 
   if (X == 0) *--BufPtr = '0';  // Handle special case...
 
@@ -118,7 +102,7 @@ static inline std::string utostr(uint64_t X, bool isNeg = false) {
   }
 
   if (isNeg) *--BufPtr = '-';   // Add negative sign...
-  return std::string(BufPtr, std::end(Buffer));
+  return std::string(BufPtr, Buffer+21);
 }
 
 

@@ -23,10 +23,10 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -424,10 +424,6 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
         // We're no longer in a comment.
         InAsmComment = false;
         if (isAsm) {
-          // If this is a new __asm {} block we want to process it seperately
-          // from the single-line __asm statements
-          if (PP.LookAhead(0).is(tok::l_brace))
-            break;
           LineNo = SrcMgr.getLineNumber(ExpLoc.first, ExpLoc.second);
           SkippedStartOfLine = Tok.isAtStartOfLine();
         }

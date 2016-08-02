@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the APINotesManager interface.
+// This file defines the HeaderSearch interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,18 +15,15 @@
 #define LLVM_CLANG_APINOTES_APINOTESMANAGER_H
 
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
-#include <string>
 
 namespace clang {
 
 class DirectoryEntry;
 class FileEntry;
-class LangOptions;
 class SourceManager;
 
 namespace api_notes {
@@ -50,13 +47,6 @@ class APINotesManager {
 
   SourceManager &SourceMgr;
 
-  /// Whether to implicitly search for API notes files based on the
-  /// source file from which an entity was declared.
-  bool ImplicitAPINotes;
-
-  /// The API notes reader for the current module.
-  std::unique_ptr<APINotesReader> CurrentModuleReader;
-
   /// Whether we have already pruned the API notes cache.
   bool PrunedCache;
 
@@ -65,13 +55,6 @@ class APINotesManager {
   /// have more information, or NULL to indicate that there is no API notes
   /// reader for this directory.
   llvm::DenseMap<const DirectoryEntry *, ReaderEntry> Readers;
-
-  /// Load the API notes associated with the given file, whether it is
-  /// the binary or source form of API notes.
-  ///
-  /// \returns the API notes reader for this file, or null if there is
-  /// a failure.
-  std::unique_ptr<APINotesReader> loadAPINotes(const FileEntry *apiNotesFile);
 
   /// Load the given API notes file for the given header directory.
   ///
@@ -95,26 +78,11 @@ class APINotesManager {
                                               bool Public);
 
 public:
-  APINotesManager(SourceManager &sourceMgr, const LangOptions &langOpts);
+  APINotesManager(SourceManager &SourceMgr);
   ~APINotesManager();
-
-  /// Load the API notes for the current module.
-  ///
-  /// \param moduleName The name of the current module.
-  /// \param searchPaths The paths in which we should search for API notes
-  /// for the current module.
-  ///
-  /// \returns the file entry for the API notes file loaded, or nullptr if
-  /// no API notes were found.
-  const FileEntry *loadCurrentModuleAPINotes(StringRef moduleName,
-                                             ArrayRef<std::string> searchPaths);
 
   /// Find the API notes reader that corresponds to the given source location.
   APINotesReader *findAPINotes(SourceLocation Loc);
-
-  APINotesReader *getCurrentModuleReader() {
-    return CurrentModuleReader.get();
-  }
 };
 
 } // end namespace api_notes

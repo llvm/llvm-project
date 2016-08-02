@@ -34,7 +34,6 @@ class GVMaterializer;
 class LLVMContext;
 class RandomNumberGenerator;
 class StructType;
-template <class PtrType> class SmallPtrSetImpl;
 
 template<> struct ilist_traits<NamedMDNode>
   : public ilist_default_traits<NamedMDNode> {
@@ -171,8 +170,6 @@ private:
   std::unique_ptr<GVMaterializer>
   Materializer;                   ///< Used to materialize GlobalValues
   std::string ModuleID;           ///< Human readable identifier for the module
-  std::string SourceFileName;     ///< Original source file name for module,
-                                  ///< recorded in bitcode.
   std::string TargetTriple;       ///< Platform target triple Module compiled on
                                   ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
   void *NamedMDSymTab;            ///< NamedMDNode names.
@@ -197,12 +194,6 @@ public:
   /// Get the module identifier which is, essentially, the name of the module.
   /// @returns the module identifier as a string
   const std::string &getModuleIdentifier() const { return ModuleID; }
-
-  /// Get the module's original source file name. When compiling from
-  /// bitcode, this is taken from a bitcode record where it was recorded.
-  /// For other compiles it is the same as the ModuleID, which would
-  /// contain the source file name.
-  const std::string &getSourceFileName() const { return SourceFileName; }
 
   /// \brief Get a short "name" for the module.
   ///
@@ -248,9 +239,6 @@ public:
 
   /// Set the module identifier.
   void setModuleIdentifier(StringRef ID) { ModuleID = ID; }
-
-  /// Set the module's original source file name.
-  void setSourceFileName(StringRef Name) { SourceFileName = Name; }
 
   /// Set the data layout
   void setDataLayout(StringRef Desc);
@@ -586,58 +574,6 @@ public:
     return make_range(named_metadata_begin(), named_metadata_end());
   }
 
-  /// An iterator for DICompileUnits that skips those marked NoDebug.
-  class debug_compile_units_iterator
-      : public std::iterator<std::input_iterator_tag, DICompileUnit *> {
-    NamedMDNode *CUs;
-    unsigned Idx;
-    void SkipNoDebugCUs();
-  public:
-    explicit debug_compile_units_iterator(NamedMDNode *CUs, unsigned Idx)
-        : CUs(CUs), Idx(Idx) {
-      SkipNoDebugCUs();
-    }
-    debug_compile_units_iterator &operator++() {
-      ++Idx;
-      SkipNoDebugCUs();
-      return *this;
-    }
-    debug_compile_units_iterator operator++(int) {
-      debug_compile_units_iterator T(*this);
-      ++Idx;
-      return T;
-    }
-    bool operator==(const debug_compile_units_iterator &I) const {
-      return Idx == I.Idx;
-    }
-    bool operator!=(const debug_compile_units_iterator &I) const {
-      return Idx != I.Idx;
-    }
-    DICompileUnit *operator*() const;
-    DICompileUnit *operator->() const;
-  };
-
-  debug_compile_units_iterator debug_compile_units_begin() const {
-    auto *CUs = getNamedMetadata("llvm.dbg.cu");
-    return debug_compile_units_iterator(CUs, 0);
-  }
-
-  debug_compile_units_iterator debug_compile_units_end() const {
-    auto *CUs = getNamedMetadata("llvm.dbg.cu");
-    return debug_compile_units_iterator(CUs, CUs ? CUs->getNumOperands() : 0);
-  }
-
-  /// Return an iterator for all DICompileUnits listed in this Module's
-  /// llvm.dbg.cu named metadata node and aren't explicitly marked as
-  /// NoDebug.
-  iterator_range<debug_compile_units_iterator> debug_compile_units() const {
-    auto *CUs = getNamedMetadata("llvm.dbg.cu");
-    return make_range(
-        debug_compile_units_iterator(CUs, 0),
-        debug_compile_units_iterator(CUs, CUs ? CUs->getNumOperands() : 0));
-  }
-/// @}
-
   /// Destroy ConstantArrays in LLVMContext if they are not used.
   /// ConstantArrays constructed during linking can cause quadratic memory
   /// explosion. Releasing all unused constants can cause a 20% LTO compile-time
@@ -647,6 +583,7 @@ public:
   /// be called where all uses of the LLVMContext are understood.
   void dropTriviallyDeadConstantArrays();
 
+/// @}
 /// @name Utility functions for printing and dumping Module objects
 /// @{
 
@@ -701,12 +638,6 @@ public:
   Optional<uint64_t> getMaximumFunctionCount();
   /// @}
 };
-
-/// \brief Given "llvm.used" or "llvm.compiler.used" as a global name, collect
-/// the initializer elements of that global in Set and return the global itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallPtrSetImpl<GlobalValue *> &Set,
-                                           bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.
 inline raw_ostream &operator<<(raw_ostream &O, const Module &M) {

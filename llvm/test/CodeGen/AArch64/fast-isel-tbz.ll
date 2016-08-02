@@ -1,4 +1,4 @@
-; RUN: llc -disable-peephole                            -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc                             -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -fast-isel -fast-isel-abort=1 -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=CHECK --check-prefix=FAST %s
 
 define i32 @icmp_eq_i8(i8 zeroext %a) {
@@ -278,7 +278,8 @@ bb2:
 ; Test that we don't fold the 'and' instruction into the compare.
 define i32 @icmp_eq_and_i32(i32 %a, i1 %c) {
 ; CHECK-LABEL: icmp_eq_and_i32
-; CHECK-FAST:       tbz  w0, #2, {{LBB.+_3}} 
+; CHECK:       and  [[REG:w[0-9]+]], w0, #0x4
+; CHECK-NEXT:  cbz  [[REG]], {{LBB.+_3}}
   %1 = and i32 %a, 4
   br i1 %c, label %bb0, label %bb2
 bb0:

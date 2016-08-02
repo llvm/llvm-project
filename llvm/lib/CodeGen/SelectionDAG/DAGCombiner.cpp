@@ -36,7 +36,6 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 using namespace llvm;
@@ -113,7 +112,7 @@ namespace {
     ///
     /// This is used to allow us to reliably add any operands of a DAG node
     /// which have not yet been combined to the worklist.
-    SmallPtrSet<SDNode *, 32> CombinedNodes;
+    SmallPtrSet<SDNode *, 64> CombinedNodes;
 
     // AA - Used for DAG load/store alias analysis.
     AliasAnalysis &AA;
@@ -444,12 +443,6 @@ namespace {
     void getStoreMergeAndAliasCandidates(
         StoreSDNode* St, SmallVectorImpl<MemOpLink> &StoreNodes,
         SmallVectorImpl<LSBaseSDNode*> &AliasLoadNodes);
-
-    /// Helper function for MergeConsecutiveStores. Checks if
-    /// Candidate stores have indirect dependency through their
-    /// operands. \return True if safe to merge
-    bool checkMergeStoreCandidatesForDependencies(
-        SmallVectorImpl<MemOpLink> &StoreNodes);
 
     /// Merge consecutive store operations into a wide store.
     /// This optimization uses wide integers or vectors when possible.
@@ -2153,10 +2146,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
 static bool isDivRemLibcallAvailable(SDNode *Node, bool isSigned,
                                      const TargetLowering &TLI) {
   RTLIB::Libcall LC;
-  EVT NodeType = Node->getValueType(0);
-  if (!NodeType.isSimple())
-    return false;
-  switch (NodeType.getSimpleVT().SimpleTy) {
+  switch (Node->getSimpleValueType(0).SimpleTy) {
   default: return false; // No libcall for vector types.
   case MVT::i8:   LC= isSigned ? RTLIB::SDIVREM_I8  : RTLIB::UDIVREM_I8;  break;
   case MVT::i16:  LC= isSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16; break;
@@ -3100,7 +3090,6 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // the 'X' node here can either be nothing or an extract_vector_elt to catch
   // more cases.
   if ((N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-       N0.getValueSizeInBits() == N0.getOperand(0).getScalarValueSizeInBits() &&
        N0.getOperand(0).getOpcode() == ISD::LOAD) ||
       N0.getOpcode() == ISD::LOAD) {
     LoadSDNode *Load = cast<LoadSDNode>( (N0.getOpcode() == ISD::LOAD) ?
@@ -7237,9 +7226,14 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();
   EVT LD1VT = LD1->getValueType(0);
-  unsigned LD1Bytes = LD1VT.getSizeInBits() / 8;
-  if (ISD::isNON_EXTLoad(LD2) && LD2->hasOneUse() &&
-      DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1)) {
+
+  if (ISD::isNON_EXTLoad(LD2) &&
+      LD2->hasOneUse() &&
+      // If both are volatile this would reduce the number of volatile loads.
+      // If one is volatile it might be ok, but play conservative and bail out.
+      !LD1->isVolatile() &&
+      !LD2->isVolatile() &&
+      DAG.isConsecutiveLoad(LD2, LD1, LD1VT.getSizeInBits()/8, 1)) {
     unsigned Align = LD1->getAlignment();
     unsigned NewAlign = DAG.getDataLayout().getABITypeAlignment(
         VT.getTypeForEVT(*DAG.getContext()));
@@ -7660,11 +7654,6 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  const TargetSelectionDAGInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
-  ;
-  if (AllowFusion && STI && STI->GenerateFMAsInMachineCombiner(OptLevel))
-    return SDValue();
-
   // Always prefer FMAD to FMA for precision.
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
@@ -7846,10 +7835,6 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
-    return SDValue();
-
-  const TargetSelectionDAGInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
-  if (AllowFusion && STI && STI->GenerateFMAsInMachineCombiner(OptLevel))
     return SDValue();
 
   // Always prefer FMAD to FMA for precision.
@@ -8320,6 +8305,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     AddToWorklist(Fused.getNode());
     return Fused;
   }
+
   return SDValue();
 }
 
@@ -9054,17 +9040,6 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   if (N0.getOpcode() == ISD::FP_ROUND) {
     const bool NIsTrunc = N->getConstantOperandVal(1) == 1;
     const bool N0IsTrunc = N0.getNode()->getConstantOperandVal(1) == 1;
-
-    // Skip this folding if it results in an fp_round from f80 to f16.
-    //
-    // f80 to f16 always generates an expensive (and as yet, unimplemented)
-    // libcall to __truncxfhf2 instead of selecting native f16 conversion
-    // instructions from f32 or f64.  Moreover, the first (value-preserving)
-    // fp_round from f80 to either f32 or f64 may become a NOP in platforms like
-    // x86.
-    if (N0.getOperand(0).getValueType() == MVT::f80 && VT == MVT::f16)
-      return SDValue();
-
     // If the first fp_round isn't a value preserving truncation, it might
     // introduce a tie in the second fp_round, that wouldn't occur in the
     // single-step fp_round we want to fold to.
@@ -9632,11 +9607,6 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
       return false;
   }
 
-  // Caches for hasPredecessorHelper.
-  SmallPtrSet<const SDNode *, 32> Visited;
-  SmallVector<const SDNode *, 16> Worklist;
-  Worklist.push_back(N);
-
   // If the offset is a constant, there may be other adds of constants that
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
@@ -9651,7 +9621,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
       if (Use.getUser() == Ptr.getNode() || Use != BasePtr)
         continue;
 
-      if (SDNode::hasPredecessorHelper(Use.getUser(), Visited, Worklist))
+      if (Use.getUser()->isPredecessorOf(N))
         continue;
 
       if (Use.getUser()->getOpcode() != ISD::ADD &&
@@ -9681,10 +9651,14 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // Now check for #3 and #4.
   bool RealUse = false;
 
+  // Caches for hasPredecessorHelper
+  SmallPtrSet<const SDNode *, 32> Visited;
+  SmallVector<const SDNode *, 16> Worklist;
+
   for (SDNode *Use : Ptr.getNode()->uses()) {
     if (Use == N)
       continue;
-    if (SDNode::hasPredecessorHelper(Use, Visited, Worklist))
+    if (N->hasPredecessorHelper(Use, Visited, Worklist))
       return false;
 
     // If Ptr may be folded in addressing mode of other use, then it's
@@ -11352,30 +11326,6 @@ void DAGCombiner::getStoreMergeAndAliasCandidates(
   }
 }
 
-// We need to check that merging these stores does not cause a loop
-// in the DAG. Any store candidate may depend on another candidate
-// indirectly through its operand (we already consider dependencies
-// through the chain). Check in parallel by searching up from
-// non-chain operands of candidates.
-bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
-    SmallVectorImpl<MemOpLink> &StoreNodes) {
-  SmallPtrSet<const SDNode *, 16> Visited;
-  SmallVector<const SDNode *, 8> Worklist;
-  // search ops of store candidates
-  for (unsigned i = 0; i < StoreNodes.size(); ++i) {
-    SDNode *n = StoreNodes[i].MemNode;
-    // Potential loops may happen only through non-chain operands
-    for (unsigned j = 1; j < n->getNumOperands(); ++j)
-      Worklist.push_back(n->getOperand(j).getNode());
-  }
-  // search through DAG. We can stop early if we find a storenode
-  for (unsigned i = 0; i < StoreNodes.size(); ++i) {
-    if (SDNode::hasPredecessorHelper(StoreNodes[i].MemNode, Visited, Worklist))
-      return false;
-  }
-  return true;
-}
-
 bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
   if (OptLevel == CodeGenOpt::None)
     return false;
@@ -11427,12 +11377,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
 
   // Check if there is anything to merge.
   if (StoreNodes.size() < 2)
-    return false;
-
-  // only do dep endence check in AA case
-  bool UseAA = CombinerAA.getNumOccurrences() > 0 ? CombinerAA
-                                                  : DAG.getSubtarget().useAA();
-  if (UseAA && !checkMergeStoreCandidatesForDependencies(StoreNodes))
     return false;
 
   // Sort the memory operands according to their distance from the
@@ -14812,10 +14756,6 @@ bool DAGCombiner::findBetterNeighborChains(StoreSDNode* St) {
     while (true) {
       if (StoreSDNode *STn = dyn_cast<StoreSDNode>(NextInChain)) {
         // We found a store node. Use it for the next iteration.
-        if (STn->isVolatile() || STn->isIndexed()) {
-          Index = nullptr;
-          break;
-        }
         ChainedStores.push_back(STn);
         Index = STn;
         break;

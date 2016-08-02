@@ -1412,6 +1412,10 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
   if (F == DFSF.DFS.DFSanVarargWrapperFn)
     return;
 
+  assert(!(cast<FunctionType>(
+      CS.getCalledValue()->getType()->getPointerElementType())->isVarArg() &&
+           dyn_cast<InvokeInst>(CS.getInstruction())));
+
   IRBuilder<> IRB(CS.getInstruction());
 
   DenseMap<Value *, Function *>::iterator i =

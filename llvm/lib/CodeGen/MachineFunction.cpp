@@ -163,7 +163,7 @@ getOrCreateJumpTableInfo(unsigned EntryKind) {
 }
 
 /// Should we be emitting segmented stack stuff for the function
-bool MachineFunction::shouldSplitStack() const {
+bool MachineFunction::shouldSplitStack() {
   return getFunction()->hasFnAttribute("split-stack");
 }
 

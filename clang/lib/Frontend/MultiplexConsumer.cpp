@@ -355,13 +355,6 @@ void MultiplexConsumer::PrintStats() {
     Consumer->PrintStats();
 }
 
-bool MultiplexConsumer::shouldSkipFunctionBody(Decl *D) {
-  bool Skip = true;
-  for (auto &Consumer : Consumers)
-    Skip = Skip && Consumer->shouldSkipFunctionBody(D);
-  return Skip;
-}
-
 void MultiplexConsumer::InitializeSema(Sema &S) {
   for (auto &Consumer : Consumers)
     if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer.get()))

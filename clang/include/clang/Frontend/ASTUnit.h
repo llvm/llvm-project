@@ -60,7 +60,7 @@ class PCHContainerOperations;
 class PCHContainerReader;
 class SourceManager;
 class TargetInfo;
-class FrontendAction;
+class ASTFrontendAction;
 class ASTDeserializationListener;
 
 /// \brief Utility class for loading a ASTContext from an AST file.
@@ -781,7 +781,7 @@ public:
       CompilerInvocation *CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-      FrontendAction *Action = nullptr, ASTUnit *Unit = nullptr,
+      ASTFrontendAction *Action = nullptr, ASTUnit *Unit = nullptr,
       bool Persistent = true, StringRef ResourceFilesPath = StringRef(),
       bool OnlyLocalDecls = false, bool CaptureDiagnostics = false,
       unsigned PrecompilePreambleAfterNParses = 0,

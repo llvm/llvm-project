@@ -6,8 +6,8 @@
 define void @f(i32 %b) safestack {
 entry:
 ; CHECK: %[[SPA:.*]] = call i8** @__safestack_pointer_address()
-; CHECK: %[[USP:.*]] = load i8*, i8** %[[SPA]]
 ; CHECK: %[[USDP:.*]] = alloca i8*
+; CHECK: %[[USP:.*]] = load i8*, i8** %[[SPA]]
 ; CHECK: store i8* %[[USP]], i8** %[[USDP]]
 ; CHECK: call i32 @setjmp
 
@@ -26,8 +26,6 @@ if.then:
   br label %if.end
 
 if.end:
-; CHECK: store i8* %[[USP:.*]], i8** %[[SPA:.*]]
-
   ret void
 }
 

@@ -23,6 +23,20 @@
 #include <type_traits>
 
 namespace llvm {
+template<class T, class V>
+typename std::enable_if< std::is_constructible<T, V>::value
+                       , typename std::remove_reference<V>::type>::type &&
+ moveIfMoveConstructible(V &Val) {
+  return std::move(Val);
+}
+
+template<class T, class V>
+typename std::enable_if< !std::is_constructible<T, V>::value
+                       , typename std::remove_reference<V>::type>::type &
+moveIfMoveConstructible(V &Val) {
+  return Val;
+}
+
 /// \brief Stores a reference that can be changed.
 template <typename T>
 class ReferenceStorage {
@@ -93,12 +107,8 @@ public:
     new (getErrorStorage()) std::error_code(EC);
   }
 
-  template <class OtherT>
-  ErrorOr(OtherT &&Val,
-          typename std::enable_if<std::is_convertible<OtherT, T>::value>::type
-              * = nullptr)
-      : HasError(false) {
-    new (getStorage()) storage_type(std::forward<OtherT>(Val));
+  ErrorOr(T Val) : HasError(false) {
+    new (getStorage()) storage_type(moveIfMoveConstructible<storage_type>(Val));
   }
 
   ErrorOr(const ErrorOr &Other) {

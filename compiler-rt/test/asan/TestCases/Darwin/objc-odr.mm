@@ -16,7 +16,7 @@ void f() {
 }
 
 int main() {
-  fprintf(stderr,"Hello world");
+  NSLog(@"Hello world");
 }
 
 // CHECK-NOT: AddressSanitizer: odr-violation

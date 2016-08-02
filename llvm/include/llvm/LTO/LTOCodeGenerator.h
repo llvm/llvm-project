@@ -38,9 +38,7 @@
 #include "llvm-c/lto.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -68,13 +66,9 @@ struct LTOCodeGenerator {
   ~LTOCodeGenerator();
 
   /// Merge given module.  Return true on success.
-  ///
-  /// Resets \a HasVerifiedInput.
   bool addModule(struct LTOModule *);
 
   /// Set the destination module.
-  ///
-  /// Resets \a HasVerifiedInput.
   void setModule(std::unique_ptr<LTOModule> M);
 
   void setTargetOptions(TargetOptions Options);
@@ -127,8 +121,6 @@ struct LTOCodeGenerator {
 
   /// Write the merged module to the file specified by the given path.  Return
   /// true on success.
-  ///
-  /// Calls \a verifyMergedModuleOnce().
   bool writeMergedModules(const char *Path);
 
   /// Compile the merged module into a *single* output file; the path to output
@@ -153,8 +145,6 @@ struct LTOCodeGenerator {
                                         bool DisableVectorization);
 
   /// Optimizes the merged module.  Returns true on success.
-  ///
-  /// Calls \a verifyMergedModuleOnce().
   bool optimize(bool DisableVerify, bool DisableInline, bool DisableGVNLoadPRE,
                 bool DisableVectorization);
 
@@ -168,8 +158,6 @@ struct LTOCodeGenerator {
   /// than one element, code generation is done in parallel with out.size()
   /// threads.  Output files will be written to members of out. Returns true on
   /// success.
-  ///
-  /// Calls \a verifyMergedModuleOnce().
   bool compileOptimized(ArrayRef<raw_pwrite_stream *> Out);
 
   void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
@@ -181,19 +169,13 @@ struct LTOCodeGenerator {
 private:
   void initializeLTOPasses();
 
-  /// Verify the merged module on first call.
-  ///
-  /// Sets \a HasVerifiedInput on first call and doesn't run again on the same
-  /// input.
-  void verifyMergedModuleOnce();
-
   bool compileOptimizedToFile(const char **Name);
   void restoreLinkageForExternals();
   void applyScopeRestrictions();
-  void preserveDiscardableGVs(
-      Module &TheModule,
-      llvm::function_ref<bool(const GlobalValue &)> mustPreserveGV);
-
+  void applyRestriction(GlobalValue &GV, ArrayRef<StringRef> Libcalls,
+                        std::vector<const char *> &MustPreserveList,
+                        SmallPtrSetImpl<GlobalValue *> &AsmUsed,
+                        Mangler &Mangler);
   bool determineTarget();
 
   static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context);
@@ -201,7 +183,8 @@ private:
   void DiagnosticHandler2(const DiagnosticInfo &DI);
 
   void emitError(const std::string &ErrMsg);
-  void emitWarning(const std::string &ErrMsg);
+
+  typedef StringMap<uint8_t> StringSet;
 
   LLVMContext &Context;
   std::unique_ptr<Module> MergedModule;
@@ -209,10 +192,9 @@ private:
   std::unique_ptr<TargetMachine> TargetMach;
   bool EmitDwarfDebugInfo = false;
   bool ScopeRestrictionsDone = false;
-  bool HasVerifiedInput = false;
   Reloc::Model RelocModel = Reloc::Default;
-  StringSet<> MustPreserveSymbols;
-  StringSet<> AsmUndefinedRefs;
+  StringSet MustPreserveSymbols;
+  StringSet AsmUndefinedRefs;
   StringMap<GlobalValue::LinkageTypes> ExternalSymbols;
   std::vector<std::string> CodegenOptions;
   std::string FeatureStr;

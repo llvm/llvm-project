@@ -427,10 +427,6 @@ added in the future:
 
     - On X86-64 the callee preserves all general purpose registers, except for
       RDI and RAX.
-"``swiftcc``" - This calling convention is used for Swift language.
-    - On X86-64 RCX and R8 are available for additional integer returns, and
-      XMM2 and XMM3 are available for additional FP/vector returns.
-    - On iOS platforms, we use AAPCS-VFP calling convention.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
     target-specific calling conventions to be used. Target specific
@@ -1069,23 +1065,10 @@ Currently, only the following parameter attributes are defined:
     parameter.
 
 ``swifterror``
-    This attribute is motivated to model and optimize Swift error handling. It
-    can be applied to a parameter with pointer to pointer type or a
-    pointer-sized alloca. At the call site, the actual argument that corresponds
-    to a ``swifterror`` parameter has to come from a ``swifterror`` alloca. A
-    ``swifterror`` value (either the parameter or the alloca) can only be loaded
-    and stored from, or used as a ``swifterror`` argument. This is not a valid
-    attribute for return values and can only be applied to one parameter.
-
-    These constraints allow the calling convention to optimize access to
-    ``swifterror`` variables by associating them with a specific register at
-    call boundaries rather than placing them in memory. Since this does change
-    the calling convention, a function which uses the ``swifterror`` attribute
-    on a parameter is not ABI-compatible with one which does not.
-
-    These constraints also allow LLVM to assume that a ``swifterror`` argument
-    does not alias any other memory visible within a function and that a
-    ``swifterror`` alloca passed as an argument does not escape.
+    This indicates that the parameter is a pointer type. That pointer holds a
+    pointer to the error object. We can only load and store from the parameter
+    to get the pointer to the error object. This is not a valid attribute for
+    return values and can only be applied to one parameter.
 
 .. _gc:
 
@@ -3820,7 +3803,7 @@ references to them from instructions).
 
     !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
                         isOptimized: true, flags: "-O2", runtimeVersion: 2,
-                        splitDebugFilename: "abc.debug", emissionKind: FullDebug,
+                        splitDebugFilename: "abc.debug", emissionKind: 1,
                         enums: !2, retainedTypes: !3, subprograms: !4,
                         globals: !5, imports: !6, macros: !7, dwoId: 0x0abcd)
 
@@ -3906,28 +3889,21 @@ The following ``tag:`` values are valid:
 
 .. code-block:: llvm
 
+  DW_TAG_formal_parameter   = 5
   DW_TAG_member             = 13
   DW_TAG_pointer_type       = 15
   DW_TAG_reference_type     = 16
   DW_TAG_typedef            = 22
-  DW_TAG_inheritance        = 28
   DW_TAG_ptr_to_member_type = 31
   DW_TAG_const_type         = 38
-  DW_TAG_friend             = 42
   DW_TAG_volatile_type      = 53
   DW_TAG_restrict_type      = 55
 
-.. _DIDerivedTypeMember:
-
 ``DW_TAG_member`` is used to define a member of a :ref:`composite type
-<DICompositeType>`. The type of the member is the ``baseType:``. The
-``offset:`` is the member's bit offset.  If the composite type has an ODR
-``identifier:`` and does not set ``flags: DIFwdDecl``, then the member is
-uniqued based only on its ``name:`` and ``scope:``.
-
-``DW_TAG_inheritance`` and ``DW_TAG_friend`` are used in the ``elements:``
-field of :ref:`composite types <DICompositeType>` to describe parents and
-friends.
+<DICompositeType>` or :ref:`subprogram <DISubprogram>`. The type of the member
+is the ``baseType:``. The ``offset:`` is the member's bit offset.
+``DW_TAG_formal_parameter`` is used to define a member which is a formal
+argument of a subprogram.
 
 ``DW_TAG_typedef`` is used to provide a name for the ``baseType:``.
 
@@ -3946,15 +3922,9 @@ DICompositeType
 structures and unions. ``elements:`` points to a tuple of the composed types.
 
 If the source language supports ODR, the ``identifier:`` field gives the unique
-identifier used for type merging between modules.  When specified,
-:ref:`subprogram declarations <DISubprogramDeclaration>` and :ref:`member
-derived types <DIDerivedTypeMember>` that reference the ODR-type in their
-``scope:`` change uniquing rules.
-
-For a given ``identifier:``, there should only be a single composite type that
-does not have  ``flags: DIFlagFwdDecl`` set.  LLVM tools that link modules
-together will unique such definitions at parse time via the ``identifier:``
-field, even if the nodes are ``distinct``.
+identifier used for type merging between modules. When specified, other types
+can refer to composite types indirectly via a :ref:`metadata string
+<metadata-string>` that matches their identifier.
 
 .. code-block:: llvm
 
@@ -3974,6 +3944,9 @@ The following ``tag:`` values are valid:
   DW_TAG_enumeration_type = 4
   DW_TAG_structure_type   = 19
   DW_TAG_union_type       = 23
+  DW_TAG_subroutine_type  = 21
+  DW_TAG_inheritance      = 28
+
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>`, each representing the range of subscripts at that
@@ -3987,9 +3960,7 @@ value for the set. All enumeration type descriptors are collected in the
 
 For ``DW_TAG_structure_type``, ``DW_TAG_class_type``, and
 ``DW_TAG_union_type``, the ``elements:`` should be :ref:`derived types
-<DIDerivedType>` with ``tag: DW_TAG_member``, ``tag: DW_TAG_inheritance``, or
-``tag: DW_TAG_friend``; or :ref:`subprograms <DISubprogram>` with
-``isDefinition: false``.
+<DIDerivedType>` with ``tag: DW_TAG_member`` or ``tag: DW_TAG_inheritance``.
 
 .. _DISubrange:
 
@@ -4078,14 +4049,6 @@ metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
 that must be retained, even if their IR counterparts are optimized out of
 the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
-.. _DISubprogramDeclaration:
-
-When ``isDefinition: false``, subprograms describe a declaration in the type
-tree as opposed to a definition of a function.  If the scope is a composite
-type with an ODR ``identifier:`` and that does not set ``flags: DIFwdDecl``,
-then the subprogram declaration is uniqued based only on its ``linkageName:``
-and ``scope:``.
-
 .. code-block:: llvm
 
     define void @_Z3foov() !dbg !0 {
@@ -4094,7 +4057,7 @@ and ``scope:``.
 
     !0 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
                                 file: !2, line: 7, type: !3, isLocal: true,
-                                isDefinition: true, scopeLine: 8,
+                                isDefinition: false, scopeLine: 8,
                                 containingType: !4,
                                 virtuality: DW_VIRTUALITY_pure_virtual,
                                 virtualIndex: 10, flags: DIFlagPrototyped,
@@ -4589,27 +4552,6 @@ For example:
 .. code-block:: llvm
 
    !0 = !{!"llvm.loop.unroll.full"}
-
-'``llvm.loop.distribute.enable``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Loop distribution allows splitting a loop into multiple loops.  Currently,
-this is only performed if the entire loop cannot be vectorized due to unsafe
-memory dependencies.  The transformation will atempt to isolate the unsafe
-dependencies into their own loop.
-
-This metadata can be used to selectively enable or disable distribution of the
-loop.  The first operand is the string ``llvm.loop.distribute.enable`` and the
-second operand is a bit. If the bit operand value is 1 distribution is
-enabled. A value of 0 disables distribution:
-
-.. code-block:: llvm
-
-   !0 = !{!"llvm.loop.distribute.enable", i1 0}
-   !1 = !{!"llvm.loop.distribute.enable", i1 1}
-
-This metadata should be used in conjunction with ``llvm.loop`` loop
-identification metadata.
 
 '``llvm.mem``'
 ^^^^^^^^^^^^^^^
@@ -7113,13 +7055,13 @@ Arguments:
 There are three arguments to the '``cmpxchg``' instruction: an address
 to operate on, a value to compare to the value currently be at that
 address, and a new value to place at that address if the compared values
-are equal. The type of '<cmp>' must be an integer or pointer type whose
-bit width is a power of two greater than or equal to eight and less 
-than or equal to a target-specific size limit. '<cmp>' and '<new>' must
-have the same type, and the type of '<pointer>' must be a pointer to 
-that type. If the ``cmpxchg`` is marked as ``volatile``, then the 
-optimizer is not allowed to modify the number or order of execution of
-this ``cmpxchg`` with other :ref:`volatile operations <volatile>`.
+are equal. The type of '<cmp>' must be an integer type whose bit width
+is a power of two greater than or equal to eight and less than or equal
+to a target-specific size limit. '<cmp>' and '<new>' must have the same
+type, and the type of '<pointer>' must be a pointer to that type. If the
+``cmpxchg`` is marked as ``volatile``, then the optimizer is not allowed
+to modify the number or order of execution of this ``cmpxchg`` with
+other :ref:`volatile operations <volatile>`.
 
 The success and failure :ref:`ordering <ordering>` arguments specify how this
 ``cmpxchg`` synchronizes with other atomic operations. Both ordering parameters

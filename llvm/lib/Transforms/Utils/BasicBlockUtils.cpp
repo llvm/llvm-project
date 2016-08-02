@@ -709,10 +709,11 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// UnreachableInst, otherwise it branches to Tail.
 /// Returns the NewBasicBlock's terminator.
 
-TerminatorInst *
-llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
-                                bool Unreachable, MDNode *BranchWeights,
-                                DominatorTree *DT, LoopInfo *LI) {
+TerminatorInst *llvm::SplitBlockAndInsertIfThen(Value *Cond,
+                                                Instruction *SplitBefore,
+                                                bool Unreachable,
+                                                MDNode *BranchWeights,
+                                                DominatorTree *DT) {
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
   TerminatorInst *HeadOldTerm = Head->getTerminator();
@@ -740,12 +741,6 @@ llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
       // Head dominates ThenBlock.
       DT->addNewBlock(ThenBlock, Head);
     }
-  }
-
-  if (LI) {
-    Loop *L = LI->getLoopFor(Head);
-    L->addBasicBlockToLoop(ThenBlock, *LI);
-    L->addBasicBlockToLoop(Tail, *LI);
   }
 
   return CheckTerm;

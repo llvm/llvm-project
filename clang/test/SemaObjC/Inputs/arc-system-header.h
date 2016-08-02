@@ -50,8 +50,3 @@ extern struct Test6 *const kMagicConstant;
 static inline void *test8(id ptr) {
   return (__bridge_retain void*) ptr;
 }
-
-typedef struct {
-  const char *name;
-  id field;
-} Test9;

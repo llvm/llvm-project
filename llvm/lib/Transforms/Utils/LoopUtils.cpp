@@ -423,7 +423,7 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
   default:
     return InstDesc(false, I);
   case Instruction::PHI:
-    return InstDesc(I, Prev.getMinMaxKind(), Prev.getUnsafeAlgebraInst());
+    return InstDesc(I, Prev.getMinMaxKind());
   case Instruction::Sub:
   case Instruction::Add:
     return InstDesc(Kind == RK_IntegerAdd, I);
@@ -726,42 +726,4 @@ SmallVector<Instruction *, 8> llvm::findDefsUsedOutsideOfLoop(Loop *L) {
     }
 
   return UsedOutside;
-}
-
-/// \brief Find string metadata for loop
-///
-/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
-/// operand or null otherwise.  If the string metadata is not found return
-/// Optional's not-a-value.
-Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
-                                                            StringRef Name) {
-  MDNode *LoopID = TheLoop->getLoopID();
-  // Return none if LoopID is false.
-  if (!LoopID)
-    return None;
-
-  // First operand should refer to the loop id itself.
-  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
-  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
-
-  // Iterate over LoopID operands and look for MDString Metadata
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-    if (!MD)
-      continue;
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-    if (!S)
-      continue;
-    // Return true if MDString holds expected MetaData.
-    if (Name.equals(S->getString()))
-      switch (MD->getNumOperands()) {
-      case 1:
-        return nullptr;
-      case 2:
-        return &MD->getOperand(1);
-      default:
-        llvm_unreachable("loop metadata has 0 or 1 operand");
-      }
-  }
-  return None;
 }

@@ -75,11 +75,8 @@ ThreadPool::ThreadPool(unsigned ThreadCount)
 void ThreadPool::wait() {
   // Wait for all threads to complete and the queue to be empty
   std::unique_lock<std::mutex> LockGuard(CompletionLock);
-  // The order of the checks for ActiveThreads and Tasks.empty() matters because
-  // any active threads might be modifying the Tasks queue, and this would be a
-  // race.
   CompletionCondition.wait(LockGuard,
-                           [&] { return !ActiveThreads && Tasks.empty(); });
+                           [&] { return Tasks.empty() && !ActiveThreads; });
 }
 
 std::shared_future<ThreadPool::VoidTy> ThreadPool::asyncImpl(TaskTy Task) {

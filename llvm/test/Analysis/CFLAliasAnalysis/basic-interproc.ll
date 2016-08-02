@@ -3,8 +3,11 @@
 
 ; RUN: opt < %s -disable-basicaa -cfl-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
-; CHECK: Function: test2
-; CHECK: MayAlias: i32* %arg1, i32* %arg2
+; CHECK:     Function: test
+; CHECK: 2 Total Alias Queries Performed
+; CHECK: 1 no alias responses
+; ^^ In @test2, %arg1 and %arg2 may alias
+
 define void @test2(i32* %arg1, i32* %arg2) {
   store i32 0, i32* %arg1
   store i32 0, i32* %arg2

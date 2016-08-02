@@ -159,7 +159,6 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
   unsigned Opc = MBBI->getOpcode();
   switch (Opc) {
   default: return 0;
-  case X86::RET:
   case X86::RETL:
   case X86::RETQ:
   case X86::RETIL:
@@ -377,15 +376,10 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   int Offset = 0;
 
   if ((Opc == X86::ADD64ri32 || Opc == X86::ADD64ri8 ||
-       Opc == X86::ADD32ri || Opc == X86::ADD32ri8) &&
+       Opc == X86::ADD32ri || Opc == X86::ADD32ri8 ||
+       Opc == X86::LEA32r || Opc == X86::LEA64_32r) &&
       PI->getOperand(0).getReg() == StackPtr){
     Offset += PI->getOperand(2).getImm();
-    MBB.erase(PI);
-    if (!doMergeWithPrevious) MBBI = NI;
-  } else if ((Opc == X86::LEA32r || Opc == X86::LEA64_32r) &&
-             PI->getOperand(0).getReg() == StackPtr) {
-    // For LEAs we have: def = lea SP, FI, noreg, Offset, noreg.
-    Offset += PI->getOperand(4).getImm();
     MBB.erase(PI);
     if (!doMergeWithPrevious) MBBI = NI;
   } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB64ri8 ||
@@ -1858,25 +1852,16 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     return true;
 
   // Push GPRs. It increases frame size.
-  const MachineFunction &MF = *MBB.getParent();
   unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
   for (unsigned i = CSI.size(); i != 0; --i) {
     unsigned Reg = CSI[i - 1].getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
+    // Add the callee-saved register as live-in. It's killed at the spill.
+    MBB.addLiveIn(Reg);
 
-    bool isLiveIn = MF.getRegInfo().isLiveIn(Reg);
-    if (!isLiveIn)
-      MBB.addLiveIn(Reg);
-
-    // Do not set a kill flag on values that are also marked as live-in. This
-    // happens with the @llvm-returnaddress intrinsic and with arguments
-    // passed in callee saved registers.
-    // Omitting the kill flags is conservatively correct even if the live-in
-    // is not used after all.
-    bool isKill = !isLiveIn;
-    BuildMI(MBB, MI, DL, TII.get(Opc)).addReg(Reg, getKillRegState(isKill))
+    BuildMI(MBB, MI, DL, TII.get(Opc)).addReg(Reg, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);
   }
 
@@ -2045,10 +2030,6 @@ void X86FrameLowering::adjustForSegmentedStacks(
   uint64_t StackSize;
   unsigned TlsReg, TlsOffset;
   DebugLoc DL;
-
-  // To support shrink-wrapping we would need to insert the new blocks
-  // at the right place and update the branches to PrologueMBB.
-  assert(&(*MF.begin()) == &PrologueMBB && "Shrink-wrapping not supported yet");
 
   unsigned ScratchReg = GetScratchRegister(Is64Bit, IsLP64, MF, true);
   assert(!MF.getRegInfo().isLiveIn(ScratchReg) &&
@@ -2290,11 +2271,6 @@ void X86FrameLowering::adjustForHiPEPrologue(
     MachineFunction &MF, MachineBasicBlock &PrologueMBB) const {
   MachineFrameInfo *MFI = MF.getFrameInfo();
   DebugLoc DL;
-
-  // To support shrink-wrapping we would need to insert the new blocks
-  // at the right place and update the branches to PrologueMBB.
-  assert(&(*MF.begin()) == &PrologueMBB && "Shrink-wrapping not supported yet");
-
   // HiPE-specific values
   const unsigned HipeLeafWords = 24;
   const unsigned CCRegisteredArgs = Is64Bit ? 6 : 5;
@@ -2456,8 +2432,7 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
 
     bool IsDef = false;
     for (const MachineOperand &MO : Prev->implicit_operands()) {
-      if (MO.isReg() && MO.isDef() &&
-          TRI->isSuperOrSubRegisterEq(MO.getReg(), Candidate)) {
+      if (MO.isReg() && MO.isDef() && MO.getReg() == Candidate) {
         IsDef = true;
         break;
       }
@@ -2586,12 +2561,6 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
   }
 }
 
-bool X86FrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
-  assert(MBB.getParent() && "Block is not attached to a function!");
-  const MachineFunction &MF = *MBB.getParent();
-  return !TRI->needsStackRealignment(MF) || !MBB.isLiveIn(X86::EFLAGS);
-}
-
 bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   assert(MBB.getParent() && "Block is not attached to a function!");
 
@@ -2615,14 +2584,7 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
 bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
-  return (MF.getFunction()->hasFnAttribute(Attribute::NoUnwind) || hasFP(MF)) &&
-         // The lowering of segmented stack and HiPE only support entry blocks
-         // as prologue blocks: PR26107.
-         // This limitation may be lifted if we fix:
-         // - adjustForSegmentedStacks
-         // - adjustForHiPEPrologue
-         MF.getFunction()->getCallingConv() != CallingConv::HiPE &&
-         !MF.shouldSplitStack();
+  return MF.getFunction()->hasFnAttribute(Attribute::NoUnwind) || hasFP(MF);
 }
 
 MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(

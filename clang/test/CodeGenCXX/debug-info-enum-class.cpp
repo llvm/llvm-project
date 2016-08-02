@@ -4,7 +4,6 @@ enum class A { A1=1 };                 // underlying type is int by default
 enum class B: unsigned long { B1=1 };  // underlying type is unsigned long
 enum C { C1 = 1 };
 enum D : short; // enum forward declaration
-enum Z : int;
 A a;
 B b;
 C c;
@@ -95,17 +94,12 @@ void f2(E) {
 // CHECK-NOT:              offset:
 // CHECK-SAME:             flags: DIFlagFwdDecl
 
-// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Z"
-// CHECK-NOT:              scope:
-// CHECK-SAME:             flags: DIFlagFwdDecl
-void fz() { Z z; }
-
 namespace test5 {
-// CHECK: [[TEST5:![0-9]+]] = !DINamespace(name: "test5"
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "E"
-// CHECK-SAME:             scope: [[TEST5]]
+// CHECK-SAME:             scope: [[TEST5:![0-9]+]]
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN5test51EE"
+// CHECK: [[TEST5]] = !DINamespace(name: "test5"
 enum E : int;
 void f1(E *) {
 }

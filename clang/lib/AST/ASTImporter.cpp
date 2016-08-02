@@ -223,40 +223,8 @@ namespace clang {
     Expr *VisitImplicitCastExpr(ImplicitCastExpr *E);
     Expr *VisitCStyleCastExpr(CStyleCastExpr *E);
     Expr *VisitCXXConstructExpr(CXXConstructExpr *E);
-    Expr *VisitCXXMemberCallExpr(CXXMemberCallExpr *E);
-    Expr *VisitCXXThisExpr(CXXThisExpr *E);
-    Expr *VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E);
     Expr *VisitMemberExpr(MemberExpr *E);
     Expr *VisitCallExpr(CallExpr *E);
-    Expr *VisitInitListExpr(InitListExpr *E);
-    Expr *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E);
-    Expr *VisitCXXNamedCastExpr(CXXNamedCastExpr *E);
-
-    template <typename T, typename Iter> bool ImportArray(
-        Iter B, Iter E, llvm::ArrayRef<T*> &ToArray) {
-      size_t NumElements = E - B;
-      SmallVector<T *, 1> ImportedElements(NumElements);
-      ASTImporter &_Importer = Importer;
-
-      bool Failed = false;
-      std::transform(B, E, ImportedElements.begin(),
-                     [&_Importer, &Failed](T *Element) -> T* {
-                       T *ToElement = _Importer.Import(Element);
-                       if (Element && !ToElement)
-                         Failed = true;
-                       return ToElement;
-                     });
-      
-      if (Failed)
-        return false;
-      
-      T **CopiedElements = new (Importer.getToContext()) T*[NumElements];
-      std::copy(ImportedElements.begin(), ImportedElements.end(),
-          &CopiedElements[0]);
-      ToArray = llvm::ArrayRef<T*>(CopiedElements, NumElements);
-      
-      return true;
-    }
   };
 }
 using namespace clang;
@@ -1006,7 +974,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 /// including the next assigned index (if none of them match). Returns an
 /// empty option if the context is not a record, i.e.. if the anonymous
 /// struct/union is at namespace or block scope.
-static Optional<unsigned> findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
+static Optional<unsigned> findAnonymousStructOrUnionIndex(RecordDecl *Anon) {
   ASTContext &Context = Anon->getASTContext();
   QualType AnonTy = Context.getRecordType(Anon);
 
@@ -1017,29 +985,13 @@ static Optional<unsigned> findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   unsigned Index = 0;
   for (const auto *D : Owner->noload_decls()) {
     const auto *F = dyn_cast<FieldDecl>(D);
-    if (!F)
+    if (!F || !F->isAnonymousStructOrUnion())
       continue;
 
-    if (F->isAnonymousStructOrUnion()) {
-      if (Context.hasSameType(F->getType(), AnonTy))
-        break;
-      ++Index;
-      continue;
-    }
+    if (Context.hasSameType(F->getType(), AnonTy))
+      break;
 
-    // If the field looks like this:
-    // struct { ... } A;
-    QualType FieldType = F->getType();
-    if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
-      const RecordDecl *RecDecl = RecType->getDecl();
-      if (RecDecl->getDeclContext() == Owner &&
-          !RecDecl->getIdentifier()) {
-        if (Context.hasSameType(FieldType, AnonTy))
-          break;
-        ++Index;
-        continue;
-      }
-    }
+    ++Index;
   }
 
   return Index;
@@ -1061,8 +1013,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (D1->isAnonymousStructOrUnion() && D2->isAnonymousStructOrUnion()) {
     // If both anonymous structs/unions are in a record context, make sure
     // they occur in the same location in the context records.
-    if (Optional<unsigned> Index1 = findUntaggedStructOrUnionIndex(D1)) {
-      if (Optional<unsigned> Index2 = findUntaggedStructOrUnionIndex(D2)) {
+    if (Optional<unsigned> Index1 = findAnonymousStructOrUnionIndex(D1)) {
+      if (Optional<unsigned> Index2 = findAnonymousStructOrUnionIndex(D2)) {
         if (*Index1 != *Index2)
           return false;
       }
@@ -2642,9 +2594,9 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           // If both anonymous structs/unions are in a record context, make sure
           // they occur in the same location in the context records.
           if (Optional<unsigned> Index1
-              = findUntaggedStructOrUnionIndex(D)) {
+              = findAnonymousStructOrUnionIndex(D)) {
             if (Optional<unsigned> Index2 =
-                    findUntaggedStructOrUnionIndex(FoundRecord)) {
+                    findAnonymousStructOrUnionIndex(FoundRecord)) {
               if (*Index1 != *Index2)
                 continue;
             }
@@ -2702,35 +2654,11 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
   RecordDecl *D2 = AdoptDecl;
   SourceLocation StartLoc = Importer.Import(D->getLocStart());
   if (!D2) {
-    CXXRecordDecl *D2CXX = nullptr;
-    if (CXXRecordDecl *DCXX = llvm::dyn_cast<CXXRecordDecl>(D)) {
-      if (DCXX->isLambda()) {
-        TypeSourceInfo *TInfo = Importer.Import(DCXX->getLambdaTypeInfo());
-        D2CXX = CXXRecordDecl::CreateLambda(Importer.getToContext(),
-                                            DC, TInfo, Loc,
-                                            DCXX->isDependentLambda(),
-                                            DCXX->isGenericLambda(),
-                                            DCXX->getLambdaCaptureDefault());
-        Decl *CDecl = Importer.Import(DCXX->getLambdaContextDecl());
-        if (DCXX->getLambdaContextDecl() && !CDecl)
-          return nullptr;
-        D2CXX->setLambdaMangling(DCXX->getLambdaManglingNumber(), CDecl);
-      } else if (DCXX->isInjectedClassName()) {                                                 
-        // We have to be careful to do a similar dance to the one in                            
-        // Sema::ActOnStartCXXMemberDeclarations                                                
-        CXXRecordDecl *const PrevDecl = nullptr;                                                
-        const bool DelayTypeCreation = true;                                                    
-        D2CXX = CXXRecordDecl::Create(                                                          
-            Importer.getToContext(), D->getTagKind(), DC, StartLoc, Loc,                        
-            Name.getAsIdentifierInfo(), PrevDecl, DelayTypeCreation);                           
-        Importer.getToContext().getTypeDeclType(                                                
-            D2CXX, llvm::dyn_cast<CXXRecordDecl>(DC));                                          
-      } else {
-        D2CXX = CXXRecordDecl::Create(Importer.getToContext(),
-                                      D->getTagKind(),
-                                      DC, StartLoc, Loc,
-                                      Name.getAsIdentifierInfo());
-      }
+    if (isa<CXXRecordDecl>(D)) {
+      CXXRecordDecl *D2CXX = CXXRecordDecl::Create(Importer.getToContext(), 
+                                                   D->getTagKind(),
+                                                   DC, StartLoc, Loc,
+                                                   Name.getAsIdentifierInfo());
       D2 = D2CXX;
       D2->setAccess(D->getAccess());
     } else {
@@ -2923,22 +2851,6 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
                                             D->isInlineSpecified(), 
                                             D->isImplicit(),
                                             D->isConstexpr());
-    if (unsigned NumInitializers = FromConstructor->getNumCtorInitializers()) {
-      SmallVector<CXXCtorInitializer *, 4> CtorInitializers;
-      for (CXXCtorInitializer *I : FromConstructor->inits()) {
-        CXXCtorInitializer *ToI =
-            cast_or_null<CXXCtorInitializer>(Importer.Import(I));
-        if (!ToI && I)
-          return nullptr;
-        CtorInitializers.push_back(ToI);
-      }
-      CXXCtorInitializer **Memory =
-          new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
-      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
-      CXXConstructorDecl *ToCtor = llvm::cast<CXXConstructorDecl>(ToFunction);
-      ToCtor->setCtorInitializers(Memory);
-      ToCtor->setNumCtorInitializers(NumInitializers);
-    }
   } else if (isa<CXXDestructorDecl>(D)) {
     ToFunction = CXXDestructorDecl::Create(Importer.getToContext(),
                                            cast<CXXRecordDecl>(DC),
@@ -3097,13 +3009,8 @@ Decl *ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
                                          D->getInClassInitStyle());
   ToField->setAccess(D->getAccess());
   ToField->setLexicalDeclContext(LexicalDC);
-  if (Expr *FromInitializer = D->getInClassInitializer()) {
-    Expr *ToInitializer = Importer.Import(FromInitializer);
-    if (ToInitializer)
-      ToField->setInClassInitializer(ToInitializer);
-    else
-      return nullptr;
-  }
+  if (ToField->hasInClassInitializer())
+    ToField->setInClassInitializer(D->getInClassInitializer());
   ToField->setImplicit(D->isImplicit());
   Importer.Imported(D, ToField);
   LexicalDC->addDeclInternal(ToField);
@@ -4154,8 +4061,7 @@ Decl *ASTNodeImporter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
   }
 
   ObjCPropertyImplDecl *ToImpl
-    = InImpl->FindPropertyImplDecl(Property->getIdentifier(),
-                                   Property->getQueryKind());
+    = InImpl->FindPropertyImplDecl(Property->getIdentifier());
   if (!ToImpl) {    
     ToImpl = ObjCPropertyImplDecl::Create(Importer.getToContext(), DC,
                                           Importer.Import(D->getLocStart()),
@@ -4712,11 +4618,16 @@ Stmt *ASTNodeImporter::VisitNullStmt(NullStmt *S) {
 }
 
 Stmt *ASTNodeImporter::VisitCompoundStmt(CompoundStmt *S) {
-  llvm::ArrayRef<Stmt *> ToStmts;
-    
-  if (!ImportArray(S->body_begin(), S->body_end(), ToStmts))
-    return nullptr;
-
+  SmallVector<Stmt *, 4> ToStmts(S->size());
+  auto &_Importer = this->Importer;
+  std::transform(S->body_begin(), S->body_end(), ToStmts.begin(),
+    [&_Importer](Stmt *CS) -> Stmt * {
+      return _Importer.Import(CS);
+    });
+  for (Stmt *ToS : ToStmts) {
+    if (!ToS)
+      return nullptr;
+  }
   SourceLocation ToLBraceLoc = Importer.Import(S->getLBracLoc());
   SourceLocation ToRBraceLoc = Importer.Import(S->getRBracLoc());
   return new (Importer.getToContext()) CompoundStmt(Importer.getToContext(),
@@ -5336,14 +5247,21 @@ Expr *ASTNodeImporter::VisitCXXConstructExpr(CXXConstructExpr *E) {
     return nullptr;
 
   CXXConstructorDecl *ToCCD =
-    dyn_cast_or_null<CXXConstructorDecl>(Importer.Import(E->getConstructor()));
-  if (!ToCCD)
+    dyn_cast<CXXConstructorDecl>(Importer.Import(E->getConstructor()));
+  if (!ToCCD && E->getConstructor())
     return nullptr;
 
-  ArrayRef<Expr *> ToArgs;
-  
-  if (!ImportArray(E->arg_begin(), E->arg_end(), ToArgs))
-    return nullptr;
+  size_t NumArgs = E->getNumArgs();
+  SmallVector<Expr *, 1> ToArgs(NumArgs);
+  ASTImporter &_Importer = Importer;
+  std::transform(E->arg_begin(), E->arg_end(), ToArgs.begin(),
+    [&_Importer](Expr *AE) -> Expr * {
+      return _Importer.Import(AE);
+    });
+  for (Expr *ToA : ToArgs) {
+    if (!ToA)
+      return nullptr;
+  }
 
   return CXXConstructExpr::Create(Importer.getToContext(), T,
                                   Importer.Import(E->getLocation()),
@@ -5355,44 +5273,6 @@ Expr *ASTNodeImporter::VisitCXXConstructExpr(CXXConstructExpr *E) {
                                   E->getConstructionKind(),
                                   Importer.Import(E->getParenOrBraceRange()));
 }
-
-Expr *ASTNodeImporter::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
-  QualType T = Importer.Import(E->getType());
-  if (T.isNull())
-    return nullptr;
-  
-  Expr *ToFn = Importer.Import(E->getCallee());
-  if (!ToFn)
-    return nullptr;
-  
-  ArrayRef<Expr *> ToArgs;
-  
-  if (!ImportArray(E->arg_begin(), E->arg_end(), ToArgs))
-    return nullptr;
-
-  return new (Importer.getToContext()) CXXMemberCallExpr(Importer.getToContext(), ToFn,
-                                                         ToArgs, T, E->getValueKind(),
-                                                         Importer.Import(E->getRParenLoc()));
-}
-
-Expr *ASTNodeImporter::VisitCXXThisExpr(CXXThisExpr *E) {
-  QualType T = Importer.Import(E->getType());
-  if (T.isNull())
-    return nullptr;
-  
-  return new (Importer.getToContext())
-  CXXThisExpr(Importer.Import(E->getLocation()), T, E->isImplicit());
-}
-
-Expr *ASTNodeImporter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E) {
-  QualType T = Importer.Import(E->getType());
-  if (T.isNull())
-    return nullptr;
-  
-  return new (Importer.getToContext())
-  CXXBoolLiteralExpr(E->getValue(), T, Importer.Import(E->getLocation()));
-}
-
 
 Expr *ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
   QualType T = Importer.Import(E->getType());
@@ -5460,72 +5340,6 @@ Expr *ASTNodeImporter::VisitCallExpr(CallExpr *E) {
     CallExpr(Importer.getToContext(), ToCallee, 
              llvm::makeArrayRef(ToArgs_Copied, NumArgs), T, E->getValueKind(),
              Importer.Import(E->getRParenLoc()));
-}
-
-Expr *ASTNodeImporter::VisitInitListExpr(InitListExpr *E) {
-  QualType T = Importer.Import(E->getType());
-  if (T.isNull())
-    return nullptr;
-    
-  ArrayRef<Expr *> ToInits;
-
-  if (!ImportArray(E->inits().begin(), E->inits().end(), ToInits))
-    return nullptr;
-    
-  InitListExpr *ToE = new (Importer.getToContext())
-    InitListExpr(Importer.getToContext(),
-                 Importer.Import(E->getLBraceLoc()),
-                 ToInits,
-                 Importer.Import(E->getRBraceLoc()));
-  
-  if (ToE)
-    ToE->setType(T);
-
-  return ToE;
-}
-
-Expr *ASTNodeImporter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE) {
-  FieldDecl *ToField = llvm::dyn_cast_or_null<FieldDecl>(
-      Importer.Import(DIE->getField()));
-  if (!ToField && DIE->getField())
-    return nullptr;
-
-  return CXXDefaultInitExpr::Create(
-      Importer.getToContext(), Importer.Import(DIE->getLocStart()), ToField);
-}
-
-Expr *ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {
-  QualType ToType = Importer.Import(E->getType());
-  if (ToType.isNull() && !E->getType().isNull())
-    return nullptr;
-  ExprValueKind VK = E->getValueKind();
-  CastKind CK = E->getCastKind();
-  Expr *ToOp = Importer.Import(E->getSubExpr());
-  if (!ToOp && E->getSubExpr())
-    return nullptr;
-  CXXCastPath BasePath;
-  if (ImportCastPath(E, BasePath))
-    return nullptr;
-  TypeSourceInfo *ToWritten = Importer.Import(E->getTypeInfoAsWritten());
-  SourceLocation ToOperatorLoc = Importer.Import(E->getOperatorLoc());
-  SourceLocation ToRParenLoc = Importer.Import(E->getRParenLoc());
-  SourceRange ToAngleBrackets = Importer.Import(E->getAngleBrackets());
-  
-  if (isa<CXXStaticCastExpr>(E)) {
-    return CXXStaticCastExpr::Create(
-        Importer.getToContext(), ToType, VK, CK, ToOp, &BasePath, 
-        ToWritten, ToOperatorLoc, ToRParenLoc, ToAngleBrackets);
-  } else if (isa<CXXDynamicCastExpr>(E)) {
-    return CXXDynamicCastExpr::Create(
-        Importer.getToContext(), ToType, VK, CK, ToOp, &BasePath, 
-        ToWritten, ToOperatorLoc, ToRParenLoc, ToAngleBrackets);
-  } else if (isa<CXXReinterpretCastExpr>(E)) {
-    return CXXReinterpretCastExpr::Create(
-        Importer.getToContext(), ToType, VK, CK, ToOp, &BasePath, 
-        ToWritten, ToOperatorLoc, ToRParenLoc, ToAngleBrackets);
-  } else {
-    return nullptr;
-  }
 }
 
 ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
@@ -5933,72 +5747,6 @@ FileID ASTImporter::Import(FileID FromID) {
   return ToID;
 }
 
-CXXCtorInitializer *ASTImporter::Import(CXXCtorInitializer *From) {
-  Expr *ToExpr = Import(From->getInit());
-  if (!ToExpr && From->getInit())
-    return nullptr;
-
-  if (From->isBaseInitializer()) {
-    TypeSourceInfo *ToTInfo = Import(From->getTypeSourceInfo());
-    if (!ToTInfo && From->getTypeSourceInfo())
-      return nullptr;
-
-    return new (ToContext) CXXCtorInitializer(
-        ToContext, ToTInfo, From->isBaseVirtual(), Import(From->getLParenLoc()),
-        ToExpr, Import(From->getRParenLoc()),
-        From->isPackExpansion() ? Import(From->getEllipsisLoc())
-                                : SourceLocation());
-  } else if (From->isMemberInitializer()) {
-    FieldDecl *ToField =
-        llvm::cast_or_null<FieldDecl>(Import(From->getMember()));
-    if (!ToField && From->getMember())
-      return nullptr;
-
-    return new (ToContext) CXXCtorInitializer(
-        ToContext, ToField, Import(From->getMemberLocation()),
-        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()));
-  } else if (From->isIndirectMemberInitializer()) {
-    IndirectFieldDecl *ToIField = llvm::cast_or_null<IndirectFieldDecl>(
-        Import(From->getIndirectMember()));
-    if (!ToIField && From->getIndirectMember())
-      return nullptr;
-
-    return new (ToContext) CXXCtorInitializer(
-        ToContext, ToIField, Import(From->getMemberLocation()),
-        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()));
-  } else if (From->isDelegatingInitializer()) {
-    TypeSourceInfo *ToTInfo = Import(From->getTypeSourceInfo());
-    if (!ToTInfo && From->getTypeSourceInfo())
-      return nullptr;
-
-    return new (ToContext)
-        CXXCtorInitializer(ToContext, ToTInfo, Import(From->getLParenLoc()),
-                           ToExpr, Import(From->getRParenLoc()));
-  } else if (unsigned NumArrayIndices = From->getNumArrayIndices()) {
-    FieldDecl *ToField =
-        llvm::cast_or_null<FieldDecl>(Import(From->getMember()));
-    if (!ToField && From->getMember())
-      return nullptr;
-
-    SmallVector<VarDecl *, 4> ToAIs(NumArrayIndices);
-
-    for (unsigned AII = 0; AII < NumArrayIndices; ++AII) {
-      VarDecl *ToArrayIndex =
-          dyn_cast_or_null<VarDecl>(Import(From->getArrayIndex(AII)));
-      if (!ToArrayIndex && From->getArrayIndex(AII))
-        return nullptr;
-    }
-
-    return CXXCtorInitializer::Create(
-        ToContext, ToField, Import(From->getMemberLocation()),
-        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()),
-        ToAIs.data(), NumArrayIndices);
-  } else {
-    return nullptr;
-  }
-}
-
-
 void ASTImporter::ImportDefinition(Decl *From) {
   Decl *To = Import(From);
   if (!To)
@@ -6103,12 +5851,7 @@ IdentifierInfo *ASTImporter::Import(const IdentifierInfo *FromId) {
   if (!FromId)
     return nullptr;
 
-  IdentifierInfo *ToId = &ToContext.Idents.get(FromId->getName());
-
-  if (!ToId->getBuiltinID() && FromId->getBuiltinID())
-    ToId->setBuiltinID(FromId->getBuiltinID());
-
-  return ToId;
+  return &ToContext.Idents.get(FromId->getName());
 }
 
 Selector ASTImporter::Import(Selector FromSel) {
@@ -6167,16 +5910,6 @@ void ASTImporter::CompleteDecl (Decl *D) {
 }
 
 Decl *ASTImporter::Imported(Decl *From, Decl *To) {
-  if (From->hasAttrs()) {
-    for (Attr *FromAttr : From->getAttrs())
-      To->addAttr(FromAttr->clone(To->getASTContext()));
-  }
-  if (From->isUsed()) {
-    To->setIsUsed();
-  }
-  if (From->isImplicit()) {
-    To->setImplicit();
-  }
   ImportedDecls[From] = To;
   return To;
 }

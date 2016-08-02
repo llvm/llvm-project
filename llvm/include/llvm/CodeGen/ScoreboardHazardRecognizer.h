@@ -83,9 +83,11 @@ class ScoreboardHazardRecognizer : public ScheduleHazardRecognizer {
     void dump() const;
   };
 
+#ifndef NDEBUG
   // Support for tracing ScoreboardHazardRecognizer as a component within
-  // another module.
-  const char *DebugType;
+  // another module. Follows the current thread-unsafe model of tracing.
+  static const char *DebugType;
+#endif
 
   // Itinerary data for the target.
   const InstrItineraryData *ItinData;

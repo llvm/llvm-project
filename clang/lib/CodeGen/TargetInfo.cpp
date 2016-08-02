@@ -19,7 +19,6 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/CodeGen/SwiftCallingConv.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
@@ -68,46 +67,6 @@ Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 }
 
 ABIInfo::~ABIInfo() {}
-
-/// Does the given lowering require more than the given number of
-/// registers when expanded?
-///
-/// This is intended to be the basis of a reasonable basic implementation
-/// of should{Pass,Return}IndirectlyForSwift.
-///
-/// For most targets, a limit of four total registers is reasonable; this
-/// limits the amount of code required in order to move around the value
-/// in case it wasn't produced immediately prior to the call by the caller
-/// (or wasn't produced in exactly the right registers) or isn't used
-/// immediately within the callee.  But some targets may need to further
-/// limit the register count due to an inability to support that many
-/// return registers.
-static bool occupiesMoreThan(CodeGenTypes &cgt,
-                             ArrayRef<llvm::Type*> scalarTypes,
-                             unsigned maxAllRegisters) {
-  unsigned intCount = 0, fpCount = 0;
-  for (llvm::Type *type : scalarTypes) {
-    if (type->isPointerTy()) {
-      intCount++;
-    } else if (auto intTy = dyn_cast<llvm::IntegerType>(type)) {
-      auto ptrWidth = cgt.getTarget().getPointerWidth(0);
-      intCount += (intTy->getBitWidth() + ptrWidth - 1) / ptrWidth;
-    } else {
-      assert(type->isVectorTy() || type->isFloatingPointTy());
-      fpCount++;
-    }
-  }
-
-  return (intCount + fpCount > maxAllRegisters);
-}
-
-bool SwiftABIInfo::isLegalVectorTypeForSwift(CharUnits vectorSize,
-                                             llvm::Type *eltTy,
-                                             unsigned numElts) const {
-  // The default implementation of this assumes that the target guarantees
-  // 128-bit SIMD support but nothing more.
-  return (vectorSize.getQuantity() > 8 && vectorSize.getQuantity() <= 16);
-}
 
 static CGCXXABI::RecordArgABI getRecordArgABI(const RecordType *RT,
                                               CGCXXABI &CXXABI) {
@@ -171,7 +130,7 @@ bool ABIInfo::shouldSignExtUnsignedType(QualType Ty) const {
   return false;
 }
 
-LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
+void ABIArgInfo::dump() const {
   raw_ostream &OS = llvm::errs();
   OS << "(ABIArgInfo Kind=";
   switch (TheKind) {
@@ -198,10 +157,6 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
     break;
   case Expand:
     OS << "Expand";
-    break;
-  case CoerceAndExpand:
-    OS << "CoerceAndExpand Type=";
-    getCoerceAndExpandType()->print(OS);
     break;
   }
   OS << ")\n";
@@ -842,7 +797,7 @@ struct CCState {
 };
 
 /// X86_32ABIInfo - The X86-32 ABI information.
-class X86_32ABIInfo : public SwiftABIInfo {
+class X86_32ABIInfo : public ABIInfo {
   enum Class {
     Integer,
     Float
@@ -911,22 +866,12 @@ public:
   X86_32ABIInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                 bool RetSmallStructInRegABI, bool Win32StructABI,
                 unsigned NumRegisterParameters, bool SoftFloatABI)
-    : SwiftABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
+    : ABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
       IsRetSmallStructInRegABI(RetSmallStructInRegABI), 
       IsWin32StructABI(Win32StructABI),
       IsSoftFloatABI(SoftFloatABI),
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
       DefaultNumRegisterParameters(NumRegisterParameters) {}
-
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    // LLVM's x86-32 lowering currently only assigns up to three
-    // integer registers and three fp registers.  Oddly, it'll use up to
-    // four vector registers for vectors, but those can overlap with the
-    // scalar registers.
-    return occupiesMoreThan(CGT, scalars, /*total*/ 3);
-  }  
 };
 
 class X86_32TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -974,11 +919,6 @@ public:
                    ('F' << 16) |
                    ('T' << 24);
     return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
-  }
-
-  StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
-    return "movl\t%ebp, %ebp"
-           "\t\t## marker for objc_retainAutoreleaseReturnValue";
   }
 };
 
@@ -1556,7 +1496,6 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   case ABIArgInfo::Direct:
   case ABIArgInfo::Extend:
   case ABIArgInfo::Expand:
-  case ABIArgInfo::CoerceAndExpand:
     if (Info.getInReg())
       return false;
     return true;
@@ -1740,7 +1679,7 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
 }
 
 /// X86_64ABIInfo - The X86_64 ABI information.
-class X86_64ABIInfo : public SwiftABIInfo {
+class X86_64ABIInfo : public ABIInfo {
   enum Class {
     Integer = 0,
     SSE,
@@ -1851,7 +1790,7 @@ class X86_64ABIInfo : public SwiftABIInfo {
 
 public:
   X86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel) :
-      SwiftABIInfo(CGT), AVXLevel(AVXLevel),
+      ABIInfo(CGT), AVXLevel(AVXLevel),
       Has64BitPointers(CGT.getDataLayout().getPointerSize(0) == 8) {
   }
 
@@ -1878,12 +1817,6 @@ public:
   bool has64BitPointers() const {
     return Has64BitPointers;
   }
-
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }  
 };
 
 /// WinX86_64ABIInfo - The Windows X86_64 ABI information.
@@ -4030,19 +3963,8 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     // agree in both total size and mode (float vs. vector) are
     // treated as being equivalent here.
     const Type *TyPtr = Ty.getTypePtr();
-    if (!Base) {
+    if (!Base)
       Base = TyPtr;
-      // If it's a non-power-of-2 vector, its size is already a power-of-2,
-      // so make sure to widen it explicitly.
-      if (const VectorType *VT = Base->getAs<VectorType>()) {
-        QualType EltTy = VT->getElementType();
-        unsigned NumElements =
-            getContext().getTypeSize(VT) / getContext().getTypeSize(EltTy);
-        Base = getContext()
-                   .getVectorType(EltTy, NumElements, VT->getVectorKind())
-                   .getTypePtr();
-      }
-    }
 
     if (Base->isVectorType() != TyPtr->isVectorType() ||
         getContext().getTypeSize(Base) != getContext().getTypeSize(TyPtr))
@@ -4316,7 +4238,7 @@ PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 
 namespace {
 
-class AArch64ABIInfo : public SwiftABIInfo {
+class AArch64ABIInfo : public ABIInfo {
 public:
   enum ABIKind {
     AAPCS = 0,
@@ -4327,8 +4249,7 @@ private:
   ABIKind Kind;
 
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, ABIKind Kind)
-    : SwiftABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {}
 
 private:
   ABIKind getABIKind() const { return Kind; }
@@ -4360,12 +4281,6 @@ private:
                     QualType Ty) const override {
     return isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
                          : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
-  }
-
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
 };
 
@@ -4836,7 +4751,7 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
 namespace {
 
-class ARMABIInfo : public SwiftABIInfo {
+class ARMABIInfo : public ABIInfo {
 public:
   enum ABIKind {
     APCS = 0,
@@ -4849,8 +4764,7 @@ private:
   ABIKind Kind;
 
 public:
-  ARMABIInfo(CodeGenTypes &CGT, ABIKind _Kind)
-      : SwiftABIInfo(CGT), Kind(_Kind) {
+  ARMABIInfo(CodeGenTypes &CGT, ABIKind _Kind) : ABIInfo(CGT), Kind(_Kind) {
     setCCs();
   }
 
@@ -4901,12 +4815,6 @@ private:
   llvm::CallingConv::ID getLLVMDefaultCC() const;
   llvm::CallingConv::ID getABIDefaultCC() const;
   void setCCs();
-
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
 };
 
 class ARMTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -5031,7 +4939,7 @@ void ARMABIInfo::computeInfo(CGFunctionInfo &FI) const {
 /// Return the default calling convention that LLVM will use.
 llvm::CallingConv::ID ARMABIInfo::getLLVMDefaultCC() const {
   // The default calling convention that LLVM will infer.
-  if (isEABIHF() || getTarget().getTriple().isWatchABI())
+  if (isEABIHF() || getTarget().getTriple().isWatchOS())
     return llvm::CallingConv::ARM_AAPCS_VFP;
   else if (isEABI())
     return llvm::CallingConv::ARM_AAPCS;
@@ -5638,12 +5546,12 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::Function *F, StringRef Name,
 
 namespace {
 
-class SystemZABIInfo : public SwiftABIInfo {
+class SystemZABIInfo : public ABIInfo {
   bool HasVector;
 
 public:
   SystemZABIInfo(CodeGenTypes &CGT, bool HV)
-    : SwiftABIInfo(CGT), HasVector(HV) {}
+    : ABIInfo(CGT), HasVector(HV) {}
 
   bool isPromotableIntegerType(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
@@ -5663,12 +5571,6 @@ public:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
-
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
 };
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -6847,7 +6749,6 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits Stride;
   switch (AI.getKind()) {
   case ABIArgInfo::Expand:
-  case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
     llvm_unreachable("Unsupported ABI kind for va_arg");
 
@@ -7076,7 +6977,6 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits ArgSize = CharUnits::Zero();
   switch (AI.getKind()) {
   case ABIArgInfo::Expand:
-  case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
     llvm_unreachable("Unsupported ABI kind for va_arg");
   case ABIArgInfo::Ignore:

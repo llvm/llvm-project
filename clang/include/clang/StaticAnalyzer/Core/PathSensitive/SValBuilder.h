@@ -21,7 +21,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 
 namespace clang {
 
@@ -66,7 +65,7 @@ public:
       SymMgr(context, BasicVals, alloc),
       MemMgr(context, alloc),
       StateMgr(stateMgr),
-      ArrayIndexTy(context.LongLongTy),
+      ArrayIndexTy(context.IntTy),
       ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
 
   virtual ~SValBuilder() {}

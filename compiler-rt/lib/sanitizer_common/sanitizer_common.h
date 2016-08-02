@@ -66,12 +66,7 @@ INLINE int Verbosity() {
 }
 
 uptr GetPageSize();
-extern uptr PageSizeCached;
-INLINE uptr GetPageSizeCached() {
-  if (!PageSizeCached)
-    PageSizeCached = GetPageSize();
-  return PageSizeCached;
-}
+uptr GetPageSizeCached();
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 // Threads
@@ -750,6 +745,7 @@ struct SignalContext {
 
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
 
+void DisableReexec();
 void MaybeReexec();
 
 }  // namespace __sanitizer

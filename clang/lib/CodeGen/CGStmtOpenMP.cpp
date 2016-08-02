@@ -120,7 +120,8 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   // Create the function declaration.
   FunctionType::ExtInfo ExtInfo;
   const CGFunctionInfo &FuncInfo =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
+      CGM.getTypes().arrangeFreeFunctionDeclaration(Ctx.VoidTy, Args, ExtInfo,
+                                                    /*IsVariadic=*/false);
   llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);
 
   llvm::Function *F = llvm::Function::Create(

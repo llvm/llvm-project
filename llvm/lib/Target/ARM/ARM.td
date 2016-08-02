@@ -250,8 +250,6 @@ def ProcA15     : SubtargetFeature<"a15", "ARMProcFamily", "CortexA15",
                                    "Cortex-A15 ARM processors", []>;
 def ProcA17     : SubtargetFeature<"a17", "ARMProcFamily", "CortexA17",
                                    "Cortex-A17 ARM processors", []>;
-def ProcA32     : SubtargetFeature<"a32", "ARMProcFamily", "CortexA32",
-                                   "Cortex-A32 ARM processors", []>;
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors", []>;
 def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
@@ -626,18 +624,6 @@ def : ProcessorModel<"cortex-r7",   CortexA8Model,      [ARMv7r, ProcR7,
                                                          FeatureAvoidPartialCPSR,
                                                          FeatureT2XtPk]>;
 
-def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
-                                                         FeatureHasRAS,
-                                                         FeatureVFP3,
-                                                         FeatureD16,
-                                                         FeatureFP16,
-                                                         FeatureMP,
-                                                         FeatureSlowFPBrcc,
-                                                         FeatureHWDivARM,
-                                                         FeatureHasSlowFPVMLx,
-                                                         FeatureAvoidPartialCPSR,
-                                                         FeatureT2XtPk]>;
-
 def : ProcNoItin<"cortex-m3",                           [ARMv7m]>;
 def : ProcNoItin<"sc300",                               [ARMv7m]>;
 
@@ -650,12 +636,6 @@ def : ProcNoItin<"cortex-m7",                           [ARMv7em,
                                                          FeatureFPARMv8,
                                                          FeatureD16]>;
 
-def : ProcNoItin<"cortex-a32",                           [ARMv8a,
-                                                         FeatureHWDiv,
-                                                         FeatureHWDivARM,
-                                                         FeatureT2XtPk,
-                                                         FeatureCrypto,
-                                                         FeatureCRC]>;
 
 def : ProcNoItin<"cortex-a35",                          [ARMv8a, ProcA35,
                                                          FeatureHWDiv,

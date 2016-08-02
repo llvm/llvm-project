@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(LexTests
-  HeaderMapTest.cpp
   LexerTest.cpp
   PPCallbacksTest.cpp
   PPConditionalDirectiveRecordTest.cpp

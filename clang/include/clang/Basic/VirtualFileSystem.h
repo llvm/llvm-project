@@ -176,11 +176,6 @@ public:
   bool operator!=(const recursive_directory_iterator &RHS) const {
     return !(*this == RHS);
   }
-  /// \brief Gets the current level. Starting path is at level 0.
-  int level() const {
-    assert(State->size() && "Cannot get level without any iteration state");
-    return State->size()-1;
-  }
 };
 
 /// \brief The virtual file system interface.
@@ -315,7 +310,6 @@ llvm::sys::fs::UniqueID getNextVirtualUniqueID();
 IntrusiveRefCntPtr<FileSystem>
 getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                llvm::SourceMgr::DiagHandlerTy DiagHandler,
-               StringRef YAMLFilePath,
                void *DiagContext = nullptr,
                IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
 
@@ -329,9 +323,6 @@ struct YAMLVFSEntry {
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
   Optional<bool> IsCaseSensitive;
-  Optional<bool> IsOverlayRelative;
-  Optional<bool> UseExternalNames;
-  std::string OverlayDir;
 
 public:
   YAMLVFSWriter() {}
@@ -339,14 +330,6 @@ public:
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;
   }
-  void setUseExternalNames(bool UseExtNames) {
-    UseExternalNames = UseExtNames;
-  }
-  void setOverlayDir(StringRef OverlayDirectory) {
-    IsOverlayRelative = true;
-    OverlayDir.assign(OverlayDirectory.str());
-  }
-
   void write(llvm::raw_ostream &OS);
 };
 

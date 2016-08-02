@@ -16,7 +16,6 @@
 #include "llvm-c/Initialization.h"
 #include "llvm-c/Transforms/IPO.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Transforms/IPO.h"
 
@@ -105,10 +104,10 @@ void LLVMAddIPSCCPPass(LLVMPassManagerRef PM) {
 }
 
 void LLVMAddInternalizePass(LLVMPassManagerRef PM, unsigned AllButMain) {
-  auto PreserveMain = [=](const GlobalValue &GV) {
-    return AllButMain && GV.getName() == "main";
-  };
-  unwrap(PM)->add(createInternalizePass(PreserveMain));
+  std::vector<const char *> Export;
+  if (AllButMain)
+    Export.push_back("main");
+  unwrap(PM)->add(createInternalizePass(Export));
 }
 
 void LLVMAddStripDeadPrototypesPass(LLVMPassManagerRef PM) {

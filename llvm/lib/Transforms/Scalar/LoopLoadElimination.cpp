@@ -28,7 +28,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <forward_list>
 
@@ -62,8 +61,7 @@ struct StoreToLoadForwardingCandidate {
 
   /// \brief Return true if the dependence from the store to the load has a
   /// distance of one.  E.g. A[i+1] = A[i]
-  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE,
-                                 Loop *L) const {
+  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE) const {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadPtrType = LoadPtr->getType();
@@ -73,13 +71,6 @@ struct StoreToLoadForwardingCandidate {
                StorePtr->getType()->getPointerAddressSpace() &&
            LoadType == StorePtr->getType()->getPointerElementType() &&
            "Should be a known dependence");
-
-    // Currently we only support accesses with unit stride.  FIXME: we should be
-    // able to handle non unit stirde as well as long as the stride is equal to
-    // the dependence distance.
-    if (isStridedPtr(PSE, LoadPtr, L) != 1 ||
-        isStridedPtr(PSE, StorePtr, L) != 1)
-      return false;
 
     auto &DL = Load->getParent()->getModule()->getDataLayout();
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
@@ -92,7 +83,7 @@ struct StoreToLoadForwardingCandidate {
     auto *Dist = cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
     const APInt &Val = Dist->getAPInt();
-    return Val == TypeByteSize;
+    return Val.abs() == TypeByteSize;
   }
 
   Value *getLoadPtr() const { return Load->getPointerOperand(); }
@@ -117,11 +108,6 @@ bool doesStoreDominatesAllLatches(BasicBlock *StoreBlock, Loop *L,
                      [&](const BasicBlock *Latch) {
                        return DT->dominates(StoreBlock, Latch);
                      });
-}
-
-/// \brief Return true if the load is not executed on all paths in the loop.
-static bool isLoadConditional(LoadInst *Load, Loop *L) {
-  return Load->getParent() != L->getHeader();
 }
 
 /// \brief The per-loop class that does most of the work.
@@ -176,12 +162,6 @@ public:
       auto *Load = dyn_cast<LoadInst>(Destination);
       if (!Load)
         continue;
-
-      // Only progagate the value if they are of the same type.
-      if (Store->getPointerOperand()->getType() !=
-          Load->getPointerOperand()->getType())
-        continue;
-
       Candidates.emplace_front(Load, Store);
     }
 
@@ -239,12 +219,12 @@ public:
         if (OtherCand == nullptr)
           continue;
 
-        // Handle the very basic case when the two stores are in the same block
-        // so deciding which one forwards is easy.  The later one forwards as
-        // long as they both have a dependence distance of one to the load.
+        // Handle the very basic of case when the two stores are in the same
+        // block so deciding which one forwards is easy.  The later one forwards
+        // as long as they both have a dependence distance of one to the load.
         if (Cand.Store->getParent() == OtherCand->Store->getParent() &&
-            Cand.isDependenceDistanceOfOne(PSE, L) &&
-            OtherCand->isDependenceDistanceOfOne(PSE, L)) {
+            Cand.isDependenceDistanceOfOne(PSE) &&
+            OtherCand->isDependenceDistanceOfOne(PSE)) {
           // They are in the same block, the later one will forward to the load.
           if (getInstrIndex(OtherCand->Store) < getInstrIndex(Cand.Store))
             OtherCand = &Cand;
@@ -449,21 +429,14 @@ public:
     unsigned NumForwarding = 0;
     for (const StoreToLoadForwardingCandidate Cand : StoreToLoadDependences) {
       DEBUG(dbgs() << "Candidate " << Cand);
-
       // Make sure that the stored values is available everywhere in the loop in
       // the next iteration.
       if (!doesStoreDominatesAllLatches(Cand.Store->getParent(), L, DT))
         continue;
 
-      // If the load is conditional we can't hoist its 0-iteration instance to
-      // the preheader because that would make it unconditional.  Thus we would
-      // access a memory location that the original loop did not access.
-      if (isLoadConditional(Cand.Load, L))
-        continue;
-
       // Check whether the SCEV difference is the same as the induction step,
       // thus we load the value in the next iteration.
-      if (!Cand.isDependenceDistanceOfOne(PSE, L))
+      if (!Cand.isDependenceDistanceOfOne(PSE))
         continue;
 
       ++NumForwarding;
@@ -492,16 +465,9 @@ public:
       return false;
     }
 
+    // Point of no-return, start the transformation.  First, version the loop if
+    // necessary.
     if (!Checks.empty() || !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
-      if (L->getHeader()->getParent()->optForSize()) {
-        DEBUG(dbgs() << "Versioning is needed but not allowed when optimizing "
-                        "for size.\n");
-        return false;
-      }
-
-      // Point of no-return, start the transformation.  First, version the loop
-      // if necessary.
-
       LoopVersioning LV(LAI, L, LI, DT, PSE.getSE(), false);
       LV.setAliasChecks(std::move(Checks));
       LV.setSCEVChecks(LAI.PSE.getUnionPredicate());
@@ -571,7 +537,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredID(LoopSimplifyID);
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<LoopAccessAnalysis>();
@@ -592,7 +557,6 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_END(LoopLoadElimination, LLE_OPTION, LLE_name, false, false)
 
 namespace llvm {

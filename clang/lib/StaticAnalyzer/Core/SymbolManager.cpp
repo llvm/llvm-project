@@ -23,7 +23,7 @@ using namespace ento;
 
 void SymExpr::anchor() { }
 
-LLVM_DUMP_METHOD void SymExpr::dump() const {
+void SymExpr::dump() const {
   dumpToStream(llvm::errs());
 }
 

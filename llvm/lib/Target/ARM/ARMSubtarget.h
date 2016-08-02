@@ -43,8 +43,8 @@ class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
     Others, CortexA5, CortexA7, CortexA8, CortexA9, CortexA12, CortexA15,
-    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexA32, CortexA35,
-    CortexA53, CortexA57, CortexA72, Krait, Swift, ExynosM1
+    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexA35, CortexA53,
+    CortexA57, CortexA72, Krait, Swift, ExynosM1
   };
   enum ARMProcClassEnum {
     None, AClass, RClass, MClass
@@ -386,7 +386,6 @@ public:
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
-  bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }
@@ -448,13 +447,6 @@ public:
 
   bool isR9Reserved() const {
     return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;
-  }
-
-  /// Returns true if the frame setup is split into two separate pushes (first
-  /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
-  /// to lr.
-  bool splitFramePushPop() const {
-    return isTargetMachO();
   }
 
   bool useStride4VFPs(const MachineFunction &MF) const;

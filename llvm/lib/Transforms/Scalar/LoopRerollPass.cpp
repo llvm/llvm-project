@@ -1487,12 +1487,14 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
         "] Loop %" << Header->getName() << " (" <<
         L->getNumBlocks() << " block(s))\n");
 
+  bool Changed = false;
+
   // For now, we'll handle only single BB loops.
   if (L->getNumBlocks() > 1)
-    return false;
+    return Changed;
 
   if (!SE->hasLoopInvariantBackedgeTakenCount(L))
-    return false;
+    return Changed;
 
   const SCEV *LIBETC = SE->getBackedgeTakenCount(L);
   const SCEV *IterCount = SE->getAddExpr(LIBETC, SE->getOne(LIBETC->getType()));
@@ -1506,12 +1508,11 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   if (PossibleIVs.empty()) {
     DEBUG(dbgs() << "LRR: No possible IVs found\n");
-    return false;
+    return Changed;
   }
 
   ReductionTracker Reductions;
   collectPossibleReductions(L, Reductions);
-  bool Changed = false;
 
   // For each possible IV, collect the associated possible set of 'root' nodes
   // (i+1, i+2, etc.).
@@ -1521,10 +1522,6 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
       Changed = true;
       break;
     }
-
-  // Trip count of L has changed so SE must be re-evaluated.
-  if (Changed)
-    SE->forgetLoop(L);
 
   return Changed;
 }

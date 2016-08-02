@@ -404,8 +404,6 @@ struct ThreadState {
   // If set, malloc must not be called.
   int nomalloc;
 
-  const ReportDesc *current_report;
-
   explicit ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
                        unsigned reuse_count,
                        uptr stk_addr, uptr stk_size,
@@ -695,7 +693,6 @@ void MutexReadLock(ThreadState *thr, uptr pc, uptr addr, bool try_lock = false);
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr);
 void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr);
 void MutexRepair(ThreadState *thr, uptr pc, uptr addr);  // call on EOWNERDEAD
-void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr);
 
 void Acquire(ThreadState *thr, uptr pc, uptr addr);
 // AcquireGlobal synchronizes the current thread with all other threads.

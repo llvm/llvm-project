@@ -191,8 +191,8 @@ namespace clang {
       return None;
     }
 
-    template<typename DeclTy>
-    void AddTemplateSpecializations(DeclTy *D) {
+    template<typename Decl>
+    void AddTemplateSpecializations(Decl *D) {
       auto *Common = D->getCommonPtr();
 
       // If we have any lazy specializations, and the external AST source is
@@ -204,6 +204,8 @@ namespace clang {
         assert(!Common->LazySpecializations);
       }
 
+      auto &Specializations = Common->Specializations;
+      auto &&PartialSpecializations = getPartialSpecializations(Common);
       ArrayRef<DeclID> LazySpecializations;
       if (auto *LS = Common->LazySpecializations)
         LazySpecializations = llvm::makeArrayRef(LS + 1, LS[0]);
@@ -212,15 +214,13 @@ namespace clang {
       unsigned I = Record.size();
       Record.push_back(0);
 
-      // AddFirstDeclFromEachModule might trigger deserialization, invalidating
-      // *Specializations iterators.
-      llvm::SmallVector<const Decl*, 16> Specs;
-      for (auto &Entry : Common->Specializations)
-        Specs.push_back(getSpecializationDecl(Entry));
-      for (auto &Entry : getPartialSpecializations(Common))
-        Specs.push_back(getSpecializationDecl(Entry));
-
-      for (auto *D : Specs) {
+      for (auto &Entry : Specializations) {
+        auto *D = getSpecializationDecl(Entry);
+        assert(D->isCanonicalDecl() && "non-canonical decl in set");
+        AddFirstDeclFromEachModule(D, /*IncludeLocal*/true);
+      }
+      for (auto &Entry : PartialSpecializations) {
+        auto *D = getSpecializationDecl(Entry);
         assert(D->isCanonicalDecl() && "non-canonical decl in set");
         AddFirstDeclFromEachModule(D, /*IncludeLocal*/true);
       }
@@ -373,7 +373,7 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
   Record.push_back(D->isEmbeddedInDeclarator());
   Record.push_back(D->isFreeStanding());
   Record.push_back(D->isCompleteDefinitionRequired());
-  Writer.AddSourceRange(D->getBraceRange(), Record);
+  Writer.AddSourceLocation(D->getRBraceLoc(), Record);
 
   if (D->hasExtInfo()) {
     Record.push_back(1);
@@ -1738,7 +1738,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFreeStanding
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsCompleteDefinitionRequired
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(0));                         // ExtInfoKind
   // EnumDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // AddTypeRef
@@ -1786,7 +1785,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // EmbeddedInDeclarator
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFreeStanding
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsCompleteDefinitionRequired
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(0));                         // ExtInfoKind
   // RecordDecl

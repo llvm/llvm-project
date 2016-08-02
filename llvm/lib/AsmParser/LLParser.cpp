@@ -27,7 +27,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -45,11 +44,6 @@ static std::string getTypeString(Type *T) {
 bool LLParser::Run() {
   // Prime the lexer.
   Lex.Lex();
-
-  if (Context.discardValueNames())
-    return Error(
-        Lex.getLoc(),
-        "Can't read textual IR with a Context that discards named Values");
 
   return ParseTopLevelEntities() ||
          ValidateEndOfModule();
@@ -84,6 +78,9 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
 /// ValidateEndOfModule - Do final validity and sanity checks at the end of the
 /// module.
 bool LLParser::ValidateEndOfModule() {
+  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
+    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
+
   // Handle any function attribute group forward references.
   for (std::map<Value*, std::vector<unsigned> >::iterator
          I = ForwardRefAttrGroups.begin(), E = ForwardRefAttrGroups.end();
@@ -186,16 +183,11 @@ bool LLParser::ValidateEndOfModule() {
       N.second->resolveCycles();
   }
 
-  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
-    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
-
   // Look for intrinsic functions and CallInst that need to be upgraded
   for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; )
     UpgradeCallsToIntrinsic(&*FI++); // must be post-increment, as we remove
 
   UpgradeDebugInfo(*M);
-
-  UpgradeModuleFlags(*M);
 
   if (!Slots)
     return false;
@@ -225,10 +217,6 @@ bool LLParser::ParseTopLevelEntities() {
     case lltok::kw_define:  if (ParseDefine()) return true; break;
     case lltok::kw_module:  if (ParseModuleAsm()) return true; break;
     case lltok::kw_target:  if (ParseTargetDefinition()) return true; break;
-    case lltok::kw_source_filename:
-      if (ParseSourceFileName())
-        return true;
-      break;
     case lltok::kw_deplibs: if (ParseDepLibs()) return true; break;
     case lltok::LocalVarID: if (ParseUnnamedType()) return true; break;
     case lltok::LocalVar:   if (ParseNamedType()) return true; break;
@@ -323,19 +311,6 @@ bool LLParser::ParseTargetDefinition() {
     M->setDataLayout(Str);
     return false;
   }
-}
-
-/// toplevelentity
-///   ::= 'source_filename' '=' STRINGCONSTANT
-bool LLParser::ParseSourceFileName() {
-  assert(Lex.getKind() == lltok::kw_source_filename);
-  std::string Str;
-  Lex.Lex();
-  if (ParseToken(lltok::equal, "expected '=' after source_filename") ||
-      ParseStringConstant(Str))
-    return true;
-  M->setSourceFileName(Str);
-  return false;
 }
 
 /// toplevelentity
@@ -578,6 +553,7 @@ bool LLParser::parseComdat() {
 bool LLParser::ParseMDString(MDString *&Result) {
   std::string Str;
   if (ParseStringConstant(Str)) return true;
+  llvm::UpgradeMDStringConstant(Str);
   Result = MDString::get(Context, Str);
   return false;
 }
@@ -586,7 +562,6 @@ bool LLParser::ParseMDString(MDString *&Result) {
 //   ::= '!' MDNodeNumber
 bool LLParser::ParseMDNodeID(MDNode *&Result) {
   // !{ ..., !42, ... }
-  LocTy IDLoc = Lex.getLoc();
   unsigned MID = 0;
   if (ParseUInt32(MID))
     return true;
@@ -599,7 +574,7 @@ bool LLParser::ParseMDNodeID(MDNode *&Result) {
 
   // Otherwise, create MDNode forward reference.
   auto &FwdRef = ForwardRefMDNodes[MID];
-  FwdRef = std::make_pair(MDTuple::getTemporary(Context, None), IDLoc);
+  FwdRef = std::make_pair(MDTuple::getTemporary(Context, None), Lex.getLoc());
 
   Result = FwdRef.first.get();
   NumberedMetadata[MID].reset(Result);
@@ -3248,9 +3223,6 @@ struct DwarfVirtualityField : public MDUnsignedField {
 struct DwarfLangField : public MDUnsignedField {
   DwarfLangField() : MDUnsignedField(0, dwarf::DW_LANG_hi_user) {}
 };
-struct EmissionKindField : public MDUnsignedField {
-  EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
-};
 
 struct DIFlagField : public MDUnsignedField {
   DIFlagField() : MDUnsignedField(0, UINT32_MAX) {}
@@ -3363,7 +3335,7 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
     return TokError("expected DWARF virtuality code");
 
   unsigned Virtuality = dwarf::getVirtuality(Lex.getStrVal());
-  if (Virtuality == dwarf::DW_VIRTUALITY_invalid)
+  if (!Virtuality)
     return TokError("invalid DWARF virtuality code" + Twine(" '") +
                     Lex.getStrVal() + "'");
   assert(Virtuality <= Result.Max && "Expected valid DWARF virtuality code");
@@ -3390,24 +3362,6 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name, DwarfLangField &Result) {
   return false;
 }
 
-template <>
-bool LLParser::ParseMDField(LocTy Loc, StringRef Name, EmissionKindField &Result) {
-  if (Lex.getKind() == lltok::APSInt)
-    return ParseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
-
-  if (Lex.getKind() != lltok::EmissionKind)
-    return TokError("expected emission kind");
-
-  auto Kind = DICompileUnit::getEmissionKind(Lex.getStrVal());
-  if (!Kind)
-    return TokError("invalid emission kind" + Twine(" '") + Lex.getStrVal() +
-                    "'");
-  assert(*Kind <= Result.Max && "Expected valid emission kind");
-  Result.assign(*Kind);
-  Lex.Lex();
-  return false;
-}
-  
 template <>
 bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
                             DwarfAttEncodingField &Result) {
@@ -3746,19 +3700,6 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  // If this has an identifier try to build an ODR type.
-  if (identifier.Val)
-    if (auto *CT = DICompositeType::buildODRType(
-            Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
-            scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
-            elements.Val, runtimeLang.Val, vtableHolder.Val,
-            templateParams.Val)) {
-      Result = CT;
-      return false;
-    }
-
-  // Create a new node, and save it in the context if it belongs in the type
-  // map.
   Result = GET_OR_DISTINCT(
       DICompositeType,
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
@@ -3794,8 +3735,8 @@ bool LLParser::ParseDIFile(MDNode *&Result, bool IsDistinct) {
 /// ParseDICompileUnit:
 ///   ::= !DICompileUnit(language: DW_LANG_C99, file: !0, producer: "clang",
 ///                      isOptimized: true, flags: "-O2", runtimeVersion: 1,
-///                      splitDebugFilename: "abc.debug",
-///                      emissionKind: FullDebug, enums: !1, retainedTypes: !2,
+///                      splitDebugFilename: "abc.debug", emissionKind: 1,
+///                      enums: !1, retainedTypes: !2, subprograms: !3,
 ///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd)
 bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
@@ -3809,9 +3750,10 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(flags, MDStringField, );                                            \
   OPTIONAL(runtimeVersion, MDUnsignedField, (0, UINT32_MAX));                  \
   OPTIONAL(splitDebugFilename, MDStringField, );                               \
-  OPTIONAL(emissionKind, EmissionKindField, );                                 \
+  OPTIONAL(emissionKind, MDUnsignedField, (0, UINT32_MAX));                    \
   OPTIONAL(enums, MDField, );                                                  \
   OPTIONAL(retainedTypes, MDField, );                                          \
+  OPTIONAL(subprograms, MDField, );                                            \
   OPTIONAL(globals, MDField, );                                                \
   OPTIONAL(imports, MDField, );                                                \
   OPTIONAL(macros, MDField, );                                                 \
@@ -3822,7 +3764,8 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   Result = DICompileUnit::getDistinct(
       Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val);
+      retainedTypes.Val, subprograms.Val, globals.Val, imports.Val, macros.Val,
+      dwoId.Val);
   return false;
 }
 
@@ -3851,7 +3794,6 @@ bool LLParser::ParseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(virtualIndex, MDUnsignedField, (0, UINT32_MAX));                    \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
-  OPTIONAL(unit, MDField, );                                                   \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
   OPTIONAL(variables, MDField, );
@@ -3864,11 +3806,11 @@ bool LLParser::ParseDISubprogram(MDNode *&Result, bool IsDistinct) {
         "missing 'distinct', required for !DISubprogram when 'isDefinition'");
 
   Result = GET_OR_DISTINCT(
-      DISubprogram, (Context, scope.Val, name.Val, linkageName.Val, file.Val,
-                     line.Val, type.Val, isLocal.Val, isDefinition.Val,
-                     scopeLine.Val, containingType.Val, virtuality.Val,
-                     virtualIndex.Val, flags.Val, isOptimized.Val, unit.Val,
-                     templateParams.Val, declaration.Val, variables.Val));
+      DISubprogram,
+      (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+       type.Val, isLocal.Val, isDefinition.Val, scopeLine.Val,
+       containingType.Val, virtuality.Val, virtualIndex.Val, flags.Val,
+       isOptimized.Val, templateParams.Val, declaration.Val, variables.Val));
   return false;
 }
 
@@ -5972,8 +5914,13 @@ int LLParser::ParseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
     return Error(CmpLoc, "compare value and pointer type do not match");
   if (cast<PointerType>(Ptr->getType())->getElementType() != New->getType())
     return Error(NewLoc, "new value and pointer type do not match");
-  if (!New->getType()->isFirstClassType())
-    return Error(NewLoc, "cmpxchg operand must be a first class value");
+  if (!New->getType()->isIntegerTy())
+    return Error(NewLoc, "cmpxchg operand must be an integer");
+  unsigned Size = New->getType()->getPrimitiveSizeInBits();
+  if (Size < 8 || (Size & (Size - 1)))
+    return Error(NewLoc, "cmpxchg operand must be power-of-two byte-sized"
+                         " integer");
+
   AtomicCmpXchgInst *CXI = new AtomicCmpXchgInst(
       Ptr, Cmp, New, SuccessOrdering, FailureOrdering, Scope);
   CXI->setVolatile(isVolatile);

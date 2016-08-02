@@ -849,7 +849,6 @@ static void diagnoseRedundantPropertyNullability(Parser &P,
 ///     nullable
 ///     null_unspecified
 ///     null_resettable
-///     class
 ///
 void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
   assert(Tok.getKind() == tok::l_paren);
@@ -965,8 +964,6 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
 
       // Also set the null_resettable bit.
       DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_null_resettable);
-    } else if (II->isStr("class")) {
-      DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_class);
     } else {
       Diag(AttrName, diag::err_objc_expected_property_attr) << II;
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -1274,6 +1271,7 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
     if (context == Declarator::ObjCResultContext)
       dsContext = DSC_objc_method_result;
     ParseSpecifierQualifierList(declSpec, AS_none, dsContext);
+    declSpec.SetRangeEnd(Tok.getLocation());
     Declarator declarator(declSpec, context);
     ParseDeclarator(declarator);
 
@@ -1689,18 +1687,11 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
     return;
   }
 
-  // We parsed an identifier list but stumbled into non single identifiers, this
-  // means we might (a) check that what we already parsed is a legitimate type
-  // (not a protocol or unknown type) and (b) parse the remaining ones, which
-  // must all be type args.
+  // We syntactically matched a type argument, so commit to parsing
+  // type arguments.
 
   // Convert the identifiers into type arguments.
   bool invalid = false;
-  IdentifierInfo *foundProtocolId = nullptr, *foundValidTypeId = nullptr;
-  SourceLocation foundProtocolSrcLoc, foundValidTypeSrcLoc;
-  SmallVector<IdentifierInfo *, 2> unknownTypeArgs;
-  SmallVector<SourceLocation, 2> unknownTypeArgsLoc;
-
   for (unsigned i = 0, n = identifiers.size(); i != n; ++i) {
     ParsedType typeArg
       = Actions.getTypeName(*identifiers[i], identifierLocs[i], getCurScope());
@@ -1714,32 +1705,17 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
       // Form a declarator to turn this into a type.
       Declarator D(DS, Declarator::TypeNameContext);
       TypeResult fullTypeArg = Actions.ActOnTypeName(getCurScope(), D);
-      if (fullTypeArg.isUsable()) {
+      if (fullTypeArg.isUsable())
         typeArgs.push_back(fullTypeArg.get());
-        if (!foundValidTypeId) {
-          foundValidTypeId = identifiers[i];
-          foundValidTypeSrcLoc = identifierLocs[i];
-        }
-      } else {
+      else
         invalid = true;
-        unknownTypeArgs.push_back(identifiers[i]);
-        unknownTypeArgsLoc.push_back(identifierLocs[i]);
-      }
     } else {
       invalid = true;
-      if (!Actions.LookupProtocol(identifiers[i], identifierLocs[i])) {
-        unknownTypeArgs.push_back(identifiers[i]);
-        unknownTypeArgsLoc.push_back(identifierLocs[i]);
-      } else if (!foundProtocolId) {
-        foundProtocolId = identifiers[i];
-        foundProtocolSrcLoc = identifierLocs[i];
-      }
     }
   }
 
   // Continue parsing type-names.
   do {
-    Token CurTypeTok = Tok;
     TypeResult typeArg = ParseTypeName();
 
     // Consume the '...' for a pack expansion.
@@ -1751,27 +1727,10 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
 
     if (typeArg.isUsable()) {
       typeArgs.push_back(typeArg.get());
-      if (!foundValidTypeId) {
-        foundValidTypeId = CurTypeTok.getIdentifierInfo();
-        foundValidTypeSrcLoc = CurTypeTok.getLocation();
-      }
     } else {
       invalid = true;
     }
   } while (TryConsumeToken(tok::comma));
-
-  // Diagnose the mix between type args and protocols.
-  if (foundProtocolId && foundValidTypeId)
-    Actions.DiagnoseTypeArgsAndProtocols(foundProtocolId, foundProtocolSrcLoc,
-                                         foundValidTypeId,
-                                         foundValidTypeSrcLoc);
-
-  // Diagnose unknown arg types.
-  ParsedType T;
-  if (unknownTypeArgs.size())
-    for (unsigned i = 0, e = unknownTypeArgsLoc.size(); i < e; ++i)
-      Actions.DiagnoseUnknownTypeName(unknownTypeArgs[i], unknownTypeArgsLoc[i],
-                                      getCurScope(), nullptr, T);
 
   // Parse the closing '>'.
   SourceLocation rAngleLoc;
@@ -2370,10 +2329,8 @@ Decl *Parser::ParseObjCPropertySynthesize(SourceLocation atLoc) {
       propertyIvar = Tok.getIdentifierInfo();
       propertyIvarLoc = ConsumeToken(); // consume ivar-name
     }
-    Actions.ActOnPropertyImplDecl(
-        getCurScope(), atLoc, propertyLoc, true,
-        propertyId, propertyIvar, propertyIvarLoc,
-        ObjCPropertyQueryKind::OBJC_PR_query_unknown);
+    Actions.ActOnPropertyImplDecl(getCurScope(), atLoc, propertyLoc, true,
+                                  propertyId, propertyIvar, propertyIvarLoc);
     if (Tok.isNot(tok::comma))
       break;
     ConsumeToken(); // consume ','
@@ -2393,31 +2350,6 @@ Decl *Parser::ParseObjCPropertyDynamic(SourceLocation atLoc) {
   assert(Tok.isObjCAtKeyword(tok::objc_dynamic) &&
          "ParseObjCPropertyDynamic(): Expected '@dynamic'");
   ConsumeToken(); // consume dynamic
-
-  bool isClassProperty = false;
-  if (Tok.is(tok::l_paren)) {
-    ConsumeParen();
-    const IdentifierInfo *II = Tok.getIdentifierInfo();
-
-    if (!II) {
-      Diag(Tok, diag::err_objc_expected_property_attr) << II;
-      SkipUntil(tok::r_paren, StopAtSemi);
-    } else {
-      SourceLocation AttrName = ConsumeToken(); // consume attribute name
-      if (II->isStr("class")) {
-        isClassProperty = true;
-        if (Tok.isNot(tok::r_paren)) {
-          Diag(Tok, diag::err_expected) << tok::r_paren;
-          SkipUntil(tok::r_paren, StopAtSemi);
-        } else
-          ConsumeParen();
-      } else {
-        Diag(AttrName, diag::err_objc_expected_property_attr) << II;
-        SkipUntil(tok::r_paren, StopAtSemi);
-      }
-    }
-  }
-
   while (true) {
     if (Tok.is(tok::code_completion)) {
       Actions.CodeCompleteObjCPropertyDefinition(getCurScope());
@@ -2433,11 +2365,8 @@ Decl *Parser::ParseObjCPropertyDynamic(SourceLocation atLoc) {
     
     IdentifierInfo *propertyId = Tok.getIdentifierInfo();
     SourceLocation propertyLoc = ConsumeToken(); // consume property name
-    Actions.ActOnPropertyImplDecl(
-        getCurScope(), atLoc, propertyLoc, false,
-        propertyId, nullptr, SourceLocation(),
-        isClassProperty ? ObjCPropertyQueryKind::OBJC_PR_query_class :
-        ObjCPropertyQueryKind::OBJC_PR_query_unknown);
+    Actions.ActOnPropertyImplDecl(getCurScope(), atLoc, propertyLoc, false,
+                                  propertyId, nullptr, SourceLocation());
 
     if (Tok.isNot(tok::comma))
       break;
@@ -3649,8 +3578,6 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   else {
     if (Tok.is(tok::colon))
       ParseConstructorInitializer(MCDecl);
-    else
-      Actions.ActOnDefaultCtorInitializers(MCDecl);
     ParseFunctionStatementBody(MCDecl, BodyScope);
   }
   

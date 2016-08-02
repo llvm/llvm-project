@@ -200,7 +200,7 @@ set(DEFAULT_SYSROOT "" CACHE PATH
 set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING
   "Default OpenMP runtime used by -fopenmp.")
 
-set(CLANG_VENDOR ${PACKAGE_VENDOR} CACHE STRING
+set(CLANG_VENDOR "" CACHE STRING
   "Vendor-specific text for showing with version information.")
 
 if( CLANG_VENDOR )
@@ -216,15 +216,14 @@ endif()
 
 option(CLANG_APPEND_VC_REV
   "Append the version control system revision id to clang version spew" OFF)
-if(CLANG_APPEND_VC_REV)
-  if(NOT SVN_REVISION)
-    # This macro will set SVN_REVISION in the parent scope
-    add_version_info_from_vcs(VERSION_VAR)
-  endif()
 
-  if(SVN_REVISION)
-    add_definitions(-DSVN_REVISION="${SVN_REVISION}")
-  endif()
+if(NOT SVN_REVISION)
+  # This macro will set SVN_REVISION in the parent scope
+  add_version_info_from_vcs(VERSION_VAR)
+endif()
+
+if(SVN_REVISION)
+  add_definitions(-DSVN_REVISION="${SVN_REVISION}")
 endif()
 
 set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
@@ -444,21 +443,6 @@ macro(add_clang_executable name)
   set_clang_windows_version_resource_properties(${name})
 endmacro(add_clang_executable)
 
-macro(add_clang_tool name)
-  add_clang_executable(${name} ${ARGN})
-  install(TARGETS ${name}
-    RUNTIME DESTINATION bin
-    COMPONENT ${name})
-
-  if(NOT CMAKE_CONFIGURATION_TYPES)
-    add_custom_target(install-${name}
-      DEPENDS ${name}
-      COMMAND "${CMAKE_COMMAND}"
-              -DCMAKE_INSTALL_COMPONENT=${name}
-              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-  endif()
-endmacro()
-
 macro(add_clang_symlink name dest)
   add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
   # Always generate install targets
@@ -586,27 +570,33 @@ if( CLANG_INCLUDE_DOCS )
   add_subdirectory(docs)
 endif()
 
-# this line is needed as a cleanup to ensure that any CMakeCaches with the old
-# default value get updated to the new default.
-if(CLANG_ORDER_FILE STREQUAL "")
-  unset(CLANG_ORDER_FILE CACHE)
-endif()
-
-set(CLANG_ORDER_FILE ${CMAKE_CURRENT_BINARY_DIR}/clang.order CACHE FILEPATH
+set(CLANG_ORDER_FILE "" CACHE FILEPATH
   "Order file to use when compiling clang in order to improve startup time.")
-
-if(CLANG_ORDER_FILE AND NOT EXISTS ${CLANG_ORDER_FILE})
-  string(FIND "${CLANG_ORDER_FILE}" "${CMAKE_CURRENT_BINARY_DIR}" PATH_START)
-  if(PATH_START EQUAL 0)
-    file(WRITE ${CLANG_ORDER_FILE} "\n")
-  else()
-    message(FATAL_ERROR "Specified order file '${CLANG_ORDER_FILE}' does not exist.")
-  endif()
-endif()
 
 if (CLANG_BUILT_STANDALONE OR CMAKE_VERSION VERSION_EQUAL 3 OR
     CMAKE_VERSION VERSION_GREATER 3)
-  add_subdirectory(cmake/modules)
+  # Generate a list of CMake library targets so that other CMake projects can
+  # link against them. LLVM calls its version of this file LLVMExports.cmake, but
+  # the usual CMake convention seems to be ${Project}Targets.cmake.
+  set(CLANG_INSTALL_PACKAGE_DIR share/clang/cmake)
+  set(clang_cmake_builddir "${CMAKE_BINARY_DIR}/${CLANG_INSTALL_PACKAGE_DIR}")
+  get_property(CLANG_EXPORTS GLOBAL PROPERTY CLANG_EXPORTS)
+  export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
+
+  # Install a <prefix>/share/clang/cmake/ClangConfig.cmake file so that
+  # find_package(Clang) works. Install the target list with it.
+  install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
+
+  install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/ClangConfig.cmake
+    DESTINATION share/clang/cmake)
+
+  # Also copy ClangConfig.cmake to the build directory so that dependent projects
+  # can build against a build directory of Clang more easily.
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/ClangConfig.cmake
+    ${CLANG_BINARY_DIR}/share/clang/cmake/ClangConfig.cmake
+    COPYONLY)
 endif ()
 
 if (CLANG_ENABLE_BOOTSTRAP)

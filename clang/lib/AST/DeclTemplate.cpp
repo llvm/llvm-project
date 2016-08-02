@@ -806,7 +806,7 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
              getSpecializationKind() == TSK_ExplicitInstantiationDefinition);
       if (getExternLoc().isValid())
         Begin = getExternLoc();
-      SourceLocation End = getBraceRange().getEnd();
+      SourceLocation End = getRBraceLoc();
       if (End.isInvalid())
         End = getTypeAsWritten()->getTypeLoc().getEndLoc();
       return SourceRange(Begin, End);

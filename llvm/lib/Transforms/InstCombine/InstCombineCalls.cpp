@@ -1654,13 +1654,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
           // If there is a stackrestore below this one, remove this one.
           if (II->getIntrinsicID() == Intrinsic::stackrestore)
             return EraseInstFromFunction(CI);
-
-          // Bail if we cross over an intrinsic with side effects, such as
-          // llvm.stacksave, llvm.read_register, or llvm.setjmp.
-          if (II->mayHaveSideEffects()) {
-            CannotRemove = true;
-            break;
-          }
+          // Otherwise, ignore the intrinsic.
         } else {
           // If we found a non-intrinsic call, we can't remove the stack
           // restore.
@@ -1839,6 +1833,10 @@ static bool isSafeToEliminateVarargsCast(const CallSite CS,
   return true;
 }
 
+// Try to fold some different type of calls here.
+// Currently we're only working with the checking functions, memcpy_chk,
+// mempcpy_chk, memmove_chk, memset_chk, strcpy_chk, stpcpy_chk, strncpy_chk,
+// strcat_chk and strncat_chk.
 Instruction *InstCombiner::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 

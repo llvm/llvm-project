@@ -48,7 +48,6 @@ if(DTRACE)
 
   add_lit_testsuite(generate-dtrace-logs "Generating clang dtrace data"
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/
-    ARGS -j 1
     DEPENDS clang clear-dtrace-logs
     )
 
@@ -56,8 +55,9 @@ if(DTRACE)
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} dtrace
     COMMENT "Clearing old dtrace data")
 
+
   add_custom_target(generate-order-file
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py gen-order-file --binary $<TARGET_FILE:clang> --output ${CLANG_ORDER_FILE} ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py gen-order-file --binary $<TARGET_FILE:clang> --output ${CMAKE_CURRENT_BINARY_DIR}/clang.order ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating order file"
     DEPENDS generate-dtrace-logs)
 endif()

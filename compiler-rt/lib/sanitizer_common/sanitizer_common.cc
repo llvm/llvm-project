@@ -24,7 +24,13 @@ namespace __sanitizer {
 const char *SanitizerToolName = "SanitizerTool";
 
 atomic_uint32_t current_verbosity;
-uptr PageSizeCached;
+
+uptr GetPageSizeCached() {
+  static uptr PageSize;
+  if (!PageSize)
+    PageSize = GetPageSize();
+  return PageSize;
+}
 
 StaticSpinMutex report_file_mu;
 ReportFile report_file = {&report_file_mu, kStderrFd, "", "", 0};
@@ -147,16 +153,8 @@ void SetCheckFailedCallback(CheckFailedCallbackType callback) {
   CheckFailedCallback = callback;
 }
 
-const int kSecondsToSleepWhenRecursiveCheckFailed = 2;
-
 void NORETURN CheckFailed(const char *file, int line, const char *cond,
                           u64 v1, u64 v2) {
-  static atomic_uint32_t num_calls;
-  if (atomic_fetch_add(&num_calls, 1, memory_order_relaxed) > 10) {
-    SleepForSeconds(kSecondsToSleepWhenRecursiveCheckFailed);
-    Trap();
-  }
-
   if (CheckFailedCallback) {
     CheckFailedCallback(file, line, cond, v1, v2);
   }

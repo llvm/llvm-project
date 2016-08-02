@@ -14,14 +14,13 @@
 #ifndef LLVM_IR_AUTOUPGRADE_H
 #define LLVM_IR_AUTOUPGRADE_H
 
-#include "llvm/ADT/StringRef.h"
+#include <string>
 
 namespace llvm {
   class CallInst;
   class Constant;
   class Function;
   class Instruction;
-  class MDNode;
   class Module;
   class GlobalVariable;
   class Type;
@@ -47,10 +46,6 @@ namespace llvm {
   /// if it requires upgrading.
   bool UpgradeGlobalVariable(GlobalVariable *GV);
 
-  /// This checks for module flags which should be upgraded. It returns true if
-  /// module is modified.
-  bool UpgradeModuleFlags(Module &M);
-
   /// If the TBAA tag for the given instruction uses the scalar TBAA format,
   /// we upgrade it to the struct-path aware TBAA format.
   void UpgradeInstWithTBAATag(Instruction *I);
@@ -69,14 +64,8 @@ namespace llvm {
   /// info. Return true if module is modified.
   bool UpgradeDebugInfo(Module &M);
 
-  /// Check whether a string looks like an old loop attachment tag.
-  inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    return Name.startswith("llvm.vectorizer.");
-  }
-
-  /// Upgrade the loop attachment metadata node.
-  MDNode *upgradeInstructionLoopAttachment(MDNode &N);
-
+  /// Upgrade a metadata string constant in place.
+  void UpgradeMDStringConstant(std::string &String);
 } // End llvm namespace
 
 #endif

@@ -5248,12 +5248,13 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
   // lead to the loop header.
   bool MustExecuteLoopHeader = true;
   BasicBlock *Exit = nullptr;
-  for (auto *SBB : successors(ExitingBlock))
-    if (!L->contains(SBB)) {
+  for (succ_iterator SI = succ_begin(ExitingBlock), SE = succ_end(ExitingBlock);
+       SI != SE; ++SI)
+    if (!L->contains(*SI)) {
       if (Exit) // Multiple exit successors.
         return getCouldNotCompute();
-      Exit = SBB;
-    } else if (SBB != L->getHeader()) {
+      Exit = *SI;
+    } else if (*SI != L->getHeader()) {
       MustExecuteLoopHeader = false;
     }
 
@@ -5366,14 +5367,6 @@ ScalarEvolution::computeExitLimitFromCond(const Loop *L,
         if (EL0.Exact == EL1.Exact)
           BECount = EL0.Exact;
       }
-
-      // There are cases (e.g. PR26207) where computeExitLimitFromCond is able
-      // to be more aggressive when computing BECount than when computing
-      // MaxBECount.  In these cases it is possible for EL0.Exact and EL1.Exact
-      // to match, but for EL0.Max and EL1.Max to not.
-      if (isa<SCEVCouldNotCompute>(MaxBECount) &&
-          !isa<SCEVCouldNotCompute>(BECount))
-        MaxBECount = BECount;
 
       return ExitLimit(BECount, MaxBECount);
     }

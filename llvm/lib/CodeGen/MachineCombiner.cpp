@@ -41,7 +41,6 @@ class MachineCombiner : public MachineFunctionPass {
   const TargetRegisterInfo *TRI;
   MCSchedModel SchedModel;
   MachineRegisterInfo *MRI;
-  MachineLoopInfo *MLI; // Current MachineLoopInfo
   MachineTraceMetrics *Traces;
   MachineTraceMetrics::Ensemble *MinInstr;
 
@@ -88,7 +87,6 @@ char &llvm::MachineCombinerID = MachineCombiner::ID;
 
 INITIALIZE_PASS_BEGIN(MachineCombiner, "machine-combiner",
                       "Machine InstCombiner", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(MachineCombiner, "machine-combiner", "Machine InstCombiner",
                     false, false)
@@ -96,7 +94,6 @@ INITIALIZE_PASS_END(MachineCombiner, "machine-combiner", "Machine InstCombiner",
 void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
   AU.addPreserved<MachineLoopInfo>();
   AU.addRequired<MachineTraceMetrics>();
   AU.addPreserved<MachineTraceMetrics>();
@@ -358,8 +355,6 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   DEBUG(dbgs() << "Combining MBB " << MBB->getName() << "\n");
 
   auto BlockIter = MBB->begin();
-  // Check if the block is in a loop.
-  const MachineLoop *ML = MLI->getLoopFor(MBB);
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
@@ -412,15 +407,11 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
       if (!NewInstCount)
         continue;
 
-      bool SubstituteAlways = false;
-      if (ML && TII->isThroughputPattern(P))
-        SubstituteAlways = true;
-
       // Substitute when we optimize for codesize and the new sequence has
       // fewer instructions OR
       // the new sequence neither lengthens the critical path nor increases
       // resource pressure.
-      if (SubstituteAlways || doSubstitute(NewInstCount, OldInstCount) ||
+      if (doSubstitute(NewInstCount, OldInstCount) ||
           (improvesCriticalPathLen(MBB, &MI, BlockTrace, InsInstrs,
                                    InstrIdxForVirtReg, P) &&
            preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs))) {
@@ -457,7 +448,6 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   SchedModel = STI.getSchedModel();
   TSchedModel.init(SchedModel, &STI, TII);
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
   OptSize = MF.getFunction()->optForSize();

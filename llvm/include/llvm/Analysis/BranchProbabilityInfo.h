@@ -40,9 +40,7 @@ class raw_ostream;
 class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() {}
-  BranchProbabilityInfo(const Function &F, const LoopInfo &LI) {
-    calculate(F, LI);
-  }
+  BranchProbabilityInfo(Function &F, const LoopInfo &LI) { calculate(F, LI); }
 
   void releaseMemory();
 
@@ -76,7 +74,7 @@ public:
   ///
   /// Given a basic block, look through its successors and if one exists for
   /// which \see isEdgeHot would return true, return that successor block.
-  const BasicBlock *getHotSucc(const BasicBlock *BB) const;
+  BasicBlock *getHotSucc(BasicBlock *BB) const;
 
   /// \brief Print an edge's probability.
   ///
@@ -100,7 +98,7 @@ public:
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  void calculate(const Function &F, const LoopInfo &LI);
+  void calculate(Function &F, const LoopInfo& LI);
 
 private:
   // Since we allow duplicate edges from one basic block to another, we use
@@ -118,22 +116,22 @@ private:
   DenseMap<Edge, BranchProbability> Probs;
 
   /// \brief Track the last function we run over for printing.
-  const Function *LastF;
+  Function *LastF;
 
   /// \brief Track the set of blocks directly succeeded by a returning block.
-  SmallPtrSet<const BasicBlock *, 16> PostDominatedByUnreachable;
+  SmallPtrSet<BasicBlock *, 16> PostDominatedByUnreachable;
 
   /// \brief Track the set of blocks that always lead to a cold call.
-  SmallPtrSet<const BasicBlock *, 16> PostDominatedByColdCall;
+  SmallPtrSet<BasicBlock *, 16> PostDominatedByColdCall;
 
-  bool calcUnreachableHeuristics(const BasicBlock *BB);
-  bool calcMetadataWeights(const BasicBlock *BB);
-  bool calcColdCallHeuristics(const BasicBlock *BB);
-  bool calcPointerHeuristics(const BasicBlock *BB);
-  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
-  bool calcZeroHeuristics(const BasicBlock *BB);
-  bool calcFloatingPointHeuristics(const BasicBlock *BB);
-  bool calcInvokeHeuristics(const BasicBlock *BB);
+  bool calcUnreachableHeuristics(BasicBlock *BB);
+  bool calcMetadataWeights(BasicBlock *BB);
+  bool calcColdCallHeuristics(BasicBlock *BB);
+  bool calcPointerHeuristics(BasicBlock *BB);
+  bool calcLoopBranchHeuristics(BasicBlock *BB, const LoopInfo &LI);
+  bool calcZeroHeuristics(BasicBlock *BB);
+  bool calcFloatingPointHeuristics(BasicBlock *BB);
+  bool calcInvokeHeuristics(BasicBlock *BB);
 };
 
 /// \brief Legacy analysis pass which computes \c BranchProbabilityInfo.

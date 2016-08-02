@@ -1,8 +1,8 @@
 ; RUN: opt < %s -reassociate -S | FileCheck %s
 ; CHECK-LABEL: faddsubAssoc1
-; CHECK: [[TMP1:%.*]] = fsub fast half 0xH8000, %a
-; CHECK: [[TMP2:%.*]] = fadd fast half %b, [[TMP1]]
-; CHECK: fmul fast half [[TMP2]], 0xH4500
+; CHECK: [[TMP1:%tmp.*]] = fmul fast half %a, 0xH4500
+; CHECK: [[TMP2:%tmp.*]] = fmul fast half %b, 0xH4500
+; CHECK: fsub fast half [[TMP2]], [[TMP1]]
 ; CHECK: ret
 ; Input is A op (B op C)
 define half @faddsubAssoc1(half %a, half %b) {

@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %deflake %run %t 2>&1
 
 #import <Foundation/Foundation.h>
 
@@ -49,7 +49,7 @@ int main() {
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 8
 // CHECK:     #0 -[MyClass method:]
-// CHECK:   Previous write of size 8
+// CHECK:   Write of size 8
 // CHECK:     #0 -[MyClass method:]
 // CHECK:   Location is heap block
 // CHECK: Done.

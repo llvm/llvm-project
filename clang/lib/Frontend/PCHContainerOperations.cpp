@@ -19,9 +19,6 @@
 
 using namespace clang;
 
-PCHContainerWriter::~PCHContainerWriter() {}
-PCHContainerReader::~PCHContainerReader() {}
-
 namespace {
 
 /// \brief A PCHContainerGenerator that writes out the PCH to a flat file.

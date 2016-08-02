@@ -177,7 +177,7 @@ void foo() {
 //      Do an adjustment from B* to C*.
 // DTORS2:   getelementptr i8, i8* %{{.*}}, i32 -4
 // DTORS2:   bitcast i8* %{{.*}} to %"struct.dtor_in_second_nvbase::C"*
-// DTORS2:   %[[CALL:.*]] = call x86_thiscallcc i8* @"\01??_GC@dtor_in_second_nvbase@@UAEPAXI@Z"
+// DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc i8* @"\01??_GC@dtor_in_second_nvbase@@UAEPAXI@Z"
 // DTORS2:   ret i8* %[[CALL]]
 
 }

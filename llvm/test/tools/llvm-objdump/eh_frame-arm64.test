@@ -1,23 +1,23 @@
-# RUN: llvm-objdump -dwarf=frames %p/Inputs/eh_frame.macho-arm64 2>/dev/null | FileCheck %s
+# RUN: llvm-objdump -unwind-info %p/Inputs/eh_frame.macho-arm64 2>/dev/null | FileCheck %s
 
-# CHECK: .eh_frame contents:
-
-# CHECK: 00000000 00000010 ffffffff CIE
-# CHECK:   Version:               1
-# CHECK:   Augmentation:          "zR"
-# CHECK:   Code alignment factor: 1
-# CHECK:   Data alignment factor: -8
-# CHECK:   Return address column: 30
-# CHECK:   Augmentation data:
-
-# CHECK:   DW_CFA_def_cfa: reg31 +0
-
-# CHECK: 00000014 00000020 00000018 FDE cie=00000018 pc=ffffffe4...00000004
-# CHECK:   DW_CFA_advance_loc: 8
-# CHECK:   DW_CFA_def_cfa_offset: +16
-# CHECK:   DW_CFA_offset: reg30 -8
-# CHECK:   DW_CFA_offset: reg29 -16
-# CHECK:   DW_CFA_nop:
-# CHECK:   DW_CFA_nop:
-# CHECK:   DW_CFA_nop:
-# CHECK:   DW_CFA_nop:
+# CHECK: Contents of __eh_frame section:
+# CHECK: CIE:
+# CHECK:   Length: 16
+# CHECK:   CIE ID: 0
+# CHECK:   Version: 1
+# CHECK:   Augmentation String: zR
+# CHECK:   Code Alignment Factor: 1
+# CHECK:   Data Alignment Factor: -8
+# CHECK:   Return Address Register: 30
+# CHECK:   Augmentation Data Length: 1
+# CHECK:   FDE Address Pointer Encoding: 16
+# CHECK:   Instructions:
+# CHECK:   0c 1f 00 
+# CHECK: FDE:
+# CHECK:   Length: 32
+# CHECK:   CIE Offset: 0
+# CHECK:   PC Begin: ffffffffffffffe4
+# CHECK:   PC Range: 0000000000000020
+# CHECK:   Augmentation Data Length: 0
+# CHECK:   Instructions:
+# CHECK:   48 0e 10 9e 01 9d 02 00 00 00 00

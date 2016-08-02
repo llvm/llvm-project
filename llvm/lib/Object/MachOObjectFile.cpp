@@ -317,61 +317,6 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       Load = LoadOrErr.get();
     }
   }
-  if (!SymtabLoadCmd) {
-    if (DysymtabLoadCmd) {
-      // Diagnostic("truncated or malformed object (contains LC_DYSYMTAB load "
-      // "command without a LC_SYMTAB load command)");
-      EC = object_error::parse_failed;
-      return;
-    }
-  } else if (DysymtabLoadCmd) {
-    MachO::symtab_command Symtab =
-      getStruct<MachO::symtab_command>(this, SymtabLoadCmd);
-    MachO::dysymtab_command Dysymtab =
-      getStruct<MachO::dysymtab_command>(this, DysymtabLoadCmd);
-    if (Dysymtab.nlocalsym != 0 && Dysymtab.ilocalsym > Symtab.nsyms) {
-      // Diagnostic("truncated or malformed object (ilocalsym in LC_DYSYMTAB "
-      // "load command extends past the end of the symbol table)"
-      EC = object_error::parse_failed;
-      return;
-    }
-    uint64_t big_size = Dysymtab.ilocalsym;
-    big_size += Dysymtab.nlocalsym;
-    if (Dysymtab.nlocalsym != 0 && big_size > Symtab.nsyms) {
-      // Diagnostic("truncated or malformed object (ilocalsym plus nlocalsym "
-      // "in LC_DYSYMTAB load command extends past the end of the symbol table)"
-      EC = object_error::parse_failed;
-      return;
-    }
-    if (Dysymtab.nextdefsym != 0 && Dysymtab.ilocalsym > Symtab.nsyms) {
-      // Diagnostic("truncated or malformed object (nextdefsym in LC_DYSYMTAB "
-      // "load command extends past the end of the symbol table)"
-      EC = object_error::parse_failed;
-      return;
-    }
-    big_size = Dysymtab.iextdefsym;
-    big_size += Dysymtab.nextdefsym;
-    if (Dysymtab.nextdefsym != 0 && big_size > Symtab.nsyms) {
-      // Diagnostic("truncated or malformed object (iextdefsym plus nextdefsym "
-      // "in LC_DYSYMTAB load command extends past the end of the symbol table)"
-      EC = object_error::parse_failed;
-      return;
-    }
-    if (Dysymtab.nundefsym != 0 && Dysymtab.iundefsym > Symtab.nsyms) {
-      // Diagnostic("truncated or malformed object (nundefsym in LC_DYSYMTAB "
-      // "load command extends past the end of the symbol table)"
-      EC = object_error::parse_failed;
-      return;
-    }
-    big_size = Dysymtab.iundefsym;
-    big_size += Dysymtab.nundefsym;
-    if (Dysymtab.nundefsym != 0 && big_size > Symtab.nsyms) {
-      // Diagnostic("truncated or malformed object (iundefsym plus nundefsym "
-      // "in LC_DYSYMTAB load command extends past the end of the symbol table)"
-      EC = object_error::parse_failed;
-      return;
-    }
-  }
   assert(LoadCommands.size() == LoadCommandCount);
 }
 
@@ -387,7 +332,8 @@ ErrorOr<StringRef> MachOObjectFile::getSymbolName(DataRefImpl Symb) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(this, Symb);
   const char *Start = &StringTable.data()[Entry.n_strx];
   if (Start < getData().begin() || Start >= getData().end())
-    return object_error::parse_failed;
+    report_fatal_error(
+        "Symbol name entry points before beginning or past end of file.");
   return StringRef(Start);
 }
 
@@ -512,7 +458,7 @@ MachOObjectFile::getSymbolSection(DataRefImpl Symb) const {
   DataRefImpl DRI;
   DRI.d.a = index - 1;
   if (DRI.d.a >= Sections.size())
-    return object_error::parse_failed;
+    report_fatal_error("getSymbolSection: Invalid section index.");
   return section_iterator(SectionRef(DRI, this));
 }
 
@@ -996,20 +942,15 @@ MachOObjectFile::getRelocationRelocatedSection(relocation_iterator Rel) const {
 }
 
 basic_symbol_iterator MachOObjectFile::symbol_begin_impl() const {
-  DataRefImpl DRI;
-  MachO::symtab_command Symtab = getSymtabLoadCommand();
-  if (!SymtabLoadCmd || Symtab.nsyms == 0)
-    return basic_symbol_iterator(SymbolRef(DRI, this));
-
   return getSymbolByIndex(0);
 }
 
 basic_symbol_iterator MachOObjectFile::symbol_end_impl() const {
   DataRefImpl DRI;
-  MachO::symtab_command Symtab = getSymtabLoadCommand();
-  if (!SymtabLoadCmd || Symtab.nsyms == 0)
+  if (!SymtabLoadCmd)
     return basic_symbol_iterator(SymbolRef(DRI, this));
 
+  MachO::symtab_command Symtab = getSymtabLoadCommand();
   unsigned SymbolTableEntrySize = is64Bit() ?
     sizeof(MachO::nlist_64) :
     sizeof(MachO::nlist);
@@ -1020,12 +961,15 @@ basic_symbol_iterator MachOObjectFile::symbol_end_impl() const {
 }
 
 basic_symbol_iterator MachOObjectFile::getSymbolByIndex(unsigned Index) const {
+  DataRefImpl DRI;
+  if (!SymtabLoadCmd)
+    return basic_symbol_iterator(SymbolRef(DRI, this));
+
   MachO::symtab_command Symtab = getSymtabLoadCommand();
-  if (!SymtabLoadCmd || Index >= Symtab.nsyms)
+  if (Index >= Symtab.nsyms)
     report_fatal_error("Requested symbol index is out of range.");
   unsigned SymbolTableEntrySize =
     is64Bit() ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
-  DataRefImpl DRI;
   DRI.p = reinterpret_cast<uintptr_t>(getPtr(this, Symtab.symoff));
   DRI.p += Index * SymbolTableEntrySize;
   return basic_symbol_iterator(SymbolRef(DRI, this));
@@ -1092,8 +1036,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType) {
   }
 }
 
-Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
-                                      const char **McpuDefault) {
+Triple MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType,
+                                const char **McpuDefault) {
   if (McpuDefault)
     *McpuDefault = nullptr;
 
@@ -1133,13 +1077,13 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
     case MachO::CPU_SUBTYPE_ARM_V7EM:
       if (McpuDefault)
         *McpuDefault = "cortex-m4";
-      return Triple("thumbv7em-apple-darwin");
+      return Triple("armv7em-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7K:
       return Triple("armv7k-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7M:
       if (McpuDefault)
         *McpuDefault = "cortex-m3";
-      return Triple("thumbv7m-apple-darwin");
+      return Triple("armv7m-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7S:
       return Triple("armv7s-apple-darwin");
     default:
@@ -1171,6 +1115,56 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
   }
 }
 
+Triple MachOObjectFile::getThumbArch(uint32_t CPUType, uint32_t CPUSubType,
+                                     const char **McpuDefault) {
+  if (McpuDefault)
+    *McpuDefault = nullptr;
+
+  switch (CPUType) {
+  case MachO::CPU_TYPE_ARM:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_ARM_V4T:
+      return Triple("thumbv4t-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V5TEJ:
+      return Triple("thumbv5e-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_XSCALE:
+      return Triple("xscale-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V6:
+      return Triple("thumbv6-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V6M:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m0";
+      return Triple("thumbv6m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V7:
+      return Triple("thumbv7-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V7EM:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m4";
+      return Triple("thumbv7em-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V7K:
+      return Triple("thumbv7k-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V7M:
+      if (McpuDefault)
+        *McpuDefault = "cortex-m3";
+      return Triple("thumbv7m-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM_V7S:
+      return Triple("thumbv7s-apple-darwin");
+    default:
+      return Triple();
+    }
+  default:
+    return Triple();
+  }
+}
+
+Triple MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType,
+                                const char **McpuDefault, Triple *ThumbTriple) {
+  Triple T = MachOObjectFile::getArch(CPUType, CPUSubType, McpuDefault);
+  *ThumbTriple = MachOObjectFile::getThumbArch(CPUType, CPUSubType,
+                                               McpuDefault);
+  return T;
+}
+
 Triple MachOObjectFile::getHostArch() {
   return Triple(sys::getDefaultTargetTriple());
 }
@@ -1200,8 +1194,10 @@ unsigned MachOObjectFile::getArch() const {
   return getArch(getCPUType(this));
 }
 
-Triple MachOObjectFile::getArchTriple(const char **McpuDefault) const {
-  return getArchTriple(Header.cputype, Header.cpusubtype, McpuDefault);
+Triple MachOObjectFile::getArch(const char **McpuDefault,
+                                Triple *ThumbTriple) const {
+  *ThumbTriple = getThumbArch(Header.cputype, Header.cpusubtype, McpuDefault);
+  return getArch(Header.cputype, Header.cpusubtype, McpuDefault);
 }
 
 relocation_iterator MachOObjectFile::section_rel_begin(unsigned Index) const {

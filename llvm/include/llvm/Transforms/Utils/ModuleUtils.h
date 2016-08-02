@@ -28,6 +28,7 @@ class Constant;
 class StringRef;
 class Value;
 class Type;
+template <class PtrType> class SmallPtrSetImpl;
 
 /// Append F to the list of global ctors of module M with the given Priority.
 /// This wraps the function in the appropriate structure and stores it along
@@ -37,6 +38,12 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority);
 
 /// Same as appendToGlobalCtors(), but for global dtors.
 void appendToGlobalDtors(Module &M, Function *F, int Priority);
+
+/// \brief Given "llvm.used" or "llvm.compiler.used" as a global name, collect
+/// the initializer elements of that global in Set and return the global itself.
+GlobalVariable *collectUsedGlobalVariables(Module &M,
+                                           SmallPtrSetImpl<GlobalValue *> &Set,
+                                           bool CompilerUsed);
 
 // Validate the result of Module::getOrInsertFunction called for an interface
 // function of given sanitizer. If the instrumented module defines a function
@@ -52,11 +59,6 @@ std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName = StringRef());
-
-/// Rename all the anon functions in the module using a hash computed from
-/// the list of public globals in the module.
-bool nameUnamedFunctions(Module &M);
-
 } // End llvm namespace
 
 #endif //  LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

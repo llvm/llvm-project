@@ -453,10 +453,8 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
 
   // Add the new block to the funclet.
   const auto &FuncletI = FuncletMembership.find(&CurMBB);
-  if (FuncletI != FuncletMembership.end()) {
-    auto n = FuncletI->second;
-    FuncletMembership[NewMBB] = n;
-  }
+  if (FuncletI != FuncletMembership.end())
+    FuncletMembership[NewMBB] = FuncletI->second;
 
   return NewMBB;
 }

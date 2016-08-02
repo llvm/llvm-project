@@ -1594,8 +1594,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
               CInt != cast<ConstantInt>(I->getOperand(1)))
             Op2VK = TargetTransformInfo::OK_NonUniformConstantValue;
         }
-        // FIXME: Currently cost of model modification for division by power of
-        // 2 is handled for X86 and AArch64. Add support for other targets.
+        // FIXME: Currently cost of model modification for division by
+        // power of 2 is handled only for X86. Add support for other targets.
         if (Op2VK == TargetTransformInfo::OK_UniformConstantValue && CInt &&
             CInt->getValue().isPowerOf2())
           Op2VP = TargetTransformInfo::OP_PowerOf2;
@@ -1732,13 +1732,6 @@ int BoUpSLP::getSpillCost() {
       continue;
     }
 
-    // Update LiveValues.
-    LiveValues.erase(PrevInst);
-    for (auto &J : PrevInst->operands()) {
-      if (isa<Instruction>(&*J) && ScalarToTreeEntry.count(&*J))
-        LiveValues.insert(cast<Instruction>(&*J));
-    }
-
     DEBUG(
       dbgs() << "SLP: #LV: " << LiveValues.size();
       for (auto *X : LiveValues)
@@ -1746,6 +1739,13 @@ int BoUpSLP::getSpillCost() {
       dbgs() << ", Looking at ";
       Inst->dump();
       );
+
+    // Update LiveValues.
+    LiveValues.erase(PrevInst);
+    for (auto &J : PrevInst->operands()) {
+      if (isa<Instruction>(&*J) && ScalarToTreeEntry.count(&*J))
+        LiveValues.insert(cast<Instruction>(&*J));
+    }
 
     // Now find the sequence of instructions between PrevInst and Inst.
     BasicBlock::reverse_iterator InstIt(Inst->getIterator()),
@@ -3632,8 +3632,8 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Instruction *InsertAfter = cast<Instruction>(BuildVectorSlice.back());
         unsigned VecIdx = 0;
         for (auto &V : BuildVectorSlice) {
-          IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
-                                      ++BasicBlock::iterator(InsertAfter));
+          IRBuilder<true, NoFolder> Builder(
+              InsertAfter->getParent(), ++BasicBlock::iterator(InsertAfter));
           InsertElementInst *IE = cast<InsertElementInst>(V);
           Instruction *Extract = cast<Instruction>(Builder.CreateExtractElement(
               VectorizedRoot, Builder.getInt32(VecIdx++)));
@@ -4403,7 +4403,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DemandedBits)
 INITIALIZE_PASS_END(SLPVectorizer, SV_NAME, lv_name, false, false)
 
 namespace llvm {

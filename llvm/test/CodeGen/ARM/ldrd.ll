@@ -98,7 +98,7 @@ declare void @extfunc(i32, i32, i32, i32)
 
 ; CHECK-LABEL: Func2:
 ; A8: ldrd
-; A8: bl
+; A8: blx
 ; A8: pop
 define void @Func2(i32* %p) {
 entry:

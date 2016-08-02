@@ -84,19 +84,6 @@ static cl::opt<bool>
 EnableFMFInDAG("enable-fmf-dag", cl::init(true), cl::Hidden,
                 cl::desc("Enable fast-math-flags for DAG nodes"));
 
-/// Minimum jump table density for normal functions.
-static cl::opt<unsigned>
-JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
-                 cl::desc("Minimum density for building a jump table in "
-                          "a normal function"));
-
-/// Minimum jump table density for -Os or -Oz functions.
-static cl::opt<unsigned>
-OptsizeJumpTableDensity("optsize-jump-table-density", cl::init(40), cl::Hidden,
-                        cl::desc("Minimum density for building a jump table in "
-                                 "an optsize function"));
-
-
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and
 // load clustering may not complete in reasonable time. It is difficult to
@@ -206,8 +193,6 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
   }
 
   // There is now one part, held in Val.  Correct it to match ValueVT.
-  // PartEVT is the type of the register class that holds the value.
-  // ValueVT is the type of the inline asm operation.
   EVT PartEVT = Val.getValueType();
 
   if (PartEVT == ValueVT)
@@ -221,11 +206,6 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
     Val = DAG.getNode(ISD::TRUNCATE, DL, PartEVT, Val);
   }
 
-  // Handle types that have the same size.
-  if (PartEVT.getSizeInBits() == ValueVT.getSizeInBits())
-    return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
-
-  // Handle types with different sizes.
   if (PartEVT.isInteger() && ValueVT.isInteger()) {
     if (ValueVT.bitsLT(PartEVT)) {
       // For a truncate, see if we have any information to
@@ -248,6 +228,9 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
 
     return DAG.getNode(ISD::FP_EXTEND, DL, ValueVT, Val);
   }
+
+  if (PartEVT.getSizeInBits() == ValueVT.getSizeInBits())
+    return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
 
   llvm_unreachable("Unknown mismatch!");
 }
@@ -930,10 +913,8 @@ static void copySwiftErrorsToFinalVRegs(SelectionDAGBuilder &SDB) {
     return;
 
   // Go through entries in SwiftErrorWorklist, and create copy as necessary.
-  FunctionLoweringInfo::SwiftErrorVRegs &WorklistEntry =
-      SDB.FuncInfo.SwiftErrorWorklist[SDB.FuncInfo.MBB];
-  FunctionLoweringInfo::SwiftErrorVRegs &MapEntry =
-      SDB.FuncInfo.SwiftErrorMap[SDB.FuncInfo.MBB];
+  auto &WorklistEntry = SDB.FuncInfo.SwiftErrorWorklist[SDB.FuncInfo.MBB];
+  auto &MapEntry = SDB.FuncInfo.SwiftErrorMap[SDB.FuncInfo.MBB];
   for (unsigned I = 0, E = WorklistEntry.size(); I < E; I++) {
     unsigned WorkReg = WorklistEntry[I];
 
@@ -1468,8 +1449,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
   // sure swifterror virtual register will be returned in the swifterror
   // physical register.
   const Function *F = I.getParent()->getParent();
-  if (TLI.supportSwiftError() &&
-      F->getAttributes().hasAttrSomewhere(Attribute::SwiftError)) {
+  if (F->getAttributes().hasAttrSomewhere(Attribute::SwiftError) &&
+      TLI.supportSwiftError()) {
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     Flags.setSwiftError();
     Outs.push_back(ISD::OutputArg(Flags, EVT(TLI.getPointerTy(DL)) /*vt*/,
@@ -2381,129 +2362,6 @@ void SelectionDAGBuilder::visitFSub(const User &I) {
   visitBinary(I, ISD::FSUB);
 }
 
-/// Checks if the given instruction performs a vector reduction, in which case
-/// we have the freedom to alter the elements in the result as long as the
-/// reduction of them stays unchanged.
-static bool isVectorReductionOp(const User *I) {
-  const Instruction *Inst = dyn_cast<Instruction>(I);
-  if (!Inst || !Inst->getType()->isVectorTy())
-    return false;
-
-  auto OpCode = Inst->getOpcode();
-  switch (OpCode) {
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-    break;
-  case Instruction::FAdd:
-  case Instruction::FMul:
-    if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(Inst))
-      if (FPOp->getFastMathFlags().unsafeAlgebra())
-        break;
-    // Fall through.
-  default:
-    return false;
-  }
-
-  unsigned ElemNum = Inst->getType()->getVectorNumElements();
-  unsigned ElemNumToReduce = ElemNum;
-
-  // Do DFS search on the def-use chain from the given instruction. We only
-  // allow four kinds of operations during the search until we reach the
-  // instruction that extracts the first element from the vector:
-  //
-  //   1. The reduction operation of the same opcode as the given instruction.
-  //
-  //   2. PHI node.
-  //
-  //   3. ShuffleVector instruction together with a reduction operation that
-  //      does a partial reduction.
-  //
-  //   4. ExtractElement that extracts the first element from the vector, and we
-  //      stop searching the def-use chain here.
-  //
-  // 3 & 4 above perform a reduction on all elements of the vector. We push defs
-  // from 1-3 to the stack to continue the DFS. The given instruction is not
-  // a reduction operation if we meet any other instructions other than those
-  // listed above.
-
-  SmallVector<const User *, 16> UsersToVisit{Inst};
-  SmallPtrSet<const User *, 16> Visited;
-  bool ReduxExtracted = false;
-
-  while (!UsersToVisit.empty()) {
-    auto User = UsersToVisit.back();
-    UsersToVisit.pop_back();
-    if (!Visited.insert(User).second)
-      continue;
-
-    for (const auto &U : User->users()) {
-      auto Inst = dyn_cast<Instruction>(U);
-      if (!Inst)
-        return false;
-
-      if (Inst->getOpcode() == OpCode || isa<PHINode>(U)) {
-        if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(Inst))
-          if (!isa<PHINode>(FPOp) && !FPOp->getFastMathFlags().unsafeAlgebra())
-            return false;
-        UsersToVisit.push_back(U);
-      } else if (const ShuffleVectorInst *ShufInst =
-                     dyn_cast<ShuffleVectorInst>(U)) {
-        // Detect the following pattern: A ShuffleVector instruction together
-        // with a reduction that do partial reduction on the first and second
-        // ElemNumToReduce / 2 elements, and store the result in
-        // ElemNumToReduce / 2 elements in another vector.
-
-        unsigned ResultElements = ShufInst->getType()->getVectorNumElements();
-        if (ResultElements < ElemNum)
-          return false;
-
-        if (ElemNumToReduce == 1)
-          return false;
-        if (!isa<UndefValue>(U->getOperand(1)))
-          return false;
-        for (unsigned i = 0; i < ElemNumToReduce / 2; ++i)
-          if (ShufInst->getMaskValue(i) != int(i + ElemNumToReduce / 2))
-            return false;
-        for (unsigned i = ElemNumToReduce / 2; i < ElemNum; ++i)
-          if (ShufInst->getMaskValue(i) != -1)
-            return false;
-
-        // There is only one user of this ShuffleVector instruction, which
-        // must be a reduction operation.
-        if (!U->hasOneUse())
-          return false;
-
-        auto U2 = dyn_cast<Instruction>(*U->user_begin());
-        if (!U2 || U2->getOpcode() != OpCode)
-          return false;
-
-        // Check operands of the reduction operation.
-        if ((U2->getOperand(0) == U->getOperand(0) && U2->getOperand(1) == U) ||
-            (U2->getOperand(1) == U->getOperand(0) && U2->getOperand(0) == U)) {
-          UsersToVisit.push_back(U2);
-          ElemNumToReduce /= 2;
-        } else
-          return false;
-      } else if (isa<ExtractElementInst>(U)) {
-        // At this moment we should have reduced all elements in the vector.
-        if (ElemNumToReduce != 1)
-          return false;
-
-        const ConstantInt *Val = dyn_cast<ConstantInt>(U->getOperand(1));
-        if (!Val || Val->getZExtValue() != 0)
-          return false;
-
-        ReduxExtracted = true;
-      } else
-        return false;
-    }
-  }
-  return ReduxExtracted;
-}
-
 void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
@@ -2511,7 +2369,6 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   bool nuw = false;
   bool nsw = false;
   bool exact = false;
-  bool vec_redux = false;
   FastMathFlags FMF;
 
   if (const OverflowingBinaryOperator *OFBinOp =
@@ -2525,16 +2382,10 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&I))
     FMF = FPOp->getFastMathFlags();
 
-  if (isVectorReductionOp(&I)) {
-    vec_redux = true;
-    DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
-  }
-
   SDNodeFlags Flags;
   Flags.setExact(exact);
   Flags.setNoSignedWrap(nsw);
   Flags.setNoUnsignedWrap(nuw);
-  Flags.setVectorReduction(vec_redux);
   if (EnableFMFInDAG) {
     Flags.setAllowReciprocal(FMF.allowReciprocal());
     Flags.setNoInfs(FMF.noInfs());
@@ -3346,20 +3197,17 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (I.isAtomic())
     return visitAtomicLoad(I);
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Value *SV = I.getOperand(0);
-  if (TLI.supportSwiftError()) {
-    // Swifterror values can come from either a function parameter with
-    // swifterror attribute or an alloca with swifterror attribute.
-    if (const Argument *Arg = dyn_cast<Argument>(SV)) {
-      if (Arg->hasSwiftErrorAttr())
-        return visitLoadFromSwiftError(I);
-    }
+  if (const Argument *Arg = dyn_cast<Argument>(SV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Arg->hasSwiftErrorAttr() && TLI.supportSwiftError())
+      return visitLoadFromSwiftError(I);
+  }
 
-    if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(SV)) {
-      if (Alloca->isSwiftError())
-        return visitLoadFromSwiftError(I);
-    }
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(SV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Alloca->isSwiftError() && TLI.supportSwiftError())
+      return visitLoadFromSwiftError(I);
   }
 
   SDValue Ptr = getValue(SV);
@@ -3385,6 +3233,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   I.getAAMetadata(AAInfo);
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SmallVector<EVT, 4> ValueVTs;
   SmallVector<uint64_t, 4> Offsets;
   ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &Offsets);
@@ -3471,8 +3320,7 @@ void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
   const Value *SrcV = I.getOperand(0);
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
                   SrcV->getType(), ValueVTs, &Offsets);
-  assert(ValueVTs.size() == 1 && Offsets[0] == 0 &&
-         "expect a single EVT for swifterror");
+  assert(ValueVTs.size() == 1 && "expect a single EVT for swifterror");
 
   SDValue Src = getValue(SrcV);
   // Create a virtual register, then update the virtual register.
@@ -3508,8 +3356,7 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   SmallVector<uint64_t, 4> Offsets;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), Ty,
                   ValueVTs, &Offsets);
-  assert(ValueVTs.size() == 1 && Offsets[0] == 0 &&
-         "expect a single EVT for swifterror");
+  assert(ValueVTs.size() == 1 && "expect a single EVT for swifterror");
 
   // Chain, DL, Reg, VT, Glue or Chain, DL, Reg, VT
   SDValue L = DAG.getCopyFromReg(getRoot(), getCurSDLoc(),
@@ -3526,19 +3373,16 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   const Value *SrcV = I.getOperand(0);
   const Value *PtrV = I.getOperand(1);
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.supportSwiftError()) {
-    // Swifterror values can come from either a function parameter with
-    // swifterror attribute or an alloca with swifterror attribute.
-    if (const Argument *Arg = dyn_cast<Argument>(PtrV)) {
-      if (Arg->hasSwiftErrorAttr())
-        return visitStoreToSwiftError(I);
-    }
+  if (const Argument *Arg = dyn_cast<Argument>(PtrV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Arg->hasSwiftErrorAttr() && TLI.supportSwiftError())
+      return visitStoreToSwiftError(I);
+  }
 
-    if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV)) {
-      if (Alloca->isSwiftError())
-        return visitStoreToSwiftError(I);
-    }
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV)) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (Alloca->isSwiftError() && TLI.supportSwiftError())
+      return visitStoreToSwiftError(I);
   }
 
   SmallVector<EVT, 4> ValueVTs;
@@ -5680,7 +5524,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   TargetLowering::ArgListEntry Entry;
   Args.reserve(CS.arg_size());
 
-  const Value *SwiftErrorVal = nullptr;
+  bool HasSwiftError = false;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
        i != e; ++i) {
@@ -5698,12 +5542,9 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
     // Use swifterror virtual register as input to the call.
     if (Entry.isSwiftError && TLI.supportSwiftError()) {
-      SwiftErrorVal = V;
-      // We find the virtual register for the actual swifterror argument.
-      // Instead of using the Value, we use the virtual register instead.
-      Entry.Node = DAG.getRegister(
-          FuncInfo.findSwiftErrorVReg(FuncInfo.MBB, V),
-          EVT(TLI.getPointerTy(DL)));
+      HasSwiftError = true;
+      Entry.Node = DAG.getRegister(FuncInfo.SwiftErrorMap[FuncInfo.MBB][0],
+                                   EVT(TLI.getPointerTy(DL)));
     }
 
     Args.push_back(Entry);
@@ -5731,14 +5572,13 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   // The last element of CLI.InVals has the SDValue for swifterror return.
   // Here we copy it to a virtual register and update SwiftErrorMap for
   // book-keeping.
-  if (SwiftErrorVal && TLI.supportSwiftError()) {
+  if (HasSwiftError && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
     const TargetRegisterClass *RC = TLI.getRegClassFor(TLI.getPointerTy(DL));
     unsigned VReg = FuncInfo.MF->getRegInfo().createVirtualRegister(RC);
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
-    // We update the virtual register for the actual swifterror argument.
-    FuncInfo.setSwiftErrorVReg(FuncInfo.MBB, SwiftErrorVal, VReg);
+    FuncInfo.SwiftErrorMap[FuncInfo.MBB][0] = VReg;
     DAG.setRoot(CopyNode);
   }
 }
@@ -8063,8 +7903,7 @@ void SelectionDAGBuilder::updateDAGForMaybeTailCall(SDValue MaybeTC) {
 
 bool SelectionDAGBuilder::isDense(const CaseClusterVector &Clusters,
                                   unsigned *TotalCases, unsigned First,
-                                  unsigned Last,
-                                  unsigned Density) {
+                                  unsigned Last) {
   assert(Last >= First);
   assert(TotalCases[Last] >= TotalCases[First]);
 
@@ -8085,7 +7924,7 @@ bool SelectionDAGBuilder::isDense(const CaseClusterVector &Clusters,
   assert(NumCases < UINT64_MAX / 100);
   assert(Range >= NumCases);
 
-  return NumCases * 100 >= Range * Density;
+  return NumCases * 100 >= Range * MinJumpTableDensity;
 }
 
 static inline bool areJTsAllowed(const TargetLowering &TLI) {
@@ -8199,11 +8038,7 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
       TotalCases[i] += TotalCases[i - 1];
   }
 
-  unsigned MinDensity = JumpTableDensity;
-  if (DefaultMBB->getParent()->getFunction()->optForSize())
-    MinDensity = OptsizeJumpTableDensity;
-  if (N >= MinJumpTableSize
-      && isDense(Clusters, &TotalCases[0], 0, N - 1, MinDensity)) {
+  if (N >= MinJumpTableSize && isDense(Clusters, &TotalCases[0], 0, N - 1)) {
     // Cheap case: the whole range might be suitable for jump table.
     CaseCluster JTCluster;
     if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
@@ -8248,7 +8083,7 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
     // Search for a solution that results in fewer partitions.
     for (int64_t j = N - 1; j > i; j--) {
       // Try building a partition from Clusters[i..j].
-      if (isDense(Clusters, &TotalCases[0], i, j, MinDensity)) {
+      if (isDense(Clusters, &TotalCases[0], i, j)) {
         unsigned NumPartitions = 1 + (j == N - 1 ? 0 : MinPartitions[j + 1]);
         bool IsTable = j - i + 1 >= MinJumpTableSize;
         unsigned Tables = IsTable + (j == N - 1 ? 0 : NumTables[j + 1]);

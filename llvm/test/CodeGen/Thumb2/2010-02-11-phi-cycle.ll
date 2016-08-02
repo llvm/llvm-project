@@ -31,9 +31,9 @@ return:                                           ; preds = %bb, %entry
 
 define i32 @test_dead_cycle(i32 %n) nounwind {
 ; CHECK-LABEL: test_dead_cycle:
-; CHECK: bl
+; CHECK: blx
 ; CHECK-NOT: mov
-; CHECK: bl
+; CHECK: blx
 entry:
   %0 = icmp eq i32 %n, 1                          ; <i1> [#uses=1]
   br i1 %0, label %return, label %bb.nph

@@ -51,7 +51,7 @@ struct DDFlags {
 };
 
 struct DDReport {
-  enum { kMaxLoopSize = 20 };
+  enum { kMaxLoopSize = 8 };
   int n;  // number of entries in loop
   struct {
     u64 thr_ctx;   // user thread context

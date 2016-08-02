@@ -24,15 +24,13 @@ void __llvm_profile_recursive_mkdir(char *path) {
   int i;
 
   for (i = 1; path[i] != '\0'; ++i) {
-    char save = path[i];
-    if (!(path[i] == '/' || path[i] == '\\'))
-      continue;
+    if (path[i] != '/') continue;
     path[i] = '\0';
 #ifdef _WIN32
     _mkdir(path);
 #else
     mkdir(path, 0755);  /* Some of these will fail, ignore it. */
 #endif
-    path[i] = save;
+    path[i] = '/';
   }
 }

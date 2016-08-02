@@ -990,22 +990,19 @@ class TemplateDiff {
       }
     };
 
-    bool UseDesugaredIterator;
     InternalIterator SugaredIterator;
     InternalIterator DesugaredIterator;
 
   public:
     TSTiterator(ASTContext &Context, const TemplateSpecializationType *TST)
-        : UseDesugaredIterator(TST->isSugared() && !TST->isTypeAlias()),
-          SugaredIterator(TST),
+        : SugaredIterator(TST),
           DesugaredIterator(
               GetTemplateSpecializationType(Context, TST->desugar())) {}
 
     /// &operator++ - Increment the iterator to the next template argument.
     TSTiterator &operator++() {
       ++SugaredIterator;
-      if (UseDesugaredIterator)
-        ++DesugaredIterator;
+      ++DesugaredIterator;
       return *this;
     }
 
@@ -1027,13 +1024,11 @@ class TemplateDiff {
     /// hasDesugaredTA - Returns true if there is another TemplateArgument
     /// available.
     bool hasDesugaredTA() const {
-      return UseDesugaredIterator && !DesugaredIterator.isEnd();
+      return !DesugaredIterator.isEnd();
     }
 
     /// getDesugaredTA - Returns the desugared TemplateArgument.
     reference getDesugaredTA() const {
-      assert(UseDesugaredIterator &&
-             "Desugared TemplateArgument should not be used.");
       return *DesugaredIterator;
     }
   };

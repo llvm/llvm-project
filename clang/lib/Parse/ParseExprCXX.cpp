@@ -739,11 +739,8 @@ ExprResult Parser::TryParseLambdaExpression() {
          && Tok.is(tok::l_square)
          && "Not at the start of a possible lambda expression.");
 
-  const Token Next = NextToken();
-  if (Next.is(tok::eof)) // Nothing else to lookup here...
-    return ExprEmpty();
+  const Token Next = NextToken(), After = GetLookAheadToken(2);
 
-  const Token After = GetLookAheadToken(2);
   // If lookahead indicates this is a lambda...
   if (Next.is(tok::r_square) ||     // []
       Next.is(tok::equal) ||        // [=
@@ -3084,14 +3081,6 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
     ParseAs = NotCastExpr ? SimpleExpr : CastExpr;
   }
 
-  // Create a fake EOF to mark end of Toks buffer.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(Toks.data());
-  Toks.push_back(AttrEnd);
-
   // The current token should go after the cached tokens.
   Toks.push_back(Tok);
   // Re-enter the stored parenthesized tokens into the token stream, so we may
@@ -3115,10 +3104,6 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
     // Match the ')'.
     Tracker.consumeClose();
     ColonProt.restore();
-
-    // Consume EOF marker for Toks buffer.
-    assert(Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData());
-    ConsumeAnyToken();
 
     if (ParseAs == CompoundLiteral) {
       ExprType = CompoundLiteral;
@@ -3156,16 +3141,10 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
 
   // Match the ')'.
   if (Result.isInvalid()) {
-    while (Tok.isNot(tok::eof))
-      ConsumeAnyToken();
-    assert(Tok.getEofData() == AttrEnd.getEofData());
-    ConsumeAnyToken();
+    SkipUntil(tok::r_paren, StopAtSemi);
     return ExprError();
   }
 
   Tracker.consumeClose();
-  // Consume EOF marker for Toks buffer.
-  assert(Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData());
-  ConsumeAnyToken();
   return Result;
 }

@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/VirtualFileSystem.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -665,7 +663,7 @@ public:
   getFromYAMLRawString(StringRef Content,
                        IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS) {
     std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(Content);
-    return getVFSFromYAML(std::move(Buffer), CountingDiagHandler, "", this,
+    return getVFSFromYAML(std::move(Buffer), CountingDiagHandler, this,
                           ExternalFS);
   }
 
@@ -675,12 +673,6 @@ public:
     std::string VersionPlusContent("{\n  'version':0,\n");
     VersionPlusContent += Content.slice(Content.find('{') + 1, StringRef::npos);
     return getFromYAMLRawString(VersionPlusContent, ExternalFS);
-  }
-
-  // This is intended as a "XFAIL" for windows hosts.
-  bool supportsSameDirMultipleYAMLEntries() {
-    Triple Host(Triple::normalize(sys::getProcessTriple()));
-    return !Host.isOSWindows();
   }
 };
 
@@ -1067,94 +1059,4 @@ TEST_F(VFSFromYAMLTest, DirectoryIteration) {
 
   checkContents(O->dir_begin("//root/foo/bar", EC),
                 {"//root/foo/bar/a", "//root/foo/bar/b"});
-}
-
-TEST_F(VFSFromYAMLTest, DirectoryIterationSameDirMultipleEntries) {
-  // https://llvm.org/bugs/show_bug.cgi?id=27725
-  if (!supportsSameDirMultipleYAMLEntries())
-    return;
-
-  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
-  Lower->addDirectory("//root/zab");
-  Lower->addDirectory("//root/baz");
-  Lower->addRegularFile("//root/zab/a");
-  Lower->addRegularFile("//root/zab/b");
-  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
-      "{ 'use-external-names': false,\n"
-      "  'roots': [\n"
-      "{\n"
-      "  'type': 'directory',\n"
-      "  'name': '//root/baz/',\n"
-      "  'contents': [ {\n"
-      "                  'type': 'file',\n"
-      "                  'name': 'x',\n"
-      "                  'external-contents': '//root/zab/a'\n"
-      "                }\n"
-      "              ]\n"
-      "},\n"
-      "{\n"
-      "  'type': 'directory',\n"
-      "  'name': '//root/baz/',\n"
-      "  'contents': [ {\n"
-      "                  'type': 'file',\n"
-      "                  'name': 'y',\n"
-      "                  'external-contents': '//root/zab/b'\n"
-      "                }\n"
-      "              ]\n"
-      "}\n"
-      "]\n"
-      "}",
-      Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
-
-  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
-      new vfs::OverlayFileSystem(Lower));
-  O->pushOverlay(FS);
-
-  std::error_code EC;
-
-  checkContents(O->dir_begin("//root/baz/", EC),
-                {"//root/baz/x", "//root/baz/y"});
-}
-
-TEST_F(VFSFromYAMLTest, RecursiveDirectoryIterationLevel) {
-
-  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
-  Lower->addDirectory("//root/a");
-  Lower->addDirectory("//root/a/b");
-  Lower->addDirectory("//root/a/b/c");
-  Lower->addRegularFile("//root/a/b/c/file");
-  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
-      "{ 'use-external-names': false,\n"
-      "  'roots': [\n"
-      "{\n"
-      "  'type': 'directory',\n"
-      "  'name': '//root/a/b/c/',\n"
-      "  'contents': [ {\n"
-      "                  'type': 'file',\n"
-      "                  'name': 'file',\n"
-      "                  'external-contents': '//root/a/b/c/file'\n"
-      "                }\n"
-      "              ]\n"
-      "},\n"
-      "]\n"
-      "}",
-      Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
-
-  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
-      new vfs::OverlayFileSystem(Lower));
-  O->pushOverlay(FS);
-
-  std::error_code EC;
-
-  // Test recursive_directory_iterator level()
-  vfs::recursive_directory_iterator I = vfs::recursive_directory_iterator(
-                                        *O, "//root", EC), E;
-  ASSERT_FALSE(EC);
-  for (int l = 0; I != E; I.increment(EC), ++l) {
-    ASSERT_FALSE(EC);
-    EXPECT_EQ(I.level(), l);
-  }
-  EXPECT_EQ(I, E);
 }

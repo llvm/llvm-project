@@ -30,7 +30,7 @@ static bool useCompactUnwind(const Triple &T) {
     return true;
 
   // armv7k always has it.
-  if (T.isWatchABI())
+  if (T.isWatchOS())
     return true;
 
   // Use it on newer version of OS X.
@@ -58,7 +58,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
   if (T.isOSDarwin() && T.getArch() == Triple::aarch64)
     SupportsCompactUnwindWithoutEHFrame = true;
 
-  if (T.isWatchABI())
+  if (T.isWatchOS())
     OmitDwarfIfHaveCompactUnwind = true;
 
   PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel
@@ -172,11 +172,6 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            MachO::S_NON_LAZY_SYMBOL_POINTERS,
                            SectionKind::getMetadata());
 
-  ThreadLocalPointerSection
-    = Ctx->getMachOSection("__DATA", "__thread_ptr",
-                           MachO::S_THREAD_LOCAL_VARIABLE_POINTERS,
-                           SectionKind::getMetadata());
-
   if (RelocM == Reloc::Static) {
     StaticCtorSection = Ctx->getMachOSection("__TEXT", "__constructor", 0,
                                              SectionKind::getData());
@@ -263,7 +258,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            SectionKind::getMetadata(), "debug_range");
   DwarfMacinfoSection =
       Ctx->getMachOSection("__DWARF", "__debug_macinfo", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata(), "debug_macinfo");
+                           SectionKind::getMetadata());
   DwarfDebugInlineSection =
       Ctx->getMachOSection("__DWARF", "__debug_inlined", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
@@ -513,8 +508,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
       Ctx->getELFSection(".debug_aranges", ELF::SHT_PROGBITS, 0);
   DwarfRangesSection =
       Ctx->getELFSection(".debug_ranges", ELF::SHT_PROGBITS, 0, "debug_range");
-  DwarfMacinfoSection = Ctx->getELFSection(".debug_macinfo", ELF::SHT_PROGBITS,
-                                           0, "debug_macinfo");
+  DwarfMacinfoSection =
+      Ctx->getELFSection(".debug_macinfo", ELF::SHT_PROGBITS, 0);
 
   // DWARF5 Experimental Debug Info
 
@@ -698,7 +693,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
       ".debug_macinfo",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getMetadata(), "debug_macinfo");
+      SectionKind::getMetadata());
   DwarfInfoDWOSection = Ctx->getCOFFSection(
       ".debug_info.dwo",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |

@@ -131,8 +131,8 @@ public:
     generateUSRForObjCCategory(cls, cat, Out);
   }
   /// Generate a USR fragment for an Objective-C property.
-  void GenObjCProperty(StringRef prop, bool isClassProp) {
-    generateUSRForObjCProperty(prop, isClassProp, Out);
+  void GenObjCProperty(StringRef prop) {
+    generateUSRForObjCProperty(prop, Out);
   }
   /// Generate a USR for an Objective-C protocol.
   void GenObjCProtocol(StringRef prot) {
@@ -203,16 +203,10 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
     VisitTemplateParameterList(FunTmpl->getTemplateParameters());
   } else
     Out << "@F@";
-
-  PrintingPolicy Policy(Context->getLangOpts());
-  // Forward references can have different template argument names. Suppress the
-  // template argument names in constructors to make their USR more stable.
-  Policy.SuppressTemplateArgsInCXXConstructors = true;
-  D->getDeclName().print(Out, Policy);
+  D->printName(Out);
 
   ASTContext &Ctx = *Context;
-  if ((!Ctx.getLangOpts().CPlusPlus || D->isExternC()) &&
-      !D->hasAttr<OverloadableAttr>())
+  if (!Ctx.getLangOpts().CPlusPlus || D->isExternC())
     return;
 
   if (const TemplateArgumentList *
@@ -406,7 +400,7 @@ void USRGenerator::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     Visit(ID);
   else
     Visit(cast<Decl>(D->getDeclContext()));
-  GenObjCProperty(D->getName(), D->isClassProperty());
+  GenObjCProperty(D->getName());
 }
 
 void USRGenerator::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
@@ -421,8 +415,7 @@ void USRGenerator::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
 void USRGenerator::VisitTagDecl(const TagDecl *D) {
   // Add the location of the tag decl to handle resolution across
   // translation units.
-  if (!isa<EnumDecl>(D) &&
-      ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
+  if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
 
   D = D->getCanonicalDecl();
@@ -478,16 +471,8 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
   else {
     if (D->isEmbeddedInDeclarator() && !D->isFreeStanding()) {
       printLoc(Out, D->getLocation(), Context->getSourceManager(), true);
-    } else {
+    } else
       Buf[off] = 'a';
-      if (auto *ED = dyn_cast<EnumDecl>(D)) {
-        // Distinguish USRs of anonymous enums by using their first enumerator.
-        auto enum_range = ED->enumerators();
-        if (enum_range.begin() != enum_range.end()) {
-          Out << '@' << **enum_range.begin();
-        }
-      }
-    }
   }
   }
   
@@ -669,11 +654,6 @@ void USRGenerator::VisitType(QualType T) {
       T = PT->getPointeeType();
       continue;
     }
-    if (const ObjCObjectPointerType *OPT = T->getAs<ObjCObjectPointerType>()) {
-      Out << '*';
-      T = OPT->getPointeeType();
-      continue;
-    }
     if (const RValueReferenceType *RT = T->getAs<RValueReferenceType>()) {
       Out << "&&";
       T = RT->getPointeeType();
@@ -706,18 +686,6 @@ void USRGenerator::VisitType(QualType T) {
     if (const TagType *TT = T->getAs<TagType>()) {
       Out << '$';
       VisitTagDecl(TT->getDecl());
-      return;
-    }
-    if (const ObjCInterfaceType *OIT = T->getAs<ObjCInterfaceType>()) {
-      Out << '$';
-      VisitObjCInterfaceDecl(OIT->getDecl());
-      return;
-    }
-    if (const ObjCObjectType *OIT = T->getAs<ObjCObjectType>()) {
-      Out << 'Q';
-      VisitType(OIT->getBaseType());
-      for (auto *Prot : OIT->getProtocols())
-        VisitObjCProtocolDecl(Prot);
       return;
     }
     if (const TemplateTypeParmType *TTP = T->getAs<TemplateTypeParmType>()) {
@@ -867,9 +835,8 @@ void clang::index::generateUSRForObjCMethod(StringRef Sel,
   OS << (IsInstanceMethod ? "(im)" : "(cm)") << Sel;
 }
 
-void clang::index::generateUSRForObjCProperty(StringRef Prop, bool isClassProp,
-                                              raw_ostream &OS) {
-  OS << (isClassProp ? "(cpy)" : "(py)") << Prop;
+void clang::index::generateUSRForObjCProperty(StringRef Prop, raw_ostream &OS) {
+  OS << "(py)" << Prop;
 }
 
 void clang::index::generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS) {

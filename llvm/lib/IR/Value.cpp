@@ -58,8 +58,6 @@ Value::Value(Type *ty, unsigned scid)
            (SubclassID < ConstantFirstVal || SubclassID > ConstantLastVal))
     assert((VTy->isFirstClassType() || VTy->isVoidTy()) &&
            "Cannot create non-first-class values except for constants!");
-  static_assert(sizeof(Value) == 3 * sizeof(void *) + 2 * sizeof(unsigned),
-                "Value too big");
 }
 
 Value::~Value() {
@@ -197,10 +195,6 @@ StringRef Value::getName() const {
 }
 
 void Value::setNameImpl(const Twine &NewName) {
-  // Fast-path: LLVMContext can be set to strip out non-GlobalValue names
-  if (getContext().discardValueNames() && !isa<GlobalValue>(this))
-    return;
-
   // Fast path for common IRBuilder case of setName("") when there is no name.
   if (NewName.isTriviallyEmpty() && !hasName())
     return;
@@ -319,8 +313,8 @@ void Value::takeName(Value *V) {
     ST->reinsertValue(this);
 }
 
-void Value::assertModuleIsMaterialized() const {
 #ifndef NDEBUG
+void Value::assertModuleIsMaterialized() const {
   const GlobalValue *GV = dyn_cast<GlobalValue>(this);
   if (!GV)
     return;
@@ -328,10 +322,8 @@ void Value::assertModuleIsMaterialized() const {
   if (!M)
     return;
   assert(M->isMaterialized());
-#endif
 }
 
-#ifndef NDEBUG
 static bool contains(SmallPtrSetImpl<ConstantExpr *> &Cache, ConstantExpr *Expr,
                      Constant *C) {
   if (!Cache.insert(Expr).second)

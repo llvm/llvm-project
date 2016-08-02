@@ -363,15 +363,25 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
     llvm::PointerType *signatureType =
       CGM.getTypes().GetFunctionType(signature)->getPointerTo();
 
-    const CGFunctionInfo &signatureForCall =
-      CGM.getTypes().arrangeCall(signature, callArgs);
+    // If that's not variadic, there's no need to recompute the ABI
+    // arrangement.
+    if (!signature.isVariadic())
+      return MessageSendInfo(signature, signatureType);
 
-    return MessageSendInfo(signatureForCall, signatureType);
+    // Otherwise, there is.
+    FunctionType::ExtInfo einfo = signature.getExtInfo();
+    const CGFunctionInfo &argsInfo =
+      CGM.getTypes().arrangeFreeFunctionCall(resultType, callArgs, einfo,
+                                             signature.getRequiredArgs());
+
+    return MessageSendInfo(argsInfo, signatureType);
   }
 
   // There's no method;  just use a default CC.
   const CGFunctionInfo &argsInfo =
-    CGM.getTypes().arrangeUnprototypedObjCMessageSend(resultType, callArgs);
+    CGM.getTypes().arrangeFreeFunctionCall(resultType, callArgs, 
+                                           FunctionType::ExtInfo(),
+                                           RequiredArgs::All);
 
   // Derive the signature to call from that.
   llvm::PointerType *signatureType =

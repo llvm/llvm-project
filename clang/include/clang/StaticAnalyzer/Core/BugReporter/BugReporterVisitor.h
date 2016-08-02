@@ -19,7 +19,6 @@
 #include "llvm/ADT/FoldingSet.h"
 
 namespace clang {
-class CFGBlock;
 
 namespace ento {
 

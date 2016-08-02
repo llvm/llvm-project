@@ -81,13 +81,11 @@ public:
   }
   unsigned size() const { return getNumEntries(); }
 
-  /// Grow the densemap so that it can contain at least \p NumEntries items
-  /// before resizing again.
-  void reserve(size_type NumEntries) {
-    auto NumBuckets = getMinBucketToReserveForEntries(NumEntries);
+  /// Grow the densemap so that it has at least Size buckets. Does not shrink
+  void resize(size_type Size) {
     incrementEpoch();
-    if (NumBuckets > getNumBuckets())
-      grow(NumBuckets);
+    if (Size > getNumBuckets())
+      grow(Size);
   }
 
   void clear() {
@@ -197,26 +195,6 @@ public:
                           true);
   }
 
-  /// Alternate version of insert() which allows a different, and possibly
-  /// less expensive, key type.
-  /// The DenseMapInfo is responsible for supplying methods
-  /// getHashValue(LookupKeyT) and isEqual(LookupKeyT, KeyT) for each key
-  /// type used.
-  template <typename LookupKeyT>
-  std::pair<iterator, bool> insert_as(std::pair<KeyT, ValueT> &&KV,
-                                      const LookupKeyT &Val) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return std::make_pair(iterator(TheBucket, getBucketsEnd(), *this, true),
-                            false); // Already in map.
-
-    // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucket(std::move(KV.first), std::move(KV.second), Val,
-                                 TheBucket);
-    return std::make_pair(iterator(TheBucket, getBucketsEnd(), *this, true),
-                          true);
-  }
-
   /// insert - Range insertion of pairs.
   template<typename InputIt>
   void insert(InputIt I, InputIt E) {
@@ -305,17 +283,6 @@ protected:
     const KeyT EmptyKey = getEmptyKey();
     for (BucketT *B = getBuckets(), *E = getBucketsEnd(); B != E; ++B)
       ::new (&B->getFirst()) KeyT(EmptyKey);
-  }
-
-  /// Returns the number of buckets to allocate to ensure that the DenseMap can
-  /// accommodate \p NumEntries without need to grow().
-  unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
-    // Ensure that "NumEntries * 4 < NumBuckets * 3"
-    if (NumEntries == 0)
-      return 0;
-    // +1 is required because of the strict equality.
-    // For example if NumEntries is 48, we need to return 401.
-    return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
   void moveFromOldBuckets(BucketT *OldBucketsBegin, BucketT *OldBucketsEnd) {
@@ -432,7 +399,7 @@ private:
 
   BucketT *InsertIntoBucket(const KeyT &Key, const ValueT &Value,
                             BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = Key;
     ::new (&TheBucket->getSecond()) ValueT(Value);
@@ -441,7 +408,7 @@ private:
 
   BucketT *InsertIntoBucket(const KeyT &Key, ValueT &&Value,
                             BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = Key;
     ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
@@ -449,26 +416,14 @@ private:
   }
 
   BucketT *InsertIntoBucket(KeyT &&Key, ValueT &&Value, BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = std::move(Key);
     ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
     return TheBucket;
   }
 
-  template <typename LookupKeyT>
-  BucketT *InsertIntoBucket(KeyT &&Key, ValueT &&Value, LookupKeyT &Lookup,
-                            BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Lookup, TheBucket);
-
-    TheBucket->getFirst() = std::move(Key);
-    ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
-    return TheBucket;
-  }
-
-  template <typename LookupKeyT>
-  BucketT *InsertIntoBucketImpl(const KeyT &Key, const LookupKeyT &Lookup,
-                                BucketT *TheBucket) {
+  BucketT *InsertIntoBucketImpl(const KeyT &Key, BucketT *TheBucket) {
     incrementEpoch();
 
     // If the load of the hash table is more than 3/4, or if fewer than 1/8 of
@@ -484,12 +439,12 @@ private:
     unsigned NumBuckets = getNumBuckets();
     if (LLVM_UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
       this->grow(NumBuckets * 2);
-      LookupBucketFor(Lookup, TheBucket);
+      LookupBucketFor(Key, TheBucket);
       NumBuckets = getNumBuckets();
     } else if (LLVM_UNLIKELY(NumBuckets-(NewNumEntries+getNumTombstones()) <=
                              NumBuckets/8)) {
       this->grow(NumBuckets);
-      LookupBucketFor(Lookup, TheBucket);
+      LookupBucketFor(Key, TheBucket);
     }
     assert(TheBucket);
 
@@ -595,9 +550,9 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumBuckets;
 
 public:
-  /// Create a DenseMap wth an optional \p InitialReserve that guarantee that
-  /// this number of elements can be inserted in the map without grow()
-  explicit DenseMap(unsigned InitialReserve = 0) { init(InitialReserve); }
+  explicit DenseMap(unsigned NumInitBuckets = 0) {
+    init(NumInitBuckets);
+  }
 
   DenseMap(const DenseMap &other) : BaseT() {
     init(0);
@@ -611,7 +566,7 @@ public:
 
   template<typename InputIt>
   DenseMap(const InputIt &I, const InputIt &E) {
-    init(std::distance(I, E));
+    init(NextPowerOf2(std::distance(I, E)));
     this->insert(I, E);
   }
 
@@ -654,8 +609,7 @@ public:
     }
   }
 
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
+  void init(unsigned InitBuckets) {
     if (allocateBuckets(InitBuckets)) {
       this->BaseT::initEmpty();
     } else {

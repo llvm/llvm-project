@@ -682,25 +682,14 @@ ModuleSlotTracker::ModuleSlotTracker(SlotTracker &Machine, const Module *M,
 
 ModuleSlotTracker::ModuleSlotTracker(const Module *M,
                                      bool ShouldInitializeAllMetadata)
-    : ShouldCreateStorage(M),
-      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata), M(M) {}
+    : MachineStorage(M ? new SlotTracker(M, ShouldInitializeAllMetadata)
+                       : nullptr),
+      M(M), Machine(MachineStorage.get()) {}
 
 ModuleSlotTracker::~ModuleSlotTracker() {}
 
-SlotTracker *ModuleSlotTracker::getMachine() {
-  if (!ShouldCreateStorage)
-    return Machine;
-
-  ShouldCreateStorage = false;
-  MachineStorage =
-      llvm::make_unique<SlotTracker>(M, ShouldInitializeAllMetadata);
-  Machine = MachineStorage.get();
-  return Machine;
-}
-
 void ModuleSlotTracker::incorporateFunction(const Function &F) {
-  // Using getMachine() may lazily create the slot tracker.
-  if (!getMachine())
+  if (!Machine)
     return;
 
   // Nothing to do if this is the right function already.
@@ -1413,7 +1402,6 @@ struct MDFieldPrinter {
   template <class IntTy, class Stringifier>
   void printDwarfEnum(StringRef Name, IntTy Value, Stringifier toString,
                       bool ShouldSkipZero = true);
-  void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
 };
 } // end namespace
 
@@ -1493,12 +1481,6 @@ void MDFieldPrinter::printDIFlags(StringRef Name, unsigned Flags) {
   if (Extra || SplitFlags.empty())
     Out << FlagsFS << Extra;
 }
-
-void MDFieldPrinter::printEmissionKind(StringRef Name,
-                                       DICompileUnit::DebugEmissionKind EK) {
-  Out << FS << Name << ": " << DICompileUnit::EmissionKindString(EK);
-}
-
 
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
@@ -1657,9 +1639,11 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printInt("runtimeVersion", N->getRuntimeVersion(),
                    /* ShouldSkipZero */ false);
   Printer.printString("splitDebugFilename", N->getSplitDebugFilename());
-  Printer.printEmissionKind("emissionKind", N->getEmissionKind());
+  Printer.printInt("emissionKind", N->getEmissionKind(),
+                   /* ShouldSkipZero */ false);
   Printer.printMetadata("enums", N->getRawEnumTypes());
   Printer.printMetadata("retainedTypes", N->getRawRetainedTypes());
+  Printer.printMetadata("subprograms", N->getRawSubprograms());
   Printer.printMetadata("globals", N->getRawGlobalVariables());
   Printer.printMetadata("imports", N->getRawImportedEntities());
   Printer.printMetadata("macros", N->getRawMacros());
@@ -1684,12 +1668,9 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("containingType", N->getRawContainingType());
   Printer.printDwarfEnum("virtuality", N->getVirtuality(),
                          dwarf::VirtualityString);
-  if (N->getVirtuality() != dwarf::DW_VIRTUALITY_none ||
-      N->getVirtualIndex() != 0)
-    Printer.printInt("virtualIndex", N->getVirtualIndex(), false);
+  Printer.printInt("virtualIndex", N->getVirtualIndex());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printBool("isOptimized", N->isOptimized());
-  Printer.printMetadata("unit", N->getRawUnit());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printMetadata("declaration", N->getRawDeclaration());
   Printer.printMetadata("variables", N->getRawVariables());
@@ -2230,12 +2211,6 @@ void AssemblyWriter::printModule(const Module *M) {
       // require a comment char before it).
       M->getModuleIdentifier().find('\n') == std::string::npos)
     Out << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
-
-  if (!M->getSourceFileName().empty()) {
-    Out << "source_filename = \"";
-    PrintEscapedString(M->getSourceFileName(), Out);
-    Out << "\"\n";
-  }
 
   const std::string &DL = M->getDataLayoutStr();
   if (!DL.empty())
@@ -3256,22 +3231,6 @@ void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
   SlotTracker SlotTable(getParent());
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, getParent(), nullptr, IsForDebug);
-  W.printNamedMDNode(this);
-}
-
-void NamedMDNode::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                        bool IsForDebug) const {
-  Optional<SlotTracker> LocalST;
-  SlotTracker *SlotTable;
-  if (auto *ST = MST.getMachine())
-    SlotTable = ST;
-  else {
-    LocalST.emplace(getParent());
-    SlotTable = &*LocalST;
-  }
-
-  formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, *SlotTable, getParent(), nullptr, IsForDebug);
   W.printNamedMDNode(this);
 }
 

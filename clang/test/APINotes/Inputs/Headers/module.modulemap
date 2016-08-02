@@ -1,3 +1,0 @@
-module HeaderLib {
-  header "HeaderLib.h"
-}

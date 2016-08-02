@@ -56,14 +56,6 @@ extern "C" {
                                               // or NULL if it is unknown.
   };
 
-  // These functions can be called on some platforms to find globals in the same
-  // loaded image as `flag' and apply __asan_(un)register_globals to them,
-  // filtering out redundant calls.
-  SANITIZER_INTERFACE_ATTRIBUTE
-  void __asan_register_image_globals(uptr *flag);
-  SANITIZER_INTERFACE_ATTRIBUTE
-  void __asan_unregister_image_globals(uptr *flag);
-
   // These two functions should be called by the instrumented code.
   // 'globals' is an array of structures describing 'n' globals.
   SANITIZER_INTERFACE_ATTRIBUTE

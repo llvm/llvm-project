@@ -26,10 +26,10 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -78,18 +78,6 @@ bool LTOModule::isBitcodeFile(const char *Path) {
   ErrorOr<MemoryBufferRef> BCData = IRObjectFile::findBitcodeInMemBuffer(
       BufferOrErr.get()->getMemBufferRef());
   return bool(BCData);
-}
-
-bool LTOModule::isThinLTO() {
-  // Right now the detection is only based on the summary presence. We may want
-  // to add a dedicated flag at some point.
-  return hasGlobalValueSummary(IRFile->getMemoryBufferRef(),
-                            [](const DiagnosticInfo &DI) {
-                              DiagnosticPrinterRawOStream DP(errs());
-                              DI.print(DP);
-                              errs() << '\n';
-                              return;
-                            });
 }
 
 bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,

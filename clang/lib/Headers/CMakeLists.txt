@@ -109,7 +109,7 @@ install(
 
 if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
   add_custom_target(install-clang-headers
-    DEPENDS clang-headers
+    DEPENDS
     COMMAND "${CMAKE_COMMAND}"
             -DCMAKE_INSTALL_COMPONENT=clang-headers
             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")

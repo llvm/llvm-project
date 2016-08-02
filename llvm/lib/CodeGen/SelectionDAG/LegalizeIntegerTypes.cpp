@@ -436,7 +436,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
 
-  return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+
+  return DAG.getNode(ISD::AssertZext, dl,
+                     NVT, Res, DAG.getValueType(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
@@ -1439,6 +1442,15 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
     } else if (Amt == NVTBits) {
       Lo = DAG.getConstant(0, DL, NVT);
       Hi = InL;
+    } else if (Amt == 1 &&
+               TLI.isOperationLegalOrCustom(ISD::ADDC,
+                              TLI.getTypeToExpandTo(*DAG.getContext(), NVT))) {
+      // Emit this X << 1 as X+X.
+      SDVTList VTList = DAG.getVTList(NVT, MVT::Glue);
+      SDValue LoOps[2] = { InL, InL };
+      Lo = DAG.getNode(ISD::ADDC, DL, VTList, LoOps);
+      SDValue HiOps[3] = { InH, InH, Lo.getValue(1) };
+      Hi = DAG.getNode(ISD::ADDE, DL, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::SHL, DL, NVT, InL, DAG.getConstant(Amt, DL, ShTy));
       Hi = DAG.getNode(ISD::OR, DL, NVT,

@@ -42,6 +42,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <deque>
 using namespace llvm;
@@ -498,7 +499,6 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
                                                GV->getThreadLocalMode(),
                                               GV->getType()->getAddressSpace());
       NGV->setExternallyInitialized(GV->isExternallyInitialized());
-      NGV->copyAttributesFrom(GV);
       Globals.push_back(NGV);
       NewGlobals.push_back(NGV);
 
@@ -533,7 +533,6 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
                                                GV->getThreadLocalMode(),
                                               GV->getType()->getAddressSpace());
       NGV->setExternallyInitialized(GV->isExternallyInitialized());
-      NGV->copyAttributesFrom(GV);
       Globals.push_back(NGV);
       NewGlobals.push_back(NGV);
 
@@ -1292,7 +1291,6 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
         *GV->getParent(), PFieldTy, false, GlobalValue::InternalLinkage,
         Constant::getNullValue(PFieldTy), GV->getName() + ".f" + Twine(FieldNo),
         nullptr, GV->getThreadLocalMode());
-    NGV->copyAttributesFrom(GV);
     FieldGlobals.push_back(NGV);
 
     unsigned TypeSize = DL.getTypeAllocSize(FieldTy);
@@ -1612,7 +1610,6 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
                                              GV->getName()+".b",
                                              GV->getThreadLocalMode(),
                                              GV->getType()->getAddressSpace());
-  NewGV->copyAttributesFrom(GV);
   GV->getParent()->getGlobalList().insert(GV->getIterator(), NewGV);
 
   Constant *InitVal = GV->getInitializer();
@@ -2852,9 +2849,8 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
 }
 
 static int compareNames(Constant *const *A, Constant *const *B) {
-  Value *AStripped = (*A)->stripPointerCastsNoFollowAliases();
-  Value *BStripped = (*B)->stripPointerCastsNoFollowAliases();
-  return AStripped->getName().compare(BStripped->getName());
+  return (*A)->stripPointerCasts()->getName().compare(
+      (*B)->stripPointerCasts()->getName());
 }
 
 static void setUsedInitializer(GlobalVariable &V,
@@ -3067,16 +3063,23 @@ bool GlobalOpt::OptimizeGlobalAliases(Module &M) {
 }
 
 static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
-  LibFunc::Func F = LibFunc::cxa_atexit;
-  if (!TLI->has(F))
+  if (!TLI->has(LibFunc::cxa_atexit))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(F));
+  Function *Fn = M.getFunction(TLI->getName(LibFunc::cxa_atexit));
+
   if (!Fn)
     return nullptr;
 
-  // Make sure that the function has the correct prototype.
-  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc::cxa_atexit)
+  FunctionType *FTy = Fn->getFunctionType();
+
+  // Checking that the function has the right return type, the right number of
+  // parameters and that they all have pointer types should be enough.
+  if (!FTy->getReturnType()->isIntegerTy() ||
+      FTy->getNumParams() != 3 ||
+      !FTy->getParamType(0)->isPointerTy() ||
+      !FTy->getParamType(1)->isPointerTy() ||
+      !FTy->getParamType(2)->isPointerTy())
     return nullptr;
 
   return Fn;

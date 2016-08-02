@@ -88,12 +88,9 @@ private:
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
   /// hasn't been set up yet.
-public:
   bool hasLazyArguments() const {
     return getSubclassDataFromValue() & (1<<0);
   }
-
-private:
   void CheckLazyArguments() const {
     if (hasLazyArguments())
       BuildLazyArguments();
@@ -202,7 +199,7 @@ public:
 
   /// @brief Return true if the function has the attribute.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
+    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex, Kind);
   }
   bool hasFnAttribute(StringRef Kind) const {
     return AttributeSets.hasAttribute(AttributeSet::FunctionIndex, Kind);
@@ -210,8 +207,6 @@ public:
 
   /// @brief Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const {
-    if (!hasFnAttribute(Kind))
-      return Attribute();
     return AttributeSets.getAttribute(AttributeSet::FunctionIndex, Kind);
   }
   Attribute getFnAttribute(StringRef Kind) const {
@@ -220,8 +215,6 @@ public:
 
   /// \brief Return the stack alignment for the function.
   unsigned getFnStackAlignment() const {
-    if (!hasFnAttribute(Attribute::StackAlignment))
-      return 0;
     return AttributeSets.getStackAlignment(AttributeSet::FunctionIndex);
   }
 
@@ -269,7 +262,8 @@ public:
 
   /// @brief Determine if the function does not access memory.
   bool doesNotAccessMemory() const {
-    return hasFnAttribute(Attribute::ReadNone);
+    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
+                                      Attribute::ReadNone);
   }
   void setDoesNotAccessMemory() {
     addFnAttr(Attribute::ReadNone);
@@ -277,7 +271,9 @@ public:
 
   /// @brief Determine if the function does not access or only reads memory.
   bool onlyReadsMemory() const {
-    return doesNotAccessMemory() || hasFnAttribute(Attribute::ReadOnly);
+    return doesNotAccessMemory() ||
+      AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
+                                 Attribute::ReadOnly);
   }
   void setOnlyReadsMemory() {
     addFnAttr(Attribute::ReadOnly);
@@ -286,14 +282,16 @@ public:
   /// @brief Determine if the call can access memmory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const {
-    return hasFnAttribute(Attribute::ArgMemOnly);
+    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
+                                      Attribute::ArgMemOnly);
   }
   void setOnlyAccessesArgMemory() { addFnAttr(Attribute::ArgMemOnly); }
 
   /// @brief Determine if the function may only access memory that is 
   ///  inaccessible from the IR.
   bool onlyAccessesInaccessibleMemory() const {
-    return hasFnAttribute(Attribute::InaccessibleMemOnly);
+    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
+                                      Attribute::InaccessibleMemOnly);
   }
   void setOnlyAccessesInaccessibleMemory() {
     addFnAttr(Attribute::InaccessibleMemOnly);
@@ -302,7 +300,8 @@ public:
   /// @brief Determine if the function may only access memory that is
   //  either inaccessible from the IR or pointed to by its arguments.
   bool onlyAccessesInaccessibleMemOrArgMem() const {
-    return hasFnAttribute(Attribute::InaccessibleMemOrArgMemOnly);
+    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
+                                      Attribute::InaccessibleMemOrArgMemOnly);
   }
   void setOnlyAccessesInaccessibleMemOrArgMem() {
     addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
@@ -310,7 +309,8 @@ public:
 
   /// @brief Determine if the function cannot return.
   bool doesNotReturn() const {
-    return hasFnAttribute(Attribute::NoReturn);
+    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
+                                      Attribute::NoReturn);
   }
   void setDoesNotReturn() {
     addFnAttr(Attribute::NoReturn);
@@ -438,12 +438,6 @@ public:
   /// and deletes it.
   ///
   void eraseFromParent() override;
-
-  /// Steal arguments from another function.
-  ///
-  /// Drop this function's arguments and splice in the ones from \c Src.
-  /// Requires that this has no function body.
-  void stealArgumentListFrom(Function &Src);
 
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.

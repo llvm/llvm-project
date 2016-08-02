@@ -80,8 +80,6 @@ static const char *conv(ReportType typ) {
     return kSuppressionMutex;
   else if (typ == ReportTypeMutexDoubleLock)
     return kSuppressionMutex;
-  else if (typ == ReportTypeMutexInvalidAccess)
-    return kSuppressionMutex;
   else if (typ == ReportTypeMutexBadUnlock)
     return kSuppressionMutex;
   else if (typ == ReportTypeMutexBadReadLock)

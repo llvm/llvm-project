@@ -20,8 +20,4 @@ __attribute__((objc_root_class))
 - (instancetype)initWithA:(A*)a;
 @end
 
-@interface ProcessInfo : A
-+(instancetype)processInfo;
-@end
-
 #endif

@@ -1,10 +1,5 @@
-set(LLVM_LINK_COMPONENTS
-  support
-)
-
 add_clang_executable(c-index-test
   c-index-test.c
-  core_main.cpp
   )
 
 if(NOT MSVC)
@@ -17,15 +12,10 @@ endif()
 if (LLVM_BUILD_STATIC)
   target_link_libraries(c-index-test
     libclang_static
-    clangIndex
   )
 else()
   target_link_libraries(c-index-test
     libclang
-    clangAST
-    clangBasic
-    clangFrontend
-    clangIndex
   )
 endif()
 
@@ -42,8 +32,6 @@ endif()
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   if(INTERNAL_INSTALL_PREFIX)
     set(INSTALL_DESTINATION "${INTERNAL_INSTALL_PREFIX}/bin")
-    set_property(TARGET c-index-test APPEND PROPERTY INSTALL_RPATH
-       "@executable_path/../../lib")
   else()
     set(INSTALL_DESTINATION bin)
   endif()

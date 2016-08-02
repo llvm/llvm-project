@@ -439,26 +439,3 @@ void doubleLevelAccessIvar(Test *a, Test *b) {
 }
 @end
 
-// This used to crash in WeakObjectProfileTy::getBaseInfo when getBase() was
-// called on an ObjCPropertyRefExpr object whose receiver was an interface.
-
-@class NSString;
-@interface NSBundle
-+(NSBundle *)foo;
-@property (class) NSBundle *foo2;
-@property NSString *prop;
-@property(weak) NSString *weakProp;
-@end
-
-@interface NSBundle2 : NSBundle
-@end
-
-void foo() {
-  NSString * t = NSBundle.foo.prop;
-  use(NSBundle.foo.weakProp); // expected-warning{{weak property 'weakProp' may be accessed multiple times}}
-  use(NSBundle2.foo.weakProp); // expected-note{{also accessed here}}
-
-  NSString * t2 = NSBundle.foo2.prop;
-  use(NSBundle.foo2.weakProp); // expected-warning{{weak property 'weakProp' may be accessed multiple times}}
-  use(NSBundle2.foo2.weakProp); // expected-note{{also accessed here}}
-}

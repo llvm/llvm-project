@@ -14,7 +14,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -324,9 +323,6 @@ public:
     }
 
     PathDiagnosticLocation L(Ret, BRC.getSourceManager(), StackFrame);
-    if (!L.isValid() || !L.asLocation().isValid())
-      return nullptr;
-
     return new PathDiagnosticEventPiece(L, Out.str());
   }
 
@@ -832,53 +828,8 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
     // Check if this is inlined defensive checks.
     const LocationContext *CurLC =Succ->getLocationContext();
     const LocationContext *ReportLC = BR.getErrorNode()->getLocationContext();
-    if (CurLC != ReportLC && !CurLC->isParentOf(ReportLC)) {
+    if (CurLC != ReportLC && !CurLC->isParentOf(ReportLC))
       BR.markInvalid("Suppress IDC", CurLC);
-      return nullptr;
-    }
-
-    // Treat defensive checks in function-like macros as if they were an inlined
-    // defensive check. If the bug location is not in a macro and the
-    // terminator for the current location is in a macro then suppress the
-    // warning.
-    auto BugPoint = BR.getErrorNode()->getLocation().getAs<StmtPoint>();
-
-    if (!BugPoint)
-      return nullptr;
-
-    SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
-    if (BugLoc.isMacroID())
-      return nullptr;
-
-    ProgramPoint CurPoint = Succ->getLocation();
-    const Stmt *CurTerminatorStmt = nullptr;
-    if (auto BE = CurPoint.getAs<BlockEdge>()) {
-      CurTerminatorStmt = BE->getSrc()->getTerminator().getStmt();
-    } else if (auto SP = CurPoint.getAs<StmtPoint>()) {
-      const Stmt *CurStmt = SP->getStmt();
-      if (!CurStmt->getLocStart().isMacroID())
-        return nullptr;
-
-      CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
-      CurTerminatorStmt = Map->getBlock(CurStmt)->getTerminator();
-    } else {
-      return nullptr;
-    }
-
-    if (!CurTerminatorStmt)
-      return nullptr;
-
-    SourceLocation TerminatorLoc = CurTerminatorStmt->getLocStart();
-    if (TerminatorLoc.isMacroID()) {
-      const SourceManager &SMgr = BRC.getSourceManager();
-      std::pair<FileID, unsigned> TLInfo = SMgr.getDecomposedLoc(TerminatorLoc);
-      SrcMgr::SLocEntry SE = SMgr.getSLocEntry(TLInfo.first);
-      const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
-      if (EInfo.isFunctionMacroExpansion()) {
-        BR.markInvalid("Suppress Macro IDC", CurLC);
-        return nullptr;
-      }
-    }
   }
   return nullptr;
 }
@@ -911,15 +862,6 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     return peelOffOuterExpr(EWC->getSubExpr(), N);
   if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(Ex))
     return peelOffOuterExpr(OVE->getSourceExpr(), N);
-  if (auto *POE = dyn_cast<PseudoObjectExpr>(Ex)) {
-    auto *PropRef = dyn_cast<ObjCPropertyRefExpr>(POE->getSyntacticForm());
-    if (PropRef && PropRef->isMessagingGetter()) {
-      const Expr *GetterMessageSend =
-          POE->getSemanticExpr(POE->getNumSemanticExprs() - 1);
-      assert(isa<ObjCMessageExpr>(GetterMessageSend->IgnoreParenCasts()));
-      return peelOffOuterExpr(GetterMessageSend, N);
-    }
-  }
 
   // Peel off the ternary operator.
   if (const ConditionalOperator *CO = dyn_cast<ConditionalOperator>(Ex)) {
@@ -1552,6 +1494,20 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
   return event;
 }
 
+
+// FIXME: Copied from ExprEngineCallAndReturn.cpp.
+static bool isInStdNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext()->getEnclosingNamespaceContext();
+  const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+  if (!ND)
+    return false;
+
+  while (const NamespaceDecl *Parent = dyn_cast<NamespaceDecl>(ND->getParent()))
+    ND = Parent;
+
+  return ND->isStdNamespace();
+}
+
 std::unique_ptr<PathDiagnosticPiece>
 LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
@@ -1562,7 +1518,7 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
   AnalyzerOptions &Options = Eng.getAnalysisManager().options;
   const Decl *D = N->getLocationContext()->getDecl();
 
-  if (AnalysisDeclContext::isInStdNamespace(D)) {
+  if (isInStdNamespace(D)) {
     // Skip reports within the 'std' namespace. Although these can sometimes be
     // the user's fault, we currently don't report them very well, and
     // Note that this will not help for any other data structure libraries, like
@@ -1596,6 +1552,12 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
         }
       }
 
+      // The analyzer issues a false positive on
+      //   std::basic_string<uint8_t> v; v.push_back(1);
+      // and
+      //   std::u16string s; s += u'a';
+      // because we cannot reason about the internal invariants of the
+      // datastructure.
       for (const LocationContext *LCtx = N->getLocationContext(); LCtx;
            LCtx = LCtx->getParent()) {
         const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
@@ -1603,21 +1565,7 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
           continue;
 
         const CXXRecordDecl *CD = MD->getParent();
-        // The analyzer issues a false positive on
-        //   std::basic_string<uint8_t> v; v.push_back(1);
-        // and
-        //   std::u16string s; s += u'a';
-        // because we cannot reason about the internal invariants of the
-        // datastructure.
         if (CD->getName() == "basic_string") {
-          BR.markInvalid(getTag(), nullptr);
-          return nullptr;
-        }
-
-        // The analyzer issues a false positive on
-        //    std::shared_ptr<int> p(new int(1)); p = nullptr;
-        // because it does not reason properly about temporary destructors.
-        if (CD->getName() == "shared_ptr") {
           BR.markInvalid(getTag(), nullptr);
           return nullptr;
         }

@@ -319,36 +319,6 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-StringRef Darwin::getPlatformFamily() const {
-  switch (TargetPlatform) {
-    case DarwinPlatformKind::MacOS:
-      return "MacOSX";
-    case DarwinPlatformKind::IPhoneOS:
-    case DarwinPlatformKind::IPhoneOSSimulator:
-      return "iPhone";
-    case DarwinPlatformKind::TvOS:
-    case DarwinPlatformKind::TvOSSimulator:
-      return "AppleTV";
-    case DarwinPlatformKind::WatchOS:
-    case DarwinPlatformKind::WatchOSSimulator:
-      return "Watch";
-  }
-  llvm_unreachable("Unsupported platform");
-}
-
-StringRef Darwin::getSDKName(StringRef isysroot) {
-  // Assume SDK has path: SOME_PATH/SDKs/PlatformXX.YY.sdk
-  llvm::sys::path::const_iterator SDKDir;
-  auto BeginSDK = llvm::sys::path::begin(isysroot);
-  auto EndSDK = llvm::sys::path::end(isysroot);
-  for (auto IT = BeginSDK; IT != EndSDK; ++IT) {
-    StringRef SDK = *IT;
-    if (SDK.endswith(".sdk"))
-      return SDK.slice(0, SDK.size() - 4);
-  }
-  return "";
-}
-
 void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
@@ -566,8 +536,11 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         TvOSTarget.empty() && Args.hasArg(options::OPT_isysroot)) {
       if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
         StringRef isysroot = A->getValue();
-        StringRef SDK = getSDKName(isysroot);
-        if (SDK.size() > 0) {
+        // Assume SDK has path: SOME_PATH/SDKs/PlatformXX.YY.sdk
+        size_t BeginSDK = isysroot.rfind("SDKs/");
+        size_t EndSDK = isysroot.rfind(".sdk");
+        if (BeginSDK != StringRef::npos && EndSDK != StringRef::npos) {
+          StringRef SDK = isysroot.slice(BeginSDK + 5, EndSDK);
           // Slice the version number out.
           // Version number is between the first and the last number.
           size_t StartVer = SDK.find_first_of("0123456789");
@@ -690,13 +663,13 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     assert(iOSVersion && "Unknown target platform!");
     if (!Driver::GetReleaseVersion(iOSVersion->getValue(), Major, Minor, Micro,
                                    HadExtra) ||
-        HadExtra || Major >= 100 || Minor >= 100 || Micro >= 100)
+        HadExtra || Major >= 10 || Minor >= 100 || Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << iOSVersion->getAsString(Args);
   } else if (Platform == TvOS) {
     if (!Driver::GetReleaseVersion(TvOSVersion->getValue(), Major, Minor,
                                    Micro, HadExtra) || HadExtra ||
-        Major >= 100 || Minor >= 100 || Micro >= 100)
+        Major >= 10 || Minor >= 100 || Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << TvOSVersion->getAsString(Args);
   } else if (Platform == WatchOS) {
@@ -720,17 +693,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     Platform = WatchOSSimulator;
 
   setTarget(Platform, Major, Minor, Micro);
-
-  if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-    StringRef SDK = getSDKName(A->getValue());
-    if (SDK.size() > 0) {
-      size_t StartVer = SDK.find_first_of("0123456789");
-      StringRef SDKName = SDK.slice(0, StartVer);
-      if (!SDKName.startswith(getPlatformFamily()))
-        getDriver().Diag(diag::warn_incompatible_sysroot)
-            << SDKName << getPlatformFamily();
-    }
-  }
 }
 
 void DarwinClang::AddCXXStdlibLibArgs(const ArgList &Args,
@@ -1113,8 +1075,7 @@ bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
     return false;
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
-  llvm::Triple Triple(ComputeLLVMTriple(Args));
-  return !Triple.isWatchABI();
+  return !isTargetWatchOS();
 }
 
 bool MachO::isPICDefault() const { return true; }
@@ -1258,7 +1219,6 @@ void Darwin::CheckObjCARC() const {
 }
 
 SanitizerMask Darwin::getSupportedSanitizers() const {
-  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (isTargetMacOS() || isTargetIOSSimulator())
     Res |= SanitizerKind::Address;
@@ -1266,11 +1226,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
     if (!isMacosxVersionLT(10, 9))
       Res |= SanitizerKind::Vptr;
     Res |= SanitizerKind::SafeStack;
-    if (IsX86_64)
-      Res |= SanitizerKind::Thread;
-  } else if (isTargetIOSSimulator() || isTargetTvOSSimulator()) {
-    if (IsX86_64)
-      Res |= SanitizerKind::Thread;
+    Res |= SanitizerKind::Thread;
   }
   return Res;
 }

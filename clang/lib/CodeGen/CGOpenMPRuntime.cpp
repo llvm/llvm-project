@@ -329,7 +329,6 @@ void CGOpenMPRuntime::clear() {
   InternalVars.clear();
 }
 
-
 // Layout information for ident_t.
 static CharUnits getIdentAlign(CodeGenModule &CGM) {
   return CGM.getPointerAlign();
@@ -418,7 +417,7 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
                                                  SourceLocation Loc,
                                                  OpenMPLocationFlags Flags) {
   // If no debug info is generated - return global default location.
-  if (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo ||
+  if (CGM.getCodeGenOpts().getDebugInfo() == CodeGenOptions::NoDebugInfo ||
       Loc.isInvalid())
     return getOrCreateDefaultLocation(Flags).getPointer();
 
@@ -1145,8 +1144,9 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
                             /*Id=*/nullptr, CGM.getContext().VoidPtrTy);
       Args.push_back(&Dst);
 
-      auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
-          CGM.getContext().VoidPtrTy, Args);
+      auto &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+          CGM.getContext().VoidPtrTy, Args, FunctionType::ExtInfo(),
+          /*isVariadic=*/false);
       auto FTy = CGM.getTypes().GetFunctionType(FI);
       auto Fn = CGM.CreateGlobalInitOrDestructFunction(
           FTy, ".__kmpc_global_ctor_.", FI, Loc);
@@ -1176,16 +1176,14 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
                             /*Id=*/nullptr, CGM.getContext().VoidPtrTy);
       Args.push_back(&Dst);
 
-      auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
-          CGM.getContext().VoidTy, Args);
+      auto &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+          CGM.getContext().VoidTy, Args, FunctionType::ExtInfo(),
+          /*isVariadic=*/false);
       auto FTy = CGM.getTypes().GetFunctionType(FI);
       auto Fn = CGM.CreateGlobalInitOrDestructFunction(
           FTy, ".__kmpc_global_dtor_.", FI, Loc);
-      auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
       DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI, Args,
                             SourceLocation());
-      // Create a scope with an artificial location for the body of this function.
-      auto AL = ApplyDebugLocation::CreateArtificial(DtorCGF);
       auto ArgVal = DtorCGF.EmitLoadOfScalar(
           DtorCGF.GetAddrOfLocalVar(&Dst),
           /*Volatile=*/false, CGM.getContext().VoidPtrTy, Dst.getLocation());
@@ -1551,7 +1549,9 @@ static llvm::Value *emitCopyprivateCopyFunction(
                            C.VoidPtrTy);
   Args.push_back(&LHSArg);
   Args.push_back(&RHSArg);
-  auto &CGFI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+  FunctionType::ExtInfo EI;
+  auto &CGFI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+      C.VoidTy, Args, EI, /*isVariadic=*/false);
   auto *Fn = llvm::Function::Create(
       CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
       ".omp.copyprivate.copy_func", &CGM.getModule());
@@ -2092,7 +2092,9 @@ createOffloadingBinaryDescriptorFunction(CodeGenModule &CGM, StringRef Name,
 
   CodeGenFunction CGF(CGM);
   GlobalDecl();
-  auto &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+  auto &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+      C.VoidTy, Args, FunctionType::ExtInfo(),
+      /*isVariadic=*/false);
   auto FTy = CGM.getTypes().GetFunctionType(FI);
   auto *Fn =
       CGM.CreateGlobalInitOrDestructFunction(FTy, Name, FI, SourceLocation());
@@ -2572,8 +2574,10 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
                                 KmpTaskTWithPrivatesPtrQTy.withRestrict());
   Args.push_back(&GtidArg);
   Args.push_back(&TaskTypeArg);
+  FunctionType::ExtInfo Info;
   auto &TaskEntryFnInfo =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
+      CGM.getTypes().arrangeFreeFunctionDeclaration(KmpInt32Ty, Args, Info,
+                                                    /*isVariadic=*/false);
   auto *TaskEntryTy = CGM.getTypes().GetFunctionType(TaskEntryFnInfo);
   auto *TaskEntry =
       llvm::Function::Create(TaskEntryTy, llvm::GlobalValue::InternalLinkage,
@@ -2639,7 +2643,8 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
   Args.push_back(&TaskTypeArg);
   FunctionType::ExtInfo Info;
   auto &DestructorFnInfo =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
+      CGM.getTypes().arrangeFreeFunctionDeclaration(KmpInt32Ty, Args, Info,
+                                                    /*isVariadic=*/false);
   auto *DestructorFnTy = CGM.getTypes().GetFunctionType(DestructorFnInfo);
   auto *DestructorFn =
       llvm::Function::Create(DestructorFnTy, llvm::GlobalValue::InternalLinkage,
@@ -2712,8 +2717,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
+  FunctionType::ExtInfo Info;
   auto &TaskPrivatesMapFnInfo =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+      CGM.getTypes().arrangeFreeFunctionDeclaration(C.VoidTy, Args, Info,
+                                                    /*isVariadic=*/false);
   auto *TaskPrivatesMapTy =
       CGM.getTypes().GetFunctionType(TaskPrivatesMapFnInfo);
   auto *TaskPrivatesMap = llvm::Function::Create(
@@ -3218,7 +3225,9 @@ static llvm::Value *emitReductionFunction(CodeGenModule &CGM,
                            C.VoidPtrTy);
   Args.push_back(&LHSArg);
   Args.push_back(&RHSArg);
-  auto &CGFI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+  FunctionType::ExtInfo EI;
+  auto &CGFI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+      C.VoidTy, Args, EI, /*isVariadic=*/false);
   auto *Fn = llvm::Function::Create(
       CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
       ".omp.reduction.reduction_func", &CGM.getModule());

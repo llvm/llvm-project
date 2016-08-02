@@ -394,7 +394,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // Emit global variable debug descriptor for static vars.
   CGDebugInfo *DI = getDebugInfo();
   if (DI &&
-      CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo) {
+      CGM.getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo) {
     DI->setLocation(D.getLocation());
     DI->EmitGlobalVariable(var, &D);
   }
@@ -715,7 +715,8 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
     llvm_unreachable("present but none");
 
   case Qualifiers::OCL_ExplicitNone:
-    value = EmitARCUnsafeUnretainedScalarExpr(init);
+    // nothing to do
+    value = EmitScalarExpr(init);
     break;
 
   case Qualifiers::OCL_Strong: {
@@ -1085,8 +1086,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   // Emit debug info for local var declaration.
   if (HaveInsertPoint())
     if (CGDebugInfo *DI = getDebugInfo()) {
-      if (CGM.getCodeGenOpts().getDebugInfo() >=
-          codegenoptions::LimitedDebugInfo) {
+      if (CGM.getCodeGenOpts().getDebugInfo()
+            >= CodeGenOptions::LimitedDebugInfo) {
         DI->setLocation(D.getLocation());
         DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
       }
@@ -1381,7 +1382,7 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
   // Make sure we call @llvm.lifetime.end.  This needs to happen
   // *last*, so the cleanup needs to be pushed *first*.
   if (emission.useLifetimeMarkers()) {
-    EHStack.pushCleanup<CallLifetimeEnd>(NormalAndEHCleanup,
+    EHStack.pushCleanup<CallLifetimeEnd>(NormalCleanup,
                                          emission.getAllocatedAddress(),
                                          emission.getSizeForLifetimeMarkers());
     EHCleanupScope &cleanup = cast<EHCleanupScope>(*EHStack.begin());
@@ -1851,8 +1852,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
 
   // Emit debug info for param declaration.
   if (CGDebugInfo *DI = getDebugInfo()) {
-    if (CGM.getCodeGenOpts().getDebugInfo() >=
-        codegenoptions::LimitedDebugInfo) {
+    if (CGM.getCodeGenOpts().getDebugInfo()
+          >= CodeGenOptions::LimitedDebugInfo) {
       DI->EmitDeclareOfArgVariable(&D, DeclPtr.getPointer(), ArgNo, Builder);
     }
   }

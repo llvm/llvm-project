@@ -1,12 +1,10 @@
-; RUN: llc -verify-machineinstrs -disable-fp-elim < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc -verify-machineinstrs -disable-fp-elim -O0 < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
 %swift_error = type {i64, i8}
 
-; This tests the basic usage of a swifterror parameter. "foo" is the function
-; that takes a swifterror parameter and "caller" is the caller of "foo".
 define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo:
 ; CHECK-APPLE: orr w0, wzr, #0x10
@@ -28,12 +26,11 @@ entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
   store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %0 = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %0
   ret float 1.0
 }
 
-; "caller" calls "foo" that takes a swifterror parameter.
 define float @caller(i8* %error_ref) {
 ; CHECK-APPLE-LABEL: caller:
 ; CHECK-APPLE: mov [[ID:x[0-9]+]], x0
@@ -57,7 +54,7 @@ entry:
   %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
   %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
   %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %0 = bitcast %swift_error* %error_from_foo to i8*
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
   %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
@@ -65,11 +62,10 @@ cont:
   store i8 %t, i8* %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(i8* %0)
   ret float 1.0
 }
 
-; "caller2" is the caller of "foo", it calls "foo" inside a loop.
 define float @caller2(i8* %error_ref) {
 ; CHECK-APPLE-LABEL: caller2:
 ; CHECK-APPLE: mov [[ID:x[0-9]+]], x0
@@ -98,7 +94,7 @@ bb_loop:
   %call = call float @foo(%swift_error** swifterror %error_ptr_ref)
   %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
   %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %0 = bitcast %swift_error* %error_from_foo to i8*
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
   %cmp = fcmp ogt float %call, 1.000000e+00
@@ -109,12 +105,10 @@ bb_end:
   store i8 %t, i8* %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(i8* %0)
   ret float 1.0
 }
 
-; "foo_if" is a function that takes a swifterror parameter, it sets swifterror
-; under a certain condition.
 define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-LABEL: foo_if:
 ; CHECK-APPLE: cbz w0
@@ -148,16 +142,14 @@ gen_error:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
   store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %0 = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %0
   ret float 1.0
 
 normal:
   ret float 0.0
 }
 
-; "foo_loop" is a function that takes a swifterror parameter, it sets swifterror
-; under a certain condition inside a loop.
 define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-APPLE-LABEL: foo_loop:
 ; CHECK-APPLE: mov x0, x19
@@ -196,8 +188,8 @@ gen_error:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
   store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %0 = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %0
   br label %bb_cont
 
 bb_cont:
@@ -209,8 +201,6 @@ bb_end:
 
 %struct.S = type { i32, i32, i32, i32, i32, i32 }
 
-; "foo_sret" is a function that takes a swifterror parameter, it also has a sret
-; parameter.
 define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo_sret:
 ; CHECK-APPLE: mov [[SRET:x[0-9]+]], x8
@@ -240,14 +230,13 @@ entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
   store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %0 = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %0
   %v2 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i32 0, i32 1
   store i32 %val1, i32* %v2
   ret void
 }
 
-; "caller3" calls "foo_sret" that takes a swifterror parameter.
 define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE-LABEL: caller3:
 ; CHECK-APPLE: mov [[ID:x[0-9]+]], x0
@@ -280,7 +269,7 @@ entry:
   call void @foo_sret(%struct.S* sret %s, i32 1, %swift_error** swifterror %error_ptr_ref)
   %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
   %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %0 = bitcast %swift_error* %error_from_foo to i8*
   br i1 %had_error_from_foo, label %handler, label %cont
 cont:
   %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
@@ -288,12 +277,10 @@ cont:
   store i8 %t, i8* %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(i8* %0)
   ret float 1.0
 }
 
-; "foo_vararg" is a function that takes a swifterror parameter, it also has
-; variable number of arguments.
 declare void @llvm.va_start(i8*) nounwind
 define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-LABEL: foo_vararg:
@@ -319,8 +306,8 @@ entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
   store %swift_error* %call.0, %swift_error** %error_ptr_ref
-  %tmp = getelementptr inbounds i8, i8* %call, i64 8
-  store i8 1, i8* %tmp
+  %0 = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %0
 
   %args = alloca i8*, align 8
   %a10 = alloca i32, align 4
@@ -338,7 +325,6 @@ entry:
   ret float 1.0
 }
 
-; "caller4" calls "foo_vararg" that takes a swifterror parameter.
 define float @caller4(i8* %error_ref) {
 ; CHECK-APPLE-LABEL: caller4:
 
@@ -371,7 +357,7 @@ entry:
   %call = call float (%swift_error**, ...) @foo_vararg(%swift_error** swifterror %error_ptr_ref, i32 %v10, i32 %v11, i32 %v12)
   %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
   %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
-  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  %0 = bitcast %swift_error* %error_from_foo to i8*
   br i1 %had_error_from_foo, label %handler, label %cont
 
 cont:
@@ -380,6 +366,6 @@ cont:
   store i8 %t, i8* %error_ref
   br label %handler
 handler:
-  call void @free(i8* %tmp)
+  call void @free(i8* %0)
   ret float 1.0
 }

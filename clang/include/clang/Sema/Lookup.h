@@ -726,13 +726,7 @@ public:
 class ADLResult {
 private:
   /// A map from canonical decls to the 'most recent' decl.
-  llvm::MapVector<NamedDecl*, NamedDecl*> Decls;
-
-  struct select_second {
-    NamedDecl *operator()(std::pair<NamedDecl*, NamedDecl*> P) const {
-      return P.second;
-    }
-  };
+  llvm::DenseMap<NamedDecl*, NamedDecl*> Decls;
 
 public:
   /// Adds a new ADL candidate to this map.
@@ -743,11 +737,23 @@ public:
     Decls.erase(cast<NamedDecl>(D->getCanonicalDecl()));
   }
 
-  typedef llvm::mapped_iterator<decltype(Decls)::iterator, select_second>
-      iterator;
+  class iterator
+      : public llvm::iterator_adaptor_base<
+            iterator, llvm::DenseMap<NamedDecl *, NamedDecl *>::iterator,
+            std::forward_iterator_tag, NamedDecl *> {
+    friend class ADLResult;
 
-  iterator begin() { return iterator(Decls.begin(), select_second()); }
-  iterator end() { return iterator(Decls.end(), select_second()); }
+    iterator(llvm::DenseMap<NamedDecl *, NamedDecl *>::iterator Iter)
+        : iterator_adaptor_base(std::move(Iter)) {}
+
+  public:
+    iterator() {}
+
+    value_type operator*() const { return I->second; }
+  };
+
+  iterator begin() { return iterator(Decls.begin()); }
+  iterator end() { return iterator(Decls.end()); }
 };
 
 }

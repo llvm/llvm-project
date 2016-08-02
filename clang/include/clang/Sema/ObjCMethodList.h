@@ -32,9 +32,6 @@ struct ObjCMethodList {
   ObjCMethodList() { }
   ObjCMethodList(ObjCMethodDecl *M)
       : MethodAndHasMoreThanOneDecl(M, 0) {}
-  ObjCMethodList(const ObjCMethodList &L)
-      : MethodAndHasMoreThanOneDecl(L.MethodAndHasMoreThanOneDecl),
-        NextAndExtraBits(L.NextAndExtraBits) {}
 
   ObjCMethodList *getNext() const { return NextAndExtraBits.getPointer(); }
   unsigned getBits() const { return NextAndExtraBits.getInt(); }

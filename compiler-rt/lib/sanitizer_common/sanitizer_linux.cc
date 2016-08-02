@@ -315,15 +315,6 @@ void internal__exit(int exitcode) {
   Die();  // Unreachable.
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
-  struct timespec ts;
-  ts.tv_sec = 1;
-  ts.tv_nsec = 0;
-  int res = internal_syscall(SYSCALL(nanosleep), &ts, &ts);
-  if (res) return ts.tv_sec;
-  return 0;
-}
-
 uptr internal_execve(const char *filename, char *const argv[],
                      char *const envp[]) {
   return internal_syscall(SYSCALL(execve), (uptr)filename, (uptr)argv,
@@ -1232,6 +1223,10 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #else
 # error "Unsupported arch"
 #endif
+}
+
+void DisableReexec() {
+  // No need to re-exec on Linux.
 }
 
 void MaybeReexec() {

@@ -3940,68 +3940,22 @@ APFloat::makeZero(bool Negative) {
   category = fcZero;
   sign = Negative;
   exponent = semantics->minExponent-1;
-  APInt::tcSet(significandParts(), 0, partCount());
+  APInt::tcSet(significandParts(), 0, partCount());  
 }
 
-void APFloat::makeQuiet() {
-  assert(isNaN());
-  APInt::tcSetBit(significandParts(), semantics->precision - 2);
-}
+APFloat llvm::scalbn(APFloat X, int Exp) {
+  if (X.isInfinity() || X.isZero() || X.isNaN())
+    return X;
 
-int llvm::ilogb(const APFloat &Arg) {
-  if (Arg.isNaN())
-    return APFloat::IEK_NaN;
-  if (Arg.isZero())
-    return APFloat::IEK_Zero;
-  if (Arg.isInfinity())
-    return APFloat::IEK_Inf;
-  if (!Arg.isDenormal())
-    return Arg.exponent;
-
-  APFloat Normalized(Arg);
-  int SignificandBits = Arg.getSemantics().precision - 1;
-
-  Normalized.exponent += SignificandBits;
-  Normalized.normalize(APFloat::rmNearestTiesToEven, lfExactlyZero);
-  return Normalized.exponent - SignificandBits;
-}
-
-APFloat llvm::scalbn(APFloat X, int Exp, APFloat::roundingMode RoundingMode) {
   auto MaxExp = X.getSemantics().maxExponent;
   auto MinExp = X.getSemantics().minExponent;
+  if (Exp > (MaxExp - X.exponent))
+    // Overflow saturates to infinity.
+    return APFloat::getInf(X.getSemantics(), X.isNegative());
+  if (Exp < (MinExp - X.exponent))
+    // Underflow saturates to zero.
+    return APFloat::getZero(X.getSemantics(), X.isNegative());
 
-  // If Exp is wildly out-of-scale, simply adding it to X.exponent will
-  // overflow; clamp it to a safe range before adding, but ensure that the range
-  // is large enough that the clamp does not change the result. The range we
-  // need to support is the difference between the largest possible exponent and
-  // the normalized exponent of half the smallest denormal.
-
-  int SignificandBits = X.getSemantics().precision - 1;
-  int MaxIncrement = MaxExp - (MinExp - SignificandBits) + 1;
-
-  // Clamp to one past the range ends to let normalize handle overlflow.
-  X.exponent += std::min(std::max(Exp, -MaxIncrement - 1), MaxIncrement);
-  X.normalize(RoundingMode, lfExactlyZero);
-  if (X.isNaN())
-    X.makeQuiet();
+  X.exponent += Exp;
   return X;
-}
-
-APFloat llvm::frexp(const APFloat &Val, int &Exp, APFloat::roundingMode RM) {
-  Exp = ilogb(Val);
-
-  // Quiet signalling nans.
-  if (Exp == APFloat::IEK_NaN) {
-    APFloat Quiet(Val);
-    Quiet.makeQuiet();
-    return Quiet;
-  }
-
-  if (Exp == APFloat::IEK_Inf)
-    return Val;
-
-  // 1 is added because frexp is defined to return a normalized fraction in
-  // +/-[0.5, 1.0), rather than the usual +/-[1.0, 2.0).
-  Exp = Exp == APFloat::IEK_Zero ? 0 : Exp + 1;
-  return scalbn(Val, -Exp, RM);
 }

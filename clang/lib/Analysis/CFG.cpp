@@ -4514,7 +4514,7 @@ void CFGBlock::dump(const CFG* cfg, const LangOptions &LO,
   print(llvm::errs(), cfg, LO, ShowColors);
 }
 
-LLVM_DUMP_METHOD void CFGBlock::dump() const {
+void CFGBlock::dump() const {
   dump(getParent(), LangOptions(), false);
 }
 

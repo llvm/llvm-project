@@ -197,11 +197,6 @@ void MultiplexExternalSemaSource::ReadMethodPool(Selector Sel) {
     Sources[i]->ReadMethodPool(Sel);
 }
 
-void MultiplexExternalSemaSource::updateOutOfDateSelector(Selector Sel) {
-  for(size_t i = 0; i < Sources.size(); ++i)
-    Sources[i]->updateOutOfDateSelector(Sel);
-}
-
 void MultiplexExternalSemaSource::ReadKnownNamespaces(
                                    SmallVectorImpl<NamespaceDecl*> &Namespaces){
   for(size_t i = 0; i < Sources.size(); ++i)
@@ -209,7 +204,7 @@ void MultiplexExternalSemaSource::ReadKnownNamespaces(
 }
 
 void MultiplexExternalSemaSource::ReadUndefinedButUsed(
-    llvm::MapVector<NamedDecl *, SourceLocation> &Undefined) {
+                         llvm::DenseMap<NamedDecl*, SourceLocation> &Undefined){
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadUndefinedButUsed(Undefined);
 }

@@ -119,15 +119,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
           .addAttributes(NewFunc->getContext(), AttributeSet::FunctionIndex,
                          OldAttrs.getFnAttributes()));
 
-  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-  OldFunc->getAllMetadata(MDs);
-  for (auto MD : MDs)
-    NewFunc->setMetadata(
-        MD.first,
-        MapMetadata(MD.second, VMap,
-                    ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                    TypeMapper, Materializer));
-
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of
   // recursive functions into themselves.
@@ -172,17 +163,52 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                        TypeMapper, Materializer);
 }
 
+// Find the MDNode which corresponds to the subprogram data that described F.
+static DISubprogram *FindSubprogram(const Function *F,
+                                    DebugInfoFinder &Finder) {
+  for (DISubprogram *Subprogram : Finder.subprograms()) {
+    if (Subprogram->describes(F))
+      return Subprogram;
+  }
+  return nullptr;
+}
+
+// Add an operand to an existing MDNode. The new operand will be added at the
+// back of the operand list.
+static void AddOperand(DICompileUnit *CU, DISubprogramArray SPs,
+                       Metadata *NewSP) {
+  SmallVector<Metadata *, 16> NewSPs;
+  NewSPs.reserve(SPs.size() + 1);
+  for (auto *SP : SPs)
+    NewSPs.push_back(SP);
+  NewSPs.push_back(NewSP);
+  CU->replaceSubprograms(MDTuple::get(CU->getContext(), NewSPs));
+}
+
 // Clone the module-level debug info associated with OldFunc. The cloned data
 // will point to NewFunc instead.
 static void CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
-                                   ValueToValueMapTy &VMap) {
-  if (const DISubprogram *OldSP = OldFunc->getSubprogram()) {
-    auto *NewSP = cast<DISubprogram>(MapMetadata(OldSP, VMap));
-    // FIXME: There ought to be a better way to do this: ValueMapper
-    // will clone the distinct DICompileUnit. Use the original one
-    // instead.
-    NewSP->replaceUnit(OldSP->getUnit());
-    NewFunc->setSubprogram(NewSP);
+                            ValueToValueMapTy &VMap) {
+  DebugInfoFinder Finder;
+  Finder.processModule(*OldFunc->getParent());
+
+  const DISubprogram *OldSubprogramMDNode = FindSubprogram(OldFunc, Finder);
+  if (!OldSubprogramMDNode) return;
+
+  auto *NewSubprogram =
+      cast<DISubprogram>(MapMetadata(OldSubprogramMDNode, VMap));
+  NewFunc->setSubprogram(NewSubprogram);
+
+  for (auto *CU : Finder.compile_units()) {
+    auto Subprograms = CU->getSubprograms();
+    // If the compile unit's function list contains the old function, it should
+    // also contain the new one.
+    for (auto *SP : Subprograms) {
+      if (SP == OldSubprogramMDNode) {
+        AddOperand(CU, Subprograms, NewSubprogram);
+        break;
+      }
+    }
   }
 }
 
@@ -658,7 +684,7 @@ void llvm::remapInstructionsInBlocks(
   for (auto *BB : Blocks)
     for (auto &Inst : *BB)
       RemapInstruction(&Inst, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingEntries);
 }
 
 /// \brief Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p

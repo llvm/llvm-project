@@ -416,15 +416,15 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
     unsigned Val =
         llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
-            .Case("limited", codegenoptions::LimitedDebugInfo)
-            .Case("standalone", codegenoptions::FullDebugInfo)
+            .Case("line-tables-only", CodeGenOptions::DebugLineTablesOnly)
+            .Case("limited", CodeGenOptions::LimitedDebugInfo)
+            .Case("standalone", CodeGenOptions::FullDebugInfo)
             .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                 << A->getValue();
     else
-      Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
+      Opts.setDebugInfo(static_cast<CodeGenOptions::DebugInfoKind>(Val));
   }
   if (Arg *A = Args.getLastArg(OPT_debugger_tuning_EQ)) {
     unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
@@ -493,7 +493,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableFPElim =
       (Args.hasArg(OPT_mdisable_fp_elim) || Args.hasArg(OPT_pg));
   Opts.DisableFree = Args.hasArg(OPT_disable_free);
-  Opts.DiscardValueNames = Args.hasArg(OPT_discard_value_names);
   Opts.DisableTailCalls = Args.hasArg(OPT_mdisable_tail_calls);
   Opts.FloatABI = Args.getLastArgValue(OPT_mfloat_abi);
   if (Arg *A = Args.getLastArg(OPT_meabi)) {
@@ -560,7 +559,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   const Arg *A = Args.getLastArg(OPT_flto, OPT_flto_EQ);
-  Opts.EmitSummaryIndex = A && A->containsValue("thin");
+  Opts.EmitFunctionSummary = A && A->containsValue("thin");
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK != IK_LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -728,8 +727,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   // If the user requested a flag that requires source locations available in
   // the backend, make sure that the backend tracks source location information.
-  if (NeedLocTracking && Opts.getDebugInfo() == codegenoptions::NoDebugInfo)
-    Opts.setDebugInfo(codegenoptions::LocTrackingOnly);
+  if (NeedLocTracking && Opts.getDebugInfo() == CodeGenOptions::NoDebugInfo)
+    Opts.setDebugInfo(CodeGenOptions::LocTrackingOnly);
 
   Opts.RewriteMapFiles = Args.getAllArgValues(OPT_frewrite_map_file);
 
@@ -774,51 +773,8 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
                         ModuleFiles.end());
 }
 
-static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
-  // Color diagnostics default to auto ("on" if terminal supports) in the driver
-  // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
-  // Support both clang's -f[no-]color-diagnostics and gcc's
-  // -f[no-]diagnostics-colors[=never|always|auto].
-  enum {
-    Colors_On,
-    Colors_Off,
-    Colors_Auto
-  } ShowColors = DefaultColor ? Colors_Auto : Colors_Off;
-  for (Arg *A : Args) {
-    const Option &O = A->getOption();
-    if (!O.matches(options::OPT_fcolor_diagnostics) &&
-        !O.matches(options::OPT_fdiagnostics_color) &&
-        !O.matches(options::OPT_fno_color_diagnostics) &&
-        !O.matches(options::OPT_fno_diagnostics_color) &&
-        !O.matches(options::OPT_fdiagnostics_color_EQ))
-      continue;
-
-    if (O.matches(options::OPT_fcolor_diagnostics) ||
-        O.matches(options::OPT_fdiagnostics_color)) {
-      ShowColors = Colors_On;
-    } else if (O.matches(options::OPT_fno_color_diagnostics) ||
-               O.matches(options::OPT_fno_diagnostics_color)) {
-      ShowColors = Colors_Off;
-    } else {
-      assert(O.matches(options::OPT_fdiagnostics_color_EQ));
-      StringRef Value(A->getValue());
-      if (Value == "always")
-        ShowColors = Colors_On;
-      else if (Value == "never")
-        ShowColors = Colors_Off;
-      else if (Value == "auto")
-        ShowColors = Colors_Auto;
-    }
-  }
-  if (ShowColors == Colors_On ||
-      (ShowColors == Colors_Auto && llvm::sys::Process::StandardErrHasColors()))
-    return true;
-  return false;
-}
-
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
-                                DiagnosticsEngine *Diags,
-                                bool DefaultDiagColor) {
+                                DiagnosticsEngine *Diags) {
   using namespace options;
   bool Success = true;
 
@@ -831,7 +787,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.Pedantic = Args.hasArg(OPT_pedantic);
   Opts.PedanticErrors = Args.hasArg(OPT_pedantic_errors);
   Opts.ShowCarets = !Args.hasArg(OPT_fno_caret_diagnostics);
-  Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
+  Opts.ShowColors = Args.hasArg(OPT_fcolor_diagnostics);
   Opts.ShowColumn = Args.hasFlag(OPT_fshow_column,
                                  OPT_fno_show_column,
                                  /*Default=*/true);
@@ -1268,8 +1224,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
   Opts.ModuleCachePath = Args.getLastArgValue(OPT_fmodules_cache_path);
   Opts.ModuleUserBuildPath = Args.getLastArgValue(OPT_fmodules_user_build_path);
   Opts.DisableModuleHash = Args.hasArg(OPT_fdisable_module_hash);
-  Opts.ModulesValidateDiagnosticOptions =
-      !Args.hasArg(OPT_fmodules_disable_diagnostic_validation);
   Opts.ImplicitModuleMaps = Args.hasArg(OPT_fimplicit_module_maps);
   Opts.ModuleMapFileHomeIsCwd = Args.hasArg(OPT_fmodule_map_file_home_is_cwd);
   Opts.ModuleCachePruneInterval =
@@ -1356,12 +1310,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
 
   for (const Arg *A : Args.filtered(OPT_ivfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
-}
-
-static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args) {
-  using namespace options;
-  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
-    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
@@ -2120,8 +2068,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
-  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                                 false /*DefaultDiagColor*/);
+  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags);
   ParseCommentArgs(Res.getLangOpts()->CommentOpts, Args);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args);
   // FIXME: We shouldn't have to pass the DashX option around here
@@ -2130,8 +2077,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags,
                               Res.getTargetOpts());
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args);
-  ParseAPINotesArgs(Res.getAPINotesOpts(), Args);
-
   if (DashX == IK_AST || DashX == IK_LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
     // PassManager in BackendUtil.cpp. They need to be initializd no matter
@@ -2153,14 +2098,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       Success = false;
     }
   }
-
-  // FIXME: Override value name discarding when asan or msan is used because the
-  // backend passes depend on the name of the alloca in order to print out
-  // names.
-  Res.getCodeGenOpts().DiscardValueNames &=
-      !Res.getLangOpts()->Sanitize.has(SanitizerKind::Address) &&
-      !Res.getLangOpts()->Sanitize.has(SanitizerKind::Memory);
-
   // FIXME: ParsePreprocessorArgs uses the FileManager to read the contents of
   // PCH file and find the original header name. Remove the need to do that in
   // ParsePreprocessorArgs and remove the FileManager
@@ -2283,8 +2220,7 @@ std::string CompilerInvocation::getModuleHash() const {
                       hsOpts.UseBuiltinIncludes,
                       hsOpts.UseStandardSystemIncludes,
                       hsOpts.UseStandardCXXIncludes,
-                      hsOpts.UseLibcxx,
-                      hsOpts.ModulesValidateDiagnosticOptions);
+                      hsOpts.UseLibcxx);
   code = hash_combine(code, hsOpts.ResourceDir);
 
   // Extend the signature with the user build path.
@@ -2384,8 +2320,8 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
       return IntrusiveRefCntPtr<vfs::FileSystem>();
     }
 
-    IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getVFSFromYAML(
-        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
+    IntrusiveRefCntPtr<vfs::FileSystem> FS =
+        vfs::getVFSFromYAML(std::move(Buffer.get()), /*DiagHandler*/ nullptr);
     if (!FS.get()) {
       Diags.Report(diag::err_invalid_vfs_overlay) << File;
       return IntrusiveRefCntPtr<vfs::FileSystem>();

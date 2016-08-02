@@ -1416,18 +1416,6 @@ namespace {
           FoundDecl = true;
     }
 
-    void VisitPseudoObjectExpr(PseudoObjectExpr *POE) {
-      // Only need to visit the semantics for POE.
-      // SyntaticForm doesn't really use the Decal.
-      for (auto *S : POE->semantics()) {
-        if (auto *OVE = dyn_cast<OpaqueValueExpr>(S))
-          // Look past the OVE into the expression it binds.
-          Visit(OVE->getSourceExpr());
-        else
-          Visit(S);
-      }
-    }
-
     bool FoundDeclInUse() { return FoundDecl; }
 
   };  // end class DeclMatcher
@@ -3078,28 +3066,22 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
   //  has multiple return statements, the return type is deduced for each return
   //  statement. [...] if the type deduced is not the same in each deduction,
   //  the program is ill-formed.
-  QualType DeducedT = AT->getDeducedType();
-  if (!DeducedT.isNull() && !FD->isInvalidDecl()) {
+  if (AT->isDeduced() && !FD->isInvalidDecl()) {
     AutoType *NewAT = Deduced->getContainedAutoType();
-    // It is possible that NewAT->getDeducedType() is null. When that happens,
-    // we should not crash, instead we ignore this deduction.
-    if (NewAT->getDeducedType().isNull())
-      return false;
-
     CanQualType OldDeducedType = Context.getCanonicalFunctionResultType(
-                                   DeducedT);
+                                   AT->getDeducedType());
     CanQualType NewDeducedType = Context.getCanonicalFunctionResultType(
                                    NewAT->getDeducedType());
     if (!FD->isDependentContext() && OldDeducedType != NewDeducedType) {
       const LambdaScopeInfo *LambdaSI = getCurLambda();
       if (LambdaSI && LambdaSI->HasImplicitReturnType) {
         Diag(ReturnLoc, diag::err_typecheck_missing_return_type_incompatible)
-          << NewAT->getDeducedType() << DeducedT
+          << NewAT->getDeducedType() << AT->getDeducedType()
           << true /*IsLambda*/;
       } else {
         Diag(ReturnLoc, diag::err_auto_fn_different_deductions)
           << (AT->isDecltypeAuto() ? 1 : 0)
-          << NewAT->getDeducedType() << DeducedT;
+          << NewAT->getDeducedType() << AT->getDeducedType();
       }
       return true;
     }

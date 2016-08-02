@@ -71,18 +71,10 @@ def SDTX86rdrand : SDTypeProfile<2, 0, [SDTCisInt<0>, SDTCisVT<1, i32>]>;
 def SDTX86cas : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisInt<1>,
                                      SDTCisVT<2, i8>]>;
 def SDTX86caspair : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
-def SDTX86caspairSaveEbx8 : SDTypeProfile<1, 3,
-                                          [SDTCisVT<0, i32>, SDTCisPtrTy<1>,
-                                          SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
-def SDTX86caspairSaveRbx16 : SDTypeProfile<1, 3,
-                                           [SDTCisVT<0, i64>, SDTCisPtrTy<1>,
-                                           SDTCisVT<2, i64>, SDTCisVT<3, i64>]>;
 
-def SDTLockBinaryArithWithFlags : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
-                                                       SDTCisPtrTy<1>,
-                                                       SDTCisInt<2>]>;
-
-def SDTX86Ret     : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDTX86atomicBinary : SDTypeProfile<2, 3, [SDTCisInt<0>, SDTCisInt<1>,
+                                SDTCisPtrTy<2>, SDTCisInt<3>,SDTCisInt<4>]>;
+def SDTX86Ret     : SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>;
 
 def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
 def SDT_X86CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
@@ -161,14 +153,6 @@ def X86cas8 : SDNode<"X86ISD::LCMPXCHG8_DAG", SDTX86caspair,
 def X86cas16 : SDNode<"X86ISD::LCMPXCHG16_DAG", SDTX86caspair,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
-def X86cas8save_ebx : SDNode<"X86ISD::LCMPXCHG8_SAVE_EBX_DAG",
-                                SDTX86caspairSaveEbx8,
-                                [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
-                                SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
-def X86cas16save_rbx : SDNode<"X86ISD::LCMPXCHG16_SAVE_RBX_DAG",
-                                SDTX86caspairSaveRbx16,
-                                [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
-                                SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def X86retflag : SDNode<"X86ISD::RET_FLAG", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -252,22 +236,6 @@ def X86xor_flag  : SDNode<"X86ISD::XOR",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86and_flag  : SDNode<"X86ISD::AND",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
-
-def X86lock_add  : SDNode<"X86ISD::LADD",  SDTLockBinaryArithWithFlags,
-                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                           SDNPMemOperand]>;
-def X86lock_sub  : SDNode<"X86ISD::LSUB",  SDTLockBinaryArithWithFlags,
-                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                           SDNPMemOperand]>;
-def X86lock_or  : SDNode<"X86ISD::LOR",  SDTLockBinaryArithWithFlags,
-                         [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                          SDNPMemOperand]>;
-def X86lock_xor  : SDNode<"X86ISD::LXOR",  SDTLockBinaryArithWithFlags,
-                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                           SDNPMemOperand]>;
-def X86lock_and  : SDNode<"X86ISD::LAND",  SDTLockBinaryArithWithFlags,
-                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                           SDNPMemOperand]>;
 
 def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
 
@@ -903,6 +871,12 @@ def X86_COND_NS  : PatLeaf<(i8 12)>;
 def X86_COND_O   : PatLeaf<(i8 13)>;
 def X86_COND_P   : PatLeaf<(i8 14)>; // alt. COND_PE
 def X86_COND_S   : PatLeaf<(i8 15)>;
+
+// Predicate used to help when pattern matching LZCNT/TZCNT.
+def X86_COND_E_OR_NE : ImmLeaf<i8, [{
+  return (Imm == X86::COND_E) || (Imm == X86::COND_NE);
+}]>;
+
 
 def i16immSExt8  : ImmLeaf<i16, [{ return isInt<8>(Imm); }]>;
 def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
@@ -2152,41 +2126,41 @@ let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
 }
 
 let Predicates = [HasLZCNT] in {
-  def : Pat<(X86cmov (ctlz GR16:$src), (i16 16), (X86_COND_E),
+  def : Pat<(X86cmov (ctlz GR16:$src), (i16 16), (X86_COND_E_OR_NE),
               (X86cmp GR16:$src, (i16 0))),
             (LZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (ctlz GR32:$src), (i32 32), (X86_COND_E),
+  def : Pat<(X86cmov (ctlz GR32:$src), (i32 32), (X86_COND_E_OR_NE),
               (X86cmp GR32:$src, (i32 0))),
             (LZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (ctlz GR64:$src), (i64 64), (X86_COND_E),
+  def : Pat<(X86cmov (ctlz GR64:$src), (i64 64), (X86_COND_E_OR_NE),
               (X86cmp GR64:$src, (i64 0))),
             (LZCNT64rr GR64:$src)>;
-  def : Pat<(X86cmov (i16 16), (ctlz GR16:$src), (X86_COND_NE),
+  def : Pat<(X86cmov (i16 16), (ctlz GR16:$src), (X86_COND_E_OR_NE),
               (X86cmp GR16:$src, (i16 0))),
             (LZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (i32 32), (ctlz GR32:$src), (X86_COND_NE),
+  def : Pat<(X86cmov (i32 32), (ctlz GR32:$src), (X86_COND_E_OR_NE),
               (X86cmp GR32:$src, (i32 0))),
             (LZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (i64 64), (ctlz GR64:$src), (X86_COND_NE),
+  def : Pat<(X86cmov (i64 64), (ctlz GR64:$src), (X86_COND_E_OR_NE),
               (X86cmp GR64:$src, (i64 0))),
             (LZCNT64rr GR64:$src)>;
 
-  def : Pat<(X86cmov (ctlz (loadi16 addr:$src)), (i16 16), (X86_COND_E),
+  def : Pat<(X86cmov (ctlz (loadi16 addr:$src)), (i16 16), (X86_COND_E_OR_NE),
               (X86cmp (loadi16 addr:$src), (i16 0))),
             (LZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (ctlz (loadi32 addr:$src)), (i32 32), (X86_COND_E),
+  def : Pat<(X86cmov (ctlz (loadi32 addr:$src)), (i32 32), (X86_COND_E_OR_NE),
               (X86cmp (loadi32 addr:$src), (i32 0))),
             (LZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (ctlz (loadi64 addr:$src)), (i64 64), (X86_COND_E),
+  def : Pat<(X86cmov (ctlz (loadi64 addr:$src)), (i64 64), (X86_COND_E_OR_NE),
               (X86cmp (loadi64 addr:$src), (i64 0))),
             (LZCNT64rm addr:$src)>;
-  def : Pat<(X86cmov (i16 16), (ctlz (loadi16 addr:$src)), (X86_COND_NE),
+  def : Pat<(X86cmov (i16 16), (ctlz (loadi16 addr:$src)), (X86_COND_E_OR_NE),
               (X86cmp (loadi16 addr:$src), (i16 0))),
             (LZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (i32 32), (ctlz (loadi32 addr:$src)), (X86_COND_NE),
+  def : Pat<(X86cmov (i32 32), (ctlz (loadi32 addr:$src)), (X86_COND_E_OR_NE),
               (X86cmp (loadi32 addr:$src), (i32 0))),
             (LZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (i64 64), (ctlz (loadi64 addr:$src)), (X86_COND_NE),
+  def : Pat<(X86cmov (i64 64), (ctlz (loadi64 addr:$src)), (X86_COND_E_OR_NE),
               (X86cmp (loadi64 addr:$src), (i64 0))),
             (LZCNT64rm addr:$src)>;
 }
@@ -2268,41 +2242,41 @@ let Predicates = [HasBMI] in {
 }
 
 let Predicates = [HasBMI] in {
-  def : Pat<(X86cmov (cttz GR16:$src), (i16 16), (X86_COND_E),
+  def : Pat<(X86cmov (cttz GR16:$src), (i16 16), (X86_COND_E_OR_NE),
               (X86cmp GR16:$src, (i16 0))),
             (TZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (cttz GR32:$src), (i32 32), (X86_COND_E),
+  def : Pat<(X86cmov (cttz GR32:$src), (i32 32), (X86_COND_E_OR_NE),
               (X86cmp GR32:$src, (i32 0))),
             (TZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (cttz GR64:$src), (i64 64), (X86_COND_E),
+  def : Pat<(X86cmov (cttz GR64:$src), (i64 64), (X86_COND_E_OR_NE),
               (X86cmp GR64:$src, (i64 0))),
             (TZCNT64rr GR64:$src)>;
-  def : Pat<(X86cmov (i16 16), (cttz GR16:$src), (X86_COND_NE),
+  def : Pat<(X86cmov (i16 16), (cttz GR16:$src), (X86_COND_E_OR_NE),
               (X86cmp GR16:$src, (i16 0))),
             (TZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (i32 32), (cttz GR32:$src), (X86_COND_NE),
+  def : Pat<(X86cmov (i32 32), (cttz GR32:$src), (X86_COND_E_OR_NE),
               (X86cmp GR32:$src, (i32 0))),
             (TZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (i64 64), (cttz GR64:$src), (X86_COND_NE),
+  def : Pat<(X86cmov (i64 64), (cttz GR64:$src), (X86_COND_E_OR_NE),
               (X86cmp GR64:$src, (i64 0))),
             (TZCNT64rr GR64:$src)>;
 
-  def : Pat<(X86cmov (cttz (loadi16 addr:$src)), (i16 16), (X86_COND_E),
+  def : Pat<(X86cmov (cttz (loadi16 addr:$src)), (i16 16), (X86_COND_E_OR_NE),
               (X86cmp (loadi16 addr:$src), (i16 0))),
             (TZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (cttz (loadi32 addr:$src)), (i32 32), (X86_COND_E),
+  def : Pat<(X86cmov (cttz (loadi32 addr:$src)), (i32 32), (X86_COND_E_OR_NE),
               (X86cmp (loadi32 addr:$src), (i32 0))),
             (TZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (cttz (loadi64 addr:$src)), (i64 64), (X86_COND_E),
+  def : Pat<(X86cmov (cttz (loadi64 addr:$src)), (i64 64), (X86_COND_E_OR_NE),
               (X86cmp (loadi64 addr:$src), (i64 0))),
             (TZCNT64rm addr:$src)>;
-  def : Pat<(X86cmov (i16 16), (cttz (loadi16 addr:$src)), (X86_COND_NE),
+  def : Pat<(X86cmov (i16 16), (cttz (loadi16 addr:$src)), (X86_COND_E_OR_NE),
               (X86cmp (loadi16 addr:$src), (i16 0))),
             (TZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (i32 32), (cttz (loadi32 addr:$src)), (X86_COND_NE),
+  def : Pat<(X86cmov (i32 32), (cttz (loadi32 addr:$src)), (X86_COND_E_OR_NE),
               (X86cmp (loadi32 addr:$src), (i32 0))),
             (TZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (i64 64), (cttz (loadi64 addr:$src)), (X86_COND_NE),
+  def : Pat<(X86cmov (i64 64), (cttz (loadi64 addr:$src)), (X86_COND_E_OR_NE),
               (X86cmp (loadi64 addr:$src), (i64 0))),
             (TZCNT64rm addr:$src)>;
 }

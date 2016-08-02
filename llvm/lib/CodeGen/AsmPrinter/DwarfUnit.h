@@ -338,7 +338,7 @@ protected:
   /// Look in the DwarfDebug map for the MDNode that corresponds to the
   /// reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve();
+    return DD->resolve(Ref);
   }
 
 private:

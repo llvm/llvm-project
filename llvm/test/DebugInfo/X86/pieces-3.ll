@@ -16,27 +16,19 @@
 ;    }
 ;
 ; CHECK: DW_TAG_formal_parameter [3]
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC1:.*]])
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC:.*]])
 ; CHECK-NEXT:   DW_AT_name {{.*}}"outer"
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC2:.*]])
+;                                                 rsi, piece 0x00000004
+; CHECK-NEXT:   DW_AT_location [DW_FORM_block1]       {{.*}} 54 93 04
 ; CHECK-NEXT:   "i1"
 ;
 ; CHECK: .debug_loc
-; CHECK: [[LOC1]]: Beginning address offset: 0x0000000000000000
-; CHECK-NEXT:         Ending address offset: 0x0000000000000004
-;             rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
-; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
-; This location is split into two ranges with identical locations
-; because it comes from a DBG_VALUE %RSI followed by a DBG_VALUE %ESI.
-; CHECK:           Beginning address offset: 0x0000000000000004
-; CHECK-NEXT:         Ending address offset: 0x0000000000000008
-; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
-; CHECK: [[LOC2]]: Beginning address offset: 0x0000000000000004
-; CHECK-NEXT:         Ending address offset: 0x0000000000000008
-;                                     rsi, piece 0x00000004
-; CHECK-NEXT:   Location description: 54 93 04
-
+; CHECK: [[LOC]]:
+; CHECK: Beginning address offset: 0x0000000000000000
+; CHECK:    Ending address offset: 0x0000000000000008
+; rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
+; CHECK: Location description: 55 93 08 93 04 54 93 04 
 ;
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-2.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -75,10 +67,11 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!21, !22}
 !llvm.ident = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
+!3 = !{!4}
+!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}

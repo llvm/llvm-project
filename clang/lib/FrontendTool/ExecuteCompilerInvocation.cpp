@@ -31,34 +31,33 @@
 using namespace clang;
 using namespace llvm::opt;
 
-static std::unique_ptr<FrontendAction>
-CreateFrontendBaseAction(CompilerInstance &CI) {
+static FrontendAction *CreateFrontendBaseAction(CompilerInstance &CI) {
   using namespace clang::frontend;
   StringRef Action("unknown");
   (void)Action;
 
   switch (CI.getFrontendOpts().ProgramAction) {
-  case ASTDeclList:            return llvm::make_unique<ASTDeclListAction>();
-  case ASTDump:                return llvm::make_unique<ASTDumpAction>();
-  case ASTPrint:               return llvm::make_unique<ASTPrintAction>();
-  case ASTView:                return llvm::make_unique<ASTViewAction>();
-  case DumpRawTokens:          return llvm::make_unique<DumpRawTokensAction>();
-  case DumpTokens:             return llvm::make_unique<DumpTokensAction>();
-  case EmitAssembly:           return llvm::make_unique<EmitAssemblyAction>();
-  case EmitBC:                 return llvm::make_unique<EmitBCAction>();
-  case EmitHTML:               return llvm::make_unique<HTMLPrintAction>();
-  case EmitLLVM:               return llvm::make_unique<EmitLLVMAction>();
-  case EmitLLVMOnly:           return llvm::make_unique<EmitLLVMOnlyAction>();
-  case EmitCodeGenOnly:        return llvm::make_unique<EmitCodeGenOnlyAction>();
-  case EmitObj:                return llvm::make_unique<EmitObjAction>();
-  case FixIt:                  return llvm::make_unique<FixItAction>();
-  case GenerateModule:         return llvm::make_unique<GenerateModuleAction>();
-  case GeneratePCH:            return llvm::make_unique<GeneratePCHAction>();
-  case GeneratePTH:            return llvm::make_unique<GeneratePTHAction>();
-  case InitOnly:               return llvm::make_unique<InitOnlyAction>();
-  case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
-  case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();
-  case VerifyPCH:              return llvm::make_unique<VerifyPCHAction>();
+  case ASTDeclList:            return new ASTDeclListAction();
+  case ASTDump:                return new ASTDumpAction();
+  case ASTPrint:               return new ASTPrintAction();
+  case ASTView:                return new ASTViewAction();
+  case DumpRawTokens:          return new DumpRawTokensAction();
+  case DumpTokens:             return new DumpTokensAction();
+  case EmitAssembly:           return new EmitAssemblyAction();
+  case EmitBC:                 return new EmitBCAction();
+  case EmitHTML:               return new HTMLPrintAction();
+  case EmitLLVM:               return new EmitLLVMAction();
+  case EmitLLVMOnly:           return new EmitLLVMOnlyAction();
+  case EmitCodeGenOnly:        return new EmitCodeGenOnlyAction();
+  case EmitObj:                return new EmitObjAction();
+  case FixIt:                  return new FixItAction();
+  case GenerateModule:         return new GenerateModuleAction;
+  case GeneratePCH:            return new GeneratePCHAction;
+  case GeneratePTH:            return new GeneratePTHAction();
+  case InitOnly:               return new InitOnlyAction();
+  case ParseSyntaxOnly:        return new SyntaxOnlyAction();
+  case ModuleFileInfo:         return new DumpModuleInfoAction();
+  case VerifyPCH:              return new VerifyPCHAction();
 
   case PluginAction: {
     for (FrontendPluginRegistry::iterator it =
@@ -68,7 +67,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
         std::unique_ptr<PluginASTAction> P(it->instantiate());
         if (!P->ParseArgs(CI, CI.getFrontendOpts().PluginArgs))
           return nullptr;
-        return std::move(P);
+        return P.release();
       }
     }
 
@@ -77,33 +76,32 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return nullptr;
   }
 
-  case PrintDeclContext:       return llvm::make_unique<DeclContextPrintAction>();
-  case PrintPreamble:          return llvm::make_unique<PrintPreambleAction>();
+  case PrintDeclContext:       return new DeclContextPrintAction();
+  case PrintPreamble:          return new PrintPreambleAction();
   case PrintPreprocessedInput: {
     if (CI.getPreprocessorOutputOpts().RewriteIncludes)
-      return llvm::make_unique<RewriteIncludesAction>();
-    return llvm::make_unique<PrintPreprocessedAction>();
+      return new RewriteIncludesAction();
+    return new PrintPreprocessedAction();
   }
 
-  case RewriteMacros:          return llvm::make_unique<RewriteMacrosAction>();
-  case RewriteTest:            return llvm::make_unique<RewriteTestAction>();
+  case RewriteMacros:          return new RewriteMacrosAction();
+  case RewriteTest:            return new RewriteTestAction();
 #ifdef CLANG_ENABLE_OBJC_REWRITER
-  case RewriteObjC:            return llvm::make_unique<RewriteObjCAction>();
+  case RewriteObjC:            return new RewriteObjCAction();
 #else
   case RewriteObjC:            Action = "RewriteObjC"; break;
 #endif
 #ifdef CLANG_ENABLE_ARCMT
-  case MigrateSource:
-    return llvm::make_unique<arcmt::MigrateSourceAction>();
+  case MigrateSource:          return new arcmt::MigrateSourceAction();
 #else
   case MigrateSource:          Action = "MigrateSource"; break;
 #endif
 #ifdef CLANG_ENABLE_STATIC_ANALYZER
-  case RunAnalysis:            return llvm::make_unique<ento::AnalysisAction>();
+  case RunAnalysis:            return new ento::AnalysisAction();
 #else
   case RunAnalysis:            Action = "RunAnalysis"; break;
 #endif
-  case RunPreprocessorOnly:    return llvm::make_unique<PreprocessOnlyAction>();
+  case RunPreprocessorOnly:    return new PreprocessOnlyAction();
   }
 
 #if !defined(CLANG_ENABLE_ARCMT) || !defined(CLANG_ENABLE_STATIC_ANALYZER) \
@@ -115,17 +113,16 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #endif
 }
 
-static std::unique_ptr<FrontendAction>
-CreateFrontendAction(CompilerInstance &CI) {
+static FrontendAction *CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
-  std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
+  FrontendAction *Act = CreateFrontendBaseAction(CI);
   if (!Act)
     return nullptr;
 
   const FrontendOptions &FEOpts = CI.getFrontendOpts();
 
   if (FEOpts.FixAndRecompile) {
-    Act = llvm::make_unique<FixItRecompile>(std::move(Act));
+    Act = new FixItRecompile(Act);
   }
   
 #ifdef CLANG_ENABLE_ARCMT
@@ -136,13 +133,13 @@ CreateFrontendAction(CompilerInstance &CI) {
     case FrontendOptions::ARCMT_None:
       break;
     case FrontendOptions::ARCMT_Check:
-      Act = llvm::make_unique<arcmt::CheckAction>(std::move(Act));
+      Act = new arcmt::CheckAction(Act);
       break;
     case FrontendOptions::ARCMT_Modify:
-      Act = llvm::make_unique<arcmt::ModifyAction>(std::move(Act));
+      Act = new arcmt::ModifyAction(Act);
       break;
     case FrontendOptions::ARCMT_Migrate:
-      Act = llvm::make_unique<arcmt::MigrateAction>(std::move(Act),
+      Act = new arcmt::MigrateAction(Act,
                                      FEOpts.MTMigrateDir,
                                      FEOpts.ARCMTMigrateReportOut,
                                      FEOpts.ARCMTMigrateEmitARCErrors);
@@ -150,9 +147,8 @@ CreateFrontendAction(CompilerInstance &CI) {
     }
 
     if (FEOpts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
-      Act = llvm::make_unique<arcmt::ObjCMigrateAction>(std::move(Act),
-                                                        FEOpts.MTMigrateDir,
-                                                        FEOpts.ObjCMTAction);
+      Act = new arcmt::ObjCMigrateAction(Act, FEOpts.MTMigrateDir,
+                                         FEOpts.ObjCMTAction);
     }
   }
 #endif
@@ -160,8 +156,7 @@ CreateFrontendAction(CompilerInstance &CI) {
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
-    Act = llvm::make_unique<ASTMergeAction>(std::move(Act),
-                                            FEOpts.ASTMergeFiles);
+    Act = new ASTMergeAction(Act, FEOpts.ASTMergeFiles);
 
   return Act;
 }

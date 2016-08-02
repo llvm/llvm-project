@@ -103,8 +103,6 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   UnwindTraceArg *arg = (UnwindTraceArg*)param;
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = Unwind_GetIP(ctx);
-  const uptr kPageSize = GetPageSizeCached();
-  if (pc < kPageSize) return UNWIND_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
   if (arg->stack->size == arg->max_depth) return UNWIND_STOP;
   return UNWIND_CONTINUE;

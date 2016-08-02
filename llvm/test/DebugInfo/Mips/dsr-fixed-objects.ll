@@ -22,15 +22,13 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 
 declare void @foo(i32*)
 
-; F0: DW_AT_name {{.*}}"e"
-; F0: DW_TAG_variable
-; F0-NEXT: DW_AT_location [DW_FORM_sec_offset]   ([[LOC:.*]])
-; F0-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
+; F0: DW_AT_location [DW_FORM_sec_offset]   (0x00000014)
+; F0: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 ;
 ; x -> DW_OP_reg1(51)
-; F0: [[LOC]]: Beginning address offset: 0x0000000000000028
-; F0:             Ending address offset: 0x0000000000000030
-; F0:              Location description: 51
+; F0: 0x00000014: Beginning address offset: 0x0000000000000028
+; F0:                Ending address offset: 0x0000000000000030
+; F0:                 Location description: 51
 
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
 entry:
@@ -57,16 +55,13 @@ entry:
 }
 
 
-; F1: DW_AT_name {{.*}}"x"
-; F1: DW_AT_name {{.*}}"e"
-; F1: DW_TAG_variable
-; F1-NEXT: DW_AT_location [DW_FORM_sec_offset]   ([[LOC:.*]])
-; F1-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
+; F1: DW_AT_location [DW_FORM_sec_offset]   (0x00000033)
+; F1: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 ; x -> DW_OP_reg1(51)
-; F1: [[LOC]]: Beginning address offset: 0x0000000000000080
-; F1:             Ending address offset: 0x0000000000000088
-; F1:              Location description: 51
+; F1: 0x00000033: Beginning address offset: 0x0000000000000080
+; F1:                Ending address offset: 0x0000000000000088
+; F1:                 Location description: 51
 
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {
 entry:
@@ -98,10 +93,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.module.flags = !{!23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "test.c", directory: "/home/vk/repos/tmp/dwarf")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "f0", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
+!3 = !{!4, !15}
+!4 = distinct !DISubprogram(name: "f0", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7, !7, !7, !7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -112,7 +108,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !12 = !DILocalVariable(name: "d", arg: 4, scope: !4, file: !1, line: 4, type: !7)
 !13 = !DILocalVariable(name: "e", arg: 5, scope: !4, file: !1, line: 4, type: !7)
 !14 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 5, type: !7)
-!15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 11, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !16)
+!15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 11, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, variables: !16)
 !16 = !{!17, !18, !19, !20, !21, !22}
 !17 = !DILocalVariable(name: "a", arg: 1, scope: !15, file: !1, line: 11, type: !7)
 !18 = !DILocalVariable(name: "b", arg: 2, scope: !15, file: !1, line: 11, type: !7)

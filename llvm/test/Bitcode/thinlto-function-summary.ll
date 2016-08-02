@@ -1,23 +1,13 @@
-; RUN: opt -name-anon-functions -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
-; Check for summary block/records.
+; RUN: llvm-as -function-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
+; Check for function summary block/records.
 
-; Check the value ids in the summary entries against the
-; same in the ValueSumbolTable, to ensure the ordering is stable.
-; Also check the linkage field on the summary entries.
-; BC: <GLOBALVAL_SUMMARY_BLOCK
-; BC-NEXT: <VERSION
-; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
-; BC-NEXT: <PERMODULE {{.*}} op0=2 op1=0
-; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=7
-; BC-NEXT: <ALIAS {{.*}} op0=4 op1=0 op2=3
-; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
-; BC-NEXT: <VALUE_SYMTAB
-; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
-; BC-NEXT: <FNENTRY {{.*}} op0=1 {{.*}}> record string = 'foo'
-; BC-NEXT: <FNENTRY {{.*}} op0=2 {{.*}}> record string = 'bar'
-; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'f'
+; BC: <FUNCTION_SUMMARY_BLOCK
+; BC-NEXT: <PERMODULE_ENTRY
+; BC-NEXT: <PERMODULE_ENTRY
+; BC-NEXT: <PERMODULE_ENTRY
+; BC-NEXT: </FUNCTION_SUMMARY_BLOCK
 
-; RUN: opt -name-anon-functions -module-summary < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as -function-summary < %s | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
 
 ; ModuleID = '<stdin>'
@@ -40,9 +30,6 @@ entry:
   ret i32 %x
 }
 
-; FIXME: Anonymous function and alias not currently in summary until
-; follow on fixes to rename anonymous functions and emit alias summary
-; entries are committed.
 ; Check an anonymous function as well, since in that case only the alias
 ; ends up in the value symbol table and having a summary.
 @f = alias void (), void ()* @0   ; <void ()*> [#uses=0]

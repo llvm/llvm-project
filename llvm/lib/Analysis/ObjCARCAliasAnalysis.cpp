@@ -132,14 +132,18 @@ ModRefInfo ObjCARCAAResult::getModRefInfo(ImmutableCallSite CS,
 }
 
 ObjCARCAAResult ObjCARCAA::run(Function &F, AnalysisManager<Function> *AM) {
-  return ObjCARCAAResult(F.getParent()->getDataLayout());
+  return ObjCARCAAResult(F.getParent()->getDataLayout(),
+                         AM->getResult<TargetLibraryAnalysis>(F));
 }
 
 char ObjCARCAA::PassID;
 
 char ObjCARCAAWrapperPass::ID = 0;
-INITIALIZE_PASS(ObjCARCAAWrapperPass, "objc-arc-aa",
-                "ObjC-ARC-Based Alias Analysis", false, true)
+INITIALIZE_PASS_BEGIN(ObjCARCAAWrapperPass, "objc-arc-aa",
+                      "ObjC-ARC-Based Alias Analysis", false, true)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(ObjCARCAAWrapperPass, "objc-arc-aa",
+                    "ObjC-ARC-Based Alias Analysis", false, true)
 
 ImmutablePass *llvm::createObjCARCAAWrapperPass() {
   return new ObjCARCAAWrapperPass();
@@ -150,7 +154,8 @@ ObjCARCAAWrapperPass::ObjCARCAAWrapperPass() : ImmutablePass(ID) {
 }
 
 bool ObjCARCAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new ObjCARCAAResult(M.getDataLayout()));
+  Result.reset(new ObjCARCAAResult(
+      M.getDataLayout(), getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()));
   return false;
 }
 
@@ -161,4 +166,5 @@ bool ObjCARCAAWrapperPass::doFinalization(Module &M) {
 
 void ObjCARCAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }

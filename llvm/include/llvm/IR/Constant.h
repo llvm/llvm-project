@@ -48,41 +48,42 @@ protected:
     : User(ty, vty, Ops, NumOps) {}
 
 public:
-  /// Return true if this is the value that would be returned by getNullValue.
+  /// isNullValue - Return true if this is the value that would be returned by
+  /// getNullValue.
   bool isNullValue() const;
 
-  /// Returns true if the value is one.
+  /// \brief Returns true if the value is one.
   bool isOneValue() const;
 
-  /// Return true if this is the value that would be returned by
+  /// isAllOnesValue - Return true if this is the value that would be returned by
   /// getAllOnesValue.
   bool isAllOnesValue() const;
 
-  /// Return true if the value is what would be returned by
-  /// getZeroValueForNegation.
+  /// isNegativeZeroValue - Return true if the value is what would be returned
+  /// by getZeroValueForNegation.
   bool isNegativeZeroValue() const;
 
   /// Return true if the value is negative zero or null value.
   bool isZeroValue() const;
 
-  /// Return true if the value is not the smallest signed value.
+  /// \brief Return true if the value is not the smallest signed value.
   bool isNotMinSignedValue() const;
 
-  /// Return true if the value is the smallest signed value.
+  /// \brief Return true if the value is the smallest signed value.
   bool isMinSignedValue() const;
 
-  /// Return true if evaluation of this constant could trap. This is true for
-  /// things like constant expressions that could divide by zero.
+  /// canTrap - Return true if evaluation of this constant could trap.  This is
+  /// true for things like constant expressions that could divide by zero.
   bool canTrap() const;
 
-  /// Return true if the value can vary between threads.
+  /// isThreadDependent - Return true if the value can vary between threads.
   bool isThreadDependent() const;
 
   /// Return true if the value is dependent on a dllimport variable.
   bool isDLLImportDependent() const;
 
-  /// Return true if the constant has users other than constant expressions and
-  /// other dangling things.
+  /// isConstantUsed - Return true if the constant has users other than constant
+  /// exprs and other dangling things.
   bool isConstantUsed() const;
 
   /// This method classifies the entry according to whether or not it may
@@ -92,14 +93,15 @@ public:
   /// FIXME: This really should not be in IR.
   bool needsRelocation() const;
 
-  /// For aggregates (struct/array/vector) return the constant that corresponds
-  /// to the specified element if possible, or null if not. This can return null
-  /// if the element index is a ConstantExpr, or if 'this' is a constant expr.
+  /// getAggregateElement - For aggregates (struct/array/vector) return the
+  /// constant that corresponds to the specified element if possible, or null if
+  /// not.  This can return null if the element index is a ConstantExpr, or if
+  /// 'this' is a constant expr.
   Constant *getAggregateElement(unsigned Elt) const;
   Constant *getAggregateElement(Constant *Elt) const;
 
-  /// If this is a splat vector constant, meaning that all of the elements have
-  /// the same value, return that value. Otherwise return 0.
+  /// getSplatValue - If this is a splat vector constant, meaning that all of
+  /// the elements have the same value, return that value. Otherwise return 0.
   Constant *getSplatValue() const;
 
   /// If C is a constant integer then return its value, otherwise C must be a
@@ -140,14 +142,14 @@ public:
   /// @brief Get the all ones value
   static Constant *getAllOnesValue(Type* Ty);
 
-  /// Return the value for an integer or pointer constant, or a vector thereof,
-  /// with the given scalar value.
+  /// getIntegerValue - Return the value for an integer or pointer constant,
+  /// or a vector thereof, with the given scalar value.
   static Constant *getIntegerValue(Type *Ty, const APInt &V);
 
-  /// If there are any dead constant users dangling off of this constant, remove
-  /// them. This method is useful for clients that want to check to see if a
-  /// global is unused, but don't want to deal with potentially dead constants
-  /// hanging off of the globals.
+  /// removeDeadConstantUsers - If there are any dead constant users dangling
+  /// off of this constant, remove them.  This method is useful for clients
+  /// that want to check to see if a global is unused, but don't want to deal
+  /// with potentially dead constants hanging off of the globals.
   void removeDeadConstantUsers() const;
 
   Constant *stripPointerCasts() {

@@ -139,7 +139,7 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   unsigned Maj, Min, Rev;
   if (Triple.isMacOSX()) {
     Triple.getMacOSXVersion(Maj, Min, Rev);
-    PlatformName = "macos";
+    PlatformName = "macosx";
   } else {
     Triple.getOSVersion(Maj, Min, Rev);
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
@@ -155,25 +155,14 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
 
   // Set the appropriate OS version define.
   if (Triple.isiOS()) {
-    assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
-    char Str[7];
-    if (Maj < 10) {
-      Str[0] = '0' + Maj;
-      Str[1] = '0' + (Min / 10);
-      Str[2] = '0' + (Min % 10);
-      Str[3] = '0' + (Rev / 10);
-      Str[4] = '0' + (Rev % 10);
-      Str[5] = '\0';
-    } else {
-      // Handle versions >= 10.
-      Str[0] = '0' + (Maj / 10);
-      Str[1] = '0' + (Maj % 10);
-      Str[2] = '0' + (Min / 10);
-      Str[3] = '0' + (Min % 10);
-      Str[4] = '0' + (Rev / 10);
-      Str[5] = '0' + (Rev % 10);
-      Str[6] = '\0';
-    }
+    assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
+    char Str[6];
+    Str[0] = '0' + Maj;
+    Str[1] = '0' + (Min / 10);
+    Str[2] = '0' + (Min % 10);
+    Str[3] = '0' + (Rev / 10);
+    Str[4] = '0' + (Rev % 10);
+    Str[5] = '\0';
     if (Triple.isTvOS())
       Builder.defineMacro("__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__", Str);
     else
@@ -219,10 +208,6 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   // Tell users about the kernel if there is one.
   if (Triple.isOSDarwin())
     Builder.defineMacro("__MACH__");
-
-  // The Watch ABI uses Dwarf EH.
-  if(Triple.isWatchABI())
-    Builder.defineMacro("__ARM_DWARF_EH__");
 
   PlatformMinVersion = VersionTuple(Maj, Min, Rev);
 }
@@ -278,13 +263,6 @@ public:
   /// attribute on declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override {
     return false;
-  }
-
-  unsigned getExnObjectAlignment() const override {
-    // The alignment of an exception object is 8-bytes for darwin since
-    // libc++abi doesn't declare _Unwind_Exception with __attribute__((aligned))
-    // and therefore doesn't guarantee 16-byte alignment.
-    return  64;
   }
 };
 
@@ -2543,20 +2521,14 @@ public:
   bool setFPMath(StringRef Name) override;
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    // Most of the non-ARM calling conventions are i386 conventions.
-    switch (CC) {
-    case CC_X86ThisCall:
-    case CC_X86FastCall:
-    case CC_X86StdCall:
-    case CC_X86VectorCall:
-    case CC_C:
-    case CC_Swift:
-    case CC_X86Pascal:
-    case CC_IntelOclBicc:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
+    // We accept all non-ARM calling conventions
+    return (CC == CC_X86ThisCall ||
+            CC == CC_X86FastCall ||
+            CC == CC_X86StdCall ||
+            CC == CC_X86VectorCall ||
+            CC == CC_C ||
+            CC == CC_X86Pascal ||
+            CC == CC_IntelOclBicc) ? CCCR_OK : CCCR_Warning;
   }
 
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
@@ -4045,18 +4017,10 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_C:
-    case CC_Swift:
-    case CC_X86VectorCall:
-    case CC_IntelOclBicc:
-    case CC_X86_64Win64:
-    case CC_PreserveMost:
-    case CC_PreserveAll:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
+    return (CC == CC_C ||
+            CC == CC_X86VectorCall ||
+            CC == CC_IntelOclBicc ||
+            CC == CC_X86_64Win64) ? CCCR_OK : CCCR_Warning;
   }
 
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
@@ -4536,7 +4500,7 @@ public:
           Triple.getOS() == llvm::Triple::UnknownOS ||
           StringRef(CPU).startswith("cortex-m")) {
         setABI("aapcs");
-      } else if (Triple.isWatchABI()) {
+      } else if (Triple.isWatchOS()) {
         setABI("aapcs16");
       } else {
         setABI("apcs-gnu");
@@ -4752,7 +4716,7 @@ public:
 
     // Unfortunately, __ARM_ARCH_7K__ is now more of an ABI descriptor. The CPU
     // happens to be Cortex-A7 though, so it should still get __ARM_ARCH_7A__.
-    if (getTriple().isWatchABI())
+    if (getTriple().isWatchOS())
       Builder.defineMacro("__ARM_ARCH_7K__", "2");
 
     if (!CPUAttr.empty())
@@ -4839,14 +4803,13 @@ public:
     if (ABI == "aapcs" || ABI == "aapcs-linux" || ABI == "aapcs-vfp") {
       // Embedded targets on Darwin follow AAPCS, but not EABI.
       // Windows on ARM follows AAPCS VFP, but does not conform to EABI.
-      if (!getTriple().isOSBinFormatMachO() && !getTriple().isOSWindows())
+      if (!getTriple().isOSDarwin() && !getTriple().isOSWindows())
         Builder.defineMacro("__ARM_EABI__");
       Builder.defineMacro("__ARM_PCS", "1");
-    }
 
-    if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp" ||
-        ABI == "aapcs16")
-      Builder.defineMacro("__ARM_PCS_VFP", "1");
+      if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp")
+        Builder.defineMacro("__ARM_PCS_VFP", "1");
+    }
 
     if (SoftFloat)
       Builder.defineMacro("__SOFTFP__");
@@ -4942,8 +4905,8 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return IsAAPCS
                ? AAPCSABIBuiltinVaList
-               : (getTriple().isWatchABI() ? TargetInfo::CharPtrBuiltinVaList
-                                           : TargetInfo::VoidPtrBuiltinVaList);
+               : (getTriple().isWatchOS() ? TargetInfo::CharPtrBuiltinVaList
+                                          : TargetInfo::VoidPtrBuiltinVaList);
   }
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
@@ -5033,14 +4996,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_AAPCS:
-    case CC_AAPCS_VFP:
-    case CC_Swift:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
+    return (CC == CC_AAPCS || CC == CC_AAPCS_VFP) ? CCCR_OK : CCCR_Warning;
   }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
@@ -5291,7 +5247,7 @@ public:
     // ARMleTargetInfo.
     MaxAtomicInlineWidth = 64;
 
-    if (Triple.isWatchABI()) {
+    if (Triple.isWatchOS()) {
       // Darwin on iOS uses a variant of the ARM C++ ABI.
       TheCXXABI.set(TargetCXXABI::WatchOS);
 
@@ -5490,18 +5446,6 @@ public:
     setDataLayoutString();
 
     return true;
-  }
-
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_C:
-    case CC_Swift:
-    case CC_PreserveMost:
-    case CC_PreserveAll:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
   }
 
   bool isCLZForZeroUndef() const override { return false; }
@@ -6280,16 +6224,6 @@ public:
         .Case("htm", HasTransactionalExecution)
         .Case("vx", HasVector)
         .Default(false);
-  }
-
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_C:
-    case CC_Swift:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
   }
 
   StringRef getABI() const override {

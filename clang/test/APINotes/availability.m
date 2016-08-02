@@ -1,5 +1,4 @@
-// RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -iapinotes-modules %S/Inputs/APINotes -fapinotes-cache-path=%t/APINotesCache -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: %clang_cc1 -fapinotes -fapinotes-cache-path=%t/APINotesCache -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 
 #include "HeaderLib.h"
 #import <SomeKit/SomeKit.h>
@@ -11,12 +10,6 @@ int main() {
   // expected-note@HeaderLib.h:8{{'unavailable_function' has been explicitly marked unavailable here}}
   i = unavailable_global_int; // expected-error{{'unavailable_global_int' is unavailable}}
   // expected-note@HeaderLib.h:9{{'unavailable_global_int' has been explicitly marked unavailable here}}
-
-  unavailable_typedef t; // expected-error{{'unavailable_typedef' is unavailable}}
-  // expected-note@HeaderLib.h:13{{'unavailable_typedef' has been explicitly marked unavailable here}}
-
-  struct unavailable_struct s; // expected-error{{'unavailable_struct' is unavailable}}
-  // expected-note@HeaderLib.h:14{{'unavailable_struct' has been explicitly marked unavailable here}}
 
   B *b = 0; // expected-error{{'B' is unavailable: just don't}}
   // expected-note@SomeKit/SomeKit.h:15{{'B' has been explicitly marked unavailable here}}

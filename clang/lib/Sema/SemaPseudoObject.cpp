@@ -578,7 +578,7 @@ bool ObjCPropertyOpBuilder::isWeakProperty() const {
   if (RefExpr->isExplicitProperty()) {
     const ObjCPropertyDecl *Prop = RefExpr->getExplicitProperty();
     if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
-      return true;
+      return !Prop->hasAttr<IBOutletAttr>();
 
     T = Prop->getType();
   } else if (Getter) {
@@ -658,8 +658,7 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
         SmallString<100> PropertyName = thisPropertyName;
         PropertyName[0] = front;
         IdentifierInfo *AltMember = &S.PP.getIdentifierTable().get(PropertyName);
-        if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(
-                AltMember, prop->getQueryKind()))
+        if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(AltMember))
           if (prop != prop1 && (prop1->getSetterMethodDecl() == setter)) {
             S.Diag(RefExpr->getExprLoc(), diag::error_property_setter_ambiguous_use)
               << prop << prop1 << setter->getSelector();

@@ -25,12 +25,9 @@
 //
 // This file contains two passes:
 // (1) Pass PGOInstrumentationGen which instruments the IR to generate edge
-// count profile, and generates the instrumentation for indirect call
-// profiling.
+// count profile, and
 // (2) Pass PGOInstrumentationUse which reads the edge count profile and
-// annotates the branch weights. It also reads the indirect call value
-// profiling records and annotate the indirect call instructions.
-//
+// annotates the branch weights.
 // To get the precise counter information, These two passes need to invoke at
 // the same compilation point (so they see the same IR). For pass
 // PGOInstrumentationGen, the real work is done in instrumentOneFunc(). For
@@ -48,16 +45,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation.h"
 #include "CFGMST.h"
-#include "IndirectCallSiteVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -70,7 +65,6 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JamCRC.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <string>
 #include <utility>
@@ -87,7 +81,6 @@ STATISTIC(NumOfPGOSplit, "Number of critical edge splits.");
 STATISTIC(NumOfPGOFunc, "Number of functions having valid profile counts.");
 STATISTIC(NumOfPGOMismatch, "Number of functions having mismatch profile.");
 STATISTIC(NumOfPGOMissing, "Number of functions without profile.");
-STATISTIC(NumOfPGOICall, "Number of indirect call value instrumentations.");
 
 // Command line option to specify the file to read profile from. This is
 // mainly used for testing.
@@ -96,20 +89,6 @@ static cl::opt<std::string>
                        cl::value_desc("filename"),
                        cl::desc("Specify the path of profile data file. This is"
                                 "mainly for test purpose."));
-
-// Command line option to disable value profiling. The default is false:
-// i.e. value profiling is enabled by default. This is for debug purpose.
-static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
-                                           cl::Hidden,
-                                           cl::desc("Disable Value Profiling"));
-
-// Command line option to set the maximum number of VP annotations to write to
-// the metada for a single indirect call callsite.
-static cl::opt<unsigned>
-    MaxNumAnnotations("icp-max-annotations", cl::init(3), cl::Hidden,
-                     cl::ZeroOrMore,
-                     cl::desc("Max number of annotations for a single indirect "
-                              "call callsite"));
 
 namespace {
 class PGOInstrumentationGen : public ModulePass {
@@ -246,7 +225,7 @@ public:
   // Dump edges and BB information.
   void dumpInfo(std::string Str = "") const {
     MST.dumpEdges(dbgs(), Twine("Dump Function ") + FuncName + " Hash: " +
-                              Twine(FunctionHash) + "\t" + Str);
+                          Twine(FunctionHash) + "\t" + Str);
   }
 
   FuncPGOInstrumentation(Function &Func, bool CreateGlobalVar = false,
@@ -326,7 +305,7 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   return InstrBB;
 }
 
-// Visit all edge and instrument the edges not in MST, and do value profiling.
+// Visit all edge and instrument the edges not in MST.
 // Critical edges will be split.
 static void instrumentOneFunc(Function &F, Module *M,
                               BranchProbabilityInfo *BPI,
@@ -339,7 +318,6 @@ static void instrumentOneFunc(Function &F, Module *M,
   }
 
   uint32_t I = 0;
-  Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
   for (auto &E : FuncInfo.MST.AllEdges) {
     BasicBlock *InstrBB = FuncInfo.getInstrBB(E.get());
     if (!InstrBB)
@@ -348,34 +326,13 @@ static void instrumentOneFunc(Function &F, Module *M,
     IRBuilder<> Builder(InstrBB, InstrBB->getFirstInsertionPt());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
+    Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
     Builder.CreateCall(
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment),
         {llvm::ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
          Builder.getInt64(FuncInfo.FunctionHash), Builder.getInt32(NumCounters),
          Builder.getInt32(I++)});
   }
-
-  if (DisableValueProfiling)
-    return;
-
-  unsigned NumIndirectCallSites = 0;
-  for (auto &I : findIndirectCallSites(F)) {
-    CallSite CS(I);
-    Value *Callee = CS.getCalledValue();
-    DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
-                 << NumIndirectCallSites << "\n");
-    IRBuilder<> Builder(I);
-    assert(Builder.GetInsertPoint() != I->getParent()->end() &&
-           "Cannot get the Instrumentation point");
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-        {llvm::ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
-         Builder.getInt64(FuncInfo.FunctionHash),
-         Builder.CreatePtrToInt(Callee, Builder.getInt64Ty()),
-         Builder.getInt32(llvm::InstrProfValueKind::IPVK_IndirectCallTarget),
-         Builder.getInt32(NumIndirectCallSites++)});
-  }
-  NumOfPGOICall += NumIndirectCallSites;
 }
 
 // This class represents a CFG edge in profile use compilation.
@@ -395,8 +352,7 @@ struct PGOUseEdge : public PGOEdge {
   const std::string infoString() const {
     if (!CountValid)
       return PGOEdge::infoString();
-    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue))
-        .str();
+    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue)).str();
   }
 };
 
@@ -443,32 +399,6 @@ static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
 }
 
 class PGOUseFunc {
-public:
-  PGOUseFunc(Function &Func, Module *Modu, BranchProbabilityInfo *BPI = nullptr,
-             BlockFrequencyInfo *BFI = nullptr)
-      : F(Func), M(Modu), FuncInfo(Func, false, BPI, BFI),
-        FreqAttr(FFA_Normal) {}
-
-  // Read counts for the instrumented BB from profile.
-  bool readCounters(IndexedInstrProfReader *PGOReader);
-
-  // Populate the counts for all BBs.
-  void populateCounters();
-
-  // Set the branch weights based on the count values.
-  void setBranchWeights();
-
-  // Annotate the indirect call sites.
-  void annotateIndirectCallSites();
-
-  // The hotness of the function from the profile count.
-  enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
-
-  // Return the funtion hotness from the profile.
-  FuncFreqAttr getFuncFreqAttr() const {
-    return FreqAttr;
-  }
-
 private:
   Function &F;
   Module *M;
@@ -484,12 +414,6 @@ private:
   // compilation.
   uint64_t ProgramMaxCount;
 
-  // ProfileRecord for this function.
-  InstrProfRecord ProfileRecord;
-
-  // Function hotness info derived from profile.
-  FuncFreqAttr FreqAttr;
-
   // Find the Instrumented BB and set the value.
   void setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
 
@@ -503,7 +427,7 @@ private:
   // Set the hot/cold inline hints based on the count values.
   // FIXME: This function should be removed once the functionality in
   // the inliner is implemented.
-  void markFunctionAttributes(uint64_t EntryCount, uint64_t MaxCount) {
+  void applyFunctionAttributes(uint64_t EntryCount, uint64_t MaxCount) {
     if (ProgramMaxCount == 0)
       return;
     // Threshold of the hot functions.
@@ -511,10 +435,24 @@ private:
     // Threshold of the cold functions.
     const BranchProbability ColdFunctionThreshold(2, 10000);
     if (EntryCount >= HotFunctionThreshold.scale(ProgramMaxCount))
-      FreqAttr = FFA_Hot;
+      F.addFnAttr(llvm::Attribute::InlineHint);
     else if (MaxCount <= ColdFunctionThreshold.scale(ProgramMaxCount))
-      FreqAttr = FFA_Cold;
+      F.addFnAttr(llvm::Attribute::Cold);
   }
+
+public:
+  PGOUseFunc(Function &Func, Module *Modu, BranchProbabilityInfo *BPI = nullptr,
+             BlockFrequencyInfo *BFI = nullptr)
+      : F(Func), M(Modu), FuncInfo(Func, false, BPI, BFI) {}
+
+  // Read counts for the instrumented BB from profile.
+  bool readCounters(IndexedInstrProfReader *PGOReader);
+
+  // Populate the counts for all BBs.
+  void populateCounters();
+
+  // Set the branch weights based on the count values.
+  void setBranchWeights();
 };
 
 // Visit all the edges and assign the count value for the instrumented
@@ -587,8 +525,7 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
         DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
     return false;
   }
-  ProfileRecord = std::move(Result.get());
-  std::vector<uint64_t> &CountFromProfile = ProfileRecord.Counts;
+  std::vector<uint64_t> &CountFromProfile = Result.get().Counts;
 
   NumOfPGOFunc++;
   DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
@@ -677,7 +614,7 @@ void PGOUseFunc::populateCounters() {
     if (Count > FuncMaxCount)
       FuncMaxCount = Count;
   }
-  markFunctionAttributes(FuncEntryCount, FuncMaxCount);
+  applyFunctionAttributes(FuncEntryCount, FuncMaxCount);
 
   DEBUG(FuncInfo.dumpInfo("after reading profile."));
 }
@@ -726,60 +663,9 @@ void PGOUseFunc::setBranchWeights() {
           dbgs() << "\n";);
   }
 }
-
-// Traverse all the indirect callsites and annotate the instructions.
-void PGOUseFunc::annotateIndirectCallSites() {
-  if (DisableValueProfiling)
-    return;
-
-  // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
-
-  unsigned IndirectCallSiteIndex = 0;
-  auto IndirectCallSites = findIndirectCallSites(F);
-  unsigned NumValueSites =
-      ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
-  if (NumValueSites != IndirectCallSites.size()) {
-    std::string Msg =
-        std::string("Inconsistent number of indirect call sites: ") +
-        F.getName().str();
-    auto &Ctx = M->getContext();
-    Ctx.diagnose(
-        DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
-    return;
-  }
-
-  for (auto &I : IndirectCallSites) {
-    DEBUG(dbgs() << "Read one indirect call instrumentation: Index="
-                 << IndirectCallSiteIndex << " out of " << NumValueSites
-                 << "\n");
-    annotateValueSite(*M, *I, ProfileRecord, IPVK_IndirectCallTarget,
-                      IndirectCallSiteIndex, MaxNumAnnotations);
-    IndirectCallSiteIndex++;
-  }
-}
 } // end anonymous namespace
 
-// Create a COMDAT variable IR_LEVEL_PROF_VARNAME to make the runtime
-// aware this is an ir_level profile so it can set the version flag.
-static void createIRLevelProfileFlagVariable(Module &M) {
-  Type *IntTy64 = Type::getInt64Ty(M.getContext());
-  uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
-  auto IRLevelVersionVariable = new GlobalVariable(
-      M, IntTy64, true, GlobalVariable::ExternalLinkage,
-      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)),
-      INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR));
-  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
-  Triple TT(M.getTargetTriple());
-  if (TT.isOSBinFormatMachO())
-    IRLevelVersionVariable->setLinkage(GlobalValue::LinkOnceODRLinkage);
-  else
-    IRLevelVersionVariable->setComdat(M.getOrInsertComdat(
-        StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
-}
-
 bool PGOInstrumentationGen::runOnModule(Module &M) {
-  createIRLevelProfileFlagVariable(M);
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -797,7 +683,6 @@ static void setPGOCountOnFunc(PGOUseFunc &Func,
   if (Func.readCounters(PGOReader)) {
     Func.populateCounters();
     Func.setBranchWeights();
-    Func.annotateIndirectCallSites();
   }
 }
 
@@ -818,15 +703,7 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
                                           "Cannot get PGOReader"));
     return false;
   }
-  // TODO: might need to change the warning once the clang option is finalized.
-  if (!PGOReader->isIRLevelProfile()) {
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        ProfileFileName.data(), "Not an IR level instrumentation profile"));
-    return false;
-  }
 
-  std::vector<Function *> HotFunctions;
-  std::vector<Function *> ColdFunctions;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -836,23 +713,6 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
         &(getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI());
     PGOUseFunc Func(F, &M, BPI, BFI);
     setPGOCountOnFunc(Func, PGOReader.get());
-    PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
-    if (FreqAttr == PGOUseFunc::FFA_Cold)
-      ColdFunctions.push_back(&F);
-    else if (FreqAttr == PGOUseFunc::FFA_Hot)
-      HotFunctions.push_back(&F);
   }
-
-  // Set function hotness attribute from the profile.
-  for (auto &F : HotFunctions) {
-    F->addFnAttr(llvm::Attribute::InlineHint);
-    DEBUG(dbgs() << "Set inline attribute to function: " << F->getName()
-                 << "\n");
-  }
-  for (auto &F : ColdFunctions) {
-    F->addFnAttr(llvm::Attribute::Cold);
-    DEBUG(dbgs() << "Set cold attribute to function: " << F->getName() << "\n");
-  }
-
   return true;
 }

@@ -183,7 +183,6 @@ protected:
   MCSection *SixteenByteConstantSection;
   MCSection *LazySymbolPointerSection;
   MCSection *NonLazySymbolPointerSection;
-  MCSection *ThreadLocalPointerSection;
 
   /// COFF specific sections.
   MCSection *DrectveSection;
@@ -324,9 +323,6 @@ public:
   }
   MCSection *getNonLazySymbolPointerSection() const {
     return NonLazySymbolPointerSection;
-  }
-  MCSection *getThreadLocalPointerSection() const {
-    return ThreadLocalPointerSection;
   }
 
   // COFF specific sections.

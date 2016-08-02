@@ -32,10 +32,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       )
   endif()
 
-  if(CMAKE_VERSION VERSION_GREATER 3.1.20141117)
-    set(cmake_3_2_USES_TERMINAL USES_TERMINAL)
-  endif()
-
   # Add compiler-rt as an external project.
   set(COMPILER_RT_PREFIX ${CMAKE_BINARY_DIR}/projects/compiler-rt)
 
@@ -71,7 +67,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                -DLLVM_CONFIG_PATH=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config
-               -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
                -DCOMPILER_RT_OUTPUT_DIR=${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}
                -DCOMPILER_RT_EXEC_OUTPUT_DIR=${LLVM_RUNTIME_OUTPUT_INTDIR}
                -DCOMPILER_RT_INSTALL_PATH:STRING=lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}
@@ -100,8 +95,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                     DEPENDS compiler-rt
                     COMMAND "${CMAKE_COMMAND}"
                              -DCMAKE_INSTALL_COMPONENT=compiler-rt
-                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                    ${cmake_3_2_USES_TERMINAL})
+                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 
   # Add top-level targets that build specific compiler-rt runtimes.
   set(COMPILER_RT_RUNTIMES asan builtins dfsan lsan msan profile tsan ubsan)
@@ -111,7 +105,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       COMMAND ${build_runtime_cmd}
       DEPENDS compiler-rt-configure
       WORKING_DIRECTORY ${BINARY_DIR}
-      VERBATIM ${cmake_3_2_USES_TERMINAL})
+      VERBATIM)
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
@@ -121,15 +115,14 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
 
     # Add top-level targets for various compiler-rt test suites.
     set(COMPILER_RT_TEST_SUITES check-asan check-asan-dynamic check-dfsan
-      check-lsan check-msan check-sanitizer check-tsan check-ubsan
-      check-profile check-cfi check-cfi-and-supported check-safestack)
+      check-lsan check-msan check-sanitizer check-tsan check-ubsan)
     foreach(test_suite ${COMPILER_RT_TEST_SUITES})
       get_ext_project_build_command(run_test_suite ${test_suite})
       add_custom_target(${test_suite}
         COMMAND ${run_test_suite}
         DEPENDS compiler-rt-build ${COMPILER_RT_TEST_DEPENDENCIES}
         WORKING_DIRECTORY ${BINARY_DIR}
-        VERBATIM ${cmake_3_2_USES_TERMINAL})
+        VERBATIM)
     endforeach()
 
     # Add special target to run all compiler-rt test suites.
@@ -138,7 +131,6 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       COMMAND ${run_check_compiler_rt}
       DEPENDS compiler-rt-build ${COMPILER_RT_TEST_DEPENDENCIES}
       WORKING_DIRECTORY ${BINARY_DIR}
-      VERBATIM ${cmake_3_2_USES_TERMINAL})
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS check-compiler-rt)
+      VERBATIM)
   endif()
 endif()

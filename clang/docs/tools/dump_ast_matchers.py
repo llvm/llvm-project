@@ -358,11 +358,11 @@ traversal_matcher_table = sort_table('TRAVERSAL', traversal_matchers)
 
 reference = open('../LibASTMatchersReference.html').read()
 reference = re.sub(r'<!-- START_DECL_MATCHERS.*END_DECL_MATCHERS -->',
-                   node_matcher_table, reference, flags=re.S)
+                   '%s', reference, flags=re.S) % node_matcher_table
 reference = re.sub(r'<!-- START_NARROWING_MATCHERS.*END_NARROWING_MATCHERS -->',
-                   narrowing_matcher_table, reference, flags=re.S)
+                   '%s', reference, flags=re.S) % narrowing_matcher_table
 reference = re.sub(r'<!-- START_TRAVERSAL_MATCHERS.*END_TRAVERSAL_MATCHERS -->',
-                   traversal_matcher_table, reference, flags=re.S)
+                   '%s', reference, flags=re.S) % traversal_matcher_table
 
 with open('../LibASTMatchersReference.html', 'wb') as output:
   output.write(reference)

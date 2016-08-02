@@ -335,7 +335,7 @@ def Xassembler : Separate<["-"], "Xassembler">,
   HelpText<"Pass <arg> to the assembler">, MetaVarName<"<arg>">;
 def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to the clang compiler">, MetaVarName<"<arg>">,
-  Flags<[DriverOption, CoreOption]>, Group<CompileOnly_Group>;
+  Flags<[DriverOption, CoreOption]>;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
@@ -782,9 +782,6 @@ def fmodules_validate_once_per_build_session : Flag<["-"], "fmodules-validate-on
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Don't verify input files for the modules if the module has been "
            "successfully validated or loaded during this build session">;
-def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagnostic-validation">,
-  Group<i_Group>, Flags<[CC1Option]>,
-  HelpText<"Disable validation of the diagnostic options when loading the module">;
 def fmodules_validate_system_headers : Flag<["-"], "fmodules-validate-system-headers">,
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Validate the system headers that a module depends on when loading the module">;
@@ -1219,8 +1216,6 @@ def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"Display available options">;
 def index_header_map : Flag<["-"], "index-header-map">, Flags<[CC1Option]>,
   HelpText<"Make the next included directory (-I or -F) an indexer header map">;
-def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>, Flags<[CC1Option]>,
-  HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>, Flags<[CC1Option]>,

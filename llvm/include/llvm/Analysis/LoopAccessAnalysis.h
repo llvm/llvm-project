@@ -651,16 +651,13 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                                       const ValueToValueMap &PtrToStride,
                                       Value *Ptr, Value *OrigPtr = nullptr);
 
-/// \brief If the pointer has a constant stride return it in units of its
-/// element size.  Otherwise return zero.
-///
-/// Ensure that it does not wrap in the address space, assuming \p Preds is
-/// true.
+/// \brief Check the stride of the pointer and ensure that it does not wrap in
+/// the address space, assuming \p Preds is true.
 ///
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add a new predicate to \p Preds.
 int isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
-                 const ValueToValueMap &StridesMap = ValueToValueMap());
+                 const ValueToValueMap &StridesMap);
 
 /// \brief This analysis provides dependence information for the memory accesses
 /// of a loop.

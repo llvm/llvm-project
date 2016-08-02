@@ -28,7 +28,8 @@ class SCEVAAResult : public AAResultBase<SCEVAAResult> {
   ScalarEvolution &SE;
 
 public:
-  explicit SCEVAAResult(ScalarEvolution &SE) : AAResultBase(), SE(SE) {}
+  explicit SCEVAAResult(const TargetLibraryInfo &TLI, ScalarEvolution &SE)
+      : AAResultBase(TLI), SE(SE) {}
   SCEVAAResult(SCEVAAResult &&Arg) : AAResultBase(std::move(Arg)), SE(Arg.SE) {}
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);

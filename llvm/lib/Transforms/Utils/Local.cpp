@@ -1025,8 +1025,7 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
 ///
 
 /// See if there is a dbg.value intrinsic for DIVar before I.
-static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
-                              Instruction *I) {
+static bool LdStHasDebugValue(const DILocalVariable *DIVar, Instruction *I) {
   // Since we can't guarantee that the original dbg.declare instrinsic
   // is removed by LowerDbgDeclare(), we need to make sure that we are
   // not inserting the same dbg.value intrinsic over and over.
@@ -1036,8 +1035,7 @@ static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(PrevI))
       if (DVI->getValue() == I->getOperand(0) &&
           DVI->getOffset() == 0 &&
-          DVI->getVariable() == DIVar &&
-          DVI->getExpression() == DIExpr)
+          DVI->getVariable() == DIVar)
         return true;
   }
   return false;
@@ -1050,6 +1048,9 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   auto *DIVar = DDI->getVariable();
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
+
+  if (LdStHasDebugValue(DIVar, SI))
+    return true;
 
   // If an argument is zero extended then use argument directly. The ZExt
   // may be zapped by an optimization pass in future.
@@ -1065,25 +1066,25 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
     // to the alloca described by DDI, if it's first operand is an extend,
     // we're guaranteed that before extension, the value was narrower than
     // the size of the alloca, hence the size of the described variable.
-    SmallVector<uint64_t, 3> Ops;
+    SmallVector<uint64_t, 3> NewDIExpr;
     unsigned PieceOffset = 0;
     // If this already is a bit piece, we drop the bit piece from the expression
     // and record the offset.
     if (DIExpr->isBitPiece()) {
-      Ops.append(DIExpr->elements_begin(), DIExpr->elements_end()-3);
+      NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end()-3);
       PieceOffset = DIExpr->getBitPieceOffset();
     } else {
-      Ops.append(DIExpr->elements_begin(), DIExpr->elements_end());
+      NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end());
     }
-    Ops.push_back(dwarf::DW_OP_bit_piece);
-    Ops.push_back(PieceOffset); // Offset
+    NewDIExpr.push_back(dwarf::DW_OP_bit_piece);
+    NewDIExpr.push_back(PieceOffset); //Offset
     const DataLayout &DL = DDI->getModule()->getDataLayout();
-    Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType())); // Size
-    auto NewDIExpr = Builder.createExpression(Ops);
-    if (!LdStHasDebugValue(DIVar, NewDIExpr, SI))
-      Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar, NewDIExpr,
-                                      DDI->getDebugLoc(), SI);
-  } else if (!LdStHasDebugValue(DIVar, DIExpr, SI))
+    NewDIExpr.push_back(DL.getTypeSizeInBits(ExtendedArg->getType())); // Size
+    Builder.insertDbgValueIntrinsic(ExtendedArg, 0, DIVar,
+                                    Builder.createExpression(NewDIExpr),
+                                    DDI->getDebugLoc(), SI);
+  }
+  else
     Builder.insertDbgValueIntrinsic(SI->getOperand(0), 0, DIVar, DIExpr,
                                     DDI->getDebugLoc(), SI);
   return true;
@@ -1097,7 +1098,7 @@ bool llvm::ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
 
-  if (LdStHasDebugValue(DIVar, DIExpr, LI))
+  if (LdStHasDebugValue(DIVar, LI))
     return true;
 
   // We are now tracking the loaded value instead of the address. In the
@@ -1440,7 +1441,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
-  SmallPtrSet<BasicBlock*, 16> Reachable;
+  SmallPtrSet<BasicBlock*, 128> Reachable;
   bool Changed = markAliveBlocks(F, Reachable);
 
   // If there are unreachable blocks in the CFG...

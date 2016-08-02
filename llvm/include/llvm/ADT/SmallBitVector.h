@@ -21,11 +21,13 @@
 
 namespace llvm {
 
-/// This is a 'bitvector' (really, a variable-sized bit array), optimized for
-/// the case when the array is small. It contains one pointer-sized field, which
-/// is directly used as a plain collection of bits when possible, or as a
-/// pointer to a larger heap-allocated array when necessary. This allows normal
-/// "small" cases to be fast without losing generality for large inputs.
+/// SmallBitVector - This is a 'bitvector' (really, a variable-sized bit array),
+/// optimized for the case when the array is small.  It contains one
+/// pointer-sized field, which is directly used as a plain collection of bits
+/// when possible, or as a pointer to a larger heap-allocated array when
+/// necessary.  This allows normal "small" cases to be fast without losing
+/// generality for large inputs.
+///
 class SmallBitVector {
   // TODO: In "large" mode, a pointer to a BitVector is used, leading to an
   // unnecessary level of indirection. It would be more efficient to use a
@@ -137,11 +139,11 @@ private:
   }
 
 public:
-  /// Creates an empty bitvector.
+  /// SmallBitVector default ctor - Creates an empty bitvector.
   SmallBitVector() : X(1) {}
 
-  /// Creates a bitvector of specified number of bits. All bits are initialized
-  /// to the specified value.
+  /// SmallBitVector ctor - Creates a bitvector of specified number of bits. All
+  /// bits are initialized to the specified value.
   explicit SmallBitVector(unsigned s, bool t = false) {
     if (s <= SmallNumDataBits)
       switchToSmall(t ? ~uintptr_t(0) : 0, s);
@@ -166,17 +168,17 @@ public:
       delete getPointer();
   }
 
-  /// Tests whether there are no bits in this bitvector.
+  /// empty - Tests whether there are no bits in this bitvector.
   bool empty() const {
     return isSmall() ? getSmallSize() == 0 : getPointer()->empty();
   }
 
-  /// Returns the number of bits in this bitvector.
+  /// size - Returns the number of bits in this bitvector.
   size_t size() const {
     return isSmall() ? getSmallSize() : getPointer()->size();
   }
 
-  /// Returns the number of bits which are set.
+  /// count - Returns the number of bits which are set.
   size_type count() const {
     if (isSmall()) {
       uintptr_t Bits = getSmallBits();
@@ -185,28 +187,29 @@ public:
     return getPointer()->count();
   }
 
-  /// Returns true if any bit is set.
+  /// any - Returns true if any bit is set.
   bool any() const {
     if (isSmall())
       return getSmallBits() != 0;
     return getPointer()->any();
   }
 
-  /// Returns true if all bits are set.
+  /// all - Returns true if all bits are set.
   bool all() const {
     if (isSmall())
       return getSmallBits() == (uintptr_t(1) << getSmallSize()) - 1;
     return getPointer()->all();
   }
 
-  /// Returns true if none of the bits are set.
+  /// none - Returns true if none of the bits are set.
   bool none() const {
     if (isSmall())
       return getSmallBits() == 0;
     return getPointer()->none();
   }
 
-  /// Returns the index of the first set bit, -1 if none of the bits are set.
+  /// find_first - Returns the index of the first set bit, -1 if none
+  /// of the bits are set.
   int find_first() const {
     if (isSmall()) {
       uintptr_t Bits = getSmallBits();
@@ -217,8 +220,8 @@ public:
     return getPointer()->find_first();
   }
 
-  /// Returns the index of the next set bit following the "Prev" bit.
-  /// Returns -1 if the next set bit is not found.
+  /// find_next - Returns the index of the next set bit following the
+  /// "Prev" bit. Returns -1 if the next set bit is not found.
   int find_next(unsigned Prev) const {
     if (isSmall()) {
       uintptr_t Bits = getSmallBits();
@@ -231,14 +234,14 @@ public:
     return getPointer()->find_next(Prev);
   }
 
-  /// Clear all bits.
+  /// clear - Clear all bits.
   void clear() {
     if (!isSmall())
       delete getPointer();
     switchToSmall(0, 0);
   }
 
-  /// Grow or shrink the bitvector.
+  /// resize - Grow or shrink the bitvector.
   void resize(unsigned N, bool t = false) {
     if (!isSmall()) {
       getPointer()->resize(N, t);
@@ -293,7 +296,7 @@ public:
     return *this;
   }
 
-  /// Efficiently set a range of bits in [I, E)
+  /// set - Efficiently set a range of bits in [I, E)
   SmallBitVector &set(unsigned I, unsigned E) {
     assert(I <= E && "Attempted to set backwards range!");
     assert(E <= size() && "Attempted to set out-of-bounds range!");
@@ -324,7 +327,7 @@ public:
     return *this;
   }
 
-  /// Efficiently reset a range of bits in [I, E)
+  /// reset - Efficiently reset a range of bits in [I, E)
   SmallBitVector &reset(unsigned I, unsigned E) {
     assert(I <= E && "Attempted to reset backwards range!");
     assert(E <= size() && "Attempted to reset out-of-bounds range!");
@@ -419,7 +422,7 @@ public:
     return *this;
   }
 
-  /// Reset bits that are set in RHS. Same as *this &= ~RHS.
+  /// reset - Reset bits that are set in RHS. Same as *this &= ~RHS.
   SmallBitVector &reset(const SmallBitVector &RHS) {
     if (isSmall() && RHS.isSmall())
       setSmallBits(getSmallBits() & ~RHS.getSmallBits());
@@ -433,7 +436,8 @@ public:
     return *this;
   }
 
-  /// Check if (This - RHS) is zero. This is the same as reset(RHS) and any().
+  /// test - Check if (This - RHS) is zero.
+  /// This is the same as reset(RHS) and any().
   bool test(const SmallBitVector &RHS) const {
     if (isSmall() && RHS.isSmall())
       return (getSmallBits() & ~RHS.getSmallBits()) != 0;
@@ -510,7 +514,7 @@ public:
     std::swap(X, RHS.X);
   }
 
-  /// Add '1' bits from Mask to this vector. Don't resize.
+  /// setBitsInMask - Add '1' bits from Mask to this vector. Don't resize.
   /// This computes "*this |= Mask".
   void setBitsInMask(const uint32_t *Mask, unsigned MaskWords = ~0u) {
     if (isSmall())
@@ -519,8 +523,8 @@ public:
       getPointer()->setBitsInMask(Mask, MaskWords);
   }
 
-  /// Clear any bits in this vector that are set in Mask. Don't resize.
-  /// This computes "*this &= ~Mask".
+  /// clearBitsInMask - Clear any bits in this vector that are set in Mask.
+  /// Don't resize. This computes "*this &= ~Mask".
   void clearBitsInMask(const uint32_t *Mask, unsigned MaskWords = ~0u) {
     if (isSmall())
       applyMask<false, false>(Mask, MaskWords);
@@ -528,8 +532,8 @@ public:
       getPointer()->clearBitsInMask(Mask, MaskWords);
   }
 
-  /// Add a bit to this vector for every '0' bit in Mask. Don't resize.
-  /// This computes "*this |= ~Mask".
+  /// setBitsNotInMask - Add a bit to this vector for every '0' bit in Mask.
+  /// Don't resize.  This computes "*this |= ~Mask".
   void setBitsNotInMask(const uint32_t *Mask, unsigned MaskWords = ~0u) {
     if (isSmall())
       applyMask<true, true>(Mask, MaskWords);
@@ -537,8 +541,8 @@ public:
       getPointer()->setBitsNotInMask(Mask, MaskWords);
   }
 
-  /// Clear a bit in this vector for every '0' bit in Mask. Don't resize.
-  /// This computes "*this &= Mask".
+  /// clearBitsNotInMask - Clear a bit in this vector for every '0' bit in Mask.
+  /// Don't resize.  This computes "*this &= Mask".
   void clearBitsNotInMask(const uint32_t *Mask, unsigned MaskWords = ~0u) {
     if (isSmall())
       applyMask<false, true>(Mask, MaskWords);

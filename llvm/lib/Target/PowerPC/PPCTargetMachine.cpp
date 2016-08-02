@@ -313,7 +313,7 @@ void PPCPassConfig::addIRPasses() {
   if (EnablePrefetch.getNumOccurrences() > 0)
     UsePrefetching = EnablePrefetch;
   if (UsePrefetching)
-    addPass(createLoopDataPrefetchPass());
+    addPass(createPPCLoopDataPrefetchPass());
 
   if (TM->getOptLevel() == CodeGenOpt::Aggressive && EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices

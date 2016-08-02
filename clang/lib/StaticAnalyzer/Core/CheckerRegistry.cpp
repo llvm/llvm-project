@@ -49,12 +49,12 @@ static void collectCheckers(const CheckerRegistry::CheckerInfoList &checkers,
                             CheckerOptInfo &opt, CheckerInfoSet &collected) {
   // Use a binary search to find the possible start of the package.
   CheckerRegistry::CheckerInfo packageInfo(nullptr, opt.getName(), "");
-  auto end = checkers.cend();
+  CheckerRegistry::CheckerInfoList::const_iterator e = checkers.end();
   CheckerRegistry::CheckerInfoList::const_iterator i =
-    std::lower_bound(checkers.cbegin(), end, packageInfo, checkerNameLT);
+    std::lower_bound(checkers.begin(), e, packageInfo, checkerNameLT);
 
   // If we didn't even find a possible package, give up.
-  if (i == end)
+  if (i == e)
     return;
 
   // If what we found doesn't actually start the package, give up.
@@ -73,7 +73,7 @@ static void collectCheckers(const CheckerRegistry::CheckerInfoList &checkers,
     size = packageSize->getValue();
 
   // Step through all the checkers in the package.
-  for (auto checkEnd = i+size; i != checkEnd; ++i) {
+  for (e = i+size; i != e; ++i) {
     if (opt.isEnabled())
       collected.insert(&*i);
     else

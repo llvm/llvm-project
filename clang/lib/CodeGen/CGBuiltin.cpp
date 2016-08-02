@@ -18,7 +18,6 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/Analyses/OSLog.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -406,17 +405,6 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   llvm::Type *Tys[] = {ResType, Builder.getInt8PtrTy(0)};
   Value *F = CGM.getIntrinsic(Intrinsic::objectsize, Tys);
   return Builder.CreateCall(F, {EmitScalarExpr(E), CI});
-}
-
-namespace {
-  struct CallObjCArcUse final : EHScopeStack::Cleanup {
-    CallObjCArcUse(llvm::Value *object) : object(object) {}
-    llvm::Value *object;
-
-    void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.EmitARCIntrinsicUse(object);
-    }
-  };
 }
 
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
@@ -1306,7 +1294,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       Args.add(RValue::get(llvm::Constant::getNullValue(VoidPtrTy)),
                getContext().VoidPtrTy);
     const CGFunctionInfo &FuncInfo =
-        CGM.getTypes().arrangeBuiltinFunctionCall(E->getType(), Args);
+        CGM.getTypes().arrangeFreeFunctionCall(E->getType(), Args,
+                                               FunctionType::ExtInfo(),
+                                               RequiredArgs::All);
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FuncInfo);
     llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy, LibCallName);
     return EmitCall(FuncInfo, Func, ReturnValueSlot(), Args);
@@ -1972,77 +1962,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
             CGM.getCXXABI().getThrowInfo(FD->getParamDecl(0)->getType()))
       return RValue::get(llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy));
     break;
-  }
-
-  case Builtin::BI__builtin_os_log_format: {
-    assert(E->getNumArgs() >= 2 &&
-           "__builtin_os_log_format takes at least 2 arguments");
-    analyze_os_log::OSLogBufferLayout Layout;
-    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
-    Address BufAddr = EmitPointerWithAlignment(E->getArg(0));
-    // Ignore argument 1, the format string. It is not currently used.
-    CharUnits offset;
-    Builder.CreateStore(
-      Builder.getInt8(Layout.getSummaryByte()),
-      Builder.CreateConstByteGEP(BufAddr, offset++, "summary"));
-    Builder.CreateStore(
-      Builder.getInt8(Layout.getNumArgsByte()),
-      Builder.CreateConstByteGEP(BufAddr, offset++, "numArgs"));
-
-    llvm::SmallVector<llvm::Value *, 4> RetainableOperands;
-    for (const auto &item : Layout.Items) {
-      Builder.CreateStore(
-        Builder.getInt8(item.getDescriptorByte()),
-        Builder.CreateConstByteGEP(BufAddr, offset++, "argDescriptor"));
-      Builder.CreateStore(
-        Builder.getInt8(item.getSizeByte()),
-        Builder.CreateConstByteGEP(BufAddr, offset++, "argSize"));
-      Address addr = Builder.CreateConstByteGEP(BufAddr, offset);
-      if (const Expr *expr = item.getExpr()) {
-        addr = Builder.CreateElementBitCast(addr,
-                                            ConvertTypeForMem(expr->getType()));
-        // Check if this is a retainable type.
-        if (expr->getType()->isObjCRetainableType()) {
-          assert(getEvaluationKind(expr->getType()) == TEK_Scalar &&
-                 "Only scalar can be a ObjC retainable type");
-          llvm::Value *SV = EmitScalarExpr(expr, /*Ignore*/ false);
-          RValue RV = RValue::get(SV);
-          LValue LV = MakeAddrLValue(addr, expr->getType());
-          EmitStoreThroughLValue(RV, LV);
-          // Check if the object is constant, if not, save it in
-          // RetainableOperands.
-          if (!isa<Constant>(SV))
-            RetainableOperands.push_back(SV);
-        } else {
-          EmitAnyExprToMem(expr, addr, Qualifiers(), /*isInit*/true);
-        }
-      } else {
-        addr = Builder.CreateElementBitCast(addr, Int32Ty);
-        Builder.CreateStore(
-          Builder.getInt32(item.getConstValue().getQuantity()), addr);
-      }
-      offset += item.getSize();
-    }
-
-    // Push a clang.arc.use cleanup for each object in RetainableOperands. The
-    // cleanup will cause the use to appear after the final log call, keeping
-    // the object valid while it’s held in the log buffer.  Note that if there’s
-    // a release cleanup on the object, it will already be active; since
-    // cleanups are emitted in reverse order, the use will occur before the
-    // object is released.
-    if (!RetainableOperands.empty() && getLangOpts().ObjCAutoRefCount &&
-        CGM.getCodeGenOpts().OptimizationLevel != 0)
-      for (llvm::Value *object : RetainableOperands)
-         pushFullExprCleanup<CallObjCArcUse>(getARCCleanupKind(), object);
-
-    return RValue::get(BufAddr.getPointer());
-  }
-
-  case Builtin::BI__builtin_os_log_format_buffer_size: {
-    analyze_os_log::OSLogBufferLayout Layout;
-    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
-    return RValue::get(ConstantInt::get(ConvertType(E->getType()),
-                                        Layout.getSize().getQuantity()));
   }
   }
 
@@ -5230,6 +5149,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *F = CGM.getIntrinsic(Intrinsic::fma, Ty);
     Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
     return Builder.CreateCall(F, {Ops[1], Ops[2], Ops[0]});
+  }
+  case NEON::BI__builtin_neon_vfms_v:
+  case NEON::BI__builtin_neon_vfmsq_v: {  // Only used for FP types
+    // FIXME: probably remove when we no longer support aarch64_simd.h
+    // (arm_neon.h delegates to vfma).
+
+    // The ARM builtins (and instructions) have the addend as the first
+    // operand, but the 'fma' intrinsics have it last. Swap it around here.
+    Value *Subtrahend = Ops[0];
+    Value *Multiplicand = Ops[2];
+    Ops[0] = Multiplicand;
+    Ops[2] = Subtrahend;
+    Ops[1] = Builder.CreateBitCast(Ops[1], VTy);
+    Ops[1] = Builder.CreateFNeg(Ops[1]);
+    Int = Intrinsic::fma;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "fmls");
   }
   case NEON::BI__builtin_neon_vmull_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.

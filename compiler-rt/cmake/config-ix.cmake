@@ -435,7 +435,7 @@ if(APPLE)
         set(DARWIN_${platform}sim_CFLAGS
           ${DARWIN_COMMON_CFLAGS}
           ${DARWIN_${platform}_SANITIZER_MIN_VER_FLAG}
-          -isysroot ${DARWIN_${platform}sim_SYSROOT})
+          -isysroot ${DARWIN_iossim_SYSROOT})
         set(DARWIN_${platform}sim_LINKFLAGS
           ${DARWIN_COMMON_LINKFLAGS}
           ${DARWIN_${platform}_SANITIZER_MIN_VER_FLAG}
@@ -454,7 +454,6 @@ if(APPLE)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
           list(APPEND BUILTIN_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
-          list(APPEND TSAN_SUPPORTED_OS ${platform}sim)
         endif()
         foreach(arch ${DARWIN_${platform}sim_ARCHS})
           list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})

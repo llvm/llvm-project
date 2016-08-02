@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 using namespace llvm;
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
@@ -111,7 +112,8 @@ Value *SCEVAAResult::GetBaseValue(const SCEV *S) {
 }
 
 SCEVAAResult SCEVAA::run(Function &F, AnalysisManager<Function> *AM) {
-  return SCEVAAResult(AM->getResult<ScalarEvolutionAnalysis>(F));
+  return SCEVAAResult(AM->getResult<TargetLibraryAnalysis>(F),
+                      AM->getResult<ScalarEvolutionAnalysis>(F));
 }
 
 char SCEVAA::PassID;
@@ -120,6 +122,7 @@ char SCEVAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(SCEVAAWrapperPass, "scev-aa",
                       "ScalarEvolution-based Alias Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(SCEVAAWrapperPass, "scev-aa",
                     "ScalarEvolution-based Alias Analysis", false, true)
 
@@ -133,11 +136,13 @@ SCEVAAWrapperPass::SCEVAAWrapperPass() : FunctionPass(ID) {
 
 bool SCEVAAWrapperPass::runOnFunction(Function &F) {
   Result.reset(
-      new SCEVAAResult(getAnalysis<ScalarEvolutionWrapperPass>().getSE()));
+      new SCEVAAResult(getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+                       getAnalysis<ScalarEvolutionWrapperPass>().getSE()));
   return false;
 }
 
 void SCEVAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<ScalarEvolutionWrapperPass>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }

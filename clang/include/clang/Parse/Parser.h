@@ -134,12 +134,6 @@ class Parser : public CodeCompletionHandler {
   /// \brief Identifier for "message".
   IdentifierInfo *Ident_message;
 
-  /// \brief Identifier for "strict".
-  IdentifierInfo *Ident_strict;
-
-  /// \brief Identifier for "replacement".
-  IdentifierInfo *Ident_replacement;
-
   /// C++0x contextual keywords.
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_override;
@@ -2229,14 +2223,6 @@ private:
                                         IdentifierInfo *ScopeName,
                                         SourceLocation ScopeLoc,
                                         AttributeList::Syntax Syntax);
-
-  void ParseSwiftNewtypeAttribute(IdentifierInfo &SwiftNewtype,
-                                  SourceLocation SwiftNewtypeLoc,
-                                  ParsedAttributes &attrs,
-                                  SourceLocation *endLoc,
-                                  IdentifierInfo *ScopeName,
-                                  SourceLocation ScopeLoc,
-                                  AttributeList::Syntax Syntax);
 
   void ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
                                  SourceLocation AttrNameLoc,

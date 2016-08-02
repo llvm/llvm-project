@@ -20,7 +20,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -31,20 +31,20 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ARMEHABI.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1206,7 +1206,7 @@ public:
   }
   bool isT2MemRegOffset() const {
     if (!isMem() || !Memory.OffsetRegNum || Memory.isNegative ||
-        Memory.Alignment != 0 || Memory.BaseRegNum == ARM::PC)
+        Memory.Alignment != 0)
       return false;
     // Only lsl #{0, 1, 2, 3} allowed.
     if (Memory.ShiftType == ARM_AM::no_shift)

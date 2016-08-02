@@ -36,7 +36,6 @@ set(sources
   X86FixupLEAs.cpp
   X86WinEHState.cpp
   X86OptimizeLEAs.cpp
-  X86FixupBWInsts.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources})

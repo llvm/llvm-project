@@ -49,30 +49,6 @@ enum CallEventKind {
 class CallEvent;
 class CallEventManager;
 
-/// This class represents a description of a function call using the number of
-/// arguments and the name of the function.
-class CallDescription {
-  friend CallEvent;
-  mutable IdentifierInfo *II;
-  StringRef FuncName;
-  unsigned RequiredArgs;
-
-public:
-  const static unsigned NoArgRequirement = ~0;
-  /// \brief Constructs a CallDescription object.
-  ///
-  /// @param FuncName The name of the function that will be matched.
-  ///
-  /// @param RequiredArgs The number of arguments that is expected to match a
-  /// call. Omit this parameter to match every occurance of call with a given
-  /// name regardless the number of arguments.
-  CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
-      : II(nullptr), FuncName(FuncName), RequiredArgs(RequiredArgs) {}
-
-  /// \brief Get the name of the function that this object matches.
-  StringRef getFunctionName() const { return FuncName; }
-};
-
 template<typename T = CallEvent>
 class CallEventRef : public IntrusiveRefCntPtr<const T> {
 public:
@@ -250,13 +226,6 @@ public:
 
     return false;
   }
-
-  /// \brief Returns true if the CallEvent is a call to a function that matches
-  /// the CallDescription.
-  ///
-  /// Note that this function is not intended to be used to match Obj-C method
-  /// calls.
-  bool isCalled(const CallDescription &CD) const;
 
   /// \brief Returns a source range for the entire call, suitable for
   /// outputting in diagnostics.
@@ -959,11 +928,6 @@ public:
     }
     llvm_unreachable("Unknown message kind");
   }
-
-  // Returns the property accessed by this method, either explicitly via
-  // property syntax or implicitly via a getter or setter method. Returns
-  // nullptr if the call is not a prooperty access.
-  const ObjCPropertyDecl *getAccessedProperty() const;
 
   RuntimeDefinition getRuntimeDefinition() const override;
 

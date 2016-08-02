@@ -87,13 +87,12 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
 
 namespace {
-/// \brief A custom IRBuilder inserter which prefixes all names, but only in
-/// Assert builds.
-class IRBuilderPrefixedInserter : public IRBuilderDefaultInserter {
+/// \brief A custom IRBuilder inserter which prefixes all names if they are
+/// preserved.
+template <bool preserveNames = true>
+class IRBuilderPrefixedInserter
+    : public IRBuilderDefaultInserter<preserveNames> {
   std::string Prefix;
-  const Twine getNameWithPrefix(const Twine &Name) const {
-    return Name.isTriviallyEmpty() ? Name : Prefix + Name;
-  }
 
 public:
   void SetNamePrefix(const Twine &P) { Prefix = P.str(); }
@@ -101,13 +100,27 @@ public:
 protected:
   void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const {
-    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name), BB,
-                                           InsertPt);
+    IRBuilderDefaultInserter<preserveNames>::InsertHelper(
+        I, Name.isTriviallyEmpty() ? Name : Prefix + Name, BB, InsertPt);
   }
 };
 
+// Specialization for not preserving the name is trivial.
+template <>
+class IRBuilderPrefixedInserter<false>
+    : public IRBuilderDefaultInserter<false> {
+public:
+  void SetNamePrefix(const Twine &P) {}
+};
+
 /// \brief Provide a typedef for IRBuilder that drops names in release builds.
-using IRBuilderTy = llvm::IRBuilder<ConstantFolder, IRBuilderPrefixedInserter>;
+#ifndef NDEBUG
+typedef llvm::IRBuilder<true, ConstantFolder, IRBuilderPrefixedInserter<true>>
+    IRBuilderTy;
+#else
+typedef llvm::IRBuilder<false, ConstantFolder, IRBuilderPrefixedInserter<false>>
+    IRBuilderTy;
+#endif
 }
 
 namespace {
@@ -3359,15 +3372,11 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   for (auto &P : AS.partitions()) {
     for (Slice &S : P) {
       Instruction *I = cast<Instruction>(S.getUse()->getUser());
-      if (!S.isSplittable() || S.endOffset() <= P.endOffset()) {
-        // If this is a load we have to track that it can't participate in any
-        // pre-splitting. If this is a store of a load we have to track that
-        // that load also can't participate in any pre-splitting.
+      if (!S.isSplittable() ||S.endOffset() <= P.endOffset()) {
+        // If this was a load we have to track that it can't participate in any
+        // pre-splitting!
         if (auto *LI = dyn_cast<LoadInst>(I))
           UnsplittableLoads.insert(LI);
-        else if (auto *SI = dyn_cast<StoreInst>(I))
-          if (auto *LI = dyn_cast<LoadInst>(SI->getValueOperand()))
-            UnsplittableLoads.insert(LI);
         continue;
       }
       assert(P.endOffset() > S.beginOffset() &&

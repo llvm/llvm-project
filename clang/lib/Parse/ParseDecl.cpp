@@ -238,38 +238,6 @@ IdentifierLoc *Parser::ParseIdentifierLoc() {
   return IL;
 }
 
-void Parser::ParseSwiftNewtypeAttribute(
-    IdentifierInfo &SwiftNewtype, SourceLocation SwiftNewtypeLoc,
-    ParsedAttributes &attrs, SourceLocation *endLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, AttributeList::Syntax Syntax) {
-
-  BalancedDelimiterTracker Parens(*this, tok::l_paren);
-  Parens.consumeOpen();
-
-  if (Tok.is(tok::r_paren)) {
-    Diag(Tok.getLocation(), diag::err_argument_required_after_attribute);
-    Parens.consumeClose();
-    return;
-  }
-  if (Tok.isNot(tok::kw_struct) && Tok.isNot(tok::kw_enum)) {
-    Diag(Tok.getLocation(), diag::warn_attribute_type_not_supported)
-        << &SwiftNewtype << Tok.getIdentifierInfo();
-    if (!isTokenSpecial())
-      ConsumeToken();
-    Parens.consumeClose();
-    return;
-  }
-  auto IL = IdentifierLoc::create(Actions.Context, Tok.getLocation(),
-                                  Tok.getIdentifierInfo());
-  ConsumeToken();
-  auto identLoc = ArgsUnion(IL);
-
-  attrs.addNew(&SwiftNewtype,
-               SourceRange(SwiftNewtypeLoc, Parens.getCloseLocation()),
-               ScopeName, ScopeLoc, &identLoc, 1, Syntax);
-  Parens.consumeClose();
-}
-
 void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
                                        SourceLocation AttrNameLoc,
                                        ParsedAttributes &Attrs,
@@ -388,10 +356,6 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
   } else if (AttrKind == AttributeList::AT_TypeTagForDatatype) {
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Syntax);
-    return;
-  } else if (AttrKind == AttributeList::AT_SwiftNewtype) {
-    ParseSwiftNewtypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
-                               ScopeName, ScopeLoc, Syntax);
     return;
   } else if (attributeIsTypeArgAttr(*AttrName)) {
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
@@ -869,14 +833,10 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 /// \brief Parse the contents of the "availability" attribute.
 ///
 /// availability-attribute:
-///   'availability' '(' platform ',' opt-strict version-arg-list,
-///                      opt-replacement, opt-message')'
+///   'availability' '(' platform ',' version-arg-list, opt-message')'
 ///
 /// platform:
 ///   identifier
-///
-/// opt-strict:
-///   'strict' ','
 ///
 /// version-arg-list:
 ///   version-arg
@@ -887,8 +847,6 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 ///   'deprecated' '=' version
 ///   'obsoleted' = version
 ///   'unavailable'
-/// opt-replacement:
-///   'replacement' '=' <string>
 /// opt-message:
 ///   'message' '=' <string>
 void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
@@ -900,7 +858,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
                                         AttributeList::Syntax Syntax) {
   enum { Introduced, Deprecated, Obsoleted, Unknown };
   AvailabilityChange Changes[Unknown];
-  ExprResult MessageExpr, ReplacementExpr;
+  ExprResult MessageExpr;
 
   // Opening '('.
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -909,20 +867,13 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
     return;
   }
 
-  // Parse the platform name.
+  // Parse the platform name,
   if (Tok.isNot(tok::identifier)) {
     Diag(Tok, diag::err_availability_expected_platform);
     SkipUntil(tok::r_paren, StopAtSemi);
     return;
   }
   IdentifierLoc *Platform = ParseIdentifierLoc();
-  // Canonicalize platform name from "macosx" to "macos".
-  if (Platform->Ident && Platform->Ident->getName() == "macosx")
-    Platform->Ident = PP.getIdentifierInfo("macos");
-  // Canonicalize platform name from "macosx_app_extension" to
-  // "macos_app_extension".
-  if (Platform->Ident && Platform->Ident->getName() == "macosx_app_extension")
-    Platform->Ident = PP.getIdentifierInfo("macos_app_extension");
 
   // Parse the ',' following the platform name.
   if (ExpectAndConsume(tok::comma)) {
@@ -938,13 +889,10 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
     Ident_obsoleted = PP.getIdentifierInfo("obsoleted");
     Ident_unavailable = PP.getIdentifierInfo("unavailable");
     Ident_message = PP.getIdentifierInfo("message");
-    Ident_strict = PP.getIdentifierInfo("strict");
-    Ident_replacement = PP.getIdentifierInfo("replacement");
   }
 
-  // Parse the optional "strict", the optional "replacement" and the set of
-  // introductions/deprecations/removals.
-  SourceLocation UnavailableLoc, StrictLoc;
+  // Parse the set of introductions/deprecations/removals.
+  SourceLocation UnavailableLoc;
   do {
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_availability_expected_change);
@@ -953,15 +901,6 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
     }
     IdentifierInfo *Keyword = Tok.getIdentifierInfo();
     SourceLocation KeywordLoc = ConsumeToken();
-
-    if (Keyword == Ident_strict) {
-      if (StrictLoc.isValid()) {
-        Diag(KeywordLoc, diag::err_availability_redundant)
-          << Keyword << SourceRange(StrictLoc);
-      }
-      StrictLoc = KeywordLoc;
-      continue;
-    }
 
     if (Keyword == Ident_unavailable) {
       if (UnavailableLoc.isValid()) {
@@ -978,17 +917,14 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
       return;
     }
     ConsumeToken();
-    if (Keyword == Ident_message || Keyword == Ident_replacement) {
+    if (Keyword == Ident_message) {
       if (Tok.isNot(tok::string_literal)) {
         Diag(Tok, diag::err_expected_string_literal)
           << /*Source='availability attribute'*/2;
         SkipUntil(tok::r_paren, StopAtSemi);
         return;
       }
-      if (Keyword == Ident_message)
-        MessageExpr = ParseStringLiteralExpression();
-      else
-        ReplacementExpr = ParseStringLiteralExpression();
+      MessageExpr = ParseStringLiteralExpression();
       // Also reject wide string literals.
       if (StringLiteral *MessageStringLiteral =
               cast_or_null<StringLiteral>(MessageExpr.get())) {
@@ -1000,10 +936,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
           return;
         }
       }
-      if (Keyword == Ident_message)
-        break;
-      else
-        continue;
+      break;
     }
 
     // Special handling of 'NA' only when applied to introduced or
@@ -1090,7 +1023,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
                Changes[Deprecated],
                Changes[Obsoleted],
                UnavailableLoc, MessageExpr.get(),
-               Syntax, StrictLoc, ReplacementExpr.get());
+               Syntax);
 }
 
 /// \brief Parse the contents of the "objc_bridge_related" attribute.
@@ -3759,7 +3692,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(),
                       attrs.getList());
   StructScope.Exit();
-  Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
+  Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl,
+                                   T.getCloseLocation());
 }
 
 /// ParseEnumSpecifier
@@ -4254,7 +4188,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
   ParsedAttributes attrs(AttrFactory);
   MaybeParseGNUAttributes(attrs);
 
-  Actions.ActOnEnumBody(StartLoc, T.getRange(),
+  Actions.ActOnEnumBody(StartLoc, T.getOpenLocation(), T.getCloseLocation(),
                         EnumDecl, EnumConstantDecls,
                         getCurScope(),
                         attrs.getList());
@@ -4268,7 +4202,8 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
   }
 
   EnumScope.Exit();
-  Actions.ActOnTagFinishDefinition(getCurScope(), EnumDecl, T.getRange());
+  Actions.ActOnTagFinishDefinition(getCurScope(), EnumDecl,
+                                   T.getCloseLocation());
 
   // The next token must be valid after an enum definition. If not, a ';'
   // was probably forgotten.

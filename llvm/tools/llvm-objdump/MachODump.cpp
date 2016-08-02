@@ -22,7 +22,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -43,7 +43,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
@@ -51,12 +50,6 @@
 
 #if HAVE_CXXABI_H
 #include <cxxabi.h>
-#endif
-
-#ifdef HAVE_LIBXAR
-extern "C" {
-#include <xar/xar.h>
-}
 #endif
 
 using namespace llvm;
@@ -150,18 +143,11 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
                                const Target **ThumbTarget) {
   // Figure out the target triple.
-  llvm::Triple TT(TripleName);
   if (TripleName.empty()) {
-    TT = MachOObj->getArchTriple(McpuDefault);
+    llvm::Triple TT("unknown-unknown-unknown");
+    llvm::Triple ThumbTriple = Triple();
+    TT = MachOObj->getArch(McpuDefault, &ThumbTriple);
     TripleName = TT.str();
-  }
-
-  if (TT.getArch() == Triple::arm) {
-    // We've inferred a 32-bit ARM target from the object file. All MachO CPUs
-    // that support ARM are also capable of Thumb mode.
-    llvm::Triple ThumbTriple = TT;
-    std::string ThumbName = (Twine("thumb") + TT.getArchName().substr(3)).str();
-    ThumbTriple.setArchName(ThumbName);
     ThumbTripleName = ThumbTriple.str();
   }
 
@@ -978,10 +964,10 @@ static void DumpRawSectionContents(MachOObjectFile *O, const char *sect,
       if (O->is64Bit())
         outs() << format("%016" PRIx64, addr) << "\t";
       else
-        outs() << format("%08" PRIx64, addr) << "\t";
+        outs() << format("%08" PRIx64, sect) << "\t";
       for (j = 0; j < 4 * sizeof(int32_t) && i + j < size;
            j += sizeof(int32_t)) {
-        if (i + j + sizeof(int32_t) <= size) {
+        if (i + j + sizeof(int32_t) < size) {
           uint32_t long_word;
           memcpy(&long_word, sect + i + j, sizeof(int32_t));
           if (O->isLittleEndian() != sys::IsLittleEndianHost)
@@ -989,7 +975,7 @@ static void DumpRawSectionContents(MachOObjectFile *O, const char *sect,
           outs() << format("%08" PRIx32, long_word) << " ";
         } else {
           for (uint32_t k = 0; i + j + k < size; k++) {
-            uint8_t byte_word = *(sect + i + j + k);
+            uint8_t byte_word = *(sect + i + j);
             outs() << format("%02" PRIx32, (uint32_t)byte_word) << " ";
           }
         }
@@ -1003,12 +989,6 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName);
 static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
                                 uint32_t size, uint32_t addr);
-#ifdef HAVE_LIBXAR
-static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
-                                uint32_t size, bool verbose,
-                                bool PrintXarHeader, bool PrintXarFileHeaders,
-                                std::string XarMemberName);
-#endif // defined(HAVE_LIBXAR)
 
 static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
                                 bool verbose) {
@@ -1070,13 +1050,6 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
             DumpProtocolSection(O, sect, sect_size, sect_addr);
             continue;
           }
-#ifdef HAVE_LIBXAR
-          if (SegName == "__LLVM" && SectName == "__bundle") {
-            DumpBitcodeSection(O, sect, sect_size, verbose, !NoSymbolicOperands,
-                               ArchiveHeaders, "");
-            continue;
-          }
-#endif // defined(HAVE_LIBXAR)
           switch (section_type) {
           case MachO::S_REGULAR:
             DumpRawSectionContents(O, sect, sect_size, sect_addr);
@@ -1154,10 +1127,10 @@ static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
     Triple T;
     if (MachO->is64Bit()) {
       H_64 = MachO->MachOObjectFile::getHeader64();
-      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
+      T = MachOObjectFile::getArch(H_64.cputype, H_64.cpusubtype);
     } else {
       H = MachO->MachOObjectFile::getHeader();
-      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
+      T = MachOObjectFile::getArch(H.cputype, H.cpusubtype);
     }
     unsigned i;
     for (i = 0; i < ArchFlags.size(); ++i) {
@@ -1241,12 +1214,6 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
     printLazyBindTable(MachOOF);
   if (WeakBind)
     printWeakBindTable(MachOOF);
-
-  if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*MachOOF));
-    // Dump the complete DWARF structure.
-    DICtx->dump(outs(), DwarfDumpType, true /* DumpEH */);
-  }
 }
 
 // printUnknownCPUType() helps print_fat_headers for unknown CPU's.
@@ -5091,9 +5058,6 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
   struct objc_image_info32 o;
   const char *r;
 
-  if (S == SectionRef())
-    return;
-
   StringRef SectName;
   S.getName(SectName);
   DataRefImpl Ref = S.getRawDataRefImpl();
@@ -5566,369 +5530,6 @@ static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
   }
 }
 
-#ifdef HAVE_LIBXAR
-inline void swapStruct(struct xar_header &xar) {
-  sys::swapByteOrder(xar.magic);
-  sys::swapByteOrder(xar.size);
-  sys::swapByteOrder(xar.version);
-  sys::swapByteOrder(xar.toc_length_compressed);
-  sys::swapByteOrder(xar.toc_length_uncompressed);
-  sys::swapByteOrder(xar.cksum_alg);
-}
-
-static void PrintModeVerbose(uint32_t mode) {
-  switch(mode & S_IFMT){
-  case S_IFDIR:
-    outs() << "d";
-    break;
-  case S_IFCHR:
-    outs() << "c";
-    break;
-  case S_IFBLK:
-    outs() << "b";
-    break;
-  case S_IFREG:
-    outs() << "-";
-    break;
-  case S_IFLNK:
-    outs() << "l";
-    break;
-  case S_IFSOCK:
-    outs() << "s";
-    break;
-  default:
-    outs() << "?";
-    break;
-  }
-
-  /* owner permissions */
-  if(mode & S_IREAD)
-    outs() << "r";
-  else
-    outs() << "-";
-  if(mode & S_IWRITE)
-    outs() << "w";
-  else
-    outs() << "-";
-  if(mode & S_ISUID)
-    outs() << "s";
-  else if(mode & S_IEXEC)
-    outs() << "x";
-  else
-    outs() << "-";
-
-  /* group permissions */
-  if(mode & (S_IREAD >> 3))
-    outs() << "r";
-  else
-    outs() << "-";
-  if(mode & (S_IWRITE >> 3))
-    outs() << "w";
-  else
-    outs() << "-";
-  if(mode & S_ISGID)
-    outs() << "s";
-  else if(mode & (S_IEXEC >> 3))
-    outs() << "x";
-  else
-    outs() << "-";
-
-  /* other permissions */
-  if(mode & (S_IREAD >> 6))
-    outs() << "r";
-  else
-    outs() << "-";
-  if(mode & (S_IWRITE >> 6))
-    outs() << "w";
-  else
-    outs() << "-";
-  if(mode & S_ISVTX)
-    outs() << "t";
-  else if(mode & (S_IEXEC >> 6))
-    outs() << "x";
-  else
-    outs() << "-";
-}
-
-static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
-  xar_iter_t xi;
-  xar_file_t xf;
-  xar_iter_t xp;
-  const char *key, *type, *mode, *user, *group, *size, *mtime, *name, *m;
-  char *endp;
-  uint32_t mode_value;
-
-  xi = xar_iter_new();
-  if (!xi) {
-    errs() << "Can't obtain an xar iterator for xar archive "
-           << XarFilename << "\n";
-    return;
-  }
-
-  // Go through the xar's files.
-  for (xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)) {
-    xp = xar_iter_new();
-    if(!xp){
-      errs() << "Can't obtain an xar iterator for xar archive "
-             << XarFilename << "\n";
-      return;
-    }
-    type = nullptr;
-    mode = nullptr;
-    user = nullptr;
-    group = nullptr;
-    size = nullptr;
-    mtime = nullptr;
-    name = nullptr;
-    for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
-      const char *val = nullptr; 
-      xar_prop_get(xf, key, &val);
-#if 0 // Useful for debugging.
-      outs() << "key: " << key << " value: " << val << "\n";
-#endif
-      if(strcmp(key, "type") == 0)
-        type = val;
-      if(strcmp(key, "mode") == 0)
-        mode = val;
-      if(strcmp(key, "user") == 0)
-        user = val;
-      if(strcmp(key, "group") == 0)
-        group = val;
-      if(strcmp(key, "data/size") == 0)
-        size = val;
-      if(strcmp(key, "mtime") == 0)
-        mtime = val;
-      if(strcmp(key, "name") == 0)
-        name = val;
-    }
-    if(mode != nullptr){
-      mode_value = strtoul(mode, &endp, 8);
-      if(*endp != '\0')
-        outs() << "(mode: \"" << mode << "\" contains non-octal chars) ";
-      if(strcmp(type, "file") == 0)
-        mode_value |= S_IFREG;
-      PrintModeVerbose(mode_value);
-      outs() << " ";
-    }
-    if(user != nullptr)
-      outs() << format("%10s/", user);
-    if(group != nullptr)
-      outs() << format("%-10s ", group);
-    if(size != nullptr)
-      outs() << format("%7s ", size);
-    if(mtime != nullptr){
-      for(m = mtime; *m != 'T' && *m != '\0'; m++)
-        outs() << *m;
-      if(*m == 'T')
-        m++;
-      outs() << " ";
-      for( ; *m != 'Z' && *m != '\0'; m++)
-        outs() << *m;
-      outs() << " ";
-    }
-    if(name != nullptr)
-      outs() << name;
-    outs() << "\n";
-  }
-}
-
-static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
-                                uint32_t size, bool verbose,
-                                bool PrintXarHeader, bool PrintXarFileHeaders,
-                                std::string XarMemberName) {
-  if(size < sizeof(struct xar_header)) {
-    outs() << "size of (__LLVM,__bundle) section too small (smaller than size "
-              "of struct xar_header)\n";
-    return;
-  }
-  struct xar_header XarHeader;
-  memcpy(&XarHeader, sect, sizeof(struct xar_header));
-  if (sys::IsLittleEndianHost)
-    swapStruct(XarHeader);
-  if (PrintXarHeader) {
-    if (!XarMemberName.empty())
-      outs() << "In xar member " << XarMemberName << ": ";
-    else
-      outs() << "For (__LLVM,__bundle) section: ";
-    outs() << "xar header\n";
-    if (XarHeader.magic == XAR_HEADER_MAGIC)
-      outs() << "                  magic XAR_HEADER_MAGIC\n";
-    else
-      outs() << "                  magic "
-             << format_hex(XarHeader.magic, 10, true)
-             << " (not XAR_HEADER_MAGIC)\n";
-    outs() << "                   size " << XarHeader.size << "\n";
-    outs() << "                version " << XarHeader.version << "\n";
-    outs() << "  toc_length_compressed " << XarHeader.toc_length_compressed
-           << "\n";
-    outs() << "toc_length_uncompressed " << XarHeader.toc_length_uncompressed
-           << "\n";
-    outs() << "              cksum_alg ";
-    switch (XarHeader.cksum_alg) {
-      case XAR_CKSUM_NONE:
-        outs() << "XAR_CKSUM_NONE\n";
-        break;
-      case XAR_CKSUM_SHA1:
-        outs() << "XAR_CKSUM_SHA1\n";
-        break;
-      case XAR_CKSUM_MD5:
-        outs() << "XAR_CKSUM_MD5\n";
-        break;
-      case XAR_CKSUM_SHA256:
-        outs() << "XAR_CKSUM_SHA256\n";
-        break;
-      case XAR_CKSUM_SHA512:
-        outs() << "XAR_CKSUM_SHA512\n";
-        break;
-      default:
-        outs() << XarHeader.cksum_alg << "\n";
-    }
-  }
-
-  SmallString<128> XarFilename;
-  int FD;
-  std::error_code XarEC =
-      sys::fs::createTemporaryFile("llvm-objdump", "xar", FD, XarFilename);
-  if (XarEC) {
-    errs() << XarEC.message() << "\n";
-    return;
-  }
-  tool_output_file XarFile(XarFilename, FD);
-  raw_fd_ostream &XarOut = XarFile.os();
-  StringRef XarContents(sect, size);
-  XarOut << XarContents;
-  XarOut.close();
-  if (XarOut.has_error())
-    return;
-
-  xar_t xar = xar_open(XarFilename.c_str(), READ);
-  if (!xar) {
-    errs() << "Can't create temporary xar archive " << XarFilename << "\n";
-    return;
-  }
-
-  SmallString<128> TocFilename;
-  std::error_code TocEC =
-      sys::fs::createTemporaryFile("llvm-objdump", "toc", TocFilename);
-  if (TocEC) {
-    errs() << TocEC.message() << "\n";
-    return;
-  }
-  xar_serialize(xar, TocFilename.c_str());
-
-  if (PrintXarFileHeaders) {
-    if (!XarMemberName.empty())
-      outs() << "In xar member " << XarMemberName << ": ";
-    else
-      outs() << "For (__LLVM,__bundle) section: ";
-    outs() << "xar archive files:\n";
-    PrintXarFilesSummary(XarFilename.c_str(), xar);
-  }
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-    MemoryBuffer::getFileOrSTDIN(TocFilename.c_str());
-  if (std::error_code EC = FileOrErr.getError()) {
-    errs() << EC.message() << "\n";
-    return;
-  }
-  std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
-
-  if (!XarMemberName.empty())
-    outs() << "In xar member " << XarMemberName << ": ";
-  else
-    outs() << "For (__LLVM,__bundle) section: ";
-  outs() << "xar table of contents:\n";
-  outs() << Buffer->getBuffer() << "\n";
-
-  // TODO: Go through the xar's files.
-  xar_iter_t xi = xar_iter_new();
-  if(!xi){
-    errs() << "Can't obtain an xar iterator for xar archive "
-           << XarFilename.c_str() << "\n";
-    xar_close(xar);
-    return;
-  }
-  for(xar_file_t xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)){
-    const char *key;
-    xar_iter_t xp;
-    const char *member_name, *member_type, *member_size_string;
-    size_t member_size;
-
-    xp = xar_iter_new();
-    if(!xp){
-      errs() << "Can't obtain an xar iterator for xar archive "
-	     << XarFilename.c_str() << "\n";
-      xar_close(xar);
-      return;
-    }
-    member_name = NULL;
-    member_type = NULL;
-    member_size_string = NULL;
-    for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
-      const char *val = nullptr; 
-      xar_prop_get(xf, key, &val);
-#if 0 // Useful for debugging.
-      outs() << "key: " << key << " value: " << val << "\n";
-#endif
-      if(strcmp(key, "name") == 0)
-	member_name = val;
-      if(strcmp(key, "type") == 0)
-	member_type = val;
-      if(strcmp(key, "data/size") == 0)
-	member_size_string = val;
-    }
-    /*
-     * If we find a file with a name, date/size and type properties
-     * and with the type being "file" see if that is a xar file.
-     */
-    if (member_name != NULL && member_type != NULL &&
-        strcmp(member_type, "file") == 0 &&
-        member_size_string != NULL){
-      // Extract the file into a buffer.
-      char *endptr;
-      member_size = strtoul(member_size_string, &endptr, 10);
-      if (*endptr == '\0' && member_size != 0) {
-	char *buffer = (char *) ::operator new (member_size);
-	if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
-#if 0 // Useful for debugging.
-	  outs() << "xar member: " << member_name << " extracted\n";
-#endif
-          // Set the XarMemberName we want to see printed in the header.
-	  std::string OldXarMemberName;
-	  // If XarMemberName is already set this is nested. So
-	  // save the old name and create the nested name.
-	  if (!XarMemberName.empty()) {
-	    OldXarMemberName = XarMemberName;
-            XarMemberName =
-             (Twine("[") + XarMemberName + "]" + member_name).str();
-	  } else {
-	    OldXarMemberName = "";
-	    XarMemberName = member_name;
-	  }
-	  // See if this is could be a xar file (nested).
-	  if (member_size >= sizeof(struct xar_header)) {
-#if 0 // Useful for debugging.
-	    outs() << "could be a xar file: " << member_name << "\n";
-#endif
-	    memcpy((char *)&XarHeader, buffer, sizeof(struct xar_header));
-            if (sys::IsLittleEndianHost)
-	      swapStruct(XarHeader);
-	    if(XarHeader.magic == XAR_HEADER_MAGIC)
-	      DumpBitcodeSection(O, buffer, member_size, verbose,
-                                 PrintXarHeader, PrintXarFileHeaders,
-		                 XarMemberName);
-	  }
-	  XarMemberName = OldXarMemberName;
-	}
-        delete buffer;
-      }
-    }
-    xar_iter_free(xp);
-  }
-  xar_close(xar);
-}
-#endif // defined(HAVE_LIBXAR)
-
 static void printObjcMetaData(MachOObjectFile *O, bool verbose) {
   if (O->is64Bit())
     printObjc2_64bit_MetaData(O, verbose);
@@ -6347,7 +5948,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     return;
   }
 
-  // Set up separate thumb disassembler if needed.
+  // Set up thumb disassembler.
   std::unique_ptr<const MCRegisterInfo> ThumbMRI;
   std::unique_ptr<const MCAsmInfo> ThumbAsmInfo;
   std::unique_ptr<const MCSubtargetInfo> ThumbSTI;
@@ -6520,8 +6121,6 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbSymbolizerInfo.adrp_addr = 0;
     ThumbSymbolizerInfo.adrp_inst = 0;
 
-    unsigned int Arch = MachOOF->getArch();
-
     // Disassemble symbol by symbol.
     for (unsigned SymIdx = 0; SymIdx != Symbols.size(); SymIdx++) {
       ErrorOr<StringRef> SymNameOrErr = Symbols[SymIdx].getName();
@@ -6535,27 +6134,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
       // Make sure the symbol is defined in this section.
       bool containsSym = Sections[SectIdx].containsSymbol(Symbols[SymIdx]);
-      if (!containsSym) {
-        if (!DisSymName.empty() && DisSymName == SymName) {
-          outs() << "-dis-symname: " << DisSymName << " not in the section\n";
-          return;
-	}
-        continue;
-      }
-      // The __mh_execute_header is special and we need to deal with that fact
-      // this symbol is before the start of the (__TEXT,__text) section and at the
-      // address of the start of the __TEXT segment.  This is because this symbol
-      // is an N_SECT symbol in the (__TEXT,__text) but its address is before the
-      // start of the section in a standard MH_EXECUTE filetype.
-      if (!DisSymName.empty() && DisSymName == "__mh_execute_header") {
-        outs() << "-dis-symname: __mh_execute_header not in any section\n";
-        return;
-      }
-      // When this code is trying to disassemble a symbol at a time and in the case
-      // there is only the __mh_execute_header symbol left as in a stripped
-      // executable, we need to deal with this by ignoring this symbol so the whole
-      // section is disassembled and this symbol is then not displayed.
-      if (SymName == "__mh_execute_header")
+      if (!containsSym)
         continue;
 
       // If we are only disassembling one symbol see if this is that symbol.
@@ -6591,11 +6170,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       symbolTableWorked = true;
 
       DataRefImpl Symb = Symbols[SymIdx].getRawDataRefImpl();
-      bool IsThumb = MachOOF->getSymbolFlags(Symb) & SymbolRef::SF_Thumb;
-
-      // We only need the dedicated Thumb target if there's a real choice
-      // (i.e. we're not targeting M-class) and the function is Thumb.
-      bool UseThumbTarget = IsThumb && ThumbTarget;
+      bool isThumb =
+          (MachOOF->getSymbolFlags(Symb) & SymbolRef::SF_Thumb) && ThumbTarget;
 
       outs() << SymName << ":\n";
       DILineInfo lastLine;
@@ -6613,7 +6189,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("%8" PRIx64 ":", PC);
           }
         }
-        if (!NoShowRawInsn || Arch == Triple::arm)
+        if (!NoShowRawInsn)
           outs() << "\t";
 
         // Check the data in code table here to see if this is data not an
@@ -6639,19 +6215,19 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         raw_svector_ostream Annotations(AnnotationsBytes);
 
         bool gotInst;
-        if (UseThumbTarget)
+        if (isThumb)
           gotInst = ThumbDisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
                                                 PC, DebugOut, Annotations);
         else
           gotInst = DisAsm->getInstruction(Inst, Size, Bytes.slice(Index), PC,
                                            DebugOut, Annotations);
         if (gotInst) {
-          if (!NoShowRawInsn || Arch == Triple::arm) {
+          if (!NoShowRawInsn) {
             dumpBytes(makeArrayRef(Bytes.data() + Index, Size), outs());
           }
           formatted_raw_ostream FormattedOS(outs());
           StringRef AnnotationsStr = Annotations.str();
-          if (UseThumbTarget)
+          if (isThumb)
             ThumbIP->printInst(&Inst, FormattedOS, AnnotationsStr, *ThumbSTI);
           else
             IP->printInst(&Inst, FormattedOS, AnnotationsStr, *STI);
@@ -6673,21 +6249,14 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
-          } else if (Arch == Triple::aarch64 ||
-                     (Arch == Triple::arm && !IsThumb)) {
+          } else if (Arch == Triple::aarch64) {
             uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
                               (*(Bytes.data() + Index + 1) & 0xff) << 8 |
                               (*(Bytes.data() + Index + 2) & 0xff) << 16 |
                               (*(Bytes.data() + Index + 3) & 0xff) << 24;
             outs() << format("\t.long\t0x%08x\n", opcode);
             Size = 4;
-          } else if (Arch == Triple::arm) {
-            assert(IsThumb && "ARM mode should have been dealt with above");
-            uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
-                              (*(Bytes.data() + Index + 1) & 0xff) << 8;
-            outs() << format("\t.short\t0x%04x\n", opcode);
-            Size = 2;
-          } else{
+          } else {
             errs() << "llvm-objdump: warning: invalid instruction encoding\n";
             if (Size == 0)
               Size = 1; // skip illegible bytes
@@ -6716,7 +6285,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
               outs() << format("%8" PRIx64 ":", PC);
             }
           }
-          if (!NoShowRawInsn || Arch == Triple::arm) {
+          if (!NoShowRawInsn) {
             outs() << "\t";
             dumpBytes(makeArrayRef(Bytes.data() + Index, InstSize), outs());
           }
@@ -7181,6 +6750,262 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   }
 }
 
+static unsigned getSizeForEncoding(bool is64Bit,
+                                   unsigned symbolEncoding) {
+  unsigned format = symbolEncoding & 0x0f;
+  switch (format) {
+    default: llvm_unreachable("Unknown Encoding");
+    case dwarf::DW_EH_PE_absptr:
+    case dwarf::DW_EH_PE_signed:
+      return is64Bit ? 8 : 4;
+    case dwarf::DW_EH_PE_udata2:
+    case dwarf::DW_EH_PE_sdata2:
+      return 2;
+    case dwarf::DW_EH_PE_udata4:
+    case dwarf::DW_EH_PE_sdata4:
+      return 4;
+    case dwarf::DW_EH_PE_udata8:
+    case dwarf::DW_EH_PE_sdata8:
+      return 8;
+  }
+}
+
+static uint64_t readPointer(const char *&Pos, bool is64Bit, unsigned Encoding) {
+  switch (getSizeForEncoding(is64Bit, Encoding)) {
+    case 2:
+      return readNext<uint16_t>(Pos);
+      break;
+    case 4:
+      return readNext<uint32_t>(Pos);
+      break;
+    case 8:
+      return readNext<uint64_t>(Pos);
+      break;
+    default:
+      llvm_unreachable("Illegal data size");
+  }
+}
+
+static void printMachOEHFrameSection(const MachOObjectFile *Obj,
+                                     std::map<uint64_t, SymbolRef> &Symbols,
+                                     const SectionRef &EHFrame) {
+  if (!Obj->isLittleEndian()) {
+    outs() << "warning: cannot handle big endian __eh_frame section\n";
+    return;
+  }
+
+  bool is64Bit = Obj->is64Bit();
+
+  outs() << "Contents of __eh_frame section:\n";
+
+  StringRef Contents;
+  EHFrame.getContents(Contents);
+
+  /// A few fields of the CIE are used when decoding the FDE's.  This struct
+  /// will cache those fields we need so that we don't have to decode it
+  /// repeatedly for each FDE that references it.
+  struct DecodedCIE {
+    Optional<uint32_t> FDEPointerEncoding;
+    Optional<uint32_t> LSDAPointerEncoding;
+    bool hasAugmentationLength;
+  };
+
+  // Map from the start offset of the CIE to the cached data for that CIE.
+  DenseMap<uint64_t, DecodedCIE> CachedCIEs;
+
+  for (const char *Pos = Contents.data(), *End = Contents.end(); Pos != End; ) {
+
+    const char *EntryStartPos = Pos;
+
+    uint64_t Length = readNext<uint32_t>(Pos);
+    if (Length == 0xffffffff)
+      Length = readNext<uint64_t>(Pos);
+
+    // Save the Pos so that we can check the length we encoded against what we
+    // end up decoding.
+    const char *PosAfterLength = Pos;
+    const char *EntryEndPos = PosAfterLength + Length;
+
+    assert(EntryEndPos <= End &&
+           "__eh_frame entry length exceeds section size");
+
+    uint32_t ID = readNext<uint32_t>(Pos);
+    if (ID == 0) {
+      // This is a CIE.
+
+      uint32_t Version = readNext<uint8_t>(Pos);
+
+      // Parse a null terminated augmentation string
+      SmallString<8> AugmentationString;
+      for (uint8_t Char = readNext<uint8_t>(Pos); Char;
+           Char = readNext<uint8_t>(Pos))
+        AugmentationString.push_back(Char);
+
+      // Optionally parse the EH data if the augmentation string says it's there.
+      Optional<uint64_t> EHData;
+      if (StringRef(AugmentationString).count("eh"))
+        EHData = is64Bit ? readNext<uint64_t>(Pos) : readNext<uint32_t>(Pos);
+
+      unsigned ULEBByteCount;
+      uint64_t CodeAlignmentFactor = decodeULEB128((const uint8_t *)Pos,
+                                                   &ULEBByteCount);
+      Pos += ULEBByteCount;
+
+      int64_t DataAlignmentFactor = decodeSLEB128((const uint8_t *)Pos,
+                                                   &ULEBByteCount);
+      Pos += ULEBByteCount;
+
+      uint32_t ReturnAddressRegister = readNext<uint8_t>(Pos);
+
+      Optional<uint64_t> AugmentationLength;
+      Optional<uint32_t> LSDAPointerEncoding;
+      Optional<uint32_t> PersonalityEncoding;
+      Optional<uint64_t> Personality;
+      Optional<uint32_t> FDEPointerEncoding;
+      if (!AugmentationString.empty() && AugmentationString.front() == 'z') {
+        AugmentationLength = decodeULEB128((const uint8_t *)Pos,
+                                           &ULEBByteCount);
+        Pos += ULEBByteCount;
+
+        // Walk the augmentation string to get all the augmentation data.
+        for (unsigned i = 1, e = AugmentationString.size(); i != e; ++i) {
+          char Char = AugmentationString[i];
+          switch (Char) {
+            case 'e':
+              assert((i + 1) != e && AugmentationString[i + 1] == 'h' &&
+                     "Expected 'eh' in augmentation string");
+              break;
+            case 'L':
+              assert(!LSDAPointerEncoding && "Duplicate LSDA encoding");
+              LSDAPointerEncoding = readNext<uint8_t>(Pos);
+              break;
+            case 'P': {
+              assert(!Personality && "Duplicate personality");
+              PersonalityEncoding = readNext<uint8_t>(Pos);
+              Personality = readPointer(Pos, is64Bit, *PersonalityEncoding);
+              break;
+            }
+            case 'R':
+              assert(!FDEPointerEncoding && "Duplicate FDE encoding");
+              FDEPointerEncoding = readNext<uint8_t>(Pos);
+              break;
+            case 'z':
+              llvm_unreachable("'z' must be first in the augmentation string");
+          }
+        }
+      }
+
+      outs() << "CIE:\n";
+      outs() << "  Length: " << Length << "\n";
+      outs() << "  CIE ID: " << ID << "\n";
+      outs() << "  Version: " << Version << "\n";
+      outs() << "  Augmentation String: " << AugmentationString << "\n";
+      if (EHData)
+        outs() << "  EHData: " << *EHData << "\n";
+      outs() << "  Code Alignment Factor: " << CodeAlignmentFactor << "\n";
+      outs() << "  Data Alignment Factor: " << DataAlignmentFactor << "\n";
+      outs() << "  Return Address Register: " << ReturnAddressRegister << "\n";
+      if (AugmentationLength) {
+        outs() << "  Augmentation Data Length: " << *AugmentationLength << "\n";
+        if (LSDAPointerEncoding) {
+          outs() << "  FDE LSDA Pointer Encoding: "
+                 << *LSDAPointerEncoding << "\n";
+        }
+        if (Personality) {
+          outs() << "  Personality Encoding: " << *PersonalityEncoding << "\n";
+          outs() << "  Personality: " << *Personality << "\n";
+        }
+        if (FDEPointerEncoding) {
+          outs() << "  FDE Address Pointer Encoding: "
+                 << *FDEPointerEncoding << "\n";
+        }
+      }
+      // FIXME: Handle instructions.
+      // For now just emit some bytes
+      outs() << "  Instructions:\n  ";
+      dumpBytes(makeArrayRef((const uint8_t*)Pos, (const uint8_t*)EntryEndPos),
+                outs());
+      outs() << "\n";
+      Pos = EntryEndPos;
+
+      // Cache this entry.
+      uint64_t Offset = EntryStartPos - Contents.data();
+      CachedCIEs[Offset] = { FDEPointerEncoding, LSDAPointerEncoding,
+                             AugmentationLength.hasValue() };
+      continue;
+    }
+
+    // This is an FDE.
+    // The CIE pointer for an FDE is the same location as the ID which we
+    // already read.
+    uint32_t CIEPointer = ID;
+
+    const char *CIEStart = PosAfterLength - CIEPointer;
+    assert(CIEStart >= Contents.data() &&
+           "FDE points to CIE before the __eh_frame start");
+
+    uint64_t CIEOffset = CIEStart - Contents.data();
+    auto CIEIt = CachedCIEs.find(CIEOffset);
+    if (CIEIt == CachedCIEs.end())
+      llvm_unreachable("Couldn't find CIE at offset in to __eh_frame section");
+
+    const DecodedCIE &CIE = CIEIt->getSecond();
+    assert(CIE.FDEPointerEncoding &&
+           "FDE references CIE which did not set pointer encoding");
+
+    uint64_t PCPointerSize = getSizeForEncoding(is64Bit,
+                                                *CIE.FDEPointerEncoding);
+
+    uint64_t PCBegin = readPointer(Pos, is64Bit, *CIE.FDEPointerEncoding);
+    uint64_t PCRange = readPointer(Pos, is64Bit, *CIE.FDEPointerEncoding);
+
+    Optional<uint64_t> AugmentationLength;
+    uint32_t LSDAPointerSize;
+    Optional<uint64_t> LSDAPointer;
+    if (CIE.hasAugmentationLength) {
+      unsigned ULEBByteCount;
+      AugmentationLength = decodeULEB128((const uint8_t *)Pos,
+                                         &ULEBByteCount);
+      Pos += ULEBByteCount;
+
+      // Decode the LSDA if the CIE augmentation string said we should.
+      if (CIE.LSDAPointerEncoding) {
+        LSDAPointerSize = getSizeForEncoding(is64Bit, *CIE.LSDAPointerEncoding);
+        LSDAPointer = readPointer(Pos, is64Bit, *CIE.LSDAPointerEncoding);
+      }
+    }
+
+    outs() << "FDE:\n";
+    outs() << "  Length: " << Length << "\n";
+    outs() << "  CIE Offset: " << CIEOffset << "\n";
+
+    if (PCPointerSize == 8) {
+      outs() << format("  PC Begin: %016" PRIx64, PCBegin) << "\n";
+      outs() << format("  PC Range: %016" PRIx64, PCRange) << "\n";
+    } else {
+      outs() << format("  PC Begin: %08" PRIx64, PCBegin) << "\n";
+      outs() << format("  PC Range: %08" PRIx64, PCRange) << "\n";
+    }
+    if (AugmentationLength) {
+      outs() << "  Augmentation Data Length: " << *AugmentationLength << "\n";
+      if (LSDAPointer) {
+        if (LSDAPointerSize == 8)
+          outs() << format("  LSDA Pointer: %016\n" PRIx64, *LSDAPointer);
+        else
+          outs() << format("  LSDA Pointer: %08\n" PRIx64, *LSDAPointer);
+      }
+    }
+
+    // FIXME: Handle instructions.
+    // For now just emit some bytes
+    outs() << "  Instructions:\n  ";
+    dumpBytes(makeArrayRef((const uint8_t*)Pos, (const uint8_t*)EntryEndPos),
+              outs());
+    outs() << "\n";
+    Pos = EntryEndPos;
+  }
+}
+
 void llvm::printMachOUnwindInfo(const MachOObjectFile *Obj) {
   std::map<uint64_t, SymbolRef> Symbols;
   for (const SymbolRef &SymRef : Obj->symbols()) {
@@ -7201,6 +7026,8 @@ void llvm::printMachOUnwindInfo(const MachOObjectFile *Obj) {
       printMachOCompactUnwindSection(Obj, Symbols, Section);
     else if (SectName == "__unwind_info")
       printMachOUnwindInfoSection(Obj, Symbols, Section);
+    else if (SectName == "__eh_frame")
+      printMachOEHFrameSection(Obj, Symbols, Section);
   }
 }
 
@@ -7317,10 +7144,6 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
         outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
         break;
       }
-      break;
-    default:
-      outs() << format(" %7d", cputype);
-      outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
       break;
     }
     if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64) {
@@ -8665,7 +8488,7 @@ static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
 static void PrintLinkEditDataCommand(MachO::linkedit_data_command ld,
                                      uint32_t object_size) {
   if (ld.cmd == MachO::LC_CODE_SIGNATURE)
-    outs() << "      cmd LC_CODE_SIGNATURE\n";
+    outs() << "      cmd LC_FUNCTION_STARTS\n";
   else if (ld.cmd == MachO::LC_SEGMENT_SPLIT_INFO)
     outs() << "      cmd LC_SEGMENT_SPLIT_INFO\n";
   else if (ld.cmd == MachO::LC_FUNCTION_STARTS)

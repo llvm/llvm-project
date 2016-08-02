@@ -23,8 +23,6 @@
 #  include <unistd.h>
 #endif
 
-extern int indextest_core_main(int argc, const char **argv);
-
 /******************************************************************************/
 /* Utility functions.                                                         */
 /******************************************************************************/
@@ -80,8 +78,6 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
   if (getenv("CINDEXTEST_CREATE_PREAMBLE_ON_FIRST_PARSE"))
     options |= CXTranslationUnit_CreatePreambleOnFirstParse;
-  if (getenv("CINDEXTEST_KEEP_GOING"))
-    options |= CXTranslationUnit_KeepGoing;
 
   return options;
 }
@@ -926,7 +922,6 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
         PRINT_PROP_ATTR(weak);
         PRINT_PROP_ATTR(strong);
         PRINT_PROP_ATTR(unsafe_unretained);
-        PRINT_PROP_ATTR(class);
         printf("]");
       }
     }
@@ -4415,15 +4410,13 @@ int cindextest_main(int argc, const char **argv) {
  * size). */
 
 typedef struct thread_info {
-  int (*main_func)(int argc, const char **argv);
   int argc;
   const char **argv;
   int result;
 } thread_info;
 void thread_runner(void *client_data_v) {
   thread_info *client_data = client_data_v;
-  client_data->result = client_data->main_func(client_data->argc,
-                                               client_data->argv);
+  client_data->result = cindextest_main(client_data->argc, client_data->argv);
 }
 
 static void flush_atexit(void) {
@@ -4442,19 +4435,11 @@ int main(int argc, const char **argv) {
   LIBXML_TEST_VERSION
 #endif
 
-  client_data.main_func = cindextest_main;
+  if (getenv("CINDEXTEST_NOTHREADS"))
+    return cindextest_main(argc, argv);
+
   client_data.argc = argc;
   client_data.argv = argv;
-
-  if (argc > 1 && strcmp(argv[1], "core") == 0) {
-    client_data.main_func = indextest_core_main;
-    --client_data.argc;
-    ++client_data.argv;
-  }
-
-  if (getenv("CINDEXTEST_NOTHREADS"))
-    return client_data.main_func(client_data.argc, client_data.argv);
-
   clang_executeOnThread(thread_runner, &client_data, 0);
   return client_data.result;
 }

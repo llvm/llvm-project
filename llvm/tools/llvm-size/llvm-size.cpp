@@ -77,8 +77,6 @@ RadixShort(cl::desc("Print size in radix:"),
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
 
-bool HadError = false;
-
 static std::string ToolName;
 
 ///  @brief If ec is not success, print the error and return true.
@@ -86,7 +84,6 @@ static bool error(std::error_code ec) {
   if (!ec)
     return false;
 
-  HadError = true;
   outs() << ToolName << ": error reading file: " << ec.message() << ".\n";
   outs().flush();
   return true;
@@ -158,11 +155,10 @@ static void PrintDarwinSectionSizes(MachOObjectFile *MachO) {
         outs() << "\ttotal " << format(fmt.str().c_str(), sec_total) << "\n";
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command Seg = MachO->getSegmentLoadCommand(Load);
-      uint64_t Seg_vmsize = Seg.vmsize;
       outs() << "Segment " << Seg.segname << ": "
-             << format(fmt.str().c_str(), Seg_vmsize);
+             << format(fmt.str().c_str(), Seg.vmsize);
       if (DarwinLongFormat)
-        outs() << " (vmaddr 0x" << format("%" PRIx32, Seg.vmaddr) << " fileoff "
+        outs() << " (vmaddr 0x" << format("%" PRIx64, Seg.vmaddr) << " fileoff "
                << Seg.fileoff << ")";
       outs() << "\n";
       total += Seg.vmsize;
@@ -174,10 +170,9 @@ static void PrintDarwinSectionSizes(MachOObjectFile *MachO) {
                  << format("%.16s", &Sec.sectname) << "): ";
         else
           outs() << "\tSection " << format("%.16s", &Sec.sectname) << ": ";
-        uint64_t Sec_size = Sec.size;
-        outs() << format(fmt.str().c_str(), Sec_size);
+        outs() << format(fmt.str().c_str(), Sec.size);
         if (DarwinLongFormat)
-          outs() << " (addr 0x" << format("%" PRIx32, Sec.addr) << " offset "
+          outs() << " (addr 0x" << format("%" PRIx64, Sec.addr) << " offset "
                  << Sec.offset << ")";
         outs() << "\n";
         sec_total += Sec.size;
@@ -396,10 +391,10 @@ static bool checkMachOAndArchFlags(ObjectFile *o, StringRef file) {
     Triple T;
     if (MachO->is64Bit()) {
       H_64 = MachO->MachOObjectFile::getHeader64();
-      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
+      T = MachOObjectFile::getArch(H_64.cputype, H_64.cpusubtype);
     } else {
       H = MachO->MachOObjectFile::getHeader();
-      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
+      T = MachOObjectFile::getArch(H.cputype, H.cpusubtype);
     }
     unsigned i;
     for (i = 0; i < ArchFlags.size(); ++i) {
@@ -423,7 +418,7 @@ static void PrintFileSectionSizes(StringRef file) {
   // Attempt to open the binary.
   ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
   if (std::error_code EC = BinaryOrErr.getError()) {
-    error(EC);
+    errs() << ToolName << ": " << file << ": " << EC.message() << ".\n";
     return;
   }
   Binary &Bin = *BinaryOrErr.get().getBinary();
@@ -740,6 +735,5 @@ int main(int argc, char **argv) {
   std::for_each(InputFilenames.begin(), InputFilenames.end(),
                 PrintFileSectionSizes);
 
-  if (HadError)
-    return 1;
+  return 0;
 }

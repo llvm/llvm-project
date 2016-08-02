@@ -847,12 +847,10 @@ public:
                   ExprObjectKind OK = OK_Ordinary,
                   Expr *SourceExpr = nullptr)
     : Expr(OpaqueValueExprClass, T, VK, OK,
-           T->isDependentType() ||
-           (SourceExpr && SourceExpr->isTypeDependent()),
+           T->isDependentType(), 
            T->isDependentType() || 
            (SourceExpr && SourceExpr->isValueDependent()),
-           T->isInstantiationDependentType() ||
-           (SourceExpr && SourceExpr->isInstantiationDependent()),
+           T->isInstantiationDependentType(),
            false),
       SourceExpr(SourceExpr), Loc(Loc) {
   }
@@ -4888,12 +4886,9 @@ public:
   }
 
   AtomicOp getOp() const { return Op; }
-  unsigned getNumSubExprs() const { return NumSubExprs; }
+  unsigned getNumSubExprs() { return NumSubExprs; }
 
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }
-  const Expr * const *getSubExprs() const {
-    return reinterpret_cast<Expr * const *>(SubExprs);
-  }
 
   bool isVolatile() const {
     return getPtr()->getType()->getPointeeType().isVolatileQualified();

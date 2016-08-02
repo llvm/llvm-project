@@ -210,16 +210,6 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
   return PostImplicitCall(D, Loc, getLocationContext(), Tag);
 }
 
-bool CallEvent::isCalled(const CallDescription &CD) const {
-  assert(getKind() != CE_ObjCMessage && "Obj-C methods are not supported");
-  if (!CD.II)
-    CD.II = &getState()->getStateManager().getContext().Idents.get(CD.FuncName);
-  if (getCalleeIdentifier() != CD.II)
-    return false;
-  return (CD.RequiredArgs == CallDescription::NoArgRequirement ||
-          CD.RequiredArgs == getNumArgs());
-}
-
 SVal CallEvent::getArgSVal(unsigned Index) const {
   const Expr *ArgE = getArgExpr(Index);
   if (!ArgE)
@@ -678,26 +668,9 @@ ArrayRef<ParmVarDecl*> ObjCMethodCall::parameters() const {
   return D->parameters();
 }
 
-void ObjCMethodCall::getExtraInvalidatedValues(
-    ValueList &Values, RegionAndSymbolInvalidationTraits *ETraits) const {
-
-  // If the method call is a setter for property known to be backed by
-  // an instance variable, don't invalidate the entire receiver, just
-  // the storage for that instance variable.
-  if (const ObjCPropertyDecl *PropDecl = getAccessedProperty()) {
-    if (const ObjCIvarDecl *PropIvar = PropDecl->getPropertyIvarDecl()) {
-      SVal IvarLVal = getState()->getLValue(PropIvar, getReceiverSVal());
-      const MemRegion *IvarRegion = IvarLVal.getAsRegion();
-      ETraits->setTrait(
-          IvarRegion,
-          RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-      ETraits->setTrait(IvarRegion,
-                        RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
-      Values.push_back(IvarLVal);
-      return;
-    }
-  }
-
+void
+ObjCMethodCall::getExtraInvalidatedValues(ValueList &Values,
+                  RegionAndSymbolInvalidationTraits *ETraits) const {
   Values.push_back(getReceiverSVal());
 }
 
@@ -757,18 +730,6 @@ const PseudoObjectExpr *ObjCMethodCall::getContainingPseudoObjectExpr() const {
   return ObjCMessageDataTy::getFromOpaqueValue(Data).getPointer();
 }
 
-static const Expr *
-getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
-  const Expr *Syntactic = POE->getSyntacticForm();
-
-  // This handles the funny case of assigning to the result of a getter.
-  // This can happen if the getter returns a non-const reference.
-  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(Syntactic))
-    Syntactic = BO->getLHS();
-
-  return Syntactic;
-}
-
 ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   if (!Data) {
 
@@ -778,7 +739,12 @@ ObjCMessageKind ObjCMethodCall::getMessageKind() const {
 
     // Check if parent is a PseudoObjectExpr.
     if (const PseudoObjectExpr *POE = dyn_cast_or_null<PseudoObjectExpr>(S)) {
-      const Expr *Syntactic = getSyntacticFromForPseudoObjectExpr(POE);
+      const Expr *Syntactic = POE->getSyntacticForm();
+
+      // This handles the funny case of assigning to the result of a getter.
+      // This can happen if the getter returns a non-const reference.
+      if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(Syntactic))
+        Syntactic = BO->getLHS();
 
       ObjCMessageKind K;
       switch (Syntactic->getStmtClass()) {
@@ -814,27 +780,6 @@ ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   return static_cast<ObjCMessageKind>(Info.getInt());
 }
 
-const ObjCPropertyDecl *ObjCMethodCall::getAccessedProperty() const {
-  // Look for properties accessed with property syntax (foo.bar = ...)
-  if ( getMessageKind() == OCM_PropertyAccess) {
-    const PseudoObjectExpr *POE = getContainingPseudoObjectExpr();
-    assert(POE && "Property access without PseudoObjectExpr?");
-
-    const Expr *Syntactic = getSyntacticFromForPseudoObjectExpr(POE);
-    auto *RefExpr = cast<ObjCPropertyRefExpr>(Syntactic);
-
-    if (RefExpr->isExplicitProperty())
-      return RefExpr->getExplicitProperty();
-  }
-
-  // Look for properties accessed with method syntax ([foo setBar:...]).
-  const ObjCMethodDecl *MD = getDecl();
-  if (!MD || !MD->isPropertyAccessor())
-    return nullptr;
-
-  // Note: This is potentially quite slow.
-  return MD->findPropertyDecl();
-}
 
 bool ObjCMethodCall::canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl,
                                              Selector Sel) const {
@@ -958,30 +903,8 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
           // even if we don't actually have an implementation.
           if (!*Val)
             if (const ObjCMethodDecl *CompileTimeMD = E->getMethodDecl())
-              if (CompileTimeMD->isPropertyAccessor()) {
-                if (!CompileTimeMD->getSelfDecl() &&
-                    isa<ObjCCategoryDecl>(CompileTimeMD->getDeclContext())) {
-                  // If the method is an accessor in a category, and it doesn't
-                  // have a self declaration, first
-                  // try to find the method in a class extension. This
-                  // works around a bug in Sema where multiple accessors
-                  // are synthesized for properties in class
-                  // extensions that are redeclared in a category and the
-                  // the implicit parameters are not filled in for
-                  // the method on the category.
-                  // This ensures we find the accessor in the extension, which
-                  // has the implicit parameters filled in.
-                  auto *ID = CompileTimeMD->getClassInterface();
-                  for (auto *CatDecl : ID->visible_extensions()) {
-                    Val = CatDecl->getMethod(Sel,
-                                             CompileTimeMD->isInstanceMethod());
-                    if (*Val)
-                      break;
-                  }
-                }
-                if (!*Val)
-                  Val = IDecl->lookupInstanceMethod(Sel);
-              }
+              if (CompileTimeMD->isPropertyAccessor())
+                Val = IDecl->lookupInstanceMethod(Sel);
         }
 
         const ObjCMethodDecl *MD = Val.getValue();

@@ -2409,8 +2409,6 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
           Constant = getConstantPart(Product);
         else
           Constant = cast<SCEVConstant>(Coeff);
-        if (!Constant)
-          return false;
         APInt ConstCoeff = Constant->getAPInt();
         RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff.abs());
       }
@@ -2429,8 +2427,6 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
           Constant = getConstantPart(Product);
         else
           Constant = cast<SCEVConstant>(Coeff);
-        if (!Constant)
-          return false;
         APInt ConstCoeff = Constant->getAPInt();
         RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff.abs());
       }
@@ -2448,8 +2444,6 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
       // or constant, in which case we give up on this direction.
       continue;
     }
-    if (!Constant)
-      continue;
     APInt ConstCoeff = Constant->getAPInt();
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff.abs());
     DEBUG(dbgs() << "\tRunningGCD = " << RunningGCD << "\n");

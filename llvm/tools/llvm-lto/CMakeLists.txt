@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BitWriter
   Core
-  IRReader
   LTO
   MC
   Object

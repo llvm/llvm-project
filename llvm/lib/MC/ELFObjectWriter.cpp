@@ -655,6 +655,12 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
 
+    if (::isWeak(SymB)) {
+      Ctx.reportError(Fixup.getLoc(),
+                      "Cannot represent a subtraction with a weak symbol");
+      return;
+    }
+
     uint64_t SymBOffset = Layout.getSymbolOffset(SymB);
     uint64_t K = SymBOffset - FixupOffset;
     IsPCRel = true;
@@ -1273,7 +1279,7 @@ void ELFObjectWriter::writeObject(MCAssembler &Asm,
   uint64_t NaturalAlignment = is64Bit() ? 8 : 4;
   align(NaturalAlignment);
 
-  const uint64_t SectionHeaderOffset = getStream().tell();
+  const unsigned SectionHeaderOffset = getStream().tell();
 
   // ... then the section header table ...
   writeSectionHeader(Layout, SectionIndexMap, SectionOffsets);

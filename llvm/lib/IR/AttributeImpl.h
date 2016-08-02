@@ -18,9 +18,7 @@
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/TrailingObjects.h"
-#include <climits>
 #include <string>
 
 namespace llvm {
@@ -150,34 +148,19 @@ class AttributeSetNode final
   friend TrailingObjects;
 
   unsigned NumAttrs; ///< Number of attributes in this node.
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint64_t AvailableAttrs;
 
-  AttributeSetNode(ArrayRef<Attribute> Attrs)
-    : NumAttrs(Attrs.size()), AvailableAttrs(0) {
-    static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
-                  "Too many attributes for AvailableAttrs");
+  AttributeSetNode(ArrayRef<Attribute> Attrs) : NumAttrs(Attrs.size()) {
     // There's memory after the node where we can store the entries in.
     std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<Attribute>());
-
-    for (iterator I = begin(), E = end(); I != E; ++I) {
-      if (!I->isStringAttribute()) {
-        AvailableAttrs |= ((uint64_t)1) << I->getKindAsEnum();
-      }
-    }
   }
 
   // AttributesSetNode is uniqued, these should not be publicly available.
   void operator=(const AttributeSetNode &) = delete;
   AttributeSetNode(const AttributeSetNode &) = delete;
 public:
-  void operator delete(void *p) { ::operator delete(p); }
-
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
-  bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs & ((uint64_t)1) << Kind;
-  }
+  bool hasAttribute(Attribute::AttrKind Kind) const;
   bool hasAttribute(StringRef Kind) const;
   bool hasAttributes() const { return NumAttrs != 0; }
 
@@ -218,8 +201,6 @@ class AttributeSetImpl final
 private:
   LLVMContext &Context;
   unsigned NumAttrs; ///< Number of entries in this set.
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint64_t AvailableFunctionAttrs;
 
   // Helper fn for TrailingObjects class.
   size_t numTrailingObjects(OverloadToken<IndexAttrPair>) { return NumAttrs; }
@@ -235,10 +216,7 @@ private:
 public:
   AttributeSetImpl(LLVMContext &C,
                    ArrayRef<std::pair<unsigned, AttributeSetNode *> > Attrs)
-      : Context(C), NumAttrs(Attrs.size()), AvailableFunctionAttrs(0) {
-    static_assert(Attribute::EndAttrKinds <=
-                      sizeof(AvailableFunctionAttrs) * CHAR_BIT,
-                  "Too many attributes");
+      : Context(C), NumAttrs(Attrs.size()) {
 
 #ifndef NDEBUG
     if (Attrs.size() >= 2) {
@@ -251,24 +229,7 @@ public:
 #endif
     // There's memory after the node where we can store the entries in.
     std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<IndexAttrPair>());
-
-    // Initialize AvailableFunctionAttrs summary bitset.
-    if (NumAttrs > 0) {
-      static_assert(AttributeSet::FunctionIndex == ~0u,
-                    "FunctionIndex should be biggest possible index");
-      const std::pair<unsigned, AttributeSetNode *> &Last = Attrs.back();
-      if (Last.first == AttributeSet::FunctionIndex) {
-        const AttributeSetNode *Node = Last.second;
-        for (AttributeSetNode::iterator I = Node->begin(), E = Node->end();
-             I != E; ++I) {
-          if (!I->isStringAttribute())
-            AvailableFunctionAttrs |= ((uint64_t)1) << I->getKindAsEnum();
-        }
-      }
-    }
   }
-
-  void operator delete(void *p) { ::operator delete(p); }
 
   /// \brief Get the context that created this AttributeSetImpl.
   LLVMContext &getContext() { return Context; }
@@ -295,12 +256,6 @@ public:
   /// AttrNode list.
   AttributeSetNode *getSlotNode(unsigned Slot) const {
     return getNode(Slot)->second;
-  }
-
-  /// \brief Return true if the AttributeSetNode for the FunctionIndex has an
-  /// enum attribute of the given kind.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AvailableFunctionAttrs & ((uint64_t)1) << Kind;
   }
 
   typedef AttributeSetNode::iterator iterator;

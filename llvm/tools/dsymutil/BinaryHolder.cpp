@@ -19,6 +19,15 @@
 namespace llvm {
 namespace dsymutil {
 
+Triple BinaryHolder::getTriple(const object::MachOObjectFile &Obj) {
+  // If a ThumbTriple is returned, use it instead of the standard
+  // one. This is because the thumb triple always allows to create a
+  // target, whereas the non-thumb one might not.
+  Triple ThumbTriple;
+  Triple T = Obj.getArch(nullptr, &ThumbTriple);
+  return ThumbTriple.getArch() ? ThumbTriple : T;
+}
+
 static std::vector<MemoryBufferRef>
 getMachOFatMemoryBuffers(StringRef Filename, MemoryBuffer &Mem,
                          object::MachOUniversalBinary &Fat) {
@@ -79,8 +88,7 @@ BinaryHolder::GetMemoryBuffersForFile(StringRef Filename,
   }
 
   CurrentFatBinary = std::move(*ErrOrFat);
-  CurrentFatBinaryName = Filename;
-  return getMachOFatMemoryBuffers(CurrentFatBinaryName, *CurrentMemoryBuffer,
+  return getMachOFatMemoryBuffers(Filename, *CurrentMemoryBuffer,
                                   *CurrentFatBinary);
 }
 
@@ -150,9 +158,8 @@ BinaryHolder::MapArchiveAndGetMemberBuffers(StringRef Filename,
     ArchiveBuffers.push_back(CurrentMemoryBuffer->getMemBufferRef());
   } else {
     CurrentFatBinary = std::move(*ErrOrFat);
-    CurrentFatBinaryName = ArchiveFilename;
     ArchiveBuffers = getMachOFatMemoryBuffers(
-        CurrentFatBinaryName, *CurrentMemoryBuffer, *CurrentFatBinary);
+        ArchiveFilename, *CurrentMemoryBuffer, *CurrentFatBinary);
   }
 
   for (auto MemRef : ArchiveBuffers) {
@@ -168,7 +175,7 @@ ErrorOr<const object::ObjectFile &>
 BinaryHolder::getObjfileForArch(const Triple &T) {
   for (const auto &Obj : CurrentObjectFiles) {
     if (const auto *MachO = dyn_cast<object::MachOObjectFile>(Obj.get())) {
-      if (MachO->getArchTriple().str() == T.str())
+      if (getTriple(*MachO).str() == T.str())
         return *MachO;
     } else if (Obj->getArch() == T.getArch())
       return *Obj;

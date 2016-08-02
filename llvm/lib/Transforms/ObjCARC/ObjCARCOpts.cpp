@@ -889,7 +889,6 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
                            Inst->getParent(), Inst,
                            DependingInstructions, Visited, PA);
           break;
-        case ARCInstKind::ClaimRV:
         case ARCInstKind::RetainRV:
         case ARCInstKind::AutoreleaseRV:
           // Don't move these; the RV optimization depends on the autoreleaseRV

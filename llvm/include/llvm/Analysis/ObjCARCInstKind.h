@@ -30,7 +30,6 @@ namespace objcarc {
 enum class ARCInstKind {
   Retain,                   ///< objc_retain
   RetainRV,                 ///< objc_retainAutoreleasedReturnValue
-  ClaimRV,                  ///< objc_unsafeClaimAutoreleasedReturnValue
   RetainBlock,              ///< objc_retainBlock
   Release,                  ///< objc_release
   Autorelease,              ///< objc_autorelease

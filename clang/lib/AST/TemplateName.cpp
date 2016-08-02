@@ -227,6 +227,6 @@ void TemplateName::dump(raw_ostream &OS) const {
   print(OS, PrintingPolicy(LO));
 }
 
-LLVM_DUMP_METHOD void TemplateName::dump() const {
+void TemplateName::dump() const {
   dump(llvm::errs());
 }

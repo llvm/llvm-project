@@ -68,7 +68,6 @@ extern "C" {
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <util.h>
 
@@ -76,20 +75,15 @@ namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
 
-// Direct syscalls, don't call libmalloc hooks.
-extern "C" void *__mmap(void *addr, size_t len, int prot, int flags, int fildes,
-                        off_t off);
-extern "C" int __munmap(void *, size_t);
-
 // ---------------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
   if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_ANALYSIS_TOOL);
-  return (uptr)__mmap(addr, length, prot, flags, fd, offset);
+  return (uptr)mmap(addr, length, prot, flags, fd, offset);
 }
 
 uptr internal_munmap(void *addr, uptr length) {
-  return __munmap(addr, length);
+  return munmap(addr, length);
 }
 
 int internal_mprotect(void *addr, uptr length, int prot) {
@@ -155,10 +149,6 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
-  return sleep(seconds);
-}
-
 uptr internal_getpid() {
   return getpid();
 }
@@ -193,11 +183,7 @@ int internal_forkpty(int *amaster) {
   }
   if (pid == 0) {
     close(master);
-    if (login_tty(slave) != 0) {
-      // We already forked, there's not much we can do.  Let's quit.
-      Report("login_tty failed (errno %d)\n", errno);
-      internal__exit(1);
-    }
+    CHECK_EQ(login_tty(slave), 0);
   } else {
     *amaster = master;
     close(slave);
@@ -213,15 +199,6 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
   return ftruncate(fd, size);
 }
 
-uptr internal_execve(const char *filename, char *const argv[],
-                     char *const envp[]) {
-  return execve(filename, argv, envp);
-}
-
-uptr internal_waitpid(int pid, int *status, int options) {
-  return waitpid(pid, status, options);
-}
-
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
   struct stat st;
@@ -232,10 +209,7 @@ bool FileExists(const char *filename) {
 }
 
 uptr GetTid() {
-  // FIXME: This can potentially get truncated on 32-bit, where uptr is 4 bytes.
-  uint64_t tid;
-  pthread_threadid_np(nullptr, &tid);
-  return tid;
+  return reinterpret_cast<uptr>(pthread_self());
 }
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
@@ -557,9 +531,10 @@ void LeakyResetEnv(const char *name, const char *name_value) {
   }
 }
 
-SANITIZER_WEAK_CXX_DEFAULT_IMPL
-bool ReexecDisabled() {
-  return false;
+static bool reexec_disabled = false;
+
+void DisableReexec() {
+  reexec_disabled = true;
 }
 
 extern "C" double dyldVersionNumber;
@@ -575,7 +550,7 @@ bool DyldNeedsEnvVariable() {
 }
 
 void MaybeReexec() {
-  if (ReexecDisabled()) return;
+  if (reexec_disabled) return;
 
   // Make sure the dynamic runtime library is preloaded so that the
   // wrappers work. If it is not, set DYLD_INSERT_LIBRARIES and re-exec
@@ -627,21 +602,6 @@ void MaybeReexec() {
            "possibly because of sandbox restrictions. Make sure to launch the "
            "executable with:\n%s=%s\n", kDyldInsertLibraries, new_env);
     CHECK("execv failed" && 0);
-  }
-
-  // Verify that interceptors really work.  We'll use dlsym to locate
-  // "pthread_create", if interceptors are working, it should really point to
-  // "wrap_pthread_create" within our own dylib.
-  Dl_info info_pthread_create;
-  void *dlopen_addr = dlsym(RTLD_DEFAULT, "pthread_create");
-  CHECK(dladdr(dlopen_addr, &info_pthread_create));
-  if (internal_strcmp(info.dli_fname, info_pthread_create.dli_fname) != 0) {
-    Report(
-        "ERROR: Interceptors are not working. This may be because %s is "
-        "loaded too late (e.g. via dlopen). Please launch the executable "
-        "with:\n%s=%s\n",
-        SanitizerToolName, kDyldInsertLibraries, info.dli_fname);
-    CHECK("interceptors not installed" && 0);
   }
 
   if (!lib_is_in_env)

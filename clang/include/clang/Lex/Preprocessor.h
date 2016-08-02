@@ -507,10 +507,9 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
   /// \brief Information about a submodule that we're currently building.
   struct BuildingSubmoduleInfo {
     BuildingSubmoduleInfo(Module *M, SourceLocation ImportLoc,
-                          SubmoduleState *OuterSubmoduleState,
-                          unsigned OuterPendingModuleMacroNames)
-        : M(M), ImportLoc(ImportLoc), OuterSubmoduleState(OuterSubmoduleState),
-          OuterPendingModuleMacroNames(OuterPendingModuleMacroNames) {}
+                          SubmoduleState *OuterSubmoduleState)
+        : M(M), ImportLoc(ImportLoc), OuterSubmoduleState(OuterSubmoduleState) {
+    }
 
     /// The module that we are building.
     Module *M;
@@ -518,8 +517,6 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
     SourceLocation ImportLoc;
     /// The previous SubmoduleState.
     SubmoduleState *OuterSubmoduleState;
-    /// The number of pending module macro names when we started building this.
-    unsigned OuterPendingModuleMacroNames;
   };
   SmallVector<BuildingSubmoduleInfo, 8> BuildingSubmoduleStack;
 
@@ -543,9 +540,6 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
 
   /// The set of known macros exported from modules.
   llvm::FoldingSet<ModuleMacro> ModuleMacros;
-
-  /// The names of potential module macros that we've not yet processed.
-  llvm::SmallVector<const IdentifierInfo*, 32> PendingModuleMacroNames;
 
   /// The list of module macros, for each identifier, that are not overridden by
   /// any other module macro.
@@ -1191,17 +1185,6 @@ public:
     return CachedTokens[CachedLexPos-1].getLastLoc();
   }
 
-  /// \brief Whether \p Tok is the most recent token (`CachedLexPos - 1`) in
-  /// CachedTokens.
-  bool IsPreviousCachedToken(const Token &Tok) const;
-
-  /// \brief Replace token in `CachedLexPos - 1` in CachedTokens by the tokens
-  /// in \p NewToks.
-  ///
-  /// Useful when a token needs to be split in smaller ones and CachedTokens
-  /// most recent token must to be updated to reflect that.
-  void ReplacePreviousCachedToken(ArrayRef<Token> NewToks);
-
   /// \brief Replace the last token with an annotation token.
   ///
   /// Like AnnotateCachedTokens(), this routine replaces an
@@ -1699,10 +1682,6 @@ private:
 
   void EnterSubmodule(Module *M, SourceLocation ImportLoc);
   void LeaveSubmodule();
-
-  /// Determine whether we need to create module macros for #defines in the
-  /// current context.
-  bool needModuleMacros() const;
 
   /// Update the set of active module macros and ambiguity flag for a module
   /// macro name.

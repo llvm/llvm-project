@@ -1,5 +1,0 @@
-# RUN: llvm-nm -P -A %p/Inputs/libExample.a.macho-x86_64 | FileCheck %s
-
-# CHECK: libExample.a.macho-x86_64[example.o]: EH_frame0 s 30 0
-# CHECK: libExample.a.macho-x86_64[example.o]: _f T 0 0
-# CHECK: libExample.a.macho-x86_64[example.o]: _f.eh S 48 0

@@ -40,8 +40,20 @@ using namespace __tsan;  // NOLINT
 #define stderr __stderrp
 #endif
 
-#if SANITIZER_ANDROID
+#if SANITIZER_FREEBSD
+#define __libc_realloc __realloc
+#define __libc_calloc __calloc
+#elif SANITIZER_MAC
+#define __libc_malloc REAL(malloc)
+#define __libc_realloc REAL(realloc)
+#define __libc_calloc REAL(calloc)
+#define __libc_free REAL(free)
+#elif SANITIZER_ANDROID
 #define __errno_location __errno
+#define __libc_malloc REAL(malloc)
+#define __libc_realloc REAL(realloc)
+#define __libc_calloc REAL(calloc)
+#define __libc_free REAL(free)
 #define mallopt(a, b)
 #endif
 
@@ -98,6 +110,10 @@ extern "C" void *pthread_self();
 extern "C" void _exit(int status);
 extern "C" int *__errno_location();
 extern "C" int fileno_unlocked(void *stream);
+#if !SANITIZER_ANDROID
+extern "C" void *__libc_calloc(uptr size, uptr n);
+extern "C" void *__libc_realloc(void *ptr, uptr size);
+#endif
 extern "C" int dirfd(void *dirp);
 #if !SANITIZER_FREEBSD && !SANITIZER_ANDROID
 extern "C" int mallopt(int param, int value);
@@ -381,7 +397,7 @@ static void at_exit_wrapper(void *arg) {
   Acquire(thr, pc, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
   ((void(*)(void *arg))ctx->f)(ctx->arg);
-  InternalFree(ctx);
+  __libc_free(ctx);
 }
 
 static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
@@ -407,7 +423,7 @@ TSAN_INTERCEPTOR(int, __cxa_atexit, void (*f)(void *a), void *arg, void *dso) {
 
 static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
       void *arg, void *dso) {
-  AtExitCtx *ctx = (AtExitCtx*)InternalAlloc(sizeof(AtExitCtx));
+  AtExitCtx *ctx = (AtExitCtx*)__libc_malloc(sizeof(AtExitCtx));
   ctx->f = f;
   ctx->arg = arg;
   Release(thr, pc, (uptr)ctx);
@@ -426,14 +442,14 @@ static void on_exit_wrapper(int status, void *arg) {
   Acquire(thr, pc, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
   ((void(*)(int status, void *arg))ctx->f)(status, ctx->arg);
-  InternalFree(ctx);
+  __libc_free(ctx);
 }
 
 TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
   if (cur_thread()->in_symbolizer)
     return 0;
   SCOPED_TSAN_INTERCEPTOR(on_exit, f, arg);
-  AtExitCtx *ctx = (AtExitCtx*)InternalAlloc(sizeof(AtExitCtx));
+  AtExitCtx *ctx = (AtExitCtx*)__libc_malloc(sizeof(AtExitCtx));
   ctx->f = (void(*)())f;
   ctx->arg = arg;
   Release(thr, pc, (uptr)ctx);
@@ -583,7 +599,7 @@ TSAN_INTERCEPTOR(void, siglongjmp, uptr *env, int val) {
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, malloc, uptr size) {
   if (cur_thread()->in_symbolizer)
-    return InternalAlloc(size);
+    return __libc_malloc(size);
   void *p = 0;
   {
     SCOPED_INTERCEPTOR_RAW(malloc, size);
@@ -600,7 +616,7 @@ TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
 
 TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
   if (cur_thread()->in_symbolizer)
-    return InternalCalloc(size, n);
+    return __libc_calloc(size, n);
   void *p = 0;
   {
     SCOPED_INTERCEPTOR_RAW(calloc, size, n);
@@ -612,7 +628,7 @@ TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
 
 TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
   if (cur_thread()->in_symbolizer)
-    return InternalRealloc(p, size);
+    return __libc_realloc(p, size);
   if (p)
     invoke_free_hook(p);
   {
@@ -627,7 +643,7 @@ TSAN_INTERCEPTOR(void, free, void *p) {
   if (p == 0)
     return;
   if (cur_thread()->in_symbolizer)
-    return InternalFree(p);
+    return __libc_free(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(free, p);
   user_free(thr, pc, p);
@@ -637,7 +653,7 @@ TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (p == 0)
     return;
   if (cur_thread()->in_symbolizer)
-    return InternalFree(p);
+    return __libc_free(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(cfree, p);
   user_free(thr, pc, p);
@@ -757,11 +773,7 @@ TSAN_INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
   if (res != MAP_FAILED) {
     if (fd > 0)
       FdAccess(thr, pc, fd);
-
-    if (thr->ignore_reads_and_writes == 0)
-      MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
-    else
-      MemoryResetRange(thr, pc, (uptr)res, sz);
+    MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
   }
   return res;
 }
@@ -776,11 +788,7 @@ TSAN_INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
   if (res != MAP_FAILED) {
     if (fd > 0)
       FdAccess(thr, pc, fd);
-
-    if (thr->ignore_reads_and_writes == 0)
-      MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
-    else
-      MemoryResetRange(thr, pc, (uptr)res, sz);
+    MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
   }
   return res;
 }
@@ -1097,12 +1105,12 @@ INTERCEPTOR(int, pthread_cond_init, void *c, void *a) {
   return REAL(pthread_cond_init)(cond, a);
 }
 
-static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
-                     int (*fn)(void *c, void *m, void *abstime), void *c,
-                     void *m, void *t) {
+INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
+  void *cond = init_cond(c);
+  SCOPED_TSAN_INTERCEPTOR(pthread_cond_wait, cond, m);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
   MutexUnlock(thr, pc, (uptr)m);
-  CondMutexUnlockCtx arg = {si, thr, pc, m};
+  CondMutexUnlockCtx arg = {&si, thr, pc, m};
   int res = 0;
   // This ensures that we handle mutex lock even in case of pthread_cancel.
   // See test/tsan/cond_cancel.cc.
@@ -1110,37 +1118,35 @@ static int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si,
     // Enable signal delivery while the thread is blocked.
     BlockingCall bc(thr);
     res = call_pthread_cancel_with_cleanup(
-        fn, c, m, t, (void (*)(void *arg))cond_mutex_unlock, &arg);
+        (int(*)(void *c, void *m, void *abstime))REAL(pthread_cond_wait),
+        cond, m, 0, (void(*)(void *arg))cond_mutex_unlock, &arg);
   }
-  if (res == errno_EOWNERDEAD) MutexRepair(thr, pc, (uptr)m);
+  if (res == errno_EOWNERDEAD)
+    MutexRepair(thr, pc, (uptr)m);
   MutexLock(thr, pc, (uptr)m);
   return res;
-}
-
-INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
-  void *cond = init_cond(c);
-  SCOPED_TSAN_INTERCEPTOR(pthread_cond_wait, cond, m);
-  return cond_wait(thr, pc, &si, (int (*)(void *c, void *m, void *abstime))REAL(
-                                     pthread_cond_wait),
-                   cond, m, 0);
 }
 
 INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait, cond, m, abstime);
-  return cond_wait(thr, pc, &si, REAL(pthread_cond_timedwait), cond, m,
-                   abstime);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  MutexUnlock(thr, pc, (uptr)m);
+  CondMutexUnlockCtx arg = {&si, thr, pc, m};
+  int res = 0;
+  // This ensures that we handle mutex lock even in case of pthread_cancel.
+  // See test/tsan/cond_cancel.cc.
+  {
+    BlockingCall bc(thr);
+    res = call_pthread_cancel_with_cleanup(
+        REAL(pthread_cond_timedwait), cond, m, abstime,
+        (void(*)(void *arg))cond_mutex_unlock, &arg);
+  }
+  if (res == errno_EOWNERDEAD)
+    MutexRepair(thr, pc, (uptr)m);
+  MutexLock(thr, pc, (uptr)m);
+  return res;
 }
-
-#if SANITIZER_MAC
-INTERCEPTOR(int, pthread_cond_timedwait_relative_np, void *c, void *m,
-            void *reltime) {
-  void *cond = init_cond(c);
-  SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait_relative_np, cond, m, reltime);
-  return cond_wait(thr, pc, &si, REAL(pthread_cond_timedwait_relative_np), cond,
-                   m, reltime);
-}
-#endif
 
 INTERCEPTOR(int, pthread_cond_signal, void *c) {
   void *cond = init_cond(c);
@@ -2185,13 +2191,7 @@ TSAN_INTERCEPTOR(int, fork, int fake) {
     return REAL(fork)(fake);
   SCOPED_INTERCEPTOR_RAW(fork, fake);
   ForkBefore(thr, pc);
-  int pid;
-  {
-    // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
-    // we'll assert in CheckNoLocks() unless we ignore interceptors.
-    ScopedIgnoreInterceptors ignore;
-    pid = REAL(fork)(fake);
-  }
+  int pid = REAL(fork)(fake);
   if (pid == 0) {
     // child
     ForkChildAfter(thr, pc);
@@ -2403,10 +2403,6 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m) \
   MutexRepair(((TsanInterceptorContext *)ctx)->thr, \
             ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
-
-#define COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m) \
-  MutexInvalidAccess(((TsanInterceptorContext *)ctx)->thr, \
-                     ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
 
 #if !SANITIZER_MAC
 #define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg) \

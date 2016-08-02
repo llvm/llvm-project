@@ -393,11 +393,7 @@ bool AttributeImpl::operator<(const AttributeImpl &AI) const {
 
   if (isIntAttribute()) {
     if (AI.isEnumAttribute()) return false;
-    if (AI.isIntAttribute()) {
-      if (getKindAsEnum() == AI.getKindAsEnum())
-        return getValueAsInt() < AI.getValueAsInt();
-      return getKindAsEnum() < AI.getKindAsEnum();
-    }
+    if (AI.isIntAttribute()) return getValueAsInt() < AI.getValueAsInt();
     if (AI.isStringAttribute()) return true;
   }
 
@@ -490,7 +486,7 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   FoldingSetNodeID ID;
 
   SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
-  std::sort(SortedAttrs.begin(), SortedAttrs.end());
+  array_pod_sort(SortedAttrs.begin(), SortedAttrs.end());
 
   for (Attribute Attr : SortedAttrs)
     Attr.Profile(ID);
@@ -512,6 +508,13 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   return PA;
 }
 
+bool AttributeSetNode::hasAttribute(Attribute::AttrKind Kind) const {
+  for (iterator I = begin(), E = end(); I != E; ++I)
+    if (I->hasAttribute(Kind))
+      return true;
+  return false;
+}
+
 bool AttributeSetNode::hasAttribute(StringRef Kind) const {
   for (iterator I = begin(), E = end(); I != E; ++I)
     if (I->hasAttribute(Kind))
@@ -520,11 +523,9 @@ bool AttributeSetNode::hasAttribute(StringRef Kind) const {
 }
 
 Attribute AttributeSetNode::getAttribute(Attribute::AttrKind Kind) const {
-  if (hasAttribute(Kind)) {
-    for (iterator I = begin(), E = end(); I != E; ++I)
-      if (I->hasAttribute(Kind))
-        return *I;
-  }
+  for (iterator I = begin(), E = end(); I != E; ++I)
+    if (I->hasAttribute(Kind))
+      return *I;
   return Attribute();
 }
 
@@ -1013,10 +1014,6 @@ bool AttributeSet::hasAttributes(unsigned Index) const {
   return ASN && ASN->hasAttributes();
 }
 
-bool AttributeSet::hasFnAttribute(Attribute::AttrKind Kind) const {
-  return pImpl && pImpl->hasFnAttribute(Kind);
-}
-
 /// \brief Return true if the specified attribute is set for at least one
 /// parameter or for the return value.
 bool AttributeSet::hasAttrSomewhere(Attribute::AttrKind Attr) const {
@@ -1402,14 +1399,14 @@ AttrBuilder &AttrBuilder::addRawValue(uint64_t Val) {
       continue;
     if (uint64_t A = (Val & AttributeImpl::getAttrMask(I))) {
       Attrs[I] = true;
-
+ 
       if (I == Attribute::Alignment)
         Alignment = 1ULL << ((A >> 16) - 1);
       else if (I == Attribute::StackAlignment)
         StackAlignment = 1ULL << ((A >> 26)-1);
     }
   }
-
+ 
   return *this;
 }
 

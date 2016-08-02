@@ -111,9 +111,6 @@ public:
     addDirectiveHandler<
       &DarwinAsmParser::parseSectionDirectiveNonLazySymbolPointers>(
         ".non_lazy_symbol_pointer");
-    addDirectiveHandler<
-      &DarwinAsmParser::parseSectionDirectiveThreadLocalVariablePointers>(
-        ".thread_local_variable_pointer");
     addDirectiveHandler<&DarwinAsmParser::parseSectionDirectiveObjCCatClsMeth>(
       ".objc_cat_cls_meth");
     addDirectiveHandler<&DarwinAsmParser::parseSectionDirectiveObjCCatInstMeth>(
@@ -263,10 +260,6 @@ public:
   bool parseSectionDirectiveLazySymbolPointers(StringRef, SMLoc) {
     return parseSectionSwitch("__DATA", "__la_symbol_ptr",
                               MachO::S_LAZY_SYMBOL_POINTERS, 4);
-  }
-  bool parseSectionDirectiveThreadLocalVariablePointers(StringRef, SMLoc) {
-    return parseSectionSwitch("__DATA", "__thread_ptr",
-                              MachO::S_THREAD_LOCAL_VARIABLE_POINTERS, 4);
   }
   bool parseSectionDirectiveDyld(StringRef, SMLoc) {
     return parseSectionSwitch("__DATA", "__dyld");
@@ -452,7 +445,6 @@ bool DarwinAsmParser::parseDirectiveIndirectSymbol(StringRef, SMLoc Loc) {
   MachO::SectionType SectionType = Current->getType();
   if (SectionType != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
       SectionType != MachO::S_LAZY_SYMBOL_POINTERS &&
-      SectionType != MachO::S_THREAD_LOCAL_VARIABLE_POINTERS &&
       SectionType != MachO::S_SYMBOL_STUBS)
     return Error(Loc, "indirect symbol not in a symbol pointer or stub "
                       "section");

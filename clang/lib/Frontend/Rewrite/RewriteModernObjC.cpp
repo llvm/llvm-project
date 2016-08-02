@@ -1147,7 +1147,7 @@ void RewriteModernObjC::RewriteCategoryDecl(ObjCCategoryDecl *CatDecl) {
     ReplaceText(LocStart, 0, "// ");
   }
   
-  for (auto *I : CatDecl->instance_properties())
+  for (auto *I : CatDecl->properties())
     RewriteProperty(I);
   
   for (auto *I : CatDecl->instance_methods())
@@ -1171,7 +1171,7 @@ void RewriteModernObjC::RewriteProtocolDecl(ObjCProtocolDecl *PDecl) {
     RewriteMethodDeclaration(I);
   for (auto *I : PDecl->class_methods())
     RewriteMethodDeclaration(I);
-  for (auto *I : PDecl->instance_properties())
+  for (auto *I : PDecl->properties())
     RewriteProperty(I);
   
   // Lastly, comment out the @end.
@@ -1417,7 +1417,7 @@ void RewriteModernObjC::RewriteInterfaceDecl(ObjCInterfaceDecl *ClassDecl) {
     // Mark this typedef as having been written into its c++ equivalent.
     ObjCWrittenInterfaces.insert(ClassDecl->getCanonicalDecl());
   
-    for (auto *I : ClassDecl->instance_properties())
+    for (auto *I : ClassDecl->properties())
       RewriteProperty(I);
     for (auto *I : ClassDecl->instance_methods())
       RewriteMethodDeclaration(I);
@@ -6995,8 +6995,7 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
                                   PDecl->getNameAsString(), false);
   
   // Protocol's property metadata.
-  SmallVector<ObjCPropertyDecl *, 8> ProtocolProperties(
-      PDecl->instance_properties());
+  SmallVector<ObjCPropertyDecl *, 8> ProtocolProperties(PDecl->properties());
   Write_prop_list_t_initializer(*this, Context, Result, ProtocolProperties,
                                  /* Container */nullptr,
                                  "_OBJC_PROTOCOL_PROPERTIES_",
@@ -7008,7 +7007,7 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
     Result += "static ";
   Result += "struct _protocol_t _OBJC_PROTOCOL_";
   Result += PDecl->getNameAsString();
-  Result += " __attribute__ ((used)) = {\n";
+  Result += " __attribute__ ((used, section (\"__DATA,__datacoal_nt,coalesced\"))) = {\n";
   Result += "\t0,\n"; // id is; is null
   Result += "\t\""; Result += PDecl->getNameAsString(); Result += "\",\n";
   if (SuperProtocols.size() > 0) {
@@ -7209,8 +7208,7 @@ void RewriteModernObjC::RewriteObjCClassMetaData(ObjCImplementationDecl *IDecl,
                                   IDecl->getNameAsString());
   
   // Protocol's property metadata.
-  SmallVector<ObjCPropertyDecl *, 8> ClassProperties(
-      CDecl->instance_properties());
+  SmallVector<ObjCPropertyDecl *, 8> ClassProperties(CDecl->properties());
   Write_prop_list_t_initializer(*this, Context, Result, ClassProperties,
                                  /* Container */IDecl,
                                  "_OBJC_$_PROP_LIST_",
@@ -7455,8 +7453,7 @@ void RewriteModernObjC::RewriteObjCCategoryImplDecl(ObjCCategoryImplDecl *IDecl,
                                   FullCategoryName);
   
   // Protocol's property metadata.
-  SmallVector<ObjCPropertyDecl *, 8> ClassProperties(
-      CDecl->instance_properties());
+  SmallVector<ObjCPropertyDecl *, 8> ClassProperties(CDecl->properties());
   Write_prop_list_t_initializer(*this, Context, Result, ClassProperties,
                                 /* Container */IDecl,
                                 "_OBJC_$_PROP_LIST_",

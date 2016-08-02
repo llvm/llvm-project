@@ -237,7 +237,7 @@ void LoopInfoStack::InsertHelper(Instruction *I) const {
   if (TerminatorInst *TI = dyn_cast<TerminatorInst>(I)) {
     for (unsigned i = 0, ie = TI->getNumSuccessors(); i < ie; ++i)
       if (TI->getSuccessor(i) == L.getHeader()) {
-        TI->setMetadata(llvm::LLVMContext::MD_loop, L.getLoopID());
+        TI->setMetadata("llvm.loop", L.getLoopID());
         break;
       }
     return;

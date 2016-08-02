@@ -111,30 +111,6 @@ NonLocalizedStringChecker::NonLocalizedStringChecker() {
                        "Localizability Issue (Apple)"));
 }
 
-namespace {
-class NonLocalizedStringBRVisitor final
-    : public BugReporterVisitorImpl<NonLocalizedStringBRVisitor> {
-
-  const MemRegion *NonLocalizedString;
-  bool Satisfied;
-
-public:
-  NonLocalizedStringBRVisitor(const MemRegion *NonLocalizedString)
-      : NonLocalizedString(NonLocalizedString), Satisfied(false) {
-        assert(NonLocalizedString);
-  }
-
-  PathDiagnosticPiece *VisitNode(const ExplodedNode *Succ,
-                                 const ExplodedNode *Pred,
-                                 BugReporterContext &BRC,
-                                 BugReport &BR) override;
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {
-    ID.Add(NonLocalizedString);
-  }
-};
-} // End anonymous namespace.
-
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
       UIMethods.insert({&Ctx.Idents.get(#receiver),                            \
@@ -643,45 +619,10 @@ void NonLocalizedStringChecker::setNonLocalizedState(const SVal S,
   }
 }
 
-
-static bool isDebuggingName(std::string name) {
-  return StringRef(name).lower().find("debug") != StringRef::npos;
-}
-
-/// Returns true when, heuristically, the analyzer may be analyzing debugging
-/// code. We use this to suppress localization diagnostics in un-localized user
-/// interfaces that are only used for debugging and are therefore not user
-/// facing.
-static bool isDebuggingContext(CheckerContext &C) {
-  const Decl *D = C.getCurrentAnalysisDeclContext()->getDecl();
-  if (!D)
-    return false;
-
-  if (auto *ND = dyn_cast<NamedDecl>(D)) {
-    if (isDebuggingName(ND->getNameAsString()))
-      return true;
-  }
-
-  const DeclContext *DC = D->getDeclContext();
-
-  if (auto *CD = dyn_cast<ObjCContainerDecl>(DC)) {
-    if (isDebuggingName(CD->getNameAsString()))
-      return true;
-  }
-
-  return false;
-}
-
-
 /// Reports a localization error for the passed in method call and SVal
 void NonLocalizedStringChecker::reportLocalizationError(
     SVal S, const ObjCMethodCall &M, CheckerContext &C,
     int argumentNumber) const {
-
-  // Don't warn about localization errors in classes and methods that
-  // may be debug code.
-  if (isDebuggingContext(C))
-    return;
 
   ExplodedNode *ErrNode = C.getPredecessor();
   static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
@@ -700,11 +641,6 @@ void NonLocalizedStringChecker::reportLocalizationError(
     R->addRange(M.getSourceRange());
   }
   R->markInteresting(S);
-
-  const MemRegion *StringRegion = S.getAsRegion();
-  if (StringRegion)
-    R->addVisitor(llvm::make_unique<NonLocalizedStringBRVisitor>(StringRegion));
-
   C.emitReport(std::move(R));
 }
 
@@ -895,41 +831,6 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
   setNonLocalizedState(sv, C);
 }
 
-PathDiagnosticPiece *
-NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                       const ExplodedNode *Pred,
-                                       BugReporterContext &BRC, BugReport &BR) {
-  if (Satisfied)
-    return nullptr;
-
-  Optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
-  if (!Point.hasValue())
-    return nullptr;
-
-  auto *LiteralExpr = dyn_cast<ObjCStringLiteral>(Point->getStmt());
-  if (!LiteralExpr)
-    return nullptr;
-
-  ProgramStateRef State = Succ->getState();
-  SVal LiteralSVal = State->getSVal(LiteralExpr, Succ->getLocationContext());
-  if (LiteralSVal.getAsRegion() != NonLocalizedString)
-    return nullptr;
-
-  Satisfied = true;
-
-  PathDiagnosticLocation L =
-      PathDiagnosticLocation::create(*Point, BRC.getSourceManager());
-
-  if (!L.isValid() || !L.asLocation().isValid())
-    return nullptr;
-
-  auto *Piece = new PathDiagnosticEventPiece(L,
-      "Non-localized string literal here");
-  Piece->addRange(LiteralExpr->getSourceRange());
-
-  return Piece;
-}
-
 namespace {
 class EmptyLocalizationContextChecker
     : public Checker<check::ASTDecl<ObjCImplementationDecl>> {
@@ -1064,7 +965,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     return;
 
   StringRef Comment =
-      StringRef(Result.getLiteralData(), Result.getLength()).trim('"');
+      StringRef(Result.getLiteralData(), Result.getLength()).trim("\"");
 
   if ((Comment.trim().size() == 0 && Comment.size() > 0) || // Is Whitespace
       Comment.empty()) {

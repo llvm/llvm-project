@@ -287,12 +287,6 @@ public:
   void runCheckersForEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                                  ExprEngine &Eng);
 
-  /// \brief Run checkers on begining of function.
-  void runCheckersForBeginFunction(ExplodedNodeSet &Dst,
-                                   const BlockEdge &L,
-                                   ExplodedNode *Pred,
-                                   ExprEngine &Eng);
-
   /// \brief Run checkers on end of function.
   void runCheckersForEndFunction(NodeBuilderContext &BC,
                                  ExplodedNodeSet &Dst,
@@ -431,10 +425,7 @@ public:
   
   typedef CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>
       CheckEndAnalysisFunc;
-
-  typedef CheckerFn<void (CheckerContext &)>
-      CheckBeginFunctionFunc;
-
+  
   typedef CheckerFn<void (CheckerContext &)>
       CheckEndFunctionFunc;
   
@@ -493,7 +484,6 @@ public:
 
   void _registerForEndAnalysis(CheckEndAnalysisFunc checkfn);
 
-  void _registerForBeginFunction(CheckEndFunctionFunc checkfn);
   void _registerForEndFunction(CheckEndFunctionFunc checkfn);
 
   void _registerForBranchCondition(CheckBranchConditionFunc checkfn);
@@ -603,7 +593,6 @@ private:
 
   std::vector<CheckEndAnalysisFunc> EndAnalysisCheckers;
 
-  std::vector<CheckBeginFunctionFunc> BeginFunctionCheckers;
   std::vector<CheckEndFunctionFunc> EndFunctionCheckers;
 
   std::vector<CheckBranchConditionFunc> BranchConditionCheckers;

@@ -65,7 +65,7 @@ dumpLocalRemap(StringRef Name,
   }
 }
 
-LLVM_DUMP_METHOD void ModuleFile::dump() {
+void ModuleFile::dump() {
   llvm::errs() << "\nModule: " << FileName << "\n";
   if (!Imports.empty()) {
     llvm::errs() << "  Imports: ";

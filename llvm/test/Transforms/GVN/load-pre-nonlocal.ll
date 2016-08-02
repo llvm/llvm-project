@@ -92,7 +92,6 @@ if.end:
 !6 = !{!"int", !3, i64 0}
 
 !llvm.module.flags = !{!7, !8, !9}
-!llvm.dbg.cu = !{!18}
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"PIC Level", i32 2}
@@ -100,12 +99,9 @@ if.end:
 !10 = !{}
 !11 = !DISubroutineType(types: !10)
 !12 = !DIFile(filename: "test.cpp", directory: "/tmp")
-!13 = distinct !DISubprogram(name: "test", scope: !12, file: !12, line: 99, type: !11, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, unit: !18, variables: !10)
+!13 = distinct !DISubprogram(name: "test", scope: !12, file: !12, line: 99, type: !11, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, variables: !10)
 !14 = !DILocation(line: 100, column: 1, scope: !13)
 !15 = !DILocation(line: 101, column: 1, scope: !13)
 !16 = !DILocation(line: 102, column: 1, scope: !13)
 !17 = !DILocation(line: 103, column: 1, scope: !13)
-!18 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
-                             file: !12,
-                             isOptimized: true, flags: "-O2",
-                             splitDebugFilename: "abc.debug", emissionKind: 2)
+

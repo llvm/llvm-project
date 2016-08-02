@@ -15,7 +15,6 @@
 #include "FormatStringParsing.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/ConvertUTF.h"
 
 using clang::analyze_format_string::ArgType;
 using clang::analyze_format_string::FormatStringHandler;
@@ -250,28 +249,6 @@ clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
   }
   LengthModifier lm(lmPosition, lmKind);
   FS.setLengthModifier(lm);
-  return true;
-}
-
-bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
-    const char *SpecifierBegin, const char *FmtStrEnd, unsigned &Len) {
-  if (SpecifierBegin + 1 >= FmtStrEnd)
-    return false;
-
-  const UTF8 *SB = reinterpret_cast<const UTF8 *>(SpecifierBegin + 1);
-  const UTF8 *SE = reinterpret_cast<const UTF8 *>(FmtStrEnd);
-  const char FirstByte = *SB;
-
-  // If the invalid specifier is a multibyte UTF-8 string, return the
-  // total length accordingly so that the conversion specifier can be
-  // properly updated to reflect a complete UTF-8 specifier.
-  unsigned NumBytes = getNumBytesForUTF8(FirstByte);
-  if (NumBytes == 1)
-    return false;
-  if (SB + NumBytes > SE)
-    return false;
-
-  Len = NumBytes + 1;
   return true;
 }
 
@@ -571,7 +548,6 @@ const char *ConversionSpecifier::toString() const {
   case cArg: return "c";
   case sArg: return "s";
   case pArg: return "p";
-  case PArg: return "P";
   case nArg: return "n";
   case PercentArg:  return "%";
   case ScanListArg: return "[";
@@ -847,7 +823,6 @@ bool FormatSpecifier::hasStandardConversionSpecifier(
     case ConversionSpecifier::ObjCObjArg:
     case ConversionSpecifier::ScanListArg:
     case ConversionSpecifier::PercentArg:
-    case ConversionSpecifier::PArg:
       return true;
     case ConversionSpecifier::CArg:
     case ConversionSpecifier::SArg:

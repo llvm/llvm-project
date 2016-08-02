@@ -505,17 +505,13 @@ def ObjCGenericsChecker : Checker<"ObjCGenerics">,
   HelpText<"Check for type errors when using Objective-C generics">,
   DescFile<"DynamicTypePropagation.cpp">;
 
-def ObjCDeallocChecker : Checker<"Dealloc">,
-  HelpText<"Warn about Objective-C classes that lack a correct implementation of -dealloc">,
-  DescFile<"CheckObjCDealloc.cpp">;
-
-def ObjCSuperDeallocChecker : Checker<"SuperDealloc">,
-  HelpText<"Warn about improper use of '[super dealloc]' in Objective-C">,
-  DescFile<"ObjCSuperDeallocChecker.cpp">;
-
 } // end "osx.cocoa"
 
 let ParentPackage = CocoaAlpha in {
+
+def ObjCDeallocChecker : Checker<"Dealloc">,
+  HelpText<"Warn about Objective-C classes that lack a correct implementation of -dealloc">,
+  DescFile<"CheckObjCDealloc.cpp">;
 
 def InstanceVariableInvalidation : Checker<"InstanceVariableInvalidation">,
   HelpText<"Check that the invalidatable instance variables are invalidated in the methods annotated with objc_instance_variable_invalidator">,

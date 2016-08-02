@@ -1,4 +1,5 @@
-; RUN: opt -S -instcombine -expensive-combines < %s | FileCheck %s
+; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -instsimplify < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

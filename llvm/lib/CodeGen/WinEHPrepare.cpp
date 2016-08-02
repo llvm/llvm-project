@@ -775,7 +775,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
       // Loop over all instructions, fixing each one as we find it...
       for (Instruction &I : *BB)
         RemapInstruction(&I, VMap,
-                         RF_IgnoreMissingLocals | RF_NoModuleLevelChanges);
+                         RF_IgnoreMissingEntries | RF_NoModuleLevelChanges);
 
     // Catchrets targeting cloned blocks need to be updated separately from
     // the loop above because they are not in the current funclet.

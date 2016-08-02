@@ -83,13 +83,14 @@ void ASTMergeAction::EndSourceFileAction() {
   return AdaptedAction->EndSourceFileAction();
 }
 
-ASTMergeAction::ASTMergeAction(std::unique_ptr<FrontendAction> adaptedAction,
+ASTMergeAction::ASTMergeAction(FrontendAction *AdaptedAction,
                                ArrayRef<std::string> ASTFiles)
-: AdaptedAction(std::move(adaptedAction)), ASTFiles(ASTFiles.begin(), ASTFiles.end()) {
+  : AdaptedAction(AdaptedAction), ASTFiles(ASTFiles.begin(), ASTFiles.end()) {
   assert(AdaptedAction && "ASTMergeAction needs an action to adapt");
 }
 
 ASTMergeAction::~ASTMergeAction() { 
+  delete AdaptedAction;
 }
 
 bool ASTMergeAction::usesPreprocessorOnly() const {

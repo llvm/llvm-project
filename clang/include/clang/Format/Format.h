@@ -285,9 +285,6 @@ struct FormatStyle {
   /// \brief Break after each annotation on a field in Java files.
   bool BreakAfterJavaFieldAnnotations;
 
-  /// \brief Allow breaking string literals when formatting.
-  bool BreakStringLiterals;
-
   /// \brief The column limit.
   ///
   /// A column limit of \c 0 means that there is no column limit. In this case,
@@ -622,7 +619,6 @@ struct FormatStyle {
            BreakConstructorInitializersBeforeComma ==
                R.BreakConstructorInitializersBeforeComma &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
-           BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
            ConstructorInitializerAllOnOneLineOrOnePerLine ==
                R.ConstructorInitializerAllOnOneLineOrOnePerLine &&

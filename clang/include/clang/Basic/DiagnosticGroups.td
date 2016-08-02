@@ -283,6 +283,8 @@ def : DiagGroup<"overflow">;
 def ForwardClassReceiver : DiagGroup<"receiver-forward-class">;
 def MethodAccess : DiagGroup<"objc-method-access">;
 def ObjCReceiver : DiagGroup<"receiver-expr">;
+// FIXME: Remove this when Xcode removes the warning setting.
+def : DiagGroup<"receiver-is-weak">;
 def OperatorNewReturnsNull : DiagGroup<"new-returns-null">;
 def OverlengthStrings : DiagGroup<"overlength-strings">;
 def OverloadedVirtual : DiagGroup<"overloaded-virtual">;
@@ -347,9 +349,6 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
-
-def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
-
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalPointerCompare : DiagGroup<"tautological-pointer-compare">;
 def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
@@ -617,6 +616,7 @@ def Most : DiagGroup<"most", [
     CharSubscript,
     Comment,
     DeleteNonVirtualDtor,
+    ForLoopAnalysis,
     Format,
     Implicit,
     InfiniteRecursion,

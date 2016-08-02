@@ -153,10 +153,11 @@ std::unique_ptr<ASTConsumer>
 RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (raw_ostream *OS = CI.createDefaultOutputFile(false, InFile, "cpp")) {
     if (CI.getLangOpts().ObjCRuntime.isNonFragile())
-      return CreateModernObjCRewriter(
-          InFile, OS, CI.getDiagnostics(), CI.getLangOpts(),
-          CI.getDiagnosticOpts().NoRewriteMacros,
-          (CI.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo));
+      return CreateModernObjCRewriter(InFile, OS,
+                                CI.getDiagnostics(), CI.getLangOpts(),
+                                CI.getDiagnosticOpts().NoRewriteMacros,
+                                (CI.getCodeGenOpts().getDebugInfo() !=
+                                 CodeGenOptions::NoDebugInfo));
     return CreateObjCRewriter(InFile, OS,
                               CI.getDiagnostics(), CI.getLangOpts(),
                               CI.getDiagnosticOpts().NoRewriteMacros);

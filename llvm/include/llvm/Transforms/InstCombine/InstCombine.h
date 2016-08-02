@@ -26,20 +26,15 @@ namespace llvm {
 
 class InstCombinePass {
   InstCombineWorklist Worklist;
-  bool ExpensiveCombines;
 
 public:
   static StringRef name() { return "InstCombinePass"; }
 
   // Explicitly define constructors for MSVC.
-  InstCombinePass(bool ExpensiveCombines = true)
-      : ExpensiveCombines(ExpensiveCombines) {}
-  InstCombinePass(InstCombinePass &&Arg)
-      : Worklist(std::move(Arg.Worklist)),
-        ExpensiveCombines(Arg.ExpensiveCombines) {}
+  InstCombinePass() {}
+  InstCombinePass(InstCombinePass &&Arg) : Worklist(std::move(Arg.Worklist)) {}
   InstCombinePass &operator=(InstCombinePass &&RHS) {
     Worklist = std::move(RHS.Worklist);
-    ExpensiveCombines = RHS.ExpensiveCombines;
     return *this;
   }
 

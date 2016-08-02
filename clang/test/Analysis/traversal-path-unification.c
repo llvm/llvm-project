@@ -11,7 +11,6 @@ int c();
 #define CHECK(x) (x)
 #endif
 
-// CHECK: --BEGIN FUNCTION--
 void testRemoveDeadBindings() {
   int i = a();
   if (CHECK(i))

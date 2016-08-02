@@ -2283,34 +2283,6 @@ float32x4_t test_vfmaq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {
   return vfmaq_f32(a, b, c);
 }
 
-// CHECK-LABEL: define <2 x float> @test_vfms_f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) #0 {
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %b
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB_I]] to <8 x i8>
-// CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %c to <8 x i8>
-// CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:   [[TMP4:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
-// CHECK:   [[TMP5:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x float>
-// CHECK:   [[TMP6:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x float> [[TMP3]]) #4
-// CHECK:   ret <2 x float> [[TMP6]]
-float32x2_t test_vfms_f32(float32x2_t a, float32x2_t b, float32x2_t c) {
-  return vfms_f32(a, b, c);
-}
-
-// CHECK-LABEL: define <4 x float> @test_vfmsq_f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
-// CHECK:   [[SUB_I:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
-// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB_I]] to <16 x i8>
-// CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %c to <16 x i8>
-// CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:   [[TMP4:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK:   [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x float>
-// CHECK:   [[TMP6:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x float> [[TMP3]]) #4
-// CHECK:   ret <4 x float> [[TMP6]]
-float32x4_t test_vfmsq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {
-  return vfmsq_f32(a, b, c);
-}
-
 
 // CHECK-LABEL: test_vget_high_s8
 int8x8_t test_vget_high_s8(int8x16_t a) {

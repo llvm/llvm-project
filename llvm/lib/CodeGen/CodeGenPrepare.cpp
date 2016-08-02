@@ -158,7 +158,7 @@ class TypePromotionTransaction;
     const char *getPassName() const override { return "CodeGen Prepare"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      // FIXME: When we can selectively preserve passes, preserve the domtree.
+      AU.addPreserved<DominatorTreeWrapperPass>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
     }
@@ -1695,26 +1695,6 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   return true;
 }
 
-static unsigned getAlignment(const GlobalValue *GV, const DataLayout &DL) {
-  unsigned Align = GV->getAlignment();
-
-  if (Align == 0) {
-    if (auto *GVar = dyn_cast<GlobalVariable>(GV)) {
-      Type *ObjectType = GVar->getValueType();
-      if (ObjectType->isSized()) {
-        // If the object is defined in the current Module, we'll be giving
-        // it the preferred alignment. Otherwise, we have to assume that it
-        // may only have the minimum ABI alignment.
-        if (GVar->isStrongDefinitionForLinker())
-          Align = DL.getPreferredAlignment(GVar);
-        else
-          Align = DL.getABITypeAlignment(ObjectType);
-      }
-    }
-  }
-  return Align;
-}
-
 bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
   BasicBlock *BB = CI->getParent();
 
@@ -1763,7 +1743,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
       // forbidden.
       GlobalVariable *GV;
       if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->canIncreaseAlignment() &&
-          getAlignment(GV, *DL) < PrefAlign &&
+          GV->getAlignment() < PrefAlign &&
           DL->getTypeAllocSize(GV->getValueType()) >=
               MinSize + Offset2)
         GV->setAlignment(PrefAlign);
@@ -5269,7 +5249,6 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
     for (auto &I : reverse(BB)) {
       if (makeBitReverse(I, *DL, *TLI)) {
         MadeBitReverse = MadeChange = true;
-        ModifiedDT = true;
         break;
       }
     }

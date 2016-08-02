@@ -68,7 +68,7 @@ public:
   const char *getPassName() const override { return "LoadCombine"; }
   static char ID;
 
-  typedef IRBuilder<TargetFolder> BuilderTy;
+  typedef IRBuilder<true, TargetFolder> BuilderTy;
 
 private:
   BuilderTy *Builder;
@@ -226,7 +226,7 @@ bool LoadCombine::runOnBasicBlock(BasicBlock &BB) {
 
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  IRBuilder<TargetFolder> TheBuilder(
+  IRBuilder<true, TargetFolder> TheBuilder(
       BB.getContext(), TargetFolder(BB.getModule()->getDataLayout()));
   Builder = &TheBuilder;
 

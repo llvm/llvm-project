@@ -18,17 +18,10 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-    AnnotateNoAlias("loop-version-annotate-no-alias", cl::init(true),
-                    cl::Hidden,
-                    cl::desc("Add no-alias annotation for instructions that "
-                             "are disambiguated by memchecks"));
 
 LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
                                DominatorTree *DT, ScalarEvolution *SE,
@@ -134,11 +127,10 @@ void LoopVersioning::addPHINodes(
     // First see if we have a single-operand PHI with the value defined by the
     // original loop.
     for (auto I = PHIBlock->begin(); (PN = dyn_cast<PHINode>(I)); ++I) {
-      if (PN->getIncomingValue(0) == Inst) {
-        assert(PN->getNumOperands() == 1 &&
-               "Exit block should only have on predecessor");
+      assert(PN->getNumOperands() == 1 &&
+             "Exit block should only have on predecessor");
+      if (PN->getIncomingValue(0) == Inst)
         break;
-      }
     }
     // If not create it.
     if (!PN) {
@@ -152,164 +144,4 @@ void LoopVersioning::addPHINodes(
     // Add the new incoming value from the non-versioned loop.
     PN->addIncoming(NonVersionedLoopInst, NonVersionedLoop->getExitingBlock());
   }
-}
-
-void LoopVersioning::prepareNoAliasMetadata() {
-  // We need to turn the no-alias relation between pointer checking groups into
-  // no-aliasing annotations between instructions.
-  //
-  // We accomplish this by mapping each pointer checking group (a set of
-  // pointers memchecked together) to an alias scope and then also mapping each
-  // group to the list of scopes it can't alias.
-
-  const RuntimePointerChecking *RtPtrChecking = LAI.getRuntimePointerChecking();
-  LLVMContext &Context = VersionedLoop->getHeader()->getContext();
-
-  // First allocate an aliasing scope for each pointer checking group.
-  //
-  // While traversing through the checking groups in the loop, also create a
-  // reverse map from pointers to the pointer checking group they were assigned
-  // to.
-  MDBuilder MDB(Context);
-  MDNode *Domain = MDB.createAnonymousAliasScopeDomain("LVerDomain");
-
-  for (const auto &Group : RtPtrChecking->CheckingGroups) {
-    GroupToScope[&Group] = MDB.createAnonymousAliasScope(Domain);
-
-    for (unsigned PtrIdx : Group.Members)
-      PtrToGroup[RtPtrChecking->getPointerInfo(PtrIdx).PointerValue] = &Group;
-  }
-
-  // Go through the checks and for each pointer group, collect the scopes for
-  // each non-aliasing pointer group.
-  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *,
-           SmallVector<Metadata *, 4>>
-      GroupToNonAliasingScopes;
-
-  for (const auto &Check : AliasChecks)
-    GroupToNonAliasingScopes[Check.first].push_back(GroupToScope[Check.second]);
-
-  // Finally, transform the above to actually map to scope list which is what
-  // the metadata uses.
-
-  for (auto Pair : GroupToNonAliasingScopes)
-    GroupToNonAliasingScopeList[Pair.first] = MDNode::get(Context, Pair.second);
-}
-
-void LoopVersioning::annotateLoopWithNoAlias() {
-  if (!AnnotateNoAlias)
-    return;
-
-  // First prepare the maps.
-  prepareNoAliasMetadata();
-
-  // Add the scope and no-alias metadata to the instructions.
-  for (Instruction *I : LAI.getDepChecker().getMemoryInstructions()) {
-    annotateInstWithNoAlias(I);
-  }
-}
-
-void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
-                                             const Instruction *OrigInst) {
-  if (!AnnotateNoAlias)
-    return;
-
-  LLVMContext &Context = VersionedLoop->getHeader()->getContext();
-  const Value *Ptr = isa<LoadInst>(OrigInst)
-                         ? cast<LoadInst>(OrigInst)->getPointerOperand()
-                         : cast<StoreInst>(OrigInst)->getPointerOperand();
-
-  // Find the group for the pointer and then add the scope metadata.
-  auto Group = PtrToGroup.find(Ptr);
-  if (Group != PtrToGroup.end()) {
-    VersionedInst->setMetadata(
-        LLVMContext::MD_alias_scope,
-        MDNode::concatenate(
-            VersionedInst->getMetadata(LLVMContext::MD_alias_scope),
-            MDNode::get(Context, GroupToScope[Group->second])));
-
-    // Add the no-alias metadata.
-    auto NonAliasingScopeList = GroupToNonAliasingScopeList.find(Group->second);
-    if (NonAliasingScopeList != GroupToNonAliasingScopeList.end())
-      VersionedInst->setMetadata(
-          LLVMContext::MD_noalias,
-          MDNode::concatenate(
-              VersionedInst->getMetadata(LLVMContext::MD_noalias),
-              NonAliasingScopeList->second));
-  }
-}
-
-namespace {
-/// \brief Also expose this is a pass.  Currently this is only used for
-/// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
-/// array accesses from the loop.
-class LoopVersioningPass : public FunctionPass {
-public:
-  LoopVersioningPass() : FunctionPass(ID) {
-    initializeLoopVersioningPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *LAA = &getAnalysis<LoopAccessAnalysis>();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-
-    // Build up a worklist of inner-loops to version. This is necessary as the
-    // act of versioning a loop creates new loops and can invalidate iterators
-    // across the loops.
-    SmallVector<Loop *, 8> Worklist;
-
-    for (Loop *TopLevelLoop : *LI)
-      for (Loop *L : depth_first(TopLevelLoop))
-        // We only handle inner-most loops.
-        if (L->empty())
-          Worklist.push_back(L);
-
-    // Now walk the identified inner loops.
-    bool Changed = false;
-    for (Loop *L : Worklist) {
-      const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
-      if (LAI.getNumRuntimePointerChecks() ||
-          !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
-        LoopVersioning LVer(LAI, L, LI, DT, SE);
-        LVer.versionLoop();
-        LVer.annotateLoopWithNoAlias();
-        Changed = true;
-      }
-    }
-
-    return Changed;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addRequired<LoopAccessAnalysis>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-  }
-
-  static char ID;
-};
-}
-
-#define LVER_OPTION "loop-versioning"
-#define DEBUG_TYPE LVER_OPTION
-
-char LoopVersioningPass::ID;
-static const char LVer_name[] = "Loop Versioning";
-
-INITIALIZE_PASS_BEGIN(LoopVersioningPass, LVER_OPTION, LVer_name, false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(LoopVersioningPass, LVER_OPTION, LVer_name, false, false)
-
-namespace llvm {
-FunctionPass *createLoopVersioningPass() {
-  return new LoopVersioningPass();
-}
 }

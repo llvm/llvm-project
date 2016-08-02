@@ -52,11 +52,7 @@ namespace llvm {
     bool AllowUnresolvedNodes;
 
     /// Each subprogram's preserved local variables.
-    ///
-    /// Do not use a std::vector.  Some versions of libc++ apparently copy
-    /// instead of move on grow operations, and TrackingMDRef is expensive to
-    /// copy.
-    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
+    DenseMap<MDNode *, std::vector<TrackingMDNodeRef>> PreservedVariables;
 
     DIBuilder(const DIBuilder &) = delete;
     void operator=(const DIBuilder &) = delete;
@@ -72,6 +68,7 @@ namespace llvm {
     /// If \c AllowUnresolved, collect unresolved nodes attached to the module
     /// in order to resolve cycles during \a finalize().
     explicit DIBuilder(Module &M, bool AllowUnresolved = true);
+    enum DebugEmissionKind { FullDebug=1, LineTablesOnly };
 
     /// Construct any deferred debug info descriptors.
     void finalize();
@@ -96,13 +93,22 @@ namespace llvm {
     ///                      out into.
     /// \param Kind          The kind of debug information to generate.
     /// \param DWOId         The DWOId if this is a split skeleton compile unit.
+    /// \param EmitDebugInfo A boolean flag which indicates whether
+    ///                      debug information should be written to
+    ///                      the final output or not. When this is
+    ///                      false, debug information annotations will
+    ///                      be present in the IL but they are not
+    ///                      written to the final assembly or object
+    ///                      file. This supports tracking source
+    ///                      location information in the back end
+    ///                      without actually changing the output
+    ///                      (e.g., when using optimization remarks).
     DICompileUnit *
     createCompileUnit(unsigned Lang, StringRef File, StringRef Dir,
                       StringRef Producer, bool isOptimized, StringRef Flags,
                       unsigned RV, StringRef SplitName = StringRef(),
-                      DICompileUnit::DebugEmissionKind Kind =
-                          DICompileUnit::DebugEmissionKind::FullDebug,
-                      uint64_t DWOId = 0);
+                      DebugEmissionKind Kind = FullDebug, uint64_t DWOId = 0,
+                      bool EmitDebugInfo = true);
 
     /// Create a file descriptor to hold debugging information
     /// for a file.
@@ -407,9 +413,9 @@ namespace llvm {
         uint64_t AlignInBits = 0, unsigned Flags = DINode::FlagFwdDecl,
         StringRef UniqueIdentifier = "");
 
-    /// Retain DIScope* in a module even if it is not referenced
+    /// Retain DIType* in a module even if it is not referenced
     /// through debug info anchors.
-    void retainType(DIScope *T);
+    void retainType(DIType *T);
 
     /// Create unspecified parameter type
     /// for a subroutine type.
@@ -552,8 +558,7 @@ namespace llvm {
     /// \param isDefinition  True if this is a function definition.
     /// \param Virtuality    Attributes describing virtualness. e.g. pure
     ///                      virtual function.
-    /// \param VTableIndex   Index no of this method in virtual table, or -1u if
-    ///                      unrepresentable.
+    /// \param VTableIndex   Index no of this method in virtual table.
     /// \param VTableHolder  Type that holds vtable.
     /// \param Flags         e.g. is this function prototyped or not.
     ///                      This flags are used to emit dwarf attributes.

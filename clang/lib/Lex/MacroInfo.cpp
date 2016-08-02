@@ -126,7 +126,7 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   return true;
 }
 
-LLVM_DUMP_METHOD void MacroInfo::dump() const {
+void MacroInfo::dump() const {
   llvm::raw_ostream &Out = llvm::errs();
 
   // FIXME: Dump locations.
@@ -209,7 +209,7 @@ MacroDirective::findDirectiveAtLoc(SourceLocation L, SourceManager &SM) const {
   return DefInfo();
 }
 
-LLVM_DUMP_METHOD void MacroDirective::dump() const {
+void MacroDirective::dump() const {
   llvm::raw_ostream &Out = llvm::errs();
 
   switch (getKind()) {

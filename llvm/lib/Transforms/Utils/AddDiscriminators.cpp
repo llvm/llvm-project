@@ -99,6 +99,11 @@ FunctionPass *llvm::createAddDiscriminatorsPass() {
   return new AddDiscriminators();
 }
 
+static bool hasDebugInfo(const Function &F) {
+  DISubprogram *S = getDISubprogram(&F);
+  return S != nullptr;
+}
+
 /// \brief Assign DWARF discriminators.
 ///
 /// To assign discriminators, we examine the boundaries of every
@@ -156,7 +161,7 @@ bool AddDiscriminators::runOnFunction(Function &F) {
   // Simlarly, if the function has no debug info, do nothing.
   // Finally, if this module is built with dwarf versions earlier than 4,
   // do nothing (discriminator support is a DWARF 4 feature).
-  if (NoDiscriminators || !F.getSubprogram() ||
+  if (NoDiscriminators || !hasDebugInfo(F) ||
       F.getParent()->getDwarfVersion() < 4)
     return false;
 

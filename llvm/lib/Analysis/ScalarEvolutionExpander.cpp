@@ -1783,12 +1783,13 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       // cycles that had postinc uses.
       const SCEV *TruncExpr = SE.getTruncateOrNoop(SE.getSCEV(OrigInc),
                                                    IsomorphicInc->getType());
-      if (OrigInc != IsomorphicInc && TruncExpr == SE.getSCEV(IsomorphicInc) &&
-          SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
-          hoistIVInc(OrigInc, IsomorphicInc)) {
-        DEBUG_WITH_TYPE(DebugType,
-                        dbgs() << "INDVARS: Eliminated congruent iv.inc: "
-                               << *IsomorphicInc << '\n');
+      if (OrigInc != IsomorphicInc
+          && TruncExpr == SE.getSCEV(IsomorphicInc)
+          && ((isa<PHINode>(OrigInc) && isa<PHINode>(IsomorphicInc))
+              || hoistIVInc(OrigInc, IsomorphicInc))) {
+        DEBUG_WITH_TYPE(DebugType, dbgs()
+                        << "INDVARS: Eliminated congruent iv.inc: "
+                        << *IsomorphicInc << '\n');
         Value *NewInc = OrigInc;
         if (OrigInc->getType() != IsomorphicInc->getType()) {
           Instruction *IP = nullptr;

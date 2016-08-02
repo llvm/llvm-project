@@ -40,43 +40,24 @@ void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
   assert(MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512);
 #endif
 
-  if (!MaskTy->isVectorTy())
-    return;
-  int NumElts = MaskTy->getVectorNumElements();
+  // This is a straightforward byte vector.
+  if (MaskTy->isVectorTy() && MaskTy->getVectorElementType()->isIntegerTy(8)) {
+    int NumElements = MaskTy->getVectorNumElements();
+    ShuffleMask.reserve(NumElements);
 
-  Type *EltTy = MaskTy->getVectorElementType();
-  if (!EltTy->isIntegerTy())
-    return;
-
-  // The shuffle mask requires a byte vector - decode cases with
-  // wider elements as well.
-  unsigned BitWidth = cast<IntegerType>(EltTy)->getBitWidth();
-  if ((BitWidth % 8) != 0)
-    return;
-
-  int Scale = BitWidth / 8;
-  int NumBytes = NumElts * Scale;
-  ShuffleMask.reserve(NumBytes);
-
-  for (int i = 0; i != NumElts; ++i) {
-    Constant *COp = C->getAggregateElement(i);
-    if (!COp) {
-      ShuffleMask.clear();
-      return;
-    } else if (isa<UndefValue>(COp)) {
-      ShuffleMask.append(Scale, SM_SentinelUndef);
-      continue;
-    }
-
-    APInt APElt = cast<ConstantInt>(COp)->getValue();
-    for (int j = 0; j != Scale; ++j) {
+    for (int i = 0; i < NumElements; ++i) {
       // For AVX vectors with 32 bytes the base of the shuffle is the 16-byte
       // lane of the vector we're inside.
-      int Base = ((i * Scale) + j) & ~0xf;
-
-      uint64_t Element = APElt.getLoBits(8).getZExtValue();
-      APElt = APElt.lshr(8);
-
+      int Base = i & ~0xf;
+      Constant *COp = C->getAggregateElement(i);
+      if (!COp) {
+        ShuffleMask.clear();
+        return;
+      } else if (isa<UndefValue>(COp)) {
+        ShuffleMask.push_back(SM_SentinelUndef);
+        continue;
+      }
+      uint64_t Element = cast<ConstantInt>(COp)->getZExtValue();
       // If the high bit (7) of the byte is set, the element is zeroed.
       if (Element & (1 << 7))
         ShuffleMask.push_back(SM_SentinelZero);
@@ -87,8 +68,7 @@ void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
       }
     }
   }
-
-  assert(NumBytes == (int)ShuffleMask.size() && "Unexpected shuffle mask size");
+  // TODO: Handle funny-looking vectors too.
 }
 
 void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,

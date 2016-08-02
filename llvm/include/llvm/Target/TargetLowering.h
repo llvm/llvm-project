@@ -43,7 +43,6 @@
 namespace llvm {
   class CallInst;
   class CCState;
-  class CCValAssign;
   class FastISel;
   class FunctionLoweringInfo;
   class ImmutableCallSite;
@@ -53,7 +52,6 @@ namespace llvm {
   class MachineInstr;
   class MachineJumpTableInfo;
   class MachineLoop;
-  class MachineRegisterInfo;
   class Mangler;
   class MCContext;
   class MCExpr;
@@ -2106,14 +2104,6 @@ public:
                                           bool doesNotReturn = false,
                                           bool isReturnValueUsed = true) const;
 
-  /// Check whether parameters to a call that are passed in callee saved
-  /// registers are the same as from the calling function.  This needs to be
-  /// checked for tail call eligibility.
-  bool parametersInCSRMatch(const MachineRegisterInfo &MRI,
-      const uint32_t *CallerPreservedMask,
-      const SmallVectorImpl<CCValAssign> &ArgLocs,
-      const SmallVectorImpl<SDValue> &OutVals) const;
-
   //===--------------------------------------------------------------------===//
   // TargetLowering Optimization Methods
   //
@@ -2276,8 +2266,7 @@ public:
     return false;
   }
 
-  /// Return true if the target supports swifterror attribute. It optimizes
-  /// loads and stores to reading and writing a specific register.
+  /// Return true if the target supports swifterror attribute.
   virtual bool supportSwiftError() const {
     return false;
   }
@@ -2862,16 +2851,6 @@ public:
   /// \param Result output after conversion
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
-
-  /// Turn load of vector type into a load of the individual elements.
-  /// \param LD load to expand
-  /// \returns MERGE_VALUEs of the scalar loads with their chains.
-  SDValue scalarizeVectorLoad(LoadSDNode *LD, SelectionDAG &DAG) const;
-
-  // Turn a store of a vector type into stores of the individual elements.
-  /// \param ST Store with a vector value type
-  /// \returns MERGE_VALUs of the individual store chains.
-  SDValue scalarizeVectorStore(StoreSDNode *ST, SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

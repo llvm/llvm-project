@@ -154,9 +154,17 @@ public:
                                Address Ptr, QualType ElementType,
                                const CXXDestructorDecl *Dtor) override;
 
+  /// Itanium says that an _Unwind_Exception has to be "double-word"
+  /// aligned (and thus the end of it is also so-aligned), meaning 16
+  /// bytes.  Of course, that was written for the actual Itanium,
+  /// which is a 64-bit platform.  Classically, the ABI doesn't really
+  /// specify the alignment on other platforms, but in practice
+  /// libUnwind declares the struct with __attribute__((aligned)), so
+  /// we assume that alignment here.  (It's generally 16 bytes, but
+  /// some targets overwrite it.)
   CharUnits getAlignmentOfExnObject() {
-    unsigned Align = CGM.getContext().getTargetInfo().getExnObjectAlignment();
-    return CGM.getContext().toCharUnitsFromBits(Align);
+    auto align = CGM.getContext().getTargetDefaultAlignForAttributeAligned();
+    return CGM.getContext().toCharUnitsFromBits(align);
   }
 
   void emitRethrow(CodeGenFunction &CGF, bool isNoReturn) override;
@@ -1488,8 +1496,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
       DC->getParent()->isTranslationUnit())
     EmitFundamentalRTTIDescriptors();
 
-  if (!VTable->isDeclarationForLinker())
-    CGM.EmitVTableBitSetEntries(VTable, VTLayout);
+  CGM.EmitVTableBitSetEntries(VTable, VTLayout);
 }
 
 bool ItaniumCXXABI::isVirtualOffsetNeededForVTableField(
@@ -1561,7 +1568,7 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   if (VTable)
     return VTable;
 
-  // Queue up this vtable for possible deferred emission.
+  // Queue up this v-table for possible deferred emission.
   CGM.addDeferredVTable(RD);
 
   SmallString<256> Name;
@@ -2180,8 +2187,9 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
   if (RetQT->isReferenceType())
     RetQT = RetQT.getNonReferenceType();
 
-  const CGFunctionInfo &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
-      getContext().getPointerType(RetQT), FunctionArgList());
+  const CGFunctionInfo &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+      getContext().getPointerType(RetQT), FunctionArgList(),
+      FunctionType::ExtInfo(), false);
 
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FI);
   llvm::Function *Wrapper =
@@ -2231,11 +2239,6 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     CodeGenFunction(CGM)
         .GenerateCXXGlobalInitFunc(InitFunc, CXXThreadLocalInits,
                                    Address(Guard, GuardAlign));
-    // On Darwin platforms, use CXX_FAST_TLS calling convention.
-    if (CGM.getTarget().getTriple().isOSDarwin()) {
-      InitFunc->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
-      InitFunc->addFnAttr(llvm::Attribute::NoUnwind);
-    }
   }
   for (const VarDecl *VD : CXXThreadLocals) {
     llvm::GlobalVariable *Var =
@@ -2273,7 +2276,9 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       Init = llvm::Function::Create(
           FnTy, llvm::GlobalVariable::ExternalWeakLinkage, InitFnName.str(),
           &CGM.getModule());
-      const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
+      const CGFunctionInfo &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
+          CGM.getContext().VoidTy, FunctionArgList(), FunctionType::ExtInfo(),
+          false);
       CGM.SetLLVMFunctionAttributes(nullptr, FI, cast<llvm::Function>(Init));
     }
 
@@ -2285,11 +2290,8 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Wrapper);
     CGBuilderTy Builder(CGM, Entry);
     if (InitIsInitFunc) {
-      if (Init) {
-        llvm::CallInst *CallVal = Builder.CreateCall(Init);
-        if (isThreadWrapperReplaceable(VD, CGM))
-          CallVal->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
-      }
+      if (Init)
+        Builder.CreateCall(Init);
     } else {
       // Don't know whether we have an init function. Call it if it exists.
       llvm::Value *Have = Builder.CreateIsNotNull(Init);

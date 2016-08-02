@@ -1723,7 +1723,7 @@ ASTUnit *ASTUnit::create(CompilerInvocation *CI,
 ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     CompilerInvocation *CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FrontendAction *Action,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags, ASTFrontendAction *Action,
     ASTUnit *Unit, bool Persistent, StringRef ResourceFilesPath,
     bool OnlyLocalDecls, bool CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, bool CacheCodeCompletionResults,
@@ -1812,7 +1812,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   // Create the source manager.
   Clang->setSourceManager(&AST->getSourceManager());
 
-  FrontendAction *Act = Action;
+  ASTFrontendAction *Act = Action;
 
   std::unique_ptr<TopLevelDeclTrackerAction> TrackerAct;
   if (!Act) {
@@ -2500,8 +2500,7 @@ static bool serializeUnit(ASTWriter &Writer,
 }
 
 bool ASTUnit::serialize(raw_ostream &OS) {
-  // For serialization we are lenient if the errors were only warn-as-error kind.
-  bool hasErrors = getDiagnostics().hasUncompilableErrorOccurred();
+  bool hasErrors = getDiagnostics().hasErrorOccurred();
 
   if (WriterData)
     return serializeUnit(WriterData->Writer, WriterData->Buffer,

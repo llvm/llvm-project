@@ -941,7 +941,7 @@ public:
 
   /// UndefinedInternals - all the used, undefined objects which require a
   /// definition in this translation unit.
-  llvm::MapVector<NamedDecl *, SourceLocation> UndefinedButUsed;
+  llvm::DenseMap<NamedDecl *, SourceLocation> UndefinedButUsed;
 
   /// Obtain a sorted list of functions that are undefined but ODR-used.
   void getUndefinedButUsed(
@@ -986,7 +986,6 @@ public:
   llvm::SmallSet<SpecialMemberDecl, 4> SpecialMembersBeingDeclared;
 
   void ReadMethodPool(Selector Sel);
-  void updateOutOfDateSelector(Selector Sel);
 
   /// Private Helper predicate to check for 'self'.
   bool isSelfExpr(Expr *RExpr);
@@ -1367,24 +1366,6 @@ public:
       DB << T;
     }
   };
-
-  /// Do a check to make sure \p Name looks like a legal swift_name
-  /// attribute for the decl \p D. Raise a diagnostic if the name is invalid
-  /// for the given declaration.
-  ///
-  /// For a function, this will validate a compound Swift name,
-  /// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
-  /// and the function will output the number of parameter names, and whether
-  /// this is a single-arg initializer.
-  ///
-  /// For a type, enum constant, property, or variable declaration, this will
-  /// validate either a simple identifier, or a qualified
-  /// <code>context.identifier</code> name.
-  ///
-  /// \returns true if the name is a valid swift name for \p D, false otherwise.
-  bool DiagnoseSwiftName(Decl *D, StringRef Name,
-                         SourceLocation ArgLoc,
-                         IdentifierInfo *AttrName);
 
 private:
   bool RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
@@ -2001,7 +1982,7 @@ public:
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
-                                SourceRange BraceRange);
+                                SourceLocation RBraceLoc);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -2038,8 +2019,8 @@ public:
                           SourceLocation IdLoc, IdentifierInfo *Id,
                           AttributeList *Attrs,
                           SourceLocation EqualLoc, Expr *Val);
-  void ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
-                     Decl *EnumDecl,
+  void ActOnEnumBody(SourceLocation EnumLoc, SourceLocation LBraceLoc,
+                     SourceLocation RBraceLoc, Decl *EnumDecl,
                      ArrayRef<Decl *> Elements,
                      Scope *S, AttributeList *Attr);
 
@@ -2124,13 +2105,11 @@ public:
   /// Attribute merging methods. Return true if a new attribute was added.
   AvailabilityAttr *mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
                                           IdentifierInfo *Platform,
-                                          bool Implicit,
                                           VersionTuple Introduced,
                                           VersionTuple Deprecated,
                                           VersionTuple Obsoleted,
                                           bool IsUnavailable,
                                           StringRef Message,
-                                          bool IsStrict, StringRef Replacement,
                                           AvailabilityMergeKind AMK,
                                           unsigned AttrSpellingListIndex);
   TypeVisibilityAttr *mergeTypeVisibilityAttr(Decl *D, SourceRange Range,
@@ -2408,8 +2387,8 @@ public:
 
   // Members have to be NamespaceDecl* or TranslationUnitDecl*.
   // TODO: make this is a typesafe union.
-  typedef llvm::SmallSetVector<DeclContext   *, 16> AssociatedNamespaceSet;
-  typedef llvm::SmallSetVector<CXXRecordDecl *, 16> AssociatedClassSet;
+  typedef llvm::SmallPtrSet<DeclContext   *, 16> AssociatedNamespaceSet;
+  typedef llvm::SmallPtrSet<CXXRecordDecl *, 16> AssociatedClassSet;
 
   void AddOverloadCandidate(FunctionDecl *Function,
                             DeclAccessPair FoundDecl,
@@ -2528,10 +2507,6 @@ public:
                                      bool Complain,
                                      DeclAccessPair &Found,
                                      bool *pHadMultipleCandidates = nullptr);
-
-  FunctionDecl *
-  resolveAddressOfOnlyViableOverloadCandidate(Expr *E,
-                                              DeclAccessPair &FoundResult);
 
   FunctionDecl *
   ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
@@ -3181,32 +3156,25 @@ private:
 
 public:
   /// \brief - Returns instance or factory methods in global method pool for
-  /// given selector. It checks the desired kind first, if none is found, and
-  /// parameter checkTheOther is set, it then checks the other kind. If no such
-  /// method or only one method is found, function returns false; otherwise, it
-  /// returns true.
-  bool
-  CollectMultipleMethodsInGlobalPool(Selector Sel,
-                                     SmallVectorImpl<ObjCMethodDecl*>& Methods,
-                                     bool InstanceFirst, bool CheckTheOther,
-                                     const ObjCObjectType *TypeBound = nullptr);
+  /// given selector. If no such method or only one method found, function returns
+  /// false; otherwise, it returns true
+  bool CollectMultipleMethodsInGlobalPool(Selector Sel,
+                                          SmallVectorImpl<ObjCMethodDecl*>& Methods,
+                                          bool instance);
     
-  bool
-  AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,
-                                 SourceRange R, bool receiverIdOrClass,
-                                 SmallVectorImpl<ObjCMethodDecl*>& Methods);
+  bool AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,
+                                      SourceRange R,
+                                      bool receiverIdOrClass);
       
-  void
-  DiagnoseMultipleMethodInGlobalPool(SmallVectorImpl<ObjCMethodDecl*> &Methods,
-                                     Selector Sel, SourceRange R,
-                                     bool receiverIdOrClass);
+  void DiagnoseMultipleMethodInGlobalPool(SmallVectorImpl<ObjCMethodDecl*> &Methods,
+                                          Selector Sel, SourceRange R,
+                                          bool receiverIdOrClass);
 
 private:
   /// \brief - Returns a selector which best matches given argument list or
   /// nullptr if none could be found
   ObjCMethodDecl *SelectBestMethod(Selector Sel, MultiExprArg Args,
-                                   bool IsInstance,
-                                   SmallVectorImpl<ObjCMethodDecl*>& Methods);
+                                   bool IsInstance);
     
 
   /// \brief Record the typo correction failure and return an empty correction.
@@ -3594,7 +3562,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Expression Parsing Callbacks: SemaExpr.cpp.
 
-  bool CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid);
+  bool CanUseDecl(NamedDecl *D);
   bool DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
                          const ObjCInterfaceDecl *UnknownObjCClass=nullptr,
                          bool ObjCPropertyAccess=false);
@@ -3628,15 +3596,9 @@ public:
   // for expressions referring to a decl; these exist because odr-use marking
   // needs to be delayed for some constant variables when we build one of the
   // named expressions.
-  //
-  // MightBeOdrUse indicates whether the use could possibly be an odr-use, and
-  // should usually be true. This only needs to be set to false if the lack of
-  // odr-use cannot be determined from the current context (for instance,
-  // because the name denotes a virtual function and was written without an
-  // explicit nested-name-specifier).
-  void MarkAnyDeclReferenced(SourceLocation Loc, Decl *D, bool MightBeOdrUse);
+  void MarkAnyDeclReferenced(SourceLocation Loc, Decl *D, bool OdrUse);
   void MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
-                              bool MightBeOdrUse = true);
+                              bool OdrUse = true);
   void MarkVariableReferenced(SourceLocation Loc, VarDecl *Var);
   void MarkDeclRefReferenced(DeclRefExpr *E);
   void MarkMemberReferenced(MemberExpr *E);
@@ -7018,33 +6980,6 @@ public:
     SavedPendingLocalImplicitInstantiations;
   };
 
-  /// A helper class for building up ExtParameterInfos.
-  class ExtParameterInfoBuilder {
-    SmallVector<FunctionProtoType::ExtParameterInfo, 16> Infos;
-    bool HasInteresting = false;
-
-  public:
-    /// Set the ExtParameterInfo for the parameter at the given index,
-    /// 
-    void set(unsigned index, FunctionProtoType::ExtParameterInfo info) {
-      assert(Infos.size() <= index);
-      Infos.resize(index);
-      Infos.push_back(info);
-
-      if (!HasInteresting)
-        HasInteresting = (info != FunctionProtoType::ExtParameterInfo());
-    }
-
-    /// Return a pointer (suitable for setting in an ExtProtoInfo) to the
-    /// ExtParameterInfo array we've built up.
-    const FunctionProtoType::ExtParameterInfo *
-    getPointerOrNull(unsigned numParams) {
-      if (!HasInteresting) return nullptr;
-      Infos.resize(numParams);
-      return Infos.data();
-    }
-  };
-
   void PerformPendingInstantiations(bool LocalOnly = false);
 
   TypeSourceInfo *SubstType(TypeSourceInfo *T,
@@ -7074,11 +7009,9 @@ public:
                                 bool ExpectParameterPack);
   bool SubstParmTypes(SourceLocation Loc,
                       ParmVarDecl **Params, unsigned NumParams,
-                      const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
                       SmallVectorImpl<QualType> &ParamTypes,
-                      SmallVectorImpl<ParmVarDecl *> *OutParams,
-                      ExtParameterInfoBuilder &ParamInfos);
+                      SmallVectorImpl<ParmVarDecl *> *OutParams = nullptr);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
 
@@ -7336,12 +7269,6 @@ public:
                                ArrayRef<IdentifierLocPair> ProtocolId,
                                SmallVectorImpl<Decl *> &Protocols);
 
-  void DiagnoseTypeArgsAndProtocols(IdentifierInfo *ProtocolId,
-                                    SourceLocation ProtocolLoc,
-                                    IdentifierInfo *TypeArgId,
-                                    SourceLocation TypeArgLoc,
-                                    bool SelectProtocolFirst = false);
-
   /// Given a list of identifiers (and their locations), resolve the
   /// names to either Objective-C protocol qualifiers or type
   /// arguments, as appropriate.
@@ -7436,8 +7363,7 @@ public:
                               bool ImplKind,
                               IdentifierInfo *PropertyId,
                               IdentifierInfo *PropertyIvar,
-                              SourceLocation PropertyIvarLoc,
-                              ObjCPropertyQueryKind QueryKind);
+                              SourceLocation PropertyIvarLoc);
 
   enum ObjCSpecialMethodKind {
     OSMK_None,
@@ -7840,13 +7766,6 @@ public:
   /// declaration.
   void AddLaunchBoundsAttr(SourceRange AttrRange, Decl *D, Expr *MaxThreads,
                            Expr *MinBlocks, unsigned SpellingListIndex);
-
-  void AddParameterABIAttr(SourceRange AttrRange, Decl *D,
-                           ParameterABI ABI, unsigned SpellingListIndex);
-
-  void AddNSConsumedAttr(SourceRange AttrRange, Decl *D,
-                         unsigned SpellingListIndex, bool isNSConsumed,
-                         bool isTemplateInstantiation);
 
   //===--------------------------------------------------------------------===//
   // C++ Coroutines TS
@@ -8716,7 +8635,7 @@ public:
                                         Expr *CastExpr,
                                         SourceLocation RParenLoc);
 
-  enum ARCConversionResult { ACR_okay, ACR_unbridged, ACR_error };
+  enum ARCConversionResult { ACR_okay, ACR_unbridged };
 
   /// \brief Checks for invalid conversions and casts between
   /// retainable pointers and other pointer kinds.
@@ -9095,7 +9014,6 @@ private:
                  VariadicCallType CallType);
 
   bool CheckObjCString(Expr *Arg);
-  ExprResult CheckOSLogFormatStringArg(Expr *Arg);
 
   ExprResult CheckBuiltinFunctionCall(FunctionDecl *FDecl,
                                       unsigned BuiltinID, CallExpr *TheCall);
@@ -9117,7 +9035,6 @@ private:
   bool SemaBuiltinVAStartARM(CallExpr *Call);
   bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
   bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
-  bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
 
 public:
   // Used by C++ template instantiation.
@@ -9153,7 +9070,6 @@ public:
     FST_Kprintf,
     FST_FreeBSDKPrintf,
     FST_OSTrace,
-    FST_OSLog,
     FST_Unknown
   };
   static FormatStringType GetFormatStringType(const FormatAttr *Format);

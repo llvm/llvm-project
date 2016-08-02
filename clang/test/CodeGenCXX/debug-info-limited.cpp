@@ -1,5 +1,4 @@
 // RUN: %clang -flimit-debug-info -emit-llvm -g -S %s -o - | FileCheck %s
-// RUN: %clang -flimit-debug-info -emit-llvm -g -S %s -o - | FileCheck --check-prefix=CHECK-C %s
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A"
 // CHECK-NOT:              DIFlagFwdDecl
@@ -28,8 +27,8 @@ int baz(B *b) {
 }
 
 
-// CHECK-C: !DICompositeType(tag: DW_TAG_structure_type, name: "C"
-// CHECK-C-SAME:             flags: DIFlagFwdDecl
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "C"
+// CHECK-SAME:             flags: DIFlagFwdDecl
 
 struct C {
 };

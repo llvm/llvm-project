@@ -38,9 +38,9 @@ bb:
 bb1:
 ; CHECK: %bb1
 ; CHECK-NOT: umull
-; CHECK: bl _Get
+; CHECK: blx _Get
 ; CHECK: umull
-; CHECK: bl _foo
+; CHECK: blx _foo
   %tmp5 = load i32, i32* %block_size, align 4
   %tmp6 = load i32, i32* %block_count, align 4
   %tmp7 = call %struct.FF* @Get() nounwind

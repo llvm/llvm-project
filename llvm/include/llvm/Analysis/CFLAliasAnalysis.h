@@ -32,7 +32,7 @@ class CFLAAResult : public AAResultBase<CFLAAResult> {
   struct FunctionInfo;
 
 public:
-  explicit CFLAAResult();
+  explicit CFLAAResult(const TargetLibraryInfo &TLI);
   CFLAAResult(CFLAAResult &&Arg);
 
   /// Handle invalidation events from the new pass manager.

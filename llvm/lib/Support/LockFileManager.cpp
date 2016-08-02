@@ -144,9 +144,7 @@ LockFileManager::LockFileManager(StringRef FileName)
 {
   this->FileName = FileName;
   if (std::error_code EC = sys::fs::make_absolute(this->FileName)) {
-    std::string S("failed to obtain absolute path for ");
-    S.append(this->FileName.str());
-    setError(EC, S);
+    Error = EC;
     return;
   }
   LockFileName = this->FileName;
@@ -163,9 +161,7 @@ LockFileManager::LockFileManager(StringRef FileName)
   int UniqueLockFileID;
   if (std::error_code EC = sys::fs::createUniqueFile(
           UniqueLockFileName, UniqueLockFileID, UniqueLockFileName)) {
-    std::string S("failed to create unique file ");
-    S.append(UniqueLockFileName.str());
-    setError(EC, S);
+    Error = EC;
     return;
   }
 
@@ -173,7 +169,7 @@ LockFileManager::LockFileManager(StringRef FileName)
   {
     SmallString<256> HostID;
     if (auto EC = getHostID(HostID)) {
-      setError(EC, "failed to get host id");
+      Error = EC;
       return;
     }
 
@@ -189,10 +185,7 @@ LockFileManager::LockFileManager(StringRef FileName)
     if (Out.has_error()) {
       // We failed to write out PID, so make up an excuse, remove the
       // unique lock file, and fail.
-      auto EC = make_error_code(errc::no_space_on_device);
-      std::string S("failed to write to ");
-      S.append(UniqueLockFileName.str());
-      setError(EC, S);
+      Error = make_error_code(errc::no_space_on_device);
       sys::fs::remove(UniqueLockFileName);
       return;
     }
@@ -212,10 +205,7 @@ LockFileManager::LockFileManager(StringRef FileName)
     }
 
     if (EC != errc::file_exists) {
-      std::string S("failed to create link ");
-      raw_string_ostream OSS(S);
-      OSS << LockFileName.str() << " to " << UniqueLockFileName.str();
-      setError(EC, OSS.str());
+      Error = EC;
       return;
     }
 
@@ -236,9 +226,7 @@ LockFileManager::LockFileManager(StringRef FileName)
     // There is a lock file that nobody owns; try to clean it up and get
     // ownership.
     if ((EC = sys::fs::remove(LockFileName))) {
-      std::string S("failed to remove lockfile ");
-      S.append(UniqueLockFileName.str());
-      setError(EC, S);
+      Error = EC;
       return;
     }
   }
@@ -252,19 +240,6 @@ LockFileManager::LockFileState LockFileManager::getState() const {
     return LFS_Error;
 
   return LFS_Owned;
-}
-
-std::string LockFileManager::getErrorMessage() const {
-  if (Error) {
-    std::string Str(ErrorDiagMsg);
-    std::string ErrCodeMsg = Error->message();
-    raw_string_ostream OSS(Str);
-    if (!ErrCodeMsg.empty())
-      OSS << ": " << Error->message();
-    OSS.flush();
-    return Str;
-  }
-  return "";
 }
 
 LockFileManager::~LockFileManager() {

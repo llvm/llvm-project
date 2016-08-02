@@ -238,14 +238,8 @@ void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
   for (unsigned I = 0, N = T->getNumParams(); I != N; ++I)
     Writer.AddTypeRef(T->getParamType(I), Record);
 
-  if (T->hasExtParameterInfos()) {
-    for (unsigned I = 0, N = T->getNumParams(); I != N; ++I)
-      Record.push_back(T->getExtParameterInfo(I).getOpaqueValue());
-  }
-
   if (T->isVariadic() || T->hasTrailingReturn() || T->getTypeQuals() ||
-      T->getRefQualifier() || T->getExceptionSpecType() != EST_None ||
-      T->hasExtParameterInfos())
+      T->getRefQualifier() || T->getExceptionSpecType() != EST_None)
     AbbrevToUse = 0;
 
   Code = TYPE_FUNCTION_PROTO;
@@ -2131,29 +2125,30 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
 
     // Write out any exported module macros.
     bool EmittedModuleMacros = false;
-    // We write out exported module macros for PCH as well.
-    auto Leafs = PP.getLeafModuleMacros(Name);
-    SmallVector<ModuleMacro*, 8> Worklist(Leafs.begin(), Leafs.end());
-    llvm::DenseMap<ModuleMacro*, unsigned> Visits;
-    while (!Worklist.empty()) {
-      auto *Macro = Worklist.pop_back_val();
+    if (IsModule) {
+      auto Leafs = PP.getLeafModuleMacros(Name);
+      SmallVector<ModuleMacro*, 8> Worklist(Leafs.begin(), Leafs.end());
+      llvm::DenseMap<ModuleMacro*, unsigned> Visits;
+      while (!Worklist.empty()) {
+        auto *Macro = Worklist.pop_back_val();
 
-      // Emit a record indicating this submodule exports this macro.
-      ModuleMacroRecord.push_back(
-          getSubmoduleID(Macro->getOwningModule()));
-      ModuleMacroRecord.push_back(getMacroRef(Macro->getMacroInfo(), Name));
-      for (auto *M : Macro->overrides())
-        ModuleMacroRecord.push_back(getSubmoduleID(M->getOwningModule()));
+        // Emit a record indicating this submodule exports this macro.
+        ModuleMacroRecord.push_back(
+            getSubmoduleID(Macro->getOwningModule()));
+        ModuleMacroRecord.push_back(getMacroRef(Macro->getMacroInfo(), Name));
+        for (auto *M : Macro->overrides())
+          ModuleMacroRecord.push_back(getSubmoduleID(M->getOwningModule()));
 
-      Stream.EmitRecord(PP_MODULE_MACRO, ModuleMacroRecord);
-      ModuleMacroRecord.clear();
+        Stream.EmitRecord(PP_MODULE_MACRO, ModuleMacroRecord);
+        ModuleMacroRecord.clear();
 
-      // Enqueue overridden macros once we've visited all their ancestors.
-      for (auto *M : Macro->overrides())
-        if (++Visits[M] == M->getNumOverridingMacros())
-          Worklist.push_back(M);
+        // Enqueue overridden macros once we've visited all their ancestors.
+        for (auto *M : Macro->overrides())
+          if (++Visits[M] == M->getNumOverridingMacros())
+            Worklist.push_back(M);
 
-      EmittedModuleMacros = true;
+        EmittedModuleMacros = true;
+      }
     }
 
     if (Record.empty() && !EmittedModuleMacros)
@@ -2403,7 +2398,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExplicit
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSystem
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExternC
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSwiftInferIAM...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferSubmodules...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExplicit...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExportWild...
@@ -2498,9 +2492,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     {
       RecordData::value_type Record[] = {
           SUBMODULE_DEFINITION, ID, ParentID, Mod->IsFramework, Mod->IsExplicit,
-          Mod->IsSystem, Mod->IsExternC, Mod->IsSwiftInferImportAsMember,
-          Mod->InferSubmodules, Mod->InferExplicitSubmodules,
-          Mod->InferExportWildcard, Mod->ConfigMacrosExhaustive};
+          Mod->IsSystem, Mod->IsExternC, Mod->InferSubmodules,
+          Mod->InferExplicitSubmodules, Mod->InferExportWildcard,
+          Mod->ConfigMacrosExhaustive};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -4158,10 +4152,6 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
   RegisterPredefDecl(Context.MakeIntegerSeqDecl,
                      PREDEF_DECL_MAKE_INTEGER_SEQ_ID);
-  RegisterPredefDecl(Context.CFConstantStringTypeDecl,
-                     PREDEF_DECL_CF_CONSTANT_STRING_ID);
-  RegisterPredefDecl(Context.CFConstantStringTagDecl,
-                     PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
 
   // Build a record containing all of the tentative definitions in this file, in
   // TentativeDefinitions order.  Generally, this record will be empty for
@@ -4357,19 +4347,6 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
       }
     }
   }
-
-  // For method pool in the module, if it contains an entry for a selector,
-  // the entry should be complete, containing everything introduced by that
-  // module and all modules it imports. It's possible that the entry is out of
-  // date, so we need to pull in the new content here.
-
-  // It's possible that updateOutOfDateSelector can update SelectorIDs. To be
-  // safe, we copy all selectors out.
-  llvm::SmallVector<Selector, 256> AllSelectors;
-  for (auto &SelectorAndID : SelectorIDs)
-    AllSelectors.push_back(SelectorAndID.first);
-  for (auto &Selector : AllSelectors)
-    SemaRef.updateOutOfDateSelector(Selector);
 
   // Form the record of special types.
   RecordData SpecialTypes;
@@ -4682,7 +4659,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         Record.push_back(RD->getTagKind());
         AddSourceLocation(RD->getLocation(), Record);
         AddSourceLocation(RD->getLocStart(), Record);
-        AddSourceRange(RD->getBraceRange(), Record);
+        AddSourceLocation(RD->getRBraceLoc(), Record);
 
         // Instantiation may change attributes; write them all out afresh.
         Record.push_back(D->hasAttrs());
@@ -5715,19 +5692,8 @@ static bool isImportedDeclContext(ASTReader *Chain, const Decl *D) {
 }
 
 void ASTWriter::AddedVisibleDecl(const DeclContext *DC, const Decl *D) {
-   assert(DC->isLookupContext() &&
-          "Should not add lookup results to non-lookup contexts!");
-
-  // TU is handled elsewhere.
-  if (isa<TranslationUnitDecl>(DC))
-    return;
-
-  // Namespaces are handled elsewhere, except for template instantiations of
-  // FunctionTemplateDecls in namespaces. We are interested in cases where the
-  // local instantiations are added to an imported context. Only happens when
-  // adding ADL lookup candidates, for example templated friends.
-  if (isa<NamespaceDecl>(DC) && D->getFriendObjectKind() == Decl::FOK_None &&
-      !isa<FunctionTemplateDecl>(D))
+  // TU and namespaces are handled elsewhere.
+  if (isa<TranslationUnitDecl>(DC) || isa<NamespaceDecl>(DC))
     return;
 
   // We're only interested in cases where a local declaration is added to an

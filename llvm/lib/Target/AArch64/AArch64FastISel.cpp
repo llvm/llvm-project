@@ -1905,18 +1905,14 @@ bool AArch64FastISel::selectLoad(const Instruction *I) {
     return false;
 
   const Value *SV = I->getOperand(0);
-  if (TLI.supportSwiftError()) {
-    // Swifterror values can come from either a function parameter with
-    // swifterror attribute or an alloca with swifterror attribute.
-    if (const Argument *Arg = dyn_cast<Argument>(SV)) {
-      if (Arg->hasSwiftErrorAttr())
-        return false;
-    }
+  if (const Argument *Arg = dyn_cast<Argument>(SV)) {
+    if (Arg->hasSwiftErrorAttr() && TLI.supportSwiftError())
+      return false;
+  }
 
-    if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(SV)) {
-      if (Alloca->isSwiftError())
-        return false;
-    }
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(SV)) {
+    if (Alloca->isSwiftError() && TLI.supportSwiftError())
+      return false;
   }
 
   // See if we can handle this address.
@@ -2084,18 +2080,14 @@ bool AArch64FastISel::selectStore(const Instruction *I) {
     return false;
 
   const Value *PtrV = I->getOperand(1);
-  if (TLI.supportSwiftError()) {
-    // Swifterror values can come from either a function parameter with
-    // swifterror attribute or an alloca with swifterror attribute.
-    if (const Argument *Arg = dyn_cast<Argument>(PtrV)) {
-      if (Arg->hasSwiftErrorAttr())
-        return false;
-    }
+  if (const Argument *Arg = dyn_cast<Argument>(PtrV)) {
+    if (Arg->hasSwiftErrorAttr() && TLI.supportSwiftError())
+      return false;
+  }
 
-    if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV)) {
-      if (Alloca->isSwiftError())
-        return false;
-    }
+  if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrV)) {
+    if (Alloca->isSwiftError() && TLI.supportSwiftError())
+      return false;
   }
 
   // Get the value to be stored into a register. Use the zero register directly
@@ -3679,8 +3671,8 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
   if (F.isVarArg())
     return false;
 
-  if (TLI.supportSwiftError() &&
-      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+  if (F.getAttributes().hasAttrSomewhere(Attribute::SwiftError) &&
+      TLI.supportSwiftError())
     return false;
 
   if (TLI.supportSplitCSR(FuncInfo.MF))

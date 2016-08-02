@@ -35,7 +35,7 @@ class OptionalFlag {
 public:
   OptionalFlag(const char *Representation)
       : representation(Representation), flag(false) {}
-  bool isSet() const { return flag; }
+  bool isSet() { return flag; }
   void set() { flag = true; }
   void clear() { flag = false; }
   void setPosition(const char *position) {
@@ -154,11 +154,6 @@ public:
     CArg,
     SArg,
 
-    // Apple extension: P specifies to os_log that the data being pointed to is
-    // to be copied by os_log. The precision indicates the number of bytes to
-    // copy.
-    PArg,
-
     // ** Printf-specific **
 
     ZArg, // MS extension
@@ -215,7 +210,6 @@ public:
   unsigned getLength() const {
     return EndScanList ? EndScanList - Position : 1;
   }
-  void setEndScanList(const char *pos) { EndScanList = pos; }
 
   bool isIntArg() const { return (kind >= IntArgBeg && kind <= IntArgEnd) ||
     kind == FreeBSDrArg || kind == FreeBSDyArg; }
@@ -419,6 +413,11 @@ public:
   bool isObjCArg() const { return kind >= ObjCBeg && kind <= ObjCEnd; }
   bool isDoubleArg() const { return kind >= DoubleArgBeg &&
                                     kind <= DoubleArgEnd; }
+  unsigned getLength() const {
+      // Conversion specifiers currently only are represented by
+      // single characters, but we be flexible.
+    return 1;
+  }
 
   static bool classof(const analyze_format_string::ConversionSpecifier *CS) {
     return CS->isPrintfKind();
@@ -438,15 +437,13 @@ class PrintfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag HasAlternativeForm; // '#'
   OptionalFlag HasLeadingZeroes; // '0'
   OptionalFlag HasObjCTechnicalTerm; // '[tt]'
-  OptionalFlag IsPrivate; // '{private}'
-  OptionalFlag IsPublic; // '{public}'
   OptionalAmount Precision;
 public:
   PrintfSpecifier() :
     FormatSpecifier(/* isPrintf = */ true),
     HasThousandsGrouping("'"), IsLeftJustified("-"), HasPlusPrefix("+"),
     HasSpacePrefix(" "), HasAlternativeForm("#"), HasLeadingZeroes("0"),
-    HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public") {}
+    HasObjCTechnicalTerm("tt") {}
 
   static PrintfSpecifier Parse(const char *beg, const char *end);
 
@@ -474,12 +471,6 @@ public:
   }
   void setHasObjCTechnicalTerm(const char *position) {
     HasObjCTechnicalTerm.setPosition(position);
-  }
-  void setIsPrivate(const char *position) {
-    IsPrivate.setPosition(position);
-  }
-  void setIsPublic(const char *position) {
-    IsPublic.setPosition(position);
   }
   void setUsesPositionalArg() { UsesPositionalArg = true; }
 
@@ -518,8 +509,6 @@ public:
   const OptionalFlag &hasLeadingZeros() const { return HasLeadingZeroes; }
   const OptionalFlag &hasSpacePrefix() const { return HasSpacePrefix; }
   const OptionalFlag &hasObjCTechnicalTerm() const { return HasObjCTechnicalTerm; }
-  const OptionalFlag &isPrivate() const { return IsPrivate; }
-  const OptionalFlag &isPublic() const { return IsPublic; }
   bool usesPositionalArg() const { return UsesPositionalArg; }
 
   /// Changes the specifier and length according to a QualType, retaining any
@@ -556,6 +545,8 @@ public:
 
   ScanfConversionSpecifier(const char *pos, Kind k)
     : ConversionSpecifier(false, pos, k) {}
+
+  void setEndScanList(const char *pos) { EndScanList = pos; }
 
   static bool classof(const analyze_format_string::ConversionSpecifier *CS) {
     return !CS->isPrintfKind();

@@ -43,7 +43,6 @@ CODEGENOPT(DataSections      , 1, 0) ///< Set when -fdata-sections is enabled.
 CODEGENOPT(UniqueSectionNames, 1, 1) ///< Set for -funique-section-names.
 CODEGENOPT(DisableFPElim     , 1, 0) ///< Set when -fomit-frame-pointer is enabled.
 CODEGENOPT(DisableFree       , 1, 0) ///< Don't free memory.
-CODEGENOPT(DiscardValueNames , 1, 0) ///< Discard Value Names from the IR (LLVMContext flag)
 CODEGENOPT(DisableGCov       , 1, 0) ///< Don't run the GCov pass, for testing.
 CODEGENOPT(DisableLLVMOpts   , 1, 0) ///< Don't run any optimizations, for use in
                                      ///< getting .bc files that correspond to the
@@ -74,8 +73,8 @@ CODEGENOPT(LessPreciseFPMAD  , 1, 0) ///< Enable less precise MAD instructions t
                                      ///< be generated.
 CODEGENOPT(PrepareForLTO     , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
-CODEGENOPT(EmitSummaryIndex, 1, 0)   ///< Set when -flto=thin is enabled on the
-                                     ///< compile step.
+CODEGENOPT(EmitFunctionSummary, 1, 0) ///< Set when -flto=thin is enabled on the
+                                      ///< compile step.
 CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< be used with an incremental
                                               ///< linker.
@@ -186,7 +185,7 @@ VALUE_CODEGENOPT(NumRegisterParameters, 32, 0)
 VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 
 /// The kind of generated debug info.
-ENUM_CODEGENOPT(DebugInfo, codegenoptions::DebugInfoKind, 3, codegenoptions::NoDebugInfo)
+ENUM_CODEGENOPT(DebugInfo, DebugInfoKind, 3, NoDebugInfo)
 
 /// Tune the debug info for this debugger.
 ENUM_CODEGENOPT(DebuggerTuning, DebuggerKind, 2, DebuggerKindDefault)

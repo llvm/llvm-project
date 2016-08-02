@@ -299,9 +299,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_Win64_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
-    if (Subtarget.getTargetLowering()->supportSwiftError() &&
-        MF->getFunction()->getAttributes().hasAttrSomewhere(
-            Attribute::SwiftError))
+    if (MF->getFunction()->getAttributes().hasAttrSomewhere(
+        Attribute::SwiftError))
       return CSR_64_SwiftError_SaveList;
     return CSR_64_SaveList;
   }
@@ -389,9 +388,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   if (Is64Bit) {
     if (IsWin64)
       return CSR_Win64_RegMask;
-    if (Subtarget.getTargetLowering()->supportSwiftError() &&
-        MF.getFunction()->getAttributes().hasAttrSomewhere(
-            Attribute::SwiftError))
+    if (MF.getFunction()->getAttributes().hasAttrSomewhere(
+        Attribute::SwiftError))
       return CSR_64_SwiftError_RegMask;
     return CSR_64_RegMask;
   }

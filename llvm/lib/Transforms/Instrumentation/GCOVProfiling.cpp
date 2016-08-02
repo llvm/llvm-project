@@ -138,6 +138,7 @@ namespace {
     Module *M;
     LLVMContext *Ctx;
     SmallVector<std::unique_ptr<GCOVFunction>, 16> Funcs;
+    DenseMap<DISubprogram *, Function *> FnMap;
   };
 }
 
@@ -449,21 +450,28 @@ bool GCOVProfiler::runOnModule(Module &M) {
   this->M = &M;
   Ctx = &M.getContext();
 
+  FnMap.clear();
+  for (Function &F : M) {
+    if (DISubprogram *SP = F.getSubprogram())
+      FnMap[SP] = &F;
+  }
+
   if (Options.EmitNotes) emitProfileNotes();
   if (Options.EmitData) return emitProfileArcs();
   return false;
 }
 
-static bool functionHasLines(Function &F) {
+static bool functionHasLines(Function *F) {
   // Check whether this function actually has any source lines. Not only
   // do these waste space, they also can crash gcov.
-  for (auto &BB : F) {
-    for (auto &I : BB) {
+  for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
+    for (BasicBlock::iterator I = BB->begin(), IE = BB->end();
+         I != IE; ++I) {
       // Debug intrinsic locations correspond to the location of the
       // declaration, not necessarily any statements or expressions.
-      if (isa<DbgInfoIntrinsic>(&I)) continue;
+      if (isa<DbgInfoIntrinsic>(I)) continue;
 
-      const DebugLoc &Loc = I.getDebugLoc();
+      const DebugLoc &Loc = I->getDebugLoc();
       if (!Loc)
         continue;
 
@@ -486,37 +494,32 @@ void GCOVProfiler::emitProfileNotes() {
     // LTO, we'll generate the same .gcno files.
 
     auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
-
-    // Skip module skeleton (and module) CUs.
-    if (CU->getDWOId())
-      continue;
-
     std::error_code EC;
     raw_fd_ostream out(mangleName(CU, "gcno"), EC, sys::fs::F_None);
     std::string EdgeDestinations;
 
     unsigned FunctionIdent = 0;
-    for (auto &F : M->functions()) {
-      DISubprogram *SP = F.getSubprogram();
-      if (!SP) continue;
+    for (auto *SP : CU->getSubprograms()) {
+      Function *F = FnMap[SP];
+      if (!F) continue;
       if (!functionHasLines(F)) continue;
 
       // gcov expects every function to start with an entry block that has a
       // single successor, so split the entry block to make sure of that.
-      BasicBlock &EntryBlock = F.getEntryBlock();
+      BasicBlock &EntryBlock = F->getEntryBlock();
       BasicBlock::iterator It = EntryBlock.begin();
       while (isa<AllocaInst>(*It) || isa<DbgInfoIntrinsic>(*It))
         ++It;
       EntryBlock.splitBasicBlock(It);
 
-      Funcs.push_back(make_unique<GCOVFunction>(SP, &F, &out, FunctionIdent++,
+      Funcs.push_back(make_unique<GCOVFunction>(SP, F, &out, FunctionIdent++,
                                                 Options.UseCfgChecksum,
                                                 Options.ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();
 
-      for (auto &BB : F) {
-        GCOVBlock &Block = Func.getBlock(&BB);
-        TerminatorInst *TI = BB.getTerminator();
+      for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
+        GCOVBlock &Block = Func.getBlock(&*BB);
+        TerminatorInst *TI = BB->getTerminator();
         if (int successors = TI->getNumSuccessors()) {
           for (int i = 0; i != successors; ++i) {
             Block.addEdge(Func.getBlock(TI->getSuccessor(i)));
@@ -526,12 +529,13 @@ void GCOVProfiler::emitProfileNotes() {
         }
 
         uint32_t Line = 0;
-        for (auto &I : BB) {
+        for (BasicBlock::iterator I = BB->begin(), IE = BB->end();
+             I != IE; ++I) {
           // Debug intrinsic locations correspond to the location of the
           // declaration, not necessarily any statements or expressions.
-          if (isa<DbgInfoIntrinsic>(&I)) continue;
+          if (isa<DbgInfoIntrinsic>(I)) continue;
 
-          const DebugLoc &Loc = I.getDebugLoc();
+          const DebugLoc &Loc = I->getDebugLoc();
           if (!Loc)
             continue;
 
@@ -572,15 +576,16 @@ bool GCOVProfiler::emitProfileArcs() {
   bool Result = false;
   bool InsertIndCounterIncrCode = false;
   for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
+    auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
     SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
-    for (auto &F : M->functions()) {
-      DISubprogram *SP = F.getSubprogram();
-      if (!SP) continue;
+    for (auto *SP : CU->getSubprograms()) {
+      Function *F = FnMap[SP];
+      if (!F) continue;
       if (!functionHasLines(F)) continue;
       if (!Result) Result = true;
       unsigned Edges = 0;
-      for (auto &BB : F) {
-        TerminatorInst *TI = BB.getTerminator();
+      for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
+        TerminatorInst *TI = BB->getTerminator();
         if (isa<ReturnInst>(TI))
           ++Edges;
         else
@@ -600,12 +605,12 @@ bool GCOVProfiler::emitProfileArcs() {
       UniqueVector<BasicBlock *> ComplexEdgeSuccs;
 
       unsigned Edge = 0;
-      for (auto &BB : F) {
-        TerminatorInst *TI = BB.getTerminator();
+      for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
+        TerminatorInst *TI = BB->getTerminator();
         int Successors = isa<ReturnInst>(TI) ? 1 : TI->getNumSuccessors();
         if (Successors) {
           if (Successors == 1) {
-            IRBuilder<> Builder(&*BB.getFirstInsertionPt());
+            IRBuilder<> Builder(&*BB->getFirstInsertionPt());
             Value *Counter = Builder.CreateConstInBoundsGEP2_64(Counters, 0,
                                                                 Edge);
             Value *Count = Builder.CreateLoad(Counter);
@@ -625,7 +630,7 @@ bool GCOVProfiler::emitProfileArcs() {
             Count = Builder.CreateAdd(Count, Builder.getInt64(1));
             Builder.CreateStore(Count, Counter);
           } else {
-            ComplexEdgePreds.insert(&BB);
+            ComplexEdgePreds.insert(&*BB);
             for (int i = 0; i != Successors; ++i)
               ComplexEdgeSuccs.insert(TI->getSuccessor(i));
           }
@@ -636,7 +641,7 @@ bool GCOVProfiler::emitProfileArcs() {
 
       if (!ComplexEdgePreds.empty()) {
         GlobalVariable *EdgeTable =
-          buildEdgeLookupTable(&F, Counters,
+          buildEdgeLookupTable(F, Counters,
                                ComplexEdgePreds, ComplexEdgeSuccs);
         GlobalVariable *EdgeState = getEdgeStateValue();
 
@@ -848,11 +853,6 @@ Function *GCOVProfiler::insertCounterWriteout(
   if (CU_Nodes) {
     for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
       auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
-
-      // Skip module skeleton (and module) CUs.
-      if (CU->getDWOId())
-        continue;
-
       std::string FilenameGcda = mangleName(CU, "gcda");
       uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
       Builder.CreateCall(StartFile,

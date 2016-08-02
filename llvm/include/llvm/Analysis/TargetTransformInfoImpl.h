@@ -264,14 +264,6 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
-  unsigned getCacheLineSize() { return 0; }
-
-  unsigned getPrefetchDistance() { return 0; }
-
-  unsigned getMinPrefetchStride() { return 1; }
-
-  unsigned getMaxPrefetchIterationsAhead() { return UINT_MAX; }
-
   unsigned getMaxInterleaveFactor(unsigned VF) { return 1; }
 
   unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,

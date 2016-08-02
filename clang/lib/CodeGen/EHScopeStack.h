@@ -341,7 +341,9 @@ public:
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return StartOfData == EndOfBuffer; }
 
-  bool requiresLandingPad() const;
+  bool requiresLandingPad() const {
+    return InnermostEHScope != stable_end();
+  }
 
   /// Determines whether there are any normal cleanups on the stack.
   bool hasNormalCleanups() const {

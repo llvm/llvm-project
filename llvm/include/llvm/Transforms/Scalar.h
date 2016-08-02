@@ -132,7 +132,7 @@ Pass *createIndVarSimplifyPass();
 // into:
 //    %Z = add int 2, %X
 //
-FunctionPass *createInstructionCombiningPass(bool ExpensiveCombines = true);
+FunctionPass *createInstructionCombiningPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -485,31 +485,13 @@ FunctionPass *createNaryReassociatePass();
 //
 // LoopDistribute - Distribute loops.
 //
-// ProcessAllLoopsByDefault instructs the pass to look for distribution
-// opportunities in all loops unless -enable-loop-distribute or the
-// llvm.loop.distribute.enable metadata data override this default.
-FunctionPass *createLoopDistributePass(bool ProcessAllLoopsByDefault);
+FunctionPass *createLoopDistributePass();
 
 //===----------------------------------------------------------------------===//
 //
 // LoopLoadElimination - Perform loop-aware load elimination.
 //
 FunctionPass *createLoopLoadEliminationPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopVersioning - Perform loop multi-versioning.
-//
-FunctionPass *createLoopVersioningPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopDataPrefetch - Perform data prefetching in loops.
-//
-FunctionPass *createLoopDataPrefetchPass();
-
-///===---------------------------------------------------------------------===//
-ModulePass *createNameAnonFunctionPass();
 
 } // End llvm namespace
 

@@ -191,10 +191,6 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     if (FP->getType()->isPPC_FP128Ty())
       return nullptr;
 
-    // Make sure dest type is compatible with the folded integer constant.
-    if (!DestTy->isIntegerTy())
-      return nullptr;
-
     return ConstantInt::get(FP->getContext(),
                             FP->getValueAPF().bitcastToAPInt());
   }
@@ -920,11 +916,9 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
 
 Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
                                               Constant *C1, Constant *C2) {
-  assert(Instruction::isBinaryOp(Opcode) && "Non-binary instruction detected");
-
   // Handle UndefValue up front.
   if (isa<UndefValue>(C1) || isa<UndefValue>(C2)) {
-    switch (static_cast<Instruction::BinaryOps>(Opcode)) {
+    switch (Opcode) {
     case Instruction::Xor:
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
         // Handle undef ^ undef -> 0 special case. This is a common
@@ -1004,21 +998,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
         return C1;
       // undef << X -> 0
       return Constant::getNullValue(C1->getType());
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-    case Instruction::FDiv:
-    case Instruction::FRem:
-      // TODO: UNDEF handling for binary float instructions.
-      return nullptr;
-    case Instruction::BinaryOpsEnd:
-      llvm_unreachable("Invalid BinaryOp");
     }
   }
-
-  // At this point neither constant should be an UndefValue.
-  assert(!isa<UndefValue>(C1) && !isa<UndefValue>(C2) &&
-         "Unexpected UndefValue");
 
   // Handle simplifications when the RHS is a constant int.
   if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
@@ -1121,6 +1102,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       return ConstantExpr::get(Opcode, C2, C1);
   }
 
+  // At this point we know neither constant is an UndefValue.
   if (ConstantInt *CI1 = dyn_cast<ConstantInt>(C1)) {
     if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
       const APInt &C1V = CI1->getValue();
@@ -2058,13 +2040,11 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
     return C;
 
   if (isa<UndefValue>(C)) {
-    PointerType *PtrTy = cast<PointerType>(C->getType()->getScalarType());
-    Type *Ty = GetElementPtrInst::getIndexedType(PtrTy->getElementType(), Idxs);
+    PointerType *Ptr = cast<PointerType>(C->getType());
+    Type *Ty = GetElementPtrInst::getIndexedType(
+        cast<PointerType>(Ptr->getScalarType())->getElementType(), Idxs);
     assert(Ty && "Invalid indices for GEP!");
-    Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
-    if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
-      GEPTy = VectorType::get(GEPTy, VT->getNumElements());
-    return UndefValue::get(GEPTy);
+    return UndefValue::get(PointerType::get(Ty, Ptr->getAddressSpace()));
   }
 
   if (C->isNullValue()) {
@@ -2075,14 +2055,12 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
         break;
       }
     if (isNull) {
-      PointerType *PtrTy = cast<PointerType>(C->getType()->getScalarType());
-      Type *Ty =
-          GetElementPtrInst::getIndexedType(PtrTy->getElementType(), Idxs);
+      PointerType *Ptr = cast<PointerType>(C->getType());
+      Type *Ty = GetElementPtrInst::getIndexedType(
+          cast<PointerType>(Ptr->getScalarType())->getElementType(), Idxs);
       assert(Ty && "Invalid indices for GEP!");
-      Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
-      if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
-        GEPTy = VectorType::get(GEPTy, VT->getNumElements());
-      return Constant::getNullValue(GEPTy);
+      return ConstantPointerNull::get(PointerType::get(Ty,
+                                                       Ptr->getAddressSpace()));
     }
   }
 
@@ -2195,7 +2173,7 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
   for (unsigned i = 1, e = Idxs.size(); i != e;
        Prev = Ty, Ty = cast<CompositeType>(Ty)->getTypeAtIndex(Idxs[i]), ++i) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Idxs[i])) {
-      if (isa<ArrayType>(Ty))
+      if (isa<ArrayType>(Ty) || isa<VectorType>(Ty))
         if (CI->getSExtValue() > 0 &&
             !isIndexInRangeOfSequentialType(cast<SequentialType>(Ty), CI)) {
           if (isa<SequentialType>(Prev)) {

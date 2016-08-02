@@ -390,8 +390,6 @@ visit(const ObjCImplementationDecl *ImplD) const {
   for (ObjCInterfaceDecl::PropertyMap::iterator
       I = PropMap.begin(), E = PropMap.end(); I != E; ++I) {
     const ObjCPropertyDecl *PD = I->second;
-    if (PD->isClassProperty())
-      continue;
 
     const ObjCIvarDecl *ID = findPropertyBackingIvar(PD, InterfaceD, Ivars,
                                                      &FirstIvarDecl);

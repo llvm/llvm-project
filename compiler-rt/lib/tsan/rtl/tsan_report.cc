@@ -96,8 +96,6 @@ static const char *ReportTypeString(ReportType typ) {
     return "destroy of a locked mutex";
   if (typ == ReportTypeMutexDoubleLock)
     return "double lock of a mutex";
-  if (typ == ReportTypeMutexInvalidAccess)
-    return "use of an invalid mutex (e.g. uninitialized or destroyed)";
   if (typ == ReportTypeMutexBadUnlock)
     return "unlock of an unlocked mutex (or by a wrong thread)";
   if (typ == ReportTypeMutexBadReadLock)
@@ -236,7 +234,7 @@ static void PrintThread(const ReportThread *rt) {
     Printf(" '%s'", rt->name);
   char thrbuf[kThreadBufSize];
   Printf(" (tid=%zu, %s) created by %s",
-    rt->os_id, rt->running ? "running" : "finished",
+    rt->pid, rt->running ? "running" : "finished",
     thread_name(thrbuf, rt->parent_tid));
   if (rt->stack)
     Printf(" at:");

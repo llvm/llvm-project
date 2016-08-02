@@ -402,8 +402,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
-
   // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
   // This requires the Performance Monitors extension.
   if (Subtarget->hasPerfMon())
@@ -1137,35 +1135,6 @@ static void changeFPCCToAArch64CC(ISD::CondCode CC,
   }
 }
 
-/// Convert a DAG fp condition code to an AArch64 CC.
-/// This differs from changeFPCCToAArch64CC in that it returns cond codes that
-/// should be AND'ed instead of OR'ed.
-static void changeFPCCToANDAArch64CC(ISD::CondCode CC,
-                                     AArch64CC::CondCode &CondCode,
-                                     AArch64CC::CondCode &CondCode2) {
-  CondCode2 = AArch64CC::AL;
-  switch (CC) {
-  default:
-    changeFPCCToAArch64CC(CC, CondCode, CondCode2);
-    assert(CondCode2 == AArch64CC::AL);
-    break;
-  case ISD::SETONE:
-    // (a one b)
-    // == ((a olt b) || (a ogt b))
-    // == ((a ord b) && (a une b))
-    CondCode = AArch64CC::VC;
-    CondCode2 = AArch64CC::NE;
-    break;
-  case ISD::SETUEQ:
-    // (a ueq b)
-    // == ((a uno b) || (a oeq b))
-    // == ((a ule b) && (a uge b))
-    CondCode = AArch64CC::PL;
-    CondCode2 = AArch64CC::LE;
-    break;
-  }
-}
-
 /// changeVectorFPCCToAArch64CC - Convert a DAG fp condition code to an AArch64
 /// CC usable with the vector instructions. Fewer operations are available
 /// without a real NZCV register, so we have to use less efficient combinations
@@ -1208,14 +1177,8 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                               SDLoc dl, SelectionDAG &DAG) {
   EVT VT = LHS.getValueType();
 
-  if (VT.isFloatingPoint()) {
-    assert(VT != MVT::f128);
-    if (VT == MVT::f16) {
-      LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, LHS);
-      RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, RHS);
-    }
+  if (VT.isFloatingPoint())
     return DAG.getNode(AArch64ISD::FCMP, dl, VT, LHS, RHS);
-  }
 
   // The CMP instruction is just an alias for SUBS, and representing it as
   // SUBS means that it's possible to get CSE with subtract operations.
@@ -1295,31 +1258,22 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 /// Create a conditional comparison; Use CCMP, CCMN or FCCMP as appropriate.
 static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
-                                         AArch64CC::CondCode Predicate,
-                                         AArch64CC::CondCode OutCC,
+                                         SDValue Condition, unsigned NZCV,
                                          SDLoc DL, SelectionDAG &DAG) {
   unsigned Opcode = 0;
-  if (LHS.getValueType().isFloatingPoint()) {
-    assert(LHS.getValueType() != MVT::f128);
-    if (LHS.getValueType() == MVT::f16) {
-      LHS = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, LHS);
-      RHS = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, RHS);
-    }
+  if (LHS.getValueType().isFloatingPoint())
     Opcode = AArch64ISD::FCCMP;
-  } else if (RHS.getOpcode() == ISD::SUB) {
+  else if (RHS.getOpcode() == ISD::SUB) {
     SDValue SubOp0 = RHS.getOperand(0);
     if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-      // See emitComparison() on why we can only do this for SETEQ and SETNE.
-      Opcode = AArch64ISD::CCMN;
-      RHS = RHS.getOperand(1);
-    }
+        // See emitComparison() on why we can only do this for SETEQ and SETNE.
+        Opcode = AArch64ISD::CCMN;
+        RHS = RHS.getOperand(1);
+      }
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
 
-  SDValue Condition = DAG.getConstant(Predicate, DL, MVT_CC);
-  AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
-  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
   SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
   return DAG.getNode(Opcode, DL, MVT_CC, LHS, RHS, NZCVOp, Condition, CCOp);
 }
@@ -1330,49 +1284,31 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
 /// at the leafs only. i.e. "not (or (or x y) z)" can be changed to
 /// "and (and (not x) (not y)) (not z)"; "not (or (and x y) z)" cannot be
 /// brought into such a form.
-static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
+static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanPushNegate,
                                          unsigned Depth = 0) {
   if (!Val.hasOneUse())
     return false;
   unsigned Opcode = Val->getOpcode();
   if (Opcode == ISD::SETCC) {
-    if (Val->getOperand(0).getValueType() == MVT::f128)
-      return false;
-    CanNegate = true;
+    CanPushNegate = true;
     return true;
   }
-  // Protect against exponential runtime and stack overflow.
-  if (Depth > 6)
+  // Protect against stack overflow.
+  if (Depth > 15)
     return false;
   if (Opcode == ISD::AND || Opcode == ISD::OR) {
     SDValue O0 = Val->getOperand(0);
     SDValue O1 = Val->getOperand(1);
-    bool CanNegateL;
-    if (!isConjunctionDisjunctionTree(O0, CanNegateL, Depth+1))
+    bool CanPushNegateL;
+    if (!isConjunctionDisjunctionTree(O0, CanPushNegateL, Depth+1))
       return false;
-    bool CanNegateR;
-    if (!isConjunctionDisjunctionTree(O1, CanNegateR, Depth+1))
+    bool CanPushNegateR;
+    if (!isConjunctionDisjunctionTree(O1, CanPushNegateR, Depth+1))
       return false;
-
-    if (Opcode == ISD::OR) {
-      // For an OR expression we need to be able to negate at least one side or
-      // we cannot do the transformation at all.
-      if (!CanNegateL && !CanNegateR)
-        return false;
-      // We can however change a (not (or x y)) to (and (not x) (not y)) if we
-      // can negate the x and y subtrees.
-      CanNegate = CanNegateL && CanNegateR;
-    } else {
-      // If the operands are OR expressions then we finally need to negate their
-      // outputs, we can only do that for the operand with emitted last by
-      // negating OutCC, not for both operands.
-      bool NeedsNegOutL = O0->getOpcode() == ISD::OR;
-      bool NeedsNegOutR = O1->getOpcode() == ISD::OR;
-      if (NeedsNegOutL && NeedsNegOutR)
-        return false;
-      // We cannot negate an AND operation (it would become an OR),
-      CanNegate = false;
-    }
+    // We cannot push a negate through an AND operation (it would become an OR),
+    // we can however change a (not (or x y)) to (and (not x) (not y)) if we can
+    // push the negate through the x/y subtrees.
+    CanPushNegate = (Opcode == ISD::OR) && CanPushNegateL && CanPushNegateR;
     return true;
   }
   return false;
@@ -1388,9 +1324,10 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
 /// effects pushed to the tree leafs; @p Predicate is an NZCV flag predicate
 /// for the comparisons in the current subtree; @p Depth limits the search
 /// depth to avoid stack overflow.
-static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
-    AArch64CC::CondCode &OutCC, bool Negate, SDValue CCOp,
-    AArch64CC::CondCode Predicate) {
+static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
+    AArch64CC::CondCode &OutCC, bool PushNegate = false,
+    SDValue CCOp = SDValue(), AArch64CC::CondCode Predicate = AArch64CC::AL,
+    unsigned Depth = 0) {
   // We're at a tree leaf, produce a conditional comparison operation.
   unsigned Opcode = Val->getOpcode();
   if (Opcode == ISD::SETCC) {
@@ -1398,7 +1335,7 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
     SDValue RHS = Val->getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Val->getOperand(2))->get();
     bool isInteger = LHS.getValueType().isInteger();
-    if (Negate)
+    if (PushNegate)
       CC = getSetCCInverse(CC, isInteger);
     SDLoc DL(Val);
     // Determine OutCC and handle FP special case.
@@ -1407,62 +1344,68 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
     } else {
       assert(LHS.getValueType().isFloatingPoint());
       AArch64CC::CondCode ExtraCC;
-      changeFPCCToANDAArch64CC(CC, OutCC, ExtraCC);
-      // Some floating point conditions can't be tested with a single condition
-      // code. Construct an additional comparison in this case.
+      changeFPCCToAArch64CC(CC, OutCC, ExtraCC);
+      // Surpisingly some floating point conditions can't be tested with a
+      // single condition code. Construct an additional comparison in this case.
+      // See comment below on how we deal with OR conditions.
       if (ExtraCC != AArch64CC::AL) {
         SDValue ExtraCmp;
         if (!CCOp.getNode())
           ExtraCmp = emitComparison(LHS, RHS, CC, DL, DAG);
-        else
-          ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate,
-                                               ExtraCC, DL, DAG);
+        else {
+          SDValue ConditionOp = DAG.getConstant(Predicate, DL, MVT_CC);
+          // Note that we want the inverse of ExtraCC, so NZCV is not inversed.
+          unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(ExtraCC);
+          ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, ConditionOp,
+                                               NZCV, DL, DAG);
+        }
         CCOp = ExtraCmp;
-        Predicate = ExtraCC;
+        Predicate = AArch64CC::getInvertedCondCode(ExtraCC);
+        OutCC = AArch64CC::getInvertedCondCode(OutCC);
       }
     }
 
     // Produce a normal comparison if we are first in the chain
-    if (!CCOp)
+    if (!CCOp.getNode())
       return emitComparison(LHS, RHS, CC, DL, DAG);
     // Otherwise produce a ccmp.
-    return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
+    SDValue ConditionOp = DAG.getConstant(Predicate, DL, MVT_CC);
+    AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
+    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
+    return emitConditionalComparison(LHS, RHS, CC, CCOp, ConditionOp, NZCV, DL,
                                      DAG);
-  }
-  assert(Opcode == ISD::AND || Opcode == ISD::OR && Val->hasOneUse()
-         && "Valid conjunction/disjunction tree");
+  } else if ((Opcode != ISD::AND && Opcode != ISD::OR) || !Val->hasOneUse())
+    return SDValue();
+
+  assert((Opcode == ISD::OR || !PushNegate)
+         && "Can only push negate through OR operation");
 
   // Check if both sides can be transformed.
   SDValue LHS = Val->getOperand(0);
   SDValue RHS = Val->getOperand(1);
+  bool CanPushNegateL;
+  if (!isConjunctionDisjunctionTree(LHS, CanPushNegateL, Depth+1))
+    return SDValue();
+  bool CanPushNegateR;
+  if (!isConjunctionDisjunctionTree(RHS, CanPushNegateR, Depth+1))
+    return SDValue();
 
-  // In case of an OR we need to negate our operands and the result.
-  // (A v B) <=> not(not(A) ^ not(B))
-  bool NegateOpsAndResult = Opcode == ISD::OR;
+  // Do we need to negate our operands?
+  bool NegateOperands = Opcode == ISD::OR;
   // We can negate the results of all previous operations by inverting the
-  // predicate flags giving us a free negation for one side. The other side
-  // must be negatable by itself.
-  if (NegateOpsAndResult) {
-    // See which side we can negate.
-    bool CanNegateL;
-    bool isValidL = isConjunctionDisjunctionTree(LHS, CanNegateL);
-    assert(isValidL && "Valid conjunction/disjunction tree");
-    (void)isValidL;
-
-#ifndef NDEBUG
-    bool CanNegateR;
-    bool isValidR = isConjunctionDisjunctionTree(RHS, CanNegateR);
-    assert(isValidR && "Valid conjunction/disjunction tree");
-    assert((CanNegateL || CanNegateR) && "Valid conjunction/disjunction tree");
-#endif
-
-    // Order the side which we cannot negate to RHS so we can emit it first.
-    if (!CanNegateL)
+  // predicate flags giving us a free negation for one side. For the other side
+  // we need to be able to push the negation to the leafs of the tree.
+  if (NegateOperands) {
+    if (!CanPushNegateL && !CanPushNegateR)
+      return SDValue();
+    // Order the side where we can push the negate through to LHS.
+    if (!CanPushNegateL && CanPushNegateR)
       std::swap(LHS, RHS);
   } else {
     bool NeedsNegOutL = LHS->getOpcode() == ISD::OR;
-    assert((!NeedsNegOutL || RHS->getOpcode() != ISD::OR) &&
-           "Valid conjunction/disjunction tree");
+    bool NeedsNegOutR = RHS->getOpcode() == ISD::OR;
+    if (NeedsNegOutL && NeedsNegOutR)
+      return SDValue();
     // Order the side where we need to negate the output flags to RHS so it
     // gets emitted first.
     if (NeedsNegOutL)
@@ -1473,32 +1416,18 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
   // through if we are already in a PushNegate case, otherwise we can negate
   // the "flags to test" afterwards.
   AArch64CC::CondCode RHSCC;
-  SDValue CmpR = emitConjunctionDisjunctionTreeRec(DAG, RHS, RHSCC, Negate,
-                                                   CCOp, Predicate);
-  if (NegateOpsAndResult && !Negate)
+  SDValue CmpR = emitConjunctionDisjunctionTree(DAG, RHS, RHSCC, PushNegate,
+                                                CCOp, Predicate, Depth+1);
+  if (NegateOperands && !PushNegate)
     RHSCC = AArch64CC::getInvertedCondCode(RHSCC);
-  // Emit LHS. We may need to negate it.
-  SDValue CmpL = emitConjunctionDisjunctionTreeRec(DAG, LHS, OutCC,
-                                                   NegateOpsAndResult, CmpR,
-                                                   RHSCC);
+  // Emit LHS. We must push the negate through if we need to negate it.
+  SDValue CmpL = emitConjunctionDisjunctionTree(DAG, LHS, OutCC, NegateOperands,
+                                                CmpR, RHSCC, Depth+1);
   // If we transformed an OR to and AND then we have to negate the result
-  // (or absorb the Negate parameter).
-  if (NegateOpsAndResult && !Negate)
+  // (or absorb a PushNegate resulting in a double negation).
+  if (Opcode == ISD::OR && !PushNegate)
     OutCC = AArch64CC::getInvertedCondCode(OutCC);
   return CmpL;
-}
-
-/// Emit conjunction or disjunction tree with the CMP/FCMP followed by a chain
-/// of CCMP/CFCMP ops. See @ref AArch64CCMP.
-/// \see emitConjunctionDisjunctionTreeRec().
-static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
-                                              AArch64CC::CondCode &OutCC) {
-  bool CanNegate;
-  if (!isConjunctionDisjunctionTree(Val, CanNegate))
-    return SDValue();
-
-  return emitConjunctionDisjunctionTreeRec(DAG, Val, OutCC, false, SDValue(),
-                                           AArch64CC::AL);
 }
 
 /// @}
@@ -2427,8 +2356,6 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     return CC_AArch64_GHC;
   case CallingConv::C:
   case CallingConv::Fast:
-  case CallingConv::CXX_FAST_TLS:
-  case CallingConv::PreserveMost:
     if (!Subtarget->isTargetDarwin())
       return CC_AArch64_AAPCS;
     return IsVarArg ? CC_AArch64_DarwinPCS_VarArg : CC_AArch64_DarwinPCS;
@@ -2595,7 +2522,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   if (isVarArg) {
     if (!Subtarget->isTargetDarwin()) {
       // The AAPCS variadic function ABI is identical to the non-variadic
@@ -2604,13 +2530,15 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       saveVarArgRegisters(CCInfo, DAG, DL, Chain);
     }
 
+    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // This will point to the next argument passed via stack.
     unsigned StackOffset = CCInfo.getNextStackOffset();
     // We currently pass all varargs at 8-byte alignment.
     StackOffset = ((StackOffset + 7) & ~7);
-    FuncInfo->setVarArgsStackIndex(MFI->CreateFixedObject(4, StackOffset, true));
+    AFI->setVarArgsStackIndex(MFI->CreateFixedObject(4, StackOffset, true));
   }
 
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   unsigned StackArgSize = CCInfo.getNextStackOffset();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (DoesCalleeRestoreStack(CallConv, TailCallOpt)) {
@@ -2760,6 +2688,7 @@ SDValue AArch64TargetLowering::LowerCallResult(
 
 bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
+    bool isCalleeStructRet, bool isCallerStructRet,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
@@ -2769,7 +2698,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   if (!IsTailCallConvention(CalleeCC) && CalleeCC != CallingConv::C)
     return false;
 
-  MachineFunction &MF = DAG.getMachineFunction();
+  const MachineFunction &MF = DAG.getMachineFunction();
   const Function *CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF->getCallingConv();
   bool CCMatch = CallerCC == CalleeCC;
@@ -2813,7 +2742,6 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   assert((!isVarArg || CalleeCC == CallingConv::C) &&
          "Unexpected variadic calling convention");
 
-  LLVMContext &C = *DAG.getContext();
   if (isVarArg && !Outs.empty()) {
     // At least two cases here: if caller is fastcc then we can't have any
     // memory arguments (we'd be expected to clean up the stack afterwards). If
@@ -2822,7 +2750,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     // FIXME: for now we take the most conservative of these in both cases:
     // disallow all variadic memory operands.
     SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
+    CCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
+                   *DAG.getContext());
 
     CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, true));
     for (const CCValAssign &ArgLoc : ArgLocs)
@@ -2830,18 +2759,34 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
         return false;
   }
 
-  // Check that the call results are passed in the same way.
-  if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
-                                  CCAssignFnForCall(CalleeCC, isVarArg),
-                                  CCAssignFnForCall(CallerCC, isVarArg)))
-    return false;
-  // The callee has to preserve all registers the caller needs to preserve.
-  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
+  // If the calling conventions do not match, then we'd better make sure the
+  // results are returned in the same way as what the caller expects.
   if (!CCMatch) {
-    const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
-    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
+    SmallVector<CCValAssign, 16> RVLocs1;
+    CCState CCInfo1(CalleeCC, false, DAG.getMachineFunction(), RVLocs1,
+                    *DAG.getContext());
+    CCInfo1.AnalyzeCallResult(Ins, CCAssignFnForCall(CalleeCC, isVarArg));
+
+    SmallVector<CCValAssign, 16> RVLocs2;
+    CCState CCInfo2(CallerCC, false, DAG.getMachineFunction(), RVLocs2,
+                    *DAG.getContext());
+    CCInfo2.AnalyzeCallResult(Ins, CCAssignFnForCall(CallerCC, isVarArg));
+
+    if (RVLocs1.size() != RVLocs2.size())
       return false;
+    for (unsigned i = 0, e = RVLocs1.size(); i != e; ++i) {
+      if (RVLocs1[i].isRegLoc() != RVLocs2[i].isRegLoc())
+        return false;
+      if (RVLocs1[i].getLocInfo() != RVLocs2[i].getLocInfo())
+        return false;
+      if (RVLocs1[i].isRegLoc()) {
+        if (RVLocs1[i].getLocReg() != RVLocs2[i].getLocReg())
+          return false;
+      } else {
+        if (RVLocs1[i].getLocMemOffset() != RVLocs2[i].getLocMemOffset())
+          return false;
+      }
+    }
   }
 
   // Nothing more to check if the callee is taking no arguments
@@ -2849,22 +2794,16 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     return true;
 
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
+  CCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
+                 *DAG.getContext());
 
   CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, isVarArg));
 
   const AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
 
-  // If the stack arguments for this call do not fit into our own save area then
-  // the call cannot be made tail.
-  if (CCInfo.getNextStackOffset() > FuncInfo->getBytesInStackArgArea())
-    return false;
-
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
-    return false;
-
-  return true;
+  // If the stack arguments for this call would fit into our own save area then
+  // the call can be made tail.
+  return CCInfo.getNextStackOffset() <= FuncInfo->getBytesInStackArgArea();
 }
 
 SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
@@ -2906,8 +2845,7 @@ bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
 }
 
 bool AArch64TargetLowering::IsTailCallConvention(CallingConv::ID CallCC) const {
-  return CallCC == CallingConv::Fast ||
-         CallCC == CallingConv::PreserveMost;
+  return CallCC == CallingConv::Fast;
 }
 
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
@@ -2927,6 +2865,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsVarArg = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
+  bool IsStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   bool IsThisReturn = false;
 
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
@@ -2936,7 +2875,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(
-        Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
+        Callee, CallConv, IsVarArg, IsStructRet,
+        MF.getFunction()->hasStructRetAttr(), Outs, OutVals, Ins, DAG);
     if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
       report_fatal_error("failed to perform tail call elimination on a call "
                          "site marked musttail");
@@ -6749,9 +6689,6 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
     return DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
   }
 
-  if (LHS.getValueType().getVectorElementType() == MVT::f16)
-    return SDValue();
-
   assert(LHS.getValueType().getVectorElementType() == MVT::f32 ||
          LHS.getValueType().getVectorElementType() == MVT::f64);
 
@@ -7627,8 +7564,7 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue Op = N->getOperand(0);
-  if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
-      Op.getOpcode() != ISD::FMUL)
+  if (!Op.getValueType().isVector() || Op.getOpcode() != ISD::FMUL)
     return SDValue();
 
   SDValue ConstVec = Op->getOperand(1);
@@ -9996,31 +9932,6 @@ static void ReplaceReductionResults(SDNode *N,
   Results.push_back(SplitVal);
 }
 
-static void ReplaceCMP_SWAP_128Results(SDNode *N,
-                                       SmallVectorImpl<SDValue> & Results,
-                                       SelectionDAG &DAG) {
-  assert(N->getValueType(0) == MVT::i128 &&
-         "AtomicCmpSwap on types less than 128 should be legal");
-  SDValue Ops[] = {N->getOperand(1),
-                   N->getOperand(2)->getOperand(0),
-                   N->getOperand(2)->getOperand(1),
-                   N->getOperand(3)->getOperand(0),
-                   N->getOperand(3)->getOperand(1),
-                   N->getOperand(0)};
-  SDNode *CmpSwap = DAG.getMachineNode(
-      AArch64::CMP_SWAP_128, SDLoc(N),
-      DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other), Ops);
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
-
-  Results.push_back(SDValue(CmpSwap, 0));
-  Results.push_back(SDValue(CmpSwap, 1));
-  Results.push_back(SDValue(CmpSwap, 3));
-}
-
 void AArch64TargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -10051,9 +9962,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::FP_TO_SINT:
     assert(N->getValueType(0) == MVT::i128 && "unexpected illegal conversion");
     // Let normal code take care of it by not adding anything to Results.
-    return;
-  case ISD::ATOMIC_CMP_SWAP:
-    ReplaceCMP_SWAP_128Results(N, Results, DAG);
     return;
   }
 }
@@ -10106,12 +10014,7 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 bool AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
-  // At -O0, fast-regalloc cannot cope with the live vregs necessary to
-  // implement cmpxchg without spilling. If the address being exchanged is also
-  // on the stack and close enough to the spill slot, this can lead to a
-  // situation where the monitor always gets cleared and the atomic operation
-  // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  return getTargetMachine().getOptLevel() != 0;
+  return true;
 }
 
 Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,

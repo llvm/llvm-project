@@ -80,8 +80,9 @@ struct TestCustomAAResult : AAResultBase<TestCustomAAResult> {
 
   std::function<void()> CB;
 
-  explicit TestCustomAAResult(std::function<void()> CB)
-      : AAResultBase(), CB(std::move(CB)) {}
+  explicit TestCustomAAResult(const TargetLibraryInfo &TLI,
+                              std::function<void()> CB)
+      : AAResultBase(TLI), CB(std::move(CB)) {}
   TestCustomAAResult(TestCustomAAResult &&Arg)
       : AAResultBase(std::move(Arg)), CB(std::move(Arg.CB)) {}
 
@@ -116,7 +117,8 @@ public:
   }
 
   bool doInitialization(Module &M) override {
-    Result.reset(new TestCustomAAResult(std::move(CB)));
+    Result.reset(new TestCustomAAResult(
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(), std::move(CB)));
     return true;
   }
 
@@ -153,7 +155,7 @@ protected:
 
   AAResults &getAAResults(Function &F) {
     // Reset the Function AA results first to clear out any references.
-    AAR.reset(new AAResults(TLI));
+    AAR.reset(new AAResults());
 
     // Build the various AA results and register them.
     AC.reset(new AssumptionCache(F));

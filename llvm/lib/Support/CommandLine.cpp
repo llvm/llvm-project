@@ -1449,7 +1449,7 @@ static int OptNameCompare(const std::pair<const char *, Option *> *LHS,
 static void sortOpts(StringMap<Option *> &OptMap,
                      SmallVectorImpl<std::pair<const char *, Option *>> &Opts,
                      bool ShowHidden) {
-  SmallPtrSet<Option *, 32> OptionSet; // Duplicate option detection.
+  SmallPtrSet<Option *, 128> OptionSet; // Duplicate option detection.
 
   for (StringMap<Option *>::iterator I = OptMap.begin(), E = OptMap.end();
        I != E; ++I) {
@@ -1737,12 +1737,8 @@ class VersionPrinter {
 public:
   void print() {
     raw_ostream &OS = outs();
-#ifdef PACKAGE_VENDOR
-    OS << PACKAGE_VENDOR << " ";
-#else
-    OS << "LLVM (http://llvm.org/):\n  ";
-#endif
-    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
+    OS << "LLVM (http://llvm.org/):\n"
+       << "  " << PACKAGE_NAME << " version " << PACKAGE_VERSION;
 #ifdef LLVM_VERSION_INFO
     OS << " " << LLVM_VERSION_INFO;
 #endif

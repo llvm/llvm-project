@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1
 
 #import <Foundation/Foundation.h>
 
@@ -30,7 +30,7 @@ int main() {
     dispatch_async(q, ^{
       dispatch_group_leave(g);
     });
-    dispatch_group_notify_f(g, q, NULL, &notify_callback);
+    dispatch_group_notify_f(g, q, nullptr, &notify_callback);
     dispatch_release(g);
   }
 

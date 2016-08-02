@@ -85,13 +85,11 @@ FunctionScopeInfo::WeakObjectProfileTy::getBaseInfo(const Expr *E) {
     if (BaseProp) {
       D = getBestPropertyDecl(BaseProp);
 
-      if (BaseProp->isObjectReceiver()) {
-        const Expr *DoubleBase = BaseProp->getBase();
-        if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(DoubleBase))
-          DoubleBase = OVE->getSourceExpr();
+      const Expr *DoubleBase = BaseProp->getBase();
+      if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(DoubleBase))
+        DoubleBase = OVE->getSourceExpr();
 
-        IsExact = DoubleBase->isObjCSelfExpr();
-      }
+      IsExact = DoubleBase->isObjCSelfExpr();
     }
     break;
   }

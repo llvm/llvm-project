@@ -320,7 +320,7 @@ TEST(ParserTest, CompletionNamedValues) {
   EXPECT_EQ("arent(", Comps[2].TypedText);
   EXPECT_EQ(
       "Matcher<Decl> "
-      "hasParent(Matcher<NestedNameSpecifierLoc|TypeLoc|Decl|...>)",
+      "hasParent(Matcher<TemplateArgument|NestedNameSpecifierLoc|Decl|...>)",
       Comps[2].MatcherDecl);
 }
 

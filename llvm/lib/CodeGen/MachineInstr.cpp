@@ -1932,7 +1932,7 @@ void MachineInstr::clearRegisterKills(unsigned Reg,
     if (!MO.isReg() || !MO.isUse() || !MO.isKill())
       continue;
     unsigned OpReg = MO.getReg();
-    if ((RegInfo && RegInfo->regsOverlap(Reg, OpReg)) || Reg == OpReg)
+    if (OpReg == Reg || (RegInfo && RegInfo->isSuperRegister(Reg, OpReg)))
       MO.setIsKill(false);
   }
 }

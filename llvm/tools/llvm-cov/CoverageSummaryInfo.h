@@ -47,8 +47,6 @@ struct RegionCoverageInfo {
   bool isFullyCovered() const { return Covered == NumRegions; }
 
   double getPercentCovered() const {
-    if (NumRegions == 0)
-      return 0.0;
     return double(Covered) / double(NumRegions) * 100.0;
   }
 };
@@ -85,8 +83,6 @@ struct LineCoverageInfo {
   bool isFullyCovered() const { return Covered == (NumLines - NonCodeLines); }
 
   double getPercentCovered() const {
-    if (NumLines - NonCodeLines == 0)
-      return 0.0;
     return double(Covered) / double(NumLines - NonCodeLines) * 100.0;
   }
 };
@@ -113,8 +109,6 @@ struct FunctionCoverageInfo {
   bool isFullyCovered() const { return Executed == NumFunctions; }
 
   double getPercentCovered() const {
-    if (NumFunctions == 0)
-      return 0.0;
     return double(Executed) / double(NumFunctions) * 100.0;
   }
 };

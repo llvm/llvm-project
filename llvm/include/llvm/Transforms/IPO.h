@@ -17,13 +17,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
-
-#include <functional>
 
 namespace llvm {
 
-class ModuleSummaryIndex;
+class FunctionInfoIndex;
 class ModulePass;
 class Pass;
 class Function;
@@ -91,7 +88,7 @@ ModulePass *createGVExtractionPass(std::vector<GlobalValue*>& GVs, bool
 
 //===----------------------------------------------------------------------===//
 /// This pass performs iterative function importing from other modules.
-Pass *createFunctionImportPass(const ModuleSummaryIndex *Index = nullptr);
+Pass *createFunctionImportPass(const FunctionInfoIndex *Index = nullptr);
 
 //===----------------------------------------------------------------------===//
 /// createFunctionInliningPass - Return a new pass object that uses a heuristic
@@ -122,17 +119,14 @@ Pass *createPruneEHPass();
 /// createInternalizePass - This pass loops over all of the functions in the
 /// input module, internalizing all globals (functions and variables) it can.
 ////
-/// Before internalizing a symbol, the callback \p MustPreserveGV is invoked and
-/// gives to the client the ability to prevent internalizing specific symbols.
+/// The symbols in \p ExportList are never internalized.
 ///
 /// The symbol in DSOList are internalized if it is safe to drop them from
 /// the symbol table.
 ///
 /// Note that commandline options that are used with the above function are not
 /// used now!
-ModulePass *
-createInternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV);
-
+ModulePass *createInternalizePass(ArrayRef<const char *> ExportList);
 /// createInternalizePass - Same as above, but with an empty exportList.
 ModulePass *createInternalizePass();
 

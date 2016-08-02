@@ -738,13 +738,12 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       BuiltinVaListDecl(nullptr), BuiltinMSVaListDecl(nullptr),
       ObjCIdDecl(nullptr), ObjCSelDecl(nullptr), ObjCClassDecl(nullptr),
       ObjCProtocolClassDecl(nullptr), BOOLDecl(nullptr),
-      CFConstantStringTagDecl(nullptr), CFConstantStringTypeDecl(nullptr),
-      ObjCInstanceTypeDecl(nullptr), FILEDecl(nullptr), jmp_bufDecl(nullptr),
-      sigjmp_bufDecl(nullptr), ucontext_tDecl(nullptr),
-      BlockDescriptorType(nullptr), BlockDescriptorExtendedType(nullptr),
-      cudaConfigureCallDecl(nullptr), FirstLocalImport(), LastLocalImport(),
-      ExternCContext(nullptr), MakeIntegerSeqDecl(nullptr), SourceMgr(SM),
-      LangOpts(LOpts),
+      CFConstantStringTypeDecl(nullptr), ObjCInstanceTypeDecl(nullptr),
+      FILEDecl(nullptr), jmp_bufDecl(nullptr), sigjmp_bufDecl(nullptr),
+      ucontext_tDecl(nullptr), BlockDescriptorType(nullptr),
+      BlockDescriptorExtendedType(nullptr), cudaConfigureCallDecl(nullptr),
+      FirstLocalImport(), LastLocalImport(), ExternCContext(nullptr),
+      MakeIntegerSeqDecl(nullptr), SourceMgr(SM), LangOpts(LOpts),
       SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
       AddrSpaceMap(nullptr), Target(nullptr), AuxTarget(nullptr),
       PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
@@ -2992,18 +2991,13 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
   return QualType(New, 0);
 }
 
-/// \brief Determine whether \p T is canonical as the result type of a function.
-static bool isCanonicalResultType(QualType T) {
-  return T.isCanonical() &&
-         (T.getObjCLifetime() == Qualifiers::OCL_None ||
-          T.getObjCLifetime() == Qualifiers::OCL_ExplicitNone);
-}
-
 /// getFunctionNoProtoType - Return a K&R style C function type like 'int()'.
 ///
 QualType
 ASTContext::getFunctionNoProtoType(QualType ResultTy,
                                    const FunctionType::ExtInfo &Info) const {
+  const CallingConv CallConv = Info.getCC();
+
   // Unique functions, to guarantee there is only one function of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
@@ -3015,9 +3009,8 @@ ASTContext::getFunctionNoProtoType(QualType ResultTy,
     return QualType(FT, 0);
 
   QualType Canonical;
-  if (!isCanonicalResultType(ResultTy)) {
-    Canonical =
-      getFunctionNoProtoType(getCanonicalFunctionResultType(ResultTy), Info);
+  if (!ResultTy.isCanonical()) {
+    Canonical = getFunctionNoProtoType(getCanonicalType(ResultTy), Info);
 
     // Get the new insert position for the node we care about.
     FunctionNoProtoType *NewIP =
@@ -3025,11 +3018,19 @@ ASTContext::getFunctionNoProtoType(QualType ResultTy,
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
+  FunctionProtoType::ExtInfo newInfo = Info.withCallingConv(CallConv);
   FunctionNoProtoType *New = new (*this, TypeAlignment)
-    FunctionNoProtoType(ResultTy, Canonical, Info);
+    FunctionNoProtoType(ResultTy, Canonical, newInfo);
   Types.push_back(New);
   FunctionNoProtoTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
+}
+
+/// \brief Determine whether \p T is canonical as the result type of a function.
+static bool isCanonicalResultType(QualType T) {
+  return T.isCanonical() &&
+         (T.getObjCLifetime() == Qualifiers::OCL_None ||
+          T.getObjCLifetime() == Qualifiers::OCL_ExplicitNone);
 }
 
 CanQualType
@@ -3098,13 +3099,12 @@ ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
   // them for three variable size arrays at the end:
   //  - parameter types
   //  - exception types
-  //  - extended parameter information
+  //  - consumed-arguments flags
   // Instead of the exception types, there could be a noexcept
   // expression, or information used to resolve the exception
   // specification.
   size_t Size = sizeof(FunctionProtoType) +
                 NumArgs * sizeof(QualType);
-
   if (EPI.ExceptionSpec.Type == EST_Dynamic) {
     Size += EPI.ExceptionSpec.Exceptions.size() * sizeof(QualType);
   } else if (EPI.ExceptionSpec.Type == EST_ComputedNoexcept) {
@@ -3114,16 +3114,8 @@ ASTContext::getFunctionType(QualType ResultTy, ArrayRef<QualType> ArgArray,
   } else if (EPI.ExceptionSpec.Type == EST_Unevaluated) {
     Size += sizeof(FunctionDecl*);
   }
-
-  // Put the ExtParameterInfos last.  If all were equal, it would make
-  // more sense to put these before the exception specification, because
-  // it's much easier to skip past them compared to the elaborate switch
-  // required to skip the exception specification.  However, all is not
-  // equal; ExtParameterInfos are used to model very uncommon features,
-  // and it's better not to burden the more common paths.
-  if (EPI.ExtParameterInfos) {
-    Size += NumArgs * sizeof(FunctionProtoType::ExtParameterInfo);
-  }
+  if (EPI.ConsumedParameters)
+    Size += NumArgs * sizeof(bool);
 
   FunctionProtoType *FTP = (FunctionProtoType*) Allocate(Size, TypeAlignment);
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
@@ -4876,12 +4868,11 @@ int ASTContext::getIntegerTypeOrder(QualType LHS, QualType RHS) const {
   return 1;
 }
 
-TypedefDecl *ASTContext::getCFConstantStringDecl() const {
+// getCFConstantStringType - Return the type used for constant CFStrings.
+QualType ASTContext::getCFConstantStringType() const {
   if (!CFConstantStringTypeDecl) {
-    assert(!CFConstantStringTagDecl &&
-           "tag and typedef should be initialized together");
-    CFConstantStringTagDecl = buildImplicitRecord("__NSConstantString_tag");
-    CFConstantStringTagDecl->startDefinition();
+    CFConstantStringTypeDecl = buildImplicitRecord("NSConstantString");
+    CFConstantStringTypeDecl->startDefinition();
 
     QualType FieldTypes[4];
 
@@ -4896,7 +4887,7 @@ TypedefDecl *ASTContext::getCFConstantStringDecl() const {
 
     // Create fields
     for (unsigned i = 0; i < 4; ++i) {
-      FieldDecl *Field = FieldDecl::Create(*this, CFConstantStringTagDecl,
+      FieldDecl *Field = FieldDecl::Create(*this, CFConstantStringTypeDecl,
                                            SourceLocation(),
                                            SourceLocation(), nullptr,
                                            FieldTypes[i], /*TInfo=*/nullptr,
@@ -4904,29 +4895,13 @@ TypedefDecl *ASTContext::getCFConstantStringDecl() const {
                                            /*Mutable=*/false,
                                            ICIS_NoInit);
       Field->setAccess(AS_public);
-      CFConstantStringTagDecl->addDecl(Field);
+      CFConstantStringTypeDecl->addDecl(Field);
     }
 
-    CFConstantStringTagDecl->completeDefinition();
-    // This type is designed to be compatible with NSConstantString, but cannot
-    // use the same name, since NSConstantString is an interface.
-    auto tagType = getTagDeclType(CFConstantStringTagDecl);
-    CFConstantStringTypeDecl =
-        buildImplicitTypedef(tagType, "__NSConstantString");
+    CFConstantStringTypeDecl->completeDefinition();
   }
 
-  return CFConstantStringTypeDecl;
-}
-
-RecordDecl *ASTContext::getCFConstantStringTagDecl() const {
-  if (!CFConstantStringTagDecl)
-    getCFConstantStringDecl(); // Build the tag and the typedef.
-  return CFConstantStringTagDecl;
-}
-
-// getCFConstantStringType - Return the type used for constant CFStrings.
-QualType ASTContext::getCFConstantStringType() const {
-  return getTypedefType(getCFConstantStringDecl());
+  return getTagDeclType(CFConstantStringTypeDecl);
 }
 
 QualType ASTContext::getObjCSuperType() const {
@@ -4939,13 +4914,9 @@ QualType ASTContext::getObjCSuperType() const {
 }
 
 void ASTContext::setCFConstantStringType(QualType T) {
-  const TypedefType *TD = T->getAs<TypedefType>();
-  assert(TD && "Invalid CFConstantStringType");
-  CFConstantStringTypeDecl = cast<TypedefDecl>(TD->getDecl());
-  auto TagType =
-      CFConstantStringTypeDecl->getUnderlyingType()->getAs<RecordType>();
-  assert(TagType && "Invalid CFConstantStringType");
-  CFConstantStringTagDecl = TagType->getDecl();
+  const RecordType *Rec = T->getAs<RecordType>();
+  assert(Rec && "Invalid CFConstantStringType");
+  CFConstantStringTypeDecl = Rec->getDecl();
 }
 
 QualType ASTContext::getBlockDescriptorType() const {
@@ -7161,11 +7132,6 @@ QualType ASTContext::areCommonBaseCompatible(
   if (!LDecl || !RDecl)
     return QualType();
 
-  // When either LHS or RHS is a kindof type, we should return a kindof type.
-  // For example, for common base of kindof(ASub1) and kindof(ASub2), we return
-  // kindof(A).
-  bool anyKindOf = LHS->isKindOfType() || RHS->isKindOfType();
-
   // Follow the left-hand side up the class hierarchy until we either hit a
   // root or find the RHS. Record the ancestors in case we don't find it.
   llvm::SmallDenseMap<const ObjCInterfaceDecl *, const ObjCObjectType *, 4>
@@ -7200,12 +7166,10 @@ QualType ASTContext::areCommonBaseCompatible(
         anyChanges = true;
 
       // If anything in the LHS will have changed, build a new result type.
-      // If we need to return a kindof type but LHS is not a kindof type, we
-      // build a new result type.
-      if (anyChanges || LHS->isKindOfType() != anyKindOf) {
+      if (anyChanges) {
         QualType Result = getObjCInterfaceType(LHS->getInterface());
         Result = getObjCObjectType(Result, LHSTypeArgs, Protocols,
-                                   anyKindOf || LHS->isKindOfType());
+                                   LHS->isKindOfType());
         return getObjCObjectPointerType(Result);
       }
 
@@ -7250,12 +7214,10 @@ QualType ASTContext::areCommonBaseCompatible(
       if (!Protocols.empty())
         anyChanges = true;
 
-      // If we need to return a kindof type but RHS is not a kindof type, we
-      // build a new result type.
-      if (anyChanges || RHS->isKindOfType() != anyKindOf) {
+      if (anyChanges) {
         QualType Result = getObjCInterfaceType(RHS->getInterface());
         Result = getObjCObjectType(Result, RHSTypeArgs, Protocols,
-                                   anyKindOf || RHS->isKindOfType());
+                                   RHS->isKindOfType());
         return getObjCObjectPointerType(Result);
       }
 
@@ -7499,7 +7461,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getTypeQuals() != rproto->getTypeQuals())
       return QualType();
 
-    if (!doFunctionTypesMatchOnExtParameterInfos(rproto, lproto))
+    if (LangOpts.ObjCAutoRefCount &&
+        !FunctionTypesMatchOnNSConsumedAttrs(rproto, lproto))
       return QualType();
 
     // Check parameter type compatibility
@@ -7887,26 +7850,21 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   llvm_unreachable("Invalid Type::Class!");
 }
 
-bool ASTContext::doFunctionTypesMatchOnExtParameterInfos(
-                   const FunctionProtoType *firstFnType,
-                   const FunctionProtoType *secondFnType) {
-  // Fast path: if the first type doesn't have ext parameter infos,
-  // we match if and only if they second type also doesn't have them.
-  if (!firstFnType->hasExtParameterInfos())
-    return !secondFnType->hasExtParameterInfos();
-
-  // Otherwise, we can only match if the second type has them.
-  if (!secondFnType->hasExtParameterInfos())
+bool ASTContext::FunctionTypesMatchOnNSConsumedAttrs(
+                   const FunctionProtoType *FromFunctionType,
+                   const FunctionProtoType *ToFunctionType) {
+  if (FromFunctionType->hasAnyConsumedParams() !=
+      ToFunctionType->hasAnyConsumedParams())
     return false;
-
-  auto firstEPI = firstFnType->getExtParameterInfos();
-  auto secondEPI = secondFnType->getExtParameterInfos();
-  assert(firstEPI.size() == secondEPI.size());
-
-  for (size_t i = 0, n = firstEPI.size(); i != n; ++i) {
-    if (firstEPI[i] != secondEPI[i])
-      return false;
-  }
+  FunctionProtoType::ExtProtoInfo FromEPI = 
+    FromFunctionType->getExtProtoInfo();
+  FunctionProtoType::ExtProtoInfo ToEPI = 
+    ToFunctionType->getExtProtoInfo();
+  if (FromEPI.ConsumedParameters && ToEPI.ConsumedParameters)
+    for (unsigned i = 0, n = FromFunctionType->getNumParams(); i != n; ++i) {
+      if (FromEPI.ConsumedParameters[i] != ToEPI.ConsumedParameters[i])
+        return false;
+    }
   return true;
 }
 

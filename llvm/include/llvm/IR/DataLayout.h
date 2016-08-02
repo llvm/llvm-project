@@ -475,7 +475,7 @@ inline LLVMTargetDataRef wrap(const DataLayout *P) {
 class StructLayout {
   uint64_t StructSize;
   unsigned StructAlignment;
-  unsigned IsPadded : 1;
+  bool IsPadded : 1;
   unsigned NumElements : 31;
   uint64_t MemberOffsets[1]; // variable sized array!
 public:

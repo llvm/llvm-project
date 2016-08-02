@@ -433,7 +433,7 @@ StandardConversionSequence::getNarrowingKind(ASTContext &Ctx,
 
 /// dump - Print this standard conversion sequence to standard
 /// error. Useful for debugging overloading issues.
-LLVM_DUMP_METHOD void StandardConversionSequence::dump() const {
+void StandardConversionSequence::dump() const {
   raw_ostream &OS = llvm::errs();
   bool PrintedSomething = false;
   if (First != ICK_Identity) {
@@ -1147,16 +1147,7 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
 /// \returns true if \arg FD is unavailable and current context is inside
 /// an available function, false otherwise.
 bool Sema::isFunctionConsideredUnavailable(FunctionDecl *FD) {
-  if (!FD->isUnavailable())
-    return false;
-
-  // Walk up the context of the caller.
-  Decl *C = cast<Decl>(CurContext);
-  do {
-    if (C->isUnavailable())
-      return false;
-  } while ((C = cast_or_null<Decl>(C->getDeclContext())));
-  return true;
+  return FD->isUnavailable() && !cast<Decl>(CurContext)->isUnavailable();
 }
 
 /// \brief Tries a user-defined conversion from From to ToType.
@@ -2547,8 +2538,9 @@ bool Sema::IsBlockPointerConversion(QualType FromType, QualType ToType,
        // Argument types are too different. Abort.
        return false;
    }
-   if (!Context.doFunctionTypesMatchOnExtParameterInfos(FromFunctionType,
-                                                        ToFunctionType))
+   if (LangOpts.ObjCAutoRefCount && 
+       !Context.FunctionTypesMatchOnNSConsumedAttrs(FromFunctionType, 
+                                                    ToFunctionType))
      return false;
    
    ConvertedType = ToType;
@@ -5846,12 +5838,12 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   }
 }
 
-ObjCMethodDecl *
-Sema::SelectBestMethod(Selector Sel, MultiExprArg Args, bool IsInstance,
-                       SmallVectorImpl<ObjCMethodDecl *> &Methods) {
-  if (Methods.size() <= 1)
+ObjCMethodDecl *Sema::SelectBestMethod(Selector Sel, MultiExprArg Args,
+                                       bool IsInstance) {
+  SmallVector<ObjCMethodDecl*, 4> Methods;
+  if (!CollectMultipleMethodsInGlobalPool(Sel, Methods, IsInstance))
     return nullptr;
-
+    
   for (unsigned b = 0, e = Methods.size(); b < e; b++) {
     bool Match = true;
     ObjCMethodDecl *Method = Methods[b];
@@ -6822,8 +6814,7 @@ namespace {
 /// enumeration types.
 class BuiltinCandidateTypeSet  {
   /// TypeSet - A set of types.
-  typedef llvm::SetVector<QualType, SmallVector<QualType, 8>,
-                          llvm::SmallPtrSet<QualType, 8>> TypeSet;
+  typedef llvm::SmallPtrSet<QualType, 8> TypeSet;
 
   /// PointerTypes - The set of pointer types that will be used in the
   /// built-in candidates.
@@ -6922,7 +6913,7 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
                                              const Qualifiers &VisibleQuals) {
 
   // Insert this type.
-  if (!PointerTypes.insert(Ty))
+  if (!PointerTypes.insert(Ty).second)
     return false;
 
   QualType PointeeTy;
@@ -6990,7 +6981,7 @@ bool
 BuiltinCandidateTypeSet::AddMemberPointerWithMoreQualifiedTypeVariants(
     QualType Ty) {
   // Insert this type.
-  if (!MemberPointerTypes.insert(Ty))
+  if (!MemberPointerTypes.insert(Ty).second)
     return false;
 
   const MemberPointerType *PointerTy = Ty->getAs<MemberPointerType>();
@@ -10390,7 +10381,7 @@ private:
         return false;
 
       QualType ResultTy;
-      if (Context.hasSameUnqualifiedType(TargetFunctionType,
+      if (Context.hasSameUnqualifiedType(TargetFunctionType, 
                                          FunDecl->getType()) ||
           S.IsNoReturnConversion(FunDecl->getType(), TargetFunctionType,
                                  ResultTy) ||
@@ -10620,42 +10611,6 @@ Sema::ResolveAddressOfOverloadedFunction(Expr *AddressOfExpr,
   if (pHadMultipleCandidates)
     *pHadMultipleCandidates = Resolver.hadMultipleCandidates();
   return Fn;
-}
-
-/// \brief Given an expression that refers to an overloaded function, try to
-/// resolve that function to a single function that can have its address taken.
-/// This will modify `Pair` iff it returns non-null.
-///
-/// This routine can only realistically succeed if all but one candidates in the
-/// overload set for SrcExpr cannot have their addresses taken.
-FunctionDecl *
-Sema::resolveAddressOfOnlyViableOverloadCandidate(Expr *E,
-                                                  DeclAccessPair &Pair) {
-  OverloadExpr::FindResult R = OverloadExpr::find(E);
-  OverloadExpr *Ovl = R.Expression;
-  FunctionDecl *Result = nullptr;
-  DeclAccessPair DAP;
-  // Don't use the AddressOfResolver because we're specifically looking for
-  // cases where we have one overload candidate that lacks
-  // enable_if/pass_object_size/...
-  for (auto I = Ovl->decls_begin(), E = Ovl->decls_end(); I != E; ++I) {
-    auto *FD = dyn_cast<FunctionDecl>(I->getUnderlyingDecl());
-    if (!FD)
-      return nullptr;
-
-    if (!checkAddressOfFunctionIsAvailable(FD))
-      continue;
-
-    // We have more than one result; quit.
-    if (Result)
-      return nullptr;
-    DAP = I.getPair();
-    Result = FD;
-  }
-
-  if (Result)
-    Pair = DAP;
-  return Result;
 }
 
 /// \brief Given an expression that refers to an overloaded function, try to

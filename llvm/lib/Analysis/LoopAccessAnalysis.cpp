@@ -1102,10 +1102,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
     if (IsTrueDataDependence &&
         (couldPreventStoreLoadForward(Val.abs().getZExtValue(), TypeByteSize) ||
-         ATy != BTy)) {
-      DEBUG(dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
+         ATy != BTy))
       return Dependence::ForwardButPreventsForwarding;
-    }
 
     DEBUG(dbgs() << "LAA: Dependence is negative: NoDep\n");
     return Dependence::Forward;
@@ -1582,12 +1580,8 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
                  << (PtrRtChecking.Need ? "" : " don't")
                  << " need runtime memory checks.\n");
   else {
-    emitAnalysis(
-        LoopAccessReport()
-        << "unsafe dependent memory operations in loop. Use "
-           "#pragma loop distribute(enable) to allow loop distribution "
-           "to attempt to isolate the offending operations into a separate "
-           "loop");
+    emitAnalysis(LoopAccessReport() <<
+                 "unsafe dependent memory operations in loop");
     DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
   }
 }

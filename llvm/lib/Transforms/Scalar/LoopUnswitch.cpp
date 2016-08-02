@@ -1078,7 +1078,7 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
     for (BasicBlock::iterator I = NewBlocks[i]->begin(),
            E = NewBlocks[i]->end(); I != E; ++I)
       RemapInstruction(&*I, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingEntries);
 
   // Rewrite the original preheader to select between versions of the loop.
   BranchInst *OldBR = cast<BranchInst>(loopPreheader->getTerminator());

@@ -275,9 +275,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeTernaryOperators);
     IO.mapOptional("BreakConstructorInitializersBeforeComma",
                    Style.BreakConstructorInitializersBeforeComma);
-    IO.mapOptional("BreakAfterJavaFieldAnnotations",
-                   Style.BreakAfterJavaFieldAnnotations);
-    IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
     IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
@@ -491,9 +488,8 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BraceWrapping = {false, false, false, false, false, false,
                              false, false, false, false, false};
-  LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakConstructorInitializersBeforeComma = false;
-  LLVMStyle.BreakStringLiterals = true;
+  LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
   LLVMStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = false;

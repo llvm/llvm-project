@@ -6,11 +6,6 @@
 
 // LINES-ONLY-NOT: !DICompositeType(tag: DW_TAG_structure_type
 
-// "h" is at the top because it's in the compile unit's retainedTypes: list.
-// CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "h<int>"
-// CHECK-NOT: DIFlagFwdDecl
-// CHECK-SAME: ){{$}}
-
 template <typename T>
 struct a {
 };
@@ -90,6 +85,9 @@ template <typename T>
 struct h {
 };
 template class h<int>;
+// CHECK: DICompositeType(tag: DW_TAG_structure_type, name: "h<int>"
+// CHECK-NOT: DIFlagFwdDecl
+// CHECK-SAME: ){{$}}
 
 template <typename T>
 struct i {

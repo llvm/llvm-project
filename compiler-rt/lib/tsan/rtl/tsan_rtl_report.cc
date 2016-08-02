@@ -56,11 +56,6 @@ bool OnReport(const ReportDesc *rep, bool suppressed) {
 }
 #endif
 
-SANITIZER_WEAK_DEFAULT_IMPL
-void __tsan_on_report(const ReportDesc *rep) {
-  (void)rep;
-}
-
 static void StackStripMain(SymbolizedStack *frames) {
   SymbolizedStack *last_frame = nullptr;
   SymbolizedStack *last_frame2 = nullptr;
@@ -194,7 +189,7 @@ void ScopedReport::AddThread(const ThreadContext *tctx, bool suppressable) {
   ReportThread *rt = new(mem) ReportThread;
   rep_->threads.PushBack(rt);
   rt->id = tctx->tid;
-  rt->os_id = tctx->os_id;
+  rt->pid = tctx->os_id;
   rt->running = (tctx->status == ThreadStatusRunning);
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
@@ -497,8 +492,6 @@ bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
     return false;
   atomic_store_relaxed(&ctx->last_symbolize_time_ns, NanoTime());
   const ReportDesc *rep = srep.GetReport();
-  CHECK_EQ(thr->current_report, nullptr);
-  thr->current_report = rep;
   Suppression *supp = 0;
   uptr pc_or_addr = 0;
   for (uptr i = 0; pc_or_addr == 0 && i < rep->mops.Size(); i++)
@@ -519,17 +512,13 @@ bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
     thr->is_freeing = false;
     bool suppressed = OnReport(rep, pc_or_addr != 0);
     thr->is_freeing = old_is_freeing;
-    if (suppressed) {
-      thr->current_report = nullptr;
+    if (suppressed)
       return false;
-    }
   }
   PrintReport(rep);
-  __tsan_on_report(rep);
   ctx->nreported++;
   if (flags()->halt_on_error)
     Die();
-  thr->current_report = nullptr;
   return true;
 }
 

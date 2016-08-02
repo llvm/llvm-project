@@ -151,29 +151,6 @@ UniqueID file_status::getUniqueID() const {
   return UniqueID(VolumeSerialNumber, FileID);
 }
 
-ErrorOr<space_info> disk_space(const Twine &Path) {
-  ULARGE_INTEGER Avail, Total, Free;
-  if (!::GetDiskFreeSpaceExA(Path.str().c_str(), &Avail, &Total, &Free))
-    return mapWindowsError(::GetLastError());
-  space_info SpaceInfo;
-  SpaceInfo.capacity =
-      (static_cast<uint64_t>(Total.HighPart) << 32) + Total.LowPart;
-  SpaceInfo.free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
-  SpaceInfo.available =
-      (static_cast<uint64_t>(Avail.HighPart) << 32) + Avail.LowPart;
-  return SpaceInfo;
-}
-
-TimeValue file_status::getLastAccessedTime() const {
-  ULARGE_INTEGER UI;
-  UI.LowPart = LastAccessedTimeLow;
-  UI.HighPart = LastAccessedTimeHigh;
-
-  TimeValue Ret;
-  Ret.fromWin32Time(UI.QuadPart);
-  return Ret;
-}
-
 TimeValue file_status::getLastModificationTime() const {
   ULARGE_INTEGER UI;
   UI.LowPart = LastWriteTimeLow;
@@ -350,15 +327,13 @@ bool can_execute(const Twine &Path) {
 
 bool equivalent(file_status A, file_status B) {
   assert(status_known(A) && status_known(B));
-  return A.FileIndexHigh         == B.FileIndexHigh &&
-         A.FileIndexLow          == B.FileIndexLow &&
-         A.FileSizeHigh          == B.FileSizeHigh &&
-         A.FileSizeLow           == B.FileSizeLow &&
-         A.LastAccessedTimeHigh  == B.LastAccessedTimeHigh &&
-         A.LastAccessedTimeLow   == B.LastAccessedTimeLow &&
-         A.LastWriteTimeHigh     == B.LastWriteTimeHigh &&
-         A.LastWriteTimeLow      == B.LastWriteTimeLow &&
-         A.VolumeSerialNumber    == B.VolumeSerialNumber;
+  return A.FileIndexHigh      == B.FileIndexHigh &&
+         A.FileIndexLow       == B.FileIndexLow &&
+         A.FileSizeHigh       == B.FileSizeHigh &&
+         A.FileSizeLow        == B.FileSizeLow &&
+         A.LastWriteTimeHigh  == B.LastWriteTimeHigh &&
+         A.LastWriteTimeLow   == B.LastWriteTimeLow &&
+         A.VolumeSerialNumber == B.VolumeSerialNumber;
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
@@ -429,9 +404,7 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
                          ? file_type::directory_file
                          : file_type::regular_file;
     Result =
-        file_status(Type, Info.ftLastAccessTime.dwHighDateTime,
-                    Info.ftLastAccessTime.dwLowDateTime,
-                    Info.ftLastWriteTime.dwHighDateTime,
+        file_status(Type, Info.ftLastWriteTime.dwHighDateTime,
                     Info.ftLastWriteTime.dwLowDateTime,
                     Info.dwVolumeSerialNumber, Info.nFileSizeHigh,
                     Info.nFileSizeLow, Info.nFileIndexHigh, Info.nFileIndexLow);

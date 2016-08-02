@@ -17,7 +17,6 @@
 #define LLVM_TARGET_TARGETSELECTIONDAGINFO_H
 
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
@@ -151,11 +150,6 @@ public:
                            SDValue Src, SDValue MaxLength,
                            MachinePointerInfo SrcPtrInfo) const {
     return std::make_pair(SDValue(), SDValue());
-  }
-  // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
-  // than FMUL and ADD is delegated to the machine combiner.
-  virtual bool GenerateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const {
-    return false;
   }
 };
 

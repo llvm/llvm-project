@@ -579,17 +579,27 @@ void llvm::AddLandingPadInfo(const LandingPadInst &I, MachineModuleInfo &MMI,
 unsigned FunctionLoweringInfo::findSwiftErrorVReg(const MachineBasicBlock *MBB,
                                                   const Value* Val) const {
   // Find the index in SwiftErrorVals.
-  SwiftErrorValues::const_iterator I =
-      std::find(SwiftErrorVals.begin(), SwiftErrorVals.end(), Val);
-  assert(I != SwiftErrorVals.end() && "Can't find value in SwiftErrorVals");
-  return SwiftErrorMap.lookup(MBB)[I - SwiftErrorVals.begin()];
+  unsigned End = SwiftErrorVals.size();
+  unsigned Index = End;
+  for (unsigned I = 0; I < End; I++)
+    if (SwiftErrorVals[I] == Val) {
+      Index = I;
+      break;
+    }
+  assert(Index < End && "Can't find value in SwiftErrorVals");
+  return SwiftErrorMap.lookup(MBB)[Index];
 }
 
 void FunctionLoweringInfo::setSwiftErrorVReg(const MachineBasicBlock *MBB,
                                              const Value* Val, unsigned VReg) {
   // Find the index in SwiftErrorVals.
-  SwiftErrorValues::iterator I =
-      std::find(SwiftErrorVals.begin(), SwiftErrorVals.end(), Val);
-  assert(I != SwiftErrorVals.end() && "Can't find value in SwiftErrorVals");
-  SwiftErrorMap[MBB][I - SwiftErrorVals.begin()] = VReg;
+  unsigned End = SwiftErrorVals.size();
+  unsigned Index = End;
+  for (unsigned I = 0, E = SwiftErrorVals.size(); I < E; I++)
+    if (SwiftErrorVals[I] == Val) {
+      Index = I;
+      break;
+    }
+  assert(Index < End && "Can't find value in SwiftErrorVals");
+  SwiftErrorMap[MBB][Index] = VReg;
 }

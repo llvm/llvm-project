@@ -571,30 +571,3 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
   return true;
 }
-
-unsigned AArch64TTIImpl::getCacheLineSize() {
-  if (ST->isCyclone())
-    return 64;
-  return BaseT::getCacheLineSize();
-}
-
-unsigned AArch64TTIImpl::getPrefetchDistance() {
-  if (ST->isCyclone())
-    return 280;
-  return BaseT::getPrefetchDistance();
-}
-
-unsigned AArch64TTIImpl::getMinPrefetchStride() {
-  if (ST->isCyclone())
-    // The HW prefetcher handles accesses with strides up to 2KB.
-    return 2048;
-  return BaseT::getMinPrefetchStride();
-}
-
-unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
-  if (ST->isCyclone())
-    // Be conservative for now and don't prefetch ahead too much since the loop
-    // may terminate early.
-    return 3;
-  return BaseT::getMaxPrefetchIterationsAhead();
-}

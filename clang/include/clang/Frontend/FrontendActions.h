@@ -168,7 +168,7 @@ public:
  */
 class ASTMergeAction : public FrontendAction {
   /// \brief The action that the merge action adapts.
-  std::unique_ptr<FrontendAction> AdaptedAction;
+  FrontendAction *AdaptedAction;
   
   /// \brief The set of AST files to merge.
   std::vector<std::string> ASTFiles;
@@ -184,8 +184,7 @@ protected:
   void EndSourceFileAction() override;
 
 public:
-  ASTMergeAction(std::unique_ptr<FrontendAction> AdaptedAction,
-                 ArrayRef<std::string> ASTFiles);
+  ASTMergeAction(FrontendAction *AdaptedAction, ArrayRef<std::string> ASTFiles);
   ~ASTMergeAction() override;
 
   bool usesPreprocessorOnly() const override;

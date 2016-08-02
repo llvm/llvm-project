@@ -21,7 +21,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/AnalysisContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -1320,8 +1319,8 @@ public:
 
   void setTrait(SymbolRef Sym, InvalidationKinds IK);
   void setTrait(const MemRegion *MR, InvalidationKinds IK);
-  bool hasTrait(SymbolRef Sym, InvalidationKinds IK) const;
-  bool hasTrait(const MemRegion *MR, InvalidationKinds IK) const;
+  bool hasTrait(SymbolRef Sym, InvalidationKinds IK);
+  bool hasTrait(const MemRegion *MR, InvalidationKinds IK);
 };
   
 } // end GR namespace

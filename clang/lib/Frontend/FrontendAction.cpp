@@ -566,10 +566,7 @@ bool WrapperFrontendAction::BeginSourceFileAction(CompilerInstance &CI,
                                                   StringRef Filename) {
   WrappedAction->setCurrentInput(getCurrentInput());
   WrappedAction->setCompilerInstance(&CI);
-  auto Ret = WrappedAction->BeginSourceFileAction(CI, Filename);
-  // BeginSourceFileAction may change CurrentInput, e.g. during module builds.
-  setCurrentInput(WrappedAction->getCurrentInput());
-  return Ret;
+  return WrappedAction->BeginSourceFileAction(CI, Filename);
 }
 void WrapperFrontendAction::ExecuteAction() {
   WrappedAction->ExecuteAction();
@@ -597,7 +594,6 @@ bool WrapperFrontendAction::hasCodeCompletionSupport() const {
   return WrappedAction->hasCodeCompletionSupport();
 }
 
-WrapperFrontendAction::WrapperFrontendAction(
-    std::unique_ptr<FrontendAction> WrappedAction)
-  : WrappedAction(std::move(WrappedAction)) {}
+WrapperFrontendAction::WrapperFrontendAction(FrontendAction *WrappedAction)
+  : WrappedAction(WrappedAction) {}
 

@@ -15,6 +15,9 @@
 
 using namespace __dsan;
 
+extern "C" void *__libc_malloc(uptr size);
+extern "C" void __libc_free(void *ptr);
+
 __attribute__((tls_model("initial-exec")))
 static __thread Thread *thr;
 __attribute__((tls_model("initial-exec")))

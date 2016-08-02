@@ -138,7 +138,7 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
 /// \brief An IRBuilder inserter that adds new instructions to the instcombine
 /// worklist.
 class LLVM_LIBRARY_VISIBILITY InstCombineIRInserter
-    : public IRBuilderDefaultInserter {
+    : public IRBuilderDefaultInserter<true> {
   InstCombineWorklist &Worklist;
   AssumptionCache *AC;
 
@@ -148,7 +148,7 @@ public:
 
   void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const {
-    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    IRBuilderDefaultInserter<true>::InsertHelper(I, Name, BB, InsertPt);
     Worklist.Add(I);
 
     using namespace llvm::PatternMatch;
@@ -171,14 +171,12 @@ public:
 
   /// \brief An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  typedef IRBuilder<TargetFolder, InstCombineIRInserter> BuilderTy;
+  typedef IRBuilder<true, TargetFolder, InstCombineIRInserter> BuilderTy;
   BuilderTy *Builder;
 
 private:
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
-  /// Enable combines that trigger rarely but are costly in compiletime.
-  const bool ExpensiveCombines;
 
   AliasAnalysis *AA;
 
@@ -197,12 +195,11 @@ private:
 
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy *Builder,
-               bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
+               bool MinimizeSize, AliasAnalysis *AA,
                AssumptionCache *AC, TargetLibraryInfo *TLI,
                DominatorTree *DT, const DataLayout &DL, LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
-        ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), LI(LI), MadeIRChange(false) {}
+        AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL), LI(LI), MadeIRChange(false) {}
 
   /// \brief Run the combiner over the entire worklist until it is empty.
   ///

@@ -211,7 +211,7 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
       llvm::make_unique<BugReport>(*BT, os.str(), errorNode));
 }
 
-LLVM_DUMP_METHOD void RegionRawOffsetV2::dump() const {
+void RegionRawOffsetV2::dump() const {
   dumpToStream(llvm::errs());
 }
 

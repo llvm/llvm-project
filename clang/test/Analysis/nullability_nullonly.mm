@@ -1,7 +1,20 @@
-// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -DNOSYSTEMHEADERS=0 -verify %s
-// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
+// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -verify %s
 
-#include "Inputs/system-header-simulator-for-nullability.h"
+#define nil 0
+#define BOOL int
+
+@protocol NSObject
++ (id)alloc;
+- (id)init;
+@end
+
+@protocol NSCopying
+@end
+
+__attribute__((objc_root_class))
+@interface
+NSObject<NSObject>
+@end
 
 int getRandom();
 
@@ -18,18 +31,18 @@ void testBasicRules() {
   Dummy *q = 0;
   if (getRandom()) {
     takesNullable(q);
-    takesNonnull(q); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+    takesNonnull(q); // expected-warning {{}}
   }
 }
 
 Dummy *_Nonnull testNullReturn() {
   Dummy *p = 0;
-  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
+  return p; // expected-warning {{}}
 }
 
 void onlyReportFirstPreconditionViolationOnPath() {
   Dummy *p = 0;
-  takesNonnull(p); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+  takesNonnull(p); // expected-warning {{}}
   takesNonnull(p); // No warning.
   // Passing null to nonnull is a sink. Stop the analysis.
   int i = 0;
@@ -130,7 +143,7 @@ TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
 @implementation SomeClass (MethodReturn)
 - (SomeClass * _Nonnull)testReturnsNilInNonnull {
   SomeClass *local = nil;
-  return local; // expected-warning {{Null is returned from a method that is expected to return a non-null value}}
+  return local; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 - (SomeClass * _Nonnull)testReturnsCastSuppressedNilInNonnull {
@@ -146,25 +159,3 @@ TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
     return p; // no-warning
 }
 @end
-
-
-void callFunctionInSystemHeader() {
-  NSString *s;
-  s = nil;
-
-  NSSystemFunctionTakingNonnull(s);
-  #if !NOSYSTEMHEADERS
-  // expected-warning@-2{{Null passed to a callee that requires a non-null 1st parameter}}
-  #endif
-}
-
-void callMethodInSystemHeader() {
-  NSString *s;
-  s = nil;
-
-  NSSystemClass *sc = [[NSSystemClass alloc] init];
-  [sc takesNonnull:s];
-  #if !NOSYSTEMHEADERS
-  // expected-warning@-2{{Null passed to a callee that requires a non-null 1st parameter}}
-  #endif
-}

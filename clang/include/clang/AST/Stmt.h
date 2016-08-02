@@ -115,7 +115,6 @@ protected:
     friend class OverloadExpr; // ctor
     friend class PseudoObjectExpr; // ctor
     friend class AtomicExpr; // ctor
-    friend class OpaqueValueExpr; // ctor
     unsigned : NumStmtBits;
 
     unsigned ValueKind : 2;

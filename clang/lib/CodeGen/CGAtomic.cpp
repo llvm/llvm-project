@@ -323,7 +323,8 @@ static RValue emitAtomicLibcall(CodeGenFunction &CGF,
                                 QualType resultType,
                                 CallArgList &args) {
   const CGFunctionInfo &fnInfo =
-    CGF.CGM.getTypes().arrangeBuiltinFunctionCall(resultType, args);
+    CGF.CGM.getTypes().arrangeFreeFunctionCall(resultType, args,
+            FunctionType::ExtInfo(), RequiredArgs::All);
   llvm::FunctionType *fnTy = CGF.CGM.getTypes().GetFunctionType(fnInfo);
   llvm::Constant *fn = CGF.CGM.CreateRuntimeFunction(fnTy, fnName);
   return CGF.EmitCall(fnInfo, fn, ReturnValueSlot(), args);

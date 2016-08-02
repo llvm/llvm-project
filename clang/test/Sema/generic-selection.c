@@ -31,8 +31,4 @@ void foo(int n) {
 
   const int i = 12;
   int a9[_Generic(i, int: 1, default: 2) == 1 ? 1 : -1];
-
-  // This is expected to not trigger any diagnostics because the controlling
-  // expression is not evaluated.
-  (void)_Generic(*(int *)0, int: 1);
 }

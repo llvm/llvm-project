@@ -1274,12 +1274,6 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
            });
 }
 
-QualType QualType::getAtomicUnqualifiedType() const {
-  if (auto AT = getTypePtr()->getAs<AtomicType>())
-    return AT->getValueType().getUnqualifiedType();
-  return getUnqualifiedType();
-}
-
 Optional<ArrayRef<QualType>> Type::getObjCSubstitutions(
                                const DeclContext *dc) const {
   // Look through method scopes.
@@ -2661,9 +2655,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_IntelOclBicc: return "intel_ocl_bicc";
   case CC_SpirFunction: return "spir_function";
   case CC_SpirKernel: return "spir_kernel";
-  case CC_Swift: return "swiftcall";
-  case CC_PreserveMost: return "preserve_most";
-  case CC_PreserveAll: return "preserve_all";
   }
 
   llvm_unreachable("Invalid calling convention.");
@@ -2680,7 +2671,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       NumParams(params.size()),
       NumExceptions(epi.ExceptionSpec.Exceptions.size()),
       ExceptionSpecType(epi.ExceptionSpec.Type),
-      HasExtParameterInfos(epi.ExtParameterInfos != nullptr),
+      HasAnyConsumedParams(epi.ConsumedParameters != nullptr),
       Variadic(epi.Variadic), HasTrailingReturn(epi.HasTrailingReturn) {
   assert(NumParams == params.size() && "function has too many parameters");
 
@@ -2746,11 +2737,10 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     slot[0] = epi.ExceptionSpec.SourceDecl;
   }
 
-  if (epi.ExtParameterInfos) {
-    ExtParameterInfo *extParamInfos =
-      const_cast<ExtParameterInfo *>(getExtParameterInfosBuffer());
+  if (epi.ConsumedParameters) {
+    bool *consumedParams = const_cast<bool *>(getConsumedParamsBuffer());
     for (unsigned i = 0; i != NumParams; ++i)
-      extParamInfos[i] = epi.ExtParameterInfos[i];
+      consumedParams[i] = epi.ConsumedParameters[i];
   }
 }
 
@@ -2870,9 +2860,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
   }
-  if (epi.ExtParameterInfos) {
+  if (epi.ConsumedParameters) {
     for (unsigned i = 0; i != NumParams; ++i)
-      ID.AddInteger(epi.ExtParameterInfos[i].getOpaqueValue());
+      ID.AddBoolean(epi.ConsumedParameters[i]);
   }
   epi.ExtInfo.Profile(ID);
   ID.AddBoolean(epi.HasTrailingReturn);
@@ -3004,11 +2994,8 @@ bool AttributedType::isQualifier() const {
   case AttributedType::attr_stdcall:
   case AttributedType::attr_thiscall:
   case AttributedType::attr_pascal:
-  case AttributedType::attr_swiftcall:
   case AttributedType::attr_vectorcall:
   case AttributedType::attr_inteloclbicc:
-  case AttributedType::attr_preserve_most:
-  case AttributedType::attr_preserve_all:
   case AttributedType::attr_ms_abi:
   case AttributedType::attr_sysv_abi:
   case AttributedType::attr_ptr32:
@@ -3060,14 +3047,11 @@ bool AttributedType::isCallingConv() const {
   case attr_fastcall:
   case attr_stdcall:
   case attr_thiscall:
-  case attr_swiftcall:
   case attr_vectorcall:
   case attr_pascal:
   case attr_ms_abi:
   case attr_sysv_abi:
   case attr_inteloclbicc:
-  case attr_preserve_most:
-  case attr_preserve_all:
     return true;
   }
   llvm_unreachable("invalid attr kind");

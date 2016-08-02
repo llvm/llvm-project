@@ -17,18 +17,14 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
-#include "llvm/LTO/ThinLTOCodeGenerator.h"
-#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
+#include "llvm/Object/FunctionIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,95 +33,59 @@
 using namespace llvm;
 
 static cl::opt<char>
-    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                           "(default = '-O2')"),
-             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+OptLevel("O",
+         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                  "(default = '-O2')"),
+         cl::Prefix,
+         cl::ZeroOrMore,
+         cl::init('2'));
 
 static cl::opt<bool> DisableVerify(
     "disable-verify", cl::init(false),
     cl::desc("Do not run the verifier during the optimization pipeline"));
 
-static cl::opt<bool> DisableInline("disable-inlining", cl::init(false),
-                                   cl::desc("Do not run the inliner pass"));
+static cl::opt<bool>
+DisableInline("disable-inlining", cl::init(false),
+  cl::desc("Do not run the inliner pass"));
 
 static cl::opt<bool>
-    DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
-                      cl::desc("Do not run the GVN load PRE pass"));
+DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
+  cl::desc("Do not run the GVN load PRE pass"));
 
-static cl::opt<bool> DisableLTOVectorization(
-    "disable-lto-vectorization", cl::init(false),
-    cl::desc("Do not run loop or slp vectorization during LTO"));
+static cl::opt<bool>
+DisableLTOVectorization("disable-lto-vectorization", cl::init(false),
+  cl::desc("Do not run loop or slp vectorization during LTO"));
 
-static cl::opt<bool> UseDiagnosticHandler(
-    "use-diagnostic-handler", cl::init(false),
-    cl::desc("Use a diagnostic handler to test the handler interface"));
+static cl::opt<bool>
+UseDiagnosticHandler("use-diagnostic-handler", cl::init(false),
+  cl::desc("Use a diagnostic handler to test the handler interface"));
 
 static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
             cl::desc("Only write combined global index for ThinLTO backends"));
 
-enum ThinLTOModes {
-  THINLINK,
-  THINPROMOTE,
-  THINIMPORT,
-  THININTERNALIZE,
-  THINOPT,
-  THINCODEGEN,
-  THINALL
-};
-
-cl::opt<ThinLTOModes> ThinLTOMode(
-    "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
-    cl::values(
-        clEnumValN(
-            THINLINK, "thinlink",
-            "ThinLink: produces the index by linking only the summaries."),
-        clEnumValN(THINPROMOTE, "promote",
-                   "Perform pre-import promotion (requires -thinlto-index)."),
-        clEnumValN(THINIMPORT, "import", "Perform both promotion and "
-                                         "cross-module importing (requires "
-                                         "-thinlto-index)."),
-        clEnumValN(THININTERNALIZE, "internalize",
-                   "Perform internalization driven by -exported-symbol "
-                   "(requires -thinlto-index)."),
-        clEnumValN(THINOPT, "optimize", "Perform ThinLTO optimizations."),
-        clEnumValN(THINCODEGEN, "codegen", "CodeGen (expected to match llc)"),
-        clEnumValN(THINALL, "run", "Perform ThinLTO end-to-end"),
-        clEnumValEnd));
-
-static cl::opt<std::string>
-    ThinLTOIndex("thinlto-index",
-                 cl::desc("Provide the index produced by a ThinLink, required "
-                          "to perform the promotion and/or importing."));
-
-static cl::opt<std::string> ThinLTOModuleId(
-    "thinlto-module-id",
-    cl::desc("For the module ID for the file to process, useful to "
-             "match what is in the index."));
-
-static cl::opt<std::string>
-    ThinLTOCacheDir("thinlto-cache-dir", cl::desc("Enable ThinLTO caching."));
-
 static cl::opt<bool>
-    SaveModuleFile("save-merged-module", cl::init(false),
-                   cl::desc("Write merged LTO module to file before CodeGen"));
-
-static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
-                                            cl::desc("<input bitcode files>"));
-
-static cl::opt<std::string> OutputFilename("o", cl::init(""),
-                                           cl::desc("Override output filename"),
-                                           cl::value_desc("filename"));
-
-static cl::list<std::string> ExportedSymbols(
-    "exported-symbol",
-    cl::desc("List of symbols to export from the resulting object file"),
-    cl::ZeroOrMore);
+SaveModuleFile("save-merged-module", cl::init(false),
+               cl::desc("Write merged LTO module to file before CodeGen"));
 
 static cl::list<std::string>
-    DSOSymbols("dso-symbol",
-               cl::desc("Symbol to put in the symtab in the resulting dso"),
-               cl::ZeroOrMore);
+InputFilenames(cl::Positional, cl::OneOrMore,
+  cl::desc("<input bitcode files>"));
+
+static cl::opt<std::string>
+OutputFilename("o", cl::init(""),
+  cl::desc("Override output filename"),
+  cl::value_desc("filename"));
+
+static cl::list<std::string>
+ExportedSymbols("exported-symbol",
+  cl::desc("Symbol to export from the resulting object file"),
+  cl::ZeroOrMore);
+
+static cl::list<std::string>
+DSOSymbols("dso-symbol",
+  cl::desc("Symbol to put in the symtab in the resulting dso"),
+  cl::ZeroOrMore);
 
 static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
@@ -141,10 +101,6 @@ static cl::opt<unsigned> Parallelism("j", cl::Prefix, cl::init(1),
 static cl::opt<bool> RestoreGlobalsLinkage(
     "restore-linkage", cl::init(false),
     cl::desc("Restore original linkage of globals prior to CodeGen"));
-
-static cl::opt<bool> CheckHasObjC(
-    "check-for-objc", cl::init(false),
-    cl::desc("Only check if the module has objective-C defined in it"));
 
 namespace {
 struct ModuleInfo {
@@ -222,11 +178,6 @@ static void error(const ErrorOr<T> &V, const Twine &Prefix) {
   error(V.getError(), Prefix);
 }
 
-static void maybeVerifyModule(const Module &Mod) {
-  if (!DisableVerify && verifyModule(Mod))
-    error("Broken Module");
-}
-
 static std::unique_ptr<LTOModule>
 getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
                   const TargetOptions &Options) {
@@ -238,7 +189,6 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
   ErrorOr<std::unique_ptr<LTOModule>> Ret = LTOModule::createInLocalContext(
       Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Path);
   CurrentActivity = "";
-  maybeVerifyModule((*Ret)->getModule());
   return std::move(*Ret);
 }
 
@@ -265,17 +215,16 @@ static void listSymbols(const TargetOptions &Options) {
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
 /// currently available via the gold plugin via -thinlto.
-static void createCombinedModuleSummaryIndex() {
-  ModuleSummaryIndex CombinedIndex;
+static void createCombinedFunctionIndex() {
+  FunctionInfoIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     CurrentActivity = "loading file '" + Filename + "'";
-    ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-        llvm::getModuleSummaryIndexForFile(Filename, diagnosticHandler);
-    error(IndexOrErr, "error: " + CurrentActivity);
-    std::unique_ptr<ModuleSummaryIndex> Index = std::move(IndexOrErr.get());
+    ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
+        llvm::getFunctionIndexForFile(Filename, diagnosticHandler);
+    std::unique_ptr<FunctionInfoIndex> Index = std::move(IndexOrErr.get());
     CurrentActivity = "";
-    // Skip files without a module summary.
+    // Skip files without a function summary.
     if (!Index)
       continue;
     CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
@@ -285,304 +234,9 @@ static void createCombinedModuleSummaryIndex() {
   raw_fd_ostream OS(OutputFilename + ".thinlto.bc", EC,
                     sys::fs::OpenFlags::F_None);
   error(EC, "error opening the file '" + OutputFilename + ".thinlto.bc'");
-  WriteIndexToFile(CombinedIndex, OS);
+  WriteFunctionSummaryToFile(CombinedIndex, OS);
   OS.close();
 }
-
-namespace thinlto {
-
-std::vector<std::unique_ptr<MemoryBuffer>>
-loadAllFilesForIndex(const ModuleSummaryIndex &Index) {
-  std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
-
-  for (auto &ModPath : Index.modulePaths()) {
-    const auto &Filename = ModPath.first();
-    auto CurrentActivity = "loading file '" + Filename + "'";
-    auto InputOrErr = MemoryBuffer::getFile(Filename);
-    error(InputOrErr, "error " + CurrentActivity);
-    InputBuffers.push_back(std::move(*InputOrErr));
-  }
-  return InputBuffers;
-}
-
-std::unique_ptr<ModuleSummaryIndex> loadCombinedIndex() {
-  if (ThinLTOIndex.empty())
-    report_fatal_error("Missing -thinlto-index for ThinLTO promotion stage");
-  auto CurrentActivity = "loading file '" + ThinLTOIndex + "'";
-  ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-      llvm::getModuleSummaryIndexForFile(ThinLTOIndex, diagnosticHandler);
-  error(IndexOrErr, "error " + CurrentActivity);
-  return std::move(IndexOrErr.get());
-}
-
-static std::unique_ptr<Module> loadModule(StringRef Filename,
-                                          LLVMContext &Ctx) {
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M(parseIRFile(Filename, Err, Ctx));
-  if (!M) {
-    Err.print("llvm-lto", errs());
-    report_fatal_error("Can't load module for file " + Filename);
-  }
-  maybeVerifyModule(*M);
-
-  if (ThinLTOModuleId.getNumOccurrences()) {
-    if (InputFilenames.size() != 1)
-      report_fatal_error("Can't override the module id for multiple files");
-    M->setModuleIdentifier(ThinLTOModuleId);
-  }
-  return M;
-}
-
-static void writeModuleToFile(Module &TheModule, StringRef Filename) {
-  std::error_code EC;
-  raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
-  error(EC, "error opening the file '" + Filename + "'");
-  maybeVerifyModule(TheModule);
-  WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
-}
-
-class ThinLTOProcessing {
-public:
-  ThinLTOCodeGenerator ThinGenerator;
-
-  ThinLTOProcessing(const TargetOptions &Options) {
-    ThinGenerator.setCodePICModel(RelocModel);
-    ThinGenerator.setTargetOptions(Options);
-    ThinGenerator.setCacheDir(ThinLTOCacheDir);
-
-    // Add all the exported symbols to the table of symbols to preserve.
-    for (unsigned i = 0; i < ExportedSymbols.size(); ++i)
-      ThinGenerator.preserveSymbol(ExportedSymbols[i]);
-  }
-
-  void run() {
-    switch (ThinLTOMode) {
-    case THINLINK:
-      return thinLink();
-    case THINPROMOTE:
-      return promote();
-    case THINIMPORT:
-      return import();
-    case THININTERNALIZE:
-      return internalize();
-    case THINOPT:
-      return optimize();
-    case THINCODEGEN:
-      return codegen();
-    case THINALL:
-      return runAll();
-    }
-  }
-
-private:
-  /// Load the input files, create the combined index, and write it out.
-  void thinLink() {
-    // Perform "ThinLink": just produce the index
-    if (OutputFilename.empty())
-      report_fatal_error(
-          "OutputFilename is necessary to store the combined index.\n");
-
-    LLVMContext Ctx;
-    std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
-    for (unsigned i = 0; i < InputFilenames.size(); ++i) {
-      auto &Filename = InputFilenames[i];
-      StringRef CurrentActivity = "loading file '" + Filename + "'";
-      auto InputOrErr = MemoryBuffer::getFile(Filename);
-      error(InputOrErr, "error " + CurrentActivity);
-      InputBuffers.push_back(std::move(*InputOrErr));
-      ThinGenerator.addModule(Filename, InputBuffers.back()->getBuffer());
-    }
-
-    auto CombinedIndex = ThinGenerator.linkCombinedIndex();
-    std::error_code EC;
-    raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
-    error(EC, "error opening the file '" + OutputFilename + "'");
-    WriteIndexToFile(*CombinedIndex, OS);
-    return;
-  }
-
-  /// Load the combined index from disk, then load every file referenced by
-  /// the index and add them to the generator, finally perform the promotion
-  /// on the files mentionned on the command line (these must match the index
-  /// content).
-  void promote() {
-    if (InputFilenames.size() != 1 && !OutputFilename.empty())
-      report_fatal_error("Can't handle a single output filename and multiple "
-                         "input files, do not provide an output filename and "
-                         "the output files will be suffixed from the input "
-                         "ones.");
-
-    auto Index = loadCombinedIndex();
-    for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
-
-      ThinGenerator.promote(*TheModule, *Index);
-
-      std::string OutputName = OutputFilename;
-      if (OutputName.empty()) {
-        OutputName = Filename + ".thinlto.promoted.bc";
-      }
-      writeModuleToFile(*TheModule, OutputName);
-    }
-  }
-
-  /// Load the combined index from disk, then load every file referenced by
-  /// the index and add them to the generator, then performs the promotion and
-  /// cross module importing on the files mentionned on the command line
-  /// (these must match the index content).
-  void import() {
-    if (InputFilenames.size() != 1 && !OutputFilename.empty())
-      report_fatal_error("Can't handle a single output filename and multiple "
-                         "input files, do not provide an output filename and "
-                         "the output files will be suffixed from the input "
-                         "ones.");
-
-    auto Index = loadCombinedIndex();
-    auto InputBuffers = loadAllFilesForIndex(*Index);
-    for (auto &MemBuffer : InputBuffers)
-      ThinGenerator.addModule(MemBuffer->getBufferIdentifier(),
-                              MemBuffer->getBuffer());
-
-    for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
-
-      ThinGenerator.crossModuleImport(*TheModule, *Index);
-
-      std::string OutputName = OutputFilename;
-      if (OutputName.empty()) {
-        OutputName = Filename + ".thinlto.imported.bc";
-      }
-      writeModuleToFile(*TheModule, OutputName);
-    }
-  }
-
-  void internalize() {
-    if (InputFilenames.size() != 1 && !OutputFilename.empty())
-      report_fatal_error("Can't handle a single output filename and multiple "
-                         "input files, do not provide an output filename and "
-                         "the output files will be suffixed from the input "
-                         "ones.");
-
-    if (ExportedSymbols.empty())
-      errs() << "Warning: -internalize will not perform without "
-                "-exported-symbol\n";
-
-    auto Index = loadCombinedIndex();
-    auto InputBuffers = loadAllFilesForIndex(*Index);
-    for (auto &MemBuffer : InputBuffers)
-      ThinGenerator.addModule(MemBuffer->getBufferIdentifier(),
-                              MemBuffer->getBuffer());
-
-    for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
-
-      ThinGenerator.internalize(*TheModule, *Index);
-
-      std::string OutputName = OutputFilename;
-      if (OutputName.empty()) {
-        OutputName = Filename + ".thinlto.internalized.bc";
-      }
-      writeModuleToFile(*TheModule, OutputName);
-    }
-  }
-
-  void optimize() {
-    if (InputFilenames.size() != 1 && !OutputFilename.empty())
-      report_fatal_error("Can't handle a single output filename and multiple "
-                         "input files, do not provide an output filename and "
-                         "the output files will be suffixed from the input "
-                         "ones.");
-    if (!ThinLTOIndex.empty())
-      errs() << "Warning: -thinlto-index ignored for optimize stage";
-
-    for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
-
-      ThinGenerator.optimize(*TheModule);
-
-      std::string OutputName = OutputFilename;
-      if (OutputName.empty()) {
-        OutputName = Filename + ".thinlto.imported.bc";
-      }
-      writeModuleToFile(*TheModule, OutputName);
-    }
-  }
-
-  void codegen() {
-    if (InputFilenames.size() != 1 && !OutputFilename.empty())
-      report_fatal_error("Can't handle a single output filename and multiple "
-                         "input files, do not provide an output filename and "
-                         "the output files will be suffixed from the input "
-                         "ones.");
-    if (!ThinLTOIndex.empty())
-      errs() << "Warning: -thinlto-index ignored for codegen stage";
-
-    for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
-      auto TheModule = loadModule(Filename, Ctx);
-
-      auto Buffer = ThinGenerator.codegen(*TheModule);
-      std::string OutputName = OutputFilename;
-      if (OutputName.empty()) {
-        OutputName = Filename + ".thinlto.o";
-      }
-      if (OutputName == "-") {
-        outs() << Buffer->getBuffer();
-        return;
-      }
-
-      std::error_code EC;
-      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
-      error(EC, "error opening the file '" + OutputName + "'");
-      OS << Buffer->getBuffer();
-    }
-  }
-
-  /// Full ThinLTO process
-  void runAll() {
-    if (!OutputFilename.empty())
-      report_fatal_error("Do not provide an output filename for ThinLTO "
-                         " processing, the output files will be suffixed from "
-                         "the input ones.");
-
-    if (!ThinLTOIndex.empty())
-      errs() << "Warning: -thinlto-index ignored for full ThinLTO process";
-
-    LLVMContext Ctx;
-    std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
-    for (unsigned i = 0; i < InputFilenames.size(); ++i) {
-      auto &Filename = InputFilenames[i];
-      StringRef CurrentActivity = "loading file '" + Filename + "'";
-      auto InputOrErr = MemoryBuffer::getFile(Filename);
-      error(InputOrErr, "error " + CurrentActivity);
-      InputBuffers.push_back(std::move(*InputOrErr));
-      ThinGenerator.addModule(Filename, InputBuffers.back()->getBuffer());
-    }
-
-    ThinGenerator.run();
-
-    auto &Binaries = ThinGenerator.getProducedBinaries();
-    if (Binaries.size() != InputFilenames.size())
-      report_fatal_error("Number of output objects does not match the number "
-                         "of inputs");
-
-    for (unsigned BufID = 0; BufID < Binaries.size(); ++BufID) {
-      auto OutputName = InputFilenames[BufID] + ".thinlto.o";
-      std::error_code EC;
-      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
-      error(EC, "error opening the file '" + OutputName + "'");
-      OS << Binaries[BufID]->getBuffer();
-    }
-  }
-
-  /// Load the combined index from disk, then load every file referenced by
-};
-
-} // namespace thinlto
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
@@ -609,31 +263,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (CheckHasObjC) {
-    for (auto &Filename : InputFilenames) {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFile(Filename);
-      error(BufferOrErr, "error loading file '" + Filename + "'");
-      auto Buffer = std::move(BufferOrErr.get());
-      LLVMContext Ctx;
-      if (llvm::isBitcodeContainingObjCCategory(*Buffer, Ctx))
-        outs() << "Bitcode " << Filename << " contains ObjC\n";
-      else
-        outs() << "Bitcode " << Filename << " does not contain ObjC\n";
-    }
-    return 0;
-  }
-
-  if (ThinLTOMode.getNumOccurrences()) {
-    if (ThinLTOMode.getNumOccurrences() > 1)
-      report_fatal_error("You can't specify more than one -thinlto-action");
-    thinlto::ThinLTOProcessing ThinLTOProcessor(Options);
-    ThinLTOProcessor.run();
-    return 0;
-  }
-
   if (ThinLTO) {
-    createCombinedModuleSummaryIndex();
+    createCombinedFunctionIndex();
     return 0;
   }
 
@@ -685,7 +316,8 @@ int main(int argc, char **argv) {
       CodeGen.setModule(std::move(Module));
     } else if (!CodeGen.addModule(Module.get())) {
       // Print a message here so that we know addModule() did not abort.
-      error("error adding file '" + InputFilenames[i] + "'");
+      errs() << argv[0] << ": error adding file '" << InputFilenames[i] << "'\n";
+      return 1;
     }
   }
 
@@ -719,7 +351,8 @@ int main(int argc, char **argv) {
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
                           DisableLTOVectorization)) {
       // Diagnostic messages should have been printed by the handler.
-      error("error optimizing the code");
+      errs() << argv[0] << ": error optimizing the code\n";
+      return 1;
     }
 
     if (SaveModuleFile) {
@@ -727,8 +360,10 @@ int main(int argc, char **argv) {
       ModuleFilename += ".merged.bc";
       std::string ErrMsg;
 
-      if (!CodeGen.writeMergedModules(ModuleFilename.c_str()))
-        error("writing merged module failed.");
+      if (!CodeGen.writeMergedModules(ModuleFilename.c_str())) {
+        errs() << argv[0] << ": writing merged module failed.\n";
+        return 1;
+      }
     }
 
     std::list<tool_output_file> OSs;
@@ -739,29 +374,40 @@ int main(int argc, char **argv) {
         PartFilename += "." + utostr(I);
       std::error_code EC;
       OSs.emplace_back(PartFilename, EC, sys::fs::F_None);
-      if (EC)
-        error("error opening the file '" + PartFilename + "': " + EC.message());
+      if (EC) {
+        errs() << argv[0] << ": error opening the file '" << PartFilename
+               << "': " << EC.message() << "\n";
+        return 1;
+      }
       OSPtrs.push_back(&OSs.back().os());
     }
 
-    if (!CodeGen.compileOptimized(OSPtrs))
+    if (!CodeGen.compileOptimized(OSPtrs)) {
       // Diagnostic messages should have been printed by the handler.
-      error("error compiling the code");
+      errs() << argv[0] << ": error compiling the code\n";
+      return 1;
+    }
 
     for (tool_output_file &OS : OSs)
       OS.keep();
   } else {
-    if (Parallelism != 1)
-      error("-j must be specified together with -o");
+    if (Parallelism != 1) {
+      errs() << argv[0] << ": -j must be specified together with -o\n";
+      return 1;
+    }
 
-    if (SaveModuleFile)
-      error(": -save-merged-module must be specified with -o");
+    if (SaveModuleFile) {
+      errs() << argv[0] << ": -save-merged-module must be specified with -o\n";
+      return 1;
+    }
 
     const char *OutputName = nullptr;
     if (!CodeGen.compile_to_file(&OutputName, DisableVerify, DisableInline,
-                                 DisableGVNLoadPRE, DisableLTOVectorization))
-      error("error compiling the code");
+                                 DisableGVNLoadPRE, DisableLTOVectorization)) {
       // Diagnostic messages should have been printed by the handler.
+      errs() << argv[0] << ": error compiling the code\n";
+      return 1;
+    }
 
     outs() << "Wrote native object file '" << OutputName << "'\n";
   }

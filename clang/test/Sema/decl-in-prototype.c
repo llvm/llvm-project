@@ -35,3 +35,6 @@ void f6(struct z {int b;} c) { // expected-warning {{declaration of 'struct z' w
 void pr19018_1 (enum e19018 { qq } x); // expected-warning{{declaration of 'enum e19018' will not be visible outside of this function}}
 enum e19018 qq; //expected-error{{tentative definition has type 'enum e19018' that is never completed}} \
                 //expected-note{{forward declaration of 'enum e19018'}}
+
+// Only warn once, even if we create two declarations.
+void f(struct q *, struct __attribute__((aligned(4))) q *); // expected-warning {{will not be visible outside}}

@@ -888,6 +888,8 @@ TailDuplicatePass::TailDuplicate(MachineBasicBlock *TailBB,
         // from PredBB.
         MachineInstr *MI = &*I++;
         ProcessPHI(MI, TailBB, PrevBB, LocalVRMap, CopyInfos, UsedByPhi, true);
+        if (MI->getParent())
+          MI->eraseFromParent();
       }
 
       // Now copy the non-PHI instructions.

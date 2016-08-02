@@ -33,10 +33,11 @@ void *Thread2(void *x) {
 }
 
 int main(int argc, char *argv[]) {
-  fprintf(stderr, "Hello world.\n");
+  NSLog(@"Hello world.");
   
   // NSUserDefaults uses XPC which triggers the false positive.
   NSDictionary *d = [[NSUserDefaults standardUserDefaults] dictionaryRepresentation];
+  NSLog(@"d = %@", d);
 
   if (argc > 1 && strcmp(argv[1], "race") == 0) {
     barrier_init(&barrier, 2);
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]) {
     pthread_join(t[1], NULL);
   }
 
-  fprintf(stderr, "Done.\n");
+  NSLog(@"Done.");
 }
 
 // CHECK: Hello world.

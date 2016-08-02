@@ -34,6 +34,7 @@ namespace llvm {
 #ifndef NDEBUG
   FunctionPass *createPPCCTRLoopsVerify();
 #endif
+  FunctionPass *createPPCLoopDataPrefetchPass();
   FunctionPass *createPPCLoopPreIncPrepPass(PPCTargetMachine &TM);
   FunctionPass *createPPCTOCRegDepsPass();
   FunctionPass *createPPCEarlyReturnPass();

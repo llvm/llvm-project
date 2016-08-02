@@ -99,6 +99,7 @@ float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
   // CHECK: fmla {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[1]
 }
 
+// CHECK-LABEL: test_vfmss_lane_f32
 float32_t test_vfmss_lane_f32(float32_t a, float32_t b, float32x2_t c) {
   return vfmss_lane_f32(a, b, c, 1);
   // CHECK: fmls {{s[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}.s[1]
@@ -110,6 +111,7 @@ float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
   // CHECK: {{fmla|fmadd}} {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+.d\[0\]|d[0-9]+}}
 }
 
+// CHECK-LABEL: test_vfms_lane_f64
 float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
   return vfms_lane_f64(a, b, v, 0);
   // CHECK: {{fmls|fmsub}} {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+.d\[0\]|d[0-9]+}}
@@ -121,6 +123,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
   // CHECK: fmla {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[0]
 }
 
+// CHECK-LABEL: test_vfms_laneq_f64
 float64x1_t test_vfms_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
   return vfms_laneq_f64(a, b, v, 0);
   // CHECK: fmls {{d[0-9]+}}, {{d[0-9]+}}, {{v[0-9]+}}.d[0]

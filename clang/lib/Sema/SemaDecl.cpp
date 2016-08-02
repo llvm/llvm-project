@@ -2194,11 +2194,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   unsigned AttrSpellingListIndex = Attr->getSpellingListIndex();
   if (const auto *AA = dyn_cast<AvailabilityAttr>(Attr))
     NewAttr = S.mergeAvailabilityAttr(D, AA->getRange(), AA->getPlatform(),
-                                      AA->isImplicit(), AA->getIntroduced(),
-                                      AA->getDeprecated(),
+                                      AA->getIntroduced(), AA->getDeprecated(),
                                       AA->getObsoleted(), AA->getUnavailable(),
-                                      AA->getMessage(), AA->getStrict(),
-                                      AA->getReplacement(), AMK,
+                                      AA->getMessage(), AMK,
                                       AttrSpellingListIndex);
   else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, VA->getRange(), VA->getVisibility(),
@@ -9408,9 +9406,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
     if (VDecl->isInvalidDecl())
       return;
 
-    InitializationSequence InitSeq(*this, Entity, Kind, Args,
-                                   /*TopLevelOfInitList=*/false,
-                                   /*TreatUnavailableAsInvalid=*/false);
+    InitializationSequence InitSeq(*this, Entity, Kind, Args);
     ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
     if (Result.isInvalid()) {
       VDecl->setInvalidDecl();
@@ -10623,8 +10619,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   // Parameter declarators cannot be interface types. All ObjC objects are
   // passed by reference.
   if (T->isObjCObjectType()) {
-    SourceLocation TypeEndLoc =
-        getLocForEndOfToken(TSInfo->getTypeLoc().getLocEnd());
+    SourceLocation TypeEndLoc = TSInfo->getTypeLoc().getLocEnd();
     Diag(NameLoc,
          diag::err_object_cannot_be_passed_returned_by_value) << 1 << T
       << FixItHint::CreateInsertion(TypeEndLoc, "*");
@@ -11064,26 +11059,22 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD) {
     FD->setBody(Body);
 
-    if (getLangOpts().CPlusPlus14) {
-      if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
-          FD->getReturnType()->isUndeducedType()) {
-        // If the function has a deduced result type but contains no 'return'
-        // statements, the result type as written must be exactly 'auto', and
-        // the deduced result type is 'void'.
-        if (!FD->getReturnType()->getAs<AutoType>()) {
-          Diag(dcl->getLocation(), diag::err_auto_fn_no_return_but_not_auto)
-              << FD->getReturnType();
-          FD->setInvalidDecl();
-        } else {
-          // Substitute 'void' for the 'auto' in the type.
-          TypeLoc ResultType = getReturnTypeLoc(FD);
-          Context.adjustDeducedFunctionResultType(
-              FD, SubstAutoType(ResultType.getType(), Context.VoidTy));
-        }
+    if (getLangOpts().CPlusPlus14 && !FD->isInvalidDecl() && Body &&
+        !FD->isDependentContext() && FD->getReturnType()->isUndeducedType()) {
+      // If the function has a deduced result type but contains no 'return'
+      // statements, the result type as written must be exactly 'auto', and
+      // the deduced result type is 'void'.
+      if (!FD->getReturnType()->getAs<AutoType>()) {
+        Diag(dcl->getLocation(), diag::err_auto_fn_no_return_but_not_auto)
+            << FD->getReturnType();
+        FD->setInvalidDecl();
+      } else {
+        // Substitute 'void' for the 'auto' in the type.
+        TypeLoc ResultType = getReturnTypeLoc(FD);
+        Context.adjustDeducedFunctionResultType(
+            FD, SubstAutoType(ResultType.getType(), Context.VoidTy));
       }
     } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {
-      // In C++11, we don't use 'auto' deduction rules for lambda call
-      // operators because we don't support return type deduction.
       auto *LSI = getCurLambda();
       if (LSI->HasImplicitReturnType) {
         deduceClosureReturnType(*LSI);
@@ -11831,6 +11822,28 @@ static bool isAcceptableTagRedeclContext(Sema &S, DeclContext *OldDC,
   return false;
 }
 
+/// Find the DeclContext in which a tag is implicitly declared if we see an
+/// elaborated type specifier in the specified context, and lookup finds
+/// nothing.
+static DeclContext *getTagInjectionContext(DeclContext *DC) {
+  while (!DC->isFileContext() && !DC->isFunctionOrMethod())
+    DC = DC->getParent();
+  return DC;
+}
+
+/// Find the Scope in which a tag is implicitly declared if we see an
+/// elaborated type specifier in the specified context, and lookup finds
+/// nothing.
+static Scope *getTagInjectionScope(Scope *S, const LangOptions &LangOpts) {
+  while (S->isClassScope() ||
+         (LangOpts.CPlusPlus &&
+          S->isFunctionPrototypeScope()) ||
+         ((S->getFlags() & Scope::DeclScope) == 0) ||
+         (S->getEntity() && S->getEntity()->isTransparentContext()))
+    S = S->getParent();
+  return S;
+}
+
 /// \brief This is invoked when we see 'struct foo' or 'struct {'.  In the
 /// former case, Name will be non-null.  In the later case, Name will be null.
 /// TagSpec indicates what kind of tag this is. TUK indicates whether this is a
@@ -12147,16 +12160,10 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
       // Find the context where we'll be declaring the tag.
       // FIXME: We would like to maintain the current DeclContext as the
       // lexical context,
-      while (!SearchDC->isFileContext() && !SearchDC->isFunctionOrMethod())
-        SearchDC = SearchDC->getParent();
+      SearchDC = getTagInjectionContext(SearchDC);
 
       // Find the scope where we'll be declaring the tag.
-      while (S->isClassScope() ||
-             (getLangOpts().CPlusPlus &&
-              S->isFunctionPrototypeScope()) ||
-             ((S->getFlags() & Scope::DeclScope) == 0) ||
-             (S->getEntity() && S->getEntity()->isTransparentContext()))
-        S = S->getParent();
+      S = getTagInjectionScope(S, getLangOpts());
     } else {
       assert(TUK == TUK_Friend);
       // C++ [namespace.memdef]p3:
@@ -12309,16 +12316,34 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         if (!Invalid) {
           // If this is a use, just return the declaration we found, unless
           // we have attributes.
-
-          // FIXME: In the future, return a variant or some other clue
-          // for the consumer of this Decl to know it doesn't own it.
-          // For our current ASTs this shouldn't be a problem, but will
-          // need to be changed with DeclGroups.
-          if (!Attr &&
-              ((TUK == TUK_Reference &&
-                (!PrevTagDecl->getFriendObjectKind() || getLangOpts().MicrosoftExt))
-               || TUK == TUK_Friend))
-            return PrevTagDecl;
+          if (TUK == TUK_Reference || TUK == TUK_Friend) {
+            if (Attr) {
+              // FIXME: Diagnose these attributes. For now, we create a new
+              // declaration to hold them.
+            } else if (TUK == TUK_Reference &&
+                       (PrevTagDecl->getFriendObjectKind() ==
+                            Decl::FOK_Undeclared ||
+                        PP.getModuleContainingLocation(
+                            PrevDecl->getLocation()) !=
+                            PP.getModuleContainingLocation(KWLoc)) &&
+                       SS.isEmpty()) {
+              // This declaration is a reference to an existing entity, but
+              // has different visibility from that entity: it either makes
+              // a friend visible or it makes a type visible in a new module.
+              // In either case, create a new declaration. We only do this if
+              // the declaration would have meant the same thing if no prior
+              // declaration were found, that is, if it was found in the same
+              // scope where we would have injected a declaration.
+              if (!getTagInjectionContext(CurContext)->getRedeclContext()
+                       ->Equals(PrevDecl->getDeclContext()->getRedeclContext()))
+                return PrevTagDecl;
+              // This is in the injected scope, create a new declaration in
+              // that scope.
+              S = getTagInjectionScope(S, getLangOpts());
+            } else {
+              return PrevTagDecl;
+            }
+          }
 
           // Diagnose attempts to redefine a tag.
           if (TUK == TUK_Definition) {
@@ -12616,7 +12641,7 @@ CreateNewDecl:
             << Name;
         Invalid = true;
       }
-    } else {
+    } else if (!PrevDecl) {
       Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
     }
     DeclsInPrototypeScope.push_back(New);
@@ -12751,10 +12776,10 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
 }
 
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
-                                    SourceRange BraceRange) {
+                                    SourceLocation RBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
-  Tag->setBraceRange(BraceRange);
+  Tag->setRBraceLoc(RBraceLoc);
 
   // Make sure we "complete" the definition even it is invalid.
   if (Tag->isBeingDefined()) {
@@ -13652,17 +13677,15 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                I = CXXRecord->conversion_begin(),
                E = CXXRecord->conversion_end(); I != E; ++I)
           I.setAccess((*I)->getAccess());
-      }
+        
+        if (!CXXRecord->isDependentType()) {
+          if (CXXRecord->hasUserDeclaredDestructor()) {
+            // Adjust user-defined destructor exception spec.
+            if (getLangOpts().CPlusPlus11)
+              AdjustDestructorExceptionSpec(CXXRecord,
+                                            CXXRecord->getDestructor());
+          }
 
-      if (!CXXRecord->isDependentType()) {
-        if (CXXRecord->hasUserDeclaredDestructor()) {
-          // Adjust user-defined destructor exception spec.
-          if (getLangOpts().CPlusPlus11)
-            AdjustDestructorExceptionSpec(CXXRecord,
-                                          CXXRecord->getDestructor());
-        }
-
-        if (!CXXRecord->isInvalidDecl()) {
           // Add any implicitly-declared members to this class.
           AddImplicitlyDeclaredMembersToClass(CXXRecord);
 
@@ -13931,10 +13954,7 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
             } else
               Diag(IdLoc, diag::err_enumerator_too_large) << EltTy;
           } else
-            Val = ImpCastExprToType(Val, EltTy,
-                                    EltTy->isBooleanType() ?
-                                    CK_IntegralToBoolean : CK_IntegralCast)
-                    .get();
+            Val = ImpCastExprToType(Val, EltTy, CK_IntegralCast).get();
         } else if (getLangOpts().CPlusPlus) {
           // C++11 [dcl.enum]p5:
           //   If the underlying type is not fixed, the type of each enumerator
@@ -14134,8 +14154,6 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
 
   // Process attributes.
   if (Attr) ProcessDeclAttributeList(S, New, Attr);
-
-  ProcessAPINotes(New);
 
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());
@@ -14351,8 +14369,8 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   return !(FlagMask & Val) || (AllowMask && !(FlagMask & ~Val));
 }
 
-void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
-                         Decl *EnumDeclX,
+void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceLocation LBraceLoc,
+                         SourceLocation RBraceLoc, Decl *EnumDeclX,
                          ArrayRef<Decl *> Elements,
                          Scope *S, AttributeList *Attr) {
   EnumDecl *Enum = cast<EnumDecl>(EnumDeclX);
@@ -14693,15 +14711,9 @@ void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
       TUKind == TU_Module &&
       getSourceManager().isWrittenInMainFile(DirectiveLoc);
 
-  // Similarly, if this module is specified by -fmodule-implementation-of
-  // don't actually synthesize an illegal module import.
-  bool ShouldAddImport = !IsInModuleIncludes &&
-    (getLangOpts().ImplementationOfModule.empty() ||
-     getLangOpts().ImplementationOfModule != Mod->getTopLevelModuleName());
-
   // If this module import was due to an inclusion directive, create an 
   // implicit import declaration to capture it in the AST.
-  if (ShouldAddImport) {
+  if (!IsInModuleIncludes) {
     TranslationUnitDecl *TU = getASTContext().getTranslationUnitDecl();
     ImportDecl *ImportD = ImportDecl::CreateImplicit(getASTContext(), TU,
                                                      DirectiveLoc, Mod,

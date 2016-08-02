@@ -35,7 +35,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 13;  // Function/method parameters
+const uint16_t VERSION_MINOR = 6;
 
 using IdentifierID = Fixnum<31>;
 using IdentifierIDField = BCVBR<16>;
@@ -84,19 +84,7 @@ enum BlockID {
 
   /// The (global) functions data block, which maps global function names to
   /// information about the global function.
-  GLOBAL_FUNCTION_BLOCK_ID,
-
-  /// The tag data block, which maps tag names to information about
-  /// the tags.
-  TAG_BLOCK_ID,
-
-  /// The typedef data block, which maps typedef names to information about
-  /// the typedefs.
-  TYPEDEF_BLOCK_ID,
-
-  /// The enum constant data block, which maps enumerator names to
-  /// information about the enumerators.
-  ENUM_CONSTANT_BLOCK_ID,
+  GLOBAL_FUNCTION_BLOCK_ID
 };
 
 namespace control_block {
@@ -104,8 +92,7 @@ namespace control_block {
   // VERSION_MAJOR.
   enum {
     METADATA = 1,
-    MODULE_NAME = 2,
-    MODULE_OPTIONS = 3
+    MODULE_NAME = 2
   };
 
   using MetadataLayout = BCRecordLayout<
@@ -117,11 +104,6 @@ namespace control_block {
   using ModuleNameLayout = BCRecordLayout<
     MODULE_NAME,
     BCBlob       // Module name
-  >;
-
-  using ModuleOptionsLayout = BCRecordLayout<
-    MODULE_OPTIONS,
-    BCFixed<1> // SwiftInferImportAsMember
   >;
 }
 
@@ -208,42 +190,6 @@ namespace global_function_block {
     GLOBAL_FUNCTION_DATA,  // record ID
     BCVBR<16>,  // table offset within the blob (see below)
     BCBlob  // map from name to global function information
-  >;
-}
-
-namespace tag_block {
-  enum {
-    TAG_DATA = 1
-  };
-
-  using TagDataLayout = BCRecordLayout<
-    TAG_DATA,   // record ID
-    BCVBR<16>,  // table offset within the blob (see below)
-    BCBlob      // map from name to tag information
-  >;
-};
-
-namespace typedef_block {
-  enum {
-    TYPEDEF_DATA = 1
-  };
-
-  using TypedefDataLayout = BCRecordLayout<
-    TYPEDEF_DATA,   // record ID
-    BCVBR<16>,  // table offset within the blob (see below)
-    BCBlob      // map from name to typedef information
-  >;
-};
-
-namespace enum_constant_block {
-  enum {
-    ENUM_CONSTANT_DATA = 1
-  };
-
-  using EnumConstantDataLayout = BCRecordLayout<
-    ENUM_CONSTANT_DATA,  // record ID
-    BCVBR<16>,           // table offset within the blob (see below)
-    BCBlob               // map from name to enumerator information
   >;
 }
 

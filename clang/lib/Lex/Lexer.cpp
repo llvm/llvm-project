@@ -1000,31 +1000,6 @@ StringRef Lexer::getImmediateMacroName(SourceLocation Loc,
   return ExpansionBuffer.substr(ExpansionInfo.second, MacroTokenLength);
 }
 
-StringRef Lexer::getImmediateMacroNameForDiagnostics(
-    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
-  assert(Loc.isMacroID() && "Only reasonble to call this on macros");
-  // Walk past macro argument expanions.
-  while (SM.isMacroArgExpansion(Loc))
-    Loc = SM.getImmediateExpansionRange(Loc).first;
-
-  // If the macro's spelling has no FileID, then it's actually a token paste
-  // or stringization (or similar) and not a macro at all.
-  if (!SM.getFileEntryForID(SM.getFileID(SM.getSpellingLoc(Loc))))
-    return StringRef();
-
-  // Find the spelling location of the start of the non-argument expansion
-  // range. This is where the macro name was spelled in order to begin
-  // expanding this macro.
-  Loc = SM.getSpellingLoc(SM.getImmediateExpansionRange(Loc).first);
-
-  // Dig out the buffer where the macro name was spelled and the extents of the
-  // name so that we can render it into the expansion note.
-  std::pair<FileID, unsigned> ExpansionInfo = SM.getDecomposedLoc(Loc);
-  unsigned MacroTokenLength = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
-  StringRef ExpansionBuffer = SM.getBufferData(ExpansionInfo.first);
-  return ExpansionBuffer.substr(ExpansionInfo.second, MacroTokenLength);
-}
-
 bool Lexer::isIdentifierBodyChar(char c, const LangOptions &LangOpts) {
   return isIdentifierBody(c, LangOpts.DollarIdents);
 }
@@ -2607,7 +2582,7 @@ static const char *FindConflictEnd(const char *CurPtr, const char *BufferEnd,
                                    ConflictMarkerKind CMK) {
   const char *Terminator = CMK == CMK_Perforce ? "<<<<\n" : ">>>>>>>";
   size_t TermLen = CMK == CMK_Perforce ? 5 : 7;
-  auto RestOfBuffer = StringRef(CurPtr, BufferEnd - CurPtr).substr(TermLen);
+  StringRef RestOfBuffer(CurPtr+TermLen, BufferEnd-CurPtr-TermLen);
   size_t Pos = RestOfBuffer.find(Terminator);
   while (Pos != StringRef::npos) {
     // Must occur at start of line.

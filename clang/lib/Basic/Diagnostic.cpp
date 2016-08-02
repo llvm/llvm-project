@@ -68,7 +68,6 @@ DiagnosticsEngine::DiagnosticsEngine(
   WarningsAsErrors = false;
   EnableAllWarnings = false;
   ErrorsAsFatal = false;
-  FatalsAsError = false;
   SuppressSystemWarnings = false;
   SuppressAllDiagnostics = false;
   ElideType = true;

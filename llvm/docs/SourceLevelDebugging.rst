@@ -259,7 +259,7 @@ Compiled to LLVM, this function would be represented like this:
   !llvm.module.flags = !{!7, !8, !9}
   !llvm.ident = !{!10}
 
-  !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+  !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
   !1 = !DIFile(filename: "/dev/stdin", directory: "/Users/dexonsmith/data/llvm/debug-info")
   !2 = !{}
   !3 = !{!4}
@@ -407,7 +407,7 @@ a C/C++ front-end would generate the following descriptors:
   !0 = !DICompileUnit(language: DW_LANG_C99, file: !1,
                       producer:
                       "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)",
-                      isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug,
+                      isOptimized: false, runtimeVersion: 0, emissionKind: 1,
                       enums: !2, retainedTypes: !2, subprograms: !2, globals:
                       !3, imports: !2)
 
@@ -679,13 +679,7 @@ New DWARF Constants
 | DW_APPLE_PROPERTY_strong             | 0x400 |
 +--------------------------------------+-------+
 | DW_APPLE_PROPERTY_unsafe_unretained  | 0x800 |
-+--------------------------------------+-------+
-| DW_APPLE_PROPERTY_nullability        | 0x1000|
-+--------------------------------------+-------+
-| DW_APPLE_PROPERTY_null_resettable    | 0x2000|
-+--------------------------------------+-------+
-| DW_APPLE_PROPERTY_class              | 0x4000|
-+--------------------------------------+-------+
++--------------------------------+-----+-------+
 
 Name Accelerator Tables
 -----------------------

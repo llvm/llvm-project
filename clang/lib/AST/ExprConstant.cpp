@@ -6346,32 +6346,25 @@ static const Expr *ignorePointerCastsAndParens(const Expr *E) {
 ///
 /// Please note: this function is specialized for how __builtin_object_size
 /// views "objects".
-///
-/// If this encounters an invalid RecordDecl, it will always return true.
 static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
   assert(!LVal.Designator.Invalid);
 
-  auto IsLastOrInvalidFieldDecl = [&Ctx](const FieldDecl *FD, bool &Invalid) {
-    const RecordDecl *Parent = FD->getParent();
-    Invalid = Parent->isInvalidDecl();
-    if (Invalid || Parent->isUnion())
+  auto IsLastFieldDecl = [&Ctx](const FieldDecl *FD) {
+    if (FD->getParent()->isUnion())
       return true;
-    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Parent);
+    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(FD->getParent());
     return FD->getFieldIndex() + 1 == Layout.getFieldCount();
   };
 
   auto &Base = LVal.getLValueBase();
   if (auto *ME = dyn_cast_or_null<MemberExpr>(Base.dyn_cast<const Expr *>())) {
     if (auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      bool Invalid;
-      if (!IsLastOrInvalidFieldDecl(FD, Invalid))
-        return Invalid;
+      if (!IsLastFieldDecl(FD))
+        return false;
     } else if (auto *IFD = dyn_cast<IndirectFieldDecl>(ME->getMemberDecl())) {
-      for (auto *FD : IFD->chain()) {
-        bool Invalid;
-        if (!IsLastOrInvalidFieldDecl(cast<FieldDecl>(FD), Invalid))
-          return Invalid;
-      }
+      for (auto *FD : IFD->chain())
+        if (!IsLastFieldDecl(cast<FieldDecl>(FD)))
+          return false;
     }
   }
 
@@ -6394,9 +6387,8 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
         return false;
       BaseType = CT->getElementType();
     } else if (auto *FD = getAsField(LVal.Designator.Entries[I])) {
-      bool Invalid;
-      if (!IsLastOrInvalidFieldDecl(FD, Invalid))
-        return Invalid;
+      if (!IsLastFieldDecl(FD))
+        return false;
       BaseType = FD->getType();
     } else {
       assert(getAsBaseClass(LVal.Designator.Entries[I]) != nullptr &&
@@ -8521,14 +8513,12 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         APFloat MaxCD = maxnum(abs(C), abs(D));
         if (MaxCD.isFinite()) {
           DenomLogB = ilogb(MaxCD);
-          C = scalbn(C, -DenomLogB, APFloat::rmNearestTiesToEven);
-          D = scalbn(D, -DenomLogB, APFloat::rmNearestTiesToEven);
+          C = scalbn(C, -DenomLogB);
+          D = scalbn(D, -DenomLogB);
         }
         APFloat Denom = C * C + D * D;
-        ResR = scalbn((A * C + B * D) / Denom, -DenomLogB,
-                      APFloat::rmNearestTiesToEven);
-        ResI = scalbn((B * C - A * D) / Denom, -DenomLogB,
-                      APFloat::rmNearestTiesToEven);
+        ResR = scalbn((A * C + B * D) / Denom, -DenomLogB);
+        ResI = scalbn((B * C - A * D) / Denom, -DenomLogB);
         if (ResR.isNaN() && ResI.isNaN()) {
           if (Denom.isPosZero() && (!A.isNaN() || !B.isNaN())) {
             ResR = APFloat::getInf(ResR.getSemantics(), C.isNegative()) * A;

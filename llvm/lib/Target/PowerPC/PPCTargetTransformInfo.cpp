@@ -21,12 +21,6 @@ using namespace llvm;
 static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
 cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
 
-// This is currently only used for the data prefetch pass which is only enabled
-// for BG/Q by default.
-static cl::opt<unsigned>
-CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
-              cl::desc("The loop prefetch cache line size"));
-
 //===----------------------------------------------------------------------===//
 //
 // PPC cost model.
@@ -234,18 +228,6 @@ unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) {
     return 64;
   return 32;
 
-}
-
-unsigned PPCTTIImpl::getCacheLineSize() {
-  // This is currently only used for the data prefetch pass which is only
-  // enabled for BG/Q by default.
-  return CacheLineSize;
-}
-
-unsigned PPCTTIImpl::getPrefetchDistance() {
-  // This seems like a reasonable default for the BG/Q (this pass is enabled, by
-  // default, only on the BG/Q).
-  return 300;
 }
 
 unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {

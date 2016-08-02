@@ -51,10 +51,13 @@ class SimpleStreamChecker : public Checker<check::PostCall,
                                            check::PreCall,
                                            check::DeadSymbols,
                                            check::PointerEscape> {
-  CallDescription OpenFn, CloseFn;
+
+  mutable IdentifierInfo *IIfopen, *IIfclose;
 
   std::unique_ptr<BugType> DoubleCloseBugType;
   std::unique_ptr<BugType> LeakBugType;
+
+  void initIdentifierInfo(ASTContext &Ctx) const;
 
   void reportDoubleClose(SymbolRef FileDescSym,
                          const CallEvent &Call,
@@ -103,7 +106,7 @@ public:
 } // end anonymous namespace
 
 SimpleStreamChecker::SimpleStreamChecker()
-    : OpenFn("fopen"), CloseFn("fclose", 1) {
+    : IIfopen(nullptr), IIfclose(nullptr) {
   // Initialize the bug types.
   DoubleCloseBugType.reset(
       new BugType(this, "Double fclose", "Unix Stream API Error"));
@@ -116,10 +119,12 @@ SimpleStreamChecker::SimpleStreamChecker()
 
 void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
+  initIdentifierInfo(C.getASTContext());
+
   if (!Call.isGlobalCFunction())
     return;
 
-  if (!Call.isCalled(OpenFn))
+  if (Call.getCalleeIdentifier() != IIfopen)
     return;
 
   // Get the symbolic value corresponding to the file handle.
@@ -135,10 +140,15 @@ void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
 
 void SimpleStreamChecker::checkPreCall(const CallEvent &Call,
                                        CheckerContext &C) const {
+  initIdentifierInfo(C.getASTContext());
+
   if (!Call.isGlobalCFunction())
     return;
 
-  if (!Call.isCalled(CloseFn))
+  if (Call.getCalleeIdentifier() != IIfclose)
+    return;
+
+  if (Call.getNumArgs() != 1)
     return;
 
   // Get the symbolic value corresponding to the file handle.
@@ -263,6 +273,13 @@ SimpleStreamChecker::checkPointerEscape(ProgramStateRef State,
     State = State->remove<StreamMap>(Sym);
   }
   return State;
+}
+
+void SimpleStreamChecker::initIdentifierInfo(ASTContext &Ctx) const {
+  if (IIfopen)
+    return;
+  IIfopen = &Ctx.Idents.get("fopen");
+  IIfclose = &Ctx.Idents.get("fclose");
 }
 
 void ento::registerSimpleStreamChecker(CheckerManager &mgr) {

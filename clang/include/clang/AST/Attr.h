@@ -129,8 +129,7 @@ public:
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    return A->getKind() >= attr::FirstInheritableAttr &&
-           A->getKind() <= attr::LastInheritableAttr;
+    return A->getKind() <= attr::LAST_INHERITABLE;
   }
 };
 
@@ -144,39 +143,10 @@ protected:
 public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    return A->getKind() >= attr::FirstInheritableParamAttr &&
-           A->getKind() <= attr::LastInheritableParamAttr;
+    // Relies on relative order of enum emission with respect to MS inheritance
+    // attrs.
+    return A->getKind() <= attr::LAST_INHERITABLE_PARAM;
   }
-};
-
-/// A parameter attribute which changes the argument-passing ABI rule
-/// for the parameter.
-class ParameterABIAttr : public InheritableParamAttr {
-protected:
-  ParameterABIAttr(attr::Kind AK, SourceRange R,
-                   unsigned SpellingListIndex, bool IsLateParsed,
-                   bool DuplicatesAllowed)
-    : InheritableParamAttr(AK, R, SpellingListIndex, IsLateParsed,
-                           DuplicatesAllowed) {}
-
-public:
-  ParameterABI getABI() const {
-    switch (getKind()) {
-    case attr::SwiftContext:
-      return ParameterABI::SwiftContext;
-    case attr::SwiftErrorResult:
-      return ParameterABI::SwiftErrorResult;
-    case attr::SwiftIndirectResult:
-      return ParameterABI::SwiftIndirectResult;
-    default:
-      llvm_unreachable("bad parameter ABI attribute kind");
-    }
-  }
-
-  static bool classof(const Attr *A) {
-    return A->getKind() >= attr::FirstParameterABIAttr &&
-           A->getKind() <= attr::LastParameterABIAttr;
-   }
 };
 
 #include "clang/AST/Attrs.inc"

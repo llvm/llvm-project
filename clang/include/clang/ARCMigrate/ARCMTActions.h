@@ -22,7 +22,7 @@ protected:
   bool BeginInvocation(CompilerInstance &CI) override;
 
 public:
-  CheckAction(std::unique_ptr<FrontendAction> WrappedAction);
+  CheckAction(FrontendAction *WrappedAction);
 };
 
 class ModifyAction : public WrapperFrontendAction {
@@ -30,7 +30,7 @@ protected:
   bool BeginInvocation(CompilerInstance &CI) override;
 
 public:
-  ModifyAction(std::unique_ptr<FrontendAction> WrappedAction);
+  ModifyAction(FrontendAction *WrappedAction);
 };
 
 class MigrateSourceAction : public ASTFrontendAction {
@@ -49,8 +49,7 @@ protected:
   bool BeginInvocation(CompilerInstance &CI) override;
 
 public:
-  MigrateAction(std::unique_ptr<FrontendAction> WrappedAction,
-                StringRef migrateDir,
+  MigrateAction(FrontendAction *WrappedAction, StringRef migrateDir,
                 StringRef plistOut,
                 bool emitPremigrationARCErrors);
 };
@@ -62,8 +61,8 @@ class ObjCMigrateAction : public WrapperFrontendAction {
   FileRemapper Remapper;
   CompilerInstance *CompInst;
 public:
-  ObjCMigrateAction(std::unique_ptr<FrontendAction> WrappedAction,
-                    StringRef migrateDir, unsigned migrateAction);
+  ObjCMigrateAction(FrontendAction *WrappedAction, StringRef migrateDir,
+                    unsigned migrateAction);
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,

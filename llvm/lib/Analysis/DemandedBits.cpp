@@ -242,6 +242,13 @@ void DemandedBits::determineLiveOperandBits(
     if (OperandNo != 0)
       AB = AOut;
     break;
+  case Instruction::ICmp:
+    // Count the number of leading zeroes in each operand.
+    ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
+    auto NumLeadingZeroes = std::min(KnownZero.countLeadingOnes(),
+                                     KnownZero2.countLeadingOnes());
+    AB = ~APInt::getHighBitsSet(BitWidth, NumLeadingZeroes);
+    break;
   }
 }
 

@@ -885,17 +885,14 @@ public:
   /// \param TopLevelOfInitList true if we are initializing from an expression
   ///        at the top level inside an initializer list. This disallows
   ///        narrowing conversions in C++11 onwards.
-  /// \param TreatUnavailableAsInvalid true if we want to treat unavailable
-  ///        as invalid.
   InitializationSequence(Sema &S, 
                          const InitializedEntity &Entity,
                          const InitializationKind &Kind,
                          MultiExprArg Args,
-                         bool TopLevelOfInitList = false,
-                         bool TreatUnavailableAsInvalid = true);
+                         bool TopLevelOfInitList = false);
   void InitializeFrom(Sema &S, const InitializedEntity &Entity,
                       const InitializationKind &Kind, MultiExprArg Args,
-                      bool TopLevelOfInitList, bool TreatUnavailableAsInvalid);
+                      bool TopLevelOfInitList);
 
   ~InitializationSequence();
   

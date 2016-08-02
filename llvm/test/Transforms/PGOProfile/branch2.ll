@@ -4,8 +4,6 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; GEN: $__llvm_profile_raw_version = comdat any
-; GEN: @__llvm_profile_raw_version = constant i64 72057594037927939, comdat
 ; GEN: @__profn_test_br_2 = private constant [9 x i8] c"test_br_2"
 
 define i32 @test_br_2(i32 %i) {

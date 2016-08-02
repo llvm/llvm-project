@@ -51,10 +51,7 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   // Emit the PCH file to the Buffer.
   assert(SemaPtr && "No Sema?");
   Buffer->Signature =
-      Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot,
-                      // For serialization we are lenient if the errors were
-                      // only warn-as-error kind.
-                      PP.getDiagnostics().hasUncompilableErrorOccurred());
+      Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot, hasErrors);
 
   Buffer->IsComplete = true;
 }

@@ -819,6 +819,8 @@ void ASTDumper::dumpAttr(const Attr *A) {
       switch (A->getKind()) {
 #define ATTR(X) case attr::X: OS << #X; break;
 #include "clang/Basic/AttrList.inc"
+      default:
+        llvm_unreachable("unexpected attribute kind");
       }
       OS << "Attr";
     }
@@ -1595,8 +1597,6 @@ void ASTDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
       OS << " strong";
     if (Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained)
       OS << " unsafe_unretained";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_class)
-      OS << " class";
     if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
       dumpDeclRef(D->getGetterMethodDecl(), "getter");
     if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)

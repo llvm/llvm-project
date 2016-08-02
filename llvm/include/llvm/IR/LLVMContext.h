@@ -26,8 +26,6 @@ class StringRef;
 class Twine;
 class Instruction;
 class Module;
-class MDString;
-class DICompositeType;
 class SMDiagnostic;
 class DiagnosticInfo;
 template <typename T> class SmallVectorImpl;
@@ -48,25 +46,24 @@ public:
   // Pinned metadata names, which always have the same value.  This is a
   // compile-time performance optimization, not a correctness optimization.
   enum {
-    MD_dbg = 0,                       // "dbg"
-    MD_tbaa = 1,                      // "tbaa"
-    MD_prof = 2,                      // "prof"
-    MD_fpmath = 3,                    // "fpmath"
-    MD_range = 4,                     // "range"
-    MD_tbaa_struct = 5,               // "tbaa.struct"
-    MD_invariant_load = 6,            // "invariant.load"
-    MD_alias_scope = 7,               // "alias.scope"
-    MD_noalias = 8,                   // "noalias",
-    MD_nontemporal = 9,               // "nontemporal"
+    MD_dbg = 0,  // "dbg"
+    MD_tbaa = 1, // "tbaa"
+    MD_prof = 2,  // "prof"
+    MD_fpmath = 3,  // "fpmath"
+    MD_range = 4, // "range"
+    MD_tbaa_struct = 5, // "tbaa.struct"
+    MD_invariant_load = 6, // "invariant.load"
+    MD_alias_scope = 7, // "alias.scope"
+    MD_noalias = 8, // "noalias",
+    MD_nontemporal = 9, // "nontemporal"
     MD_mem_parallel_loop_access = 10, // "llvm.mem.parallel_loop_access"
-    MD_nonnull = 11,                  // "nonnull"
-    MD_dereferenceable = 12,          // "dereferenceable"
-    MD_dereferenceable_or_null = 13,  // "dereferenceable_or_null"
-    MD_make_implicit = 14,            // "make.implicit"
-    MD_unpredictable = 15,            // "unpredictable"
-    MD_invariant_group = 16,          // "invariant.group"
-    MD_align = 17,                    // "align"
-    MD_loop = 18,                     // "llvm.loop"
+    MD_nonnull = 11, // "nonnull"
+    MD_dereferenceable = 12, // "dereferenceable"
+    MD_dereferenceable_or_null = 13, // "dereferenceable_or_null"
+    MD_make_implicit = 14, // "make.implicit"
+    MD_unpredictable = 15, // "unpredictable"
+    MD_invariant_group = 16, // "invariant.group"
+    MD_align = 17 // "align"
   };
 
   /// Known operand bundle tag IDs, which always have the same value.  All
@@ -96,6 +93,7 @@ public:
   /// tag registered with an LLVMContext has an unique ID.
   uint32_t getOperandBundleTagID(StringRef Tag) const;
 
+
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);
 
@@ -105,21 +103,6 @@ public:
   /// Remove the GC for a function
   void deleteGC(const Function &Fn);
 
-  /// Return true if the Context runtime configuration is set to discard all
-  /// value names. When true, only GlobalValue names will be available in the
-  /// IR.
-  bool discardValueNames() const;
-
-  /// Set the Context runtime configuration to discard all value name (but
-  /// GlobalValue). Clients can use this flag to save memory and runtime,
-  /// especially in release mode.
-  void setDiscardValueNames(bool Discard);
-
-  /// Whether there is a string map for uniquing debug info
-  /// identifiers across the context.  Off by default.
-  bool isODRUniquingDebugTypes() const;
-  void enableDebugTypeODRUniquing();
-  void disableDebugTypeODRUniquing();
 
   typedef void (*InlineAsmDiagHandlerTy)(const SMDiagnostic&, void *Context,
                                          unsigned LocCookie);

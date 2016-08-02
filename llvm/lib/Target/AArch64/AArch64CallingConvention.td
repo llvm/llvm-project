@@ -45,9 +45,6 @@ def CC_AArch64_AAPCS : CallingConv<[
   // supported there.
   CCIfNest<CCAssignToReg<[X18]>>,
 
-  // Pass SwiftSelf in a callee saved register.
-  CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X20], [W20]>>>,
-
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
@@ -131,8 +128,8 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   // slot is 64-bit.
   CCIfByVal<CCPassByVal<8, 8>>,
 
-  // Pass SwiftSelf in a callee saved register.
-  CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X20], [W20]>>>,
+  // An SwiftSelf is passed in X9.
+  CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X9], [W9]>>>,
 
   // A SwiftError is passed in X19.
   CCIfSwiftError<CCIfType<[i64], CCAssignToRegWithShadow<[X19], [W19]>>>,
@@ -281,8 +278,10 @@ def CSR_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
 // case)
 def CSR_AArch64_AAPCS_ThisReturn : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X0)>;
 
-def CSR_AArch64_AAPCS_SwiftError
-    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X19)>;
+def CSR_AArch64_AAPCS_SwiftError : CalleeSavedRegs<(add LR, FP, X20, X21, X22,
+                                           X23, X24, X25, X26, X27, X28,
+                                           D8,  D9,  D10, D11,
+                                           D12, D13, D14, D15)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // guarantees more than a normal AAPCS function. x16 and x17 are used on the
@@ -324,7 +323,3 @@ def CSR_AArch64_AllRegs
                            (sequence "Q%u", 0, 31))>;
 
 def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
-
-def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
-                                                (sequence "X%u", 9, 14))>;
-
