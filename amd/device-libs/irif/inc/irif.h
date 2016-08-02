@@ -155,6 +155,10 @@ extern __attribute__((const)) uint __llvm_amdgcn_workgroup_id_y(void) __asm("llv
 extern __attribute__((const)) uint __llvm_amdgcn_workgroup_id_z(void) __asm("llvm.amdgcn.workitem.id.z");
 
 extern __attribute__((const)) __constant void *__llvm_amdgcn_dispatch_ptr(void) __asm("llvm.amdgcn.dispatch.ptr");
+extern __attribute__((const)) __constant void *__llvm_amdgcn_kernarg_segment_ptr(void) __asm("llvm.amdgcn.kernarg.segment.ptr");
+extern __attribute__((const)) __constant void *__llvm_amdgcn_implicitarg_ptr(void) __asm("llvm.amdgcn.implicitarg.ptr");
+
+extern __attribute__((const)) uint __llvm_amdgcn_groupstaticsize(void) __asm("llvm.amdgcn.groutstaticsize");
 
 extern void __llvm_amdgcn_s_sleep(uint) __asm("llvm.amdgcn.s.sleep");
 extern ulong __llvm_amdgcn_s_memtime(void) __asm("llvm.amdgcn.s.memtime");

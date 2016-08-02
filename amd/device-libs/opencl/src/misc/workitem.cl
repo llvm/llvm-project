@@ -13,22 +13,14 @@
 ATTR size_t
 get_global_offset(uint dim)
 {
-    // TODO
-    // If the ABI continues to use the first 3 kernarg
-    // slots for global offset, and the AMDGPU target
-    // provides an intrinsic for accessing the kernarg
-    // segment, llvm.amdgcn.kernarg.segment.ptr, then
-    // this can be finished.
-    //
-    // We could get the kernarg pointer from the dispatch
-    // packet if needed
+    // TODO find out if implicit arg pointer is aligned properly
     switch(dim) {
     case 0:
-        return 0;
+        return *(__constant size_t *)__llvm_amdgcn_implicitarg_ptr();
     case 1:
-        return 0;
+        return ((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[1];
     case 2:
-        return 0;
+        return ((__constant size_t *)__llvm_amdgcn_implicitarg_ptr())[2];
     default:
         return 0;
     }
