@@ -143,20 +143,16 @@ void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
 }
 
 void *user_realloc(ThreadState *thr, uptr pc, void *p, uptr sz) {
-  void *p2 = 0;
   // FIXME: Handle "shrinking" more efficiently,
   // it seems that some software actually does this.
-  if (sz) {
-    p2 = user_alloc(thr, pc, sz);
-    if (p2 == 0)
-      return 0;
-    if (p) {
-      uptr oldsz = user_alloc_usable_size(p);
-      internal_memcpy(p2, p, min(oldsz, sz));
-    }
-  }
-  if (p)
+  void *p2 = user_alloc(thr, pc, sz);
+  if (p2 == 0)
+    return 0;
+  if (p) {
+    uptr oldsz = user_alloc_usable_size(p);
+    internal_memcpy(p2, p, min(oldsz, sz));
     user_free(thr, pc, p);
+  }
   return p2;
 }
 
