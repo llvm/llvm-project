@@ -1,4 +1,4 @@
-//===-- asan_win_uar_thunk.cc ---------------------------------------------===//
+//===-- asan_win_dynamic_runtime_thunk.cc ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,11 +17,11 @@
 //  - forwarding the detect_stack_use_after_return runtime option
 //  - forwarding the detect_stack_use_after_scope runtime option
 //  - working around deficiencies of the MD runtime
-//  - installing a custom SEH handlerx
+//  - installing a custom SEH handler
 //
 //===----------------------------------------------------------------------===//
 
-// Only compile this code when buidling asan_dynamic_runtime_thunk.lib
+// Only compile this code when building asan_dynamic_runtime_thunk.lib
 // Using #ifdef rather than relying on Makefiles etc.
 // simplifies the build procedure.
 #ifdef ASAN_DYNAMIC_RUNTIME_THUNK

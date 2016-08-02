@@ -43,7 +43,7 @@ int __asan_should_detect_stack_use_after_scope() {
   return __asan_option_detect_stack_use_after_scope;
 }
 
-// -------------------- A workaround for the abscence of weak symbols ----- {{{
+// -------------------- A workaround for the absence of weak symbols ----- {{{
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can
 // use the /alternatename directive to tell the linker to default a specific
 // symbol to a specific value, which works nicely for allocator hooks and
@@ -70,7 +70,7 @@ void __asan_default_on_error() {}
 // }}}
 }  // extern "C"
 
-// ---------------------- Windows-specific inteceptors ---------------- {{{
+// ---------------------- Windows-specific interceptors ---------------- {{{
 INTERCEPTOR_WINAPI(void, RaiseException, void *a, void *b, void *c, void *d) {
   CHECK(REAL(RaiseException));
   __asan_handle_no_return();
@@ -153,7 +153,7 @@ void EnsureWorkerThreadRegistered() {
 INTERCEPTOR_WINAPI(DWORD, NtWaitForWorkViaWorkerFactory, DWORD a, DWORD b) {
   // NtWaitForWorkViaWorkerFactory is called from system worker pool threads to
   // query work scheduled by BindIoCompletionCallback, QueueUserWorkItem, etc.
-  // System worker pool threads are created at arbitraty point in time and
+  // System worker pool threads are created at arbitrary point in time and
   // without using CreateThread, so we wrap NtWaitForWorkViaWorkerFactory
   // instead and don't register a specific parent_tid/stack.
   EnsureWorkerThreadRegistered();
