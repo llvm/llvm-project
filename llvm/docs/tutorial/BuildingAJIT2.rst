@@ -93,8 +93,8 @@ define below.
   auto Resolver = createLambdaResolver(
       [&](const std::string &Name) {
         if (auto Sym = OptimizeLayer.findSymbol(Name, false))
-          return Sym.toRuntimeDyldSymbol();
-        return RuntimeDyld::SymbolInfo(nullptr);
+          return Sym;
+        return JITSymbol(nullptr);
       },
   // ...
 

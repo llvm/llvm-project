@@ -20,6 +20,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyISelLowering.cpp
   WebAssemblyInstrInfo.cpp
   WebAssemblyLowerBrUnless.cpp
+  WebAssemblyLowerEmscriptenExceptions.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
   WebAssemblyOptimizeLiveIntervals.cpp

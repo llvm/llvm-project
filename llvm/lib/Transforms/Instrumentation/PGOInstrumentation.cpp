@@ -299,6 +299,16 @@ public:
     if (CreateGlobalVar)
       FuncNameVar = createPGOFuncNameVar(F, FuncName);
   }
+
+  // Return the number of profile counters needed for the function.
+  unsigned getNumCounters() {
+    unsigned NumCounters = 0;
+    for (auto &E : this->MST.AllEdges) {
+      if (!E->InMST && !E->Removed)
+        NumCounters++;
+    }
+    return NumCounters;
+  }
 };
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
@@ -442,13 +452,10 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
 static void instrumentOneFunc(
     Function &F, Module *M, BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFI,
     std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers) {
-  unsigned NumCounters = 0;
   FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(F, ComdatMembers, true, BPI,
                                                    BFI);
-  for (auto &E : FuncInfo.MST.AllEdges) {
-    if (!E->InMST && !E->Removed)
-      NumCounters++;
-  }
+  unsigned NumCounters = FuncInfo.getNumCounters();
+
   uint32_t I = 0;
   Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
   for (auto &E : FuncInfo.MST.AllEdges) {
@@ -465,6 +472,7 @@ static void instrumentOneFunc(
          Builder.getInt64(FuncInfo.FunctionHash), Builder.getInt32(NumCounters),
          Builder.getInt32(I++)});
   }
+  assert(I == NumCounters);
 
   if (DisableValueProfiling)
     return;
@@ -638,6 +646,7 @@ private:
 void PGOUseFunc::setInstrumentedCounts(
     const std::vector<uint64_t> &CountFromProfile) {
 
+  assert(FuncInfo.getNumCounters() == CountFromProfile.size());
   // Use a worklist as we will update the vector during the iteration.
   std::vector<PGOUseEdge *> WorkList;
   for (auto &E : FuncInfo.MST.AllEdges)
@@ -667,6 +676,7 @@ void PGOUseFunc::setInstrumentedCounts(
     NewEdge1.InMST = true;
     getBBInfo(InstrBB).setBBInfoCount(CountValue);
   }
+  assert(I == CountFromProfile.size());
 }
 
 // Set the count value for the unknown edge. There should be one and only one

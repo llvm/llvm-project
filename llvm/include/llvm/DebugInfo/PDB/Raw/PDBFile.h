@@ -67,6 +67,8 @@ public:
   Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                      ArrayRef<uint8_t> Data) const override;
 
+  ArrayRef<uint32_t> getFpmPages() const { return FpmPages; }
+
   ArrayRef<support::ulittle32_t> getStreamSizes() const {
     return ContainerLayout.StreamSizes;
   }
@@ -95,6 +97,7 @@ private:
 
   std::unique_ptr<msf::ReadableStream> Buffer;
 
+  std::vector<uint32_t> FpmPages;
   msf::MSFLayout ContainerLayout;
 
   std::unique_ptr<InfoStream> Info;

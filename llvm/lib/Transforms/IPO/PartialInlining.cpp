@@ -14,6 +14,9 @@
 
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -133,9 +136,15 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
   DominatorTree DT;
   DT.recalculate(*DuplicateFunction);
 
+  // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*DuplicateFunction, LI);
+  BlockFrequencyInfo BFI(*DuplicateFunction, BPI, LI);
+
   // Extract the body of the if.
   Function *ExtractedFunction =
-      CodeExtractor(ToExtract, &DT).extractCodeRegion();
+      CodeExtractor(ToExtract, &DT, /*AggregateArgs*/ false, &BFI, &BPI)
+          .extractCodeRegion();
 
   // Inline the top-level if test into all callers.
   std::vector<User *> Users(DuplicateFunction->user_begin(),
@@ -181,8 +190,8 @@ bool PartialInlinerImpl::run(Module &M) {
     if (Recursive)
       continue;
 
-    if (Function *newFunc = unswitchFunction(CurrFunc)) {
-      Worklist.push_back(newFunc);
+    if (Function *NewFunc = unswitchFunction(CurrFunc)) {
+      Worklist.push_back(NewFunc);
       Changed = true;
     }
   }

@@ -114,7 +114,7 @@ public:
   /// this function when peeling off one or more iterations of a loop. This
   /// function assumes the nth iteration is peeled first.
   unsigned reduceLoopCount(MachineBasicBlock &MBB,
-                           MachineInstr *IndVar, MachineInstr *Cmp,
+                           MachineInstr *IndVar, MachineInstr &Cmp,
                            SmallVectorImpl<MachineOperand> &Cond,
                            SmallVectorImpl<MachineInstr *> &PrevInsts,
                            unsigned Iter, unsigned MaxIter) const override;
@@ -206,7 +206,7 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   /// Return true for post-incremented instructions.
-  bool isPostIncrement(const MachineInstr *MI) const override;
+  bool isPostIncrement(const MachineInstr &MI) const override;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.
@@ -274,11 +274,11 @@ public:
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.
-  bool getBaseAndOffsetPosition(const MachineInstr *MI, unsigned &BasePos,
+  bool getBaseAndOffsetPosition(const MachineInstr &MI, unsigned &BasePos,
                                 unsigned &OffsetPos) const override;
 
   /// If the instruction is an increment of a constant value, return the amount.
-  bool getIncrementValue(const MachineInstr *MI, int &Value) const override;
+  bool getIncrementValue(const MachineInstr &MI, int &Value) const override;
 
   /// HexagonInstrInfo specifics.
   ///

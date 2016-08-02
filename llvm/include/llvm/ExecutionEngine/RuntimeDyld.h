@@ -14,7 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLD_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLD_H
 
-#include "JITSymbolFlags.h"
+#include "JITSymbol.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Object/ObjectFile.h"
@@ -59,18 +59,6 @@ protected:
   // Any relocations already associated with the symbol will be re-resolved.
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 public:
-
-  /// \brief Information about a named symbol.
-  class SymbolInfo : public JITSymbolBase {
-  public:
-    SymbolInfo(std::nullptr_t) : JITSymbolBase(JITSymbolFlags::None), Address(0) {}
-    SymbolInfo(uint64_t Address, JITSymbolFlags Flags)
-      : JITSymbolBase(Flags), Address(Address) {}
-    explicit operator bool() const { return Address != 0; }
-    uint64_t getAddress() const { return Address; }
-  private:
-    uint64_t Address;
-  };
 
   /// \brief Information about the loaded object.
   class LoadedObjectInfo : public llvm::LoadedObjectInfo {
@@ -189,39 +177,8 @@ public:
     bool FinalizationLocked;
   };
 
-  /// \brief Symbol resolution.
-  class SymbolResolver {
-  public:
-    virtual ~SymbolResolver() {}
-
-    /// This method returns the address of the specified symbol if it exists
-    /// within the logical dynamic library represented by this
-    /// RTDyldMemoryManager. Unlike findSymbol, queries through this
-    /// interface should return addresses for hidden symbols.
-    ///
-    /// This is of particular importance for the Orc JIT APIs, which support lazy
-    /// compilation by breaking up modules: Each of those broken out modules
-    /// must be able to resolve hidden symbols provided by the others. Clients
-    /// writing memory managers for MCJIT can usually ignore this method.
-    ///
-    /// This method will be queried by RuntimeDyld when checking for previous
-    /// definitions of common symbols.
-    virtual SymbolInfo findSymbolInLogicalDylib(const std::string &Name) = 0;
-
-    /// This method returns the address of the specified function or variable.
-    /// It is used to resolve symbols during module linking.
-    ///
-    /// If the returned symbol's address is equal to ~0ULL then RuntimeDyld will
-    /// skip all relocations for that symbol, and the client will be responsible
-    /// for handling them manually.
-    virtual SymbolInfo findSymbol(const std::string &Name) = 0;
-
-  private:
-    virtual void anchor();
-  };
-
   /// \brief Construct a RuntimeDyld instance.
-  RuntimeDyld(MemoryManager &MemMgr, SymbolResolver &Resolver);
+  RuntimeDyld(MemoryManager &MemMgr, JITSymbolResolver &Resolver);
   ~RuntimeDyld();
 
   /// Add the referenced object file to the list of objects to be loaded and
@@ -235,7 +192,7 @@ public:
 
   /// Get the target address and flags for the named symbol.
   /// This address is the one used for relocation.
-  SymbolInfo getSymbol(StringRef Name) const;
+  JITEvaluatedSymbol getSymbol(StringRef Name) const;
 
   /// Resolve the relocations for all symbols we currently know about.
   void resolveRelocations();
@@ -295,7 +252,7 @@ private:
   // interface.
   std::unique_ptr<RuntimeDyldImpl> Dyld;
   MemoryManager &MemMgr;
-  SymbolResolver &Resolver;
+  JITSymbolResolver &Resolver;
   bool ProcessAllSections;
   RuntimeDyldCheckerImpl *Checker;
 };

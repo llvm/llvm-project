@@ -48,12 +48,13 @@ STATISTIC(NumGlobals  , "Number of global vars initialized");
 ExecutionEngine *(*ExecutionEngine::MCJITCtor)(
     std::unique_ptr<Module> M, std::string *ErrorStr,
     std::shared_ptr<MCJITMemoryManager> MemMgr,
-    std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+
+    std::shared_ptr<JITSymbolResolver> Resolver,
     std::unique_ptr<TargetMachine> TM) = nullptr;
 
 ExecutionEngine *(*ExecutionEngine::OrcMCJITReplacementCtor)(
   std::string *ErrorStr, std::shared_ptr<MCJITMemoryManager> MemMgr,
-  std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+  std::shared_ptr<JITSymbolResolver> Resolver,
   std::unique_ptr<TargetMachine> TM) = nullptr;
 
 ExecutionEngine *(*ExecutionEngine::InterpCtor)(std::unique_ptr<Module> M,
@@ -499,8 +500,8 @@ EngineBuilder::setMemoryManager(std::unique_ptr<MCJITMemoryManager> MM) {
 }
 
 EngineBuilder&
-EngineBuilder::setSymbolResolver(std::unique_ptr<RuntimeDyld::SymbolResolver> SR) {
-  Resolver = std::shared_ptr<RuntimeDyld::SymbolResolver>(std::move(SR));
+EngineBuilder::setSymbolResolver(std::unique_ptr<JITSymbolResolver> SR) {
+  Resolver = std::shared_ptr<JITSymbolResolver>(std::move(SR));
   return *this;
 }
 

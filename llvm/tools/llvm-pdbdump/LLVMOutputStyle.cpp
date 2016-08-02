@@ -35,6 +35,48 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
+namespace {
+struct PageStats {
+  explicit PageStats(const BitVector &FreePages)
+      : Upm(FreePages), ActualUsedPages(FreePages.size()),
+        MultiUsePages(FreePages.size()), UseAfterFreePages(FreePages.size()) {
+    const_cast<BitVector &>(Upm).flip();
+    // To calculate orphaned pages, we start with the set of pages that the
+    // MSF thinks are used.  Each time we find one that actually *is* used,
+    // we unset it.  Whichever bits remain set at the end are orphaned.
+    OrphanedPages = Upm;
+  }
+
+  // The inverse of the MSF File's copy of the Fpm.  The basis for which we
+  // determine the allocation status of each page.
+  const BitVector Upm;
+
+  // Pages which are marked as used in the FPM and are used at least once.
+  BitVector ActualUsedPages;
+
+  // Pages which are marked as used in the FPM but are used more than once.
+  BitVector MultiUsePages;
+
+  // Pages which are marked as used in the FPM but are not used at all.
+  BitVector OrphanedPages;
+
+  // Pages which are marked free in the FPM but are used.
+  BitVector UseAfterFreePages;
+};
+}
+
+static void recordKnownUsedPage(PageStats &Stats, uint32_t UsedIndex) {
+  if (Stats.Upm.test(UsedIndex)) {
+    if (Stats.ActualUsedPages.test(UsedIndex))
+      Stats.MultiUsePages.set(UsedIndex);
+    Stats.ActualUsedPages.set(UsedIndex);
+    Stats.OrphanedPages.reset(UsedIndex);
+  } else {
+    // The MSF doesn't think this page is used, but it is.
+    Stats.UseAfterFreePages.set(UsedIndex);
+  }
+}
+
 static void printSectionOffset(llvm::raw_ostream &OS,
                                const SectionOffset &Off) {
   OS << Off.Off << ", " << Off.Isect;
@@ -238,19 +280,51 @@ Error LLVMOutputStyle::dumpStreamSummary() {
 }
 
 Error LLVMOutputStyle::dumpFreePageMap() {
-  if (!opts::raw::DumpFreePageMap)
+  if (!opts::raw::DumpPageStats)
     return Error::success();
-  const BitVector &FPM = File.getMsfLayout().FreePageMap;
 
-  std::vector<uint32_t> Vec;
-  for (uint32_t I = 0, E = FPM.size(); I != E; ++I)
-    if (!FPM[I])
-      Vec.push_back(I);
-
-  // Prints out used pages instead of free pages because
+  // Start with used pages instead of free pages because
   // the number of free pages is far larger than used pages.
-  P.printList("Used Page Map", Vec);
+  BitVector FPM = File.getMsfLayout().FreePageMap;
+
+  PageStats PS(FPM);
+
+  recordKnownUsedPage(PS, 0); // MSF Super Block
+
+  uint32_t BlocksPerSection = File.getBlockSize();
+  uint32_t NumSections =
+      llvm::alignTo(File.getBlockCount(), BlocksPerSection) / BlocksPerSection;
+  for (uint32_t I = 0; I < NumSections; ++I) {
+    uint32_t Fpm0 = 1 + BlocksPerSection * I;
+    // 2 Fpm blocks spaced at `getBlockSize()` block intervals
+    recordKnownUsedPage(PS, Fpm0);
+    recordKnownUsedPage(PS, Fpm0 + 1);
+  }
+
+  recordKnownUsedPage(PS, File.getBlockMapIndex()); // Stream Table
+
+  for (auto DB : File.getDirectoryBlockArray()) {
+    recordKnownUsedPage(PS, DB);
+  }
+  for (auto &SE : File.getStreamMap()) {
+    for (auto &S : SE) {
+      recordKnownUsedPage(PS, S);
+    }
+  }
+
+  dumpBitVector("Msf Free Pages", FPM);
+  dumpBitVector("Orphaned Pages", PS.OrphanedPages);
+  dumpBitVector("Multiply Used Pages", PS.MultiUsePages);
+  dumpBitVector("Use After Free Pages", PS.UseAfterFreePages);
   return Error::success();
+}
+
+void LLVMOutputStyle::dumpBitVector(StringRef Name, const BitVector &V) {
+  std::vector<uint32_t> Vec;
+  for (uint32_t I = 0, E = V.size(); I != E; ++I)
+    if (V[I])
+      Vec.push_back(I);
+  P.printList(Name, Vec);
 }
 
 Error LLVMOutputStyle::dumpStreamBlocks() {

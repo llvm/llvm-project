@@ -167,8 +167,10 @@ cl::opt<bool> DumpStreamBlocks("stream-blocks",
 cl::opt<bool> DumpStreamSummary("stream-summary",
                                 cl::desc("dump summary of the PDB streams"),
                                 cl::cat(MsfOptions), cl::sub(RawSubcommand));
-cl::opt<bool> DumpFreePageMap("fpm", cl::desc("dump free page bitmap"),
-                              cl::cat(MsfOptions), cl::sub(RawSubcommand));
+cl::opt<bool> DumpPageStats(
+    "page-stats",
+    cl::desc("dump allocation stats of the pages in the MSF file"),
+    cl::cat(MsfOptions), cl::sub(RawSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool>
@@ -544,7 +546,7 @@ int main(int argc_, const char *argv_[]) {
     opts::raw::DumpPublics = true;
     opts::raw::DumpSectionHeaders = true;
     opts::raw::DumpStreamSummary = true;
-    opts::raw::DumpFreePageMap = true;
+    opts::raw::DumpPageStats = true;
     opts::raw::DumpStreamBlocks = true;
     opts::raw::DumpTpiRecords = true;
     opts::raw::DumpTpiHash = true;

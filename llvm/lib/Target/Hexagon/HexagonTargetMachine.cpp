@@ -86,6 +86,10 @@ static cl::opt<bool> EnableLoopResched("hexagon-loop-resched", cl::init(true),
 static cl::opt<bool> HexagonNoOpt("hexagon-noopt", cl::init(false),
   cl::Hidden, cl::desc("Disable backend optimizations"));
 
+static cl::opt<bool> EnableVectorPrint("enable-hexagon-vector-print",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Enable Hexagon Vector print instr pass"));
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -135,6 +139,7 @@ namespace llvm {
   FunctionPass *createHexagonSplitConst32AndConst64();
   FunctionPass *createHexagonSplitDoubleRegs();
   FunctionPass *createHexagonStoreWidening();
+  FunctionPass *createHexagonVectorPrint();
 } // end namespace llvm;
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -331,6 +336,8 @@ void HexagonPassConfig::addPreEmitPass() {
 
     addPass(createHexagonPacketizer(), false);
   }
+  if (EnableVectorPrint)
+    addPass(createHexagonVectorPrint(), false);
 
   // Add CFI instructions if necessary.
   addPass(createHexagonCallFrameInformation(), false);

@@ -5045,7 +5045,7 @@ static bool isSwitchDense(ArrayRef<int64_t> Values) {
   uint64_t NumCases = Values.size();
   // 40% is the default density for building a jump table in optsize/minsize mode.
   uint64_t MinDensity = 40;
-  
+
   return NumCases * 100 >= Range * MinDensity;
 }
 
@@ -5123,7 +5123,7 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // shift and puts the shifted-off bits in the uppermost bits. If any of these
   // are nonzero then the switch condition will be very large and will hit the
   // default case.
-  
+
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
   auto *ShiftC = ConstantInt::get(Ty, Shift);

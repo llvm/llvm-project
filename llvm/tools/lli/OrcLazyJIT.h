@@ -81,20 +81,20 @@ public:
     //   3) Search the host process (LLI)'s symbol table.
     auto Resolver =
       orc::createLambdaResolver(
-        [this](const std::string &Name) {
+        [this](const std::string &Name) -> JITSymbol {
           if (auto Sym = CODLayer.findSymbol(Name, true))
-            return Sym.toRuntimeDyldSymbol();
+            return Sym;
           if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
             return Sym;
 
           if (auto Addr =
               RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-            return RuntimeDyld::SymbolInfo(Addr, JITSymbolFlags::Exported);
+            return JITSymbol(Addr, JITSymbolFlags::Exported);
 
-          return RuntimeDyld::SymbolInfo(nullptr);
+          return JITSymbol(nullptr);
         },
         [](const std::string &Name) {
-          return RuntimeDyld::SymbolInfo(nullptr);
+          return JITSymbol(nullptr);
         }
       );
 
@@ -115,11 +115,11 @@ public:
     return H;
   }
 
-  orc::JITSymbol findSymbol(const std::string &Name) {
+  JITSymbol findSymbol(const std::string &Name) {
     return CODLayer.findSymbol(mangle(Name), true);
   }
 
-  orc::JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name) {
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name) {
     return CODLayer.findSymbolIn(H, mangle(Name), true);
   }
 

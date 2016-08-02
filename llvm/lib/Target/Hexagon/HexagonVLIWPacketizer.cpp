@@ -497,7 +497,7 @@ static PredicateKind getPredicateSense(const MachineInstr &MI,
 
 static const MachineOperand &getPostIncrementOperand(const MachineInstr &MI,
       const HexagonInstrInfo *HII) {
-  assert(HII->isPostIncrement(&MI) && "Not a post increment operation.");
+  assert(HII->isPostIncrement(MI) && "Not a post increment operation.");
 #ifndef NDEBUG
   // Post Increment means duplicates. Use dense map to find duplicates in the
   // list. Caution: Densemap initializes with the minimum of 64 buckets,
@@ -600,12 +600,12 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
 
   // Make sure it's NOT the post increment register that we are going to
   // new value.
-  if (HII->isPostIncrement(&MI) &&
+  if (HII->isPostIncrement(MI) &&
       getPostIncrementOperand(MI, HII).getReg() == DepReg) {
     return false;
   }
 
-  if (HII->isPostIncrement(&PacketMI) && PacketMI.mayLoad() &&
+  if (HII->isPostIncrement(PacketMI) && PacketMI.mayLoad() &&
       getPostIncrementOperand(PacketMI, HII).getReg() == DepReg) {
     // If source is post_inc, or absolute-set addressing, it can not feed
     // into new value store
@@ -703,7 +703,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
   //    The following store can not be dot new.
   //    Eg.   r0 = add(r0, #3)
   //          memw(r1+r0<<#2) = r0
-  if (!HII->isPostIncrement(&MI)) {
+  if (!HII->isPostIncrement(MI)) {
     for (unsigned opNum = 0; opNum < MI.getNumOperands()-1; opNum++) {
       const MachineOperand &MO = MI.getOperand(opNum);
       if (MO.isReg() && MO.getReg() == DepReg)

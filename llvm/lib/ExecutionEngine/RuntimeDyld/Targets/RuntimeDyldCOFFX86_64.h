@@ -33,7 +33,7 @@ private:
 
 public:
   RuntimeDyldCOFFX86_64(RuntimeDyld::MemoryManager &MM,
-                        RuntimeDyld::SymbolResolver &Resolver)
+                        JITSymbolResolver &Resolver)
     : RuntimeDyldCOFF(MM, Resolver) {}
 
   unsigned getMaxStubSize() override {

@@ -101,7 +101,7 @@ CodeGenOpt::Level getOptLevel();
 
 
 template <typename PtrTy>
-static PtrTy fromTargetAddress(orc::TargetAddress Addr) {
+static PtrTy fromTargetAddress(JITTargetAddress Addr) {
   return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
 }
 

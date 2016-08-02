@@ -29,11 +29,11 @@ define <8 x double> @combine_permvar_8f64_identity_mask(<8 x double> %x0, <8 x d
 ; CHECK-LABEL: combine_permvar_8f64_identity_mask:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [7,6,5,4,3,2,1,0]
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm1 {%k1}
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
+; CHECK-NEXT:    vmovapd {{.*#+}} zmm0 = [7,14,5,12,3,10,1,8]
 ; CHECK-NEXT:    vpermpd %zmm1, %zmm0, %zmm1 {%k1}
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %res0 = call <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x double> %x1, i8 %m)
   %res1 = call <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double> %res0, <8 x i64> <i64 7, i64 14, i64 5, i64 12, i64 3, i64 10, i64 1, i64 8>, <8 x double> %res0, i8 %m)
@@ -433,7 +433,7 @@ define <8 x double> @combine_permvar_8f64_as_permpd_mask(<8 x double> %x0, <8 x 
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,2,1,0,7,6,5,4]
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>, <8 x double> %x1, i8 %m)
   ret <8 x double> %1

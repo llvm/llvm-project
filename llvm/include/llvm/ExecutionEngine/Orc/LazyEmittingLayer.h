@@ -14,8 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAZYEMITTINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_LAZYEMITTINGLAYER_H
 
-#include "JITSymbol.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -52,7 +51,7 @@ private:
           std::string PName = Name;
           JITSymbolFlags Flags = JITSymbolBase::flagsFromGlobalValue(*GV);
           auto GetAddress =
-            [this, ExportedSymbolsOnly, PName, &B]() -> TargetAddress {
+            [this, ExportedSymbolsOnly, PName, &B]() -> JITTargetAddress {
               if (this->EmitState == Emitting)
                 return 0;
               else if (this->EmitState == NotEmitted) {

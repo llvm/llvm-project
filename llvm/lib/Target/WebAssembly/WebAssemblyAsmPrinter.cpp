@@ -14,10 +14,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "InstPrinter/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
@@ -183,6 +183,15 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
 
   SmallVector<MVT, 4> ResultVTs;
   const Function &F(*MF->getFunction());
+
+  // Emit the function index.
+  if (MDNode *Idx = F.getMetadata("wasm.index")) {
+    assert(Idx->getNumOperands() == 1);
+
+    getTargetStreamer()->emitIndIdx(AsmPrinter::lowerConstant(
+        cast<ConstantAsMetadata>(Idx->getOperand(0))->getValue()));
+  }
+
   ComputeLegalValueVTs(F, TM, F.getReturnType(), ResultVTs);
 
   // If the return type needs to be legalized it will get converted into

@@ -2977,7 +2977,7 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
     // Check if the LOOP0 has already been removed. If so, then there is no need
     // to reduce the trip count.
     if (LC != 0)
-      LC = TII->reduceLoopCount(*Prolog, IndVar, Cmp, Cond, PrevInsts, j,
+      LC = TII->reduceLoopCount(*Prolog, IndVar, *Cmp, Cond, PrevInsts, j,
                                 MaxIter);
 
     // Record the value of the first trip count, which is used to determine if
@@ -3035,7 +3035,7 @@ bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
     return false;
 
   int D = 0;
-  if (!TII->getIncrementValue(BaseDef, D) && D >= 0)
+  if (!TII->getIncrementValue(*BaseDef, D) && D >= 0)
     return false;
 
   Delta = D;
@@ -3108,7 +3108,7 @@ MachineInstr *SwingSchedulerDAG::cloneAndChangeInstr(MachineInstr *OldMI,
   if (It != InstrChanges.end()) {
     std::pair<unsigned, int64_t> RegAndOffset = It->second;
     unsigned BasePos, OffsetPos;
-    if (!TII->getBaseAndOffsetPosition(OldMI, BasePos, OffsetPos))
+    if (!TII->getBaseAndOffsetPosition(*OldMI, BasePos, OffsetPos))
       return nullptr;
     int64_t NewOffset = OldMI->getOperand(OffsetPos).getImm();
     MachineInstr *LoopDef = findDefInLoop(RegAndOffset.first);
@@ -3311,10 +3311,10 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
                                               unsigned &NewBase,
                                               int64_t &Offset) {
   // Get the load instruction.
-  if (TII->isPostIncrement(MI))
+  if (TII->isPostIncrement(*MI))
     return false;
   unsigned BasePosLd, OffsetPosLd;
-  if (!TII->getBaseAndOffsetPosition(MI, BasePosLd, OffsetPosLd))
+  if (!TII->getBaseAndOffsetPosition(*MI, BasePosLd, OffsetPosLd))
     return false;
   unsigned BaseReg = MI->getOperand(BasePosLd).getReg();
 
@@ -3333,11 +3333,11 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
   if (!PrevDef || PrevDef == MI)
     return false;
 
-  if (!TII->isPostIncrement(PrevDef))
+  if (!TII->isPostIncrement(*PrevDef))
     return false;
 
   unsigned BasePos1 = 0, OffsetPos1 = 0;
-  if (!TII->getBaseAndOffsetPosition(PrevDef, BasePos1, OffsetPos1))
+  if (!TII->getBaseAndOffsetPosition(*PrevDef, BasePos1, OffsetPos1))
     return false;
 
   // Make sure offset values are both positive or both negative.
@@ -3365,7 +3365,7 @@ MachineInstr *SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
   if (It != InstrChanges.end()) {
     std::pair<unsigned, int64_t> RegAndOffset = It->second;
     unsigned BasePos, OffsetPos;
-    if (!TII->getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    if (!TII->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
       return nullptr;
     unsigned BaseReg = MI->getOperand(BasePos).getReg();
     MachineInstr *LoopDef = findDefInLoop(BaseReg);
@@ -3644,7 +3644,7 @@ bool SMSchedule::orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
         continue;
       unsigned Reg = MO.getReg();
       unsigned BasePos, OffsetPos;
-      if (ST.getInstrInfo()->getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+      if (ST.getInstrInfo()->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
         if (MI->getOperand(BasePos).getReg() == Reg)
           if (unsigned NewReg = SSD->getInstrBaseReg(SU))
             Reg = NewReg;

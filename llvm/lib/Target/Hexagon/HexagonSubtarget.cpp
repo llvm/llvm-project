@@ -336,17 +336,17 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
     return;
 
   // Don't adjust the latency of post-increment part of the instruction.
-  if (QII->isPostIncrement(SrcInst) && Dep.isAssignedRegDep()) {
+  if (QII->isPostIncrement(*SrcInst) && Dep.isAssignedRegDep()) {
     if (SrcInst->mayStore())
       return;
     if (Dep.getReg() != SrcInst->getOperand(0).getReg())
       return;
-  } else if (QII->isPostIncrement(DstInst) && Dep.getKind() == SDep::Anti) {
+  } else if (QII->isPostIncrement(*DstInst) && Dep.getKind() == SDep::Anti) {
     if (DstInst->mayStore())
       return;
     if (Dep.getReg() != DstInst->getOperand(0).getReg())
       return;
-  } else if (QII->isPostIncrement(DstInst) && DstInst->mayStore() &&
+  } else if (QII->isPostIncrement(*DstInst) && DstInst->mayStore() &&
              Dep.isAssignedRegDep()) {
     MachineOperand &Op = DstInst->getOperand(DstInst->getNumOperands() - 1);
     if (Op.isReg() && Dep.getReg() != Op.getReg())
