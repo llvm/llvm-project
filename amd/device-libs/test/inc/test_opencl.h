@@ -47,6 +47,14 @@
     NAME(func, arg1##16, arg2##16)
 
 #define \
+  VEC_REPEAT2_1(NAME, func, arg1, arg2) \
+    NAME(func, arg1##2, arg2) \
+    NAME(func, arg1##3, arg2) \
+    NAME(func, arg1##4, arg2) \
+    NAME(func, arg1##8, arg2) \
+    NAME(func, arg1##16, arg2)
+
+#define \
   VEC_REPEAT3(NAME, func, arg1, arg2, arg3) \
     NAME(func, arg1, arg2, arg3) \
     NAME(func, arg1##2, arg2##2, arg3##2) \
@@ -56,6 +64,22 @@
     NAME(func, arg1##16, arg2##16, arg3##16)
 
 #define \
+  VEC_REPEAT3_1(NAME, func, arg1, arg2, arg3) \
+    NAME(func, arg1##2, arg2##2, arg3) \
+    NAME(func, arg1##3, arg2##3, arg3) \
+    NAME(func, arg1##4, arg2##4, arg3) \
+    NAME(func, arg1##8, arg2##8, arg3) \
+    NAME(func, arg1##16, arg2##16, arg3)
+
+#define \
+  VEC_REPEAT3_1r(NAME, func, arg1, arg2, arg3) \
+    NAME(func, arg1##2, arg2, arg3##2) \
+    NAME(func, arg1##3, arg2, arg3##3) \
+    NAME(func, arg1##4, arg2, arg3##4) \
+    NAME(func, arg1##8, arg2, arg3##8) \
+    NAME(func, arg1##16, arg2, arg3##16)
+
+#define \
   VEC_REPEAT4(NAME, func, arg1, arg2, arg3, arg4) \
     NAME(func, arg1, arg2, arg3, arg4) \
     NAME(func, arg1##2, arg2##2, arg3##2, arg4##2) \
@@ -63,6 +87,38 @@
     NAME(func, arg1##4, arg2##4, arg3##4, arg4##4) \
     NAME(func, arg1##8, arg2##8, arg3##8, arg4##8) \
     NAME(func, arg1##16, arg2##16, arg3##16, arg4##16)
+
+#define \
+  VEC_REPEAT4_1(NAME, func, arg1, arg2, arg3, arg4) \
+    NAME(func, arg1##2, arg2##2, arg3##2, arg4) \
+    NAME(func, arg1##3, arg2##3, arg3##3, arg4) \
+    NAME(func, arg1##4, arg2##4, arg3##4, arg4) \
+    NAME(func, arg1##8, arg2##8, arg3##8, arg4) \
+    NAME(func, arg1##16, arg2##16, arg3##16, arg4)
+
+#define \
+  VEC_REPEAT4_1r(NAME, func, arg1, arg2, arg3, arg4) \
+    NAME(func, arg1##2, arg2, arg3##2, arg4##2) \
+    NAME(func, arg1##3, arg2, arg3##3, arg4##3) \
+    NAME(func, arg1##4, arg2, arg3##4, arg4##4) \
+    NAME(func, arg1##8, arg2, arg3##8, arg4##8) \
+    NAME(func, arg1##16, arg2, arg3##16, arg4##16)
+
+#define \
+  VEC_REPEAT4_2(NAME, func, arg1, arg2, arg3, arg4) \
+    NAME(func, arg1##2, arg2##2, arg3, arg4) \
+    NAME(func, arg1##3, arg2##3, arg3, arg4) \
+    NAME(func, arg1##4, arg2##4, arg3, arg4) \
+    NAME(func, arg1##8, arg2##8, arg3, arg4) \
+    NAME(func, arg1##16, arg2##16, arg3, arg4)
+
+#define \
+  VEC_REPEAT4_2r(NAME, func, arg1, arg2, arg3, arg4) \
+    NAME(func, arg1##2, arg2, arg3, arg4##2) \
+    NAME(func, arg1##3, arg2, arg3, arg4##3) \
+    NAME(func, arg1##4, arg2, arg3, arg4##4) \
+    NAME(func, arg1##8, arg2, arg3, arg4##8) \
+    NAME(func, arg1##16, arg2, arg3, arg4##16)
 
 #define \
   TEST_KERNEL_FUNC_VEC(func, type_res, type_arg) \
