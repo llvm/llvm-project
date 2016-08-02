@@ -166,8 +166,10 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       StringRef::size_type End = StringRef(addr).find('\n');
       return StringRef(addr, End - 1);
     }
-    return StringRef(addr);
-  } else if (Name.startswith("#1/")) {
+    return addr;
+  }
+
+  if (Name.startswith("#1/")) {
     uint64_t NameLength;
     if (Name.substr(3).rtrim(' ').getAsInteger(10, NameLength)) {
       std::string Buf;
@@ -191,16 +193,14 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
     }
     return StringRef(reinterpret_cast<const char *>(ArMemHdr) + getSizeOf(),
                      NameLength).rtrim('\0');
-  } else {
-    // It is not a long name so trim the blanks at the end of the name.
-    if (Name[Name.size() - 1] != '/') {
-      return Name.rtrim(' ');
-    }
   }
+
+  // It is not a long name so trim the blanks at the end of the name.
+  if (Name[Name.size() - 1] != '/')
+    return Name.rtrim(' ');
+
   // It's a simple name.
-  if (Name[Name.size() - 1] == '/')
-    return Name.substr(0, Name.size() - 1);
-  return Name;
+  return Name.drop_back(1);
 }
 
 Expected<uint32_t> ArchiveMemberHeader::getSize() const {

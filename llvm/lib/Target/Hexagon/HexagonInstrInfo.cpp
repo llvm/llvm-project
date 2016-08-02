@@ -684,18 +684,18 @@ bool HexagonInstrInfo::analyzeLoop(MachineLoop &L,
 /// finished. Return the value/register of the new loop count. this function
 /// assumes the nth iteration is peeled first.
 unsigned HexagonInstrInfo::reduceLoopCount(MachineBasicBlock &MBB,
-      MachineInstr *IndVar, MachineInstr *Cmp,
+      MachineInstr *IndVar, MachineInstr &Cmp,
       SmallVectorImpl<MachineOperand> &Cond,
       SmallVectorImpl<MachineInstr *> &PrevInsts,
       unsigned Iter, unsigned MaxIter) const {
   // We expect a hardware loop currently. This means that IndVar is set
   // to null, and the compare is the ENDLOOP instruction.
-  assert((!IndVar) && isEndLoopN(Cmp->getOpcode())
+  assert((!IndVar) && isEndLoopN(Cmp.getOpcode())
                    && "Expecting a hardware loop");
   MachineFunction *MF = MBB.getParent();
-  DebugLoc DL = Cmp->getDebugLoc();
+  DebugLoc DL = Cmp.getDebugLoc();
   SmallPtrSet<MachineBasicBlock *, 8> VisitedBBs;
-  MachineInstr *Loop = findLoopInstr(&MBB, Cmp->getOpcode(), VisitedBBs);
+  MachineInstr *Loop = findLoopInstr(&MBB, Cmp.getOpcode(), VisitedBBs);
   if (!Loop)
     return 0;
   // If the loop trip count is a compile-time value, then just change the
@@ -1346,8 +1346,8 @@ void HexagonInstrInfo::insertNoop(MachineBasicBlock &MBB,
 }
 
 
-bool HexagonInstrInfo::isPostIncrement(const MachineInstr *MI) const {
-  return getAddrMode(*MI) == HexagonII::PostInc;
+bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
+  return getAddrMode(MI) == HexagonII::PostInc;
 }
 
 
@@ -1677,14 +1677,14 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
 
 
 /// If the instruction is an increment of a constant value, return the amount.
-bool HexagonInstrInfo::getIncrementValue(const MachineInstr *MI,
+bool HexagonInstrInfo::getIncrementValue(const MachineInstr &MI,
       int &Value) const {
   if (isPostIncrement(MI)) {
     unsigned AccessSize;
-    return getBaseAndOffset(*MI, Value, AccessSize);
+    return getBaseAndOffset(MI, Value, AccessSize);
   }
-  if (MI->getOpcode() == Hexagon::A2_addi) {
-    Value = MI->getOperand(2).getImm();
+  if (MI.getOpcode() == Hexagon::A2_addi) {
+    Value = MI.getOperand(2).getImm();
     return true;
   }
 
@@ -3160,7 +3160,7 @@ unsigned HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
       getAddrMode(MI) != HexagonII::BaseLongOffset &&
-      !isMemOp(MI) && !isPostIncrement(&MI))
+      !isMemOp(MI) && !isPostIncrement(MI))
     return 0;
 
   // Since it is a memory access instruction, getMemAccessSize() should never
@@ -3175,12 +3175,12 @@ unsigned HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
   AccessSize = (1U << (getMemAccessSize(MI) - 1));
 
   unsigned basePos = 0, offsetPos = 0;
-  if (!getBaseAndOffsetPosition(&MI, basePos, offsetPos))
+  if (!getBaseAndOffsetPosition(MI, basePos, offsetPos))
     return 0;
 
   // Post increment updates its EA after the mem access,
   // so we need to treat its offset as zero.
-  if (isPostIncrement(&MI))
+  if (isPostIncrement(MI))
     Offset = 0;
   else {
     Offset = MI.getOperand(offsetPos).getImm();
@@ -3191,22 +3191,22 @@ unsigned HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
 
 
 /// Return the position of the base and offset operands for this instruction.
-bool HexagonInstrInfo::getBaseAndOffsetPosition(const MachineInstr *MI,
+bool HexagonInstrInfo::getBaseAndOffsetPosition(const MachineInstr &MI,
       unsigned &BasePos, unsigned &OffsetPos) const {
   // Deal with memops first.
-  if (isMemOp(*MI)) {
+  if (isMemOp(MI)) {
     BasePos = 0;
     OffsetPos = 1;
-  } else if (MI->mayStore()) {
+  } else if (MI.mayStore()) {
     BasePos = 0;
     OffsetPos = 1;
-  } else if (MI->mayLoad()) {
+  } else if (MI.mayLoad()) {
     BasePos = 1;
     OffsetPos = 2;
   } else
     return false;
 
-  if (isPredicated(*MI)) {
+  if (isPredicated(MI)) {
     BasePos++;
     OffsetPos++;
   }
@@ -3215,7 +3215,7 @@ bool HexagonInstrInfo::getBaseAndOffsetPosition(const MachineInstr *MI,
     OffsetPos++;
   }
 
-  if (!MI->getOperand(BasePos).isReg() || !MI->getOperand(OffsetPos).isImm())
+  if (!MI.getOperand(BasePos).isReg() || !MI.getOperand(OffsetPos).isImm())
     return false;
 
   return true;

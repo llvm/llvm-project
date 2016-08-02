@@ -17,11 +17,11 @@
 #include "RemoteJITUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
@@ -123,21 +123,20 @@ public:
     auto Resolver = createLambdaResolver(
         [&](const std::string &Name) {
           if (auto Sym = IndirectStubsMgr->findStub(Name, false))
-            return Sym.toRuntimeDyldSymbol();
+            return Sym;
           if (auto Sym = OptimizeLayer.findSymbol(Name, false))
-            return Sym.toRuntimeDyldSymbol();
-          return RuntimeDyld::SymbolInfo(nullptr);
+            return Sym;
+          return JITSymbol(nullptr);
         },
         [&](const std::string &Name) {
           if (auto AddrOrErr = Remote.getSymbolAddress(Name))
-            return RuntimeDyld::SymbolInfo(*AddrOrErr,
-                                           JITSymbolFlags::Exported);
+            return JITSymbol(*AddrOrErr, JITSymbolFlags::Exported);
           else {
             logAllUnhandledErrors(AddrOrErr.takeError(), errs(),
                                   "Error resolving remote symbol:");
             exit(1);
           }
-          return RuntimeDyld::SymbolInfo(nullptr);
+          return JITSymbol(nullptr);
         });
 
     std::unique_ptr<MyRemote::RCMemoryManager> MemMgr;
@@ -201,7 +200,7 @@ public:
         addModule(std::move(M));
         auto Sym = findSymbol(SharedFnAST->getName() + "$impl");
         assert(Sym && "Couldn't find compiled function?");
-        TargetAddress SymAddr = Sym.getAddress();
+        JITTargetAddress SymAddr = Sym.getAddress();
         if (auto Err =
               IndirectStubsMgr->updatePointer(mangle(SharedFnAST->getName()),
                                               SymAddr)) {
@@ -216,7 +215,7 @@ public:
     return Error::success();
   }
 
-  Error executeRemoteExpr(TargetAddress ExprAddr) {
+  Error executeRemoteExpr(JITTargetAddress ExprAddr) {
     return Remote.callVoidVoid(ExprAddr);
   }
 

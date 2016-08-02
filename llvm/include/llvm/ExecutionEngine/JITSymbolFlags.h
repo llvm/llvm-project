@@ -23,7 +23,8 @@ namespace llvm {
 enum class JITSymbolFlags : char {
   None = 0,
   Weak = 1U << 0,
-  Exported = 1U << 1
+  Common = 1U << 1,
+  Exported = 1U << 2
 };
 
 inline JITSymbolFlags operator|(JITSymbolFlags LHS, JITSymbolFlags RHS) {
@@ -59,6 +60,10 @@ public:
     return (Flags & JITSymbolFlags::Weak) == JITSymbolFlags::Weak;
   }
 
+  bool isCommon() const {
+    return (Flags & JITSymbolFlags::Common) == JITSymbolFlags::Common;
+  }
+
   bool isExported() const {
     return (Flags & JITSymbolFlags::Exported) == JITSymbolFlags::Exported;
   }
@@ -67,6 +72,8 @@ public:
     JITSymbolFlags Flags = JITSymbolFlags::None;
     if (GV.hasWeakLinkage())
       Flags |= JITSymbolFlags::Weak;
+    if (GV.hasCommonLinkage())
+      Flags |= JITSymbolFlags::Common;
     if (!GV.hasLocalLinkage() && !GV.hasHiddenVisibility())
       Flags |= JITSymbolFlags::Exported;
     return Flags;
@@ -77,6 +84,8 @@ public:
     JITSymbolFlags Flags = JITSymbolFlags::None;
     if (Symbol.getFlags() & object::BasicSymbolRef::SF_Weak)
       Flags |= JITSymbolFlags::Weak;
+    if (Symbol.getFlags() & object::BasicSymbolRef::SF_Common)
+      Flags |= JITSymbolFlags::Common;
     if (Symbol.getFlags() & object::BasicSymbolRef::SF_Exported)
       Flags |= JITSymbolFlags::Exported;
     return Flags;

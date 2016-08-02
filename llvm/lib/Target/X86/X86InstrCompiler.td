@@ -1709,6 +1709,22 @@ defm : MaskedShiftAmountPats<sra, "SAR">;
 defm : MaskedShiftAmountPats<rotl, "ROL">;
 defm : MaskedShiftAmountPats<rotr, "ROR">;
 
+// Double shift amount is implicitly masked.
+multiclass MaskedDoubleShiftAmountPats<SDNode frag, string name> {
+  // (shift x (and y, 31)) ==> (shift x, y)
+  def : Pat<(frag GR16:$src1, GR16:$src2, (and CL, immShift32)),
+            (!cast<Instruction>(name # "16rrCL") GR16:$src1, GR16:$src2)>;
+  def : Pat<(frag GR32:$src1, GR32:$src2, (and CL, immShift32)),
+            (!cast<Instruction>(name # "32rrCL") GR32:$src1, GR32:$src2)>;
+
+  // (shift x (and y, 63)) ==> (shift x, y)
+  def : Pat<(frag GR64:$src1, GR64:$src2, (and CL, immShift64)),
+            (!cast<Instruction>(name # "64rrCL") GR64:$src1, GR64:$src2)>;
+}
+
+defm : MaskedDoubleShiftAmountPats<X86shld, "SHLD">;
+defm : MaskedDoubleShiftAmountPats<X86shrd, "SHRD">;
+
 // (anyext (setcc_carry)) -> (setcc_carry)
 def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
           (SETB_C16r)>;
@@ -1716,9 +1732,6 @@ def : Pat<(i32 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
           (SETB_C32r)>;
 def : Pat<(i32 (anyext (i16 (X86setcc_c X86_COND_B, EFLAGS)))),
           (SETB_C32r)>;
-
-
-
 
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns

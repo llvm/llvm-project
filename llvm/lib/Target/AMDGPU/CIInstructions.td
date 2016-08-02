@@ -13,15 +13,6 @@
 // S_CBRANCH_CDBGSYS
 // S_CBRANCH_CDBGSYS_OR_USER
 // S_CBRANCH_CDBGSYS_AND_USER
-// DS_NOP
-// DS_GWS_SEMA_RELEASE_ALL
-// DS_WRAP_RTN_B32
-// DS_CNDXCHG32_RTN_B64
-// DS_WRITE_B96
-// DS_WRITE_B128
-// DS_CONDXCHG32_RTN_B128
-// DS_READ_B96
-// DS_READ_B128
 // BUFFER_LOAD_DWORDX3
 // BUFFER_STORE_DWORDX3
 
@@ -80,14 +71,6 @@ defm V_MAD_I64_I32 : VOP3Inst <vop3<0x177>, "v_mad_i64_i32",
 >;
 } // End isCommutable = 1
 
-
-//===----------------------------------------------------------------------===//
-// DS Instructions
-//===----------------------------------------------------------------------===//
-defm DS_WRAP_RTN_F32 : DS_1A1D_RET <0x34, "ds_wrap_rtn_f32", VGPR_32, "ds_wrap_f32">;
-
-// DS_CONDXCHG32_RTN_B64
-// DS_CONDXCHG32_RTN_B128
 
 //===----------------------------------------------------------------------===//
 // SMRD Instructions

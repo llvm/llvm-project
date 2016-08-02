@@ -121,14 +121,41 @@ Error PDBFile::parseFileHeaders() {
   ContainerLayout.SB = SB;
 
   // Initialize Free Page Map.
-  ContainerLayout.FreePageMap.resize(getBlockSize() * 8);
-  uint64_t FPMOffset = SB->FreeBlockMapBlock * getBlockSize();
-  ArrayRef<uint8_t> FPMBlock;
-  if (auto EC = Buffer->readBytes(FPMOffset, getBlockSize(), FPMBlock))
-    return EC;
-  for (uint32_t I = 0, E = getBlockSize() * 8; I != E; ++I)
-    if (FPMBlock[I / 8] & (1 << (I % 8)))
-      ContainerLayout.FreePageMap[I] = true;
+  ContainerLayout.FreePageMap.resize(SB->NumBlocks);
+  ArrayRef<uint8_t> FpmBytes;
+  // The Fpm exists either at block 1 or block 2 of the MSF.  However, this
+  // allows for a maximum of getBlockSize() * 8 blocks bits in the Fpm, and
+  // thusly an equal number of total blocks in the file.  For a block size
+  // of 4KiB (very common), this would yield 32KiB total blocks in file, for a
+  // maximum file size of 32KiB * 4KiB = 128MiB.  Obviously this won't do, so
+  // the Fpm is split across the file at `getBlockSize()` intervals.  As a
+  // result, every block whose index is of the form |{1,2} + getBlockSize() * k|
+  // for any non-negative integer k is an Fpm block.  In theory, we only really
+  // need to reserve blocks of the form |{1,2} + getBlockSize() * 8 * k|, but
+  // current versions of the MSF format already expect the Fpm to be arranged
+  // at getBlockSize() intervals, so we have to be compatible.
+  // See the function fpmPn() for more information:
+  // https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/msf/msf.cpp#L489
+
+  uint32_t BlocksPerSection = getBlockSize();
+  uint64_t FpmBlockOffset = SB->FreeBlockMapBlock;
+  uint32_t BlocksRemaining = getBlockCount();
+  for (uint32_t SI = 0; BlocksRemaining > 0; ++SI) {
+    uint32_t FpmFileOffset = FpmBlockOffset * getBlockSize();
+
+    if (auto EC = Buffer->readBytes(FpmFileOffset, getBlockSize(), FpmBytes))
+      return EC;
+
+    uint32_t BlocksThisSection = std::min(BlocksRemaining, BlocksPerSection);
+    for (uint32_t I = 0; I < BlocksThisSection; ++I) {
+      uint32_t BI = I + BlocksPerSection * SI;
+
+      if (FpmBytes[I / 8] & (1 << (I % 8)))
+        ContainerLayout.FreePageMap[BI] = true;
+    }
+    BlocksRemaining -= BlocksThisSection;
+    FpmBlockOffset += BlocksPerSection;
+  }
 
   Reader.setOffset(getBlockMapOffset());
   if (auto EC = Reader.readArray(ContainerLayout.DirectoryBlocks,

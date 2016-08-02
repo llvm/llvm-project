@@ -265,8 +265,6 @@ cxx_linker_notdir = $(if $(findstring clang,$(1)), \
                                         $(subst cc,c++,$(1))))))
 cxx_linker = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_linker_notdir,$(notdir $(1)))),$(call cxx_linker_notdir,$(1)))
 
-OBJCOPY := $(CROSS_COMPILE)objcopy
-
 #----------------------------------------------------------------------
 # Windows specific options
 #----------------------------------------------------------------------
@@ -287,23 +285,24 @@ endif
 #----------------------------------------------------------------------
 # Android specific options
 #----------------------------------------------------------------------
-ifeq "$(OS)" "Android"
-    ifdef PIE
-        LDFLAGS += -pie
-    endif
-    replace_with = $(if $(findstring clang,$(1)), \
-                        $(subst clang,$(2),$(1)), \
-                        $(if $(findstring gcc,$(1)), \
-                             $(subst gcc,$(2),$(1)), \
-                             $(subst cc,$(2),$(1))))
-    ifeq "$(notdir $(CC))" "$(CC)"
-        replace_cc_with = $(call replace_with,$(CC),$(1))
-    else
-        replace_cc_with = $(join $(dir $(CC)),$(call replace_with,$(notdir $(CC)),$(1)))
-    endif
-    OBJCOPY = $(call replace_cc_with,objcopy)
-    AR = $(call replace_cc_with,ar)
+
+ifdef PIE
+    LDFLAGS += -pie
 endif
+
+replace_with = $(if $(findstring clang,$(1)), \
+                    $(subst clang,$(2),$(1)), \
+                    $(if $(findstring gcc,$(1)), \
+                         $(subst gcc,$(2),$(1)), \
+                         $(subst cc,$(2),$(1))))
+ifeq "$(notdir $(CC))" "$(CC)"
+    replace_cc_with = $(call replace_with,$(CC),$(1))
+else
+    replace_cc_with = $(join $(dir $(CC)),$(call replace_with,$(notdir $(CC)),$(1)))
+endif
+
+OBJCOPY = $(call replace_cc_with,objcopy)
+AR = $(call replace_cc_with,ar)
 
 #----------------------------------------------------------------------
 # C++ standard library options

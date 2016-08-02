@@ -141,9 +141,10 @@ private:
 
   void addCalleeSaveRegistersAsImpOperand(MachineInstr *MI, const CSIVect &CSI,
       bool IsDef, bool IsKill) const;
-  bool shouldInlineCSR(llvm::MachineFunction &MF, const CSIVect &CSI) const;
+  bool shouldInlineCSR(MachineFunction &MF, const CSIVect &CSI) const;
   bool useSpillFunction(MachineFunction &MF, const CSIVect &CSI) const;
   bool useRestoreFunction(MachineFunction &MF, const CSIVect &CSI) const;
+  bool mayOverflowFrameOffset(MachineFunction &MF) const;
 };
 
 } // End llvm namespace

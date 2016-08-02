@@ -1595,8 +1595,8 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
   int DataWidth = isa<PointerType>(ScalarTy) ?
     DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
-  return (DataWidth >= 32 && ST->hasAVX()) ||
-         (DataWidth >= 8 && ST->hasBWI());
+  return ((DataWidth == 32 || DataWidth == 64) && ST->hasAVX()) ||
+         ((DataWidth == 8 || DataWidth == 16) && ST->hasBWI());
 }
 
 bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
@@ -1621,7 +1621,7 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
     DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
   // AVX-512 allows gather and scatter
-  return DataWidth >= 32 && ST->hasAVX512();
+  return (DataWidth == 32 || DataWidth == 64) && ST->hasAVX512();
 }
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType) {

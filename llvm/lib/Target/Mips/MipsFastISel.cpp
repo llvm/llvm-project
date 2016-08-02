@@ -1275,10 +1275,13 @@ bool MipsFastISel::fastLowerArguments() {
     return false;
   }
 
-  static const MCPhysReg GPR32ArgRegs[] = {Mips::A0, Mips::A1, Mips::A2,
-                                           Mips::A3};
-  static const MCPhysReg FGR32ArgRegs[] = {Mips::F12, Mips::F14};
-  static const MCPhysReg AFGR64ArgRegs[] = {Mips::D6, Mips::D7};
+  const ArrayRef<MCPhysReg> GPR32ArgRegs = {Mips::A0, Mips::A1, Mips::A2,
+                                            Mips::A3};
+  const ArrayRef<MCPhysReg> FGR32ArgRegs = {Mips::F12, Mips::F14};
+  const ArrayRef<MCPhysReg> AFGR64ArgRegs = {Mips::D6, Mips::D7};
+  ArrayRef<MCPhysReg>::iterator NextGPR32 = GPR32ArgRegs.begin();
+  ArrayRef<MCPhysReg>::iterator NextFGR32 = FGR32ArgRegs.begin();
+  ArrayRef<MCPhysReg>::iterator NextAFGR64 = AFGR64ArgRegs.begin();
 
   struct AllocatedReg {
     const TargetRegisterClass *RC;
@@ -1287,18 +1290,11 @@ bool MipsFastISel::fastLowerArguments() {
         : RC(RC), Reg(Reg) {}
   };
 
-  // Only handle simple cases. i.e. Up to four integer arguments.
-  // Supporting floating point significantly complicates things so we leave
-  // that out for now.
+  // Only handle simple cases. i.e. All arguments are directly mapped to
+  // registers of the appropriate type.
   SmallVector<AllocatedReg, 4> Allocation;
   unsigned Idx = 1;
-  bool HasAllocatedNonFGR = false;
   for (const auto &FormalArg : F->args()) {
-    if (Idx > 4) {
-      DEBUG(dbgs() << ".. gave up (too many arguments)\n");
-      return false;
-    }
-
     if (F->getAttributes().hasAttribute(Idx, Attribute::InReg) ||
         F->getAttributes().hasAttribute(Idx, Attribute::StructRet) ||
         F->getAttributes().hasAttribute(Idx, Attribute::ByVal)) {
@@ -1330,9 +1326,18 @@ bool MipsFastISel::fastLowerArguments() {
         DEBUG(dbgs() << ".. .. gave up (i8/i16 arg is not extended)\n");
         return false;
       }
-      DEBUG(dbgs() << ".. .. GPR32(" << GPR32ArgRegs[Idx - 1] << ")\n");
-      Allocation.emplace_back(&Mips::GPR32RegClass, GPR32ArgRegs[Idx - 1]);
-      HasAllocatedNonFGR = true;
+
+      if (NextGPR32 == GPR32ArgRegs.end()) {
+        DEBUG(dbgs() << ".. .. gave up (ran out of GPR32 arguments)\n");
+        return false;
+      }
+
+      DEBUG(dbgs() << ".. .. GPR32(" << *NextGPR32 << ")\n");
+      Allocation.emplace_back(&Mips::GPR32RegClass, *NextGPR32++);
+
+      // Allocating any GPR32 prohibits further use of floating point arguments.
+      NextFGR32 = FGR32ArgRegs.end();
+      NextAFGR64 = AFGR64ArgRegs.end();
       break;
 
     case MVT::i32:
@@ -1341,29 +1346,50 @@ bool MipsFastISel::fastLowerArguments() {
         DEBUG(dbgs() << ".. .. gave up (i32 arg is zero extended)\n");
         return false;
       }
-      DEBUG(dbgs() << ".. .. GPR32(" << GPR32ArgRegs[Idx - 1] << ")\n");
-      Allocation.emplace_back(&Mips::GPR32RegClass, GPR32ArgRegs[Idx - 1]);
-      HasAllocatedNonFGR = true;
+
+      if (NextGPR32 == GPR32ArgRegs.end()) {
+        DEBUG(dbgs() << ".. .. gave up (ran out of GPR32 arguments)\n");
+        return false;
+      }
+
+      DEBUG(dbgs() << ".. .. GPR32(" << *NextGPR32 << ")\n");
+      Allocation.emplace_back(&Mips::GPR32RegClass, *NextGPR32++);
+
+      // Allocating any GPR32 prohibits further use of floating point arguments.
+      NextFGR32 = FGR32ArgRegs.end();
+      NextAFGR64 = AFGR64ArgRegs.end();
       break;
 
     case MVT::f32:
-      if (Idx > 2 || HasAllocatedNonFGR) {
-        DEBUG(dbgs() << ".. .. gave up (f32 arg needed i32)\n");
+      if (NextFGR32 == FGR32ArgRegs.end()) {
+        DEBUG(dbgs() << ".. .. gave up (ran out of FGR32 arguments)\n");
         return false;
-      } else {
-        DEBUG(dbgs() << ".. .. FGR32(" << FGR32ArgRegs[Idx - 1] << ")\n");
-        Allocation.emplace_back(&Mips::FGR32RegClass, FGR32ArgRegs[Idx - 1]);
       }
+      DEBUG(dbgs() << ".. .. FGR32(" << *NextFGR32 << ")\n");
+      Allocation.emplace_back(&Mips::FGR32RegClass, *NextFGR32++);
+      // Allocating an FGR32 also allocates the super-register AFGR64, and
+      // ABI rules require us to skip the corresponding GPR32.
+      if (NextGPR32 != GPR32ArgRegs.end())
+        NextGPR32++;
+      if (NextAFGR64 != AFGR64ArgRegs.end())
+        NextAFGR64++;
       break;
 
     case MVT::f64:
-      if (Idx > 2 || HasAllocatedNonFGR) {
-        DEBUG(dbgs() << ".. .. gave up (f64 arg needed 2xi32)\n");
+      if (NextAFGR64 == AFGR64ArgRegs.end()) {
+        DEBUG(dbgs() << ".. .. gave up (ran out of AFGR64 arguments)\n");
         return false;
-      } else {
-        DEBUG(dbgs() << ".. .. AFGR64(" << AFGR64ArgRegs[Idx - 1] << ")\n");
-        Allocation.emplace_back(&Mips::AFGR64RegClass, AFGR64ArgRegs[Idx - 1]);
       }
+      DEBUG(dbgs() << ".. .. AFGR64(" << *NextAFGR64 << ")\n");
+      Allocation.emplace_back(&Mips::AFGR64RegClass, *NextAFGR64++);
+      // Allocating an FGR32 also allocates the super-register AFGR64, and
+      // ABI rules require us to skip the corresponding GPR32 pair.
+      if (NextGPR32 != GPR32ArgRegs.end())
+        NextGPR32++;
+      if (NextGPR32 != GPR32ArgRegs.end())
+        NextGPR32++;
+      if (NextFGR32 != FGR32ArgRegs.end())
+        NextFGR32++;
       break;
 
     default:

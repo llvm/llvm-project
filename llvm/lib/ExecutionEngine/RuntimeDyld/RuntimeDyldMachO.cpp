@@ -343,7 +343,7 @@ void RuntimeDyldMachOCRTPBase<Impl>::registerEHFrames() {
 std::unique_ptr<RuntimeDyldMachO>
 RuntimeDyldMachO::create(Triple::ArchType Arch,
                          RuntimeDyld::MemoryManager &MemMgr,
-                         RuntimeDyld::SymbolResolver &Resolver) {
+                         JITSymbolResolver &Resolver) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported target for RuntimeDyldMachO.");

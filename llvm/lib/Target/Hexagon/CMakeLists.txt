@@ -54,6 +54,7 @@ add_llvm_target(HexagonCodeGen
   HexagonTargetMachine.cpp
   HexagonTargetObjectFile.cpp
   HexagonTargetTransformInfo.cpp
+  HexagonVectorPrint.cpp
   HexagonVLIWPacketizer.cpp
   RDFCopy.cpp
   RDFDeadCode.cpp

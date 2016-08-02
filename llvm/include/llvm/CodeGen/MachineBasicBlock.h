@@ -740,6 +740,7 @@ struct MBB2NumberFunctor :
 
 template <> struct GraphTraits<MachineBasicBlock *> {
   typedef MachineBasicBlock NodeType;
+  typedef MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::succ_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(MachineBasicBlock *BB) { return BB; }
@@ -753,6 +754,7 @@ template <> struct GraphTraits<MachineBasicBlock *> {
 
 template <> struct GraphTraits<const MachineBasicBlock *> {
   typedef const MachineBasicBlock NodeType;
+  typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_succ_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(const MachineBasicBlock *BB) { return BB; }
@@ -772,6 +774,7 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
 //
 template <> struct GraphTraits<Inverse<MachineBasicBlock*> > {
   typedef MachineBasicBlock NodeType;
+  typedef MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::pred_iterator ChildIteratorType;
   static NodeType *getEntryNode(Inverse<MachineBasicBlock *> G) {
     return G.Graph;
@@ -786,6 +789,7 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*> > {
 
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*> > {
   typedef const MachineBasicBlock NodeType;
+  typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_pred_iterator ChildIteratorType;
   static NodeType *getEntryNode(Inverse<const MachineBasicBlock*> G) {
     return G.Graph;

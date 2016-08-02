@@ -141,6 +141,12 @@ public:
                         MachineBasicBlock::iterator InsertPt, int FrameIndex,
                         LiveIntervals *LIS = nullptr) const override;
 
+  /// \returns true if a branch from an instruction with opcode \p BranchOpc
+  /// located at \p BrOffset bytes is capable of jumping to a position at \p
+  /// DestOffset.
+  bool isBranchInRange(unsigned BranchOpc, uint64_t BrOffset,
+                       uint64_t DestOffset) const;
+
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,

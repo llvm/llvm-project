@@ -3,11 +3,11 @@
 target datalayout = "e-n32"
 
 ; CHECK-LABEL: @test1
-; CHECK: %1 = sub i32 %a, 97
-; CHECK-DAG: %2 = lshr i32 %1, 2
-; CHECK-DAG: %3 = shl i32 %1, 30
-; CHECK: %4 = or i32 %2, %3
-; CHECK:  switch i32 %4, label %def [
+; CHECK: %[[SUB:.*]] = sub i32 %a, 97
+; CHECK-DAG: %[[LSHR:.*]] = lshr i32 %[[SUB]], 2
+; CHECK-DAG: %[[SHL:.*]] = shl i32 %[[SUB]], 30
+; CHECK: %[[OR:.*]] = or i32 %[[LSHR]], %[[SHL]]
+; CHECK:  switch i32 %[[OR]], label %def [
 ; CHECK:    i32 0, label %one
 ; CHECK:    i32 1, label %two
 ; CHECK:    i32 2, label %three
@@ -120,11 +120,11 @@ three:
 }
 
 ; CHECK-LABEL: @test6
-; CHECK: %1 = sub i32 %a, -109
-; CHECK-DAG: %2 = lshr i32 %1, 2
-; CHECK-DAG: %3 = shl i32 %1, 30
-; CHECK: %4 = or i32 %2, %3
-; CHECK:  switch i32 %4, label %def [
+; CHECK: %[[SUB:.*]] = sub i32 %a, -109
+; CHECK-DAG: %[[LSHR:.*]] = lshr i32 %[[SUB]], 2
+; CHECK-DAG: %[[SHL:.*]] = shl i32 %[[SUB]], 30
+; CHECK: %[[OR:.*]] = or i32 %[[LSHR]], %[[SHL]]
+; CHECK:  switch i32 %[[OR]], label %def [
 define i32 @test6(i32 %a) optsize {
   switch i32 %a, label %def [
     i32 -97, label %one
@@ -145,11 +145,11 @@ three:
 }
 
 ; CHECK-LABEL: @test7
-; CHECK: %1 = sub i8 %a, -36
-; CHECK-DAG: %2 = lshr i8 %1, 2
-; CHECK-DAG: %3 = shl i8 %1, 6
-; CHECK: %4 = or i8 %2, %3
-; CHECK:  switch.tableidx = {{.*}} %4
+; CHECK: %[[SUB:.*]] = sub i8 %a, -36
+; CHECK-DAG: %[[LSHR:.*]] = lshr i8 %[[SUB]], 2
+; CHECK-DAG: %[[SHL:.*]] = shl i8 %[[SUB]], 6
+; CHECK: %[[OR:.*]] = or i8 %[[LSHR]], %[[SHL]]
+; CHECK:  switch.tableidx = {{.*}} %[[OR]]
 define i8 @test7(i8 %a) optsize {
   switch i8 %a, label %def [
     i8 220, label %one
@@ -170,11 +170,11 @@ three:
 }
 
 ; CHECK-LABEL: @test8
-; CHECK: %1 = sub i32 %a, 97
-; CHECK-DAG: %2 = lshr i32 %1, 2
-; CHECK-DAG: %3 = shl i32 %1, 30
-; CHECK: %4 = or i32 %2, %3
-; CHECK:  switch i32 %4, label %def [
+; CHECK: %[[SUB:.*]] = sub i32 %a, 97
+; CHECK-DAG: %[[LSHR:.*]] = lshr i32 %1, 2
+; CHECK-DAG: %[[SHL:.*]] = shl i32 %1, 30
+; CHECK: %[[OR:.*]] = or i32 %[[LSHR]], %[[SHL]]
+; CHECK:  switch i32 %[[OR]], label %def [
 define i32 @test8(i32 %a) optsize {
   switch i32 %a, label %def [
     i32 97, label %one

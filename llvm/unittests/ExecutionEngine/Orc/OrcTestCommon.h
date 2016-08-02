@@ -22,7 +22,7 @@
 #include "llvm/IR/TypeBuilder.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/Orc/JITSymbol.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/TargetSelect.h"
 #include <memory>
 
@@ -124,11 +124,11 @@ public:
     RemoveModuleSet(H);
   }
 
-  orc::JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
+  JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     return FindSymbol(Name, ExportedSymbolsOnly);
   }
 
-  orc::JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return FindSymbolIn(H, Name, ExportedSymbolsOnly);
   }

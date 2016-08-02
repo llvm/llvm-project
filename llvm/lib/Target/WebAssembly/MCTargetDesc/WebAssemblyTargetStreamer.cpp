@@ -67,11 +67,16 @@ void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
     StringRef name, SmallVectorImpl<MVT> &SignatureVTs, size_t NumResults) {
   OS << "\t.functype\t" << name;
-  if (NumResults == 0) OS << ", void";
+  if (NumResults == 0)
+    OS << ", void";
   for (auto Ty : SignatureVTs) {
     OS << ", " << WebAssembly::TypeToString(Ty);
   }
   OS << "\n";
+}
+
+void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
+  OS << "\t.indidx  \t" << *Value << '\n';
 }
 
 // FIXME: What follows is not the real binary encoding.
@@ -99,4 +104,9 @@ void WebAssemblyTargetELFStreamer::emitLocal(ArrayRef<MVT> Types) {
 
 void WebAssemblyTargetELFStreamer::emitEndFunc() {
   Streamer.EmitIntValue(WebAssembly::DotEndFunc, sizeof(uint64_t));
+}
+
+void WebAssemblyTargetELFStreamer::emitIndIdx(const MCExpr *Value) {
+  Streamer.EmitIntValue(WebAssembly::DotIndIdx, sizeof(uint64_t));
+  Streamer.EmitValue(Value, sizeof(uint64_t));
 }

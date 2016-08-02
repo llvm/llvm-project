@@ -310,8 +310,8 @@ TEST(TargetParserTest, ARMparseCPUArch) {
       "cortex-r5",     "cortex-r7",     "cortex-r8",   "sc300",
       "cortex-m3",     "cortex-m4",     "cortex-m7",   "cortex-a32",
       "cortex-a35",    "cortex-a53",    "cortex-a57",  "cortex-a72",
-      "cortex-a73",    "cyclone",       "exynos-m1",   "iwmmxt",
-      "xscale",        "swift"};
+      "cortex-a73",    "cyclone",       "exynos-m1",   "exynos-m2",   
+      "iwmmxt",        "xscale",        "swift"};
 
   for (const auto &ARMCPUName : kARMCPUNames)
     EXPECT_TRUE(contains(CPU, ARMCPUName.Name)
@@ -535,7 +535,8 @@ TEST(TargetParserTest, AArch64parseArchExt) {
 TEST(TargetParserTest, AArch64parseCPUArch) {
   const char *CPU[] = {"cortex-a35", "cortex-a53", "cortex-a57",
                        "cortex-a72", "cortex-a73", "cyclone",
-                       "exynos-m1",  "kryo",       "vulcan"};
+                       "exynos-m1",  "exynos-m2",  "kryo",
+                       "vulcan"};
 
   for (const auto &AArch64CPUName : kAArch64CPUNames)
     EXPECT_TRUE(contains(CPU, AArch64CPUName.Name)

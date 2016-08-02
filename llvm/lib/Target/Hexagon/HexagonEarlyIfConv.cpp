@@ -670,7 +670,7 @@ void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
     assert(COpc);
     MachineInstrBuilder MIB = BuildMI(*ToB, At, DL, HII->get(COpc));
     MIOperands MO(*MI);
-    if (HII->isPostIncrement(MI)) {
+    if (HII->isPostIncrement(*MI)) {
       MIB.addOperand(*MO);
       ++MO;
     }

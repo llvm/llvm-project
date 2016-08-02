@@ -227,7 +227,7 @@ protected:
   RuntimeDyld::MemoryManager &MemMgr;
 
   // The symbol resolver to use for external symbols.
-  RuntimeDyld::SymbolResolver &Resolver;
+  JITSymbolResolver &Resolver;
 
   // Attached RuntimeDyldChecker instance. Null if no instance attached.
   RuntimeDyldCheckerImpl *Checker;
@@ -420,7 +420,7 @@ protected:
 
 public:
   RuntimeDyldImpl(RuntimeDyld::MemoryManager &MemMgr,
-                  RuntimeDyld::SymbolResolver &Resolver)
+                  JITSymbolResolver &Resolver)
     : MemMgr(MemMgr), Resolver(Resolver), Checker(nullptr),
       ProcessAllSections(false), HasError(false) {
   }
@@ -451,7 +451,7 @@ public:
     return getSectionAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
   }
 
-  RuntimeDyld::SymbolInfo getSymbol(StringRef Name) const {
+  JITEvaluatedSymbol getSymbol(StringRef Name) const {
     // FIXME: Just look up as a function for now. Overly simple of course.
     // Work in progress.
     RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
@@ -462,7 +462,7 @@ public:
     if (SymEntry.getSectionID() != AbsoluteSymbolSection)
       SectionAddr = getSectionLoadAddress(SymEntry.getSectionID());
     uint64_t TargetAddr = SectionAddr + SymEntry.getOffset();
-    return RuntimeDyld::SymbolInfo(TargetAddr, SymEntry.getFlags());
+    return JITEvaluatedSymbol(TargetAddr, SymEntry.getFlags());
   }
 
   void resolveRelocations();

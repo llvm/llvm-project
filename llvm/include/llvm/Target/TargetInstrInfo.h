@@ -565,7 +565,7 @@ public:
   /// this function when peeling off one or more iterations of a loop. This
   /// function assumes the nth iteration is peeled first.
   virtual unsigned reduceLoopCount(MachineBasicBlock &MBB,
-                                   MachineInstr *IndVar, MachineInstr *Cmp,
+                                   MachineInstr *IndVar, MachineInstr &Cmp,
                                    SmallVectorImpl<MachineOperand> &Cond,
                                    SmallVectorImpl<MachineInstr *> &PrevInsts,
                                    unsigned Iter, unsigned MaxIter) const {
@@ -1033,14 +1033,14 @@ public:
   /// Return true if the instruction contains a base register and offset. If
   /// true, the function also sets the operand position in the instruction
   /// for the base register and offset.
-  virtual bool getBaseAndOffsetPosition(const MachineInstr *MI,
+  virtual bool getBaseAndOffsetPosition(const MachineInstr &MI,
                                         unsigned &BasePos,
                                         unsigned &OffsetPos) const {
     return false;
   }
 
   /// If the instruction is an increment of a constant value, return the amount.
-  virtual bool getIncrementValue(const MachineInstr *MI, int &Value) const {
+  virtual bool getIncrementValue(const MachineInstr &MI, int &Value) const {
     return false;
   }
 
@@ -1077,7 +1077,7 @@ public:
   virtual void getNoopForMachoTarget(MCInst &NopInst) const;
 
   /// Return true for post-incremented instructions.
-  virtual bool isPostIncrement(const MachineInstr* MI) const {
+  virtual bool isPostIncrement(const MachineInstr &MI) const {
     return false;
   }
 

@@ -20,7 +20,7 @@ to `the LLVM bugtracker <https://llvm.org/bugs>`_ will definitely help the
 project. If you have any ideas or suggestions, you might want to put a feature
 request there.
 
-Using clang-rename
+Using Clang-Rename
 ==================
 
 :program:`clang-rename` is a `LibTooling
@@ -28,7 +28,7 @@ Using clang-rename
 work with if you set up a compile command database for your project (for an
 example of how to do this see `How To Setup Tooling For LLVM
 <http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html>`_). You can also
-specify compilation options on the command line after ``--``:
+specify compilation options on the command line after `--`:
 
 .. code-block:: console
 
@@ -47,7 +47,7 @@ only. It is planned to extend the tool's functionality to support multi-TU
 renaming actions in the future.
 
 :program:`clang-rename` also aims to be easily integrated into popular text
-editors, such as Vim, and improve the workflow of users.
+editors, such as Vim and Emacs, and improve the workflow of users.
 
 Although a command line interface exists, it is highly recommended to use the
 text editor interface instead for better experience.
@@ -84,8 +84,8 @@ text editor interface instead for better experience.
     -version                   - Display the version of this program
 
 
-clang-rename Vim integration
-============================
+Vim Integration
+===============
 
 You can call :program:`clang-rename` directly from Vim! To set up
 :program:`clang-rename` integration for Vim see
@@ -96,7 +96,21 @@ Please note that **you have to save all buffers, in which the replacement will
 happen before running the tool**.
 
 Once installed, you can point your cursor to symbols you want to rename, press
-``<leader>cr`` and print new desired name. The
-[``<leader> key``](http://vim.wikia.com/wiki/Mapping_keys_in_Vim_-_Tutorial_(Part_3)#Map_leader)
+`<leader>cr` and type new desired name. The [`<leader> key`]
+(http://vim.wikia.com/wiki/Mapping_keys_in_Vim_-_Tutorial_(Part_3)#Map_leader)
 is a reference to a specific key defined by the mapleader variable and is bound
 to backslash by default.
+
+Emacs Integration
+=================
+
+You can also use :program:`clang-rename` while using Emacs! To set up
+:program:`clang-rename` integration for Emacs see
+`clang-rename/tool/clang-rename.el
+<http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-rename/tool/clang-rename.el>`_.
+
+Once installed, you can point your cursor to symbols you want to rename, press
+`M-X`, type `clang-rename` and new desired name.
+
+Please note that **you have to save all buffers, in which the replacement will
+happen before running the tool**.

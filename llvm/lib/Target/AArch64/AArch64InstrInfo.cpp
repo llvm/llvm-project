@@ -32,6 +32,18 @@ using namespace llvm;
 static LLVM_CONSTEXPR MachineMemOperand::Flags MOSuppressPair =
     MachineMemOperand::MOTargetFlag1;
 
+static cl::opt<unsigned>
+TBZDisplacementBits("aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
+                    cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
+
+static cl::opt<unsigned>
+CBZDisplacementBits("aarch64-cbz-offset-bits", cl::Hidden, cl::init(19),
+                    cl::desc("Restrict range of CB[N]Z instructions (DEBUG)"));
+
+static cl::opt<unsigned>
+BCCDisplacementBits("aarch64-bcc-offset-bits", cl::Hidden, cl::init(19),
+                    cl::desc("Restrict range of Bcc instructions (DEBUG)"));
+
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP),
       RI(STI.getTargetTriple()), Subtarget(STI) {}
@@ -93,6 +105,51 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
     Cond.push_back(LastInst->getOperand(0));
     Cond.push_back(LastInst->getOperand(1));
   }
+}
+
+static unsigned getBranchDisplacementBits(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("unexpected opcode!");
+  case AArch64::TBNZW:
+  case AArch64::TBZW:
+  case AArch64::TBNZX:
+  case AArch64::TBZX:
+    return TBZDisplacementBits;
+  case AArch64::CBNZW:
+  case AArch64::CBZW:
+  case AArch64::CBNZX:
+  case AArch64::CBZX:
+    return CBZDisplacementBits;
+  case AArch64::Bcc:
+    return BCCDisplacementBits;
+  }
+}
+
+static unsigned getBranchMaxDisplacementBytes(unsigned Opc) {
+  if (Opc == AArch64::B)
+    return -1;
+
+  unsigned Bits = getBranchDisplacementBits(Opc);
+  unsigned MaxOffs = ((1 << (Bits - 1)) - 1) << 2;
+
+  // Verify the displacement bits options have sane values.
+  // XXX: Is there a better place for this?
+  assert(MaxOffs >= 8 &&
+         "max branch displacement must be enough to jump"
+         "over conditional branch expansion");
+
+  return MaxOffs;
+}
+
+bool AArch64InstrInfo::isBranchInRange(unsigned BranchOp, uint64_t BrOffset,
+                                       uint64_t DestOffset) const {
+  unsigned MaxOffs = getBranchMaxDisplacementBytes(BranchOp);
+
+  // Branch before the Dest.
+  if (BrOffset <= DestOffset)
+    return (DestOffset - BrOffset <= MaxOffs);
+  return (BrOffset - DestOffset <= MaxOffs);
 }
 
 // Branch analysis.

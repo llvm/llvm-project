@@ -78,8 +78,8 @@ public:
     return true;
   }
 
-  virtual void PreprocessISelDAG() override;
-  virtual void EmitFunctionEntryCode() override;
+  void PreprocessISelDAG() override;
+  void EmitFunctionEntryCode() override;
 
   void Select(SDNode *N) override;
 
@@ -127,11 +127,9 @@ public:
   // the single bit 32 bit mask represents.
   // Used in Clr and Set bit immediate memops.
   SDValue XformMskToBitPosU5Imm(uint32_t Imm, const SDLoc &DL) {
-    int32_t bitPos;
-    bitPos = Log2_32(Imm);
-    assert(bitPos >= 0 && bitPos < 32 &&
-           "Constant out of range for 32 BitPos Memops");
-    return CurDAG->getTargetConstant(bitPos, DL, MVT::i32);
+    unsigned BitPos = Log2_32(Imm);
+    assert(BitPos < 32 && "Constant out of range for 32 BitPos Memops");
+    return CurDAG->getTargetConstant(BitPos, DL, MVT::i32);
   }
 
   // XformMskToBitPosU4Imm - Returns the bit position which the single-bit
@@ -667,7 +665,6 @@ void HexagonDAGToDAGISel::SelectStore(SDNode *N) {
 void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
   SDLoc dl(N);
 
-  //
   // %conv.i = sext i32 %tmp1 to i64
   // %conv2.i = sext i32 %add to i64
   // %mul.i = mul nsw i64 %conv2.i, %conv.i
@@ -692,7 +689,6 @@ void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
         SelectCode(N);
         return;
       }
-
       OP0 = Sext0;
     } else if (MulOp0.getOpcode() == ISD::LOAD) {
       LoadSDNode *LD = cast<LoadSDNode>(MulOp0.getNode());
@@ -702,7 +698,6 @@ void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
         SelectCode(N);
         return;
       }
-
       SDValue Chain = LD->getChain();
       SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
       OP0 = SDValue(CurDAG->getMachineNode(Hexagon::L2_loadri_io, dl, MVT::i32,
@@ -721,7 +716,6 @@ void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
         SelectCode(N);
         return;
       }
-
       OP1 = Sext1;
     } else if (MulOp1.getOpcode() == ISD::LOAD) {
       LoadSDNode *LD = cast<LoadSDNode>(MulOp1.getNode());
@@ -731,7 +725,6 @@ void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
         SelectCode(N);
         return;
       }
-
       SDValue Chain = LD->getChain();
       SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
       OP1 = SDValue(CurDAG->getMachineNode(Hexagon::L2_loadri_io, dl, MVT::i32,
@@ -744,8 +737,8 @@ void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
     }
 
     // Generate a mpy instruction.
-    SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_dpmpyss_s0, dl, MVT::i64,
-                                            OP0, OP1);
+    SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_dpmpyss_s0, dl,
+                                            MVT::i64, OP0, OP1);
     ReplaceNode(N, Result);
     return;
   }
@@ -755,68 +748,56 @@ void HexagonDAGToDAGISel::SelectMul(SDNode *N) {
 
 void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
   SDLoc dl(N);
-  if (N->getValueType(0) == MVT::i32) {
-    SDValue Shl_0 = N->getOperand(0);
-    SDValue Shl_1 = N->getOperand(1);
-    // RHS is const.
-    if (Shl_1.getOpcode() == ISD::Constant) {
-      if (Shl_0.getOpcode() == ISD::MUL) {
-        SDValue Mul_0 = Shl_0.getOperand(0); // Val
-        SDValue Mul_1 = Shl_0.getOperand(1); // Const
-        // RHS of mul is const.
-        if (Mul_1.getOpcode() == ISD::Constant) {
-          int32_t ShlConst =
-            cast<ConstantSDNode>(Shl_1.getNode())->getSExtValue();
-          int32_t MulConst =
-            cast<ConstantSDNode>(Mul_1.getNode())->getSExtValue();
-          int32_t ValConst = MulConst << ShlConst;
-          SDValue Val = CurDAG->getTargetConstant(ValConst, dl,
-                                                  MVT::i32);
-          if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Val.getNode()))
-            if (isInt<9>(CN->getSExtValue())) {
-              SDNode* Result =
-                CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
-                                       MVT::i32, Mul_0, Val);
-              ReplaceNode(N, Result);
-              return;
-            }
+  SDValue Shl_0 = N->getOperand(0);
+  SDValue Shl_1 = N->getOperand(1);
 
-        }
-      } else if (Shl_0.getOpcode() == ISD::SUB) {
-        SDValue Sub_0 = Shl_0.getOperand(0); // Const 0
-        SDValue Sub_1 = Shl_0.getOperand(1); // Val
-        if (Sub_0.getOpcode() == ISD::Constant) {
-          int32_t SubConst =
-            cast<ConstantSDNode>(Sub_0.getNode())->getSExtValue();
-          if (SubConst == 0) {
-            if (Sub_1.getOpcode() == ISD::SHL) {
-              SDValue Shl2_0 = Sub_1.getOperand(0); // Val
-              SDValue Shl2_1 = Sub_1.getOperand(1); // Const
-              if (Shl2_1.getOpcode() == ISD::Constant) {
-                int32_t ShlConst =
-                  cast<ConstantSDNode>(Shl_1.getNode())->getSExtValue();
-                int32_t Shl2Const =
-                  cast<ConstantSDNode>(Shl2_1.getNode())->getSExtValue();
-                int32_t ValConst = 1 << (ShlConst+Shl2Const);
-                SDValue Val = CurDAG->getTargetConstant(-ValConst, dl,
-                                                        MVT::i32);
-                if (ConstantSDNode *CN =
-                    dyn_cast<ConstantSDNode>(Val.getNode()))
-                  if (isInt<9>(CN->getSExtValue())) {
-                    SDNode* Result =
-                      CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl, MVT::i32,
-                                             Shl2_0, Val);
-                    ReplaceNode(N, Result);
-                    return;
-                  }
-              }
-            }
-          }
+  auto Default = [this,N] () -> void { SelectCode(N); };
+
+  if (N->getValueType(0) != MVT::i32 || Shl_1.getOpcode() != ISD::Constant)
+    return Default();
+
+  // RHS is const.
+  int32_t ShlConst = cast<ConstantSDNode>(Shl_1)->getSExtValue();
+
+  if (Shl_0.getOpcode() == ISD::MUL) {
+    SDValue Mul_0 = Shl_0.getOperand(0); // Val
+    SDValue Mul_1 = Shl_0.getOperand(1); // Const
+    // RHS of mul is const.
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Mul_1)) {
+      int32_t ValConst = C->getSExtValue() << ShlConst;
+      if (isInt<9>(ValConst)) {
+        SDValue Val = CurDAG->getTargetConstant(ValConst, dl, MVT::i32);
+        SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
+                                                MVT::i32, Mul_0, Val);
+        ReplaceNode(N, Result);
+        return;
+      }
+    }
+    return Default();
+  }
+
+  if (Shl_0.getOpcode() == ISD::SUB) {
+    SDValue Sub_0 = Shl_0.getOperand(0); // Const 0
+    SDValue Sub_1 = Shl_0.getOperand(1); // Val
+    if (ConstantSDNode *C1 = dyn_cast<ConstantSDNode>(Sub_0)) {
+      if (C1->getSExtValue() != 0 || Sub_1.getOpcode() != ISD::SHL)
+        return Default();
+      SDValue Shl2_0 = Sub_1.getOperand(0); // Val
+      SDValue Shl2_1 = Sub_1.getOperand(1); // Const
+      if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Shl2_1)) {
+        int32_t ValConst = 1 << (ShlConst + C2->getSExtValue());
+        if (isInt<9>(-ValConst)) {
+          SDValue Val = CurDAG->getTargetConstant(-ValConst, dl, MVT::i32);
+          SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
+                                                  MVT::i32, Shl2_0, Val);
+          ReplaceNode(N, Result);
+          return;
         }
       }
     }
   }
-  SelectCode(N);
+
+  return Default();
 }
 
 
@@ -866,21 +847,18 @@ void HexagonDAGToDAGISel::SelectZeroExtend(SDNode *N) {
     return;
   }
 
-  SDNode *IsIntrinsic = N->getOperand(0).getNode();
-  if ((IsIntrinsic->getOpcode() == ISD::INTRINSIC_WO_CHAIN)) {
-    unsigned ID =
-      cast<ConstantSDNode>(IsIntrinsic->getOperand(0))->getZExtValue();
+  SDNode *Int = N->getOperand(0).getNode();
+  if ((Int->getOpcode() == ISD::INTRINSIC_WO_CHAIN)) {
+    unsigned ID = cast<ConstantSDNode>(Int->getOperand(0))->getZExtValue();
     if (doesIntrinsicReturnPredicate(ID)) {
       // Now we need to differentiate target data types.
       if (N->getValueType(0) == MVT::i64) {
         // Convert the zero_extend to Rs = Pd followed by A2_combinew(0,Rs).
         SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
         SDNode *Result_1 = CurDAG->getMachineNode(Hexagon::C2_tfrpr, dl,
-                                                  MVT::i32,
-                                                  SDValue(IsIntrinsic, 0));
+                                                  MVT::i32, SDValue(Int, 0));
         SDNode *Result_2 = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl,
-                                                  MVT::i32,
-                                                  TargetConst0);
+                                                  MVT::i32, TargetConst0);
         SDNode *Result_3 = CurDAG->getMachineNode(Hexagon::A2_combinew, dl,
                                                   MVT::i64, MVT::Other,
                                                   SDValue(Result_2, 0),
@@ -891,8 +869,7 @@ void HexagonDAGToDAGISel::SelectZeroExtend(SDNode *N) {
       if (N->getValueType(0) == MVT::i32) {
         // Convert the zero_extend to Rs = Pd
         SDNode* RsPd = CurDAG->getMachineNode(Hexagon::C2_tfrpr, dl,
-                                              MVT::i32,
-                                              SDValue(IsIntrinsic, 0));
+                                              MVT::i32, SDValue(Int, 0));
         ReplaceNode(N, RsPd);
         return;
       }
@@ -956,7 +933,7 @@ void HexagonDAGToDAGISel::SelectConstantFP(SDNode *N) {
                                       APF.convertToFloat(), dl, MVT::f32)));
     return;
   }
-  else if (N->getValueType(0) == MVT::f64) {
+  if (N->getValueType(0) == MVT::f64) {
     ReplaceNode(
         N, CurDAG->getMachineNode(Hexagon::CONST64_Float_Real, dl, MVT::f64,
                                   CurDAG->getTargetConstantFP(
@@ -1001,8 +978,8 @@ void HexagonDAGToDAGISel::SelectAdd(SDNode *N) {
   }
   // Identify nodes of the form: add(asr(...)).
   SDNode* Src1 = N->getOperand(0).getNode();
-  if (Src1->getOpcode() != ISD::SRA || !Src1->hasOneUse()
-      || Src1->getValueType(0) != MVT::i32) {
+  if (Src1->getOpcode() != ISD::SRA || !Src1->hasOneUse() ||
+      Src1->getValueType(0) != MVT::i32) {
     SelectCode(N);
     return;
   }
@@ -1173,7 +1150,7 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   SDValue FI = CurDAG->getTargetFrameIndex(FX, MVT::i32);
   SDLoc DL(N);
   SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  SDNode *R = 0;
+  SDNode *R = nullptr;
 
   // Use TFR_FI when:
   // - the object is fixed, or
@@ -1768,7 +1745,7 @@ SDValue HexagonDAGToDAGISel::getMultiplierForSHL(SDNode *N) {
 static unsigned getPowerOf2Factor(SDValue Val) {
   if (Val.getOpcode() == ISD::MUL) {
     unsigned MaxFactor = 0;
-    for (int i=0; i < 2; ++i) {
+    for (int i = 0; i < 2; ++i) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val.getOperand(i));
       if (!C)
         continue;
@@ -1791,9 +1768,9 @@ static unsigned getPowerOf2Factor(SDValue Val) {
 static bool willShiftRightEliminate(SDValue V, unsigned Amount) {
   if (V.getOpcode() == ISD::MUL) {
     SDValue Ops[] = { V.getOperand(0), V.getOperand(1) };
-    for (int i=0; i < 2; ++i)
+    for (int i = 0; i < 2; ++i)
       if (isa<ConstantSDNode>(Ops[i].getNode()) &&
-          V.getConstantOperandVal(i) % ((uint64_t)1 << Amount) == 0) {
+          V.getConstantOperandVal(i) % (1ULL << Amount) == 0) {
         uint64_t NewConst = V.getConstantOperandVal(i) >> Amount;
         return (NewConst == 1);
       }
@@ -2111,6 +2088,9 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
     Leaves.pushToBottom(Leaves.pop());
   }
 
+  const DataLayout &DL = CurDAG->getDataLayout();
+  const TargetLowering &TLI = *getTargetLowering();
+
   // Rebuild the tree using Huffman's algorithm
   while (Leaves.size() > 1) {
     WeightedLeaf L0 = Leaves.pop();
@@ -2156,7 +2136,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
           ISD::SHL, SDLoc(V0), VT, V0,
           CurDAG->getConstant(
               V1C->getAPIntValue().logBase2(), SDLoc(N),
-              getTargetLowering()->getScalarShiftAmountTy(CurDAG->getDataLayout(), V0.getValueType())));
+              TLI.getScalarShiftAmountTy(DL, V0.getValueType())));
     else
       NewNode = CurDAG->getNode(NOpcode, SDLoc(N), VT, V0, V1);
 
@@ -2184,9 +2164,9 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
       SDValue V0 = NewRoot.getOperand(0);
       NewRoot = CurDAG->getNode(
           ISD::SHL, SDLoc(NewRoot), VT, V0,
-          CurDAG->getConstant(V1C->getAPIntValue().logBase2(), SDLoc(NewRoot),
-                              getTargetLowering()->getScalarShiftAmountTy(
-                                  CurDAG->getDataLayout(), V0.getValueType())));
+          CurDAG->getConstant(
+              V1C->getAPIntValue().logBase2(), SDLoc(NewRoot),
+              TLI.getScalarShiftAmountTy(DL, V0.getValueType())));
     }
   }
 
@@ -2209,8 +2189,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
 }
 
 void HexagonDAGToDAGISel::rebalanceAddressTrees() {
-  for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
-       E = CurDAG->allnodes_end(); I != E;) {
+  for (auto I = CurDAG->allnodes_begin(), E = CurDAG->allnodes_end(); I != E;) {
     SDNode *N = &*I++;
     if (N->getOpcode() != ISD::LOAD && N->getOpcode() != ISD::STORE)
       continue;
@@ -2273,5 +2252,4 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
   RootHeights.clear();
   RootWeights.clear();
 }
-
 

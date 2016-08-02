@@ -270,6 +270,16 @@ static GetElementPtrInst *getGEPInstruction(Value *Ptr) {
   return nullptr;
 }
 
+/// A helper function that returns the pointer operand of a load or store
+/// instruction.
+static Value *getPointerOperand(Value *I) {
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerOperand();
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getPointerOperand();
+  return nullptr;
+}
+
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
@@ -1480,6 +1490,17 @@ public:
   bool isLegalMaskedGather(Type *DataType) {
     return TTI->isLegalMaskedGather(DataType);
   }
+  /// Returns true if the target machine can represent \p V as a masked gather
+  /// or scatter operation.
+  bool isLegalGatherOrScatter(Value *V) {
+    auto *LI = dyn_cast<LoadInst>(V);
+    auto *SI = dyn_cast<StoreInst>(V);
+    if (!LI && !SI)
+      return false;
+    auto *Ptr = getPointerOperand(V);
+    auto *Ty = cast<PointerType>(Ptr->getType())->getElementType();
+    return (LI && isLegalMaskedGather(Ty)) || (SI && isLegalMaskedScatter(Ty));
+  }
 
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
@@ -2335,7 +2356,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
 
   LoadInst *LI = dyn_cast<LoadInst>(Instr);
   StoreInst *SI = dyn_cast<StoreInst>(Instr);
-  Value *Ptr = LI ? LI->getPointerOperand() : SI->getPointerOperand();
+  Value *Ptr = getPointerOperand(Instr);
 
   // Prepare for the vector type of the interleaved load/store.
   Type *ScalarTy = LI ? LI->getType() : SI->getValueOperand()->getType();
@@ -2459,7 +2480,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
 
   Type *ScalarDataTy = LI ? LI->getType() : SI->getValueOperand()->getType();
   Type *DataTy = VectorType::get(ScalarDataTy, VF);
-  Value *Ptr = LI ? LI->getPointerOperand() : SI->getPointerOperand();
+  Value *Ptr = getPointerOperand(Instr);
   unsigned Alignment = LI ? LI->getAlignment() : SI->getAlignment();
   // An alignment of 0 means target abi alignment. We need to use the scalar's
   // target abi alignment in such a case.
@@ -4433,12 +4454,9 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     if (blockNeedsPredication(BB))
       continue;
 
-    for (Instruction &I : *BB) {
-      if (auto *LI = dyn_cast<LoadInst>(&I))
-        SafePointes.insert(LI->getPointerOperand());
-      else if (auto *SI = dyn_cast<StoreInst>(&I))
-        SafePointes.insert(SI->getPointerOperand());
-    }
+    for (Instruction &I : *BB)
+      if (auto *Ptr = getPointerOperand(&I))
+        SafePointes.insert(Ptr);
   }
 
   // Collect the blocks that need predication.
@@ -5035,7 +5053,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       if (!LI && !SI)
         continue;
 
-      Value *Ptr = LI ? LI->getPointerOperand() : SI->getPointerOperand();
+      Value *Ptr = getPointerOperand(&I);
       int64_t Stride = getPtrStride(PSE, Ptr, TheLoop, Strides);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
@@ -5821,19 +5839,6 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
   return Cost;
 }
 
-/// \brief Check if the load/store instruction \p I may be translated into
-/// gather/scatter during vectorization.
-///
-/// Pointer \p Ptr specifies address in memory for the given scalar memory
-/// instruction. We need it to retrieve data type.
-/// Using gather/scatter is possible when it is supported by target.
-static bool isGatherOrScatterLegal(Instruction *I, Value *Ptr,
-                                   LoopVectorizationLegality *Legal) {
-  auto *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
-  return (isa<LoadInst>(I) && Legal->isLegalMaskedGather(DataTy)) ||
-         (isa<StoreInst>(I) && Legal->isLegalMaskedScatter(DataTy));
-}
-
 /// \brief Check whether the address computation for a non-consecutive memory
 /// access looks like an unlikely candidate for being merged into the indexing
 /// mode.
@@ -6021,7 +6026,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     unsigned Alignment = SI ? SI->getAlignment() : LI->getAlignment();
     unsigned AS =
         SI ? SI->getPointerAddressSpace() : LI->getPointerAddressSpace();
-    Value *Ptr = SI ? SI->getPointerOperand() : LI->getPointerOperand();
+    Value *Ptr = getPointerOperand(I);
     // We add the cost of address computation here instead of with the gep
     // instruction because only here we know whether the operation is
     // scalarized.
@@ -6081,7 +6086,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // Scalarized loads/stores.
     int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
     bool UseGatherOrScatter =
-        (ConsecutiveStride == 0) && isGatherOrScatterLegal(I, Ptr, Legal);
+        (ConsecutiveStride == 0) && Legal->isLegalGatherOrScatter(I);
 
     bool Reverse = ConsecutiveStride < 0;
     const DataLayout &DL = I->getModule()->getDataLayout();
@@ -6233,25 +6238,12 @@ Pass *createLoopVectorizePass(bool NoUnrolling, bool AlwaysVectorize) {
 }
 
 bool LoopVectorizationCostModel::isConsecutiveLoadOrStore(Instruction *Inst) {
-  // Check for a store.
-  if (auto *ST = dyn_cast<StoreInst>(Inst))
-    return Legal->isConsecutivePtr(ST->getPointerOperand()) != 0;
 
-  // Check for a load.
-  if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return Legal->isConsecutivePtr(LI->getPointerOperand()) != 0;
-
+  // Check if the pointer operand of a load or store instruction is
+  // consecutive.
+  if (auto *Ptr = getPointerOperand(Inst))
+    return Legal->isConsecutivePtr(Ptr);
   return false;
-}
-
-/// Take the pointer operand from the Load/Store instruction.
-/// Returns NULL if this is not a valid Load/Store instruction.
-static Value *getPointerOperand(Value *I) {
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerOperand();
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  return nullptr;
 }
 
 void LoopVectorizationCostModel::collectValuesToIgnore() {
@@ -6275,7 +6267,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         VecValuesToIgnore.insert(&I);
       Instruction *PI = dyn_cast_or_null<Instruction>(getPointerOperand(&I));
       if (PI && !Legal->isConsecutivePtr(PI) &&
-          !isGatherOrScatterLegal(&I, PI, Legal))
+          !Legal->isLegalGatherOrScatter(&I))
         NonConsecutivePtr.insert(PI);
     }
   }

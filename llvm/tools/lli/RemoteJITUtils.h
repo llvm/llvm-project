@@ -83,7 +83,7 @@ public:
     this->MemMgr = std::move(MemMgr);
   }
 
-  void setResolver(std::unique_ptr<RuntimeDyld::SymbolResolver> Resolver) {
+  void setResolver(std::unique_ptr<JITSymbolResolver> Resolver) {
     this->Resolver = std::move(Resolver);
   }
 
@@ -134,18 +134,18 @@ public:
   // Don't hide the sibling notifyObjectLoaded from RTDyldMemoryManager.
   using RTDyldMemoryManager::notifyObjectLoaded;
 
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
+  JITSymbol findSymbol(const std::string &Name) override {
     return Resolver->findSymbol(Name);
   }
 
-  RuntimeDyld::SymbolInfo
+  JITSymbol
   findSymbolInLogicalDylib(const std::string &Name) override {
     return Resolver->findSymbolInLogicalDylib(Name);
   }
 
 private:
   std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr;
-  std::unique_ptr<RuntimeDyld::SymbolResolver> Resolver;
+  std::unique_ptr<JITSymbolResolver> Resolver;
 };
 }
 

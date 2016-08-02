@@ -389,45 +389,21 @@ define <4 x double> @shuffle_v4f64_1054(<4 x double> %a, <4 x double> %b) {
 }
 
 define <4 x double> @shuffle_v4f64_3254(<4 x double> %a, <4 x double> %b) {
-; AVX1-LABEL: shuffle_v4f64_3254:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v4f64_3254:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
-; AVX2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v4f64_3254:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v4f64_3254:
+; ALL:       # BB#0:
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; ALL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 3, i32 2, i32 5, i32 4>
   ret <4 x double> %shuffle
 }
 
 define <4 x double> @shuffle_v4f64_3276(<4 x double> %a, <4 x double> %b) {
-; AVX1-LABEL: shuffle_v4f64_3276:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v4f64_3276:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
-; AVX2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v4f64_3276:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v4f64_3276:
+; ALL:       # BB#0:
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; ALL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 3, i32 2, i32 7, i32 6>
   ret <4 x double> %shuffle
 }

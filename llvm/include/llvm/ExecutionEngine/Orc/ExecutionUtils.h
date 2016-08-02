@@ -14,9 +14,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTIONUTILS_H
 
-#include "JITSymbol.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include <vector>
 
@@ -144,10 +144,10 @@ public:
   }
 
   /// Search overrided symbols.
-  RuntimeDyld::SymbolInfo searchOverrides(const std::string &Name) {
+  JITEvaluatedSymbol searchOverrides(const std::string &Name) {
     auto I = CXXRuntimeOverrides.find(Name);
     if (I != CXXRuntimeOverrides.end())
-      return RuntimeDyld::SymbolInfo(I->second, JITSymbolFlags::Exported);
+      return JITEvaluatedSymbol(I->second, JITSymbolFlags::Exported);
     return nullptr;
   }
 
@@ -158,15 +158,15 @@ public:
 private:
 
   template <typename PtrTy>
-  TargetAddress toTargetAddress(PtrTy* P) {
-    return static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(P));
+  JITTargetAddress toTargetAddress(PtrTy* P) {
+    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
   }
 
-  void addOverride(const std::string &Name, TargetAddress Addr) {
+  void addOverride(const std::string &Name, JITTargetAddress Addr) {
     CXXRuntimeOverrides.insert(std::make_pair(Name, Addr));
   }
 
-  StringMap<TargetAddress> CXXRuntimeOverrides;
+  StringMap<JITTargetAddress> CXXRuntimeOverrides;
 
   typedef void (*DestructorPtr)(void*);
   typedef std::pair<DestructorPtr, void*> CXXDestructorDataPair;

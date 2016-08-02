@@ -184,7 +184,7 @@ LoadedELFObjectInfo::getObjectForDebug(const ObjectFile &Obj) const {
 namespace llvm {
 
 RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
-                               RuntimeDyld::SymbolResolver &Resolver)
+                               JITSymbolResolver &Resolver)
     : RuntimeDyldImpl(MemMgr, Resolver), GOTSectionID(0), CurrentGOTIndex(0) {}
 RuntimeDyldELF::~RuntimeDyldELF() {}
 

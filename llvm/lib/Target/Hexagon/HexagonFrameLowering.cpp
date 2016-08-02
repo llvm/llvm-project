@@ -1869,7 +1869,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // We need to reserve a a spill slot if scavenging could potentially require
   // spilling a scavenged register.
-  if (!NewRegs.empty()) {
+  if (!NewRegs.empty() || mayOverflowFrameOffset(MF)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     SetVector<const TargetRegisterClass*> SpillRCs;
@@ -2407,3 +2407,16 @@ bool HexagonFrameLowering::useRestoreFunction(MachineFunction &MF,
                                      : SpillFuncThreshold;
   return Threshold < NumCSI;
 }
+
+
+bool HexagonFrameLowering::mayOverflowFrameOffset(MachineFunction &MF) const {
+  unsigned StackSize = MF.getFrameInfo().estimateStackSize(MF);
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  // A fairly simplistic guess as to whether a potential load/store to a
+  // stack location could require an extra register. It does not account
+  // for store-immediate instructions.
+  if (HST.useHVXOps())
+    return StackSize > 256;
+  return false;
+}
+
