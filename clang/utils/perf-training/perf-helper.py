@@ -102,6 +102,7 @@ def dtrace(args):
   start_time = time.time()
 
   with open("%d.dtrace" % os.getpid(), "w") as f:
+    f.write("### Command: %s" % dtrace_args)
     subprocess.check_call(dtrace_args, stdout=f, stderr=subprocess.PIPE)
 
   elapsed = time.time() - start_time
