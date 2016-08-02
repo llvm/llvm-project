@@ -65,12 +65,16 @@ EXPB(native_divide)
 EXPB(native_powr)
 EXPU(native_tan)
 EXPU(native_cos)
-EXPU(native_exp2)
 EXPU(native_exp)
+EXPU(native_exp2)
 EXPU(native_exp10)
-EXPU(native_log2)
 EXPU(native_log)
+EXPU(native_log2)
 EXPU(native_log10)
+EXPU(native_recip)
+EXPU(native_rsqrt)
+EXPU(native_sin)
+EXPU(native_sqrt)
 
 ATTR float
 native_divide(float x, float y)
@@ -94,7 +98,7 @@ native_tan(float x)
 ATTR float
 native_cos(float x)
 {
-    return __llvm_amdgcn_cos_f32(x*0x1.45f306p-3f);
+    return __llvm_cos_f32(x);
 }
 
 ATTR float
@@ -144,7 +148,7 @@ native_rsqrt(float x)
 
 ATTR float
 native_sin(float x) {
-    return __llvm_amdgcn_sin_f32(x*0x1.45f306p-3f);
+    return __llvm_sin_f32(x);
 }
 
 ATTR float
