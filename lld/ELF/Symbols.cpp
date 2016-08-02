@@ -63,10 +63,10 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
     return VA;
   }
-  case SymbolBody::DefinedCommonKind: {
-    auto &D = cast<DefinedCommon<ELFT>>(Body);
-    return D.Section->OutSec->getVA() + D.Section->OutSecOff + D.Offset;
-  }
+  case SymbolBody::DefinedCommonKind:
+    return CommonInputSection<ELFT>::X->OutSec->getVA() +
+           CommonInputSection<ELFT>::X->OutSecOff +
+           cast<DefinedCommon<ELFT>>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(Body);
     if (!SS.NeedsCopyOrPltAddr)

@@ -687,7 +687,6 @@ CommonInputSection<ELFT>::CommonInputSection(
 
     // Compute symbol offset relative to beginning of input section.
     Sym->Offset = Hdr.sh_size;
-    Sym->Section = this;
     Hdr.sh_size += Sym->Size;
   }
 }

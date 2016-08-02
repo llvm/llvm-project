@@ -1448,7 +1448,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     break;
   }
   case SymbolBody::DefinedCommonKind:
-    return cast<DefinedCommon<ELFT>>(Sym)->Section->OutSec;
+    return CommonInputSection<ELFT>::X->OutSec;
   case SymbolBody::SharedKind:
     if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
       return Out<ELFT>::Bss;

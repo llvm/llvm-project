@@ -13,6 +13,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     "${CMAKE_SOURCE_DIR}/../../cmake/Modules")
   include(base-config-ix)
   include(CompilerRTUtils)
+
+  load_llvm_config()
+  construct_compiler_rt_default_triple()
+
   if(APPLE)
     include(CompilerRTDarwinUtils)
   endif()
