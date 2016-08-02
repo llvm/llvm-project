@@ -117,7 +117,7 @@ __shared_weak_count::__release_weak() _NOEXCEPT
     // threads, and have them all get copied at once.  The argument
     // also doesn't apply for __release_shared, because an outstanding
     // weak_ptr::lock() could read / modify the shared count.
-    if (__libcpp_atomic_load(&__shared_weak_owners_, _AO_Aquire) == 0)
+    if (__libcpp_atomic_load(&__shared_weak_owners_, _AO_Acquire) == 0)
     {
         // no need to do this store, because we are about
         // to destroy everything.

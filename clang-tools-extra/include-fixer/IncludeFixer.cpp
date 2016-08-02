@@ -275,8 +275,11 @@ private:
     // 1. lookup a::b::foo.
     // 2. lookup b::foo.
     std::string QueryString = ScopedQualifiers.str() + Query.str();
-    MatchedSymbols = SymbolIndexMgr.search(QueryString);
-    if (MatchedSymbols.empty() && !ScopedQualifiers.empty())
+    // It's unsafe to do nested search for the identifier with scoped namespace
+    // context, it might treat the identifier as a nested class of the scoped
+    // namespace.
+    MatchedSymbols = SymbolIndexMgr.search(QueryString, /*IsNestedSearch=*/false);
+    if (MatchedSymbols.empty())
       MatchedSymbols = SymbolIndexMgr.search(Query);
     DEBUG(llvm::dbgs() << "Having found " << MatchedSymbols.size()
                        << " symbols\n");

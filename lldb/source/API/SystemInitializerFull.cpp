@@ -27,6 +27,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/JavaASTContext.h"
+#include "lldb/Symbol/OCamlASTContext.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"
@@ -56,6 +57,7 @@
 #include "Plugins/Language/Java/JavaLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
+#include "Plugins/Language/OCaml/OCamlLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Go/GoLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Java/JavaLanguageRuntime.h"
@@ -314,6 +316,7 @@ SystemInitializerFull::Initialize()
     ClangASTContext::Initialize();
     GoASTContext::Initialize();
     JavaASTContext::Initialize();
+    OCamlASTContext::Initialize();
 
     ABIMacOSX_i386::Initialize();
     ABIMacOSX_arm::Initialize();
@@ -360,6 +363,7 @@ SystemInitializerFull::Initialize()
     JavaLanguage::Initialize();
     ObjCLanguage::Initialize();
     ObjCPlusPlusLanguage::Initialize();
+    OCamlLanguage::Initialize();
 
 #if defined(_MSC_VER)
     ProcessWindowsLive::Initialize();
@@ -444,6 +448,7 @@ SystemInitializerFull::Terminate()
     ClangASTContext::Terminate();
     GoASTContext::Terminate();
     JavaASTContext::Terminate();
+    OCamlASTContext::Terminate();
 
     ABIMacOSX_i386::Terminate();
     ABIMacOSX_arm::Terminate();
@@ -488,6 +493,7 @@ SystemInitializerFull::Terminate()
     JavaLanguage::Terminate();
     ObjCLanguage::Terminate();
     ObjCPlusPlusLanguage::Terminate();
+    OCamlLanguage::Terminate();
 
 #if defined(__APPLE__)
     DynamicLoaderDarwinKernel::Terminate();

@@ -104,6 +104,13 @@ public:
         USRSet.end()) {
       checkAndAddLocation(Loc.getBeginLoc());
     }
+    if (const auto *TemplateTypeParm =
+            dyn_cast<TemplateTypeParmType>(Loc.getType())) {
+      if (USRSet.find(getUSRForDecl(TemplateTypeParm->getDecl())) !=
+          USRSet.end()) {
+        checkAndAddLocation(Loc.getBeginLoc());
+      }
+    }
     return true;
   }
 
