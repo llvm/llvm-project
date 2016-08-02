@@ -18,8 +18,8 @@ typealias Color = NSColor
 #endif
 
 func main() {
-  var optColor_Some : Color? = Color.red()
-  var uoptColor_Some : Color! = Color.red()
+  var optColor_Some : Color? = Color.red
+  var uoptColor_Some : Color! = Color.red
 
   var optColor_None : Color? = nil
   var uoptColor_None : Color! = nil
