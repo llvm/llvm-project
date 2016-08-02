@@ -1234,6 +1234,16 @@ bool TargetLowering::isConstTrueVal(const SDNode *N) const {
   llvm_unreachable("Invalid boolean contents");
 }
 
+SDValue TargetLowering::getConstTrueVal(SelectionDAG &DAG, EVT VT,
+                                        const SDLoc &DL) const {
+  unsigned ElementWidth = VT.getScalarSizeInBits();
+  APInt TrueInt =
+      getBooleanContents(VT) == TargetLowering::ZeroOrOneBooleanContent
+          ? APInt(ElementWidth, 1)
+          : APInt::getAllOnesValue(ElementWidth);
+  return DAG.getConstant(TrueInt, DL, VT);
+}
+
 bool TargetLowering::isConstFalseVal(const SDNode *N) const {
   if (!N)
     return false;
