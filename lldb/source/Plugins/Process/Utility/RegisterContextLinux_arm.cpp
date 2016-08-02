@@ -26,7 +26,7 @@ using namespace lldb_private;
 #define EXC_OFFSET(idx) ((idx) * 4 + sizeof (RegisterContextLinux_arm::GPR) + sizeof (RegisterContextLinux_arm::FPU))
 #define DBG_OFFSET(reg) ((LLVM_EXTENSION offsetof (RegisterContextLinux_arm::DBG, reg) + sizeof (RegisterContextLinux_arm::GPR) + sizeof (RegisterContextLinux_arm::FPU) + sizeof (RegisterContextLinux_arm::EXC)))
 
-#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextLinux_arm::DBG *)NULL)->reg[i]), DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, dbg_##reg##i }, NULL, NULL
+#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextLinux_arm::DBG *)NULL)->reg[i]), DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, dbg_##reg##i }, NULL, NULL, NULL, 0
 #define REG_CONTEXT_SIZE (sizeof (RegisterContextLinux_arm::GPR) + sizeof (RegisterContextLinux_arm::FPU) + sizeof (RegisterContextLinux_arm::EXC))
 
 //-----------------------------------------------------------------------------

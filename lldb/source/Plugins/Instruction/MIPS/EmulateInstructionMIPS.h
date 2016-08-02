@@ -127,6 +127,12 @@ protected:
     Emulate_ADDiu (llvm::MCInst& insn);
 
     bool
+    Emulate_SUBU_ADDU (llvm::MCInst& insn);
+
+    bool
+    Emulate_LUI (llvm::MCInst& insn);
+
+    bool
     Emulate_SW (llvm::MCInst& insn);
 
     bool

@@ -103,6 +103,7 @@ struct Configuration {
   bool StripAll;
   bool StripDebug;
   bool SysvHash = true;
+  bool Target1Rel;
   bool Threads;
   bool Trace;
   bool Verbose;

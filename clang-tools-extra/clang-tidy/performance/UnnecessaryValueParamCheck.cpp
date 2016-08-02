@@ -157,8 +157,8 @@ void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,
   if (CopyArgument.getLocStart().isMacroID())
     return;
   const auto &SM = Context.getSourceManager();
-  auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0, SM, 
-					   Context.getLangOpts());
+  auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0, SM,
+                                           Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(CopyArgument.getLocStart(), "std::move(")
        << FixItHint::CreateInsertion(EndLoc, ")");
   if (auto IncludeFixit = Inserter->CreateIncludeInsertion(

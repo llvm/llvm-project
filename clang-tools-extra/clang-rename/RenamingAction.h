@@ -27,17 +27,17 @@ class RenamingAction {
 public:
   RenamingAction(const std::string &NewName, const std::string &PrevName,
                  const std::vector<std::string> &USRs,
-                 tooling::Replacements &Replaces, bool PrintLocations = false)
-      : NewName(NewName), PrevName(PrevName), USRs(USRs), Replaces(Replaces),
-        PrintLocations(PrintLocations) {
-  }
+                 std::map<std::string, tooling::Replacements> &FileToReplaces,
+                 bool PrintLocations = false)
+      : NewName(NewName), PrevName(PrevName), USRs(USRs),
+        FileToReplaces(FileToReplaces), PrintLocations(PrintLocations) {}
 
   std::unique_ptr<ASTConsumer> newASTConsumer();
 
 private:
   const std::string &NewName, &PrevName;
   const std::vector<std::string> &USRs;
-  tooling::Replacements &Replaces;
+  std::map<std::string, tooling::Replacements> &FileToReplaces;
   bool PrintLocations;
 };
 

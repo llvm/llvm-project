@@ -1,4 +1,6 @@
-// RUN: clang-rename -old-name=Foo -new-name=Bar %s -- | FileCheck %s
+// RUN: cat %s > %t.cpp
+// RUN: clang-rename -old-name=Foo -new-name=Bar %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 
 void foo() {
 }

@@ -54,6 +54,10 @@ namespace lldb_private
                                    // null, all registers in this list will be invalidated when the value of this
                                    // register changes.  For example, the invalidate list for eax would be rax
                                    // ax, ah, and al.
+        const uint8_t *dynamic_size_dwarf_expr_bytes; // A DWARF expression that when evaluated gives 
+                                                      // the byte size of this register.
+        size_t dynamic_size_dwarf_len; // The length of the DWARF expression in bytes
+                                       // in the dynamic_size_dwarf_expr_bytes member. 
     };
 
     //----------------------------------------------------------------------

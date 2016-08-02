@@ -146,9 +146,10 @@ int main(int argc, const char **argv) {
 
       // Export replacements.
       tooling::TranslationUnitReplacements TUR;
-      const tooling::Replacements &Replacements = Tool.getReplacements();
-      TUR.Replacements.insert(TUR.Replacements.end(), Replacements.begin(),
-                              Replacements.end());
+      const auto &FileToReplacements = Tool.getReplacements();
+      for (const auto &Entry : FileToReplacements)
+        TUR.Replacements.insert(TUR.Replacements.end(), Entry.second.begin(),
+                                Entry.second.end());
 
       yaml::Output YAML(OS);
       YAML << TUR;

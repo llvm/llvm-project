@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {  
+namespace misc {
 
 void SizeofContainerCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

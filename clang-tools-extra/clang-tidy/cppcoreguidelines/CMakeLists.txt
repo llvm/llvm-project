@@ -13,6 +13,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   ProTypeStaticCastDowncastCheck.cpp
   ProTypeUnionAccessCheck.cpp
   ProTypeVarargCheck.cpp
+  SpecialMemberFunctionsCheck.cpp
   SlicingCheck.cpp
 
   LINK_LIBS

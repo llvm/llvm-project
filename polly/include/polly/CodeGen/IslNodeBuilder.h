@@ -55,6 +55,9 @@ public:
   void addParameters(__isl_take isl_set *Context);
   void create(__isl_take isl_ast_node *Node);
 
+  /// @brief Allocate memory for all new arrays created by Polly.
+  void allocateNewArrays();
+
   /// @brief Preload all memory loads that are invariant.
   bool preloadInvariantLoads();
 

@@ -122,6 +122,81 @@ static void reportConflict(
   }
 }
 
+// FIXME: Remove this function after changing clang-apply-replacements to use
+// Replacements class.
+bool applyAllReplacements(const std::vector<tooling::Replacement> &Replaces,
+                          Rewriter &Rewrite) {
+  bool Result = true;
+  for (std::vector<tooling::Replacement>::const_iterator I = Replaces.begin(),
+                                                E = Replaces.end();
+       I != E; ++I) {
+    if (I->isApplicable()) {
+      Result = I->apply(Rewrite) && Result;
+    } else {
+      Result = false;
+    }
+  }
+  return Result;
+}
+
+
+// FIXME: moved from libToolingCore. remove this when std::vector<Replacement>
+// is replaced with tooling::Replacements class.
+static void deduplicate(std::vector<tooling::Replacement> &Replaces,
+                 std::vector<tooling::Range> &Conflicts) {
+  if (Replaces.empty())
+    return;
+
+  auto LessNoPath = [](const tooling::Replacement &LHS,
+                       const tooling::Replacement &RHS) {
+    if (LHS.getOffset() != RHS.getOffset())
+      return LHS.getOffset() < RHS.getOffset();
+    if (LHS.getLength() != RHS.getLength())
+      return LHS.getLength() < RHS.getLength();
+    return LHS.getReplacementText() < RHS.getReplacementText();
+  };
+
+  auto EqualNoPath = [](const tooling::Replacement &LHS,
+                        const tooling::Replacement &RHS) {
+    return LHS.getOffset() == RHS.getOffset() &&
+           LHS.getLength() == RHS.getLength() &&
+           LHS.getReplacementText() == RHS.getReplacementText();
+  };
+
+  // Deduplicate. We don't want to deduplicate based on the path as we assume
+  // that all replacements refer to the same file (or are symlinks).
+  std::sort(Replaces.begin(), Replaces.end(), LessNoPath);
+  Replaces.erase(std::unique(Replaces.begin(), Replaces.end(), EqualNoPath),
+                 Replaces.end());
+
+  // Detect conflicts
+  tooling::Range ConflictRange(Replaces.front().getOffset(),
+                               Replaces.front().getLength());
+  unsigned ConflictStart = 0;
+  unsigned ConflictLength = 1;
+  for (unsigned i = 1; i < Replaces.size(); ++i) {
+    tooling::Range Current(Replaces[i].getOffset(), Replaces[i].getLength());
+    if (ConflictRange.overlapsWith(Current)) {
+      // Extend conflicted range
+      ConflictRange =
+          tooling::Range(ConflictRange.getOffset(),
+                         std::max(ConflictRange.getLength(),
+                                  Current.getOffset() + Current.getLength() -
+                                      ConflictRange.getOffset()));
+      ++ConflictLength;
+    } else {
+      if (ConflictLength > 1)
+        Conflicts.push_back(tooling::Range(ConflictStart, ConflictLength));
+      ConflictRange = Current;
+      ConflictStart = i;
+      ConflictLength = 1;
+    }
+  }
+
+  if (ConflictLength > 1)
+    Conflicts.push_back(tooling::Range(ConflictStart, ConflictLength));
+}
+
 /// \brief Deduplicates and tests for conflicts among the replacements for each
 /// file in \c Replacements. Any conflicts found are reported.
 ///
@@ -144,7 +219,7 @@ static bool deduplicateAndDetectConflicts(FileToReplacementsMap &Replacements,
     assert(Entry != nullptr && "No file entry!");
 
     std::vector<tooling::Range> Conflicts;
-    tooling::deduplicate(FileAndReplacements.second, Conflicts);
+    deduplicate(FileAndReplacements.second, Conflicts);
 
     if (Conflicts.empty())
       continue;
@@ -197,7 +272,7 @@ bool applyReplacements(const FileToReplacementsMap &GroupedReplacements,
   // However, until we nail down the design of ReplacementGroups, might as well
   // leave this as is.
   for (const auto &FileAndReplacements : GroupedReplacements) {
-    if (!tooling::applyAllReplacements(FileAndReplacements.second, Rewrites))
+    if (!applyAllReplacements(FileAndReplacements.second, Rewrites))
       return false;
   }
 

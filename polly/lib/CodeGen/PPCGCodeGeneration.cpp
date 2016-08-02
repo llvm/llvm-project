@@ -794,7 +794,7 @@ SetVector<Value *> GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
     findValues(Expr, SE, SubtreeValues);
 
   for (auto &SAI : S.arrays())
-    SubtreeValues.remove(SAI.second->getBasePtr());
+    SubtreeValues.remove(SAI->getBasePtr());
 
   isl_space *Space = S.getParamSpace();
   for (long i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
@@ -1379,7 +1379,7 @@ public:
     }
 
     for (auto &Array : S->arrays()) {
-      auto Id = Array.second->getBasePtrId();
+      auto Id = Array->getBasePtrId();
       Names = isl_id_to_ast_expr_set(Names, Id, isl_ast_expr_copy(Zero));
     }
 
@@ -1550,9 +1550,7 @@ public:
   /// @param PPCGProg The program to compute the arrays for.
   void createArrays(gpu_prog *PPCGProg) {
     int i = 0;
-    for (auto &Element : S->arrays()) {
-      ScopArrayInfo *Array = Element.second.get();
-
+    for (auto &Array : S->arrays()) {
       std::string TypeName;
       raw_string_ostream OS(TypeName);
 
@@ -1595,8 +1593,7 @@ public:
   isl_union_map *getArrayIdentity() {
     isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
 
-    for (auto &Item : S->arrays()) {
-      ScopArrayInfo *Array = Item.second.get();
+    for (auto &Array : S->arrays()) {
       isl_space *Space = Array->getSpace();
       Space = isl_space_map_from_set(Space);
       isl_map *Identity = isl_map_identity(Space);

@@ -184,9 +184,6 @@ public:
   uint64_t Alignment;
 
   uint64_t Size;
-
-  // Virtual input section for common symbols.
-  CommonInputSection<ELFT> *Section;
 };
 
 // Regular defined symbols read from object file symbol tables.

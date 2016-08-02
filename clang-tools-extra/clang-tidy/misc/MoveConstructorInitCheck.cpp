@@ -133,7 +133,7 @@ void MoveConstructorInitCheck::handleMoveConstructor(
   QualType QT = Initializer->getInit()->getType();
   if (QT.isTriviallyCopyableType(*Result.Context))
     return;
-  
+
   const auto *RD = QT->getAsCXXRecordDecl();
   if (RD && RD->isTriviallyCopyable())
     return;

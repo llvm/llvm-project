@@ -77,7 +77,14 @@ protected:
       assert(Range.getBegin().isFileID() && Range.getEnd().isFileID() &&
              "Only file locations supported in fix-it hints.");
 
-      Error.Fix.insert(tooling::Replacement(SM, Range, FixIt.CodeToInsert));
+      auto Err =
+          Error.Fix.add(tooling::Replacement(SM, Range, FixIt.CodeToInsert));
+      // FIXME: better error handling.
+      if (Err) {
+        llvm::errs() << "Fix conflicts with existing fix! "
+                    << llvm::toString(std::move(Err)) << "\n";
+      }
+      assert(!Err && "Fix conflicts with existing fix!");
     }
   }
 

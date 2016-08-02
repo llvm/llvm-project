@@ -64,6 +64,11 @@ Improvements to clang-tidy
 
   Flags slicing of member variables or vtable.
 
+- New `cppcoreguidelines-special-member-functions
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-special-member-functions.html>`_ check
+
+  Flags classes where some, but not all, special member functions are user-defined.
+
 Improvements to include-fixer
 -----------------------------
 

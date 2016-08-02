@@ -485,8 +485,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
 
   Builder.SetInsertPoint(StartBB->getTerminator());
 
-  for (auto &Pair : S.arrays()) {
-    auto &Array = Pair.second;
+  for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
       continue;
     if (Array->isPHIKind()) {
@@ -576,8 +575,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
 }
 
 void BlockGenerator::findOutsideUsers(Scop &S) {
-  for (auto &Pair : S.arrays()) {
-    auto &Array = Pair.second;
+  for (auto &Array : S.arrays()) {
 
     if (Array->getNumberOfDimensions() != 0)
       continue;
@@ -613,8 +611,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
 
   Builder.SetInsertPoint(OptExitBB->getTerminator());
 
-  for (auto &Pair : S.arrays()) {
-    auto &SAI = Pair.second;
+  for (auto &SAI : S.arrays()) {
     auto *Val = SAI->getBasePtr();
 
     // Only Value-like scalars need a merge PHI. Exit block PHIs receive either
