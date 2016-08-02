@@ -2240,7 +2240,8 @@ class T2SatI<dag oops, dag iops, InstrItinClass itin,
 def t2SSAT: T2SatI<
               (outs rGPR:$Rd),
               (ins imm1_32:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
-              NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []> {
+              NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []>,
+              Requires<[IsThumb2]> {
   let Inst{31-27} = 0b11110;
   let Inst{25-22} = 0b1100;
   let Inst{20} = 0;
@@ -2251,7 +2252,7 @@ def t2SSAT: T2SatI<
 def t2SSAT16: T2SatI<
                 (outs rGPR:$Rd), (ins imm1_16:$sat_imm, rGPR:$Rn), NoItinerary,
                 "ssat16", "\t$Rd, $sat_imm, $Rn", []>,
-          Requires<[IsThumb2, HasDSP]> {
+                Requires<[IsThumb2, HasDSP]> {
   let Inst{31-27} = 0b11110;
   let Inst{25-22} = 0b1100;
   let Inst{20} = 0;
@@ -2265,7 +2266,8 @@ def t2SSAT16: T2SatI<
 def t2USAT: T2SatI<
                (outs rGPR:$Rd),
                (ins imm0_31:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
-                NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []> {
+                NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []>,
+                Requires<[IsThumb2]> {
   let Inst{31-27} = 0b11110;
   let Inst{25-22} = 0b1110;
   let Inst{20} = 0;
@@ -2275,7 +2277,7 @@ def t2USAT: T2SatI<
 def t2USAT16: T2SatI<(outs rGPR:$Rd), (ins imm0_15:$sat_imm, rGPR:$Rn),
                      NoItinerary,
                      "usat16", "\t$Rd, $sat_imm, $Rn", []>,
-          Requires<[IsThumb2, HasDSP]> {
+                     Requires<[IsThumb2, HasDSP]> {
   let Inst{31-22} = 0b1111001110;
   let Inst{20} = 0;
   let Inst{15} = 0;

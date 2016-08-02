@@ -3650,7 +3650,8 @@ def USADA8 : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
 
 def SSAT : AI<(outs GPRnopc:$Rd),
               (ins imm1_32:$sat_imm, GPRnopc:$Rn, shift_imm:$sh),
-              SatFrm, NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []> {
+              SatFrm, NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []>,
+              Requires<[IsARM,HasV6]>{
   bits<4> Rd;
   bits<5> sat_imm;
   bits<4> Rn;
@@ -3666,7 +3667,8 @@ def SSAT : AI<(outs GPRnopc:$Rd),
 
 def SSAT16 : AI<(outs GPRnopc:$Rd),
                 (ins imm1_16:$sat_imm, GPRnopc:$Rn), SatFrm,
-                NoItinerary, "ssat16", "\t$Rd, $sat_imm, $Rn", []> {
+                NoItinerary, "ssat16", "\t$Rd, $sat_imm, $Rn", []>,
+                Requires<[IsARM,HasV6]>{
   bits<4> Rd;
   bits<4> sat_imm;
   bits<4> Rn;
@@ -3679,7 +3681,8 @@ def SSAT16 : AI<(outs GPRnopc:$Rd),
 
 def USAT : AI<(outs GPRnopc:$Rd),
               (ins imm0_31:$sat_imm, GPRnopc:$Rn, shift_imm:$sh),
-              SatFrm, NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []> {
+              SatFrm, NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []>,
+              Requires<[IsARM,HasV6]> {
   bits<4> Rd;
   bits<5> sat_imm;
   bits<4> Rn;
@@ -3695,7 +3698,8 @@ def USAT : AI<(outs GPRnopc:$Rd),
 
 def USAT16 : AI<(outs GPRnopc:$Rd),
                 (ins imm0_15:$sat_imm, GPRnopc:$Rn), SatFrm,
-                NoItinerary, "usat16", "\t$Rd, $sat_imm, $Rn", []> {
+                NoItinerary, "usat16", "\t$Rd, $sat_imm, $Rn", []>,
+                Requires<[IsARM,HasV6]>{
   bits<4> Rd;
   bits<4> sat_imm;
   bits<4> Rn;

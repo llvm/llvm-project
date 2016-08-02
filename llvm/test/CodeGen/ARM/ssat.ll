@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
+; RUN: llc -mtriple=armv4t-eabi %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=V4T
+; RUN: llc -mtriple=armv6t2-eabi %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=V6T2
 
 ; Check for several conditions that should result in SSAT.
 ; For example, the base test is equivalent to
@@ -16,7 +17,8 @@
 ; 32-bit base test
 define i32 @sat_base_32bit(i32 %x) #0 {
 ; CHECK-LABEL: sat_base_32bit:
-; CHECK: ssat r0, #24, r0
+; V6T2: ssat r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpLow = icmp slt i32 %x, -8388608
   %cmpUp = icmp sgt i32 %x, 8388607
@@ -29,7 +31,8 @@ entry:
 ; 16-bit base test
 define i16 @sat_base_16bit(i16 %x) #0 {
 ; CHECK-LABEL: sat_base_16bit:
-; CHECK: ssat r0, #12, r0
+; V6T2: ssat r0, #12, r0
+; V4T-NOT: ssat
 entry:
   %cmpLow = icmp slt i16 %x, -2048
   %cmpUp = icmp sgt i16 %x, 2047
@@ -42,7 +45,8 @@ entry:
 ; 8-bit base test
 define i8 @sat_base_8bit(i8 %x) #0 {
 ; CHECK-LABEL: sat_base_8bit:
-; CHECK: ssat r0, #6, r0
+; V6T2: ssat r0, #6, r0
+; V4T-NOT: ssat
 entry:
   %cmpLow = icmp slt i8 %x, -32
   %cmpUp = icmp sgt i8 %x, 31
@@ -60,7 +64,8 @@ entry:
 ; x < -k ? -k : (x < k ? x : k)
 define i32 @sat_lower_upper_1(i32 %x) #0 {
 ; CHECK-LABEL: sat_lower_upper_1:
-; CHECK: ssat r0, #24, r0
+; V6T2: ssat r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpLow = icmp slt i32 %x, -8388608
   %cmpUp = icmp slt i32 %x, 8388607
@@ -72,7 +77,8 @@ entry:
 ; x > -k ? (x > k ? k : x) : -k
 define i32 @sat_lower_upper_2(i32 %x) #0 {
 ; CHECK-LABEL: sat_lower_upper_2:
-; CHECK: ssat    r0, #24, r0
+; V6T2: ssat    r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpLow = icmp sgt i32 %x, -8388608
   %cmpUp = icmp sgt i32 %x, 8388607
@@ -84,7 +90,8 @@ entry:
 ; x < k ? (x < -k ? -k : x) : k
 define i32 @sat_upper_lower_1(i32 %x) #0 {
 ; CHECK-LABEL: sat_upper_lower_1:
-; CHECK: ssat    r0, #24, r0
+; V6T2: ssat    r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpUp = icmp slt i32 %x, 8388607
   %cmpLow = icmp slt i32 %x, -8388608
@@ -96,7 +103,8 @@ entry:
 ; x > k ? k : (x < -k ? -k : x)
 define i32 @sat_upper_lower_2(i32 %x) #0 {
 ; CHECK-LABEL: sat_upper_lower_2:
-; CHECK: ssat    r0, #24, r0
+; V6T2: ssat    r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpUp = icmp sgt i32 %x, 8388607
   %cmpLow = icmp slt i32 %x, -8388608
@@ -108,7 +116,8 @@ entry:
 ; k < x ? k : (x > -k ? x : -k)
 define i32 @sat_upper_lower_3(i32 %x) #0 {
 ; CHECK-LABEL: sat_upper_lower_3:
-; CHECK: ssat    r0, #24, r0
+; V6T2: ssat    r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpUp = icmp slt i32 8388607, %x
   %cmpLow = icmp sgt i32 %x, -8388608
@@ -125,7 +134,8 @@ entry:
 ; k <= x ? k : (x >= -k ? x : -k)
 define i32 @sat_le_ge(i32 %x) #0 {
 ; CHECK-LABEL: sat_le_ge:
-; CHECK: ssat    r0, #24, r0
+; V6T2: ssat    r0, #24, r0
+; V4T-NOT: ssat
 entry:
   %cmpUp = icmp sle i32 8388607, %x
   %cmpLow = icmp sge i32 %x, -8388608
