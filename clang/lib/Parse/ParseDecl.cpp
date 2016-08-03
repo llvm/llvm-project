@@ -884,7 +884,7 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 ///
 /// version-arg:
 ///   'introduced' '=' version
-///   'deprecated' '=' version
+///   'deprecated' ['=' version]
 ///   'obsoleted' = version
 ///   'unavailable'
 /// opt-replacement:
@@ -969,6 +969,21 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
           << Keyword << SourceRange(UnavailableLoc);
       }
       UnavailableLoc = KeywordLoc;
+      continue;
+    }
+
+    if (Keyword == Ident_deprecated && Platform->Ident &&
+        Platform->Ident->getName() == "swift") {
+      // For swift, we deprecate for all versions.
+      if (!Changes[Deprecated].KeywordLoc.isInvalid()) {
+        Diag(KeywordLoc, diag::err_availability_redundant)
+          << Keyword
+          << SourceRange(Changes[Deprecated].KeywordLoc);
+      }
+
+      Changes[Deprecated].KeywordLoc = KeywordLoc;
+      // Use a fake version here.
+      Changes[Deprecated].Version = VersionTuple(1);
       continue;
     }
 

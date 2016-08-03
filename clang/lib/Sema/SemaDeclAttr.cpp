@@ -2173,9 +2173,10 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
     Replacement = SE->getString();
 
   if (II->getName() == "swift") {
-    if (Introduced.isValid() || Deprecated.isValid() || Obsoleted.isValid() ||
-        !IsUnavailable) {
-      S.Diag(Attr.getLoc(), diag::warn_availability_swift_unavailable_only);
+    if (Introduced.isValid() || Obsoleted.isValid() ||
+        (!IsUnavailable && !Deprecated.isValid())) {
+      S.Diag(Attr.getLoc(),
+             diag::warn_availability_swift_unavailable_deprecated_only);
       return;
     }
   }
