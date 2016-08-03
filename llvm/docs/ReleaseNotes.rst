@@ -165,7 +165,7 @@ Changes to the ARM Targets
 * Initial ARM/Thumb support was added to LLD.
 * The ExecutionEngine now supports COFF/ARM
 * Swift calling convention was ported to ARM
-* A large number of cddegen fixes around ARMv8, DSP, correct sub-target support,
+* A large number of codegen fixes around ARMv8, DSP, correct sub-target support,
   relocations, EABI, EHABI, Windows on ARM, atomics.
 * Improved assembler support for Linux/Android/Chromium sub-projects.
 * Initial support for MUSL (libc) on ARM
