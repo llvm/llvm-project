@@ -785,7 +785,6 @@ class AVX512AIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
       : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
         Requires<[HasAVX512]>;
 class AVX512AIi8Base : TAPD {
-  Domain ExeDomain = SSEPackedInt;
   ImmType ImmT = Imm8;
 }
 class AVX512Ii8<bits<8> o, Format F, dag outs, dag ins, string asm,

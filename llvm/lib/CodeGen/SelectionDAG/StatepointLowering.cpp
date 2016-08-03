@@ -70,7 +70,7 @@ SDValue
 StatepointLoweringState::allocateStackSlot(EVT ValueType,
                                            SelectionDAGBuilder &Builder) {
   NumSlotsAllocatedForStatepoints++;
-  auto *MFI = Builder.DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
 
   unsigned SpillSize = ValueType.getSizeInBits() / 8;
   assert((SpillSize * 8) == ValueType.getSizeInBits() && "Size not in bytes?");
@@ -90,7 +90,7 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
   for (; NextSlotToAllocate < NumSlots; NextSlotToAllocate++) {
     if (!AllocatedStackSlots.test(NextSlotToAllocate)) {
       const int FI = Builder.FuncInfo.StatepointStackSlots[NextSlotToAllocate];
-      if (MFI->getObjectSize(FI) == SpillSize) {
+      if (MFI.getObjectSize(FI) == SpillSize) {
         AllocatedStackSlots.set(NextSlotToAllocate);
         return Builder.DAG.getFrameIndex(FI, ValueType);
       }
@@ -101,7 +101,7 @@ StatepointLoweringState::allocateStackSlot(EVT ValueType,
 
   SDValue SpillSlot = Builder.DAG.CreateStackTemporary(ValueType);
   const unsigned FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
-  MFI->markAsStatepointSpillSlotObjectIndex(FI);
+  MFI.markAsStatepointSpillSlotObjectIndex(FI);
 
   Builder.FuncInfo.StatepointStackSlots.push_back(FI);
 
@@ -350,8 +350,8 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     // vary since we spill vectors of pointers too).  At some point we
     // can consider allowing spills of smaller values to larger slots
     // (i.e. change the '==' in the assert below to a '>=').
-    auto *MFI = Builder.DAG.getMachineFunction().getFrameInfo();
-    assert((MFI->getObjectSize(Index) * 8) ==
+    MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
+    assert((MFI.getObjectSize(Index) * 8) ==
                Incoming.getValueType().getSizeInBits() &&
            "Bad spill:  stack slot does not match!");
 #endif

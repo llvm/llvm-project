@@ -8,13 +8,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseEmplaceCheck.h"
-#include "../utils/Matchers.h"
-
+#include "../utils/OptionsUtils.h"
 using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
 namespace modernize {
+
+static const auto DefaultContainersWithPushBack =
+    "::std::vector; ::std::list; ::std::deque";
+static const auto DefaultSmartPointers =
+    "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
+
+UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ContainersWithPushBack(utils::options::parseStringList(Options.get(
+          "ContainersWithPushBack", DefaultContainersWithPushBack))),
+      SmartPointers(utils::options::parseStringList(
+          Options.get("SmartPointers", DefaultSmartPointers))) {}
 
 void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
@@ -31,40 +42,51 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // + match for make_pair calls.
   auto callPushBack = cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName("push_back"))),
-      on(hasType(cxxRecordDecl(hasAnyName("std::vector", "llvm::SmallVector",
-                                          "std::list", "std::deque")))));
+      on(hasType(cxxRecordDecl(hasAnyName(SmallVector<StringRef, 5>(
+          ContainersWithPushBack.begin(), ContainersWithPushBack.end()))))));
 
   // We can't replace push_backs of smart pointer because
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
   // passed pointer because smart pointer won't be constructed
   // (and destructed) as in push_back case.
-  auto isCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(
-      ofClass(hasAnyName("std::shared_ptr", "std::unique_ptr", "std::auto_ptr",
-                         "std::weak_ptr"))));
+  auto isCtorOfSmartPtr = hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(
+      SmallVector<StringRef, 5>(SmartPointers.begin(), SmartPointers.end())))));
 
   // Bitfields binds only to consts and emplace_back take it by universal ref.
-  auto bitFieldAsArgument = hasAnyArgument(ignoringParenImpCasts(
-      memberExpr(hasDeclaration(fieldDecl(matchers::isBitfield())))));
+  auto bitFieldAsArgument = hasAnyArgument(
+      ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(isBitField())))));
+
+  // Initializer list can't be passed to universal reference.
+  auto initializerListAsArgument = hasAnyArgument(
+      ignoringImplicit(cxxConstructExpr(isListInitialization())));
 
   // We could have leak of resource.
-  auto newExprAsArgument = hasAnyArgument(ignoringParenImpCasts(cxxNewExpr()));
+  auto newExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
+  // We would call another constructor.
   auto constructingDerived =
       hasParent(implicitCastExpr(hasCastKind(CastKind::CK_DerivedToBase)));
 
-  auto hasInitList = has(ignoringParenImpCasts(initListExpr()));
+  // emplace_back can't access private constructor.
+  auto isPrivateCtor = hasDeclaration(cxxConstructorDecl(isPrivate()));
+
+  auto hasInitList = has(ignoringImplicit(initListExpr()));
+  // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
+  // overloaded functions and template names.
   auto soughtConstructExpr =
       cxxConstructExpr(
           unless(anyOf(isCtorOfSmartPtr, hasInitList, bitFieldAsArgument,
-                       newExprAsArgument, constructingDerived,
-                       has(materializeTemporaryExpr(hasInitList)))))
+                       initializerListAsArgument, newExprAsArgument,
+                       constructingDerived, isPrivateCtor)))
           .bind("ctor");
-  auto hasConstructExpr = has(ignoringParenImpCasts(soughtConstructExpr));
+  auto hasConstructExpr = has(ignoringImplicit(soughtConstructExpr));
 
   auto ctorAsArgument = materializeTemporaryExpr(
       anyOf(hasConstructExpr, has(cxxFunctionalCastExpr(hasConstructExpr))));
 
-  Finder->addMatcher(
-      cxxMemberCallExpr(callPushBack, has(ctorAsArgument)).bind("call"), this);
+  Finder->addMatcher(cxxMemberCallExpr(callPushBack, has(ctorAsArgument),
+                                       unless(isInTemplateInstantiation()))
+                         .bind("call"),
+                     this);
 }
 
 void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
@@ -89,14 +111,19 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Range for constructor name and opening brace.
-  auto CtorCallSourceRange = CharSourceRange::getCharRange(
-      InnerCtorCall->getExprLoc(),
-      CallParensRange.getBegin().getLocWithOffset(1));
+  auto CtorCallSourceRange = CharSourceRange::getTokenRange(
+      InnerCtorCall->getExprLoc(), CallParensRange.getBegin());
 
   Diag << FixItHint::CreateRemoval(CtorCallSourceRange)
-       << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-              CallParensRange.getEnd(),
-              CallParensRange.getEnd().getLocWithOffset(1)));
+       << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+              CallParensRange.getEnd(), CallParensRange.getEnd()));
+}
+
+void UseEmplaceCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ContainersWithPushBack",
+                utils::options::serializeStringList(ContainersWithPushBack));
+  Options.store(Opts, "SmartPointers",
+                utils::options::serializeStringList(SmartPointers));
 }
 
 } // namespace modernize

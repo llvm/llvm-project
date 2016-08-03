@@ -185,7 +185,8 @@ public:
   unsigned getNumSGPRsAllowed(const SISubtarget &ST, unsigned WaveCount) const;
 
   unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
-                              const TargetRegisterClass *RC) const;
+                              const TargetRegisterClass *RC,
+                              const MachineFunction &MF) const;
 
   unsigned getSGPR32PressureSet() const { return SGPR32SetID; };
   unsigned getVGPR32PressureSet() const { return VGPR32SetID; };

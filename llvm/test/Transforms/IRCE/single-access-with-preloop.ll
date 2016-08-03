@@ -53,7 +53,7 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
 ; CHECK: br i1 [[continue_mainloop_cond]], label %loop, label %main.exit.selector
 
 ; CHECK: main.exit.selector:
-; CHECK: [[mainloop_its_left:[^ ]+]] = icmp slt i32 %idx.next, %n
+; CHECK: [[mainloop_its_left:[^ ]+]] = icmp slt i32 %idx.next.lcssa, %n
 ; CHECK: br i1 [[mainloop_its_left]], label %main.pseudo.exit, label %exit.loopexit
 
 ; CHECK: in.bounds.preloop:

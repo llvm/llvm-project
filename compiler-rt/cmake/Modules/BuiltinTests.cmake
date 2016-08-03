@@ -1,3 +1,4 @@
+include(CMakeCheckCompilerFlagCommonPatterns)
 
 # This function takes an OS and a list of architectures and identifies the
 # subset of the architectures list that the installed toolchain can target.
@@ -37,7 +38,18 @@ function(try_compile_only output)
     OUTPUT_VARIABLE TEST_OUTPUT
     ERROR_VARIABLE TEST_ERROR
   )
-  if(result EQUAL 0)
+
+  CHECK_COMPILER_FLAG_COMMON_PATTERNS(_CheckCCompilerFlag_COMMON_PATTERNS)
+  foreach(var ${_CheckCCompilerFlag_COMMON_PATTERNS})
+    if("${var}" STREQUAL "FAIL_REGEX")
+      continue()
+    endif()
+    if("${var}" MATCHES "${_CheckCCompilerFlag_COMMON_PATTERNS}")
+      set(ERRORS_FOUND True)
+    endif()
+  endforeach()
+
+  if(result EQUAL 0 AND NOT ERRORS_FOUND)
     set(${output} True PARENT_SCOPE)
   else()
     file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log

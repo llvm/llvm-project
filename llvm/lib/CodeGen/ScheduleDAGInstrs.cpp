@@ -164,7 +164,7 @@ static void getUnderlyingObjects(const Value *V,
 /// information and it can be tracked to a normal reference to a known
 /// object, return the Value for that object.
 static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
-                                         const MachineFrameInfo *MFI,
+                                         const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
   auto allMMOsOkay = [&]() {
@@ -178,16 +178,16 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
         // overlapping locations. The client code calling this function assumes
         // this is not the case. So return a conservative answer of no known
         // object.
-        if (MFI->hasTailCall())
+        if (MFI.hasTailCall())
           return false;
 
         // For now, ignore PseudoSourceValues which may alias LLVM IR values
         // because the code that uses this function has no way to cope with
         // such aliases.
-        if (PSV->isAliased(MFI))
+        if (PSV->isAliased(&MFI))
           return false;
 
-        bool MayAlias = PSV->mayAlias(MFI);
+        bool MayAlias = PSV->mayAlias(&MFI);
         Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
@@ -621,7 +621,7 @@ static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
 /// Check whether two objects need a chain edge and add it if needed.
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
-  if (MIsNeedChainEdge(AAForDep, MFI, MF.getDataLayout(), SUa->getInstr(),
+  if (MIsNeedChainEdge(AAForDep, &MFI, MF.getDataLayout(), SUa->getInstr(),
                        SUb->getInstr())) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);

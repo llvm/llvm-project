@@ -16,6 +16,7 @@
 #include <limits.h>
 
 // C++ Includes
+#include <chrono>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -2920,12 +2921,9 @@ public:
     // function releases the run lock after the stop. Setting use_run_lock to false
     // will avoid this behavior.
     lldb::StateType
-    WaitForProcessToStop(const TimeValue *timeout,
-                         lldb::EventSP *event_sp_ptr = nullptr,
-                         bool wait_always = true,
-                         lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
-                         Stream *stream = nullptr,
-                         bool use_run_lock = true);
+    WaitForProcessToStop(const std::chrono::microseconds &timeout, lldb::EventSP *event_sp_ptr = nullptr,
+                         bool wait_always = true, lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
+                         Stream *stream = nullptr, bool use_run_lock = true);
 
     uint32_t
     GetIOHandlerID () const
@@ -2947,8 +2945,7 @@ public:
     SyncIOHandler (uint32_t iohandler_id, uint64_t timeout_msec);
 
     lldb::StateType
-    WaitForStateChangedEvents(const TimeValue *timeout,
-                              lldb::EventSP &event_sp,
+    WaitForStateChangedEvents(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp,
                               lldb::ListenerSP hijack_listener); // Pass an empty ListenerSP to use builtin listener
 
     //--------------------------------------------------------------------------------------
@@ -3538,21 +3535,20 @@ protected:
     HaltPrivate();
 
     lldb::StateType
-    WaitForProcessStopPrivate (const TimeValue *timeout, lldb::EventSP &event_sp);
+    WaitForProcessStopPrivate(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp);
 
     // This waits for both the state change broadcaster, and the control broadcaster.
     // If control_only, it only waits for the control broadcaster.
 
     bool
-    WaitForEventsPrivate (const TimeValue *timeout, lldb::EventSP &event_sp, bool control_only);
+    WaitForEventsPrivate(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp, bool control_only);
 
     lldb::StateType
-    WaitForStateChangedEventsPrivate (const TimeValue *timeout, lldb::EventSP &event_sp);
+    WaitForStateChangedEventsPrivate(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp);
 
     lldb::StateType
-    WaitForState (const TimeValue *timeout,
-                  const lldb::StateType *match_states,
-                  const uint32_t num_match_states);
+    WaitForState(const std::chrono::microseconds &timeout, const lldb::StateType *match_states,
+                 const uint32_t num_match_states);
 
     size_t
     WriteMemoryPrivate (lldb::addr_t addr, const void *buf, size_t size, Error &error);

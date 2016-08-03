@@ -9,10 +9,9 @@
 
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 
-#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
@@ -273,22 +272,21 @@ Error DbiStream::initializeSectionHeadersData() {
   if (StreamNum >= Pdb.getNumStreams())
     return make_error<RawError>(raw_error_code::no_stream);
 
-  auto SHS = MappedBlockStream::createIndexedStream(StreamNum, Pdb);
-  if (!SHS)
-    return SHS.takeError();
+  auto SHS = MappedBlockStream::createIndexedStream(
+      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), StreamNum);
 
-  size_t StreamLen = (*SHS)->getLength();
+  size_t StreamLen = SHS->getLength();
   if (StreamLen % sizeof(object::coff_section))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted section header stream.");
 
   size_t NumSections = StreamLen / sizeof(object::coff_section);
-  msf::StreamReader Reader(**SHS);
+  msf::StreamReader Reader(*SHS);
   if (auto EC = Reader.readArray(SectionHeaders, NumSections))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a bitmap.");
 
-  SectionHeaderStream = std::move(*SHS);
+  SectionHeaderStream = std::move(SHS);
   return Error::success();
 }
 
@@ -306,21 +304,20 @@ Error DbiStream::initializeFpoRecords() {
   if (StreamNum >= Pdb.getNumStreams())
     return make_error<RawError>(raw_error_code::no_stream);
 
-  auto FS = MappedBlockStream::createIndexedStream(StreamNum, Pdb);
-  if (!FS)
-    return FS.takeError();
+  auto FS = MappedBlockStream::createIndexedStream(
+      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), StreamNum);
 
-  size_t StreamLen = (*FS)->getLength();
+  size_t StreamLen = FS->getLength();
   if (StreamLen % sizeof(object::FpoData))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted New FPO stream.");
 
   size_t NumRecords = StreamLen / sizeof(object::FpoData);
-  msf::StreamReader Reader(**FS);
+  msf::StreamReader Reader(*FS);
   if (auto EC = Reader.readArray(FpoRecords, NumRecords))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted New FPO stream.");
-  FpoStream = std::move(*FS);
+  FpoStream = std::move(FS);
   return Error::success();
 }
 
@@ -421,33 +418,4 @@ Expected<StringRef> DbiStream::getFileNameForIndex(uint32_t Index) const {
   if (auto EC = Names.readZeroString(Name))
     return std::move(EC);
   return Name;
-}
-
-Error DbiStream::commit() {
-  StreamWriter Writer(*Stream);
-  if (auto EC = Writer.writeObject(*Header))
-    return EC;
-
-  if (auto EC = Writer.writeStreamRef(ModInfoSubstream))
-    return EC;
-
-  if (auto EC = Writer.writeStreamRef(SecContrSubstream,
-                                      SecContrSubstream.getLength()))
-    return EC;
-  if (auto EC =
-          Writer.writeStreamRef(SecMapSubstream, SecMapSubstream.getLength()))
-    return EC;
-  if (auto EC = Writer.writeStreamRef(FileInfoSubstream,
-                                      FileInfoSubstream.getLength()))
-    return EC;
-  if (auto EC = Writer.writeStreamRef(TypeServerMapSubstream,
-                                      TypeServerMapSubstream.getLength()))
-    return EC;
-  if (auto EC = Writer.writeStreamRef(ECSubstream, ECSubstream.getLength()))
-    return EC;
-
-  if (Writer.bytesRemaining() > 0)
-    return make_error<RawError>(raw_error_code::invalid_format,
-                                "Unexpected bytes found in DBI Stream");
-  return Error::success();
 }

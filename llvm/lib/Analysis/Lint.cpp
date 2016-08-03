@@ -680,9 +680,9 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
     if (Value *W = SimplifyInstruction(Inst, *DL, TLI, DT, AC))
       return findValueImpl(W, OffsetOk, Visited);
-  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
-    if (Value *W = ConstantFoldConstantExpression(CE, *DL, TLI))
-      if (W != V)
+  } else if (auto *C = dyn_cast<Constant>(V)) {
+    if (Value *W = ConstantFoldConstant(C, *DL, TLI))
+      if (W && W != V)
         return findValueImpl(W, OffsetOk, Visited);
   }
 

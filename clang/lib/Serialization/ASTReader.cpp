@@ -7905,9 +7905,10 @@ ASTReader::ReadTemplateParameterList(ModuleFile &F,
   while (NumParams--)
     Params.push_back(ReadDeclAs<NamedDecl>(F, Record, Idx));
 
+  // TODO: Concepts
   TemplateParameterList* TemplateParams =
     TemplateParameterList::Create(Context, TemplateLoc, LAngleLoc,
-                                  Params, RAngleLoc);
+                                  Params, RAngleLoc, nullptr);
   return TemplateParams;
 }
 

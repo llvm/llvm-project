@@ -570,10 +570,11 @@ class LoopConstrainer {
   Function &F;
   LLVMContext &Ctx;
   ScalarEvolution &SE;
+  DominatorTree &DT;
 
   // Information about the original loop we started out with.
   Loop &OriginalLoop;
-  LoopInfo &OriginalLoopInfo;
+  LoopInfo &LI;
   const SCEV *LatchTakenCount;
   BasicBlock *OriginalPreheader;
 
@@ -590,9 +591,10 @@ class LoopConstrainer {
 
 public:
   LoopConstrainer(Loop &L, LoopInfo &LI, const LoopStructure &LS,
-                  ScalarEvolution &SE, InductiveRangeCheck::Range R)
+                  ScalarEvolution &SE, DominatorTree &DT,
+                  InductiveRangeCheck::Range R)
       : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()),
-        SE(SE), OriginalLoop(L), OriginalLoopInfo(LI), LatchTakenCount(nullptr),
+        SE(SE), DT(DT), OriginalLoop(L), LI(LI), LatchTakenCount(nullptr),
         OriginalPreheader(nullptr), MainLoopPreheader(nullptr), Range(R),
         MainLoopStructure(LS) {}
 
@@ -1147,7 +1149,7 @@ void LoopConstrainer::addToParentLoopIfNeeded(ArrayRef<BasicBlock *> BBs) {
     return;
 
   for (BasicBlock *BB : BBs)
-    ParentLoop->addBasicBlockToLoop(BB, OriginalLoopInfo);
+    ParentLoop->addBasicBlockToLoop(BB, LI);
 }
 
 bool LoopConstrainer::run() {
@@ -1273,6 +1275,9 @@ bool LoopConstrainer::run() {
   addToParentLoopIfNeeded(makeArrayRef(std::begin(NewBlocks), NewBlocksEnd));
   addToParentLoopIfNeeded(PreLoop.Blocks);
   addToParentLoopIfNeeded(PostLoop.Blocks);
+
+  DT.recalculate(F);
+  formLCSSARecursively(OriginalLoop, DT, &LI, &SE);
 
   return true;
 }
@@ -1444,8 +1449,9 @@ bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (!SafeIterRange.hasValue())
     return false;
 
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LoopConstrainer LC(*L, getAnalysis<LoopInfoWrapperPass>().getLoopInfo(), LS,
-                     SE, SafeIterRange.getValue());
+                     SE, DT, SafeIterRange.getValue());
   bool Changed = LC.run();
 
   if (Changed) {

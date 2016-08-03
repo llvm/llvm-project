@@ -41,6 +41,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bits<1> DS = 0;
   field bits<1> MIMG = 0;
   field bits<1> FLAT = 0;
+
+  // Whether WQM _must_ be enabled for this instruction.
   field bits<1> WQM = 0;
   field bits<1> VGPRSpill = 0;
 
@@ -49,6 +51,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bits<1> VOPAsmPrefer32Bit = 0;
 
   field bits<1> Gather4 = 0;
+
+  // Whether WQM _must_ be disabled for this instruction.
+  field bits<1> DisableWQM = 0;
 
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = VM_CNT;
@@ -81,6 +86,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{23} = VGPRSpill;
   let TSFlags{24} = VOPAsmPrefer32Bit;
   let TSFlags{25} = Gather4;
+  let TSFlags{26} = DisableWQM;
 
   let SchedRW = [Write32Bit];
 
@@ -482,26 +488,6 @@ class VINTRPe <bits<2> op> : Enc32 {
   let Inst{31-26} = 0x32; // encoding
 }
 
-class DSe <bits<8> op> : Enc64 {
-  bits<8> vdst;
-  bits<1> gds;
-  bits<8> addr;
-  bits<8> data0;
-  bits<8> data1;
-  bits<8> offset0;
-  bits<8> offset1;
-
-  let Inst{7-0} = offset0;
-  let Inst{15-8} = offset1;
-  let Inst{17} = gds;
-  let Inst{25-18} = op;
-  let Inst{31-26} = 0x36; //encoding
-  let Inst{39-32} = addr;
-  let Inst{47-40} = data0;
-  let Inst{55-48} = data1;
-  let Inst{63-56} = vdst;
-}
-
 class MUBUFe <bits<7> op> : Enc64 {
   bits<12> offset;
   bits<1> offen;
@@ -665,23 +651,6 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
 //===----------------------------------------------------------------------===//
 // Vector I/O operations
 //===----------------------------------------------------------------------===//
-
-class DS <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI <outs, ins, asm, pattern> {
-
-  let LGKM_CNT = 1;
-  let DS = 1;
-  let UseNamedOperandTable = 1;
-  let Uses = [M0, EXEC];
-
-  // Most instruction load and store data, so set this as the default.
-  let mayLoad = 1;
-  let mayStore = 1;
-
-  let hasSideEffects = 0;
-  let AsmMatchConverter = "cvtDS";
-  let SchedRW = [WriteLDS];
-}
 
 class MUBUF <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI<outs, ins, asm, pattern> {

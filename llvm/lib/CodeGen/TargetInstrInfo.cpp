@@ -530,7 +530,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     assert((!(Flags & MachineMemOperand::MOLoad) ||
             NewMI->mayLoad()) &&
            "Folded a use to a non-load!");
-    const MachineFrameInfo &MFI = *MF.getFrameInfo();
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
     assert(MFI.getObjectOffset(FI) != -1);
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), Flags, MFI.getObjectSize(FI),
@@ -844,7 +844,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
   // simple, and a common case.
   int FrameIdx = 0;
   if (isLoadFromStackSlot(MI, FrameIdx) &&
-      MF.getFrameInfo()->isImmutableObjectIndex(FrameIdx))
+      MF.getFrameInfo().isImmutableObjectIndex(FrameIdx))
     return true;
 
   // Avoid instructions obviously unsafe for remat.

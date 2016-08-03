@@ -518,9 +518,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
                                     SingletonId);
 #include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
-    return DBuilder.createBasicType(
-        "opencl_sampler_t", CGM.getContext().getTypeSize(BT),
-        CGM.getContext().getTypeAlign(BT), llvm::dwarf::DW_ATE_unsigned);
+    return getOrCreateStructPtrType("opencl_sampler_t",
+                                    OCLSamplerDITy);
   case BuiltinType::OCLEvent:
     return getOrCreateStructPtrType("opencl_event_t", OCLEventDITy);
   case BuiltinType::OCLClkEvent:
@@ -1093,6 +1092,9 @@ void CGDebugInfo::CollectRecordNormalField(
 void CGDebugInfo::CollectRecordNestedRecord(
     const RecordDecl *RD, SmallVectorImpl<llvm::Metadata *> &elements) {
   QualType Ty = CGM.getContext().getTypeDeclType(RD);
+  // Injected class names are not considered nested records.
+  if (isa<InjectedClassNameType>(Ty))
+    return;
   SourceLocation Loc = RD->getLocation();
   llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc));
   elements.push_back(nestedType);

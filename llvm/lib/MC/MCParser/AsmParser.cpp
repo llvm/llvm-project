@@ -262,9 +262,23 @@ public:
     return false;
   }
 
+  bool parseEOL(const Twine &ErrMsg) {
+    if (getTok().getKind() == AsmToken::Hash) {
+      StringRef CommentStr = parseStringToEndOfStatement();
+      Lexer.Lex();
+      Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
+    }
+    if (getTok().getKind() != AsmToken::EndOfStatement)
+      return TokError(ErrMsg);
+    Lex();
+    return false;
+  }
+
   /// parseToken - If current token has the specified kind, eat it and
   /// return success.  Otherwise, emit the specified error and return failure.
   bool parseToken(AsmToken::TokenKind T, const Twine &ErrMsg) {
+    if (T == AsmToken::EndOfStatement)
+      return parseEOL(ErrMsg);
     if (getTok().getKind() != T)
       return TokError(ErrMsg);
     Lex();
@@ -1409,6 +1423,16 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return false;
   }
+  if (Lexer.is(AsmToken::Hash)) {
+    // Seeing a hash here means that it was an end-of-line comment in
+    // an asm syntax where hash's are not comment and the previous
+    // statement parser did not check the end of statement. Relex as
+    // EndOfStatement.
+    StringRef CommentStr = parseStringToEndOfStatement();
+    Lexer.Lex();
+    Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
+    return false;
+  }
   // Statements always start with an identifier.
   AsmToken ID = getTok();
   SMLoc IDLoc = ID.getLoc();
@@ -1541,6 +1565,16 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
     if (!Sym->isUndefined() || Sym->isVariable())
       return Error(IDLoc, "invalid symbol redefinition");
+
+    // End of Labels should be treated as end of line for lexing
+    // purposes but that information is not available to the Lexer who
+    // does not understand Labels. This may cause us to see a Hash
+    // here instead of a preprocessor line comment.
+    if (getTok().is(AsmToken::Hash)) {
+      StringRef CommentStr = parseStringToEndOfStatement();
+      Lexer.Lex();
+      Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
+    }
 
     // Consume any end of statement token, if present, to avoid spurious
     // AddBlankLine calls().

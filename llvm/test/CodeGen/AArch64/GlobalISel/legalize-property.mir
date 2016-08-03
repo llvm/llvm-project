@@ -1,0 +1,19 @@
+# RUN: llc -O0 -run-pass=legalize-mir -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @legalized_property() { ret void }
+...
+
+---
+# Check that we set the "legalized" property.
+# CHECK-LABEL: name: legalized_property
+# CHECK: legalized: true
+# CHECK: isSSA: true
+name:            legalized_property
+isSSA:           true
+legalized:       false
+body:             |
+  bb.0:
+...

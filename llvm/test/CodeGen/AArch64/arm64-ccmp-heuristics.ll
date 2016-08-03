@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=cyclone -verify-machineinstrs -aarch64-ccmp | FileCheck %s
+; RUN: llc < %s -mcpu=cyclone -verify-machineinstrs -aarch64-enable-ccmp | FileCheck %s
 target triple = "arm64-apple-ios7.0.0"
 
 @channelColumns = external global i64

@@ -322,13 +322,15 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding) {
 // We have a new non-common defined symbol with the specified binding. Return 1
 // if the new symbol should win, -1 if the new symbol should lose, or 0 if there
 // is a conflict. If the new symbol wins, also update the binding.
-static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding) {
+template <class ELFT>
+static int compareDefinedNonCommon(Symbol *S, bool WasInserted,
+                                   uint8_t Binding) {
   if (int Cmp = compareDefined(S, WasInserted, Binding)) {
     if (Cmp > 0)
       S->Binding = Binding;
     return Cmp;
   }
-  if (isa<DefinedCommon>(S->body())) {
+  if (isa<DefinedCommon<ELFT>>(S->body())) {
     // Non-common symbols take precedence over common symbols.
     if (Config->WarnCommon)
       warning("common " + S->body()->getName() + " is overridden");
@@ -350,9 +352,10 @@ Symbol *SymbolTable<ELFT>::addCommon(StringRef N, uint64_t Size,
   int Cmp = compareDefined(S, WasInserted, Binding);
   if (Cmp > 0) {
     S->Binding = Binding;
-    replaceBody<DefinedCommon>(S, N, Size, Alignment, StOther, Type, File);
+    replaceBody<DefinedCommon<ELFT>>(S, N, Size, Alignment, StOther, Type,
+                                     File);
   } else if (Cmp == 0) {
-    auto *C = dyn_cast<DefinedCommon>(S->body());
+    auto *C = dyn_cast<DefinedCommon<ELFT>>(S->body());
     if (!C) {
       // Non-common symbols take precedence over common symbols.
       if (Config->WarnCommon)
@@ -388,7 +391,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
       insert(Name, Sym.getType(), Sym.getVisibility(),
              /*CanOmitFromDynSym*/ false, /*IsUsedInRegularObj*/ true,
              Section ? Section->getFile() : nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Sym.getBinding());
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, Sym.getBinding());
   if (Cmp > 0)
     replaceBody<DefinedRegular<ELFT>>(S, Name, Sym, Section);
   else if (Cmp == 0)
@@ -404,7 +407,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
   std::tie(S, WasInserted) =
       insert(Name, STT_NOTYPE, StOther & 3, /*CanOmitFromDynSym*/ false,
              /*IsUsedInRegularObj*/ true, nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, Binding);
   if (Cmp > 0)
     replaceBody<DefinedRegular<ELFT>>(S, Name, StOther);
   else if (Cmp == 0)
@@ -421,7 +424,7 @@ Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
   std::tie(S, WasInserted) =
       insert(N, STT_NOTYPE, STV_HIDDEN, /*CanOmitFromDynSym*/ false,
              /*IsUsedInRegularObj*/ true, nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, STB_GLOBAL);
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, STB_GLOBAL);
   if (Cmp > 0)
     replaceBody<DefinedSynthetic<ELFT>>(S, N, Value, Section);
   else if (Cmp == 0)
@@ -459,8 +462,8 @@ Symbol *SymbolTable<ELFT>::addBitcode(StringRef Name, bool IsWeak,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Type, StOther & 3, CanOmitFromDynSym,
                                     /*IsUsedInRegularObj*/ false, F);
-  int Cmp =
-      compareDefinedNonCommon(S, WasInserted, IsWeak ? STB_WEAK : STB_GLOBAL);
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted,
+                                          IsWeak ? STB_WEAK : STB_GLOBAL);
   if (Cmp > 0)
     replaceBody<DefinedBitcode>(S, Name, StOther, Type, F);
   else if (Cmp == 0)

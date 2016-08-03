@@ -32,7 +32,7 @@ static inline void _inlineFunction() {
 @end
 
 // CHECK: @__CFConstantStringClassReference = common global [24 x i32] zeroinitializer, align 16
-// CHECK: @_unnamed_cfstring_{{.*}} = private constant %struct.__NSConstantString_tag { i32* getelementptr inbounds ([24 x i32], [24 x i32]* @__CFConstantStringClassReference, i32 0, i32 0)
+// CHECK: @_unnamed_cfstring_{{.*}} = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([24 x i32], [24 x i32]* @__CFConstantStringClassReference, i32 0, i32 0)
 
 // CHECK-LABEL: define internal void @_inlineFunction()
 // CHECK:  [[ZERO:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_

@@ -76,7 +76,7 @@ struct UnpackedHeader {
   u64 Offset        : 20; // Offset from the beginning of the backend
                           // allocation to the beginning chunk itself, in
                           // multiples of MinAlignment. See comment about its
-                          // maximum value and test in Initialize.
+                          // maximum value and test in init().
   u64 Unused_1_     : 28;
   u16 Salt          : 16;
 };

@@ -22,7 +22,6 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/UUID.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/SafeMachO.h"
 

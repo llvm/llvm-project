@@ -32,6 +32,8 @@ class CMICmdArgValString : public CMICmdArgValBaseTemplate<CMIUtilString>
     /* ctor */ CMICmdArgValString(const bool vbHandleQuotes, const bool vbAcceptNumbers, const bool vbHandleDirPaths);
     /* ctor */ CMICmdArgValString(const CMIUtilString &vrArgName, const bool vbMandatory, const bool vbHandleByCmd,
                                   const bool vbHandleQuotes = false, const bool vbAcceptNumbers = false);
+    /* ctor */ CMICmdArgValString(const CMIUtilString &vrArgName, const bool vbMandatory, const bool vbHandleByCmd,
+                                  const bool vbHandleQuotes, const bool vbAcceptNumbers, const bool vbHandleDirPaths);
     //
     bool IsStringArg(const CMIUtilString &vrTxt) const;
 

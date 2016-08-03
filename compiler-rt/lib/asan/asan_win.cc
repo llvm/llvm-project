@@ -43,7 +43,7 @@ int __asan_should_detect_stack_use_after_scope() {
   return __asan_option_detect_stack_use_after_scope;
 }
 
-// -------------------- A workaround for the abscence of weak symbols ----- {{{
+// -------------------- A workaround for the absence of weak symbols ----- {{{
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can
 // use the /alternatename directive to tell the linker to default a specific
 // symbol to a specific value, which works nicely for allocator hooks and
@@ -70,11 +70,11 @@ void __asan_default_on_error() {}
 // }}}
 }  // extern "C"
 
-// ---------------------- Windows-specific inteceptors ---------------- {{{
-INTERCEPTOR_WINAPI(void, RaiseException, void *a, void *b, void *c, void *d) {
-  CHECK(REAL(RaiseException));
+// ---------------------- Windows-specific interceptors ---------------- {{{
+INTERCEPTOR_WINAPI(void, RtlRaiseException, void *ExceptionRecord) {
+  CHECK(REAL(RtlRaiseException));
   __asan_handle_no_return();
-  REAL(RaiseException)(a, b, c, d);
+  REAL(RtlRaiseException)(ExceptionRecord);
 }
 
 
@@ -129,44 +129,16 @@ INTERCEPTOR_WINAPI(DWORD, CreateThread,
                             asan_thread_start, t, thr_flags, tid);
 }
 
-namespace {
-BlockingMutex mu_for_thread_tracking(LINKER_INITIALIZED);
-
-void EnsureWorkerThreadRegistered() {
-  // FIXME: GetCurrentThread relies on TSD, which might not play well with
-  // system thread pools.  We might want to use something like reference
-  // counting to zero out GetCurrentThread() underlying storage when the last
-  // work item finishes?  Or can we disable reclaiming of threads in the pool?
-  BlockingMutexLock l(&mu_for_thread_tracking);
-  if (__asan::GetCurrentThread())
-    return;
-
-  AsanThread *t = AsanThread::Create(
-      /* start_routine */ nullptr, /* arg */ nullptr,
-      /* parent_tid */ -1, /* stack */ nullptr, /* detached */ true);
-  t->Init();
-  asanThreadRegistry().StartThread(t->tid(), 0, 0);
-  SetCurrentThread(t);
-}
-}  // namespace
-
-INTERCEPTOR_WINAPI(DWORD, NtWaitForWorkViaWorkerFactory, DWORD a, DWORD b) {
-  // NtWaitForWorkViaWorkerFactory is called from system worker pool threads to
-  // query work scheduled by BindIoCompletionCallback, QueueUserWorkItem, etc.
-  // System worker pool threads are created at arbitraty point in time and
-  // without using CreateThread, so we wrap NtWaitForWorkViaWorkerFactory
-  // instead and don't register a specific parent_tid/stack.
-  EnsureWorkerThreadRegistered();
-  return REAL(NtWaitForWorkViaWorkerFactory)(a, b);
-}
-
 // }}}
 
 namespace __asan {
 
 void InitializePlatformInterceptors() {
   ASAN_INTERCEPT_FUNC(CreateThread);
-  ASAN_INTERCEPT_FUNC(RaiseException);
+  // RtlRaiseException is always linked dynamically.
+  CHECK(::__interception::OverrideFunction("RtlRaiseException",
+                                           (uptr)WRAP(RtlRaiseException),
+                                           (uptr *)&REAL(RtlRaiseException)));
 
 #ifdef _WIN64
   ASAN_INTERCEPT_FUNC(__C_specific_handler);
@@ -174,12 +146,6 @@ void InitializePlatformInterceptors() {
   ASAN_INTERCEPT_FUNC(_except_handler3);
   ASAN_INTERCEPT_FUNC(_except_handler4);
 #endif
-
-  // NtWaitForWorkViaWorkerFactory is always linked dynamically.
-  CHECK(::__interception::OverrideFunction(
-      "NtWaitForWorkViaWorkerFactory",
-      (uptr)WRAP(NtWaitForWorkViaWorkerFactory),
-      (uptr *)&REAL(NtWaitForWorkViaWorkerFactory)));
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {

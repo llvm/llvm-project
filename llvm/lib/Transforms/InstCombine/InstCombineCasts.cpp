@@ -161,8 +161,8 @@ Value *InstCombiner::EvaluateInDifferentType(Value *V, Type *Ty,
   if (Constant *C = dyn_cast<Constant>(V)) {
     C = ConstantExpr::getIntegerCast(C, Ty, isSigned /*Sext or ZExt*/);
     // If we got a constantexpr back, try to simplify it with DL info.
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
-      C = ConstantFoldConstantExpression(CE, DL, TLI);
+    if (Constant *FoldedC = ConstantFoldConstant(C, DL, TLI))
+      C = FoldedC;
     return C;
   }
 

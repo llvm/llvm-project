@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.1)
+
+option(STREAM_EXECUTOR_UNIT_TESTS "enable unit tests" ON)
+
+# First find includes relative to the streamexecutor top-level source path.
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# If we are not building as part of LLVM, build StreamExecutor as a standalone
+# project using LLVM as an external library:
+string(
+    COMPARE
+    EQUAL
+    "${CMAKE_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    STREAM_EXECUTOR_STANDALONE)
+
+if(STREAM_EXECUTOR_STANDALONE)
+    project(StreamExecutor)
+
+    find_package(LLVM REQUIRED CONFIG)
+    message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+    message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+    include_directories(${LLVM_INCLUDE_DIRS})
+    add_definitions(${LLVM_DEFINITIONS})
+
+    # Find the libraries that correspond to the LLVM components
+    # that we wish to use
+    llvm_map_components_to_libnames(llvm_libs support)
+
+    if(STREAM_EXECUTOR_UNIT_TESTS)
+        enable_testing()
+        find_package(GTest REQUIRED)
+        include_directories(${GTEST_INCLUDE_DIRS})
+    endif()
+else(NOT STREAM_EXECUTOR_STANDALONE)
+    if(STREAM_EXECUTOR_UNIT_TESTS)
+        include_directories(
+            "${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include")
+    endif()
+endif(STREAM_EXECUTOR_STANDALONE)
+
+# Insist on C++ 11 features.
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Add warning flags.
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+
+add_subdirectory(lib)

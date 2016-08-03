@@ -127,7 +127,8 @@ public:
   tooling::Replacements
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-          FormatTokenLexer &Tokens, tooling::Replacements &Result) override {
+          FormatTokenLexer &Tokens, tooling::Replacements &) override {
+    tooling::Replacements Result;
     AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
                                           AnnotatedLines.end());
 
@@ -192,9 +193,14 @@ public:
     DEBUG(llvm::dbgs() << "Replacing imports:\n"
                        << getSourceText(InsertionPoint) << "\nwith:\n"
                        << ReferencesText << "\n");
-    Result.insert(tooling::Replacement(
+    auto Err = Result.add(tooling::Replacement(
         Env.getSourceManager(), CharSourceRange::getCharRange(InsertionPoint),
         ReferencesText));
+    // FIXME: better error handling. For now, just print error message and skip
+    // the replacement for the release version.
+    if (Err)
+      llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    assert(!Err);
 
     return Result;
   }

@@ -801,7 +801,7 @@ void MipsConstantIslands::computeBlockSize(MachineBasicBlock *MBB) {
   BBI.Size = 0;
 
   for (const MachineInstr &MI : *MBB)
-    BBI.Size += TII->GetInstSizeInBytes(MI);
+    BBI.Size += TII->getInstSizeInBytes(MI);
 }
 
 /// getOffsetOf - Return the current offset of the specified machine instruction
@@ -818,7 +818,7 @@ unsigned MipsConstantIslands::getOffsetOf(MachineInstr *MI) const {
   // Sum instructions before MI in MBB.
   for (MachineBasicBlock::iterator I = MBB->begin(); &*I != MI; ++I) {
     assert(I != MBB->end() && "Didn't find MI in its own basic block?");
-    Offset += TII->GetInstSizeInBytes(*I);
+    Offset += TII->getInstSizeInBytes(*I);
   }
   return Offset;
 }
@@ -1297,9 +1297,9 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
   unsigned CPUIndex = CPUserIndex+1;
   unsigned NumCPUsers = CPUsers.size();
   //MachineInstr *LastIT = 0;
-  for (unsigned Offset = UserOffset + TII->GetInstSizeInBytes(*UserMI);
+  for (unsigned Offset = UserOffset + TII->getInstSizeInBytes(*UserMI);
        Offset < BaseInsertOffset;
-       Offset += TII->GetInstSizeInBytes(*MI), MI = std::next(MI)) {
+       Offset += TII->getInstSizeInBytes(*MI), MI = std::next(MI)) {
     assert(MI != UserMBB->end() && "Fell off end of block");
     if (CPUIndex < NumCPUsers &&
         CPUsers[CPUIndex].MI == static_cast<MachineInstr *>(MI)) {
@@ -1622,7 +1622,7 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
     splitBlockBeforeInstr(*MI);
     // No need for the branch to the next block. We're adding an unconditional
     // branch to the destination.
-    int delta = TII->GetInstSizeInBytes(MBB->back());
+    int delta = TII->getInstSizeInBytes(MBB->back());
     BBInfo[MBB->getNumber()].Size -= delta;
     MBB->back().eraseFromParent();
     // BBInfo[SplitBB].Offset is wrong temporarily, fixed below
@@ -1644,14 +1644,14 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
            .addMBB(NextBB);
   }
   Br.MI = &MBB->back();
-  BBInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(MBB->back());
+  BBInfo[MBB->getNumber()].Size += TII->getInstSizeInBytes(MBB->back());
   BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr)).addMBB(DestBB);
-  BBInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(MBB->back());
+  BBInfo[MBB->getNumber()].Size += TII->getInstSizeInBytes(MBB->back());
   unsigned MaxDisp = getUnconditionalBrDisp(Br.UncondBr);
   ImmBranches.push_back(ImmBranch(&MBB->back(), MaxDisp, false, Br.UncondBr));
 
   // Remove the old conditional branch.  It may or may not still be in MBB.
-  BBInfo[MI->getParent()->getNumber()].Size -= TII->GetInstSizeInBytes(*MI);
+  BBInfo[MI->getParent()->getNumber()].Size -= TII->getInstSizeInBytes(*MI);
   MI->eraseFromParent();
   adjustBBOffsetsAfter(MBB);
   return true;

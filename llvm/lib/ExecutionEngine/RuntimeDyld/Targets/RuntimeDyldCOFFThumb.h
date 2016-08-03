@@ -25,7 +25,7 @@ namespace llvm {
 class RuntimeDyldCOFFThumb : public RuntimeDyldCOFF {
 public:
   RuntimeDyldCOFFThumb(RuntimeDyld::MemoryManager &MM,
-                       RuntimeDyld::SymbolResolver &Resolver)
+                       JITSymbolResolver &Resolver)
       : RuntimeDyldCOFF(MM, Resolver) {}
 
   unsigned getMaxStubSize() override {

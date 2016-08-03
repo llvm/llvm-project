@@ -14,8 +14,8 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
-#include "llvm/DebugInfo/Msf/StreamRef.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
@@ -32,7 +32,7 @@ namespace msf {
 
 template <typename Kind>
 struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
-  Error operator()(StreamRef Stream, uint32_t &Len,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
                    codeview::CVRecord<Kind> &Item) const {
     using namespace codeview;
     const RecordPrefix *Prefix = nullptr;

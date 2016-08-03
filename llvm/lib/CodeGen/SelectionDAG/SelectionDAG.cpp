@@ -1863,13 +1863,13 @@ SDValue SelectionDAG::expandVACopy(SDNode *Node) {
 }
 
 SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
-  MachineFrameInfo *FrameInfo = getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
   unsigned ByteSize = VT.getStoreSize();
   Type *Ty = VT.getTypeForEVT(*getContext());
   unsigned StackAlign =
       std::max((unsigned)getDataLayout().getPrefTypeAlignment(Ty), minAlign);
 
-  int FrameIdx = FrameInfo->CreateStackObject(ByteSize, StackAlign, false);
+  int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
   return getFrameIndex(FrameIdx, TLI->getPointerTy(getDataLayout()));
 }
 
@@ -1881,8 +1881,8 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   unsigned Align =
       std::max(DL.getPrefTypeAlignment(Ty1), DL.getPrefTypeAlignment(Ty2));
 
-  MachineFrameInfo *FrameInfo = getMachineFunction().getFrameInfo();
-  int FrameIdx = FrameInfo->CreateStackObject(Bytes, Align, false);
+  MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
+  int FrameIdx = MFI.CreateStackObject(Bytes, Align, false);
   return getFrameIndex(FrameIdx, TLI->getPointerTy(getDataLayout()));
 }
 
@@ -4306,10 +4306,10 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF);
   FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
-  if (FI && !MFI->isFixedObjectIndex(FI->getIndex()))
+  if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
     DstAlignCanChange = true;
   unsigned SrcAlign = DAG.InferPtrAlignment(Src);
   if (Align > SrcAlign)
@@ -4342,8 +4342,8 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     if (NewAlign > Align) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI->getObjectAlignment(FI->getIndex()) < NewAlign)
-        MFI->setObjectAlignment(FI->getIndex(), NewAlign);
+      if (MFI.getObjectAlignment(FI->getIndex()) < NewAlign)
+        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
       Align = NewAlign;
     }
   }
@@ -4422,10 +4422,10 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF);
   FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
-  if (FI && !MFI->isFixedObjectIndex(FI->getIndex()))
+  if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
     DstAlignCanChange = true;
   unsigned SrcAlign = DAG.InferPtrAlignment(Src);
   if (Align > SrcAlign)
@@ -4445,8 +4445,8 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     unsigned NewAlign = (unsigned)DAG.getDataLayout().getABITypeAlignment(Ty);
     if (NewAlign > Align) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI->getObjectAlignment(FI->getIndex()) < NewAlign)
-        MFI->setObjectAlignment(FI->getIndex(), NewAlign);
+      if (MFI.getObjectAlignment(FI->getIndex()) < NewAlign)
+        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
       Align = NewAlign;
     }
   }
@@ -4519,10 +4519,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   bool OptSize = shouldLowerMemFuncForSize(MF);
   FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
-  if (FI && !MFI->isFixedObjectIndex(FI->getIndex()))
+  if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
     DstAlignCanChange = true;
   bool IsZeroVal =
     isa<ConstantSDNode>(Src) && cast<ConstantSDNode>(Src)->isNullValue();
@@ -4538,8 +4538,8 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     unsigned NewAlign = (unsigned)DAG.getDataLayout().getABITypeAlignment(Ty);
     if (NewAlign > Align) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI->getObjectAlignment(FI->getIndex()) < NewAlign)
-        MFI->setObjectAlignment(FI->getIndex(), NewAlign);
+      if (MFI.getObjectAlignment(FI->getIndex()) < NewAlign)
+        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
       Align = NewAlign;
     }
   }
@@ -6255,6 +6255,9 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
          "Cannot replace with this method!");
   assert(From != To.getNode() && "Cannot replace uses of with self");
 
+  // Preserve Debug Values
+  TransferDbgValues(FromN, To);
+
   // Iterate over all the existing uses of From. New uses will be added
   // to the beginning of the use list, which we avoid visiting.
   // This specifically avoids visiting uses of From that arise while the
@@ -6285,8 +6288,6 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
     AddModifiedNodeToCSEMaps(User);
   }
 
-  // Preserve Debug Values
-  TransferDbgValues(FromN, To);
 
   // If we just RAUW'd the root, take note.
   if (FromN == getRoot())
@@ -6639,19 +6640,26 @@ void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
   ArrayRef<SDDbgValue *> DVs = GetDbgValues(FromNode);
+  SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (ArrayRef<SDDbgValue *>::iterator I = DVs.begin(), E = DVs.end();
        I != E; ++I) {
     SDDbgValue *Dbg = *I;
     // Only add Dbgvalues attached to same ResNo.
     if (Dbg->getKind() == SDDbgValue::SDNODE &&
-        Dbg->getResNo() == From.getResNo()) {
+        Dbg->getSDNode() == From.getNode() &&
+        Dbg->getResNo() == From.getResNo() && !Dbg->isInvalidated()) {
+      assert(FromNode != ToNode &&
+             "Should not transfer Debug Values intranode");
       SDDbgValue *Clone =
           getDbgValue(Dbg->getVariable(), Dbg->getExpression(), ToNode,
                       To.getResNo(), Dbg->isIndirect(), Dbg->getOffset(),
                       Dbg->getDebugLoc(), Dbg->getOrder());
-      AddDbgValue(Clone, ToNode, false);
+      ClonedDVs.push_back(Clone);
+      Dbg->setIsInvalidated();
     }
   }
+  for (SDDbgValue *I : ClonedDVs)
+    AddDbgValue(I, ToNode, false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6955,13 +6963,13 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
   if (Loc.getOpcode() == ISD::FrameIndex) {
     if (BaseLoc.getOpcode() != ISD::FrameIndex)
       return false;
-    const MachineFrameInfo *MFI = getMachineFunction().getFrameInfo();
+    const MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
     int FI  = cast<FrameIndexSDNode>(Loc)->getIndex();
     int BFI = cast<FrameIndexSDNode>(BaseLoc)->getIndex();
-    int FS  = MFI->getObjectSize(FI);
-    int BFS = MFI->getObjectSize(BFI);
+    int FS  = MFI.getObjectSize(FI);
+    int BFS = MFI.getObjectSize(BFI);
     if (FS != BFS || FS != (int)Bytes) return false;
-    return MFI->getObjectOffset(FI) == (MFI->getObjectOffset(BFI) + Dist*Bytes);
+    return MFI.getObjectOffset(FI) == (MFI.getObjectOffset(BFI) + Dist*Bytes);
   }
 
   // Handle X + C.
@@ -7026,7 +7034,7 @@ unsigned SelectionDAG::InferPtrAlignment(SDValue Ptr) const {
   }
 
   if (FrameIdx != (1 << 31)) {
-    const MachineFrameInfo &MFI = *getMachineFunction().getFrameInfo();
+    const MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
     unsigned FIInfoAlign = MinAlign(MFI.getObjectAlignment(FrameIdx),
                                     FrameOffset);
     return FIInfoAlign;

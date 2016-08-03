@@ -14,6 +14,7 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/UUID.h"
 
 namespace lldb_private {
 
@@ -250,6 +251,55 @@ public:
                         lldb::addr_t link_map_addr,
                         lldb::addr_t base_addr,
                         bool base_addr_is_offset);
+
+    //------------------------------------------------------------------
+    /// Get information about the shared cache for a process, if possible.
+    ///
+    /// On some systems (e.g. Darwin based systems), a set of libraries 
+    /// that are common to most processes may be put in a single region
+    /// of memory and mapped into every process, this is called the
+    /// shared cache, as a performance optimization.
+    ///
+    /// Many targets will not have the concept of a shared cache.
+    ///
+    /// Depending on how the DynamicLoader gathers information about the
+    /// shared cache, it may be able to only return basic information - 
+    /// like the UUID of the cache - or it may be able to return additional
+    /// information about the cache.  
+    ///
+    /// @param[out] base_address
+    ///     The base address (load address) of the shared cache.
+    ///     LLDB_INVALID_ADDRESS if it cannot be determined.
+    ///
+    /// @param[out] uuid
+    ///     The UUID of the shared cache, if it can be determined.
+    ///     If the UUID cannot be fetched, IsValid() will be false.
+    ///
+    /// @param[out] using_shared_cache
+    ///     If this process is using a shared cache.
+    ///     If unknown, eLazyBoolCalculate is returned.
+    ///
+    /// @param[out] private_shared_cache
+    ///     A LazyBool indicating whether this process is using a
+    ///     private shared cache.
+    ///     If this information cannot be fetched, eLazyBoolCalculate.
+    ///
+    /// @return
+    ///     Returns false if this DynamicLoader cannot gather information
+    ///     about the shared cache / has no concept of a shared cache.
+    //------------------------------------------------------------------
+    virtual bool
+    GetSharedCacheInformation (lldb::addr_t &base_address, 
+                               UUID &uuid,
+                               LazyBool &using_shared_cache,
+                               LazyBool &private_shared_cache)
+    {
+        base_address = LLDB_INVALID_ADDRESS;
+        uuid.Clear();
+        using_shared_cache = eLazyBoolCalculate;
+        private_shared_cache = eLazyBoolCalculate;
+        return false;
+    }
 
 protected:
     //------------------------------------------------------------------

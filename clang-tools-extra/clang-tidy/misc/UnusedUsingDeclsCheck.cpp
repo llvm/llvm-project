@@ -37,6 +37,11 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(declRefExpr().bind("used"), this);
   Finder->addMatcher(callExpr(callee(unresolvedLookupExpr().bind("used"))),
                      this);
+  Finder->addMatcher(
+      callExpr(hasDeclaration(functionDecl(hasAnyTemplateArgument(
+          anyOf(refersToTemplate(templateName().bind("used")),
+                refersToDeclaration(functionDecl().bind("used"))))))),
+      this);
 }
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
@@ -71,17 +76,24 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       Contexts.push_back(Context);
     return;
   }
-
   // Mark using declarations as used by setting FoundDecls' value to zero. As
   // the AST is walked in order, usages are only marked after a the
   // corresponding using declaration has been found.
   // FIXME: This currently doesn't look at whether the type reference is
   // actually found with the help of the using declaration.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
-    if (const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(Used))
+    if (const auto *FD = dyn_cast<FunctionDecl>(Used)) {
+      removeFromFoundDecls(FD->getPrimaryTemplate());
+    } else if (const auto *Specialization =
+                   dyn_cast<ClassTemplateSpecializationDecl>(Used)) {
       Used = Specialization->getSpecializedTemplate();
+    }
     removeFromFoundDecls(Used);
+    return;
+  }
+
+  if (const auto *Used = Result.Nodes.getNodeAs<TemplateName>("used")) {
+    removeFromFoundDecls(Used->getAsTemplateDecl());
     return;
   }
 
@@ -109,6 +121,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
+  if (!D)
+    return;
   // FIXME: Currently, we don't handle the using-decls being used in different
   // scopes (such as different namespaces, different functions). Instead of
   // giving an incorrect message, we mark all of them as used.

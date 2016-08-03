@@ -1,4 +1,4 @@
-; RUN: llc -O3 -aarch64-gep-opt=true   < %s |FileCheck %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true   < %s |FileCheck %s
 target datalayout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"
 target triple = "aarch64--linux-gnu"
 

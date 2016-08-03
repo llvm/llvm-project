@@ -74,6 +74,12 @@ public:
     lldb_private::Error
     CanLoadImage() override;
 
+    bool
+    GetSharedCacheInformation (lldb::addr_t &base_address,
+                               lldb_private::UUID &uuid,
+                               lldb_private::LazyBool &using_shared_cache,
+                               lldb_private::LazyBool &private_shared_cache) override;
+
     //------------------------------------------------------------------
     // PluginInterface protocol
     //------------------------------------------------------------------

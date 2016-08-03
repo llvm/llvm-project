@@ -167,6 +167,21 @@ static uptr RoundUpTo(uptr size, uptr boundary) {
 // FIXME: internal_str* and internal_mem* functions should be moved from the
 // ASan sources into interception/.
 
+static size_t _strlen(const char *str) {
+  const char* p = str;
+  while (*p != '\0') ++p;
+  return p - str;
+}
+
+static char* _strchr(char* str, char c) {
+  while (*str) {
+    if (*str == c)
+      return str;
+    ++str;
+  }
+  return nullptr;
+}
+
 static void _memset(void *p, int value, size_t sz) {
   for (size_t i = 0; i < sz; ++i)
     ((char*)p)[i] = (char)value;
@@ -481,14 +496,16 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xc0854d:    // 4d 85 c0 : test r8, r8
     case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
+    case 0xdb3345:    // 45 33 DB : xor r11d, r11d
     case 0xd98b4c:    // 4c 8b d9 : mov r11, rcx
     case 0xd28b4c:    // 4c 8b d2 : mov r10, rdx
+    case 0xc98b4c:    // 4C 8B C9 : mov r9, rcx
     case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
     case 0xc00b4d:    // 3d 0b c0 : or r8, r8
     case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
-    case 0xdc8b4c:    // 4c 8b dc : mov r11,rsp
+    case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
     case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx
       return 3;
 
@@ -496,6 +513,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xf88349:    // 49 83 f8 XX : cmp r8, XX
     case 0x588948:    // 48 89 58 XX : mov QWORD PTR[rax + XX], rbx
       return 4;
+
+    case 0xec8148:    // 48 81 EC XX XX XX XX : sub rsp, XXXXXXXX
+      return 7;
 
     case 0x058b48:    // 48 8b 05 XX XX XX XX :
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
@@ -550,6 +570,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24748B:  // 8B 74 24 XX : mov esi, dword ptr [esp + XX]
     case 0x247C8B:  // 8B 7C 24 XX : mov edi, dword ptr [esp + XX]
       return 4;
+
+    case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
+      return 7;
   }
 
   switch (*(u32*)address) {
@@ -857,6 +880,32 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
     if (!strcmp(func_name, name)) {
       DWORD index = ordinals[i];
       RVAPtr<char> func(module, functions[index]);
+
+      // Handle forwarded functions.
+      DWORD offset = functions[index];
+      if (offset >= export_directory->VirtualAddress &&
+          offset < export_directory->VirtualAddress + export_directory->Size) {
+        // An entry for a forwarded function is a string with the following
+        // format: "<module> . <function_name>" that is stored into the
+        // exported directory.
+        char function_name[256];
+        size_t funtion_name_length = _strlen(func);
+        if (funtion_name_length >= sizeof(function_name) - 1)
+          InterceptionFailed();
+
+        _memcpy(function_name, func, funtion_name_length);
+        function_name[funtion_name_length] = '\0';
+        char* separator = _strchr(function_name, '.');
+        if (!separator)
+          InterceptionFailed();
+        *separator = '\0';
+
+        void* redirected_module = GetModuleHandleA(function_name);
+        if (!redirected_module)
+          InterceptionFailed();
+        return InternalGetProcAddress(redirected_module, separator + 1);
+      }
+
       return (uptr)(char *)func;
     }
   }

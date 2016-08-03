@@ -33,10 +33,14 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 using namespace llvm;
 
+#define TLSCLEANUP_PASS_NAME "AArch64 Local Dynamic TLS Access Clean-up"
+
 namespace {
 struct LDTLSCleanup : public MachineFunctionPass {
   static char ID;
-  LDTLSCleanup() : MachineFunctionPass(ID) {}
+  LDTLSCleanup() : MachineFunctionPass(ID) {
+    initializeLDTLSCleanupPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(*MF.getFunction()))
@@ -128,9 +132,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
     return Copy;
   }
 
-  const char *getPassName() const override {
-    return "Local Dynamic TLS Access Clean-up";
-  }
+  const char *getPassName() const override { return TLSCLEANUP_PASS_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -139,6 +141,9 @@ struct LDTLSCleanup : public MachineFunctionPass {
   }
 };
 }
+
+INITIALIZE_PASS(LDTLSCleanup, "aarch64-local-dynamic-tls-cleanup",
+                TLSCLEANUP_PASS_NAME, false, false)
 
 char LDTLSCleanup::ID = 0;
 FunctionPass *llvm::createAArch64CleanupLocalDynamicTLSPass() {

@@ -25,6 +25,22 @@ using namespace llvm;
 #endif
 
 AArch64MachineLegalizer::AArch64MachineLegalizer() {
-  setAction(TargetOpcode::G_ADD, LLT::vector(2, 64), Legal);
+  using namespace TargetOpcode;
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+  const LLT v2s32 = LLT::vector(2, 32);
+  const LLT v4s32 = LLT::vector(4, 32);
+  const LLT v2s64 = LLT::vector(2, 64);
+
+  for (auto BinOp : {G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+    for (auto Ty : {s32, s64, v2s32, v4s32, v2s64})
+      setAction(BinOp, Ty, Legal);
+
+  for (auto MemOp : {G_LOAD, G_STORE})
+    for (auto Ty : {s32, s64})
+      setAction(MemOp, Ty, Legal);
+
+  setAction(G_BR, LLT::unsized(), Legal);
+
   computeTables();
 }

@@ -44,8 +44,8 @@ private:
   class GenericHandle {
   public:
     virtual ~GenericHandle() {}
-    virtual orc::JITSymbol findSymbolIn(const std::string &Name,
-                                        bool ExportedSymbolsOnly) = 0;
+    virtual JITSymbol findSymbolIn(const std::string &Name,
+                                   bool ExportedSymbolsOnly) = 0;
     virtual void removeModule() = 0;
   };
 
@@ -54,8 +54,8 @@ private:
     GenericHandleImpl(LayerT &Layer, typename LayerT::ModuleSetHandleT Handle)
         : Layer(Layer), Handle(std::move(Handle)) {}
 
-    orc::JITSymbol findSymbolIn(const std::string &Name,
-                                bool ExportedSymbolsOnly) override {
+    JITSymbol findSymbolIn(const std::string &Name,
+                           bool ExportedSymbolsOnly) override {
       return Layer.findSymbolIn(Handle, Name, ExportedSymbolsOnly);
     }
 
@@ -109,55 +109,56 @@ public:
   }
 
   template <typename PtrTy>
-  static PtrTy fromTargetAddress(orc::TargetAddress Addr) {
+  static PtrTy fromTargetAddress(JITTargetAddress Addr) {
     return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
   }
 
-  orc::TargetAddress
+  JITTargetAddress
   createLazyCompileCallback(LLVMOrcLazyCompileCallbackFn Callback,
                             void *CallbackCtx) {
     auto CCInfo = CCMgr->getCompileCallback();
-    CCInfo.setCompileAction([=]() -> orc::TargetAddress {
+    CCInfo.setCompileAction([=]() -> JITTargetAddress {
       return Callback(wrap(this), CallbackCtx);
     });
     return CCInfo.getAddress();
   }
 
   LLVMOrcErrorCode createIndirectStub(StringRef StubName,
-                                      orc::TargetAddress Addr) {
+                                      JITTargetAddress Addr) {
     return mapError(
         IndirectStubsMgr->createStub(StubName, Addr, JITSymbolFlags::Exported));
   }
 
   LLVMOrcErrorCode setIndirectStubPointer(StringRef Name,
-                                          orc::TargetAddress Addr) {
+                                          JITTargetAddress Addr) {
     return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
   }
 
-  std::unique_ptr<RuntimeDyld::SymbolResolver>
+  std::unique_ptr<JITSymbolResolver>
   createResolver(LLVMOrcSymbolResolverFn ExternalResolver,
                  void *ExternalResolverCtx) {
     return orc::createLambdaResolver(
-        [this, ExternalResolver, ExternalResolverCtx](const std::string &Name) {
+        [this, ExternalResolver, ExternalResolverCtx](const std::string &Name)
+            -> JITSymbol {
           // Search order:
           // 1. JIT'd symbols.
           // 2. Runtime overrides.
           // 3. External resolver (if present).
 
           if (auto Sym = CODLayer.findSymbol(Name, true))
-            return Sym.toRuntimeDyldSymbol();
+            return Sym;
           if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
             return Sym;
 
           if (ExternalResolver)
-            return RuntimeDyld::SymbolInfo(
+            return JITSymbol(
                 ExternalResolver(Name.c_str(), ExternalResolverCtx),
                 llvm::JITSymbolFlags::Exported);
 
-          return RuntimeDyld::SymbolInfo(nullptr);
+          return JITSymbol(nullptr);
         },
         [](const std::string &Name) {
-          return RuntimeDyld::SymbolInfo(nullptr);
+          return JITSymbol(nullptr);
         });
   }
 
@@ -222,14 +223,14 @@ public:
     FreeHandleIndexes.push_back(H);
   }
 
-  orc::JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
+  JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     if (auto Sym = IndirectStubsMgr->findStub(Name, ExportedSymbolsOnly))
       return Sym;
     return CODLayer.findSymbol(mangle(Name), ExportedSymbolsOnly);
   }
 
-  orc::JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
-                              bool ExportedSymbolsOnly) {
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
+                         bool ExportedSymbolsOnly) {
     return GenericHandles[H]->findSymbolIn(Name, ExportedSymbolsOnly);
   }
 

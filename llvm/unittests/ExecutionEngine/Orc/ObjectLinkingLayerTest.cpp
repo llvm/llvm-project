@@ -90,10 +90,10 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
   auto Resolver =
     createLambdaResolver(
       [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
+        return JITSymbol(nullptr);
       },
       [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
+        return JITSymbol(nullptr);
       });
 
   {
@@ -165,11 +165,11 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     createLambdaResolver(
       [&](const std::string &Name) {
         if (auto Sym = ObjLayer.findSymbol(Name, true))
-          return Sym.toRuntimeDyldSymbol();
-        return RuntimeDyld::SymbolInfo(nullptr);
+          return Sym;
+        return JITSymbol(nullptr);
       },
       [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
+        return JITSymbol(nullptr);
       });
 
   SectionMemoryManagerWrapper SMMW;

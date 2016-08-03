@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -fast-isel -verify-machineinstrs \
-; RUN:   -aarch64-atomic-cfg-tidy=0 -disable-cgp -disable-branch-fold \
+; RUN:   -aarch64-enable-atomic-cfg-tidy=0 -disable-cgp -disable-branch-fold \
 ; RUN:   < %s | FileCheck %s
 
 ;

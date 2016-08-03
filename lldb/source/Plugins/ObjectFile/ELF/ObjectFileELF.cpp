@@ -1479,7 +1479,7 @@ ObjectFileELF::RefineModuleDetailsFromNote (lldb_private::DataExtractor &data, l
         else if (note.n_name == LLDB_NT_OWNER_CORE)
         {
             // Parse the NT_FILE to look for stuff in paths to shared libraries
-            // As the contents look like:
+            // As the contents look like this in a 64 bit ELF core file:
             // count     = 0x000000000000000a (10)
             // page_size = 0x0000000000001000 (4096)
             // Index start              end                file_ofs           path
@@ -1494,14 +1494,24 @@ ObjectFileELF::RefineModuleDetailsFromNote (lldb_private::DataExtractor &data, l
             // [  7] 0x00007fa79cdb2000 0x00007fa79cdd5000 0x0000000000000000 /lib/x86_64-linux-gnu/ld-2.19.so
             // [  8] 0x00007fa79cfd4000 0x00007fa79cfd5000 0x0000000000000022 /lib/x86_64-linux-gnu/ld-2.19.so
             // [  9] 0x00007fa79cfd5000 0x00007fa79cfd6000 0x0000000000000023 /lib/x86_64-linux-gnu/ld-2.19.so
+            // In the 32 bit ELFs the count, page_size, start, end, file_ofs are uint32_t
+            // For reference: see readelf source code (in binutils).
             if (note.n_type == NT_FILE)
             {
-                uint64_t count = data.GetU64(&offset);
-                offset += 8 + 3*8*count; // Skip page size and all start/end/file_ofs
+                uint64_t count = data.GetAddress(&offset);
+                const char *cstr;
+                data.GetAddress(&offset);                        // Skip page size
+                offset += count * 3 * data.GetAddressByteSize(); // Skip all start/end/file_ofs
                 for (size_t i=0; i<count; ++i)
                 {
-                    llvm::StringRef path(data.GetCStr(&offset));
-                    if (path.startswith("/lib/x86_64-linux-gnu"))
+                    cstr = data.GetCStr(&offset);
+                    if(cstr == nullptr)
+                    {
+                        error.SetErrorStringWithFormat("ObjectFileELF::%s trying to read at an offset after the end (GetCStr returned nullptr)", __FUNCTION__);
+                        return error;
+                    }
+                    llvm::StringRef path(cstr);
+                    if (path.startswith("/lib/x86_64-linux-gnu") || path.startswith("/lib/i386-linux-gnu"))
                     {
                         arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
                         break;

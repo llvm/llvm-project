@@ -27,6 +27,7 @@ set( LLDB_USED_LIBS
   lldbPluginJavaLanguage
   lldbPluginObjCLanguage
   lldbPluginObjCPlusPlusLanguage
+  lldbPluginOCamlLanguage
 
   lldbPluginObjectFileELF
   lldbPluginObjectFileJIT

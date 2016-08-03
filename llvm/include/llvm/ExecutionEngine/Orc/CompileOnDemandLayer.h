@@ -120,13 +120,12 @@ private:
   };
 
   struct LogicalDylibResources {
-    typedef std::function<RuntimeDyld::SymbolInfo(const std::string&)>
-      SymbolResolverFtor;
+    typedef std::function<JITSymbol(const std::string&)> SymbolResolverFtor;
 
     typedef std::function<typename BaseLayerT::ModuleSetHandleT(
                             BaseLayerT&,
                             std::unique_ptr<Module>,
-                            std::unique_ptr<RuntimeDyld::SymbolResolver>)>
+                            std::unique_ptr<JITSymbolResolver>)>
       ModuleAdderFtor;
 
     LogicalDylibResources() = default;
@@ -145,7 +144,7 @@ private:
       return *this;
     }
 
-    std::unique_ptr<RuntimeDyld::SymbolResolver> ExternalSymbolResolver;
+    std::unique_ptr<JITSymbolResolver> ExternalSymbolResolver;
     std::unique_ptr<ResourceOwner<RuntimeDyld::MemoryManager>> MemMgr;
     ModuleAdderFtor ModuleAdder;
   };
@@ -196,7 +195,7 @@ public:
 
     LDResources.ModuleAdder =
       [&MemMgrRef](BaseLayerT &B, std::unique_ptr<Module> M,
-                   std::unique_ptr<RuntimeDyld::SymbolResolver> R) {
+                   std::unique_ptr<JITSymbolResolver> R) {
         std::vector<std::unique_ptr<Module>> Ms;
         Ms.push_back(std::move(M));
         return B.addModuleSet(std::move(Ms), &MemMgrRef, std::move(R));
@@ -234,6 +233,32 @@ public:
   JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return H->findSymbol(Name, ExportedSymbolsOnly);
+  }
+
+  /// @brief Update the stub for the given function to point at FnBodyAddr.
+  /// This can be used to support re-optimization.
+  /// @return true if the function exists and the stub is updated, false
+  ///         otherwise.
+  //
+  // FIXME: We should track and free associated resources (unused compile
+  //        callbacks, uncompiled IR, and no-longer-needed/reachable function
+  //        implementations).
+  // FIXME: Return Error once the JIT APIs are Errorized.
+  bool updatePointer(std::string FuncName, JITTargetAddress FnBodyAddr) {
+    //Find out which logical dylib contains our symbol
+    auto LDI = LogicalDylibs.begin();
+    for (auto LDE = LogicalDylibs.end(); LDI != LDE; ++LDI) {
+      if (auto LMResources = LDI->getLogicalModuleResourcesForSymbol(FuncName, false)) {
+        Module &SrcM = LMResources->SourceModule->getResource();
+        std::string CalledFnName = mangle(FuncName, SrcM.getDataLayout());
+        if (auto EC = LMResources->StubsMgr->updatePointer(CalledFnName, FnBodyAddr)) {
+          return false;
+        }
+        else
+          return true;
+      }
+    }
+    return false;
   }
 
 private:
@@ -360,7 +385,7 @@ private:
         [&LD, LMH](const std::string &Name) {
           auto &LMResources = LD.getLogicalModuleResources(LMH);
           if (auto Sym = LMResources.StubsMgr->findStub(Name, false))
-            return Sym.toRuntimeDyldSymbol();
+            return Sym;
           auto &LDResolver = LD.getDylibResources().ExternalSymbolResolver;
           return LDResolver->findSymbolInLogicalDylib(Name);
         },
@@ -383,9 +408,9 @@ private:
     return MangledName;
   }
 
-  TargetAddress extractAndCompile(CODLogicalDylib &LD,
-                                  LogicalModuleHandle LMH,
-                                  Function &F) {
+  JITTargetAddress extractAndCompile(CODLogicalDylib &LD,
+                                     LogicalModuleHandle LMH,
+                                     Function &F) {
     auto &LMResources = LD.getLogicalModuleResources(LMH);
     Module &SrcM = LMResources.SourceModule->getResource();
 
@@ -399,13 +424,13 @@ private:
     auto Part = Partition(F);
     auto PartH = emitPartition(LD, LMH, Part);
 
-    TargetAddress CalledAddr = 0;
+    JITTargetAddress CalledAddr = 0;
     for (auto *SubF : Part) {
       std::string FnName = mangle(SubF->getName(), SrcM.getDataLayout());
       auto FnBodySym = BaseLayer.findSymbolIn(PartH, FnName, false);
       assert(FnBodySym && "Couldn't find function body.");
 
-      TargetAddress FnBodyAddr = FnBodySym.getAddress();
+      JITTargetAddress FnBodyAddr = FnBodySym.getAddress();
 
       // If this is the function we're calling record the address so we can
       // return it from this function.
@@ -487,7 +512,7 @@ private:
     auto Resolver = createLambdaResolver(
         [this, &LD, LMH](const std::string &Name) {
           if (auto Sym = LD.findSymbolInternally(LMH, Name))
-            return Sym.toRuntimeDyldSymbol();
+            return Sym;
           auto &LDResolver = LD.getDylibResources().ExternalSymbolResolver;
           return LDResolver->findSymbolInLogicalDylib(Name);
         },

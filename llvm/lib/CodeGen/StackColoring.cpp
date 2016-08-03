@@ -980,7 +980,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
                << "********** Function: "
                << ((const Value*)Func.getFunction())->getName() << '\n');
   MF = &Func;
-  MFI = MF->getFrameInfo();
+  MFI = &MF->getFrameInfo();
   Indexes = &getAnalysis<SlotIndexes>();
   SP = &getAnalysis<StackProtector>();
   BlockLiveness.clear();

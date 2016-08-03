@@ -161,9 +161,11 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     uint32_t Type = Rel.getType(Config->Mips64EL);
     SymbolBody &Body = this->File->getRelocTargetSym(Rel);
 
-    RelTy *P = reinterpret_cast<RelTy *>(Buf);
+    Elf_Rela *P = reinterpret_cast<Elf_Rela *>(Buf);
     Buf += sizeof(RelTy);
 
+    if (Config->Rela)
+      P->r_addend = getAddend<ELFT>(Rel);
     P->r_offset = RelocatedSection->getOffset(Rel.r_offset);
     P->setSymbolAndType(Body.DynsymIndex, Type, Config->Mips64EL);
   }
@@ -666,6 +668,31 @@ bool MipsOptionsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::MipsOptions;
 }
 
+template <class ELFT>
+CommonInputSection<ELFT>::CommonInputSection(
+    std::vector<DefinedCommon<ELFT> *> Syms)
+    : InputSection<ELFT>(nullptr, &Hdr) {
+  Hdr.sh_size = 0;
+  Hdr.sh_type = SHT_NOBITS;
+  Hdr.sh_flags = SHF_ALLOC | SHF_WRITE;
+  this->Live = true;
+
+  // Sort the common symbols by alignment as an heuristic to pack them better.
+  std::stable_sort(Syms.begin(), Syms.end(), [](const DefinedCommon<ELFT> *A,
+                                                const DefinedCommon<ELFT> *B) {
+    return A->Alignment > B->Alignment;
+  });
+
+  for (DefinedCommon<ELFT> *Sym : Syms) {
+    this->Alignment = std::max<uintX_t>(this->Alignment, Sym->Alignment);
+    Hdr.sh_size = alignTo(Hdr.sh_size, Sym->Alignment);
+
+    // Compute symbol offset relative to beginning of input section.
+    Sym->Offset = Hdr.sh_size;
+    Hdr.sh_size += Sym->Size;
+  }
+}
+
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;
 template class elf::InputSectionBase<ELF64LE>;
@@ -695,3 +722,8 @@ template class elf::MipsOptionsInputSection<ELF32LE>;
 template class elf::MipsOptionsInputSection<ELF32BE>;
 template class elf::MipsOptionsInputSection<ELF64LE>;
 template class elf::MipsOptionsInputSection<ELF64BE>;
+
+template class elf::CommonInputSection<ELF32LE>;
+template class elf::CommonInputSection<ELF32BE>;
+template class elf::CommonInputSection<ELF64LE>;
+template class elf::CommonInputSection<ELF64BE>;

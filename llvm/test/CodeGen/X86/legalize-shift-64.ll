@@ -24,19 +24,13 @@ define i64 @test2(i64 %xx, i32 %test) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; CHECK-NEXT:    andb $7, %ch
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl %edx
-; CHECK-NEXT:    xorb $31, %cl
-; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    andb $7, %cl
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    shldl %cl, %esi, %edx
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %and = and i32 %test, 7
@@ -48,20 +42,12 @@ define i64 @test2(i64 %xx, i32 %test) nounwind {
 define i64 @test3(i64 %xx, i32 %test) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; CHECK-NEXT:    andb $7, %ch
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    leal (%edx,%edx), %eax
-; CHECK-NEXT:    xorb $31, %cl
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    andb $7, %cl
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
 ; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %and = and i32 %test, 7
   %sh_prom = zext i32 %and to i64
@@ -72,20 +58,12 @@ define i64 @test3(i64 %xx, i32 %test) nounwind {
 define i64 @test4(i64 %xx, i32 %test) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; CHECK-NEXT:    andb $7, %ch
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    leal (%edx,%edx), %eax
-; CHECK-NEXT:    xorb $31, %cl
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    andb $7, %cl
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
 ; CHECK-NEXT:    sarl %cl, %edx
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %and = and i32 %test, 7
   %sh_prom = zext i32 %and to i64

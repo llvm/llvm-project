@@ -1,5 +1,6 @@
-// RUN: clang-rename -offset=73 -new-name=X %s -- | FileCheck %s
-
+// RUN: cat %s > %t.cpp
+// RUN: clang-rename -offset=133 -new-name=X %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 class Cla {
 public:
   int getValue() const {
@@ -12,5 +13,5 @@ int main() {
   reinterpret_cast<const Cla *>(C)->getValue(); // CHECK: reinterpret_cast<const X *>
 }
 
-// Use grep -FUbo 'Cla' <file> to get the correct offset of Cla when changing
+// Use grep -FUbo 'Cla' <file> to get the correct offset of foo when changing
 // this file.

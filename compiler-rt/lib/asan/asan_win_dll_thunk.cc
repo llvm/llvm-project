@@ -15,7 +15,7 @@
 // See https://github.com/google/sanitizers/issues/209 for the details.
 //===----------------------------------------------------------------------===//
 
-// Only compile this code when buidling asan_dll_thunk.lib
+// Only compile this code when building asan_dll_thunk.lib
 // Using #ifdef rather than relying on Makefiles etc.
 // simplifies the build procedure.
 #ifdef ASAN_DLL_THUNK

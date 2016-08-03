@@ -163,6 +163,13 @@ const u8 kPatchableCode4[] = {
     0x90, 0x90, 0x90, 0x90,
 };
 
+const u8 kPatchableCode5[] = {
+    0x55,                                      // push    ebp
+    0x8b, 0xec,                                // mov     ebp,esp
+    0x8d, 0xa4, 0x24, 0x30, 0xfd, 0xff, 0xff,  // lea     esp,[esp-2D0h]
+    0x54,                                      // push    esp
+};
+
 const u8 kUnpatchableCode1[] = {
     0xC3,                           // ret
 };
@@ -474,6 +481,7 @@ TEST(Interception, PatchableFunction) {
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode3, override));
 #endif
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode4, override));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode5, override));
 
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode1, override));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode2, override));

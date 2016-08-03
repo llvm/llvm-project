@@ -19,13 +19,13 @@
 # RUN: hexdump -C %t.out | FileCheck -check-prefix=NO %s
 # NO: 00000120  66 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
-## Filler should be a hex value (1):
+## Decimal value.
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =99 }" > %t.script
-# RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
-# RUN:   | FileCheck --check-prefix=ERR %s
-# ERR: filler should be a hexadecimal value
+# RUN: ld.lld -o %t.out --script %t.script %t
+# RUN: hexdump -C %t.out | FileCheck -check-prefix=DEC %s
+# DEC: 00000120  66 63 63 63 63 63 63 63  63 63 63 63 63 63 63 63
 
-## Filler should be a hex value (2):
+## Invalid hex value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
 # RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR2 %s

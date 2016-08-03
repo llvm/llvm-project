@@ -30,7 +30,9 @@ RefactoringTool::RefactoringTool(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps)
     : ClangTool(Compilations, SourcePaths, PCHContainerOps) {}
 
-Replacements &RefactoringTool::getReplacements() { return Replace; }
+std::map<std::string, Replacements> &RefactoringTool::getReplacements() {
+  return FileToReplaces;
+}
 
 int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
   if (int Result = run(ActionFactory)) {
@@ -54,19 +56,21 @@ int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
 }
 
 bool RefactoringTool::applyAllReplacements(Rewriter &Rewrite) {
-  return tooling::applyAllReplacements(Replace, Rewrite);
+  bool Result = true;
+  for (const auto &Entry : FileToReplaces)
+    Result = tooling::applyAllReplacements(Entry.second, Rewrite) && Result;
+  return Result;
 }
 
 int RefactoringTool::saveRewrittenFiles(Rewriter &Rewrite) {
   return Rewrite.overwriteChangedFiles() ? 1 : 0;
 }
 
-bool formatAndApplyAllReplacements(const Replacements &Replaces,
-                                   Rewriter &Rewrite, StringRef Style) {
+bool formatAndApplyAllReplacements(
+    const std::map<std::string, Replacements> &FileToReplaces, Rewriter &Rewrite,
+    StringRef Style) {
   SourceManager &SM = Rewrite.getSourceMgr();
   FileManager &Files = SM.getFileManager();
-
-  auto FileToReplaces = groupReplacementsByFile(Replaces);
 
   bool Result = true;
   for (const auto &FileAndReplaces : FileToReplaces) {

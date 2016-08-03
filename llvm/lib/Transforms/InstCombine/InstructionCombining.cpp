@@ -2981,7 +2981,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
   Worklist.push_back(BB);
 
   SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
-  DenseMap<ConstantExpr*, Constant*> FoldedConstants;
+  DenseMap<Constant *, Constant *> FoldedConstants;
 
   do {
     BB = Worklist.pop_back_val();
@@ -3017,17 +3017,17 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
       // See if we can constant fold its operands.
       for (User::op_iterator i = Inst->op_begin(), e = Inst->op_end(); i != e;
            ++i) {
-        ConstantExpr *CE = dyn_cast<ConstantExpr>(i);
-        if (CE == nullptr)
+        if (!isa<ConstantVector>(i) && !isa<ConstantExpr>(i))
           continue;
 
-        Constant *&FoldRes = FoldedConstants[CE];
+        auto *C = cast<Constant>(i);
+        Constant *&FoldRes = FoldedConstants[C];
         if (!FoldRes)
-          FoldRes = ConstantFoldConstantExpression(CE, DL, TLI);
+          FoldRes = ConstantFoldConstant(C, DL, TLI);
         if (!FoldRes)
-          FoldRes = CE;
+          FoldRes = C;
 
-        if (FoldRes != CE) {
+        if (FoldRes != C) {
           *i = FoldRes;
           MadeIRChange = true;
         }

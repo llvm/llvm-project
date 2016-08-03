@@ -1025,7 +1025,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.pand.d.512(<16 x i32>, <16 x i32>, <16 
 define <8 x i64> @test_xor_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_xor_epi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.pxor.q.512(<8 x i64> %a,<8 x i64> %b, <8 x i64>zeroinitializer, i8 -1)
   ret < 8 x i64> %res
@@ -1047,7 +1047,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.pxor.q.512(<8 x i64>, <8 x i64>, <8 x i6
 define <8 x i64> @test_or_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_or_epi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vorps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.por.q.512(<8 x i64> %a,<8 x i64> %b, <8 x i64>zeroinitializer, i8 -1)
   ret < 8 x i64> %res
@@ -1069,7 +1069,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.por.q.512(<8 x i64>, <8 x i64>, <8 x i64
 define <8 x i64> @test_and_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_and_epi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vandps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.pand.q.512(<8 x i64> %a,<8 x i64> %b, <8 x i64>zeroinitializer, i8 -1)
   ret < 8 x i64> %res

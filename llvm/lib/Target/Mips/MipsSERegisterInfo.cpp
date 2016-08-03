@@ -149,7 +149,7 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
                                      int64_t SPOffset) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
   MipsABIInfo ABI =
@@ -157,7 +157,7 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   const MipsRegisterInfo *RegInfo =
     static_cast<const MipsRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int MinCSFI = 0;
   int MaxCSFI = -1;
 
@@ -182,9 +182,9 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
       IsISRRegFI)
     FrameReg = ABI.GetStackPtr();
   else if (RegInfo->needsStackRealignment(MF)) {
-    if (MFI->hasVarSizedObjects() && !MFI->isFixedObjectIndex(FrameIndex))
+    if (MFI.hasVarSizedObjects() && !MFI.isFixedObjectIndex(FrameIndex))
       FrameReg = ABI.GetBasePtr();
-    else if (MFI->isFixedObjectIndex(FrameIndex))
+    else if (MFI.isFixedObjectIndex(FrameIndex))
       FrameReg = getFrameRegister(MF);
     else
       FrameReg = ABI.GetStackPtr();

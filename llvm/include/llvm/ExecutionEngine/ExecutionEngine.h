@@ -137,13 +137,13 @@ protected:
                                 std::unique_ptr<Module> M,
                                 std::string *ErrorStr,
                                 std::shared_ptr<MCJITMemoryManager> MM,
-                                std::shared_ptr<RuntimeDyld::SymbolResolver> SR,
+                                std::shared_ptr<JITSymbolResolver> SR,
                                 std::unique_ptr<TargetMachine> TM);
 
   static ExecutionEngine *(*OrcMCJITReplacementCtor)(
                                 std::string *ErrorStr,
                                 std::shared_ptr<MCJITMemoryManager> MM,
-                                std::shared_ptr<RuntimeDyld::SymbolResolver> SR,
+                                std::shared_ptr<JITSymbolResolver> SR,
                                 std::unique_ptr<TargetMachine> TM);
 
   static ExecutionEngine *(*InterpCtor)(std::unique_ptr<Module> M,
@@ -516,7 +516,7 @@ private:
   std::string *ErrorStr;
   CodeGenOpt::Level OptLevel;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
-  std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver;
+  std::shared_ptr<JITSymbolResolver> Resolver;
   TargetOptions Options;
   Optional<Reloc::Model> RelocModel;
   CodeModel::Model CMModel;
@@ -555,7 +555,7 @@ public:
   setMemoryManager(std::unique_ptr<MCJITMemoryManager> MM);
 
   EngineBuilder&
-  setSymbolResolver(std::unique_ptr<RuntimeDyld::SymbolResolver> SR);
+  setSymbolResolver(std::unique_ptr<JITSymbolResolver> SR);
 
   /// setErrorStr - Set the error string to write to on error.  This option
   /// defaults to NULL.

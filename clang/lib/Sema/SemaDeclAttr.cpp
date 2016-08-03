@@ -6484,3 +6484,26 @@ void Sema::EmitAvailabilityWarning(AvailabilityDiagnostic AD,
   DoEmitAvailabilityWarning(*this, AD, Ctx, D, Message, Loc, UnknownObjCClass,
                             ObjCProperty, ObjCPropertyAccess);
 }
+
+VersionTuple Sema::getVersionForDecl(const Decl *D) const {
+  assert(D && "Expected a declaration here!");
+
+  VersionTuple DeclVersion;
+  if (const auto *AA = getAttrForPlatform(getASTContext(), D))
+    DeclVersion = AA->getIntroduced();
+
+  const ObjCInterfaceDecl *Interface = nullptr;
+
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    Interface = MD->getClassInterface();
+  else if (const auto *ID = dyn_cast<ObjCImplementationDecl>(D))
+    Interface = ID->getClassInterface();
+
+  if (Interface) {
+    if (const auto *AA = getAttrForPlatform(getASTContext(), Interface))
+      if (AA->getIntroduced() > DeclVersion)
+        DeclVersion = AA->getIntroduced();
+  }
+
+  return std::max(DeclVersion, Context.getTargetInfo().getPlatformMinVersion());
+}

@@ -26,9 +26,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -71,6 +72,10 @@ static bool IsArgument(const MachineInstr &MI) {
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
   case WebAssembly::ARGUMENT_F64:
+  case WebAssembly::ARGUMENT_v16i8:
+  case WebAssembly::ARGUMENT_v8i16:
+  case WebAssembly::ARGUMENT_v4i32:
+  case WebAssembly::ARGUMENT_v4f32:
     return true;
   default:
     return false;

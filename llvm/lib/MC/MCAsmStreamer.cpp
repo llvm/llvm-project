@@ -357,9 +357,10 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
     ExplicitCommentToEmit.append("\t");
     ExplicitCommentToEmit.append(c.str());
   } else if (c.front() == '#') {
-    // # are comments for ## commentString. Output extra #.
-    ExplicitCommentToEmit.append("\t#");
-    ExplicitCommentToEmit.append(c.str());
+
+    ExplicitCommentToEmit.append("\t");
+    ExplicitCommentToEmit.append(MAI->getCommentString());
+    ExplicitCommentToEmit.append(c.slice(1, c.size()).str());
   } else
     assert(false && "Unexpected Assembly Comment");
   // full line comments immediately output

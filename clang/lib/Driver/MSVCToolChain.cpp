@@ -114,6 +114,9 @@ static bool readFullStringValue(HKEY hkey, const char *valueName,
   if (result == ERROR_SUCCESS) {
     std::wstring WideValue(reinterpret_cast<const wchar_t *>(buffer.data()),
                            valueSize / sizeof(wchar_t));
+    if (valueSize && WideValue.back() == L'\0') {
+        WideValue.pop_back();
+    }
     // The destination buffer must be empty as an invariant of the conversion
     // function; but this function is sometimes called in a loop that passes in
     // the same buffer, however. Simply clear it out so we can overwrite it.
@@ -191,8 +194,7 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
           lResult = RegOpenKeyExA(hTopKey, bestName.c_str(), 0,
                                   KEY_READ | KEY_WOW64_32KEY, &hKey);
           if (lResult == ERROR_SUCCESS) {
-            lResult = readFullStringValue(hKey, valueName, value);
-            if (lResult == ERROR_SUCCESS) {
+            if (readFullStringValue(hKey, valueName, value)) {
               bestValue = dvalue;
               if (phValue)
                 *phValue = bestName;
@@ -209,8 +211,7 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
     lResult =
         RegOpenKeyExA(hRootKey, keyPath, 0, KEY_READ | KEY_WOW64_32KEY, &hKey);
     if (lResult == ERROR_SUCCESS) {
-      lResult = readFullStringValue(hKey, valueName, value);
-      if (lResult == ERROR_SUCCESS)
+      if (readFullStringValue(hKey, valueName, value))
         returnValue = true;
       if (phValue)
         phValue->clear();

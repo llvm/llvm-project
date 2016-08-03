@@ -292,6 +292,15 @@ bool MIRParserImpl::initializeMachineFunction(MachineFunction &MF) {
   MF.setHasInlineAsm(YamlMF.HasInlineAsm);
   if (YamlMF.AllVRegsAllocated)
     MF.getProperties().set(MachineFunctionProperties::Property::AllVRegsAllocated);
+
+  if (YamlMF.Legalized)
+    MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
+  if (YamlMF.RegBankSelected)
+    MF.getProperties().set(
+        MachineFunctionProperties::Property::RegBankSelected);
+  if (YamlMF.Selected)
+    MF.getProperties().set(MachineFunctionProperties::Property::Selected);
+
   PerFunctionMIParsingState PFS(MF, SM, IRSlots);
   if (initializeRegisterInfo(PFS, YamlMF))
     return true;
@@ -449,7 +458,7 @@ void MIRParserImpl::inferRegisterInfo(const PerFunctionMIParsingState &PFS,
 bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                         const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &F = *MF.getFunction();
   const yaml::MachineFrameInfo &YamlMFI = YamlMF.FrameInfo;
   MFI.setFrameAddressIsTaken(YamlMFI.IsFrameAddressTaken);

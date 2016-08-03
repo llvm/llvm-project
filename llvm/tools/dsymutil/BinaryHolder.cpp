@@ -106,8 +106,11 @@ BinaryHolder::GetArchiveMemberBuffers(StringRef Filename,
     for (auto Child : CurrentArchive->children(Err)) {
       if (auto NameOrErr = Child.getName()) {
         if (*NameOrErr == Filename) {
+          Expected<sys::TimeValue> ModTimeOrErr = Child.getLastModified();
+          if (!ModTimeOrErr)
+            return errorToErrorCode(ModTimeOrErr.takeError());
           if (Timestamp != sys::TimeValue::PosixZeroTime() &&
-              Timestamp != Child.getLastModified()) {
+              Timestamp != ModTimeOrErr.get()) {
             if (Verbose)
               outs() << "\tmember had timestamp mismatch.\n";
             continue;
@@ -115,8 +118,8 @@ BinaryHolder::GetArchiveMemberBuffers(StringRef Filename,
           if (Verbose)
             outs() << "\tfound member in current archive.\n";
           auto ErrOrMem = Child.getMemoryBufferRef();
-          if (auto Err = ErrOrMem.getError())
-            return Err;
+          if (!ErrOrMem)
+            return errorToErrorCode(ErrOrMem.takeError());
           Buffers.push_back(*ErrOrMem);
         }
       }

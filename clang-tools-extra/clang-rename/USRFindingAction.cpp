@@ -54,7 +54,12 @@ public:
 
   void Find() {
     USRSet.insert(getUSRForDecl(FoundDecl));
-    addUSRsFromOverrideSetsAndCtorDtors();
+    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
+      addUSRsFromOverrideSets(MethodDecl);
+    }
+    if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
+      addUSRsOfCtorDtors(RecordDecl);
+    }
     addMatchers();
     Finder.matchAST(Context);
     USRs->insert(USRs->end(), USRSet.begin(), USRSet.end());
@@ -63,12 +68,11 @@ public:
 private:
   void addMatchers() {
     const auto CXXMethodDeclMatcher =
-        cxxMethodDecl(isVirtual()).bind("cxxMethodDecl");
+        cxxMethodDecl(forEachOverridden(cxxMethodDecl().bind("cxxMethodDecl")));
     Finder.addMatcher(CXXMethodDeclMatcher, this);
   }
 
-  // FIXME: Implement hasOverriddenMethod and matchesUSR matchers to make
-  // lookups more efficient.
+  // FIXME: Implement matchesUSR matchers to make lookups more efficient.
   virtual void run(const MatchFinder::MatchResult &Result) {
     const auto *VirtualMethod =
         Result.Nodes.getNodeAs<CXXMethodDecl>("cxxMethodDecl");
@@ -83,20 +87,19 @@ private:
     }
   }
 
-  void addUSRsFromOverrideSetsAndCtorDtors() {
-    // If D is CXXRecordDecl we should add all USRs of its constructors.
-    if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
-      RecordDecl = RecordDecl->getDefinition();
-      for (const auto *CtorDecl : RecordDecl->ctors()) {
-        USRSet.insert(getUSRForDecl(CtorDecl));
-      }
-      USRSet.insert(getUSRForDecl(RecordDecl->getDestructor()));
+  void addUSRsOfCtorDtors(const CXXRecordDecl *RecordDecl) {
+    RecordDecl = RecordDecl->getDefinition();
+    for (const auto *CtorDecl : RecordDecl->ctors()) {
+      USRSet.insert(getUSRForDecl(CtorDecl));
     }
-    // If D is CXXMethodDecl we should add all USRs of its overriden methods.
-    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
-      for (auto &OverriddenMethod : MethodDecl->overridden_methods()) {
-        USRSet.insert(getUSRForDecl(OverriddenMethod));
-      }
+    USRSet.insert(getUSRForDecl(RecordDecl->getDestructor()));
+  }
+
+  void addUSRsFromOverrideSets(const CXXMethodDecl *MethodDecl) {
+    USRSet.insert(getUSRForDecl(MethodDecl));
+    for (auto &OverriddenMethod : MethodDecl->overridden_methods()) {
+      // Recursively visit each OverridenMethod.
+      addUSRsFromOverrideSets(OverriddenMethod);
     }
   }
 

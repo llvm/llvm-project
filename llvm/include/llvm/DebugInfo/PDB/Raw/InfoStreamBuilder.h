@@ -19,6 +19,9 @@
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
 namespace llvm {
+namespace msf {
+class StreamWriter;
+}
 namespace pdb {
 class PDBFile;
 
@@ -37,13 +40,17 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
-  Expected<std::unique_ptr<InfoStream>> build(PDBFile &File);
+  Expected<std::unique_ptr<InfoStream>>
+  build(PDBFile &File, const msf::WritableStream &Buffer);
+
+  Error commit(const msf::MSFLayout &Layout,
+               const msf::WritableStream &Buffer) const;
 
 private:
-  Optional<PdbRaw_ImplVer> Ver;
-  Optional<uint32_t> Sig;
-  Optional<uint32_t> Age;
-  Optional<PDB_UniqueId> Guid;
+  PdbRaw_ImplVer Ver;
+  uint32_t Sig;
+  uint32_t Age;
+  PDB_UniqueId Guid;
 
   NameMapBuilder NamedStreams;
 };

@@ -111,11 +111,11 @@ generate a line-oriented report:
     # Step 3(b): Create a line-oriented coverage report.
     % llvm-cov show ./foo -instr-profile=foo.profdata
 
-To demangle any C++ identifiers in the output, use:
+To generate the same report in html with demangling turned on, use:
 
 .. code-block:: console
 
-    % llvm-cov show ./foo -instr-profile=foo.profdata | c++filt -n
+    % llvm-cov show ./foo -instr-profile=foo.profdata -format html -o report.dir -Xdemangler c++filt -Xdemangler -n
 
 This report includes a summary view as well as dedicated sub-views for
 templated functions and their instantiations. For our example program, we get
@@ -152,11 +152,11 @@ of a line-oriented report) with:
 
     # Step 3(c): Create a coverage summary.
     % llvm-cov report ./foo -instr-profile=foo.profdata
-    Filename                    Regions    Miss   Cover Functions  Executed
-    -----------------------------------------------------------------------
-    /tmp/foo.cc                      13       0 100.00%         3   100.00%
-    -----------------------------------------------------------------------
-    TOTAL                            13       0 100.00%         3   100.00%
+    Filename           Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
+    --------------------------------------------------------------------------------------------------------------------------------------
+    /tmp/foo.cc             13                 0   100.00%           3                 0   100.00%          13                 0   100.00%
+    --------------------------------------------------------------------------------------------------------------------------------------
+    TOTAL                   13                 0   100.00%           3                 0   100.00%          13                 0   100.00%
 
 A few final notes:
 

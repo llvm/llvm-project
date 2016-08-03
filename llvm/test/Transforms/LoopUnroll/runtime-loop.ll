@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -23,7 +23,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; PROLOG: %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body.prol ], [ 0, %for.body.prol.preheader ]
 ; PROLOG:  %prol.iter.sub = sub i32 %prol.iter, 1
 ; PROLOG:  %prol.iter.cmp = icmp ne i32 %prol.iter.sub, 0
-; PROLOG:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit, !llvm.loop !0
+; PROLOG:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop !0
 
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {

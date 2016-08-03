@@ -46,7 +46,8 @@ typedef llvm::PointerUnion3<TemplateTypeParmDecl*, NonTypeTemplateParmDecl*,
 /// \brief Stores a list of template parameters for a TemplateDecl and its
 /// derived classes.
 class TemplateParameterList final
-    : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *> {
+    : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *,
+                                    Expr *> {
 
   /// The location of the 'template' keyword.
   SourceLocation TemplateLoc;
@@ -56,26 +57,36 @@ class TemplateParameterList final
 
   /// The number of template parameters in this template
   /// parameter list.
-  unsigned NumParams : 31;
+  unsigned NumParams : 30;
 
   /// Whether this template parameter list contains an unexpanded parameter
   /// pack.
   unsigned ContainsUnexpandedParameterPack : 1;
+
+  /// Whether this template parameter list has an associated requires-clause
+  unsigned HasRequiresClause : 1;
 
 protected:
   size_t numTrailingObjects(OverloadToken<NamedDecl *>) const {
     return NumParams;
   }
 
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return HasRequiresClause;
+  }
+
   TemplateParameterList(SourceLocation TemplateLoc, SourceLocation LAngleLoc,
-                        ArrayRef<NamedDecl *> Params, SourceLocation RAngleLoc);
+                        ArrayRef<NamedDecl *> Params, SourceLocation RAngleLoc,
+                        Expr *RequiresClause);
 
 public:
+  // FIXME: remove default argument for RequiresClause
   static TemplateParameterList *Create(const ASTContext &C,
                                        SourceLocation TemplateLoc,
                                        SourceLocation LAngleLoc,
                                        ArrayRef<NamedDecl *> Params,
-                                       SourceLocation RAngleLoc);
+                                       SourceLocation RAngleLoc,
+                                       Expr *RequiresClause = nullptr);
 
   /// \brief Iterates through the template parameters in this list.
   typedef NamedDecl** iterator;
@@ -127,6 +138,16 @@ public:
     return ContainsUnexpandedParameterPack;
   }
 
+  /// \brief The constraint-expression of the associated requires-clause.
+  Expr *getRequiresClause() {
+    return HasRequiresClause ? *getTrailingObjects<Expr *>() : nullptr;
+  }
+
+  /// \brief The constraint-expression of the associated requires-clause.
+  const Expr *getRequiresClause() const {
+    return HasRequiresClause ? *getTrailingObjects<Expr *>() : nullptr;
+  }
+
   SourceLocation getTemplateLoc() const { return TemplateLoc; }
   SourceLocation getLAngleLoc() const { return LAngleLoc; }
   SourceLocation getRAngleLoc() const { return RAngleLoc; }
@@ -136,36 +157,37 @@ public:
   }
 
   friend TrailingObjects;
-  template <size_t N> friend class FixedSizeTemplateParameterListStorage;
+
+  template <size_t N, bool HasRequiresClause>
+  friend class FixedSizeTemplateParameterListStorage;
+
+public:
+  // FIXME: workaround for MSVC 2013; remove when no longer needed
+  using FixedSizeStorageOwner = TrailingObjects::FixedSizeStorageOwner;
 };
 
-/// \brief Stores a list of template parameters for a TemplateDecl and its
-/// derived classes. Suitable for creating on the stack.
-template <size_t N> class FixedSizeTemplateParameterListStorage {
-  // This is kinda ugly: TemplateParameterList usually gets allocated
-  // in a block of memory with NamedDecls appended to it. Here, to get
-  // it stack allocated, we include the params as a separate
-  // variable. After allocation, the TemplateParameterList object
-  // treats them as part of itself.
-  TemplateParameterList List;
-  NamedDecl *Params[N];
+/// \brief Stores a list of template parameters and the associated
+/// requires-clause (if any) for a TemplateDecl and its derived classes.
+/// Suitable for creating on the stack.
+template <size_t N, bool HasRequiresClause>
+class FixedSizeTemplateParameterListStorage
+    : public TemplateParameterList::FixedSizeStorageOwner {
+  typename TemplateParameterList::FixedSizeStorage<
+      NamedDecl *, Expr *>::with_counts<
+      N, HasRequiresClause ? 1u : 0u
+      >::type storage;
 
 public:
   FixedSizeTemplateParameterListStorage(SourceLocation TemplateLoc,
                                         SourceLocation LAngleLoc,
                                         ArrayRef<NamedDecl *> Params,
-                                        SourceLocation RAngleLoc)
-      : List(TemplateLoc, LAngleLoc, Params, RAngleLoc) {
-    // Because we're doing an evil layout hack above, have some
-    // asserts, just to double-check everything is laid out like
-    // expected.
-    assert(sizeof(*this) ==
-               TemplateParameterList::totalSizeToAlloc<NamedDecl *>(N) &&
-           "Object layout not as expected");
-    assert(this->Params == List.getTrailingObjects<NamedDecl *>() &&
-           "Object layout not as expected");
-  }
-  TemplateParameterList *get() { return &List; }
+                                        SourceLocation RAngleLoc,
+                                        Expr *RequiresClause)
+      : FixedSizeStorageOwner(
+            (assert(N == Params.size()),
+             assert(HasRequiresClause == static_cast<bool>(RequiresClause)),
+             new (static_cast<void *>(&storage)) TemplateParameterList(
+                 TemplateLoc, LAngleLoc, Params, RAngleLoc, RequiresClause))) {}
 };
 
 /// \brief A template argument list.
@@ -351,6 +373,11 @@ public:
   /// Get the list of template parameters
   TemplateParameterList *getTemplateParameters() const {
     return TemplateParams;
+  }
+
+  /// Get the constraint-expression from the associated requires-clause (if any)
+  const Expr *getRequiresClause() const {
+    return TemplateParams ? TemplateParams->getRequiresClause() : nullptr;
   }
 
   /// Get the underlying, templated declaration.

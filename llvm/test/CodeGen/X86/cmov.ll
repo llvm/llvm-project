@@ -33,16 +33,17 @@ entry:
 }
 
 
-; x86's 32-bit cmov doesn't clobber the high 32 bits of the destination
-; if the condition is false. An explicit zero-extend (movl) is needed
-; after the cmov.
+; x86's 32-bit cmov zeroes the high 32 bits of the destination. Make
+; sure CodeGen takes advantage of that to avoid an unnecessary
+; zero-extend (movl) after the cmov.
 
 declare void @bar(i64) nounwind
 
 define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:      cmov{{n?}}el %[[R1:e..]], %[[R2:e..]]
-; CHECK-NEXT: movl    %[[R2]], %{{e..}}
+; CHECK-NOT:  movl
+; CHECK:      call
 
   %c = trunc i64 %a to i32
   %d = trunc i64 %b to i32

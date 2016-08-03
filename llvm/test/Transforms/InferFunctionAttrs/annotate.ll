@@ -499,6 +499,9 @@ declare i32 @memcmp(i8*, i8*, i64)
 ; CHECK: declare i8* @memcpy(i8*, i8* nocapture readonly, i64) [[G0]]
 declare i8* @memcpy(i8*, i8*, i64)
 
+; CHECK: declare i8* @mempcpy(i8*, i8* nocapture readonly, i64) [[G0]]
+declare i8* @mempcpy(i8*, i8*, i64)
+
 ; CHECK: declare i8* @memmove(i8*, i8* nocapture readonly, i64) [[G0]]
 declare i8* @memmove(i8*, i8*, i64)
 

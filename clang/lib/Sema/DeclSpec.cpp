@@ -1299,6 +1299,7 @@ bool VirtSpecifiers::SetSpecifier(Specifier VS, SourceLocation Loc,
   switch (VS) {
   default: llvm_unreachable("Unknown specifier!");
   case VS_Override: VS_overrideLoc = Loc; break;
+  case VS_GNU_Final:
   case VS_Sealed:
   case VS_Final:    VS_finalLoc = Loc; break;
   }
@@ -1311,6 +1312,7 @@ const char *VirtSpecifiers::getSpecifierName(Specifier VS) {
   default: llvm_unreachable("Unknown specifier");
   case VS_Override: return "override";
   case VS_Final: return "final";
+  case VS_GNU_Final: return "__final";
   case VS_Sealed: return "sealed";
   }
 }

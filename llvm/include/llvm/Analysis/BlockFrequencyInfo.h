@@ -61,6 +61,11 @@ public:
   /// the enclosing function's count (if available) and returns the value.
   Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB) const;
 
+  /// \brief Returns the estimated profile count of \p Freq.
+  /// This uses the frequency \p Freq and multiplies it by
+  /// the enclosing function's count (if available) and returns the value.
+  Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
+
   // Set the frequency of the given basic block.
   void setBlockFreq(const BasicBlock *BB, uint64_t Freq);
 

@@ -11,7 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBINFOSTREAM_H
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -27,18 +27,10 @@ class PDBFile;
 class InfoStream {
   friend class InfoStreamBuilder;
 
-  struct HeaderInfo {
-    support::ulittle32_t Version;
-    support::ulittle32_t Signature;
-    support::ulittle32_t Age;
-    PDB_UniqueId Guid;
-  };
-
 public:
   InfoStream(std::unique_ptr<msf::MappedBlockStream> Stream);
 
   Error reload();
-  Error commit();
 
   PdbRaw_ImplVer getVersion() const;
   uint32_t getSignature() const;

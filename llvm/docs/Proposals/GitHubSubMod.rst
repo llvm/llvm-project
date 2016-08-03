@@ -151,7 +151,7 @@ The three types hooks to be implemented are:
   in the lists, allowing us to retain history and do post-commit reviews.
   See: https://help.github.com/articles/managing-notifications-for-pushes-to-a-repository/
 
-Access will be transfered one-to-one to GitHub accounts for everyone that already
+Access will be transferred one-to-one to GitHub accounts for everyone that already
 has commit access to our current repository. Those who don't have accounts will
 have to create one in order to continue contributing to the project. In the
 future, people only need to provide their GitHub accounts to be granted access.
@@ -173,6 +173,11 @@ Additionally, each repository will have the following server hooks:
 
 Essentially, we're adding Git RW access in addition to the already existing
 structure, with all the additional benefits of it being in GitHub.
+
+Example of a working version:
+
+* Repository: https://github.com/llvm-beanz/llvm-submodules
+* Update bot: http://beanz-bot.com:8180/jenkins/job/submodule-update/
 
 What will *not* be changed
 --------------------------

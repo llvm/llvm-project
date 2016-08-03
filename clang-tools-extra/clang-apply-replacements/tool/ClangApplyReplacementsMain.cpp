@@ -108,7 +108,7 @@ getRewrittenData(const std::vector<tooling::Replacement> &Replacements,
                  Rewriter &Rewrites, std::string &Result) {
   if (Replacements.empty()) return true;
 
-  if (!tooling::applyAllReplacements(Replacements, Rewrites))
+  if (!applyAllReplacements(Replacements, Rewrites))
     return false;
 
   SourceManager &SM = Rewrites.getSourceMgr();

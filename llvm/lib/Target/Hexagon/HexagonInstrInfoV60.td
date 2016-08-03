@@ -1659,6 +1659,46 @@ defm V6_vpackoh :
      T_HVX_alu_VV <"$dst.h = vpacko($src1.w,$src2.w)">, V6_vpackoh_enc;
 }
 
+def SDTHexagonVPACK: SDTypeProfile<1, 3, [SDTCisSameAs<1, 2>,
+                                          SDTCisInt<3>]>;
+
+def HexagonVPACK: SDNode<"HexagonISD::VPACK", SDTHexagonVPACK>;
+
+// 0 as the last argument denotes vpacke. 1 denotes vpacko
+def: Pat<(v64i8 (HexagonVPACK (v64i8 VectorRegs:$Vs),
+                              (v64i8 VectorRegs:$Vt), (i32 0))),
+         (V6_vpackeb VectorRegs:$Vs, VectorRegs:$Vt)>,
+         Requires<[UseHVXSgl]>;
+def: Pat<(v64i8 (HexagonVPACK (v64i8 VectorRegs:$Vs),
+                              (v64i8 VectorRegs:$Vt), (i32 1))),
+         (V6_vpackob VectorRegs:$Vs, VectorRegs:$Vt)>,
+         Requires<[UseHVXSgl]>;
+def: Pat<(v32i16 (HexagonVPACK (v32i16 VectorRegs:$Vs),
+                               (v32i16 VectorRegs:$Vt), (i32 0))),
+         (V6_vpackeh VectorRegs:$Vs, VectorRegs:$Vt)>,
+         Requires<[UseHVXSgl]>;
+def: Pat<(v32i16 (HexagonVPACK (v32i16 VectorRegs:$Vs),
+                             (v32i16 VectorRegs:$Vt), (i32 1))),
+         (V6_vpackoh VectorRegs:$Vs, VectorRegs:$Vt)>,
+         Requires<[UseHVXSgl]>;
+
+def: Pat<(v128i8 (HexagonVPACK (v128i8 VecDblRegs:$Vs),
+                             (v128i8 VecDblRegs:$Vt), (i32 0))),
+         (V6_vpackeb_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
+         Requires<[UseHVXDbl]>;
+def: Pat<(v128i8 (HexagonVPACK (v128i8 VecDblRegs:$Vs),
+                             (v128i8 VecDblRegs:$Vt), (i32 1))),
+         (V6_vpackob_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
+         Requires<[UseHVXDbl]>;
+def: Pat<(v64i16 (HexagonVPACK (v64i16 VecDblRegs:$Vs),
+                             (v64i16 VecDblRegs:$Vt), (i32 0))),
+         (V6_vpackeh_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
+         Requires<[UseHVXDbl]>;
+def: Pat<(v64i16 (HexagonVPACK (v64i16 VecDblRegs:$Vs),
+                            (v64i16 VecDblRegs:$Vt), (i32 1))),
+        (V6_vpackoh_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
+        Requires<[UseHVXDbl]>;
+
 let hasNewValue = 1, hasSideEffects = 0 in
 class T_HVX_condALU <string asmString, RegisterClass RC1, RegisterClass RC2>
   : CVI_VA_Resource1 <(outs RC2:$dst),

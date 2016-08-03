@@ -651,6 +651,10 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                            cast<TemplateTemplateParmDecl>(*P)));
   }
 
+  assert(!TTP->getRequiresClause() &&
+         "Unexpected requires-clause on template template-parameter");
+  LLVM_CONSTEXPR Expr *const CanonRequiresClause = nullptr;
+
   TemplateTemplateParmDecl *CanonTTP
     = TemplateTemplateParmDecl::Create(*this, getTranslationUnitDecl(), 
                                        SourceLocation(), TTP->getDepth(),
@@ -660,7 +664,8 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                          TemplateParameterList::Create(*this, SourceLocation(),
                                                        SourceLocation(),
                                                        CanonParams,
-                                                       SourceLocation()));
+                                                       SourceLocation(),
+                                                       CanonRequiresClause));
 
   // Get the new insert position for the node we care about.
   Canonical = CanonTemplateTemplateParms.FindNodeOrInsertPos(ID, InsertPos);
@@ -1734,11 +1739,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(0); 
       Align = Target->getPointerAlign(0);
       break;
-    case BuiltinType::OCLSampler:
-      // Samplers are modeled as integers.
-      Width = Target->getIntWidth();
-      Align = Target->getIntAlign();
+    case BuiltinType::OCLSampler: {
+      auto AS = getTargetAddressSpace(LangAS::opencl_constant);
+      Width = Target->getPointerWidth(AS);
+      Align = Target->getPointerAlign(AS);
       break;
+    }
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:

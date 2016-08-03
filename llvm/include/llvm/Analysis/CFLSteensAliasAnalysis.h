@@ -81,16 +81,6 @@ public:
     return QueryResult;
   }
 
-  /// Get the location associated with a pointer argument of a callsite.
-  ModRefInfo getArgModRefInfo(ImmutableCallSite CS, unsigned ArgIdx);
-
-  /// Returns the behavior when calling the given call site.
-  FunctionModRefBehavior getModRefBehavior(ImmutableCallSite CS);
-
-  /// Returns the behavior when calling the given function. For use when the
-  /// call site is not known.
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
-
 private:
   struct FunctionHandle final : public CallbackVH {
     FunctionHandle(Function *Fn, CFLSteensAAResult *Result)

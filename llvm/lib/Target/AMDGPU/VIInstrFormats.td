@@ -11,26 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-class DSe_vi <bits<8> op> : Enc64 {
-  bits<8> vdst;
-  bits<1> gds;
-  bits<8> addr;
-  bits<8> data0;
-  bits<8> data1;
-  bits<8> offset0;
-  bits<8> offset1;
-
-  let Inst{7-0} = offset0;
-  let Inst{15-8} = offset1;
-  let Inst{16} = gds;
-  let Inst{24-17} = op;
-  let Inst{31-26} = 0x36; //encoding
-  let Inst{39-32} = addr;
-  let Inst{47-40} = data0;
-  let Inst{55-48} = data1;
-  let Inst{63-56} = vdst;
-}
-
 class MUBUFe_vi <bits<7> op> : Enc64 {
   bits<12> offset;
   bits<1> offen;

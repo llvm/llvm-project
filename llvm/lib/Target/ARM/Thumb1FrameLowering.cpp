@@ -26,8 +26,8 @@ Thumb1FrameLowering::Thumb1FrameLowering(const ARMSubtarget &sti)
     : ARMFrameLowering(sti) {}
 
 bool Thumb1FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const{
-  const MachineFrameInfo *FFI = MF.getFrameInfo();
-  unsigned CFSize = FFI->getMaxCallFrameSize();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  unsigned CFSize = MFI.getMaxCallFrameSize();
   // It's not always a good idea to include the call frame as part of the
   // stack frame. ARM (especially Thumb) has small immediate offset to
   // address the stack frame. So a large call frame can cause poor codegen
@@ -35,7 +35,7 @@ bool Thumb1FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const{
   if (CFSize >= ((1 << 8) - 1) * 4 / 2) // Half of imm8 * 4
     return false;
 
-  return !MF.getFrameInfo()->hasVarSizedObjects();
+  return !MFI.hasVarSizedObjects();
 }
 
 static void emitSPUpdate(MachineBasicBlock &MBB,
@@ -85,7 +85,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
 void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  MachineFrameInfo  *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
@@ -95,10 +95,10 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       *static_cast<const Thumb1InstrInfo *>(STI.getInstrInfo());
 
   unsigned ArgRegsSaveSize = AFI->getArgRegsSaveSize();
-  unsigned NumBytes = MFI->getStackSize();
+  unsigned NumBytes = MFI.getStackSize();
   assert(NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -110,7 +110,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   // Thumb add/sub sp, imm8 instructions implicitly multiply the offset by 4.
   NumBytes = (NumBytes + 3) & ~3;
-  MFI->setStackSize(NumBytes);
+  MFI.setStackSize(NumBytes);
 
   // Determine the sizes of each callee-save spill areas and record which frame
   // belongs to which callee-save spill areas.
@@ -179,7 +179,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   unsigned GPRCS1Offset = GPRCS2Offset + GPRCS2Size;
   bool HasFP = hasFP(MF);
   if (HasFP)
-    AFI->setFramePtrSpillOffset(MFI->getObjectOffset(FramePtrSpillFI) +
+    AFI->setFramePtrSpillOffset(MFI.getObjectOffset(FramePtrSpillFI) +
                                 NumBytes);
   AFI->setGPRCalleeSavedArea1Offset(GPRCS1Offset);
   AFI->setGPRCalleeSavedArea2Offset(GPRCS2Offset);
@@ -225,7 +225,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R7:
     case ARM::LR:
       unsigned CFIIndex = MMI.addFrameInst(MCCFIInstruction::createOffset(
-          nullptr, MRI->getDwarfRegNum(Reg, true), MFI->getObjectOffset(FI)));
+          nullptr, MRI->getDwarfRegNum(Reg, true), MFI.getObjectOffset(FI)));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -236,7 +236,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   // Adjust FP so it point to the stack slot that contains the previous FP.
   if (HasFP) {
     FramePtrOffsetInBlock +=
-        MFI->getObjectOffset(FramePtrSpillFI) + GPRCS1Size + ArgRegsSaveSize;
+        MFI.getObjectOffset(FramePtrSpillFI) + GPRCS1Size + ArgRegsSaveSize;
     AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::tADDrSPi), FramePtr)
       .addReg(ARM::SP).addImm(FramePtrOffsetInBlock / 4)
       .setMIFlags(MachineInstr::FrameSetup));
@@ -276,8 +276,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (STI.isTargetELF() && HasFP)
-    MFI->setOffsetAdjustment(MFI->getOffsetAdjustment() -
-                             AFI->getFramePtrSpillOffset());
+    MFI.setOffsetAdjustment(MFI.getOffsetAdjustment() -
+                            AFI->getFramePtrSpillOffset());
 
   AFI->setGPRCalleeSavedArea1Size(GPRCS1Size);
   AFI->setGPRCalleeSavedArea2Size(GPRCS2Size);
@@ -299,7 +299,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   // If the frame has variable sized objects then the epilogue must restore
   // the sp from fp. We can assume there's an FP here since hasFP already
   // checks for hasVarSizedObjects.
-  if (MFI->hasVarSizedObjects())
+  if (MFI.hasVarSizedObjects())
     AFI->setShouldRestoreSPFromFP(true);
 }
 
@@ -322,7 +322,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ThumbRegisterInfo *RegInfo =
       static_cast<const ThumbRegisterInfo *>(STI.getRegisterInfo());
@@ -330,7 +330,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
       *static_cast<const Thumb1InstrInfo *>(STI.getInstrInfo());
 
   unsigned ArgRegsSaveSize = AFI->getArgRegsSaveSize();
-  int NumBytes = (int)MFI->getStackSize();
+  int NumBytes = (int)MFI.getStackSize();
   assert((unsigned)NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
@@ -361,7 +361,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
       // frame pointer stack slot, the target is ELF and the function has FP, or
       // the target uses var sized objects.
       if (NumBytes) {
-        assert(!MFI->getPristineRegs(MF).test(ARM::R4) &&
+        assert(!MFI.getPristineRegs(MF).test(ARM::R4) &&
                "No scratch register to restore SP from FP!");
         emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::R4, FramePtr, -NumBytes,
                                   TII, *RegInfo);
@@ -405,7 +405,7 @@ bool Thumb1FrameLowering::needPopSpecialFixUp(const MachineFunction &MF) const {
     return true;
 
   // LR cannot be encoded with Thumb1, i.e., it requires a special fix-up.
-  for (const CalleeSavedInfo &CSI : MF.getFrameInfo()->getCalleeSavedInfo())
+  for (const CalleeSavedInfo &CSI : MF.getFrameInfo().getCalleeSavedInfo())
     if (CSI.getReg() == ARM::LR)
       return true;
 
@@ -590,7 +590,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     // then it's already added to the function and entry block live-in sets.
     if (Reg == ARM::LR) {
       MachineFunction &MF = *MBB.getParent();
-      if (MF.getFrameInfo()->isReturnAddressTaken() &&
+      if (MF.getFrameInfo().isReturnAddressTaken() &&
           MF.getRegInfo().isLiveIn(Reg))
         isKill = false;
     }

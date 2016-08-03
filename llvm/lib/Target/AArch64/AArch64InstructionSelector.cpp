@@ -52,8 +52,14 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       switch (GenericOpc) {
       case TargetOpcode::G_OR:
         return AArch64::ORRWrr;
+      case TargetOpcode::G_XOR:
+        return AArch64::EORWrr;
+      case TargetOpcode::G_AND:
+        return AArch64::ANDWrr;
       case TargetOpcode::G_ADD:
         return AArch64::ADDWrr;
+      case TargetOpcode::G_SUB:
+        return AArch64::SUBWrr;
       default:
         return GenericOpc;
       }
@@ -61,11 +67,37 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       switch (GenericOpc) {
       case TargetOpcode::G_OR:
         return AArch64::ORRXrr;
+      case TargetOpcode::G_XOR:
+        return AArch64::EORXrr;
+      case TargetOpcode::G_AND:
+        return AArch64::ANDXrr;
       case TargetOpcode::G_ADD:
         return AArch64::ADDXrr;
+      case TargetOpcode::G_SUB:
+        return AArch64::SUBXrr;
       default:
         return GenericOpc;
       }
+    }
+  };
+  return GenericOpc;
+}
+
+/// Select the AArch64 opcode for the G_LOAD or G_STORE operation \p GenericOpc,
+/// appropriate for the (value) register bank \p RegBankID and of memory access
+/// size \p OpSize.  This returns the variant with the base+unsigned-immediate
+/// addressing mode (e.g., LDRXui).
+/// \returns \p GenericOpc if the combination is unsupported.
+static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
+                                    unsigned OpSize) {
+  const bool isStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (RegBankID) {
+  case AArch64::GPRRegBankID:
+    switch (OpSize) {
+    case 32:
+      return isStore ? AArch64::STRWui : AArch64::LDRWui;
+    case 64:
+      return isStore ? AArch64::STRXui : AArch64::LDRXui;
     }
   };
   return GenericOpc;
@@ -94,19 +126,63 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   LLT Ty = I.getType();
   assert(Ty.isValid() && "Generic instruction doesn't have a type");
 
-  // FIXME: Support unsized instructions (e.g., G_BR).
-  if (!Ty.isSized()) {
-    DEBUG(dbgs() << "Unsized generic instructions are unsupported\n");
-    return false;
+  switch (I.getOpcode()) {
+  case TargetOpcode::G_BR: {
+    I.setDesc(TII.get(AArch64::B));
+    I.removeTypes();
+    return true;
   }
 
-  // The size (in bits) of the operation, or 0 for the label type.
-  const unsigned OpSize = Ty.getSizeInBits();
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    LLT MemTy = I.getType(0);
+    LLT PtrTy = I.getType(1);
 
-  switch (I.getOpcode()) {
+    if (PtrTy != LLT::pointer(0)) {
+      DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
+                   << ", expected: " << LLT::pointer(0) << '\n');
+      return false;
+    }
+
+#ifndef NDEBUG
+    // Sanity-check the pointer register.
+    const unsigned PtrReg = I.getOperand(1).getReg();
+    const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);
+    assert(PtrRB.getID() == AArch64::GPRRegBankID &&
+           "Load/Store pointer operand isn't a GPR");
+    assert(MRI.getSize(PtrReg) == 64 &&
+           "Load/Store pointer operand isn't 64-bit");
+#endif
+
+    const unsigned ValReg = I.getOperand(0).getReg();
+    const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
+
+    const unsigned NewOpc =
+        selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemTy.getSizeInBits());
+    if (NewOpc == I.getOpcode())
+      return false;
+
+    I.setDesc(TII.get(NewOpc));
+    I.removeTypes();
+
+    I.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
   case TargetOpcode::G_OR:
-  case TargetOpcode::G_ADD: {
+  case TargetOpcode::G_XOR:
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB: {
     DEBUG(dbgs() << "AArch64: Selecting: binop\n");
+
+    if (!Ty.isSized()) {
+      DEBUG(dbgs() << "Generic binop should be sized\n");
+      return false;
+    }
+
+    // The size (in bits) of the operation, or 0 for the label type.
+    const unsigned OpSize = Ty.getSizeInBits();
 
     // Reject the various things we don't support yet.
     {
@@ -150,7 +226,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     I.setDesc(TII.get(NewOpc));
     // FIXME: Should the type be always reset in setDesc?
-    I.setType(LLT());
+    I.removeTypes();
 
     // Now that we selected an opcode, we need to constrain the register
     // operands to use appropriate classes.

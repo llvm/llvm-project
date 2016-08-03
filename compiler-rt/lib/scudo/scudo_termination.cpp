@@ -13,15 +13,17 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "scudo_utils.h"
+
 #include "sanitizer_common/sanitizer_common.h"
 
 namespace __sanitizer {
 
-bool AddDieCallback(DieCallbackType callback) { return true; }
+bool AddDieCallback(DieCallbackType Callback) { return true; }
 
-bool RemoveDieCallback(DieCallbackType callback) { return true; }
+bool RemoveDieCallback(DieCallbackType Callback) { return true; }
 
-void SetUserDieCallback(DieCallbackType callback) {}
+void SetUserDieCallback(DieCallbackType Callback) {}
 
 void NORETURN Die() {
   if (common_flags()->abort_on_error)
@@ -31,11 +33,10 @@ void NORETURN Die() {
 
 void SetCheckFailedCallback(CheckFailedCallbackType callback) {}
 
-void NORETURN CheckFailed(const char *file, int line, const char *cond,
-                          u64 v1, u64 v2) {
-  Report("Sanitizer CHECK failed: %s:%d %s (%lld, %lld)\n", file, line, cond,
-                                                            v1, v2);
-  Die();
+void NORETURN CheckFailed(const char *File, int Line, const char *Condition,
+                          u64 Value1, u64 Value2) {
+  __scudo::dieWithMessage("Scudo CHECK failed: %s:%d %s (%lld, %lld)\n",
+                          File, Line, Condition, Value1, Value2);
 }
 
 } // namespace __sanitizer

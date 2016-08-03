@@ -574,7 +574,7 @@ static _Unwind_Reason_Code unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor
     unw_get_reg(cursor, UNW_REG_SP, &sp);
     if (unw_get_proc_info(cursor, &frameInfo) != UNW_ESUCCESS) {
       _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): unw_get_proc_info "
-                                 "failed => _URC_FATAL_PHASE1_ERROR\n",
+                                 "failed => _URC_FATAL_PHASE2_ERROR\n",
                                  static_cast<void *>(exception_object));
       return _URC_FATAL_PHASE2_ERROR;
     }

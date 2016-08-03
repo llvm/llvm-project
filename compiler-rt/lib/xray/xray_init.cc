@@ -22,18 +22,20 @@
 #include "xray_interface_internal.h"
 
 extern "C" {
-extern void __xray_init();
+void __xray_init();
 extern const XRaySledEntry __start_xray_instr_map[] __attribute__((weak));
 extern const XRaySledEntry __stop_xray_instr_map[] __attribute__((weak));
 }
 
 using namespace __xray;
 
-// We initialize some global variables that pertain to specific sections of XRay
-// data structures in the binary. We do this for the current process using
-// /proc/curproc/map and make sure that we're able to get it. We signal failure
-// via a global atomic boolean to indicate whether we've initialized properly.
+// When set to 'true' this means the XRay runtime has been initialised. We use
+// the weak symbols defined above (__start_xray_inst_map and
+// __stop_xray_instr_map) to initialise the instrumentation map that XRay uses
+// for runtime patching/unpatching of instrumentation points.
 //
+// FIXME: Support DSO instrumentation maps too. The current solution only works
+// for statically linked executables.
 std::atomic<bool> XRayInitialized{false};
 
 // This should always be updated before XRayInitialized is updated.

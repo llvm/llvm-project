@@ -352,7 +352,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   // Get the basic block's function.
   MachineFunction &MF = *MBB.getParent();
   // Get the frame info.
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   // Get the instruction info.
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -361,14 +361,14 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   DebugLoc dl = MI.getDebugLoc();
 
   // Get the maximum call stack size.
-  unsigned maxCallFrameSize = MFI->getMaxCallFrameSize();
+  unsigned maxCallFrameSize = MFI.getMaxCallFrameSize();
   // Get the total frame size.
-  unsigned FrameSize = MFI->getStackSize();
+  unsigned FrameSize = MFI.getStackSize();
 
   // Get stack alignments.
   const PPCFrameLowering *TFI = getFrameLowering(MF);
   unsigned TargetAlign = TFI->getStackAlignment();
-  unsigned MaxAlign = MFI->getMaxAlignment();
+  unsigned MaxAlign = MFI.getMaxAlignment();
   assert((maxCallFrameSize & (MaxAlign-1)) == 0 &&
          "Maximum call-frame size not sufficiently aligned");
 
@@ -466,12 +466,12 @@ void PPCRegisterInfo::lowerDynamicAreaOffset(
   // Get the basic block's function.
   MachineFunction &MF = *MBB.getParent();
   // Get the frame info.
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   // Get the instruction info.
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
 
-  unsigned maxCallFrameSize = MFI->getMaxCallFrameSize();
+  unsigned maxCallFrameSize = MFI.getMaxCallFrameSize();
   DebugLoc dl = MI.getDebugLoc();
   BuildMI(MBB, II, dl, TII.get(PPC::LI), MI.getOperand(0).getReg())
       .addImm(maxCallFrameSize);
@@ -787,7 +787,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Get the instruction info.
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   // Get the frame info.
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   DebugLoc dl = MI.getDebugLoc();
 
   unsigned OffsetOperandNo = getOffsetONFromFION(MI, FIOperandNum);
@@ -848,7 +848,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                    OpC != TargetOpcode::PATCHPOINT && !ImmToIdxMap.count(OpC);
 
   // Now add the frame object offset to the offset from r1.
-  int Offset = MFI->getObjectOffset(FrameIndex);
+  int Offset = MFI.getObjectOffset(FrameIndex);
   Offset += MI.getOperand(OffsetOperandNo).getImm();
 
   // If we're not using a Frame Pointer that has been set to the value of the
@@ -859,7 +859,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // functions.
   if (!MF.getFunction()->hasFnAttribute(Attribute::Naked)) {
     if (!(hasBasePointer(MF) && FrameIndex < 0))
-      Offset += MFI->getStackSize();
+      Offset += MFI.getStackSize();
   }
 
   // If we can, encode the offset directly into the instruction.  If this is a

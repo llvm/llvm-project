@@ -281,7 +281,7 @@ define <2 x double>@test_int_x86_avx512_gather3div2_df(<2 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3div2_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK-NEXT:    vmovapd %xmm0, %xmm2
 ; CHECK-NEXT:    vgatherqpd (%rdi,%xmm1,4), %xmm2 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vgatherqpd (%rdi,%xmm1,2), %xmm0 {%k1}
@@ -314,7 +314,7 @@ define <4 x double>@test_int_x86_avx512_gather3div4_df(<4 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3div4_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %ymm0, %ymm2
+; CHECK-NEXT:    vmovapd %ymm0, %ymm2
 ; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,4), %ymm2 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,2), %ymm0 {%k1}
@@ -332,7 +332,7 @@ define <8 x i32>@test_int_x86_avx512_gather3div4_di(<4 x i64> %x0, i8* %x1, <4 x
 ; CHECK-LABEL: test_int_x86_avx512_gather3div4_di:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %ymm0, %ymm2
+; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm2
 ; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm2 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm0 {%k1}
@@ -369,7 +369,7 @@ define <4 x i32>@test_int_x86_avx512_gather3div4_si(<4 x i32> %x0, i8* %x1, <2 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK-NEXT:    vmovdqa64 %xmm0, %xmm2
 ; CHECK-NEXT:    vpgatherqd (%rdi,%xmm1,4), %xmm2 {%k2}
 ; CHECK-NEXT:    vpgatherqd (%rdi,%xmm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
@@ -404,7 +404,7 @@ define <4 x i32>@test_int_x86_avx512_gather3div8_si(<4 x i32> %x0, i8* %x1, <4 x
 ; CHECK-LABEL: test_int_x86_avx512_gather3div8_si:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK-NEXT:    vmovdqa64 %xmm0, %xmm2
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherqd (%rdi,%ymm1,4), %xmm2 {%k2}
 ; CHECK-NEXT:    vpgatherqd (%rdi,%ymm1,2), %xmm0 {%k1}
@@ -422,7 +422,7 @@ define <2 x double>@test_int_x86_avx512_gather3siv2_df(<2 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv2_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK-NEXT:    vmovapd %xmm0, %xmm2
 ; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %xmm2 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %xmm0 {%k1}
@@ -455,7 +455,7 @@ define <4 x double>@test_int_x86_avx512_gather3siv4_df(<4 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv4_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %ymm0, %ymm2
+; CHECK-NEXT:    vmovapd %ymm0, %ymm2
 ; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %ymm2 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %ymm0 {%k1}
@@ -507,7 +507,7 @@ define <4 x i32>@test_int_x86_avx512_gather3siv4_si(<4 x i32> %x0, i8* %x1, <4 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK-NEXT:    vmovdqa64 %xmm0, %xmm2
 ; CHECK-NEXT:    vpgatherdd (%rdi,%xmm1,4), %xmm2 {%k2}
 ; CHECK-NEXT:    vpgatherdd (%rdi,%xmm1,2), %xmm0 {%k1}
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
@@ -542,7 +542,7 @@ define <8 x i32>@test_int_x86_avx512_gather3siv8_si(<8 x i32> %x0, i8* %x1, <8 x
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv8_si:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %ymm0, %ymm2
+; CHECK-NEXT:    vmovdqa64 %ymm0, %ymm2
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherdd (%rdi,%ymm1,4), %ymm2 {%k2}
 ; CHECK-NEXT:    vpgatherdd (%rdi,%ymm1,2), %ymm0 {%k1}

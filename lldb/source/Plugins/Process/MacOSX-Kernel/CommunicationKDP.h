@@ -249,7 +249,7 @@ protected:
                                                 uint32_t timeout_usec);
 
     bool
-    WaitForNotRunningPrivate (const lldb_private::TimeValue *timeout_ptr);
+    WaitForNotRunningPrivate(const std::chrono::microseconds &timeout);
 
     void
     MakeRequestPacketHeader (CommandType request_type, 

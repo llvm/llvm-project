@@ -11,9 +11,9 @@
 
 #include "llvm/ADT/BitVector.h"
 
-#include "llvm/DebugInfo/Msf/MsfBuilder.h"
-#include "llvm/DebugInfo/Msf/StreamInterface.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
+#include "llvm/DebugInfo/MSF/StreamInterface.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
@@ -31,20 +31,20 @@ PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
 
 Error PDBFileBuilder::initialize(const msf::SuperBlock &Super) {
   auto ExpectedMsf =
-      MsfBuilder::create(Allocator, Super.BlockSize, Super.NumBlocks);
+      MSFBuilder::create(Allocator, Super.BlockSize, Super.NumBlocks);
   if (!ExpectedMsf)
     return ExpectedMsf.takeError();
 
   auto &MsfResult = *ExpectedMsf;
   if (auto EC = MsfResult.setBlockMapAddr(Super.BlockMapAddr))
     return EC;
-  Msf = llvm::make_unique<MsfBuilder>(std::move(MsfResult));
+  Msf = llvm::make_unique<MSFBuilder>(std::move(MsfResult));
   Msf->setFreePageMap(Super.FreeBlockMapBlock);
   Msf->setUnknown1(Super.Unknown1);
   return Error::success();
 }
 
-MsfBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
+MSFBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
 
 InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
   if (!Info)
@@ -58,8 +58,7 @@ DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   return *Dbi;
 }
 
-Expected<std::unique_ptr<PDBFile>>
-PDBFileBuilder::build(std::unique_ptr<msf::StreamInterface> PdbFileBuffer) {
+Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
   if (Info) {
     uint32_t Length = Info->calculateSerializedLength();
     if (auto EC = Msf->setStreamSize(StreamPDB, Length))
@@ -71,22 +70,27 @@ PDBFileBuilder::build(std::unique_ptr<msf::StreamInterface> PdbFileBuffer) {
       return std::move(EC);
   }
 
-  auto ExpectedLayout = Msf->build();
+  return Msf->build();
+}
+
+Expected<std::unique_ptr<PDBFile>>
+PDBFileBuilder::build(std::unique_ptr<msf::WritableStream> PdbFileBuffer) {
+  auto ExpectedLayout = finalizeMsfLayout();
   if (!ExpectedLayout)
     return ExpectedLayout.takeError();
 
   auto File = llvm::make_unique<PDBFile>(std::move(PdbFileBuffer), Allocator);
-  File->MsfLayout = *ExpectedLayout;
+  File->ContainerLayout = *ExpectedLayout;
 
   if (Info) {
-    auto ExpectedInfo = Info->build(*File);
+    auto ExpectedInfo = Info->build(*File, *PdbFileBuffer);
     if (!ExpectedInfo)
       return ExpectedInfo.takeError();
     File->Info = std::move(*ExpectedInfo);
   }
 
   if (Dbi) {
-    auto ExpectedDbi = Dbi->build(*File);
+    auto ExpectedDbi = Dbi->build(*File, *PdbFileBuffer);
     if (!ExpectedDbi)
       return ExpectedDbi.takeError();
     File->Dbi = std::move(*ExpectedDbi);
@@ -98,4 +102,47 @@ PDBFileBuilder::build(std::unique_ptr<msf::StreamInterface> PdbFileBuffer) {
         "PDB Stream Age doesn't match Dbi Stream Age!");
 
   return std::move(File);
+}
+
+Error PDBFileBuilder::commit(const msf::WritableStream &Buffer) {
+  StreamWriter Writer(Buffer);
+  auto ExpectedLayout = finalizeMsfLayout();
+  if (!ExpectedLayout)
+    return ExpectedLayout.takeError();
+  auto &Layout = *ExpectedLayout;
+
+  if (auto EC = Writer.writeObject(*Layout.SB))
+    return EC;
+  uint32_t BlockMapOffset =
+      msf::blockToOffset(Layout.SB->BlockMapAddr, Layout.SB->BlockSize);
+  Writer.setOffset(BlockMapOffset);
+  if (auto EC = Writer.writeArray(Layout.DirectoryBlocks))
+    return EC;
+
+  auto DirStream =
+      WritableMappedBlockStream::createDirectoryStream(Layout, Buffer);
+  StreamWriter DW(*DirStream);
+  if (auto EC =
+          DW.writeInteger(static_cast<uint32_t>(Layout.StreamSizes.size())))
+    return EC;
+
+  if (auto EC = DW.writeArray(Layout.StreamSizes))
+    return EC;
+
+  for (const auto &Blocks : Layout.StreamMap) {
+    if (auto EC = DW.writeArray(Blocks))
+      return EC;
+  }
+
+  if (Info) {
+    if (auto EC = Info->commit(Layout, Buffer))
+      return EC;
+  }
+
+  if (Dbi) {
+    if (auto EC = Dbi->commit(Layout, Buffer))
+      return EC;
+  }
+
+  return Buffer.commit();
 }

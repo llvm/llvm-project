@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/Support/Endian.h"
 
@@ -27,7 +27,7 @@ ModInfo::ModInfo(const ModInfo &Info)
 
 ModInfo::~ModInfo() {}
 
-Error ModInfo::initialize(StreamRef Stream, ModInfo &Info) {
+Error ModInfo::initialize(ReadableStreamRef Stream, ModInfo &Info) {
   StreamReader Reader(Stream);
   if (auto EC = Reader.readObject(Info.Layout))
     return EC;

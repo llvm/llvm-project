@@ -13,11 +13,8 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0

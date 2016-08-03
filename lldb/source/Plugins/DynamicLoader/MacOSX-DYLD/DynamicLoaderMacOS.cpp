@@ -490,6 +490,52 @@ DynamicLoaderMacOS::CanLoadImage ()
     return error;
 }
 
+bool
+DynamicLoaderMacOS::GetSharedCacheInformation (lldb::addr_t &base_address,
+                                               UUID &uuid,
+                                               LazyBool &using_shared_cache,
+                                               LazyBool &private_shared_cache)
+{
+    base_address = LLDB_INVALID_ADDRESS;
+    uuid.Clear();
+    using_shared_cache = eLazyBoolCalculate;
+    private_shared_cache = eLazyBoolCalculate;
+
+    if (m_process)
+    {
+        StructuredData::ObjectSP info = m_process->GetSharedCacheInfo();
+        StructuredData::Dictionary *info_dict = nullptr;
+        if (info.get() && info->GetAsDictionary())
+        {
+            info_dict = info->GetAsDictionary();
+        }
+
+        // {"shared_cache_base_address":140735683125248,"shared_cache_uuid":"DDB8D70C-C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false}
+
+        if (info_dict
+            && info_dict->HasKey("shared_cache_uuid")
+            && info_dict->HasKey("no_shared_cache")
+            && info_dict->HasKey("shared_cache_base_address"))
+        {
+            base_address = info_dict->GetValueForKey("shared_cache_base_address")->GetIntegerValue(LLDB_INVALID_ADDRESS);
+            std::string uuid_str = info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue().c_str();
+            if (!uuid_str.empty())
+                uuid.SetFromCString (uuid_str.c_str());
+            if (info_dict->GetValueForKey("no_shared_cache")->GetBooleanValue() == false)
+                using_shared_cache = eLazyBoolYes;
+            else
+                using_shared_cache = eLazyBoolNo;
+            if (info_dict->GetValueForKey("shared_cache_private_cache")->GetBooleanValue())
+                private_shared_cache = eLazyBoolYes;
+            else
+                private_shared_cache = eLazyBoolNo;
+
+            return true;
+        }
+    }
+    return false;
+}
+
 void
 DynamicLoaderMacOS::Initialize()
 {

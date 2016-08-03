@@ -13,9 +13,8 @@
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
-#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/EnumTables.h"
@@ -36,6 +35,48 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
+namespace {
+struct PageStats {
+  explicit PageStats(const BitVector &FreePages)
+      : Upm(FreePages), ActualUsedPages(FreePages.size()),
+        MultiUsePages(FreePages.size()), UseAfterFreePages(FreePages.size()) {
+    const_cast<BitVector &>(Upm).flip();
+    // To calculate orphaned pages, we start with the set of pages that the
+    // MSF thinks are used.  Each time we find one that actually *is* used,
+    // we unset it.  Whichever bits remain set at the end are orphaned.
+    OrphanedPages = Upm;
+  }
+
+  // The inverse of the MSF File's copy of the Fpm.  The basis for which we
+  // determine the allocation status of each page.
+  const BitVector Upm;
+
+  // Pages which are marked as used in the FPM and are used at least once.
+  BitVector ActualUsedPages;
+
+  // Pages which are marked as used in the FPM but are used more than once.
+  BitVector MultiUsePages;
+
+  // Pages which are marked as used in the FPM but are not used at all.
+  BitVector OrphanedPages;
+
+  // Pages which are marked free in the FPM but are used.
+  BitVector UseAfterFreePages;
+};
+}
+
+static void recordKnownUsedPage(PageStats &Stats, uint32_t UsedIndex) {
+  if (Stats.Upm.test(UsedIndex)) {
+    if (Stats.ActualUsedPages.test(UsedIndex))
+      Stats.MultiUsePages.set(UsedIndex);
+    Stats.ActualUsedPages.set(UsedIndex);
+    Stats.OrphanedPages.reset(UsedIndex);
+  } else {
+    // The MSF doesn't think this page is used, but it is.
+    Stats.UseAfterFreePages.set(UsedIndex);
+  }
+}
+
 static void printSectionOffset(llvm::raw_ostream &OS,
                                const SectionOffset &Off) {
   OS << Off.Off << ", " << Off.Isect;
@@ -49,6 +90,9 @@ Error LLVMOutputStyle::dump() {
     return EC;
 
   if (auto EC = dumpStreamSummary())
+    return EC;
+
+  if (auto EC = dumpFreePageMap())
     return EC;
 
   if (auto EC = dumpStreamBlocks())
@@ -235,6 +279,56 @@ Error LLVMOutputStyle::dumpStreamSummary() {
   return Error::success();
 }
 
+Error LLVMOutputStyle::dumpFreePageMap() {
+  if (!opts::raw::DumpPageStats)
+    return Error::success();
+
+  // Start with used pages instead of free pages because
+  // the number of free pages is far larger than used pages.
+  BitVector FPM = File.getMsfLayout().FreePageMap;
+
+  PageStats PS(FPM);
+
+  recordKnownUsedPage(PS, 0); // MSF Super Block
+
+  uint32_t BlocksPerSection = File.getBlockSize();
+  uint32_t NumSections =
+      llvm::alignTo(File.getBlockCount(), BlocksPerSection) / BlocksPerSection;
+  for (uint32_t I = 0; I < NumSections; ++I) {
+    uint32_t Fpm0 = 1 + BlocksPerSection * I;
+    // 2 Fpm blocks spaced at `getBlockSize()` block intervals
+    recordKnownUsedPage(PS, Fpm0);
+    recordKnownUsedPage(PS, Fpm0 + 1);
+  }
+
+  recordKnownUsedPage(PS, File.getBlockMapIndex()); // Stream Table
+
+  for (auto DB : File.getDirectoryBlockArray())
+    recordKnownUsedPage(PS, DB);
+
+  // Record pages used by streams. Note that pages for stream 0
+  // are considered being unused because that's what MSVC tools do.
+  // Stream 0 doesn't contain actual data, so it makes some sense,
+  // though it's a bit confusing to us.
+  for (auto &SE : File.getStreamMap().drop_front(1))
+    for (auto &S : SE)
+      recordKnownUsedPage(PS, S);
+
+  dumpBitVector("Msf Free Pages", FPM);
+  dumpBitVector("Orphaned Pages", PS.OrphanedPages);
+  dumpBitVector("Multiply Used Pages", PS.MultiUsePages);
+  dumpBitVector("Use After Free Pages", PS.UseAfterFreePages);
+  return Error::success();
+}
+
+void LLVMOutputStyle::dumpBitVector(StringRef Name, const BitVector &V) {
+  std::vector<uint32_t> Vec;
+  for (uint32_t I = 0, E = V.size(); I != E; ++I)
+    if (V[I])
+      Vec.push_back(I);
+  P.printList(Name, Vec);
+}
+
 Error LLVMOutputStyle::dumpStreamBlocks() {
   if (!opts::raw::DumpStreamBlocks)
     return Error::success();
@@ -260,10 +354,9 @@ Error LLVMOutputStyle::dumpStreamData() {
   if (DumpStreamNum >= StreamCount)
     return make_error<RawError>(raw_error_code::no_stream);
 
-  auto S = MappedBlockStream::createIndexedStream(DumpStreamNum, File);
-  if (!S)
-    return S.takeError();
-  StreamReader R(**S);
+  auto S = MappedBlockStream::createIndexedStream(
+      File.getMsfLayout(), File.getMsfBuffer(), DumpStreamNum);
+  StreamReader R(*S);
   while (R.bytesRemaining() > 0) {
     ArrayRef<uint8_t> Data;
     uint32_t BytesToReadInBlock = std::min(
@@ -312,11 +405,9 @@ Error LLVMOutputStyle::dumpNamedStream() {
     DictScope D(P, Name);
     P.printNumber("Index", NameStreamIndex);
 
-    auto NameStream =
-        MappedBlockStream::createIndexedStream(NameStreamIndex, File);
-    if (!NameStream)
-      return NameStream.takeError();
-    StreamReader Reader(**NameStream);
+    auto NameStream = MappedBlockStream::createIndexedStream(
+        File.getMsfLayout(), File.getMsfBuffer(), NameStreamIndex);
+    StreamReader Reader(*NameStream);
 
     NameHashTable NameTable;
     if (auto EC = NameTable.load(Reader))
@@ -487,10 +578,10 @@ Error LLVMOutputStyle::dumpDbiStream() {
           (opts::raw::DumpModuleSyms || opts::raw::DumpSymRecordBytes);
       if (HasModuleDI && (ShouldDumpSymbols || opts::raw::DumpLineInfo)) {
         auto ModStreamData = MappedBlockStream::createIndexedStream(
-            Modi.Info.getModuleStreamIndex(), File);
-        if (!ModStreamData)
-          return ModStreamData.takeError();
-        ModStream ModS(Modi.Info, std::move(*ModStreamData));
+            File.getMsfLayout(), File.getMsfBuffer(),
+            Modi.Info.getModuleStreamIndex());
+
+        ModStream ModS(Modi.Info, std::move(ModStreamData));
         if (auto EC = ModS.reload())
           return EC;
 
@@ -520,7 +611,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
           public:
             RecordVisitor(ScopedPrinter &P, PDBFile &F) : P(P), F(F) {}
             Error visitUnknown(ModuleSubstreamKind Kind,
-                               StreamRef Stream) override {
+                               ReadableStreamRef Stream) override {
               DictScope DD(P, "Unknown");
               ArrayRef<uint8_t> Data;
               StreamReader R(Stream);
@@ -533,7 +624,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
               return Error::success();
             }
             Error
-            visitFileChecksums(StreamRef Data,
+            visitFileChecksums(ReadableStreamRef Data,
                                const FileChecksumArray &Checksums) override {
               DictScope DD(P, "FileChecksums");
               for (const auto &C : Checksums) {
@@ -549,7 +640,8 @@ Error LLVMOutputStyle::dumpDbiStream() {
               return Error::success();
             }
 
-            Error visitLines(StreamRef Data, const LineSubstreamHeader *Header,
+            Error visitLines(ReadableStreamRef Data,
+                             const LineSubstreamHeader *Header,
                              const LineInfoArray &Lines) override {
               DictScope DD(P, "Lines");
               for (const auto &L : Lines) {

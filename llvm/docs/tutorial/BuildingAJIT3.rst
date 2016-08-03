@@ -113,10 +113,11 @@ to create the compile callback needed for each function.
 Next we have to update our constructor to initialize the new members. To create
 an appropriate compile callback manager we use the
 createLocalCompileCallbackManager function, which takes a TargetMachine and a
-TargetAddress to call if it receives a request to compile an unknown function.
-In our simple JIT this situation is unlikely to come up, so we'll cheat and
-just pass '0' here. In a production quality JIT you could give the address of a
-function that throws an exception in order to unwind the JIT'd code's stack.
+JITTargetAddress to call if it receives a request to compile an unknown
+function.  In our simple JIT this situation is unlikely to come up, so we'll
+cheat and just pass '0' here. In a production quality JIT you could give the
+address of a function that throws an exception in order to unwind the JIT'd
+code's stack.
 
 Now we can construct our CompileOnDemandLayer. Following the pattern from
 previous layers we start by passing a reference to the next layer down in our

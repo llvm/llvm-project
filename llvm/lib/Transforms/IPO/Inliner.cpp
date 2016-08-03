@@ -47,6 +47,24 @@ STATISTIC(NumMergedAllocas, "Number of allocas merged together");
 // if those would be more profitable and blocked inline steps.
 STATISTIC(NumCallerCallersAnalyzed, "Number of caller-callers analyzed");
 
+namespace {
+enum class InlinerFunctionImportStatsOpts {
+  No = 0,
+  Basic = 1,
+  Verbose = 2,
+};
+
+cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
+    "inliner-function-import-stats",
+    cl::init(InlinerFunctionImportStatsOpts::No),
+    cl::values(clEnumValN(InlinerFunctionImportStatsOpts::Basic, "basic",
+                          "basic statistics"),
+               clEnumValN(InlinerFunctionImportStatsOpts::Verbose, "verbose",
+                          "printing of statistics for each inlined function"),
+               clEnumValEnd),
+    cl::Hidden, cl::desc("Enable inliner stats for imported functions"));
+} // namespace
+
 Inliner::Inliner(char &ID) : CallGraphSCCPass(ID), InsertLifetime(true) {}
 
 Inliner::Inliner(char &ID, bool InsertLifetime)
@@ -75,11 +93,11 @@ InlinedArrayAllocasTy;
 /// available from other functions inlined into the caller.  If we are able to
 /// inline this call site we attempt to reuse already available allocas or add
 /// any new allocas to the set if not possible.
-static bool
-InlineCallIfPossible(CallSite CS, InlineFunctionInfo &IFI,
-                     InlinedArrayAllocasTy &InlinedArrayAllocas,
-                     int InlineHistory, bool InsertLifetime,
-                     std::function<AAResults &(Function &)> &AARGetter) {
+static bool InlineCallIfPossible(
+    CallSite CS, InlineFunctionInfo &IFI,
+    InlinedArrayAllocasTy &InlinedArrayAllocas, int InlineHistory,
+    bool InsertLifetime, std::function<AAResults &(Function &)> &AARGetter,
+    ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
   Function *Callee = CS.getCalledFunction();
   Function *Caller = CS.getCaller();
 
@@ -89,6 +107,9 @@ InlineCallIfPossible(CallSite CS, InlineFunctionInfo &IFI,
   // inlined.
   if (!InlineFunction(CS, IFI, &AAR, InsertLifetime))
     return false;
+
+  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
+    ImportedFunctionsStats.recordInline(*Caller, *Callee);
 
   AttributeFuncs::mergeAttributesForInlining(*Caller, *Callee);
 
@@ -371,10 +392,15 @@ static bool InlineHistoryIncludes(Function *F, int InlineHistoryID,
   return false;
 }
 
+bool Inliner::doInitialization(CallGraph &CG) {
+  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
+    ImportedFunctionsStats.setModuleInfo(CG.getModule());
+  return false; // No changes to CallGraph.
+}
+
 bool Inliner::runOnSCC(CallGraphSCC &SCC) {
   if (skipSCC(SCC))
     return false;
-
   return inlineCalls(SCC);
 }
 
@@ -384,7 +410,8 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                 ProfileSummaryInfo *PSI, TargetLibraryInfo &TLI,
                 bool InsertLifetime,
                 std::function<InlineCost(CallSite CS)> GetInlineCost,
-                std::function<AAResults &(Function &)> AARGetter) {
+                std::function<AAResults &(Function &)> AARGetter,
+                ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
   SmallPtrSet<Function*, 8> SCCFunctions;
   DEBUG(dbgs() << "Inliner visiting SCC:");
   for (CallGraphNode *Node : SCC) {
@@ -502,7 +529,8 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
         // Attempt to inline the function.
         if (!InlineCallIfPossible(CS, InlineInfo, InlinedArrayAllocas,
-                                  InlineHistoryID, InsertLifetime, AARGetter)) {
+                                  InlineHistoryID, InsertLifetime, AARGetter,
+                                  ImportedFunctionsStats)) {
           emitOptimizationRemarkMissed(CallerCtx, DEBUG_TYPE, *Caller, DLoc,
                                        Twine(Callee->getName() +
                                              " will not be inlined into " +
@@ -591,12 +619,15 @@ bool Inliner::inlineCalls(CallGraphSCC &SCC) {
   };
   return inlineCallsImpl(SCC, CG, GetAssumptionCache, PSI, TLI, InsertLifetime,
                          [this](CallSite CS) { return getInlineCost(CS); },
-                         AARGetter);
+                         AARGetter, ImportedFunctionsStats);
 }
 
 /// Remove now-dead linkonce functions at the end of
 /// processing to avoid breaking the SCC traversal.
 bool Inliner::doFinalization(CallGraph &CG) {
+  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
+    ImportedFunctionsStats.dump(InlinerFunctionImportStats ==
+                                InlinerFunctionImportStatsOpts::Verbose);
   return removeDeadFunctions(CG);
 }
 

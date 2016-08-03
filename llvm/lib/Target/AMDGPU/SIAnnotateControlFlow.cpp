@@ -331,6 +331,8 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 
   BasicBlock *BB = Term->getParent();
   llvm::Loop *L = LI->getLoopFor(BB);
+  if (!L)
+    return;
   BasicBlock *Target = Term->getSuccessor(1);
   PHINode *Broken = PHINode::Create(Int64, 0, "", &Target->front());
 

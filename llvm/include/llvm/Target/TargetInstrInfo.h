@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -249,6 +250,12 @@ public:
   virtual bool getStackSlotRange(const TargetRegisterClass *RC, unsigned SubIdx,
                                  unsigned &Size, unsigned &Offset,
                                  const MachineFunction &MF) const;
+
+  /// Returns the size in bytes of the specified MachineInstr, or ~0U
+  /// when this function is not implemented by a target.
+  virtual unsigned getInstSizeInBytes(const MachineInstr &MI) const {
+    return ~0U;
+  }
 
   /// Return true if the instruction is as cheap as a move instruction.
   ///
@@ -543,6 +550,26 @@ public:
                                 ArrayRef<MachineOperand> Cond,
                                 const DebugLoc &DL) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::InsertBranch!");
+  }
+
+  /// Analyze the loop code, return true if it cannot be understoo. Upon
+  /// success, this function returns false and returns information about the
+  /// induction variable and compare instruction used at the end.
+  virtual bool analyzeLoop(MachineLoop &L, MachineInstr *&IndVarInst,
+                           MachineInstr *&CmpInst) const {
+    return true;
+  }
+
+  /// Generate code to reduce the loop iteration by one and check if the loop is
+  /// finished.  Return the value/register of the the new loop count.  We need
+  /// this function when peeling off one or more iterations of a loop. This
+  /// function assumes the nth iteration is peeled first.
+  virtual unsigned reduceLoopCount(MachineBasicBlock &MBB,
+                                   MachineInstr *IndVar, MachineInstr &Cmp,
+                                   SmallVectorImpl<MachineOperand> &Cond,
+                                   SmallVectorImpl<MachineInstr *> &PrevInsts,
+                                   unsigned Iter, unsigned MaxIter) const {
+    llvm_unreachable("Target didn't implement ReduceLoopCount");
   }
 
   /// Delete the instruction OldInst and everything after it, replacing it with
@@ -1003,6 +1030,20 @@ public:
     return false;
   }
 
+  /// Return true if the instruction contains a base register and offset. If
+  /// true, the function also sets the operand position in the instruction
+  /// for the base register and offset.
+  virtual bool getBaseAndOffsetPosition(const MachineInstr &MI,
+                                        unsigned &BasePos,
+                                        unsigned &OffsetPos) const {
+    return false;
+  }
+
+  /// If the instruction is an increment of a constant value, return the amount.
+  virtual bool getIncrementValue(const MachineInstr &MI, int &Value) const {
+    return false;
+  }
+
   virtual bool enableClusterLoads() const { return false; }
 
   virtual bool enableClusterStores() const { return false; }
@@ -1035,6 +1076,10 @@ public:
   /// Return the noop instruction to use for a noop.
   virtual void getNoopForMachoTarget(MCInst &NopInst) const;
 
+  /// Return true for post-incremented instructions.
+  virtual bool isPostIncrement(const MachineInstr &MI) const {
+    return false;
+  }
 
   /// Returns true if the instruction is already predicated.
   virtual bool isPredicated(const MachineInstr &MI) const {

@@ -9596,7 +9596,12 @@ public:
   }
 
   AvailabilityResult getCurContextAvailability() const;
-  
+
+  /// \brief Get the verison that this context implies.
+  /// For instance, a method in an interface that is annotated with an
+  /// availability attribuite effectively has the availability of the interface.
+  VersionTuple getVersionForDecl(const Decl *Ctx) const;
+
   const DeclContext *getCurObjCLexicalContext() const {
     const DeclContext *DC = getCurLexicalContext();
     // A category implicitly has the attribute of the interface.

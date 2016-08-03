@@ -725,8 +725,9 @@ static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   assert(CanCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, DL) &&
          "precondition violation - materialization can't fail");
 
-  if (auto *CExpr = dyn_cast<ConstantExpr>(StoredVal))
-    StoredVal = ConstantFoldConstantExpression(CExpr, DL);
+  if (auto *C = dyn_cast<Constant>(StoredVal))
+    if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
+      StoredVal = FoldedStoredVal;
 
   // If this is already the right type, just return it.
   Type *StoredValTy = StoredVal->getType();
@@ -759,8 +760,9 @@ static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
         StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy);
     }
 
-    if (auto *CExpr = dyn_cast<ConstantExpr>(StoredVal))
-      StoredVal = ConstantFoldConstantExpression(CExpr, DL);
+    if (auto *C = dyn_cast<ConstantExpr>(StoredVal))
+      if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
+        StoredVal = FoldedStoredVal;
 
     return StoredVal;
   }
@@ -804,8 +806,9 @@ static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
       StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy, "bitcast");
   }
 
-  if (auto *CExpr = dyn_cast<ConstantExpr>(StoredVal))
-    StoredVal = ConstantFoldConstantExpression(CExpr, DL);
+  if (auto *C = dyn_cast<Constant>(StoredVal))
+    if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
+      StoredVal = FoldedStoredVal;
 
   return StoredVal;
 }

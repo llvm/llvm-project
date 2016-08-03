@@ -8,51 +8,54 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
 
-Error IModuleSubstreamVisitor::visitSymbols(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitSymbols(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::Symbols, Data);
 }
-Error IModuleSubstreamVisitor::visitLines(StreamRef Data,
+Error IModuleSubstreamVisitor::visitLines(ReadableStreamRef Data,
                                           const LineSubstreamHeader *Header,
                                           const LineInfoArray &Lines) {
   return visitUnknown(ModuleSubstreamKind::Lines, Data);
 }
-Error IModuleSubstreamVisitor::visitStringTable(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitStringTable(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::StringTable, Data);
 }
 Error IModuleSubstreamVisitor::visitFileChecksums(
-    StreamRef Data, const FileChecksumArray &Checksums) {
+    ReadableStreamRef Data, const FileChecksumArray &Checksums) {
   return visitUnknown(ModuleSubstreamKind::FileChecksums, Data);
 }
-Error IModuleSubstreamVisitor::visitFrameData(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitFrameData(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::FrameData, Data);
 }
-Error IModuleSubstreamVisitor::visitInlineeLines(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitInlineeLines(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::InlineeLines, Data);
 }
-Error IModuleSubstreamVisitor::visitCrossScopeImports(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitCrossScopeImports(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::CrossScopeExports, Data);
 }
-Error IModuleSubstreamVisitor::visitCrossScopeExports(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitCrossScopeExports(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::CrossScopeImports, Data);
 }
-Error IModuleSubstreamVisitor::visitILLines(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitILLines(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::ILLines, Data);
 }
-Error IModuleSubstreamVisitor::visitFuncMDTokenMap(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitFuncMDTokenMap(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::FuncMDTokenMap, Data);
 }
-Error IModuleSubstreamVisitor::visitTypeMDTokenMap(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitTypeMDTokenMap(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::TypeMDTokenMap, Data);
 }
-Error IModuleSubstreamVisitor::visitMergedAssemblyInput(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitMergedAssemblyInput(
+    ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::MergedAssemblyInput, Data);
 }
-Error IModuleSubstreamVisitor::visitCoffSymbolRVA(StreamRef Data) {
+Error IModuleSubstreamVisitor::visitCoffSymbolRVA(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::CoffSymbolRVA, Data);
 }
 

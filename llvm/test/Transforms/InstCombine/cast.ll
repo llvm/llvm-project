@@ -1372,3 +1372,24 @@ define i16 @PR24763(i8 %V) {
   %t = trunc i32 %l to i16
   ret i16 %t
 }
+
+define i64 @PR28745() {
+; CHECK-LABEL: @PR28745(
+; CHECK-NEXT:    ret i64 1
+
+  %b = zext i32 extractvalue ({ i32 } select (i1 icmp eq (i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), i16 0), { i32 } { i32 1 }, { i32 } zeroinitializer), 0) to i64
+  ret i64 %b
+}
+
+define i32 @test89() {
+; CHECK-LABEL: @test89(
+; CHECK-NEXT:    ret i32 393216
+  ret i32 bitcast (<2 x i16> <i16 6, i16 undef> to i32)
+}
+
+define <2 x i32> @test90() {
+; CHECK-LABEL: @test90(
+; CHECK: ret <2 x i32> <i32 0, i32 15360>
+  %tmp6 = bitcast <4 x half> <half undef, half undef, half undef, half 0xH3C00> to <2 x i32>
+  ret <2 x i32> %tmp6
+}

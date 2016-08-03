@@ -125,10 +125,15 @@ define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
 }
 
 define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
-; ALL-LABEL: andd512fold:
-; ALL:       ## BB#0: ## %entry
-; ALL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
-; ALL-NEXT:    retq
+; KNL-LABEL: andd512fold:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: andd512fold:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    vandps (%rdi), %zmm0, %zmm0
+; SKX-NEXT:    retq
 entry:
   %a = load <16 x i32>, <16 x i32>* %x, align 4
   %b = and <16 x i32> %y, %a

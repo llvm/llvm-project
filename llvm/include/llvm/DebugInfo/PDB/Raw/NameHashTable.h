@@ -12,8 +12,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamRef.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -41,7 +41,7 @@ public:
   msf::FixedStreamArray<support::ulittle32_t> name_ids() const;
 
 private:
-  msf::StreamRef NamesBuffer;
+  msf::ReadableStreamRef NamesBuffer;
   msf::FixedStreamArray<support::ulittle32_t> IDs;
   uint32_t Signature;
   uint32_t HashVersion;

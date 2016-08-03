@@ -146,6 +146,10 @@ def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
 def sysroot: J<"sysroot=">, HelpText<"Set the system root">;
 
+def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_REL32">;
+
+def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_ABS32">;
+
 def threads: F<"threads">, HelpText<"Enable use of threads">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
@@ -243,6 +247,7 @@ def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def define_common: F<"define-common">;
 def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
+def g: Flag<["-"], "g">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,

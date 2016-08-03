@@ -148,12 +148,12 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           int FrameIndex = INT_MAX;
           auto Iter = CatchObjects.find(AI);
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {
-            FrameIndex = MF->getFrameInfo()->CreateFixedObject(
+            FrameIndex = MF->getFrameInfo().CreateFixedObject(
                 TySize, 0, /*Immutable=*/false, /*isAliased=*/true);
-            MF->getFrameInfo()->setObjectAlignment(FrameIndex, Align);
+            MF->getFrameInfo().setObjectAlignment(FrameIndex, Align);
           } else {
             FrameIndex =
-                MF->getFrameInfo()->CreateStackObject(TySize, Align, false, AI);
+                MF->getFrameInfo().CreateStackObject(TySize, Align, false, AI);
           }
 
           StaticAllocaMap[AI] = FrameIndex;
@@ -167,7 +167,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (Align <= StackAlign)
             Align = 0;
           // Inform the Frame Information that we have variable-sized objects.
-          MF->getFrameInfo()->CreateVariableSizedObject(Align ? Align : 1, AI);
+          MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, AI);
         }
       }
 
@@ -188,7 +188,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                   TLI->getRegForInlineAsmConstraint(TRI, Op.ConstraintCode,
                                                     Op.ConstraintVT);
               if (PhysReg.first == SP)
-                MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
+                MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
             }
           }
         }
@@ -199,14 +199,14 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       // arguments.
       if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::vastart)
-          MF->getFrameInfo()->setHasVAStart(true);
+          MF->getFrameInfo().setHasVAStart(true);
       }
 
       // If we have a musttail call in a variadic function, we need to ensure we
       // forward implicit register parameters.
       if (const auto *CI = dyn_cast<CallInst>(I)) {
         if (CI->isMustTailCall() && Fn->isVarArg())
-          MF->getFrameInfo()->setHasMustTailInVarArgFunc(true);
+          MF->getFrameInfo().setHasMustTailInVarArgFunc(true);
       }
 
       // Mark values used outside their block as exported, by allocating
@@ -260,7 +260,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       // this in such cases in order to improve frame layout.
       if (!isa<LandingPadInst>(I)) {
         MMI.setHasEHFunclets(true);
-        MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
+        MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }
       if (isa<CatchSwitchInst>(I)) {
         assert(&*BB->begin() == I &&

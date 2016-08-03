@@ -453,7 +453,7 @@ private:
   /// object and incorporates their load into the current chain. This prevents
   /// an upcoming store from clobbering the stack argument before it's used.
   SDValue addTokenForArgument(SDValue Chain, SelectionDAG &DAG,
-                              MachineFrameInfo *MFI, int ClobberedFI) const;
+                              MachineFrameInfo &MFI, int ClobberedFI) const;
 
   bool DoesCalleeRestoreStack(CallingConv::ID CallCC, bool TailCallOpt) const;
 

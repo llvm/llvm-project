@@ -1791,22 +1791,32 @@ void Generic_GCC::CudaInstallationDetector::init(
           LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
       LibDeviceMap[GpuArch] = FilePath.str();
       // Insert map entries for specifc devices with this compute capability.
+      // NVCC's choice of libdevice library version is rather peculiar:
+      // http://docs.nvidia.com/cuda/libdevice-users-guide/basic-usage.html#version-selection
+      // TODO: this will need to be updated once CUDA-8 is released.
       if (GpuArch == "compute_20") {
         LibDeviceMap["sm_20"] = FilePath;
         LibDeviceMap["sm_21"] = FilePath;
+        LibDeviceMap["sm_32"] = FilePath;
       } else if (GpuArch == "compute_30") {
         LibDeviceMap["sm_30"] = FilePath;
-        LibDeviceMap["sm_32"] = FilePath;
+        // compute_30 is the fallback libdevice variant for sm_30+,
+        // unless CUDA specifies different version for specific GPU
+        // arch.
+        LibDeviceMap["sm_50"] = FilePath;
+        LibDeviceMap["sm_52"] = FilePath;
+        LibDeviceMap["sm_53"] = FilePath;
+        // sm_6? are currently all aliases for sm_53 in LLVM and
+        // should use compute_30.
+        LibDeviceMap["sm_60"] = FilePath;
+        LibDeviceMap["sm_61"] = FilePath;
+        LibDeviceMap["sm_62"] = FilePath;
       } else if (GpuArch == "compute_35") {
         LibDeviceMap["sm_35"] = FilePath;
         LibDeviceMap["sm_37"] = FilePath;
       } else if (GpuArch == "compute_50") {
-        LibDeviceMap["sm_50"] = FilePath;
-        LibDeviceMap["sm_52"] = FilePath;
-        LibDeviceMap["sm_53"] = FilePath;
-        LibDeviceMap["sm_60"] = FilePath;
-        LibDeviceMap["sm_61"] = FilePath;
-        LibDeviceMap["sm_62"] = FilePath;
+        // NVCC does not use compute_50 libdevice at all at the moment.
+        // The version that's shipped with CUDA-7.5 is a copy of compute_30.
       }
     }
 
@@ -4759,18 +4769,23 @@ CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nocudalib))
     return;
 
-  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(
-      DriverArgs.getLastArgValue(options::OPT_march_EQ));
-  if (!LibDeviceFile.empty()) {
-    CC1Args.push_back("-mlink-cuda-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
+  StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
+  assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
+  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
 
-    // Libdevice in CUDA-7.0 requires PTX version that's more recent
-    // than LLVM defaults to. Use PTX4.2 which is the PTX version that
-    // came with CUDA-7.0.
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+ptx42");
+  if (LibDeviceFile.empty()) {
+    getDriver().Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
+    return;
   }
+
+  CC1Args.push_back("-mlink-cuda-bitcode");
+  CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
+
+  // Libdevice in CUDA-7.0 requires PTX version that's more recent
+  // than LLVM defaults to. Use PTX4.2 which is the PTX version that
+  // came with CUDA-7.0.
+  CC1Args.push_back("-target-feature");
+  CC1Args.push_back("+ptx42");
 }
 
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,

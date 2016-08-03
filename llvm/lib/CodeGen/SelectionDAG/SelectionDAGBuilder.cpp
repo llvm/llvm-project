@@ -833,8 +833,7 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
 
       if (TheReg == SP && Code == InlineAsm::Kind_Clobber) {
         // If we clobbered the stack pointer, MFI should know about it.
-        assert(DAG.getMachineFunction().getFrameInfo()->
-            hasOpaqueSPAdjustment());
+        assert(DAG.getMachineFunction().getFrameInfo().hasOpaqueSPAdjustment());
       }
     }
   }
@@ -2033,8 +2032,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
 
-  MachineFrameInfo *MFI = ParentBB->getParent()->getFrameInfo();
-  int FI = MFI->getStackProtectorIndex();
+  MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
+  int FI = MFI.getStackProtectorIndex();
 
   SDValue Guard;
   SDLoc dl = getCurSDLoc();
@@ -3433,7 +3432,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   setValue(&I, DSA);
   DAG.setRoot(DSA.getValue(1));
 
-  assert(FuncInfo.MF->getFrameInfo()->hasVarSizedObjects());
+  assert(FuncInfo.MF->getFrameInfo().hasVarSizedObjects());
 }
 
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
@@ -5024,11 +5023,11 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::eh_sjlj_functioncontext: {
     // Get and store the index of the function context.
-    MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     AllocaInst *FnCtx =
       cast<AllocaInst>(I.getArgOperand(0)->stripPointerCasts());
     int FI = FuncInfo.StaticAllocaMap[FnCtx];
-    MFI->setFunctionContextIndex(FI);
+    MFI.setFunctionContextIndex(FI);
     return nullptr;
   }
   case Intrinsic::eh_sjlj_setjmp: {
@@ -5377,7 +5376,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::stackprotector: {
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
-    MachineFrameInfo *MFI = MF.getFrameInfo();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
     EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
     SDValue Src, Chain = getRoot();
 
@@ -5389,7 +5388,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     AllocaInst *Slot = cast<AllocaInst>(I.getArgOperand(1));
 
     int FI = FuncInfo.StaticAllocaMap[Slot];
-    MFI->setStackProtectorIndex(FI);
+    MFI.setStackProtectorIndex(FI);
 
     SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
 
@@ -6044,6 +6043,49 @@ bool SelectionDAGBuilder::visitMemChrCall(const CallInst &I) {
   return false;
 }
 
+///
+/// visitMemPCpyCall -- lower a mempcpy call as a memcpy followed by code to
+/// to adjust the dst pointer by the size of the copied memory.
+bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
+
+  // Verify argument count: void *mempcpy(void *, const void *, size_t)
+  if (I.getNumArgOperands() != 3)
+    return false;
+
+  SDValue Dst = getValue(I.getArgOperand(0));
+  SDValue Src = getValue(I.getArgOperand(1));
+  SDValue Size = getValue(I.getArgOperand(2));
+
+  unsigned DstAlign = DAG.InferPtrAlignment(Dst);
+  unsigned SrcAlign = DAG.InferPtrAlignment(Src);
+  unsigned Align = std::min(DstAlign, SrcAlign);
+  if (Align == 0) // Alignment of one or both could not be inferred.
+    Align = 1; // 0 and 1 both specify no alignment, but 0 is reserved.
+
+  bool isVol = false;
+  SDLoc sdl = getCurSDLoc();
+
+  // In the mempcpy context we need to pass in a false value for isTailCall
+  // because the return pointer needs to be adjusted by the size of
+  // the copied memory.
+  SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Align, isVol,
+                             false, /*isTailCall=*/false,
+                             MachinePointerInfo(I.getArgOperand(0)),
+                             MachinePointerInfo(I.getArgOperand(1)));
+  assert(MC.getNode() != nullptr &&
+         "** memcpy should not be lowered as TailCall in mempcpy context **");
+  DAG.setRoot(MC);
+
+  // Check if Size needs to be truncated or extended.
+  Size = DAG.getSExtOrTrunc(Size, sdl, Dst.getValueType());
+
+  // Adjust return pointer to point just past the last dst byte.
+  SDValue DstPlusSize = DAG.getNode(ISD::ADD, sdl, Dst.getValueType(),
+                                    Dst, Size);
+  setValue(&I, DstPlusSize);
+  return true;
+}
+
 /// visitStrCpyCall -- See if we can lower a strcpy or stpcpy call into an
 /// optimized form.  If so, return true and lower it, otherwise return false
 /// and it will be lowered like a normal call.
@@ -6332,6 +6374,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         break;
       case LibFunc::memcmp:
         if (visitMemCmpCall(I))
+          return;
+        break;
+      case LibFunc::mempcpy:
+        if (visitMemPCpyCall(I))
           return;
         break;
       case LibFunc::memchr:
@@ -6723,7 +6769,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         uint64_t TySize = DL.getTypeAllocSize(Ty);
         unsigned Align = DL.getPrefTypeAlignment(Ty);
         MachineFunction &MF = DAG.getMachineFunction();
-        int SSFI = MF.getFrameInfo()->CreateStackObject(TySize, Align, false);
+        int SSFI = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
         SDValue StackSlot =
             DAG.getFrameIndex(SSFI, TLI.getPointerTy(DAG.getDataLayout()));
         Chain = DAG.getStore(
@@ -7308,7 +7354,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   DAG.setRoot(Chain);
 
   // Inform the Frame Information that we have a stackmap in this function.
-  FuncInfo.MF->getFrameInfo()->setHasStackMap();
+  FuncInfo.MF->getFrameInfo().setHasStackMap();
 }
 
 /// \brief Lower llvm.experimental.patchpoint directly to its target opcode.
@@ -7459,7 +7505,7 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   DAG.DeleteNode(Call);
 
   // Inform the Frame Information that we have a patchpoint in this function.
-  FuncInfo.MF->getFrameInfo()->setHasPatchPoint();
+  FuncInfo.MF->getFrameInfo().setHasPatchPoint();
 }
 
 /// Returns an AttributeSet representing the attributes applied to the return
@@ -7507,7 +7553,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     uint64_t TySize = DL.getTypeAllocSize(CLI.RetTy);
     unsigned Align = DL.getPrefTypeAlignment(CLI.RetTy);
     MachineFunction &MF = CLI.DAG.getMachineFunction();
-    DemoteStackIdx = MF.getFrameInfo()->CreateStackObject(TySize, Align, false);
+    DemoteStackIdx = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
     Type *StackSlotPtrType = PointerType::getUnqual(CLI.RetTy);
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getPointerTy(DL));

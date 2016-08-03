@@ -177,7 +177,7 @@ static inline const MachineInstrBuilder &
 addFrameReference(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
   MachineInstr *MI = MIB;
   MachineFunction &MF = *MI->getParent()->getParent();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const MCInstrDesc &MCID = MI->getDesc();
   auto Flags = MachineMemOperand::MONone;
   if (MCID.mayLoad())

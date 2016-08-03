@@ -44,7 +44,8 @@ std::string createQualifiedNameForReplacement(
   std::string StrippedQualifiers;
   while (!SymbolQualifiers.empty() &&
          !llvm::StringRef(QualifiedName).endswith(SymbolQualifiers.back())) {
-    StrippedQualifiers = "::" + SymbolQualifiers.back().str();
+    StrippedQualifiers =
+        "::" + SymbolQualifiers.back().str() + StrippedQualifiers;
     SymbolQualifiers.pop_back();
   }
   // Append the missing stripped qualifiers.

@@ -165,11 +165,11 @@ public:
     DummyExterns[Name] = Addr;
   }
 
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
+  JITSymbol findSymbol(const std::string &Name) override {
     auto I = DummyExterns.find(Name);
 
     if (I != DummyExterns.end())
-      return RuntimeDyld::SymbolInfo(I->second, JITSymbolFlags::Exported);
+      return JITSymbol(I->second, JITSymbolFlags::Exported);
 
     return RTDyldMemoryManager::findSymbol(Name);
   }

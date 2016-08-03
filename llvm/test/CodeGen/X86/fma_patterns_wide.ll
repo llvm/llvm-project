@@ -749,7 +749,7 @@ define <16 x float> @test_v16f32_fneg_fmul(<16 x float> %x, <16 x float> %y) #0 
 ;
 ; AVX512-LABEL: test_v16f32_fneg_fmul:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vxorps %zmm2, %zmm2, %zmm2
 ; AVX512-NEXT:    vfnmsub213ps %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %m = fmul nsz <16 x float> %x, %y
@@ -774,7 +774,7 @@ define <8 x double> @test_v8f64_fneg_fmul(<8 x double> %x, <8 x double> %y) #0 {
 ;
 ; AVX512-LABEL: test_v8f64_fneg_fmul:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
+; AVX512-NEXT:    vxorpd %zmm2, %zmm2, %zmm2
 ; AVX512-NEXT:    vfnmsub213pd %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %m = fmul nsz <8 x double> %x, %y

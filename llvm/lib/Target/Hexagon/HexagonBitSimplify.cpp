@@ -1331,7 +1331,6 @@ namespace {
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
     static bool isTfrConst(const MachineInstr &MI);
   private:
-    bool isConst(unsigned R, int64_t &V) const;
     unsigned genTfrConst(const TargetRegisterClass *RC, int64_t C,
         MachineBasicBlock &B, MachineBasicBlock::iterator At, DebugLoc &DL);
 
@@ -1339,23 +1338,6 @@ namespace {
     MachineRegisterInfo &MRI;
     BitTracker &BT;
   };
-}
-
-bool ConstGeneration::isConst(unsigned R, int64_t &C) const {
-  if (!BT.has(R))
-    return false;
-  const BitTracker::RegisterCell &RC = BT.lookup(R);
-  int64_t T = 0;
-  for (unsigned i = RC.width(); i > 0; --i) {
-    const BitTracker::BitValue &V = RC[i-1];
-    T <<= 1;
-    if (V.is(1))
-      T |= 1;
-    else if (!V.is(0))
-      return false;
-  }
-  C = T;
-  return true;
 }
 
 bool ConstGeneration::isTfrConst(const MachineInstr &MI) {
@@ -1586,7 +1568,9 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
         continue;
       }
 
-      if (FRC == &Hexagon::DoubleRegsRegClass) {
+      if (FRC == &Hexagon::DoubleRegsRegClass ||
+          FRC == &Hexagon::VecDblRegsRegClass ||
+          FRC == &Hexagon::VecDblRegs128BRegClass) {
         // Try to generate REG_SEQUENCE.
         BitTracker::RegisterRef TL = { R, Hexagon::subreg_loreg };
         BitTracker::RegisterRef TH = { R, Hexagon::subreg_hireg };
@@ -1620,6 +1604,8 @@ bool CopyPropagation::isCopyReg(unsigned Opc) {
     case Hexagon::A2_combinew:
     case Hexagon::A4_combineir:
     case Hexagon::A4_combineri:
+    case Hexagon::V6_vcombine:
+    case Hexagon::V6_vcombine_128B:
       return true;
     default:
       break;
@@ -1657,7 +1643,9 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
       }
       break;
     }
-    case Hexagon::A2_combinew: {
+    case Hexagon::A2_combinew:
+    case Hexagon::V6_vcombine:
+    case Hexagon::V6_vcombine_128B: {
       BitTracker::RegisterRef RH = MI.getOperand(1), RL = MI.getOperand(2);
       Changed = HBS::replaceSubWithSub(RD.Reg, Hexagon::subreg_loreg,
                                        RL.Reg, RL.Sub, MRI);

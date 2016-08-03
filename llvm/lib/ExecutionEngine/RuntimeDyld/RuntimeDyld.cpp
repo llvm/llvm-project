@@ -584,13 +584,19 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
       return NameOrErr.takeError();
 
     // Skip common symbols already elsewhere.
-    if (GlobalSymbolTable.count(Name) ||
-        Resolver.findSymbolInLogicalDylib(Name)) {
+    if (GlobalSymbolTable.count(Name)) {
       DEBUG(dbgs() << "\tSkipping already emitted common symbol '" << Name
                    << "'\n");
       continue;
     }
 
+    if (auto Sym = Resolver.findSymbolInLogicalDylib(Name)) {
+      if (!Sym.isCommon()) {
+        DEBUG(dbgs() << "\tSkipping common symbol '" << Name
+                     << "' in favor of stronger definition.\n");
+        continue;
+      }
+    }
     uint32_t Align = Sym.getAlignment();
     uint64_t Size = Sym.getCommonSize();
 
@@ -974,10 +980,10 @@ uint64_t RuntimeDyld::LoadedObjectInfo::getSectionLoadAddress(
 }
 
 void RuntimeDyld::MemoryManager::anchor() {}
-void RuntimeDyld::SymbolResolver::anchor() {}
+void JITSymbolResolver::anchor() {}
 
 RuntimeDyld::RuntimeDyld(RuntimeDyld::MemoryManager &MemMgr,
-                         RuntimeDyld::SymbolResolver &Resolver)
+                         JITSymbolResolver &Resolver)
     : MemMgr(MemMgr), Resolver(Resolver) {
   // FIXME: There's a potential issue lurking here if a single instance of
   // RuntimeDyld is used to load multiple objects.  The current implementation
@@ -994,8 +1000,8 @@ RuntimeDyld::~RuntimeDyld() {}
 
 static std::unique_ptr<RuntimeDyldCOFF>
 createRuntimeDyldCOFF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
-                      RuntimeDyld::SymbolResolver &Resolver,
-                      bool ProcessAllSections, RuntimeDyldCheckerImpl *Checker) {
+                      JITSymbolResolver &Resolver, bool ProcessAllSections,
+                      RuntimeDyldCheckerImpl *Checker) {
   std::unique_ptr<RuntimeDyldCOFF> Dyld =
     RuntimeDyldCOFF::create(Arch, MM, Resolver);
   Dyld->setProcessAllSections(ProcessAllSections);
@@ -1005,8 +1011,8 @@ createRuntimeDyldCOFF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
 
 static std::unique_ptr<RuntimeDyldELF>
 createRuntimeDyldELF(RuntimeDyld::MemoryManager &MM,
-                     RuntimeDyld::SymbolResolver &Resolver,
-                     bool ProcessAllSections, RuntimeDyldCheckerImpl *Checker) {
+                     JITSymbolResolver &Resolver, bool ProcessAllSections,
+                     RuntimeDyldCheckerImpl *Checker) {
   std::unique_ptr<RuntimeDyldELF> Dyld(new RuntimeDyldELF(MM, Resolver));
   Dyld->setProcessAllSections(ProcessAllSections);
   Dyld->setRuntimeDyldChecker(Checker);
@@ -1015,7 +1021,7 @@ createRuntimeDyldELF(RuntimeDyld::MemoryManager &MM,
 
 static std::unique_ptr<RuntimeDyldMachO>
 createRuntimeDyldMachO(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
-                       RuntimeDyld::SymbolResolver &Resolver,
+                       JITSymbolResolver &Resolver,
                        bool ProcessAllSections,
                        RuntimeDyldCheckerImpl *Checker) {
   std::unique_ptr<RuntimeDyldMachO> Dyld =
@@ -1056,7 +1062,7 @@ void *RuntimeDyld::getSymbolLocalAddress(StringRef Name) const {
   return Dyld->getSymbolLocalAddress(Name);
 }
 
-RuntimeDyld::SymbolInfo RuntimeDyld::getSymbol(StringRef Name) const {
+JITEvaluatedSymbol RuntimeDyld::getSymbol(StringRef Name) const {
   if (!Dyld)
     return nullptr;
   return Dyld->getSymbol(Name);

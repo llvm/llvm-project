@@ -370,7 +370,7 @@ void Vectorizer::reorder(Instruction *I) {
   // All instructions to move should follow I. Start from I, not from begin().
   for (auto BBI = I->getIterator(), E = I->getParent()->end(); BBI != E;
        ++BBI) {
-    if (!is_contained(InstructionsToMove, &*BBI))
+    if (!InstructionsToMove.count(&*BBI))
       continue;
     Instruction *IM = &*BBI;
     --BBI;

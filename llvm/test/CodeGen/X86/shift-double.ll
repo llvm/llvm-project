@@ -151,19 +151,12 @@ define i64 @test8(i64 %val, i32 %bits) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl %edx
-; CHECK-NEXT:    andb $31, %cl
-; CHECK-NEXT:    xorb $31, %cl
-; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    shldl %cl, %esi, %edx
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %and = and i32 %bits, 31
@@ -175,20 +168,11 @@ define i64 @test8(i64 %val, i32 %bits) nounwind {
 define i64 @test9(i64 %val, i32 %bits) nounwind {
 ; CHECK-LABEL: test9:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    leal (%edx,%edx), %eax
-; CHECK-NEXT:    andb $31, %cl
-; CHECK-NEXT:    xorb $31, %cl
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
 ; CHECK-NEXT:    sarl %cl, %edx
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %and = and i32 %bits, 31
   %sh_prom = zext i32 %and to i64
@@ -199,23 +183,130 @@ define i64 @test9(i64 %val, i32 %bits) nounwind {
 define i64 @test10(i64 %val, i32 %bits) nounwind {
 ; CHECK-LABEL: test10:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movb %ch, %cl
-; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    leal (%edx,%edx), %eax
-; CHECK-NEXT:    andb $31, %cl
-; CHECK-NEXT:    xorb $31, %cl
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    movb %ch, %cl
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
 ; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %and = and i32 %bits, 31
   %sh_prom = zext i32 %and to i64
   %lshr = lshr i64 %val, %sh_prom
   ret i64 %lshr
+}
+
+; SHLD/SHRD manual shifts
+
+define i32 @test11(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test11:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    andl $31, %ecx
+; CHECK-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; CHECK-NEXT:    shldl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %and = and i32 %bits, 31
+  %and32 = sub i32 32, %and
+  %sh_lo = lshr i32 %lo, %and32
+  %sh_hi = shl i32 %hi, %and
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
+}
+
+define i32 @test12(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test12:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    andl $31, %ecx
+; CHECK-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %and = and i32 %bits, 31
+  %and32 = sub i32 32, %and
+  %sh_lo = shl i32 %hi, %and32
+  %sh_hi = lshr i32 %lo, %and
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
+}
+
+define i32 @test13(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test13:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    shldl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %bits32 = sub i32 32, %bits
+  %sh_lo = lshr i32 %lo, %bits32
+  %sh_hi = shl i32 %hi, %bits
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
+}
+
+define i32 @test14(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test14:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %bits32 = sub i32 32, %bits
+  %sh_lo = shl i32 %hi, %bits32
+  %sh_hi = lshr i32 %lo, %bits
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
+}
+
+define i32 @test15(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test15:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    shldl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %bits32 = xor i32 %bits, 31
+  %lo2 = lshr i32 %lo, 1
+  %sh_lo = lshr i32 %lo2, %bits32
+  %sh_hi = shl i32 %hi, %bits
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
+}
+
+define i32 @test16(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %bits32 = xor i32 %bits, 31
+  %lo2 = shl i32 %lo, 1
+  %sh_lo = shl i32 %lo2, %bits32
+  %sh_hi = lshr i32 %hi, %bits
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
+}
+
+define i32 @test17(i32 %hi, i32 %lo, i32 %bits) nounwind {
+; CHECK-LABEL: test17:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    shrdl %cl, %edx, %eax
+; CHECK-NEXT:    retl
+  %bits32 = xor i32 %bits, 31
+  %lo2 = add i32 %lo, %lo
+  %sh_lo = shl i32 %lo2, %bits32
+  %sh_hi = lshr i32 %hi, %bits
+  %sh = or i32 %sh_lo, %sh_hi
+  ret i32 %sh
 }

@@ -4036,8 +4036,8 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result) {
                                  nullptr, false, false);
   QualType TemplArg = QualType(TemplParam->getTypeForDecl(), 0);
   NamedDecl *TemplParamPtr = TemplParam;
-  FixedSizeTemplateParameterListStorage<1> TemplateParamsSt(
-      Loc, Loc, TemplParamPtr, Loc);
+  FixedSizeTemplateParameterListStorage<1, false> TemplateParamsSt(
+      Loc, Loc, TemplParamPtr, Loc, nullptr);
 
   QualType FuncParam = SubstituteAutoTransform(*this, TemplArg).Apply(Type);
   assert(!FuncParam.isNull() &&

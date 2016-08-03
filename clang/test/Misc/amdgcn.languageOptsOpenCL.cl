@@ -181,6 +181,18 @@
 #pragma OPENCL EXTENSION cl_khr_egl_image: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_egl_image' - ignoring}}
 
+#if (__OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_mipmap_image
+#error "Missing cl_khr_mipmap_image define"
+#endif
+#else
+#ifdef cl_khr_mipmap_image
+#error "Incorrect cl_khr_mipmap_image define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_mipmap_image' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_mipmap_image: enable
+
 #ifdef cl_khr_srgb_image_writes
 #error "Incorrect cl_khr_srgb_image_writes define"
 #endif

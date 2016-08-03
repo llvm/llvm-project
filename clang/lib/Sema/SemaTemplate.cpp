@@ -832,11 +832,10 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
   if (ExportLoc.isValid())
     Diag(ExportLoc, diag::warn_template_export_unsupported);
 
-  // FIXME: store RequiresClause
   return TemplateParameterList::Create(
       Context, TemplateLoc, LAngleLoc,
       llvm::makeArrayRef((NamedDecl *const *)Params.data(), Params.size()),
-      RAngleLoc);
+      RAngleLoc, RequiresClause);
 }
 
 static void SetNestedNameSpecifier(TagDecl *T, const CXXScopeSpec &SS) {
@@ -1956,7 +1955,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       // Fabricate an empty template parameter list for the invented header.
       return TemplateParameterList::Create(Context, SourceLocation(),
                                            SourceLocation(), None,
-                                           SourceLocation());
+                                           SourceLocation(), nullptr);
     }
 
     return nullptr;

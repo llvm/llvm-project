@@ -400,11 +400,12 @@ const Attr *Decl::getDefiningAttr() const {
 /// diagnostics.
 static AvailabilityResult CheckAvailability(ASTContext &Context,
                                             const AvailabilityAttr *A,
-                                            std::string *Message) {
-  VersionTuple TargetMinVersion =
-    Context.getTargetInfo().getPlatformMinVersion();
+                                            std::string *Message,
+                                            VersionTuple EnclosingVersion) {
+  if (EnclosingVersion.empty())
+    EnclosingVersion = Context.getTargetInfo().getPlatformMinVersion();
 
-  if (TargetMinVersion.empty())
+  if (EnclosingVersion.empty())
     return AR_Available;
 
   // Check if this is an App Extension "platform", and if so chop off
@@ -449,7 +450,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
 
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() && 
-      TargetMinVersion < A->getIntroduced()) {
+      EnclosingVersion < A->getIntroduced()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -463,7 +464,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   }
 
   // Make sure that this declaration hasn't been obsoleted.
-  if (!A->getObsoleted().empty() && TargetMinVersion >= A->getObsoleted()) {
+  if (!A->getObsoleted().empty() && EnclosingVersion >= A->getObsoleted()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -477,7 +478,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   }
 
   // Make sure that this declaration hasn't been deprecated.
-  if (!A->getDeprecated().empty() && TargetMinVersion >= A->getDeprecated()) {
+  if (!A->getDeprecated().empty() && EnclosingVersion >= A->getDeprecated()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -493,9 +494,10 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   return AR_Available;
 }
 
-AvailabilityResult Decl::getAvailability(std::string *Message) const {
+AvailabilityResult Decl::getAvailability(std::string *Message,
+                                         VersionTuple EnclosingVersion) const {
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
-    return FTD->getTemplatedDecl()->getAvailability(Message);
+    return FTD->getTemplatedDecl()->getAvailability(Message, EnclosingVersion);
 
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
@@ -520,7 +522,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message) const {
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
       AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
-                                                Message);
+                                                Message, EnclosingVersion);
 
       if (AR == AR_Unavailable)
         return AR_Unavailable;
@@ -579,8 +581,8 @@ bool Decl::isWeakImported() const {
       return true;
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      if (CheckAvailability(getASTContext(), Availability,
-                            nullptr) == AR_NotYetIntroduced)
+      if (CheckAvailability(getASTContext(), Availability, nullptr,
+                            VersionTuple()) == AR_NotYetIntroduced)
         return true;
     }
   }

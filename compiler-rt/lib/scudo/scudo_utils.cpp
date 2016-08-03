@@ -33,7 +33,7 @@ extern int VSNPrintf(char *buff, int buff_length, const char *format,
 namespace __scudo {
 
 FORMAT(1, 2)
-void dieWithMessage(const char *Format, ...) {
+void NORETURN dieWithMessage(const char *Format, ...) {
   // Our messages are tiny, 128 characters is more than enough.
   char Message[128];
   va_list Args;

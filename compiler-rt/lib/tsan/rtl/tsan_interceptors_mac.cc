@@ -119,24 +119,23 @@ OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap32, __tsan_atomic32, a32,
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap64, __tsan_atomic64, a64,
                           int64_t)
 
-#define OSATOMIC_INTERCEPTOR_BITOP(f, op, m, mo)              \
+#define OSATOMIC_INTERCEPTOR_BITOP(f, op, clear, mo)          \
   TSAN_INTERCEPTOR(bool, f, uint32_t n, volatile void *ptr) { \
     SCOPED_TSAN_INTERCEPTOR(f, n, ptr);                       \
     char *byte_ptr = ((char *)ptr) + (n >> 3);                \
-    char bit_index = n & 7;                                   \
-    char mask = m;                                            \
+    char bit = 0x80u >> (n & 7);                              \
+    char mask = clear ? ~bit : bit;                           \
     char orig_byte = op((a8 *)byte_ptr, mask, mo);            \
-    return orig_byte & mask;                                  \
+    return orig_byte & bit;                                   \
   }
 
-#define OSATOMIC_INTERCEPTORS_BITOP(f, op, m)                     \
-  OSATOMIC_INTERCEPTOR_BITOP(f, op, m, kMacOrderNonBarrier)       \
-  OSATOMIC_INTERCEPTOR_BITOP(f##Barrier, op, m, kMacOrderBarrier)
+#define OSATOMIC_INTERCEPTORS_BITOP(f, op, clear)               \
+  OSATOMIC_INTERCEPTOR_BITOP(f, op, clear, kMacOrderNonBarrier) \
+  OSATOMIC_INTERCEPTOR_BITOP(f##Barrier, op, clear, kMacOrderBarrier)
 
-OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndSet, __tsan_atomic8_fetch_or,
-                            0x80u >> bit_index)
+OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndSet, __tsan_atomic8_fetch_or, false)
 OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndClear, __tsan_atomic8_fetch_and,
-                            ~(0x80u >> bit_index))
+                            true)
 
 TSAN_INTERCEPTOR(void, OSAtomicEnqueue, OSQueueHead *list, void *item,
                  size_t offset) {

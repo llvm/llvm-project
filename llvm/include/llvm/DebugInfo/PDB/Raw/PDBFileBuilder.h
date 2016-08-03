@@ -23,8 +23,7 @@
 
 namespace llvm {
 namespace msf {
-class MsfBuilder;
-class StreamInterface;
+class MSFBuilder;
 }
 namespace pdb {
 class DbiStreamBuilder;
@@ -38,17 +37,21 @@ public:
 
   Error initialize(const msf::SuperBlock &Super);
 
-  msf::MsfBuilder &getMsfBuilder();
+  msf::MSFBuilder &getMsfBuilder();
   InfoStreamBuilder &getInfoBuilder();
   DbiStreamBuilder &getDbiBuilder();
 
   Expected<std::unique_ptr<PDBFile>>
-  build(std::unique_ptr<msf::StreamInterface> PdbFileBuffer);
+  build(std::unique_ptr<msf::WritableStream> PdbFileBuffer);
+
+  Error commit(const msf::WritableStream &Buffer);
 
 private:
+  Expected<msf::MSFLayout> finalizeMsfLayout() const;
+
   BumpPtrAllocator &Allocator;
 
-  std::unique_ptr<msf::MsfBuilder> Msf;
+  std::unique_ptr<msf::MSFBuilder> Msf;
   std::unique_ptr<InfoStreamBuilder> Info;
   std::unique_ptr<DbiStreamBuilder> Dbi;
 };

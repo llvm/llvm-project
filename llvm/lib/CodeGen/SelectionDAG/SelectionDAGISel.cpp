@@ -594,16 +594,16 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   }
 
   // Determine if there are any calls in this machine function.
-  MachineFrameInfo *MFI = MF->getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   for (const auto &MBB : *MF) {
-    if (MFI->hasCalls() && MF->hasInlineAsm())
+    if (MFI.hasCalls() && MF->hasInlineAsm())
       break;
 
     for (const auto &MI : MBB) {
       const MCInstrDesc &MCID = TII->get(MI.getOpcode());
       if ((MCID.isCall() && !MCID.isReturn()) ||
           MI.isStackAligningInlineAsm()) {
-        MFI->setHasCalls(true);
+        MFI.setHasCalls(true);
       }
       if (MI.isInlineAsm()) {
         MF->setHasInlineAsm(true);
@@ -645,7 +645,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   }
 
   if (TLI->hasCopyImplyingStackAdjustment(MF))
-    MFI->setHasCopyImplyingStackAdjustment(true);
+    MFI.setHasCopyImplyingStackAdjustment(true);
 
   // Freeze the set of reserved registers now that MachineFrameInfo has been
   // set up. All the information required by getReservedRegs() should be

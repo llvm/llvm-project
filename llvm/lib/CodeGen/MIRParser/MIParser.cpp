@@ -26,12 +26,14 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
@@ -130,8 +132,7 @@ public:
   bool parseIRConstant(StringRef::iterator Loc, StringRef Source,
                        const Constant *&C);
   bool parseIRConstant(StringRef::iterator Loc, const Constant *&C);
-  bool parseLowLevelType(StringRef::iterator Loc, LLT &Ty,
-                         bool MustBeSized = true);
+  bool parseLowLevelType(StringRef::iterator Loc, LLT &Ty);
   bool parseTypedImmediateOperand(MachineOperand &Dest);
   bool parseFPImmediateOperand(MachineOperand &Dest);
   bool parseMBBReference(MachineBasicBlock *&MBB);
@@ -153,6 +154,7 @@ public:
   bool parseCFIOperand(MachineOperand &Dest);
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
   bool parseBlockAddressOperand(MachineOperand &Dest);
+  bool parseIntrinsicOperand(MachineOperand &Dest);
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(MachineOperand &Dest,
@@ -1039,11 +1041,8 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
   return false;
 }
 
-bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty,
-                                 bool MustBeSized) {
+bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.is(MIToken::Identifier) && Token.stringValue() == "unsized") {
-    if (MustBeSized)
-      return error(Loc, "expected pN, sN or <N x sM> for sized GlobalISel type");
     lex();
     Ty = LLT::unsized();
     return false;
@@ -1158,7 +1157,7 @@ bool MIParser::parseStackFrameIndex(int &FI) {
                  "'");
   StringRef Name;
   if (const auto *Alloca =
-          MF.getFrameInfo()->getObjectAllocation(ObjectInfo->second))
+          MF.getFrameInfo().getObjectAllocation(ObjectInfo->second))
     Name = Alloca->getName();
   if (!Token.stringValue().empty() && Token.stringValue() != Name)
     return error(Twine("the name of the stack object '%stack.") + Twine(ID) +
@@ -1441,6 +1440,35 @@ bool MIParser::parseBlockAddressOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_intrinsic));
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return error("expected syntax intrinsic(@llvm.whatever)");
+
+  if (Token.isNot(MIToken::NamedGlobalValue))
+    return error("expected syntax intrinsic(@llvm.whatever)");
+
+  std::string Name = Token.stringValue();
+  lex();
+
+  if (expectAndConsume(MIToken::rparen))
+    return error("expected ')' to terminate intrinsic name");
+
+  // Find out what intrinsic we're dealing with, first try the global namespace
+  // and then the target's private intrinsics if that fails.
+  const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
+  Intrinsic::ID ID = Function::lookupIntrinsicID(Name);
+  if (ID == Intrinsic::not_intrinsic && TII)
+    ID = static_cast<Intrinsic::ID>(TII->lookupName(Name));
+
+  if (ID == Intrinsic::not_intrinsic)
+    return error("unknown intrinsic name");
+  Dest = MachineOperand::CreateIntrinsicID(ID);
+
+  return false;
+}
+
 bool MIParser::parseTargetIndexOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_target_index));
   lex();
@@ -1541,6 +1569,8 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);
+  case MIToken::kw_intrinsic:
+    return parseIntrinsicOperand(Dest);
   case MIToken::kw_target_index:
     return parseTargetIndexOperand(Dest);
   case MIToken::kw_liveout:

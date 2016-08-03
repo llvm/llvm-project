@@ -45,7 +45,13 @@ for developer guidelines and send your questions and proposals to
       <li><a href="#bugs">Bug Reports</a></li>
       <li><a href="#ast">AST Visitors</a></li>
       <li><a href="#testing">Testing</a></li>
-      <li><a href="#commands">Useful Commands/Debugging Hints</a></li>
+      <li><a href="#commands">Useful Commands/Debugging Hints</a>
+      <ul>
+        <li><a href="#attaching">Attaching the Debugger</a></li>
+        <li><a href="#narrowing">Narrowing Down the Problem</a></li>
+        <li><a href="#visualizing">Visualizing the Analysis</a></li>
+        <li><a href="#debugprints">Debug Prints and Tricks</a></li>
+      </ul></li>
       <li><a href="#additioninformation">Additional Sources of Information</a></li>
       <li><a href="#links">Useful Links</a></li>
     </ul>
@@ -115,6 +121,8 @@ for developer guidelines and send your questions and proposals to
   </ul>
   
   <h3 id=interaction>Interaction with Checkers</h3>
+
+  <p>
   Checkers are not merely passive receivers of the analyzer core changes - they 
   actively participate in the <tt>ProgramState</tt> construction through the
   <tt>GenericDataMap</tt> which can be used to store the checker-defined part 
@@ -123,9 +131,12 @@ for developer guidelines and send your questions and proposals to
   opportunity to either report a bug or modify the state. (As a rule of thumb, 
   the checker itself should be stateless.) The checkers are called one after another 
   in the predefined order; thus, calling all the checkers adds a chain to the 
-  <tt>ExplodedGraph</tt>. 
+  <tt>ExplodedGraph</tt>.
+  </p>
   
   <h3 id=values>Representing Values</h3>
+
+  <p>
   During symbolic execution, <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1SVal.html">SVal</a> 
   objects are used to represent the semantic evaluation of expressions. 
   They can represent things like concrete 
@@ -142,7 +153,9 @@ for developer guidelines and send your questions and proposals to
   This represents a case that is outside the realm of the analyzer's reasoning 
   capabilities. <tt>SVals</tt> are value objects and their values can be viewed 
   using the <tt>.dump()</tt> method. Often they wrap persistent objects such as 
-  symbols or regions. 
+  symbols or regions.
+  </p>
+
   <p>
   <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1SymExpr.html">SymExpr</a> (symbol) 
   is meant to represent abstract, but named, symbolic value. Symbols represent 
@@ -150,7 +163,7 @@ for developer guidelines and send your questions and proposals to
   we can associate constraints with that value as we analyze a path. For 
   example, we might record that the value of a symbol is greater than 
   <tt>0</tt>, etc.
-  <p>
+  </p>
 
   <p>
   <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1MemRegion.html">MemRegion</a> is similar to a symbol.  
@@ -163,9 +176,12 @@ for developer guidelines and send your questions and proposals to
   <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1SymbolicRegion.html">SymbolicRegion</a> 
   is for. It is a <tt>MemRegion</tt> that has an associated symbol. Since the 
   symbol is unique and has a unique name; that symbol names the region.
+  </p>
   
-  <P>
+  <p>
   Let's see how the analyzer processes the expressions in the following example:
+  </p>
+
   <p>
   <pre class="code_example">
   int foo(int x) {
@@ -174,6 +190,8 @@ for developer guidelines and send your questions and proposals to
      ...
   }
   </pre>
+  </p>
+
   <p>
 Let's look at how <tt>x*2</tt> gets evaluated. When <tt>x</tt> is evaluated, 
 we first construct an <tt>SVal</tt> that represents the lvalue of <tt>x</tt>, in 
@@ -193,6 +211,7 @@ to the <tt>MemRegion</tt> in the symbolic store.
 The second line is similar. When we evaluate <tt>x</tt> again, we do the same 
 dance, and create an <tt>SVal</tt> that references the symbol <tt>$0</tt>. Note, two <tt>SVals</tt> 
 might reference the same underlying values.
+  </p>
 
 <p>
 To summarize, MemRegions are unique names for blocks of memory. Symbols are 
@@ -200,6 +219,7 @@ unique names for abstract symbolic values. Some MemRegions represents abstract
 symbolic chunks of memory, and thus are also based on symbols. SVals are just 
 references to values, and can reference either MemRegions, Symbols, or concrete 
 values (e.g., the number 1).
+</p>
 
   <!-- 
   TODO: Add a picture.
@@ -511,75 +531,139 @@ by calling <a href = "http://clang.llvm.org/doxygen/classclang_1_1ento_1_1Checke
   live in <tt>clang/test/Analysis</tt> folder. To run all of the analyzer tests, 
   execute the following from the <tt>clang</tt> build directory:
     <pre class="code">
-    $ <b>TESTDIRS=Analysis make test</b>
+    $ <b>bin/llvm-lit -sv ../llvm/tools/clang/test/Analysis</b>
     </pre>
 
 <h2 id=commands>Useful Commands/Debugging Hints</h2>
-<ul>
-<li>
-While investigating a checker-related issue, instruct the analyzer to only 
+
+<h3 id=attaching>Attaching the Debugger</h3>
+
+<p>When your command contains the <tt><b>-cc1</b></tt> flag, you can attach the
+debugger to it directly:</p>
+
+<pre class="code">
+    $ <b>gdb --args clang -cc1 -analyze -analyzer-checker=core test.c</b>
+    $ <b>lldb -- clang -cc1 -analyze -analyzer-checker=core test.c</b>
+</pre>
+
+<p>
+Otherwise, if your command line contains <tt><b>--analyze</b></tt>,
+the actual clang instance would be run in a separate process. In
+order to debug it, use the <tt><b>-###</b></tt> flag for obtaining
+the command line of the child process:
+</p>
+
+<pre class="code">
+    $ <b>clang --analyze test.c -\#\#\#</b>
+</pre>
+
+<p>
+Below we describe a few useful command line arguments, all of which assume that
+you are running <tt><b>clang -cc1</b></tt>.
+</p>
+
+<h3 id=narrowing>Narrowing Down the Problem</h3>
+
+<p>While investigating a checker-related issue, instruct the analyzer to only
 execute a single checker:
-<br><tt>
-$ <b>clang -cc1 -analyze -analyzer-checker=osx.KeychainAPI test.c</b>
-</tt>
-</li>
-<li>
-To dump AST:
-<br><tt>
-$ <b>clang -cc1 -ast-dump test.c</b>
-</tt>
-</li>
-<li>
-To view/dump CFG use <tt>debug.ViewCFG</tt> or <tt>debug.DumpCFG</tt> checkers:
-<br><tt>
-$ <b>clang -cc1 -analyze -analyzer-checker=debug.ViewCFG test.c</b>
-</tt> 
-</li>
-<li>
-To see all available debug checkers:
-<br><tt>
-$ <b>clang -cc1 -analyzer-checker-help | grep "debug"</b>
-</tt>
-</li>
-<li>
-To see which function is failing while processing a large file use 
-<tt>-analyzer-display-progress</tt> option.
-</li>
-<li>
-While debugging execute <tt>clang -cc1 -analyze -analyzer-checker=core</tt> 
-instead of <tt>clang --analyze</tt>, as the later would call the compiler 
-in a separate process.
-</li>
-<li>
-To view <tt>ExplodedGraph</tt> (the state graph explored by the analyzer) while 
-debugging, goto a frame that has <tt>clang::ento::ExprEngine</tt> object and 
-execute:
-<br><tt> 
-(gdb) <b>p ViewGraph(0)</b>
-</tt>
-</li>
-<li>
-To see the <tt>ProgramState</tt> while debugging use the following command. 
-<br><tt>
-(gdb) <b>p State->dump()</b>
-</tt> 
-</li>
-<li>
-To see <tt>clang::Expr</tt> while debugging use the following command. If you 
-pass in a SourceManager object, it will also dump the corresponding line in the 
-source code.
-<br><tt>
-(gdb) <b>p E->dump()</b>
-</tt> 
-</li>
-<li>
-To dump AST of a method that the current <tt>ExplodedNode</tt> belongs to:
-<br><tt>
-(gdb) <b>p C.getPredecessor()->getCodeDecl().getBody()->dump()</b>
-(gdb) <b>p C.getPredecessor()->getCodeDecl().getBody()->dump(getContext().getSourceManager())</b>
-</tt>
-</li>
-</ul>
+</p>
+<pre class="code">
+    $ <b>clang -cc1 -analyze -analyzer-checker=osx.KeychainAPI test.c</b>
+</pre>
+
+<p>If you are experiencing a crash, to see which function is failing while
+processing a large file use the  <tt><b>-analyzer-display-progress</b></tt>
+option.</p>
+
+<p>You can analyze a particular function within the file, which is often useful
+because the problem is always in a certain function:</p>
+<pre class="code">
+    $ <b>clang -cc1 -analyze -analyzer-checker=core test.c -analyzer-display-progress</b>
+    ANALYZE (Syntax): test.c foo
+    ANALYZE (Syntax): test.c bar
+    ANALYZE (Path,  Inline_Regular): test.c bar
+    ANALYZE (Path,  Inline_Regular): test.c foo
+    $ <b>clang -cc1 -analyze -analyzer-checker=core test.c -analyzer-display-progress -analyze-function=foo</b>
+    ANALYZE (Syntax): test.c foo
+    ANALYZE (Path,  Inline_Regular): test.c foo
+</pre>
+
+<p>The bug reporter mechanism removes path diagnostics inside intermediate
+function calls that have returned by the time the bug was found and contain
+no interesting pieces. Usually it is up to the checkers to produce more
+interesting pieces by adding custom <tt>BugReporterVisitor</tt> objects.
+However, you can disable path pruning while debugging with the
+<tt><b>-analyzer-config prune-paths=false</b></tt> option.
+
+<h3 id=visualizing>Visualizing the Analysis</h3>
+
+<p>To dump the AST, which often helps understanding how the program should
+behave:</p>
+<pre class="code">
+    $ <b>clang -cc1 -ast-dump test.c</b>
+</pre>
+
+<p>To view/dump CFG use <tt>debug.ViewCFG</tt> or <tt>debug.DumpCFG</tt>
+checkers:</p>
+<pre class="code">
+    $ <b>clang -cc1 -analyze -analyzer-checker=debug.ViewCFG test.c</b>
+</pre>
+
+<p><tt>ExplodedGraph</tt> (the state graph explored by the analyzer) can be
+visualized with another debug checker:</p>
+<pre class="code">
+    $ <b>clang -cc1 -analyze -analyzer-checker=debug.ViewExplodedGraph test.c</b>
+</pre>
+<p>Or, equivalently, with <tt><b>-analyzer-viz-egraph-graphviz</b></tt>
+option, which does the same thing - dumps the exploded graph in graphviz
+<tt><b>.dot</b></tt> format.</p>
+
+<p>You can convert <tt><b>.dot</b></tt> files into other formats - in
+particular, converting to <tt><b>.svg</b></tt> and viewing in your web
+browser might be more comfortable than using a <tt><b>.dot</b></tt> viewer:</p>
+<pre class="code">
+    $ <b>dot -Tsvg ExprEngine-501e2e.dot -o ExprEngine-501e2e.svg</b>
+</pre>
+
+<p>The <tt><b>-trim-egraph</b></tt> option removes all paths except those
+leading to bug reports from the exploded graph dump. This is useful
+because exploded graphs are often huge and hard to navigate.</p>
+
+<p>Viewing <tt>ExplodedGraph</tt> is your most powerful tool for understanding
+the analyzer's false positives, because it gives comprehensive information
+on every decision made by the analyzer across all analysis paths.</p>
+
+<p>There are more debug checkers available. To see all available debug checkers:
+</p>
+<pre class="code">
+    $ <b>clang -cc1 -analyzer-checker-help | grep "debug"</b>
+</pre>
+
+<h3 id=debugprints>Debug Prints and Tricks</h3>
+
+<p>To view "half-baked" <tt>ExplodedGraph</tt> while debugging, jump to a frame
+that has <tt>clang::ento::ExprEngine</tt> object and execute:</p>
+<pre class="code">
+    (gdb) <b>p ViewGraph(0)</b>
+</pre>
+
+<p>To see the <tt>ProgramState</tt> while debugging use the following command.
+<pre class="code">
+    (gdb) <b>p State->dump()</b>
+</pre>
+
+<p>To see <tt>clang::Expr</tt> while debugging use the following command. If you
+pass in a <tt>SourceManager</tt> object, it will also dump the corresponding line in the
+source code.</p>
+<pre class="code">
+    (gdb) <b>p E->dump()</b>
+</pre>
+
+<p>To dump AST of a method that the current <tt>ExplodedNode</tt> belongs
+to:</p>
+<pre class="code">
+    (gdb) <b>p C.getPredecessor()->getCodeDecl().getBody()->dump()</b>
+</pre>
 
 <h2 id=additioninformation>Additional Sources of Information</h2>
 

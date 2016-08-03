@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -O2 -aarch64-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s --check-prefix=CHECK-ELF
+; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s --check-prefix=CHECK-ELF
 
 ; CHECK-ELF-NOT: .loh
 ; CHECK-ELF-NOT: AdrpAdrp

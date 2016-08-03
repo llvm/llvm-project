@@ -1526,6 +1526,8 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_ARM_TLS_IE32:
     // GOT(S) + A - P
     return R_GOT_PC;
+  case R_ARM_TARGET1:
+    return Config->Target1Rel ? R_PC : R_ABS;
   case R_ARM_TLS_GD32:
     return R_TLSGD_PC;
   case R_ARM_TLS_LDM32:
@@ -1548,6 +1550,8 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
 }
 
 uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
+  if (Type == R_ARM_TARGET1 && !Config->Target1Rel)
+    return R_ARM_ABS32;
   if (Type == R_ARM_ABS32)
     return Type;
   // Keep it going with a dummy value so that we can find more reloc errors.
@@ -1629,6 +1633,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_TARGET1:
   case R_ARM_TLS_GD32:
   case R_ARM_TLS_IE32:
   case R_ARM_TLS_LDM32:
@@ -1757,6 +1762,7 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_TARGET1:
   case R_ARM_TLS_GD32:
   case R_ARM_TLS_LDM32:
   case R_ARM_TLS_LDO32:

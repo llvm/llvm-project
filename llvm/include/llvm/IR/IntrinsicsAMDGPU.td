@@ -407,6 +407,14 @@ def int_amdgcn_lerp :
   GCCBuiltin<"__builtin_amdgcn_lerp">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
+def int_amdgcn_icmp :
+  Intrinsic<[llvm_i64_ty], [llvm_anyint_ty, LLVMMatchType<0>, llvm_i32_ty], 
+            [IntrNoMem, IntrConvergent]>;
+
+def int_amdgcn_fcmp :
+  Intrinsic<[llvm_i64_ty], [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_i32_ty], 
+            [IntrNoMem, IntrConvergent]>;
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//

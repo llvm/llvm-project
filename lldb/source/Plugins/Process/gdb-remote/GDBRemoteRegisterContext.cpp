@@ -89,7 +89,15 @@ GDBRemoteRegisterContext::GetRegisterCount ()
 const RegisterInfo *
 GDBRemoteRegisterContext::GetRegisterInfoAtIndex (size_t reg)
 {
-    return m_reg_info.GetRegisterInfoAtIndex (reg);
+    RegisterInfo* reg_info = m_reg_info.GetRegisterInfoAtIndex (reg);
+
+    if (reg_info && reg_info->dynamic_size_dwarf_expr_bytes)
+    {
+        const ArchSpec &arch = m_thread.GetProcess ()->GetTarget ().GetArchitecture ();
+        uint8_t reg_size = UpdateDynamicRegisterSize (arch, reg_info);
+        reg_info->byte_size = reg_size;
+    }
+    return reg_info;
 }
 
 size_t
@@ -401,8 +409,8 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
                                   reg_info->byte_size,          // dst length
                                   m_reg_data.GetByteOrder()))   // dst byte order
     {
-        Mutex::Locker locker;
-        if (gdb_comm.GetSequenceMutex (locker, "Didn't get sequence mutex for write register."))
+        std::unique_lock<std::recursive_mutex> lock;
+        if (gdb_comm.GetSequenceMutex(lock, "Didn't get sequence mutex for write register."))
         {
             const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
             ProcessSP process_sp (m_thread.GetProcess());
@@ -570,8 +578,8 @@ GDBRemoteRegisterContext::ReadAllRegisterValues (lldb::DataBufferSP &data_sp)
 
     const bool use_g_packet = gdb_comm.AvoidGPackets ((ProcessGDBRemote *)process) == false;
 
-    Mutex::Locker locker;
-    if (gdb_comm.GetSequenceMutex (locker, "Didn't get sequence mutex for read all registers."))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (gdb_comm.GetSequenceMutex(lock, "Didn't get sequence mutex for read all registers."))
     {
         SyncThreadState(process);
         
@@ -679,8 +687,8 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
     const bool use_g_packet = gdb_comm.AvoidGPackets ((ProcessGDBRemote *)process) == false;
 
     StringExtractorGDBRemote response;
-    Mutex::Locker locker;
-    if (gdb_comm.GetSequenceMutex (locker, "Didn't get sequence mutex for write all registers."))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (gdb_comm.GetSequenceMutex(lock, "Didn't get sequence mutex for write all registers."))
     {
         const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
         ProcessSP process_sp (m_thread.GetProcess());

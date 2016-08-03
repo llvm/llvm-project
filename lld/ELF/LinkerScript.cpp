@@ -74,10 +74,7 @@ static bool match(ArrayRef<StringRef> Patterns, StringRef S) {
   return false;
 }
 
-// Create a vector of (<output section name>, <input section name patterns>).
-// For example, if a returned vector contains (".text" (".foo.*" ".bar.*")),
-// input sections start with ".foo." or ".bar." should be added to
-// ".text" section.
+// Create a vector of (<output section name>, <input section description>).
 template <class ELFT>
 std::vector<std::pair<StringRef, const InputSectionDescription *>>
 LinkerScript<ELFT>::getSectionMap() {
@@ -92,40 +89,62 @@ LinkerScript<ELFT>::getSectionMap() {
   return Ret;
 }
 
+static bool fileMatches(const InputSectionDescription *Desc,
+                        StringRef Filename) {
+  if (!globMatch(Desc->FilePattern, Filename))
+    return false;
+  return Desc->ExcludedFiles.empty() || !match(Desc->ExcludedFiles, Filename);
+}
+
 // Returns input sections filtered by given glob patterns.
 template <class ELFT>
 std::vector<InputSectionBase<ELFT> *>
 LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
-  ArrayRef<StringRef> Patterns = I->Patterns;
-  ArrayRef<StringRef> ExcludedFiles = I->ExcludedFiles;
+  ArrayRef<StringRef> Patterns = I->SectionPatterns;
   std::vector<InputSectionBase<ELFT> *> Ret;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *S : F->getSections())
-      if (!isDiscarded(S) && !S->OutSec && match(Patterns, S->getSectionName()))
-        if (ExcludedFiles.empty() ||
-            !match(ExcludedFiles, sys::path::filename(F->getName())))
+       Symtab<ELFT>::X->getObjectFiles()) {
+    if (fileMatches(I, sys::path::filename(F->getName())))
+      for (InputSectionBase<ELFT> *S : F->getSections())
+        if (!isDiscarded(S) && !S->OutSec &&
+            match(Patterns, S->getSectionName()))
           Ret.push_back(S);
+  }
+
+  if ((llvm::find(Patterns, "COMMON") != Patterns.end()))
+    Ret.push_back(CommonInputSection<ELFT>::X);
+
   return Ret;
 }
 
+// Add input section to output section. If there is no output section yet,
+// then create it and add to output section list.
 template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *>
-LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
-  std::vector<OutputSectionBase<ELFT> *> Ret;
+static void addSection(OutputSectionFactory<ELFT> &Factory,
+                       std::vector<OutputSectionBase<ELFT> *> &Out,
+                       InputSectionBase<ELFT> *C, StringRef Name) {
+  OutputSectionBase<ELFT> *Sec;
+  bool IsNew;
+  std::tie(Sec, IsNew) = Factory.create(C, Name);
+  if (IsNew)
+    Out.push_back(Sec);
+  Sec->addSection(C);
+}
 
-  // Add input section to output section. If there is no output section yet,
-  // then create it and add to output section list.
-  auto Add = [&](InputSectionBase<ELFT> *C, StringRef Name) {
-    OutputSectionBase<ELFT> *Sec;
-    bool IsNew;
-    std::tie(Sec, IsNew) = Factory.create(C, Name);
-    if (IsNew)
-      Ret.push_back(Sec);
-    Sec->addSection(C);
-  };
+template <class ELFT>
+static bool compareByName(InputSectionBase<ELFT> *A,
+                          InputSectionBase<ELFT> *B) {
+  return A->getSectionName() < B->getSectionName();
+}
+
+template <class ELFT>
+void LinkerScript<ELFT>::createSections(
+    std::vector<OutputSectionBase<ELFT> *> *Out,
+    OutputSectionFactory<ELFT> &Factory) {
+  OutputSections = Out;
 
   for (auto &P : getSectionMap()) {
+    std::vector<InputSectionBase<ELFT> *> Sections;
     StringRef OutputName = P.first;
     const InputSectionDescription *I = P.second;
     for (InputSectionBase<ELFT> *S : getInputSections(I)) {
@@ -134,8 +153,12 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
         reportDiscarded(S);
         continue;
       }
-      Add(S, OutputName);
+      Sections.push_back(S);
     }
+    if (I->Sort)
+      std::stable_sort(Sections.begin(), Sections.end(), compareByName<ELFT>);
+    for (InputSectionBase<ELFT> *S : Sections)
+      addSection(Factory, *Out, S, OutputName);
   }
 
   // Add all other input sections, which are not listed in script.
@@ -143,17 +166,15 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
        Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec)
-        Add(S, getOutputSectionName(S));
+        addSection(Factory, *Out, S, getOutputSectionName(S));
 
   // Remove from the output all the sections which did not meet
   // the optional constraints.
-  return filter(Ret);
+  filter();
 }
 
 // Process ONLY_IF_RO and ONLY_IF_RW.
-template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *>
-LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
+template <class ELFT> void LinkerScript<ELFT>::filter() {
   // In this loop, we remove output sections if they don't satisfy
   // requested properties.
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
@@ -164,10 +185,10 @@ LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
     if (Cmd->Constraint == ConstraintKind::NoConstraint)
       continue;
 
-    auto It = llvm::find_if(Sections, [&](OutputSectionBase<ELFT> *S) {
+    auto It = llvm::find_if(*OutputSections, [&](OutputSectionBase<ELFT> *S) {
       return S->getName() == Cmd->Name;
     });
-    if (It == Sections.end())
+    if (It == OutputSections->end())
       continue;
 
     OutputSectionBase<ELFT> *Sec = *It;
@@ -175,22 +196,8 @@ LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
     bool RO = (Cmd->Constraint == ConstraintKind::ReadOnly);
     bool RW = (Cmd->Constraint == ConstraintKind::ReadWrite);
 
-    if ((RO && Writable) || (RW && !Writable)) {
-      Sections.erase(It);
-      continue;
-    }
-  }
-  return Sections;
-}
-
-template <class ELFT>
-void LinkerScript<ELFT>::dispatchAssignment(SymbolAssignment *Cmd) {
-  uint64_t Val = Cmd->Expression(Dot);
-  if (Cmd->Name == ".") {
-    Dot = Val;
-  } else if (!Cmd->Ignore) {
-    auto *D = cast<DefinedRegular<ELFT>>(Symtab<ELFT>::X->find(Cmd->Name));
-    D->Value = Val;
+    if ((RO && Writable) || (RW && !Writable))
+      OutputSections->erase(It);
   }
 }
 
@@ -215,7 +222,11 @@ void LinkerScript<ELFT>::assignAddresses(
 
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get())) {
-      dispatchAssignment(Cmd);
+      if (Cmd->Name == ".") {
+        Dot = Cmd->Expression(Dot);
+      } else if (Cmd->Sym) {
+        cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
+      }
       continue;
     }
 
@@ -357,27 +368,39 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
   return I < J ? -1 : 1;
 }
 
+// Add symbols defined by linker scripts.
 template <class ELFT> void LinkerScript<ELFT>::addScriptedSymbols() {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     auto *Cmd = dyn_cast<SymbolAssignment>(Base.get());
     if (!Cmd || Cmd->Name == ".")
       continue;
 
+    // If a symbol was in PROVIDE(), define it only when it is an
+    // undefined symbol.
     SymbolBody *B = Symtab<ELFT>::X->find(Cmd->Name);
-    // The semantic of PROVIDE is that of introducing a symbol only if
-    // it's not defined and there's at least a reference to it.
-    if ((!B && !Cmd->Provide) || (B && B->isUndefined()))
-      Symtab<ELFT>::X->addAbsolute(Cmd->Name,
-                                   Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
-    else
-      // Symbol already exists in symbol table. If it is provided
-      // then we can't override its value.
-      Cmd->Ignore = Cmd->Provide;
+    if (Cmd->Provide && !(B && B->isUndefined()))
+      continue;
+
+    // Define an absolute symbol. The symbol value will be assigned later.
+    // (At this point, we don't know the final address yet.)
+    Symbol *Sym = Symtab<ELFT>::X->addUndefined(Cmd->Name);
+    replaceBody<DefinedRegular<ELFT>>(Sym, Cmd->Name, STV_DEFAULT);
+    Sym->Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+    Cmd->Sym = Sym->body();
   }
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
   return !Opt.PhdrsCommands.empty();
+}
+
+template <class ELFT>
+typename ELFT::uint LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->getSize();
+  error("undefined section " + Name);
+  return 0;
 }
 
 // Returns indices of ELF headers containing specific section, identified
@@ -424,9 +447,7 @@ private:
   void readAsNeeded();
   void readEntry();
   void readExtern();
-  std::unique_ptr<InputSectionDescription> readFilePattern();
   void readGroup();
-  void readKeep(OutputSectionCommand *Cmd);
   void readInclude();
   void readNothing() {}
   void readOutput();
@@ -438,10 +459,15 @@ private:
 
   SymbolAssignment *readAssignment(StringRef Name);
   void readOutputSectionDescription(StringRef OutSec);
+  std::vector<uint8_t> readOutputSectionFiller();
   std::vector<StringRef> readOutputSectionPhdrs();
+  std::unique_ptr<InputSectionDescription> readInputSectionDescription();
+  void readInputFilePattern(InputSectionDescription *InCmd, bool Keep);
+  void readInputSectionRules(InputSectionDescription *InCmd, bool Keep);
   unsigned readPhdrType();
   void readProvide(bool Hidden);
   void readAlign(OutputSectionCommand *Cmd);
+  void readSort();
 
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
@@ -619,7 +645,9 @@ void ScriptParser::readPhdrs() {
         PhdrCmd.HasPhdrs = true;
       else if (Tok == "FLAGS") {
         expect("(");
-        next().getAsInteger(0, PhdrCmd.Flags);
+        // Passing 0 for the value of dot is a bit of a hack. It means that
+        // we accept expressions like ".|1".
+        PhdrCmd.Flags = readExpr()(0);
         expect(")");
       } else
         setError("unexpected header attribute: " + Tok);
@@ -634,11 +662,11 @@ void ScriptParser::readSearchDir() {
 }
 
 void ScriptParser::readSections() {
-  Opt.DoLayout = true;
+  Opt.HasContents = true;
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
-    if (peek() == "=") {
+    if (peek() == "=" || peek() == "+=") {
       readAssignment(Tok);
       expect(";");
     } else if (Tok == "PROVIDE") {
@@ -667,37 +695,63 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-std::unique_ptr<InputSectionDescription> ScriptParser::readFilePattern() {
-  expect("*");
-  expect("(");
+void ScriptParser::readInputFilePattern(InputSectionDescription *InCmd,
+                                        bool Keep) {
+  while (!Error && !skip(")")) {
+    if (Keep)
+      Opt.KeptSections.push_back(peek());
+    InCmd->SectionPatterns.push_back(next());
+  }
+}
 
-  auto InCmd = llvm::make_unique<InputSectionDescription>();
+void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd,
+                                         bool Keep) {
+  InCmd->FilePattern = next();
+  expect("(");
 
   if (skip("EXCLUDE_FILE")) {
     expect("(");
     while (!Error && !skip(")"))
       InCmd->ExcludedFiles.push_back(next());
-    InCmd->Patterns.push_back(next());
-    expect(")");
-  } else {
-    while (!Error && !skip(")"))
-      InCmd->Patterns.push_back(next());
   }
-  return InCmd;
+
+  if (skip("SORT")) {
+    expect("(");
+    InCmd->Sort = true;
+    readInputFilePattern(InCmd, Keep);
+    expect(")");
+    return;
+  }
+
+  readInputFilePattern(InCmd, Keep);
 }
 
-void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
-  expect("(");
-  std::unique_ptr<InputSectionDescription> InCmd = readFilePattern();
-  Opt.KeptSections.insert(Opt.KeptSections.end(), InCmd->Patterns.begin(),
-                          InCmd->Patterns.end());
-  Cmd->Commands.push_back(std::move(InCmd));
-  expect(")");
+std::unique_ptr<InputSectionDescription>
+ScriptParser::readInputSectionDescription() {
+  auto InCmd = llvm::make_unique<InputSectionDescription>();
+
+  // Input section wildcard can be surrounded by KEEP.
+  // https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html#Input-Section-Keep
+  if (skip("KEEP")) {
+    expect("(");
+    readInputSectionRules(InCmd.get(), true);
+    expect(")");
+  } else {
+    readInputSectionRules(InCmd.get(), false);
+  }
+
+  return InCmd;
 }
 
 void ScriptParser::readAlign(OutputSectionCommand *Cmd) {
   expect("(");
   Cmd->AlignExpr = readExpr();
+  expect(")");
+}
+
+void ScriptParser::readSort() {
+  expect("(");
+  expect("CONSTRUCTORS");
   expect(")");
 }
 
@@ -723,60 +777,58 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect("{");
 
   while (!Error && !skip("}")) {
+    if (peek().startswith("*") || peek() == "KEEP") {
+      Cmd->Commands.push_back(readInputSectionDescription());
+      continue;
+    }
+
     StringRef Tok = next();
-    if (Tok == "*") {
-      auto *InCmd = new InputSectionDescription();
-      Cmd->Commands.emplace_back(InCmd);
-      expect("(");
-      while (!Error && !skip(")"))
-        InCmd->Patterns.push_back(next());
-    } else if (Tok == "KEEP") {
-      readKeep(Cmd);
-    } else if (Tok == "PROVIDE") {
+    if (Tok == "PROVIDE") {
       readProvide(false);
     } else if (Tok == "PROVIDE_HIDDEN") {
       readProvide(true);
+    } else if (Tok == "SORT") {
+      readSort();
     } else {
       setError("unknown command " + Tok);
     }
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
+  Cmd->Filler = readOutputSectionFiller();
+}
 
+std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
   StringRef Tok = peek();
-  if (Tok.startswith("=")) {
-    if (!Tok.startswith("=0x")) {
-      setError("filler should be a hexadecimal value");
-      return;
-    }
-    Tok = Tok.substr(3);
-    Cmd->Filler = parseHex(Tok);
-    next();
+  if (!Tok.startswith("="))
+    return {};
+  next();
+  if (Tok.startswith("=0x"))
+    return parseHex(Tok.substr(3));
+
+  // This must be a decimal.
+  unsigned int Value;
+  if (Tok.substr(1).getAsInteger(10, Value)) {
+    setError("filler should be a decimal/hexadecimal value");
+    return {};
   }
+  if (Value > 255)
+    setError("only single bytes decimal are supported for the filler now");
+  return {static_cast<unsigned char>(Value)};
 }
 
 void ScriptParser::readProvide(bool Hidden) {
   expect("(");
-  if (SymbolAssignment *Assignment = readAssignment(next())) {
-    Assignment->Provide = true;
-    Assignment->Hidden = Hidden;
-  }
+  SymbolAssignment *Cmd = readAssignment(next());
+  Cmd->Provide = true;
+  Cmd->Hidden = Hidden;
   expect(")");
   expect(";");
 }
 
-SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
-  expect("=");
-  Expr E = readExpr();
-  auto *Cmd = new SymbolAssignment(Name, E);
-  Opt.Commands.emplace_back(Cmd);
-  return Cmd;
-}
+static uint64_t getSymbolValue(StringRef S, uint64_t Dot) {
+  if (S == ".")
+    return Dot;
 
-// This is an operator-precedence parser to parse a linker
-// script expression.
-Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
-
-static uint64_t getSymbolValue(StringRef S) {
   switch (Config->EKind) {
   case ELF32LEKind:
     if (SymbolBody *B = Symtab<ELF32LE>::X->find(S))
@@ -800,6 +852,37 @@ static uint64_t getSymbolValue(StringRef S) {
   error("symbol not found: " + S);
   return 0;
 }
+
+static uint64_t getSectionSize(StringRef Name) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return Script<ELF32LE>::X->getOutputSectionSize(Name);
+  case ELF32BEKind:
+    return Script<ELF32BE>::X->getOutputSectionSize(Name);
+  case ELF64LEKind:
+    return Script<ELF64LE>::X->getOutputSectionSize(Name);
+  case ELF64BEKind:
+    return Script<ELF64BE>::X->getOutputSectionSize(Name);
+  default:
+    llvm_unreachable("unsupported target");
+  }
+  return 0;
+}
+
+SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
+  StringRef Op = next();
+  assert(Op == "=" || Op == "+=");
+  Expr E = readExpr();
+  if (Op == "+=")
+    E = [=](uint64_t Dot) { return getSymbolValue(Name, Dot) + E(Dot); };
+  auto *Cmd = new SymbolAssignment(Name, E);
+  Opt.Commands.emplace_back(Cmd);
+  return Cmd;
+}
+
+// This is an operator-precedence parser to parse a linker
+// script expression.
+Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
 
 // This is a part of the operator-precedence parser. This function
 // assumes that the remaining token stream starts with an operator.
@@ -840,9 +923,6 @@ uint64_t static getConstant(StringRef S) {
 Expr ScriptParser::readPrimary() {
   StringRef Tok = next();
 
-  if (Tok == ".")
-    return [](uint64_t Dot) { return Dot; };
-
   if (Tok == "(") {
     Expr E = readExpr();
     expect(")");
@@ -862,6 +942,15 @@ Expr ScriptParser::readPrimary() {
     StringRef Tok = next();
     expect(")");
     return [=](uint64_t Dot) { return getConstant(Tok); };
+  }
+  if (Tok == "SEGMENT_START") {
+    expect("(");
+    next();
+    expect(",");
+    uint64_t Val;
+    next().getAsInteger(0, Val);
+    expect(")");
+    return [=](uint64_t Dot) { return Val; };
   }
   if (Tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
@@ -888,13 +977,19 @@ Expr ScriptParser::readPrimary() {
     expect(")");
     return [](uint64_t Dot) { return alignTo(Dot, Target->PageSize); };
   }
+  if (Tok == "SIZEOF") {
+    expect("(");
+    StringRef Name = next();
+    expect(")");
+    return [=](uint64_t Dot) { return getSectionSize(Name); };
+  }
 
   // Parse a symbol name or a number literal.
   uint64_t V = 0;
   if (Tok.getAsInteger(0, V)) {
-    if (!isValidCIdentifier(Tok))
+    if (Tok != "." && !isValidCIdentifier(Tok))
       setError("malformed number: " + Tok);
-    return [=](uint64_t Dot) { return getSymbolValue(Tok); };
+    return [=](uint64_t Dot) { return getSymbolValue(Tok, Dot); };
   }
   return [=](uint64_t Dot) { return V; };
 }

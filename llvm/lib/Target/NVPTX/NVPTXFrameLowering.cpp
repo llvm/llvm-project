@@ -32,7 +32,7 @@ bool NVPTXFrameLowering::hasFP(const MachineFunction &MF) const { return true; }
 
 void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
-  if (MF.getFrameInfo()->hasStackObjects()) {
+  if (MF.getFrameInfo().hasStackObjects()) {
     assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
     MachineInstr *MI = &MBB.front();
     MachineRegisterInfo &MR = MF.getRegInfo();

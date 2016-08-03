@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=i686-linux-pc -mcpu=corei7 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-linux-pc -mcpu=corei7 | FileCheck %s --check-prefix=X64
 
-; FIXME: As discussed on PR14760, we currently have a difference in uitofp <2 x i32> codegen between
-; buildvector and legalization on 32-bit targets:
+; uitofp <2 x i32> codegen from buildvector or legalization is different but gives the same results
+; across the full 0 - 0xFFFFFFFF u32 range.
 
 define <2 x float> @uitofp_2i32_buildvector(i32 %x, i32 %y, <2 x float> %v) {
 ; X32-LABEL: uitofp_2i32_buildvector:
@@ -52,13 +52,12 @@ define <2 x float> @uitofp_2i32_legalized(<2 x i32> %in, <2 x float> %v) {
 ;
 ; X64-LABEL: uitofp_2i32_legalized:
 ; X64:       # BB#0:
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [1258291200,1258291200,1258291200,1258291200]
-; X64-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; X64-NEXT:    psrld $16, %xmm0
-; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X64-NEXT:    addps {{.*}}(%rip), %xmm0
-; X64-NEXT:    addps %xmm2, %xmm0
+; X64-NEXT:    pxor %xmm2, %xmm2
+; X64-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; X64-NEXT:    movdqa {{.*#+}} xmm0 = [4.503600e+15,4.503600e+15]
+; X64-NEXT:    por %xmm0, %xmm2
+; X64-NEXT:    subpd %xmm0, %xmm2
+; X64-NEXT:    cvtpd2ps %xmm2, %xmm0
 ; X64-NEXT:    mulps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %t1 = uitofp <2 x i32> %in to <2 x float>

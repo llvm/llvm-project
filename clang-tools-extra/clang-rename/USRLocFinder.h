@@ -26,7 +26,8 @@ namespace rename {
 
 // FIXME: make this an AST matcher. Wouldn't that be awesome??? I agree!
 std::vector<SourceLocation>
-getLocationsOfUSR(llvm::StringRef USR, llvm::StringRef PrevName, Decl *Decl);
+getLocationsOfUSRs(const std::vector<std::string> &USRs,
+                   llvm::StringRef PrevName, Decl *Decl);
 
 } // namespace rename
 } // namespace clang

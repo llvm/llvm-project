@@ -68,6 +68,7 @@ struct MIToken {
     kw_cfi_def_cfa_offset,
     kw_cfi_def_cfa,
     kw_blockaddress,
+    kw_intrinsic,
     kw_target_index,
     kw_half,
     kw_float,

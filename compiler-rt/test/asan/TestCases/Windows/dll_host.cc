@@ -24,8 +24,7 @@
 // IMPORT: __asan_wrap_HeapReAlloc
 // IMPORT: __asan_wrap_HeapSize
 // IMPORT: __asan_wrap_CreateThread
-// IMPORT: __asan_wrap_NtWaitForWorkViaWorkerFactory
-// IMPORT: __asan_wrap_RaiseException
+// IMPORT: __asan_wrap_RtlRaiseException
 //
 // The exception handlers differ in 32-bit and 64-bit, so we ignore them:
 // RUN: grep '[E]XPORT:' %s | sed -e 's/.*[E]XPORT: //' > %t.exported_wrappers3

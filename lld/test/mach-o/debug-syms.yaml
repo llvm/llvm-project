@@ -1,11 +1,11 @@
-# RUN: lld -flavor darwin -arch x86_64 -o %t %s -lSystem && \
+# RUN: lld -flavor darwin -arch x86_64 -o %t %s -dylib %p/Inputs/libSystem.yaml && \
 # RUN:   llvm-nm -no-sort -debug-syms %t | FileCheck %s
 
 # CHECK:      0000000000000000 - 00 0000    SO /Users/lhames/Projects/lld/lld-svn-tot/scratch/
 # CHECK-NEXT: 0000000000000000 - 00 0000    SO hw.c
-# CHECK-NEXT:    {{[0-9a-f]+}} - 03 0001   OSO {{.*}}/test/mach-o/debug-syms.yaml
-# CHECK-NEXT: 0000000100000fa0 - 01 0000 BNSYM 
-# CHECK-NEXT: 0000000100000fa0 - 01 0000   FUN _main
+# CHECK-NEXT:    {{[0-9a-f]+}} - 03 0001   OSO {{.*}}{{/|\\}}test{{/|\\}}mach-o{{/|\\}}debug-syms.yaml
+# CHECK-NEXT: 0000000000000fa0 - 01 0000 BNSYM 
+# CHECK-NEXT: 0000000000000fa0 - 01 0000   FUN _main
 # CHECK-NEXT: 0000000000000016 - 00 0000   FUN 
 # CHECK-NEXT: 0000000000000016 - 01 0000 ENSYM 
 # CHECK-NEXT: 0000000000000000 - 01 0000    SO 

@@ -37,7 +37,8 @@ public:
   static const unsigned TrampolineSize = 1;
   static const unsigned ResolverCodeSize = 1;
 
-  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+  typedef JITTargetAddress (*JITReentryFn)(void *CallbackMgr,
+                                           void *TrampolineId);
 
   static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,
                                 void *CallbackMgr) {
@@ -115,7 +116,8 @@ public:
 
   typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
 
-  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+  typedef JITTargetAddress (*JITReentryFn)(void *CallbackMgr,
+                                           void *TrampolineId);
 
   /// @brief Write the resolver code into the given memory. The user is be
   ///        responsible for allocating the memory and setting permissions.
@@ -170,7 +172,8 @@ public:
 class OrcX86_64_SysV : public OrcX86_64_Base {
 public:
   static const unsigned ResolverCodeSize = 0x6C;
-  typedef TargetAddress(*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+  typedef JITTargetAddress (*JITReentryFn)(void *CallbackMgr,
+                                           void *TrampolineId);
 
   /// @brief Write the resolver code into the given memory. The user is be
   ///        responsible for allocating the memory and setting permissions.
@@ -184,7 +187,8 @@ public:
 class OrcX86_64_Win32 : public OrcX86_64_Base {
 public:
   static const unsigned ResolverCodeSize = 0x74;
-  typedef TargetAddress(*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+  typedef JITTargetAddress (*JITReentryFn)(void *CallbackMgr,
+                                           void *TrampolineId);
 
   /// @brief Write the resolver code into the given memory. The user is be
   ///        responsible for allocating the memory and setting permissions.
@@ -203,7 +207,8 @@ public:
 
   typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
 
-  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+  typedef JITTargetAddress (*JITReentryFn)(void *CallbackMgr,
+                                           void *TrampolineId);
 
   /// @brief Write the resolver code into the given memory. The user is be
   ///        responsible for allocating the memory and setting permissions.

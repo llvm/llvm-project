@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs -o - %s | FileCheck %s
 
 ; This file contains tests for the AArch64 load/store optimizer.
 

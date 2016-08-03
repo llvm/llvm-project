@@ -2439,7 +2439,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2492,7 +2492,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       // FIXME: This works on big-endian for composite byvals, which are the common
       // case. It should also work for fundamental types too.
       unsigned FrameIdx =
-        MFI->CreateFixedObject(8 * NumRegs, VA.getLocMemOffset(), false);
+        MFI.CreateFixedObject(8 * NumRegs, VA.getLocMemOffset(), false);
       SDValue FrameIdxN = DAG.getFrameIndex(FrameIdx, PtrVT);
       InVals.push_back(FrameIdxN);
 
@@ -2557,7 +2557,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
           !Ins[i].Flags.isInConsecutiveRegs())
         BEAlign = 8 - ArgSize;
 
-      int FI = MFI->CreateFixedObject(ArgSize, ArgOffset + BEAlign, true);
+      int FI = MFI.CreateFixedObject(ArgSize, ArgOffset + BEAlign, true);
 
       // Create load nodes to retrieve arguments from the stack.
       SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
@@ -2607,7 +2607,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     unsigned StackOffset = CCInfo.getNextStackOffset();
     // We currently pass all varargs at 8-byte alignment.
     StackOffset = ((StackOffset + 7) & ~7);
-    FuncInfo->setVarArgsStackIndex(MFI->CreateFixedObject(4, StackOffset, true));
+    FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
   }
 
   unsigned StackArgSize = CCInfo.getNextStackOffset();
@@ -2638,7 +2638,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
                                                 const SDLoc &DL,
                                                 SDValue &Chain) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
@@ -2653,7 +2653,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   unsigned GPRSaveSize = 8 * (NumGPRArgRegs - FirstVariadicGPR);
   int GPRIdx = 0;
   if (GPRSaveSize != 0) {
-    GPRIdx = MFI->CreateStackObject(GPRSaveSize, 8, false);
+    GPRIdx = MFI.CreateStackObject(GPRSaveSize, 8, false);
 
     SDValue FIN = DAG.getFrameIndex(GPRIdx, PtrVT);
 
@@ -2681,7 +2681,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
     unsigned FPRSaveSize = 16 * (NumFPRArgRegs - FirstVariadicFPR);
     int FPRIdx = 0;
     if (FPRSaveSize != 0) {
-      FPRIdx = MFI->CreateStackObject(FPRSaveSize, 16, false);
+      FPRIdx = MFI.CreateStackObject(FPRSaveSize, 16, false);
 
       SDValue FIN = DAG.getFrameIndex(FPRIdx, PtrVT);
 
@@ -2865,11 +2865,11 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
 SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
                                                    SelectionDAG &DAG,
-                                                   MachineFrameInfo *MFI,
+                                                   MachineFrameInfo &MFI,
                                                    int ClobberedFI) const {
   SmallVector<SDValue, 8> ArgChains;
-  int64_t FirstByte = MFI->getObjectOffset(ClobberedFI);
-  int64_t LastByte = FirstByte + MFI->getObjectSize(ClobberedFI) - 1;
+  int64_t FirstByte = MFI.getObjectOffset(ClobberedFI);
+  int64_t LastByte = FirstByte + MFI.getObjectSize(ClobberedFI) - 1;
 
   // Include the original chain at the beginning of the list. When this is
   // used by target LowerCall hooks, this helps legalize find the
@@ -2883,9 +2883,9 @@ SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
     if (LoadSDNode *L = dyn_cast<LoadSDNode>(*U))
       if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(L->getBasePtr()))
         if (FI->getIndex() < 0) {
-          int64_t InFirstByte = MFI->getObjectOffset(FI->getIndex());
+          int64_t InFirstByte = MFI.getObjectOffset(FI->getIndex());
           int64_t InLastByte = InFirstByte;
-          InLastByte += MFI->getObjectSize(FI->getIndex()) - 1;
+          InLastByte += MFI.getObjectSize(FI->getIndex()) - 1;
 
           if ((InFirstByte <= FirstByte && FirstByte <= InLastByte) ||
               (FirstByte <= InFirstByte && InFirstByte <= LastByte))
@@ -3112,7 +3112,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
       if (IsTailCall) {
         Offset = Offset + FPDiff;
-        int FI = MF.getFrameInfo()->CreateFixedObject(OpSize, Offset, true);
+        int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
 
         DstAddr = DAG.getFrameIndex(FI, PtrVT);
         DstInfo =
@@ -3246,7 +3246,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
   if (IsTailCall) {
-    MF.getFrameInfo()->setHasTailCall();
+    MF.getFrameInfo().setHasTailCall();
     return DAG.getNode(AArch64ISD::TC_RETURN, DL, NodeTys, Ops);
   }
 
@@ -3444,8 +3444,8 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
                                            MachineMemOperand::MOInvariant);
   Chain = FuncTLVGet.getValue(1);
 
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI->setAdjustsStack(true);
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setAdjustsStack(true);
 
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
@@ -4371,8 +4371,8 @@ SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue AArch64TargetLowering::LowerFRAMEADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI->setFrameAddressIsTaken(true);
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
@@ -4401,8 +4401,8 @@ unsigned AArch64TargetLowering::getRegisterByName(const char* RegName, EVT VT,
 SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setReturnAddressIsTaken(true);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setReturnAddressIsTaken(true);
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);

@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -542,6 +543,26 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   if (F->hasFnAttribute(Attribute::OptimizeNone))
     OptMode = Mode::Fast;
   init(MF);
+
+#ifndef NDEBUG
+  // Check that our input is fully legal: we require the function to have the
+  // Legalized property, so it should be.
+  // FIXME: This should be in the MachineVerifier, but it can't use the
+  // MachineLegalizer as it's currently in the separate GlobalISel library.
+  if (const MachineLegalizer *MLI = MF.getSubtarget().getMachineLegalizer()) {
+    for (const MachineBasicBlock &MBB : MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI)) {
+          std::string ErrStorage;
+          raw_string_ostream Err(ErrStorage);
+          Err << "Instruction is not legal: " << MI << '\n';
+          report_fatal_error(Err.str());
+        }
+      }
+    }
+  }
+#endif
+
   // Walk the function and assign register banks to all operands.
   // Use a RPOT to make sure all registers are assigned before we choose
   // the best mapping of the current instruction.
@@ -554,7 +575,13 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
          MII != End;) {
       // MI might be invalidated by the assignment, so move the
       // iterator before hand.
-      assignInstr(*MII++);
+      MachineInstr &MI = *MII++;
+
+      // Ignore target-specific instructions: they should use proper regclasses.
+      if (isTargetSpecificOpcode(MI.getOpcode()))
+        continue;
+
+      assignInstr(MI);
     }
   }
   OptMode = SaveOptMode;

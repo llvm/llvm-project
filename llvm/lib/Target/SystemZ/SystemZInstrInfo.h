@@ -219,7 +219,7 @@ public:
   const SystemZRegisterInfo &getRegisterInfo() const { return RI; }
 
   // Return the size in bytes of MI.
-  uint64_t getInstSizeInBytes(const MachineInstr &MI) const;
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   // Return true if MI is a conditional or unconditional branch.
   // When returning true, set Cond to the mask of condition-code

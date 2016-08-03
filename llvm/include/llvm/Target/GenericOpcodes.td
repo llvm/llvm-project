@@ -76,6 +76,14 @@ def G_OR : Instruction {
   let isCommutable = 1;
 }
 
+// Generic bitwise xor.
+def G_XOR : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
@@ -117,6 +125,22 @@ def G_SEQUENCE : Instruction {
   let hasSideEffects = 0;
 }
 
+// Intrinsic without side effects.
+def G_INTRINSIC : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+}
+
+// Intrinsic with side effects.
+def G_INTRINSIC_W_SIDE_EFFECTS : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
 //------------------------------------------------------------------------------
 // Branches.
 //------------------------------------------------------------------------------
@@ -124,6 +148,16 @@ def G_SEQUENCE : Instruction {
 def G_BR : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$src1);
+  let hasSideEffects = 0;
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+}
+
+// Generic conditional branch.
+def G_BRCOND : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$tst, unknown:$truebb);
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;

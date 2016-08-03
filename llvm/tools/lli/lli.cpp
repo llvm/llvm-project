@@ -397,8 +397,18 @@ int main(int argc, char **argv, char * const *envp) {
     return 1;
   }
 
-  if (UseJITKind == JITKind::OrcLazy)
-    return runOrcLazyJIT(std::move(Owner), argc, argv);
+  if (UseJITKind == JITKind::OrcLazy) {
+    std::vector<std::unique_ptr<Module>> Ms;
+    Ms.push_back(std::move(Owner));
+    for (auto &ExtraMod : ExtraModules) {
+      Ms.push_back(parseIRFile(ExtraMod, Err, Context));
+      if (!Ms.back()) {
+        Err.print(argv[0], errs());
+        return 1;
+      }
+    }
+    return runOrcLazyJIT(std::move(Ms), argc, argv);
+  }
 
   if (EnableCacheManager) {
     std::string CacheName("file:");
@@ -669,15 +679,15 @@ int main(int argc, char **argv, char * const *envp) {
         [](const std::string &Name) { return nullptr; },
         [&](const std::string &Name) {
           if (auto Addr = ExitOnErr(R.getSymbolAddress(Name)))
-	    return RuntimeDyld::SymbolInfo(Addr, JITSymbolFlags::Exported);
-          return RuntimeDyld::SymbolInfo(nullptr);
+	    return JITSymbol(Addr, JITSymbolFlags::Exported);
+          return JITSymbol(nullptr);
         }
       ));
 
     // Grab the target address of the JIT'd main function on the remote and call
     // it.
     // FIXME: argv and envp handling.
-    orc::TargetAddress Entry = EE->getFunctionAddress(EntryFn->getName().str());
+    JITTargetAddress Entry = EE->getFunctionAddress(EntryFn->getName().str());
     EE->finalizeObject();
     DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
                  << format("%llx", Entry) << "\n");

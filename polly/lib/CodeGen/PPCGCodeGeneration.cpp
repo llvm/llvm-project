@@ -794,7 +794,7 @@ SetVector<Value *> GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
     findValues(Expr, SE, SubtreeValues);
 
   for (auto &SAI : S.arrays())
-    SubtreeValues.remove(SAI.second->getBasePtr());
+    SubtreeValues.remove(SAI->getBasePtr());
 
   isl_space *Space = S.getParamSpace();
   for (long i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
@@ -880,7 +880,8 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
 
 Value *GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel,
                                               Function *F) {
-  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(), F->getNumOperands());
+  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(),
+                                 std::distance(F->arg_begin(), F->arg_end()));
 
   BasicBlock *EntryBlock =
       &Builder.GetInsertBlock()->getParent()->getEntryBlock();
@@ -902,8 +903,44 @@ Value *GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel,
         Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
         EntryBlock->getTerminator());
     Builder.CreateStore(DevArray, Param);
-    Value *Slot = Builder.CreateGEP(Parameters,
-                                    {Builder.getInt64(0), Builder.getInt64(i)});
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  int NumHostIters = isl_space_dim(Kernel->space, isl_dim_set);
+
+  for (long i = 0; i < NumHostIters; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_set, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Instruction *Param = new AllocaInst(
+        Val->getType(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
+
+  for (long i = 0; i < NumVars; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Instruction *Param = new AllocaInst(
+        Val->getType(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
     Value *ParamTyped =
         Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
     Builder.CreateStore(ParamTyped, Slot);
@@ -1342,7 +1379,7 @@ public:
     }
 
     for (auto &Array : S->arrays()) {
-      auto Id = Array.second->getBasePtrId();
+      auto Id = Array->getBasePtrId();
       Names = isl_id_to_ast_expr_set(Names, Id, isl_ast_expr_copy(Zero));
     }
 
@@ -1513,9 +1550,7 @@ public:
   /// @param PPCGProg The program to compute the arrays for.
   void createArrays(gpu_prog *PPCGProg) {
     int i = 0;
-    for (auto &Element : S->arrays()) {
-      ScopArrayInfo *Array = Element.second.get();
-
+    for (auto &Array : S->arrays()) {
       std::string TypeName;
       raw_string_ostream OS(TypeName);
 
@@ -1558,8 +1593,7 @@ public:
   isl_union_map *getArrayIdentity() {
     isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
 
-    for (auto &Item : S->arrays()) {
-      ScopArrayInfo *Array = Item.second.get();
+    for (auto &Array : S->arrays()) {
       isl_space *Space = Array->getSpace();
       Space = isl_space_map_from_set(Space);
       isl_map *Identity = isl_map_identity(Space);
