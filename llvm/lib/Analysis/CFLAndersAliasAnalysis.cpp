@@ -305,7 +305,7 @@ class CFLAndersAAResult::FunctionInfo {
   /// Summary of externally visible effects.
   AliasSummary Summary;
 
-  AliasAttrs getAttrs(const Value *) const;
+  Optional<AliasAttrs> getAttrs(const Value *) const;
 
 public:
   FunctionInfo(const Function &, const SmallVectorImpl<Value *> &,
@@ -479,17 +479,14 @@ CFLAndersAAResult::FunctionInfo::FunctionInfo(
   populateExternalRelations(Summary.RetParamRelations, Fn, RetVals, ReachSet);
 }
 
-AliasAttrs CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
+Optional<AliasAttrs>
+CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
   assert(V != nullptr);
 
-  // Return AttrUnknown if V is not found in AttrMap. Sometimes V can be created
-  // after the analysis gets executed, and we want to be conservative in
-  // those cases.
-  AliasAttrs Attr = getAttrUnknown();
   auto Itr = AttrMap.find(V);
   if (Itr != AttrMap.end())
-    Attr = Itr->second;
-  return Attr;
+    return Itr->second;
+  return None;
 }
 
 bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
@@ -498,9 +495,17 @@ bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
                                                uint64_t RHSSize) const {
   assert(LHS && RHS);
 
-  // Check AliasAttrs first since it's cheaper
-  auto AttrsA = getAttrs(LHS);
-  auto AttrsB = getAttrs(RHS);
+  // Check if we've seen LHS and RHS before. Sometimes LHS or RHS can be created
+  // after the analysis gets executed, and we want to be conservative in those
+  // cases.
+  auto MaybeAttrsA = getAttrs(LHS);
+  auto MaybeAttrsB = getAttrs(RHS);
+  if (!MaybeAttrsA || !MaybeAttrsB)
+    return true;
+
+  // Check AliasAttrs before AliasMap lookup since it's cheaper
+  auto AttrsA = *MaybeAttrsA;
+  auto AttrsB = *MaybeAttrsB;
   if (hasUnknownOrCallerAttr(AttrsA))
     return AttrsB.any();
   if (hasUnknownOrCallerAttr(AttrsB))

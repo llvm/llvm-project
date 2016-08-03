@@ -3850,7 +3850,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // Try to convert two saturating conditional selects into a single SSAT
   SDValue SatValue;
   uint64_t SatConstant;
-  if (Subtarget->hasDSP() &&
+  if (((!Subtarget->isThumb() && Subtarget->hasV6Ops()) || Subtarget->isThumb2()) &&
       isSaturatingConditional(Op, SatValue, SatConstant))
     return DAG.getNode(ARMISD::SSAT, dl, VT, SatValue,
                        DAG.getConstant(countTrailingOnes(SatConstant), dl, VT));

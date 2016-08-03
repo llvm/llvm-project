@@ -46,7 +46,7 @@ STATISTIC(NumCompletelyUnrolled, "Number of loops completely unrolled");
 STATISTIC(NumUnrolled, "Number of loops unrolled (completely or otherwise)");
 
 static cl::opt<bool>
-UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(true), cl::Hidden,
+UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(false), cl::Hidden,
                     cl::desc("Allow runtime unrolled loops to be unrolled "
                              "with epilog instead of prolog."));
 

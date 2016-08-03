@@ -41,7 +41,8 @@ enum {
   WQM = 1 << 22,
   VGPRSpill = 1 << 23,
   VOPAsmPrefer32Bit = 1 << 24,
-  Gather4 = 1 << 25
+  Gather4 = 1 << 25,
+  DisableWQM = 1 << 26
 };
 }
 

@@ -57,6 +57,9 @@ include "MipsSchedule.td"
 include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
 
+// Avoid forward declaration issues.
+include "MipsScheduleP5600.td"
+
 def MipsInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

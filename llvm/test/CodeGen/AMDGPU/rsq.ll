@@ -72,3 +72,67 @@ define void @rsqrt_fmul(float addrspace(1)* %out, float addrspace(1)* %in) {
   store float %z, float addrspace(1)* %out.gep
   ret void
 }
+
+; SI-LABEL: {{^}}neg_rsq_f32:
+; SI-SAFE: v_sqrt_f32_e32 [[SQRT:v[0-9]+]], v{{[0-9]+}}
+; SI-SAFE: v_rcp_f32_e64 [[RSQ:v[0-9]+]], -[[SQRT]]
+; SI-SAFE: buffer_store_dword [[RSQ]]
+
+; SI-UNSAFE: v_rsq_f32_e32 [[RSQ:v[0-9]+]], v{{[0-9]+}}
+; SI-UNSAFE: v_xor_b32_e32 [[NEG_RSQ:v[0-9]+]], 0x80000000, [[RSQ]]
+; SI-UNSAFE: buffer_store_dword [[NEG_RSQ]]
+define void @neg_rsq_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+  %val = load float, float addrspace(1)* %in, align 4
+  %sqrt = call float @llvm.sqrt.f32(float %val)
+  %div = fdiv float -1.0, %sqrt
+  store float %div, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; SI-LABEL: {{^}}neg_rsq_f64:
+; SI-SAFE: v_sqrt_f64_e32
+; SI-SAFE: v_div_scale_f64
+
+; SI-UNSAFE: v_sqrt_f64_e32 [[SQRT:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}
+; SI-UNSAFE: v_rcp_f64_e64 [[RCP:v\[[0-9]+:[0-9]+\]]], -[[SQRT]]
+; SI-UNSAFE: buffer_store_dwordx2 [[RCP]]
+define void @neg_rsq_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) nounwind {
+  %val = load double, double addrspace(1)* %in, align 4
+  %sqrt = call double @llvm.sqrt.f64(double %val)
+  %div = fdiv double -1.0, %sqrt
+  store double %div, double addrspace(1)* %out, align 4
+  ret void
+}
+
+; SI-LABEL: {{^}}neg_rsq_neg_f32:
+; SI-SAFE: v_sqrt_f32_e64 [[SQRT:v[0-9]+]], -v{{[0-9]+}}
+; SI-SAFE: v_rcp_f32_e64 [[RSQ:v[0-9]+]], -[[SQRT]]
+; SI-SAFE: buffer_store_dword [[RSQ]]
+
+; SI-UNSAFE: v_rsq_f32_e64 [[RSQ:v[0-9]+]], -v{{[0-9]+}}
+; SI-UNSAFE: v_xor_b32_e32 [[NEG_RSQ:v[0-9]+]], 0x80000000, [[RSQ]]
+; SI-UNSAFE: buffer_store_dword [[NEG_RSQ]]
+define void @neg_rsq_neg_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
+  %val = load float, float addrspace(1)* %in, align 4
+  %val.fneg = fsub float -0.0, %val
+  %sqrt = call float @llvm.sqrt.f32(float %val.fneg)
+  %div = fdiv float -1.0, %sqrt
+  store float %div, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; SI-LABEL: {{^}}neg_rsq_neg_f64:
+; SI-SAFE: v_sqrt_f64_e64 v{{\[[0-9]+:[0-9]+\]}}, -v{{\[[0-9]+:[0-9]+\]}}
+; SI-SAFE: v_div_scale_f64
+
+; SI-UNSAFE: v_sqrt_f64_e64 [[SQRT:v\[[0-9]+:[0-9]+\]]], -v{{\[[0-9]+:[0-9]+\]}}
+; SI-UNSAFE: v_rcp_f64_e64 [[RCP:v\[[0-9]+:[0-9]+\]]], -[[SQRT]]
+; SI-UNSAFE: buffer_store_dwordx2 [[RCP]]
+define void @neg_rsq_neg_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) nounwind {
+  %val = load double, double addrspace(1)* %in, align 4
+  %val.fneg = fsub double -0.0, %val
+  %sqrt = call double @llvm.sqrt.f64(double %val.fneg)
+  %div = fdiv double -1.0, %sqrt
+  store double %div, double addrspace(1)* %out, align 4
+  ret void
+}

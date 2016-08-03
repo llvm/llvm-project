@@ -63,7 +63,22 @@ define i8 addrspace(4)* @f_9() {
 
 @global1 = addrspace(4) constant i8 42
 
-define i8 addrspace(4)* @f_10(i64 %rhs) {
+define i8 addrspace(4)* @f_10() {
 ; CHECK: ptrtoint not supported for non-integral pointers
   ret i8 addrspace(4)* getelementptr (i8, i8 addrspace(4)* @global0, i64 ptrtoint (i8 addrspace(4)* @global1 to i64))
+}
+
+@cycle_0 = addrspace(4) constant i64 ptrtoint (i64 addrspace(4)* addrspace(4)* @cycle_1 to i64)
+@cycle_1 = addrspace(4) constant i64 addrspace(4) * @cycle_0
+
+define i64 addrspace(4)* addrspace(4)* @f_11() {
+; CHECK: ptrtoint not supported for non-integral pointers
+  ret i64 addrspace(4)* addrspace(4)* @cycle_1
+}
+
+@cycle_self = addrspace(4) constant i64 ptrtoint (i64 addrspace(4)* @cycle_self to i64)
+
+define i64 addrspace(4)* @f_12() {
+; CHECK: ptrtoint not supported for non-integral pointers
+  ret i64 addrspace(4)* @cycle_self
 }

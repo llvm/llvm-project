@@ -340,6 +340,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::WQM;
   }
 
+  static bool isDisableWQM(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::DisableWQM;
+  }
+
+  bool isDisableWQM(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::DisableWQM;
+  }
+
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VGPRSpill;
   }

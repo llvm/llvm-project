@@ -1096,11 +1096,18 @@ void X86AsmPrinter::EmitXRayTable() {
   if (Sleds.empty())
     return;
   if (Subtarget->isTargetELF()) {
-    auto *Section = OutContext.getELFSection(
-        "xray_instr_map", ELF::SHT_PROGBITS,
-        ELF::SHF_ALLOC | ELF::SHF_GROUP | ELF::SHF_MERGE, 0,
-        CurrentFnSym->getName());
     auto PrevSection = OutStreamer->getCurrentSectionOnly();
+    auto Fn = MF->getFunction();
+    MCSection *Section = nullptr;
+    if (Fn->hasComdat()) {
+      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+                                         ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
+                                         Fn->getComdat()->getName());
+      OutStreamer->SwitchSection(Section);
+    } else {
+      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+                                         ELF::SHF_ALLOC);
+    }
     OutStreamer->SwitchSection(Section);
     for (const auto &Sled : Sleds) {
       OutStreamer->EmitSymbolValue(Sled.Sled, 8);

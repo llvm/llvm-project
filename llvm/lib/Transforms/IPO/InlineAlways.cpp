@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -26,6 +25,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/InlinerPass.h"
 
 using namespace llvm;
@@ -55,21 +55,20 @@ public:
 
   using llvm::Pass::doFinalization;
   bool doFinalization(CallGraph &CG) override {
-    return removeDeadFunctions(CG, /*AlwaysInlineOnly=*/ true);
+    return removeDeadFunctions(CG, /*AlwaysInlineOnly=*/true);
   }
 };
-
 }
 
 char AlwaysInliner::ID = 0;
 INITIALIZE_PASS_BEGIN(AlwaysInliner, "always-inline",
-                "Inliner for always_inline functions", false, false)
+                      "Inliner for always_inline functions", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AlwaysInliner, "always-inline",
-                "Inliner for always_inline functions", false, false)
+                    "Inliner for always_inline functions", false, false)
 
 Pass *llvm::createAlwaysInlinerPass() { return new AlwaysInliner(); }
 

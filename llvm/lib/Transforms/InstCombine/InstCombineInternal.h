@@ -583,8 +583,7 @@ private:
   Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);
   Instruction *foldICmpWithConstant(ICmpInst &ICI, Instruction *LHS,
                                     ConstantInt *RHS);
-  Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI, Instruction *LHS,
-                                            ConstantInt *RHS);
+  Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI);
   Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI);
 
   Instruction *OptAndOp(Instruction *Op, ConstantInt *OpRHS,

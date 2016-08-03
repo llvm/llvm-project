@@ -47,10 +47,22 @@ NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,
   NewArchiveMember M;
   M.Buf = MemoryBuffer::getMemBuffer(*BufOrErr, false);
   if (!Deterministic) {
-    M.ModTime = OldMember.getLastModified();
-    M.UID = OldMember.getUID();
-    M.GID = OldMember.getGID();
-    M.Perms = OldMember.getAccessMode();
+    Expected<sys::TimeValue> ModTimeOrErr = OldMember.getLastModified();
+    if (!ModTimeOrErr)
+      return ModTimeOrErr.takeError();
+    M.ModTime = ModTimeOrErr.get();
+    Expected<unsigned> UIDOrErr = OldMember.getUID();
+    if (!UIDOrErr)
+      return UIDOrErr.takeError();
+    M.UID = UIDOrErr.get();
+    Expected<unsigned> GIDOrErr = OldMember.getGID();
+    if (!GIDOrErr)
+      return GIDOrErr.takeError();
+    M.GID = GIDOrErr.get();
+    Expected<sys::fs::perms> AccessModeOrErr = OldMember.getAccessMode();
+    if (!AccessModeOrErr)
+      return AccessModeOrErr.takeError();
+    M.Perms = AccessModeOrErr.get();
   }
   return std::move(M);
 }

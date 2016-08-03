@@ -2464,22 +2464,31 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   bool Unsafe = DAG.getTarget().Options.UnsafeFPMath;
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
-    if ((Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals())) &&
-        CLHS->isExactlyValue(1.0)) {
-      // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
-      // the CI documentation has a worst case error of 1 ulp.
-      // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
-      // use it as long as we aren't trying to use denormals.
+    if ((Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals()))) {
 
-      // 1.0 / sqrt(x) -> rsq(x)
-      //
-      // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
-      // error seems really high at 2^29 ULP.
-      if (RHS.getOpcode() == ISD::FSQRT)
-        return DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0));
+      if (CLHS->isExactlyValue(1.0)) {
+        // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
+        // the CI documentation has a worst case error of 1 ulp.
+        // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
+        // use it as long as we aren't trying to use denormals.
 
-      // 1.0 / x -> rcp(x)
-      return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
+        // 1.0 / sqrt(x) -> rsq(x)
+        //
+        // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
+        // error seems really high at 2^29 ULP.
+        if (RHS.getOpcode() == ISD::FSQRT)
+          return DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0));
+
+        // 1.0 / x -> rcp(x)
+        return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
+      }
+
+      // Same as for 1.0, but expand the sign out of the constant.
+      if (CLHS->isExactlyValue(-1.0)) {
+        // -1.0 / x -> rcp (fneg x)
+        SDValue FNegRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
+        return DAG.getNode(AMDGPUISD::RCP, SL, VT, FNegRHS);
+      }
     }
   }
 

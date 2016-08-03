@@ -1,6 +1,5 @@
 # RUN: llc -O0 -run-pass=regbankselect -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
 # RUN: llc -O0 -run-pass=regbankselect -global-isel %s -regbankselect-greedy -o - 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
-# REQUIRES: global-isel
 
 --- |
   ; ModuleID = 'generic-virtual-registers-type-error.mir'
@@ -54,6 +53,10 @@
   entry:
     ret void
   }
+
+  define void @ignoreTargetSpecificInst() { ret void }
+
+  define void @regBankSelected_property() { ret void }
 ...
 
 ---
@@ -61,6 +64,7 @@
 # Based on the type i32, this should be gpr.
 name:            defaultMapping
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
 registers:
@@ -78,6 +82,7 @@ body: |
 # FPR is used for both floating point and vector registers.
 name:            defaultMappingVector
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
 registers:
@@ -95,6 +100,7 @@ body: |
 # in FPR, but at the use, it should be GPR.
 name:            defaultMapping1Repair
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
@@ -115,6 +121,7 @@ body: |
 # Check that we repair the assignment for %0 differently for both uses.
 name:            defaultMapping2Repairs
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
@@ -141,6 +148,7 @@ body: |
 # fixes that.
 name:            defaultMappingDefRepair
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
 # CHECK-NEXT:   - { id: 1, class: fpr }
@@ -162,6 +170,7 @@ body: |
 # Check that we are able to propagate register banks from phis.
 name:            phiPropagation
 isSSA:           true
+legalized:       true
 tracksRegLiveness:   true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr32 }
@@ -199,6 +208,7 @@ body: |
 # Make sure we can repair physical register uses as well.
 name:            defaultMappingUseRepairPhysReg
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
@@ -220,6 +230,7 @@ body: |
 # Make sure we can repair physical register defs.
 name:            defaultMappingDefRepairPhysReg
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
@@ -240,6 +251,7 @@ body: |
 # G_OR instruction from fpr to gpr.
 name:            greedyMappingOr
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr }
 # CHECK-NEXT:  - { id: 1, class: gpr }
@@ -286,6 +298,7 @@ body: |
 # %2 constraint.
 name:            greedyMappingOrWithConstraints
 isSSA:           true
+legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr }
 # CHECK-NEXT:  - { id: 1, class: gpr }
@@ -326,4 +339,44 @@ body: |
     %0(64) = COPY %x0
     %1(64) = COPY %x1
     %2(64) = G_OR <2 x s32> %0, %1
+...
+
+---
+# CHECK-LABEL: name: ignoreTargetSpecificInst
+name:            ignoreTargetSpecificInst
+isSSA:           true
+legalized:       true
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+body: |
+  bb.0:
+    liveins: %x0
+
+    ; CHECK: %0 = COPY %x0
+    ; CHECK-NEXT: %1 = ADDXrr %0, %0
+    ; CHECK-NEXT: %x0 = COPY %1
+    ; CHECK-NEXT: RET_ReallyLR implicit %x0
+
+    %0 = COPY %x0
+    %1 = ADDXrr %0, %0
+    %x0 = COPY %1
+    RET_ReallyLR implicit %x0
+...
+
+---
+# Check that we set the "regBankSelected" property.
+# CHECK-LABEL: name: regBankSelected_property
+# CHECK: legalized: true
+# CHECK: regBankSelected: true
+# CHECK: isSSA: true
+name:            regBankSelected_property
+isSSA:           true
+legalized:       true
+regBankSelected: false
+body:             |
+  bb.0:
 ...

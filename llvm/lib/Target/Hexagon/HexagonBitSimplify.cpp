@@ -1568,7 +1568,9 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
         continue;
       }
 
-      if (FRC == &Hexagon::DoubleRegsRegClass) {
+      if (FRC == &Hexagon::DoubleRegsRegClass ||
+          FRC == &Hexagon::VecDblRegsRegClass ||
+          FRC == &Hexagon::VecDblRegs128BRegClass) {
         // Try to generate REG_SEQUENCE.
         BitTracker::RegisterRef TL = { R, Hexagon::subreg_loreg };
         BitTracker::RegisterRef TH = { R, Hexagon::subreg_hireg };
@@ -1602,6 +1604,8 @@ bool CopyPropagation::isCopyReg(unsigned Opc) {
     case Hexagon::A2_combinew:
     case Hexagon::A4_combineir:
     case Hexagon::A4_combineri:
+    case Hexagon::V6_vcombine:
+    case Hexagon::V6_vcombine_128B:
       return true;
     default:
       break;
@@ -1639,7 +1643,9 @@ bool CopyPropagation::propagateRegCopy(MachineInstr &MI) {
       }
       break;
     }
-    case Hexagon::A2_combinew: {
+    case Hexagon::A2_combinew:
+    case Hexagon::V6_vcombine:
+    case Hexagon::V6_vcombine_128B: {
       BitTracker::RegisterRef RH = MI.getOperand(1), RL = MI.getOperand(2);
       Changed = HBS::replaceSubWithSub(RD.Reg, Hexagon::subreg_loreg,
                                        RL.Reg, RL.Sub, MRI);

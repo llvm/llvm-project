@@ -3047,7 +3047,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     // Look for a pattern to match SMMLS
     // (sube a, (smul_loHi a, b), (subc 0, (smul_LOhi(a, b))))
     if (N->getOperand(1).getOpcode() != ISD::SMUL_LOHI ||
-        N->getOperand(2).getOpcode() != ARMISD::SUBC)
+        N->getOperand(2).getOpcode() != ARMISD::SUBC ||
+        !SDValue(N, 1).use_empty())
       break;
 
     if (Subtarget->isThumb())

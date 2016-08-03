@@ -61,6 +61,11 @@ INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(MemorySSAPrinterLegacyPass, "print-memoryssa",
                     "Memory SSA Printer", false, false)
 
+static cl::opt<unsigned> MaxCheckLimit(
+    "memssa-check-limit", cl::Hidden, cl::init(100),
+    cl::desc("The maximum number of stores/phis MemorySSA"
+             "will consider trying to walk past (default = 100)"));
+
 static cl::opt<bool>
     VerifyMemorySSA("verify-memoryssa", cl::init(false), cl::Hidden,
                     cl::desc("Verify MemorySSA in legacy printer pass."));
@@ -90,6 +95,82 @@ public:
 }
 
 namespace {
+/// Our current alias analysis API differentiates heavily between calls and
+/// non-calls, and functions called on one usually assert on the other.
+/// This class encapsulates the distinction to simplify other code that wants
+/// "Memory affecting instructions and related data" to use as a key.
+/// For example, this class is used as a densemap key in the use optimizer.
+class MemoryLocOrCall {
+public:
+  MemoryLocOrCall() : IsCall(false) {}
+  MemoryLocOrCall(MemoryUseOrDef *MUD)
+      : MemoryLocOrCall(MUD->getMemoryInst()) {}
+
+  MemoryLocOrCall(Instruction *Inst) {
+    if (ImmutableCallSite(Inst)) {
+      IsCall = true;
+      CS = ImmutableCallSite(Inst);
+    } else {
+      IsCall = false;
+      // There is no such thing as a memorylocation for a fence inst, and it is
+      // unique in that regard.
+      if (!isa<FenceInst>(Inst))
+        Loc = MemoryLocation::get(Inst);
+    }
+  }
+
+  explicit MemoryLocOrCall(const MemoryLocation &Loc)
+      : IsCall(false), Loc(Loc) {}
+
+  bool IsCall;
+  ImmutableCallSite getCS() const {
+    assert(IsCall);
+    return CS;
+  }
+  MemoryLocation getLoc() const {
+    assert(!IsCall);
+    return Loc;
+  }
+
+  bool operator==(const MemoryLocOrCall &Other) const {
+    if (IsCall != Other.IsCall)
+      return false;
+
+    if (IsCall)
+      return CS.getCalledValue() == Other.CS.getCalledValue();
+    return Loc == Other.Loc;
+  }
+
+private:
+  // FIXME: MSVC 2013 does not properly implement C++11 union rules, once we
+  // require newer versions, this should be made an anonymous union again.
+  ImmutableCallSite CS;
+  MemoryLocation Loc;
+};
+}
+
+namespace llvm {
+template <> struct DenseMapInfo<MemoryLocOrCall> {
+  static inline MemoryLocOrCall getEmptyKey() {
+    return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getEmptyKey());
+  }
+  static inline MemoryLocOrCall getTombstoneKey() {
+    return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getTombstoneKey());
+  }
+  static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
+    if (MLOC.IsCall)
+      return hash_combine(MLOC.IsCall,
+                          DenseMapInfo<const Value *>::getHashValue(
+                              MLOC.getCS().getCalledValue()));
+    return hash_combine(
+        MLOC.IsCall, DenseMapInfo<MemoryLocation>::getHashValue(MLOC.getLoc()));
+  }
+  static bool isEqual(const MemoryLocOrCall &LHS, const MemoryLocOrCall &RHS) {
+    return LHS == RHS;
+  }
+};
+}
+namespace {
 struct UpwardsMemoryQuery {
   // True if our original query started off as a call
   bool IsCall;
@@ -111,17 +192,61 @@ struct UpwardsMemoryQuery {
   }
 };
 
-static bool instructionClobbersQuery(MemoryDef *MD, const MemoryLocation &Loc,
-                                     const UpwardsMemoryQuery &Query,
+static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
+                           AliasAnalysis &AA) {
+  Instruction *Inst = MD->getMemoryInst();
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+    switch (II->getIntrinsicID()) {
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
+        return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+static bool instructionClobbersQuery(MemoryDef *MD,
+                                     const MemoryLocation &UseLoc,
+                                     const Instruction *UseInst,
                                      AliasAnalysis &AA) {
-  Instruction *DefMemoryInst = MD->getMemoryInst();
-  assert(DefMemoryInst && "Defining instruction not actually an instruction");
+  Instruction *DefInst = MD->getMemoryInst();
+  assert(DefInst && "Defining instruction not actually an instruction");
 
-  if (!Query.IsCall)
-    return AA.getModRefInfo(DefMemoryInst, Loc) & MRI_Mod;
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
+    // These intrinsics will show up as affecting memory, but they are just
+    // markers.
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::assume:
+      return false;
+    default:
+      break;
+    }
+  }
 
-  ModRefInfo I = AA.getModRefInfo(DefMemoryInst, ImmutableCallSite(Query.Inst));
-  return I != MRI_NoModRef;
+  ImmutableCallSite UseCS(UseInst);
+  if (UseCS) {
+    ModRefInfo I = AA.getModRefInfo(DefInst, UseCS);
+    return I != MRI_NoModRef;
+  }
+  return AA.getModRefInfo(DefInst, UseLoc) & MRI_Mod;
+}
+
+static bool instructionClobbersQuery(MemoryDef *MD, MemoryUse *MU,
+                                     const MemoryLocOrCall &UseMLOC,
+                                     AliasAnalysis &AA) {
+  // FIXME: This is a temporary hack to allow a single instructionClobbersQuery
+  // to exist while MemoryLocOrCall is pushed through places.
+  if (UseMLOC.IsCall)
+    return instructionClobbersQuery(MD, MemoryLocation(), MU->getMemoryInst(),
+                                    AA);
+  return instructionClobbersQuery(MD, UseMLOC.getLoc(), MU->getMemoryInst(),
+                                  AA);
 }
 
 /// Cache for our caching MemorySSA walker.
@@ -257,8 +382,9 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
           //
           // Also, note that this can't be hoisted out of the `Worklist` loop,
           // since MD may only act as a clobber for 1 of N MemoryLocations.
-          FoundClobber = FoundClobber || MSSA.isLiveOnEntryDef(MD) ||
-                         instructionClobbersQuery(MD, MAP.second, Query, AA);
+          FoundClobber =
+              FoundClobber || MSSA.isLiveOnEntryDef(MD) ||
+              instructionClobbersQuery(MD, MAP.second, Query.Inst, AA);
         }
         break;
       }
@@ -268,7 +394,7 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
 
       if (auto *MD = dyn_cast<MemoryDef>(MA)) {
         (void)MD;
-        assert(!instructionClobbersQuery(MD, MAP.second, Query, AA) &&
+        assert(!instructionClobbersQuery(MD, MAP.second, Query.Inst, AA) &&
                "Found clobber before reaching ClobberAt!");
         continue;
       }
@@ -428,7 +554,7 @@ class ClobberWalker {
 
       if (auto *MD = dyn_cast<MemoryDef>(Current))
         if (MSSA.isLiveOnEntryDef(MD) ||
-            instructionClobbersQuery(MD, Desc.Loc, *Query, AA))
+            instructionClobbersQuery(MD, Desc.Loc, Query->Inst, AA))
           return {MD, true, false};
 
       // Cache checks must be done last, because if Current is a clobber, the
@@ -468,7 +594,7 @@ class ClobberWalker {
   ///
   /// If this returns None, NewPaused is a vector of searches that terminated
   /// at StopWhere. Otherwise, NewPaused is left in an unspecified state.
-  Optional<ListIndex>
+  Optional<TerminatedPath>
   getBlockingAccess(MemoryAccess *StopWhere,
                     SmallVectorImpl<ListIndex> &PausedSearches,
                     SmallVectorImpl<ListIndex> &NewPaused,
@@ -507,11 +633,12 @@ class ClobberWalker {
         assert(Res.Result != StopWhere || Res.FromCache);
         // If this wasn't a cache hit, we hit a clobber when walking. That's a
         // failure.
+        TerminatedPath Term{Res.Result, PathIndex};
         if (!Res.FromCache || !MSSA.dominates(Res.Result, StopWhere))
-          return PathIndex;
+          return Term;
 
         // Otherwise, it's a valid thing to potentially optimize to.
-        Terminated.push_back({Res.Result, PathIndex});
+        Terminated.push_back(Term);
         continue;
       }
 
@@ -643,22 +770,21 @@ class ClobberWalker {
       // liveOnEntry, and we'll happily wait for that to disappear (read: never)
       // For the moment, this is fine, since we do basically nothing with
       // blocker info.
-      if (Optional<ListIndex> Blocker = getBlockingAccess(
+      if (Optional<TerminatedPath> Blocker = getBlockingAccess(
               Target, PausedSearches, NewPaused, TerminatedPaths)) {
-        MemoryAccess *BlockingAccess = Paths[*Blocker].Last;
         // Cache our work on the blocking node, since we know that's correct.
-        cacheDefPath(Paths[*Blocker], BlockingAccess);
+        cacheDefPath(Paths[Blocker->LastNode], Blocker->Clobber);
 
         // Find the node we started at. We can't search based on N->Last, since
         // we may have gone around a loop with a different MemoryLocation.
-        auto Iter = find_if(def_path(*Blocker), [&](const DefPath &N) {
+        auto Iter = find_if(def_path(Blocker->LastNode), [&](const DefPath &N) {
           return defPathIndex(N) < PriorPathsSize;
         });
         assert(Iter != def_path_iterator());
 
         DefPath &CurNode = *Iter;
         assert(CurNode.Last == Current);
-        CurNode.Blocker = BlockingAccess;
+        CurNode.Blocker = Blocker->Clobber;
 
         // Two things:
         // A. We can't reliably cache all of NewPaused back. Consider a case
@@ -1065,6 +1191,219 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
   return Res.first->second.get();
 }
 
+/// This class is a batch walker of all MemoryUse's in the program, and points
+/// their defining access at the thing that actually clobbers them.  Because it
+/// is a batch walker that touches everything, it does not operate like the
+/// other walkers.  This walker is basically performing a top-down SSA renaming
+/// pass, where the version stack is used as the cache.  This enables it to be
+/// significantly more time and memory efficient than using the regular walker,
+/// which is walking bottom-up.
+class MemorySSA::OptimizeUses {
+public:
+  OptimizeUses(MemorySSA *MSSA, MemorySSAWalker *Walker, AliasAnalysis *AA,
+               DominatorTree *DT)
+      : MSSA(MSSA), Walker(Walker), AA(AA), DT(DT) {
+    Walker = MSSA->getWalker();
+  }
+
+  void optimizeUses();
+
+private:
+  /// This represents where a given memorylocation is in the stack.
+  struct MemlocStackInfo {
+    // This essentially is keeping track of versions of the stack. Whenever
+    // the stack changes due to pushes or pops, these versions increase.
+    unsigned long StackEpoch;
+    unsigned long PopEpoch;
+    // This is the lower bound of places on the stack to check. It is equal to
+    // the place the last stack walk ended.
+    // Note: Correctness depends on this being initialized to 0, which densemap
+    // does
+    unsigned long LowerBound;
+    // This is where the last walk for this memory location ended.
+    unsigned long LastKill;
+    bool LastKillValid;
+  };
+  void optimizeUsesInBlock(const BasicBlock *, unsigned long &, unsigned long &,
+                           SmallVectorImpl<MemoryAccess *> &,
+                           DenseMap<MemoryLocOrCall, MemlocStackInfo> &);
+  MemorySSA *MSSA;
+  MemorySSAWalker *Walker;
+  AliasAnalysis *AA;
+  DominatorTree *DT;
+};
+
+/// Optimize the uses in a given block This is basically the SSA renaming
+/// algorithm, with one caveat: We are able to use a single stack for all
+/// MemoryUses.  This is because the set of *possible* reaching MemoryDefs is
+/// the same for every MemoryUse.  The *actual* clobbering MemoryDef is just
+/// going to be some position in that stack of possible ones.
+///
+/// We track the stack positions that each MemoryLocation needs
+/// to check, and last ended at.  This is because we only want to check the
+/// things that changed since last time.  The same MemoryLocation should
+/// get clobbered by the same store (getModRefInfo does not use invariantness or
+/// things like this, and if they start, we can modify MemoryLocOrCall to
+/// include relevant data)
+void MemorySSA::OptimizeUses::optimizeUsesInBlock(
+    const BasicBlock *BB, unsigned long &StackEpoch, unsigned long &PopEpoch,
+    SmallVectorImpl<MemoryAccess *> &VersionStack,
+    DenseMap<MemoryLocOrCall, MemlocStackInfo> &LocStackInfo) {
+
+  /// If no accesses, nothing to do.
+  MemorySSA::AccessList *Accesses = MSSA->getWritableBlockAccesses(BB);
+  if (Accesses == nullptr)
+    return;
+
+  // Pop everything that doesn't dominate the current block off the stack,
+  // increment the PopEpoch to account for this.
+  while (!VersionStack.empty()) {
+    BasicBlock *BackBlock = VersionStack.back()->getBlock();
+    if (DT->dominates(BackBlock, BB))
+      break;
+    while (VersionStack.back()->getBlock() == BackBlock)
+      VersionStack.pop_back();
+    ++PopEpoch;
+  }
+
+  for (MemoryAccess &MA : *Accesses) {
+    auto *MU = dyn_cast<MemoryUse>(&MA);
+    if (!MU) {
+      VersionStack.push_back(&MA);
+      ++StackEpoch;
+      continue;
+    }
+
+    MemoryLocOrCall UseMLOC(MU);
+    auto &LocInfo = LocStackInfo[UseMLOC];
+    // If the pop epoch changed, it means we've removed stuff from top of
+    // stack due to changing blocks. We may have to reset the lower bound or
+    // last kill info.
+    if (LocInfo.PopEpoch != PopEpoch) {
+      LocInfo.PopEpoch = PopEpoch;
+      LocInfo.StackEpoch = StackEpoch;
+      // If the lower bound was in the info we popped, we have to reset it.
+      if (LocInfo.LowerBound >= VersionStack.size()) {
+        // Reset the lower bound of things to check.
+        // TODO: Some day we should be able to reset to last kill, rather than
+        // 0.
+
+        LocInfo.LowerBound = 0;
+        LocInfo.LastKillValid = false;
+      }
+    } else if (LocInfo.StackEpoch != StackEpoch) {
+      // If all that has changed is the StackEpoch, we only have to check the
+      // new things on the stack, because we've checked everything before.  In
+      // this case, the lower bound of things to check remains the same.
+      LocInfo.PopEpoch = PopEpoch;
+      LocInfo.StackEpoch = StackEpoch;
+    }
+    if (!LocInfo.LastKillValid) {
+      LocInfo.LastKill = VersionStack.size() - 1;
+      LocInfo.LastKillValid = true;
+    }
+
+    // At this point, we should have corrected last kill and LowerBound to be
+    // in bounds.
+    assert(LocInfo.LowerBound < VersionStack.size() &&
+           "Lower bound out of range");
+    assert(LocInfo.LastKill < VersionStack.size() &&
+           "Last kill info out of range");
+    // In any case, the new upper bound is the top of the stack.
+    unsigned long UpperBound = VersionStack.size() - 1;
+
+    if (UpperBound - LocInfo.LowerBound > MaxCheckLimit) {
+      DEBUG(dbgs() << "MemorySSA skipping optimization of " << *MU << " ("
+                   << *(MU->getMemoryInst()) << ")"
+                   << " because there are " << UpperBound - LocInfo.LowerBound
+                   << " stores to disambiguate\n");
+      // Because we did not walk, LastKill is no longer valid, as this may
+      // have been a kill.
+      LocInfo.LastKillValid = false;
+      continue;
+    }
+    bool FoundClobberResult = false;
+    while (UpperBound > LocInfo.LowerBound) {
+      if (isa<MemoryPhi>(VersionStack[UpperBound])) {
+        // For phis, use the walker, see where we ended up, go there
+        Instruction *UseInst = MU->getMemoryInst();
+        MemoryAccess *Result = Walker->getClobberingMemoryAccess(UseInst);
+        // We are guaranteed to find it or something is wrong
+        while (VersionStack[UpperBound] != Result) {
+          assert(UpperBound != 0);
+          --UpperBound;
+        }
+        FoundClobberResult = true;
+        break;
+      }
+
+      MemoryDef *MD = cast<MemoryDef>(VersionStack[UpperBound]);
+      // If the lifetime of the pointer ends at this instruction, it's live on
+      // entry.
+      if (!UseMLOC.IsCall && lifetimeEndsAt(MD, UseMLOC.getLoc(), *AA)) {
+        // Reset UpperBound to liveOnEntryDef's place in the stack
+        UpperBound = 0;
+        FoundClobberResult = true;
+        break;
+      }
+      if (instructionClobbersQuery(MD, MU, UseMLOC, *AA)) {
+        FoundClobberResult = true;
+        break;
+      }
+      --UpperBound;
+    }
+    // At the end of this loop, UpperBound is either a clobber, or lower bound
+    // PHI walking may cause it to be < LowerBound, and in fact, < LastKill.
+    if (FoundClobberResult || UpperBound < LocInfo.LastKill) {
+      MU->setDefiningAccess(VersionStack[UpperBound]);
+      // We were last killed now by where we got to
+      LocInfo.LastKill = UpperBound;
+    } else {
+      // Otherwise, we checked all the new ones, and now we know we can get to
+      // LastKill.
+      MU->setDefiningAccess(VersionStack[LocInfo.LastKill]);
+    }
+    LocInfo.LowerBound = VersionStack.size() - 1;
+  }
+}
+
+/// Optimize uses to point to their actual clobbering definitions.
+void MemorySSA::OptimizeUses::optimizeUses() {
+
+  // We perform a non-recursive top-down dominator tree walk
+  struct StackInfo {
+    const DomTreeNode *Node;
+    DomTreeNode::const_iterator Iter;
+  };
+
+  SmallVector<MemoryAccess *, 16> VersionStack;
+  SmallVector<StackInfo, 16> DomTreeWorklist;
+  DenseMap<MemoryLocOrCall, MemlocStackInfo> LocStackInfo;
+  DomTreeWorklist.push_back({DT->getRootNode(), DT->getRootNode()->begin()});
+  // Bottom of the version stack is always live on entry.
+  VersionStack.push_back(MSSA->getLiveOnEntryDef());
+
+  unsigned long StackEpoch = 1;
+  unsigned long PopEpoch = 1;
+  while (!DomTreeWorklist.empty()) {
+    const auto *DomNode = DomTreeWorklist.back().Node;
+    const auto DomIter = DomTreeWorklist.back().Iter;
+    BasicBlock *BB = DomNode->getBlock();
+    optimizeUsesInBlock(BB, StackEpoch, PopEpoch, VersionStack, LocStackInfo);
+    if (DomIter == DomNode->end()) {
+      // Hit the end, pop the worklist
+      DomTreeWorklist.pop_back();
+      continue;
+    }
+    // Move the iterator to the next child for the next time we get to process
+    // children
+    ++DomTreeWorklist.back().Iter;
+
+    // Now visit the next child
+    DomTreeWorklist.push_back({*DomIter, (*DomIter)->begin()});
+  }
+}
+
 void MemorySSA::buildMemorySSA() {
   // We create an access to represent "live on entry", for things like
   // arguments or users of globals, where the memory they use is defined before
@@ -1161,25 +1500,7 @@ void MemorySSA::buildMemorySSA() {
 
   // We're doing a batch of updates; don't drop useful caches between them.
   Walker->setAutoResetWalker(false);
-
-  // Now optimize the MemoryUse's defining access to point to the nearest
-  // dominating clobbering def.
-  // This ensures that MemoryUse's that are killed by the same store are
-  // immediate users of that store, one of the invariants we guarantee.
-  for (auto DomNode : depth_first(DT)) {
-    BasicBlock *BB = DomNode->getBlock();
-    auto AI = PerBlockAccesses.find(BB);
-    if (AI == PerBlockAccesses.end())
-      continue;
-    AccessList *Accesses = AI->second.get();
-    for (auto &MA : *Accesses) {
-      if (auto *MU = dyn_cast<MemoryUse>(&MA)) {
-        Instruction *Inst = MU->getMemoryInst();
-        MU->setDefiningAccess(Walker->getClobberingMemoryAccess(Inst));
-      }
-    }
-  }
-
+  OptimizeUses(this, Walker, AA, DT).optimizeUses();
   Walker->setAutoResetWalker(true);
   Walker->resetClobberWalker();
 

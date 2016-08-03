@@ -41,7 +41,7 @@
 ; EMPTY-NEXT: Msf Free Pages: [3, 4, 5, 8, 9]
 ; EMPTY-NEXT: Orphaned Pages: []
 ; EMPTY-NEXT: Multiply Used Pages: []
-; EMPTY-NEXT: Use After Free Pages: [8]
+; EMPTY-NEXT: Use After Free Pages: []
 ; EMPTY-NEXT: StreamBlocks [
 ; EMPTY-NEXT:   Stream 0: [8]
 ; EMPTY-NEXT:   Stream 1: [19]
@@ -980,7 +980,7 @@
 ; ALL: Msf Free Pages: [3, 4, 5, 8, 9]
 ; ALL: Orphaned Pages: []
 ; ALL: Multiply Used Pages: []
-; ALL: Use After Free Pages: [8]
+; ALL: Use After Free Pages: []
 ; ALL: StreamBlocks [
 ; ALL:   Stream 0: [8]
 ; ALL:   Stream 1: [19]

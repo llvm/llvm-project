@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -O2 -unroll-runtime=true | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -O2 -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -O2 -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; Check runtime unrolling prologue can be promoted by LICM pass.

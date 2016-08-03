@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -unroll-runtime -unroll-count=2 -loop-unroll | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -unroll-runtime -unroll-count=2 -loop-unroll -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -unroll-runtime -unroll-count=2 -loop-unroll -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
