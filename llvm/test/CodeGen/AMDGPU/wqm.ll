@@ -350,6 +350,44 @@ main_body:
   ret float %s
 }
 
+; CHECK-LABEL: {{^}}test_loop_vcc:
+; CHECK-NEXT: ; %entry
+; CHECK-NEXT: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: s_and_b64 exec, exec, [[LIVE]]
+; CHECK: image_store
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: v_mov_b32_e32 [[CTR:v[0-9]+]], -2
+; CHECK: s_branch [[LOOPHDR:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[LOOPHDR]]: ; %loop
+; CHECK: v_add_i32_e32 [[CTR]], vcc, 2, [[CTR]]
+; CHECK: v_cmp_lt_i32_e32 vcc, 7, [[CTR]]
+; CHECK: s_cbranch_vccz
+; CHECK: ; %break
+
+; CHECK: ; return
+define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
+entry:
+  call void @llvm.amdgcn.image.store.v4i32(<4 x float> %in, <4 x i32> undef, <8 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0)
+  br label %loop
+
+loop:
+  %ctr.iv = phi i32 [ 0, %entry ], [ %ctr.next, %body ]
+  %c.iv = phi <4 x float> [ %in, %entry ], [ %c.next, %body ]
+  %cc = icmp sgt i32 %ctr.iv, 7
+  br i1 %cc, label %break, label %body
+
+body:
+  %c.i = bitcast <4 x float> %c.iv to <4 x i32>
+  %c.next = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %c.i, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %ctr.next = add i32 %ctr.iv, 2
+  br label %loop
+
+break:
+  ret <4 x float> %c.iv
+}
+
 declare void @llvm.amdgcn.image.store.v4i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 
 declare <4 x float> @llvm.amdgcn.image.load.v4i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
