@@ -157,6 +157,8 @@ public:
 /// are not supported.
 class CloneDetector {
 public:
+  typedef unsigned DataPiece;
+
   /// Holds the data about a StmtSequence that is needed during the search for
   /// code clones.
   struct CloneSignature {
@@ -164,7 +166,7 @@ public:
     ///
     /// If this variable is equal for two different StmtSequences, then they can
     /// be considered clones of each other.
-    std::vector<unsigned> Data;
+    std::vector<DataPiece> Data;
 
     /// \brief The complexity of the StmtSequence.
     ///

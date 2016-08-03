@@ -50,3 +50,18 @@ class DeletesCopyDefaultsMove {
   DeletesCopyDefaultsMove &operator=(DeletesCopyDefaultsMove &&) = default;
   ~DeletesCopyDefaultsMove() = default;
 };
+
+template <typename T>
+struct TemplateClass {
+  TemplateClass() = default;
+  TemplateClass(const TemplateClass &);
+  TemplateClass &operator=(const TemplateClass &);
+  TemplateClass(TemplateClass &&);
+  TemplateClass &operator=(TemplateClass &&);
+  ~TemplateClass();
+};
+
+// Multiple instantiations of a class template will trigger multiple matches for defined special members.
+// This should not cause problems.
+TemplateClass<int> InstantiationWithInt;
+TemplateClass<double> InstantiationWithDouble;

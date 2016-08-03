@@ -1066,14 +1066,14 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   if (ValueMap.count(MA->getAccessInstruction()))
     return true;
 
-  // Check for recurrsion which can be caused by additional constraints, e.g.,
-  // non-finitie loop contraints. In such a case we have to bail out and insert
+  // Check for recursion which can be caused by additional constraints, e.g.,
+  // non-finite loop constraints. In such a case we have to bail out and insert
   // a "false" runtime check that will cause the original code to be executed.
   auto PtrId = std::make_pair(IAClass.IdentifyingPointer, IAClass.AccessType);
   if (!PreloadedPtrs.insert(PtrId).second)
     return false;
 
-  // The exectution context of the IAClass.
+  // The execution context of the IAClass.
   isl_set *&ExecutionCtx = IAClass.ExecutionContext;
 
   // If the base pointer of this class is dependent on another one we have to

@@ -189,7 +189,7 @@ testing::AssertionResult matchesConditionallyWithCuda(
   // avoid constructing a full system triple.
   std::vector<std::string> Args = {
       "-xcuda",  "-fno-ms-extensions",      "--cuda-host-only", "-nocudainc",
-      "-target", "nvptx64-unknown-unknown", CompileArg};
+      "-target", "x86_64-unknown-unknown", CompileArg};
   if (!runToolOnCodeWithArgs(Factory->create(),
                              CudaHeader + Code, Args)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";

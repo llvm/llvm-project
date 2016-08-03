@@ -17,6 +17,7 @@
 // };
 
 #include <memory>
+#include <cstdint>
 #include <cassert>
 
 template <class T>
@@ -27,7 +28,7 @@ struct A
     value_type* allocate(std::size_t n)
     {
         assert(n == 10);
-        return (value_type*)0xDEADBEEF;
+        return reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xDEADBEEF));
     }
 };
 
@@ -39,13 +40,13 @@ struct B
     value_type* allocate(std::size_t n)
     {
         assert(n == 12);
-        return (value_type*)0xEEADBEEF;
+        return reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xEEADBEEF));
     }
     value_type* allocate(std::size_t n, const void* p)
     {
         assert(n == 11);
         assert(p == 0);
-        return (value_type*)0xFEADBEEF;
+        return reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xFEADBEEF));
     }
 };
 
@@ -53,8 +54,8 @@ int main()
 {
 #ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
     A<int> a;
-    assert(std::allocator_traits<A<int> >::allocate(a, 10, nullptr) == (int*)0xDEADBEEF);
+    assert(std::allocator_traits<A<int> >::allocate(a, 10, nullptr) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
 #endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
     B<int> b;
-    assert(std::allocator_traits<B<int> >::allocate(b, 11, nullptr) == (int*)0xFEADBEEF);
+    assert(std::allocator_traits<B<int> >::allocate(b, 11, nullptr) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xFEADBEEF)));
 }

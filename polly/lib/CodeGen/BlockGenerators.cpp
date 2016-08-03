@@ -892,7 +892,7 @@ bool VectorBlockGenerator::extractScalarValues(const Instruction *Inst,
 
       // If there is one scalar extracted, all scalar elements should have
       // already been extracted by the code here. So no need to check for the
-      // existance of all of them.
+      // existence of all of them.
       if (SM.count(Operand))
         break;
 

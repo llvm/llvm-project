@@ -69,7 +69,7 @@ public:
   ///
   /// This function takes a node in an (possibly already optimized) schedule
   /// tree and applies a set of additional optimizations on this schedule tree
-  /// node and its descendents. The transformations applied include:
+  /// node and its descendants. The transformations applied include:
   ///
   ///   - Tiling
   ///   - Prevectorization

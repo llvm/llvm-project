@@ -127,6 +127,8 @@ class basic_regex
 public:
     // types:
     typedef charT                               value_type;
+    typedef traits                              traits_type;
+    typedef typename traits::string_type        string_type;
     typedef regex_constants::syntax_option_type flag_type;
     typedef typename traits::locale_type        locale_type;
 
@@ -2475,6 +2477,8 @@ class _LIBCPP_TYPE_VIS_ONLY basic_regex
 public:
     // types:
     typedef _CharT                              value_type;
+    typedef _Traits                             traits_type;
+    typedef typename _Traits::string_type       string_type;
     typedef regex_constants::syntax_option_type flag_type;
     typedef typename _Traits::locale_type       locale_type;
 

@@ -25,18 +25,19 @@ namespace rename {
 
 class RenamingAction {
 public:
-  RenamingAction(const std::string &NewName, const std::string &PrevName,
-                 const std::vector<std::string> &USRs,
+  RenamingAction(const std::vector<std::string> &NewNames,
+                 const std::vector<std::string> &PrevNames,
+                 const std::vector<std::vector<std::string>> &USRList,
                  std::map<std::string, tooling::Replacements> &FileToReplaces,
                  bool PrintLocations = false)
-      : NewName(NewName), PrevName(PrevName), USRs(USRs),
+      : NewNames(NewNames), PrevNames(PrevNames), USRList(USRList),
         FileToReplaces(FileToReplaces), PrintLocations(PrintLocations) {}
 
   std::unique_ptr<ASTConsumer> newASTConsumer();
 
 private:
-  const std::string &NewName, &PrevName;
-  const std::vector<std::string> &USRs;
+  const std::vector<std::string> &NewNames, &PrevNames;
+  const std::vector<std::vector<std::string>> &USRList;
   std::map<std::string, tooling::Replacements> &FileToReplaces;
   bool PrintLocations;
 };

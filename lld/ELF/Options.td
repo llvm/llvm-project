@@ -247,6 +247,7 @@ def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def define_common: F<"define-common">;
 def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
+def g: Flag<["-"], "g">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,

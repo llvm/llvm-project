@@ -1407,11 +1407,19 @@ static Action *buildCudaActions(Compilation &C, DerivedArgList &Args,
   bool CompileDeviceOnly =
       PartialCompilationArg &&
       PartialCompilationArg->getOption().matches(options::OPT_cuda_device_only);
+  const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+  assert(HostTC && "No toolchain for host compilation.");
+  if (HostTC->getTriple().isNVPTX()) {
+    // We do not support targeting NVPTX for host compilation. Throw
+    // an error and abort pipeline construction early so we don't trip
+    // asserts that assume device-side compilation.
+    C.getDriver().Diag(diag::err_drv_cuda_nvptx_host);
+    return nullptr;
+  }
 
   if (CompileHostOnly) {
-    OffloadAction::HostDependence HDep(
-        *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-        /*BoundArch=*/nullptr, Action::OFK_Cuda);
+    OffloadAction::HostDependence HDep(*HostAction, *HostTC,
+                                       /*BoundArch=*/nullptr, Action::OFK_Cuda);
     return C.MakeAction<OffloadAction>(HDep);
   }
 
@@ -1507,9 +1515,8 @@ static Action *buildCudaActions(Compilation &C, DerivedArgList &Args,
 
   // Return a new host action that incorporates original host action and all
   // device actions.
-  OffloadAction::HostDependence HDep(
-      *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-      /*BoundArch=*/nullptr, Action::OFK_Cuda);
+  OffloadAction::HostDependence HDep(*HostAction, *HostTC,
+                                     /*BoundArch=*/nullptr, Action::OFK_Cuda);
   OffloadAction::DeviceDependences DDep;
   DDep.add(*FatbinAction, *CudaTC, /*BoundArch=*/nullptr, Action::OFK_Cuda);
   return C.MakeAction<OffloadAction>(HDep, DDep);

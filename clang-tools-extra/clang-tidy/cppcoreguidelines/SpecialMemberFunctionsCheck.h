@@ -1,4 +1,4 @@
-//===--- SpecialMemberFunctionsCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===--- SpecialMemberFunctionsCheck.h - clang-tidy--------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -41,15 +41,11 @@ public:
 
   using ClassDefId = std::pair<SourceLocation, std::string>;
 
-  using ClassDefiningSpecialMembersMap = llvm::DenseMap<ClassDefId, llvm::SmallVector<SpecialMemberFunctionKind, 5>>;
+  using ClassDefiningSpecialMembersMap =
+      llvm::DenseMap<ClassDefId,
+                     llvm::SmallSetVector<SpecialMemberFunctionKind, 5>>;
 
 private:
-
-  static llvm::StringRef toString(SpecialMemberFunctionKind K);
-
-  static std::string join(llvm::ArrayRef<SpecialMemberFunctionKind> SMFS,
-                          llvm::StringRef AndOr);
-
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
 };
 
@@ -65,7 +61,7 @@ template <>
 struct DenseMapInfo<
     clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId> {
   using ClassDefId =
-    clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
+      clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
   static inline ClassDefId getEmptyKey() {
     return ClassDefId(

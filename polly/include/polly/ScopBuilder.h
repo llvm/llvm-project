@@ -91,7 +91,7 @@ class ScopBuilder {
   /// @returns True if the access could be built, False otherwise.
   bool buildAccessCallInst(MemAccInst Inst, Loop *L);
 
-  /// @brief Build a single-dimensional parameteric sized MemoryAccess
+  /// @brief Build a single-dimensional parametric sized MemoryAccess
   ///        from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
@@ -159,7 +159,7 @@ class ScopBuilder {
   /// @param Affine      Whether all subscripts are affine expressions.
   /// @param AccessValue Value read or written.
   /// @param Subscripts  Access subscripts per dimension.
-  /// @param Sizes       The array diminsion's sizes.
+  /// @param Sizes       The array dimension's sizes.
   /// @param Kind        The kind of memory accessed.
   ///
   /// @return The created MemoryAccess, or nullptr if the access is not within

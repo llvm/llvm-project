@@ -39,94 +39,146 @@
 
 using namespace llvm;
 
-cl::OptionCategory ClangRenameCategory("Clang-rename options");
-
-static cl::opt<std::string>
-NewName(
-    "new-name",
-    cl::desc("The new name to change the symbol to."),
-    cl::cat(ClangRenameCategory));
-static cl::opt<unsigned>
-SymbolOffset(
-    "offset",
-    cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
-    cl::cat(ClangRenameCategory));
-static cl::opt<std::string>
-OldName(
-    "old-name",
-    cl::desc("The fully qualified name of the symbol, if -offset is not used."),
-    cl::cat(ClangRenameCategory));
-static cl::opt<bool>
-Inplace(
-    "i",
-    cl::desc("Overwrite edited <file>s."),
-    cl::cat(ClangRenameCategory));
-static cl::opt<bool>
-PrintName(
-    "pn",
-    cl::desc("Print the found symbol's name prior to renaming to stderr."),
-    cl::cat(ClangRenameCategory));
-static cl::opt<bool>
-PrintLocations(
-    "pl",
-    cl::desc("Print the locations affected by renaming to stderr."),
-    cl::cat(ClangRenameCategory));
-static cl::opt<std::string>
-ExportFixes(
-    "export-fixes",
-    cl::desc("YAML file to store suggested fixes in."),
-    cl::value_desc("filename"),
-    cl::cat(ClangRenameCategory));
-
 using namespace clang;
 
-const char RenameUsage[] = "A tool to rename symbols in C/C++ code.\n\
+cl::OptionCategory ClangRenameAtCategory("clang-rename rename-at options");
+cl::OptionCategory ClangRenameAllCategory("clang-rename rename-all options");
+
+const char RenameAtUsage[] = "A tool to rename symbols in C/C++ code.\n\
 clang-rename renames every occurrence of a symbol found at <offset> in\n\
 <source0>. If -i is specified, the edited files are overwritten to disk.\n\
 Otherwise, the results are written to stdout.\n";
 
+const char RenameAllUsage[] = "A tool to rename symbols in C/C++ code.\n\
+clang-rename renames every occurrence of a symbol named <old-name>.\n";
+
+static int renameAtMain(int argc, const char *argv[]);
+static int renameAllMain(int argc, const char *argv[]);
+static int helpMain(int argc, const char *argv[]);
+
 int main(int argc, const char **argv) {
-  tooling::CommonOptionsParser OP(argc, argv, ClangRenameCategory, RenameUsage);
+  if (argc > 1) {
+    using MainFunction = std::function<int(int, const char *[])>;
+    MainFunction Func = StringSwitch<MainFunction>(argv[1])
+                            .Case("rename-at", renameAtMain)
+                            .Case("rename-all", renameAllMain)
+                            .Cases("-help", "--help", helpMain)
+                            .Default(nullptr);
+
+    if (Func) {
+      std::string Invocation = std::string(argv[0]) + " " + argv[1];
+      argv[1] = Invocation.c_str();
+      return Func(argc - 1, argv + 1);
+    } else {
+      return renameAtMain(argc, argv);
+    }
+  }
+
+  helpMain(argc, argv);
+  return 1;
+}
+
+int subcommandMain(bool isRenameAll, int argc, const char **argv) {
+  cl::OptionCategory *Category = nullptr;
+  const char *Usage = nullptr;
+  if (isRenameAll) {
+    Category = &ClangRenameAllCategory;
+    Usage = RenameAllUsage;
+  } else {
+    Category = &ClangRenameAtCategory;
+    Usage = RenameAtUsage;
+  }
+
+  cl::list<std::string> NewNames(
+      "new-name", cl::desc("The new name to change the symbol to."),
+      (isRenameAll ? cl::OneOrMore : cl::Required), cl::cat(*Category));
+  cl::list<unsigned> SymbolOffsets(
+      "offset",
+      cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
+      (isRenameAll ? cl::ZeroOrMore : cl::Required), cl::cat(*Category));
+  cl::list<std::string> OldNames(
+      "old-name",
+      cl::desc(
+          "The fully qualified name of the symbol, if -offset is not used."),
+      (isRenameAll ? cl::ZeroOrMore : cl::Optional),
+      cl::cat(ClangRenameAllCategory));
+  cl::opt<bool> Inplace("i", cl::desc("Overwrite edited <file>s."),
+                        cl::cat(*Category));
+  cl::opt<bool> PrintName(
+      "pn",
+      cl::desc("Print the found symbol's name prior to renaming to stderr."),
+      cl::cat(ClangRenameAtCategory));
+  cl::opt<bool> PrintLocations(
+      "pl", cl::desc("Print the locations affected by renaming to stderr."),
+      cl::cat(ClangRenameAtCategory));
+  cl::opt<std::string> ExportFixes(
+      "export-fixes", cl::desc("YAML file to store suggested fixes in."),
+      cl::value_desc("filename"), cl::cat(*Category));
+
+  tooling::CommonOptionsParser OP(argc, argv, *Category, Usage);
 
   // Check the arguments for correctness.
 
-  if (NewName.empty()) {
-    errs() << "ERROR: no new name provided.\n\n";
+  // Check if NewNames is a valid identifier in C++17.
+  for (const auto &NewName : NewNames) {
+    LangOptions Options;
+    Options.CPlusPlus = true;
+    Options.CPlusPlus1z = true;
+    IdentifierTable Table(Options);
+    auto NewNameTokKind = Table.get(NewName).getTokenID();
+    if (!tok::isAnyIdentifier(NewNameTokKind)) {
+      errs() << "ERROR: new name is not a valid identifier in C++17.\n\n";
+      exit(1);
+    }
+  }
+
+  if (!OldNames.empty() && OldNames.size() != NewNames.size()) {
+    errs() << "clang-rename: number of old names (" << OldNames.size()
+           << ") do not equal to number of new names (" << NewNames.size()
+           << ").\n\n";
+    cl::PrintHelpMessage();
     exit(1);
   }
 
-  // Check if NewName is a valid identifier in C++17.
-  LangOptions Options;
-  Options.CPlusPlus = true;
-  Options.CPlusPlus1z = true;
-  IdentifierTable Table(Options);
-  auto NewNameTokKind = Table.get(NewName).getTokenID();
-  if (!tok::isAnyIdentifier(NewNameTokKind)) {
-    errs() << "ERROR: new name is not a valid identifier in C++17.\n\n";
+  if (!SymbolOffsets.empty() && SymbolOffsets.size() != NewNames.size()) {
+    errs() << "clang-rename: number of symbol offsets (" << SymbolOffsets.size()
+           << ") do not equal to number of new names (" << NewNames.size()
+           << ").\n\n";
+    cl::PrintHelpMessage();
     exit(1);
   }
 
-  // Get the USRs.
+  std::vector<std::vector<std::string>> USRList;
+  std::vector<std::string> PrevNames;
   auto Files = OP.getSourcePathList();
   tooling::RefactoringTool Tool(OP.getCompilations(), Files);
-  rename::USRFindingAction USRAction(SymbolOffset, OldName);
+  unsigned Count = OldNames.size() ? OldNames.size() : SymbolOffsets.size();
+  for (unsigned I = 0; I < Count; ++I) {
+    unsigned SymbolOffset = SymbolOffsets.empty() ? 0 : SymbolOffsets[I];
+    const std::string &OldName = OldNames.empty() ? std::string() : OldNames[I];
 
-  // Find the USRs.
-  Tool.run(tooling::newFrontendActionFactory(&USRAction).get());
-  const auto &USRs = USRAction.getUSRs();
-  const auto &PrevName = USRAction.getUSRSpelling();
+    // Get the USRs.
+    rename::USRFindingAction USRAction(SymbolOffset, OldName);
 
-  if (PrevName.empty()) {
-    // An error should have already been printed.
-    exit(1);
-  }
+    // Find the USRs.
+    Tool.run(tooling::newFrontendActionFactory(&USRAction).get());
+    const auto &USRs = USRAction.getUSRs();
+    USRList.push_back(USRs);
+    const auto &PrevName = USRAction.getUSRSpelling();
+    PrevNames.push_back(PrevName);
 
-  if (PrintName) {
-    errs() << "clang-rename: found name: " << PrevName << '\n';
+    if (PrevName.empty()) {
+      // An error should have already been printed.
+      exit(1);
+    }
+
+    if (PrintName) {
+      errs() << "clang-rename: found name: " << PrevName << '\n';
+    }
   }
 
   // Perform the renaming.
-  rename::RenamingAction RenameAction(NewName, PrevName, USRs,
+  rename::RenamingAction RenameAction(NewNames, PrevNames, USRList,
                                       Tool.getReplacements(), PrintLocations);
   auto Factory = tooling::newFrontendActionFactory(&RenameAction);
   int ExitCode;
@@ -161,12 +213,11 @@ int main(int argc, const char **argv) {
     // indication of which files start where, other than that we print the files
     // in the same order we see them.
     LangOptions DefaultLangOptions;
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-        new DiagnosticOptions();
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
     TextDiagnosticPrinter DiagnosticPrinter(errs(), &*DiagOpts);
     DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
-        &*DiagOpts, &DiagnosticPrinter, false);
+        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
+        &DiagnosticPrinter, false);
     auto &FileMgr = Tool.getFiles();
     SourceManager Sources(Diagnostics, FileMgr);
     Rewriter Rewrite(Sources, DefaultLangOptions);
@@ -180,4 +231,25 @@ int main(int argc, const char **argv) {
   }
 
   exit(ExitCode);
+}
+
+/// \brief Top level help.
+/// FIXME It would be better if this could be auto-generated.
+static int helpMain(int argc, const char *argv[]) {
+  errs() << "Usage: clang-rename {rename-at|rename-all} [OPTION]...\n\n"
+            "A tool to rename symbols in C/C++ code.\n\n"
+            "Subcommands:\n"
+            "  rename-at:  Perform rename off of a location in a file. (This "
+            "is the default.)\n"
+            "  rename-all: Perform rename of all symbols matching one or more "
+            "fully qualified names.\n";
+  return 0;
+}
+
+static int renameAtMain(int argc, const char *argv[]) {
+  return subcommandMain(false, argc, argv);
+}
+
+static int renameAllMain(int argc, const char *argv[]) {
+  return subcommandMain(true, argc, argv);
 }

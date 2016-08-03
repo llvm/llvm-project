@@ -77,6 +77,10 @@ public:
     const auto TypeBeginLoc = Loc.getBeginLoc();
     const auto TypeEndLoc = Lexer::getLocForEndOfToken(
         TypeBeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
+    if (const auto *TemplateTypeParm =
+            dyn_cast<TemplateTypeParmType>(Loc.getType())) {
+      return setResult(TemplateTypeParm->getDecl(), TypeBeginLoc, TypeEndLoc);
+    }
     return setResult(Loc.getType()->getAsCXXRecordDecl(), TypeBeginLoc,
                      TypeEndLoc);
   }

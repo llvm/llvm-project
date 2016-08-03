@@ -14,7 +14,8 @@ following types of bugs:
 
 * Out-of-bounds accesses to heap, stack and globals
 * Use-after-free
-* Use-after-return (to some extent)
+* Use-after-return (runtime flag `ASAN_OPTIONS=detect_stack_use_after_return=1`)
+* Use-after-scope (clang flag `-fsanitize-address-use-after-scope`)
 * Double-free, invalid free
 * Memory leaks (experimental)
 
