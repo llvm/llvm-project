@@ -7914,12 +7914,6 @@ def err_event_t_addr_space_qual : Error<
   "the event_t type can only be used with __private address space qualifier">;
 def err_expected_kernel_void_return_type : Error<
   "kernel must have void return type">;
-def err_sampler_initializer_not_integer : Error<
-  "sampler_t initialization requires 32-bit integer, not %0">;
-def warn_sampler_initializer_invalid_bits : Warning<
-  "sampler initializer has invalid %0 bits">, InGroup<SpirCompat>, DefaultIgnore;
-def err_sampler_initializer_not_constant : Error<
-  "sampler_t initialization requires compile time constant">;
 def err_sampler_argument_required : Error<
   "sampler_t variable required - got %0">;
 def err_wrong_sampler_addressspace: Error<

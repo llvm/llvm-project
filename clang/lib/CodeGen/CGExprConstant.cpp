@@ -690,9 +690,6 @@ public:
     case CK_ConstructorConversion:
       return C;
 
-    case CK_IntToOCLSampler:
-      llvm_unreachable("global sampler variables are not generated");
-
     case CK_Dependent: llvm_unreachable("saw dependent cast!");
 
     case CK_BuiltinFnToFnPtr:

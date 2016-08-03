@@ -1573,10 +1573,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return llvm::Constant::getNullValue(ConvertType(DestTy));
   }
 
-  case CK_IntToOCLSampler:
-    return CGF.CGM.createOpenCLIntToSamplerConversion(E, CGF);
-
-  } // end of switch
+  }
 
   llvm_unreachable("unknown scalar cast");
 }
