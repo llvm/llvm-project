@@ -43,8 +43,8 @@
 // attribute adds __imp_ prefix to the symbol name of a variable.
 // Since in general we don't know if a given TU is going to be used
 // with a MT or MD runtime and we don't want to use ugly __imp_ names on Windows
-// just to work around this issue, let's clone the a variable that is
-// constant after initialization anyways.
+// just to work around this issue, let's clone the variable that is constant
+// after initialization anyways.
 extern "C" {
 __declspec(dllimport) int __asan_should_detect_stack_use_after_return();
 int __asan_option_detect_stack_use_after_return =
@@ -60,8 +60,8 @@ int __asan_option_detect_stack_use_after_return =
 // attribute adds __imp_ prefix to the symbol name of a variable.
 // Since in general we don't know if a given TU is going to be used
 // with a MT or MD runtime and we don't want to use ugly __imp_ names on Windows
-// just to work around this issue, let's clone the a variable that is
-// constant after initialization anyways.
+// just to work around this issue, let's clone the variable that is constant
+// after initialization anyways.
 extern "C" {
 __declspec(dllimport) int __asan_should_detect_stack_use_after_scope();
 int __asan_option_detect_stack_use_after_scope =

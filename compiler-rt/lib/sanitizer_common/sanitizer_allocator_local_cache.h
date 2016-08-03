@@ -109,25 +109,22 @@ struct SizeClassAllocatorLocalCache {
     InitCache();
     PerClass *c = &per_class_[class_id];
     Batch *b = allocator->AllocateBatch(&stats_, this, class_id);
-    CHECK_GT(b->count, 0);
-    for (uptr i = 0; i < b->count; i++)
-      c->batch[i] = b->batch[i];
-    c->count = b->count;
+    CHECK_GT(b->Count(), 0);
+    for (uptr i = 0; i < b->Count(); i++)
+      c->batch[i] = b->Get(i);
+    c->count = b->Count();
     DestroyBatch(class_id, allocator, b);
   }
 
   NOINLINE void Drain(SizeClassAllocator *allocator, uptr class_id) {
     InitCache();
     PerClass *c = &per_class_[class_id];
-    Batch *b = CreateBatch(class_id, allocator, (Batch*)c->batch[0]);
     uptr cnt = Min(c->max_count / 2, c->count);
-    for (uptr i = 0; i < cnt; i++) {
-      b->batch[i] = c->batch[i];
-      c->batch[i] = c->batch[i + c->max_count / 2];
-    }
-    b->count = cnt;
+    uptr first_idx_to_drain = c->count - cnt;
+    Batch *b =
+        CreateBatch(class_id, allocator, (Batch *)c->batch[first_idx_to_drain]);
+    b->SetFromArray(&c->batch[first_idx_to_drain], cnt);
     c->count -= cnt;
-    CHECK_GT(b->count, 0);
     allocator->DeallocateBatch(&stats_, class_id, b);
   }
 };

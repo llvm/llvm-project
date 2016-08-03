@@ -1,11 +1,6 @@
 // Make sure we can throw exceptions from work items executed via
 // BindIoCompletionCallback.
 //
-// Clang doesn't support exceptions on Windows yet, so for the time being we
-// build this program in two parts: the code with exceptions is built with CL,
-// the rest is built with Clang.  This represents the typical scenario when we
-// build a large project using "clang-cl -fallback -fsanitize=address".
-//
 // RUN: %clangxx_asan %s -o %t.exe
 // RUN: %run %t.exe 2>&1 | FileCheck %s
 
