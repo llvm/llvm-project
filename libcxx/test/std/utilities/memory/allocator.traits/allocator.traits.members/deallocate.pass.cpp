@@ -17,6 +17,7 @@
 // };
 
 #include <memory>
+#include <cstdint>
 #include <cassert>
 
 int called = 0;
@@ -28,7 +29,7 @@ struct A
 
     void deallocate(value_type* p, std::size_t n)
     {
-        assert(p == (value_type*)0xDEADBEEF);
+        assert(p == reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
         assert(n == 10);
         ++called;
     }
@@ -37,6 +38,6 @@ struct A
 int main()
 {
     A<int> a;
-    std::allocator_traits<A<int> >::deallocate(a, (int*)0xDEADBEEF, 10);
+    std::allocator_traits<A<int> >::deallocate(a, reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)), 10);
     assert(called == 1);
 }

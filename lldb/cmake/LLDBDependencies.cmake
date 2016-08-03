@@ -202,6 +202,7 @@ set(LLVM_LINK_COMPONENTS
   option
   support
   coverage
+  target
   )
 
 if ( NOT LLDB_DISABLE_PYTHON )

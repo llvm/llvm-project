@@ -42,7 +42,7 @@
 ; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, 98
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
-; KERNEL-IR: define ptx_kernel void @kernel_0(i8* %MemRef_A, i64 %c0) {
+; KERNEL-IR: define ptx_kernel void @kernel_0(i8* %MemRef_A, i64 %c0)
 ; KERNEL-IR-LABEL: entry:
 ; KERNEL-IR-NEXT:   %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-IR-NEXT:   %b0 = zext i32 %0 to i64

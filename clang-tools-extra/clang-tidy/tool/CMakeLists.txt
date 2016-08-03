@@ -20,6 +20,7 @@ target_link_libraries(clang-tidy
   clangTidyLLVMModule
   clangTidyMiscModule
   clangTidyModernizeModule
+  clangTidyMPIModule
   clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTooling

@@ -43,25 +43,26 @@ void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-llvm::StringRef SpecialMemberFunctionsCheck::toString(
-    SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
+static llvm::StringRef
+toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
   switch (K) {
-  case SpecialMemberFunctionKind::Destructor:
+  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::Destructor:
     return "a destructor";
-  case SpecialMemberFunctionKind::CopyConstructor:
+  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::CopyConstructor:
     return "a copy constructor";
-  case SpecialMemberFunctionKind::CopyAssignment:
+  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::CopyAssignment:
     return "a copy assignment operator";
-  case SpecialMemberFunctionKind::MoveConstructor:
+  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::MoveConstructor:
     return "a move constructor";
-  case SpecialMemberFunctionKind::MoveAssignment:
+  case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::MoveAssignment:
     return "a move assignment operator";
   }
   llvm_unreachable("Unhandled SpecialMemberFunctionKind");
 }
 
-std::string SpecialMemberFunctionsCheck::join(
-    llvm::ArrayRef<SpecialMemberFunctionKind> SMFS, llvm::StringRef AndOr) {
+static std::string
+join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
+     llvm::StringRef AndOr) {
 
   assert(!SMFS.empty() &&
          "List of defined or undefined members should never be empty.");
@@ -97,7 +98,7 @@ void SpecialMemberFunctionsCheck::check(
 
   for (const auto &KV : Matchers)
     if (Result.Nodes.getNodeAs<CXXMethodDecl>(KV.first))
-      ClassWithSpecialMembers[ID].push_back(KV.second);
+      ClassWithSpecialMembers[ID].insert(KV.second);
 }
 
 void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
@@ -112,7 +113,7 @@ void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
   }
 
   for (const auto &C : ClassWithSpecialMembers) {
-    ArrayRef<SpecialMemberFunctionKind> DefinedSpecialMembers = C.second;
+    const auto &DefinedSpecialMembers = C.second;
 
     if (DefinedSpecialMembers.size() == AllSpecialMembers.size())
       continue;
@@ -124,7 +125,7 @@ void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
                         std::back_inserter(UndefinedSpecialMembers));
 
     diag(C.first.first, "class '%0' defines %1 but does not define %2")
-        << C.first.second << join(DefinedSpecialMembers, " and ")
+        << C.first.second << join(DefinedSpecialMembers.getArrayRef(), " and ")
         << join(UndefinedSpecialMembers, " or ");
   }
 }

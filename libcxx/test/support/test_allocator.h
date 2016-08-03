@@ -291,7 +291,10 @@ public:
 
     template<typename U, typename... Args>
     void destroy(U* p)
-    { p->~U(); }
+    {
+        p->~U();
+        ((void)p); // Prevent MSVC's spurious unused warning
+    }
 };
 
 template<typename T, typename U>

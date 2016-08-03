@@ -131,11 +131,27 @@ static void addSection(OutputSectionFactory<ELFT> &Factory,
   Sec->addSection(C);
 }
 
-template <class ELFT>
-static bool compareByName(InputSectionBase<ELFT> *A,
-                          InputSectionBase<ELFT> *B) {
-  return A->getSectionName() < B->getSectionName();
-}
+template <class ELFT> struct SectionsSorter {
+  SectionsSorter(SortKind Kind) : Kind(Kind) {}
+  bool operator()(InputSectionBase<ELFT> *A, InputSectionBase<ELFT> *B) {
+    int AlignmentCmp = A->Alignment - B->Alignment;
+    if (Kind == SortKind::Align || (Kind == SortKind::AlignName && AlignmentCmp != 0))
+      return AlignmentCmp < 0;
+
+    int NameCmp = A->getSectionName().compare(B->getSectionName());
+    if (Kind == SortKind::Name || (Kind == SortKind::NameAlign && NameCmp != 0))
+      return NameCmp < 0;
+
+    if (Kind == SortKind::NameAlign)
+      return AlignmentCmp < 0;
+    if (Kind == SortKind::AlignName)
+      return NameCmp < 0;
+
+    llvm_unreachable("unknown section sort kind in predicate");
+    return false;
+  }
+  SortKind Kind;
+};
 
 template <class ELFT>
 void LinkerScript<ELFT>::createSections(
@@ -144,19 +160,22 @@ void LinkerScript<ELFT>::createSections(
   OutputSections = Out;
 
   for (auto &P : getSectionMap()) {
-    std::vector<InputSectionBase<ELFT> *> Sections;
     StringRef OutputName = P.first;
-    const InputSectionDescription *I = P.second;
-    for (InputSectionBase<ELFT> *S : getInputSections(I)) {
-      if (OutputName == "/DISCARD/") {
+    const InputSectionDescription *Cmd = P.second;
+    std::vector<InputSectionBase<ELFT> *> Sections = getInputSections(Cmd);
+
+    if (OutputName == "/DISCARD/") {
+      for (InputSectionBase<ELFT> *S : Sections) {
         S->Live = false;
         reportDiscarded(S);
-        continue;
       }
-      Sections.push_back(S);
+      continue;
     }
-    if (I->Sort)
-      std::stable_sort(Sections.begin(), Sections.end(), compareByName<ELFT>);
+
+    if (Cmd->Sort != SortKind::None)
+      std::stable_sort(Sections.begin(), Sections.end(),
+                       SectionsSorter<ELFT>(Cmd->Sort));
+
     for (InputSectionBase<ELFT> *S : Sections)
       addSection(Factory, *Out, S, OutputName);
   }
@@ -645,7 +664,9 @@ void ScriptParser::readPhdrs() {
         PhdrCmd.HasPhdrs = true;
       else if (Tok == "FLAGS") {
         expect("(");
-        next().getAsInteger(0, PhdrCmd.Flags);
+        // Passing 0 for the value of dot is a bit of a hack. It means that
+        // we accept expressions like ".|1".
+        PhdrCmd.Flags = readExpr()(0);
         expect(")");
       } else
         setError("unexpected header attribute: " + Tok);
@@ -713,10 +734,32 @@ void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd,
       InCmd->ExcludedFiles.push_back(next());
   }
 
-  if (skip("SORT")) {
+  if (skip("SORT") || skip("SORT_BY_NAME")) {
     expect("(");
-    InCmd->Sort = true;
-    readInputFilePattern(InCmd, Keep);
+    if (skip("SORT_BY_ALIGNMENT")) {
+      InCmd->Sort = SortKind::NameAlign;
+      expect("(");
+      readInputFilePattern(InCmd, Keep);
+      expect(")");
+    } else {
+      InCmd->Sort = SortKind::Name;
+      readInputFilePattern(InCmd, Keep);
+    }
+    expect(")");
+    return;
+  }
+
+  if (skip("SORT_BY_ALIGNMENT")) {
+    expect("(");
+    if (skip("SORT") || skip("SORT_BY_NAME")) {
+      InCmd->Sort = SortKind::AlignName;
+      expect("(");
+      readInputFilePattern(InCmd, Keep);
+      expect(")");
+    } else {
+      InCmd->Sort = SortKind::Align;
+      readInputFilePattern(InCmd, Keep);
+    }
     expect(")");
     return;
   }
