@@ -9,7 +9,7 @@
 #include <sys/mman.h>
 
 int main() {
-  void *p = realloc(nullptr, 0);
+  void *p = realloc(NULL, 0);
   if (!p) {
     abort();
   }
