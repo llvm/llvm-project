@@ -139,7 +139,7 @@ behavior.  See `PR26774 <http://llvm.org/PR26774>`_ for more details.
 Changes to the ARM Targets
 --------------------------
 
- During this release the AArch64 backend has:
+**During this release the AArch64 backend has:**
 
 * Gained support for Qualcomm's Kryo and Broadcom's Vulcan CPUs, including
   scheduling models
@@ -150,10 +150,27 @@ Changes to the ARM Targets
 * Gained support for the Swift calling convention
 * Switched to using SubtargetFeatures rather than testing for specific CPUs and
   to using TableGen for handling system instruction operands
+* Like ARM, AArch64 is now using the TargetParser, so no more StringSwitches
+  matching CPU, FPU or feature names will be accepted in normal code.
 * Gained a big batch of tests from Halide
 
  Furthermore, LLDB now supports AArch64 compact unwind tables, as used on iOS,
  tvos and watchos.
+
+**During this release the ARM target has:**
+
+* ARMv8.2-A can now be targeted directly via Clang flags.
+* Adding preliminary support for Cortex-R8
+* LLDB can now parse EABI attributes for an ELF input.
+* Initial ARM/Thumb support was added to LLD.
+* The ExecutionEngine now supports COFF/ARM
+* Swift calling convention was ported to ARM
+* A large number of cddegen fixes around ARMv8, DSP, correct sub-target support,
+  relocations, EABI, EHABI, Windows on ARM, atomics.
+* Improved assembler support for Linux/Android/Chromium sub-projects.
+* Initial support for MUSL (libc) on ARM
+* Support for Thumb1 targets in libunwind
+* Gained a big batch of tests from Halide
 
 
 Changes to the MIPS Target
