@@ -53,9 +53,9 @@ TEST(Mman, UserRealloc) {
   uptr pc = 0;
   {
     void *p = user_realloc(thr, pc, 0, 0);
-    // Strictly saying this is incorrect, realloc(NULL, N) is equivalent to
-    // malloc(N), thus must return non-NULL pointer.
-    EXPECT_EQ(p, (void*)0);
+    // Realloc(NULL, N) is equivalent to malloc(N), thus must return
+    // non-NULL pointer.
+    EXPECT_NE(p, (void*)0);
   }
   {
     void *p = user_realloc(thr, pc, 0, 100);
@@ -68,7 +68,7 @@ TEST(Mman, UserRealloc) {
     EXPECT_NE(p, (void*)0);
     memset(p, 0xde, 100);
     void *p2 = user_realloc(thr, pc, p, 0);
-    EXPECT_EQ(p2, (void*)0);
+    EXPECT_NE(p2, (void*)0);
   }
   {
     void *p = user_realloc(thr, pc, 0, 100);
