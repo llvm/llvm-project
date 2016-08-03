@@ -142,17 +142,18 @@ Changes to the ARM Targets
 **During this release the AArch64 backend has:**
 
 * Gained support for Qualcomm's Kryo and Broadcom's Vulcan CPUs, including
-  scheduling models
-* Landed a scheduling model for Samsung's Exynos M1
-* Seen a lot of work on GlobalISel
+  scheduling models.
+* Landed a scheduling model for Samsung's Exynos M1.
+* Seen a lot of work on GlobalISel.
 * Learned a few more useful combines (fadd and fmul into fmadd, adjustments to the
-  stack pointer for callee-save stack memory and local stack memory etc)
-* Gained support for the Swift calling convention
+  stack pointer for callee-save stack memory and local stack memory etc).
+* Gained support for the Swift calling convention.
 * Switched to using SubtargetFeatures rather than testing for specific CPUs and
-  to using TableGen for handling system instruction operands
+  to using TableGen for handling system instruction operands.
 * Like ARM, AArch64 is now using the TargetParser, so no more StringSwitches
   matching CPU, FPU or feature names will be accepted in normal code.
-* Gained a big batch of tests from Halide
+* Clang can now self-host itself using LLD on AArch64.
+* Gained a big batch of tests from Halide.
 
  Furthermore, LLDB now supports AArch64 compact unwind tables, as used on iOS,
  tvos and watchos.
@@ -160,17 +161,17 @@ Changes to the ARM Targets
 **During this release the ARM target has:**
 
 * ARMv8.2-A can now be targeted directly via Clang flags.
-* Adding preliminary support for Cortex-R8
+* Adding preliminary support for Cortex-R8.
 * LLDB can now parse EABI attributes for an ELF input.
 * Initial ARM/Thumb support was added to LLD.
-* The ExecutionEngine now supports COFF/ARM
-* Swift calling convention was ported to ARM
+* The ExecutionEngine now supports COFF/ARM.
+* Swift calling convention was ported to ARM.
 * A large number of codegen fixes around ARMv8, DSP, correct sub-target support,
-  relocations, EABI, EHABI, Windows on ARM, atomics.
+  relocations, EABI, EHABI, Windows on ARM, atomics..
 * Improved assembler support for Linux/Android/Chromium sub-projects.
-* Initial support for MUSL (libc) on ARM
-* Support for Thumb1 targets in libunwind
-* Gained a big batch of tests from Halide
+* Initial support for MUSL (libc) on ARM.
+* Support for Thumb1 targets in libunwind.
+* Gained a big batch of tests from Halide.
 
 
 Changes to the MIPS Target
