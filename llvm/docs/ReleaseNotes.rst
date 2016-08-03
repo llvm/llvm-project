@@ -136,10 +136,24 @@ link-time may be differently optimized than the one what was visible
 during optimization, and may have arbitrarily different observable
 behavior.  See `PR26774 <http://llvm.org/PR26774>`_ for more details.
 
-Changes to the ARM Backend
+Changes to the ARM Targets
 --------------------------
 
- During this release ...
+ During this release the AArch64 backend has:
+
+* Gained support for Qualcomm's Kryo and Broadcom's Vulcan CPUs, including
+  scheduling models
+* Landed a scheduling model for Samsung's Exynos M1
+* Seen a lot of work on GlobalISel
+* Learned a few more useful combines (fadd and fmul into fmadd, adjustments to the
+  stack pointer for callee-save stack memory and local stack memory etc)
+* Gained support for the Swift calling convention
+* Switched to using SubtargetFeatures rather than testing for specific CPUs and
+  to using TableGen for handling system instruction operands
+* Gained a big batch of tests from Halide
+
+ Furthermore, LLDB now supports AArch64 compact unwind tables, as used on iOS,
+ tvos and watchos.
 
 
 Changes to the MIPS Target
