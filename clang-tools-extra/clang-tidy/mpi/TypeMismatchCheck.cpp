@@ -169,7 +169,7 @@ static bool isCComplexTypeMatching(const ComplexType *const Complex,
 /// Check if a complex<float/double/long double> templated buffer type matches
 /// the MPI datatype.
 ///
-/// \param Complex buffer type
+/// \param Template buffer type
 /// \param BufferTypeName buffer type name, gets assigned
 /// \param MPIDatatype name of the MPI datatype
 /// \param LO language options
@@ -203,7 +203,7 @@ isCXXComplexTypeMatching(const TemplateSpecializationType *const Template,
 
 /// Check if a fixed size width buffer type matches the MPI datatype.
 ///
-/// \param Complex buffer type
+/// \param Typedef buffer type
 /// \param BufferTypeName buffer type name, gets assigned
 /// \param MPIDatatype name of the MPI datatype
 ///

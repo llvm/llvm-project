@@ -462,6 +462,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 0;
   }
 
+  switch (0x00FFFFFF & *(u32*)address) {
+    case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
+      return 7;
+  }
+
 #if SANITIZER_WINDOWS64
   switch (*(u8*)address) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
@@ -496,14 +501,16 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xc0854d:    // 4d 85 c0 : test r8, r8
     case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
+    case 0xdb3345:    // 45 33 DB : xor r11d, r11d
     case 0xd98b4c:    // 4c 8b d9 : mov r11, rcx
     case 0xd28b4c:    // 4c 8b d2 : mov r10, rdx
+    case 0xc98b4c:    // 4C 8B C9 : mov r9, rcx
     case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
     case 0xc00b4d:    // 3d 0b c0 : or r8, r8
     case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
-    case 0xdc8b4c:    // 4c 8b dc : mov r11,rsp
+    case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
     case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx
       return 3;
 
@@ -511,6 +518,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xf88349:    // 49 83 f8 XX : cmp r8, XX
     case 0x588948:    // 48 89 58 XX : mov QWORD PTR[rax + XX], rbx
       return 4;
+
+    case 0xec8148:    // 48 81 EC XX XX XX XX : sub rsp, XXXXXXXX
+      return 7;
 
     case 0x058b48:    // 48 8b 05 XX XX XX XX :
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]

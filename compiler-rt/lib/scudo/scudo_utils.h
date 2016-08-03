@@ -28,7 +28,7 @@ inline Dest bit_cast(const Source& source) {
   return dest;
 }
 
-void dieWithMessage(const char *Format, ...);
+void NORETURN dieWithMessage(const char *Format, ...);
 
 enum  CPUFeature {
   SSE4_2 = 0,

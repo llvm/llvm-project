@@ -20,25 +20,25 @@ Before:
 
 .. code:: c++
 
-        std::vector<MyClass> v;
-        v.push_back(MyClass(21, 37));
+    std::vector<MyClass> v;
+    v.push_back(MyClass(21, 37));
 
-        std::vector<std::pair<int,int>> w;
+    std::vector<std::pair<int,int>> w;
 
-        w.push_back(std::pair<int,int>(21, 37));
-        w.push_back(std::make_pair(21L, 37L));
+    w.push_back(std::pair<int,int>(21, 37));
+    w.push_back(std::make_pair(21L, 37L));
 
 After:
 
 .. code:: c++
 
-        std::vector<MyClass> v;
-        v.emplace_back(21, 37);
+    std::vector<MyClass> v;
+    v.emplace_back(21, 37);
 
-        std::vector<std::pair<int,int>> w;
-        w.emplace_back(21, 37);
-        // This will be fixed to w.push_back(21, 37); in next version
-        w.emplace_back(std::make_pair(21L, 37L);
+    std::vector<std::pair<int,int>> w;
+    w.emplace_back(21, 37);
+    // This will be fixed to w.push_back(21, 37); in next version
+    w.emplace_back(std::make_pair(21L, 37L);
 
 The other situation is when we pass arguments that will be converted to a type
 inside a container.
@@ -47,15 +47,15 @@ Before:
 
 .. code:: c++
 
-        std::vector<boost::optional<std::string> > v;
-        v.push_back("abc");
+    std::vector<boost::optional<std::string> > v;
+    v.push_back("abc");
 
 After:
 
 .. code:: c++
 
-        std::vector<boost::optional<std::string> > v;
-        v.emplace_back("abc");
+    std::vector<boost::optional<std::string> > v;
+    v.emplace_back("abc");
 
 
 In some cases the transformation would be valid, but the code
@@ -65,9 +65,9 @@ In this case the calls of ``push_back`` won't be replaced.
 .. code:: c++
 
     std::vector<std::unique_ptr<int>> v;
-        v.push_back(std::unique_ptr<int>(new int(0)));
-        auto *ptr = new int(1);
-        v.push_back(std::unique_ptr<int>(ptr));
+    v.push_back(std::unique_ptr<int>(new int(0)));
+    auto *ptr = new int(1);
+    v.push_back(std::unique_ptr<int>(ptr));
 
 This is because replacing it with ``emplace_back`` could cause a leak of this
 pointer if ``emplace_back`` would throw exception before emplacement
