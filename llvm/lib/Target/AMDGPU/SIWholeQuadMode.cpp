@@ -185,7 +185,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
 
       if (TII->isWQM(Opcode) || TII->isDS(Opcode)) {
         Flags = StateWQM;
-      } else if (MI.mayStore() && TII->usesVM_CNT(MI)) {
+      } else if (TII->isDisableWQM(MI)) {
         Flags = StateExact;
       } else {
         // Handle export instructions with the exec mask valid flag set
@@ -237,9 +237,10 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
   InstrInfo II = Instructions[&MI]; // take a copy to prevent dangling references
   BlockInfo &BI = Blocks[MBB];
 
-  // Control flow-type instructions that are followed by WQM computations
-  // must themselves be in WQM.
-  if ((II.OutNeeds & StateWQM) && !(II.Needs & StateWQM) && MI.isTerminator()) {
+  // Control flow-type instructions and stores to temporary memory that are
+  // followed by WQM computations must themselves be in WQM.
+  if ((II.OutNeeds & StateWQM) && !II.Needs &&
+      (MI.isTerminator() || (TII->usesVM_CNT(MI) && MI.mayStore()))) {
     Instructions[&MI].Needs = StateWQM;
     II.Needs = StateWQM;
   }
