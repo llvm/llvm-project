@@ -72,9 +72,6 @@ Non-comprehensive list of changes in this release
   need to be updated to replace the argument node and remove any dead nodes in
   cases where they currently return an ``SDNode *`` from this interface.
 
-* Introduction of ThinLTO: [FIXME: needs to be documented more extensively in
-  /docs/ ; ping Mehdi/Teresa before the release if not done]
-
 * Raised the minimum required CMake version to 3.4.3.
 
 .. NOTE
@@ -138,6 +135,16 @@ functions is unsound because the implementation the linker chooses at
 link-time may be differently optimized than the one what was visible
 during optimization, and may have arbitrarily different observable
 behavior.  See `PR26774 <http://llvm.org/PR26774>`_ for more details.
+
+Support for ThinLTO
+-------------------
+
+LLVM now supports ThinLTO compilation, which can be invoked by compiling
+and linking with -flto=thin. The gold linker plugin, as well as linkers
+that use the new ThinLTO API in libLTO (like ld64), will transparently
+execute the ThinLTO backends in parallel threads.
+For more information on ThinLTO and the LLVM implementation, see the
+`ThinLTO blog post <http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html>`_.
 
 Changes to the ARM Targets
 --------------------------
