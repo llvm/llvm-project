@@ -40,7 +40,10 @@ Non-comprehensive list of changes in this release
 
 * There is no longer a "global context" available in LLVM, except for the C API.
 
-* .. note about autoconf build having been removed.
+* The autoconf build system has been removed in favor of CMake. LLVM 3.9
+  requires CMake 3.4.3 or later to build. For information about using CMake
+  please see the documentation on :doc:`CMake`. For information about the CMake
+  language there is also a :doc:`CMakePrimer` document available.
 
 * .. note about C API functions LLVMParseBitcode,
    LLVMParseBitcodeInContext, LLVMGetBitcodeModuleInContext and
