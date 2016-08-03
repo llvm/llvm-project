@@ -150,7 +150,7 @@ public:
     for (DesignatedInitExpr::reverse_designators_iterator
            D = E->designators_rbegin(), DEnd = E->designators_rend();
            D != DEnd; ++D) {
-      if (D->isFieldDesignator())
+      if (D->isFieldDesignator() && D->getField())
         return IndexCtx.handleReference(D->getField(), D->getFieldLoc(),
                                         Parent, ParentDC, SymbolRoleSet(),
                                         {}, E);
