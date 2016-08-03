@@ -89,10 +89,33 @@ functions.
 
 Options
 -------
-Several aspects of the allocator can be configured through environment options,
-following the usual ASan options syntax, through the variable SCUDO_OPTIONS.
+Several aspects of the allocator can be configured through the following ways:
 
-For example: SCUDO_OPTIONS="DeleteSizeMismatch=1:QuarantineSizeMb=16".
+- by defining a __scudo_default_options function in one's program that returns
+  the options string to be parsed. Said function must have the following
+  prototype: ``extern "C" const char* __scudo_default_options()``.
+
+- through the environment variable SCUDO_OPTIONS, containing the options string
+  to be parsed. Options defined this way will override any definition made
+  through __scudo_default_options;
+
+The options string follows a syntax similar to ASan, where distinct options
+can be assigned in the same string, separated by colons.
+
+For example, using the environment variable:
+
+.. code::
+
+  SCUDO_OPTIONS="DeleteSizeMismatch=1:QuarantineSizeMb=16" ./a.out
+
+Or using the function:
+
+.. code::
+
+  extern "C" const char *__scudo_default_options() {
+    return "DeleteSizeMismatch=1:QuarantineSizeMb=16";
+  }
+
 
 The following options are available:
 

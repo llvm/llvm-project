@@ -4955,14 +4955,16 @@ bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
     return false;
 
   const TargetRegisterClass *ResRC;
-  unsigned Opc;
+  unsigned Opc, CmpOpc;
   // This only supports i32/i64, because i8/i16 aren't legal, and the generic
   // extractvalue selection doesn't support that.
   if (VT == MVT::i32) {
     Opc = AArch64::CMP_SWAP_32;
+    CmpOpc = AArch64::SUBSWrs;
     ResRC = &AArch64::GPR32RegClass;
   } else if (VT == MVT::i64) {
     Opc = AArch64::CMP_SWAP_64;
+    CmpOpc = AArch64::SUBSXrs;
     ResRC = &AArch64::GPR64RegClass;
   } else {
     return false;
@@ -4979,14 +4981,27 @@ bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
 
   const unsigned ResultReg1 = createResultReg(ResRC);
   const unsigned ResultReg2 = createResultReg(&AArch64::GPR32RegClass);
+  const unsigned ScratchReg = createResultReg(&AArch64::GPR32RegClass);
 
   // FIXME: MachineMemOperand doesn't support cmpxchg yet.
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
-      .addReg(ResultReg1, RegState::Define)
-      .addReg(ResultReg2, RegState::Define)
-      .addReg(AddrReg)
-      .addReg(DesiredReg)
-      .addReg(NewReg);
+      .addDef(ResultReg1)
+      .addDef(ScratchReg)
+      .addUse(AddrReg)
+      .addUse(DesiredReg)
+      .addUse(NewReg);
+
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(CmpOpc))
+      .addDef(VT == MVT::i32 ? AArch64::WZR : AArch64::XZR)
+      .addUse(ResultReg1)
+      .addUse(DesiredReg)
+      .addImm(0);
+
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::CSINCWr))
+      .addDef(ResultReg2)
+      .addUse(AArch64::WZR)
+      .addUse(AArch64::WZR)
+      .addImm(AArch64CC::NE);
 
   assert((ResultReg1 + 1) == ResultReg2 && "Nonconsecutive result registers.");
   updateValueMap(I, ResultReg1, 2);

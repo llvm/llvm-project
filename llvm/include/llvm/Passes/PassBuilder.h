@@ -16,9 +16,11 @@
 #ifndef LLVM_PASSES_PASSBUILDER_H
 #define LLVM_PASSES_PASSBUILDER_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include <vector>
 
 namespace llvm {
 class StringRef;
@@ -242,20 +244,36 @@ public:
   bool parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
 private:
-  bool parseModulePassName(ModulePassManager &MPM, StringRef Name,
-                           bool DebugLogging);
-  bool parseCGSCCPassName(CGSCCPassManager &CGPM, StringRef Name);
-  bool parseFunctionPassName(FunctionPassManager &FPM, StringRef Name);
-  bool parseLoopPassName(LoopPassManager &LPM, StringRef Name);
+  /// A struct to capture parsed pass pipeline names.
+  struct PipelineElement {
+    StringRef Name;
+    std::vector<PipelineElement> InnerPipeline;
+  };
+
+  static Optional<std::vector<PipelineElement>>
+  parsePipelineText(StringRef Text);
+
+  bool parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
+                       bool VerifyEachPass, bool DebugLogging);
+  bool parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
+                      bool VerifyEachPass, bool DebugLogging);
+  bool parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
+                     bool VerifyEachPass, bool DebugLogging);
+  bool parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
+                     bool VerifyEachPass, bool DebugLogging);
   bool parseAAPassName(AAManager &AA, StringRef Name);
-  bool parseLoopPassPipeline(LoopPassManager &LPM, StringRef &PipelineText,
+
+  bool parseLoopPassPipeline(LoopPassManager &LPM,
+                             ArrayRef<PipelineElement> Pipeline,
                              bool VerifyEachPass, bool DebugLogging);
   bool parseFunctionPassPipeline(FunctionPassManager &FPM,
-                                 StringRef &PipelineText, bool VerifyEachPass,
-                                 bool DebugLogging);
-  bool parseCGSCCPassPipeline(CGSCCPassManager &CGPM, StringRef &PipelineText,
+                                 ArrayRef<PipelineElement> Pipeline,
+                                 bool VerifyEachPass, bool DebugLogging);
+  bool parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
+                              ArrayRef<PipelineElement> Pipeline,
                               bool VerifyEachPass, bool DebugLogging);
-  bool parseModulePassPipeline(ModulePassManager &MPM, StringRef &PipelineText,
+  bool parseModulePassPipeline(ModulePassManager &MPM,
+                               ArrayRef<PipelineElement> Pipeline,
                                bool VerifyEachPass, bool DebugLogging);
 };
 }

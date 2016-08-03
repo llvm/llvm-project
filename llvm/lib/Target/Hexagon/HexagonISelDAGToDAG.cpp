@@ -26,13 +26,6 @@ using namespace llvm;
 #define DEBUG_TYPE "hexagon-isel"
 
 static
-cl::opt<unsigned>
-MaxNumOfUsesForConstExtenders("ga-max-num-uses-for-constant-extenders",
-  cl::Hidden, cl::init(2),
-  cl::desc("Maximum number of uses of a global address such that we still us a"
-           "constant extended instruction"));
-
-static
 cl::opt<bool>
 EnableAddressRebalancing("isel-rebalance-addr", cl::Hidden, cl::init(true),
   cl::desc("Rebalance address calculation trees to improve "

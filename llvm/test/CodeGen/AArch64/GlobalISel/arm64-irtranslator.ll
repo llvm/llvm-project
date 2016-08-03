@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
-; REQUIRES: global-isel
+
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

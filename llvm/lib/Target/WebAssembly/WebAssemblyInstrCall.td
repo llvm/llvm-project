@@ -33,11 +33,29 @@ multiclass CALL<WebAssemblyRegClass vt, string prefix> {
                             [(set vt:$dst, (WebAssemblycall1 I32:$callee))],
                             !strconcat(prefix, "call_indirect\t$dst, $callee")>;
 }
+
+multiclass SIMD_CALL<ValueType vt, string prefix> {
+  def CALL_#vt : SIMD_I<(outs V128:$dst), (ins i32imm:$callee, variable_ops),
+                         [(set (vt V128:$dst),
+                               (WebAssemblycall1 (i32 imm:$callee)))],
+                         !strconcat(prefix, "call\t$dst, $callee")>;
+  def CALL_INDIRECT_#vt : SIMD_I<(outs V128:$dst),
+                                  (ins I32:$callee, variable_ops),
+                                  [(set (vt V128:$dst),
+                                        (WebAssemblycall1 I32:$callee))],
+                                  !strconcat(prefix,
+                                             "call_indirect\t$dst, $callee")>;
+}
+
 let Uses = [SP32, SP64], isCall = 1 in {
   defm : CALL<I32, "i32.">;
   defm : CALL<I64, "i64.">;
   defm : CALL<F32, "f32.">;
   defm : CALL<F64, "f64.">;
+  defm : SIMD_CALL<v16i8, "i8x16.">;
+  defm : SIMD_CALL<v8i16, "i16x8.">;
+  defm : SIMD_CALL<v4i32, "i32x4.">;
+  defm : SIMD_CALL<v4f32, "f32x4.">;
 
   def CALL_VOID : I<(outs), (ins i32imm:$callee, variable_ops),
                     [(WebAssemblycall0 (i32 imm:$callee))],
@@ -58,6 +76,14 @@ def : Pat<(f32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
           (CALL_F32 tglobaladdr:$callee)>;
 def : Pat<(f64 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
           (CALL_F64 tglobaladdr:$callee)>;
+def : Pat<(v16i8 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_v16i8 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v8i16 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_v8i16 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v4i32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_v4i32 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v4f32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),
+          (CALL_v4f32 tglobaladdr:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(WebAssemblycall0 (WebAssemblywrapper tglobaladdr:$callee)),
           (CALL_VOID tglobaladdr:$callee)>;
 
@@ -70,5 +96,13 @@ def : Pat<(f32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
           (CALL_F32 texternalsym:$callee)>;
 def : Pat<(f64 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
           (CALL_F64 texternalsym:$callee)>;
+def : Pat<(v16i8 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_v16i8 texternalsym:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v8i16 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_v8i16 texternalsym:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v4i32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_v4i32 texternalsym:$callee)>, Requires<[HasSIMD128]>;
+def : Pat<(v4f32 (WebAssemblycall1 (WebAssemblywrapper texternalsym:$callee))),
+          (CALL_v4f32 texternalsym:$callee)>, Requires<[HasSIMD128]>;
 def : Pat<(WebAssemblycall0 (WebAssemblywrapper texternalsym:$callee)),
           (CALL_VOID texternalsym:$callee)>;

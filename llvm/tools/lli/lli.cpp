@@ -397,8 +397,18 @@ int main(int argc, char **argv, char * const *envp) {
     return 1;
   }
 
-  if (UseJITKind == JITKind::OrcLazy)
-    return runOrcLazyJIT(std::move(Owner), argc, argv);
+  if (UseJITKind == JITKind::OrcLazy) {
+    std::vector<std::unique_ptr<Module>> Ms;
+    Ms.push_back(std::move(Owner));
+    for (auto &ExtraMod : ExtraModules) {
+      Ms.push_back(parseIRFile(ExtraMod, Err, Context));
+      if (!Ms.back()) {
+        Err.print(argv[0], errs());
+        return 1;
+      }
+    }
+    return runOrcLazyJIT(std::move(Ms), argc, argv);
+  }
 
   if (EnableCacheManager) {
     std::string CacheName("file:");

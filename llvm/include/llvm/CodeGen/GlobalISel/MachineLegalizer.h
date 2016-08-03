@@ -101,7 +101,7 @@ public:
   /// \returns a pair consisting of the kind of legalization that should be
   /// performed and the destination type.
   std::pair<LegalizeAction, LLT> getAction(unsigned Opcode, LLT) const;
-  std::pair<LegalizeAction, LLT> getAction(MachineInstr &MI) const;
+  std::pair<LegalizeAction, LLT> getAction(const MachineInstr &MI) const;
 
   /// Iterate the given function (typically something like doubling the width)
   /// on Ty until we find a legal type for this operation.
@@ -128,7 +128,7 @@ public:
     return std::make_pair(Action, findLegalType(Opcode, Ty, Action));
   }
 
-  bool isLegal(MachineInstr &MI) const;
+  bool isLegal(const MachineInstr &MI) const;
 
 private:
   typedef DenseMap<std::pair<unsigned, LLT>, LegalizeAction> ActionMap;

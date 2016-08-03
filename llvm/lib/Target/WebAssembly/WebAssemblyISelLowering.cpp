@@ -54,6 +54,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   addRegisterClass(MVT::i64, &WebAssembly::I64RegClass);
   addRegisterClass(MVT::f32, &WebAssembly::F32RegClass);
   addRegisterClass(MVT::f64, &WebAssembly::F64RegClass);
+  if (Subtarget->hasSIMD128()) {
+    addRegisterClass(MVT::v16i8, &WebAssembly::V128RegClass);
+    addRegisterClass(MVT::v8i16, &WebAssembly::V128RegClass);
+    addRegisterClass(MVT::v4i32, &WebAssembly::V128RegClass);
+    addRegisterClass(MVT::v4f32, &WebAssembly::V128RegClass);
+  }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -190,6 +196,10 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
     switch (Constraint[0]) {
       case 'r':
         assert(VT != MVT::iPTR && "Pointer MVT not expected here");
+        if (Subtarget->hasSIMD128() && VT.isVector()) {
+          if (VT.getSizeInBits() == 128)
+            return std::make_pair(0U, &WebAssembly::V128RegClass);
+        }
         if (VT.isInteger() && !VT.isVector()) {
           if (VT.getSizeInBits() <= 32)
             return std::make_pair(0U, &WebAssembly::I32RegClass);

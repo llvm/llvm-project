@@ -112,6 +112,18 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
     }
   }
 
+  // Make sure that created prolog loop is in simplified form
+  SmallVector<BasicBlock *, 4> PrologExitPreds;
+  Loop *PrologLoop = LI->getLoopFor(PrologLatch);
+  if (PrologLoop) {
+    for (BasicBlock *PredBB : predecessors(PrologExit))
+      if (PrologLoop->contains(PredBB))
+        PrologExitPreds.push_back(PredBB);
+
+    SplitBlockPredecessors(PrologExit, PrologExitPreds, ".unr-lcssa", DT, LI,
+                           PreserveLCSSA);
+  }
+
   // Create a branch around the original loop, which is taken if there are no
   // iterations remaining to be executed after running the prologue.
   Instruction *InsertPt = PrologExit->getTerminator();

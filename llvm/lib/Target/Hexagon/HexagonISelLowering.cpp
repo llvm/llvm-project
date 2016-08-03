@@ -3055,8 +3055,12 @@ bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
 bool HexagonTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                   const AddrMode &AM, Type *Ty,
                                                   unsigned AS) const {
-  // Allows a signed-extended 11-bit immediate field.
-  if (AM.BaseOffs <= -(1LL << 13) || AM.BaseOffs >= (1LL << 13)-1)
+  unsigned A = DL.getABITypeAlignment(Ty);
+  // The base offset must be a multiple of the alignment.
+  if ((AM.BaseOffs % A) != 0)
+    return false;
+  // The shifted offset must fit in 11 bits.
+  if (!isInt<11>(AM.BaseOffs >> Log2_32(A)))
     return false;
 
   // No global is ever allowed as a base.
@@ -3137,6 +3141,35 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
   // go on the stack. We cannot check that here because at this point that
   // information is not available.
   return true;
+}
+
+/// Returns the target specific optimal type for load and store operations as
+/// a result of memset, memcpy, and memmove lowering.
+///
+/// If DstAlign is zero that means it's safe to destination alignment can
+/// satisfy any constraint. Similarly if SrcAlign is zero it means there isn't
+/// a need to check it against alignment requirement, probably because the
+/// source does not need to be loaded. If 'IsMemset' is true, that means it's
+/// expanding a memset. If 'ZeroMemset' is true, that means it's a memset of
+/// zero. 'MemcpyStrSrc' indicates whether the memcpy source is constant so it
+/// does not need to be loaded.  It returns EVT::Other if the type should be
+/// determined using generic target-independent logic.
+EVT HexagonTargetLowering::getOptimalMemOpType(uint64_t Size,
+      unsigned DstAlign, unsigned SrcAlign, bool IsMemset, bool ZeroMemset,
+      bool MemcpyStrSrc, MachineFunction &MF) const {
+
+  auto Aligned = [](unsigned GivenA, unsigned MinA) -> bool {
+    return (GivenA % MinA) == 0;
+  };
+
+  if (Size >= 8 && Aligned(DstAlign, 8) && (IsMemset || Aligned(SrcAlign, 8)))
+    return MVT::i64;
+  if (Size >= 4 && Aligned(DstAlign, 4) && (IsMemset || Aligned(SrcAlign, 4)))
+    return MVT::i32;
+  if (Size >= 2 && Aligned(DstAlign, 2) && (IsMemset || Aligned(SrcAlign, 2)))
+    return MVT::i16;
+
+  return MVT::Other;
 }
 
 // Return true when the given node fits in a positive half word.

@@ -15,8 +15,8 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringMap.h"
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -100,10 +100,10 @@ private:
   void dfs(InlineGraphNode &GraphNode);
 
   using NodesMapTy =
-      std::unordered_map<std::string, std::unique_ptr<InlineGraphNode>>;
+      llvm::StringMap<std::unique_ptr<InlineGraphNode>>;
   using SortedNodesTy =
-      std::vector<std::pair<std::string, std::unique_ptr<InlineGraphNode>>>;
-  /// Clears NodesMap and returns vector of elements sorted by
+      std::vector<const NodesMapTy::MapEntryTy*>;
+  /// Returns vector of elements sorted by
   /// (-NumberOfInlines, -NumberOfRealInlines, FunctionName).
   SortedNodesTy getSortedNodes();
 
@@ -114,7 +114,7 @@ private:
   /// address of the node would not be invariant.
   NodesMapTy NodesMap;
   /// Non external functions that have some other function inlined inside.
-  std::vector<std::string> NonImportedCallers;
+  std::vector<StringRef> NonImportedCallers;
   int AllFunctions = 0;
   int ImportedFunctions = 0;
   StringRef ModuleName;

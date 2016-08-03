@@ -1,5 +1,4 @@
 ; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
-; REQUIRES: global-isel
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linux-gnu"

@@ -32,6 +32,11 @@ static inline bool isPreISelGenericOpcode(unsigned Opcode) {
   return Opcode >= TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START &&
          Opcode <= TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 }
+
+/// Check whether the given Opcode is a target-specific opcode.
+static inline bool isTargetSpecificOpcode(unsigned Opcode) {
+  return Opcode > TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
+}
 } // end namespace llvm
 
 #endif

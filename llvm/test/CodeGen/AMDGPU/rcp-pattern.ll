@@ -76,8 +76,22 @@ define void @rcp_fabs_pat_f32(float addrspace(1)* %out, float %src) #0 {
   ret void
 }
 
-; FIXME: fneg folded into constant 1
+; FUNC-LABEL: {{^}}neg_rcp_pat_f32:
+; GCN: s_load_dword [[SRC:s[0-9]+]]
+; GCN: v_rcp_f32_e64 [[RCP:v[0-9]+]], -[[SRC]]
+; GCN: buffer_store_dword [[RCP]]
+
+; EG: RECIP_IEEE
+define void @neg_rcp_pat_f32(float addrspace(1)* %out, float %src) #0 {
+  %rcp = fdiv float -1.0, %src
+  store float %rcp, float addrspace(1)* %out, align 4
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}rcp_fabs_fneg_pat_f32:
+; GCN: s_load_dword [[SRC:s[0-9]+]]
+; GCN: v_rcp_f32_e64 [[RCP:v[0-9]+]], -|[[SRC]]|
+; GCN: buffer_store_dword [[RCP]]
 define void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
   %src.fabs.fneg = fsub float -0.0, %src.fabs
@@ -86,8 +100,27 @@ define void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float %src) #0 {
   ret void
 }
 
+; FUNC-LABEL: {{^}}rcp_fabs_fneg_pat_multi_use_f32:
+; GCN: s_load_dword [[SRC:s[0-9]+]]
+; GCN: v_rcp_f32_e64 [[RCP:v[0-9]+]], -|[[SRC]]|
+; GCN: buffer_store_dword [[RCP]]
+
+; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], [[SRC]], -|[[SRC]]|
+; GCN: buffer_store_dword [[MUL]]
+define void @rcp_fabs_fneg_pat_multi_use_f32(float addrspace(1)* %out, float %src) #0 {
+  %src.fabs = call float @llvm.fabs.f32(float %src)
+  %src.fabs.fneg = fsub float -0.0, %src.fabs
+  %rcp = fdiv float 1.0, %src.fabs.fneg
+  store volatile float %rcp, float addrspace(1)* %out, align 4
+
+  %other = fmul float %src, %src.fabs.fneg
+  store volatile float %other, float addrspace(1)* %out, align 4
+  ret void
+}
+
 
 declare float @llvm.fabs.f32(float) #1
+declare float @llvm.sqrt.f32(float) #1
 
 attributes #0 = { nounwind "unsafe-fp-math"="false" }
 attributes #1 = { nounwind readnone }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -loop-unroll | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -loop-unroll -unroll-runtime-epilog=true  | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -loop-unroll -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {

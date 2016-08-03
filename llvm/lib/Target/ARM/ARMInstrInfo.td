@@ -358,7 +358,23 @@ def imm16_31 : ImmLeaf<i32, [{
 
 // sext_16_node predicate - True if the SDNode is sign-extended 16 or more bits.
 def sext_16_node : PatLeaf<(i32 GPR:$a), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17;
+  if (CurDAG->ComputeNumSignBits(SDValue(N,0)) >= 17)
+    return true;
+
+  if (N->getOpcode() != ISD::SRA)
+    return false;
+  if (N->getOperand(0).getOpcode() != ISD::SHL)
+    return false;
+
+  auto *ShiftVal = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!ShiftVal || ShiftVal->getZExtValue() != 16)
+    return false;
+
+  ShiftVal = dyn_cast<ConstantSDNode>(N->getOperand(0)->getOperand(1));
+  if (!ShiftVal || ShiftVal->getZExtValue() != 16)
+    return false;
+
+  return true;
 }]>;
 
 /// Split a 32-bit immediate into two 16 bit parts.
@@ -3651,7 +3667,7 @@ def USADA8 : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
 def SSAT : AI<(outs GPRnopc:$Rd),
               (ins imm1_32:$sat_imm, GPRnopc:$Rn, shift_imm:$sh),
               SatFrm, NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []>,
-              Requires<[HasDSP]>{
+              Requires<[IsARM,HasV6]>{
   bits<4> Rd;
   bits<5> sat_imm;
   bits<4> Rn;
@@ -3668,7 +3684,7 @@ def SSAT : AI<(outs GPRnopc:$Rd),
 def SSAT16 : AI<(outs GPRnopc:$Rd),
                 (ins imm1_16:$sat_imm, GPRnopc:$Rn), SatFrm,
                 NoItinerary, "ssat16", "\t$Rd, $sat_imm, $Rn", []>,
-                Requires<[HasDSP]>{
+                Requires<[IsARM,HasV6]>{
   bits<4> Rd;
   bits<4> sat_imm;
   bits<4> Rn;
@@ -3682,7 +3698,7 @@ def SSAT16 : AI<(outs GPRnopc:$Rd),
 def USAT : AI<(outs GPRnopc:$Rd),
               (ins imm0_31:$sat_imm, GPRnopc:$Rn, shift_imm:$sh),
               SatFrm, NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []>,
-              Requires<[HasDSP]>{
+              Requires<[IsARM,HasV6]> {
   bits<4> Rd;
   bits<5> sat_imm;
   bits<4> Rn;
@@ -3699,7 +3715,7 @@ def USAT : AI<(outs GPRnopc:$Rd),
 def USAT16 : AI<(outs GPRnopc:$Rd),
                 (ins imm0_15:$sat_imm, GPRnopc:$Rn), SatFrm,
                 NoItinerary, "usat16", "\t$Rd, $sat_imm, $Rn", []>,
-                Requires<[HasDSP]>{
+                Requires<[IsARM,HasV6]>{
   bits<4> Rd;
   bits<4> sat_imm;
   bits<4> Rn;
@@ -5492,44 +5508,21 @@ def : ARMPat<(extloadi8  addrmodepc:$addr), (PICLDRB addrmodepc:$addr)>;
 def : ARMPat<(extloadi16 addrmodepc:$addr), (PICLDRH addrmodepc:$addr)>;
 
 // smul* and smla*
-def : ARMV5TEPat<(mul (sra (shl GPR:$a, (i32 16)), (i32 16)),
-                      (sra (shl GPR:$b, (i32 16)), (i32 16))),
-                 (SMULBB GPR:$a, GPR:$b)>;
 def : ARMV5TEPat<(mul sext_16_node:$a, sext_16_node:$b),
                  (SMULBB GPR:$a, GPR:$b)>;
-def : ARMV5TEPat<(mul (sra (shl GPR:$a, (i32 16)), (i32 16)),
-                      (sra GPR:$b, (i32 16))),
-                 (SMULBT GPR:$a, GPR:$b)>;
 def : ARMV5TEPat<(mul sext_16_node:$a, (sra GPR:$b, (i32 16))),
                  (SMULBT GPR:$a, GPR:$b)>;
-def : ARMV5TEPat<(mul (sra GPR:$a, (i32 16)),
-                      (sra (shl GPR:$b, (i32 16)), (i32 16))),
-                 (SMULTB GPR:$a, GPR:$b)>;
 def : ARMV5TEPat<(mul (sra GPR:$a, (i32 16)), sext_16_node:$b),
                 (SMULTB GPR:$a, GPR:$b)>;
-
-def : ARMV5MOPat<(add GPR:$acc,
-                      (mul (sra (shl GPR:$a, (i32 16)), (i32 16)),
-                           (sra (shl GPR:$b, (i32 16)), (i32 16)))),
-                 (SMLABB GPR:$a, GPR:$b, GPR:$acc)>;
 def : ARMV5MOPat<(add GPR:$acc,
                       (mul sext_16_node:$a, sext_16_node:$b)),
                  (SMLABB GPR:$a, GPR:$b, GPR:$acc)>;
 def : ARMV5MOPat<(add GPR:$acc,
-                      (mul (sra (shl GPR:$a, (i32 16)), (i32 16)),
-                           (sra GPR:$b, (i32 16)))),
-                 (SMLABT GPR:$a, GPR:$b, GPR:$acc)>;
-def : ARMV5MOPat<(add GPR:$acc,
                       (mul sext_16_node:$a, (sra GPR:$b, (i32 16)))),
                  (SMLABT GPR:$a, GPR:$b, GPR:$acc)>;
 def : ARMV5MOPat<(add GPR:$acc,
-                      (mul (sra GPR:$a, (i32 16)),
-                           (sra (shl GPR:$b, (i32 16)), (i32 16)))),
-                 (SMLATB GPR:$a, GPR:$b, GPR:$acc)>;
-def : ARMV5MOPat<(add GPR:$acc,
                       (mul (sra GPR:$a, (i32 16)), sext_16_node:$b)),
                  (SMLATB GPR:$a, GPR:$b, GPR:$acc)>;
-
 
 // Pre-v7 uses MCR for synchronization barriers.
 def : ARMPat<(ARMMemBarrierMCR GPR:$zero), (MCR 15, 0, GPR:$zero, 7, 10, 5)>,

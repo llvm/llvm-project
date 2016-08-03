@@ -61,8 +61,8 @@ public:
   InlineCost getInlineCost(CallSite CS) override {
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
-    std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
-        Function &F) -> AssumptionCache & {
+    std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+        [&](Function &F) -> AssumptionCache & {
       return ACT->getAssumptionCache(F);
     };
     return llvm::getInlineCost(CS, DefaultThreshold, TTI, GetAssumptionCache,
@@ -79,15 +79,15 @@ private:
 } // end anonymous namespace
 
 char SimpleInliner::ID = 0;
-INITIALIZE_PASS_BEGIN(SimpleInliner, "inline",
-                "Function Integration/Inlining", false, false)
+INITIALIZE_PASS_BEGIN(SimpleInliner, "inline", "Function Integration/Inlining",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(SimpleInliner, "inline",
-                "Function Integration/Inlining", false, false)
+INITIALIZE_PASS_END(SimpleInliner, "inline", "Function Integration/Inlining",
+                    false, false)
 
 Pass *llvm::createFunctionInliningPass() { return new SimpleInliner(); }
 

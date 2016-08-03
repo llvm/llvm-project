@@ -210,6 +210,11 @@ const char *llvm::WebAssembly::TypeToString(MVT Ty) {
     return "f32";
   case MVT::f64:
     return "f64";
+  case MVT::v16i8:
+  case MVT::v8i16:
+  case MVT::v4i32:
+  case MVT::v4f32:
+    return "v128";
   default:
     llvm_unreachable("unsupported type");
   }

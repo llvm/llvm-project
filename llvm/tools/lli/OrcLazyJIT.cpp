@@ -105,7 +105,8 @@ static PtrTy fromTargetAddress(JITTargetAddress Addr) {
   return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
 }
 
-int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
+int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms, int ArgC,
+                        char* ArgV[]) {
   // Add the program's symbols into the JIT's search space.
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr)) {
     errs() << "Error loading program symbols.\n";
@@ -143,8 +144,9 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
                OrcInlineStubs);
 
   // Add the module, look up main and run it.
-  auto MainHandle = J.addModule(std::move(M));
-  auto MainSym = J.findSymbolIn(MainHandle, "main");
+  for (auto &M : Ms)
+    J.addModule(std::move(M));
+  auto MainSym = J.findSymbol("main");
 
   if (!MainSym) {
     errs() << "Could not find main function.\n";

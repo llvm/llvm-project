@@ -65,6 +65,10 @@ static bool IsArgument(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
   case WebAssembly::ARGUMENT_F64:
+  case WebAssembly::ARGUMENT_v16i8:
+  case WebAssembly::ARGUMENT_v8i16:
+  case WebAssembly::ARGUMENT_v4i32:
+  case WebAssembly::ARGUMENT_v4f32:
     return true;
   default:
     return false;
@@ -73,7 +77,7 @@ static bool IsArgument(const MachineInstr *MI) {
 
 // Test whether the given register has an ARGUMENT def.
 static bool HasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
-  for (auto &Def : MRI.def_instructions(Reg))
+  for (const auto &Def : MRI.def_instructions(Reg))
     if (IsArgument(&Def))
       return true;
   return false;

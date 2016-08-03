@@ -53,7 +53,7 @@ Error MSFBuilder::setBlockMapAddr(uint32_t Addr) {
     if (!IsGrowable)
       return make_error<MSFError>(msf_error_code::insufficient_buffer,
                                   "Cannot grow the number of blocks");
-    FreeBlocks.resize(Addr + 1);
+    FreeBlocks.resize(Addr + 1, true);
   }
 
   if (!isBlockFree(Addr))

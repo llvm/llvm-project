@@ -530,8 +530,7 @@ public:
   ///
   /// This list is not modifiable by the user.
   const AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+    return getWritableBlockAccesses(BB);
   }
 
   /// \brief Create an empty MemoryPhi in MemorySSA for a given basic block.
@@ -602,11 +601,20 @@ protected:
   void verifyDomination(Function &F) const;
   void verifyOrdering(Function &F) const;
 
+  // This is used by the use optimizer class
+  AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
+    auto It = PerBlockAccesses.find(BB);
+    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+  }
+
 private:
   class CachingWalker;
+  class OptimizeUses;
 
   CachingWalker *getWalkerImpl();
   void buildMemorySSA();
+  void optimizeUses();
+
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
 

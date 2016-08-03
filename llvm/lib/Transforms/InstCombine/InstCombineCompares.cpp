@@ -2200,19 +2200,20 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &ICI,
   return nullptr;
 }
 
-/// Simplify icmp_eq and icmp_ne instructions with integer constant RHS.
-Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI,
-                                                        Instruction *LHSI,
-                                                        ConstantInt *RHS) {
-  BinaryOperator *BO = dyn_cast<BinaryOperator>(LHSI);
-  if (!BO || !ICI.isEquality())
+/// Simplify icmp_eq and icmp_ne instructions with binary operator LHS and
+/// integer constant RHS.
+Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI) {
+  // FIXME: If we use m_APInt() instead of m_ConstantInt(), it would enable
+  // vector types with constant splat vectors to be optimized too.
+  BinaryOperator *BO;
+  ConstantInt *RHS;
+  if (!ICI.isEquality() || !match(ICI.getOperand(0), m_BinOp(BO)) ||
+      !match(ICI.getOperand(1), m_ConstantInt(RHS)))
     return nullptr;
 
   const APInt &RHSV = RHS->getValue();
   bool isICMP_NE = ICI.getPredicate() == ICmpInst::ICMP_NE;
 
-  // If the first operand is (add|sub|and|or|xor|rem) with a constant, and
-  // the second operand is a constant, simplify a bit.
   switch (BO->getOpcode()) {
   case Instruction::SRem:
     // If we have a signed (X % (2^c)) == 0, turn it into an unsigned one.
@@ -2304,7 +2305,7 @@ Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI,
       // If we have ((X & C) == C), turn it into ((X & C) != 0).
       if (RHS == BOC && RHSV.isPowerOf2())
         return new ICmpInst(isICMP_NE ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
-                            LHSI, Constant::getNullValue(RHS->getType()));
+                            BO, Constant::getNullValue(RHS->getType()));
 
       // Don't perform the following transforms if the AND has multiple uses
       if (!BO->hasOneUse())
@@ -3647,13 +3648,13 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // Since the RHS is a ConstantInt (CI), if the left hand side is an
     // instruction, see if that instruction also has constants so that the
     // instruction can be folded into the icmp
-    if (Instruction *LHSI = dyn_cast<Instruction>(Op0)) {
+    if (Instruction *LHSI = dyn_cast<Instruction>(Op0))
       if (Instruction *Res = foldICmpWithConstant(I, LHSI, CI))
         return Res;
-      if (Instruction *Res = foldICmpEqualityWithConstant(I, LHSI, CI))
-        return Res;
-    }
   }
+
+  if (Instruction *Res = foldICmpEqualityWithConstant(I))
+    return Res;
 
   if (Instruction *Res = foldICmpIntrinsicWithConstant(I))
     return Res;

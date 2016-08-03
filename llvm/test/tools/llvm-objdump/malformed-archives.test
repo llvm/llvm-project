@@ -58,3 +58,31 @@
 # RUN:   2>&1 | FileCheck -check-prefix=bogus10 %s 
 
 # bogus10: libbogus10.a(???) truncated or malformed archive (long name offset 507 past the end of the string table for archive member header at offset 94)
+
+# RUN: not llvm-objdump -macho -archive-headers \
+# RUN:   %p/Inputs/libbogus11.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus11 %s 
+
+# bogus11: libbogus11.a(hello.c) truncated or malformed archive (characters in UID field in archive header are not all decimal numbers: '~97&' for the archive member header at offset 8)
+
+# RUN: not llvm-objdump -macho -archive-headers \
+# RUN:   %p/Inputs/libbogus12.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus12 %s 
+
+# bogus12: libbogus12.a(hello.c) truncated or malformed archive (characters in GID field in archive header are not all decimal numbers: '#55!' for the archive member header at offset 8)
+
+# RUN: not llvm-objdump -macho -archive-headers \
+# RUN:   %p/Inputs/libbogus13.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus13 %s 
+
+# bogus13: libbogus13.a(hello.c) truncated or malformed archive (characters in AccessMode field in archive header are not all decimal numbers: 'Feed' for the archive member header at offset 8)
+
+# RUN: llvm-objdump -macho -archive-headers %p/Inputs/libbogus14.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus14 %s 
+
+# bogus14: -rw-r--r--124/0     102 (date: "1foobar273" contains non-decimal chars) hello.c
+
+# RUN: not llvm-ar tv %p/Inputs/libbogus14.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus14a %s 
+
+# bogus14a: truncated or malformed archive (characters in LastModified field in archive header are not all decimal numbers: '1foobar273' for the archive member header at offset 8)

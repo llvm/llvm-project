@@ -87,11 +87,13 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
+enum class SortKind { None, Name, Align, NameAlign, AlignName };
+
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription() : BaseCommand(InputSectionKind) {}
   static bool classof(const BaseCommand *C);
   StringRef FilePattern;
-  bool Sort = false;
+  SortKind Sort = SortKind::None;
   std::vector<StringRef> ExcludedFiles;
   std::vector<StringRef> SectionPatterns;
 };

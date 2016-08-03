@@ -95,7 +95,8 @@ private:
 
 MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
   const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
-  for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
+  for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64, MVT::v16i8, MVT::v8i16,
+                MVT::v4i32, MVT::v4f32})
     if (TRC->hasType(T))
       return T;
   DEBUG(errs() << "Unknown type for register number: " << RegNo);
@@ -234,13 +235,21 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
   case WebAssembly::ARGUMENT_F64:
+  case WebAssembly::ARGUMENT_v16i8:
+  case WebAssembly::ARGUMENT_v8i16:
+  case WebAssembly::ARGUMENT_v4i32:
+  case WebAssembly::ARGUMENT_v4f32:
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
     break;
   case WebAssembly::FALLTHROUGH_RETURN_I32:
   case WebAssembly::FALLTHROUGH_RETURN_I64:
   case WebAssembly::FALLTHROUGH_RETURN_F32:
-  case WebAssembly::FALLTHROUGH_RETURN_F64: {
+  case WebAssembly::FALLTHROUGH_RETURN_F64:
+  case WebAssembly::FALLTHROUGH_RETURN_v16i8:
+  case WebAssembly::FALLTHROUGH_RETURN_v8i16:
+  case WebAssembly::FALLTHROUGH_RETURN_v4i32:
+  case WebAssembly::FALLTHROUGH_RETURN_v4f32: {
     // These instructions represent the implicit return at the end of a
     // function body. The operand is always a pop.
     assert(MFI->isVRegStackified(MI->getOperand(0).getReg()));

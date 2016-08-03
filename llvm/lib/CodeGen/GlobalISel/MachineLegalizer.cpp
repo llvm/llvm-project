@@ -94,11 +94,11 @@ MachineLegalizer::getAction(unsigned Opcode, LLT Ty) const {
 }
 
 std::pair<MachineLegalizer::LegalizeAction, LLT>
-MachineLegalizer::getAction(MachineInstr &MI) const {
+MachineLegalizer::getAction(const MachineInstr &MI) const {
   return getAction(MI.getOpcode(), MI.getType());
 }
 
-bool MachineLegalizer::isLegal(MachineInstr &MI) const {
+bool MachineLegalizer::isLegal(const MachineInstr &MI) const {
   return getAction(MI).first == Legal;
 }
 

@@ -131,11 +131,27 @@ static void addSection(OutputSectionFactory<ELFT> &Factory,
   Sec->addSection(C);
 }
 
-template <class ELFT>
-static bool compareByName(InputSectionBase<ELFT> *A,
-                          InputSectionBase<ELFT> *B) {
-  return A->getSectionName() < B->getSectionName();
-}
+template <class ELFT> struct SectionsSorter {
+  SectionsSorter(SortKind Kind) : Kind(Kind) {}
+  bool operator()(InputSectionBase<ELFT> *A, InputSectionBase<ELFT> *B) {
+    int AlignmentCmp = A->Alignment - B->Alignment;
+    if (Kind == SortKind::Align || (Kind == SortKind::AlignName && AlignmentCmp != 0))
+      return AlignmentCmp < 0;
+
+    int NameCmp = A->getSectionName().compare(B->getSectionName());
+    if (Kind == SortKind::Name || (Kind == SortKind::NameAlign && NameCmp != 0))
+      return NameCmp < 0;
+
+    if (Kind == SortKind::NameAlign)
+      return AlignmentCmp < 0;
+    if (Kind == SortKind::AlignName)
+      return NameCmp < 0;
+
+    llvm_unreachable("unknown section sort kind in predicate");
+    return false;
+  }
+  SortKind Kind;
+};
 
 template <class ELFT>
 void LinkerScript<ELFT>::createSections(
@@ -155,8 +171,9 @@ void LinkerScript<ELFT>::createSections(
       }
       Sections.push_back(S);
     }
-    if (I->Sort)
-      std::stable_sort(Sections.begin(), Sections.end(), compareByName<ELFT>);
+    if (I->Sort != SortKind::None)
+      std::stable_sort(Sections.begin(), Sections.end(),
+                       SectionsSorter<ELFT>(I->Sort));
     for (InputSectionBase<ELFT> *S : Sections)
       addSection(Factory, *Out, S, OutputName);
   }
@@ -715,10 +732,32 @@ void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd,
       InCmd->ExcludedFiles.push_back(next());
   }
 
-  if (skip("SORT")) {
+  if (skip("SORT") || skip("SORT_BY_NAME")) {
     expect("(");
-    InCmd->Sort = true;
-    readInputFilePattern(InCmd, Keep);
+    if (skip("SORT_BY_ALIGNMENT")) {
+      InCmd->Sort = SortKind::NameAlign;
+      expect("(");
+      readInputFilePattern(InCmd, Keep);
+      expect(")");
+    } else {
+      InCmd->Sort = SortKind::Name;
+      readInputFilePattern(InCmd, Keep);
+    }
+    expect(")");
+    return;
+  }
+
+  if (skip("SORT_BY_ALIGNMENT")) {
+    expect("(");
+    if (skip("SORT") || skip("SORT_BY_NAME")) {
+      InCmd->Sort = SortKind::AlignName;
+      expect("(");
+      readInputFilePattern(InCmd, Keep);
+      expect(")");
+    } else {
+      InCmd->Sort = SortKind::Align;
+      readInputFilePattern(InCmd, Keep);
+    }
     expect(")");
     return;
   }

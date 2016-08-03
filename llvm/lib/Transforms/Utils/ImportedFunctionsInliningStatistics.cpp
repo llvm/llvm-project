@@ -49,9 +49,14 @@ void ImportedFunctionsInliningStatistics::recordInline(const Function &Caller,
   }
 
   CallerNode.InlinedCallees.push_back(&CalleeNode);
-  if (!CallerNode.Imported)
-    // Save Caller as a starting node for traversal.
-    NonImportedCallers.push_back(Caller.getName());
+  if (!CallerNode.Imported) {
+    // We could avoid second lookup, but it would make the code ultra ugly.
+    auto It = NodesMap.find(Caller.getName());
+    assert(It != NodesMap.end() && "The node should be already there.");
+    // Save Caller as a starting node for traversal. The string has to be one
+    // from map because Caller can disappear (and function name with it).
+    NonImportedCallers.push_back(It->first());
+  }
 }
 
 void ImportedFunctionsInliningStatistics::setModuleInfo(const Module &M) {
@@ -98,27 +103,27 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
     Ostream << "-- List of inlined functions:\n";
 
   for (const auto &Node : SortedNodes) {
-    assert(Node.second->NumberOfInlines >= Node.second->NumberOfRealInlines);
-    if (Node.second->NumberOfInlines == 0)
+    assert(Node->second->NumberOfInlines >= Node->second->NumberOfRealInlines);
+    if (Node->second->NumberOfInlines == 0)
       continue;
 
-    if (Node.second->Imported) {
+    if (Node->second->Imported) {
       InlinedImportedFunctionsCount++;
       InlinedImportedFunctionsToImportingModuleCount +=
-          int(Node.second->NumberOfRealInlines > 0);
+          int(Node->second->NumberOfRealInlines > 0);
     } else {
       InlinedNotImportedFunctionsCount++;
       InlinedNotImportedFunctionsToImportingModuleCount +=
-          int(Node.second->NumberOfRealInlines > 0);
+          int(Node->second->NumberOfRealInlines > 0);
     }
 
     if (Verbose)
       Ostream << "Inlined "
-              << (Node.second->Imported ? "imported " : "not imported ")
-              << "function [" << Node.first << "]"
-              << ": #inlines = " << Node.second->NumberOfInlines
+              << (Node->second->Imported ? "imported " : "not imported ")
+              << "function [" << Node->first() << "]"
+              << ": #inlines = " << Node->second->NumberOfInlines
               << ", #inlines_to_importing_module = "
-              << Node.second->NumberOfRealInlines << "\n";
+              << Node->second->NumberOfRealInlines << "\n";
   }
 
   auto InlinedFunctionsCount =
@@ -180,22 +185,19 @@ ImportedFunctionsInliningStatistics::SortedNodesTy
 ImportedFunctionsInliningStatistics::getSortedNodes() {
   SortedNodesTy SortedNodes;
   SortedNodes.reserve(NodesMap.size());
-
-  for (auto &&Node : NodesMap)
-    SortedNodes.emplace_back(Node.first, std::move(Node.second));
-
-  NodesMap.clear(); // We don't want to leave nullptrs.
+  for (const NodesMapTy::value_type& Node : NodesMap)
+    SortedNodes.push_back(&Node);
 
   std::sort(
       SortedNodes.begin(), SortedNodes.end(),
       [&](const SortedNodesTy::value_type &Lhs,
           const SortedNodesTy::value_type &Rhs) {
-        if (Lhs.second->NumberOfInlines != Rhs.second->NumberOfInlines)
-          return Lhs.second->NumberOfInlines > Rhs.second->NumberOfInlines;
-        if (Lhs.second->NumberOfRealInlines != Rhs.second->NumberOfRealInlines)
-          return Lhs.second->NumberOfRealInlines >
-                 Rhs.second->NumberOfRealInlines;
-        return Lhs.first < Rhs.first;
+        if (Lhs->second->NumberOfInlines != Rhs->second->NumberOfInlines)
+          return Lhs->second->NumberOfInlines > Rhs->second->NumberOfInlines;
+        if (Lhs->second->NumberOfRealInlines != Rhs->second->NumberOfRealInlines)
+          return Lhs->second->NumberOfRealInlines >
+                 Rhs->second->NumberOfRealInlines;
+        return Lhs->first() < Rhs->first();
       });
   return SortedNodes;
 }

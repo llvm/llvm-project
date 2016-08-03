@@ -118,6 +118,14 @@ static cl::opt<bool> DiscardValueNames(
     cl::desc("Discard names from Value (other than GlobalValue)."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<std::string> StopAfter("stop-after",
+    cl::desc("Stop compilation after a specific pass"),
+    cl::value_desc("pass-name"), cl::init(""));
+
+static cl::opt<std::string> StartAfter("start-after",
+    cl::desc("Resume compilation after a specific pass"),
+    cl::value_desc("pass-name"), cl::init(""));
+
 namespace {
 static ManagedStatic<std::vector<std::string>> RunPassNames;
 

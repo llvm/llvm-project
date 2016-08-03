@@ -54,6 +54,12 @@ bool MachineLegalizePass::runOnMachineFunction(MachineFunction &MF) {
       // Get the next Instruction before we try to legalize, because there's a
       // good chance MI will be deleted.
       NextMI = std::next(MI);
+
+      // Only legalize pre-isel generic instructions: others don't have types
+      // and are assumed to be legal.
+      if (!isPreISelGenericOpcode(MI->getOpcode()))
+        continue;
+
       auto Res = Helper.legalizeInstr(*MI, Legalizer);
 
       // Error out if we couldn't legalize this instruction. We may want to fall

@@ -418,6 +418,8 @@ static unsigned GetTeeLocalOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::TEE_LOCAL_F32;
   if (RC == &WebAssembly::F64RegClass)
     return WebAssembly::TEE_LOCAL_F64;
+  if (RC == &WebAssembly::V128RegClass)
+    return WebAssembly::TEE_LOCAL_V128;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -765,7 +767,11 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (Def->getOpcode() == WebAssembly::ARGUMENT_I32 ||
             Def->getOpcode() == WebAssembly::ARGUMENT_I64 ||
             Def->getOpcode() == WebAssembly::ARGUMENT_F32 ||
-            Def->getOpcode() == WebAssembly::ARGUMENT_F64)
+            Def->getOpcode() == WebAssembly::ARGUMENT_F64 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_v16i8 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_v8i16 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_v4i32 ||
+            Def->getOpcode() == WebAssembly::ARGUMENT_v4f32)
           continue;
 
         // Decide which strategy to take. Prefer to move a single-use value
