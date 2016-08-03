@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass generates an entirey new schedule tree from the data dependences
+// This pass generates an entirely new schedule tree from the data dependences
 // and iteration domains. The new schedule tree is computed in two steps:
 //
 // 1) The isl scheduling optimizer is run

@@ -43,10 +43,10 @@ class Region;
 
 namespace polly {
 
-/// @brief Type to hold region delimitors (entry & exit block).
+/// @brief Type to hold region delimiters (entry & exit block).
 using BBPair = std::pair<BasicBlock *, BasicBlock *>;
 
-/// @brief Return the region delimitors (entry & exit block) of @p R.
+/// @brief Return the region delimiters (entry & exit block) of @p R.
 BBPair getBBPairForRegion(const Region *R);
 
 /// @brief Set the begin and end source location for the region limited by @p P.
@@ -57,7 +57,7 @@ class RejectLog;
 ///
 /// This emits the content of the reject log as optimization remarks.
 /// Remember to at least track failures (-polly-detect-track-failures).
-/// @param P The region delimitors (entry & exit) we emit remarks for.
+/// @param P The region delimiters (entry & exit) we emit remarks for.
 /// @param Log The error log containing all messages being emitted as remark.
 void emitRejectionRemarks(const BBPair &P, const RejectLog &Log);
 

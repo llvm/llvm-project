@@ -74,6 +74,7 @@ public:
     friend class DWARFASTParserClang;
     friend class DWARFASTParserGo;
     friend class DWARFASTParserJava;
+    friend class DWARFASTParserOCaml;
 
     //------------------------------------------------------------------
     // Static Functions

@@ -383,7 +383,7 @@ void MemoryAccess::updateDimensionality() {
   // two subsequent values of 'i' index two values that are stored next to
   // each other in memory. By this division we make this characteristic
   // obvious again. If the base pointer was accessed with offsets not divisible
-  // by the accesses element size, we will have choosen a smaller ArrayElemSize
+  // by the accesses element size, we will have chosen a smaller ArrayElemSize
   // that divides the offsets of all accesses to this base pointer.
   if (DimsAccess == 1) {
     isl_val *V = isl_val_int_from_si(Ctx, ArrayElemSize);

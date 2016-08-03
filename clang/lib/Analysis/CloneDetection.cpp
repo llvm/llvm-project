@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang;
@@ -79,6 +80,168 @@ SourceLocation StmtSequence::getStartLoc() const {
 SourceLocation StmtSequence::getEndLoc() const { return back()->getLocEnd(); }
 
 namespace {
+/// \brief Collects the data of a single Stmt.
+///
+/// This class defines what a code clone is: If it collects for two statements
+/// the same data, then those two statements are considered to be clones of each
+/// other.
+class StmtDataCollector : public ConstStmtVisitor<StmtDataCollector> {
+
+  ASTContext &Context;
+  std::vector<CloneDetector::DataPiece> &CollectedData;
+
+public:
+  /// \brief Collects data of the given Stmt.
+  /// \param S The given statement.
+  /// \param Context The ASTContext of S.
+  /// \param D The given data vector to which all collected data is appended.
+  StmtDataCollector(const Stmt *S, ASTContext &Context,
+                    std::vector<CloneDetector::DataPiece> &D)
+      : Context(Context), CollectedData(D) {
+    Visit(S);
+  }
+
+  // Below are utility methods for appending different data to the vector.
+
+  void addData(CloneDetector::DataPiece Integer) {
+    CollectedData.push_back(Integer);
+  }
+
+  // FIXME: The functions below add long strings to the data vector which are
+  // probably not good for performance. Replace the strings with pointer values
+  // or a some other unique integer.
+
+  void addData(llvm::StringRef Str) {
+    if (Str.empty())
+      return;
+
+    const size_t OldSize = CollectedData.size();
+
+    const size_t PieceSize = sizeof(CloneDetector::DataPiece);
+    // Calculate how many vector units we need to accomodate all string bytes.
+    size_t RoundedUpPieceNumber = (Str.size() + PieceSize - 1) / PieceSize;
+    // Allocate space for the string in the data vector.
+    CollectedData.resize(CollectedData.size() + RoundedUpPieceNumber);
+
+    // Copy the string to the allocated space at the end of the vector.
+    std::memcpy(CollectedData.data() + OldSize, Str.data(), Str.size());
+  }
+
+  void addData(const QualType &QT) { addData(QT.getAsString()); }
+
+// The functions below collect the class specific data of each Stmt subclass.
+
+// Utility macro for defining a visit method for a given class. This method
+// calls back to the ConstStmtVisitor to visit all parent classes.
+#define DEF_ADD_DATA(CLASS, CODE)                                              \
+  void Visit##CLASS(const CLASS *S) {                                          \
+    CODE;                                                                      \
+    ConstStmtVisitor<StmtDataCollector>::Visit##CLASS(S);                      \
+  }
+
+  DEF_ADD_DATA(Stmt, { addData(S->getStmtClass()); })
+  DEF_ADD_DATA(Expr, { addData(S->getType()); })
+
+  //--- Builtin functionality ----------------------------------------------//
+  DEF_ADD_DATA(ArrayTypeTraitExpr, { addData(S->getTrait()); })
+  DEF_ADD_DATA(ExpressionTraitExpr, { addData(S->getTrait()); })
+  DEF_ADD_DATA(PredefinedExpr, { addData(S->getIdentType()); })
+  DEF_ADD_DATA(TypeTraitExpr, {
+    addData(S->getTrait());
+    for (unsigned i = 0; i < S->getNumArgs(); ++i)
+      addData(S->getArg(i)->getType());
+  })
+
+  //--- Calls --------------------------------------------------------------//
+  DEF_ADD_DATA(CallExpr,
+               { addData(S->getDirectCallee()->getQualifiedNameAsString()); })
+
+  //--- Exceptions ---------------------------------------------------------//
+  DEF_ADD_DATA(CXXCatchStmt, { addData(S->getCaughtType()); })
+
+  //--- C++ OOP Stmts ------------------------------------------------------//
+  DEF_ADD_DATA(CXXDeleteExpr, {
+    addData(S->isArrayFormAsWritten());
+    addData(S->isGlobalDelete());
+  })
+
+  //--- Casts --------------------------------------------------------------//
+  DEF_ADD_DATA(ObjCBridgedCastExpr, { addData(S->getBridgeKind()); })
+
+  //--- Miscellaneous Exprs ------------------------------------------------//
+  DEF_ADD_DATA(BinaryOperator, { addData(S->getOpcode()); })
+  DEF_ADD_DATA(UnaryOperator, { addData(S->getOpcode()); })
+
+  //--- Control flow -------------------------------------------------------//
+  DEF_ADD_DATA(GotoStmt, { addData(S->getLabel()->getName()); })
+  DEF_ADD_DATA(IndirectGotoStmt, {
+    if (S->getConstantTarget())
+      addData(S->getConstantTarget()->getName());
+  })
+  DEF_ADD_DATA(LabelStmt, { addData(S->getDecl()->getName()); })
+  DEF_ADD_DATA(MSDependentExistsStmt, { addData(S->isIfExists()); })
+  DEF_ADD_DATA(AddrLabelExpr, { addData(S->getLabel()->getName()); })
+
+  //--- Objective-C --------------------------------------------------------//
+  DEF_ADD_DATA(ObjCIndirectCopyRestoreExpr, { addData(S->shouldCopy()); })
+  DEF_ADD_DATA(ObjCPropertyRefExpr, {
+    addData(S->isSuperReceiver());
+    addData(S->isImplicitProperty());
+  })
+  DEF_ADD_DATA(ObjCAtCatchStmt, { addData(S->hasEllipsis()); })
+
+  //--- Miscellaneous Stmts ------------------------------------------------//
+  DEF_ADD_DATA(CXXFoldExpr, {
+    addData(S->isRightFold());
+    addData(S->getOperator());
+  })
+  DEF_ADD_DATA(GenericSelectionExpr, {
+    for (unsigned i = 0; i < S->getNumAssocs(); ++i) {
+      addData(S->getAssocType(i));
+    }
+  })
+  DEF_ADD_DATA(LambdaExpr, {
+    for (const LambdaCapture &C : S->captures()) {
+      addData(C.isPackExpansion());
+      addData(C.getCaptureKind());
+      if (C.capturesVariable())
+        addData(C.getCapturedVar()->getType());
+    }
+    addData(S->isGenericLambda());
+    addData(S->isMutable());
+  })
+  DEF_ADD_DATA(DeclStmt, {
+    auto numDecls = std::distance(S->decl_begin(), S->decl_end());
+    addData(static_cast<CloneDetector::DataPiece>(numDecls));
+    for (const Decl *D : S->decls()) {
+      if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+        addData(VD->getType());
+      }
+    }
+  })
+  DEF_ADD_DATA(AsmStmt, {
+    addData(S->isSimple());
+    addData(S->isVolatile());
+    addData(S->generateAsmString(Context));
+    for (unsigned i = 0; i < S->getNumInputs(); ++i) {
+      addData(S->getInputConstraint(i));
+    }
+    for (unsigned i = 0; i < S->getNumOutputs(); ++i) {
+      addData(S->getOutputConstraint(i));
+    }
+    for (unsigned i = 0; i < S->getNumClobbers(); ++i) {
+      addData(S->getClobber(i));
+    }
+  })
+  DEF_ADD_DATA(AttributedStmt, {
+    for (const Attr *A : S->getAttrs()) {
+      addData(std::string(A->getSpelling()));
+    }
+  })
+};
+} // end anonymous namespace
+
+namespace {
 /// Generates CloneSignatures for a set of statements and stores the results in
 /// a CloneDetector object.
 class CloneSignatureGenerator {
@@ -95,9 +258,8 @@ class CloneSignatureGenerator {
     // Create an empty signature that will be filled in this method.
     CloneDetector::CloneSignature Signature;
 
-    // The only relevant data for now is the class of the statement.
-    // TODO: Collect statement class specific data.
-    Signature.Data.push_back(S->getStmtClass());
+    // Collect all relevant data from S and put it into the empty signature.
+    StmtDataCollector(S, Context, Signature.Data);
 
     // Storage for the signatures of the direct child statements. This is only
     // needed if the current statement is a CompoundStmt.

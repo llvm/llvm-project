@@ -645,7 +645,9 @@ void ScriptParser::readPhdrs() {
         PhdrCmd.HasPhdrs = true;
       else if (Tok == "FLAGS") {
         expect("(");
-        next().getAsInteger(0, PhdrCmd.Flags);
+        // Passing 0 for the value of dot is a bit of a hack. It means that
+        // we accept expressions like ".|1".
+        PhdrCmd.Flags = readExpr()(0);
         expect(")");
       } else
         setError("unexpected header attribute: " + Tok);

@@ -162,6 +162,13 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Config->Optimize == 0)
     return false;
 
+  // A mergeable section with size 0 is useless because they don't have
+  // any data to merge. A mergeable string section with size 0 can be
+  // argued as invalid because it doesn't end with a null character.
+  // We'll avoid a mess by handling them as if they were non-mergeable.
+  if (Sec.sh_size == 0)
+    return false;
+
   uintX_t Flags = Sec.sh_flags;
   if (!(Flags & SHF_MERGE))
     return false;

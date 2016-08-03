@@ -12,14 +12,6 @@ int max(int a, int b) { // expected-warning{{Detected code clone.}}
   return b;
 }
 
-// FIXME: Detect different binary operator kinds.
-int min1(int a, int b) { // expected-note{{Related code clone is here.}}
-  log();
-  if (a < b)
-    return a;
-  return b;
-}
-
 // FIXME: Detect different variable patterns.
 int min2(int a, int b) { // expected-note{{Related code clone is here.}}
   log();

@@ -17,6 +17,7 @@
 // };
 
 #include <memory>
+#include <cstdint>
 #include <cassert>
 
 template <class T>
@@ -27,12 +28,12 @@ struct A
     value_type* allocate(std::size_t n)
     {
         assert(n == 10);
-        return (value_type*)0xDEADBEEF;
+        return reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xDEADBEEF));
     }
 };
 
 int main()
 {
     A<int> a;
-    assert(std::allocator_traits<A<int> >::allocate(a, 10) == (int*)0xDEADBEEF);
+    assert(std::allocator_traits<A<int> >::allocate(a, 10) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
 }

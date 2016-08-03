@@ -35,14 +35,23 @@ namespace rename {
 class RenamingASTConsumer : public ASTConsumer {
 public:
   RenamingASTConsumer(
-      const std::string &NewName, const std::string &PrevName,
-      const std::vector<std::string> &USRs,
+      const std::vector<std::string> &NewNames,
+      const std::vector<std::string> &PrevNames,
+      const std::vector<std::vector<std::string>> &USRList,
       std::map<std::string, tooling::Replacements> &FileToReplaces,
       bool PrintLocations)
-      : NewName(NewName), PrevName(PrevName), USRs(USRs),
+      : NewNames(NewNames), PrevNames(PrevNames), USRList(USRList),
         FileToReplaces(FileToReplaces), PrintLocations(PrintLocations) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
+    for (unsigned I = 0; I < NewNames.size(); ++I) {
+      HandleOneRename(Context, NewNames[I], PrevNames[I], USRList[I]);
+    }
+  }
+
+  void HandleOneRename(ASTContext &Context, const std::string &NewName,
+                       const std::string &PrevName,
+                       const std::vector<std::string> &USRs) {
     const auto &SourceMgr = Context.getSourceManager();
     std::vector<SourceLocation> RenamingCandidates;
     std::vector<SourceLocation> NewCandidates;
@@ -70,14 +79,14 @@ public:
   }
 
 private:
-  const std::string &NewName, &PrevName;
-  const std::vector<std::string> &USRs;
+  const std::vector<std::string> &NewNames, &PrevNames;
+  const std::vector<std::vector<std::string>> &USRList;
   std::map<std::string, tooling::Replacements> &FileToReplaces;
   bool PrintLocations;
 };
 
 std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
-  return llvm::make_unique<RenamingASTConsumer>(NewName, PrevName, USRs,
+  return llvm::make_unique<RenamingASTConsumer>(NewNames, PrevNames, USRList,
                                                 FileToReplaces, PrintLocations);
 }
 

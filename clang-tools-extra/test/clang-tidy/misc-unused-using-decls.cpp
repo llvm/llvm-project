@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- -- -fno-delayed-template-parsing -isystem %S/Inputs/
+
 
 // ----- Definitions -----
 template <typename T> class vector {};
@@ -53,6 +54,16 @@ enum Color3 { Yellow };
 enum Color4 { Blue };
 
 }  // namespace n
+
+#include "unused-using-decls.h"
+namespace ns {
+template <typename T>
+class AA {
+  T t;
+};
+template <typename T>
+T ff() { T t; return t; }
+} // namespace ns
 
 // ----- Using declarations -----
 // eol-comments aren't removed (yet)
@@ -136,6 +147,9 @@ using n::Color2;
 using n::Color3;
 using n::Blue;
 
+using ns::AA;
+using ns::ff;
+
 // ----- Usages -----
 void f(B b);
 void g() {
@@ -151,4 +165,9 @@ void g() {
   Color2 color2;
   int t1 = Color3::Yellow;
   int t2 = Blue;
+
+  MyClass a;
+  int t3 = 0;
+  a.func1<AA>(&t3);
+  a.func2<int, ff>(t3);
 }
