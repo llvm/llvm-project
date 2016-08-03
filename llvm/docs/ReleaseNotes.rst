@@ -93,6 +93,32 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
+GCC ABI Tag
+-----------
+
+Recently, many of the Linux distributions (ex. `Fedora <http://developerblog.redhat.com/2015/02/10/gcc-5-in-fedora/>`_,
+`Debian <https://wiki.debian.org/GCC5>`_, `Ubuntu <https://wiki.ubuntu.com/GCC5>`_)
+have moved on to use the new `GCC ABI <https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Attributes.html>`_
+to work around `C++11 incompatibilities in libstdc++ <https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html>`_.
+This caused `incompatibility problems <https://gcc.gnu.org/ml/gcc-patches/2015-04/msg00153.html>`_
+with other compilers (ex. Clang), which needed to be fixed, but due to the
+experimental nature of GCC's own implementation, it took a long time for it to
+land in LLVM (`here <https://reviews.llvm.org/D18035>`_ and
+`here <https://reviews.llvm.org/D17567>`_), not in time for the 3.8 release.
+
+Those patches are now present in the 3.9.0 release and should be working on the
+majority of cases, as they have been tested thoroughly. However, some bugs were
+`filled in GCC <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71712>`_ and have not
+yet been fixed, so there may be corner cases not covered by either GCC or Clang.
+Bug fixes to those problems should be reported in Bugzilla (either LLVM or GCC),
+and patches to LLVM's trunk are very likely to be back-ported to future 3.9.x
+releases (depends on how destructive it is).
+
+Unfortunately, these patches won't be back-ported to 3.8.x or earlier, so we
+strongly recommend people to use 3.9.x when GCC ABI cases are at stake.
+
+For a more in-depth view of the issue, check our `Bugzilla entry <https://llvm.org/bugs/show_bug.cgi?id=23529>`_.
+
 Changes to the LLVM IR
 ----------------------
 
