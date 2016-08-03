@@ -47,6 +47,13 @@ Major New Features
 - :program:`clang-include-fixer`, a tool that provides an automated way of
   adding ``#include`` directives for missing symbols in one translation unit.
 
+  It aims to provide automated insertion of missing ``#includes`` with a single
+  button press in an editor. Integration with Vim and a tool to generate the
+  symbol index used by the tool are also part of this release. See the
+  `include-fixer documentation`_ for more information.
+
+.. _include-fixer documentation: http://clang.llvm.org/extra/include-fixer.html
+
 Improvements to clang-query
 ---------------------------
 
