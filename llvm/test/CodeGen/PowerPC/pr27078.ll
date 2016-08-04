@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-linux-gnu -mcpu=pwr8 -mattr=+vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-linux-gnu -mcpu=pwr8 -mattr=+vsx < %s | FileCheck %s
 
 define <4 x float> @bar(float* %p, float* %q) {
   %1 = bitcast float* %p to <12 x float>*

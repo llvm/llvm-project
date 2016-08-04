@@ -142,7 +142,7 @@ bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
     DEBUG(dbgs() << "Evaluating V MI\n"; I->dump());
     unsigned Reg = 0;
     if (!getInstrVecReg(*I, Reg))
-      assert(!"Need a vector reg");
+      llvm_unreachable("Need a vector reg");
     MachineBasicBlock::instr_iterator MII = I->getIterator();
     if (I->isInsideBundle()) {
       DEBUG(dbgs() << "add to end of bundle\n"; I->dump());

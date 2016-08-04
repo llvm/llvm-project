@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=ppc32
-; RUN: llc < %s -march=ppc64
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc64
 
 ; Test two things: 1) that a frameidx can be rewritten in an inline asm
 ; 2) that inline asms can handle reg+imm addr modes.

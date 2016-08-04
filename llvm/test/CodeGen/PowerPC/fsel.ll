@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -enable-no-nans-fp-math -mattr=-vsx | FileCheck -check-prefix=CHECK-FM %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -enable-no-nans-fp-math -mattr=+vsx | FileCheck -check-prefix=CHECK-FM-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -enable-no-nans-fp-math -mattr=-vsx | FileCheck -check-prefix=CHECK-FM %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -enable-no-nans-fp-math -mattr=+vsx | FileCheck -check-prefix=CHECK-FM-VSX %s
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

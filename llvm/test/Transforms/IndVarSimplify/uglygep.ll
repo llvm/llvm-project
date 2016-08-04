@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | not grep uglygep
+; RUN: opt -indvars -S < %s | FileCheck %s
 ; rdar://8197217
 
 ; Indvars should be able to emit a clean GEP here, not an uglygep.
@@ -11,6 +11,8 @@ target triple = "x86_64-apple-darwin11.0"
 @tds = external global double**                   ; <double***> [#uses=1]
 
 define void @init_td(i32 %tmp7) nounwind {
+; CHECK-LABEL: @init_td
+; CHECK-NOT: uglygep
 entry:
   br label %bb4
 

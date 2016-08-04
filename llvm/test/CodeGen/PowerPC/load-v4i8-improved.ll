@@ -1,6 +1,6 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck \
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck \
 ; RUN:   -implicit-check-not vmrg -implicit-check-not=vperm %s
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck \
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck \
 ; RUN:   -implicit-check-not vmrg -implicit-check-not=vperm %s \
 ; RUN:   --check-prefix=CHECK-BE
 

@@ -279,3 +279,25 @@ return:
   %retval.0 = phi i32* [ %b, %if.end3 ], [ %a, %if.then ]
   ret i32* %retval.0
 }
+
+declare i32 @PR28802.external(i32 returned %p1)
+
+define internal i32 @PR28802.callee() {
+entry:
+  br label %cont
+
+cont:
+  %0 = phi i32 [ 0, %entry ]
+  %call = call i32 @PR28802.external(i32 %0)
+  ret i32 %call
+}
+
+define i32 @PR28802() {
+entry:
+  %call = call i32 @PR28802.callee()
+  ret i32 %call
+}
+
+; CHECK-LABEL: define i32 @PR28802(
+; CHECK: call i32 @PR28802.external(i32 0)
+; CHECK: ret i32 0

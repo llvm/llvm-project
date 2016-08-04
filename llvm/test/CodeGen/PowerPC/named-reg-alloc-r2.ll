@@ -1,5 +1,5 @@
 ; RUN: not llc < %s -mtriple=powerpc-apple-darwin 2>&1 | FileCheck %s --check-prefix=CHECK-NOTPPC32
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu 2>&1 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu 2>&1 | FileCheck %s
 ; RUN: not llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s --check-prefix=CHECK-NOTPPC32
 
 define i32 @get_reg() nounwind {

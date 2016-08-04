@@ -14,13 +14,10 @@ define <16 x i32> @test2(<16 x i32> %x) {
 define <16 x float> @test3(<4 x float> %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[1,0],xmm0[0,1]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[8,9,10,11,0,1,2,3],zero,zero,zero,zero
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpxor %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %b = extractelement <4 x float> %a, i32 2

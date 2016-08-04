@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin | grep lwz | grep 228
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin | grep lwz | grep 228
 
 @"\01LC" = internal constant [4 x i8] c"%d\0A\00"		; <[4 x i8]*> [#uses=1]
 

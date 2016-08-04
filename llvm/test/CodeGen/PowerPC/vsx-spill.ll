@@ -1,7 +1,7 @@
-; RUN: llc -mcpu=pwr7 -mattr=+vsx < %s | FileCheck %s
-; RUN: llc -mcpu=pwr7 -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-REG %s
-; RUN: llc -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | FileCheck %s
-; RUN: llc -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | FileCheck -check-prefix=CHECK-FISL %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-REG %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 < %s | FileCheck -check-prefix=CHECK-FISL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

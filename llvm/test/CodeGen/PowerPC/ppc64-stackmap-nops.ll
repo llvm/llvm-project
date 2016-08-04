@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-gnu-linux | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-gnu-linux | FileCheck %s
 
 define void @test_shadow_optimization() {
 entry:

@@ -249,7 +249,10 @@ DbiStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
 }
 
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
-                               const msf::WritableStream &Buffer) const {
+                               const msf::WritableStream &Buffer) {
+  if (auto EC = finalize())
+    return EC;
+
   auto InfoS =
       WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamDBI);
 

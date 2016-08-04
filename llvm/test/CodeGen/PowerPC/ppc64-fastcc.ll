@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-vsx < %s | FileCheck %s
 ; XFAIL: *
 
 target datalayout = "E-m:e-i64:64-n32:64"

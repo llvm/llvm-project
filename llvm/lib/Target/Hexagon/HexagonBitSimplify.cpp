@@ -363,24 +363,28 @@ bool HexagonBitSimplify::replaceSubWithSub(unsigned OldR, unsigned OldSR,
 bool HexagonBitSimplify::getSubregMask(const BitTracker::RegisterRef &RR,
       unsigned &Begin, unsigned &Width, MachineRegisterInfo &MRI) {
   const TargetRegisterClass *RC = MRI.getRegClass(RR.Reg);
-  if (RC == &Hexagon::IntRegsRegClass) {
-    assert(RR.Sub == 0);
+  if (RR.Sub == 0) {
     Begin = 0;
-    Width = 32;
+    Width = RC->getSize()*8;
     return true;
   }
-  if (RC == &Hexagon::DoubleRegsRegClass) {
-    if (RR.Sub == 0) {
-      Begin = 0;
-      Width = 64;
-      return true;
-    }
-    assert(RR.Sub == Hexagon::subreg_loreg || RR.Sub == Hexagon::subreg_hireg);
-    Width = 32;
-    Begin = (RR.Sub == Hexagon::subreg_loreg ? 0 : 32);
-    return true;
+
+  assert(RR.Sub == Hexagon::subreg_loreg || RR.Sub == Hexagon::subreg_hireg);
+  if (RR.Sub == Hexagon::subreg_loreg)
+    Begin = 0;
+
+  switch (RC->getID()) {
+    case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::VecDblRegsRegClassID:
+    case Hexagon::VecDblRegs128BRegClassID:
+      Width = RC->getSize()*8 / 2;
+      if (RR.Sub == Hexagon::subreg_hireg)
+        Begin = Width;
+      break;
+    default:
+      return false;
   }
-  return false;
+  return true;
 }
 
 
@@ -1473,7 +1477,7 @@ namespace {
     CopyPropagation(const HexagonRegisterInfo &hri, MachineRegisterInfo &mri)
         : Transformation(false), MRI(mri) {}
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
-    static bool isCopyReg(unsigned Opc);
+    static bool isCopyReg(unsigned Opc, bool NoConv);
   private:
     bool propagateRegCopy(MachineInstr &MI);
 
@@ -1548,7 +1552,8 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
     HBS::getInstrDefs(*I, Defs);
 
     unsigned Opc = I->getOpcode();
-    if (CopyPropagation::isCopyReg(Opc) || ConstGeneration::isTfrConst(*I))
+    if (CopyPropagation::isCopyReg(Opc, false) ||
+        ConstGeneration::isTfrConst(*I))
       continue;
 
     DebugLoc DL = I->getDebugLoc();
@@ -1595,18 +1600,19 @@ bool CopyGeneration::processBlock(MachineBasicBlock &B,
 }
 
 
-bool CopyPropagation::isCopyReg(unsigned Opc) {
+bool CopyPropagation::isCopyReg(unsigned Opc, bool NoConv) {
   switch (Opc) {
     case TargetOpcode::COPY:
     case TargetOpcode::REG_SEQUENCE:
+    case Hexagon::A4_combineir:
+    case Hexagon::A4_combineri:
+      return true;
     case Hexagon::A2_tfr:
     case Hexagon::A2_tfrp:
     case Hexagon::A2_combinew:
-    case Hexagon::A4_combineir:
-    case Hexagon::A4_combineri:
     case Hexagon::V6_vcombine:
     case Hexagon::V6_vcombine_128B:
-      return true;
+      return NoConv;
     default:
       break;
   }
@@ -1675,7 +1681,7 @@ bool CopyPropagation::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   bool Changed = false;
   for (auto I : Instrs) {
     unsigned Opc = I->getOpcode();
-    if (!CopyPropagation::isCopyReg(Opc))
+    if (!CopyPropagation::isCopyReg(Opc, true))
       continue;
     Changed |= propagateRegCopy(*I);
   }

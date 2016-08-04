@@ -3055,13 +3055,22 @@ bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
 bool HexagonTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                   const AddrMode &AM, Type *Ty,
                                                   unsigned AS) const {
-  unsigned A = DL.getABITypeAlignment(Ty);
-  // The base offset must be a multiple of the alignment.
-  if ((AM.BaseOffs % A) != 0)
-    return false;
-  // The shifted offset must fit in 11 bits.
-  if (!isInt<11>(AM.BaseOffs >> Log2_32(A)))
-    return false;
+  if (Ty->isSized()) {
+    // When LSR detects uses of the same base address to access different
+    // types (e.g. unions), it will assume a conservative type for these
+    // uses:
+    //   LSR Use: Kind=Address of void in addrspace(4294967295), ...
+    // The type Ty passed here would then be "void". Skip the alignment
+    // checks, but do not return false right away, since that confuses
+    // LSR into crashing.
+    unsigned A = DL.getABITypeAlignment(Ty);
+    // The base offset must be a multiple of the alignment.
+    if ((AM.BaseOffs % A) != 0)
+      return false;
+    // The shifted offset must fit in 11 bits.
+    if (!isInt<11>(AM.BaseOffs >> Log2_32(A)))
+      return false;
+  }
 
   // No global is ever allowed as a base.
   if (AM.BaseGV)

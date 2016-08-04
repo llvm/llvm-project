@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
 
 @d = common global double 0.000000e+00, align 8
 @f = common global float 0.000000e+00, align 4

@@ -665,6 +665,7 @@ int main(int argc, const char *argv[]) {
       errs() << "OVERVIEW: LLVM profile data tools\n\n"
              << "USAGE: " << ProgName << " <command> [args...]\n"
              << "USAGE: " << ProgName << " <command> -help\n\n"
+             << "See each individual command --help for more details.\n"
              << "Available commands: merge, show\n";
       return 0;
     }

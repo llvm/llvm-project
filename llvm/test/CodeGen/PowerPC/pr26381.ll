@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -mtriple=powerpc64le-unknown-unknown -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64le-unknown-unknown -O0 < %s | FileCheck %s
 
 define internal signext i32 @foo() #0 {
   ret i32 -125452974

@@ -389,14 +389,14 @@ Expected<bool> Archive::Child::isThinMember() const {
   return Parent->IsThin && Name != "/" && Name != "//";
 }
 
-ErrorOr<std::string> Archive::Child::getFullName() const {
+Expected<std::string> Archive::Child::getFullName() const {
   Expected<bool> isThin = isThinMember();
   if (!isThin)
-    return errorToErrorCode(isThin.takeError());
+    return isThin.takeError();
   assert(isThin.get());
   Expected<StringRef> NameOrErr = getName();
   if (!NameOrErr)
-    return errorToErrorCode(NameOrErr.takeError());
+    return NameOrErr.takeError();
   StringRef Name = *NameOrErr;
   if (sys::path::is_absolute(Name))
     return Name;
@@ -407,24 +407,24 @@ ErrorOr<std::string> Archive::Child::getFullName() const {
   return StringRef(FullName);
 }
 
-ErrorOr<StringRef> Archive::Child::getBuffer() const {
+Expected<StringRef> Archive::Child::getBuffer() const {
   Expected<bool> isThinOrErr = isThinMember();
   if (!isThinOrErr)
-    return errorToErrorCode(isThinOrErr.takeError());
+    return isThinOrErr.takeError();
   bool isThin = isThinOrErr.get();
   if (!isThin) {
     Expected<uint32_t> Size = getSize();
     if (!Size)
-      return errorToErrorCode(Size.takeError());
+      return Size.takeError();
     return StringRef(Data.data() + StartOfFile, Size.get());
   }
-  ErrorOr<std::string> FullNameOrEr = getFullName();
-  if (std::error_code EC = FullNameOrEr.getError())
-    return EC;
-  const std::string &FullName = *FullNameOrEr;
+  Expected<std::string> FullNameOrErr = getFullName();
+  if (!FullNameOrErr)
+    return FullNameOrErr.takeError();
+  const std::string &FullName = *FullNameOrErr;
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(FullName);
   if (std::error_code EC = Buf.getError())
-    return EC;
+    return errorCodeToError(EC);
   Parent->ThinBuffers.push_back(std::move(*Buf));
   return Parent->ThinBuffers.back()->getBuffer();
 }
@@ -485,9 +485,9 @@ Expected<MemoryBufferRef> Archive::Child::getMemoryBufferRef() const {
   if (!NameOrErr)
     return NameOrErr.takeError();
   StringRef Name = NameOrErr.get();
-  ErrorOr<StringRef> Buf = getBuffer();
-  if (std::error_code EC = Buf.getError())
-    return errorCodeToError(EC);
+  Expected<StringRef> Buf = getBuffer();
+  if (!Buf)
+    return Buf.takeError();
   return MemoryBufferRef(*Buf, Name);
 }
 
@@ -590,9 +590,14 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
       Format = K_BSD;
     else // Name == "__.SYMDEF_64"
       Format = K_DARWIN64;
-    // We know that the symbol table is not an external file, so we just assert
-    // there is no error.
-    SymbolTable = *C->getBuffer();
+    // We know that the symbol table is not an external file, but we still must
+    // check any Expected<> return value.
+    Expected<StringRef> BufOrErr = C->getBuffer();
+    if (!BufOrErr) {
+      Err = BufOrErr.takeError();
+      return;
+    }
+    SymbolTable = BufOrErr.get();
     if (Increment())
       return;
     setFirstRegular(*C);
@@ -611,17 +616,27 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     }
     Name = NameOrErr.get();
     if (Name == "__.SYMDEF SORTED" || Name == "__.SYMDEF") {
-      // We know that the symbol table is not an external file, so we just
-      // assert there is no error.
-      SymbolTable = *C->getBuffer();
+      // We know that the symbol table is not an external file, but we still
+      // must check any Expected<> return value.
+      Expected<StringRef> BufOrErr = C->getBuffer();
+      if (!BufOrErr) {
+        Err = BufOrErr.takeError();
+        return;
+      }
+      SymbolTable = BufOrErr.get();
       if (Increment())
         return;
     }
     else if (Name == "__.SYMDEF_64 SORTED" || Name == "__.SYMDEF_64") {
       Format = K_DARWIN64;
-      // We know that the symbol table is not an external file, so we just
-      // assert there is no error.
-      SymbolTable = *C->getBuffer();
+      // We know that the symbol table is not an external file, but we still
+      // must check any Expected<> return value.
+      Expected<StringRef> BufOrErr = C->getBuffer();
+      if (!BufOrErr) {
+        Err = BufOrErr.takeError();
+        return;
+      }
+      SymbolTable = BufOrErr.get();
       if (Increment())
         return;
     }
@@ -636,9 +651,14 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
 
   bool has64SymTable = false;
   if (Name == "/" || Name == "/SYM64/") {
-    // We know that the symbol table is not an external file, so we just assert
-    // there is no error.
-    SymbolTable = *C->getBuffer();
+    // We know that the symbol table is not an external file, but we still
+    // must check any Expected<> return value.
+    Expected<StringRef> BufOrErr = C->getBuffer();
+    if (!BufOrErr) {
+      Err = BufOrErr.takeError();
+      return;
+    }
+    SymbolTable = BufOrErr.get();
     if (Name == "/SYM64/")
       has64SymTable = true;
 
@@ -658,9 +678,14 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
 
   if (Name == "//") {
     Format = has64SymTable ? K_MIPS64 : K_GNU;
-    // The string table is never an external member, so we just assert on the
-    // ErrorOr.
-    StringTable = *C->getBuffer();
+    // The string table is never an external member, but we still
+    // must check any Expected<> return value.
+    Expected<StringRef> BufOrErr = C->getBuffer();
+    if (!BufOrErr) {
+      Err = BufOrErr.takeError();
+      return;
+    }
+    StringTable = BufOrErr.get();
     if (Increment())
       return;
     setFirstRegular(*C);
@@ -681,9 +706,14 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   }
 
   Format = K_COFF;
-  // We know that the symbol table is not an external file, so we just assert
-  // there is no error.
-  SymbolTable = *C->getBuffer();
+  // We know that the symbol table is not an external file, but we still
+  // must check any Expected<> return value.
+  Expected<StringRef> BufOrErr = C->getBuffer();
+  if (!BufOrErr) {
+    Err = BufOrErr.takeError();
+    return;
+  }
+  SymbolTable = BufOrErr.get();
 
   if (Increment())
     return;
@@ -702,9 +732,14 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Name = NameOrErr.get();
 
   if (Name == "//") {
-    // The string table is never an external member, so we just assert on the
-    // ErrorOr.
-    StringTable = *C->getBuffer();
+    // The string table is never an external member, but we still
+    // must check any Expected<> return value.
+    Expected<StringRef> BufOrErr = C->getBuffer();
+    if (!BufOrErr) {
+      Err = BufOrErr.takeError();
+      return;
+    }
+    StringTable = BufOrErr.get();
     if (Increment())
       return;
   }
@@ -738,7 +773,7 @@ StringRef Archive::Symbol::getName() const {
   return Parent->getSymbolTable().begin() + StringIndex;
 }
 
-ErrorOr<Archive::Child> Archive::Symbol::getMember() const {
+Expected<Archive::Child> Archive::Symbol::getMember() const {
   const char *Buf = Parent->getSymbolTable().begin();
   const char *Offsets = Buf;
   if (Parent->kind() == K_MIPS64 || Parent->kind() == K_DARWIN64)
@@ -773,7 +808,7 @@ ErrorOr<Archive::Child> Archive::Symbol::getMember() const {
 
     uint32_t SymbolCount = read32le(Buf);
     if (SymbolIndex >= SymbolCount)
-      return object_error::parse_failed;
+      return errorCodeToError(object_error::parse_failed);
 
     // Skip SymbolCount to get to the indices table.
     const char *Indices = Buf + 4;
@@ -785,7 +820,7 @@ ErrorOr<Archive::Child> Archive::Symbol::getMember() const {
     --OffsetIndex;
 
     if (OffsetIndex >= MemberCount)
-      return object_error::parse_failed;
+      return errorCodeToError(object_error::parse_failed);
 
     Offset = read32le(Offsets + OffsetIndex * 4);
   }
@@ -794,7 +829,7 @@ ErrorOr<Archive::Child> Archive::Symbol::getMember() const {
   Error Err;
   Child C(Parent, Loc, &Err);
   if (Err)
-    return errorToErrorCode(std::move(Err));
+    return std::move(Err);
   return C;
 }
 
@@ -925,7 +960,7 @@ Expected<Optional<Archive::Child>> Archive::findSym(StringRef name) const {
       if (auto MemberOrErr = bs->getMember())
         return Child(*MemberOrErr);
       else
-        return errorCodeToError(MemberOrErr.getError());
+        return MemberOrErr.takeError();
     }
   }
   return Optional<Child>();

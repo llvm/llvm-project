@@ -291,9 +291,8 @@ Error LLVMOutputStyle::dumpFreePageMap() {
 
   recordKnownUsedPage(PS, 0); // MSF Super Block
 
-  uint32_t BlocksPerSection = File.getBlockSize();
-  uint32_t NumSections =
-      llvm::alignTo(File.getBlockCount(), BlocksPerSection) / BlocksPerSection;
+  uint32_t BlocksPerSection = msf::getFpmIntervalLength(File.getMsfLayout());
+  uint32_t NumSections = msf::getNumFpmIntervals(File.getMsfLayout());
   for (uint32_t I = 0; I < NumSections; ++I) {
     uint32_t Fpm0 = 1 + BlocksPerSection * I;
     // 2 Fpm blocks spaced at `getBlockSize()` block intervals

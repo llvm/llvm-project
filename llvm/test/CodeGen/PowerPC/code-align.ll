@@ -1,15 +1,15 @@
-; RUN: llc -mcpu=ppc64 < %s | FileCheck %s -check-prefix=GENERIC
-; RUN: llc -mcpu=970 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=a2 < %s | FileCheck %s -check-prefix=BASIC
-; RUN: llc -mcpu=e500mc < %s | FileCheck %s -check-prefix=BASIC
-; RUN: llc -mcpu=e5500 < %s | FileCheck %s -check-prefix=BASIC
-; RUN: llc -mcpu=pwr4 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=pwr5 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=pwr5x < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=pwr6 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=pwr6x < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PWR
-; RUN: llc -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s -check-prefix=GENERIC
+; RUN: llc -verify-machineinstrs -mcpu=970 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s -check-prefix=BASIC
+; RUN: llc -verify-machineinstrs -mcpu=e500mc < %s | FileCheck %s -check-prefix=BASIC
+; RUN: llc -verify-machineinstrs -mcpu=e5500 < %s | FileCheck %s -check-prefix=BASIC
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr5 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr5x < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr6 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr6x < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PWR
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PWR
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

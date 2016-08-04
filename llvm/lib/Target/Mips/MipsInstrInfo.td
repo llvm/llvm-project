@@ -1918,8 +1918,11 @@ def BLTZAL : MMRel, BGEZAL_FT<"bltzal", brtarget, GPR32Opnd>, BGEZAL_FM<0x10>,
 def BLTZALL : MMRel, BGEZAL_FT<"bltzall", brtarget, GPR32Opnd, 0>,
               BGEZAL_FM<0x12>, ISA_MIPS2_NOT_32R6_64R6;
 def BAL_BR : BAL_BR_Pseudo<BGEZAL>;
-def TAILCALL : TailCall<J>;
-def TAILCALL_R : TailCallReg<GPR32Opnd, JR>;
+
+let AdditionalPredicates = [NotInMicroMips] in {
+def TAILCALL : TailCall<J>, ISA_MIPS1_NOT_32R6_64R6;
+def TAILCALLREG : TailCallReg<GPR32Opnd, JR>, ISA_MIPS1_NOT_32R6_64R6, GPR_32;
+}
 
 // Indirect branches are matched as PseudoIndirectBranch/PseudoIndirectBranch64
 // then are expanded to JR, JR64, JALR, or JALR64 depending on the ISA.

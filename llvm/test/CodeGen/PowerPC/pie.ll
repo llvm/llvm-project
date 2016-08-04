@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-pc-linux -relocation-model=pic | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-pc-linux -relocation-model=pic | FileCheck %s
 
 
 define void @f() {

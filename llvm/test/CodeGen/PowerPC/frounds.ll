@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 
 define i32 @foo() {
 entry:

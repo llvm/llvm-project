@@ -1,5 +1,5 @@
 ; All of these should be codegen'd without loading immediates
-; RUN: llc < %s -mtriple=powerpc-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin | FileCheck %s
 
 define i64 @add_ll(i64 %a, i64 %b) nounwind {
 entry:

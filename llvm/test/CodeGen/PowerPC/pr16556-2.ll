@@ -1,4 +1,4 @@
-; RUN: llc < %s
+; RUN: llc -verify-machineinstrs < %s
 
 ; This test formerly failed because of wrong custom lowering for
 ; fptosi of ppc_fp128.

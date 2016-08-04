@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -O2 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 < %s | FileCheck %s
 
 ; Verify that returning multiple return values in registers works,
 ; both with fast-isel and regular isel.

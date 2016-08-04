@@ -1,4 +1,4 @@
-; RUN: llc -fp-contract=fast -O2 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -fp-contract=fast -O2 < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-grtev4-linux-gnu"
 

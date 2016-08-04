@@ -15,6 +15,7 @@
 ; Verify that the file can be compiled to an object file at -O3 with all
 ; skippable passes skipped.
 
+; REQUIRES: default_triple
 ; RUN: opt -O3 -opt-bisect-limit=0 < %s | llc -O3 -opt-bisect-limit=0
 
 

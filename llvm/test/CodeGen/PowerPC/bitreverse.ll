@@ -1,4 +1,4 @@
-; RUN: llc -march=ppc64 %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc64 %s -o - | FileCheck %s
 
 ; These tests just check that the plumbing is in place for @llvm.bitreverse. The
 ; actual output is massive at the moment as llvm.bitreverse is not yet legal.

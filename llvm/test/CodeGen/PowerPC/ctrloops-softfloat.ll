@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu -O1 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -O1 < %s | FileCheck %s
 
 ; double x, y;
 ; 

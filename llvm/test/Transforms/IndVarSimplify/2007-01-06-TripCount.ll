@@ -1,5 +1,5 @@
 ; PR1015
-; RUN: opt < %s -indvars -S | not grep "ret i32 0"
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 target datalayout = "e-p:32:32"
 target triple = "i686-apple-darwin8"
@@ -8,6 +8,8 @@ target triple = "i686-apple-darwin8"
 
 
 define i32 @test(i32 %J) {
+; CHECK-LABEL: @test(
+; CHECK-NOT: ret i32 0
 entry:
 	br label %bb2
 

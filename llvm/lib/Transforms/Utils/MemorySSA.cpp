@@ -170,6 +170,7 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
   }
 };
 }
+
 namespace {
 struct UpwardsMemoryQuery {
   // True if our original query started off as a call
@@ -197,14 +198,65 @@ static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
   Instruction *Inst = MD->getMemoryInst();
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
-        return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+      return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
     default:
       return false;
     }
   }
   return false;
+}
+
+enum class Reorderability { Always, IfNoAlias, Never };
+
+/// This does one-way checks to see if Use could theoretically be hoisted above
+/// MayClobber. This will not check the other way around.
+///
+/// This assumes that, for the purposes of MemorySSA, Use comes directly after
+/// MayClobber, with no potentially clobbering operations in between them.
+/// (Where potentially clobbering ops are memory barriers, aliased stores, etc.)
+static Reorderability getLoadReorderability(const LoadInst *Use,
+                                            const LoadInst *MayClobber) {
+  bool VolatileUse = Use->isVolatile();
+  bool VolatileClobber = MayClobber->isVolatile();
+  // Volatile operations may never be reordered with other volatile operations.
+  if (VolatileUse && VolatileClobber)
+    return Reorderability::Never;
+
+  // The lang ref allows reordering of volatile and non-volatile operations.
+  // Whether an aliasing nonvolatile load and volatile load can be reordered,
+  // though, is ambiguous. Because it may not be best to exploit this ambiguity,
+  // we only allow volatile/non-volatile reordering if the volatile and
+  // non-volatile operations don't alias.
+  Reorderability Result = VolatileUse || VolatileClobber
+                              ? Reorderability::IfNoAlias
+                              : Reorderability::Always;
+
+  // If a load is seq_cst, it cannot be moved above other loads. If its ordering
+  // is weaker, it can be moved above other loads. We just need to be sure that
+  // MayClobber isn't an acquire load, because loads can't be moved above
+  // acquire loads.
+  //
+  // Note that this explicitly *does* allow the free reordering of monotonic (or
+  // weaker) loads of the same address.
+  bool SeqCstUse = Use->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  bool MayClobberIsAcquire = isAtLeastOrStrongerThan(MayClobber->getOrdering(),
+                                                     AtomicOrdering::Acquire);
+  if (SeqCstUse || MayClobberIsAcquire)
+    return Reorderability::Never;
+  return Result;
+}
+
+static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
+                                                   const Instruction *I) {
+  // If the memory can't be changed, then loads of the memory can't be
+  // clobbered.
+  //
+  // FIXME: We should handle invariant groups, as well. It's a bit harder,
+  // because we need to pay close attention to invariant group barriers.
+  return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
+                              AA.pointsToConstantMemory(I));
 }
 
 static bool instructionClobbersQuery(MemoryDef *MD,
@@ -234,6 +286,20 @@ static bool instructionClobbersQuery(MemoryDef *MD,
     ModRefInfo I = AA.getModRefInfo(DefInst, UseCS);
     return I != MRI_NoModRef;
   }
+
+  if (auto *DefLoad = dyn_cast<LoadInst>(DefInst)) {
+    if (auto *UseLoad = dyn_cast<LoadInst>(UseInst)) {
+      switch (getLoadReorderability(UseLoad, DefLoad)) {
+      case Reorderability::Always:
+        return false;
+      case Reorderability::Never:
+        return true;
+      case Reorderability::IfNoAlias:
+        return !AA.isNoAlias(UseLoc, MemoryLocation::get(DefLoad));
+      }
+    }
+  }
+
   return AA.getModRefInfo(DefInst, UseLoc) & MRI_Mod;
 }
 
@@ -1170,6 +1236,8 @@ MemorySSA::MemorySSA(MemorySSA &&MSSA)
       ValueToMemoryAccess(std::move(MSSA.ValueToMemoryAccess)),
       PerBlockAccesses(std::move(MSSA.PerBlockAccesses)),
       LiveOnEntryDef(std::move(MSSA.LiveOnEntryDef)),
+      BlockNumberingValid(std::move(MSSA.BlockNumberingValid)),
+      BlockNumbering(std::move(MSSA.BlockNumbering)),
       Walker(std::move(MSSA.Walker)), NextID(MSSA.NextID) {
   // Update the Walker MSSA pointer so it doesn't point to the moved-from MSSA
   // object any more.
@@ -1271,6 +1339,11 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     if (!MU) {
       VersionStack.push_back(&MA);
       ++StackEpoch;
+      continue;
+    }
+
+    if (isUseTriviallyOptimizableToLiveOnEntry(*AA, MU->getMemoryInst())) {
+      MU->setDefiningAccess(MSSA->getLiveOnEntryDef());
       continue;
     }
 
@@ -2187,6 +2260,12 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
 
   if (auto *CacheResult = Cache.lookup(StartingAccess, Q.StartingLoc, Q.IsCall))
     return CacheResult;
+
+  if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
+    MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
+    Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
+    return LiveOnEntry;
+  }
 
   // Start with the thing we already think clobbers this location
   MemoryAccess *DefiningAccess = StartingAccess->getDefiningAccess();

@@ -1,5 +1,5 @@
-; RUN: llc -O3 -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -O3 -mcpu=pwr8 -disable-ppc-vsx-swap-removal -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck -check-prefix=NOOPTSWAP %s
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -disable-ppc-vsx-swap-removal -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck -check-prefix=NOOPTSWAP %s
 
 ; This test was generated from the following source:
 ;

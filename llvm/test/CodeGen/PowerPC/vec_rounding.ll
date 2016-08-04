@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr6 -mattr=+altivec < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr6 -mattr=+altivec < %s | FileCheck %s
 
 ; Check vector round to single-precision toward -infinity (vrfim)
 ; instruction generation using Altivec.

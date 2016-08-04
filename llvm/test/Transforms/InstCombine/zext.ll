@@ -70,3 +70,72 @@ define <2 x i64> @fold_xor_zext_sandwich_vec(<2 x i1> %a) {
   ret <2 x i64> %zext2
 }
 
+; Assert that zexts in and(zext(icmp), zext(icmp)) can be folded.
+; CHECK-LABEL: @fold_and_zext_icmp(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i64 %a, %b
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp slt i64 %a, %c
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[AND]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
+define i8 @fold_and_zext_icmp(i64 %a, i64 %b, i64 %c) {
+  %1 = icmp sgt i64 %a, %b
+  %2 = zext i1 %1 to i8
+  %3 = icmp slt i64 %a, %c
+  %4 = zext i1 %3 to i8
+  %5 = and i8 %2, %4
+  ret i8 %5
+}
+
+; Assert that zexts in or(zext(icmp), zext(icmp)) can be folded.
+; CHECK-LABEL: @fold_or_zext_icmp(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i64 %a, %b
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp slt i64 %a, %c
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
+define i8 @fold_or_zext_icmp(i64 %a, i64 %b, i64 %c) {
+  %1 = icmp sgt i64 %a, %b
+  %2 = zext i1 %1 to i8
+  %3 = icmp slt i64 %a, %c
+  %4 = zext i1 %3 to i8
+  %5 = or i8 %2, %4
+  ret i8 %5
+}
+
+; Assert that zexts in xor(zext(icmp), zext(icmp)) can be folded.
+; CHECK-LABEL: @fold_xor_zext_icmp(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i64 %a, %b
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp slt i64 %a, %c
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[XOR]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
+define i8 @fold_xor_zext_icmp(i64 %a, i64 %b, i64 %c) {
+  %1 = icmp sgt i64 %a, %b
+  %2 = zext i1 %1 to i8
+  %3 = icmp slt i64 %a, %c
+  %4 = zext i1 %3 to i8
+  %5 = xor i8 %2, %4
+  ret i8 %5
+}
+
+; Assert that zexts in logic(zext(icmp), zext(icmp)) are also folded accross
+; nested logical operators.
+; CHECK-LABEL: @fold_nested_logic_zext_icmp(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i64 %a, %b
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp slt i64 %a, %c
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    [[ICMP3:%.*]] = icmp eq i64 %a, %d
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND]], [[ICMP3]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
+define i8 @fold_nested_logic_zext_icmp(i64 %a, i64 %b, i64 %c, i64 %d) {
+  %1 = icmp sgt i64 %a, %b
+  %2 = zext i1 %1 to i8
+  %3 = icmp slt i64 %a, %c
+  %4 = zext i1 %3 to i8
+  %5 = and i8 %2, %4
+  %6 = icmp eq i64 %a, %d
+  %7 = zext i1 %6 to i8
+  %8 = or i8 %5, %7
+  ret i8 %8
+}

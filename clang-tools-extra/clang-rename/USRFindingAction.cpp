@@ -33,7 +33,6 @@
 #include <set>
 #include <vector>
 
-
 using namespace llvm;
 
 namespace clang {
@@ -47,8 +46,8 @@ namespace {
 class AdditionalUSRFinder : public RecursiveASTVisitor<AdditionalUSRFinder> {
 public:
   explicit AdditionalUSRFinder(const Decl *FoundDecl, ASTContext &Context,
-                             std::vector<std::string> *USRs)
-    : FoundDecl(FoundDecl), Context(Context), USRs(USRs) {}
+                               std::vector<std::string> *USRs)
+      : FoundDecl(FoundDecl), Context(Context), USRs(USRs) {}
 
   void Find() {
     // Fill OverriddenMethods and PartialSpecs storages.
@@ -63,7 +62,7 @@ public:
     } else if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
       handleCXXRecordDecl(RecordDecl);
     } else if (const auto *TemplateDecl =
-               dyn_cast<ClassTemplateDecl>(FoundDecl)) {
+                   dyn_cast<ClassTemplateDecl>(FoundDecl)) {
       handleClassTemplateDecl(TemplateDecl);
     } else {
       USRSet.insert(getUSRForDecl(FoundDecl));
@@ -87,8 +86,8 @@ public:
 private:
   void handleCXXRecordDecl(const CXXRecordDecl *RecordDecl) {
     RecordDecl = RecordDecl->getDefinition();
-    if (const auto *ClassTemplateSpecDecl
-            = dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl)) {
+    if (const auto *ClassTemplateSpecDecl =
+            dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl)) {
       handleClassTemplateDecl(ClassTemplateSpecDecl->getSpecializedTemplate());
     }
     addUSRsOfCtorDtors(RecordDecl);
@@ -137,8 +136,8 @@ private:
   ASTContext &Context;
   std::vector<std::string> *USRs;
   std::set<std::string> USRSet;
-  std::vector<const CXXMethodDecl*> OverriddenMethods;
-  std::vector<const ClassTemplatePartialSpecializationDecl*> PartialSpecs;
+  std::vector<const CXXMethodDecl *> OverriddenMethods;
+  std::vector<const ClassTemplatePartialSpecializationDecl *> PartialSpecs;
 };
 } // namespace
 

@@ -10,16 +10,12 @@
 define <2 x i64> @_clearupper2xi64a(<2 x i64>) nounwind {
 ; SSE-LABEL: _clearupper2xi64a:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: _clearupper2xi64a:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x0 = extractelement <2 x i64> %0, i32 0
   %x1 = extractelement <2 x i64> %0, i32 1
@@ -35,13 +31,7 @@ define <2 x i64> @_clearupper2xi64a(<2 x i64>) nounwind {
 define <4 x i32> @_clearupper4xi32a(<4 x i32>) nounwind {
 ; SSE-LABEL: _clearupper4xi32a:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[3,1,2,3]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: _clearupper4xi32a:

@@ -221,12 +221,14 @@ private:
 
   /// Create kernel launch parameters.
   ///
-  /// @param Kernel The kernel to create parameters for.
-  /// @param F      The kernel function that has been created.
+  /// @param Kernel        The kernel to create parameters for.
+  /// @param F             The kernel function that has been created.
+  /// @param SubtreeValues The set of llvm::Values referenced by this kernel.
   ///
   /// @returns A stack allocated array with pointers to the parameter
   ///          values that are passed to the kernel.
-  Value *createLaunchParameters(ppcg_kernel *Kernel, Function *F);
+  Value *createLaunchParameters(ppcg_kernel *Kernel, Function *F,
+                                SetVector<Value *> SubtreeValues);
 
   /// Create GPU kernel.
   ///
@@ -239,6 +241,12 @@ private:
   ///
   /// @param Array The array for which to compute a size.
   Value *getArraySize(gpu_array_info *Array);
+
+  /// Prepare the kernel arguments for kernel code generation
+  ///
+  /// @param Kernel The kernel to generate code for.
+  /// @param FN     The function created for the kernel.
+  void prepareKernelArguments(ppcg_kernel *Kernel, Function *FN);
 
   /// Create kernel function.
   ///
@@ -773,7 +781,7 @@ isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
   auto Stmt = (ScopStmt *)KernelStmt->u.d.stmt->stmt;
   isl_id_free(Id);
 
-  addReferencesFromStmt(Stmt, User);
+  addReferencesFromStmt(Stmt, User, false /* CreateScalarRefs */);
 
   return isl_bool_true;
 }
@@ -879,8 +887,9 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
   return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
 }
 
-Value *GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel,
-                                              Function *F) {
+Value *
+GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
+                                       SetVector<Value *> SubtreeValues) {
   Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(),
                                  std::distance(F->arg_begin(), F->arg_end()));
 
@@ -948,6 +957,19 @@ Value *GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel,
     Index++;
   }
 
+  for (auto Val : SubtreeValues) {
+    Instruction *Param = new AllocaInst(
+        Val->getType(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
   auto Location = EntryBlock->getTerminator();
   return new BitCastInst(Parameters, Builder.getInt8PtrTy(),
                          Launch + "_params_i8ptr", Location);
@@ -1003,7 +1025,7 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
     S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
   LocalArrays.clear();
 
-  Value *Parameters = createLaunchParameters(Kernel, F);
+  Value *Parameters = createLaunchParameters(Kernel, F, SubtreeValues);
 
   std::string ASMString = finalizeKernelFunction();
   std::string Name = "kernel_" + std::to_string(Kernel->id);
@@ -1151,6 +1173,32 @@ void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
   }
 }
 
+void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
+  auto Arg = FN->arg_begin();
+  for (long i = 0; i < Kernel->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    isl_id_free(Id);
+
+    if (SAI->getNumberOfDimensions() > 0) {
+      Arg++;
+      continue;
+    }
+
+    Value *Alloca = BlockGen.getOrCreateScalarAlloca(SAI->getBasePtr());
+    Value *ArgPtr = &*Arg;
+    Type *TypePtr = SAI->getElementType()->getPointerTo();
+    Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
+    Value *Val = Builder.CreateLoad(TypedArgPtr);
+    Builder.CreateStore(Val, Alloca);
+
+    Arg++;
+  }
+}
+
 void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
                                           SetVector<Value *> &SubtreeValues) {
 
@@ -1173,6 +1221,7 @@ void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
 
   ScopDetection::markFunctionAsInvalid(FN);
 
+  prepareKernelArguments(Kernel, FN);
   insertKernelIntrinsics(Kernel);
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr8 -mattr=+vsx -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 define <2 x double> @test00(<2 x double>* %p1, <2 x double>* %p2) {
   %v1 = load <2 x double>, <2 x double>* %p1

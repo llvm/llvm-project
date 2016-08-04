@@ -1,9 +1,9 @@
-; RUN: llc < %s -relocation-model=static | FileCheck %s -check-prefix=STATIC
-; RUN: llc < %s -relocation-model=pic -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=PIC
-; RUN: llc < %s -relocation-model=pic -mtriple=powerpc-unknown-linux | FileCheck %s -check-prefix=PICELF
-; RUN: llc < %s -relocation-model=pic -mtriple=powerpc64-apple-darwin9 | FileCheck %s -check-prefix=PIC64
-; RUN: llc < %s -relocation-model=dynamic-no-pic -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=DYNAMIC
-; RUN: llc < %s -relocation-model=dynamic-no-pic -mtriple=powerpc64-apple-darwin9 | FileCheck %s -check-prefix=DYNAMIC64
+; RUN: llc -verify-machineinstrs < %s -relocation-model=static | FileCheck %s -check-prefix=STATIC
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=PIC
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc-unknown-linux | FileCheck %s -check-prefix=PICELF
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic -mtriple=powerpc64-apple-darwin9 | FileCheck %s -check-prefix=PIC64
+; RUN: llc -verify-machineinstrs < %s -relocation-model=dynamic-no-pic -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=DYNAMIC
+; RUN: llc -verify-machineinstrs < %s -relocation-model=dynamic-no-pic -mtriple=powerpc64-apple-darwin9 | FileCheck %s -check-prefix=DYNAMIC64
 ; PR4482
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "powerpc-apple-darwin9"

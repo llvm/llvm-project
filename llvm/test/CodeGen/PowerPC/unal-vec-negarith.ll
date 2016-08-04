@@ -1,4 +1,4 @@
-; RUN: llc -debug-only=isel <%s >%t 2>&1 && FileCheck <%t %s
+; RUN: llc -verify-machineinstrs -debug-only=isel <%s >%t 2>&1 && FileCheck <%t %s
 ; REQUIRES: asserts
 
 target datalayout = "E-m:e-i64:64-n32:64"
