@@ -232,7 +232,27 @@ libclang
 Static Analyzer
 ---------------
 
-...
+The scan-build and scan-build-py tools now include a 
+``--force-analyze-debug-code`` flag to force projects to build in debug mode.
+This can result in more precise analysis because it leaves in assertions.
+
+On Windows, checks for memory leaks, double frees, and use-after-free problems
+are now enabled by default.
+
+The analyzer now supports Objective-C class properties.
+
+Diagnostics for misuse of _Nonnull are greatly improved.
+
+Several new checkers were added:
+
+- The analyzer now checks for incorrect usage of MPI APIs in C and C++. This
+  check can be enabled by passing the following command to scan-build:
+  ``-enable-checker optin.mpi.MPI-Checker``.
+- The analyzer now checks for improper retains and releases of ivars synthesized
+  for properties in Objective-C ``-dealloc`` methods under manual
+  retain/release.
+- The analyzer now checks for missing and extra calls to ``[super dealloc]``
+  under manual retain/release.
 
 Core Analysis Improvements
 ==========================
