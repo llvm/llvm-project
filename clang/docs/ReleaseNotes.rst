@@ -95,6 +95,11 @@ TLS is enabled for Cygwin defaults to -femulated-tls.
 Proper support, including correct mangling and overloading, added for
 MS-specific "__unaligned" type qualifier.
 
+clang-cl now has limited support for the precompiled header flags /Yc, /Yu, and
+/Fp.  If the precompiled header is passed on the compile command with /FI, then
+the precompiled header flags are honored.  But if the precompiled header is
+included by an `#include <stdafx.h>` in each source file instead of by a
+`/FIstdafx.h` flag, these flag continue to be ignored.
 
 C Language Changes in Clang
 ---------------------------
