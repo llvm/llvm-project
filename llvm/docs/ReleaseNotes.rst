@@ -74,6 +74,11 @@ Non-comprehensive list of changes in this release
 
 * Raised the minimum required CMake version to 3.4.3.
 
+* Added the MemorySSA analysis, which hopes to replace MemoryDependenceAnalysis.
+  It should provide higher-quality results than MemDep, and be algorithmically
+  faster than MemDep. Currently, GVNHoist (which is off by default) makes use of
+  MemorySSA.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
