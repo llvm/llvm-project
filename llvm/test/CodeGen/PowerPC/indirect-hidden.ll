@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-apple-darwin < %s | FileCheck %s
 
 @a = external hidden global i32
 @b = external global i32

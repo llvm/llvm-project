@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 ; <rdar://problem/6020042>
 
 define i32 @bork() nounwind  {

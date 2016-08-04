@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -O3 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O3 < %s | FileCheck %s
 
 ; Test case derived from bug report 15031.  The code in the post-RA
 ; scheduler to break critical anti-dependencies was failing to check

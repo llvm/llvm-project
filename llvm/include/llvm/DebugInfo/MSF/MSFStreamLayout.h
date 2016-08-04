@@ -10,10 +10,10 @@
 #ifndef LLVM_DEBUGINFO_MSF_MSFSTREAMLAYOUT_H
 #define LLVM_DEBUGINFO_MSF_MSFSTREAMLAYOUT_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Endian.h"
 
 #include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace msf {
@@ -27,7 +27,7 @@ namespace msf {
 class MSFStreamLayout {
 public:
   uint32_t Length;
-  ArrayRef<support::ulittle32_t> Blocks;
+  std::vector<support::ulittle32_t> Blocks;
 };
 } // namespace msf
 } // namespace llvm

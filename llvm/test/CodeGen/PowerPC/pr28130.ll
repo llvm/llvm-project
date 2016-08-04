@@ -1,4 +1,4 @@
-; RUN: llc -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 < %s | FileCheck %s
 target triple = "powerpc64le-unknown-linux-gnu"
 
 %StructA = type { double, double, double, double, double, double, double, double }

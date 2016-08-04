@@ -1,5 +1,5 @@
-; RUN: llc -mtriple="powerpc-unknown-linux-gnu" < %s | FileCheck %s --check-prefix=PPC32
-; RUN: llc -mtriple="powerpc64-unknown-linux-gnu" < %s | FileCheck %s --check-prefix=PPC64
+; RUN: llc -verify-machineinstrs -mtriple="powerpc-unknown-linux-gnu" < %s | FileCheck %s --check-prefix=PPC32
+; RUN: llc -verify-machineinstrs -mtriple="powerpc64-unknown-linux-gnu" < %s | FileCheck %s --check-prefix=PPC64
 ; PR15332
 
 define i32 @regalloc() nounwind {

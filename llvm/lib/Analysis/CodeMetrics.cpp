@@ -104,7 +104,7 @@ void CodeMetrics::collectEphemeralValues(
 /// block.
 void CodeMetrics::analyzeBasicBlock(const BasicBlock *BB,
                                     const TargetTransformInfo &TTI,
-                                    SmallPtrSetImpl<const Value*> &EphValues) {
+                                    const SmallPtrSetImpl<const Value*> &EphValues) {
   ++NumBlocks;
   unsigned NumInstsBeforeThisBB = NumInsts;
   for (const Instruction &I : *BB) {

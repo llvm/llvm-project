@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-bgq-linux < %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-bgq-linux < %s
 
 ; Check that llc does not crash due to an illegal APInt operation
 

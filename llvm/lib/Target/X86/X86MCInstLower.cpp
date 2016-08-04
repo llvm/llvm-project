@@ -1038,8 +1038,8 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                                   X86MCInstLower &MCIL) {
   // We want to emit the following pattern:
   //
+  //   .p2align 1, ...
   // .Lxray_sled_N:
-  //   .palign 2, ...
   //   jmp .tmpN
   //   # 9 bytes worth of noops
   // .tmpN
@@ -1051,8 +1051,8 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   //   call <relative offset, 32-bits>   // 5 bytes
   //
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitCodeAlignment(2);
   OutStreamer->EmitLabel(CurSled);
-  OutStreamer->EmitCodeAlignment(4);
   auto Target = OutContext.createTempSymbol();
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1074,12 +1074,14 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   //
   // We should emit the RET followed by sleds.
   //
+  //   .p2align 1, ...
   // .Lxray_sled_N:
   //   ret  # or equivalent instruction
   //   # 10 bytes worth of noops
   //
   // This just makes sure that the alignment for the next instruction is 2.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitCodeAlignment(2);
   OutStreamer->EmitLabel(CurSled);
   unsigned OpCode = MI.getOperand(0).getImm();
   MCInst Ret;

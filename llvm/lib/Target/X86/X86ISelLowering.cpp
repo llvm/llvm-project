@@ -25289,7 +25289,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 ///    instructions, and replace them with the slightly more expensive SSSE3
 ///    PSHUFB instruction if available. We do this as the last combining step
 ///    to ensure we avoid using PSHUFB if we can implement the shuffle with
-///    a suitable short sequence of other instructions. The PHUFB will either
+///    a suitable short sequence of other instructions. The PSHUFB will either
 ///    use a register or have to read from memory and so is slightly (but only
 ///    slightly) more expensive than the other shuffle instructions.
 ///
@@ -25302,7 +25302,8 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 /// would simplify under the threshold for PSHUFB formation because of
 /// combine-ordering. To fix this, we should do the redundant instruction
 /// combining in this recursive walk.
-static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
+static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
+                                          int SrcOpIndex, SDValue Root,
                                           ArrayRef<int> RootMask,
                                           int Depth, bool HasVariableMask,
                                           SelectionDAG &DAG,
@@ -25314,6 +25315,7 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
     return false;
 
   // Directly rip through bitcasts to find the underlying operand.
+  SDValue Op = SrcOps[SrcOpIndex];
   Op = peekThroughOneUseBitcasts(Op);
 
   MVT VT = Op.getSimpleValueType();
@@ -25330,6 +25332,27 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
   SmallVector<int, 16> OpMask;
   if (!resolveTargetShuffleInputs(Op, Input0, Input1, OpMask))
     return false;
+
+  // Add the inputs to the Ops list, avoiding duplicates.
+  SmallVector<SDValue, 8> Ops(SrcOps.begin(), SrcOps.end());
+
+  int InputIdx0 = -1, InputIdx1 = -1;
+  for (int i = 0, e = Ops.size(); i < e; ++i) {
+    SDValue BC = peekThroughBitcasts(Ops[i]);
+    if (Input0 && BC == peekThroughBitcasts(Input0))
+      InputIdx0 = i;
+    if (Input1 && BC == peekThroughBitcasts(Input1))
+      InputIdx1 = i;
+  }
+
+  if (Input0 && InputIdx0 < 0) {
+    InputIdx0 = SrcOpIndex;
+    Ops[SrcOpIndex] = Input0;
+  }
+  if (Input1 && InputIdx1 < 0) {
+    InputIdx1 = Ops.size();
+    Ops.push_back(Input1);
+  }
 
   assert(VT.getVectorNumElements() == OpMask.size() &&
          "Different mask size from vector size!");
@@ -25362,6 +25385,17 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
     }
 
     int RootMaskedIdx = RootMask[RootIdx] * RootRatio + i % RootRatio;
+
+    // Just insert the scaled root mask value if it references an input other
+    // than the SrcOp we're currently inserting.
+    if ((RootMaskedIdx < (SrcOpIndex * MaskWidth)) ||
+        (((SrcOpIndex + 1) * MaskWidth) <= RootMaskedIdx)) {
+      Mask.push_back(RootMaskedIdx);
+      continue;
+    }
+
+    RootMaskedIdx %= MaskWidth;
+
     int OpIdx = RootMaskedIdx / OpRatio;
     if (OpMask[OpIdx] < 0) {
       // The incoming lanes are zero or undef, it doesn't matter which ones we
@@ -25370,9 +25404,19 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
       continue;
     }
 
-    // Ok, we have non-zero lanes, map them through.
-    Mask.push_back(OpMask[OpIdx] * OpRatio +
-                   RootMaskedIdx % OpRatio);
+    // Ok, we have non-zero lanes, map them through to one of the Op's inputs.
+    int OpMaskedIdx = OpMask[OpIdx] * OpRatio + RootMaskedIdx % OpRatio;
+    OpMaskedIdx %= MaskWidth;
+
+    if (OpMask[OpIdx] < (int)OpMask.size()) {
+      assert(0 <= InputIdx0 && "Unknown target shuffle input");
+      OpMaskedIdx += InputIdx0 * MaskWidth;
+    } else {
+      assert(0 <= InputIdx1 && "Unknown target shuffle input");
+      OpMaskedIdx += InputIdx1 * MaskWidth;
+    }
+
+    Mask.push_back(OpMaskedIdx);
   }
 
   // Handle the all undef/zero cases early.
@@ -25389,29 +25433,35 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
     return true;
   }
 
-  int MaskSize = Mask.size();
-  bool UseInput0 = std::any_of(Mask.begin(), Mask.end(),
-                  [MaskSize](int Idx) { return 0 <= Idx && Idx < MaskSize; });
-  bool UseInput1 = std::any_of(Mask.begin(), Mask.end(),
-                  [MaskSize](int Idx) { return MaskSize <= Idx; });
-
-  // At the moment we can only combine unary shuffle mask cases.
-  if (UseInput0 && UseInput1)
-    return false;
-  else if (UseInput1) {
-    std::swap(Input0, Input1);
-    ShuffleVectorSDNode::commuteMask(Mask);
+  // Remove unused shuffle source ops.
+  SmallVector<SDValue, 8> UsedOps;
+  for (int i = 0, e = Ops.size(); i < e; ++i) {
+    int lo = UsedOps.size() * MaskWidth;
+    int hi = lo + MaskWidth;
+    if (std::any_of(Mask.begin(), Mask.end(),
+                     [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
+      UsedOps.push_back(Ops[i]);
+      continue;
+    }
+    for (int &M : Mask)
+      if (lo <= M)
+        M -= MaskWidth;
   }
-
-  assert(Input0 && "Shuffle with no inputs detected");
+  assert(!UsedOps.empty() && "Shuffle with no inputs detected");
+  Ops = UsedOps;
 
   HasVariableMask |= isTargetShuffleVariableMask(Op.getOpcode());
 
-  // See if we can recurse into Input0 (if it's a target shuffle).
-  if (Op->isOnlyUserOf(Input0.getNode()) &&
-      combineX86ShufflesRecursively(Input0, Root, Mask, Depth + 1,
-                                    HasVariableMask, DAG, DCI, Subtarget))
-    return true;
+  // See if we can recurse into each shuffle source op (if it's a target shuffle).
+  for (int i = 0, e = Ops.size(); i < e; ++i)
+    if (Ops[i].getNode()->hasOneUse() || Op->isOnlyUserOf(Ops[i].getNode()))
+      if (combineX86ShufflesRecursively(Ops, i, Root, Mask, Depth + 1,
+                                        HasVariableMask, DAG, DCI, Subtarget))
+        return true;
+
+  // At the moment we can only combine unary shuffle mask cases.
+  if (Ops.size() != 1)
+    return false;
 
   // Minor canonicalization of the accumulated shuffle mask to make it easier
   // to match below. All this does is detect masks with sequential pairs of
@@ -25423,7 +25473,7 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
     Mask = std::move(WidenedMask);
   }
 
-  return combineX86ShuffleChain(Input0, Root, Mask, Depth, HasVariableMask, DAG,
+  return combineX86ShuffleChain(Ops[0], Root, Mask, Depth, HasVariableMask, DAG,
                                 DCI, Subtarget);
 }
 
@@ -26099,8 +26149,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     return LD;
 
   if (isTargetShuffle(N->getOpcode())) {
-    if (SDValue Shuffle =
-            combineTargetShuffle(SDValue(N, 0), DAG, DCI, Subtarget))
+    SDValue Op(N, 0);
+    if (SDValue Shuffle = combineTargetShuffle(Op, DAG, DCI, Subtarget))
       return Shuffle;
 
     // Try recursively combining arbitrary sequences of x86 shuffle
@@ -26110,7 +26160,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // a particular chain.
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively(SDValue(N, 0), SDValue(N, 0), NonceMask,
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
                                       /*Depth*/ 1, /*HasPSHUFB*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.

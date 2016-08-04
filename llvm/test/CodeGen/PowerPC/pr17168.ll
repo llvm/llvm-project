@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -O0 < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 < %s
 
 ; This test formerly failed due to a DBG_VALUE being placed prior to a PHI
 ; when fast-isel is partially successful before punting to DAG-isel.

@@ -372,7 +372,7 @@
 ; RUN:     -passes='repeat<3>(no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-MODULE-PASS
 ; CHECK-REPEAT-MODULE-PASS: Starting llvm::Module pass manager run
-; CHECK-REPEAT-MODULE-PASS-NEXT: Running pass: RepeatingPassWrapper
+; CHECK-REPEAT-MODULE-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-MODULE-PASS-NEXT: Starting llvm::Module pass manager run
 ; CHECK-REPEAT-MODULE-PASS-NEXT: Running pass: NoOpModulePass
 ; CHECK-REPEAT-MODULE-PASS-NEXT: Finished llvm::Module pass manager run
@@ -393,7 +393,7 @@
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Starting llvm::LazyCallGraph::SCC pass manager run
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: RepeatingPassWrapper
+; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Starting llvm::LazyCallGraph::SCC pass manager run
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Finished llvm::LazyCallGraph::SCC pass manager run
@@ -413,7 +413,7 @@
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Starting llvm::Function pass manager run
-; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: RepeatingPassWrapper
+; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Finished llvm::Function pass manager run
@@ -438,7 +438,7 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: RepeatingPassWrapper
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Loop pass manager run

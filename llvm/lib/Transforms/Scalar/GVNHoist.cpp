@@ -53,6 +53,11 @@ static cl::opt<int> MaxDepthInBB(
     cl::desc("Hoist instructions from the beginning of the BB up to the "
              "maximum specified depth (default = 100, unlimited = -1)"));
 
+static cl::opt<int> MaxChainLength(
+    "gvn-hoist-max-chain-length", cl::Hidden, cl::init(10),
+    cl::desc("Maximum length of dependent chains to hoist "
+             "(default = 10, unlimited = -1)"));
+
 namespace {
 
 // Provides a sorting function based on the execution order of two instructions.
@@ -72,8 +77,16 @@ public:
     //
     // assert(A != B);
 
-    unsigned ADFS = DFSNumber.lookup(A);
-    unsigned BDFS = DFSNumber.lookup(B);
+    const BasicBlock *BA = A->getParent();
+    const BasicBlock *BB = B->getParent();
+    unsigned ADFS, BDFS;
+    if (BA == BB) {
+      ADFS = DFSNumber.lookup(A);
+      BDFS = DFSNumber.lookup(B);
+    } else {
+      ADFS = DFSNumber.lookup(BA);
+      BDFS = DFSNumber.lookup(BB);
+    }
     assert (ADFS && BDFS);
     return ADFS < BDFS;
   }
@@ -193,34 +206,35 @@ public:
     VN.setAliasAnalysis(AA);
     VN.setMemDep(MD);
     bool Res = false;
+    MemorySSA M(F, AA, DT);
+    MSSA = &M;
+    // Perform DFS Numbering of instructions.
+    unsigned BBI = 0;
+    for (const BasicBlock *BB : depth_first(&F.getEntryBlock())) {
+      DFSNumber[BB] = ++BBI;
+      unsigned I = 0;
+      for (auto &Inst: *BB)
+        DFSNumber[&Inst] = ++I;
+    }
+
+    int ChainLength = 0;
 
     // FIXME: use lazy evaluation of VN to avoid the fix-point computation.
     while (1) {
-      // FIXME: only compute MemorySSA once. We need to update the analysis in
-      // the same time as transforming the code.
-      MemorySSA M(F, AA, DT);
-      MSSA = &M;
-
-      // Perform DFS Numbering of instructions.
-      unsigned I = 0;
-      for (const BasicBlock *BB : depth_first(&F.getEntryBlock()))
-        for (auto &Inst: *BB)
-          DFSNumber.insert({&Inst, ++I});
+      if (MaxChainLength != -1 && ++ChainLength >= MaxChainLength)
+        return Res;
 
       auto HoistStat = hoistExpressions(F);
-      if (HoistStat.first + HoistStat.second == 0) {
+      if (HoistStat.first + HoistStat.second == 0)
         return Res;
-      }
-      if (HoistStat.second > 0) {
-        // To address a limitation of the current GVN, we need to rerun the
-        // hoisting after we hoisted loads in order to be able to hoist all
-        // scalars dependent on the hoisted loads. Same for stores.
-        VN.clear();
-      }
-      Res = true;
 
-      // DFS numbers change when instructions are hoisted: clear and recompute.
-      DFSNumber.clear();
+      if (HoistStat.second > 0)
+        // To address a limitation of the current GVN, we need to rerun the
+        // hoisting after we hoisted loads or stores in order to be able to
+        // hoist all scalars dependent on the hoisted ld/st.
+        VN.clear();
+
+      Res = true;
     }
 
     return Res;
@@ -310,7 +324,8 @@ private:
 
     for (User *U : Def->users())
       if (auto *MU = dyn_cast<MemoryUse>(U)) {
-        BasicBlock *UBB = MU->getBlock();
+        // FIXME: MU->getBlock() does not get updated when we move the instruction.
+        BasicBlock *UBB = MU->getMemoryInst()->getParent();
         // Only analyze uses in BB.
         if (BB != UBB)
           continue;
@@ -742,7 +757,24 @@ private:
             !makeGepOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
           continue;
 
-        Repl->moveBefore(HoistPt->getTerminator());
+        // Move the instruction at the end of HoistPt.
+        Instruction *Last = HoistPt->getTerminator();
+        Repl->moveBefore(Last);
+
+        DFSNumber[Repl] = DFSNumber[Last]++;
+      }
+
+      MemoryAccess *NewMemAcc = nullptr;
+      if (MemoryAccess *MA = MSSA->getMemoryAccess(Repl)) {
+        if (MemoryUseOrDef *OldMemAcc = dyn_cast<MemoryUseOrDef>(MA)) {
+          // The definition of this ld/st will not change: ld/st hoisting is
+          // legal when the ld/st is not moved past its current definition.
+          MemoryAccess *Def = OldMemAcc->getDefiningAccess();
+          NewMemAcc = MSSA->createMemoryAccessInBB(Repl, Def, HoistPt,
+                                                   MemorySSA::End);
+          OldMemAcc->replaceAllUsesWith(NewMemAcc);
+          MSSA->removeMemoryAccess(OldMemAcc);
+        }
       }
 
       if (isa<LoadInst>(Repl))
@@ -775,11 +807,36 @@ private:
           } else if (isa<CallInst>(Repl)) {
             ++NumCallsRemoved;
           }
+
+          if (NewMemAcc) {
+            // Update the uses of the old MSSA access with NewMemAcc.
+            MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
+            OldMA->replaceAllUsesWith(NewMemAcc);
+            MSSA->removeMemoryAccess(OldMA);
+          }
+
           Repl->intersectOptionalDataWith(I);
           combineKnownMetadata(Repl, I);
           I->replaceAllUsesWith(Repl);
           I->eraseFromParent();
         }
+
+      // Remove MemorySSA phi nodes with the same arguments.
+      if (NewMemAcc) {
+        SmallPtrSet<MemoryPhi *, 4> UsePhis;
+        for (User *U : NewMemAcc->users())
+          if (MemoryPhi *Phi = dyn_cast<MemoryPhi>(U))
+            UsePhis.insert(Phi);
+
+        for (auto *Phi : UsePhis) {
+          auto In = Phi->incoming_values();
+          if (std::all_of(In.begin(), In.end(),
+                          [&](Use &U){return U == NewMemAcc;})) {
+            Phi->replaceAllUsesWith(NewMemAcc);
+            MSSA->removeMemoryAccess(Phi);
+          }
+        }
+      }
     }
 
     NumHoisted += NL + NS + NC + NI;

@@ -37,7 +37,20 @@ struct SubtreeReferences {
   BlockGenerator &BlockGen;
 };
 
-isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr);
+/// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
+///
+/// This includes the SCEVUnknowns referenced by the SCEVs used in the
+/// statement and the base pointers of the memory accesses. For scalar
+/// statements we force the generation of alloca memory locations and list
+/// these locations in the set of out-of-scop values as well.
+///
+/// @param Stmt             The statement for which to extract the information.
+/// @param UserPtr          A void pointer that can be casted to a
+///                         SubtreeReferences structure.
+/// @param CreateScalarRefs Should the result include allocas of scalar
+///                         references?
+isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                               bool CreateScalarRefs = true);
 
 class IslNodeBuilder {
 public:

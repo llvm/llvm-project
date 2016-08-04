@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mcpu=g5
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5
 
 define <4 x i32> @test_arg(<4 x i32> %A, <4 x i32> %B) {
 	%C = add <4 x i32> %A, %B		; <<4 x i32>> [#uses=1]

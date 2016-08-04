@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=medium| FileCheck --check-prefix=CHECK --check-prefix=MEDIUM %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=large | FileCheck --check-prefix=CHECK --check-prefix=LARGE %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=medium| FileCheck --check-prefix=CHECK --check-prefix=MEDIUM %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=large | FileCheck --check-prefix=CHECK --check-prefix=LARGE %s
 
 @foo = global i32 42
 @fooa = alias i32, i32* @foo

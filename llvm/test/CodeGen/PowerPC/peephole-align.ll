@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck -check-prefix=POWER7 -check-prefix=CHECK %s
-; RUN: llc -mcpu=pwr8 -O1 -code-model=medium <%s | FileCheck -check-prefix=POWER8 -check-prefix=CHECK %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck -check-prefix=POWER7 -check-prefix=CHECK %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -O1 -code-model=medium <%s | FileCheck -check-prefix=POWER8 -check-prefix=CHECK %s
 
 ; Test peephole optimization for medium code model (32-bit TOC offsets)
 ; for loading and storing small offsets within aligned values.

@@ -992,21 +992,19 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
 /// This can be useful when debugging or testing passes. It also serves as an
 /// example of how to extend the pass manager in ways beyond composition.
 template <typename PassT>
-class RepeatingPassWrapper : public PassInfoMixin<RepeatingPassWrapper<PassT>> {
+class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
 public:
-  RepeatingPassWrapper(int Count, PassT P) : Count(Count), P(std::move(P)) {}
+  RepeatedPass(int Count, PassT P) : Count(Count), P(std::move(P)) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
-  RepeatingPassWrapper(const RepeatingPassWrapper &Arg)
-      : Count(Arg.Count), P(Arg.P) {}
-  RepeatingPassWrapper(RepeatingPassWrapper &&Arg)
-      : Count(Arg.Count), P(std::move(Arg.P)) {}
-  friend void swap(RepeatingPassWrapper &LHS, RepeatingPassWrapper &RHS) {
+  RepeatedPass(const RepeatedPass &Arg) : Count(Arg.Count), P(Arg.P) {}
+  RepeatedPass(RepeatedPass &&Arg) : Count(Arg.Count), P(std::move(Arg.P)) {}
+  friend void swap(RepeatedPass &LHS, RepeatedPass &RHS) {
     using std::swap;
     swap(LHS.Count, RHS.Count);
     swap(LHS.P, RHS.P);
   }
-  RepeatingPassWrapper &operator=(RepeatingPassWrapper RHS) {
+  RepeatedPass &operator=(RepeatedPass RHS) {
     swap(*this, RHS);
     return *this;
   }
@@ -1026,8 +1024,8 @@ private:
 };
 
 template <typename PassT>
-RepeatingPassWrapper<PassT> createRepeatingPassWrapper(int Count, PassT P) {
-  return RepeatingPassWrapper<PassT>(Count, std::move(P));
+RepeatedPass<PassT> createRepeatedPass(int Count, PassT P) {
+  return RepeatedPass<PassT>(Count, std::move(P));
 }
 
 }

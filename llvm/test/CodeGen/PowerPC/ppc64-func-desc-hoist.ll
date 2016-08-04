@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=a2 < %s | FileCheck %s -check-prefix=INVFUNCDESC
-; RUN: llc -mcpu=a2 -mattr=-invariant-function-descriptors < %s | FileCheck %s -check-prefix=NONINVFUNCDESC
+; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s -check-prefix=INVFUNCDESC
+; RUN: llc -verify-machineinstrs -mcpu=a2 -mattr=-invariant-function-descriptors < %s | FileCheck %s -check-prefix=NONINVFUNCDESC
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

@@ -470,7 +470,7 @@ bool PassBuilder::parseModulePass(ModulePassManager &MPM,
       if (!parseModulePassPipeline(NestedMPM, InnerPipeline, VerifyEachPass,
                                    DebugLogging))
         return false;
-      MPM.addPass(createRepeatingPassWrapper(*Count, std::move(NestedMPM)));
+      MPM.addPass(createRepeatedPass(*Count, std::move(NestedMPM)));
       return true;
     }
     // Normal passes can't have pipelines.
@@ -557,7 +557,7 @@ bool PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
       if (!parseCGSCCPassPipeline(NestedCGPM, InnerPipeline, VerifyEachPass,
                                   DebugLogging))
         return false;
-      CGPM.addPass(createRepeatingPassWrapper(*Count, std::move(NestedCGPM)));
+      CGPM.addPass(createRepeatedPass(*Count, std::move(NestedCGPM)));
       return true;
     }
     // Normal passes can't have pipelines.
@@ -617,7 +617,7 @@ bool PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       if (!parseFunctionPassPipeline(NestedFPM, InnerPipeline, VerifyEachPass,
                                      DebugLogging))
         return false;
-      FPM.addPass(createRepeatingPassWrapper(*Count, std::move(NestedFPM)));
+      FPM.addPass(createRepeatedPass(*Count, std::move(NestedFPM)));
       return true;
     }
     // Normal passes can't have pipelines.
@@ -667,7 +667,7 @@ bool PassBuilder::parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
       if (!parseLoopPassPipeline(NestedLPM, InnerPipeline, VerifyEachPass,
                                  DebugLogging))
         return false;
-      LPM.addPass(createRepeatingPassWrapper(*Count, std::move(NestedLPM)));
+      LPM.addPass(createRepeatedPass(*Count, std::move(NestedLPM)));
       return true;
     }
     // Normal passes can't have pipelines.

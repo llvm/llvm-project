@@ -471,6 +471,18 @@ class JumpRegCMM16<string opstr, RegisterOperand RO> :
   let isIndirectBranch = 1;
 }
 
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
+    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT] in {
+  class TailCall_MM<Instruction JumpInst> :
+    PseudoSE<(outs), (ins calltarget:$target), [], II_J>,
+    PseudoInstExpansion<(JumpInst jmptarget_mm:$target)>;
+
+  class TailCallReg_MM<RegisterOperand RO, Instruction JRInst,
+                       RegisterOperand ResRO = RO> :
+    PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>,
+    PseudoInstExpansion<(JRInst ResRO:$rs)>;
+}
+
 // Break16 and Sdbbp16
 class BrkSdbbp16MM<string opstr> :
   MicroMipsInst16<(outs), (ins uimm4:$code_),
@@ -967,6 +979,12 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   def SDBBP_MM : MMRel, SYS_FT<"sdbbp", uimm10>, SDBBP_FM_MM;
 
   def PREFX_MM : PrefetchIndexed<"prefx">, POOL32F_PREFX_FM_MM<0x15, 0x1A0>;
+}
+
+let AdditionalPredicates = [InMicroMips] in {
+  def TAILCALL_MM : TailCall_MM<J_MM>, ISA_MIPS1_NOT_32R6_64R6;
+  def TAILCALLREG_MM : TailCallReg_MM<GPR32Opnd, JR_MM>,
+                       ISA_MIPS1_NOT_32R6_64R6;
 }
 
 let DecoderNamespace = "MicroMips" in {

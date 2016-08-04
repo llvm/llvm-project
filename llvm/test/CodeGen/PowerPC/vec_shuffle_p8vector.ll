@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -mattr=+power8-vector < %s | FileCheck %s
-; RUN: llc -mcpu=pwr7 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck -check-prefix=CHECK-PWR7 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -mattr=+power8-vector < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck -check-prefix=CHECK-PWR7 %s
 
 define void @VPKUDUM_unary(<2 x i64>* %A) {
 entry:

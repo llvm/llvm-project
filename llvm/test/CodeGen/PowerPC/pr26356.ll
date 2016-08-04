@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mcpu=pwr7 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
 
 define zeroext i32 @f1() {
 entry:

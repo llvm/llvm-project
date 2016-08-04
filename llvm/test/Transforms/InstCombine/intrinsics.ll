@@ -302,9 +302,12 @@ entry:
   %tz = tail call i32 @llvm.cttz.i32(i32 %a, i1 false) nounwind readnone
   %tz.cmp = icmp ne i32 %tz, 32
   store volatile i1 %tz.cmp, i1* %c
-  %pop = tail call i32 @llvm.ctpop.i32(i32 %b) nounwind readnone
-  %pop.cmp = icmp eq i32 %pop, 0
-  store volatile i1 %pop.cmp, i1* %c
+  %pop0 = tail call i32 @llvm.ctpop.i32(i32 %b) nounwind readnone
+  %pop0.cmp = icmp eq i32 %pop0, 0
+  store volatile i1 %pop0.cmp, i1* %c
+  %pop1 = tail call i32 @llvm.ctpop.i32(i32 %b) nounwind readnone
+  %pop1.cmp = icmp eq i32 %pop1, 32
+  store volatile i1 %pop1.cmp, i1* %c
   ret void
 ; CHECK: @cmp.simplify
 ; CHECK-NEXT: entry:
@@ -312,8 +315,10 @@ entry:
 ; CHECK-NEXT: store volatile i1 %lz.cmp, i1* %c
 ; CHECK-NEXT: %tz.cmp = icmp ne i32 %a, 0
 ; CHECK-NEXT: store volatile i1 %tz.cmp, i1* %c
-; CHECK-NEXT: %pop.cmp = icmp eq i32 %b, 0
-; CHECK-NEXT: store volatile i1 %pop.cmp, i1* %c
+; CHECK-NEXT: %pop0.cmp = icmp eq i32 %b, 0
+; CHECK-NEXT: store volatile i1 %pop0.cmp, i1* %c
+; CHECK-NEXT: %pop1.cmp = icmp eq i32 %b, -1
+; CHECK-NEXT: store volatile i1 %pop1.cmp, i1* %c
 }
 
 define <2 x i1> @ctlz_cmp_vec(<2 x i32> %a) {
@@ -336,14 +341,19 @@ define <2 x i1> @cttz_cmp_vec(<2 x i32> %a) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @ctpop_cmp_vec(<2 x i32> %a) {
+define void @ctpop_cmp_vec(<2 x i32> %a, <2 x i1>* %b) {
+  %pop0 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone
+  %pop0.cmp = icmp eq <2 x i32> %pop0, zeroinitializer
+  store volatile <2 x i1> %pop0.cmp, <2 x i1>* %b
+  %pop1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone
+  %pop1.cmp = icmp eq <2 x i32> %pop1, < i32 32, i32 32 >
+  store volatile <2 x i1> %pop1.cmp, <2 x i1>* %b
+  ret void
 ; CHECK-LABEL: @ctpop_cmp_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %a, zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
-;
-  %x = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone
-  %cmp = icmp eq <2 x i32> %x, zeroinitializer
-  ret <2 x i1> %cmp
+; CHECK-NEXT: %pop0.cmp = icmp eq <2 x i32> %a, zeroinitializer
+; CHECK-NEXT: store volatile <2 x i1> %pop0.cmp, <2 x i1>* %b
+; CHECK-NEXT: %pop1.cmp = icmp eq <2 x i32> %a, <i32 -1, i32 -1>
+; CHECK-NEXT: store volatile <2 x i1> %pop1.cmp, <2 x i1>* %b
 }
 
 define i32 @cttz_simplify1a(i32 %x) nounwind readnone ssp {

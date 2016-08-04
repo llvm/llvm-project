@@ -1,6 +1,6 @@
 ; This should fold the "vcmpbfp." and "vcmpbfp" instructions into a single
 ; "vcmpbfp.".
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | grep vcmpbfp | count 1
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | grep vcmpbfp | count 1
 
 
 define void @test(<4 x float>* %x, <4 x float>* %y, i32* %P) {

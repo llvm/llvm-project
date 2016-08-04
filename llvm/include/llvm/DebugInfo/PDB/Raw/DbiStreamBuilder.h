@@ -49,7 +49,7 @@ public:
   Expected<std::unique_ptr<DbiStream>> build(PDBFile &File,
                                              const msf::WritableStream &Buffer);
   Error commit(const msf::MSFLayout &Layout,
-               const msf::WritableStream &Buffer) const;
+               const msf::WritableStream &Buffer);
 
 private:
   Error finalize();

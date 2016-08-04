@@ -20,6 +20,7 @@
 #include <string.h>
 
 static int DebugMode;
+static int CacheMode;
 
 static void debug_print(const char *format, ...) {
   if (!DebugMode)
@@ -40,6 +41,7 @@ struct PollyGPUContextT {
 struct PollyGPUFunctionT {
   CUfunction Cuda;
   CUmodule CudaModule;
+  const char *PTXString;
 };
 
 struct PollyGPUDevicePtrT {
@@ -249,6 +251,11 @@ PollyGPUContext *polly_initContext() {
   char DeviceName[256];
   int DeviceCount = 0;
 
+  static __thread PollyGPUContext *CurrentContext = NULL;
+
+  if (CurrentContext)
+    return CurrentContext;
+
   /* Get API handles. */
   if (initialDeviceAPIs() == 0) {
     fprintf(stdout, "Getting the \"handle\" for the CUDA driver API failed.\n");
@@ -282,12 +289,40 @@ PollyGPUContext *polly_initContext() {
   }
   CuCtxCreateFcnPtr(&(Context->Cuda), 0, Device);
 
+  CacheMode = getenv("POLLY_NOCACHE") == 0;
+
+  if (CacheMode)
+    CurrentContext = Context;
+
   return Context;
 }
+
+static void freeKernel(PollyGPUFunction *Kernel) {
+  if (Kernel->CudaModule)
+    CuModuleUnloadFcnPtr(Kernel->CudaModule);
+
+  if (Kernel)
+    free(Kernel);
+}
+
+#define KERNEL_CACHE_SIZE 10
 
 PollyGPUFunction *polly_getKernel(const char *PTXBuffer,
                                   const char *KernelName) {
   dump_function();
+
+  static __thread PollyGPUFunction *KernelCache[KERNEL_CACHE_SIZE];
+  static __thread int NextCacheItem = 0;
+
+  for (long i = 0; i < KERNEL_CACHE_SIZE; i++) {
+    // We exploit here the property that all Polly-ACC kernels are allocated
+    // as global constants, hence a pointer comparision is sufficient to
+    // determin equality.
+    if (KernelCache[i] && KernelCache[i]->PTXString == PTXBuffer) {
+      debug_print("  -> using cached kernel\n");
+      return KernelCache[i];
+    }
+  }
 
   PollyGPUFunction *Function = malloc(sizeof(PollyGPUFunction));
 
@@ -361,17 +396,27 @@ PollyGPUFunction *polly_getKernel(const char *PTXBuffer,
 
   CuLinkDestroyFcnPtr(LState);
 
+  Function->PTXString = PTXBuffer;
+
+  if (CacheMode) {
+    if (KernelCache[NextCacheItem])
+      freeKernel(KernelCache[NextCacheItem]);
+
+    KernelCache[NextCacheItem] = Function;
+
+    NextCacheItem = (NextCacheItem + 1) % KERNEL_CACHE_SIZE;
+  }
+
   return Function;
 }
 
 void polly_freeKernel(PollyGPUFunction *Kernel) {
   dump_function();
 
-  if (Kernel->CudaModule)
-    CuModuleUnloadFcnPtr(Kernel->CudaModule);
+  if (CacheMode)
+    return;
 
-  if (Kernel)
-    free(Kernel);
+  freeKernel(Kernel);
 }
 
 void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
@@ -447,6 +492,9 @@ void *polly_getDevicePtr(PollyGPUDevicePtr *Allocation) {
 
 void polly_freeContext(PollyGPUContext *Context) {
   dump_function();
+
+  if (CacheMode)
+    return;
 
   if (Context->Cuda) {
     CuCtxDestroyFcnPtr(Context->Cuda);

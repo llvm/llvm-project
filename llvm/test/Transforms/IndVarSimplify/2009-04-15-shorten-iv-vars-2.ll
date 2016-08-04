@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -instcombine -S | not grep "[sz]ext"
+; RUN: opt < %s -indvars -instcombine -S | FileCheck %s
 ; ModuleID = '<stdin>'
 ;extern int *a, *b, *c, *d, *e, *f;  /* 64 bit */
 ;extern int K[256];
@@ -24,6 +24,9 @@ target triple = "x86_64-apple-darwin9.6"
 @K = external global [256 x i32]		; <[256 x i32]*> [#uses=3]
 
 define void @foo() nounwind {
+; CHECK-LABEL: @foo(
+; CHECK-NOT: sext
+; CHECK-NOT: zext
 bb1.thread:
 	br label %bb1
 

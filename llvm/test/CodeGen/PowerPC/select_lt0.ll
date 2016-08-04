@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 | not grep cmp
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep cmp
 
 define i32 @seli32_1(i32 %a) {
 entry:

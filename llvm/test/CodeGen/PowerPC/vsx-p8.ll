@@ -1,7 +1,7 @@
-; RUN: llc -mcpu=pwr8 -mattr=+power8-vector < %s | FileCheck %s
-; RUN: llc -mcpu=pwr8 -mattr=+power8-vector < %s | FileCheck -check-prefix=CHECK-REG %s
-; RUN: llc -mcpu=pwr8 -mattr=+power8-vector -fast-isel -O0 < %s | FileCheck %s
-; RUN: llc -mcpu=pwr8 -mattr=+power8-vector -fast-isel -O0 < %s | FileCheck -check-prefix=CHECK-FISL %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+power8-vector < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+power8-vector < %s | FileCheck -check-prefix=CHECK-REG %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+power8-vector -fast-isel -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+power8-vector -fast-isel -O0 < %s | FileCheck -check-prefix=CHECK-FISL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

@@ -11546,7 +11546,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
   if (StoreNodes.size() < 2)
     return false;
 
-  // only do dep endence check in AA case
+  // only do dependence check in AA case
   bool UseAA = CombinerAA.getNumOccurrences() > 0 ? CombinerAA
                                                   : DAG.getSubtarget().useAA();
   if (UseAA && !checkMergeStoreCandidatesForDependencies(StoreNodes))

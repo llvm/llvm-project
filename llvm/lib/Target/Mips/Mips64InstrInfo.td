@@ -228,21 +228,23 @@ def LL64 : LLBase<"ll", GPR32Opnd>, LW_FM<0x30>, PTR_64,
            ISA_MIPS2_NOT_32R6_64R6;
 def SC64 : SCBase<"sc", GPR32Opnd>, LW_FM<0x38>, PTR_64,
            ISA_MIPS2_NOT_32R6_64R6;
+def JR64   : IndirectBranch<"jr", GPR64Opnd>, MTLO_FM<8>, PTR_64;
 }
+
+def JALR64 : JumpLinkReg<"jalr", GPR64Opnd>, JALR_FM;
 
 /// Jump and Branch Instructions
 let isCodeGenOnly = 1 in {
-  def JR64   : IndirectBranch<"jr", GPR64Opnd>, MTLO_FM<8>;
   def BEQ64  : CBranch<"beq", brtarget, seteq, GPR64Opnd>, BEQ_FM<4>;
   def BNE64  : CBranch<"bne", brtarget, setne, GPR64Opnd>, BEQ_FM<5>;
   def BGEZ64 : CBranchZero<"bgez", brtarget, setge, GPR64Opnd>, BGEZ_FM<1, 1>;
   def BGTZ64 : CBranchZero<"bgtz", brtarget, setgt, GPR64Opnd>, BGEZ_FM<7, 0>;
   def BLEZ64 : CBranchZero<"blez", brtarget, setle, GPR64Opnd>, BGEZ_FM<6, 0>;
   def BLTZ64 : CBranchZero<"bltz", brtarget, setlt, GPR64Opnd>, BGEZ_FM<1, 0>;
-  def JALR64 : JumpLinkReg<"jalr", GPR64Opnd>, JALR_FM;
   def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
-  def TAILCALL64_R : TailCallReg<GPR64Opnd, JR, GPR32Opnd>;
+  def TAILCALLREG64 : TailCallReg<GPR64Opnd, JR64>, GPR_64, ISA_MIPS1_NOT_32R6_64R6;
 }
+
 
 def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
 def PseudoIndirectBranch64 : PseudoIndirectBranchBase<GPR64Opnd>;

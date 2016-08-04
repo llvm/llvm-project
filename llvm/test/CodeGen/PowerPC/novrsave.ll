@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=powerpc-unknown-linux-gnu   < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=powerpc-unknown-linux-gnu   < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 
 ; This verifies that the code to update VRSAVE has been removed for SVR4.
 

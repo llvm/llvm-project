@@ -39,7 +39,6 @@ struct MSFLayout;
 /// of bytes.
 class MappedBlockStream : public ReadableStream {
   friend class WritableMappedBlockStream;
-
 public:
   static std::unique_ptr<MappedBlockStream>
   createStream(uint32_t BlockSize, uint32_t NumBlocks,
@@ -48,6 +47,9 @@ public:
   static std::unique_ptr<MappedBlockStream>
   createIndexedStream(const MSFLayout &Layout, const ReadableStream &MsfData,
                       uint32_t StreamIndex);
+
+  static std::unique_ptr<MappedBlockStream>
+  createFpmStream(const MSFLayout &Layout, const ReadableStream &MsfData);
 
   static std::unique_ptr<MappedBlockStream>
   createDirectoryStream(const MSFLayout &Layout, const ReadableStream &MsfData);
@@ -104,6 +106,9 @@ public:
 
   static std::unique_ptr<WritableMappedBlockStream>
   createDirectoryStream(const MSFLayout &Layout, const WritableStream &MsfData);
+
+  static std::unique_ptr<WritableMappedBlockStream>
+  createFpmStream(const MSFLayout &Layout, const WritableStream &MsfData);
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;

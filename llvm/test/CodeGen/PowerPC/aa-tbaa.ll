@@ -1,4 +1,4 @@
-; RUN: llc -enable-misched -misched=shuffle -enable-aa-sched-mi -use-tbaa-in-sched-mi=0 -post-RA-scheduler=0 -mcpu=ppc64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-misched -misched=shuffle -enable-aa-sched-mi -use-tbaa-in-sched-mi=0 -post-RA-scheduler=0 -mcpu=ppc64 < %s | FileCheck %s
 
 ; REQUIRES: asserts
 ; -misched=shuffle is NDEBUG only!

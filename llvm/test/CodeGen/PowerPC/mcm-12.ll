@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr7 -O1 -code-model=medium -mattr=-vsx < %s | FileCheck %s
-; RUN: llc -mcpu=pwr7 -O1 -code-model=medium -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-VSX %s
 
 ; Test peephole optimization for medium code model (32-bit TOC offsets)
 ; for loading a value from the constant pool (TOC-relative).

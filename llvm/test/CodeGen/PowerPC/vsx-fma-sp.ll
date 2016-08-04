@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=+vsx | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=+vsx -fast-isel -O0 | FileCheck -check-prefix=CHECK-FISL %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=+vsx | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=+vsx -fast-isel -O0 | FileCheck -check-prefix=CHECK-FISL %s
 ; XFAIL: *
 
 define void @test1sp(float %a, float %b, float %c, float %e, float* nocapture %d) #0 {

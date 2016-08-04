@@ -110,12 +110,9 @@ define i1 @test11(i8 %A, i8 %B) {
   ret i1 %D
 }
 
-; FIXME: Vectors should get the same folds as scalars.
-
 define <2 x i1> @test11vec(<2 x i8> %A, <2 x i8> %B) {
 ; CHECK-LABEL: @test11vec(
-; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> %A, %B
-; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> [[C]], zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> %A, %B
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %C = sub <2 x i8> %A, %B

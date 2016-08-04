@@ -122,7 +122,6 @@ Error PDBFile::parseFileHeaders() {
 
   // Initialize Free Page Map.
   ContainerLayout.FreePageMap.resize(SB->NumBlocks);
-  ArrayRef<uint8_t> FpmBytes;
   // The Fpm exists either at block 1 or block 2 of the MSF.  However, this
   // allows for a maximum of getBlockSize() * 8 blocks bits in the Fpm, and
   // thusly an equal number of total blocks in the file.  For a block size
@@ -136,25 +135,22 @@ Error PDBFile::parseFileHeaders() {
   // at getBlockSize() intervals, so we have to be compatible.
   // See the function fpmPn() for more information:
   // https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/msf/msf.cpp#L489
-
-  uint32_t BlocksPerSection = getBlockSize();
-  uint64_t FpmBlockOffset = SB->FreeBlockMapBlock;
+  auto FpmStream = MappedBlockStream::createFpmStream(ContainerLayout, *Buffer);
+  StreamReader FpmReader(*FpmStream);
+  ArrayRef<uint8_t> FpmBytes;
+  if (auto EC = FpmReader.readBytes(FpmBytes,
+                                    msf::getFullFpmByteSize(ContainerLayout)))
+    return EC;
   uint32_t BlocksRemaining = getBlockCount();
-  for (uint32_t SI = 0; BlocksRemaining > 0; ++SI) {
-    uint32_t FpmFileOffset = FpmBlockOffset * getBlockSize();
-
-    if (auto EC = Buffer->readBytes(FpmFileOffset, getBlockSize(), FpmBytes))
-      return EC;
-
-    uint32_t BlocksThisSection = std::min(BlocksRemaining, BlocksPerSection);
-    for (uint32_t I = 0; I < BlocksThisSection; ++I) {
-      uint32_t BI = I + BlocksPerSection * SI;
-
-      if (FpmBytes[I / 8] & (1 << (I % 8)))
+  uint32_t BI = 0;
+  for (auto Byte : FpmBytes) {
+    uint32_t BlocksThisByte = std::min(BlocksRemaining, 8U);
+    for (uint32_t I = 0; I < BlocksThisByte; ++I) {
+      if (Byte & (1 << I))
         ContainerLayout.FreePageMap[BI] = true;
+      --BlocksRemaining;
+      ++BI;
     }
-    BlocksRemaining -= BlocksThisSection;
-    FpmBlockOffset += BlocksPerSection;
   }
 
   Reader.setOffset(getBlockMapOffset());
