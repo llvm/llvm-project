@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -552,9 +553,39 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // two PHINodes, the iteration over the old PHIs remains valid, and the
   // mapping will just map us to the new node (which may not even be a PHI
   // node).
+  const DataLayout &DL = NewFunc->getParent()->getDataLayout();
+  SmallSetVector<const Value *, 8> Worklist;
   for (unsigned Idx = 0, Size = PHIToResolve.size(); Idx != Size; ++Idx)
-    if (PHINode *PN = dyn_cast<PHINode>(VMap[PHIToResolve[Idx]]))
-      recursivelySimplifyInstruction(PN);
+    if (isa<PHINode>(VMap[PHIToResolve[Idx]]))
+      Worklist.insert(PHIToResolve[Idx]);
+
+  // Note that we must test the size on each iteration, the worklist can grow.
+  for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
+    const Value *OrigV = Worklist[Idx];
+    auto *I = dyn_cast_or_null<Instruction>(VMap.lookup(OrigV));
+    if (!I)
+      continue;
+
+    // See if this instruction simplifies.
+    Value *SimpleV = SimplifyInstruction(I, DL);
+    if (!SimpleV)
+      continue;
+
+    // Stash away all the uses of the old instruction so we can check them for
+    // recursive simplifications after a RAUW. This is cheaper than checking all
+    // uses of To on the recursive step in most cases.
+    for (const User *U : OrigV->users())
+      Worklist.insert(cast<Instruction>(U));
+
+    // Replace the instruction with its simplified value.
+    I->replaceAllUsesWith(SimpleV);
+
+    // If the original instruction had no side effects, remove it.
+    if (isInstructionTriviallyDead(I))
+      I->eraseFromParent();
+    else
+      VMap[OrigV] = I;
+  }
 
   // Now that the inlined function body has been fully constructed, go through
   // and zap unconditional fall-through branches. This happens all the time when
