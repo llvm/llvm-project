@@ -13,7 +13,7 @@ This repository contains the following libraries:
 
 All libraries are compiled to LLVM Bitcode which can be linked. Note that libraries use specific AMDGPU intrinsics.
 
-Refer to [[LICENSE.TXT][LICENSE.TXT]] for license information.
+Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 
 ## BUILDING
 
