@@ -115,6 +115,68 @@ TEST_F(ReplacementTest, FailAddReplacements) {
   llvm::consumeError(std::move(Err));
 }
 
+TEST_F(ReplacementTest, FailAddOverlappingInsertions) {
+  Replacements Replaces;
+  // Test adding an insertion at the offset of an existing replacement.
+  auto Err = Replaces.add(Replacement("x.cc", 10, 3, "replace"));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  Err = Replaces.add(Replacement("x.cc", 10, 0, "insert"));
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+
+  Replaces.clear();
+  // Test overlap with an existing insertion.
+  Err = Replaces.add(Replacement("x.cc", 10, 0, "insert"));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  Err = Replaces.add(Replacement("x.cc", 10, 3, "replace"));
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+}
+
+TEST_F(ReplacementTest, FailAddRegression) {
+  Replacements Replaces;
+  // Create two replacements, where the second one is an insertion of the empty
+  // string exactly at the end of the first one.
+  auto Err = Replaces.add(Replacement("x.cc", 0, 10, "1"));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+
+  // Make sure we find the overlap with the first entry when inserting a
+  // replacement that ends exactly at the seam of the existing replacements.
+  Err = Replaces.add(Replacement("x.cc", 5, 5, "fail"));
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+
+  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+}
+
+TEST_F(ReplacementTest, FailAddInsertAtOffsetOfReplacement) {
+  Replacements Replaces;
+  auto Err = Replaces.add(Replacement("x.cc", 10, 2, ""));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+}
+
+TEST_F(ReplacementTest, FailAddInsertAtOtherInsert) {
+  Replacements Replaces;
+  auto Err = Replaces.add(Replacement("x.cc", 10, 0, "a"));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  Err = Replaces.add(Replacement("x.cc", 10, 0, "b"));
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+}
+
 TEST_F(ReplacementTest, CanApplyReplacements) {
   FileID ID = Context.createInMemoryFile("input.cpp",
                                          "line1\nline2\nline3\nline4");

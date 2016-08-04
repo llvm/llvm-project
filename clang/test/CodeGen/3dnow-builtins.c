@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +3dnowa -emit-llvm -o - -Werror | FileCheck %s -check-prefix=GCC -check-prefix=CHECK
-// RUN: %clang_cc1 %s -triple=x86_64-scei-ps4 -target-feature +3dnowa -emit-llvm -o - -Werror | FileCheck %s -check-prefix=PS4 -check-prefix=CHECK
+// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -target-feature +3dnowa -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=GCC -check-prefix=CHECK
+// RUN: %clang_cc1 %s -triple=x86_64-scei-ps4 -target-feature +3dnowa -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=PS4 -check-prefix=CHECK
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H

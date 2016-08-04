@@ -1750,14 +1750,18 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLNDRange:
     case BuiltinType::OCLReserveID:
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
-    case BuiltinType::Id:
-#include "clang/Basic/OpenCLImageTypes.def"
-
       // Currently these types are pointers to opaque types.
       Width = Target->getPointerWidth(0);
       Align = Target->getPointerAlign(0);
       break;
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+    case BuiltinType::Id:
+#include "clang/Basic/OpenCLImageTypes.def"
+      {
+        auto AS = getTargetAddressSpace(Target->getOpenCLImageAddrSpace());
+        Width = Target->getPointerWidth(AS);
+        Align = Target->getPointerAlign(AS);
+      }
     }
     break;
   case Type::ObjCObjectPointer:

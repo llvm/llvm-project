@@ -986,6 +986,11 @@ public:
       return getTargetOpts().SupportedOpenCLOptions;
   }
 
+  /// \brief Get OpenCL image type address space.
+  virtual LangAS::ID getOpenCLImageAddrSpace() const {
+    return LangAS::opencl_global;
+  }
+
   /// \brief Check the target is valid after it is fully initialized.
   virtual bool validateTarget(DiagnosticsEngine &Diags) const {
     return true;
