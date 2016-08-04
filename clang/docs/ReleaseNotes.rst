@@ -47,7 +47,7 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- Clang will no longer passes --build-id by default to the linker. In modern
+- Clang will no longer pass --build-id by default to the linker. In modern
   linkers that is a relatively expensive option. It can be passed explicitly
   with -Wl,--build-id. To have clang always pass it, build clang with
   -DENABLE_LINKER_BUILD_ID.
