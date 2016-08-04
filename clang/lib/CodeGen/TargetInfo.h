@@ -220,9 +220,6 @@ public:
 
   /// Get LLVM calling convention for OpenCL kernel.
   virtual unsigned getOpenCLKernelCallingConv() const;
-
-  /// Get LLVM Image Address Space for OpenCL kernel.
-  virtual unsigned getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const;
 };
 
 } // namespace CodeGen

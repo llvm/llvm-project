@@ -80,13 +80,12 @@ protected:
                         Expr *RequiresClause);
 
 public:
-  // FIXME: remove default argument for RequiresClause
   static TemplateParameterList *Create(const ASTContext &C,
                                        SourceLocation TemplateLoc,
                                        SourceLocation LAngleLoc,
                                        ArrayRef<NamedDecl *> Params,
                                        SourceLocation RAngleLoc,
-                                       Expr *RequiresClause = nullptr);
+                                       Expr *RequiresClause);
 
   /// \brief Iterates through the template parameters in this list.
   typedef NamedDecl** iterator;
