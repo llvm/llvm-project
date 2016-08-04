@@ -1402,7 +1402,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
   return true;
 }
 
-void ScopDetection::markFunctionAsInvalid(Function *F) const {
+void ScopDetection::markFunctionAsInvalid(Function *F) {
   F->addFnAttr(PollySkipFnAttr);
 }
 

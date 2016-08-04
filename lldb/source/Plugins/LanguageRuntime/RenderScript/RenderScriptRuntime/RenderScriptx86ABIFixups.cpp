@@ -103,8 +103,8 @@ cloneToStructRetFnTy(llvm::CallInst *call_inst)
     if (log)
         log->Printf("%s - cloning to StructRet function for '%s'", __FUNCTION__, name.str().c_str());
 
-    std::vector<llvm::Type *> new_params{orig_type->getNumParams() + 1, nullptr};
     unsigned num_params = orig_type->getNumParams();
+    std::vector<llvm::Type *> new_params{num_params + 1, nullptr};
     std::vector<llvm::Type *> params{orig_type->param_begin(), orig_type->param_end()};
 
     // This may not work if the function is somehow declared void as llvm is strongly typed

@@ -247,16 +247,44 @@ void InitializePlatformExceptionHandlers() {
 
 static LPTOP_LEVEL_EXCEPTION_FILTER default_seh_handler;
 
+// Check based on flags if we should report this exception.
+static bool ShouldReportDeadlyException(unsigned code) {
+  switch (code) {
+    case EXCEPTION_ACCESS_VIOLATION:
+    case EXCEPTION_IN_PAGE_ERROR:
+      return common_flags()->handle_segv;
+    case EXCEPTION_BREAKPOINT:
+    case EXCEPTION_ILLEGAL_INSTRUCTION: {
+      return common_flags()->handle_sigill;
+    }
+  }
+  return false;
+}
+
+// Return the textual name for this exception.
+static const char *DescribeDeadlyException(unsigned code) {
+  switch (code) {
+    case EXCEPTION_ACCESS_VIOLATION:
+      return "access-violation";
+    case EXCEPTION_IN_PAGE_ERROR:
+      return "in-page-error";
+    case EXCEPTION_BREAKPOINT:
+      return "breakpoint";
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+      return "illegal-instruction";
+  }
+  return nullptr;
+}
+
 static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
   EXCEPTION_RECORD *exception_record = info->ExceptionRecord;
   CONTEXT *context = info->ContextRecord;
 
-  if (exception_record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION ||
-      exception_record->ExceptionCode == EXCEPTION_IN_PAGE_ERROR) {
+  if (ShouldReportDeadlyException(exception_record->ExceptionCode)) {
+    // Get the string description of the exception if this is a known deadly
+    // exception.
     const char *description =
-        (exception_record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
-            ? "access-violation"
-            : "in-page-error";
+        DescribeDeadlyException(exception_record->ExceptionCode);
     SignalContext sig = SignalContext::Create(exception_record, context);
     ReportDeadlySignal(description, sig);
   }

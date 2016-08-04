@@ -716,6 +716,10 @@
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CABA9DF134A8BCD00539BDD /* ValueObjectMemory.cpp */; };
+		4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */; };
+		4CC7C6531D5299140076FF94 /* DWARFASTParserOCaml.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4CC7C6511D5299140076FF94 /* DWARFASTParserOCaml.h */; };
+		4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */; };
+		4CC7C6581D529B950076FF94 /* DWARFASTParserOCaml.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */; };
 		4CCA644D13B40B82003BDF98 /* ItaniumABILanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA643D13B40B82003BDF98 /* ItaniumABILanguageRuntime.cpp */; };
 		4CCA645013B40B82003BDF98 /* AppleObjCRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA644213B40B82003BDF98 /* AppleObjCRuntime.cpp */; };
 		4CCA645213B40B82003BDF98 /* AppleObjCRuntimeV1.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA644413B40B82003BDF98 /* AppleObjCRuntimeV1.cpp */; };
@@ -1144,6 +1148,7 @@
 				23D0658C1D4A7BDA0008EDE6 /* RenderScriptRuntime.h in CopyFiles */,
 				23D0658A1D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h in CopyFiles */,
 				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */,
+				4CC7C6531D5299140076FF94 /* DWARFASTParserOCaml.h in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 				23D065881D4A7BDA0008EDE6 /* CMakeLists.txt in CopyFiles */,
 			);
@@ -2453,6 +2458,11 @@
 		4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObjCLanguageRuntime.h; path = include/lldb/Target/ObjCLanguageRuntime.h; sourceTree = "<group>"; };
 		4CC2A148128C73ED001531C4 /* ThreadPlanTracer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanTracer.cpp; path = source/Target/ThreadPlanTracer.cpp; sourceTree = "<group>"; };
 		4CC2A14C128C7409001531C4 /* ThreadPlanTracer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanTracer.h; path = include/lldb/Target/ThreadPlanTracer.h; sourceTree = "<group>"; };
+		4CC7C64C1D5298E20076FF94 /* OCamlLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OCamlLanguage.h; path = Language/OCaml/OCamlLanguage.h; sourceTree = "<group>"; };
+		4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OCamlLanguage.cpp; path = Language/OCaml/OCamlLanguage.cpp; sourceTree = "<group>"; };
+		4CC7C6511D5299140076FF94 /* DWARFASTParserOCaml.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParserOCaml.h; sourceTree = "<group>"; };
+		4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFASTParserOCaml.cpp; sourceTree = "<group>"; };
+		4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OCamlASTContext.cpp; path = source/Symbol/OCamlASTContext.cpp; sourceTree = "<group>"; };
 		4CCA643D13B40B82003BDF98 /* ItaniumABILanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ItaniumABILanguageRuntime.cpp; sourceTree = "<group>"; };
 		4CCA643E13B40B82003BDF98 /* ItaniumABILanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ItaniumABILanguageRuntime.h; sourceTree = "<group>"; };
 		4CCA644213B40B82003BDF98 /* AppleObjCRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCRuntime.cpp; sourceTree = "<group>"; };
@@ -3389,8 +3399,6 @@
 		260C89B210F57C5600BB2B04 /* DWARF */ = {
 			isa = PBXGroup;
 			children = (
-				6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */,
-				6D0F61451C80AACF00A4ECEE /* DWARFASTParserJava.h */,
 				6D95DC031B9DC06F000E318A /* DIERef.h */,
 				6D95DC041B9DC06F000E318A /* SymbolFileDWARFDwo.h */,
 				6D95DBFD1B9DC057000E318A /* DIERef.cpp */,
@@ -3403,6 +3411,10 @@
 				269DDD481B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp */,
 				AE6897271B94F6DE0018845D /* DWARFASTParserGo.h */,
 				AE6897261B94F6DE0018845D /* DWARFASTParserGo.cpp */,
+				6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */,
+				6D0F61451C80AACF00A4ECEE /* DWARFASTParserJava.h */,
+				4CC7C6511D5299140076FF94 /* DWARFASTParserOCaml.h */,
+				4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */,
 				260C89B610F57C5600BB2B04 /* DWARFAttribute.h */,
 				266E829C1B8E542C008FCA06 /* DWARFAttribute.cpp */,
 				260C89B710F57C5600BB2B04 /* DWARFCompileUnit.cpp */,
@@ -4536,6 +4548,7 @@
 				26BC7C5D10F1B6E900F91463 /* ObjectContainer.h */,
 				26BC7C5E10F1B6E900F91463 /* ObjectFile.h */,
 				26BC7F4C10F1BC1A00F91463 /* ObjectFile.cpp */,
+				4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */,
 				26BC7C5F10F1B6E900F91463 /* Symbol.h */,
 				26BC7F1B10F1B8EC00F91463 /* Symbol.cpp */,
 				26BC7C6010F1B6E900F91463 /* SymbolContext.h */,
@@ -5446,6 +5459,15 @@
 			name = Clang;
 			sourceTree = "<group>";
 		};
+		4CC7C64B1D5298AB0076FF94 /* OCaml */ = {
+			isa = PBXGroup;
+			children = (
+				4CC7C64C1D5298E20076FF94 /* OCamlLanguage.h */,
+				4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */,
+			);
+			name = OCaml;
+			sourceTree = "<group>";
+		};
 		4CCA643A13B40B82003BDF98 /* LanguageRuntime */ = {
 			isa = PBXGroup;
 			children = (
@@ -5731,6 +5753,7 @@
 				AE44FB431BB4BAC20033EB62 /* Go */,
 				94B638551B8FAC87004FE1E4 /* ObjC */,
 				94B638601B8FB7BE004FE1E4 /* ObjCPlusPlus */,
+				4CC7C64B1D5298AB0076FF94 /* OCaml */,
 			);
 			name = Language;
 			sourceTree = "<group>";
@@ -6683,6 +6706,7 @@
 				3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */,
 				4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */,
 				26BC179918C7F2B300D2196D /* JITLoader.cpp in Sources */,
+				4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */,
 				2689002713353DDE00698AC0 /* CommandObjectTarget.cpp in Sources */,
 				2689002813353DDE00698AC0 /* CommandObjectThread.cpp in Sources */,
 				2689002913353DDE00698AC0 /* CommandObjectVersion.cpp in Sources */,
@@ -6954,6 +6978,7 @@
 				268900EB13353E6F00698AC0 /* ExecutionContext.cpp in Sources */,
 				268900EC13353E6F00698AC0 /* LanguageRuntime.cpp in Sources */,
 				268900ED13353E6F00698AC0 /* ObjCLanguageRuntime.cpp in Sources */,
+				4CC7C6581D529B950076FF94 /* DWARFASTParserOCaml.cpp in Sources */,
 				268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */,
 				4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */,
 				AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */,
@@ -7051,6 +7076,7 @@
 				9A22A163135E30370024DDC3 /* EmulationStateARM.cpp in Sources */,
 				9A4F35101368A51A00823F52 /* StreamAsynchronousIO.cpp in Sources */,
 				AF1D88691B575E8D003CB899 /* ValueObjectConstResultCast.cpp in Sources */,
+				4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */,
 				2692BA15136610C100F9E14D /* UnwindAssemblyInstEmulation.cpp in Sources */,
 				263E949F13661AEA00E7D1CE /* UnwindAssembly-x86.cpp in Sources */,
 				E7723D481AC4A8C8002BA082 /* RegisterContextFreeBSD_arm64.cpp in Sources */,

@@ -17,6 +17,7 @@
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
+#include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/SCEVValidator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -1169,6 +1170,8 @@ void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
   Builder.SetInsertPoint(EntryBlock);
   Builder.CreateRetVoid();
   Builder.SetInsertPoint(EntryBlock, EntryBlock->begin());
+
+  ScopDetection::markFunctionAsInvalid(FN);
 
   insertKernelIntrinsics(Kernel);
 }

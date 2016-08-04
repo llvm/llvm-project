@@ -20,10 +20,10 @@
 # NO: 00000120  66 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
 ## Decimal value.
-# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =99 }" > %t.script
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =777 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: hexdump -C %t.out | FileCheck -check-prefix=DEC %s
-# DEC: 00000120  66 63 63 63 63 63 63 63  63 63 63 63 63 63 63 63
+# DEC: 00000120  66 00 03 09 00 00 03 09 00 00 03 09 00 00 03 09
 
 ## Invalid hex value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
