@@ -24,7 +24,7 @@ class REPLThrowReturnTestCase (REPLTest):
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
-    @decorators.expectedFlakeyDarwin
+    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="rdar://27648290")
     def testREPL(self):
         REPLTest.testREPL(self)
 
