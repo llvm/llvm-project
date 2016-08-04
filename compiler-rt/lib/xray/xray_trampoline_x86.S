@@ -24,7 +24,15 @@ __xray_FunctionEntry:
   // Save caller provided registers before doing any actual work.
 	pushq %rbp
 	.cfi_def_cfa_offset 16
-	subq $72, %rsp
+	subq $200, %rsp
+	movupd	%xmm0, 184(%rsp)
+	movupd	%xmm1, 168(%rsp)
+	movupd	%xmm2, 152(%rsp)
+	movupd	%xmm3, 136(%rsp)
+	movupd	%xmm4, 120(%rsp)
+	movupd	%xmm5, 104(%rsp)
+	movupd	%xmm6, 88(%rsp)
+	movupd	%xmm7, 72(%rsp)
 	movq	%rdi, 64(%rsp)
 	movq  %rax, 56(%rsp)
 	movq  %rdx, 48(%rsp)
@@ -45,6 +53,14 @@ __xray_FunctionEntry:
 	callq	*%rax
 .Ltmp0:
   // restore the registers
+	movupd	184(%rsp), %xmm0
+	movupd	168(%rsp), %xmm1
+	movupd	152(%rsp), %xmm2
+	movupd	136(%rsp), %xmm3
+	movupd	120(%rsp), %xmm4
+	movupd	104(%rsp), %xmm5
+	movupd	88(%rsp) , %xmm6
+	movupd	72(%rsp) , %xmm7
 	movq	64(%rsp), %rdi
 	movq  56(%rsp), %rax
 	movq  48(%rsp), %rdx
@@ -52,7 +68,7 @@ __xray_FunctionEntry:
 	movq	32(%rsp), %rcx
 	movq	24(%rsp), %r8
 	movq	16(%rsp), %r9
-	addq	$72, %rsp
+	addq	$200, %rsp
 	popq	%rbp
 	retq
 .Ltmp1:
@@ -67,11 +83,12 @@ __xray_FunctionExit:
 	// Save the important registers first. Since we're assuming that this
 	// function is only jumped into, we only preserve the registers for
 	// returning.
-	// FIXME: Figure out whether this is sufficient.
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
-	subq	$24, %rsp
+	subq	$56, %rsp
 	.cfi_def_cfa_offset 32
+	movupd	%xmm0, 40(%rsp)
+	movupd	%xmm1, 24(%rsp)
 	movq	%rax, 16(%rsp)
 	movq	%rdx, 8(%rsp)
 	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
@@ -83,9 +100,11 @@ __xray_FunctionExit:
 	callq	*%rax
 .Ltmp2:
   // Restore the important registers.
+	movupd	40(%rsp), %xmm0
+	movupd	24(%rsp), %xmm1
 	movq	16(%rsp), %rax
 	movq	8(%rsp), %rdx
-	addq	$24, %rsp
+	addq	$56, %rsp
 	popq	%rbp
 	retq
 .Ltmp3:

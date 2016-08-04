@@ -75,7 +75,7 @@ COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
-COMMON_FLAG(bool, handle_segv, SANITIZER_NEEDS_SEGV,
+COMMON_FLAG(bool, handle_segv, true,
             "If set, registers the tool's custom SIGSEGV/SIGBUS handler.")
 COMMON_FLAG(bool, handle_abort, false,
             "If set, registers the tool's custom SIGABRT handler.")

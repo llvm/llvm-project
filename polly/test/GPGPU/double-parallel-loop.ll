@@ -113,7 +113,7 @@
 ; IR: polly.exiting:
 ; IR-NEXT:    br label %polly.merge_new_and_old
 
-; KERNEL-IR-LABEL: define ptx_kernel void @kernel_0(i8* %MemRef_A) {
+; KERNEL-IR-LABEL: define ptx_kernel void @kernel_0(i8* %MemRef_A) #0 {
 ; KERNEL-IR-NEXT: entry:
 ; KERNEL-IR-NEXT:   %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-IR-NEXT:   %b0 = zext i32 %0 to i64
@@ -171,6 +171,7 @@
 ; KERNEL-IR-LABEL: polly.loop_preheader:                             ; preds = %entry
 ; KERNEL-IR-NEXT:   br label %polly.loop_header
 
+; KERNEL-IR: attributes #0 = { "polly.skip.fn" }
 
 ; KERNEL-ASM: .version 3.2
 ; KERNEL-ASM-NEXT: .target sm_30

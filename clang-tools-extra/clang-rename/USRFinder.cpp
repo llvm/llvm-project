@@ -81,6 +81,11 @@ public:
             dyn_cast<TemplateTypeParmType>(Loc.getType())) {
       return setResult(TemplateTypeParm->getDecl(), TypeBeginLoc, TypeEndLoc);
     }
+    if (const auto *TemplateSpecType =
+            dyn_cast<TemplateSpecializationType>(Loc.getType())) {
+      return setResult(TemplateSpecType->getTemplateName().getAsTemplateDecl(),
+                       TypeBeginLoc, TypeEndLoc);
+    }
     return setResult(Loc.getType()->getAsCXXRecordDecl(), TypeBeginLoc,
                      TypeEndLoc);
   }

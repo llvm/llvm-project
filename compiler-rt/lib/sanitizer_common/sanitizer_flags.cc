@@ -30,11 +30,6 @@ struct FlagDescription {
 
 IntrusiveList<FlagDescription> flag_descriptions;
 
-// If set, the tool will install its own SEGV signal handler by default.
-#ifndef SANITIZER_NEEDS_SEGV
-# define SANITIZER_NEEDS_SEGV 1
-#endif
-
 void CommonFlags::SetDefaults() {
 #define COMMON_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "sanitizer_flags.inc"

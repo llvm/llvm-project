@@ -720,7 +720,7 @@ INTERCEPTOR(int, fork, void) {
 namespace __asan {
 void InitializeAsanInterceptors() {
   static bool was_called_once;
-  CHECK(was_called_once == false);
+  CHECK(!was_called_once);
   was_called_once = true;
   InitializeCommonInterceptors();
 

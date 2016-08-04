@@ -1,5 +1,11 @@
 // RUN: %clangxx_cfi -o %t %s
 // RUN: %t
+// RUN: %clangxx_cfi -Wl,-plugin-opt,--lowertypetests-bitsets-level=0 -o %t2 %s
+// RUN: %t2
+// RUN: %clangxx_cfi -Wl,-plugin-opt,--lowertypetests-bitsets-level=1 -o %t3 %s
+// RUN: %t3
+// RUN: %clangxx_cfi -Wl,-plugin-opt,--lowertypetests-bitsets-level=2 -o %t4 %s
+// RUN: %t4
 
 // Tests that the CFI mechanism does not crash the program when making various
 // kinds of valid calls involving classes with various different linkages and
