@@ -640,6 +640,11 @@ public:
     GetProtocolTypeInfo (const CompilerType& type,
                          ProtocolInfo& protocol_info);
     
+    static bool
+    IsOptionalChain (CompilerType type,
+                     CompilerType &payload_type,
+                     uint32_t &depth);
+    
     enum class TypeAllocationStrategy
     {
         eInline,

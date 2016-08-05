@@ -6225,6 +6225,56 @@ SwiftASTContext::GetProtocolTypeInfo (const CompilerType& type,
     return false;
 }
 
+bool
+SwiftASTContext::IsOptionalChain (CompilerType type,
+                                  CompilerType &payload_type,
+                                  uint32_t &depth)
+{
+    auto is_optional = [] (const CompilerType &type) -> bool {
+        if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem()))
+        {
+            if (auto swift_ast = ast->GetASTContext())
+            {
+                swift::CanType swift_can_type (GetCanonicalSwiftType (type));
+                const swift::TypeKind type_kind = swift_can_type->getKind();
+                switch (type_kind)
+                {
+                    case swift::TypeKind::BoundGenericEnum:
+                    {
+                        swift::BoundGenericEnumType *t = swift_can_type->getAs<swift::BoundGenericEnumType>();
+                        if (t)
+                        {
+                            swift::EnumDecl *enum_decl = t->getDecl();
+                            return (enum_decl == swift_ast->getOptionalDecl());
+                        }
+                    }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return false;
+    };
+
+    depth = 0;
+    
+    while (is_optional(type))
+    {
+        ++depth;
+        lldb::TemplateArgumentKind kind;
+        type = type.GetTemplateArgument(0, kind);
+    }
+    
+    if (depth > 0)
+    {
+        payload_type = type;
+        return true;
+    }
+    else
+        return false;
+}
+
 SwiftASTContext::TypeAllocationStrategy
 SwiftASTContext::GetAllocationStrategy (const CompilerType& type)
 {
