@@ -310,27 +310,32 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
                              (Start - Parent->getData().data()), Err) {
   if (!Start)
     return;
+
+  // If we are pointed to real data, Start is not a nullptr, then there must be
+  // a non-null Err pointer available to report malformed data on.  Only in
+  // the case sentinel value is being constructed is Err is permitted to be a
+  // nullptr.
+  assert(Err && "Err can't be nullptr if Start is not a nullptr");
+
   ErrorAsOutParameter ErrAsOutParam(Err);
 
-  // If there was an error in the construction of the Header and we were passed
-  // Err that is not nullptr then just return with the error now set.
-  if (Err && *Err)
+  // If there was an error in the construction of the Header 
+  // then just return with the error now set.
+  if (*Err)
     return;
 
   uint64_t Size = Header.getSizeOf();
   Data = StringRef(Start, Size);
   Expected<bool> isThinOrErr = isThinMember();
   if (!isThinOrErr) {
-    if (Err)
-      *Err = isThinOrErr.takeError();
+    *Err = isThinOrErr.takeError();
     return;
   }
   bool isThin = isThinOrErr.get();
   if (!isThin) {
     Expected<uint64_t> MemberSize = getRawSize();
     if (!MemberSize) {
-      if (Err)
-        *Err = MemberSize.takeError();
+      *Err = MemberSize.takeError();
       return;
     }
     Size += MemberSize.get();
@@ -342,26 +347,23 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   // Don't include attached name.
   Expected<StringRef> NameOrErr = getRawName();
   if (!NameOrErr){
-    if (Err)
-      *Err = NameOrErr.takeError();
+    *Err = NameOrErr.takeError();
     return;
   }
   StringRef Name = NameOrErr.get();
   if (Name.startswith("#1/")) {
     uint64_t NameSize;
     if (Name.substr(3).rtrim(' ').getAsInteger(10, NameSize)) {
-      if (Err) {
-        std::string Buf;
-        raw_string_ostream OS(Buf);
-        OS.write_escaped(Name.substr(3).rtrim(' '));
-        OS.flush();
-        uint64_t Offset = Start - Parent->getData().data();
-        *Err = malformedError("long name length characters after the #1/ are "
-                              "not all decimal numbers: '" + Buf + "' for "
-                              "archive member header at offset " +
-                              Twine(Offset));
-        return;
-      }
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      OS.write_escaped(Name.substr(3).rtrim(' '));
+      OS.flush();
+      uint64_t Offset = Start - Parent->getData().data();
+      *Err = malformedError("long name length characters after the #1/ are "
+                            "not all decimal numbers: '" + Buf + "' for "
+                            "archive member header at offset " +
+                            Twine(Offset));
+      return;
     }
     StartOfFile += NameSize;
   }

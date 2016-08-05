@@ -34,6 +34,7 @@ struct CoverageViewOptions {
   OutputFormat Format;
   std::string ShowOutputDirectory;
   std::vector<std::string> DemanglerOpts;
+  uint32_t TabSize;
 
   /// \brief Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,

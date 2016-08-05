@@ -591,7 +591,7 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
     }
 
     if (auto Sym = Resolver.findSymbolInLogicalDylib(Name)) {
-      if (!Sym.isCommon()) {
+      if (!Sym.getFlags().isCommon()) {
         DEBUG(dbgs() << "\tSkipping common symbol '" << Name
                      << "' in favor of stronger definition.\n");
         continue;

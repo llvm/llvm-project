@@ -243,9 +243,10 @@ public:
     return true;
   }
 
-  /// Return true if sqrt(x) is as cheap or cheaper than 1 / rsqrt(x)
-  bool isFsqrtCheap() const {
-    return FsqrtIsCheap;
+  /// Return true if SQRT(X) shouldn't be replaced with X*RSQRT(X).
+  virtual bool isFsqrtCheap(SDValue X, SelectionDAG &DAG) const {
+    // Default behavior is to replace SQRT(X) with X*RSQRT(X).
+    return false;
   }
 
   /// Returns true if target has indicated at least one type should be bypassed.
@@ -1381,10 +1382,6 @@ protected:
   /// control.
   void setJumpIsExpensive(bool isExpensive = true);
 
-  /// Tells the code generator that fsqrt is cheap, and should not be replaced
-  /// with an alternative sequence of instructions.
-  void setFsqrtIsCheap(bool isCheap = true) { FsqrtIsCheap = isCheap; }
-
   /// Tells the code generator that this target supports floating point
   /// exceptions and cares about preserving floating point exception behavior.
   void setHasFloatingPointExceptions(bool FPExceptions = true) {
@@ -1909,9 +1906,6 @@ private:
   /// their users if the users will generate "and" instructions which can be
   /// combined with "shift" to BitExtract instructions.
   bool HasExtractBitsInsn;
-
-  // Don't expand fsqrt with an approximation based on the inverse sqrt.
-  bool FsqrtIsCheap;
 
   /// Tells the code generator to bypass slow divide or remainder
   /// instructions. For example, BypassSlowDivWidths[32,8] tells the code

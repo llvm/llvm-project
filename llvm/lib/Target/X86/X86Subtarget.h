@@ -199,6 +199,14 @@ protected:
   /// of a YMM register without clearing the upper part.
   bool HasFastPartialYMMWrite;
 
+  /// True if hardware SQRTSS instruction is at least as fast (latency) as
+  /// RSQRTSS followed by a Newton-Raphson iteration.
+  bool HasFastScalarFSQRT;
+
+  /// True if hardware SQRTPS/VSQRTPS instructions are at least as fast
+  /// (throughput) as RSQRTPS/VRSQRTPS followed by a Newton-Raphson iteration.
+  bool HasFastVectorFSQRT;
+
   /// True if 8-bit divisions are significantly faster than
   /// 32-bit divisions and should be used when possible.
   bool HasSlowDivide32;
@@ -434,6 +442,8 @@ public:
   bool hasCmpxchg16b() const { return HasCmpxchg16b; }
   bool useLeaForSP() const { return UseLeaForSP; }
   bool hasFastPartialYMMWrite() const { return HasFastPartialYMMWrite; }
+  bool hasFastScalarFSQRT() const { return HasFastScalarFSQRT; }
+  bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }

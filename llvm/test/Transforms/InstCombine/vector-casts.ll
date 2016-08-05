@@ -63,9 +63,8 @@ entry:
 	ret <2 x i64> %conv
         
 ; CHECK-LABEL: @test5(
-; CHECK:   sext <4 x i1> %cmp to <4 x i32>	
-; The sext-and pair is canonicalized to a select.
-; CHECK:   select <4 x i1> %cmp4, <4 x i32>	%sext, <4 x i32> zeroinitializer
+; CHECK:   %fold.and = and <4 x i1> %cmp4, %cmp
+; CHECK:   sext <4 x i1> %fold.and to <4 x i32>
 }
 
 

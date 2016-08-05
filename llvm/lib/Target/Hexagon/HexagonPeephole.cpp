@@ -250,6 +250,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
               if (unsigned PeepholeSrc = PeepholeMap.lookup(Reg0)) {
                 // Change the 1st operand and, flip the opcode.
                 MI.getOperand(0).setReg(PeepholeSrc);
+                MRI->clearKillFlags(PeepholeSrc);
                 int NewOp = QII->getInvertedPredicatedOpcode(MI.getOpcode());
                 MI.setDesc(QII->get(NewOp));
                 Done = true;
@@ -280,6 +281,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
             unsigned PSrc = MI.getOperand(PR).getReg();
             if (unsigned POrig = PeepholeMap.lookup(PSrc)) {
               MI.getOperand(PR).setReg(POrig);
+              MRI->clearKillFlags(POrig);
               MI.setDesc(QII->get(NewOp));
               // Swap operands S1 and S2.
               MachineOperand Op1 = MI.getOperand(S1);
@@ -304,6 +306,7 @@ void HexagonPeephole::ChangeOpInto(MachineOperand &Dst, MachineOperand &Src) {
       if (Src.isReg()) {
         Dst.setReg(Src.getReg());
         Dst.setSubReg(Src.getSubReg());
+        MRI->clearKillFlags(Src.getReg());
       } else if (Src.isImm()) {
         Dst.ChangeToImmediate(Src.getImm());
       } else {
@@ -316,7 +319,7 @@ void HexagonPeephole::ChangeOpInto(MachineOperand &Dst, MachineOperand &Src) {
         Dst.setImm(Src.getImm());
       } else if (Src.isReg()) {
         Dst.ChangeToRegister(Src.getReg(), Src.isDef(), Src.isImplicit(),
-                             Src.isKill(), Src.isDead(), Src.isUndef(),
+                             false, Src.isDead(), Src.isUndef(),
                              Src.isDebug());
         Dst.setSubReg(Src.getSubReg());
       } else {

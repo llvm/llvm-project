@@ -286,7 +286,7 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     SmallVector<Instruction *, 4> ToDelete;
     if (MemTransferInst *Copy = isOnlyCopiedFromConstantGlobal(&AI, ToDelete)) {
       unsigned SourceAlign = getOrEnforceKnownAlignment(
-          Copy->getSource(), AI.getAlignment(), DL, &AI, AC, DT);
+          Copy->getSource(), AI.getAlignment(), DL, &AI, &AC, &DT);
       if (AI.getAlignment() <= SourceAlign) {
         DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
         DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
@@ -795,7 +795,7 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
 
   // Attempt to improve the alignment.
   unsigned KnownAlign = getOrEnforceKnownAlignment(
-      Op, DL.getPrefTypeAlignment(LI.getType()), DL, &LI, AC, DT);
+      Op, DL.getPrefTypeAlignment(LI.getType()), DL, &LI, &AC, &DT);
   unsigned LoadAlign = LI.getAlignment();
   unsigned EffectiveLoadAlign =
       LoadAlign != 0 ? LoadAlign : DL.getABITypeAlignment(LI.getType());
@@ -1155,7 +1155,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
 
   // Attempt to improve the alignment.
   unsigned KnownAlign = getOrEnforceKnownAlignment(
-      Ptr, DL.getPrefTypeAlignment(Val->getType()), DL, &SI, AC, DT);
+      Ptr, DL.getPrefTypeAlignment(Val->getType()), DL, &SI, &AC, &DT);
   unsigned StoreAlign = SI.getAlignment();
   unsigned EffectiveStoreAlign =
       StoreAlign != 0 ? StoreAlign : DL.getABITypeAlignment(Val->getType());
@@ -1279,7 +1279,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
 bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
   assert(SI.isUnordered() &&
          "this code has not been auditted for volatile or ordered store case");
-  
+
   BasicBlock *StoreBB = SI.getParent();
 
   // Check to see if the successor block has exactly two incoming edges.  If

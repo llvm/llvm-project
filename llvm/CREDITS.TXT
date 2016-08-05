@@ -370,6 +370,10 @@ N: Francois Pichet
 E: pichet2000@gmail.com
 D: MSVC support
 
+N: Adrian Prantl
+E: aprantl@apple.com
+D: Debug Information
+
 N: Vladimir Prus
 W: http://vladimir_prus.blogspot.com
 E: ghost@cs.msu.su

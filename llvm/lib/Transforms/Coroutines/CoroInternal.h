@@ -12,10 +12,14 @@
 #ifndef LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
+#include "CoroInstr.h"
 #include "llvm/Transforms/Coroutines.h"
 
 namespace llvm {
 
+class FunctionType;
+class LLVMContext;
+class Module;
 class PassRegistry;
 
 void initializeCoroEarlyPass(PassRegistry &);
@@ -23,6 +27,20 @@ void initializeCoroSplitPass(PassRegistry &);
 void initializeCoroElidePass(PassRegistry &);
 void initializeCoroCleanupPass(PassRegistry &);
 
-}
+namespace coro {
+
+// Keeps data and helper functions for lowering coroutine intrinsics.
+struct LowererBase {
+  Module &TheModule;
+  LLVMContext &Context;
+  FunctionType *const ResumeFnType;
+
+  LowererBase(Module &M);
+  Value *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
+  static bool declaresIntrinsics(Module &M, std::initializer_list<StringRef>);
+};
+
+} // End namespace coro.
+} // End namespace llvm
 
 #endif

@@ -95,6 +95,11 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(unsigned Res, unsigned Op) {
   return buildInstr(TargetOpcode::COPY).addDef(Res).addUse(Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildConstant(LLT Ty, unsigned Res,
+                                                    int64_t Val) {
+  return buildInstr(TargetOpcode::G_CONSTANT, Ty).addDef(Res).addImm(Val);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(LLT Ty, unsigned Tst,
                                                   MachineBasicBlock &Dest) {
   return buildInstr(TargetOpcode::G_BRCOND, Ty).addUse(Tst).addMBB(&Dest);
@@ -117,6 +122,23 @@ MachineInstrBuilder MachineIRBuilder::buildStore(LLT VTy, LLT PTy,
       .addUse(Val)
       .addUse(Addr)
       .addMemOperand(&MMO);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildAdde(LLT Ty, unsigned Res,
+                                                unsigned CarryOut, unsigned Op0,
+                                                unsigned Op1,
+                                                unsigned CarryIn) {
+  return buildInstr(TargetOpcode::G_ADDE, Ty)
+      .addDef(Res)
+      .addDef(CarryOut)
+      .addUse(Op0)
+      .addUse(Op1)
+      .addUse(CarryIn);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildAnyExtend(LLT Ty, unsigned Res,
+                                                     unsigned Op) {
+  return buildInstr(TargetOpcode::G_ANYEXTEND, Ty).addDef(Res).addUse(Op);
 }
 
 MachineInstrBuilder
@@ -156,4 +178,9 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(ArrayRef<LLT> Tys,
     MIB.addDef(Res);
   MIB.addIntrinsicID(ID);
   return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildTrunc(LLT Ty, unsigned Res,
+                                           unsigned Op) {
+  return buildInstr(TargetOpcode::G_TRUNC, Ty).addDef(Res).addUse(Op);
 }

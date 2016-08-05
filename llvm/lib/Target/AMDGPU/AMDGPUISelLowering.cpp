@@ -446,8 +446,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setSelectIsExpensive(false);
   PredictableSelectIsExpensive = false;
 
-  setFsqrtIsCheap(true);
-
   // We want to find all load dependencies for long chains of stores to enable
   // merging into very wide vectors. The problem is with vectors with > 4
   // elements. MergeConsecutiveStores will attempt to merge these because x8/x16

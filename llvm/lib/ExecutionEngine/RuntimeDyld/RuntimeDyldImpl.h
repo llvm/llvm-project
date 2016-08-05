@@ -199,20 +199,23 @@ public:
 };
 
 /// @brief Symbol info for RuntimeDyld. 
-class SymbolTableEntry : public JITSymbolBase {
+class SymbolTableEntry {
 public:
   SymbolTableEntry()
-    : JITSymbolBase(JITSymbolFlags::None), Offset(0), SectionID(0) {}
+      : Offset(0), SectionID(0) {}
 
   SymbolTableEntry(unsigned SectionID, uint64_t Offset, JITSymbolFlags Flags)
-    : JITSymbolBase(Flags), Offset(Offset), SectionID(SectionID) {}
+      : Offset(Offset), SectionID(SectionID), Flags(Flags) {}
 
   unsigned getSectionID() const { return SectionID; }
   uint64_t getOffset() const { return Offset; }
 
+  JITSymbolFlags getFlags() const { return Flags; }
+
 private:
   uint64_t Offset;
   unsigned SectionID;
+  JITSymbolFlags Flags;
 };
 
 typedef StringMap<SymbolTableEntry> RTDyldSymbolTable;

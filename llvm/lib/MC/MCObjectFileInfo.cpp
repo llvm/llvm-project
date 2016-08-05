@@ -395,6 +395,14 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
                     dwarf::DW_EH_PE_sdata4;
     // We don't support PC-relative LSDA references in GAS so we use the default
     // DW_EH_PE_absptr for those.
+
+    // FreeBSD must be explicit about the data size and using pcrel since it's
+    // assembler/linker won't do the automatic conversion that the Linux tools
+    // do.
+    if (T.isOSFreeBSD()) {
+      PersonalityEncoding |= dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    }
     break;
   case Triple::ppc64:
   case Triple::ppc64le:

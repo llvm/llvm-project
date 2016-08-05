@@ -20,11 +20,6 @@ if(NOT DEFINED LLVM_STDLIB_HANDLED)
         append("-stdlib=libc++"
           CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS
           CMAKE_MODULE_LINKER_FLAGS)
-        if(LLVM_ENABLE_LIBCXXABI)
-          append("-lc++abi"
-            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS
-            CMAKE_MODULE_LINKER_FLAGS)
-        endif()
       else()
         message(WARNING "Can't specify libc++ with '-stdlib='")
       endif()

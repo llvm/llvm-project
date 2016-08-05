@@ -131,7 +131,8 @@ public:
   /// size of the scalar type involved. For example `s32` will become `s16`,
   /// `<2 x s32>` will become `<2 x s16>`.
   LLT halfScalarSize() const {
-    assert(isSized() && "cannot change size of this type");
+    assert(isSized() && getScalarSizeInBits() > 1 &&
+           getScalarSizeInBits() % 2 == 0 && "cannot half size of this type");
     return LLT{Kind, NumElements, SizeOrAddrSpace / 2};
   }
 

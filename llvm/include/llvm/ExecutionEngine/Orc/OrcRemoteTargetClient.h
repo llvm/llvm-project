@@ -477,7 +477,7 @@ public:
       auto Key = I->second.first;
       auto Flags = I->second.second;
       auto StubSymbol = JITSymbol(getStubAddr(Key), Flags);
-      if (ExportedStubsOnly && !StubSymbol.isExported())
+      if (ExportedStubsOnly && !StubSymbol.getFlags().isExported())
         return nullptr;
       return StubSymbol;
     }

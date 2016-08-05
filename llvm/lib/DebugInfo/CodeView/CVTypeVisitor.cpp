@@ -45,10 +45,10 @@ Error CVTypeVisitor::visitTypeRecord(const CVRecord<TypeLeafKind> &Record) {
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   case EnumName: {                                                             \
     TypeRecordKind RK = static_cast<TypeRecordKind>(EnumName);                 \
-    auto Result = Name##Record::deserialize(RK, LeafData);                     \
-    if (Result.getError())                                                     \
-      return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);   \
-    if (auto EC = Callbacks.visit##Name(*Result))                              \
+    auto ExpectedRecord = Name##Record::deserialize(RK, LeafData);             \
+    if (!ExpectedRecord)                                                       \
+      return ExpectedRecord.takeError();                                       \
+    if (auto EC = Callbacks.visit##Name(*ExpectedRecord))                      \
       return EC;                                                               \
     break;                                                                     \
   }
@@ -106,10 +106,10 @@ Error CVTypeVisitor::visitFieldList(const CVRecord<TypeLeafKind> &Record) {
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   case EnumName: {                                                             \
     TypeRecordKind RK = static_cast<TypeRecordKind>(EnumName);                 \
-    auto Result = Name##Record::deserialize(RK, RecordData);                   \
-    if (Result.getError())                                                     \
-      return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);   \
-    if (auto EC = Callbacks.visit##Name(*Result))                              \
+    auto ExpectedRecord = Name##Record::deserialize(RK, RecordData);           \
+    if (!ExpectedRecord)                                                       \
+      return ExpectedRecord.takeError();                                       \
+    if (auto EC = Callbacks.visit##Name(*ExpectedRecord))                      \
       return EC;                                                               \
     break;                                                                     \
   }

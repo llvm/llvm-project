@@ -1219,6 +1219,9 @@ namespace llvm {
     /// Convert a comparison if required by the subtarget.
     SDValue ConvertCmpIfNecessary(SDValue Cmp, SelectionDAG &DAG) const;
 
+    /// Check if replacement of SQRT with RSQRT should be disabled.
+    bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override;
+
     /// Use rsqrt* to speed up sqrt calculations.
     SDValue getRsqrtEstimate(SDValue Operand, DAGCombinerInfo &DCI,
                              unsigned &RefinementSteps,

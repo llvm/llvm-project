@@ -301,3 +301,24 @@ entry:
 ; CHECK-LABEL: define i32 @PR28802(
 ; CHECK: call i32 @PR28802.external(i32 0)
 ; CHECK: ret i32 0
+
+define internal i32 @PR28848.callee(i32 %p2, i1 %c) {
+entry:
+  br i1 %c, label %cond.end, label %cond.true
+
+cond.true:
+  br label %cond.end
+
+cond.end:
+  %cond = phi i32 [ 0, %cond.true ], [ %p2, %entry ]
+  %or = or i32 %cond, %p2
+  ret i32 %or
+}
+
+define i32 @PR28848() {
+entry:
+  %call = call i32 @PR28848.callee(i32 0, i1 false)
+  ret i32 %call
+}
+; CHECK-LABEL: define i32 @PR28848(
+; CHECK: ret i32 0

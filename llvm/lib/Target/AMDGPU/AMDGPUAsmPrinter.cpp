@@ -833,7 +833,7 @@ static std::string getOCLTypeName(Type *Ty, bool Signed) {
     return (Twine(getOCLTypeName(EleTy, Signed)) + Twine(Size)).str();
   }
   default:
-    llvm_unreachable("invalid type");
+    return "unknown";
   }
 }
 

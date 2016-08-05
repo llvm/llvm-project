@@ -2676,6 +2676,32 @@ bool llvm::CC_PPC32_SVR4_Custom_AlignArgRegs(unsigned &ValNo, MVT &ValVT,
   return false;
 }
 
+bool 
+llvm::CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128(unsigned &ValNo, MVT &ValVT,
+                                                  MVT &LocVT,
+                                                  CCValAssign::LocInfo &LocInfo,
+                                                  ISD::ArgFlagsTy &ArgFlags,
+                                                  CCState &State) {
+  static const MCPhysReg ArgRegs[] = {
+    PPC::R3, PPC::R4, PPC::R5, PPC::R6,
+    PPC::R7, PPC::R8, PPC::R9, PPC::R10,
+  };
+  const unsigned NumArgRegs = array_lengthof(ArgRegs);
+
+  unsigned RegNum = State.getFirstUnallocated(ArgRegs);
+  int RegsLeft = NumArgRegs - RegNum;
+
+  // Skip if there is not enough registers left for long double type (4 gpr regs 
+  // in soft float mode) and put long double argument on the stack.
+  if (RegNum != NumArgRegs && RegsLeft < 4) {
+    for (int i = 0; i < RegsLeft; i++) {
+      State.AllocateReg(ArgRegs[RegNum + i]);
+    }
+  }
+
+  return false;
+}
+
 bool llvm::CC_PPC32_SVR4_Custom_AlignFPArgRegs(unsigned &ValNo, MVT &ValVT,
                                                MVT &LocVT,
                                                CCValAssign::LocInfo &LocInfo,

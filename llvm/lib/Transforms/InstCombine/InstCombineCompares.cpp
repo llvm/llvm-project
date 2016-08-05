@@ -176,12 +176,6 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const ConstantInt *RHS) {
   return false;
 }
 
-/// Return true if the constant is of the form 1+0+. This is the same as
-/// lowones(~X).
-static bool isHighOnes(const ConstantInt *CI) {
-  return (~CI->getValue() + 1).isPowerOf2();
-}
-
 /// Given a signed integer type and a set of known zero and one bits, compute
 /// the maximum and minimum values that could have the specified known zero and
 /// known one bits, returning them in Min/Max.
@@ -320,7 +314,7 @@ Instruction *InstCombiner::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
 
     // Find out if the comparison would be true or false for the i'th element.
     Constant *C = ConstantFoldCompareInstOperands(ICI.getPredicate(), Elt,
-                                                  CompareRHS, DL, TLI);
+                                                  CompareRHS, DL, &TLI);
     // If the result is undef for this element, ignore it.
     if (isa<UndefValue>(C)) {
       // Extend range state machines to cover this element in case there is an
@@ -1718,7 +1712,7 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &ICI,
               cast<ConstantInt>(ConstantExpr::getShl(AndCst, ShAmt));
             ConstantInt *ShiftedRHSCst =
               cast<ConstantInt>(ConstantExpr::getShl(RHS, ShAmt));
-            
+
             if (!ShiftedAndCst->isNegative() && !ShiftedRHSCst->isNegative())
               CanFold = true;
           }
@@ -2265,47 +2259,34 @@ Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI) {
     break;
   case Instruction::Sub:
     if (BO->hasOneUse()) {
-      // FIXME: Vectors are excluded by ConstantInt.
-      if (ConstantInt *BOp0C = dyn_cast<ConstantInt>(BOp0)) {
+      const APInt *BOC;
+      if (match(BOp0, m_APInt(BOC))) {
         // Replace ((sub A, B) != C) with (B != A-C) if A & C are constants.
-        return new ICmpInst(ICI.getPredicate(), BOp1,
-                            ConstantExpr::getSub(BOp0C, RHS));
+        Constant *SubC = ConstantExpr::getSub(cast<Constant>(BOp0), RHS);
+        return new ICmpInst(ICI.getPredicate(), BOp1, SubC);
       } else if (*RHSV == 0) {
         // Replace ((sub A, B) != 0) with (A != B)
         return new ICmpInst(ICI.getPredicate(), BOp0, BOp1);
       }
     }
     break;
-  case Instruction::Or:
-    // If bits are being or'd in that are not present in the constant we
-    // are comparing against, then the comparison could never succeed!
-    // FIXME: Vectors are excluded by ConstantInt.
-    if (ConstantInt *BOC = dyn_cast<ConstantInt>(BOp1)) {
-      Constant *NotCI = ConstantExpr::getNot(RHS);
-      if (!ConstantExpr::getAnd(BOC, NotCI)->isNullValue())
-        return replaceInstUsesWith(ICI, Builder->getInt1(isICMP_NE));
-
+  case Instruction::Or: {
+    const APInt *BOC;
+    if (match(BOp1, m_APInt(BOC)) && BO->hasOneUse() && RHS->isAllOnesValue()) {
       // Comparing if all bits outside of a constant mask are set?
       // Replace (X | C) == -1 with (X & ~C) == ~C.
       // This removes the -1 constant.
-      if (BO->hasOneUse() && RHS->isAllOnesValue()) {
-        Constant *NotBOC = ConstantExpr::getNot(BOC);
-        Value *And = Builder->CreateAnd(BOp0, NotBOC);
-        return new ICmpInst(ICI.getPredicate(), And, NotBOC);
-      }
+      Constant *NotBOC = ConstantExpr::getNot(cast<Constant>(BOp1));
+      Value *And = Builder->CreateAnd(BOp0, NotBOC);
+      return new ICmpInst(ICI.getPredicate(), And, NotBOC);
     }
     break;
-
-  case Instruction::And:
-    // FIXME: Vectors are excluded by ConstantInt.
-    if (ConstantInt *BOC = dyn_cast<ConstantInt>(BOp1)) {
-      // If bits are being compared against that are and'd out, then the
-      // comparison can never succeed!
-      if ((*RHSV & ~BOC->getValue()) != 0)
-        return replaceInstUsesWith(ICI, Builder->getInt1(isICMP_NE));
-
+  }
+  case Instruction::And: {
+    const APInt *BOC;
+    if (match(BOp1, m_APInt(BOC))) {
       // If we have ((X & C) == C), turn it into ((X & C) != 0).
-      if (RHS == BOC && RHSV->isPowerOf2())
+      if (RHSV == BOC && RHSV->isPowerOf2())
         return new ICmpInst(isICMP_NE ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
                             BO, Constant::getNullValue(RHS->getType()));
 
@@ -2314,7 +2295,7 @@ Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI) {
         break;
 
       // Replace (and X, (1 << size(X)-1) != 0) with x s< 0
-      if (BOC->getValue().isSignBit()) {
+      if (BOC->isSignBit()) {
         Constant *Zero = Constant::getNullValue(BOp0->getType());
         ICmpInst::Predicate Pred =
             isICMP_NE ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGE;
@@ -2322,24 +2303,24 @@ Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI) {
       }
 
       // ((X & ~7) == 0) --> X < 8
-      if (*RHSV == 0 && isHighOnes(BOC)) {
-        Constant *NegX = ConstantExpr::getNeg(BOC);
+      if (*RHSV == 0 && (~(*BOC) + 1).isPowerOf2()) {
+        Constant *NegBOC = ConstantExpr::getNeg(cast<Constant>(BOp1));
         ICmpInst::Predicate Pred =
             isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
-        return new ICmpInst(Pred, BOp0, NegX);
+        return new ICmpInst(Pred, BOp0, NegBOC);
       }
     }
     break;
+  }
   case Instruction::Mul:
     if (*RHSV == 0 && BO->hasNoSignedWrap()) {
-      // FIXME: Vectors are excluded by ConstantInt.
-      if (ConstantInt *BOC = dyn_cast<ConstantInt>(BOp1)) {
-        // The trivial case (mul X, 0) is handled by InstSimplify
+      const APInt *BOC;
+      if (match(BOp1, m_APInt(BOC)) && *BOC != 0) {
+        // The trivial case (mul X, 0) is handled by InstSimplify.
         // General case : (mul X, C) != 0 iff X != 0
         //                (mul X, C) == 0 iff X == 0
-        if (!BOC->isZero())
-          return new ICmpInst(ICI.getPredicate(), BOp0,
-                              Constant::getNullValue(RHS->getType()));
+        return new ICmpInst(ICI.getPredicate(), BOp0,
+                            Constant::getNullValue(RHS->getType()));
       }
     }
     break;
@@ -3034,12 +3015,9 @@ bool InstCombiner::dominatesAllUses(const Instruction *DI,
   // Protect from self-referencing blocks
   if (DI->getParent() == DB)
     return false;
-  // DominatorTree available?
-  if (!DT)
-    return false;
   for (const User *U : DI->users()) {
     auto *Usr = cast<Instruction>(U);
-    if (Usr != UI && !DT->dominates(DB, Usr->getParent()))
+    if (Usr != UI && !DT.dominates(DB, Usr->getParent()))
       return false;
   }
   return true;
@@ -3198,7 +3176,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   }
 
   if (Value *V =
-          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, TLI, DT, AC, &I))
+          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, &TLI, &DT, &AC, &I))
     return replaceInstUsesWith(I, V);
 
   // comparing -val or val with non-zero is the same as just comparing val
@@ -3308,7 +3286,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
             return new ICmpInst(I.getPredicate(), A, CI);
         }
       }
-    
+
 
     // The following transforms are only 'worth it' if the only user of the
     // subtraction is the icmp.
@@ -4122,7 +4100,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // if A is a power of 2.
     if (match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
         match(Op1, m_Zero()) &&
-        isKnownToBeAPowerOfTwo(A, DL, false, 0, AC, &I, DT) && I.isEquality())
+        isKnownToBeAPowerOfTwo(A, DL, false, 0, &AC, &I, &DT) && I.isEquality())
       return new ICmpInst(I.getInversePredicate(),
                           Builder->CreateAnd(A, B),
                           Op1);
@@ -4369,21 +4347,21 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
   // This would allow us to handle (fptosi (x >>s 62) to float) if x is i64 f.e.
   unsigned InputSize = IntTy->getScalarSizeInBits();
 
-  // Following test does NOT adjust InputSize downwards for signed inputs, 
-  // because the most negative value still requires all the mantissa bits 
+  // Following test does NOT adjust InputSize downwards for signed inputs,
+  // because the most negative value still requires all the mantissa bits
   // to distinguish it from one less than that value.
   if ((int)InputSize > MantissaWidth) {
     // Conversion would lose accuracy. Check if loss can impact comparison.
     int Exp = ilogb(RHS);
     if (Exp == APFloat::IEK_Inf) {
       int MaxExponent = ilogb(APFloat::getLargest(RHS.getSemantics()));
-      if (MaxExponent < (int)InputSize - !LHSUnsigned) 
+      if (MaxExponent < (int)InputSize - !LHSUnsigned)
         // Conversion could create infinity.
         return nullptr;
     } else {
-      // Note that if RHS is zero or NaN, then Exp is negative 
+      // Note that if RHS is zero or NaN, then Exp is negative
       // and first condition is trivially false.
-      if (MantissaWidth <= Exp && Exp <= (int)InputSize - !LHSUnsigned) 
+      if (MantissaWidth <= Exp && Exp <= (int)InputSize - !LHSUnsigned)
         // Conversion could affect comparison.
         return nullptr;
     }
@@ -4577,7 +4555,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyFCmpInst(I.getPredicate(), Op0, Op1,
-                                  I.getFastMathFlags(), DL, TLI, DT, AC, &I))
+                                  I.getFastMathFlags(), DL, &TLI, &DT, &AC, &I))
     return replaceInstUsesWith(I, V);
 
   // Simplify 'fcmp pred X, X'
@@ -4697,7 +4675,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
           break;
 
         CallInst *CI = cast<CallInst>(LHSI);
-        Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
+        Intrinsic::ID IID = getIntrinsicForCallSite(CI, &TLI);
         if (IID != Intrinsic::fabs)
           break;
 

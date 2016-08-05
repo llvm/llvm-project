@@ -3,8 +3,8 @@
 
 define i32 @test_sext1(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext1(
-; CHECK-NEXT:    [[CCAX:%.*]] = sext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 [[CCAX]], i32 0
+; CHECK-NEXT:    [[FOLD_R:%.*]] = and i1 %ccb, %cca
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = sext i1 %cca to i32
@@ -14,8 +14,8 @@ define i32 @test_sext1(i1 %cca, i1 %ccb) {
 
 define i32 @test_sext2(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext2(
-; CHECK-NEXT:    [[CCAX:%.*]] = sext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 -1, i32 [[CCAX]]
+; CHECK-NEXT:    [[FOLD_R:%.*]] = or i1 %ccb, %cca
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = sext i1 %cca to i32
@@ -25,8 +25,9 @@ define i32 @test_sext2(i1 %cca, i1 %ccb) {
 
 define i32 @test_sext3(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext3(
-; CHECK-NEXT:    [[CCAX:%.*]] = sext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 0, i32 [[CCAX]]
+; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 %ccb, true
+; CHECK-NEXT:    [[FOLD_R:%.*]] = and i1 [[NOT_CCB]], %cca
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = sext i1 %cca to i32
@@ -36,8 +37,9 @@ define i32 @test_sext3(i1 %cca, i1 %ccb) {
 
 define i32 @test_sext4(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_sext4(
-; CHECK-NEXT:    [[CCAX:%.*]] = sext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 [[CCAX]], i32 -1
+; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 %ccb, true
+; CHECK-NEXT:    [[FOLD_R:%.*]] = or i1 [[NOT_CCB]], %cca
+; CHECK-NEXT:    [[R:%.*]] = sext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = sext i1 %cca to i32
@@ -47,8 +49,8 @@ define i32 @test_sext4(i1 %cca, i1 %ccb) {
 
 define i32 @test_zext1(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext1(
-; CHECK-NEXT:    [[CCAX:%.*]] = zext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 [[CCAX]], i32 0
+; CHECK-NEXT:    [[FOLD_R:%.*]] = and i1 %ccb, %cca
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = zext i1 %cca to i32
@@ -58,8 +60,8 @@ define i32 @test_zext1(i1 %cca, i1 %ccb) {
 
 define i32 @test_zext2(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext2(
-; CHECK-NEXT:    [[CCAX:%.*]] = zext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 1, i32 [[CCAX]]
+; CHECK-NEXT:    [[FOLD_R:%.*]] = or i1 %ccb, %cca
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = zext i1 %cca to i32
@@ -69,8 +71,9 @@ define i32 @test_zext2(i1 %cca, i1 %ccb) {
 
 define i32 @test_zext3(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext3(
-; CHECK-NEXT:    [[CCAX:%.*]] = zext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 0, i32 [[CCAX]]
+; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 %ccb, true
+; CHECK-NEXT:    [[FOLD_R:%.*]] = and i1 [[NOT_CCB]], %cca
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = zext i1 %cca to i32
@@ -80,8 +83,9 @@ define i32 @test_zext3(i1 %cca, i1 %ccb) {
 
 define i32 @test_zext4(i1 %cca, i1 %ccb) {
 ; CHECK-LABEL: @test_zext4(
-; CHECK-NEXT:    [[CCAX:%.*]] = zext i1 %cca to i32
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, i32 [[CCAX]], i32 1
+; CHECK-NEXT:    [[NOT_CCB:%.*]] = xor i1 %ccb, true
+; CHECK-NEXT:    [[FOLD_R:%.*]] = or i1 [[NOT_CCB]], %cca
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[FOLD_R]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ccax = zext i1 %cca to i32
@@ -151,10 +155,10 @@ define i32 @test_op_op(i32 %a, i32 %b, i32 %c) {
   ret i32 %r
 }
 
-define <2 x i32> @test_vectors1(<2 x i1> %cca, <2 x i1> %ccb) {
-; CHECK-LABEL: @test_vectors1(
-; CHECK-NEXT:    [[CCAX:%.*]] = sext <2 x i1> %cca to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> %ccb, <2 x i32> [[CCAX]], <2 x i32> zeroinitializer
+define <2 x i32> @test_vectors_sext(<2 x i1> %cca, <2 x i1> %ccb) {
+; CHECK-LABEL: @test_vectors_sext(
+; CHECK-NEXT:    [[FOLD_R:%.*]] = and <2 x i1> %ccb, %cca
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[FOLD_R]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %ccax = sext <2 x i1> %cca to <2 x i32>
@@ -162,13 +166,35 @@ define <2 x i32> @test_vectors1(<2 x i1> %cca, <2 x i1> %ccb) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @test_vectors2(<2 x i1> %cca, i1 %ccb) {
-; CHECK-LABEL: @test_vectors2(
-; CHECK-NEXT:    [[CCAX:%.*]] = sext <2 x i1> %cca to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = select i1 %ccb, <2 x i32> [[CCAX]], <2 x i32> zeroinitializer
+define <2 x i32> @test_vectors_zext(<2 x i1> %cca, <2 x i1> %ccb) {
+; CHECK-LABEL: @test_vectors_zext(
+; CHECK-NEXT:    [[FOLD_R:%.*]] = and <2 x i1> %ccb, %cca
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[FOLD_R]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %ccax = zext <2 x i1> %cca to <2 x i32>
+  %r = select <2 x i1> %ccb, <2 x i32> %ccax, <2 x i32> <i32 0, i32 0>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @scalar_select_of_vectors_sext(<2 x i1> %cca, i1 %ccb) {
+; CHECK-LABEL: @scalar_select_of_vectors_sext(
+; CHECK-NEXT:    [[FOLD_R:%.*]] = select i1 %ccb, <2 x i1> %cca, <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[FOLD_R]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %ccax = sext <2 x i1> %cca to <2 x i32>
+  %r = select i1 %ccb, <2 x i32> %ccax, <2 x i32> <i32 0, i32 0>
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @scalar_select_of_vectors_zext(<2 x i1> %cca, i1 %ccb) {
+; CHECK-LABEL: @scalar_select_of_vectors_zext(
+; CHECK-NEXT:    [[FOLD_R:%.*]] = select i1 %ccb, <2 x i1> %cca, <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[FOLD_R]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %ccax = zext <2 x i1> %cca to <2 x i32>
   %r = select i1 %ccb, <2 x i32> %ccax, <2 x i32> <i32 0, i32 0>
   ret <2 x i32> %r
 }

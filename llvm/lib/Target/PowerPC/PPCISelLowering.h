@@ -953,6 +953,13 @@ namespace llvm {
                                          ISD::ArgFlagsTy &ArgFlags,
                                          CCState &State);
 
+  bool 
+  CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128(unsigned &ValNo, MVT &ValVT,
+                                                 MVT &LocVT,
+                                                 CCValAssign::LocInfo &LocInfo,
+                                                 ISD::ArgFlagsTy &ArgFlags,
+                                                 CCState &State);
+
   bool CC_PPC32_SVR4_Custom_AlignFPArgRegs(unsigned &ValNo, MVT &ValVT,
                                            MVT &LocVT,
                                            CCValAssign::LocInfo &LocInfo,

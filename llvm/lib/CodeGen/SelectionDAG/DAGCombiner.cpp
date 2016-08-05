@@ -8907,14 +8907,18 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitFSQRT(SDNode *N) {
-  if (!DAG.getTarget().Options.UnsafeFPMath || TLI.isFsqrtCheap())
+  if (!DAG.getTarget().Options.UnsafeFPMath)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (TLI.isFsqrtCheap(N0, DAG))
     return SDValue();
 
   // TODO: FSQRT nodes should have flags that propagate to the created nodes.
   // For now, create a Flags object for use with all unsafe math transforms.
   SDNodeFlags Flags;
   Flags.setUnsafeAlgebra(true);
-  return buildSqrtEstimate(N->getOperand(0), &Flags);
+  return buildSqrtEstimate(N0, &Flags);
 }
 
 /// copysign(x, fp_extend(y)) -> copysign(x, y)

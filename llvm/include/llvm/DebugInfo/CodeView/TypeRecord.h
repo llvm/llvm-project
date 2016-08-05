@@ -16,7 +16,7 @@
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
 #include <cinttypes>
 #include <utility>
 
@@ -83,7 +83,7 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MemberPointerInfo> deserialize(ArrayRef<uint8_t> &Data);
+  static Expected<MemberPointerInfo> deserialize(ArrayRef<uint8_t> &Data);
 
   TypeIndex getContainingType() const { return ContainingType; }
   PointerToMemberRepresentation getRepresentation() const {
@@ -122,8 +122,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ModifierRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+  static Expected<ModifierRecord> deserialize(TypeRecordKind Kind,
+                                              ArrayRef<uint8_t> &Data);
 
   TypeIndex getModifiedType() const { return ModifiedType; }
   ModifierOptions getModifiers() const { return Modifiers; }
@@ -152,8 +152,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ProcedureRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<ProcedureRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   static uint32_t getLayoutSize() { return 2 + sizeof(Layout); }
 
@@ -196,8 +196,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MemberFunctionRecord> deserialize(TypeRecordKind Kind,
-                                                   ArrayRef<uint8_t> &Data);
+  static Expected<MemberFunctionRecord> deserialize(TypeRecordKind Kind,
+                                                    ArrayRef<uint8_t> &Data);
 
   TypeIndex getReturnType() const { return ReturnType; }
   TypeIndex getClassType() const { return ClassType; }
@@ -242,8 +242,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MemberFuncIdRecord> deserialize(TypeRecordKind Kind,
-                                                 ArrayRef<uint8_t> &Data);
+  static Expected<MemberFuncIdRecord> deserialize(TypeRecordKind Kind,
+                                                  ArrayRef<uint8_t> &Data);
   TypeIndex getClassType() const { return ClassType; }
   TypeIndex getFunctionType() const { return FunctionType; }
   StringRef getName() const { return Name; }
@@ -269,8 +269,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ArgListRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+  static Expected<ArgListRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data);
 
   ArrayRef<TypeIndex> getIndices() const { return StringIndices; }
 
@@ -313,8 +313,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<PointerRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+  static Expected<PointerRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data);
 
   TypeIndex getReferentType() const { return ReferentType; }
   PointerKind getPointerKind() const { return PtrKind; }
@@ -389,8 +389,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<NestedTypeRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+  static Expected<NestedTypeRecord> deserialize(TypeRecordKind Kind,
+                                                ArrayRef<uint8_t> &Data);
 
   TypeIndex getNestedType() const { return Type; }
   StringRef getName() const { return Name; }
@@ -418,8 +418,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ArrayRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<ArrayRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   TypeIndex getElementType() const { return ElementType; }
   TypeIndex getIndexType() const { return IndexType; }
@@ -486,8 +486,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ClassRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<ClassRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   HfaKind getHfa() const { return Hfa; }
   WindowsRTClassKind getWinRTKind() const { return WinRTKind; }
@@ -527,8 +527,8 @@ struct UnionRecord : public TagRecord {
                   UniqueName),
         Hfa(Hfa), Size(Size) {}
 
-  static ErrorOr<UnionRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<UnionRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   HfaKind getHfa() const { return Hfa; }
   uint64_t getSize() const { return Size; }
@@ -563,8 +563,8 @@ public:
   /// Rewrite member type indices with IndexMap. Returns false if a type index is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<EnumRecord> deserialize(TypeRecordKind Kind,
-                                         ArrayRef<uint8_t> &Data);
+  static Expected<EnumRecord> deserialize(TypeRecordKind Kind,
+                                          ArrayRef<uint8_t> &Data);
 
   TypeIndex getUnderlyingType() const { return UnderlyingType; }
 
@@ -595,8 +595,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<BitFieldRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+  static Expected<BitFieldRecord> deserialize(TypeRecordKind Kind,
+                                              ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
   uint8_t getBitOffset() const { return BitOffset; }
@@ -626,8 +626,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VFTableShapeRecord> deserialize(TypeRecordKind Kind,
-                                                 ArrayRef<uint8_t> &Data);
+  static Expected<VFTableShapeRecord> deserialize(TypeRecordKind Kind,
+                                                  ArrayRef<uint8_t> &Data);
 
   ArrayRef<VFTableSlotKind> getSlots() const {
     if (!SlotsRef.empty())
@@ -661,8 +661,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<TypeServer2Record> deserialize(TypeRecordKind Kind,
-                                                ArrayRef<uint8_t> &Data);
+  static Expected<TypeServer2Record> deserialize(TypeRecordKind Kind,
+                                                 ArrayRef<uint8_t> &Data);
 
   StringRef getGuid() const { return Guid; }
 
@@ -692,8 +692,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<StringIdRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+  static Expected<StringIdRecord> deserialize(TypeRecordKind Kind,
+                                              ArrayRef<uint8_t> &Data);
 
   TypeIndex getId() const { return Id; }
 
@@ -720,8 +720,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<FuncIdRecord> deserialize(TypeRecordKind Kind,
-                                           ArrayRef<uint8_t> &Data);
+  static Expected<FuncIdRecord> deserialize(TypeRecordKind Kind,
+                                            ArrayRef<uint8_t> &Data);
 
   TypeIndex getParentScope() const { return ParentScope; }
 
@@ -752,8 +752,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<UdtSourceLineRecord> deserialize(TypeRecordKind Kind,
-                                                  ArrayRef<uint8_t> &Data);
+  static Expected<UdtSourceLineRecord> deserialize(TypeRecordKind Kind,
+                                                   ArrayRef<uint8_t> &Data);
 
   TypeIndex getUDT() const { return UDT; }
   TypeIndex getSourceFile() const { return SourceFile; }
@@ -781,8 +781,8 @@ public:
 
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<UdtModSourceLineRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data) {
+  static Expected<UdtModSourceLineRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
     CV_DESERIALIZE(Data, L);
 
@@ -820,8 +820,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<BuildInfoRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<BuildInfoRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
 
@@ -853,8 +853,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VFTableRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+  static Expected<VFTableRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data);
 
   TypeIndex getCompleteClass() const { return CompleteClass; }
   TypeIndex getOverriddenVTable() const { return OverriddenVFTable; }
@@ -897,8 +897,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<OneMethodRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<OneMethodRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
   MethodKind getKind() const { return Kind; }
@@ -939,8 +939,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MethodOverloadListRecord> deserialize(TypeRecordKind Kind,
-                                                       ArrayRef<uint8_t> &Data);
+  static Expected<MethodOverloadListRecord>
+  deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data);
 
   ArrayRef<OneMethodRecord> getMethods() const { return Methods; }
 
@@ -969,8 +969,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<OverloadedMethodRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<OverloadedMethodRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
   uint16_t getNumOverloads() const { return NumOverloads; }
   TypeIndex getMethodList() const { return MethodList; }
@@ -1000,8 +1000,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<DataMemberRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+  static Expected<DataMemberRecord> deserialize(TypeRecordKind Kind,
+                                                ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
@@ -1033,8 +1033,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<StaticDataMemberRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<StaticDataMemberRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
@@ -1063,8 +1063,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<EnumeratorRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+  static Expected<EnumeratorRecord> deserialize(TypeRecordKind Kind,
+                                                ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   APSInt getValue() const { return Value; }
@@ -1092,8 +1092,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VFPtrRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<VFPtrRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
 
@@ -1116,8 +1116,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<BaseClassRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<BaseClassRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return Type; }
@@ -1147,8 +1147,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VirtualBaseClassRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<VirtualBaseClassRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return BaseType; }
@@ -1183,8 +1183,8 @@ public:
 
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ListContinuationRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<ListContinuationRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
 private:
   struct Layout {

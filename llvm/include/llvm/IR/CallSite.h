@@ -109,6 +109,17 @@ public:
     *getCallee() = V;
   }
 
+  /// Return the intrinsic ID of the intrinsic called by this CallSite,
+  /// or Intrinsic::not_intrinsic if the called function is not an
+  /// intrinsic, or if this CallSite is an indirect call.
+  Intrinsic::ID getIntrinsicID() const {
+    if (auto *F = getCalledFunction())
+      return F->getIntrinsicID();
+    // Don't use Intrinsic::not_intrinsic, as it will require pulling
+    // Intrinsics.h into every header that uses CallSite.
+    return static_cast<Intrinsic::ID>(0);
+  }
+
   /// isCallee - Determine whether the passed iterator points to the
   /// callee operand's Use.
   bool isCallee(Value::const_user_iterator UI) const {
