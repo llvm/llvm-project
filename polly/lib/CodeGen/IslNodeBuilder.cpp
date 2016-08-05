@@ -193,17 +193,8 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   return 0;
 }
 
-/// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
-///
-/// This includes the SCEVUnknowns referenced by the SCEVs used in the
-/// statement and the base pointers of the memory accesses. For scalar
-/// statements we force the generation of alloca memory locations and list
-/// these locations in the set of out-of-scop values as well.
-///
-/// @param Stmt    The statement for which to extract the information.
-/// @param UserPtr A void pointer that can be casted to a SubtreeReferences
-///                structure.
-isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
+isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                               bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())
@@ -226,7 +217,8 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
       continue;
     }
 
-    References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
+    if (CreateScalarRefs)
+      References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
   }
 
   return isl_stat_ok;

@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "InefficientStringConcatenationCheck.h"
 
 #include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
@@ -30,6 +31,8 @@ public:
         "performance-for-range-copy");
     CheckFactories.registerCheck<ImplicitCastInLoopCheck>(
         "performance-implicit-cast-in-loop");
+    CheckFactories.registerCheck<InefficientStringConcatenationCheck>(
+        "performance-inefficient-string-concatenation");
     CheckFactories.registerCheck<UnnecessaryCopyInitialization>(
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(

@@ -73,6 +73,23 @@ public:
     return Result;
   }
 
+  /// \brief Read a named option from the ``Context`` and parse it as an
+  /// integral type ``T``.
+  ///
+  /// Reads the option with the check-local name \p LocalName from local or
+  /// global ``CheckOptions``. Gets local option first. If local is not present,
+  /// falls back to get global option. If global option is not present either,
+  /// returns Default.
+  template <typename T>
+  typename std::enable_if<std::is_integral<T>::value, T>::type
+  getLocalOrGlobal(StringRef LocalName, T Default) const {
+    std::string Value = getLocalOrGlobal(LocalName, "");
+    T Result = Default;
+    if (!Value.empty())
+      StringRef(Value).getAsInteger(10, Result);
+    return Result;
+  }
+
   /// \brief Stores an option with the check-local name \p LocalName with string
   /// value \p Value to \p Options.
   void store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,

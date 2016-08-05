@@ -363,6 +363,8 @@ Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
+  assert(!Access.isArrayKind() && "Trying to get alloca for array kind");
+
   if (Access.isPHIKind())
     return getOrCreatePHIAlloca(Access.getBaseAddr());
   else
@@ -370,6 +372,8 @@ Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
+  assert(!Array->isArrayKind() && "Trying to get alloca for array kind");
+
   if (Array->isPHIKind())
     return getOrCreatePHIAlloca(Array->getBasePtr());
   else

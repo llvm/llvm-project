@@ -1,14 +1,5 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=287 -new-name=Bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
-
-// Currently unsupported test.
-// FIXME: clang-rename should be able to rename classes with templates
-// correctly.
-// XFAIL: *
-
 template <typename T>
-class Foo {               // CHECK: class Bar;
+class Foo {               // CHECK: class Bar {
 public:
   T foo(T arg, T& ref, T* ptr) {
     T value;
@@ -40,5 +31,14 @@ int main() {
   return 0;
 }
 
-// Use grep -FUbo 'C' <file> to get the correct offset of foo when changing
-// this file.
+// RUN: cat %s > %t-0.cpp
+// RUN: clang-rename -offset=29 -new-name=Bar %t-0.cpp -i -- -fno-delayed-template-parsing
+// RUN: sed 's,//.*,,' %t-0.cpp | FileCheck %s
+
+// RUN: cat %s > %t-1.cpp
+// RUN: clang-rename -offset=311 -new-name=Bar %t-1.cpp -i -- -fno-delayed-template-parsing
+// RUN: sed 's,//.*,,' %t-1.cpp | FileCheck %s
+
+// RUN: cat %s > %t-2.cpp
+// RUN: clang-rename -offset=445 -new-name=Bar %t-2.cpp -i -- -fno-delayed-template-parsing
+// RUN: sed 's,//.*,,' %t-2.cpp | FileCheck %s

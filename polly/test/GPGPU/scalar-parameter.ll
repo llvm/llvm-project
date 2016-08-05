@@ -2,6 +2,14 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
+; RUN: opt %loadPolly -polly-codegen-ppcg \
+; RUN: -S < %s | \
+; RUN: FileCheck -check-prefix=IR %s
+
+; RUN: opt %loadPolly -polly-codegen-ppcg \
+; RUN: -disable-output -polly-acc-dump-kernel-ir < %s | \
+; RUN: FileCheck -check-prefix=KERNEL %s
+
 ; REQUIRES: pollyacc
 
 ; CODE: Code
@@ -54,6 +62,8 @@ bb7:                                              ; preds = %bb1
   ret void
 }
 
+; KERNEL: define ptx_kernel void @kernel_0(i8* %MemRef_A, i8* %MemRef_b)
+
 ; CODE: Code
 ; CODE-NEXT: ====
 ; CODE-NEXT: # host
@@ -103,6 +113,13 @@ bb5:                                              ; preds = %bb2
 bb7:                                              ; preds = %bb1
   ret void
 }
+
+; KERNEL: define ptx_kernel void @kernel_0(i8* %MemRef_A, i8* %MemRef_b)
+; KERNEL-NEXT: entry:
+; KERNEL-NEXT:   %b.s2a = alloca float
+; KERNEL-NEXT:   %0 = bitcast i8* %MemRef_b to float*
+; KERNEL-NEXT:   %1 = load float, float* %0
+; KERNEL-NEXT:   store float %1, float* %b.s2a
 
 ; CODE: Code
 ; CODE-NEXT: ====
@@ -300,6 +317,17 @@ bb5:                                              ; preds = %bb2
 bb7:                                              ; preds = %bb1
   ret void
 }
+
+; IR-LABEL: @i8
+
+; IR: %1 = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_A)
+; IR-NEXT: store i8* %1, i8** %polly_launch_0_param_0
+; IR-NEXT: %2 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; IR-NEXT: %3 = bitcast i8** %polly_launch_0_param_0 to i8*
+; IR-NEXT: store i8* %3, i8** %2
+; IR-NEXT: store i8 %b, i8* %polly_launch_0_param_1
+; IR-NEXT: %4 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT: store i8* %polly_launch_0_param_1, i8** %4
 
 ; CODE: Code
 ; CODE-NEXT: ====

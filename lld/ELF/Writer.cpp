@@ -233,8 +233,9 @@ template <class ELFT> void Writer<ELFT>::run() {
   CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
   CommonInputSection<ELFT>::X = &Common;
 
+  Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasContents)
-    Script<ELFT>::X->createSections(&OutputSections, Factory);
+    Script<ELFT>::X->createSections(Factory);
   else
     createSections();
 
@@ -245,12 +246,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    Phdrs = Script<ELFT>::X->hasPhdrsCommands()
-                ? Script<ELFT>::X->createPhdrs(OutputSections)
-                : createPhdrs();
+    Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
+                                                : createPhdrs();
     fixHeaders();
     if (ScriptConfig->HasContents) {
-      Script<ELFT>::X->assignAddresses(OutputSections);
+      Script<ELFT>::X->assignAddresses();
     } else {
       fixSectionAlignments();
       assignAddresses();

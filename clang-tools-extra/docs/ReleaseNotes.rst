@@ -69,6 +69,13 @@ Improvements to clang-tidy
 
   Flags classes where some, but not all, special member functions are user-defined.
 
+- New `performance-inefficient-string-concatenation
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-string-concatenation.html>`_ check
+
+  This check warns about the performance overhead arising from concatenating
+  strings using the ``operator+``, instead of ``operator+=``.
+
+
 Improvements to include-fixer
 -----------------------------
 

@@ -41,7 +41,6 @@ private:
   std::map<std::string, tooling::Replacements> &FileToReplaces;
   bool PrintLocations;
 };
-
 }
 }
 
