@@ -4,26 +4,26 @@
 ## Check that padding value works:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x112233445566778899 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: hexdump -C %t.out | FileCheck -check-prefix=YES %s
-# YES: 00000120  66 22 33 44 55 66 77 88 99 11 22 33 44 55 66 77
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
+# YES: 0120  66223344 55667788 99112233 44556677
 
 ## Confirming that address was correct:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x998877665544332211 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: hexdump -C %t.out | FileCheck -check-prefix=YES2 %s
-# YES2: 00000120  66 88 77 66 55 44 33 22 11 99 88 77 66 55 44
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES2 %s
+# YES2: 0120  66887766 55443322 11998877 66554433
 
 ## Default padding value is 0x00:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: hexdump -C %t.out | FileCheck -check-prefix=NO %s
-# NO: 00000120  66 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=NO %s
+# NO: 0120  66000000 00000000 00000000 00000000
 
 ## Decimal value.
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =777 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: hexdump -C %t.out | FileCheck -check-prefix=DEC %s
-# DEC: 00000120  66 00 03 09 00 00 03 09 00 00 03 09 00 00 03 09
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=DEC %s
+# DEC: 0120  66000309 00000309 00000309 00000309
 
 ## Invalid hex value:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script

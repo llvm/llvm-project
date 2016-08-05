@@ -6344,13 +6344,15 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
 
   // It is possible to have a non-standard definition of memset.  Validate
   // we have enough arguments, and if not, abort further checking.
-  unsigned ExpectedNumArgs = (BId == Builtin::BIstrndup ? 2 : 3);
+  unsigned ExpectedNumArgs =
+      (BId == Builtin::BIstrndup || Builtin::BIbzero ? 2 : 3);
   if (Call->getNumArgs() < ExpectedNumArgs)
     return;
 
-  unsigned LastArg = (BId == Builtin::BImemset ||
+  unsigned LastArg = (BId == Builtin::BImemset || BId == Builtin::BIbzero ||
                       BId == Builtin::BIstrndup ? 1 : 2);
-  unsigned LenArg = (BId == Builtin::BIstrndup ? 1 : 2);
+  unsigned LenArg =
+      (BId == Builtin::BIbzero || BId == Builtin::BIstrndup ? 1 : 2);
   const Expr *LenExpr = Call->getArg(LenArg)->IgnoreParenImpCasts();
 
   if (CheckMemorySizeofForComparison(*this, LenExpr, FnName,
@@ -7989,6 +7991,12 @@ bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
 
   unsigned OriginalWidth = Value.getBitWidth();
   unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
+
+  if (Value.isSigned() && Value.isNegative())
+    if (UnaryOperator *UO = dyn_cast<UnaryOperator>(OriginalInit))
+      if (UO->getOpcode() == UO_Minus)
+        if (isa<IntegerLiteral>(UO->getSubExpr()))
+          OriginalWidth = Value.getMinSignedBits();
 
   if (OriginalWidth <= FieldWidth)
     return false;

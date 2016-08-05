@@ -41,7 +41,8 @@ template <class ELFT> class OutputSectionBase;
 enum SectionsCommandKind {
   AssignmentKind,
   OutputSectionKind,
-  InputSectionKind
+  InputSectionKind,
+  AssertKind
 };
 
 struct BaseCommand {
@@ -87,15 +88,22 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
-enum class SortKind { None, Name, Align, NameAlign, AlignName };
+enum SortKind { SortNone, SortByName, SortByAlignment };
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription() : BaseCommand(InputSectionKind) {}
   static bool classof(const BaseCommand *C);
   StringRef FilePattern;
-  SortKind Sort = SortKind::None;
+  SortKind SortOuter = SortNone;
+  SortKind SortInner = SortNone;
   std::vector<StringRef> ExcludedFiles;
   std::vector<StringRef> SectionPatterns;
+};
+
+struct AssertCommand : BaseCommand {
+  AssertCommand(Expr E) : BaseCommand(AssertKind), Expression(E) {}
+  static bool classof(const BaseCommand *C);
+  Expr Expression;
 };
 
 struct PhdrsCommand {
@@ -130,19 +138,19 @@ template <class ELFT> class LinkerScript {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  void createSections(std::vector<OutputSectionBase<ELFT> *> *Out,
-                      OutputSectionFactory<ELFT> &Factory);
+  void createSections(OutputSectionFactory<ELFT> &Factory);
 
-  std::vector<PhdrEntry<ELFT>>
-  createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
+  std::vector<PhdrEntry<ELFT>> createPhdrs();
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
-  void assignAddresses(ArrayRef<OutputSectionBase<ELFT> *> S);
+  void assignAddresses();
   int compareSections(StringRef A, StringRef B);
   void addScriptedSymbols();
   bool hasPhdrsCommands();
   uintX_t getOutputSectionSize(StringRef Name);
+
+  std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
 private:
   std::vector<std::pair<StringRef, const InputSectionDescription *>>
@@ -160,7 +168,6 @@ private:
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
 
-  std::vector<OutputSectionBase<ELFT> *> *OutputSections;
   uintX_t Dot;
 };
 

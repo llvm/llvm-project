@@ -79,16 +79,4 @@ DefinedAtom::ContentPermissions DefinedAtom::permissions(ContentType type) {
   llvm_unreachable("unknown content type");
 }
 
-bool DefinedAtom::compareByPosition(const DefinedAtom *lhs,
-                                    const DefinedAtom *rhs) {
-  if (lhs == rhs)
-    return false;
-  const File *lhsFile = &lhs->file();
-  const File *rhsFile = &rhs->file();
-  if (lhsFile->ordinal() != rhsFile->ordinal())
-    return lhsFile->ordinal() < rhsFile->ordinal();
-  assert(lhs->ordinal() != rhs->ordinal());
-  return lhs->ordinal() < rhs->ordinal();
-}
-
 } // namespace

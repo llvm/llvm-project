@@ -9810,14 +9810,6 @@ float3 __ovld __cnfn native_cos(float3 x);
 float4 __ovld __cnfn native_cos(float4 x);
 float8 __ovld __cnfn native_cos(float8 x);
 float16 __ovld __cnfn native_cos(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_cos(double x);
-double2 __ovld __cnfn native_cos(double2 x);
-double3 __ovld __cnfn native_cos(double3 x);
-double4 __ovld __cnfn native_cos(double4 x);
-double8 __ovld __cnfn native_cos(double8 x);
-double16 __ovld __cnfn native_cos(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute x / y over an implementation-defined range.
@@ -9829,14 +9821,6 @@ float3 __ovld __cnfn native_divide(float3 x, float3 y);
 float4 __ovld __cnfn native_divide(float4 x, float4 y);
 float8 __ovld __cnfn native_divide(float8 x, float8 y);
 float16 __ovld __cnfn native_divide(float16 x, float16 y);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_divide(double x, double y);
-double2 __ovld __cnfn native_divide(double2 x, double2 y);
-double3 __ovld __cnfn native_divide(double3 x, double3 y);
-double4 __ovld __cnfn native_divide(double4 x, double4 y);
-double8 __ovld __cnfn native_divide(double8 x, double8 y);
-double16 __ovld __cnfn native_divide(double16 x, double16 y);
-#endif //cl_khr_fp64
 
 /**
  * Compute the base- e exponential of x over an
@@ -9849,14 +9833,6 @@ float3 __ovld __cnfn native_exp(float3 x);
 float4 __ovld __cnfn native_exp(float4 x);
 float8 __ovld __cnfn native_exp(float8 x);
 float16 __ovld __cnfn native_exp(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_exp(double x);
-double2 __ovld __cnfn native_exp(double2 x);
-double3 __ovld __cnfn native_exp(double3 x);
-double4 __ovld __cnfn native_exp(double4 x);
-double8 __ovld __cnfn native_exp(double8 x);
-double16 __ovld __cnfn native_exp(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute the base- 2 exponential of x over an
@@ -9869,14 +9845,6 @@ float3 __ovld __cnfn native_exp2(float3 x);
 float4 __ovld __cnfn native_exp2(float4 x);
 float8 __ovld __cnfn native_exp2(float8 x);
 float16 __ovld __cnfn native_exp2(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_exp2(double x);
-double2 __ovld __cnfn native_exp2(double2 x);
-double3 __ovld __cnfn native_exp2(double3 x);
-double4 __ovld __cnfn native_exp2(double4 x);
-double8 __ovld __cnfn native_exp2(double8 x);
-double16 __ovld __cnfn native_exp2(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute the base- 10 exponential of x over an
@@ -9889,14 +9857,6 @@ float3 __ovld __cnfn native_exp10(float3 x);
 float4 __ovld __cnfn native_exp10(float4 x);
 float8 __ovld __cnfn native_exp10(float8 x);
 float16 __ovld __cnfn native_exp10(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_exp10(double x);
-double2 __ovld __cnfn native_exp10(double2 x);
-double3 __ovld __cnfn native_exp10(double3 x);
-double4 __ovld __cnfn native_exp10(double4 x);
-double8 __ovld __cnfn native_exp10(double8 x);
-double16 __ovld __cnfn native_exp10(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute natural logarithm over an implementationdefined
@@ -9909,14 +9869,6 @@ float3 __ovld __cnfn native_log(float3 x);
 float4 __ovld __cnfn native_log(float4 x);
 float8 __ovld __cnfn native_log(float8 x);
 float16 __ovld __cnfn native_log(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_log(double x);
-double2 __ovld __cnfn native_log(double2 x);
-double3 __ovld __cnfn native_log(double3 x);
-double4 __ovld __cnfn native_log(double4 x);
-double8 __ovld __cnfn native_log(double8 x);
-double16 __ovld __cnfn native_log(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute a base 2 logarithm over an implementationdefined
@@ -9928,14 +9880,6 @@ float3 __ovld __cnfn native_log2(float3 x);
 float4 __ovld __cnfn native_log2(float4 x);
 float8 __ovld __cnfn native_log2(float8 x);
 float16 __ovld __cnfn native_log2(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_log2(double x);
-double2 __ovld __cnfn native_log2(double2 x);
-double3 __ovld __cnfn native_log2(double3 x);
-double4 __ovld __cnfn native_log2(double4 x);
-double8 __ovld __cnfn native_log2(double8 x);
-double16 __ovld __cnfn native_log2(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute a base 10 logarithm over an implementationdefined
@@ -9947,14 +9891,6 @@ float3 __ovld __cnfn native_log10(float3 x);
 float4 __ovld __cnfn native_log10(float4 x);
 float8 __ovld __cnfn native_log10(float8 x);
 float16 __ovld __cnfn native_log10(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_log10(double x);
-double2 __ovld __cnfn native_log10(double2 x);
-double3 __ovld __cnfn native_log10(double3 x);
-double4 __ovld __cnfn native_log10(double4 x);
-double8 __ovld __cnfn native_log10(double8 x);
-double16 __ovld __cnfn native_log10(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute x to the power y, where x is >= 0. The range of
@@ -9967,14 +9903,6 @@ float3 __ovld __cnfn native_powr(float3 x, float3 y);
 float4 __ovld __cnfn native_powr(float4 x, float4 y);
 float8 __ovld __cnfn native_powr(float8 x, float8 y);
 float16 __ovld __cnfn native_powr(float16 x, float16 y);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_powr(double x, double y);
-double2 __ovld __cnfn native_powr(double2 x, double2 y);
-double3 __ovld __cnfn native_powr(double3 x, double3 y);
-double4 __ovld __cnfn native_powr(double4 x, double4 y);
-double8 __ovld __cnfn native_powr(double8 x, double8 y);
-double16 __ovld __cnfn native_powr(double16 x, double16 y);
-#endif //cl_khr_fp64
 
 /**
  * Compute reciprocal over an implementation-defined
@@ -9986,14 +9914,6 @@ float3 __ovld __cnfn native_recip(float3 x);
 float4 __ovld __cnfn native_recip(float4 x);
 float8 __ovld __cnfn native_recip(float8 x);
 float16 __ovld __cnfn native_recip(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_recip(double x);
-double2 __ovld __cnfn native_recip(double2 x);
-double3 __ovld __cnfn native_recip(double3 x);
-double4 __ovld __cnfn native_recip(double4 x);
-double8 __ovld __cnfn native_recip(double8 x);
-double16 __ovld __cnfn native_recip(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute inverse square root over an implementationdefined
@@ -10005,14 +9925,6 @@ float3 __ovld __cnfn native_rsqrt(float3 x);
 float4 __ovld __cnfn native_rsqrt(float4 x);
 float8 __ovld __cnfn native_rsqrt(float8 x);
 float16 __ovld __cnfn native_rsqrt(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_rsqrt(double x);
-double2 __ovld __cnfn native_rsqrt(double2 x);
-double3 __ovld __cnfn native_rsqrt(double3 x);
-double4 __ovld __cnfn native_rsqrt(double4 x);
-double8 __ovld __cnfn native_rsqrt(double8 x);
-double16 __ovld __cnfn native_rsqrt(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute sine over an implementation-defined range.
@@ -10024,14 +9936,6 @@ float3 __ovld __cnfn native_sin(float3 x);
 float4 __ovld __cnfn native_sin(float4 x);
 float8 __ovld __cnfn native_sin(float8 x);
 float16 __ovld __cnfn native_sin(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_sin(double x);
-double2 __ovld __cnfn native_sin(double2 x);
-double3 __ovld __cnfn native_sin(double3 x);
-double4 __ovld __cnfn native_sin(double4 x);
-double8 __ovld __cnfn native_sin(double8 x);
-double16 __ovld __cnfn native_sin(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute square root over an implementation-defined
@@ -10043,14 +9947,6 @@ float3 __ovld __cnfn native_sqrt(float3 x);
 float4 __ovld __cnfn native_sqrt(float4 x);
 float8 __ovld __cnfn native_sqrt(float8 x);
 float16 __ovld __cnfn native_sqrt(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_sqrt(double x);
-double2 __ovld __cnfn native_sqrt(double2 x);
-double3 __ovld __cnfn native_sqrt(double3 x);
-double4 __ovld __cnfn native_sqrt(double4 x);
-double8 __ovld __cnfn native_sqrt(double8 x);
-double16 __ovld __cnfn native_sqrt(double16 x);
-#endif //cl_khr_fp64
 
 /**
  * Compute tangent over an implementation-defined range.
@@ -10062,14 +9958,6 @@ float3 __ovld __cnfn native_tan(float3 x);
 float4 __ovld __cnfn native_tan(float4 x);
 float8 __ovld __cnfn native_tan(float8 x);
 float16 __ovld __cnfn native_tan(float16 x);
-#ifdef cl_khr_fp64
-double __ovld __cnfn native_tan(double x);
-double2 __ovld __cnfn native_tan(double2 x);
-double3 __ovld __cnfn native_tan(double3 x);
-double4 __ovld __cnfn native_tan(double4 x);
-double8 __ovld __cnfn native_tan(double8 x);
-double16 __ovld __cnfn native_tan(double16 x);
-#endif //cl_khr_fp64
 
 // OpenCL v1.1 s6.11.3, v1.2 s6.12.3, v2.0 s6.13.3 - Integer Functions
 

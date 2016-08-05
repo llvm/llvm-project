@@ -80,6 +80,102 @@ SourceLocation StmtSequence::getStartLoc() const {
 SourceLocation StmtSequence::getEndLoc() const { return back()->getLocEnd(); }
 
 namespace {
+
+/// \brief Analyzes the pattern of the referenced variables in a statement.
+class VariablePattern {
+
+  /// \brief Describes an occurence of a variable reference in a statement.
+  struct VariableOccurence {
+    /// The index of the associated VarDecl in the Variables vector.
+    size_t KindID;
+
+    VariableOccurence(size_t KindID) : KindID(KindID) {}
+  };
+
+  /// All occurences of referenced variables in the order of appearance.
+  std::vector<VariableOccurence> Occurences;
+  /// List of referenced variables in the order of appearance.
+  /// Every item in this list is unique.
+  std::vector<const VarDecl *> Variables;
+
+  /// \brief Adds a new variable referenced to this pattern.
+  /// \param VarDecl The declaration of the variable that is referenced.
+  void addVariableOccurence(const VarDecl *VarDecl) {
+    // First check if we already reference this variable
+    for (size_t KindIndex = 0; KindIndex < Variables.size(); ++KindIndex) {
+      if (Variables[KindIndex] == VarDecl) {
+        // If yes, add a new occurence that points to the existing entry in
+        // the Variables vector.
+        Occurences.emplace_back(KindIndex);
+        return;
+      }
+    }
+    // If this variable wasn't already referenced, add it to the list of
+    // referenced variables and add a occurence that points to this new entry.
+    Occurences.emplace_back(Variables.size());
+    Variables.push_back(VarDecl);
+  }
+
+  /// \brief Adds each referenced variable from the given statement.
+  void addVariables(const Stmt *S) {
+    // Sometimes we get a nullptr (such as from IfStmts which often have nullptr
+    // children). We skip such statements as they don't reference any
+    // variables.
+    if (!S)
+      return;
+
+    // Check if S is a reference to a variable. If yes, add it to the pattern.
+    if (auto D = dyn_cast<DeclRefExpr>(S)) {
+      if (auto VD = dyn_cast<VarDecl>(D->getDecl()->getCanonicalDecl()))
+        addVariableOccurence(VD);
+    }
+
+    // Recursively check all children of the given statement.
+    for (const Stmt *Child : S->children()) {
+      addVariables(Child);
+    }
+  }
+
+public:
+  /// \brief Creates an VariablePattern object with information about the given
+  ///        StmtSequence.
+  VariablePattern(const StmtSequence &Sequence) {
+    for (const Stmt *S : Sequence)
+      addVariables(S);
+  }
+
+  /// \brief Compares this pattern with the given one.
+  /// \param Other The given VariablePattern to compare with.
+  /// \return Returns true if and only if the references variables in this
+  ///         object follow the same pattern than the ones in the given
+  ///         VariablePattern.
+  ///
+  /// For example, the following statements all have the same pattern:
+  ///
+  ///   if (a < b) return a; return b;
+  ///   if (x < y) return x; return y;
+  ///   if (u2 < u1) return u2; return u1;
+  ///
+  /// but the following statement has a different pattern (note the changed
+  /// variables in the return statements).
+  ///
+  ///   if (a < b) return b; return a;
+  ///
+  /// This function should only be called if the related statements of the given
+  /// pattern and the statements of this objects are clones of each other.
+  bool comparePattern(const VariablePattern &Other) {
+    assert(Other.Occurences.size() == Occurences.size());
+    for (unsigned i = 0; i < Occurences.size(); ++i) {
+      if (Occurences[i].KindID != Other.Occurences[i].KindID) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+}
+
+namespace {
 /// \brief Collects the data of a single Stmt.
 ///
 /// This class defines what a code clone is: If it collects for two statements
@@ -374,8 +470,7 @@ void CloneDetector::add(const StmtSequence &S,
 namespace {
 /// \brief Returns true if and only if \p Stmt contains at least one other
 /// sequence in the \p Group.
-bool containsAnyInGroup(StmtSequence &Stmt,
-                            CloneDetector::CloneGroup &Group) {
+bool containsAnyInGroup(StmtSequence &Stmt, CloneDetector::CloneGroup &Group) {
   for (StmtSequence &GroupStmt : Group.Sequences) {
     if (Stmt.contains(GroupStmt))
       return true;
@@ -402,12 +497,57 @@ bool containsGroup(CloneDetector::CloneGroup &Group,
 }
 } // end anonymous namespace
 
+/// \brief Finds all actual clone groups in a single group of presumed clones.
+/// \param Result Output parameter to which all found groups are added. Every
+///               clone in a group that was added this way follows the same
+///               variable pattern as the other clones in its group.
+/// \param Group A group of clones. The clones are allowed to have a different
+///              variable pattern.
+static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
+                              const CloneDetector::CloneGroup &Group) {
+  // We remove the Sequences one by one, so a list is more appropriate.
+  std::list<StmtSequence> UnassignedSequences(Group.Sequences.begin(),
+                                              Group.Sequences.end());
+
+  // Search for clones as long as there could be clones in UnassignedSequences.
+  while (UnassignedSequences.size() > 1) {
+
+    // Pick the first Sequence as a protoype for a new clone group.
+    StmtSequence Prototype = UnassignedSequences.front();
+    UnassignedSequences.pop_front();
+
+    CloneDetector::CloneGroup FilteredGroup(Prototype, Group.Complexity);
+
+    // Analyze the variable pattern of the prototype. Every other StmtSequence
+    // needs to have the same pattern to get into the new clone group.
+    VariablePattern PrototypeFeatures(Prototype);
+
+    // Search all remaining StmtSequences for an identical variable pattern
+    // and assign them to our new clone group.
+    auto I = UnassignedSequences.begin(), E = UnassignedSequences.end();
+    while (I != E) {
+      if (VariablePattern(*I).comparePattern(PrototypeFeatures)) {
+        FilteredGroup.Sequences.push_back(*I);
+        I = UnassignedSequences.erase(I);
+        continue;
+      }
+      ++I;
+    }
+
+    // Add a valid clone group to the list of found clone groups.
+    if (!FilteredGroup.isValid())
+      continue;
+
+    Result.push_back(FilteredGroup);
+  }
+}
+
 void CloneDetector::findClones(std::vector<CloneGroup> &Result,
                                unsigned MinGroupComplexity) {
   // Add every valid clone group that fulfills the complexity requirement.
   for (const CloneGroup &Group : CloneGroups) {
     if (Group.isValid() && Group.Complexity >= MinGroupComplexity) {
-      Result.push_back(Group);
+      createCloneGroups(Result, Group);
     }
   }
 
