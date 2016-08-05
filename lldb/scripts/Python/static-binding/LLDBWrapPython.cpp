@@ -23491,135 +23491,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SBExpressionOptions_GetREPLMode(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  bool result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:SBExpressionOptions_GetREPLMode",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_GetREPLMode" "', argument " "1"" of type '" "lldb::SBExpressionOptions const *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    result = (bool)((lldb::SBExpressionOptions const *)arg1)->GetREPLMode();
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_From_bool(static_cast< bool >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetREPLMode__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
-  bool arg2 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:SBExpressionOptions_SetREPLMode",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetREPLMode" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBExpressionOptions_SetREPLMode" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    (arg1)->SetREPLMode(arg2);
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_Py_Void();
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetREPLMode__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:SBExpressionOptions_SetREPLMode",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetREPLMode" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    (arg1)->SetREPLMode();
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_Py_Void();
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetREPLMode(PyObject *self, PyObject *args) {
-  int argc;
-  PyObject *argv[3];
-  int ii;
-  
-  if (!PyTuple_Check(args)) SWIG_fail;
-  argc = (int)PyObject_Length(args);
-  for (ii = 0; (ii < argc) && (ii < 2); ii++) {
-    argv[ii] = PyTuple_GET_ITEM(args,ii);
-  }
-  if (argc == 1) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBExpressionOptions, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      return _wrap_SBExpressionOptions_SetREPLMode__SWIG_1(self, args);
-    }
-  }
-  if (argc == 2) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBExpressionOptions, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      {
-        int res = SWIG_AsVal_bool(argv[1], NULL);
-        _v = SWIG_CheckState(res);
-      }
-      if (_v) {
-        return _wrap_SBExpressionOptions_SetREPLMode__SWIG_0(self, args);
-      }
-    }
-  }
-  
-fail:
-  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBExpressionOptions_SetREPLMode'.\n"
-    "  Possible C/C++ prototypes are:\n"
-    "    SetREPLMode(lldb::SBExpressionOptions *,bool)\n"
-    "    SetREPLMode(lldb::SBExpressionOptions *)\n");
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetLanguage(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
@@ -62495,66 +62366,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SBValue_IsSyntheticChildrenGenerated(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBValue *arg1 = (lldb::SBValue *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  bool result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:SBValue_IsSyntheticChildrenGenerated",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBValue, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBValue_IsSyntheticChildrenGenerated" "', argument " "1"" of type '" "lldb::SBValue *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBValue * >(argp1);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    result = (bool)(arg1)->IsSyntheticChildrenGenerated();
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_From_bool(static_cast< bool >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBValue_SetSyntheticChildrenGenerated(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBValue *arg1 = (lldb::SBValue *) 0 ;
-  bool arg2 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  bool val2 ;
-  int ecode2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:SBValue_SetSyntheticChildrenGenerated",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBValue, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBValue_SetSyntheticChildrenGenerated" "', argument " "1"" of type '" "lldb::SBValue *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBValue * >(argp1);
-  ecode2 = SWIG_AsVal_bool(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBValue_SetSyntheticChildrenGenerated" "', argument " "2"" of type '" "bool""'");
-  } 
-  arg2 = static_cast< bool >(val2);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    (arg1)->SetSyntheticChildrenGenerated(arg2);
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_Py_Void();
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_SBValue_GetLocation(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBValue *arg1 = (lldb::SBValue *) 0 ;
@@ -68466,11 +68277,6 @@ static PyMethodDef SwigMethods[] = {
 		"SetPlaygroundTransformEnabled(bool enable_playground_transform = True)\n"
 		"SBExpressionOptions_SetPlaygroundTransformEnabled(SBExpressionOptions self)\n"
 		""},
-	 { (char *)"SBExpressionOptions_GetREPLMode", _wrap_SBExpressionOptions_GetREPLMode, METH_VARARGS, (char *)"SBExpressionOptions_GetREPLMode(SBExpressionOptions self) -> bool"},
-	 { (char *)"SBExpressionOptions_SetREPLMode", _wrap_SBExpressionOptions_SetREPLMode, METH_VARARGS, (char *)"\n"
-		"SetREPLMode(bool enable_repl = True)\n"
-		"SBExpressionOptions_SetREPLMode(SBExpressionOptions self)\n"
-		""},
 	 { (char *)"SBExpressionOptions_SetLanguage", _wrap_SBExpressionOptions_SetLanguage, METH_VARARGS, (char *)"\n"
 		"SBExpressionOptions_SetLanguage(SBExpressionOptions self, LanguageType language)\n"
 		"\n"
@@ -68504,12 +68310,12 @@ static PyMethodDef SwigMethods[] = {
 		"SetAutoApplyFixIts(bool b = True)\n"
 		"SBExpressionOptions_SetAutoApplyFixIts(SBExpressionOptions self)\n"
 		"\n"
-		"Sets whether to auto-apply fix-it hints to the expression being evaluated.\n"
+		"Sets whether to auto-apply FixIt hints to the expression being evaluated.\n"
 		""},
 	 { (char *)"SBExpressionOptions_GetAutoApplyFixIts", _wrap_SBExpressionOptions_GetAutoApplyFixIts, METH_VARARGS, (char *)"\n"
 		"SBExpressionOptions_GetAutoApplyFixIts(SBExpressionOptions self) -> bool\n"
 		"\n"
-		"Gets whether to auto-apply fix-it hints to an expression.\n"
+		"Gets whether to auto-apply FixIt hints to an expression.\n"
 		""},
 	 { (char *)"SBExpressionOptions_GetTopLevel", _wrap_SBExpressionOptions_GetTopLevel, METH_VARARGS, (char *)"SBExpressionOptions_GetTopLevel(SBExpressionOptions self) -> bool"},
 	 { (char *)"SBExpressionOptions_SetTopLevel", _wrap_SBExpressionOptions_SetTopLevel, METH_VARARGS, (char *)"\n"
@@ -70726,8 +70532,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBValue_SetPreferSyntheticValue", _wrap_SBValue_SetPreferSyntheticValue, METH_VARARGS, (char *)"SBValue_SetPreferSyntheticValue(SBValue self, bool use_synthetic)"},
 	 { (char *)"SBValue_IsDynamic", _wrap_SBValue_IsDynamic, METH_VARARGS, (char *)"SBValue_IsDynamic(SBValue self) -> bool"},
 	 { (char *)"SBValue_IsSynthetic", _wrap_SBValue_IsSynthetic, METH_VARARGS, (char *)"SBValue_IsSynthetic(SBValue self) -> bool"},
-	 { (char *)"SBValue_IsSyntheticChildrenGenerated", _wrap_SBValue_IsSyntheticChildrenGenerated, METH_VARARGS, (char *)"SBValue_IsSyntheticChildrenGenerated(SBValue self) -> bool"},
-	 { (char *)"SBValue_SetSyntheticChildrenGenerated", _wrap_SBValue_SetSyntheticChildrenGenerated, METH_VARARGS, (char *)"SBValue_SetSyntheticChildrenGenerated(SBValue self, bool arg1)"},
 	 { (char *)"SBValue_GetLocation", _wrap_SBValue_GetLocation, METH_VARARGS, (char *)"SBValue_GetLocation(SBValue self) -> char"},
 	 { (char *)"SBValue_SetValueFromCString", _wrap_SBValue_SetValueFromCString, METH_VARARGS, (char *)"\n"
 		"SetValueFromCString(char value_str) -> bool\n"
@@ -72736,7 +72540,6 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eValueTypeRegister",SWIG_From_int(static_cast< int >(lldb::eValueTypeRegister)));
   SWIG_Python_SetConstant(d, "eValueTypeRegisterSet",SWIG_From_int(static_cast< int >(lldb::eValueTypeRegisterSet)));
   SWIG_Python_SetConstant(d, "eValueTypeConstResult",SWIG_From_int(static_cast< int >(lldb::eValueTypeConstResult)));
-  SWIG_Python_SetConstant(d, "eValueTypeVariableThreadLocal",SWIG_From_int(static_cast< int >(lldb::eValueTypeVariableThreadLocal)));
   SWIG_Python_SetConstant(d, "eInputReaderGranularityInvalid",SWIG_From_int(static_cast< int >(lldb::eInputReaderGranularityInvalid)));
   SWIG_Python_SetConstant(d, "eInputReaderGranularityByte",SWIG_From_int(static_cast< int >(lldb::eInputReaderGranularityByte)));
   SWIG_Python_SetConstant(d, "eInputReaderGranularityWord",SWIG_From_int(static_cast< int >(lldb::eInputReaderGranularityWord)));
@@ -72917,7 +72720,6 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eArgTypeWatchpointID",SWIG_From_int(static_cast< int >(lldb::eArgTypeWatchpointID)));
   SWIG_Python_SetConstant(d, "eArgTypeWatchpointIDRange",SWIG_From_int(static_cast< int >(lldb::eArgTypeWatchpointIDRange)));
   SWIG_Python_SetConstant(d, "eArgTypeWatchType",SWIG_From_int(static_cast< int >(lldb::eArgTypeWatchType)));
-  SWIG_Python_SetConstant(d, "eArgRawInput",SWIG_From_int(static_cast< int >(lldb::eArgRawInput)));
   SWIG_Python_SetConstant(d, "eArgTypeLastArg",SWIG_From_int(static_cast< int >(lldb::eArgTypeLastArg)));
   SWIG_Python_SetConstant(d, "eSymbolTypeAny",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeAny)));
   SWIG_Python_SetConstant(d, "eSymbolTypeInvalid",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeInvalid)));
