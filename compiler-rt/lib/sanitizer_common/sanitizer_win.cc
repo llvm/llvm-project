@@ -221,8 +221,12 @@ void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
 }
 
 void *MmapNoAccess(uptr size) {
-  // FIXME: unsupported.
-  return nullptr;
+  void *res = VirtualAlloc(nullptr, size, MEM_RESERVE, PAGE_NOACCESS);
+  if (res == 0)
+    Report("WARNING: %s failed to "
+           "mprotect %p (%zd) bytes (error code: %d)\n",
+           SanitizerToolName, size, size, GetLastError());
+  return res;
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {

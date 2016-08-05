@@ -30,7 +30,10 @@
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
 #if SANITIZER_WINDOWS
-static const uptr kAllocatorSpace = 0x10000000000ULL;
+// On Windows 64-bit there is no easy way to find a large enough fixed address
+// space that is always available. Thus, a dynamically allocated address space
+// is used instead (i.e. ~(uptr)0).
+static const uptr kAllocatorSpace = ~(uptr)0;
 static const uptr kAllocatorSize  =  0x10000000000ULL;  // 1T.
 static const u64 kAddressSpaceSize = 1ULL << 40;
 #else
@@ -41,6 +44,8 @@ static const u64 kAddressSpaceSize = 1ULL << 47;
 
 typedef SizeClassAllocator64<
   kAllocatorSpace, kAllocatorSize, 16, DefaultSizeClassMap> Allocator64;
+typedef SizeClassAllocator64<
+  ~(uptr)0, kAllocatorSize, 16, DefaultSizeClassMap> Allocator64Dynamic;
 
 typedef SizeClassAllocator64<
   kAllocatorSpace, kAllocatorSize, 16, CompactSizeClassMap> Allocator64Compact;
@@ -158,6 +163,10 @@ TEST(SanitizerCommon, SizeClassAllocator64) {
   TestSizeClassAllocator<Allocator64>();
 }
 
+TEST(SanitizerCommon, SizeClassAllocator64Dynamic) {
+  TestSizeClassAllocator<Allocator64Dynamic>();
+}
+
 TEST(SanitizerCommon, SizeClassAllocator64Compact) {
   TestSizeClassAllocator<Allocator64Compact>();
 }
@@ -202,6 +211,10 @@ TEST(SanitizerCommon, SizeClassAllocator64MetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64>();
 }
 
+TEST(SanitizerCommon, SizeClassAllocator64DynamicMetadataStress) {
+  SizeClassAllocatorMetadataStress<Allocator64Dynamic>();
+}
+
 TEST(SanitizerCommon, SizeClassAllocator64CompactMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Compact>();
 }
@@ -237,6 +250,9 @@ void SizeClassAllocatorGetBlockBeginStress() {
 #if SANITIZER_CAN_USE_ALLOCATOR64
 TEST(SanitizerCommon, SizeClassAllocator64GetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64>();
+}
+TEST(SanitizerCommon, SizeClassAllocator64DynamicGetBlockBegin) {
+  SizeClassAllocatorGetBlockBeginStress<Allocator64Dynamic>();
 }
 TEST(SanitizerCommon, SizeClassAllocator64CompactGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Compact>();
@@ -484,6 +500,12 @@ TEST(SanitizerCommon, CombinedAllocator64) {
       SizeClassAllocatorLocalCache<Allocator64> > ();
 }
 
+TEST(SanitizerCommon, CombinedAllocator64Dynamic) {
+  TestCombinedAllocator<Allocator64Dynamic,
+      LargeMmapAllocator<>,
+      SizeClassAllocatorLocalCache<Allocator64Dynamic> > ();
+}
+
 TEST(SanitizerCommon, CombinedAllocator64Compact) {
   TestCombinedAllocator<Allocator64Compact,
       LargeMmapAllocator<>,
@@ -535,6 +557,11 @@ void TestSizeClassAllocatorLocalCache() {
 TEST(SanitizerCommon, SizeClassAllocator64LocalCache) {
   TestSizeClassAllocatorLocalCache<
       SizeClassAllocatorLocalCache<Allocator64> >();
+}
+
+TEST(SanitizerCommon, SizeClassAllocator64DynamicLocalCache) {
+  TestSizeClassAllocatorLocalCache<
+      SizeClassAllocatorLocalCache<Allocator64Dynamic> >();
 }
 
 TEST(SanitizerCommon, SizeClassAllocator64CompactLocalCache) {
@@ -709,6 +736,9 @@ void TestSizeClassAllocatorIteration() {
 #if SANITIZER_CAN_USE_ALLOCATOR64
 TEST(SanitizerCommon, SizeClassAllocator64Iteration) {
   TestSizeClassAllocatorIteration<Allocator64>();
+}
+TEST(SanitizerCommon, SizeClassAllocator64DynamicIteration) {
+  TestSizeClassAllocatorIteration<Allocator64Dynamic>();
 }
 #endif
 

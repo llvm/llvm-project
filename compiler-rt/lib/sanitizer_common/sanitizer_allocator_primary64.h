@@ -94,6 +94,14 @@ class SizeClassAllocator64 {
     return P >= SpaceBeg() && P < SpaceEnd();
   }
 
+  uptr GetRegionBegin(const void *p) {
+    if (kUsingConstantSpaceBeg)
+      return reinterpret_cast<uptr>(p) & ~(kRegionSize - 1);
+    uptr space_beg = SpaceBeg();
+    return ((reinterpret_cast<uptr>(p)  - space_beg) & ~(kRegionSize - 1)) +
+        space_beg;
+  }
+
   uptr GetSizeClass(const void *p) {
     if (kUsingConstantSpaceBeg && (kSpaceBeg % kSpaceSize) == 0)
       return ((reinterpret_cast<uptr>(p)) / kRegionSize) % kNumClassesRounded;
@@ -106,7 +114,7 @@ class SizeClassAllocator64 {
     uptr size = SizeClassMap::Size(class_id);
     if (!size) return nullptr;
     uptr chunk_idx = GetChunkIdx((uptr)p, size);
-    uptr reg_beg = (uptr)p & ~(kRegionSize - 1);
+    uptr reg_beg = GetRegionBegin(p);
     uptr beg = chunk_idx * size;
     uptr next_beg = beg + size;
     if (class_id >= kNumClasses) return nullptr;
@@ -258,7 +266,10 @@ class SizeClassAllocator64 {
     return &regions[class_id];
   }
 
-  static uptr GetChunkIdx(uptr chunk, uptr size) {
+  uptr GetChunkIdx(uptr chunk, uptr size) {
+    if (!kUsingConstantSpaceBeg)
+      chunk -= SpaceBeg();
+
     uptr offset = chunk % kRegionSize;
     // Here we divide by a non-constant. This is costly.
     // size always fits into 32-bits. If the offset fits too, use 32-bit div.

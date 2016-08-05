@@ -71,9 +71,12 @@ void __asan_default_on_error() {}
 }  // extern "C"
 
 // ---------------------- Windows-specific interceptors ---------------- {{{
-INTERCEPTOR_WINAPI(void, RtlRaiseException, void *ExceptionRecord) {
+INTERCEPTOR_WINAPI(void, RtlRaiseException, EXCEPTION_RECORD *ExceptionRecord) {
   CHECK(REAL(RtlRaiseException));
-  __asan_handle_no_return();
+  // This is a noreturn function, unless it's one of the exceptions raised to
+  // communicate with the debugger, such as the one from OutputDebugString.
+  if (ExceptionRecord->ExceptionCode != DBG_PRINTEXCEPTION_C)
+    __asan_handle_no_return();
   REAL(RtlRaiseException)(ExceptionRecord);
 }
 

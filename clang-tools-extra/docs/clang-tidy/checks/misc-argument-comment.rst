@@ -18,3 +18,7 @@ that are placed right before the argument.
   // warning: argument name 'bar' in comment does not match parameter name 'foo'
 
 The check tries to detect typos and suggest automated fixes for them.
+
+Supported options:
+  - `StrictMode` (local or global): when non-zero, the check will ignore leading
+    and trailing underscores and case when comparing parameter names.

@@ -1137,6 +1137,18 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
   return ctx.validate(diagnostics);
 }
 
+static void createFiles(MachOLinkingContext &ctx, bool Implicit) {
+  std::vector<std::unique_ptr<File>> Files;
+  if (Implicit)
+    ctx.createImplicitFiles(Files);
+  else
+    ctx.createInternalFiles(Files);
+  for (auto i = Files.rbegin(), e = Files.rend(); i != e; ++i) {
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
+  }
+}
+
 /// This is where the link is actually performed.
 bool link(llvm::ArrayRef<const char *> args, raw_ostream &diagnostics) {
   MachOLinkingContext ctx;
@@ -1151,20 +1163,10 @@ bool link(llvm::ArrayRef<const char *> args, raw_ostream &diagnostics) {
     if (FileNode *node = dyn_cast<FileNode>(ie.get()))
       node->getFile()->parse();
 
-  std::vector<std::unique_ptr<File>> internalFiles;
-  ctx.createInternalFiles(internalFiles);
-  for (auto i = internalFiles.rbegin(), e = internalFiles.rend(); i != e; ++i) {
-    auto &members = ctx.getNodes();
-    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
-  }
+  createFiles(ctx, false /* Implicit */);
 
-  // Give target a chance to add files.
-  std::vector<std::unique_ptr<File>> implicitFiles;
-  ctx.createImplicitFiles(implicitFiles);
-  for (auto i = implicitFiles.rbegin(), e = implicitFiles.rend(); i != e; ++i) {
-    auto &members = ctx.getNodes();
-    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
-  }
+  // Give target a chance to add files
+  createFiles(ctx, true /* Implicit */);
 
   // Give target a chance to postprocess input files.
   // Mach-O uses this chance to move all object files before library files.

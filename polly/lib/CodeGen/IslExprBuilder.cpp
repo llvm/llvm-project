@@ -212,7 +212,7 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
          "isl ast expression not of type isl_ast_op");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_access &&
          "not an access isl ast expression");
-  assert(isl_ast_expr_get_op_n_arg(Expr) >= 2 &&
+  assert(isl_ast_expr_get_op_n_arg(Expr) >= 1 &&
          "We need at least two operands to create a member access.");
 
   Value *Base, *IndexOp, *Access;
@@ -248,6 +248,11 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
   if (Base->getType() != PointerTy) {
     Base =
         Builder.CreateBitCast(Base, PointerTy, "polly.access.cast." + BaseName);
+  }
+
+  if (isl_ast_expr_get_op_n_arg(Expr) == 1) {
+    isl_ast_expr_free(Expr);
+    return Base;
   }
 
   IndexOp = nullptr;

@@ -29,8 +29,8 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include <algorithm>
-#include <string>
 #include <set>
+#include <string>
 #include <vector>
 
 using namespace llvm;

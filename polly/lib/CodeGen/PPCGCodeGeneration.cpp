@@ -76,6 +76,14 @@ static cl::opt<bool> FastMath("polly-acc-fastmath",
                               cl::desc("Allow unsafe math optimizations"),
                               cl::Hidden, cl::init(false), cl::ZeroOrMore,
                               cl::cat(PollyCategory));
+static cl::opt<bool> SharedMemory("polly-acc-use-shared",
+                                  cl::desc("Use shared memory"), cl::Hidden,
+                                  cl::init(false), cl::ZeroOrMore,
+                                  cl::cat(PollyCategory));
+static cl::opt<bool> PrivateMemory("polly-acc-use-private",
+                                   cl::desc("Use private memory"), cl::Hidden,
+                                   cl::init(false), cl::ZeroOrMore,
+                                   cl::cat(PollyCategory));
 
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",
@@ -155,6 +163,9 @@ private:
   /// The current GPU context.
   Value *GPUContext;
 
+  /// The set of isl_ids allocated in the kernel
+  std::vector<isl_id *> KernelIds;
+
   /// A module containing GPU code.
   ///
   /// This pointer is only set in case we are currently generating GPU code.
@@ -230,6 +241,14 @@ private:
   Value *createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                                 SetVector<Value *> SubtreeValues);
 
+  /// Create declarations for kernel variable.
+  ///
+  /// This includes shared memory declarations.
+  ///
+  /// @param Kernel        The kernel definition to create variables for.
+  /// @param FN            The function into which to generate the variables.
+  void createKernelVariables(ppcg_kernel *Kernel, Function *FN);
+
   /// Create GPU kernel.
   ///
   /// Code generate the kernel described by @p KernelStmt.
@@ -279,6 +298,11 @@ private:
   ///
   /// @param The kernel to generate the intrinsic functions for.
   void insertKernelIntrinsics(ppcg_kernel *Kernel);
+
+  /// Create a global-to-shared or shared-to-global copy statement.
+  ///
+  /// @param CopyStmt The copy statement to generate code for
+  void createKernelCopy(ppcg_kernel_stmt *CopyStmt);
 
   /// Create code for a ScopStmt called in @p Expr.
   ///
@@ -714,7 +738,7 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     isl_ast_node_free(UserStmt);
     return;
   case ppcg_kernel_copy:
-    // TODO: Create kernel copy stmt
+    createKernelCopy(KernelStmt);
     isl_ast_expr_free(Expr);
     isl_ast_node_free(UserStmt);
     return;
@@ -728,6 +752,22 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   isl_ast_expr_free(Expr);
   isl_ast_node_free(UserStmt);
   return;
+}
+void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
+  isl_ast_expr *LocalIndex = isl_ast_expr_copy(KernelStmt->u.c.local_index);
+  LocalIndex = isl_ast_expr_address_of(LocalIndex);
+  Value *LocalAddr = ExprBuilder.create(LocalIndex);
+  isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
+  Index = isl_ast_expr_address_of(Index);
+  Value *GlobalAddr = ExprBuilder.create(Index);
+
+  if (KernelStmt->u.c.read) {
+    LoadInst *Load = Builder.CreateLoad(GlobalAddr, "shared.read");
+    Builder.CreateStore(Load, LocalAddr);
+  } else {
+    LoadInst *Load = Builder.CreateLoad(LocalAddr, "shared.write");
+    Builder.CreateStore(Load, GlobalAddr);
+  }
 }
 
 void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
@@ -1042,6 +1082,11 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   createCallLaunchKernel(GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
                          BlockDimZ, Parameters);
   createCallFreeKernel(GPUKernel);
+
+  for (auto Id : KernelIds)
+    isl_id_free(Id);
+
+  KernelIds.clear();
 }
 
 /// Compute the DataLayout string for the NVPTX backend.
@@ -1114,7 +1159,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     LocalArrays.push_back(Val);
 
     isl_ast_build_free(Build);
-    isl_id_free(Id);
+    KernelIds.push_back(Id);
     IDToSAI[Id] = SAIRep;
     Arg++;
   }
@@ -1199,6 +1244,50 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
   }
 }
 
+void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+
+  for (int i = 0; i < Kernel->n_var; ++i) {
+    struct ppcg_kernel_var &Var = Kernel->var[i];
+    isl_id *Id = isl_space_get_tuple_id(Var.array->space, isl_dim_set);
+    Type *EleTy = ScopArrayInfo::getFromId(Id)->getElementType();
+
+    Type *ArrayTy = EleTy;
+    SmallVector<const SCEV *, 4> Sizes;
+
+    for (unsigned int j = 0; j < Var.array->n_index; ++j) {
+      isl_val *Val = isl_vec_get_element_val(Var.size, j);
+      long Bound = isl_val_get_num_si(Val);
+      isl_val_free(Val);
+      Sizes.push_back(S.getSE()->getConstant(Builder.getInt64Ty(), Bound));
+      ArrayTy = ArrayType::get(ArrayTy, Bound);
+    }
+
+    const ScopArrayInfo *SAI;
+    Value *Allocation;
+    if (Var.type == ppcg_access_shared) {
+      auto GlobalVar = new GlobalVariable(
+          *M, ArrayTy, false, GlobalValue::InternalLinkage, 0, Var.name,
+          nullptr, GlobalValue::ThreadLocalMode::NotThreadLocal, 3);
+      GlobalVar->setAlignment(EleTy->getPrimitiveSizeInBits() / 8);
+      GlobalVar->setInitializer(Constant::getNullValue(ArrayTy));
+
+      Allocation = GlobalVar;
+    } else if (Var.type == ppcg_access_private) {
+      Allocation = Builder.CreateAlloca(ArrayTy, 0, "private_array");
+    } else {
+      llvm_unreachable("unknown variable type");
+    }
+    SAI = S.getOrCreateScopArrayInfo(Allocation, EleTy, Sizes,
+                                     ScopArrayInfo::MK_Array);
+    Id = isl_id_alloc(S.getIslCtx(), Var.name, nullptr);
+    IDToValue[Id] = Allocation;
+    LocalArrays.push_back(Allocation);
+    KernelIds.push_back(Id);
+    IDToSAI[Id] = SAI;
+  }
+}
+
 void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
                                           SetVector<Value *> &SubtreeValues) {
 
@@ -1222,6 +1311,7 @@ void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
   ScopDetection::markFunctionAsInvalid(FN);
 
   prepareKernelArguments(Kernel, FN);
+  createKernelVariables(Kernel, FN);
   insertKernelIntrinsics(Kernel);
 }
 
@@ -1314,6 +1404,7 @@ public:
     DebugOptions->dump_schedule = false;
     DebugOptions->dump_final_schedule = false;
     DebugOptions->dump_sizes = false;
+    DebugOptions->verbose = false;
 
     Options->debug = DebugOptions;
 
@@ -1327,9 +1418,9 @@ public:
 
     Options->tile_size = 32;
 
-    Options->use_private_memory = false;
-    Options->use_shared_memory = false;
-    Options->max_shared_memory = 0;
+    Options->use_private_memory = PrivateMemory;
+    Options->use_shared_memory = SharedMemory;
+    Options->max_shared_memory = 48 * 1024;
 
     Options->target = PPCG_TARGET_CUDA;
     Options->openmp = false;
@@ -1510,9 +1601,10 @@ public:
       isl_map *Universe = isl_map_universe(Space);
       Access->tagged_access =
           isl_map_domain_product(Acc->getAccessRelation(), Universe);
-      Access->exact_write = Acc->isWrite();
+      Access->exact_write = !Acc->isMayWrite();
       Access->ref_id = Acc->getId();
       Access->next = Accesses;
+      Access->n_index = Acc->getScopArrayInfo()->getNumberOfDimensions();
       Accesses = Access;
     }
 
