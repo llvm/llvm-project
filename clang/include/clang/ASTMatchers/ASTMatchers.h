@@ -3342,7 +3342,8 @@ AST_MATCHER_P(FunctionDecl, returns,
 /// \endcode
 /// functionDecl(isExternC())
 ///   matches the declaration of f and g, but not the declaration h
-AST_MATCHER(FunctionDecl, isExternC) {
+AST_POLYMORPHIC_MATCHER(isExternC, AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
+                                                                   VarDecl)) {
   return Node.isExternC();
 }
 

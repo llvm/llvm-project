@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-sizeof-array-argument %s
 //
+extern "C" void *bzero(void *, unsigned);
 extern "C" void *memset(void *, int, unsigned);
 extern "C" void *memmove(void *s1, const void *s2, unsigned n);
 extern "C" void *memcpy(void *s1, const void *s2, unsigned n);
@@ -47,6 +48,19 @@ void f(Mat m, const Foo& const_foo, char *buffer) {
   memset(heap_buffer, 0, sizeof(heap_buffer));  // \
       // expected-warning {{'memset' call operates on objects of type 'char' while the size is based on a different type 'char *'}} expected-note{{did you mean to provide an explicit length?}}
 
+  bzero(&s, sizeof(&s));  // \
+      // expected-warning {{'bzero' call operates on objects of type 'S' while the size is based on a different type 'S *'}} expected-note{{did you mean to remove the addressof in the argument to 'sizeof' (and multiply it by the number of elements)?}}
+  bzero(ps, sizeof(ps));  // \
+      // expected-warning {{'bzero' call operates on objects of type 'S' while the size is based on a different type 'S *'}} expected-note{{did you mean to dereference the argument to 'sizeof' (and multiply it by the number of elements)?}}
+  bzero(ps2, sizeof(ps2));  // \
+      // expected-warning {{'bzero' call operates on objects of type 'S' while the size is based on a different type 'PS' (aka 'S *')}} expected-note{{did you mean to dereference the argument to 'sizeof' (and multiply it by the number of elements)?}}
+  bzero(ps2, sizeof(typeof(ps2)));  // \
+      // expected-warning {{argument to 'sizeof' in 'bzero' call is the same pointer type}}
+  bzero(ps2, sizeof(PS));  // \
+      // expected-warning {{argument to 'sizeof' in 'bzero' call is the same pointer type}}
+  bzero(heap_buffer, sizeof(heap_buffer));  // \
+      // expected-warning {{'bzero' call operates on objects of type 'char' while the size is based on a different type 'char *'}} expected-note{{did you mean to provide an explicit length?}}
+
   memcpy(&s, 0, sizeof(&s));  // \
       // expected-warning {{'memcpy' call operates on objects of type 'S' while the size is based on a different type 'S *'}} expected-note{{did you mean to remove the addressof in the argument to 'sizeof' (and multiply it by the number of elements)?}}
   memcpy(0, &s, sizeof(&s));  // \
@@ -73,6 +87,21 @@ void f(Mat m, const Foo& const_foo, char *buffer) {
   memset(arr, 0, sizeof(arr));
   memset(parr, 0, sizeof(parr));
 
+  bzero((void*)&s, sizeof(&s));
+  bzero(&s, sizeof(s));
+  bzero(&s, sizeof(S));
+  bzero(&s, sizeof(const S));
+  bzero(&s, sizeof(volatile S));
+  bzero(&s, sizeof(volatile const S));
+  bzero(&foo, sizeof(CFoo));
+  bzero(&foo, sizeof(VFoo));
+  bzero(&foo, sizeof(CVFoo));
+  bzero(ps, sizeof(*ps));
+  bzero(ps2, sizeof(*ps2));
+  bzero(ps2, sizeof(typeof(*ps2)));
+  bzero(arr, sizeof(arr));
+  bzero(parr, sizeof(parr));
+
   memcpy(&foo, &const_foo, sizeof(Foo));
   memcpy((void*)&s, 0, sizeof(&s));
   memcpy(0, (void*)&s, sizeof(&s));
@@ -96,12 +125,17 @@ void f(Mat m, const Foo& const_foo, char *buffer) {
   int iarr[14];
   memset(&iarr[0], 0, sizeof iarr);
   memset(iarr, 0, sizeof iarr);
+  bzero(&iarr[0], sizeof iarr);
+  bzero(iarr, sizeof iarr);
 
   int* iparr[14];
   memset(&iparr[0], 0, sizeof iparr);
   memset(iparr, 0, sizeof iparr);
+  bzero(&iparr[0], sizeof iparr);
+  bzero(iparr, sizeof iparr);
 
   memset(m, 0, sizeof(Mat));
+  bzero(m, sizeof(Mat));
 
   // Copy to raw buffer shouldn't warn either
   memcpy(&foo, &arr, sizeof(Foo));
@@ -114,12 +148,21 @@ void f(Mat m, const Foo& const_foo, char *buffer) {
     for (;;) {}
     &s;
   }), 0, sizeof(s));
+
+  bzero(({
+    if (0) {}
+    while (0) {}
+    for (;;) {}
+    &s;
+  }), sizeof(s));
 }
 
 namespace ns {
 void memset(void* s, char c, int n);
+void bzero(void* s, int n);
 void f(int* i) {
   memset(i, 0, sizeof(i));
+  bzero(i, sizeof(i));
 }
 }
 
