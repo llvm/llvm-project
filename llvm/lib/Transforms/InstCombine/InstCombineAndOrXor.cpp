@@ -1268,7 +1268,7 @@ static Instruction *foldBoolSextMaskToSelect(BinaryOperator &I) {
     Value *Zero = Constant::getNullValue(Op0->getType());
     return SelectInst::Create(X, Zero, Op1);
   }
-  
+
   return nullptr;
 }
 
@@ -1279,7 +1279,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyAndInst(Op0, Op1, DL, TLI, DT, AC))
+  if (Value *V = SimplifyAndInst(Op0, Op1, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   // (A|B)&(A|C) -> A|(B&C) etc
@@ -1664,17 +1664,17 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       Value *Mask = nullptr;
       Value *Masked = nullptr;
       if (LAnd->getOperand(0) == RAnd->getOperand(0) &&
-          isKnownToBeAPowerOfTwo(LAnd->getOperand(1), DL, false, 0, AC, CxtI,
-                                 DT) &&
-          isKnownToBeAPowerOfTwo(RAnd->getOperand(1), DL, false, 0, AC, CxtI,
-                                 DT)) {
+          isKnownToBeAPowerOfTwo(LAnd->getOperand(1), DL, false, 0, &AC, CxtI,
+                                 &DT) &&
+          isKnownToBeAPowerOfTwo(RAnd->getOperand(1), DL, false, 0, &AC, CxtI,
+                                 &DT)) {
         Mask = Builder->CreateOr(LAnd->getOperand(1), RAnd->getOperand(1));
         Masked = Builder->CreateAnd(LAnd->getOperand(0), Mask);
       } else if (LAnd->getOperand(1) == RAnd->getOperand(1) &&
-                 isKnownToBeAPowerOfTwo(LAnd->getOperand(0), DL, false, 0, AC,
-                                        CxtI, DT) &&
-                 isKnownToBeAPowerOfTwo(RAnd->getOperand(0), DL, false, 0, AC,
-                                        CxtI, DT)) {
+                 isKnownToBeAPowerOfTwo(LAnd->getOperand(0), DL, false, 0, &AC,
+                                        CxtI, &DT) &&
+                 isKnownToBeAPowerOfTwo(RAnd->getOperand(0), DL, false, 0, &AC,
+                                        CxtI, &DT)) {
         Mask = Builder->CreateOr(LAnd->getOperand(0), RAnd->getOperand(0));
         Masked = Builder->CreateAnd(LAnd->getOperand(1), Mask);
       }
@@ -1792,7 +1792,7 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
   if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/true))
     return V;
- 
+
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSCst || !RHSCst) return nullptr;
 
@@ -2093,7 +2093,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyOrInst(Op0, Op1, DL, TLI, DT, AC))
+  if (Value *V = SimplifyOrInst(Op0, Op1, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   // (A&B)|(A&C) -> A&(B|C) etc
@@ -2446,7 +2446,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyXorInst(Op0, Op1, DL, TLI, DT, AC))
+  if (Value *V = SimplifyXorInst(Op0, Op1, DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   // (A&B)^(A&C) -> A&(B^C) etc

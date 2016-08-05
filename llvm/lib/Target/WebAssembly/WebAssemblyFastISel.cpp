@@ -388,6 +388,9 @@ unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V, bool &Not) {
 
 unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
                                               MVT::SimpleValueType From) {
+  if (Reg == 0)
+    return 0;
+
   switch (From) {
   case MVT::i1:
     // If the value is naturally an i1, we don't need to mask it.
@@ -422,6 +425,9 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
 
 unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
                                               MVT::SimpleValueType From) {
+  if (Reg == 0)
+    return 0;
+
   switch (From) {
   case MVT::i1:
   case MVT::i8:
@@ -1121,6 +1127,8 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   materializeLoadStoreOperands(Addr);
 
   unsigned ValueReg = getRegForValue(Store->getValueOperand());
+  if (ValueReg == 0)
+    return false;
   if (VTIsi1)
     ValueReg = maskI1Value(ValueReg, Store->getValueOperand());
 
@@ -1147,6 +1155,8 @@ bool WebAssemblyFastISel::selectBr(const Instruction *I) {
 
   bool Not;
   unsigned CondReg = getRegForI1Value(Br->getCondition(), Not);
+  if (CondReg == 0)
+    return false;
 
   unsigned Opc = WebAssembly::BR_IF;
   if (Not)
@@ -1213,6 +1223,9 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
     Reg = getRegForUnsignedValue(RV);
   else
     Reg = getRegForValue(RV);
+
+  if (Reg == 0)
+    return false;
 
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc)).addReg(Reg);
   return true;

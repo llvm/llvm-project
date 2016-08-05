@@ -3681,11 +3681,13 @@ void Verifier::visitInstruction(Instruction &I) {
       Assert(
           !F->isIntrinsic() || isa<CallInst>(I) ||
               F->getIntrinsicID() == Intrinsic::donothing ||
+              F->getIntrinsicID() == Intrinsic::coro_resume ||
+              F->getIntrinsicID() == Intrinsic::coro_destroy ||
               F->getIntrinsicID() == Intrinsic::experimental_patchpoint_void ||
               F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
               F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint,
-          "Cannot invoke an intrinsic other than donothing, patchpoint or "
-          "statepoint",
+          "Cannot invoke an intrinsic other than donothing, patchpoint, "
+          "statepoint, coro_resume or coro_destroy",
           &I);
       Assert(F->getParent() == &M, "Referencing function in another module!",
              &I, &M, F, F->getParent());

@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -123,7 +124,7 @@ static bool isAlternateVectorMask(SmallVectorImpl<int> &Mask) {
 
 static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
   TargetTransformInfo::OperandValueKind OpInfo =
-    TargetTransformInfo::OK_AnyValue;
+      TargetTransformInfo::OK_AnyValue;
 
   // Check for a splat of a constant or for a non uniform vector of constants.
   if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
@@ -131,6 +132,12 @@ static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
     if (cast<Constant>(V)->getSplatValue() != nullptr)
       OpInfo = TargetTransformInfo::OK_UniformConstantValue;
   }
+
+  // Check for a splat of a uniform value. This is not loop aware, so return
+  // true only for the obviously uniform cases (argument, globalvalue)
+  const Value *Splat = getSplatValue(V);
+  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
+    OpInfo = TargetTransformInfo::OK_UniformValue;
 
   return OpInfo;
 }

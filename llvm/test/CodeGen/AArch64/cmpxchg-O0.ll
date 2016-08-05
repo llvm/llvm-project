@@ -73,3 +73,29 @@ define { i128, i1 } @test_cmpxchg_128(i128* %addr, i128 %desired, i128 %new) nou
   %res = cmpxchg i128* %addr, i128 %desired, i128 %new seq_cst monotonic
   ret { i128, i1 } %res
 }
+
+; Original implementation assumed the desired & new arguments had already been
+; type-legalized into some kind of BUILD_PAIR operation and crashed when this
+; was false.
+@var128 = global i128 0
+define {i128, i1} @test_cmpxchg_128_unsplit(i128* %addr) {
+; CHECK-LABEL: test_cmpxchg_128_unsplit:
+; CHECK:     add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
+; CHECK:     ldr [[DESIRED_HI:x[0-9]+]], [x[[VAR128]], #8]
+; CHECK:     ldr [[DESIRED_LO:x[0-9]+]], [x[[VAR128]]]
+; CHECK:     ldr [[NEW_HI:x[0-9]+]], [x[[VAR128]], #8]
+; CHECK:     ldr [[NEW_LO:x[0-9]+]], [x[[VAR128]]]
+; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
+; CHECK:     ldaxp [[OLD_LO:x[0-9]+]], [[OLD_HI:x[0-9]+]], [x0]
+; CHECK:     cmp [[OLD_LO]], [[DESIRED_LO]]
+; CHECK:     sbcs xzr, [[OLD_HI]], [[DESIRED_HI]]
+; CHECK:     b.ne [[DONE:.LBB[0-9]+_[0-9]+]]
+; CHECK:     stlxp [[STATUS:w[0-9]+]], [[NEW_LO]], [[NEW_HI]], [x0]
+; CHECK:     cbnz [[STATUS]], [[RETRY]]
+; CHECK: [[DONE]]:
+
+  %desired = load volatile i128, i128* @var128
+  %new = load volatile i128, i128* @var128
+  %val = cmpxchg i128* %addr, i128 %desired, i128 %new seq_cst seq_cst
+  ret { i128, i1 } %val
+}

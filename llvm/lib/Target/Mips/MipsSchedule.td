@@ -53,9 +53,11 @@ def II_BCCZC            : InstrItinClass; // beqzc, bnezc
 def II_BITSWAP          : InstrItinClass;
 def II_CEIL             : InstrItinClass;
 def II_CFC1             : InstrItinClass;
+def II_CFC2             : InstrItinClass;
 def II_CLO              : InstrItinClass;
 def II_CLZ              : InstrItinClass;
 def II_CTC1             : InstrItinClass;
+def II_CTC2             : InstrItinClass;
 def II_CVT              : InstrItinClass;
 def II_C_CC_D           : InstrItinClass; // Any c.<cc>.d instruction
 def II_C_CC_S           : InstrItinClass; // Any c.<cc>.s instruction
@@ -521,6 +523,8 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_MOV_S           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_CFC1            , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_CTC1            , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_CFC2            , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_CTC2            , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MOVF_D          , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MOVF_S          , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MOVT_D          , [InstrStage<2,  [ALU]>]>,

@@ -297,7 +297,7 @@ private:
         auto CCInfo = CompileCallbackMgr.getCompileCallback();
         StubInits[mangle(F.getName(), DL)] =
           std::make_pair(CCInfo.getAddress(),
-                         JITSymbolBase::flagsFromGlobalValue(F));
+                         JITSymbolFlags::fromGlobalValue(F));
         CCInfo.setCompileAction([this, &LD, LMH, &F]() {
           return this->extractAndCompile(LD, LMH, F);
         });

@@ -52,7 +52,7 @@ protected:
       auto SymEntry = SymbolTable.find(Name);
       if (SymEntry == SymbolTable.end())
         return nullptr;
-      if (!SymEntry->second.isExported() && ExportedSymbolsOnly)
+      if (!SymEntry->second.getFlags().isExported() && ExportedSymbolsOnly)
         return nullptr;
       if (!Finalized)
         return JITSymbol(getSymbolMaterializer(Name),
@@ -163,7 +163,7 @@ private:
             consumeError(SymbolName.takeError());
             continue;
           }
-          auto Flags = JITSymbol::flagsFromObjectSymbol(Symbol);
+          auto Flags = JITSymbolFlags::fromObjectSymbol(Symbol);
           SymbolTable.insert(
             std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
         }

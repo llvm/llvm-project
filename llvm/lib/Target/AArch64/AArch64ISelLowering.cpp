@@ -10075,17 +10075,24 @@ static void ReplaceReductionResults(SDNode *N,
   Results.push_back(SplitVal);
 }
 
+static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, N);
+  SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64,
+                           DAG.getNode(ISD::SRL, DL, MVT::i128, N,
+                                       DAG.getConstant(64, DL, MVT::i64)));
+  return std::make_pair(Lo, Hi);
+}
+
 static void ReplaceCMP_SWAP_128Results(SDNode *N,
                                        SmallVectorImpl<SDValue> & Results,
                                        SelectionDAG &DAG) {
   assert(N->getValueType(0) == MVT::i128 &&
          "AtomicCmpSwap on types less than 128 should be legal");
-  SDValue Ops[] = {N->getOperand(1),
-                   N->getOperand(2)->getOperand(0),
-                   N->getOperand(2)->getOperand(1),
-                   N->getOperand(3)->getOperand(0),
-                   N->getOperand(3)->getOperand(1),
-                   N->getOperand(0)};
+  auto Desired = splitInt128(N->getOperand(2), DAG);
+  auto New = splitInt128(N->getOperand(3), DAG);
+  SDValue Ops[] = {N->getOperand(1), Desired.first, Desired.second,
+                   New.first,        New.second,    N->getOperand(0)};
   SDNode *CmpSwap = DAG.getMachineNode(
       AArch64::CMP_SWAP_128, SDLoc(N),
       DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other), Ops);

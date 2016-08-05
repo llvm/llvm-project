@@ -131,6 +131,31 @@ public:
   MachineInstrBuilder buildAdd(LLT Ty, unsigned Res, unsigned Op0,
                                 unsigned Op1);
 
+  /// Build and insert \p Res<def>, \p CarryOut = G_ADDE \p Ty \p Op0, \p Op1,
+  /// \p CarryIn
+  ///
+  /// G_ADDE sets \p Res to \p Op0 + \p Op1 + \p CarryIn (truncated to the bit
+  /// width) and sets \p CarryOut to 1 if the result overflowed in 2s-complement
+  /// arithmetic.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildAdde(LLT Ty, unsigned Res, unsigned CarryOut,
+                                unsigned Op0, unsigned Op1, unsigned CarryIn);
+
+  /// Build and insert \p Res<def> = G_ANYEXTEND \p Ty \p Op0
+  ///
+  /// G_ANYEXTEND produces a register of the specified width, with bits 0 to
+  /// sizeof(\p Ty) * 8 set to \p Op. The remaining bits are unspecified
+  /// (i.e. this is neither zero nor sign-extension). For a vector register,
+  /// each element is extended individually.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildAnyExtend(LLT Ty, unsigned Res, unsigned Op);
+
   /// Build and insert G_BR unsized \p Dest
   ///
   /// G_BR is an unconditional branch to \p Dest.
@@ -150,6 +175,15 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildBrCond(LLT Ty, unsigned Tst, MachineBasicBlock &BB);
+
+  /// Build and insert \p Res = G_CONSTANT \p Ty \p Val
+  ///
+  /// G_CONSTANT is an integer constant with the specified size and value.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildConstant(LLT Ty, unsigned Res, int64_t Val);
 
   /// Build and insert \p Res<def> = COPY Op
   ///
@@ -217,6 +251,16 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildIntrinsic(ArrayRef<LLT> Tys, Intrinsic::ID ID,
                                      unsigned Res, bool HasSideEffects);
+
+  /// Build and insert \p Res<def> = G_TRUNC \p Ty \p Op
+  ///
+  /// G_TRUNC extracts the low bits of a type. For a vector type each element is
+  /// truncated independently before being packed into the destination.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildTrunc(LLT Ty, unsigned Res, unsigned Op);
 };
 
 } // End namespace llvm.

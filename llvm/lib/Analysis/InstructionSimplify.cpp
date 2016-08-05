@@ -3121,17 +3121,16 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // If a bit is known to be zero for A and known to be one for B,
   // then A and B cannot be equal.
   if (ICmpInst::isEquality(Pred)) {
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-      uint32_t BitWidth = CI->getBitWidth();
+    const APInt *RHSVal;
+    if (match(RHS, m_APInt(RHSVal))) {
+      unsigned BitWidth = RHSVal->getBitWidth();
       APInt LHSKnownZero(BitWidth, 0);
       APInt LHSKnownOne(BitWidth, 0);
       computeKnownBits(LHS, LHSKnownZero, LHSKnownOne, Q.DL, /*Depth=*/0, Q.AC,
                        Q.CxtI, Q.DT);
-      const APInt &RHSVal = CI->getValue();
-      if (((LHSKnownZero & RHSVal) != 0) || ((LHSKnownOne & ~RHSVal) != 0))
-        return Pred == ICmpInst::ICMP_EQ
-                   ? ConstantInt::getFalse(CI->getContext())
-                   : ConstantInt::getTrue(CI->getContext());
+      if (((LHSKnownZero & *RHSVal) != 0) || ((LHSKnownOne & ~(*RHSVal)) != 0))
+        return Pred == ICmpInst::ICMP_EQ ? ConstantInt::getFalse(ITy)
+                                         : ConstantInt::getTrue(ITy);
     }
   }
 

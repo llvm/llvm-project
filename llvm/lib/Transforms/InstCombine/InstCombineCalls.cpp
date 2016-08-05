@@ -79,8 +79,8 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
 }
 
 Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
-  unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, AC, DT);
-  unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, AC, DT);
+  unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, &AC, &DT);
+  unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, &AC, &DT);
   unsigned MinAlign = std::min(DstAlign, SrcAlign);
   unsigned CopyAlign = MI->getAlignment();
 
@@ -173,7 +173,7 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
 }
 
 Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
-  unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, AC, DT);
+  unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
   if (MI->getAlignment() < Alignment) {
     MI->setAlignment(ConstantInt::get(MI->getAlignmentType(),
                                              Alignment, false));
@@ -1243,10 +1243,10 @@ Instruction *InstCombiner::visitVACopyInst(VACopyInst &I) {
 Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   auto Args = CI.arg_operands();
   if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(), DL,
-                              TLI, DT, AC))
+                              &TLI, &DT, &AC))
     return replaceInstUsesWith(CI, V);
 
-  if (isFreeCall(&CI, TLI))
+  if (isFreeCall(&CI, &TLI))
     return visitFree(CI);
 
   // If the caller function is nounwind, mark the call as nounwind, even if the
@@ -1334,7 +1334,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   default: break;
   case Intrinsic::objectsize: {
     uint64_t Size;
-    if (getObjectSize(II->getArgOperand(0), Size, DL, TLI)) {
+    if (getObjectSize(II->getArgOperand(0), Size, DL, &TLI)) {
       APInt APSize(II->getType()->getIntegerBitWidth(), Size);
       // Equality check to be sure that `Size` can fit in a value of type
       // `II->getType()`
@@ -1480,8 +1480,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
     // Turn PPC lvx -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, AC, DT) >=
-        16) {
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+                                   &DT) >= 16) {
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
       return new LoadInst(Ptr);
@@ -1497,8 +1497,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
     // Turn stvx -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, AC, DT) >=
-        16) {
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+                                   &DT) >= 16) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(1), OpPtrTy);
@@ -1514,8 +1514,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, AC, DT) >=
-        16) {
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 16, DL, II, &AC,
+                                   &DT) >= 16) {
       Type *VTy = VectorType::get(Builder->getFloatTy(),
                                   II->getType()->getVectorNumElements());
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(0),
@@ -1526,8 +1526,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvlfd:
     // Turn PPC QPX qvlfd -> load if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II, AC, DT) >=
-        32) {
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II, &AC,
+                                   &DT) >= 32) {
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
       return new LoadInst(Ptr);
@@ -1535,8 +1535,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfs:
     // Turn PPC QPX qvstfs -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, AC, DT) >=
-        16) {
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 16, DL, II, &AC,
+                                   &DT) >= 16) {
       Type *VTy = VectorType::get(Builder->getFloatTy(),
           II->getArgOperand(0)->getType()->getVectorNumElements());
       Value *TOp = Builder->CreateFPTrunc(II->getArgOperand(0), VTy);
@@ -1547,8 +1547,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::ppc_qpx_qvstfd:
     // Turn PPC QPX qvstfd -> store if the pointer is known aligned.
-    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 32, DL, II, AC, DT) >=
-        32) {
+    if (getOrEnforceKnownAlignment(II->getArgOperand(1), 32, DL, II, &AC,
+                                   &DT) >= 32) {
       Type *OpPtrTy =
         PointerType::getUnqual(II->getArgOperand(0)->getType());
       Value *Ptr = Builder->CreateBitCast(II->getArgOperand(1), OpPtrTy);
@@ -2104,7 +2104,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_neon_vst2lane:
   case Intrinsic::arm_neon_vst3lane:
   case Intrinsic::arm_neon_vst4lane: {
-    unsigned MemAlign = getKnownAlignment(II->getArgOperand(0), DL, II, AC, DT);
+    unsigned MemAlign =
+        getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
     unsigned AlignArg = II->getNumArgOperands() - 1;
     ConstantInt *IntrAlign = dyn_cast<ConstantInt>(II->getArgOperand(AlignArg));
     if (IntrAlign && IntrAlign->getZExtValue() < MemAlign) {
@@ -2288,7 +2289,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
           RHS->getType()->isPointerTy() &&
           cast<Constant>(RHS)->isNullValue()) {
         LoadInst* LI = cast<LoadInst>(LHS);
-        if (isValidAssumeForContext(II, LI, DT)) {
+        if (isValidAssumeForContext(II, LI, &DT)) {
           MDNode *MD = MDNode::get(II->getContext(), None);
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           return eraseInstFromFunction(*II);
@@ -2334,7 +2335,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(*II, ConstantPointerNull::get(PT));
 
       // isKnownNonNull -> nonnull attribute
-      if (isKnownNonNullAt(DerivedPtr, II, DT))
+      if (isKnownNonNullAt(DerivedPtr, II, &DT))
         II->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
     }
 
@@ -2394,7 +2395,7 @@ Instruction *InstCombiner::tryOptimizeCall(CallInst *CI) {
   auto InstCombineRAUW = [this](Instruction *From, Value *With) {
     replaceInstUsesWith(*From, With);
   };
-  LibCallSimplifier Simplifier(DL, TLI, InstCombineRAUW);
+  LibCallSimplifier Simplifier(DL, &TLI, InstCombineRAUW);
   if (Value *With = Simplifier.optimizeCall(CI)) {
     ++NumSimplified;
     return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);
@@ -2483,7 +2484,7 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
 /// Improvements for call and invoke instructions.
 Instruction *InstCombiner::visitCallSite(CallSite CS) {
 
-  if (isAllocLikeFn(CS.getInstruction(), TLI))
+  if (isAllocLikeFn(CS.getInstruction(), &TLI))
     return visitAllocSite(*CS.getInstruction());
 
   bool Changed = false;
@@ -2497,7 +2498,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   for (Value *V : CS.args()) {
     if (V->getType()->isPointerTy() &&
         !CS.paramHasAttr(ArgNo + 1, Attribute::NonNull) &&
-        isKnownNonNullAt(V, CS.getInstruction(), DT))
+        isKnownNonNullAt(V, CS.getInstruction(), &DT))
       Indices.push_back(ArgNo + 1);
     ArgNo++;
   }

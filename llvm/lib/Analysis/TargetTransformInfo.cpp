@@ -186,11 +186,12 @@ bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
   return TTIImpl->isFPVectorizationPotentiallyUnsafe();
 }
 
-bool TargetTransformInfo::allowsMisalignedMemoryAccesses(unsigned BitWidth,
+bool TargetTransformInfo::allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                                         unsigned BitWidth,
                                                          unsigned AddressSpace,
                                                          unsigned Alignment,
                                                          bool *Fast) const {
-  return TTIImpl->allowsMisalignedMemoryAccesses(BitWidth, AddressSpace,
+  return TTIImpl->allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
                                                  Alignment, Fast);
 }
 

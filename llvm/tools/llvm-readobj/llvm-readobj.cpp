@@ -272,6 +272,14 @@ LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
   exit(1);
 }
 
+void error(llvm::Error EC) {
+  if (!EC)
+    return;
+
+  handleAllErrors(std::move(EC),
+                  [&](ErrorInfoBase &EI) { reportError(EI.message()); });
+}
+
 void error(std::error_code EC) {
   if (!EC)
     return;

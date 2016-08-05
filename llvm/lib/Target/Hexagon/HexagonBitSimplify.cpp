@@ -1700,8 +1700,9 @@ namespace {
   class BitSimplification : public Transformation {
   public:
     BitSimplification(BitTracker &bt, const HexagonInstrInfo &hii,
-        MachineRegisterInfo &mri)
-      : Transformation(true), HII(hii), MRI(mri), BT(bt) {}
+        const HexagonRegisterInfo &hri, MachineRegisterInfo &mri,
+        MachineFunction &mf)
+      : Transformation(true), HII(hii), HRI(hri), MRI(mri), MF(mf), BT(bt) {}
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
   private:
     struct RegHalf : public BitTracker::RegisterRef {
@@ -1710,6 +1711,7 @@ namespace {
 
     bool matchHalf(unsigned SelfR, const BitTracker::RegisterCell &RC,
           unsigned B, RegHalf &RH);
+    bool validateReg(BitTracker::RegisterRef R, unsigned Opc, unsigned OpNum);
 
     bool matchPackhl(unsigned SelfR, const BitTracker::RegisterCell &RC,
           BitTracker::RegisterRef &Rs, BitTracker::RegisterRef &Rt);
@@ -1729,7 +1731,9 @@ namespace {
           const BitTracker::RegisterCell &RC);
 
     const HexagonInstrInfo &HII;
+    const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
+    MachineFunction &MF;
     BitTracker &BT;
   };
 }
@@ -1814,6 +1818,14 @@ bool BitSimplification::matchHalf(unsigned SelfR,
     RH.Sub = 0;
 
   return true;
+}
+
+
+bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
+      unsigned OpNum) {
+  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI, MF);
+  auto *RRC = HBS::getFinalVRegClass(R, MRI);
+  return OpRC->hasSubClassEq(RRC);
 }
 
 
@@ -1955,6 +1967,9 @@ bool BitSimplification::genPackhl(MachineInstr *MI,
   BitTracker::RegisterRef Rs, Rt;
   if (!matchPackhl(RD.Reg, RC, Rs, Rt))
     return false;
+  if (!validateReg(Rs, Hexagon::S2_packhl, 1) ||
+      !validateReg(Rt, Hexagon::S2_packhl, 2))
+    return false;
 
   MachineBasicBlock &B = *MI->getParent();
   unsigned NewR = MRI.createVirtualRegister(&Hexagon::DoubleRegsRegClass);
@@ -1989,14 +2004,18 @@ bool BitSimplification::genExtractHalf(MachineInstr *MI,
   auto At = MI->isPHI() ? B.getFirstNonPHI()
                         : MachineBasicBlock::iterator(MI);
   if (L.Low && Opc != Hexagon::A2_zxth) {
-    NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    BuildMI(B, At, DL, HII.get(Hexagon::A2_zxth), NewR)
-        .addReg(L.Reg, 0, L.Sub);
+    if (validateReg(L, Hexagon::A2_zxth, 1)) {
+      NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(B, At, DL, HII.get(Hexagon::A2_zxth), NewR)
+          .addReg(L.Reg, 0, L.Sub);
+    }
   } else if (!L.Low && Opc != Hexagon::S2_lsr_i_r) {
-    NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    BuildMI(B, MI, DL, HII.get(Hexagon::S2_lsr_i_r), NewR)
-        .addReg(L.Reg, 0, L.Sub)
-        .addImm(16);
+    if (validateReg(L, Hexagon::S2_lsr_i_r, 1)) {
+      NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(B, MI, DL, HII.get(Hexagon::S2_lsr_i_r), NewR)
+          .addReg(L.Reg, 0, L.Sub)
+          .addImm(16);
+    }
   }
   if (NewR == 0)
     return false;
@@ -2021,6 +2040,8 @@ bool BitSimplification::genCombineHalf(MachineInstr *MI,
   unsigned Opc = MI->getOpcode();
   unsigned COpc = getCombineOpcode(H.Low, L.Low);
   if (COpc == Opc)
+    return false;
+  if (!validateReg(H, COpc, 1) || !validateReg(L, COpc, 2))
     return false;
 
   MachineBasicBlock &B = *MI->getParent();
@@ -2079,6 +2100,8 @@ bool BitSimplification::genExtractLow(MachineInstr *MI,
     if (!HBS::getSubregMask(RS, BN, BW, MRI))
       continue;
     if (BW < W || !HBS::isEqual(RC, 0, SC, BN, W))
+      continue;
+    if (!validateReg(RS, NewOpc, 1))
       continue;
 
     unsigned NewR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
@@ -2264,7 +2287,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 
   BT.run();
   RegisterSet ABS;  // Available registers for BS.
-  BitSimplification BitS(BT, HII, MRI);
+  BitSimplification BitS(BT, HII, HRI, MRI, MF);
   Changed |= visitBlock(Entry, BitS, ABS);
 
   Changed = DeadCodeElimination(MF, *MDT).run() || Changed;

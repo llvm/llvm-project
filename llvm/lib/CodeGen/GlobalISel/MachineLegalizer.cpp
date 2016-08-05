@@ -25,6 +25,11 @@
 using namespace llvm;
 
 MachineLegalizer::MachineLegalizer() : TablesInitialized(false) {
+  // FIXME: these two can be legalized to the fundamental load/store Jakob
+  // proposed. Once loads & stores are supported.
+  DefaultActions[TargetOpcode::G_ANYEXTEND] = Legal;
+  DefaultActions[TargetOpcode::G_TRUNC] = Legal;
+
   DefaultActions[TargetOpcode::G_ADD] = NarrowScalar;
 }
 

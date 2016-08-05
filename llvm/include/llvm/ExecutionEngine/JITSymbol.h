@@ -14,27 +14,81 @@
 #ifndef LLVM_EXECUTIONENGINE_JITSYMBOL_H
 #define LLVM_EXECUTIONENGINE_JITSYMBOL_H
 
-#include "llvm/ExecutionEngine/JITSymbolFlags.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <functional>
 
 namespace llvm {
 
+class GlobalValue;
+
+namespace object {
+  class BasicSymbolRef;
+}
+
 /// @brief Represents an address in the target process's address space.
 typedef uint64_t JITTargetAddress;
 
+/// @brief Flags for symbols in the JIT.
+class JITSymbolFlags {
+public:
+
+  typedef uint8_t UnderlyingType;
+
+  enum FlagNames : UnderlyingType {
+    None = 0,
+    Weak = 1U << 0,
+    Common = 1U << 1,
+    Absolute = 1U << 2,
+    Exported = 1U << 3
+  };
+
+  /// @brief Default-construct a JITSymbolFlags instance.
+  JITSymbolFlags() : Flags(None) {}
+
+  /// @brief Construct a JITSymbolFlags instance from the given flags.
+  JITSymbolFlags(FlagNames Flags) : Flags(Flags) {}
+
+  /// @brief Returns true is the Weak flag is set.
+  bool isWeak() const {
+    return (Flags & Weak) == Weak;
+  }
+
+  /// @brief Returns true is the Weak flag is set.
+  bool isCommon() const {
+    return (Flags & Common) == Common;
+  }
+
+  /// @brief Returns true is the Weak flag is set.
+  bool isExported() const {
+    return (Flags & Exported) == Exported;
+  }
+
+  operator UnderlyingType&() { return Flags; }
+
+  /// Construct a JITSymbolFlags value based on the flags of the given global
+  /// value.
+  static JITSymbolFlags fromGlobalValue(const GlobalValue &GV);
+
+  /// Construct a JITSymbolFlags value based on the flags of the given libobject
+  /// symbol.
+  static JITSymbolFlags fromObjectSymbol(const object::BasicSymbolRef &Symbol);
+
+private:
+  UnderlyingType Flags;
+};
+
 /// @brief Represents a symbol that has been evaluated to an address already.
-class JITEvaluatedSymbol : public JITSymbolBase {
+class JITEvaluatedSymbol {
 public:
 
   /// @brief Create a 'null' symbol.
   JITEvaluatedSymbol(std::nullptr_t)
-      : JITSymbolBase(JITSymbolFlags::None), Address(0) {}
+      : Address(0) {}
 
   /// @brief Create a symbol for the given address and flags.
   JITEvaluatedSymbol(JITTargetAddress Address, JITSymbolFlags Flags)
-      : JITSymbolBase(Flags), Address(Address) {}
+      : Address(Address), Flags(Flags) {}
 
   /// @brief An evaluated symbol converts to 'true' if its address is non-zero.
   explicit operator bool() const { return Address != 0; }
@@ -42,12 +96,16 @@ public:
   /// @brief Return the address of this symbol.
   JITTargetAddress getAddress() const { return Address; }
 
+  /// @brief Return the flags for this symbol.
+  JITSymbolFlags getFlags() const { return Flags; }
+
 private:
   JITTargetAddress Address;
+  JITSymbolFlags Flags;
 };
 
 /// @brief Represents a symbol in the JIT.
-class JITSymbol : public JITSymbolBase {
+class JITSymbol {
 public:
 
   typedef std::function<JITTargetAddress()> GetAddressFtor;
@@ -55,15 +113,15 @@ public:
   /// @brief Create a 'null' symbol that represents failure to find a symbol
   ///        definition.
   JITSymbol(std::nullptr_t)
-      : JITSymbolBase(JITSymbolFlags::None), CachedAddr(0) {}
+      : CachedAddr(0) {}
 
   /// @brief Create a symbol for a definition with a known address.
   JITSymbol(JITTargetAddress Addr, JITSymbolFlags Flags)
-    : JITSymbolBase(Flags), CachedAddr(Addr) {}
+      : CachedAddr(Addr), Flags(Flags) {}
 
   /// @brief Construct a JITSymbol from a JITEvaluatedSymbol.
   JITSymbol(JITEvaluatedSymbol Sym)
-    : JITSymbolBase(Sym.getFlags()), CachedAddr(Sym.getAddress()) {}
+      : CachedAddr(Sym.getAddress()), Flags(Sym.getFlags()) {}
 
   /// @brief Create a symbol for a definition that doesn't have a known address
   ///        yet.
@@ -75,7 +133,7 @@ public:
   /// user can materialize the definition at any time by calling the getAddress
   /// method.
   JITSymbol(GetAddressFtor GetAddress, JITSymbolFlags Flags)
-      : JITSymbolBase(Flags), GetAddress(std::move(GetAddress)), CachedAddr(0) {}
+      : GetAddress(std::move(GetAddress)), CachedAddr(0), Flags(Flags) {}
 
   /// @brief Returns true if the symbol exists, false otherwise.
   explicit operator bool() const { return CachedAddr || GetAddress; }
@@ -91,9 +149,12 @@ public:
     return CachedAddr;
   }
 
+  JITSymbolFlags getFlags() const { return Flags; }
+
 private:
   GetAddressFtor GetAddress;
   JITTargetAddress CachedAddr;
+  JITSymbolFlags Flags;
 };
 
 /// \brief Symbol resolution.

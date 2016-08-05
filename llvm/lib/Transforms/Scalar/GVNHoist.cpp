@@ -750,12 +750,19 @@ private:
         Repl = InstructionsToHoist.front();
 
         // We can move Repl in HoistPt only when all operands are available.
-        // When not HoistingGeps we need to copy the GEPs now.
         // The order in which hoistings are done may influence the availability
         // of operands.
-        if (!allOperandsAvailable(Repl, HoistPt) && !HoistingGeps &&
-            !makeGepOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
-          continue;
+        if (!allOperandsAvailable(Repl, HoistPt)) {
+
+          // When HoistingGeps there is nothing more we can do to make the
+          // operands available: just continue.
+          if (HoistingGeps)
+            continue;
+
+          // When not HoistingGeps we need to copy the GEPs.
+          if (!makeGepOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
+            continue;
+        }
 
         // Move the instruction at the end of HoistPt.
         Instruction *Last = HoistPt->getTerminator();
@@ -879,6 +886,10 @@ private:
             if (Call->mayThrow())
               break;
           }
+
+          if (Call->isConvergent())
+            break;
+
           CI.insert(Call, VN);
         } else if (HoistingGeps || !isa<GetElementPtrInst>(&I1))
           // Do not hoist scalars past calls that may write to memory because

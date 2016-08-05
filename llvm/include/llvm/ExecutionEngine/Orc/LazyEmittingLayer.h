@@ -49,7 +49,7 @@ private:
           // (a StringRef) may go away before the lambda is executed.
           // FIXME: Use capture-init when we move to C++14.
           std::string PName = Name;
-          JITSymbolFlags Flags = JITSymbolBase::flagsFromGlobalValue(*GV);
+          JITSymbolFlags Flags = JITSymbolFlags::fromGlobalValue(*GV);
           auto GetAddress =
             [this, ExportedSymbolsOnly, PName, &B]() -> JITTargetAddress {
               if (this->EmitState == Emitting)

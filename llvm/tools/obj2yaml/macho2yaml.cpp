@@ -455,8 +455,6 @@ void MachODumper::dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
   while (RemainingTable.size() > 0) {
     auto SymbolPair = RemainingTable.split('\0');
     RemainingTable = SymbolPair.second;
-    if (SymbolPair.first.empty())
-      break;
     LEData.StringTable.push_back(SymbolPair.first);
   }
 }

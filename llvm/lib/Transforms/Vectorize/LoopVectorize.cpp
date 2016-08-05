@@ -6092,7 +6092,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         TargetTransformInfo::OP_None;
     Value *Op2 = I->getOperand(1);
 
-    // Check for a splat of a constant or for a non uniform vector of constants.
+    // Check for a splat or for a non uniform vector of constants.
     if (isa<ConstantInt>(Op2)) {
       ConstantInt *CInt = cast<ConstantInt>(Op2);
       if (CInt && CInt->getValue().isPowerOf2())
@@ -6107,6 +6107,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
           Op2VP = TargetTransformInfo::OP_PowerOf2;
         Op2VK = TargetTransformInfo::OK_UniformConstantValue;
       }
+    } else if (Legal->isUniform(Op2)) {
+      Op2VK = TargetTransformInfo::OK_UniformValue;
     }
 
     return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK, Op2VK,

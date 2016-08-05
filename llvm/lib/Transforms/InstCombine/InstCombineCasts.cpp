@@ -161,7 +161,7 @@ Value *InstCombiner::EvaluateInDifferentType(Value *V, Type *Ty,
   if (Constant *C = dyn_cast<Constant>(V)) {
     C = ConstantExpr::getIntegerCast(C, Ty, isSigned /*Sext or ZExt*/);
     // If we got a constantexpr back, try to simplify it with DL info.
-    if (Constant *FoldedC = ConstantFoldConstant(C, DL, TLI))
+    if (Constant *FoldedC = ConstantFoldConstant(C, DL, &TLI))
       C = FoldedC;
     return C;
   }
@@ -450,13 +450,13 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
 
   // Test if the trunc is the user of a select which is part of a
   // minimum or maximum operation. If so, don't do any more simplification.
-  // Even simplifying demanded bits can break the canonical form of a 
+  // Even simplifying demanded bits can break the canonical form of a
   // min/max.
   Value *LHS, *RHS;
   if (SelectInst *SI = dyn_cast<SelectInst>(CI.getOperand(0)))
     if (matchSelectPattern(SI, LHS, RHS).Flavor != SPF_UNKNOWN)
       return nullptr;
-  
+
   // See if we can simplify any instructions used by the input whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(CI))
@@ -1104,7 +1104,7 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
   Type *SrcTy = Src->getType(), *DestTy = CI.getType();
 
   // If we know that the value being extended is positive, we can use a zext
-  // instead. 
+  // instead.
   bool KnownZero, KnownOne;
   ComputeSignBit(Src, KnownZero, KnownOne, 0, &CI);
   if (KnownZero) {

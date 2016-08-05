@@ -223,10 +223,10 @@ if.end:
 
 ; Check that all independent expressions are hoisted.
 ; CHECK-LABEL: @independentScalarsHoisting
-; CHECK: fadd
 ; CHECK: fsub
 ; CHECK: fdiv
 ; CHECK: fmul
+; CHECK: fadd
 ; CHECK-NOT: fsub
 ; CHECK-NOT: fdiv
 ; CHECK-NOT: fmul
