@@ -24,6 +24,12 @@ ELF Improvements
 
 * Initial support for LTO.
 
+Changes to the MIPS Target
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Added support for MIPS N64 ABI.
+* Added support for TLS relocations for both O32 and N64 MIPS ABIs.
+
 COFF Improvements
 -----------------
 
