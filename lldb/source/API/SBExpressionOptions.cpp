@@ -174,18 +174,6 @@ SBExpressionOptions::SetPlaygroundTransformEnabled (bool enable_playground_trans
 }
 
 bool
-SBExpressionOptions::GetREPLMode () const
-{
-    return m_opaque_ap->GetREPLEnabled();
-}
-
-bool
-SBExpressionOptions::SetREPLMode (bool enable_repl_mode)
-{
-    m_opaque_ap->SetREPLEnabled(enable_repl_mode);
-}
-
-bool
 SBExpressionOptions::GetGenerateDebugInfo ()
 {
     return m_opaque_ap->GetGenerateDebugInfo();
