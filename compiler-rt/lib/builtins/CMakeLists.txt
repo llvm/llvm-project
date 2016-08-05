@@ -261,64 +261,16 @@ else () # MSVC
 endif () # if (NOT MSVC)
 
 set(arm_SOURCES
-  arm/adddf3vfp.S
-  arm/addsf3vfp.S
-  arm/aeabi_cdcmp.S
-  arm/aeabi_cdcmpeq_check_nan.c
-  arm/aeabi_cfcmp.S
-  arm/aeabi_cfcmpeq_check_nan.c
-  arm/aeabi_dcmp.S
-  arm/aeabi_div0.c
-  arm/aeabi_drsub.c
-  arm/aeabi_fcmp.S
-  arm/aeabi_frsub.c
-  arm/aeabi_idivmod.S
-  arm/aeabi_ldivmod.S
-  arm/aeabi_memcmp.S
-  arm/aeabi_memcpy.S
-  arm/aeabi_memmove.S
-  arm/aeabi_memset.S
-  arm/aeabi_uidivmod.S
-  arm/aeabi_uldivmod.S
   arm/bswapdi2.S
   arm/bswapsi2.S
   arm/clzdi2.S
   arm/clzsi2.S
   arm/comparesf2.S
-  arm/divdf3vfp.S
   arm/divmodsi4.S
-  arm/divsf3vfp.S
   arm/divsi3.S
-  arm/eqdf2vfp.S
-  arm/eqsf2vfp.S
-  arm/extendsfdf2vfp.S
-  arm/fixdfsivfp.S
-  arm/fixsfsivfp.S
-  arm/fixunsdfsivfp.S
-  arm/fixunssfsivfp.S
-  arm/floatsidfvfp.S
-  arm/floatsisfvfp.S
-  arm/floatunssidfvfp.S
-  arm/floatunssisfvfp.S
-  arm/gedf2vfp.S
-  arm/gesf2vfp.S
-  arm/gtdf2vfp.S
-  arm/gtsf2vfp.S
-  arm/ledf2vfp.S
-  arm/lesf2vfp.S
-  arm/ltdf2vfp.S
-  arm/ltsf2vfp.S
   arm/modsi3.S
-  arm/muldf3vfp.S
-  arm/mulsf3vfp.S
-  arm/nedf2vfp.S
-  arm/negdf2vfp.S
-  arm/negsf2vfp.S
-  arm/nesf2vfp.S
   arm/restore_vfp_d8_d15_regs.S
   arm/save_vfp_d8_d15_regs.S
-  arm/subdf3vfp.S
-  arm/subsf3vfp.S
   arm/switch16.S
   arm/switch32.S
   arm/switch8.S
@@ -344,13 +296,73 @@ set(arm_SOURCES
   arm/sync_fetch_and_xor_4.S
   arm/sync_fetch_and_xor_8.S
   arm/sync_synchronize.S
-  arm/truncdfsf2vfp.S
   arm/udivmodsi4.S
   arm/udivsi3.S
   arm/umodsi3.S
-  arm/unorddf2vfp.S
-  arm/unordsf2vfp.S
   ${GENERIC_SOURCES})
+
+set(arm_EABI_SOURCES
+  arm/aeabi_cdcmp.S
+  arm/aeabi_cdcmpeq_check_nan.c
+  arm/aeabi_cfcmp.S
+  arm/aeabi_cfcmpeq_check_nan.c
+  arm/aeabi_dcmp.S
+  arm/aeabi_div0.c
+  arm/aeabi_drsub.c
+  arm/aeabi_fcmp.S
+  arm/aeabi_frsub.c
+  arm/aeabi_idivmod.S
+  arm/aeabi_ldivmod.S
+  arm/aeabi_memcmp.S
+  arm/aeabi_memcpy.S
+  arm/aeabi_memmove.S
+  arm/aeabi_memset.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S)
+set(arm_VFP_SOURCES
+  arm/adddf3vfp.S
+  arm/addsf3vfp.S
+  arm/divdf3vfp.S
+  arm/divsf3vfp.S
+  arm/eqdf2vfp.S
+  arm/eqsf2vfp.S
+  arm/extendsfdf2vfp.S
+  arm/fixdfsivfp.S
+  arm/fixsfsivfp.S
+  arm/fixunsdfsivfp.S
+  arm/fixunssfsivfp.S
+  arm/floatsidfvfp.S
+  arm/floatsisfvfp.S
+  arm/floatunssidfvfp.S
+  arm/floatunssisfvfp.S
+  arm/gedf2vfp.S
+  arm/gesf2vfp.S
+  arm/gtdf2vfp.S
+  arm/gtsf2vfp.S
+  arm/ledf2vfp.S
+  arm/lesf2vfp.S
+  arm/ltdf2vfp.S
+  arm/ltsf2vfp.S
+  arm/muldf3vfp.S
+  arm/mulsf3vfp.S
+  arm/nedf2vfp.S
+  arm/negdf2vfp.S
+  arm/negsf2vfp.S
+  arm/nesf2vfp.S
+  arm/subdf3vfp.S
+  arm/subsf3vfp.S
+  arm/truncdfsf2vfp.S
+  arm/unorddf2vfp.S
+  arm/unordsf2vfp.S)
+
+if(NOT WIN32)
+  # TODO the VFP sources should only be used for non-FPU targets, the EABI
+  # sources should only be added to EABI targets
+  set(arm_SOURCES
+    ${arm_SOURCES}
+    ${arm_EABI_SOURCES}
+    ${arm_VFP_SOURCES})
+endif()
 
 set(aarch64_SOURCES
   comparetf2.c

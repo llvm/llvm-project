@@ -22,18 +22,6 @@
 // RUN: %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG2 %s
 // RUN: %t6 x 2>&1 | FileCheck --check-prefix=CFI-DIAG1 %s
 
-// RUN: %clangxx_cfi_diag -Wl,-plugin-opt,--lowertypetests-bitsets-level=0 -o %t7 %s
-// RUN: %t7 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t7 x 2>&1 | FileCheck --check-prefix=CFI-DIAG1 %s
-
-// RUN: %clangxx_cfi_diag -Wl,-plugin-opt,--lowertypetests-bitsets-level=1 -o %t8 %s
-// RUN: %t8 2>&1 | FileCheck --check-prefix=CFI-DIAG2 %s
-// RUN: %t8 x 2>&1 | FileCheck --check-prefix=CFI-DIAG1 %s
-
-// RUN: %clangxx_cfi_diag -Wl,-plugin-opt,--lowertypetests-bitsets-level=2 -o %t9 %s
-// RUN: %t9 2>&1 | FileCheck --check-prefix=CFI-DIAG2 %s
-// RUN: %t9 x 2>&1 | FileCheck --check-prefix=CFI-DIAG1 %s
-
 // Tests that the CFI mechanism is sensitive to multiple inheritance and only
 // permits calls via virtual tables for the correct base class.
 
