@@ -216,6 +216,9 @@ Changes to the X86 Target
 Changes to the AMDGPU Target
 -----------------------------
 
+ * Added backend support for OpenGL shader image, buffer storage, atomic
+   counter, and compute shader extensions (supported since Mesa 12)
+
  * Mesa 11.0.x is no longer supported
 
 
