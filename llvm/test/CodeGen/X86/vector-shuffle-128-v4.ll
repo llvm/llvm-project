@@ -1064,14 +1064,12 @@ define <4 x float> @shuffle_v4f32_0zz4(<4 x float> %a, <4 x float> %b) {
 ;
 ; SSE41-LABEL: shuffle_v4f32_0zz4:
 ; SSE41:       # BB#0:
-; SSE41-NEXT:    insertps {{.*#+}} xmm1 = zero,zero,zero,xmm1[0]
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0zz4:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = zero,zero,zero,xmm1[0]
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x float> %b, <4 x float> zeroinitializer, <4 x i32> <i32 undef, i32 5, i32 6, i32 0>
   %shuffle1 = shufflevector <4 x float> %a, <4 x float> %shuffle, <4 x i32> <i32 0, i32 5, i32 6, i32 7>

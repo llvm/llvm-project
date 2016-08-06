@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -96,17 +97,28 @@ public:
                   uint32_t NumHashBuckets)
       : HashValues(HashValues), NumHashBuckets(NumHashBuckets) {}
 
-  Error visitUdtSourceLine(UdtSourceLineRecord &Rec) override {
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         UdtSourceLineRecord &Rec) override {
     return verifySourceLine(Rec);
   }
 
-  Error visitUdtModSourceLine(UdtModSourceLineRecord &Rec) override {
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         UdtModSourceLineRecord &Rec) override {
     return verifySourceLine(Rec);
   }
 
-  Error visitClass(ClassRecord &Rec) override { return verify(Rec); }
-  Error visitEnum(EnumRecord &Rec) override { return verify(Rec); }
-  Error visitUnion(UnionRecord &Rec) override { return verify(Rec); }
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         ClassRecord &Rec) override {
+    return verify(Rec);
+  }
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         EnumRecord &Rec) override {
+    return verify(Rec);
+  }
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         UnionRecord &Rec) override {
+    return verify(Rec);
+  }
 
   Error visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) override {
     ++Index;
@@ -148,7 +160,8 @@ private:
 // Currently we only verify SRC_LINE records.
 Error TpiStream::verifyHashValues() {
   TpiHashVerifier Verifier(HashValues, Header->NumHashBuckets);
-  CVTypeVisitor Visitor(Verifier);
+  TypeDeserializer Deserializer(Verifier);
+  CVTypeVisitor Visitor(Deserializer);
   return Visitor.visitTypeStream(TypeRecords);
 }
 

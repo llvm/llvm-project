@@ -2,7 +2,7 @@
 ; intrinsics.
 ; RUN: opt < %s -S -coro-early | FileCheck %s
 
-; CHECK-LABEL: @callResume
+; CHECK-LABEL: @callResume(
 define void @callResume(i8* %hdl) {
 ; CHECK-NEXT: entry
 entry:
@@ -20,7 +20,7 @@ entry:
 ; CHECK-NEXT: ret void
 }
 
-; CHECK-LABEL: @eh
+; CHECK-LABEL: @eh(
 define void @eh(i8* %hdl) personality i8* null {
 ; CHECK-NEXT: entry
 entry:

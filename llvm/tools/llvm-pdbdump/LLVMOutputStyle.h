@@ -46,7 +46,7 @@ private:
 
   PDBFile &File;
   ScopedPrinter P;
-  codeview::CVTypeDumper TD;
+  codeview::CVTypeDumper Dumper;
 };
 }
 }

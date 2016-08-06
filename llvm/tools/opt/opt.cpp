@@ -122,6 +122,10 @@ StandardLinkOpts("std-link-opts",
                  cl::desc("Include the standard link time optimizations"));
 
 static cl::opt<bool>
+OptLevelO0("O0",
+  cl::desc("Optimization level 0. Similar to clang -O0"));
+
+static cl::opt<bool>
 OptLevelO1("O1",
            cl::desc("Optimization level 1. Similar to clang -O1"));
 
@@ -515,7 +519,8 @@ int main(int argc, char **argv) {
                                                      : TargetIRAnalysis()));
 
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
-  if (OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz || OptLevelO3) {
+  if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
+      OptLevelO3) {
     FPasses.reset(new legacy::FunctionPassManager(M.get()));
     FPasses->add(createTargetTransformInfoWrapperPass(
         TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis()));
@@ -545,6 +550,11 @@ int main(int argc, char **argv) {
         StandardLinkOpts.getPosition() < PassList.getPosition(i)) {
       AddStandardLinkPasses(Passes);
       StandardLinkOpts = false;
+    }
+
+    if (OptLevelO0 && OptLevelO0.getPosition() < PassList.getPosition(i)) {
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 0, 0);
+      OptLevelO0 = false;
     }
 
     if (OptLevelO1 && OptLevelO1.getPosition() < PassList.getPosition(i)) {
@@ -618,6 +628,9 @@ int main(int argc, char **argv) {
     AddStandardLinkPasses(Passes);
     StandardLinkOpts = false;
   }
+
+  if (OptLevelO0)
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 0, 0);
 
   if (OptLevelO1)
     AddOptimizationPasses(Passes, *FPasses, TM.get(), 1, 0);

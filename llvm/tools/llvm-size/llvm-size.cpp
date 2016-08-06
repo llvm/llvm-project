@@ -521,7 +521,7 @@ static void printFileSectionSizes(StringRef file) {
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
   if (!BinaryOrErr) {
-    error(errorToErrorCode(BinaryOrErr.takeError()));
+    error(BinaryOrErr.takeError(), file);
     return;
   }
   Binary &Bin = *BinaryOrErr.get().getBinary();

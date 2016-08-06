@@ -1262,7 +1262,10 @@ Optional<uint64_t> Function::getEntryCount() const {
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
       if (MDS->getString().equals("function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        return CI->getValue().getZExtValue();
+        uint64_t Count = CI->getValue().getZExtValue();
+        if (Count == 0)
+          return None;
+        return Count;
       }
   return None;
 }

@@ -370,6 +370,34 @@
 	brctg	%r0, 1
 	brctg	%r0, 0x10000
 
+#CHECK: error: offset out of range
+#CHECK: brxh	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: brxh	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: brxh	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: brxh	%r0, %r2, 0x10000
+
+	brxh	%r0, %r2, -0x100002
+	brxh	%r0, %r2, -1
+	brxh	%r0, %r2, 1
+	brxh	%r0, %r2, 0x10000
+
+#CHECK: error: offset out of range
+#CHECK: brxle	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: brxle	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: brxle	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: brxle	%r0, %r2, 0x10000
+
+	brxle	%r0, %r2, -0x100002
+	brxle	%r0, %r2, -1
+	brxle	%r0, %r2, 1
+	brxle	%r0, %r2, 0x10000
+
 #CHECK: error: invalid operand
 #CHECK: c	%r0, -1
 #CHECK: error: invalid operand
@@ -1419,6 +1447,23 @@
         ex      %r0, -1
         ex      %r0, 4096
 
+#CHECK: error: invalid use of indexed addressing
+#CHECK: ectg    160(%r1,%r15),160(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: ectg    -1(%r1),160(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: ectg    4096(%r1),160(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: ectg    0(%r1),-1(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: ectg    0(%r1),4096(%r15), %r2
+
+        ectg    160(%r1,%r15),160(%r15), %r2
+        ectg    -1(%r1),160(%r15), %r2
+        ectg    4096(%r1),160(%r15), %r2
+        ectg    0(%r1),-1(%r15), %r2
+        ectg    0(%r1),4096(%r15), %r2
+
 #CHECK: error: invalid operand
 #CHECK: fidbr	%f0, -1, %f0
 #CHECK: error: invalid operand
@@ -2371,6 +2416,38 @@
 	mvc	0(1,%r2), 0(%r1,%r2)
 	mvc	0(-), 0
 
+#CHECK: error: invalid use of length addressing
+#CHECK: mvck	0(%r1,%r1), 0(2,%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvck	0(%r0,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvck	-1(%r1,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvck	4096(%r1,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvck	0(%r1,%r1), -1(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvck	0(%r1,%r1), 4096(%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvck	0(%r1,%r0), 0(%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvck	0(%r1,%r1), 0(%r0), %r3
+#CHECK: error: invalid use of indexed addressing
+#CHECK: mvck	0(%r1,%r2), 0(%r1,%r2), %r3
+#CHECK: error: unknown token in expression
+#CHECK: mvck	0(-), 0, %r3
+
+	mvck	0(%r1,%r1), 0(2,%r1), %r3
+	mvck	0(%r0,%r1), 0(%r1), %r3
+	mvck	-1(%r1,%r1), 0(%r1), %r3
+	mvck	4096(%r1,%r1), 0(%r1), %r3
+	mvck	0(%r1,%r1), -1(%r1), %r3
+	mvck	0(%r1,%r1), 4096(%r1), %r3
+	mvck	0(%r1,%r0), 0(%r1), %r3
+	mvck	0(%r1,%r1), 0(%r0), %r3
+	mvck	0(%r1,%r2), 0(%r1,%r2), %r3
+	mvck	0(-), 0, %r3
+
 #CHECK: error: invalid operand
 #CHECK: mvghi	-1, 0
 #CHECK: error: invalid operand
@@ -2838,6 +2915,10 @@
 #CHECK: popcnt	%r0, %r0
 
 	popcnt	%r0, %r0
+
+#CHECK: error: invalid operand
+#CHECK: pr    %r0
+        pr    %r0
 
 #CHECK: error: invalid operand
 #CHECK: risbg	%r0,%r0,0,0,-1
@@ -3402,6 +3483,23 @@
 	stmy	%r0, %r0, -524289
 	stmy	%r0, %r0, 524288
 	stmy	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: invalid use of indexed addressing
+#CHECK: strag   160(%r1,%r15),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: strag   -1(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: strag   4096(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: strag   0(%r1),-1(%r15)
+#CHECK: error: invalid operand
+#CHECK: strag   0(%r1),4096(%r15)
+
+        strag   160(%r1,%r15),160(%r15)
+        strag   -1(%r1),160(%r15)
+        strag   4096(%r1),160(%r15)
+        strag   0(%r1),-1(%r15)
+        strag   0(%r1),4096(%r15)
 
 #CHECK: error: offset out of range
 #CHECK: strl	%r0, -0x1000000002

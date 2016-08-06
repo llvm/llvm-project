@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
@@ -195,8 +196,6 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
   case ename:                                                                  \
     return #name;
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
-  case LF_FIELDLIST:
-    return "FieldList";
   default:
     break;
   }
@@ -231,7 +230,13 @@ Error CVTypeDumper::visitTypeEnd(const CVRecord<TypeLeafKind> &Record) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitStringId(StringIdRecord &String) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     FieldListRecord &FieldList) {
+  return Error::success();
+}
+
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     StringIdRecord &String) {
   printTypeIndex("Id", String.getId());
   W->printString("StringData", String.getString());
   // Put this in CVUDTNames so it gets printed with LF_UDT_SRC_LINE.
@@ -239,7 +244,8 @@ Error CVTypeDumper::visitStringId(StringIdRecord &String) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitArgList(ArgListRecord &Args) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     ArgListRecord &Args) {
   auto Indices = Args.getIndices();
   uint32_t Size = Indices.size();
   W->printNumber("NumArgs", Size);
@@ -257,7 +263,8 @@ Error CVTypeDumper::visitArgList(ArgListRecord &Args) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitClass(ClassRecord &Class) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     ClassRecord &Class) {
   uint16_t Props = static_cast<uint16_t>(Class.getOptions());
   W->printNumber("MemberCount", Class.getMemberCount());
   W->printFlags("Properties", Props, makeArrayRef(ClassOptionNames));
@@ -272,7 +279,8 @@ Error CVTypeDumper::visitClass(ClassRecord &Class) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitUnion(UnionRecord &Union) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     UnionRecord &Union) {
   uint16_t Props = static_cast<uint16_t>(Union.getOptions());
   W->printNumber("MemberCount", Union.getMemberCount());
   W->printFlags("Properties", Props, makeArrayRef(ClassOptionNames));
@@ -285,7 +293,8 @@ Error CVTypeDumper::visitUnion(UnionRecord &Union) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitEnum(EnumRecord &Enum) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     EnumRecord &Enum) {
   uint16_t Props = static_cast<uint16_t>(Enum.getOptions());
   W->printNumber("NumEnumerators", Enum.getMemberCount());
   W->printFlags("Properties", uint16_t(Enum.getOptions()),
@@ -299,7 +308,8 @@ Error CVTypeDumper::visitEnum(EnumRecord &Enum) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitArray(ArrayRecord &AT) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     ArrayRecord &AT) {
   printTypeIndex("ElementType", AT.getElementType());
   printTypeIndex("IndexType", AT.getIndexType());
   W->printNumber("SizeOf", AT.getSize());
@@ -308,7 +318,8 @@ Error CVTypeDumper::visitArray(ArrayRecord &AT) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitVFTable(VFTableRecord &VFT) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     VFTableRecord &VFT) {
   printTypeIndex("CompleteClass", VFT.getCompleteClass());
   printTypeIndex("OverriddenVFTable", VFT.getOverriddenVTable());
   W->printHex("VFPtrOffset", VFT.getVFPtrOffset());
@@ -319,7 +330,8 @@ Error CVTypeDumper::visitVFTable(VFTableRecord &VFT) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitMemberFuncId(MemberFuncIdRecord &Id) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     MemberFuncIdRecord &Id) {
   printTypeIndex("ClassType", Id.getClassType());
   printTypeIndex("FunctionType", Id.getFunctionType());
   W->printString("Name", Id.getName());
@@ -327,7 +339,8 @@ Error CVTypeDumper::visitMemberFuncId(MemberFuncIdRecord &Id) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitProcedure(ProcedureRecord &Proc) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     ProcedureRecord &Proc) {
   printTypeIndex("ReturnType", Proc.getReturnType());
   W->printEnum("CallingConvention", uint8_t(Proc.getCallConv()),
                makeArrayRef(CallingConventions));
@@ -345,7 +358,8 @@ Error CVTypeDumper::visitProcedure(ProcedureRecord &Proc) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitMemberFunction(MemberFunctionRecord &MF) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     MemberFunctionRecord &MF) {
   printTypeIndex("ReturnType", MF.getReturnType());
   printTypeIndex("ClassType", MF.getClassType());
   printTypeIndex("ThisType", MF.getThisType());
@@ -369,8 +383,8 @@ Error CVTypeDumper::visitMemberFunction(MemberFunctionRecord &MF) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitMethodOverloadList(
-    MethodOverloadListRecord &MethodList) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     MethodOverloadListRecord &MethodList) {
   for (auto &M : MethodList.getMethods()) {
     ListScope S(*W, "Method");
     printMemberAttributes(M.getAccess(), M.getKind(), M.getOptions());
@@ -381,7 +395,8 @@ Error CVTypeDumper::visitMethodOverloadList(
   return Error::success();
 }
 
-Error CVTypeDumper::visitFuncId(FuncIdRecord &Func) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     FuncIdRecord &Func) {
   printTypeIndex("ParentScope", Func.getParentScope());
   printTypeIndex("FunctionType", Func.getFunctionType());
   W->printString("Name", Func.getName());
@@ -389,7 +404,8 @@ Error CVTypeDumper::visitFuncId(FuncIdRecord &Func) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitTypeServer2(TypeServer2Record &TS) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     TypeServer2Record &TS) {
   W->printBinary("Signature", TS.getGuid());
   W->printNumber("Age", TS.getAge());
   W->printString("Name", TS.getName());
@@ -397,7 +413,8 @@ Error CVTypeDumper::visitTypeServer2(TypeServer2Record &TS) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitPointer(PointerRecord &Ptr) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     PointerRecord &Ptr) {
   printTypeIndex("PointeeType", Ptr.getReferentType());
   W->printHex("PointerAttributes", uint32_t(Ptr.getOptions()));
   W->printEnum("PtrType", unsigned(Ptr.getPointerKind()),
@@ -448,7 +465,8 @@ Error CVTypeDumper::visitPointer(PointerRecord &Ptr) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitModifier(ModifierRecord &Mod) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     ModifierRecord &Mod) {
   uint16_t Mods = static_cast<uint16_t>(Mod.getModifiers());
   printTypeIndex("ModifiedType", Mod.getModifiedType());
   W->printFlags("Modifiers", Mods, makeArrayRef(TypeModifierNames));
@@ -466,26 +484,30 @@ Error CVTypeDumper::visitModifier(ModifierRecord &Mod) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitBitField(BitFieldRecord &BitField) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     BitFieldRecord &BitField) {
   printTypeIndex("Type", BitField.getType());
   W->printNumber("BitSize", BitField.getBitSize());
   W->printNumber("BitOffset", BitField.getBitOffset());
   return Error::success();
 }
 
-Error CVTypeDumper::visitVFTableShape(VFTableShapeRecord &Shape) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     VFTableShapeRecord &Shape) {
   W->printNumber("VFEntryCount", Shape.getEntryCount());
   return Error::success();
 }
 
-Error CVTypeDumper::visitUdtSourceLine(UdtSourceLineRecord &Line) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     UdtSourceLineRecord &Line) {
   printTypeIndex("UDT", Line.getUDT());
   printTypeIndex("SourceFile", Line.getSourceFile());
   W->printNumber("LineNumber", Line.getLineNumber());
   return Error::success();
 }
 
-Error CVTypeDumper::visitUdtModSourceLine(UdtModSourceLineRecord &Line) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     UdtModSourceLineRecord &Line) {
   printTypeIndex("UDT", Line.getUDT());
   printTypeIndex("SourceFile", Line.getSourceFile());
   W->printNumber("LineNumber", Line.getLineNumber());
@@ -493,7 +515,8 @@ Error CVTypeDumper::visitUdtModSourceLine(UdtModSourceLineRecord &Line) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitBuildInfo(BuildInfoRecord &Args) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     BuildInfoRecord &Args) {
   W->printNumber("NumArgs", static_cast<uint32_t>(Args.getArgs().size()));
 
   ListScope Arguments(*W, "Arguments");
@@ -533,7 +556,8 @@ Error CVTypeDumper::visitUnknownType(const CVRecord<TypeLeafKind> &Record) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitNestedType(NestedTypeRecord &Nested) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     NestedTypeRecord &Nested) {
   DictScope S(*W, "NestedType");
   printTypeIndex("Type", Nested.getNestedType());
   W->printString("Name", Nested.getName());
@@ -541,7 +565,8 @@ Error CVTypeDumper::visitNestedType(NestedTypeRecord &Nested) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitOneMethod(OneMethodRecord &Method) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     OneMethodRecord &Method) {
   DictScope S(*W, "OneMethod");
   MethodKind K = Method.getKind();
   printMemberAttributes(Method.getAccess(), K, Method.getOptions());
@@ -554,7 +579,8 @@ Error CVTypeDumper::visitOneMethod(OneMethodRecord &Method) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitOverloadedMethod(OverloadedMethodRecord &Method) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     OverloadedMethodRecord &Method) {
   DictScope S(*W, "OverloadedMethod");
   W->printHex("MethodCount", Method.getNumOverloads());
   printTypeIndex("MethodListIndex", Method.getMethodList());
@@ -563,7 +589,8 @@ Error CVTypeDumper::visitOverloadedMethod(OverloadedMethodRecord &Method) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitDataMember(DataMemberRecord &Field) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     DataMemberRecord &Field) {
   DictScope S(*W, "DataMember");
   printMemberAttributes(Field.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -574,7 +601,8 @@ Error CVTypeDumper::visitDataMember(DataMemberRecord &Field) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitStaticDataMember(StaticDataMemberRecord &Field) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     StaticDataMemberRecord &Field) {
   DictScope S(*W, "StaticDataMember");
   printMemberAttributes(Field.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -584,13 +612,15 @@ Error CVTypeDumper::visitStaticDataMember(StaticDataMemberRecord &Field) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitVFPtr(VFPtrRecord &VFTable) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     VFPtrRecord &VFTable) {
   DictScope S(*W, "VFPtr");
   printTypeIndex("Type", VFTable.getType());
   return Error::success();
 }
 
-Error CVTypeDumper::visitEnumerator(EnumeratorRecord &Enum) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     EnumeratorRecord &Enum) {
   DictScope S(*W, "Enumerator");
   printMemberAttributes(Enum.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -600,7 +630,8 @@ Error CVTypeDumper::visitEnumerator(EnumeratorRecord &Enum) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitBaseClass(BaseClassRecord &Base) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     BaseClassRecord &Base) {
   DictScope S(*W, "BaseClass");
   printMemberAttributes(Base.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -609,7 +640,8 @@ Error CVTypeDumper::visitBaseClass(BaseClassRecord &Base) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitVirtualBaseClass(VirtualBaseClassRecord &Base) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     VirtualBaseClassRecord &Base) {
   DictScope S(*W, "VirtualBaseClass");
   printMemberAttributes(Base.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -620,7 +652,8 @@ Error CVTypeDumper::visitVirtualBaseClass(VirtualBaseClassRecord &Base) {
   return Error::success();
 }
 
-Error CVTypeDumper::visitListContinuation(ListContinuationRecord &Cont) {
+Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                                     ListContinuationRecord &Cont) {
   DictScope S(*W, "ListContinuation");
   printTypeIndex("ContinuationIndex", Cont.getContinuationIndex());
   return Error::success();
@@ -665,7 +698,8 @@ void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
 
 Error CVTypeDumper::dump(const CVRecord<TypeLeafKind> &Record) {
   assert(W && "printer should not be null");
-  CVTypeVisitor Visitor(*this);
+  TypeDeserializer Deserializer(*this);
+  CVTypeVisitor Visitor(Deserializer);
 
   if (auto EC = Visitor.visitTypeRecord(Record))
     return EC;
@@ -674,7 +708,9 @@ Error CVTypeDumper::dump(const CVRecord<TypeLeafKind> &Record) {
 
 Error CVTypeDumper::dump(const CVTypeArray &Types) {
   assert(W && "printer should not be null");
-  CVTypeVisitor Visitor(*this);
+  TypeDeserializer Deserializer(*this);
+  CVTypeVisitor Visitor(Deserializer);
+
   if (auto EC = Visitor.visitTypeStream(Types))
     return EC;
   return Error::success();

@@ -13,7 +13,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 1
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:.+]] = select i1 %[[IsZero]], i64 2, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ;
 ; CHECK: vector.body:
 ; CHECK:   %wide.vec = load <4 x i64>, <4 x i64>* %{{.*}}
@@ -62,7 +62,7 @@ for.end:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 1
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:.+]] = select i1 %[[IsZero]], i64 2, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ;
 ; CHECK: vector.body:
 ; CHECK:   %[[L1:.+]] = load <4 x i64>, <4 x i64>* %{{.*}}
@@ -121,7 +121,7 @@ for.end:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 1
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:.+]] = select i1 %[[IsZero]], i64 2, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ;
 ; CHECK: vector.body:
 ; CHECK:   %[[L1:.+]] = load <4 x i64>, <4 x i64>* %{{.*}}

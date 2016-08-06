@@ -1359,66 +1359,68 @@ operator<<(Output &yout, T &seq) {
   return yout;
 }
 
+template <typename T> struct SequenceTraitsImpl {
+  typedef typename T::value_type _type;
+  static size_t size(IO &io, T &seq) { return seq.size(); }
+  static _type &element(IO &io, T &seq, size_t index) {
+    if (index >= seq.size())
+      seq.resize(index + 1);
+    return seq[index];
+  }
+};
+
 } // namespace yaml
 } // namespace llvm
 
 /// Utility for declaring that a std::vector of a particular type
 /// should be considered a YAML sequence.
-#define LLVM_YAML_IS_SEQUENCE_VECTOR(_type)                                 \
-  namespace llvm {                                                          \
-  namespace yaml {                                                          \
-    template<>                                                              \
-    struct SequenceTraits< std::vector<_type> > {                           \
-      static size_t size(IO &io, std::vector<_type> &seq) {                 \
-        return seq.size();                                                  \
-      }                                                                     \
-      static _type& element(IO &io, std::vector<_type> &seq, size_t index) {\
-        if ( index >= seq.size() )                                          \
-          seq.resize(index+1);                                              \
-        return seq[index];                                                  \
-      }                                                                     \
-    };                                                                      \
-  }                                                                         \
+#define LLVM_YAML_IS_SEQUENCE_VECTOR(_type)                                    \
+  namespace llvm {                                                             \
+  namespace yaml {                                                             \
+  template <>                                                                  \
+  struct SequenceTraits<std::vector<_type>>                                    \
+      : public SequenceTraitsImpl<std::vector<_type>> {};                      \
+  template <unsigned N>                                                        \
+  struct SequenceTraits<SmallVector<_type, N>>                                 \
+      : public SequenceTraitsImpl<SmallVector<_type, N>> {};                   \
+  }                                                                            \
   }
 
 /// Utility for declaring that a std::vector of a particular type
 /// should be considered a YAML flow sequence.
-#define LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(_type)                            \
-  namespace llvm {                                                          \
-  namespace yaml {                                                          \
-    template<>                                                              \
-    struct SequenceTraits< std::vector<_type> > {                           \
-      static size_t size(IO &io, std::vector<_type> &seq) {                 \
-        return seq.size();                                                  \
-      }                                                                     \
-      static _type& element(IO &io, std::vector<_type> &seq, size_t index) {\
-        (void)flow; /* Remove this workaround after PR17897 is fixed */     \
-        if ( index >= seq.size() )                                          \
-          seq.resize(index+1);                                              \
-        return seq[index];                                                  \
-      }                                                                     \
-      static const bool flow = true;                                        \
-    };                                                                      \
-  }                                                                         \
+/// We need to do a partial specialization on the vector version, not a full.
+/// If this is a full specialization, the compiler is a bit too "smart" and
+/// decides to warn on -Wunused-const-variable.  This workaround can be
+/// removed and we can do a full specialization on std::vector<T> once
+/// PR28878 is fixed.
+#define LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(_type)                               \
+  namespace llvm {                                                             \
+  namespace yaml {                                                             \
+  template <unsigned N>                                                        \
+  struct SequenceTraits<SmallVector<_type, N>>                                 \
+      : public SequenceTraitsImpl<SmallVector<_type, N>> {                     \
+    static const bool flow = true;                                             \
+  };                                                                           \
+  template <typename Allocator>                                                \
+  struct SequenceTraits<std::vector<_type, Allocator>>                         \
+      : public SequenceTraitsImpl<std::vector<_type, Allocator>> {             \
+    static const bool flow = true;                                             \
+  };                                                                           \
+  }                                                                            \
   }
 
 /// Utility for declaring that a std::vector of a particular type
 /// should be considered a YAML document list.
-#define LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(_type)                            \
-  namespace llvm {                                                          \
-  namespace yaml {                                                          \
-    template<>                                                              \
-    struct DocumentListTraits< std::vector<_type> > {                       \
-      static size_t size(IO &io, std::vector<_type> &seq) {                 \
-        return seq.size();                                                  \
-      }                                                                     \
-      static _type& element(IO &io, std::vector<_type> &seq, size_t index) {\
-        if ( index >= seq.size() )                                          \
-          seq.resize(index+1);                                              \
-        return seq[index];                                                  \
-      }                                                                     \
-    };                                                                      \
-  }                                                                         \
+#define LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(_type)                               \
+  namespace llvm {                                                             \
+  namespace yaml {                                                             \
+  template <unsigned N>                                                        \
+  struct DocumentListTraits<SmallVector<_type, N>>                             \
+      : public SequenceTraitsImpl<SmallVector<_type, N>> {};                   \
+  template <>                                                                  \
+  struct DocumentListTraits<std::vector<_type>>                                \
+      : public SequenceTraitsImpl<std::vector<_type>> {};                      \
+  }                                                                            \
   }
 
 #endif // LLVM_SUPPORT_YAMLTRAITS_H

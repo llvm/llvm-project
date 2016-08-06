@@ -49,15 +49,17 @@ public:
 
   void reset() { ListRecordBuilder::reset(); }
 
-  void writeBaseClass(const BaseClassRecord &Record);
-  void writeEnumerator(const EnumeratorRecord &Record);
-  void writeDataMember(const DataMemberRecord &Record);
-  void writeOneMethod(const OneMethodRecord &Record);
-  void writeOverloadedMethod(const OverloadedMethodRecord &Record);
-  void writeNestedType(const NestedTypeRecord &Record);
-  void writeStaticDataMember(const StaticDataMemberRecord &Record);
-  void writeVirtualBaseClass(const VirtualBaseClassRecord &Record);
-  void writeVFPtr(const VFPtrRecord &Type);
+  void writeMemberType(const BaseClassRecord &Record);
+  void writeMemberType(const EnumeratorRecord &Record);
+  void writeMemberType(const DataMemberRecord &Record);
+  void writeMemberType(const OneMethodRecord &Record);
+  void writeMemberType(const OverloadedMethodRecord &Record);
+  void writeMemberType(const NestedTypeRecord &Record);
+  void writeMemberType(const StaticDataMemberRecord &Record);
+  void writeMemberType(const VirtualBaseClassRecord &Record);
+  void writeMemberType(const VFPtrRecord &Type);
+
+  using ListRecordBuilder::writeMemberType;
 };
 }
 }

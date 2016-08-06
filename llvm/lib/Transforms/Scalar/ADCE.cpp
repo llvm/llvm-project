@@ -37,54 +37,71 @@ using namespace llvm;
 STATISTIC(NumRemoved, "Number of instructions removed");
 
 namespace {
-class AgggressiveDeadCodeElimination {
+class AggressiveDeadCodeElimination {
   Function &F;
-  // Instructions known to be live
+  /// Instructions known to be live.
   SmallPtrSet<Instruction *, 32> Alive;
-  // Instructions known to be live where we need to mark
-  // reaching definitions as live
+  /// Instructions known to be live where we need to mark
+  /// reaching definitions as live.
   SmallVector<Instruction *, 128> Worklist;
-  // Debug info scopes around a live instruction
+  /// Debug info scopes around a live instruction.
   SmallPtrSet<const Metadata *, 32> AliveScopes;
+
+  void initialize();
+  /// True for operations which are always treated as live.
+  bool isAlwaysLive(Instruction &I);
+  /// True for instrumentation instructions for value profiling.
+  bool isInstrumentsConstant(Instruction &I);
+  
+
+  /// Propagate liveness to reaching definitions.
+  void markLiveInstructions();
+  /// Mark an instruction as live.
+  void markLive(Instruction &I);
   
   void collectLiveScopes(const DILocalScope &LS);
   void collectLiveScopes(const DILocation &DL);
-  bool isInstrumentsConstant(Instruction &I);
+  
+
+  /// Remove instructions not marked live, return if any any instruction
+  /// was removed.
+  bool removeDeadInstructions();
+
 public:
-  AgggressiveDeadCodeElimination(Function &F) : F(F) {}
-  bool aggressiveDCE();
+  AggressiveDeadCodeElimination(Function &F) : F(F) {}
+  bool performDeadCodeElimination();
 };
 }
 
-void AgggressiveDeadCodeElimination::collectLiveScopes(
-    const DILocalScope &LS) {
-  if (!AliveScopes.insert(&LS).second)
-    return;
-
-  if (isa<DISubprogram>(LS))
-    return;
-
-  // Tail-recurse through the scope chain.
-  collectLiveScopes(cast<DILocalScope>(*LS.getScope()));
+bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
+  initialize();
+  markLiveInstructions();
+  return removeDeadInstructions();
 }
 
-void AgggressiveDeadCodeElimination::collectLiveScopes(const DILocation &DL) {
-  // Even though DILocations are not scopes, shove them into AliveScopes so we
-  // don't revisit them.
-  if (!AliveScopes.insert(&DL).second)
-    return;
+void AggressiveDeadCodeElimination::initialize() {
+  // Collect the set of "root" instructions that are known live.
+  for (Instruction &I : instructions(F))
+    if (isAlwaysLive(I))
+      markLive(I);
+}
 
-  // Collect live scopes from the scope chain.
-  collectLiveScopes(*DL.getScope());
+bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
 
-  // Tail-recurse through the inlined-at chain.
-  if (const DILocation *IA = DL.getInlinedAt())
-    collectLiveScopes(*IA);
+  // TODO -- use llvm::isInstructionTriviallyDead
+  if (isa<TerminatorInst>(I) || I.isEHPad() || I.mayHaveSideEffects()) {
+    // Skip any value profile instrumentation calls if they are
+    // instrumenting constants.
+    if (!isInstrumentsConstant(I))
+      return true;
+  }
+  return false;
 }
 
 // Check if this instruction is a runtime call for value profiling and
 // if it's instrumenting a constant.
-bool AgggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
+bool AggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
+  // TODO -- move this test into llvm::isInstructionTriviallyDead
   if (CallInst *CI = dyn_cast<CallInst>(&I))
     if (Function *Callee = CI->getCalledFunction())
       if (Callee->getName().equals(getInstrProfValueProfFuncName()))
@@ -93,19 +110,7 @@ bool AgggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
   return false;
 }
 
-bool AgggressiveDeadCodeElimination::aggressiveDCE() {
-
-  // Collect the set of "root" instructions that are known live.
-  for (Instruction &I : instructions(F)) {
-    if (isa<TerminatorInst>(I) || I.isEHPad() || I.mayHaveSideEffects()) {
-      // Skip any value profile instrumentation calls if they are
-      // instrumenting constants.
-      if (isInstrumentsConstant(I))
-        continue;
-      Alive.insert(&I);
-      Worklist.push_back(&I);
-    }
-  }
+void AggressiveDeadCodeElimination::markLiveInstructions() {
 
   // Propagate liveness backwards to operands.  Keep track of live debug info
   // scopes.
@@ -118,10 +123,43 @@ bool AgggressiveDeadCodeElimination::aggressiveDCE() {
 
     for (Use &OI : Curr->operands()) {
       if (Instruction *Inst = dyn_cast<Instruction>(OI))
-        if (Alive.insert(Inst).second)
-          Worklist.push_back(Inst);
+        markLive(*Inst);
     }
   }
+}
+
+void AggressiveDeadCodeElimination::collectLiveScopes(const DILocalScope &LS) {
+  if (!AliveScopes.insert(&LS).second)
+    return;
+  
+  if (isa<DISubprogram>(LS))
+    return;
+  
+  // Tail-recurse through the scope chain.
+  collectLiveScopes(cast<DILocalScope>(*LS.getScope()));
+}
+
+void AggressiveDeadCodeElimination::collectLiveScopes(const DILocation &DL) {
+  // Even though DILocations are not scopes, shove them into AliveScopes so we
+  // don't revisit them.
+  if (!AliveScopes.insert(&DL).second)
+    return;
+  
+  // Collect live scopes from the scope chain.
+  collectLiveScopes(*DL.getScope());
+  
+  // Tail-recurse through the inlined-at chain.
+  if (const DILocation *IA = DL.getInlinedAt())
+    collectLiveScopes(*IA);
+}
+
+void AggressiveDeadCodeElimination::markLive(Instruction &I) {
+  if (!Alive.insert(&I).second)
+    return;
+  Worklist.push_back(&I);
+}
+
+bool AggressiveDeadCodeElimination::removeDeadInstructions() {
 
   // The inverse of the live set is the dead set.  These are those instructions
   // which have no side effects and do not influence the control flow or return
@@ -163,7 +201,7 @@ bool AgggressiveDeadCodeElimination::aggressiveDCE() {
 }
 
 PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &) {
-  if (!AgggressiveDeadCodeElimination(F).aggressiveDCE())
+  if (!AggressiveDeadCodeElimination(F).performDeadCodeElimination())
     return PreservedAnalyses::all();
 
   // FIXME: This should also 'preserve the CFG'.
@@ -182,7 +220,7 @@ struct ADCELegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
-    return AgggressiveDeadCodeElimination(F).aggressiveDCE();
+    return AggressiveDeadCodeElimination(F).performDeadCodeElimination();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

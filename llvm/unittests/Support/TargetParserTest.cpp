@@ -81,6 +81,13 @@ bool contains(const T (&array)[N], const T element) {
          std::end(array);
 }
 
+template <size_t N>
+bool contains(const char *(&array)[N], const char *element) {
+  return std::find_if(std::begin(array), std::end(array), [&](const char *S) {
+           return ::strcmp(S, element) == 0;
+         }) != std::end(array);
+}
+
 TEST(TargetParserTest, ARMArchName) {
   for (ARM::ArchKind AK = static_cast<ARM::ArchKind>(0);
        AK <= ARM::ArchKind::AK_LAST;
@@ -313,10 +320,12 @@ TEST(TargetParserTest, ARMparseCPUArch) {
       "cortex-a73",    "cyclone",       "exynos-m1",   "exynos-m2",   
       "iwmmxt",        "xscale",        "swift"};
 
-  for (const auto &ARMCPUName : kARMCPUNames)
-    EXPECT_TRUE(contains(CPU, ARMCPUName.Name)
-                    ? (ARM::AK_INVALID != ARM::parseCPUArch(ARMCPUName.Name))
-                    : (ARM::AK_INVALID == ARM::parseCPUArch(ARMCPUName.Name)));
+  for (const auto &ARMCPUName : kARMCPUNames) {
+    if (contains(CPU, ARMCPUName.Name))
+      EXPECT_NE(ARM::AK_INVALID, ARM::parseCPUArch(ARMCPUName.Name));
+    else
+      EXPECT_EQ(ARM::AK_INVALID, ARM::parseCPUArch(ARMCPUName.Name));
+  }
 }
 
 TEST(TargetParserTest, ARMparseArchEndianAndISA) {

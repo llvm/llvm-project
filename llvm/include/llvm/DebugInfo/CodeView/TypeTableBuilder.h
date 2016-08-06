@@ -37,26 +37,26 @@ public:
   virtual ~TypeTableBuilder();
 
 public:
-  TypeIndex writeModifier(const ModifierRecord &Record);
-  TypeIndex writeProcedure(const ProcedureRecord &Record);
-  TypeIndex writeMemberFunction(const MemberFunctionRecord &Record);
-  TypeIndex writeArgList(const ArgListRecord &Record);
-  TypeIndex writePointer(const PointerRecord &Record);
-  TypeIndex writeArray(const ArrayRecord &Record);
-  TypeIndex writeClass(const ClassRecord &Record);
-  TypeIndex writeUnion(const UnionRecord &Record);
-  TypeIndex writeEnum(const EnumRecord &Record);
-  TypeIndex writeBitField(const BitFieldRecord &Record);
-  TypeIndex writeVFTableShape(const VFTableShapeRecord &Record);
-  TypeIndex writeStringId(const StringIdRecord &Record);
-  TypeIndex writeVFTable(const VFTableRecord &Record);
-  TypeIndex writeUdtSourceLine(const UdtSourceLineRecord &Record);
-  TypeIndex writeUdtModSourceLine(const UdtModSourceLineRecord &Record);
-  TypeIndex writeFuncId(const FuncIdRecord &Record);
-  TypeIndex writeMemberFuncId(const MemberFuncIdRecord &Record);
-  TypeIndex writeBuildInfo(const BuildInfoRecord &Record);
-  TypeIndex writeMethodOverloadList(const MethodOverloadListRecord &Record);
-  TypeIndex writeTypeServer2(const TypeServer2Record &Record);
+  TypeIndex writeKnownType(const ModifierRecord &Record);
+  TypeIndex writeKnownType(const ProcedureRecord &Record);
+  TypeIndex writeKnownType(const MemberFunctionRecord &Record);
+  TypeIndex writeKnownType(const ArgListRecord &Record);
+  TypeIndex writeKnownType(const PointerRecord &Record);
+  TypeIndex writeKnownType(const ArrayRecord &Record);
+  TypeIndex writeKnownType(const ClassRecord &Record);
+  TypeIndex writeKnownType(const UnionRecord &Record);
+  TypeIndex writeKnownType(const EnumRecord &Record);
+  TypeIndex writeKnownType(const BitFieldRecord &Record);
+  TypeIndex writeKnownType(const VFTableShapeRecord &Record);
+  TypeIndex writeKnownType(const StringIdRecord &Record);
+  TypeIndex writeKnownType(const VFTableRecord &Record);
+  TypeIndex writeKnownType(const UdtSourceLineRecord &Record);
+  TypeIndex writeKnownType(const UdtModSourceLineRecord &Record);
+  TypeIndex writeKnownType(const FuncIdRecord &Record);
+  TypeIndex writeKnownType(const MemberFuncIdRecord &Record);
+  TypeIndex writeKnownType(const BuildInfoRecord &Record);
+  TypeIndex writeKnownType(const MethodOverloadListRecord &Record);
+  TypeIndex writeKnownType(const TypeServer2Record &Record);
 
   TypeIndex writeFieldList(FieldListRecordBuilder &FieldList);
 

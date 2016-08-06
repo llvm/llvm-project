@@ -338,6 +338,11 @@ public:
            NonIntegralSpaces.end();
   }
 
+  bool isNonIntegralPointerType(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty);
+    return PTy && isNonIntegralPointerType(PTy);
+  }
+
   /// Layout pointer size, in bits
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.

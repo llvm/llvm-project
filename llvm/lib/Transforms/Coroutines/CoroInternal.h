@@ -17,9 +17,6 @@
 
 namespace llvm {
 
-class FunctionType;
-class LLVMContext;
-class Module;
 class PassRegistry;
 
 void initializeCoroEarlyPass(PassRegistry &);
@@ -29,6 +26,8 @@ void initializeCoroCleanupPass(PassRegistry &);
 
 namespace coro {
 
+bool declaresIntrinsics(Module &M, std::initializer_list<StringRef>);
+
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
   Module &TheModule;
@@ -37,7 +36,6 @@ struct LowererBase {
 
   LowererBase(Module &M);
   Value *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
-  static bool declaresIntrinsics(Module &M, std::initializer_list<StringRef>);
 };
 
 } // End namespace coro.
