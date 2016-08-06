@@ -113,3 +113,58 @@ void test() {
   (__builtin_object_size(&(++a, a), 0) ? 1 : 0) + ++a; // ok
   (__builtin_expect(++a, 0) ? 1 : 0) + ++a; // expected-warning {{multiple unsequenced modifications}}
 }
+
+namespace templates {
+
+template <typename T>
+struct Bar {
+  T get() { return 0; }
+};
+
+template <typename X>
+struct Foo {
+  int Run();
+  Bar<int> bar;
+};
+
+enum E {e1, e2};
+bool operator&&(E, E);
+
+void foo(int, int);
+
+template <typename X>
+int Foo<X>::Run() {
+  char num = 0;
+
+  // Before instantiation, Clang may consider the builtin operator here as
+  // unresolved function calls, and treat the arguments as unordered when
+  // the builtin operator evaluatation is well-ordered.  Waiting until
+  // instantiation to check these expressions will prevent false positives.
+  if ((num = bar.get()) < 5 && num < 10) { }
+  if ((num = bar.get()) < 5 || num < 10) { }
+  if (static_cast<E>((num = bar.get()) < 5) || static_cast<E>(num < 10)) { }
+
+  if (static_cast<E>((num = bar.get()) < 5) && static_cast<E>(num < 10)) { }
+  // expected-warning@-1 {{unsequenced modification and access to 'num'}}
+
+  foo(num++, num++);
+  // expected-warning@-1 2{{multiple unsequenced modifications to 'num'}}
+  return 1;
+}
+
+int x = Foo<int>().Run();
+// expected-note@-1 {{in instantiation of member function 'templates::Foo<int>::Run'}}
+
+
+template <typename T>
+int Run2() {
+  T t = static_cast<T>(0);
+  return (t = static_cast<T>(1)) && t;
+  // expected-warning@-1 {{unsequenced modification and access to 't'}}
+}
+
+int y = Run2<bool>();
+int z = Run2<E>();
+// expected-note@-1{{in instantiation of function template specialization 'templates::Run2<templates::E>' requested here}}
+
+}

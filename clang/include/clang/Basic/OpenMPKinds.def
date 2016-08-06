@@ -141,6 +141,9 @@
 #ifndef OPENMP_TARGET_SIMD_CLAUSE
 #define OPENMP_TARGET_SIMD_CLAUSE(Name)
 #endif
+#ifndef OPENMP_TEAMS_DISTRIBUTE_CLAUSE
+#define OPENMP_TEAMS_DISTRIBUTE_CLAUSE(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -186,6 +189,7 @@ OPENMP_DIRECTIVE_EXT(distribute_parallel_for_simd, "distribute parallel for simd
 OPENMP_DIRECTIVE_EXT(distribute_simd, "distribute simd")
 OPENMP_DIRECTIVE_EXT(target_parallel_for_simd, "target parallel for simd")
 OPENMP_DIRECTIVE_EXT(target_simd, "target simd")
+OPENMP_DIRECTIVE_EXT(teams_distribute, "teams distribute")
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)
@@ -642,6 +646,18 @@ OPENMP_TARGET_SIMD_CLAUSE(simdlen)
 OPENMP_TARGET_SIMD_CLAUSE(collapse)
 OPENMP_TARGET_SIMD_CLAUSE(reduction)
 
+// Clauses allowed for OpenMP directive 'teams distribute'.
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(default)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(private)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(firstprivate)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(shared)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(reduction)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(num_teams)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(thread_limit)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(lastprivate)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(collapse)
+OPENMP_TEAMS_DISTRIBUTE_CLAUSE(dist_schedule)
+
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE
 #undef OPENMP_LINEAR_KIND
@@ -685,3 +701,4 @@ OPENMP_TARGET_SIMD_CLAUSE(reduction)
 #undef OPENMP_DISTRIBUTE_SIMD_CLAUSE
 #undef OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE
 #undef OPENMP_TARGET_SIMD_CLAUSE
+#undef OPENMP_TEAMS_DISTRIBUTE_CLAUSE

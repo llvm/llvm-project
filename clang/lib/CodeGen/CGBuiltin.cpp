@@ -7771,6 +7771,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_fract);
   case AMDGPU::BI__builtin_amdgcn_lerp:
     return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_lerp);
+  case AMDGPU::BI__builtin_amdgcn_uicmp:
+  case AMDGPU::BI__builtin_amdgcn_uicmpl:
+  case AMDGPU::BI__builtin_amdgcn_sicmp:
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
+    return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_icmp);
+  case AMDGPU::BI__builtin_amdgcn_fcmp:
+  case AMDGPU::BI__builtin_amdgcn_fcmpf:
+    return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_fcmp);
   case AMDGPU::BI__builtin_amdgcn_class:
   case AMDGPU::BI__builtin_amdgcn_classf:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_class);
