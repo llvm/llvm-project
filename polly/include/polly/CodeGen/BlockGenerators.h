@@ -18,7 +18,7 @@
 
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/Support/ScopHelper.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "isl/map.h"
 
@@ -57,8 +57,8 @@ public:
   ///
   /// @see The EscapeMap member.
   using EscapeUsersAllocaMapTy =
-      DenseMap<Instruction *,
-               std::pair<AssertingVH<Value>, EscapeUserVectorTy>>;
+      MapVector<Instruction *,
+                std::pair<AssertingVH<Value>, EscapeUserVectorTy>>;
 
   ///@}
 

@@ -468,3 +468,6 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   l.sw     120(r3), r30
   l.sw     124(r3), r31
 #endif
+
+NO_EXEC_STACK_DIRECTIVE
+

@@ -269,12 +269,6 @@ set(arm_SOURCES
   arm/divmodsi4.S
   arm/divsi3.S
   arm/modsi3.S
-  arm/restore_vfp_d8_d15_regs.S
-  arm/save_vfp_d8_d15_regs.S
-  arm/switch16.S
-  arm/switch32.S
-  arm/switch8.S
-  arm/switchu8.S
   arm/sync_fetch_and_add_4.S
   arm/sync_fetch_and_add_8.S
   arm/sync_fetch_and_and_4.S
@@ -295,7 +289,6 @@ set(arm_SOURCES
   arm/sync_fetch_and_umin_8.S
   arm/sync_fetch_and_xor_4.S
   arm/sync_fetch_and_xor_8.S
-  arm/sync_synchronize.S
   arm/udivmodsi4.S
   arm/udivsi3.S
   arm/umodsi3.S
@@ -319,7 +312,15 @@ set(arm_EABI_SOURCES
   arm/aeabi_memset.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S)
-set(arm_VFP_SOURCES
+set(arm_Thumb1_JT_SOURCES
+  arm/switch16.S
+  arm/switch32.S
+  arm/switch8.S
+  arm/switchu8.S)
+set(arm_Thumb1_SjLj_EH_SOURCES
+  arm/restore_vfp_d8_d15_regs.S
+  arm/save_vfp_d8_d15_regs.S)
+set(arm_Thumb1_VFPv2_SOURCES
   arm/adddf3vfp.S
   arm/addsf3vfp.S
   arm/divdf3vfp.S
@@ -354,14 +355,20 @@ set(arm_VFP_SOURCES
   arm/truncdfsf2vfp.S
   arm/unorddf2vfp.S
   arm/unordsf2vfp.S)
+set(arm_Thumb1_icache_SOURCES
+  arm/sync_synchronize.S)
+set(arm_Thumb1_SOURCES
+  ${arm_Thumb1_JT_SOURCES}
+  ${arm_Thumb1_SjLj_EH_SOURCES}
+  ${arm_Thumb1_VFPv2_SOURCES}
+  ${arm_Thumb1_icache_SOURCES})
 
 if(NOT WIN32)
-  # TODO the VFP sources should only be used for non-FPU targets, the EABI
-  # sources should only be added to EABI targets
+  # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_SOURCES}
     ${arm_EABI_SOURCES}
-    ${arm_VFP_SOURCES})
+    ${arm_Thumb1_SOURCES})
 endif()
 
 set(aarch64_SOURCES

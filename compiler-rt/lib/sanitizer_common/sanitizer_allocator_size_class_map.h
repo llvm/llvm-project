@@ -91,55 +91,12 @@ class SizeClassMap {
  public:
   static const uptr kMaxNumCached = kMaxNumCachedT;
   COMPILER_CHECK(((kMaxNumCached + 2) & (kMaxNumCached + 1)) == 0);
-  // We transfer chunks between central and thread-local free lists in batches.
-  // For small size classes we allocate batches separately.
-  // For large size classes we use one of the chunks to store the batch.
-  // sizeof(TransferBatch) must be a power of 2 for more efficient allocation.
-  struct TransferBatch {
-    void SetFromRange(uptr region_beg, uptr beg_offset, uptr step, uptr count) {
-      count_ = count;
-      CHECK_LE(count_, kMaxNumCached);
-      for (uptr i = 0; i < count; i++)
-        batch_[i] = (void*)(region_beg + beg_offset + i * step);
-    }
-    void SetFromArray(void *batch[], uptr count) {
-      count_ = count;
-      CHECK_LE(count_, kMaxNumCached);
-      for (uptr i = 0; i < count; i++)
-        batch_[i] = batch[i];
-    }
-    void *Get(uptr idx) {
-      CHECK_LT(idx, count_);
-      return batch_[idx];
-    }
-    uptr Count() const { return count_; }
-    void Clear() { count_ = 0; }
-    void Add(void *ptr) {
-      batch_[count_++] = ptr;
-      CHECK_LE(count_, kMaxNumCached);
-    }
-    TransferBatch *next;
-
-   private:
-    uptr count_;
-    void *batch_[kMaxNumCached];
-  };
-  static const uptr kBatchSize = sizeof(TransferBatch);
-  COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
-
-  // If true, all TransferBatch objects are allocated from kBatchClassID
-  // size class (except for those that are needed for kBatchClassID itself).
-  // The goal is to have TransferBatches in a totally different region of RAM
-  // to improve security and allow more efficient RAM reclamation.
-  // This is experimental and may currently increase memory usage by up to 3%
-  // in extreme cases.
-  static const bool kUseSeparateSizeClassForBatch = false;
-
 
   static const uptr kMaxSize = 1UL << kMaxSizeLog;
   static const uptr kNumClasses =
       kMidClass + ((kMaxSizeLog - kMidSizeLog) << S) + 1 + 1;
   static const uptr kBatchClassID = kNumClasses - 1;
+  static const uptr kLargestClassID = kNumClasses - 2;
   COMPILER_CHECK(kNumClasses >= 32 && kNumClasses <= 256);
   static const uptr kNumClassesRounded =
       kNumClasses == 32  ? 32 :
@@ -149,8 +106,8 @@ class SizeClassMap {
   static uptr Size(uptr class_id) {
     if (class_id <= kMidClass)
       return kMinSize * class_id;
-    if (class_id == kBatchClassID)
-      return kBatchSize;
+    // Should not pass kBatchClassID here, but we should avoid a CHECK.
+    if (class_id == kBatchClassID) return 0;
     class_id -= kMidClass;
     uptr t = kMidSize << (class_id >> S);
     return t + (t >> S) * (class_id & M);
@@ -169,6 +126,11 @@ class SizeClassMap {
 
   static uptr MaxCached(uptr class_id) {
     if (class_id == 0) return 0;
+    // Estimate the result for kBatchClassID because this class
+    // does not know the exact size of TransferBatch.
+    // Moreover, we need to cache fewer batches than user chunks,
+    // so this number could be small.
+    if (class_id == kBatchClassID) return Min((uptr)8, kMaxNumCached);
     uptr n = (1UL << kMaxBytesCachedLog) / Size(class_id);
     return Max<uptr>(1, Min(kMaxNumCached, n));
   }
@@ -193,15 +155,6 @@ class SizeClassMap {
       prev_s = s;
     }
     Printf("Total cached: %zd\n", total_cached);
-  }
-
-  static uptr SizeClassForTransferBatch(uptr class_id) {
-    if (kUseSeparateSizeClassForBatch)
-      return class_id == kBatchClassID ? 0 : kBatchClassID;
-    if (Size(class_id) < sizeof(TransferBatch) -
-        sizeof(uptr) * (kMaxNumCached - MaxCached(class_id)))
-      return ClassID(sizeof(TransferBatch));
-    return 0;
   }
 
   static void Validate() {

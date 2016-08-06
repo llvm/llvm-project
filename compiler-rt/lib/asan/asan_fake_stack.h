@@ -52,7 +52,7 @@ struct FakeFrame {
 // Allocate() flips the appropriate allocation flag atomically, thus achieving
 // async-signal safety.
 // This allocator does not have quarantine per se, but it tries to allocate the
-// frames in round robin fasion to maximize the delay between a deallocation
+// frames in round robin fashion to maximize the delay between a deallocation
 // and the next allocation.
 class FakeStack {
   static const uptr kMinStackFrameSizeLog = 6;  // Min frame is 64B.
@@ -99,12 +99,12 @@ class FakeStack {
     return ((uptr)1) << (stack_size_log - kMinStackFrameSizeLog - class_id);
   }
 
-  // Divide n by the numbe of frames in size class.
+  // Divide n by the number of frames in size class.
   static uptr ModuloNumberOfFrames(uptr stack_size_log, uptr class_id, uptr n) {
     return n & (NumberOfFrames(stack_size_log, class_id) - 1);
   }
 
-  // The the pointer to the flags of the given class_id.
+  // The pointer to the flags of the given class_id.
   u8 *GetFlags(uptr stack_size_log, uptr class_id) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            FlagsOffset(stack_size_log, class_id);

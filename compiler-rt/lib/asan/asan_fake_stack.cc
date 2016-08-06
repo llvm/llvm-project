@@ -100,7 +100,7 @@ FakeFrame *FakeStack::Allocate(uptr stack_size_log, uptr class_id,
     // if the signal arrives between checking and setting flags[pos], the
     // signal handler's fake stack will start from a different hint_position
     // and so will not touch this particular byte. So, it is safe to do this
-    // with regular non-atimic load and store (at least I was not able to make
+    // with regular non-atomic load and store (at least I was not able to make
     // this code crash).
     if (flags[pos]) continue;
     flags[pos] = 1;
