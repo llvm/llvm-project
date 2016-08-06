@@ -198,6 +198,14 @@ bool isOpenMPSimdDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPDistributeDirective(OpenMPDirectiveKind DKind);
 
+/// Checks if the specified composite/combined directive constitutes a
+/// distribute directive in the outermost nest.  For example,
+/// 'omp distribute parallel for' or 'omp distribute'.
+/// \param DKind Specified directive.
+/// \return true - the directive has distribute on the outermost nest.
+/// otherwise - false.
+bool isOpenMPNestingDistributeDirective(OpenMPDirectiveKind DKind);
+
 /// \brief Checks if the specified clause is one of private clauses like
 /// 'private', 'firstprivate', 'reduction' etc..
 /// \param Kind Clause kind.

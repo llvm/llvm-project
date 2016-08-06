@@ -938,13 +938,13 @@ class TemplateDiff {
 
       /// isEnd - Returns true if the iterator is one past the end.
       bool isEnd() const {
-        assert(TST && "InternalalIterator is invalid with a null TST.");
+        assert(TST && "InternalIterator is invalid with a null TST.");
         return Index >= TST->getNumArgs();
       }
 
       /// &operator++ - Increment the iterator to the next template argument.
       InternalIterator &operator++() {
-        assert(TST && "InternalalIterator is invalid with a null TST.");
+        assert(TST && "InternalIterator is invalid with a null TST.");
         if (isEnd()) {
           return *this;
         }
@@ -980,7 +980,7 @@ class TemplateDiff {
 
       /// operator* - Returns the appropriate TemplateArgument.
       reference operator*() const {
-        assert(TST && "InternalalIterator is invalid with a null TST.");
+        assert(TST && "InternalIterator is invalid with a null TST.");
         assert(!isEnd() && "Index exceeds number of arguments.");
         if (CurrentTA == EndTA)
           return TST->getArg(Index);
@@ -990,7 +990,7 @@ class TemplateDiff {
 
       /// operator-> - Allow access to the underlying TemplateArgument.
       pointer operator->() const {
-        assert(TST && "InternalalIterator is invalid with a null TST.");
+        assert(TST && "InternalIterator is invalid with a null TST.");
         return &operator*();
       }
     };
