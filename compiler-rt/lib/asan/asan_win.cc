@@ -80,6 +80,11 @@ INTERCEPTOR_WINAPI(void, RtlRaiseException, EXCEPTION_RECORD *ExceptionRecord) {
   REAL(RtlRaiseException)(ExceptionRecord);
 }
 
+INTERCEPTOR_WINAPI(void, RaiseException, void *a, void *b, void *c, void *d) {
+  CHECK(REAL(RaiseException));
+  __asan_handle_no_return();
+  REAL(RaiseException)(a, b, c, d);
+}
 
 #ifdef _WIN64
 
@@ -138,10 +143,6 @@ namespace __asan {
 
 void InitializePlatformInterceptors() {
   ASAN_INTERCEPT_FUNC(CreateThread);
-  // RtlRaiseException is always linked dynamically.
-  CHECK(::__interception::OverrideFunction("RtlRaiseException",
-                                           (uptr)WRAP(RtlRaiseException),
-                                           (uptr *)&REAL(RtlRaiseException)));
 
 #ifdef _WIN64
   ASAN_INTERCEPT_FUNC(__C_specific_handler);
@@ -149,6 +150,16 @@ void InitializePlatformInterceptors() {
   ASAN_INTERCEPT_FUNC(_except_handler3);
   ASAN_INTERCEPT_FUNC(_except_handler4);
 #endif
+
+  // Try to intercept kernel32!RaiseException, and if that fails, intercept
+  // ntdll!RtlRaiseException instead.
+  if (!::__interception::OverrideFunction("RaiseException",
+                                          (uptr)WRAP(RaiseException),
+                                          (uptr *)&REAL(RaiseException))) {
+    CHECK(::__interception::OverrideFunction("RtlRaiseException",
+                                             (uptr)WRAP(RtlRaiseException),
+                                             (uptr *)&REAL(RtlRaiseException)));
+  }
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {

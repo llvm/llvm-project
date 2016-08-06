@@ -174,6 +174,15 @@ SBThreadPlan::IsPlanComplete()
 }
 
 bool
+SBThreadPlan::IsPlanStale()
+{
+    if (m_opaque_sp)
+        return m_opaque_sp->IsPlanStale();
+    else
+        return true;
+}
+
+bool
 SBThreadPlan::IsValid()
 {
     if (m_opaque_sp)

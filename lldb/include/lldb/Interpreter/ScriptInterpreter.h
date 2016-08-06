@@ -265,6 +265,13 @@ public:
         return true;
     }
 
+    virtual bool
+    ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp, bool &script_error)
+    {
+        script_error = true;
+        return true;
+    }
+
     virtual lldb::StateType
     ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp, bool &script_error)
     {

@@ -60,6 +60,9 @@ public:
 
     void
     DidPush() override;
+    
+    bool
+    IsPlanStale() override;
 
 protected:
     bool

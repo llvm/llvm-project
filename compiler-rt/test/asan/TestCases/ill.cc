@@ -9,7 +9,7 @@
 #include <windows.h>
 #endif
 
-int main() {
+int main(int argc, char **argv) {
 #ifdef _WIN32
   // Sometimes on Windows this test generates a WER fault dialog. Suppress that.
   UINT new_flags = SEM_FAILCRITICALERRORS |
@@ -21,7 +21,12 @@ int main() {
   SetErrorMode(existing_flags | new_flags);
 #endif
 
-  __builtin_trap();
+  if (argc)
+    __builtin_trap();
+  // Unreachable code to avoid confusing the Windows unwinder.
+#ifdef _WIN32
+  SetErrorMode(0);
+#endif
 }
 // CHECK0-NOT: ERROR: AddressSanitizer
 // CHECK1: ERROR: AddressSanitizer: {{ILL|illegal-instruction}} on unknown address {{0x0*}}
