@@ -547,8 +547,8 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
   for (const auto &EscapeMapping : EscapeMap) {
     // Extract the escaping instruction and the escaping users as well as the
     // alloca the instruction was demoted to.
-    Instruction *EscapeInst = EscapeMapping.getFirst();
-    const auto &EscapeMappingValue = EscapeMapping.getSecond();
+    Instruction *EscapeInst = EscapeMapping.first;
+    const auto &EscapeMappingValue = EscapeMapping.second;
     const EscapeUserVectorTy &EscapeUsers = EscapeMappingValue.second;
     Value *ScalarAddr = EscapeMappingValue.first;
 

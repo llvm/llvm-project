@@ -86,6 +86,9 @@ public:
     IsPlanComplete();
 
     bool
+    IsPlanStale();
+
+    bool
     IsValid();
 
     // This section allows an SBThreadPlan to push another of the common types of plans...

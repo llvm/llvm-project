@@ -314,6 +314,118 @@ Enter your Python command(s). Type 'DONE' to end.
             To remove the breakpoint command:
             <p><code>(lldb) <strong>breakpoint command delete 1</strong></code>
             </div>
+
+      	</div>
+		<div class="post">
+			<h1 class ="postheader">Using the Python API's to create custom stepping logic</h1>
+			<div class="postcontent">
+
+                <p>A slightly esoteric use of the Python API's is to construct custom stepping types.  LLDB's stepping is
+                   driven by a stack of "thread plans" and a fairly simple state machine that runs the plans.  You can create
+                   a Python class that works as a thread plan, and responds to the requests the state machine makes to run
+                   its operations. </p>
+                <p>There is a longer discussion of scripted thread plans and the state machine, and several interesting examples
+                   of their use in:</p>
+        <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/python/scripted_step.py">scripted_step.py</a>
+
+                <p> And for a MUCH fuller discussion of the whole state machine, see:</p>
+
+        <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/Target/ThreadPlan.h">ThreadPlan.h</a>
+             
+                <p>If you are reading those comments it is useful to know that scripted thread plans are set to be
+                  "MasterPlans", and not "OkayToDiscard".
+
+                <p>To implement a scripted step, you define a python class that has the following methods:</p>
+</tt></pre></code>
+                    <p><table class="stats" width="620" cellspacing="0">
+                    <tr>
+                        <td class="hed" width="10%">Name</td>
+                        <td class="hed" width="10%">Arguments</td>
+                        <td class="hed" width="80%">Description</td>
+                    </tr>
+
+
+                    <tr>
+                        <td class="content">
+                            <b>__init__</b>
+                        </td>
+                        <td class="content">
+                            <b>thread_plan: lldb.SBThreadPlan</b>
+                        </td>
+                        <td class="content">
+                            This is the underlying SBThreadPlan that is pushed onto the plan stack.  
+                            You will want to store this away in an ivar.  Also, if you are going to
+                            use one of the canned thread plans, you can queue it at this point.
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="content">
+                            <b>explains_stop</b>
+                        </td>
+                        <td class="content">
+                            <b>event: lldb.SBEvent</b>
+                        </td>
+                        <td class="content">
+                            Return True if this stop is part of your thread plans logic, false otherwise.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <b>is_stale</b>
+                        </td>
+                        <td class="content">
+                            <b>None</b>
+                        </td>
+                        <td class="content">
+                            If your plan is no longer relevant (for instance, you were
+                            stepping in a particular stack frame, but some other operation
+                            pushed that frame off the stack) return True and your plan will
+                            get popped.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <b>should_step</b>
+                        </td>
+                        <td class="content">
+                            <b>None</b>
+                        </td>
+                        <td class="content">
+                            Return True if you want lldb to instruction step one instruction,
+                            or False to continue till the next breakpoint is hit.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <b>should_stop</b>
+                        </td>
+                        <td class="content">
+                            <b>event: lldb.SBEvent</b>
+                        </td>
+                        <td class="content">
+                          If your plan wants to stop and return control to the user at this point, return True.
+                          If your plan is done at this point, call SetPlanComplete on your
+                          thread plan instance.
+                          Also, do any work you need here to set up the next stage of stepping.
+                        </td>
+                    </tr>
+                    </table>
+                   
+                    <p>To use this class to implement a step, use the command:</p>
+
+<code><pre><tt>(lldb) <strong>thread step-scripted -C MyModule.MyStepPlanClass</strong>
+</tt></pre></code>
+                   <p>Or use the SBThread.StepUsingScriptedThreadPlan API.  The SBThreadPlan passed into
+                     your __init__ function can also push several common plans (step in/out/over and run-to-address)
+                     in front of itself on the stack, which can be used to compose more complex stepping operations.
+                     When you use subsidiary plans your explains_stop and should_stop methods won't get called until
+                     the subsidiary plan is done, or the process stops for an event the subsidiary plan doesn't
+                     explain.  For instance, step over plans don't explain a breakpoint hit while performing the
+                     step-over.</p>
+
+            </div>
+
         </div>
 		<div class="post">
 			<h1 class ="postheader">Create a new LLDB command using a python function</h1>

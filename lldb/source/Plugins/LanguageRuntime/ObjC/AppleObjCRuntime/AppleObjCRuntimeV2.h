@@ -344,8 +344,14 @@ private:
     DescriptorMapUpdateResult
     UpdateISAToDescriptorMapSharedCache ();
     
+    enum class SharedCacheWarningReason
+    {
+        eExpressionExecutionFailure,
+        eNotEnoughClassesRead
+    };
+    
     void
-    WarnIfNoClassesCached ();
+    WarnIfNoClassesCached (SharedCacheWarningReason reason);
 
     lldb::addr_t
     GetSharedCacheReadOnlyAddress();

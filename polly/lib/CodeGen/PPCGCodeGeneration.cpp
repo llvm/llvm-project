@@ -249,6 +249,21 @@ private:
   /// @param FN            The function into which to generate the variables.
   void createKernelVariables(ppcg_kernel *Kernel, Function *FN);
 
+  /// Add CUDA annotations to module.
+  ///
+  /// Add a set of CUDA annotations that declares the maximal block dimensions
+  /// that will be used to execute the CUDA kernel. This allows the NVIDIA
+  /// PTX compiler to bound the number of allocated registers to ensure the
+  /// resulting kernel is known to run with up to as many block dimensions
+  /// as specified here.
+  ///
+  /// @param M         The module to add the annotations to.
+  /// @param BlockDimX The size of block dimension X.
+  /// @param BlockDimY The size of block dimension Y.
+  /// @param BlockDimZ The size of block dimension Z.
+  void addCUDAAnnotations(Module *M, Value *BlockDimX, Value *BlockDimY,
+                          Value *BlockDimZ);
+
   /// Create GPU kernel.
   ///
   /// Code generate the kernel described by @p KernelStmt.
@@ -446,6 +461,27 @@ void GPUNodeBuilder::allocateDeviceArrays() {
   }
 
   isl_ast_build_free(Build);
+}
+
+void GPUNodeBuilder::addCUDAAnnotations(Module *M, Value *BlockDimX,
+                                        Value *BlockDimY, Value *BlockDimZ) {
+  auto AnnotationNode = M->getOrInsertNamedMetadata("nvvm.annotations");
+
+  for (auto &F : *M) {
+    if (F.getCallingConv() != CallingConv::PTX_Kernel)
+      continue;
+
+    Value *V[] = {BlockDimX, BlockDimY, BlockDimZ};
+
+    Metadata *Elements[] = {
+        ValueAsMetadata::get(&F),   MDString::get(M->getContext(), "maxntidx"),
+        ValueAsMetadata::get(V[0]), MDString::get(M->getContext(), "maxntidy"),
+        ValueAsMetadata::get(V[1]), MDString::get(M->getContext(), "maxntidz"),
+        ValueAsMetadata::get(V[2]),
+    };
+    MDNode *Node = MDNode::get(M->getContext(), Elements);
+    AnnotationNode->addOperand(Node);
+  }
 }
 
 void GPUNodeBuilder::freeDeviceArrays() {
@@ -1021,6 +1057,9 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_id_free(Id);
   isl_ast_node_free(KernelStmt);
 
+  Value *BlockDimX, *BlockDimY, *BlockDimZ;
+  std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);
+
   SetVector<Value *> SubtreeValues = getReferencesInKernel(Kernel);
 
   assert(Kernel->tree && "Device AST of kernel node is empty");
@@ -1048,6 +1087,7 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   create(isl_ast_node_copy(Kernel->tree));
 
   Function *F = Builder.GetInsertBlock()->getParent();
+  addCUDAAnnotations(F->getParent(), BlockDimX, BlockDimY, BlockDimZ);
   clearDominators(F);
   clearScalarEvolution(F);
   clearLoops(F);
@@ -1075,9 +1115,6 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 
   Value *GridDimX, *GridDimY;
   std::tie(GridDimX, GridDimY) = getGridSizes(Kernel);
-
-  Value *BlockDimX, *BlockDimY, *BlockDimZ;
-  std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);
 
   createCallLaunchKernel(GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
                          BlockDimZ, Parameters);
@@ -1255,11 +1292,17 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
 
-    for (unsigned int j = 0; j < Var.array->n_index; ++j) {
+    for (unsigned int j = 1; j < Var.array->n_index; ++j) {
       isl_val *Val = isl_vec_get_element_val(Var.size, j);
       long Bound = isl_val_get_num_si(Val);
       isl_val_free(Val);
       Sizes.push_back(S.getSE()->getConstant(Builder.getInt64Ty(), Bound));
+    }
+
+    for (int j = Var.array->n_index - 1; j >= 0; --j) {
+      isl_val *Val = isl_vec_get_element_val(Var.size, j);
+      long Bound = isl_val_get_num_si(Val);
+      isl_val_free(Val);
       ArrayTy = ArrayType::get(ArrayTy, Bound);
     }
 

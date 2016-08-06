@@ -22,7 +22,6 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"

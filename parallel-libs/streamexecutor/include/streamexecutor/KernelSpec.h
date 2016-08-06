@@ -198,6 +198,13 @@ private:
 /// than doing it by hand.
 class MultiKernelLoaderSpec {
 public:
+  std::string getKernelName() const {
+    if (TheKernelName) {
+      return *TheKernelName;
+    }
+    return "";
+  }
+
   // Convenience getters for testing whether these platform variants have
   // kernel loader specifications available.
 
