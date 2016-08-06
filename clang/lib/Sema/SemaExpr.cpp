@@ -136,7 +136,7 @@ AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
     }
 
   switch (Result) {
-  default:
+  case AR_Available:
     return Result;
 
   case AR_Unavailable:
@@ -167,6 +167,7 @@ AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
     return Warn ? AR_NotYetIntroduced : AR_Available;
   }
   }
+  llvm_unreachable("Unknown availability result!");
 }
 
 static void
