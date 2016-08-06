@@ -1,8 +1,10 @@
 # Check generation of MIPS specific ELF header flags.
 
-# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -shared -o %t.so
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
+# RUN:         %S/Inputs/mips-dynamic.s -o %t-so.o
+# RUN: ld.lld %t-so.o -shared -o %t.so
 # RUN: llvm-readobj -h %t.so | FileCheck -check-prefix=SO %s
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
 # RUN: llvm-readobj -h %t.exe | FileCheck -check-prefix=EXE %s
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -44,4 +46,5 @@ __start:
 # EXE-R6-NEXT:   EF_MIPS_ABI_O32
 # EXE-R6-NEXT:   EF_MIPS_ARCH_32R6
 # EXE-R6-NEXT:   EF_MIPS_CPIC
+# EXE-R6-NEXT:   EF_MIPS_NAN2008
 # EXE-R6-NEXT: ]

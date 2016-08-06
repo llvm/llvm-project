@@ -184,7 +184,7 @@ static bool addDiscriminators(Function &F) {
   // discriminator for this instruction.
   for (BasicBlock &B : F) {
     for (auto &I : B.getInstList()) {
-      if (isa<DbgInfoIntrinsic>(&I))
+      if (isa<IntrinsicInst>(&I))
         continue;
       const DILocation *DIL = I.getDebugLoc();
       if (!DIL)
@@ -222,7 +222,7 @@ static bool addDiscriminators(Function &F) {
     LocationSet CallLocations;
     for (auto &I : B.getInstList()) {
       CallInst *Current = dyn_cast<CallInst>(&I);
-      if (!Current || isa<DbgInfoIntrinsic>(&I))
+      if (!Current || isa<IntrinsicInst>(&I))
         continue;
 
       DILocation *CurrentDIL = Current->getDebugLoc();

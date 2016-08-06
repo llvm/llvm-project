@@ -3837,6 +3837,20 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   switch (ID) {
   default:
     break;
+  case Intrinsic::coro_begin: {
+    auto *InfoArg = CS.getArgOperand(3)->stripPointerCasts();
+    if (isa<ConstantPointerNull>(InfoArg))
+      break;
+    auto *GV = dyn_cast<GlobalVariable>(InfoArg);
+    Assert(GV && GV->isConstant() && GV->hasDefinitiveInitializer(),
+      "info argument of llvm.coro.begin must refer to an initialized "
+      "constant");
+    Constant *Init = GV->getInitializer();
+    Assert(isa<ConstantStruct>(Init) || isa<ConstantArray>(Init),
+      "info argument of llvm.coro.begin must refer to either a struct or "
+      "an array");
+    break;
+  }
   case Intrinsic::ctlz:  // llvm.ctlz
   case Intrinsic::cttz:  // llvm.cttz
     Assert(isa<ConstantInt>(CS.getArgOperand(1)),

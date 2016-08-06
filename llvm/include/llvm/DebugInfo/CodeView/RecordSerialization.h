@@ -44,7 +44,7 @@ inline Error consumeObject(U &Data, const T *&Res) {
   if (Data.size() < sizeof(*Res))
     return make_error<CodeViewError>(
         cv_error_code::insufficient_buffer,
-        "Error consuming object.  Not enough data for requested object size.");
+        "Insufficient bytes for expected object type");
   Res = reinterpret_cast<const T *>(Data.data());
   Data = Data.drop_front(sizeof(*Res));
   return Error::success();
@@ -146,9 +146,8 @@ struct serialize_null_term_string_array_impl {
 
   Error deserialize(ArrayRef<uint8_t> &Data) const {
     if (Data.empty())
-      return make_error<CodeViewError>(
-          cv_error_code::insufficient_buffer,
-          "Null terminated string buffer is empty!");
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer,
+                                       "Null terminated string is empty!");
 
     StringRef Field;
     // Stop when we run out of bytes or we hit record padding bytes.
@@ -159,7 +158,7 @@ struct serialize_null_term_string_array_impl {
       if (Data.empty())
         return make_error<CodeViewError>(
             cv_error_code::insufficient_buffer,
-            "Null terminated string buffer is empty!");
+            "Null terminated string has no null terminator!");
     }
     Data = Data.drop_front(1);
     return Error::success();

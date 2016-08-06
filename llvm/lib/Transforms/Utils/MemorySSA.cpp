@@ -1452,29 +1452,13 @@ void MemorySSA::OptimizeUses::optimizeUses() {
   SmallVector<MemoryAccess *, 16> VersionStack;
   SmallVector<StackInfo, 16> DomTreeWorklist;
   DenseMap<MemoryLocOrCall, MemlocStackInfo> LocStackInfo;
-  DomTreeWorklist.push_back({DT->getRootNode(), DT->getRootNode()->begin()});
-  // Bottom of the version stack is always live on entry.
   VersionStack.push_back(MSSA->getLiveOnEntryDef());
 
   unsigned long StackEpoch = 1;
   unsigned long PopEpoch = 1;
-  while (!DomTreeWorklist.empty()) {
-    const auto *DomNode = DomTreeWorklist.back().Node;
-    const auto DomIter = DomTreeWorklist.back().Iter;
-    BasicBlock *BB = DomNode->getBlock();
-    optimizeUsesInBlock(BB, StackEpoch, PopEpoch, VersionStack, LocStackInfo);
-    if (DomIter == DomNode->end()) {
-      // Hit the end, pop the worklist
-      DomTreeWorklist.pop_back();
-      continue;
-    }
-    // Move the iterator to the next child for the next time we get to process
-    // children
-    ++DomTreeWorklist.back().Iter;
-
-    // Now visit the next child
-    DomTreeWorklist.push_back({*DomIter, (*DomIter)->begin()});
-  }
+  for (const auto *DomNode : depth_first(DT->getRootNode()))
+    optimizeUsesInBlock(DomNode->getBlock(), StackEpoch, PopEpoch, VersionStack,
+                        LocStackInfo);
 }
 
 void MemorySSA::buildMemorySSA() {
@@ -1865,70 +1849,38 @@ void MemorySSA::verifyOrdering(Function &F) const {
 /// \brief Verify the domination properties of MemorySSA by checking that each
 /// definition dominates all of its uses.
 void MemorySSA::verifyDomination(Function &F) const {
+#ifndef NDEBUG
   for (BasicBlock &B : F) {
     // Phi nodes are attached to basic blocks
-    if (MemoryPhi *MP = getMemoryAccess(&B)) {
-      for (User *U : MP->users()) {
-        BasicBlock *UseBlock;
-        // Phi operands are used on edges, we simulate the right domination by
-        // acting as if the use occurred at the end of the predecessor block.
-        if (MemoryPhi *P = dyn_cast<MemoryPhi>(U)) {
-          for (const auto &Arg : P->operands()) {
-            if (Arg == MP) {
-              UseBlock = P->getIncomingBlock(Arg);
-              break;
-            }
-          }
-        } else {
-          UseBlock = cast<MemoryAccess>(U)->getBlock();
-        }
-        (void)UseBlock;
-        assert(DT->dominates(MP->getBlock(), UseBlock) &&
-               "Memory PHI does not dominate it's uses");
-      }
-    }
+    if (MemoryPhi *MP = getMemoryAccess(&B))
+      for (const Use &U : MP->uses())
+        assert(dominates(MP, U) && "Memory PHI does not dominate it's uses");
 
     for (Instruction &I : B) {
       MemoryAccess *MD = dyn_cast_or_null<MemoryDef>(getMemoryAccess(&I));
       if (!MD)
         continue;
 
-      for (User *U : MD->users()) {
-        BasicBlock *UseBlock;
-        (void)UseBlock;
-        // Things are allowed to flow to phi nodes over their predecessor edge.
-        if (auto *P = dyn_cast<MemoryPhi>(U)) {
-          for (const auto &Arg : P->operands()) {
-            if (Arg == MD) {
-              UseBlock = P->getIncomingBlock(Arg);
-              break;
-            }
-          }
-        } else {
-          UseBlock = cast<MemoryAccess>(U)->getBlock();
-        }
-        assert(DT->dominates(MD->getBlock(), UseBlock) &&
-               "Memory Def does not dominate it's uses");
-      }
+      for (const Use &U : MD->uses())
+        assert(dominates(MD, U) && "Memory Def does not dominate it's uses");
     }
   }
+#endif
 }
 
 /// \brief Verify the def-use lists in MemorySSA, by verifying that \p Use
 /// appears in the use list of \p Def.
-///
-/// llvm_unreachable is used instead of asserts because this may be called in
-/// a build without asserts. In that case, we don't want this to turn into a
-/// nop.
+
 void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
+#ifndef NDEBUG
   // The live on entry use may cause us to get a NULL def here
-  if (!Def) {
-    if (!isLiveOnEntryDef(Use))
-      llvm_unreachable("Null def but use not point to live on entry def");
-  } else if (std::find(Def->user_begin(), Def->user_end(), Use) ==
-             Def->user_end()) {
-    llvm_unreachable("Did not find use in def's use list");
-  }
+  if (!Def)
+    assert(isLiveOnEntryDef(Use) &&
+           "Null def but use not point to live on entry def");
+  else
+    assert(find(Def->users(), Use) != Def->user_end() &&
+           "Did not find use in def's use list");
+#endif
 }
 
 /// \brief Verify the immediate use information, by walking all the memory
@@ -2025,6 +1977,20 @@ bool MemorySSA::dominates(const MemoryAccess *Dominator,
   if (Dominator->getBlock() != Dominatee->getBlock())
     return DT->dominates(Dominator->getBlock(), Dominatee->getBlock());
   return locallyDominates(Dominator, Dominatee);
+}
+
+bool MemorySSA::dominates(const MemoryAccess *Dominator,
+                          const Use &Dominatee) const {
+  if (MemoryPhi *MP = dyn_cast<MemoryPhi>(Dominatee.getUser())) {
+    BasicBlock *UseBB = MP->getIncomingBlock(Dominatee);
+    // The def must dominate the incoming block of the phi.
+    if (UseBB != Dominator->getBlock())
+      return DT->dominates(Dominator->getBlock(), UseBB);
+    // If the UseBB and the DefBB are the same, compare locally.
+    return locallyDominates(Dominator, cast<MemoryAccess>(Dominatee));
+  }
+  // If it's not a PHI node use, the normal dominates can already handle it.
+  return dominates(Dominator, cast<MemoryAccess>(Dominatee.getUser()));
 }
 
 const static char LiveOnEntryStr[] = "liveOnEntry";

@@ -53,20 +53,33 @@ static void MissingExternalApiFunction(const char *FnName) {
 // Only one Fuzzer per process.
 static Fuzzer *F;
 
-struct CoverageController {
-  static void Reset() {
+// Only one CoverageController per process should be created.
+class CoverageController {
+ public:
+  explicit CoverageController(const FuzzingOptions &Options) 
+    : Options(Options) {
+    if (Options.PrintNewCovPcs) {
+      PcBufferLen = 1 << 24;
+      PcBuffer = new uintptr_t[PcBufferLen];
+      EF->__sanitizer_set_coverage_pc_buffer(PcBuffer, PcBufferLen);
+    }
+  }
+
+  uintptr_t* pc_buffer() const { return PcBuffer; }
+
+  void Reset() {
     CHECK_EXTERNAL_FUNCTION(__sanitizer_reset_coverage);
     EF->__sanitizer_reset_coverage();
     PcMapResetCurrent();
   }
 
-  static void ResetCounters(const FuzzingOptions &Options) {
+  void ResetCounters() {
     if (Options.UseCounters) {
       EF->__sanitizer_update_counter_bitset_and_clear_counters(0);
     }
   }
 
-  static void Prepare(const FuzzingOptions &Options, Fuzzer::Coverage *C) {
+  void Prepare(Fuzzer::Coverage *C) {
     if (Options.UseCounters) {
       size_t NumCounters = EF->__sanitizer_get_number_of_counters();
       C->CounterBitmap.resize(NumCounters);
@@ -75,7 +88,7 @@ struct CoverageController {
 
   // Records data to a maximum coverage tracker. Returns true if additional
   // coverage was discovered.
-  static bool RecordMax(const FuzzingOptions &Options, Fuzzer::Coverage *C) {
+  bool RecordMax(Fuzzer::Coverage *C) {
     bool Res = false;
 
     uint64_t NewBlockCoverage = EF->__sanitizer_get_total_unique_coverage();
@@ -110,16 +123,23 @@ struct CoverageController {
       C->PcMapBits = NewPcMapBits;
     }
 
-    uintptr_t *CoverageBuf;
-    uint64_t NewPcBufferLen =
-        EF->__sanitizer_get_coverage_pc_buffer(&CoverageBuf);
-    if (NewPcBufferLen > C->PcBufferLen) {
+    uint64_t NewPcBufferPos = EF->__sanitizer_get_coverage_pc_buffer_pos();
+    if (NewPcBufferPos > C->PcBufferPos) {
       Res = true;
-      C->PcBufferLen = NewPcBufferLen;
+      C->PcBufferPos = NewPcBufferPos;
+    }
+
+    if (NewPcBufferPos >= PcBufferLen) {
+      Printf("ERROR: PC buffer overflow.\n");
     }
 
     return Res;
   }
+
+ private:
+  const FuzzingOptions Options;
+  uintptr_t* PcBuffer = nullptr;
+  size_t PcBufferLen = 0;
 };
 
 // Leak detection is expensive, so we first check if there were more mallocs
@@ -145,7 +165,8 @@ void FreeHook(const volatile void *ptr) {
 }
 
 Fuzzer::Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options)
-    : CB(CB), MD(MD), Options(Options) {
+    : CB(CB), MD(MD), Options(Options),
+      CController(new CoverageController(Options)) {
   SetDeathCallback();
   InitializeTraceState();
   assert(!F);
@@ -155,6 +176,8 @@ Fuzzer::Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options)
   if (Options.DetectLeaks && EF->__sanitizer_install_malloc_and_free_hooks)
     EF->__sanitizer_install_malloc_and_free_hooks(MallocHook, FreeHook);
 }
+
+Fuzzer::~Fuzzer() { }
 
 void Fuzzer::LazyAllocateCurrentUnitData() {
   if (CurrentUnitData || Options.MaxLen == 0) return;
@@ -421,15 +444,13 @@ void Fuzzer::ShuffleAndMinimize() {
 }
 
 bool Fuzzer::UpdateMaxCoverage() {
-  uintptr_t PrevBufferLen = MaxCoverage.PcBufferLen;
-  bool Res = CoverageController::RecordMax(Options, &MaxCoverage);
+  uintptr_t PrevPcBufferPos = MaxCoverage.PcBufferPos;
+  bool Res = CController->RecordMax(&MaxCoverage);
 
-  if (Options.PrintNewCovPcs && PrevBufferLen != MaxCoverage.PcBufferLen) {
-    uintptr_t *CoverageBuf;
-    EF->__sanitizer_get_coverage_pc_buffer(&CoverageBuf);
-    assert(CoverageBuf);
-    for (size_t I = PrevBufferLen; I < MaxCoverage.PcBufferLen; ++I) {
-      Printf("%p\n", CoverageBuf[I]);
+  if (Options.PrintNewCovPcs && PrevPcBufferPos != MaxCoverage.PcBufferPos) {
+    uintptr_t* PcBuffer = CController->pc_buffer();
+    for (size_t I = PrevPcBufferPos; I < MaxCoverage.PcBufferPos; ++I) {
+      Printf("%p\n", PcBuffer[I]);
     }
   }
 
@@ -440,7 +461,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   TotalNumberOfRuns++;
 
   // TODO(aizatsky): this Reset call seems to be not needed.
-  CoverageController::ResetCounters(Options);
+  CController->ResetCounters();
   ExecuteCallback(Data, Size);
   bool Res = UpdateMaxCoverage();
 
@@ -693,9 +714,9 @@ size_t Fuzzer::ChooseUnitIdxToMutate() {
 }
 
 void Fuzzer::ResetCoverage() {
-  CoverageController::Reset();
+  CController->Reset();
   MaxCoverage.Reset();
-  CoverageController::Prepare(Options, &MaxCoverage);
+  CController->Prepare(&MaxCoverage);
 }
 
 // Experimental search heuristic: drilling.

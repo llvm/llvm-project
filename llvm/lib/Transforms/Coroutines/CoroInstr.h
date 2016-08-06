@@ -61,4 +61,58 @@ public:
   }
 };
 
+/// This class represents the llvm.coro.begin instruction.
+class LLVM_LIBRARY_VISIBILITY CoroBeginInst : public IntrinsicInst {
+  enum { MemArg, AlignArg, PromiseArg, InfoArg };
+
+public:
+  Constant *getRawInfo() const {
+    return cast<Constant>(getArgOperand(InfoArg)->stripPointerCasts());
+  }
+
+  void setInfo(Constant *C) { setArgOperand(InfoArg, C); }
+
+  // Info argument of coro.begin is
+  //   fresh out of the frontend: null ;
+  //   outlined                 : {Init, Return, Susp1, Susp2, ...} ;
+  //   postsplit                : [resume, destroy, cleanup] ;
+  //
+  // If parts of the coroutine were outlined to protect against undesirable
+  // code motion, these functions will be stored in a struct literal referred to
+  // by the Info parameter. Note: this is only needed before coroutine is split.
+  //
+  // After coroutine is split, resume functions are stored in an array
+  // referred to by this parameter.
+
+  struct Info {
+    ConstantStruct *OutlinedParts = nullptr;
+    ConstantArray *Resumers = nullptr;
+
+    bool hasOutlinedParts() const { return OutlinedParts != nullptr; }
+    bool isPostSplit() const { return Resumers != nullptr; }
+  };
+  Info getInfo() const {
+    Info Result;
+    auto *GV = dyn_cast<GlobalVariable>(getRawInfo());
+    if (!GV)
+      return Result;
+
+    assert(GV->isConstant() && GV->hasDefinitiveInitializer());
+    Constant *Initializer = GV->getInitializer();
+    if ((Result.OutlinedParts = dyn_cast<ConstantStruct>(Initializer)))
+      return Result;
+
+    Result.Resumers = cast<ConstantArray>(Initializer);
+    return Result;
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_begin;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 } // End namespace llvm.

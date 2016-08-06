@@ -21,8 +21,6 @@ namespace codeview {
 enum class TypeRecordKind : uint16_t {
 #define TYPE_RECORD(lf_ename, value, name) name = value,
 #include "TypeRecords.def"
-  // FIXME: Add serialization support
-  FieldList = 0x1203,
 };
 
 /// Duplicate copy of the above enum, but using the official CV names. Useful

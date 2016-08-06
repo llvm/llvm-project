@@ -296,6 +296,33 @@ define void @intrinsics(i32 %cur, i32 %bits) {
   ret void
 }
 
+; CHECK-LABEL: name: test_phi
+; CHECK:     G_BRCOND s1 {{%.*}}, %[[TRUE:bb\.[0-9]+]]
+; CHECK:     G_BR unsized %[[FALSE:bb\.[0-9]+]]
+
+; CHECK: [[TRUE]]:
+; CHECK:     [[RES1:%[0-9]+]](32) = G_LOAD { s32, p0 }
+
+; CHECK: [[FALSE]]:
+; CHECK:     [[RES2:%[0-9]+]](32) = G_LOAD { s32, p0 }
+
+; CHECK:     [[RES:%[0-9]+]](32) = PHI [[RES1]], %[[TRUE]], [[RES2]], %[[FALSE]]
+; CHECK:     %w0 = COPY [[RES]]
+define i32 @test_phi(i32* %addr1, i32* %addr2, i1 %tst) {
+  br i1 %tst, label %true, label %false
+
+true:
+  %res1 = load i32, i32* %addr1
+  br label %end
+
+false:
+  %res2 = load i32, i32* %addr2
+  br label %end
+
+end:
+  %res = phi i32 [%res1, %true], [%res2, %false]
+  ret i32 %res
+}
 
 ; CHECK-LABEL: name: unreachable
 ; CHECK: G_ADD

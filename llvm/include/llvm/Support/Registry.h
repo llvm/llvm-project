@@ -44,6 +44,7 @@ namespace llvm {
   template <typename T>
   class Registry {
   public:
+    typedef T type;
     typedef SimpleRegistryEntry<T> entry;
 
     class node;
@@ -69,13 +70,14 @@ namespace llvm {
       node(const entry &V) : Next(nullptr), Val(V) {}
     };
 
-    static void add_node(node *N) {
-      if (Tail)
-        Tail->Next = N;
-      else
-        Head = N;
-      Tail = N;
-    }
+    /// Add a node to the Registry: this is the interface between the plugin and
+    /// the executable.
+    ///
+    /// This function is exported by the executable and called by the plugin to
+    /// add a node to the executable's registry. Therefore it's not defined here
+    /// to avoid it being instantiated in the plugin and is instead defined in
+    /// the executable (see LLVM_INSTANTIATE_REGISTRY below).
+    static void add_node(node *N);
 
     /// Iterators for registry entries.
     ///
@@ -92,7 +94,9 @@ namespace llvm {
       const entry *operator->() const { return &Cur->Val; }
     };
 
-    static iterator begin() { return iterator(Head); }
+    // begin is not defined here in order to avoid usage of an undefined static
+    // data member, instead it's instantiated by LLVM_INSTANTIATE_REGISTRY.
+    static iterator begin();
     static iterator end()   { return iterator(nullptr); }
 
     static iterator_range<iterator> entries() {
@@ -120,61 +124,37 @@ namespace llvm {
         add_node(&Node);
       }
     };
-
-    /// A dynamic import facility.  This is used on Windows to
-    /// import the entries added in the plugin.
-    static void import(sys::DynamicLibrary &DL, const char *RegistryName) {
-      typedef void *(*GetRegistry)();
-      std::string Name("LLVMGetRegistry_");
-      Name.append(RegistryName);
-      GetRegistry Getter =
-          (GetRegistry)(intptr_t)DL.getAddressOfSymbol(Name.c_str());
-      if (Getter) {
-        // Call the getter function in order to get the full copy of the
-        // registry defined in the plugin DLL, and copy them over to the
-        // current Registry.
-        typedef std::pair<const node *, const node *> Info;
-        Info *I = static_cast<Info *>(Getter());
-        iterator begin(I->first);
-        iterator end(I->second);
-        for (++end; begin != end; ++begin) {
-          // This Node object needs to remain alive for the
-          // duration of the program.
-          add_node(new node(*begin));
-        }
-      }
-    }
-
-    /// Retrieve the data to be passed across DLL boundaries when
-    /// importing registries from another DLL on Windows.
-    static void *exportRegistry() {
-      static std::pair<const node *, const node *> Info(Head, Tail);
-      return &Info;
-    }
   };
-
-  
-  // Since these are defined in a header file, plugins must be sure to export
-  // these symbols.
-  template <typename T>
-  typename Registry<T>::node *Registry<T>::Head;
-
-  template <typename T>
-  typename Registry<T>::node *Registry<T>::Tail;
 } // end namespace llvm
 
-#ifdef LLVM_ON_WIN32
-#define LLVM_EXPORT_REGISTRY(REGISTRY_CLASS)                                   \
-  extern "C" {                                                                 \
-  __declspec(dllexport) void *__cdecl LLVMGetRegistry_##REGISTRY_CLASS() {     \
-    return REGISTRY_CLASS::exportRegistry();                                   \
-  }                                                                            \
+/// Instantiate a registry class.
+///
+/// This provides template definitions of add_node, begin, and the Head and Tail
+/// pointers, then explicitly instantiates them. We could explicitly specialize
+/// them, instead of the two-step process of define then instantiate, but
+/// strictly speaking that's not allowed by the C++ standard (we would need to
+/// have explicit specialization declarations in all translation units where the
+/// specialization is used) so we don't.
+#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS) \
+  namespace llvm { \
+  template<typename T> typename Registry<T>::node *Registry<T>::Head = nullptr;\
+  template<typename T> typename Registry<T>::node *Registry<T>::Tail = nullptr;\
+  template<typename T> \
+  void Registry<T>::add_node(typename Registry<T>::node *N) { \
+    if (Tail) \
+      Tail->Next = N; \
+    else \
+      Head = N; \
+    Tail = N; \
+  } \
+  template<typename T> typename Registry<T>::iterator Registry<T>::begin() { \
+    return iterator(Head); \
+  } \
+  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Head; \
+  template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Tail; \
+  template \
+  void Registry<REGISTRY_CLASS::type>::add_node(REGISTRY_CLASS::node*); \
+  template REGISTRY_CLASS::iterator Registry<REGISTRY_CLASS::type>::begin(); \
   }
-#define LLVM_IMPORT_REGISTRY(REGISTRY_CLASS, DL)                               \
-  REGISTRY_CLASS::import(DL, #REGISTRY_CLASS)
-#else
-#define LLVM_EXPORT_REGISTRY(REGISTRY_CLASS)
-#define LLVM_IMPORT_REGISTRY(REGISTRY_CLASS, DL)
-#endif
 
 #endif // LLVM_SUPPORT_REGISTRY_H

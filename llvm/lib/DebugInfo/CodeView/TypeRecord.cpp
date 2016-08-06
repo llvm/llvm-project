@@ -114,6 +114,11 @@ NestedTypeRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
   return NestedTypeRecord(L->Type, Name);
 }
 
+Expected<FieldListRecord>
+FieldListRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
+  return FieldListRecord(Data);
+}
+
 Expected<ArrayRecord> ArrayRecord::deserialize(TypeRecordKind Kind,
                                                ArrayRef<uint8_t> &Data) {
   const Layout *L = nullptr;

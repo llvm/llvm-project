@@ -36,10 +36,6 @@ template <typename IRUnitT> struct PassConcept {
   virtual ~PassConcept() {}
 
   /// \brief The polymorphic API which runs the pass over a given IR entity.
-  ///
-  /// Note that actual pass object can omit the analysis manager argument if
-  /// desired. Also that the analysis manager may be null if there is no
-  /// analysis manager in the pass pipeline.
   virtual PreservedAnalyses run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) = 0;
 
   /// \brief Polymorphic method to access the name of a pass.
@@ -50,7 +46,7 @@ template <typename IRUnitT> struct PassConcept {
 ///
 /// Can be instantiated for any object which provides a \c run method accepting
 /// an \c IRUnitT& and an \c AnalysisManager<IRUnit>&. It requires the pass to
-/// be a copyable object. When the
+/// be a copyable object.
 template <typename IRUnitT, typename PassT,
           typename PreservedAnalysesT = PreservedAnalyses>
 struct PassModel : PassConcept<IRUnitT> {

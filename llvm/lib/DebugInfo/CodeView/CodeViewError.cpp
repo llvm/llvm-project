@@ -33,6 +33,8 @@ public:
       return "The CodeView record is corrupted.";
     case cv_error_code::operation_unsupported:
       return "The requested operation is not supported.";
+    case cv_error_code::unknown_member_record:
+      return "The member record is of an unknown type.";
     }
     llvm_unreachable("Unrecognized cv_error_code");
   }

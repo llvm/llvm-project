@@ -99,19 +99,11 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
-    "llvm.coro.alloc",
-    "llvm.coro.begin",
-    "llvm.coro.destroy",
-    "llvm.coro.done",
-    "llvm.coro.end",
-    "llvm.coro.frame",
-    "llvm.coro.free",
-    "llvm.coro.param",
-    "llvm.coro.promise",
-    "llvm.coro.resume",
-    "llvm.coro.save",
-    "llvm.coro.size",
-    "llvm.coro.suspend",
+      "llvm.coro.alloc",   "llvm.coro.begin", "llvm.coro.destroy",
+      "llvm.coro.done",    "llvm.coro.end",   "llvm.coro.frame",
+      "llvm.coro.free",    "llvm.coro.param", "llvm.coro.promise",
+      "llvm.coro.resume",  "llvm.coro.save",  "llvm.coro.size",
+      "llvm.coro.suspend",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }
@@ -119,8 +111,8 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
 
 // Verifies if a module has named values listed. Also, in debug mode verifies
 // that names are intrinsic names.
-bool coro::LowererBase::declaresIntrinsics(
-    Module &M, std::initializer_list<StringRef> List) {
+bool coro::declaresIntrinsics(Module &M,
+                              std::initializer_list<StringRef> List) {
 
   for (StringRef Name : List) {
     assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");

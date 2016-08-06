@@ -333,7 +333,9 @@ public:
 class SISubtarget final : public AMDGPUSubtarget {
 public:
   enum {
-    FIXED_SGPR_COUNT_FOR_INIT_BUG = 80
+    // The closed Vulkan driver sets 96, which limits the wave count to 8 but
+    // doesn't spill SGPRs as much as when 80 is set.
+    FIXED_SGPR_COUNT_FOR_INIT_BUG = 96
   };
 
 private:

@@ -4,8 +4,8 @@ target datalayout = "e-n32"
 
 ; CHECK-LABEL: @test1
 ; CHECK: %[[SUB:.*]] = sub i32 %a, 97
-; CHECK-DAG: %[[LSHR:.*]] = lshr i32 %[[SUB]], 2
-; CHECK-DAG: %[[SHL:.*]] = shl i32 %[[SUB]], 30
+; CHECK: %[[LSHR:.*]] = lshr i32 %[[SUB]], 2
+; CHECK: %[[SHL:.*]] = shl i32 %[[SUB]], 30
 ; CHECK: %[[OR:.*]] = or i32 %[[LSHR]], %[[SHL]]
 ; CHECK:  switch i32 %[[OR]], label %def [
 ; CHECK:    i32 0, label %one
@@ -121,8 +121,8 @@ three:
 
 ; CHECK-LABEL: @test6
 ; CHECK: %[[SUB:.*]] = sub i32 %a, -109
-; CHECK-DAG: %[[LSHR:.*]] = lshr i32 %[[SUB]], 2
-; CHECK-DAG: %[[SHL:.*]] = shl i32 %[[SUB]], 30
+; CHECK: %[[LSHR:.*]] = lshr i32 %[[SUB]], 2
+; CHECK: %[[SHL:.*]] = shl i32 %[[SUB]], 30
 ; CHECK: %[[OR:.*]] = or i32 %[[LSHR]], %[[SHL]]
 ; CHECK:  switch i32 %[[OR]], label %def [
 define i32 @test6(i32 %a) optsize {
@@ -146,8 +146,8 @@ three:
 
 ; CHECK-LABEL: @test7
 ; CHECK: %[[SUB:.*]] = sub i8 %a, -36
-; CHECK-DAG: %[[LSHR:.*]] = lshr i8 %[[SUB]], 2
-; CHECK-DAG: %[[SHL:.*]] = shl i8 %[[SUB]], 6
+; CHECK: %[[LSHR:.*]] = lshr i8 %[[SUB]], 2
+; CHECK: %[[SHL:.*]] = shl i8 %[[SUB]], 6
 ; CHECK: %[[OR:.*]] = or i8 %[[LSHR]], %[[SHL]]
 ; CHECK:  switch.tableidx = {{.*}} %[[OR]]
 define i8 @test7(i8 %a) optsize {
@@ -171,8 +171,8 @@ three:
 
 ; CHECK-LABEL: @test8
 ; CHECK: %[[SUB:.*]] = sub i32 %a, 97
-; CHECK-DAG: %[[LSHR:.*]] = lshr i32 %1, 2
-; CHECK-DAG: %[[SHL:.*]] = shl i32 %1, 30
+; CHECK: %[[LSHR:.*]] = lshr i32 %1, 2
+; CHECK: %[[SHL:.*]] = shl i32 %1, 30
 ; CHECK: %[[OR:.*]] = or i32 %[[LSHR]], %[[SHL]]
 ; CHECK:  switch i32 %[[OR]], label %def [
 define i32 @test8(i32 %a) optsize {

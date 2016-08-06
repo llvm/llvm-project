@@ -1104,6 +1104,35 @@ static Instruction *simplifyMaskedScatter(IntrinsicInst &II, InstCombiner &IC) {
   return nullptr;
 }
 
+static Value *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
+  Value *Op0 = II.getArgOperand(0);
+  // FIXME: Try to simplify vectors of integers.
+  auto *IT = dyn_cast<IntegerType>(Op0->getType());
+  if (!IT)
+    return nullptr;
+
+  unsigned BitWidth = IT->getBitWidth();
+  APInt KnownZero(BitWidth, 0);
+  APInt KnownOne(BitWidth, 0);
+  IC.computeKnownBits(Op0, KnownZero, KnownOne, 0, &II);
+
+  // Create a mask for bits above (ctlz) or below (cttz) the first known one.
+  bool IsTZ = II.getIntrinsicID() == Intrinsic::cttz;
+  unsigned NumMaskBits = IsTZ ? KnownOne.countTrailingZeros()
+                              : KnownOne.countLeadingZeros();
+  APInt Mask = IsTZ ? APInt::getLowBitsSet(BitWidth, NumMaskBits)
+                    : APInt::getHighBitsSet(BitWidth, NumMaskBits);
+
+  // If all bits above (ctlz) or below (cttz) the first known one are known
+  // zero, this value is constant.
+  // FIXME: This should be in InstSimplify because we're replacing an
+  // instruction with a constant.
+  if ((Mask & KnownZero) == Mask)
+    return ConstantInt::get(IT, APInt(BitWidth, NumMaskBits));
+
+  return nullptr;
+}
+
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
 // XMM register mask efficiently, we could transform all x86 masked intrinsics
 // to LLVM masked intrinsics and remove the x86 masked intrinsic defs.
@@ -1397,41 +1426,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                                           II->getArgOperand(0));
     }
     break;
-  case Intrinsic::cttz: {
-    // If all bits below the first known one are known zero,
-    // this value is constant.
-    IntegerType *IT = dyn_cast<IntegerType>(II->getArgOperand(0)->getType());
-    // FIXME: Try to simplify vectors of integers.
-    if (!IT) break;
-    uint32_t BitWidth = IT->getBitWidth();
-    APInt KnownZero(BitWidth, 0);
-    APInt KnownOne(BitWidth, 0);
-    computeKnownBits(II->getArgOperand(0), KnownZero, KnownOne, 0, II);
-    unsigned TrailingZeros = KnownOne.countTrailingZeros();
-    APInt Mask(APInt::getLowBitsSet(BitWidth, TrailingZeros));
-    if ((Mask & KnownZero) == Mask)
-      return replaceInstUsesWith(CI, ConstantInt::get(IT,
-                                 APInt(BitWidth, TrailingZeros)));
 
-    }
-    break;
-  case Intrinsic::ctlz: {
-    // If all bits above the first known one are known zero,
-    // this value is constant.
-    IntegerType *IT = dyn_cast<IntegerType>(II->getArgOperand(0)->getType());
-    // FIXME: Try to simplify vectors of integers.
-    if (!IT) break;
-    uint32_t BitWidth = IT->getBitWidth();
-    APInt KnownZero(BitWidth, 0);
-    APInt KnownOne(BitWidth, 0);
-    computeKnownBits(II->getArgOperand(0), KnownZero, KnownOne, 0, II);
-    unsigned LeadingZeros = KnownOne.countLeadingZeros();
-    APInt Mask(APInt::getHighBitsSet(BitWidth, LeadingZeros));
-    if ((Mask & KnownZero) == Mask)
-      return replaceInstUsesWith(CI, ConstantInt::get(IT,
-                                 APInt(BitWidth, LeadingZeros)));
-
-    }
+  case Intrinsic::cttz:
+  case Intrinsic::ctlz:
+    if (Value *V = foldCttzCtlz(*II, *this))
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::uadd_with_overflow:

@@ -241,6 +241,11 @@ static Error parseSegmentLoadCommand(
       const char *Sec = getSectionPtr(Obj, Load, J);
       Sections.push_back(Sec);
     }
+    uint64_t FileSize = Obj->getData().size();
+    if (S.fileoff > FileSize)
+      return malformedError("load command " + Twine(LoadCommandIndex) +
+                            " fileoff field in " + CmdName + 
+                            " extends past the end of the file");
     IsPageZeroSegment |= StringRef("__PAGEZERO").equals(S.segname);
   } else
     return SegOrErr.takeError();

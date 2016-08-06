@@ -126,3 +126,31 @@ for.cond.0:
 
   ret i32 %init
 }
+
+define i32 @f6(i32 %x, i32 %y) {
+; Do the right thing for unreachable code:
+
+; CHECK-LABEL: Classifying expressions for: @f6
+ entry:
+  %c0 = icmp sgt i32 %y, 0
+  %sum = add i32 %x, %y
+  br i1 %c0, label %merge, label %leave_1
+
+ merge:
+  %v0 = phi i32 [ %sum, %entry ], [ %v1, %unreachable ]
+  %c1 = icmp slt i32 %y, 0
+  br i1 %c1, label %leave_0, label %leave_0_cond
+
+leave_0_cond:
+  br label %leave_0
+
+leave_0:
+  %v1 = phi i32 [ %v0, %merge ], [ 0, %leave_0_cond ]
+  ret i32 0
+
+leave_1:
+  ret i32 0
+
+unreachable:
+  br label %merge
+}

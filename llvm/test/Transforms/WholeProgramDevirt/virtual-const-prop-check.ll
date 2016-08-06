@@ -4,8 +4,20 @@ target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: remark: <unknown>:0:0: devirtualized call
+; CHECK: remark: <unknown>:0:0: devirtualized vf1i32
+; CHECK: remark: <unknown>:0:0: devirtualized vf2i32
+; CHECK: remark: <unknown>:0:0: devirtualized vf3i32
+; CHECK: remark: <unknown>:0:0: devirtualized vf4i32
 ; CHECK: remark: <unknown>:0:0: devirtualized call
+; CHECK: remark: <unknown>:0:0: devirtualized vf1i1
+; CHECK: remark: <unknown>:0:0: devirtualized vf0i1
+; CHECK: remark: <unknown>:0:0: devirtualized vf1i1
+; CHECK: remark: <unknown>:0:0: devirtualized vf0i1
 ; CHECK: remark: <unknown>:0:0: devirtualized call
+; CHECK: remark: <unknown>:0:0: devirtualized vf0i1
+; CHECK: remark: <unknown>:0:0: devirtualized vf1i1
+; CHECK: remark: <unknown>:0:0: devirtualized vf0i1
+; CHECK: remark: <unknown>:0:0: devirtualized vf1i1
 ; CHECK-NOT: devirtualized call
 
 ; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\01\01\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf1i32 to i8*)], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
