@@ -376,6 +376,21 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
         }
       }
     }
+    // We also need to check exit blocks of the outer loop - it might be using
+    // values from what now became an inner loop.
+    SmallVector<BasicBlock*, 8> ExitBlocks;
+    NewOuter->getExitBlocks(ExitBlocks);
+    for (BasicBlock *ExitBB: ExitBlocks) {
+      for (Instruction &I : *ExitBB) {
+        for (Value *Op : I.operands()) {
+          Instruction *OpI = dyn_cast<Instruction>(Op);
+          if (!OpI || !L->contains(OpI))
+            continue;
+          WorklistSet.insert(OpI);
+        }
+      }
+    }
+
     SmallVector<Instruction *, 8> Worklist(WorklistSet.begin(),
                                            WorklistSet.end());
     formLCSSAForInstructions(Worklist, *DT, *LI);

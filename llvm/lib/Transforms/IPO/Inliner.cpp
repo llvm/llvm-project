@@ -94,7 +94,7 @@ typedef DenseMap<ArrayType *, std::vector<AllocaInst *>> InlinedArrayAllocasTy;
 static bool InlineCallIfPossible(
     CallSite CS, InlineFunctionInfo &IFI,
     InlinedArrayAllocasTy &InlinedArrayAllocas, int InlineHistory,
-    bool InsertLifetime, std::function<AAResults &(Function &)> &AARGetter,
+    bool InsertLifetime, function_ref<AAResults &(Function &)> AARGetter,
     ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
   Function *Callee = CS.getCalledFunction();
   Function *Caller = CS.getCaller();
@@ -252,7 +252,7 @@ static void emitAnalysis(CallSite CS, const Twine &Msg) {
 static bool
 shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
                  int &TotalSecondaryCost,
-                 std::function<InlineCost(CallSite CS)> &GetInlineCost) {
+                 function_ref<InlineCost(CallSite CS)> GetInlineCost) {
 
   // For now we only handle local or inline functions.
   if (!Caller->hasLocalLinkage() && !Caller->hasLinkOnceODRLinkage())
@@ -323,7 +323,7 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
 
 /// Return true if the inliner should attempt to inline at the given CallSite.
 static bool shouldInline(CallSite CS,
-                         std::function<InlineCost(CallSite CS)> GetInlineCost) {
+                         function_ref<InlineCost(CallSite CS)> GetInlineCost) {
   InlineCost IC = GetInlineCost(CS);
 
   if (IC.isAlways()) {
@@ -408,8 +408,8 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                 std::function<AssumptionCache &(Function &)> GetAssumptionCache,
                 ProfileSummaryInfo *PSI, TargetLibraryInfo &TLI,
                 bool InsertLifetime,
-                std::function<InlineCost(CallSite CS)> GetInlineCost,
-                std::function<AAResults &(Function &)> AARGetter,
+                function_ref<InlineCost(CallSite CS)> GetInlineCost,
+                function_ref<AAResults &(Function &)> AARGetter,
                 ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
   SmallPtrSet<Function *, 8> SCCFunctions;
   DEBUG(dbgs() << "Inliner visiting SCC:");

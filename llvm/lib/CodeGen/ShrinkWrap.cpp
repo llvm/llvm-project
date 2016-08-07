@@ -256,8 +256,8 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
 
 /// \brief Helper function to find the immediate (post) dominator.
 template <typename ListOfBBs, typename DominanceAnalysis>
-MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
-                            DominanceAnalysis &Dom) {
+static MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
+                                   DominanceAnalysis &Dom) {
   MachineBasicBlock *IDom = &Block;
   for (MachineBasicBlock *BB : BBs) {
     IDom = Dom.findNearestCommonDominator(IDom, BB);

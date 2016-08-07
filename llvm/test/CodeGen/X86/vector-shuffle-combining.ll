@@ -1406,8 +1406,7 @@ define <4 x float> @combine_test3(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_test4(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_test4:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_test4:
@@ -2326,8 +2325,7 @@ define <4 x float> @combine_undef_input_test3(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_undef_input_test4(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_undef_input_test4:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test4:
@@ -2432,7 +2430,7 @@ define <4 x float> @combine_undef_input_test8(<4 x float> %a) {
 define <4 x float> @combine_undef_input_test9(<4 x float> %a) {
 ; SSE-LABEL: combine_undef_input_test9:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test9:
@@ -2511,8 +2509,7 @@ define <4 x float> @combine_undef_input_test13(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_undef_input_test14(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_undef_input_test14:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test14:
@@ -2623,7 +2620,7 @@ define <4 x float> @combine_undef_input_test18(<4 x float> %a) {
 define <4 x float> @combine_undef_input_test19(<4 x float> %a) {
 ; SSE-LABEL: combine_undef_input_test19:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test19:

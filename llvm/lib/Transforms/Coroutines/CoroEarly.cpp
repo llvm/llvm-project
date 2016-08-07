@@ -52,6 +52,14 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       switch (CS.getIntrinsicID()) {
       default:
         continue;
+      case Intrinsic::coro_begin:
+        // Mark a function that comes out of the frontend that has a coro.begin
+        // with a coroutine attribute.
+        if (auto *CB = cast<CoroBeginInst>(&I)) {
+          if (CB->getInfo().isPreSplit())
+            F.addFnAttr(CORO_PRESPLIT_ATTR, UNPREPARED_FOR_SPLIT);
+        }
+        break;
       case Intrinsic::coro_resume:
         lowerResumeOrDestroy(CS, CoroSubFnInst::ResumeIndex);
         break;
@@ -80,7 +88,8 @@ struct CoroEarly : public FunctionPass {
   // This pass has work to do only if we find intrinsics we are going to lower
   // in the module.
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(M, {"llvm.coro.resume", "llvm.coro.destroy"}))
+    if (coro::declaresIntrinsics(
+            M, {"llvm.coro.begin", "llvm.coro.resume", "llvm.coro.destroy"}))
       L = llvm::make_unique<Lowerer>(M);
     return false;
   }

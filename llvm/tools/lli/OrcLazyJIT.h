@@ -38,7 +38,7 @@ public:
   typedef orc::CompileOnDemandLayer<IRDumpLayerT, CompileCallbackMgr> CODLayerT;
   typedef CODLayerT::IndirectStubsManagerBuilderT
     IndirectStubsManagerBuilder;
-  typedef CODLayerT::ModuleSetHandleT ModuleHandleT;
+  typedef CODLayerT::ModuleSetHandleT ModuleSetHandleT;
 
   OrcLazyJIT(std::unique_ptr<TargetMachine> TM,
              std::unique_ptr<CompileCallbackMgr> CCMgr,
@@ -62,18 +62,21 @@ public:
       DtorRunner.runViaLayer(CODLayer);
   }
 
-  ModuleHandleT addModule(std::unique_ptr<Module> M) {
-    // Attach a data-layout if one isn't already present.
-    if (M->getDataLayout().isDefault())
-      M->setDataLayout(DL);
+  ModuleSetHandleT addModuleSet(std::vector<std::unique_ptr<Module>> Ms) {
+    // Attach a data-layouts if they aren't already present.
+    for (auto &M : Ms)
+      if (M->getDataLayout().isDefault())
+        M->setDataLayout(DL);
 
     // Record the static constructors and destructors. We have to do this before
     // we hand over ownership of the module to the JIT.
     std::vector<std::string> CtorNames, DtorNames;
-    for (auto Ctor : orc::getConstructors(*M))
-      CtorNames.push_back(mangle(Ctor.Func->getName()));
-    for (auto Dtor : orc::getDestructors(*M))
-      DtorNames.push_back(mangle(Dtor.Func->getName()));
+    for (auto &M : Ms) {
+      for (auto Ctor : orc::getConstructors(*M))
+        CtorNames.push_back(mangle(Ctor.Func->getName()));
+      for (auto Dtor : orc::getDestructors(*M))
+        DtorNames.push_back(mangle(Dtor.Func->getName()));
+    }
 
     // Symbol resolution order:
     //   1) Search the JIT symbols.
@@ -84,24 +87,18 @@ public:
         [this](const std::string &Name) -> JITSymbol {
           if (auto Sym = CODLayer.findSymbol(Name, true))
             return Sym;
-          if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
-            return Sym;
-
+          return CXXRuntimeOverrides.searchOverrides(Name);
+        },
+        [](const std::string &Name) {
           if (auto Addr =
               RTDyldMemoryManager::getSymbolAddressInProcess(Name))
             return JITSymbol(Addr, JITSymbolFlags::Exported);
-
-          return JITSymbol(nullptr);
-        },
-        [](const std::string &Name) {
           return JITSymbol(nullptr);
         }
       );
 
     // Add the module to the JIT.
-    std::vector<std::unique_ptr<Module>> S;
-    S.push_back(std::move(M));
-    auto H = CODLayer.addModuleSet(std::move(S),
+    auto H = CODLayer.addModuleSet(std::move(Ms),
 				   llvm::make_unique<SectionMemoryManager>(),
 				   std::move(Resolver));
 
@@ -119,7 +116,7 @@ public:
     return CODLayer.findSymbol(mangle(Name), true);
   }
 
-  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name) {
+  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name) {
     return CODLayer.findSymbolIn(H, mangle(Name), true);
   }
 

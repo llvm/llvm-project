@@ -59,6 +59,10 @@ public:
     return (Flags & Common) == Common;
   }
 
+  bool isStrongDefinition() const {
+    return !isWeak() && !isCommon();
+  }
+
   /// @brief Returns true is the Weak flag is set.
   bool isExported() const {
     return (Flags & Exported) == Exported;

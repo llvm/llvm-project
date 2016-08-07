@@ -367,7 +367,7 @@ define i32 @test21() {
         %rval = load i32, i32* %pbobel
         ret i32 %rval
 ; CHECK-LABEL: @test21(
-; CHECK: getelementptr %intstruct, %intstruct* %pbob1, i64 0, i32 0
+; CHECK: getelementptr inbounds %intstruct, %intstruct* %pbob1, i64 0, i32 0
 }
 
 
@@ -541,8 +541,8 @@ define i8* @test32(i8* %v) {
 	%G = load i8*, i8** %F
 	ret i8* %G
 ; CHECK-LABEL: @test32(
-; CHECK: %D = getelementptr [4 x i8*], [4 x i8*]* %A, i64 0, i64 1
-; CHECK: %F = getelementptr [4 x i8*], [4 x i8*]* %A, i64 0, i64 2
+; CHECK: %D = getelementptr inbounds [4 x i8*], [4 x i8*]* %A, i64 0, i64 1
+; CHECK: %F = getelementptr inbounds [4 x i8*], [4 x i8*]* %A, i64 0, i64 2
 }
 
 ; PR3290

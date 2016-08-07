@@ -214,7 +214,7 @@ class ARMAsmParser : public MCTargetAsmParser {
 
     // Emit the conditonal instructions
     assert(PendingConditionalInsts.size() <= 4);
-    for (MCInst Inst : PendingConditionalInsts) {
+    for (const MCInst &Inst : PendingConditionalInsts) {
       Out.EmitInstruction(Inst, getSTI());
     }
     PendingConditionalInsts.clear();
