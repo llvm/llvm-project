@@ -34,6 +34,10 @@
 #include <x86intrin.h>
 #endif
 
+#if defined(__arm__)
+#include <armintr.h>
+#endif
+
 /* For the definition of jmp_buf. */
 #if __STDC_HOSTED__
 #include <setjmp.h>
