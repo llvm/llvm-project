@@ -14,7 +14,6 @@
 #include "CoroInternal.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/IR/ConstantFolder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Pass.h"
 
@@ -108,7 +107,32 @@ static bool replaceIndirectCalls(CoroBeginInst *CoroBegin) {
   return true;
 }
 
+// See if there are any coro.subfn.addr instructions referring to coro.devirt
+// trigger, if so, replace them with a direct call to devirt trigger function.
+static bool replaceDevirtTrigger(Function &F) {
+  SmallVector<CoroSubFnInst *, 1> DevirtAddr;
+  for (auto &I : instructions(F))
+    if (auto *SubFn = dyn_cast<CoroSubFnInst>(&I))
+      if (SubFn->getIndex() == CoroSubFnInst::RestartTrigger)
+        DevirtAddr.push_back(SubFn);
+
+  if (DevirtAddr.empty())
+    return false;
+
+  Module &M = *F.getParent();
+  Function *DevirtFn = M.getFunction(CORO_DEVIRT_TRIGGER_FN);
+  assert(DevirtFn && "coro.devirt.fn not found");
+  replaceWithConstant(DevirtFn, DevirtAddr);
+
+  return true;
+}
+
 bool CoroElide::runOnFunction(Function &F) {
+  bool Changed = false;
+
+  if (F.hasFnAttribute(CORO_PRESPLIT_ATTR))
+    Changed = replaceDevirtTrigger(F);
+
   // Collect all PostSplit coro.begins.
   SmallVector<CoroBeginInst *, 4> CoroBegins;
   for (auto &I : instructions(F))
@@ -117,9 +141,7 @@ bool CoroElide::runOnFunction(Function &F) {
         CoroBegins.push_back(CB);
 
   if (CoroBegins.empty())
-    return false;
-
-  bool Changed = false;
+    return Changed;
 
   for (auto *CB : CoroBegins)
     Changed |= replaceIndirectCalls(CB);

@@ -1703,6 +1703,7 @@ bool llvm::callsGCLeafFunction(ImmutableCallSite CS) {
   return false;
 }
 
+namespace {
 /// A potential constituent of a bitreverse or bswap expression. See
 /// collectBitParts for a fuller explanation.
 struct BitPart {
@@ -1718,6 +1719,7 @@ struct BitPart {
 
   enum { Unset = -1 };
 };
+} // end anonymous namespace
 
 /// Analyze the specified subexpression and see if it is capable of providing
 /// pieces of a bswap or bitreverse. The subexpression provides a potential

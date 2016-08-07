@@ -34,10 +34,11 @@ class LLVM_LIBRARY_VISIBILITY CoroSubFnInst : public IntrinsicInst {
 
 public:
   enum ResumeKind {
+    RestartTrigger = -1,
     ResumeIndex,
     DestroyIndex,
     IndexLast,
-    IndexFirst = ResumeIndex
+    IndexFirst = RestartTrigger
   };
 
   Value *getFrame() const { return getArgOperand(FrameArg); }
@@ -90,6 +91,7 @@ public:
 
     bool hasOutlinedParts() const { return OutlinedParts != nullptr; }
     bool isPostSplit() const { return Resumers != nullptr; }
+    bool isPreSplit() const { return !isPostSplit(); }
   };
   Info getInfo() const {
     Info Result;

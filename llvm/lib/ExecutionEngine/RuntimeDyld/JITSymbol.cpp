@@ -19,7 +19,7 @@ using namespace llvm;
 
 JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
   JITSymbolFlags Flags = JITSymbolFlags::None;
-  if (GV.hasWeakLinkage())
+  if (GV.hasWeakLinkage() || GV.hasLinkOnceLinkage())
     Flags |= JITSymbolFlags::Weak;
   if (GV.hasCommonLinkage())
     Flags |= JITSymbolFlags::Common;

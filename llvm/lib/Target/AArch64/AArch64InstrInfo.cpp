@@ -1028,6 +1028,7 @@ static bool areCFlagsAliveInSuccessors(MachineBasicBlock *MBB) {
   return false;
 }
 
+namespace {
 struct UsedNZCV {
   bool N;
   bool Z;
@@ -1042,6 +1043,7 @@ struct UsedNZCV {
     return *this;
   }
 };
+} // end anonymous namespace
 
 /// Find a condition code used by the instruction.
 /// Returns AArch64CC::Invalid if either the instruction does not use condition

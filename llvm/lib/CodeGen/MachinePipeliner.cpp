@@ -98,8 +98,9 @@ STATISTIC(NumTrytoPipeline, "Number of loops that we attempt to pipeline");
 STATISTIC(NumPipelined, "Number of loops software pipelined");
 
 /// A command line option to turn software pipelining on or off.
-cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
-                        cl::ZeroOrMore, cl::desc("Enable Software Pipelining"));
+static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
+                               cl::ZeroOrMore,
+                               cl::desc("Enable Software Pipelining"));
 
 /// A command line option to enable SWP at -Os.
 static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",

@@ -762,7 +762,7 @@ static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
 
 template <class Ty>
-bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
+static bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
   for (Metadata *MD : N.operands()) {
     if (MD) {
       if (!isa<Ty>(MD))
@@ -775,13 +775,11 @@ bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
   return true;
 }
 
-template <class Ty>
-bool isValidMetadataArray(const MDTuple &N) {
+template <class Ty> static bool isValidMetadataArray(const MDTuple &N) {
   return isValidMetadataArrayImpl<Ty>(N, /* AllowNull */ false);
 }
 
-template <class Ty>
-bool isValidMetadataNullArray(const MDTuple &N) {
+template <class Ty> static bool isValidMetadataNullArray(const MDTuple &N) {
   return isValidMetadataArrayImpl<Ty>(N, /* AllowNull */ true);
 }
 

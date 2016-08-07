@@ -1,7 +1,7 @@
 ; RUN: opt < %s -lcssa -loop-unroll -S | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
-; PR28272
+; PR28272, PR28825
 ; When LoopSimplify separates nested loops, it might break LCSSA form: values
 ; from the original loop might be used in the outer loop. This test invokes
 ; loop-unroll, which calls loop-simplify before itself. If LCSSA is broken
@@ -73,4 +73,36 @@ loop2.if.false:
 
 bb:
   br label %loop2
+}
+
+; When LoopSimplify separates nested loops, it might break LCSSA form: values
+; from the original loop might be used in exit blocks of the outer loop.
+; CHECK-LABEL: @foo3
+define void @foo3() {
+entry:
+  br label %bb1
+
+bb1:
+  br i1 undef, label %bb2, label %bb1
+
+bb2:
+  %a = phi i32 [ undef, %bb1 ], [ %a, %bb3 ], [ undef, %bb5 ]
+  br i1 undef, label %bb3, label %bb1
+
+bb3:
+  %b = load i32*, i32** undef
+  br i1 undef, label %bb2, label %bb4
+
+bb4:
+  br i1 undef, label %bb5, label %bb6
+
+bb5:
+  br i1 undef, label %bb2, label %bb4
+
+bb6:
+  br i1 undef, label %bb_end, label %bb1
+
+bb_end:
+  %x = getelementptr i32, i32* %b
+  br label %bb_end
 }

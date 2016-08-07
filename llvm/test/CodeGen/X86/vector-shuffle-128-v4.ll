@@ -319,8 +319,7 @@ define <4 x float> @shuffle_v4f32_0145(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @shuffle_v4f32_6723(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: shuffle_v4f32_6723:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_6723:
