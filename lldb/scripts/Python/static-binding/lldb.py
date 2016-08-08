@@ -291,6 +291,7 @@ eValueTypeVariableLocal = _lldb.eValueTypeVariableLocal
 eValueTypeRegister = _lldb.eValueTypeRegister
 eValueTypeRegisterSet = _lldb.eValueTypeRegisterSet
 eValueTypeConstResult = _lldb.eValueTypeConstResult
+eValueTypeVariableThreadLocal = _lldb.eValueTypeVariableThreadLocal
 eInputReaderGranularityInvalid = _lldb.eInputReaderGranularityInvalid
 eInputReaderGranularityByte = _lldb.eInputReaderGranularityByte
 eInputReaderGranularityWord = _lldb.eInputReaderGranularityWord
@@ -471,6 +472,7 @@ eArgTypePlatform = _lldb.eArgTypePlatform
 eArgTypeWatchpointID = _lldb.eArgTypeWatchpointID
 eArgTypeWatchpointIDRange = _lldb.eArgTypeWatchpointIDRange
 eArgTypeWatchType = _lldb.eArgTypeWatchType
+eArgRawInput = _lldb.eArgRawInput
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 eSymbolTypeAny = _lldb.eSymbolTypeAny
 eSymbolTypeInvalid = _lldb.eSymbolTypeInvalid
@@ -4171,7 +4173,7 @@ class SBExpressionOptions(_object):
         SetAutoApplyFixIts(self, bool b = True)
         SetAutoApplyFixIts(self)
 
-        Sets whether to auto-apply FixIt hints to the expression being evaluated.
+        Sets whether to auto-apply fix-it hints to the expression being evaluated.
         """
         return _lldb.SBExpressionOptions_SetAutoApplyFixIts(self, b)
 
@@ -4179,7 +4181,7 @@ class SBExpressionOptions(_object):
         """
         GetAutoApplyFixIts(self) -> bool
 
-        Gets whether to auto-apply FixIt hints to an expression.
+        Gets whether to auto-apply fix-it hints to an expression.
         """
         return _lldb.SBExpressionOptions_GetAutoApplyFixIts(self)
 
@@ -11568,6 +11570,14 @@ class SBValue(_object):
         """IsSynthetic(self) -> bool"""
         return _lldb.SBValue_IsSynthetic(self)
 
+    def IsSyntheticChildrenGenerated(self):
+        """IsSyntheticChildrenGenerated(self) -> bool"""
+        return _lldb.SBValue_IsSyntheticChildrenGenerated(self)
+
+    def SetSyntheticChildrenGenerated(self, *args):
+        """SetSyntheticChildrenGenerated(self, bool arg0)"""
+        return _lldb.SBValue_SetSyntheticChildrenGenerated(self, *args)
+
     def GetLocation(self):
         """GetLocation(self) -> str"""
         return _lldb.SBValue_GetLocation(self)
@@ -11960,6 +11970,23 @@ class SBValue(_object):
 
     __swig_getmethods__["path"] = get_expr_path
     if _newclass: path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
+
+    def synthetic_child_from_expression(self, name, expr, options=None):
+        if options is None: options = lldb.SBExpressionOptions()
+        child = self.CreateValueFromExpression(name, expr, options)
+        child.SetSyntheticChildrenGenerated(True)
+        return child
+
+    def synthetic_child_from_data(self, name, data, type):
+        child = self.CreateValueFromData(name, data, type)
+        child.SetSyntheticChildrenGenerated(True)
+        return child
+            
+    def synthetic_child_from_address(self, name, addr, type):
+        child = self.CreateValueFromAddress(name, addr, type)
+        child.SetSyntheticChildrenGenerated(True)
+        return child
+
 
     def __str__(self):
         """__str__(self) -> PyObject"""
