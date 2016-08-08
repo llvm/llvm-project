@@ -166,7 +166,6 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = icmp eq <16 x i64> %a, %b
   %res1 = bitcast <16 x i1> %res to i16

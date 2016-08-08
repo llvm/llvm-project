@@ -246,7 +246,70 @@ bb3:
   ret i32 %res.0
 }
 
+; Make sure we merge the aliasing metadata. (If we don't, we have a load
+; with the wrong metadata, so the branch gets incorrectly eliminated.)
+define void @test8(i32*, i32*, i32*) {
+; CHECK-LABEL: @test8(
+; CHECK: %a = load i32, i32* %0, !range !4
+; CHECK-NEXT: store i32 %a
+; CHECK: br i1 %c
+  %a = load i32, i32* %0, !tbaa !0, !range !4, !alias.scope !9, !noalias !10
+  %b = load i32, i32* %0, !range !5
+  store i32 %a, i32* %1
+  %c = icmp eq i32 %b, 8
+  br i1 %c, label %ret1, label %ret2
+
+ret1:
+  ret void
+
+ret2:
+  %xxx = tail call i32 (...) @f1() nounwind
+  ret void
+}
+
+; Make sure we merge/PRE aliasing metadata correctly.  That means that
+; we need to remove metadata from the existing load, and add appropriate
+; metadata to the newly inserted load.
+define void @test9(i32*, i32*, i32*, i1 %c) {
+; CHECK-LABEL: @test9(
+  br i1 %c, label %d1, label %d2
+
+; CHECK: d1:
+; CHECK-NEXT: %a = load i32, i32* %0{{$}}
+d1:
+  %a = load i32, i32* %0, !range !4, !alias.scope !9, !noalias !10
+  br label %d3
+
+; CHECK: d2:
+; CHECK-NEXT: %xxxx = tail call i32 (...) @f1()
+; CHECK-NEXT: %b.pr = load i32, i32* %0, !tbaa !0{{$}}
+d2:
+  %xxxx = tail call i32 (...) @f1() nounwind
+  br label %d3
+
+d3:
+  %p = phi i32 [ 1, %d2 ], [ %a, %d1 ]
+  %b = load i32, i32* %0, !tbaa !0
+  store i32 %p, i32* %1
+  %c2 = icmp eq i32 %b, 8
+  br i1 %c2, label %ret1, label %ret2
+
+ret1:
+  ret void
+
+ret2:
+  %xxx = tail call i32 (...) @f1() nounwind
+  ret void
+}
+
 !0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA", null}
 !3 = !{!"int", !1}
+!4 = !{ i32 0, i32 1 }
+!5 = !{ i32 8, i32 10 }
+!6 = !{!6}
+!7 = !{!7, !6}
+!8 = !{!8, !6}
+!9 = !{!7}
+!10 = !{!8}

@@ -8,7 +8,6 @@ define i16 @mask16(i16 %x) {
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    knotw %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -36,7 +35,6 @@ define i8 @mask8(i8 %x) {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8:
@@ -44,7 +42,6 @@ define i8 @mask8(i8 %x) {
 ; SKX-NEXT:    kmovb %edi, %k0
 ; SKX-NEXT:    knotb %k0, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
-; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -139,7 +136,6 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; CHECK-NEXT:    kxorw %k1, %k0, %k0
 ; CHECK-NEXT:    korw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %ma = load <16 x i1>, <16 x i1>* %x
   %mb = load <16 x i1>, <16 x i1>* %y
@@ -156,7 +152,6 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    kshiftrw $8, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuf_test1:
@@ -164,7 +159,6 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; SKX-NEXT:    kmovw %edi, %k0
 ; SKX-NEXT:    kshiftrw $8, %k0, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
-; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

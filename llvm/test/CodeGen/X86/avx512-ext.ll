@@ -1328,7 +1328,6 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_16i8_to_16i1:
@@ -1336,7 +1335,6 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k0
 ; SKX-NEXT:    kmovw %k0, %eax
-; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %mask_b = trunc <16 x i8>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
@@ -1349,7 +1347,6 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; ALL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; ALL-NEXT:    kmovw %k0, %eax
-; ALL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; ALL-NEXT:    retq
   %mask_b = trunc <16 x i32>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
@@ -1387,7 +1384,6 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_8i16_to_8i1:
@@ -1395,7 +1391,6 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
-; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %mask_b = trunc <8 x i16>%a to <8 x i1>
   %mask = bitcast <8 x i1> %mask_b to i8
@@ -1436,7 +1431,6 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; ALL-NEXT:    kmovw %eax, %k1
 ; ALL-NEXT:    korw %k0, %k1, %k0
 ; ALL-NEXT:    kmovw %k0, %eax
-; ALL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; ALL-NEXT:    retq
   %a_i = trunc i32 %a to i1
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %a_i, i32 0

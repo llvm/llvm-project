@@ -819,11 +819,10 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   // where there are several consecutive memory accesses to the same location,
   // separated by a few arithmetic operations.
   BasicBlock::iterator BBI(LI);
-  AAMDNodes AATags;
   bool IsLoadCSE = false;
   if (Value *AvailableVal =
       FindAvailableLoadedValue(&LI, LI.getParent(), BBI,
-                               DefMaxInstsToScan, AA, &AATags, &IsLoadCSE)) {
+                               DefMaxInstsToScan, AA, &IsLoadCSE)) {
     if (IsLoadCSE) {
       LoadInst *NLI = cast<LoadInst>(AvailableVal);
       unsigned KnownIDs[] = {

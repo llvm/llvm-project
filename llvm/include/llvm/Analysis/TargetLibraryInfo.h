@@ -273,6 +273,7 @@ public:
   /// If we try to invalidate this info, just return false. It cannot become
   /// invalid even if the module changes.
   bool invalidate(Module &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.
