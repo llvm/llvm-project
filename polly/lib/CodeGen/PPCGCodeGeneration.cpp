@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
@@ -1212,6 +1213,8 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
   for (long i = 0; i < NumVars; i++) {
     isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
     Arg->setName(isl_id_get_name(Id));
+    Value *Val = IDToValue[Id];
+    ValueMap[Val] = &*Arg;
     IDToValue[Id] = &*Arg;
     KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
     Arg++;
@@ -2038,10 +2041,17 @@ public:
         executeScopConditionally(*S, this, Builder.getTrue());
 
     // TODO: Handle LICM
-    // TODO: Verify run-time checks
     auto SplitBlock = StartBlock->getSinglePredecessor();
     Builder.SetInsertPoint(SplitBlock->getTerminator());
     NodeBuilder.addParameters(S->getContext());
+
+    isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
+    isl_ast_expr *Condition = IslAst::buildRunCondition(S, Build);
+    isl_ast_build_free(Build);
+
+    Value *RTC = NodeBuilder.createRTC(Condition);
+    Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
+
     Builder.SetInsertPoint(&*StartBlock->begin());
 
     NodeBuilder.initializeAfterRTH();

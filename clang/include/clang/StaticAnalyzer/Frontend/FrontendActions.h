@@ -17,6 +17,7 @@
 namespace clang {
 
 class Stmt;
+class AnalyzerOptions;
 
 namespace ento {
 
@@ -52,6 +53,8 @@ private:
 };
 
 void printCheckerHelp(raw_ostream &OS, ArrayRef<std::string> plugins);
+void printEnabledCheckerList(raw_ostream &OS, ArrayRef<std::string> plugins,
+                             const AnalyzerOptions &opts);
 
 } // end GR namespace
 

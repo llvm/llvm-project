@@ -506,6 +506,13 @@ TEST(Range, CalculateRangesOfReplacements) {
   EXPECT_TRUE(Ranges[1].getLength() == 22);
 }
 
+TEST(Range, RangesAfterEmptyReplacements) {
+  std::vector<Range> Ranges = {Range(5, 6), Range(10, 5)};
+  Replacements Replaces;
+  std::vector<Range> Expected = {Range(5, 10)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
 TEST(Range, RangesAfterReplacements) {
   std::vector<Range> Ranges = {Range(5, 2), Range(10, 5)};
   Replacements Replaces = toReplacements({Replacement("foo", 0, 2, "1234")});

@@ -45,7 +45,7 @@ __start:
 # R1R2-NEXT:   EF_MIPS_CPIC
 # R1R2-NEXT: ]
 
-# R1R6: target isa 'mips32' is incompatible with 'mips32r6': {{.*}}mips-elf-flags-err.s.tmp2.o
+# R1R6: target ISA 'mips32' is incompatible with 'mips32r6': {{.*}}mips-elf-flags-err.s.tmp2.o
 
 # N32O32: target ABI 'n32' is incompatible with 'o32': {{.*}}mips-elf-flags-err.s.tmp2.o
 

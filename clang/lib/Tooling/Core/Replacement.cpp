@@ -361,6 +361,8 @@ calculateRangesAfterReplacements(const Replacements &Replaces,
   //   - Merge with \p Replaces.
   //   - The new ranges will be the affected ranges of the merged replacements.
   auto MergedRanges = combineAndSortRanges(Ranges);
+  if (Replaces.empty())
+    return MergedRanges;
   tooling::Replacements FakeReplaces;
   for (const auto &R : MergedRanges) {
     auto Err = FakeReplaces.add(Replacement(Replaces.begin()->getFilePath(),
