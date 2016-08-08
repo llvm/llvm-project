@@ -147,7 +147,7 @@ public:
     // construct/copy/destroy:
     basic_regex();
     explicit basic_regex(const charT* p, flag_type f = regex_constants::ECMAScript);
-    basic_regex(const charT* p, size_t len, flag_type f);
+    basic_regex(const charT* p, size_t len, flag_type f = regex_constants::ECMAScript);
     basic_regex(const basic_regex&);
     basic_regex(basic_regex&&) noexcept;
     template <class ST, class SA>
@@ -2519,7 +2519,7 @@ public:
           __end_(0)
         {__parse(__p, __p + __traits_.length(__p));}
     _LIBCPP_INLINE_VISIBILITY
-    basic_regex(const value_type* __p, size_t __len, flag_type __f)
+    basic_regex(const value_type* __p, size_t __len, flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
           __end_(0)
         {__parse(__p, __p + __len);}
