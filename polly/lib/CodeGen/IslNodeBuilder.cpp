@@ -1222,7 +1222,37 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
 }
 
 Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
-  Instruction *InsertLocation = &*--(Builder.GetInsertBlock()->end());
+  /// We pass the insert location of our Builder, as Polly ensures during IR
+  /// generation that there is always a valid CFG into which instructions are
+  /// inserted. As a result, the insertpoint is known to be always followed by a
+  /// terminator instruction. This means the insert point may be specified by a
+  /// terminator instruction, but it can never point to an ->end() iterator
+  /// which does not have a corresponding instruction. Hence, dereferencing
+  /// the insertpoint to obtain an instruction is known to be save.
+  ///
+  /// We also do not need to update the Builder here, as new instructions are
+  /// always inserted _before_ the given InsertLocation. As a result, the
+  /// insert location remains valid.
+  assert(Builder.GetInsertBlock()->end() != Builder.GetInsertPoint() &&
+         "Insert location points after last valid instruction");
+  Instruction *InsertLocation = &*Builder.GetInsertPoint();
   return expandCodeFor(S, SE, DL, "polly", Expr, Expr->getType(),
                        InsertLocation, &ValueMap);
+}
+
+/// The AST expression we generate to perform the run-time check assumes
+/// computations on integer types of infinite size. As we only use 64-bit
+/// arithmetic we check for overflows, in case of which we set the result
+/// of this run-time check to false to be cosnservatively correct,
+Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
+  auto ExprBuilder = getExprBuilder();
+  ExprBuilder.setTrackOverflow(true);
+  Value *RTC = ExprBuilder.create(Condition);
+  if (!RTC->getType()->isIntegerTy(1))
+    RTC = Builder.CreateIsNotNull(RTC);
+  Value *OverflowHappened =
+      Builder.CreateNot(ExprBuilder.getOverflowState(), "polly.rtc.overflown");
+  RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
+  ExprBuilder.setTrackOverflow(false);
+  return RTC;
 }

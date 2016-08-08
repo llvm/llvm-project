@@ -66,6 +66,20 @@ public:
   virtual ~IslNodeBuilder() {}
 
   void addParameters(__isl_take isl_set *Context);
+
+  /// @brief Generate code that evaluates @p Condition at run-time.
+  ///
+  /// This function is typically called to generate the LLVM-IR for the
+  /// run-time condition of the scop, that verifies that all the optimistic
+  /// assumptions we have taken during scop modeling and transformation
+  /// hold at run-time.
+  ///
+  /// @param Condition The condition to evaluate
+  ///
+  /// @result An llvm::Value that is true if the condition holds and false
+  ///         otherwise.
+  Value *createRTC(isl_ast_expr *Condition);
+
   void create(__isl_take isl_ast_node *Node);
 
   /// @brief Allocate memory for all new arrays created by Polly.

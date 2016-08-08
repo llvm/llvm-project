@@ -240,6 +240,11 @@ def err_test_module_file_extension_format : Error<
 def warn_drv_invoking_fallback : Warning<"falling back to %0">,
   InGroup<Fallback>;
 
+def err_drv_ropi_rwpi_incompatible_with_pic : Error<
+  "embedded and GOT-based position independence are incompatible">;
+def err_drv_ropi_incompatible_with_cxx : Error<
+  "ROPI is not compatible with c++">;
+
 def warn_target_unsupported_nan2008 : Warning<
   "ignoring '-mnan=2008' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;
