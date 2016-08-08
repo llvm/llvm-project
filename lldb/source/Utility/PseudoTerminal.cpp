@@ -33,7 +33,6 @@ char *ptsname(int fd) { return 0; }
 pid_t fork(void) { return 0; }
 pid_t setsid(void) { return 0; }
 #elif defined(__ANDROID_NDK__)
-#include "lldb/Host/android/Android.h"
 int posix_openpt(int flags);
 #endif
 

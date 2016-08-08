@@ -16,10 +16,6 @@
 #include "lldb/Host/windows/win32.h"
 #endif
 
-#ifdef __ANDROID_NDK__
-#include "lldb/Host/android/Android.h"
-#endif
-
 #include "lldb/lldb-public.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"

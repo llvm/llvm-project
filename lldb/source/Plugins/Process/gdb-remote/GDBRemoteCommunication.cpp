@@ -33,6 +33,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 // Project includes
 #include "ProcessGDBRemoteLog.h"
@@ -1250,7 +1251,7 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
                 }
                 int write_fd = socket_pipe.GetWriteFileDescriptor();
                 debugserver_args.AppendArgument("--pipe");
-                debugserver_args.AppendArgument(std::to_string(write_fd).c_str());
+                debugserver_args.AppendArgument(llvm::to_string(write_fd).c_str());
                 launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
 #endif
             }

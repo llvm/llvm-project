@@ -29,6 +29,17 @@ void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
           unless(isInTemplateInstantiation()),
           anyOf(hasParent(explicitCastExpr().bind("cast")), anything())),
       this);
+
+  Finder->addMatcher(
+      conditionalOperator(
+          hasParent(implicitCastExpr(
+              hasImplicitDestinationType(qualType(booleanType())),
+              unless(isInTemplateInstantiation()))),
+          eachOf(hasTrueExpression(
+                     ignoringParenImpCasts(integerLiteral().bind("literal"))),
+                 hasFalseExpression(
+                     ignoringParenImpCasts(integerLiteral().bind("literal"))))),
+      this);
 }
 
 void UseBoolLiteralsCheck::check(const MatchFinder::MatchResult &Result) {

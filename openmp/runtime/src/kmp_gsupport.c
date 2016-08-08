@@ -1259,7 +1259,7 @@ PARALLEL_LOOP(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_RUNTIME), kmp_sch_runtime)
 void
 xexpand(KMP_API_NAME_GOMP_TASKGROUP_START)(void)
 {
-    int gtid = __kmp_get_gtid();
+    int gtid = __kmp_entry_gtid();
     MKLOC(loc, "GOMP_taskgroup_start");
     KA_TRACE(20, ("GOMP_taskgroup_start: T#%d\n", gtid));
 

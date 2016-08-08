@@ -578,6 +578,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!isOutputDynamic<ELFT>())
     Symtab.addIgnored("__tls_get_addr");
 
+  // If linker script do layout we do not need to create any standart symbols.
+  if (ScriptConfig->HasContents)
+    return;
+
   auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
                        DefinedRegular<ELFT> *&Sym2) {
     Sym1 = Symtab.addIgnored(S, STV_DEFAULT);
@@ -1136,23 +1140,6 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
         H.p_memsz = alignTo(H.p_memsz, H.p_align);
     }
   }
-}
-
-template <class ELFT> static uint32_t getMipsEFlags() {
-  // FIXME: ELF flags depends on ELF flags of all input object files and
-  // selected emulation. For now pick the arch flag from the fisrt input file
-  // and use hard coded values for other flags.
-  uint32_t FirstElfFlags =
-      cast<ELFFileBase<ELFT>>(Config->FirstElf)->getObj().getHeader()->e_flags;
-  uint32_t ElfFlags = FirstElfFlags & EF_MIPS_ARCH;
-  if (ELFT::Is64Bits)
-    ElfFlags |= EF_MIPS_CPIC | EF_MIPS_PIC;
-  else {
-    ElfFlags |= EF_MIPS_CPIC | EF_MIPS_ABI_O32;
-    if (Config->Shared)
-      ElfFlags |= EF_MIPS_PIC;
-  }
-  return ElfFlags;
 }
 
 template <class ELFT> static typename ELFT::uint getEntryAddr() {

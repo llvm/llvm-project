@@ -13,6 +13,7 @@ add_lld_library(lldELF
   LTO.cpp
   LinkerScript.cpp
   MarkLive.cpp
+  Mips.cpp
   OutputSections.cpp
   Relocations.cpp
   ScriptParser.cpp
