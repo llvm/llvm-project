@@ -1406,8 +1406,7 @@ define <4 x float> @combine_test3(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_test4(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_test4:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_test4:
@@ -1812,9 +1811,6 @@ define void @combine_test23(<8 x float> %v, <2 x float>* %ptr) {
 ;
 ; AVX-LABEL: combine_test23:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; AVX-NEXT:    vmovups %xmm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -2329,8 +2325,7 @@ define <4 x float> @combine_undef_input_test3(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_undef_input_test4(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_undef_input_test4:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test4:
@@ -2435,7 +2430,7 @@ define <4 x float> @combine_undef_input_test8(<4 x float> %a) {
 define <4 x float> @combine_undef_input_test9(<4 x float> %a) {
 ; SSE-LABEL: combine_undef_input_test9:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test9:
@@ -2514,8 +2509,7 @@ define <4 x float> @combine_undef_input_test13(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_undef_input_test14(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_undef_input_test14:
 ; SSE:       # BB#0:
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test14:
@@ -2626,7 +2620,7 @@ define <4 x float> @combine_undef_input_test18(<4 x float> %a) {
 define <4 x float> @combine_undef_input_test19(<4 x float> %a) {
 ; SSE-LABEL: combine_undef_input_test19:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_undef_input_test19:

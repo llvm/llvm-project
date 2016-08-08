@@ -19,7 +19,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -100,7 +100,7 @@ public:
     Expected<Child> getNext() const;
 
     Expected<StringRef> getName() const;
-    ErrorOr<std::string> getFullName() const;
+    Expected<std::string> getFullName() const;
     Expected<StringRef> getRawName() const { return Header.getRawName(); }
     Expected<sys::TimeValue> getLastModified() const {
       return Header.getLastModified();
@@ -118,7 +118,7 @@ public:
     /// \return the size in the archive header for this member.
     Expected<uint64_t> getRawSize() const;
 
-    ErrorOr<StringRef> getBuffer() const;
+    Expected<StringRef> getBuffer() const;
     uint64_t getChildOffset() const;
 
     Expected<MemoryBufferRef> getMemoryBufferRef() const;
@@ -179,7 +179,7 @@ public:
       , SymbolIndex(symi)
       , StringIndex(stri) {}
     StringRef getName() const;
-    ErrorOr<Child> getMember() const;
+    Expected<Child> getMember() const;
     Symbol getNext() const;
   };
 

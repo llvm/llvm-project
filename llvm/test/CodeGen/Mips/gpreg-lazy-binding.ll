@@ -6,7 +6,7 @@
 ; CHECK:     jalr  $25
 ; CHECK:     nop
 ; CHECK-NOT: move  $gp
-; CHECK:     jalr  $25
+; CHECK:     jr    $25
 
 define void @f0() nounwind {
 entry:

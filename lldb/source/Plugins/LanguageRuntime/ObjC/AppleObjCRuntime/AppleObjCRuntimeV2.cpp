@@ -1360,7 +1360,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     
     uint32_t num_class_infos = 0;
     
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
     
     ExecutionContext exe_ctx;
     
@@ -1389,7 +1389,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     {
         if (log)
             log->Printf ("No dynamic classes found in gdb_objc_realized_classes.");
-        return DescriptorMapUpdateResult::Fail();
+        return DescriptorMapUpdateResult::Success(0);
     }
     
     // Make some types for our arguments
@@ -1478,7 +1478,11 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
                                                             err);
     
     if (class_infos_addr == LLDB_INVALID_ADDRESS)
+    {
+        if (log)
+            log->Printf("unable to allocate %" PRIu32 " bytes in process for shared cache read", class_infos_byte_size);
         return DescriptorMapUpdateResult::Fail();
+    }
 
     std::lock_guard<std::mutex> guard(m_get_class_info_args_mutex);
 
@@ -1571,7 +1575,7 @@ AppleObjCRuntimeV2::ParseClassInfoArray (const DataExtractor &data, uint32_t num
     //        uint32_t hash;
     //    } __attribute__((__packed__));
 
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
     
     uint32_t num_parsed = 0;
 
@@ -1591,6 +1595,8 @@ AppleObjCRuntimeV2::ParseClassInfoArray (const DataExtractor &data, uint32_t num
         // never change, so we can just skip it.
         if (ISAIsCached(isa))
         {
+            if (log)
+                log->Printf("AppleObjCRuntimeV2 found cached isa=0x%" PRIx64 ", ignoring this class info", isa);
             offset += 4;
         }
         else
@@ -1600,10 +1606,12 @@ AppleObjCRuntimeV2::ParseClassInfoArray (const DataExtractor &data, uint32_t num
             ClassDescriptorSP descriptor_sp (new ClassDescriptorV2(*this, isa, NULL));
             AddClass (isa, descriptor_sp, name_hash);
             num_parsed++;
-            if (log && log->GetVerbose())
+            if (log)
                 log->Printf("AppleObjCRuntimeV2 added isa=0x%" PRIx64 ", hash=0x%8.8x, name=%s", isa, name_hash,descriptor_sp->GetClassName().AsCString("<unknown>"));
         }
     }
+    if (log)
+        log->Printf("AppleObjCRuntimeV2 parsed %" PRIu32 " class infos", num_parsed);
     return num_parsed;
 }
 
@@ -1615,7 +1623,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     if (process == NULL)
         return DescriptorMapUpdateResult::Fail();
     
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
     
     ExecutionContext exe_ctx;
     
@@ -1645,14 +1653,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     if (objc_opt_ptr == LLDB_INVALID_ADDRESS)
         return DescriptorMapUpdateResult::Fail();
     
-    // Read the total number of classes from the hash table
     const uint32_t num_classes = 128*1024;
-    if (num_classes == 0)
-    {
-        if (log)
-            log->Printf ("No dynamic classes found in gdb_objc_realized_classes_addr.");
-        return DescriptorMapUpdateResult::Fail();
-    }
     
     // Make some types for our arguments
     CompilerType clang_uint32_t_type = ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
@@ -1732,7 +1733,11 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
                                                              err);
     
     if (class_infos_addr == LLDB_INVALID_ADDRESS)
+    {
+        if (log)
+            log->Printf("unable to allocate %" PRIu32 " bytes in process for shared cache read", class_infos_byte_size);
         return DescriptorMapUpdateResult::Fail();
+    }
 
     std::lock_guard<std::mutex> guard(m_get_shared_cache_class_info_args_mutex);
 
@@ -1840,7 +1845,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
 bool
 AppleObjCRuntimeV2::UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table)
 {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
     
     Process *process = GetProcess();
 
@@ -1912,6 +1917,8 @@ AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress()
 void
 AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded()
 {
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+
     Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
     
     // Else we need to check with our process to see when the map was updated.
@@ -1948,13 +1955,20 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded()
             
             DescriptorMapUpdateResult shared_cache_update_result = UpdateISAToDescriptorMapSharedCache();
             
+            if (log)
+                log->Printf("attempted to read objc class data - results: [dynamic_update]: ran: %s, count: %" PRIu32 " [shared_cache_update]: ran: %s, count: %" PRIu32,
+                            dynamic_update_result.m_update_ran ? "yes" : "no",
+                            dynamic_update_result.m_num_found,
+                            shared_cache_update_result.m_update_ran ? "yes" : "no",
+                            shared_cache_update_result.m_num_found);
+            
             // warn if:
             // - we could not run either expression
             // - we found fewer than num_classes_to_warn_at classes total
             if ((false == shared_cache_update_result.m_update_ran) || (false == dynamic_update_result.m_update_ran))
-                WarnIfNoClassesCached();
+                WarnIfNoClassesCached(SharedCacheWarningReason::eExpressionExecutionFailure);
             else if (dynamic_update_result.m_num_found + shared_cache_update_result.m_num_found < num_classes_to_warn_at)
-                WarnIfNoClassesCached();
+                WarnIfNoClassesCached(SharedCacheWarningReason::eNotEnoughClassesRead);
             else
                 m_loaded_objc_opt = true;
         }
@@ -1965,15 +1979,31 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded()
     }
 }
 
+static bool
+DoesProcessHaveSharedCache (Process& process)
+{
+    PlatformSP platform_sp = process.GetTarget().GetPlatform();
+    if (!platform_sp)
+        return true; // this should not happen
+    
+    ConstString platform_plugin_name = platform_sp->GetPluginName();
+    if (platform_plugin_name)
+    {
+        llvm::StringRef platform_plugin_name_sr = platform_plugin_name.GetStringRef();
+        if (platform_plugin_name_sr.endswith("-simulator"))
+            return false;
+    }
+    
+    return true;
+}
+
 void
-AppleObjCRuntimeV2::WarnIfNoClassesCached ()
+AppleObjCRuntimeV2::WarnIfNoClassesCached (SharedCacheWarningReason reason)
 {
     if (m_noclasses_warning_emitted)
         return;
 
-    if (m_process &&
-        m_process->GetTarget().GetPlatform() &&
-        m_process->GetTarget().GetPlatform()->GetPluginName().GetStringRef().endswith("-simulator"))
+    if (GetProcess() && !DoesProcessHaveSharedCache(*GetProcess()))
     {
         // Simulators do not have the objc_opt_ro class table so don't actually complain to the user
         m_noclasses_warning_emitted = true;
@@ -1981,11 +2011,21 @@ AppleObjCRuntimeV2::WarnIfNoClassesCached ()
     }
 
     Debugger &debugger(GetProcess()->GetTarget().GetDebugger());
-    
-    if (debugger.GetAsyncOutputStream())
+    if (auto stream = debugger.GetAsyncOutputStream())
     {
-        debugger.GetAsyncOutputStream()->PutCString("warning: could not load any Objective-C class information from the dyld shared cache. This will significantly reduce the quality of type information available.\n");
-        m_noclasses_warning_emitted = true;
+        switch (reason)
+        {
+            case SharedCacheWarningReason::eNotEnoughClassesRead:
+                stream->PutCString("warning: could not find Objective-C class data in the process. This may reduce the quality of type information available.\n");
+                m_noclasses_warning_emitted = true;
+                break;
+            case SharedCacheWarningReason::eExpressionExecutionFailure:
+                stream->PutCString("warning: could not execute support code to read Objective-C class data in the process. This may reduce the quality of type information available.\n");
+                m_noclasses_warning_emitted = true;
+                break;
+            default:
+                break;
+        }
     }
 }
 

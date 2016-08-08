@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=ppc64 -O0 -fast-isel=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 -O0 -fast-isel=false < %s | FileCheck %s
 
 ; This tests receiving and re-passing parameters consisting of structures
 ; of size 3, 5, 6, and 7.  They are to be found/placed right-adjusted in

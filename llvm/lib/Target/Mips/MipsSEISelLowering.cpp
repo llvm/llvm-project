@@ -27,8 +27,8 @@ using namespace llvm;
 #define DEBUG_TYPE "mips-isel"
 
 static cl::opt<bool>
-EnableMipsTailCalls("enable-mips-tail-calls", cl::Hidden,
-                    cl::desc("MIPS: Enable tail calls."), cl::init(false));
+UseMipsTailCalls("mips-tail-calls", cl::Hidden,
+                    cl::desc("MIPS: permit tail calls."), cl::init(true));
 
 static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                    cl::desc("Expand double precision loads and "
@@ -1178,7 +1178,7 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 bool MipsSETargetLowering::isEligibleForTailCallOptimization(
     const CCState &CCInfo, unsigned NextStackOffset,
     const MipsFunctionInfo &FI) const {
-  if (!EnableMipsTailCalls)
+  if (!UseMipsTailCalls)
     return false;
 
   // Exception has to be cleared with eret.

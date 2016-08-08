@@ -34,7 +34,7 @@ TEST(LowLevelTypeTest, Scalar) {
 
   for (unsigned S : {1U, 17U, 32U, 64U, 0xfffffU}) {
     const LLT Ty = LLT::scalar(S);
-    const LLT HalfTy = Ty.halfScalarSize();
+    const LLT HalfTy = (S % 2) == 0 ? Ty.halfScalarSize() : Ty;
     const LLT DoubleTy = Ty.doubleScalarSize();
 
     // Test kind.
@@ -51,12 +51,13 @@ TEST(LowLevelTypeTest, Scalar) {
     EXPECT_EQ(S, Ty.getSizeInBits());
     EXPECT_EQ(S, Ty.getScalarSizeInBits());
 
-    // Is it OK to half an odd-sized scalar? It currently is.
-    EXPECT_EQ(S/2, HalfTy.getSizeInBits());
-    EXPECT_EQ(S/2, HalfTy.getScalarSizeInBits());
-
     EXPECT_EQ(S*2, DoubleTy.getSizeInBits());
     EXPECT_EQ(S*2, DoubleTy.getScalarSizeInBits());
+
+    if ((S % 2) == 0) {
+      EXPECT_EQ(S/2, HalfTy.getSizeInBits());
+      EXPECT_EQ(S/2, HalfTy.getScalarSizeInBits());
+    }
 
     // Test equality operators.
     EXPECT_TRUE(Ty == Ty);
@@ -87,7 +88,7 @@ TEST(LowLevelTypeTest, Vector) {
       // Test getElementType().
       EXPECT_EQ(STy, VTy.getElementType());
 
-      const LLT HalfSzTy = VTy.halfScalarSize();
+      const LLT HalfSzTy = ((S % 2) == 0) ? VTy.halfScalarSize() : VTy;
       const LLT DoubleSzTy = VTy.doubleScalarSize();
 
       // halfElements requires an even number of elements.
@@ -123,9 +124,11 @@ TEST(LowLevelTypeTest, Vector) {
       EXPECT_EQ(S, VTy.getScalarSizeInBits());
       EXPECT_EQ(Elts, VTy.getNumElements());
 
-      EXPECT_EQ((S / 2) * Elts, HalfSzTy.getSizeInBits());
-      EXPECT_EQ(S / 2, HalfSzTy.getScalarSizeInBits());
-      EXPECT_EQ(Elts, HalfSzTy.getNumElements());
+      if ((S % 2) == 0) {
+        EXPECT_EQ((S / 2) * Elts, HalfSzTy.getSizeInBits());
+        EXPECT_EQ(S / 2, HalfSzTy.getScalarSizeInBits());
+        EXPECT_EQ(Elts, HalfSzTy.getNumElements());
+      }
 
       EXPECT_EQ((S * 2) * Elts, DoubleSzTy.getSizeInBits());
       EXPECT_EQ(S * 2, DoubleSzTy.getScalarSizeInBits());

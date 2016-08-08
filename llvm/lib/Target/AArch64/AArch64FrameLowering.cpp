@@ -869,7 +869,7 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
            Attrs.hasAttrSomewhere(Attribute::SwiftError));
 }
 
-
+namespace {
 struct RegPairInfo {
   RegPairInfo() : Reg1(AArch64::NoRegister), Reg2(AArch64::NoRegister) {}
   unsigned Reg1;
@@ -879,6 +879,7 @@ struct RegPairInfo {
   bool IsGPR;
   bool isPaired() const { return Reg2 != AArch64::NoRegister; }
 };
+} // end anonymous namespace
 
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, const std::vector<CalleeSavedInfo> &CSI,

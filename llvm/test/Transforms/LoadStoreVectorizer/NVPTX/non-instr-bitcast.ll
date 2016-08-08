@@ -6,7 +6,7 @@
 
 define void @foo() {
   ; CHECK: load <4 x float>
-  %a = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 0), align 4
+  %a = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 0), align 16
   %b = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 1), align 4
   %c = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 2), align 4
   %d = load float, float addrspace(1)* getelementptr inbounds ([4 x float], [4 x float] addrspace(1)* @global, i64 0, i64 3), align 4

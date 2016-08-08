@@ -451,6 +451,7 @@ public:
 namespace llvm {
   template<> struct GraphTraits<clang::ento::ExplodedNode*> {
     typedef clang::ento::ExplodedNode NodeType;
+    typedef clang::ento::ExplodedNode *NodeRef;
     typedef NodeType::succ_iterator  ChildIteratorType;
     typedef llvm::df_iterator<NodeType*>      nodes_iterator;
 
@@ -477,6 +478,7 @@ namespace llvm {
 
   template<> struct GraphTraits<const clang::ento::ExplodedNode*> {
     typedef const clang::ento::ExplodedNode NodeType;
+    typedef const clang::ento::ExplodedNode *NodeRef;
     typedef NodeType::const_succ_iterator   ChildIteratorType;
     typedef llvm::df_iterator<NodeType*>       nodes_iterator;
 

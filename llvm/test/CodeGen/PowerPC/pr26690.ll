@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 %struct.anon = type { %struct.anon.0, %struct.anon.1 }
 %struct.anon.0 = type { i32 }

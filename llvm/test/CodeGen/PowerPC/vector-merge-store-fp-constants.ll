@@ -1,4 +1,4 @@
-; RUN: llc -march=ppc64 -mtriple=ppc64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc64 -mtriple=ppc64-apple-darwin < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}_merge_8_float_zero_stores:
 ; CHECK: li [[ZEROREG:r[0-9]+]], 0

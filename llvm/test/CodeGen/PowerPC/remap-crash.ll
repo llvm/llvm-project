@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s
 target triple = "powerpc64-unknown-linux-gnu"
 
 define void @autogen_SD13() {

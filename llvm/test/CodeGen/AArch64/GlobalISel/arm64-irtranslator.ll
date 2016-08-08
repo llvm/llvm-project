@@ -17,6 +17,17 @@ define i64 @addi64(i64 %arg1, i64 %arg2) {
   ret i64 %res
 }
 
+; CHECK-LABEL: name: muli64
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
+; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_MUL s64 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %x0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %x0
+define i64 @muli64(i64 %arg1, i64 %arg2) {
+  %res = mul i64 %arg1, %arg2
+  ret i64 %res
+}
+
 ; Tests for alloca
 ; CHECK-LABEL: name: allocai64
 ; CHECK: stack:
@@ -223,6 +234,19 @@ define i64 @bitcast(i64 %a) {
   ret i64 %res2
 }
 
+; CHECK-LABEL: name: trunc
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK: [[VEC:%[0-9]+]](128) = G_LOAD { <4 x s32>, p0 }
+; CHECK: [[RES1:%[0-9]+]](8) = G_TRUNC { s8, s64 } [[ARG1]]
+; CHECK: [[RES2:%[0-9]+]](64) = G_TRUNC { <4 x s16>, <4 x s32> } [[VEC]]
+define void @trunc(i64 %a) {
+  %vecptr = alloca <4 x i32>
+  %vec = load <4 x i32>, <4 x i32>* %vecptr
+  %res1 = trunc i64 %a to i8
+  %res2 = trunc <4 x i32> %vec to <4 x i16>
+  ret void
+}
+
 ; CHECK-LABEL: name: load
 ; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
 ; CHECK: [[ADDR42:%[0-9]+]](64) = COPY %x1
@@ -272,6 +296,33 @@ define void @intrinsics(i32 %cur, i32 %bits) {
   ret void
 }
 
+; CHECK-LABEL: name: test_phi
+; CHECK:     G_BRCOND s1 {{%.*}}, %[[TRUE:bb\.[0-9]+]]
+; CHECK:     G_BR unsized %[[FALSE:bb\.[0-9]+]]
+
+; CHECK: [[TRUE]]:
+; CHECK:     [[RES1:%[0-9]+]](32) = G_LOAD { s32, p0 }
+
+; CHECK: [[FALSE]]:
+; CHECK:     [[RES2:%[0-9]+]](32) = G_LOAD { s32, p0 }
+
+; CHECK:     [[RES:%[0-9]+]](32) = PHI [[RES1]], %[[TRUE]], [[RES2]], %[[FALSE]]
+; CHECK:     %w0 = COPY [[RES]]
+define i32 @test_phi(i32* %addr1, i32* %addr2, i1 %tst) {
+  br i1 %tst, label %true, label %false
+
+true:
+  %res1 = load i32, i32* %addr1
+  br label %end
+
+false:
+  %res2 = load i32, i32* %addr2
+  br label %end
+
+end:
+  %res = phi i32 [%res1, %true], [%res2, %false]
+  ret i32 %res
+}
 
 ; CHECK-LABEL: name: unreachable
 ; CHECK: G_ADD

@@ -10,9 +10,9 @@ See also:
    :maxdepth: 1
 
 
-:program:`clang-rename` is a clang-based C++ "linter" tool. Its purpose is to
-perform efficient renaming actions in large-scale projects such as renaming
-classes, functions, variables, arguments, namespaces etc.
+:program:`clang-rename` is a C++ refactoring tool. Its purpose is to perform
+efficient renaming actions in large-scale projects such as renaming classes,
+functions, variables, arguments, namespaces etc.
 
 The tool is in a very early development stage, so you might encounter bugs and
 crashes. Submitting reports with information about how to reproduce the issue

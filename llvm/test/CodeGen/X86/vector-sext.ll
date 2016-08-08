@@ -407,15 +407,9 @@ define <8 x i64> @sext_16i8_to_8i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; AVX2-LABEL: sext_16i8_to_8i64:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-NEXT:    vpslld $24, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrad $24, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm2
+; AVX2-NEXT:    vpmovsxbq %xmm0, %ymm2
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-NEXT:    vpslld $24, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrad $24, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm1
+; AVX2-NEXT:    vpmovsxbq %xmm0, %ymm1
 ; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;

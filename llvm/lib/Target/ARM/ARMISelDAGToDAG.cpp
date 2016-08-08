@@ -476,7 +476,9 @@ bool ARMDAGToDAGISel::isShifterOpProfitable(const SDValue &Shift,
 unsigned ARMDAGToDAGISel::ConstantMaterializationCost(unsigned Val) const {
   if (Subtarget->isThumb()) {
     if (Val <= 255) return 1;                               // MOV
-    if (Subtarget->hasV6T2Ops() && Val <= 0xffff) return 1; // MOVW
+    if (Subtarget->hasV6T2Ops() &&
+        (Val <= 0xffff || ARM_AM::getT2SOImmValSplatVal(Val) != -1))
+      return 1; // MOVW
     if (Val <= 510) return 2;                               // MOV + ADDi8
     if (~Val <= 255) return 2;                              // MOV + MVN
     if (ARM_AM::isThumbImmShiftedVal(Val)) return 2;        // MOV + LSL

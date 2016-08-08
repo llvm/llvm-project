@@ -302,60 +302,74 @@ TEST(TripleTest, Normalization) {
 
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
-  StringRef C[4];
-  for (int Arch = 1+Triple::UnknownArch; Arch <= Triple::LastArchType; ++Arch) {
+  //
+  // We don't check every possible combination. For the set of architectures A,
+  // vendors V, operating systems O, and environments E, that would require |A|
+  // * |V| * |O| * |E| * 4! tests. Instead we check every option for any given
+  // slot and make sure it gets normalized to the correct position from every
+  // permutation. This should cover the core logic while being a tractable
+  // number of tests at (|A| + |V| + |O| + |E|) * 4!.
+  auto FirstArchType = Triple::ArchType(Triple::UnknownArch + 1);
+  auto FirstVendorType = Triple::VendorType(Triple::UnknownVendor + 1);
+  auto FirstOSType = Triple::OSType(Triple::UnknownOS + 1);
+  auto FirstEnvType = Triple::EnvironmentType(Triple::UnknownEnvironment + 1);
+  StringRef InitialC[] = {Triple::getArchTypeName(FirstArchType),
+                          Triple::getVendorTypeName(FirstVendorType),
+                          Triple::getOSTypeName(FirstOSType),
+                          Triple::getEnvironmentTypeName(FirstEnvType)};
+  for (int Arch = FirstArchType; Arch <= Triple::LastArchType; ++Arch) {
+    StringRef C[] = {InitialC[0], InitialC[1], InitialC[2], InitialC[3]};
     C[0] = Triple::getArchTypeName(Triple::ArchType(Arch));
-    for (int Vendor = 1+Triple::UnknownVendor; Vendor <= Triple::LastVendorType;
-         ++Vendor) {
-      C[1] = Triple::getVendorTypeName(Triple::VendorType(Vendor));
-      for (int OS = 1+Triple::UnknownOS; OS <= Triple::LastOSType; ++OS) {
-        if (OS == Triple::Win32)
-          continue;
-
-        C[2] = Triple::getOSTypeName(Triple::OSType(OS));
-
-        std::string E = Join(C[0], C[1], C[2]);
-        EXPECT_EQ(E, Triple::normalize(Join(C[0], C[1], C[2])));
-
-        EXPECT_EQ(E, Triple::normalize(Join(C[0], C[2], C[1])));
-        EXPECT_EQ(E, Triple::normalize(Join(C[1], C[2], C[0])));
-        EXPECT_EQ(E, Triple::normalize(Join(C[1], C[0], C[2])));
-        EXPECT_EQ(E, Triple::normalize(Join(C[2], C[0], C[1])));
-        EXPECT_EQ(E, Triple::normalize(Join(C[2], C[1], C[0])));
-
-        for (int Env = 1 + Triple::UnknownEnvironment; Env <= Triple::LastEnvironmentType;
-             ++Env) {
-          C[3] = Triple::getEnvironmentTypeName(Triple::EnvironmentType(Env));
-
-          std::string F = Join(C[0], C[1], C[2], C[3]);
-          EXPECT_EQ(F, Triple::normalize(Join(C[0], C[1], C[2], C[3])));
-
-          EXPECT_EQ(F, Triple::normalize(Join(C[0], C[1], C[3], C[2])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[0], C[2], C[3], C[1])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[0], C[2], C[1], C[3])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[0], C[3], C[1], C[2])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[0], C[3], C[2], C[1])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[1], C[2], C[3], C[0])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[1], C[2], C[0], C[3])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[1], C[3], C[0], C[2])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[1], C[3], C[2], C[0])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[1], C[0], C[2], C[3])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[1], C[0], C[3], C[2])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[2], C[3], C[0], C[1])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[2], C[3], C[1], C[0])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[2], C[0], C[1], C[3])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[2], C[0], C[3], C[1])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[2], C[1], C[3], C[0])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[2], C[1], C[0], C[3])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[3], C[0], C[1], C[2])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[3], C[0], C[2], C[1])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[3], C[1], C[2], C[0])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[3], C[1], C[0], C[2])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[3], C[2], C[0], C[1])));
-          EXPECT_EQ(F, Triple::normalize(Join(C[3], C[2], C[1], C[0])));
-        }
-      }
-    }
+    std::string E = Join(C[0], C[1], C[2]);
+    int I[] = {0, 1, 2};
+    do {
+      EXPECT_EQ(E, Triple::normalize(Join(C[I[0]], C[I[1]], C[I[2]])));
+    } while (std::next_permutation(std::begin(I), std::end(I)));
+    std::string F = Join(C[0], C[1], C[2], C[3]);
+    int J[] = {0, 1, 2, 3};
+    do {
+      EXPECT_EQ(F, Triple::normalize(Join(C[J[0]], C[J[1]], C[J[2]], C[J[3]])));
+    } while (std::next_permutation(std::begin(J), std::end(J)));
+  }
+  for (int Vendor = FirstVendorType; Vendor <= Triple::LastVendorType;
+       ++Vendor) {
+    StringRef C[] = {InitialC[0], InitialC[1], InitialC[2], InitialC[3]};
+    C[1] = Triple::getVendorTypeName(Triple::VendorType(Vendor));
+    std::string E = Join(C[0], C[1], C[2]);
+    int I[] = {0, 1, 2};
+    do {
+      EXPECT_EQ(E, Triple::normalize(Join(C[I[0]], C[I[1]], C[I[2]])));
+    } while (std::next_permutation(std::begin(I), std::end(I)));
+    std::string F = Join(C[0], C[1], C[2], C[3]);
+    int J[] = {0, 1, 2, 3};
+    do {
+      EXPECT_EQ(F, Triple::normalize(Join(C[J[0]], C[J[1]], C[J[2]], C[J[3]])));
+    } while (std::next_permutation(std::begin(J), std::end(J)));
+  }
+  for (int OS = FirstOSType; OS <= Triple::LastOSType; ++OS) {
+    if (OS == Triple::Win32)
+      continue;
+    StringRef C[] = {InitialC[0], InitialC[1], InitialC[2], InitialC[3]};
+    C[2] = Triple::getOSTypeName(Triple::OSType(OS));
+    std::string E = Join(C[0], C[1], C[2]);
+    int I[] = {0, 1, 2};
+    do {
+      EXPECT_EQ(E, Triple::normalize(Join(C[I[0]], C[I[1]], C[I[2]])));
+    } while (std::next_permutation(std::begin(I), std::end(I)));
+    std::string F = Join(C[0], C[1], C[2], C[3]);
+    int J[] = {0, 1, 2, 3};
+    do {
+      EXPECT_EQ(F, Triple::normalize(Join(C[J[0]], C[J[1]], C[J[2]], C[J[3]])));
+    } while (std::next_permutation(std::begin(J), std::end(J)));
+  }
+  for (int Env = FirstEnvType; Env <= Triple::LastEnvironmentType; ++Env) {
+    StringRef C[] = {InitialC[0], InitialC[1], InitialC[2], InitialC[3]};
+    C[3] = Triple::getEnvironmentTypeName(Triple::EnvironmentType(Env));
+    std::string F = Join(C[0], C[1], C[2], C[3]);
+    int J[] = {0, 1, 2, 3};
+    do {
+      EXPECT_EQ(F, Triple::normalize(Join(C[J[0]], C[J[1]], C[J[2]], C[J[3]])));
+    } while (std::next_permutation(std::begin(J), std::end(J)));
   }
 
   // Various real-world funky triples.  The value returned by GCC's config.sub

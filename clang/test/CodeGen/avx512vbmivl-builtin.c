@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +avx512vbmi -target-feature +avx512vl -target-feature +avx512bw -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +avx512vbmi -target-feature +avx512vl -target-feature +avx512bw -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H

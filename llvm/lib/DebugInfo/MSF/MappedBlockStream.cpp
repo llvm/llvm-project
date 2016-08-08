@@ -26,6 +26,19 @@ public:
 };
 }
 
+static void initializeFpmStreamLayout(const MSFLayout &Layout,
+                                      MSFStreamLayout &FpmLayout) {
+  uint32_t NumFpmIntervals = msf::getNumFpmIntervals(Layout);
+  support::ulittle32_t FpmBlock = Layout.SB->FreeBlockMapBlock;
+  assert(FpmBlock == 1 || FpmBlock == 2);
+  while (NumFpmIntervals > 0) {
+    FpmLayout.Blocks.push_back(FpmBlock);
+    FpmBlock += msf::getFpmIntervalLength(Layout);
+    --NumFpmIntervals;
+  }
+  FpmLayout.Length = msf::getFullFpmByteSize(Layout);
+}
+
 typedef std::pair<uint32_t, uint32_t> Interval;
 static Interval intersect(const Interval &I1, const Interval &I2) {
   return std::make_pair(std::max(I1.first, I2.first),
@@ -63,6 +76,14 @@ MappedBlockStream::createDirectoryStream(const MSFLayout &Layout,
   MSFStreamLayout SL;
   SL.Blocks = Layout.DirectoryBlocks;
   SL.Length = Layout.SB->NumDirectoryBytes;
+  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+}
+
+std::unique_ptr<MappedBlockStream>
+MappedBlockStream::createFpmStream(const MSFLayout &Layout,
+                                   const ReadableStream &MsfData) {
+  MSFStreamLayout SL;
+  initializeFpmStreamLayout(Layout, SL);
   return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
 }
 
@@ -321,6 +342,14 @@ WritableMappedBlockStream::createDirectoryStream(
   MSFStreamLayout SL;
   SL.Blocks = Layout.DirectoryBlocks;
   SL.Length = Layout.SB->NumDirectoryBytes;
+  return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
+}
+
+std::unique_ptr<WritableMappedBlockStream>
+WritableMappedBlockStream::createFpmStream(const MSFLayout &Layout,
+                                           const WritableStream &MsfData) {
+  MSFStreamLayout SL;
+  initializeFpmStreamLayout(Layout, SL);
   return createStream(Layout.SB->BlockSize, Layout.SB->NumBlocks, SL, MsfData);
 }
 

@@ -101,6 +101,29 @@ ThreadPlanPython::ShouldStop (Event *event_ptr)
 }
 
 bool
+ThreadPlanPython::IsPlanStale()
+{
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
+    if (log)
+        log->Printf ("%s called on Python Thread Plan: %s )",
+                    __PRETTY_FUNCTION__, m_class_name.c_str());
+
+    bool is_stale = true;
+    if (m_implementation_sp)
+    {
+        ScriptInterpreter *script_interp = m_thread.GetProcess()->GetTarget().GetDebugger().GetCommandInterpreter().GetScriptInterpreter();
+        if (script_interp)
+        {
+            bool script_error;
+            is_stale = script_interp->ScriptedThreadPlanIsStale (m_implementation_sp, script_error);
+            if (script_error)
+                SetPlanComplete(false);
+        }
+    }
+    return is_stale;
+}
+
+bool
 ThreadPlanPython::DoPlanExplainsStop (Event *event_ptr)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));

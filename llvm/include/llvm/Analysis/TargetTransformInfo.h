@@ -389,7 +389,8 @@ public:
   bool isFPVectorizationPotentiallyUnsafe() const;
 
   /// \brief Determine if the target supports unaligned memory accesses.
-  bool allowsMisalignedMemoryAccesses(unsigned BitWidth, unsigned AddressSpace = 0,
+  bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                      unsigned BitWidth, unsigned AddressSpace = 0,
                                       unsigned Alignment = 1,
                                       bool *Fast = nullptr) const;
 
@@ -668,7 +669,8 @@ public:
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
-  virtual bool allowsMisalignedMemoryAccesses(unsigned BitWidth,
+  virtual bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                              unsigned BitWidth,
                                               unsigned AddressSpace,
                                               unsigned Alignment,
                                               bool *Fast) = 0;
@@ -841,9 +843,10 @@ public:
   bool isFPVectorizationPotentiallyUnsafe() override {
     return Impl.isFPVectorizationPotentiallyUnsafe();
   }
-  bool allowsMisalignedMemoryAccesses(unsigned BitWidth, unsigned AddressSpace,
+  bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                      unsigned BitWidth, unsigned AddressSpace,
                                       unsigned Alignment, bool *Fast) override {
-    return Impl.allowsMisalignedMemoryAccesses(BitWidth, AddressSpace,
+    return Impl.allowsMisalignedMemoryAccesses(Context, BitWidth, AddressSpace,
                                                Alignment, Fast);
   }
   PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) override {

@@ -842,6 +842,12 @@ TEST(IsExternC, MatchesExternCFunctionDeclarations) {
   EXPECT_TRUE(notMatches("void f() {}", functionDecl(isExternC())));
 }
 
+TEST(IsExternC, MatchesExternCVariableDeclarations) {
+  EXPECT_TRUE(matches("extern \"C\" int i;", varDecl(isExternC())));
+  EXPECT_TRUE(matches("extern \"C\" { int i; }", varDecl(isExternC())));
+  EXPECT_TRUE(notMatches("int i;", varDecl(isExternC())));
+}
+
 TEST(IsDefaulted, MatchesDefaultedFunctionDeclarations) {
   EXPECT_TRUE(notMatches("class A { ~A(); };",
                          functionDecl(hasName("~A"), isDefaulted())));

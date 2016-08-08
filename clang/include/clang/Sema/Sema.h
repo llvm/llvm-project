@@ -3629,13 +3629,10 @@ public:
 
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
 
-  enum AvailabilityDiagnostic { AD_Deprecation, AD_Unavailable, AD_Partial };
-
-  void EmitAvailabilityWarning(AvailabilityDiagnostic AD,
-                               NamedDecl *D, StringRef Message,
-                               SourceLocation Loc,
+  void EmitAvailabilityWarning(AvailabilityResult AR, NamedDecl *D,
+                               StringRef Message, SourceLocation Loc,
                                const ObjCInterfaceDecl *UnknownObjCClass,
-                               const ObjCPropertyDecl  *ObjCProperty,
+                               const ObjCPropertyDecl *ObjCProperty,
                                bool ObjCPropertyAccess);
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
@@ -8251,6 +8248,12 @@ public:
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
       llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp teams distribute' after parsing of
+  /// the associated statement.
+  StmtResult ActOnOpenMPTeamsDistributeDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc,
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
 
   /// Checks correctness of linear modifiers.
   bool CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,
@@ -9601,6 +9604,17 @@ public:
   /// For instance, a method in an interface that is annotated with an
   /// availability attribuite effectively has the availability of the interface.
   VersionTuple getVersionForDecl(const Decl *Ctx) const;
+
+  /// \brief The diagnostic we should emit for \c D, or \c AR_Available.
+  ///
+  /// \param D The declaration to check. Note that this may be altered to point
+  /// to another declaration that \c D gets it's availability from. i.e., we
+  /// walk the list of typedefs to find an availability attribute.
+  ///
+  /// \param ContextVersion The version to compare availability against.
+  AvailabilityResult
+  ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, VersionTuple ContextVersion,
+                                   std::string *Message);
 
   const DeclContext *getCurObjCLexicalContext() const {
     const DeclContext *DC = getCurLexicalContext();

@@ -66,7 +66,10 @@ class PPCBoolRetToInt : public FunctionPass {
     while (!WorkList.empty()) {
       Value *Curr = WorkList.back();
       WorkList.pop_back();
-      if (User *CurrUser = dyn_cast<User>(Curr))
+      User *CurrUser = dyn_cast<User>(Curr);
+      // Operands of CallInst are skipped because they may not be Bool type,
+      // and their positions are defined by ABI.
+      if (CurrUser && !isa<CallInst>(Curr))
         for (auto &Op : CurrUser->operands())
           if (Defs.insert(Op).second)
             WorkList.push_back(Op);
@@ -199,11 +202,12 @@ class PPCBoolRetToInt : public FunctionPass {
     if (!std::any_of(Defs.begin(), Defs.end(), isa<Instruction, Value *>))
       return false;
 
-    // Presently, we only know how to handle PHINode, Constant, and Arguments.
-    // Potentially, bitwise operations (AND, OR, XOR, NOT) and sign extension
-    // could also be handled in the future.
+    // Presently, we only know how to handle PHINode, Constant, Arguments and
+    // CallInst. Potentially, bitwise operations (AND, OR, XOR, NOT) and sign
+    // extension could also be handled in the future.
     for (Value *V : Defs)
-      if (!isa<PHINode>(V) && !isa<Constant>(V) && !isa<Argument>(V))
+      if (!isa<PHINode>(V) && !isa<Constant>(V) &&
+          !isa<Argument>(V) && !isa<CallInst>(V))
         return false;
 
     for (Value *V : Defs)
@@ -221,13 +225,15 @@ class PPCBoolRetToInt : public FunctionPass {
       if (!BoolToIntMap.count(V))
         BoolToIntMap[V] = translate(V);
 
-    // Replace the operands of the translated instructions. There were set to
+    // Replace the operands of the translated instructions. They were set to
     // zero in the translate function.
     for (auto &Pair : BoolToIntMap) {
       User *First = dyn_cast<User>(Pair.first);
       User *Second = dyn_cast<User>(Pair.second);
       assert((!First || Second) && "translated from user to non-user!?");
-      if (First)
+      // Operands of CallInst are skipped because they may not be Bool type,
+      // and their positions are defined by ABI.
+      if (First && !isa<CallInst>(First))
         for (unsigned i = 0; i < First->getNumOperands(); ++i)
           Second->setOperand(i, BoolToIntMap[First->getOperand(i)]);
     }

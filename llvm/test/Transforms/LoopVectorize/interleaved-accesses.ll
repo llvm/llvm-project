@@ -577,7 +577,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ; CHECK: vector.body:
 ; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
 ; CHECK:   %[[X1:.+]] = extractelement <8 x i32> %[[L1]], i32 0
@@ -625,7 +625,7 @@ for.end:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ; CHECK: vector.body:
 ; CHECK:   %[[Phi:.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ {{.*}}, %vector.body ]
 ; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
@@ -678,7 +678,7 @@ for.end:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ; CHECK: vector.body:
 ; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
 ; CHECK:   %[[X1:.+]] = extractelement <8 x i32> %[[L1]], i32 0
@@ -726,7 +726,7 @@ for.end:
 ; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
 ; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
 ; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
-; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
 ; CHECK: vector.body:
 ; CHECK:   %[[Phi:.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ {{.*}}, %vector.body ]
 ; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}

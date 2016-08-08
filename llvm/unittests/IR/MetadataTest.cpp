@@ -449,6 +449,40 @@ TEST_F(MDNodeTest, DistinctOnUniquingCollision) {
   EXPECT_FALSE(Wrapped1->isDistinct());
 }
 
+TEST_F(MDNodeTest, UniquedOnDeletedOperand) {
+  // temp !{}
+  TempMDTuple T = MDTuple::getTemporary(Context, None);
+
+  // !{temp !{}}
+  Metadata *Ops[] = {T.get()};
+  MDTuple *N = MDTuple::get(Context, Ops);
+
+  // !{temp !{}} => !{null}
+  T.reset();
+  ASSERT_TRUE(N->isUniqued());
+  Metadata *NullOps[] = {nullptr};
+  ASSERT_EQ(N, MDTuple::get(Context, NullOps));
+}
+
+TEST_F(MDNodeTest, DistinctOnDeletedValueOperand) {
+  // i1* @GV
+  Type *Ty = Type::getInt1PtrTy(Context);
+  std::unique_ptr<GlobalVariable> GV(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
+
+  // !{i1* @GV}
+  Metadata *Ops[] = {Op};
+  MDTuple *N = MDTuple::get(Context, Ops);
+
+  // !{i1* @GV} => !{null}
+  GV.reset();
+  ASSERT_TRUE(N->isDistinct());
+  ASSERT_EQ(nullptr, N->getOperand(0));
+  Metadata *NullOps[] = {nullptr};
+  ASSERT_NE(N, MDTuple::get(Context, NullOps));
+}
+
 TEST_F(MDNodeTest, getDistinct) {
   // !{}
   MDNode *Empty = MDNode::get(Context, None);
@@ -669,7 +703,7 @@ TEST_F(MDNodeTest, replaceWithUniquedResolvingOperand) {
   EXPECT_TRUE(N->isResolved());
 }
 
-TEST_F(MDNodeTest, replaceWithUniquedChangingOperand) {
+TEST_F(MDNodeTest, replaceWithUniquedDeletedOperand) {
   // i1* @GV
   Type *Ty = Type::getInt1PtrTy(Context);
   std::unique_ptr<GlobalVariable> GV(
@@ -686,8 +720,33 @@ TEST_F(MDNodeTest, replaceWithUniquedChangingOperand) {
 
   // !{i1* @GV} => !{null}
   GV.reset();
-  ASSERT_TRUE(N->isUniqued());
+  ASSERT_TRUE(N->isDistinct());
+  ASSERT_EQ(nullptr, N->getOperand(0));
   Metadata *NullOps[] = {nullptr};
+  ASSERT_NE(N, MDTuple::get(Context, NullOps));
+}
+
+TEST_F(MDNodeTest, replaceWithUniquedChangedOperand) {
+  // i1* @GV
+  Type *Ty = Type::getInt1PtrTy(Context);
+  std::unique_ptr<GlobalVariable> GV(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
+
+  // temp !{i1* @GV}
+  Metadata *Ops[] = {Op};
+  MDTuple *N = MDTuple::getTemporary(Context, Ops).release();
+
+  // temp !{i1* @GV} => !{i1* @GV}
+  ASSERT_EQ(N, MDNode::replaceWithUniqued(TempMDTuple(N)));
+  ASSERT_TRUE(N->isUniqued());
+
+  // !{i1* @GV} => !{i1* @GV2}
+  std::unique_ptr<GlobalVariable> GV2(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  GV->replaceAllUsesWith(GV2.get());
+  ASSERT_TRUE(N->isUniqued());
+  Metadata *NullOps[] = {ConstantAsMetadata::get(GV2.get())};
   ASSERT_EQ(N, MDTuple::get(Context, NullOps));
 }
 

@@ -51,6 +51,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "misched"
 
+namespace {
 class HexagonCallMutation : public ScheduleDAGMutation {
 public:
   void apply(ScheduleDAGInstrs *DAG) override;
@@ -58,6 +59,7 @@ private:
   bool shouldTFRICallBind(const HexagonInstrInfo &HII,
                           const SUnit &Inst1, const SUnit &Inst2) const;
 };
+} // end anonymous namespace
 
 // Check if a call and subsequent A2_tfrpi instructions should maintain
 // scheduling affinity. We are looking for the TFRI to be consumed in

@@ -173,6 +173,40 @@
 ; CHECK-NESTED-FP-LP: Finished llvm::Function pass manager run
 ; CHECK-NESTED-FP-LP: Finished llvm::Module pass manager run
 
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='function(no-op-function)function(no-op-function)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-MISSING-COMMA1
+; CHECK-MISSING-COMMA1: unable to parse pass pipeline description
+
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='function()' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-EMPTY-INNER-PIPELINE
+; CHECK-EMPTY-INNER-PIPELINE: unable to parse pass pipeline description
+
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='no-op-module(no-op-module,whatever)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-MODULE-PASS
+; CHECK-PIPELINE-ON-MODULE-PASS: unable to parse pass pipeline description
+
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='no-op-cgscc(no-op-cgscc,whatever)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-CGSCC-PASS
+; CHECK-PIPELINE-ON-CGSCC-PASS: unable to parse pass pipeline description
+
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='no-op-function(no-op-function,whatever)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-FUNCTION-PASS
+; CHECK-PIPELINE-ON-FUNCTION-PASS: unable to parse pass pipeline description
+
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='no-op-loop(no-op-loop,whatever)' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-LOOP-PASS
+; CHECK-PIPELINE-ON-LOOP-PASS: unable to parse pass pipeline description
+
+; RUN: not opt -disable-output -debug-pass-manager \
+; RUN:     -passes='no-op-function()' %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-EMPTY-PIPELINE-ON-PASS
+; CHECK-EMPTY-PIPELINE-ON-PASS: unable to parse pass pipeline description
 
 define void @f() {
 entry:

@@ -318,8 +318,8 @@ static void doPrint(StringRef Name, const object::Archive::Child &C) {
   if (Verbose)
     outs() << "Printing " << Name << "\n";
 
-  ErrorOr<StringRef> DataOrErr = C.getBuffer();
-  failIfError(DataOrErr.getError());
+  Expected<StringRef> DataOrErr = C.getBuffer();
+  failIfError(DataOrErr.takeError());
   StringRef Data = *DataOrErr;
   outs().write(Data.data(), Data.size());
 }
@@ -376,7 +376,9 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
     raw_fd_ostream file(FD, false);
 
     // Get the data and its length
-    StringRef Data = *C.getBuffer();
+    Expected<StringRef> BufOrErr = C.getBuffer();
+    failIfError(BufOrErr.takeError());
+    StringRef Data = BufOrErr.get();
 
     // Write the data.
     file.write(Data.data(), Data.size());

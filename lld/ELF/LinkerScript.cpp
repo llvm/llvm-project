@@ -55,6 +55,10 @@ bool InputSectionDescription::classof(const BaseCommand *C) {
   return C->Kind == InputSectionKind;
 }
 
+bool AssertCommand::classof(const BaseCommand *C) {
+  return C->Kind == AssertKind;
+}
+
 template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
   return !S || !S->Live;
 }
@@ -132,33 +136,52 @@ static void addSection(OutputSectionFactory<ELFT> &Factory,
 }
 
 template <class ELFT>
-static bool compareByName(InputSectionBase<ELFT> *A,
-                          InputSectionBase<ELFT> *B) {
+static bool compareName(InputSectionBase<ELFT> *A, InputSectionBase<ELFT> *B) {
   return A->getSectionName() < B->getSectionName();
 }
 
 template <class ELFT>
-void LinkerScript<ELFT>::createSections(
-    std::vector<OutputSectionBase<ELFT> *> *Out,
-    OutputSectionFactory<ELFT> &Factory) {
-  OutputSections = Out;
+static bool compareAlignment(InputSectionBase<ELFT> *A,
+                             InputSectionBase<ELFT> *B) {
+  // ">" is not a mistake. Larger alignments are placed before smaller
+  // alignments in order to reduce the amount of padding necessary.
+  // This is compatible with GNU.
+  return A->Alignment > B->Alignment;
+}
 
+template <class ELFT>
+static std::function<bool(InputSectionBase<ELFT> *, InputSectionBase<ELFT> *)>
+getComparator(SortKind K) {
+  if (K == SortByName)
+    return compareName<ELFT>;
+  return compareAlignment<ELFT>;
+}
+
+template <class ELFT>
+void LinkerScript<ELFT>::createSections(
+    OutputSectionFactory<ELFT> &Factory) {
   for (auto &P : getSectionMap()) {
-    std::vector<InputSectionBase<ELFT> *> Sections;
     StringRef OutputName = P.first;
-    const InputSectionDescription *I = P.second;
-    for (InputSectionBase<ELFT> *S : getInputSections(I)) {
-      if (OutputName == "/DISCARD/") {
+    const InputSectionDescription *Cmd = P.second;
+    std::vector<InputSectionBase<ELFT> *> Sections = getInputSections(Cmd);
+
+    if (OutputName == "/DISCARD/") {
+      for (InputSectionBase<ELFT> *S : Sections) {
         S->Live = false;
         reportDiscarded(S);
-        continue;
       }
-      Sections.push_back(S);
+      continue;
     }
-    if (I->Sort)
-      std::stable_sort(Sections.begin(), Sections.end(), compareByName<ELFT>);
+
+    if (Cmd->SortInner)
+      std::stable_sort(Sections.begin(), Sections.end(),
+                       getComparator<ELFT>(Cmd->SortInner));
+    if (Cmd->SortOuter)
+      std::stable_sort(Sections.begin(), Sections.end(),
+                       getComparator<ELFT>(Cmd->SortOuter));
+
     for (InputSectionBase<ELFT> *S : Sections)
-      addSection(Factory, *Out, S, OutputName);
+      addSection(Factory, *OutputSections, S, OutputName);
   }
 
   // Add all other input sections, which are not listed in script.
@@ -166,11 +189,16 @@ void LinkerScript<ELFT>::createSections(
        Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec)
-        addSection(Factory, *Out, S, getOutputSectionName(S));
+        addSection(Factory, *OutputSections, S, getOutputSectionName(S));
 
   // Remove from the output all the sections which did not meet
   // the optional constraints.
   filter();
+}
+
+template <class R, class T>
+static inline void removeElementsIf(R &Range, const T &Pred) {
+  Range.erase(std::remove_if(Range.begin(), Range.end(), Pred), Range.end());
 }
 
 // Process ONLY_IF_RO and ONLY_IF_RW.
@@ -185,25 +213,19 @@ template <class ELFT> void LinkerScript<ELFT>::filter() {
     if (Cmd->Constraint == ConstraintKind::NoConstraint)
       continue;
 
-    auto It = llvm::find_if(*OutputSections, [&](OutputSectionBase<ELFT> *S) {
-      return S->getName() == Cmd->Name;
-    });
-    if (It == OutputSections->end())
-      continue;
-
-    OutputSectionBase<ELFT> *Sec = *It;
-    bool Writable = (Sec->getFlags() & SHF_WRITE);
     bool RO = (Cmd->Constraint == ConstraintKind::ReadOnly);
     bool RW = (Cmd->Constraint == ConstraintKind::ReadWrite);
 
-    if ((RO && Writable) || (RW && !Writable))
-      OutputSections->erase(It);
+    removeElementsIf(*OutputSections, [&](OutputSectionBase<ELFT> *S) {
+      bool Writable = (S->getFlags() & SHF_WRITE);
+      return S->getName() == Cmd->Name &&
+             ((RO && Writable) || (RW && !Writable));
+    });
   }
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::assignAddresses(
-    ArrayRef<OutputSectionBase<ELFT> *> Sections) {
+template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
+  ArrayRef<OutputSectionBase<ELFT> *> Sections = *OutputSections;
   // Orphan sections are sections present in the input files which
   // are not explicitly placed into the output file by the linker script.
   // We place orphan sections at end of file.
@@ -227,6 +249,11 @@ void LinkerScript<ELFT>::assignAddresses(
       } else if (Cmd->Sym) {
         cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
       }
+      continue;
+    }
+
+    if (auto *Cmd = dyn_cast<AssertCommand>(Base.get())) {
+      Cmd->Expression(Dot);
       continue;
     }
 
@@ -272,8 +299,8 @@ void LinkerScript<ELFT>::assignAddresses(
 }
 
 template <class ELFT>
-std::vector<PhdrEntry<ELFT>>
-LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
+std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
+  ArrayRef<OutputSectionBase<ELFT> *> Sections = *OutputSections;
   std::vector<PhdrEntry<ELFT>> Ret;
 
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
@@ -458,22 +485,23 @@ private:
   void readSections();
 
   SymbolAssignment *readAssignment(StringRef Name);
-  void readOutputSectionDescription(StringRef OutSec);
+  OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
   std::vector<uint8_t> readOutputSectionFiller();
   std::vector<StringRef> readOutputSectionPhdrs();
-  std::unique_ptr<InputSectionDescription> readInputSectionDescription();
-  void readInputFilePattern(InputSectionDescription *InCmd, bool Keep);
-  void readInputSectionRules(InputSectionDescription *InCmd, bool Keep);
+  InputSectionDescription *readInputSectionDescription();
+  std::vector<StringRef> readInputFilePatterns();
+  InputSectionDescription *readInputSectionRules();
   unsigned readPhdrType();
-  void readProvide(bool Hidden);
-  void readAlign(OutputSectionCommand *Cmd);
+  SortKind readSortKind();
+  SymbolAssignment *readProvide(bool Hidden);
+  Expr readAlign();
   void readSort();
+  Expr readAssert();
 
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
   Expr readPrimary();
   Expr readTernary(Expr Cond);
-  Expr combine(StringRef Op, Expr Lhs, Expr Rhs);
 
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -539,12 +567,8 @@ void ScriptParser::readAsNeeded() {
   expect("(");
   bool Orig = Config->AsNeeded;
   Config->AsNeeded = true;
-  while (!Error) {
-    StringRef Tok = next();
-    if (Tok == ")")
-      break;
-    addFile(Tok);
-  }
+  while (!Error && !skip(")"))
+    addFile(next());
   Config->AsNeeded = Orig;
 }
 
@@ -559,25 +583,18 @@ void ScriptParser::readEntry() {
 
 void ScriptParser::readExtern() {
   expect("(");
-  while (!Error) {
-    StringRef Tok = next();
-    if (Tok == ")")
-      return;
-    Config->Undefined.push_back(Tok);
-  }
+  while (!Error && !skip(")"))
+    Config->Undefined.push_back(next());
 }
 
 void ScriptParser::readGroup() {
   expect("(");
-  while (!Error) {
+  while (!Error && !skip(")")) {
     StringRef Tok = next();
-    if (Tok == ")")
-      return;
-    if (Tok == "AS_NEEDED") {
+    if (Tok == "AS_NEEDED")
       readAsNeeded();
-      continue;
-    }
-    addFile(Tok);
+    else
+      addFile(Tok);
   }
 }
 
@@ -666,16 +683,20 @@ void ScriptParser::readSections() {
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
+    BaseCommand *Cmd;
     if (peek() == "=" || peek() == "+=") {
-      readAssignment(Tok);
+      Cmd = readAssignment(Tok);
       expect(";");
     } else if (Tok == "PROVIDE") {
-      readProvide(false);
+      Cmd = readProvide(false);
     } else if (Tok == "PROVIDE_HIDDEN") {
-      readProvide(true);
+      Cmd = readProvide(true);
+    } else if (Tok == "ASSERT") {
+      Cmd = new AssertCommand(readAssert());
     } else {
-      readOutputSectionDescription(Tok);
+      Cmd = readOutputSectionDescription(Tok);
     }
+    Opt.Commands.emplace_back(Cmd);
   }
 }
 
@@ -695,58 +716,73 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-void ScriptParser::readInputFilePattern(InputSectionDescription *InCmd,
-                                        bool Keep) {
-  while (!Error && !skip(")")) {
-    if (Keep)
-      Opt.KeptSections.push_back(peek());
-    InCmd->SectionPatterns.push_back(next());
-  }
+std::vector<StringRef> ScriptParser::readInputFilePatterns() {
+  std::vector<StringRef> V;
+  while (!Error && !skip(")"))
+    V.push_back(next());
+  return V;
 }
 
-void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd,
-                                         bool Keep) {
-  InCmd->FilePattern = next();
+SortKind ScriptParser::readSortKind() {
+  if (skip("SORT") || skip("SORT_BY_NAME"))
+    return SortByName;
+  if (skip("SORT_BY_ALIGNMENT"))
+    return SortByAlignment;
+  return SortNone;
+}
+
+InputSectionDescription *ScriptParser::readInputSectionRules() {
+  auto *Cmd = new InputSectionDescription;
+  Cmd->FilePattern = next();
   expect("(");
 
+  // Read EXCLUDE_FILE().
   if (skip("EXCLUDE_FILE")) {
     expect("(");
     while (!Error && !skip(")"))
-      InCmd->ExcludedFiles.push_back(next());
+      Cmd->ExcludedFiles.push_back(next());
   }
 
-  if (skip("SORT")) {
+  // Read SORT().
+  if (SortKind K1 = readSortKind()) {
+    Cmd->SortOuter = K1;
     expect("(");
-    InCmd->Sort = true;
-    readInputFilePattern(InCmd, Keep);
+    if (SortKind K2 = readSortKind()) {
+      Cmd->SortInner = K2;
+      expect("(");
+      Cmd->SectionPatterns = readInputFilePatterns();
+      expect(")");
+    } else {
+      Cmd->SectionPatterns = readInputFilePatterns();
+    }
     expect(")");
-    return;
+    return Cmd;
   }
 
-  readInputFilePattern(InCmd, Keep);
+  Cmd->SectionPatterns = readInputFilePatterns();
+  return Cmd;
 }
 
-std::unique_ptr<InputSectionDescription>
-ScriptParser::readInputSectionDescription() {
-  auto InCmd = llvm::make_unique<InputSectionDescription>();
-
+InputSectionDescription *ScriptParser::readInputSectionDescription() {
   // Input section wildcard can be surrounded by KEEP.
   // https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html#Input-Section-Keep
   if (skip("KEEP")) {
     expect("(");
-    readInputSectionRules(InCmd.get(), true);
+    InputSectionDescription *Cmd = readInputSectionRules();
     expect(")");
-  } else {
-    readInputSectionRules(InCmd.get(), false);
+    Opt.KeptSections.insert(Opt.KeptSections.end(),
+                            Cmd->SectionPatterns.begin(),
+                            Cmd->SectionPatterns.end());
+    return Cmd;
   }
-
-  return InCmd;
+  return readInputSectionRules();
 }
 
-void ScriptParser::readAlign(OutputSectionCommand *Cmd) {
+Expr ScriptParser::readAlign() {
   expect("(");
-  Cmd->AlignExpr = readExpr();
+  Expr E = readExpr();
   expect(")");
+  return E;
 }
 
 void ScriptParser::readSort() {
@@ -755,9 +791,23 @@ void ScriptParser::readSort() {
   expect(")");
 }
 
-void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
+Expr ScriptParser::readAssert() {
+  expect("(");
+  Expr E = readExpr();
+  expect(",");
+  StringRef Msg = next();
+  expect(")");
+  return [=](uint64_t Dot) {
+    uint64_t V = E(Dot);
+    if (!V)
+      error(Msg);
+    return V;
+  };
+}
+
+OutputSectionCommand *
+ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
-  Opt.Commands.emplace_back(Cmd);
 
   // Read an address expression.
   // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html#Output-Section-Address
@@ -767,7 +817,7 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect(":");
 
   if (skip("ALIGN"))
-    readAlign(Cmd);
+    Cmd->AlignExpr = readAlign();
 
   // Parse constraints.
   if (skip("ONLY_IF_RO"))
@@ -778,23 +828,18 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   while (!Error && !skip("}")) {
     if (peek().startswith("*") || peek() == "KEEP") {
-      Cmd->Commands.push_back(readInputSectionDescription());
+      Cmd->Commands.emplace_back(readInputSectionDescription());
       continue;
     }
-
-    StringRef Tok = next();
-    if (Tok == "PROVIDE") {
-      readProvide(false);
-    } else if (Tok == "PROVIDE_HIDDEN") {
-      readProvide(true);
-    } else if (Tok == "SORT") {
+    if (skip("SORT")) {
       readSort();
-    } else {
-      setError("unknown command " + Tok);
+      continue;
     }
+    setError("unknown command " + peek());
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
   Cmd->Filler = readOutputSectionFiller();
+  return Cmd;
 }
 
 std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
@@ -802,27 +847,29 @@ std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
   if (!Tok.startswith("="))
     return {};
   next();
+
+  // Read a hexstring of arbitrary length.
   if (Tok.startswith("=0x"))
     return parseHex(Tok.substr(3));
 
-  // This must be a decimal.
-  unsigned int Value;
-  if (Tok.substr(1).getAsInteger(10, Value)) {
-    setError("filler should be a decimal/hexadecimal value");
+  // Read a decimal or octal value as a big-endian 32 bit value.
+  // Why do this? I don't know, but that's what gold does.
+  uint32_t V;
+  if (Tok.substr(1).getAsInteger(0, V)) {
+    setError("invalid filler expression: " + Tok);
     return {};
   }
-  if (Value > 255)
-    setError("only single bytes decimal are supported for the filler now");
-  return {static_cast<unsigned char>(Value)};
+  return { uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V) };
 }
 
-void ScriptParser::readProvide(bool Hidden) {
+SymbolAssignment *ScriptParser::readProvide(bool Hidden) {
   expect("(");
   SymbolAssignment *Cmd = readAssignment(next());
   Cmd->Provide = true;
   Cmd->Hidden = Hidden;
   expect(")");
   expect(";");
+  return Cmd;
 }
 
 static uint64_t getSymbolValue(StringRef S, uint64_t Dot) {
@@ -875,14 +922,46 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E = readExpr();
   if (Op == "+=")
     E = [=](uint64_t Dot) { return getSymbolValue(Name, Dot) + E(Dot); };
-  auto *Cmd = new SymbolAssignment(Name, E);
-  Opt.Commands.emplace_back(Cmd);
-  return Cmd;
+  return new SymbolAssignment(Name, E);
 }
 
 // This is an operator-precedence parser to parse a linker
 // script expression.
 Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
+
+static Expr combine(StringRef Op, Expr L, Expr R) {
+  if (Op == "*")
+    return [=](uint64_t Dot) { return L(Dot) * R(Dot); };
+  if (Op == "/") {
+    return [=](uint64_t Dot) -> uint64_t {
+      uint64_t RHS = R(Dot);
+      if (RHS == 0) {
+        error("division by zero");
+        return 0;
+      }
+      return L(Dot) / RHS;
+    };
+  }
+  if (Op == "+")
+    return [=](uint64_t Dot) { return L(Dot) + R(Dot); };
+  if (Op == "-")
+    return [=](uint64_t Dot) { return L(Dot) - R(Dot); };
+  if (Op == "<")
+    return [=](uint64_t Dot) { return L(Dot) < R(Dot); };
+  if (Op == ">")
+    return [=](uint64_t Dot) { return L(Dot) > R(Dot); };
+  if (Op == ">=")
+    return [=](uint64_t Dot) { return L(Dot) >= R(Dot); };
+  if (Op == "<=")
+    return [=](uint64_t Dot) { return L(Dot) <= R(Dot); };
+  if (Op == "==")
+    return [=](uint64_t Dot) { return L(Dot) == R(Dot); };
+  if (Op == "!=")
+    return [=](uint64_t Dot) { return L(Dot) != R(Dot); };
+  if (Op == "&")
+    return [=](uint64_t Dot) { return L(Dot) & R(Dot); };
+  llvm_unreachable("invalid operator");
+}
 
 // This is a part of the operator-precedence parser. This function
 // assumes that the remaining token stream starts with an operator.
@@ -931,6 +1010,8 @@ Expr ScriptParser::readPrimary() {
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
+  if (Tok == "ASSERT")
+    return readAssert();
   if (Tok == "ALIGN") {
     expect("(");
     Expr E = readExpr();
@@ -1000,40 +1081,6 @@ Expr ScriptParser::readTernary(Expr Cond) {
   expect(":");
   Expr R = readExpr();
   return [=](uint64_t Dot) { return Cond(Dot) ? L(Dot) : R(Dot); };
-}
-
-Expr ScriptParser::combine(StringRef Op, Expr L, Expr R) {
-  if (Op == "*")
-    return [=](uint64_t Dot) { return L(Dot) * R(Dot); };
-  if (Op == "/") {
-    return [=](uint64_t Dot) -> uint64_t {
-      uint64_t RHS = R(Dot);
-      if (RHS == 0) {
-        error("division by zero");
-        return 0;
-      }
-      return L(Dot) / RHS;
-    };
-  }
-  if (Op == "+")
-    return [=](uint64_t Dot) { return L(Dot) + R(Dot); };
-  if (Op == "-")
-    return [=](uint64_t Dot) { return L(Dot) - R(Dot); };
-  if (Op == "<")
-    return [=](uint64_t Dot) { return L(Dot) < R(Dot); };
-  if (Op == ">")
-    return [=](uint64_t Dot) { return L(Dot) > R(Dot); };
-  if (Op == ">=")
-    return [=](uint64_t Dot) { return L(Dot) >= R(Dot); };
-  if (Op == "<=")
-    return [=](uint64_t Dot) { return L(Dot) <= R(Dot); };
-  if (Op == "==")
-    return [=](uint64_t Dot) { return L(Dot) == R(Dot); };
-  if (Op == "!=")
-    return [=](uint64_t Dot) { return L(Dot) != R(Dot); };
-  if (Op == "&")
-    return [=](uint64_t Dot) { return L(Dot) & R(Dot); };
-  llvm_unreachable("invalid operator");
 }
 
 std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {

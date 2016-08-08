@@ -408,10 +408,13 @@ private:
 
     // Search for a previously saved allocation detail object using a target address.
     // If an allocation does not exist for this address then nullptr will be returned.
-    // If 'create' is true and there is no previous allocation then a new allocation
-    // detail object will be created for this address and returned.
     AllocationDetails *
-    LookUpAllocation(lldb::addr_t address, bool create);
+    LookUpAllocation(lldb::addr_t address);
+
+    // Creates a new allocation with the specified address assigning a new ID and removes
+    // any previous stored allocation which has the same address.
+    AllocationDetails *
+    CreateAllocation(lldb::addr_t address);
 
     bool
     GetOverrideExprOptions(clang::TargetOptions &prototype) override;

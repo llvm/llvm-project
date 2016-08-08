@@ -271,7 +271,7 @@ public:
     auto StubTargetAddr =
         static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(StubAddr));
     auto StubSymbol = JITSymbol(StubTargetAddr, I->second.second);
-    if (ExportedStubsOnly && !StubSymbol.isExported())
+    if (ExportedStubsOnly && !StubSymbol.getFlags().isExported())
       return nullptr;
     return StubSymbol;
   }

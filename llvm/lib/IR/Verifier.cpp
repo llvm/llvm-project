@@ -762,7 +762,7 @@ static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
 
 template <class Ty>
-bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
+static bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
   for (Metadata *MD : N.operands()) {
     if (MD) {
       if (!isa<Ty>(MD))
@@ -775,13 +775,11 @@ bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
   return true;
 }
 
-template <class Ty>
-bool isValidMetadataArray(const MDTuple &N) {
+template <class Ty> static bool isValidMetadataArray(const MDTuple &N) {
   return isValidMetadataArrayImpl<Ty>(N, /* AllowNull */ false);
 }
 
-template <class Ty>
-bool isValidMetadataNullArray(const MDTuple &N) {
+template <class Ty> static bool isValidMetadataNullArray(const MDTuple &N) {
   return isValidMetadataArrayImpl<Ty>(N, /* AllowNull */ true);
 }
 
@@ -3681,11 +3679,13 @@ void Verifier::visitInstruction(Instruction &I) {
       Assert(
           !F->isIntrinsic() || isa<CallInst>(I) ||
               F->getIntrinsicID() == Intrinsic::donothing ||
+              F->getIntrinsicID() == Intrinsic::coro_resume ||
+              F->getIntrinsicID() == Intrinsic::coro_destroy ||
               F->getIntrinsicID() == Intrinsic::experimental_patchpoint_void ||
               F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
               F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint,
-          "Cannot invoke an intrinsic other than donothing, patchpoint or "
-          "statepoint",
+          "Cannot invoke an intrinsic other than donothing, patchpoint, "
+          "statepoint, coro_resume or coro_destroy",
           &I);
       Assert(F->getParent() == &M, "Referencing function in another module!",
              &I, &M, F, F->getParent());
@@ -3835,6 +3835,20 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   switch (ID) {
   default:
     break;
+  case Intrinsic::coro_begin: {
+    auto *InfoArg = CS.getArgOperand(3)->stripPointerCasts();
+    if (isa<ConstantPointerNull>(InfoArg))
+      break;
+    auto *GV = dyn_cast<GlobalVariable>(InfoArg);
+    Assert(GV && GV->isConstant() && GV->hasDefinitiveInitializer(),
+      "info argument of llvm.coro.begin must refer to an initialized "
+      "constant");
+    Constant *Init = GV->getInitializer();
+    Assert(isa<ConstantStruct>(Init) || isa<ConstantArray>(Init),
+      "info argument of llvm.coro.begin must refer to either a struct or "
+      "an array");
+    break;
+  }
   case Intrinsic::ctlz:  // llvm.ctlz
   case Intrinsic::cttz:  // llvm.cttz
     Assert(isa<ConstantInt>(CS.getArgOperand(1)),

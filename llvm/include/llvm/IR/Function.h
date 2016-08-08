@@ -191,6 +191,12 @@ public:
                                  AttributeSet::FunctionIndex, Kind, Value));
   }
 
+  /// @brief Remove function attribute from this function.
+  void removeFnAttr(StringRef Kind) {
+    setAttributes(AttributeSets.removeAttribute(
+        getContext(), AttributeSet::FunctionIndex, Kind));
+  }
+
   /// Set the entry count for this function.
   void setEntryCount(uint64_t Count);
 

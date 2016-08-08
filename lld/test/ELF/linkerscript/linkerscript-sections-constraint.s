@@ -9,8 +9,8 @@
 # BASE: Sections:
 # BASE-NEXT: Idx Name          Size      Address          Type
 # BASE-NEXT:   0               00000000 0000000000000000
-# BASE-NEXT:   1 .writable     00000004 0000000000000190 DATA
-# BASE-NEXT:   2 .readable     00000004 0000000000000194 DATA
+# BASE-NEXT:   1 .writable     00000004 0000000000000200 DATA
+# BASE-NEXT:   2 .readable     00000004 0000000000000204 DATA
 
 # RUN: echo "SECTIONS { \
 # RUN:  .writable : ONLY_IF_RO { *(.writable) } \
@@ -21,6 +21,14 @@
 # NOSECTIONS: Sections:
 # NOSECTIONS-NOT: .writable
 # NOSECTIONS-NOT: .readable
+
+# RUN: echo "SECTIONS { \
+# RUN:  .foo : ONLY_IF_RO { *(.foo.*) }}" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -section-headers %t1 | \
+# RUN:   FileCheck -check-prefix=NOSECTIONS2 %s
+# NOSECTIONS2: Sections:
+# NOSECTIONS2-NOT: .foo
 
 .global _start
 _start:
@@ -33,3 +41,9 @@ writable:
 .section .readable, "a"
 readable:
  .long 2
+
+.section .foo.1, "awx"
+ .long 0
+
+.section .foo.2, "aw"
+ .long 0

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin | FileCheck %s
 
 ; TODO: These could use 'andc'.
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple="powerpc64le-unknown-linux-gnu" -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple="powerpc64le-unknown-linux-gnu" -relocation-model=pic < %s | FileCheck %s
 ; CHECK-LABEL: foo_test:
 ; CHECK: mflr 0
 ; CHECK: __tls_get_addr

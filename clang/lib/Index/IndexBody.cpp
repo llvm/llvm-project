@@ -148,7 +148,7 @@ public:
 
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
     for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
-      if (D.isFieldDesignator())
+      if (D.isFieldDesignator() && D.getField())
         return IndexCtx.handleReference(D.getField(), D.getFieldLoc(), Parent,
                                         ParentDC, SymbolRoleSet(), {}, E);
     }

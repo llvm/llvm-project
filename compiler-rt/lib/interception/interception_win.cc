@@ -462,6 +462,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 0;
   }
 
+  switch (0x00FFFFFF & *(u32*)address) {
+    case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
+      return 7;
+  }
+
 #if SANITIZER_WINDOWS64
   switch (*(u8*)address) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
@@ -570,9 +575,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24748B:  // 8B 74 24 XX : mov esi, dword ptr [esp + XX]
     case 0x247C8B:  // 8B 7C 24 XX : mov edi, dword ptr [esp + XX]
       return 4;
-
-    case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
-      return 7;
   }
 
   switch (*(u32*)address) {

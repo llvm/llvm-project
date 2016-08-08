@@ -26,12 +26,13 @@ if(STREAM_EXECUTOR_STANDALONE)
 
     # Find the libraries that correspond to the LLVM components
     # that we wish to use
-    llvm_map_components_to_libnames(llvm_libs support)
+    llvm_map_components_to_libnames(llvm_libs support symbolize)
 
     if(STREAM_EXECUTOR_UNIT_TESTS)
         enable_testing()
         find_package(GTest REQUIRED)
         include_directories(${GTEST_INCLUDE_DIRS})
+        find_package(Threads REQUIRED)
     endif()
 else(NOT STREAM_EXECUTOR_STANDALONE)
     if(STREAM_EXECUTOR_UNIT_TESTS)

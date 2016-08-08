@@ -122,6 +122,37 @@
 # X86FBSD-NEXT:   StringTableSectionIndex:
 # X86FBSD-NEXT: }
 
+# RUN: llvm-mc -filetype=obj -triple=i586-intel-elfiamcu %s -o %tiamcu
+# RUN: ld.lld -m elf_iamcu %tiamcu -o %t2iamcu
+# RUN: llvm-readobj -file-headers %t2iamcu | FileCheck --check-prefix=IAMCU %s
+# RUN: ld.lld %tiamcu -o %t3iamcu
+# RUN: llvm-readobj -file-headers %t3iamcu | FileCheck --check-prefix=IAMCU %s
+# IAMCU:      ElfHeader {
+# IAMCU-NEXT:   Ident {
+# IAMCU-NEXT:     Magic: (7F 45 4C 46)
+# IAMCU-NEXT:     Class: 32-bit (0x1)
+# IAMCU-NEXT:     DataEncoding: LittleEndian (0x1)
+# IAMCU-NEXT:     FileVersion: 1
+# IAMCU-NEXT:     OS/ABI: SystemV (0x0)
+# IAMCU-NEXT:     ABIVersion: 0
+# IAMCU-NEXT:     Unused: (00 00 00 00 00 00 00)
+# IAMCU-NEXT:   }
+# IAMCU-NEXT:   Type: Executable (0x2)
+# IAMCU-NEXT:   Machine: EM_IAMCU (0x6)
+# IAMCU-NEXT:   Version: 1
+# IAMCU-NEXT:   Entry:
+# IAMCU-NEXT:   ProgramHeaderOffset: 0x34
+# IAMCU-NEXT:   SectionHeaderOffset:
+# IAMCU-NEXT:   Flags [ (0x0)
+# IAMCU-NEXT:   ]
+# IAMCU-NEXT:   HeaderSize: 52
+# IAMCU-NEXT:   ProgramHeaderEntrySize: 32
+# IAMCU-NEXT:   ProgramHeaderCount:
+# IAMCU-NEXT:   SectionHeaderEntrySize: 40
+# IAMCU-NEXT:   SectionHeaderCount:
+# IAMCU-NEXT:   StringTableSectionIndex:
+# IAMCU-NEXT: }
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %tppc64
 # RUN: ld.lld -m elf64ppc %tppc64 -o %t2ppc64
 # RUN: llvm-readobj -file-headers %t2ppc64 | FileCheck --check-prefix=PPC64 %s

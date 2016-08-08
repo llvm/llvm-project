@@ -214,6 +214,7 @@ public:
 TargetInfo *createTarget() {
   switch (Config->EMachine) {
   case EM_386:
+  case EM_IAMCU:
     return new X86TargetInfo();
   case EM_AARCH64:
     return new AArch64TargetInfo();

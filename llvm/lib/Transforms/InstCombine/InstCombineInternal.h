@@ -135,28 +135,6 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
   }
 }
 
-/// \brief An IRBuilder inserter that adds new instructions to the instcombine
-/// worklist.
-class LLVM_LIBRARY_VISIBILITY InstCombineIRInserter
-    : public IRBuilderDefaultInserter {
-  InstCombineWorklist &Worklist;
-  AssumptionCache *AC;
-
-public:
-  InstCombineIRInserter(InstCombineWorklist &WL, AssumptionCache *AC)
-      : Worklist(WL), AC(AC) {}
-
-  void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
-                    BasicBlock::iterator InsertPt) const {
-    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
-    Worklist.Add(I);
-
-    using namespace llvm::PatternMatch;
-    if (match(I, m_Intrinsic<Intrinsic::assume>()))
-      AC->registerAssumption(cast<CallInst>(I));
-  }
-};
-
 /// \brief The core instruction combiner logic.
 ///
 /// This class provides both the logic to recursively visit instructions and
@@ -171,7 +149,7 @@ public:
 
   /// \brief An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  typedef IRBuilder<TargetFolder, InstCombineIRInserter> BuilderTy;
+  typedef IRBuilder<TargetFolder, IRBuilderCallbackInserter> BuilderTy;
   BuilderTy *Builder;
 
 private:
@@ -183,10 +161,9 @@ private:
   AliasAnalysis *AA;
 
   // Required analyses.
-  // FIXME: These can never be null and should be references.
-  AssumptionCache *AC;
-  TargetLibraryInfo *TLI;
-  DominatorTree *DT;
+  AssumptionCache &AC;
+  TargetLibraryInfo &TLI;
+  DominatorTree &DT;
   const DataLayout &DL;
 
   // Optional analyses. When non-null, these can both be used to do better
@@ -198,8 +175,8 @@ private:
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy *Builder,
                bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
-               AssumptionCache *AC, TargetLibraryInfo *TLI,
-               DominatorTree *DT, const DataLayout &DL, LoopInfo *LI)
+               AssumptionCache &AC, TargetLibraryInfo &TLI,
+               DominatorTree &DT, const DataLayout &DL, LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
         ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
         DL(DL), LI(LI), MadeIRChange(false) {}
@@ -209,15 +186,15 @@ public:
   /// \returns true if the IR is changed.
   bool run();
 
-  AssumptionCache *getAssumptionCache() const { return AC; }
+  AssumptionCache &getAssumptionCache() const { return AC; }
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  DominatorTree *getDominatorTree() const { return DT; }
+  DominatorTree &getDominatorTree() const { return DT; }
 
   LoopInfo *getLoopInfo() const { return LI; }
 
-  TargetLibraryInfo *getTargetLibraryInfo() const { return TLI; }
+  TargetLibraryInfo &getTargetLibraryInfo() const { return TLI; }
 
   // Visitation implementation - Implement instruction combining for different
   // instruction types.  The semantics are as follows:
@@ -484,30 +461,30 @@ public:
 
   void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
                         unsigned Depth, Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, KnownZero, KnownOne, DL, Depth, AC, CxtI,
-                                  DT);
+    return llvm::computeKnownBits(V, KnownZero, KnownOne, DL, Depth, &AC, CxtI,
+                                  &DT);
   }
 
   bool MaskedValueIsZero(Value *V, const APInt &Mask, unsigned Depth = 0,
                          Instruction *CxtI = nullptr) const {
-    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, AC, CxtI, DT);
+    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
   }
   unsigned ComputeNumSignBits(Value *Op, unsigned Depth = 0,
                               Instruction *CxtI = nullptr) const {
-    return llvm::ComputeNumSignBits(Op, DL, Depth, AC, CxtI, DT);
+    return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
   void ComputeSignBit(Value *V, bool &KnownZero, bool &KnownOne,
                       unsigned Depth = 0, Instruction *CxtI = nullptr) const {
-    return llvm::ComputeSignBit(V, KnownZero, KnownOne, DL, Depth, AC, CxtI,
-                                DT);
+    return llvm::ComputeSignBit(V, KnownZero, KnownOne, DL, Depth, &AC, CxtI,
+                                &DT);
   }
   OverflowResult computeOverflowForUnsignedMul(Value *LHS, Value *RHS,
                                                const Instruction *CxtI) {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, AC, CxtI, DT);
+    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
   }
   OverflowResult computeOverflowForUnsignedAdd(Value *LHS, Value *RHS,
                                                const Instruction *CxtI) {
-    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, AC, CxtI, DT);
+    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
   }
 
 private:

@@ -16,7 +16,7 @@
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
 #include <cinttypes>
 #include <utility>
 
@@ -83,7 +83,7 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MemberPointerInfo> deserialize(ArrayRef<uint8_t> &Data);
+  static Expected<MemberPointerInfo> deserialize(ArrayRef<uint8_t> &Data);
 
   TypeIndex getContainingType() const { return ContainingType; }
   PointerToMemberRepresentation getRepresentation() const {
@@ -114,6 +114,7 @@ private:
 // LF_MODIFIER
 class ModifierRecord : public TypeRecord {
 public:
+  explicit ModifierRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ModifierRecord(TypeIndex ModifiedType, ModifierOptions Modifiers)
       : TypeRecord(TypeRecordKind::Modifier), ModifiedType(ModifiedType),
         Modifiers(Modifiers) {}
@@ -122,8 +123,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ModifierRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+  static Expected<ModifierRecord> deserialize(TypeRecordKind Kind,
+                                              ArrayRef<uint8_t> &Data);
 
   TypeIndex getModifiedType() const { return ModifiedType; }
   ModifierOptions getModifiers() const { return Modifiers; }
@@ -141,6 +142,7 @@ private:
 // LF_PROCEDURE
 class ProcedureRecord : public TypeRecord {
 public:
+  explicit ProcedureRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ProcedureRecord(TypeIndex ReturnType, CallingConvention CallConv,
                   FunctionOptions Options, uint16_t ParameterCount,
                   TypeIndex ArgumentList)
@@ -152,8 +154,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ProcedureRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<ProcedureRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   static uint32_t getLayoutSize() { return 2 + sizeof(Layout); }
 
@@ -182,6 +184,8 @@ private:
 // LF_MFUNCTION
 class MemberFunctionRecord : public TypeRecord {
 public:
+  explicit MemberFunctionRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
   MemberFunctionRecord(TypeIndex ReturnType, TypeIndex ClassType,
                        TypeIndex ThisType, CallingConvention CallConv,
                        FunctionOptions Options, uint16_t ParameterCount,
@@ -196,8 +200,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MemberFunctionRecord> deserialize(TypeRecordKind Kind,
-                                                   ArrayRef<uint8_t> &Data);
+  static Expected<MemberFunctionRecord> deserialize(TypeRecordKind Kind,
+                                                    ArrayRef<uint8_t> &Data);
 
   TypeIndex getReturnType() const { return ReturnType; }
   TypeIndex getClassType() const { return ClassType; }
@@ -233,6 +237,7 @@ private:
 // LF_MFUNC_ID
 class MemberFuncIdRecord : public TypeRecord {
 public:
+  explicit MemberFuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   MemberFuncIdRecord(TypeIndex ClassType, TypeIndex FunctionType,
                          StringRef Name)
       : TypeRecord(TypeRecordKind::MemberFuncId), ClassType(ClassType),
@@ -242,8 +247,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MemberFuncIdRecord> deserialize(TypeRecordKind Kind,
-                                                 ArrayRef<uint8_t> &Data);
+  static Expected<MemberFuncIdRecord> deserialize(TypeRecordKind Kind,
+                                                  ArrayRef<uint8_t> &Data);
   TypeIndex getClassType() const { return ClassType; }
   TypeIndex getFunctionType() const { return FunctionType; }
   StringRef getName() const { return Name; }
@@ -262,6 +267,8 @@ private:
 // LF_ARGLIST, LF_SUBSTR_LIST
 class ArgListRecord : public TypeRecord {
 public:
+  explicit ArgListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
   ArgListRecord(TypeRecordKind Kind, ArrayRef<TypeIndex> Indices)
       : TypeRecord(Kind), StringIndices(Indices) {}
 
@@ -269,8 +276,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ArgListRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+  static Expected<ArgListRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data);
 
   ArrayRef<TypeIndex> getIndices() const { return StringIndices; }
 
@@ -297,6 +304,8 @@ public:
   static const uint32_t PointerSizeShift = 13;
   static const uint32_t PointerSizeMask = 0xFF;
 
+  explicit PointerRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+
   PointerRecord(TypeIndex ReferentType, PointerKind Kind, PointerMode Mode,
                 PointerOptions Options, uint8_t Size)
       : PointerRecord(ReferentType, Kind, Mode, Options, Size,
@@ -313,8 +322,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<PointerRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+  static Expected<PointerRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data);
 
   TypeIndex getReferentType() const { return ReferentType; }
   PointerKind getPointerKind() const { return PtrKind; }
@@ -382,6 +391,7 @@ private:
 // LF_NESTTYPE
 class NestedTypeRecord : public TypeRecord {
 public:
+  explicit NestedTypeRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   NestedTypeRecord(TypeIndex Type, StringRef Name)
       : TypeRecord(TypeRecordKind::NestedType), Type(Type), Name(Name) {}
 
@@ -389,8 +399,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<NestedTypeRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+  static Expected<NestedTypeRecord> deserialize(TypeRecordKind Kind,
+                                                ArrayRef<uint8_t> &Data);
 
   TypeIndex getNestedType() const { return Type; }
   StringRef getName() const { return Name; }
@@ -406,9 +416,30 @@ private:
   StringRef Name;
 };
 
+// LF_FIELDLIST
+class FieldListRecord : public TypeRecord {
+public:
+  explicit FieldListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
+  FieldListRecord(ArrayRef<uint8_t> ListData)
+      : TypeRecord(TypeRecordKind::FieldList), ListData(ListData) {}
+
+  /// Rewrite member type indices with IndexMap. Returns false if a type index
+  /// is not in the map.
+  bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap) { return false; }
+
+  static Expected<FieldListRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
+
+  ArrayRef<uint8_t> getFieldListData() const { return ListData; }
+
+private:
+  ArrayRef<uint8_t> ListData;
+};
+
 // LF_ARRAY
 class ArrayRecord : public TypeRecord {
 public:
+  explicit ArrayRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ArrayRecord(TypeIndex ElementType, TypeIndex IndexType, uint64_t Size,
               StringRef Name)
       : TypeRecord(TypeRecordKind::Array), ElementType(ElementType),
@@ -418,8 +449,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ArrayRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<ArrayRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   TypeIndex getElementType() const { return ElementType; }
   TypeIndex getIndexType() const { return IndexType; }
@@ -442,6 +473,7 @@ private:
 
 class TagRecord : public TypeRecord {
 protected:
+  explicit TagRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   TagRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
             TypeIndex FieldList, StringRef Name, StringRef UniqueName)
       : TypeRecord(Kind), MemberCount(MemberCount), Options(Options),
@@ -474,6 +506,7 @@ private:
 // LF_CLASS, LF_STRUCTURE, LF_INTERFACE
 class ClassRecord : public TagRecord {
 public:
+  explicit ClassRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   ClassRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
               HfaKind Hfa, WindowsRTClassKind WinRTKind, TypeIndex FieldList,
               TypeIndex DerivationList, TypeIndex VTableShape, uint64_t Size,
@@ -486,8 +519,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ClassRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<ClassRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   HfaKind getHfa() const { return Hfa; }
   WindowsRTClassKind getWinRTKind() const { return WinRTKind; }
@@ -520,6 +553,7 @@ private:
 
 // LF_UNION
 struct UnionRecord : public TagRecord {
+  explicit UnionRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   UnionRecord(uint16_t MemberCount, ClassOptions Options, HfaKind Hfa,
               TypeIndex FieldList, uint64_t Size, StringRef Name,
               StringRef UniqueName)
@@ -527,8 +561,8 @@ struct UnionRecord : public TagRecord {
                   UniqueName),
         Hfa(Hfa), Size(Size) {}
 
-  static ErrorOr<UnionRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<UnionRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   HfaKind getHfa() const { return Hfa; }
   uint64_t getSize() const { return Size; }
@@ -554,6 +588,7 @@ private:
 // LF_ENUM
 class EnumRecord : public TagRecord {
 public:
+  explicit EnumRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   EnumRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
              StringRef Name, StringRef UniqueName, TypeIndex UnderlyingType)
       : TagRecord(TypeRecordKind::Enum, MemberCount, Options, FieldList, Name,
@@ -563,8 +598,8 @@ public:
   /// Rewrite member type indices with IndexMap. Returns false if a type index is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<EnumRecord> deserialize(TypeRecordKind Kind,
-                                         ArrayRef<uint8_t> &Data);
+  static Expected<EnumRecord> deserialize(TypeRecordKind Kind,
+                                          ArrayRef<uint8_t> &Data);
 
   TypeIndex getUnderlyingType() const { return UnderlyingType; }
 
@@ -587,6 +622,7 @@ private:
 // LF_BITFIELD
 class BitFieldRecord : public TypeRecord {
 public:
+  explicit BitFieldRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BitFieldRecord(TypeIndex Type, uint8_t BitSize, uint8_t BitOffset)
       : TypeRecord(TypeRecordKind::BitField), Type(Type), BitSize(BitSize),
         BitOffset(BitOffset) {}
@@ -595,8 +631,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<BitFieldRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+  static Expected<BitFieldRecord> deserialize(TypeRecordKind Kind,
+                                              ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
   uint8_t getBitOffset() const { return BitOffset; }
@@ -617,6 +653,7 @@ private:
 // LF_VTSHAPE
 class VFTableShapeRecord : public TypeRecord {
 public:
+  explicit VFTableShapeRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   explicit VFTableShapeRecord(ArrayRef<VFTableSlotKind> Slots)
       : TypeRecord(TypeRecordKind::VFTableShape), SlotsRef(Slots) {}
   explicit VFTableShapeRecord(std::vector<VFTableSlotKind> Slots)
@@ -626,8 +663,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VFTableShapeRecord> deserialize(TypeRecordKind Kind,
-                                                 ArrayRef<uint8_t> &Data);
+  static Expected<VFTableShapeRecord> deserialize(TypeRecordKind Kind,
+                                                  ArrayRef<uint8_t> &Data);
 
   ArrayRef<VFTableSlotKind> getSlots() const {
     if (!SlotsRef.empty())
@@ -653,6 +690,7 @@ private:
 // LF_TYPESERVER2
 class TypeServer2Record : public TypeRecord {
 public:
+  explicit TypeServer2Record(TypeRecordKind Kind) : TypeRecord(Kind) {}
   TypeServer2Record(StringRef Guid, uint32_t Age, StringRef Name)
       : TypeRecord(TypeRecordKind::TypeServer2), Guid(Guid), Age(Age),
         Name(Name) {}
@@ -661,8 +699,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<TypeServer2Record> deserialize(TypeRecordKind Kind,
-                                                ArrayRef<uint8_t> &Data);
+  static Expected<TypeServer2Record> deserialize(TypeRecordKind Kind,
+                                                 ArrayRef<uint8_t> &Data);
 
   StringRef getGuid() const { return Guid; }
 
@@ -685,6 +723,7 @@ private:
 // LF_STRING_ID
 class StringIdRecord : public TypeRecord {
 public:
+  explicit StringIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   StringIdRecord(TypeIndex Id, StringRef String)
       : TypeRecord(TypeRecordKind::StringId), Id(Id), String(String) {}
 
@@ -692,8 +731,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<StringIdRecord> deserialize(TypeRecordKind Kind,
-                                             ArrayRef<uint8_t> &Data);
+  static Expected<StringIdRecord> deserialize(TypeRecordKind Kind,
+                                              ArrayRef<uint8_t> &Data);
 
   TypeIndex getId() const { return Id; }
 
@@ -712,6 +751,7 @@ private:
 // LF_FUNC_ID
 class FuncIdRecord : public TypeRecord {
 public:
+  explicit FuncIdRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   FuncIdRecord(TypeIndex ParentScope, TypeIndex FunctionType, StringRef Name)
       : TypeRecord(TypeRecordKind::FuncId), ParentScope(ParentScope),
         FunctionType(FunctionType), Name(Name) {}
@@ -720,8 +760,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<FuncIdRecord> deserialize(TypeRecordKind Kind,
-                                           ArrayRef<uint8_t> &Data);
+  static Expected<FuncIdRecord> deserialize(TypeRecordKind Kind,
+                                            ArrayRef<uint8_t> &Data);
 
   TypeIndex getParentScope() const { return ParentScope; }
 
@@ -744,6 +784,7 @@ private:
 // LF_UDT_SRC_LINE
 class UdtSourceLineRecord : public TypeRecord {
 public:
+  explicit UdtSourceLineRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   UdtSourceLineRecord(TypeIndex UDT, TypeIndex SourceFile, uint32_t LineNumber)
       : TypeRecord(TypeRecordKind::UdtSourceLine), UDT(UDT),
         SourceFile(SourceFile), LineNumber(LineNumber) {}
@@ -752,8 +793,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<UdtSourceLineRecord> deserialize(TypeRecordKind Kind,
-                                                  ArrayRef<uint8_t> &Data);
+  static Expected<UdtSourceLineRecord> deserialize(TypeRecordKind Kind,
+                                                   ArrayRef<uint8_t> &Data);
 
   TypeIndex getUDT() const { return UDT; }
   TypeIndex getSourceFile() const { return SourceFile; }
@@ -774,6 +815,7 @@ private:
 // LF_UDT_MOD_SRC_LINE
 class UdtModSourceLineRecord : public TypeRecord {
 public:
+  explicit UdtModSourceLineRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   UdtModSourceLineRecord(TypeIndex UDT, TypeIndex SourceFile,
                          uint32_t LineNumber, uint16_t Module)
       : TypeRecord(TypeRecordKind::UdtSourceLine), UDT(UDT),
@@ -781,8 +823,8 @@ public:
 
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<UdtModSourceLineRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data) {
+  static Expected<UdtModSourceLineRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
     CV_DESERIALIZE(Data, L);
 
@@ -812,6 +854,7 @@ private:
 // LF_BUILDINFO
 class BuildInfoRecord : public TypeRecord {
 public:
+  explicit BuildInfoRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BuildInfoRecord(ArrayRef<TypeIndex> ArgIndices)
       : TypeRecord(TypeRecordKind::BuildInfo),
         ArgIndices(ArgIndices.begin(), ArgIndices.end()) {}
@@ -820,8 +863,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<BuildInfoRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<BuildInfoRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
 
@@ -836,6 +879,7 @@ private:
 // LF_VFTABLE
 class VFTableRecord : public TypeRecord {
 public:
+  explicit VFTableRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   VFTableRecord(TypeIndex CompleteClass, TypeIndex OverriddenVFTable,
                 uint32_t VFPtrOffset, StringRef Name,
                 ArrayRef<StringRef> Methods)
@@ -853,8 +897,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VFTableRecord> deserialize(TypeRecordKind Kind,
-                                            ArrayRef<uint8_t> &Data);
+  static Expected<VFTableRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data);
 
   TypeIndex getCompleteClass() const { return CompleteClass; }
   TypeIndex getOverriddenVTable() const { return OverriddenVFTable; }
@@ -887,6 +931,7 @@ private:
 // LF_ONEMETHOD
 class OneMethodRecord : public TypeRecord {
 public:
+  explicit OneMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   OneMethodRecord(TypeIndex Type, MethodKind Kind, MethodOptions Options,
                   MemberAccess Access, int32_t VFTableOffset, StringRef Name)
       : TypeRecord(TypeRecordKind::OneMethod), Type(Type), Kind(Kind),
@@ -897,8 +942,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<OneMethodRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<OneMethodRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
   MethodKind getKind() const { return Kind; }
@@ -932,6 +977,7 @@ private:
 // LF_METHODLIST
 class MethodOverloadListRecord : public TypeRecord {
 public:
+  explicit MethodOverloadListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   MethodOverloadListRecord(ArrayRef<OneMethodRecord> Methods)
       : TypeRecord(TypeRecordKind::MethodOverloadList), Methods(Methods) {}
 
@@ -939,8 +985,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<MethodOverloadListRecord> deserialize(TypeRecordKind Kind,
-                                                       ArrayRef<uint8_t> &Data);
+  static Expected<MethodOverloadListRecord>
+  deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data);
 
   ArrayRef<OneMethodRecord> getMethods() const { return Methods; }
 
@@ -960,6 +1006,7 @@ private:
 /// For method overload sets.  LF_METHOD
 class OverloadedMethodRecord : public TypeRecord {
 public:
+  explicit OverloadedMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   OverloadedMethodRecord(uint16_t NumOverloads, TypeIndex MethodList,
                          StringRef Name)
       : TypeRecord(TypeRecordKind::OverloadedMethod),
@@ -969,8 +1016,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<OverloadedMethodRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<OverloadedMethodRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
   uint16_t getNumOverloads() const { return NumOverloads; }
   TypeIndex getMethodList() const { return MethodList; }
@@ -991,6 +1038,7 @@ private:
 // LF_MEMBER
 class DataMemberRecord : public TypeRecord {
 public:
+  explicit DataMemberRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   DataMemberRecord(MemberAccess Access, TypeIndex Type, uint64_t Offset,
                    StringRef Name)
       : TypeRecord(TypeRecordKind::DataMember), Access(Access), Type(Type),
@@ -1000,8 +1048,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<DataMemberRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+  static Expected<DataMemberRecord> deserialize(TypeRecordKind Kind,
+                                                ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
@@ -1025,6 +1073,7 @@ private:
 // LF_STMEMBER
 class StaticDataMemberRecord : public TypeRecord {
 public:
+  explicit StaticDataMemberRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   StaticDataMemberRecord(MemberAccess Access, TypeIndex Type, StringRef Name)
       : TypeRecord(TypeRecordKind::StaticDataMember), Access(Access),
         Type(Type), Name(Name) {}
@@ -1033,8 +1082,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<StaticDataMemberRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<StaticDataMemberRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
@@ -1055,6 +1104,7 @@ private:
 // LF_ENUMERATE
 class EnumeratorRecord : public TypeRecord {
 public:
+  explicit EnumeratorRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   EnumeratorRecord(MemberAccess Access, APSInt Value, StringRef Name)
       : TypeRecord(TypeRecordKind::Enumerator), Access(Access),
         Value(std::move(Value)), Name(Name) {}
@@ -1063,8 +1113,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<EnumeratorRecord> deserialize(TypeRecordKind Kind,
-                                               ArrayRef<uint8_t> &Data);
+  static Expected<EnumeratorRecord> deserialize(TypeRecordKind Kind,
+                                                ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   APSInt getValue() const { return Value; }
@@ -1085,6 +1135,7 @@ private:
 // LF_VFUNCTAB
 class VFPtrRecord : public TypeRecord {
 public:
+  explicit VFPtrRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   VFPtrRecord(TypeIndex Type)
       : TypeRecord(TypeRecordKind::VFPtr), Type(Type) {}
 
@@ -1092,8 +1143,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VFPtrRecord> deserialize(TypeRecordKind Kind,
-                                          ArrayRef<uint8_t> &Data);
+  static Expected<VFPtrRecord> deserialize(TypeRecordKind Kind,
+                                           ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
 
@@ -1108,6 +1159,7 @@ private:
 // LF_BCLASS, LF_BINTERFACE
 class BaseClassRecord : public TypeRecord {
 public:
+  explicit BaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   BaseClassRecord(MemberAccess Access, TypeIndex Type, uint64_t Offset)
       : TypeRecord(TypeRecordKind::BaseClass), Access(Access), Type(Type),
         Offset(Offset) {}
@@ -1116,8 +1168,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<BaseClassRecord> deserialize(TypeRecordKind Kind,
-                                              ArrayRef<uint8_t> &Data);
+  static Expected<BaseClassRecord> deserialize(TypeRecordKind Kind,
+                                               ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return Type; }
@@ -1137,6 +1189,7 @@ private:
 // LF_VBCLASS, LF_IVBCLASS
 class VirtualBaseClassRecord : public TypeRecord {
 public:
+  explicit VirtualBaseClassRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   VirtualBaseClassRecord(MemberAccess Access, TypeIndex BaseType,
                          TypeIndex VBPtrType, uint64_t Offset, uint64_t Index)
       : TypeRecord(TypeRecordKind::VirtualBaseClass), Access(Access),
@@ -1147,8 +1200,8 @@ public:
   /// is not in the map.
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<VirtualBaseClassRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<VirtualBaseClassRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return BaseType; }
@@ -1175,6 +1228,7 @@ private:
 /// together. The first will end in an LF_INDEX record that points to the next.
 class ListContinuationRecord : public TypeRecord {
 public:
+  explicit ListContinuationRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   ListContinuationRecord(TypeIndex ContinuationIndex)
       : TypeRecord(TypeRecordKind::ListContinuation),
         ContinuationIndex(ContinuationIndex) {}
@@ -1183,8 +1237,8 @@ public:
 
   bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
 
-  static ErrorOr<ListContinuationRecord> deserialize(TypeRecordKind Kind,
-                                                     ArrayRef<uint8_t> &Data);
+  static Expected<ListContinuationRecord> deserialize(TypeRecordKind Kind,
+                                                      ArrayRef<uint8_t> &Data);
 
 private:
   struct Layout {

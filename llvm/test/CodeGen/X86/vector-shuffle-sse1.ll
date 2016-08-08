@@ -253,7 +253,7 @@ define <4 x float> @shuffle_mem_v4f32_3210(<4 x float>* %ptr) {
 define <4 x float> @shuffle_mem_v4f32_0145(<4 x float> %a, <4 x float>* %pb) {
 ; SSE1-LABEL: shuffle_mem_v4f32_0145:
 ; SSE1:       # BB#0:
-; SSE1-NEXT:    movhps (%rdi), %xmm0
+; SSE1-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE1-NEXT:    retq
   %b = load <4 x float>, <4 x float>* %pb, align 16
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -262,7 +262,7 @@ define <4 x float> @shuffle_mem_v4f32_0145(<4 x float> %a, <4 x float>* %pb) {
 define <4 x float> @shuffle_mem_v4f32_6723(<4 x float> %a, <4 x float>* %pb) {
 ; SSE1-LABEL: shuffle_mem_v4f32_6723:
 ; SSE1:       # BB#0:
-; SSE1-NEXT:    movlps 8(%rdi), %xmm0
+; SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE1-NEXT:    retq
   %b = load <4 x float>, <4 x float>* %pb, align 16
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 6, i32 7, i32 2, i32 3>

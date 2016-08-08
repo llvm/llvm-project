@@ -6246,7 +6246,7 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
   return nullptr;
 }
 
-static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
+static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
                                       Decl *Ctx, const NamedDecl *D,
                                       StringRef Message, SourceLocation Loc,
                                       const ObjCInterfaceDecl *UnknownObjCClass,
@@ -6264,7 +6264,7 @@ static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
 
   // Don't warn if our current context is deprecated or unavailable.
   switch (K) {
-  case Sema::AD_Deprecation:
+  case AR_Deprecated:
     if (isDeclDeprecated(Ctx) || isDeclUnavailable(Ctx))
       return;
     diag = !ObjCPropertyAccess ? diag::warn_deprecated
@@ -6275,7 +6275,7 @@ static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
     available_here_select_kind = /* deprecated */ 2;
     break;
 
-  case Sema::AD_Unavailable:
+  case AR_Unavailable:
     if (isDeclUnavailable(Ctx))
       return;
     diag = !ObjCPropertyAccess ? diag::err_unavailable
@@ -6329,18 +6329,21 @@ static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
     }
     break;
 
-  case Sema::AD_Partial:
+  case AR_NotYetIntroduced:
     diag = diag::warn_partial_availability;
     diag_message = diag::warn_partial_message;
     diag_fwdclass_message = diag::warn_partial_fwdclass_message;
     property_note_select = /* partial */ 2;
     available_here_select_kind = /* partial */ 3;
     break;
+
+  case AR_Available:
+    llvm_unreachable("Warning for availability of available declaration?");
   }
 
   CharSourceRange UseRange;
   StringRef Replacement;
-  if (K == Sema::AD_Deprecation) {
+  if (K == AR_Deprecated) {
     if (auto attr = D->getAttr<DeprecatedAttr>())
       Replacement = attr->getReplacement();
     if (auto attr = getAttrForPlatform(S.Context, D))
@@ -6393,7 +6396,7 @@ static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
     S.Diag(D->getLocation(), diag_available_here)
         << D << available_here_select_kind;
 
-  if (K == Sema::AD_Partial)
+  if (K == AR_NotYetIntroduced)
     S.Diag(Loc, diag::note_partial_availability_silence) << D;
 }
 
@@ -6401,12 +6404,12 @@ static void handleDelayedAvailabilityCheck(Sema &S, DelayedDiagnostic &DD,
                                            Decl *Ctx) {
   assert(DD.Kind == DelayedDiagnostic::Deprecation ||
          DD.Kind == DelayedDiagnostic::Unavailable);
-  Sema::AvailabilityDiagnostic AD = DD.Kind == DelayedDiagnostic::Deprecation
-                                        ? Sema::AD_Deprecation
-                                        : Sema::AD_Unavailable;
+  AvailabilityResult AR = DD.Kind == DelayedDiagnostic::Deprecation
+                              ? AR_Deprecated
+                              : AR_Unavailable;
   DD.Triggered = true;
   DoEmitAvailabilityWarning(
-      S, AD, Ctx, DD.getDeprecationDecl(), DD.getDeprecationMessage(), DD.Loc,
+      S, AR, Ctx, DD.getDeprecationDecl(), DD.getDeprecationMessage(), DD.Loc,
       DD.getUnknownObjCClass(), DD.getObjCProperty(), false);
 }
 
@@ -6466,22 +6469,23 @@ void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
   curPool->steal(pool);
 }
 
-void Sema::EmitAvailabilityWarning(AvailabilityDiagnostic AD,
+void Sema::EmitAvailabilityWarning(AvailabilityResult AR,
                                    NamedDecl *D, StringRef Message,
                                    SourceLocation Loc,
                                    const ObjCInterfaceDecl *UnknownObjCClass,
                                    const ObjCPropertyDecl  *ObjCProperty,
                                    bool ObjCPropertyAccess) {
   // Delay if we're currently parsing a declaration.
-  if (DelayedDiagnostics.shouldDelayDiagnostics() && AD != AD_Partial) {
+  if (DelayedDiagnostics.shouldDelayDiagnostics() &&
+      AR != AR_NotYetIntroduced) {
     DelayedDiagnostics.add(DelayedDiagnostic::makeAvailability(
-        AD, Loc, D, UnknownObjCClass, ObjCProperty, Message,
+        AR, Loc, D, UnknownObjCClass, ObjCProperty, Message,
         ObjCPropertyAccess));
     return;
   }
 
   Decl *Ctx = cast<Decl>(getCurLexicalContext());
-  DoEmitAvailabilityWarning(*this, AD, Ctx, D, Message, Loc, UnknownObjCClass,
+  DoEmitAvailabilityWarning(*this, AR, Ctx, D, Message, Loc, UnknownObjCClass,
                             ObjCProperty, ObjCPropertyAccess);
 }
 

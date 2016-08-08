@@ -13,8 +13,6 @@
 #include "ClangTidyModule.h"
 #include "llvm/Support/Registry.h"
 
-extern template class llvm::Registry<clang::tidy::ClangTidyModule>;
-
 namespace clang {
 namespace tidy {
 

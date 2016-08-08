@@ -1,4 +1,4 @@
-; RUN: llc -mtriple powerpc64-unknown-linux-gnu -fast-isel -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-unknown-linux-gnu -fast-isel -O0 < %s | FileCheck %s
 
 ; The second fctiwz would use an incorrect input register due to wrong handling
 ; of COPY_TO_REGCLASS in the FastISel pass.  Verify that this is fixed.

@@ -1,4 +1,4 @@
-; RUN: llc  -mtriple=powerpc-unknown-linux-gnu -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs  -mtriple=powerpc-unknown-linux-gnu -O0 < %s | FileCheck %s
 
 @ld = common global ppc_fp128 0xM00000000000000000000000000000000, align 16
 @ld2 = common global ppc_fp128 0xM00000000000000000000000000000000, align 16

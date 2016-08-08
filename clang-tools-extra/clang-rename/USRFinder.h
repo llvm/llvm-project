@@ -49,7 +49,7 @@ std::string getUSRForDecl(const Decl *Decl);
 class NestedNameSpecifierLocFinder : public MatchFinder::MatchCallback {
 public:
   explicit NestedNameSpecifierLocFinder(ASTContext &Context)
-    : Context(Context) {}
+      : Context(Context) {}
 
   std::vector<NestedNameSpecifierLoc> getNestedNameSpecifierLocations() {
     addMatchers();
@@ -65,8 +65,8 @@ private:
   }
 
   virtual void run(const MatchFinder::MatchResult &Result) {
-    const auto *NNS =
-        Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("nestedNameSpecifierLoc");
+    const auto *NNS = Result.Nodes.getNodeAs<NestedNameSpecifierLoc>(
+        "nestedNameSpecifierLoc");
     Locations.push_back(*NNS);
   }
 
@@ -74,7 +74,6 @@ private:
   std::vector<NestedNameSpecifierLoc> Locations;
   MatchFinder Finder;
 };
-
 }
 }
 

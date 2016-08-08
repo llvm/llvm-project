@@ -1583,6 +1583,7 @@ int HexagonDAGToDAGISel::getHeight(SDNode *N) {
   return RootHeights[N];
 }
 
+namespace {
 struct WeightedLeaf {
   SDValue Value;
   int Weight;
@@ -1673,6 +1674,7 @@ public:
   LeafPrioQueue(unsigned Opcode) :
     HaveConst(false), Opcode(Opcode) { }
 };
+} // end anonymous namespace
 
 WeightedLeaf LeafPrioQueue::findSHL(uint64_t MaxAmount) {
   int ResultPos;

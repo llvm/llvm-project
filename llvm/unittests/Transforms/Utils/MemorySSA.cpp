@@ -134,9 +134,8 @@ TEST_F(MemorySSATest, MoveAStore) {
   SideStore->moveBefore(Entry->getTerminator());
   MemoryAccess *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
   MemoryAccess *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
-  MemoryAccess *NewStoreAccess = MSSA.createMemoryAccessAfter(SideStore,
-                                                         EntryStoreAccess,
-                                                         EntryStoreAccess);
+  MemoryAccess *NewStoreAccess = MSSA.createMemoryAccessAfter(
+      SideStore, EntryStoreAccess, EntryStoreAccess);
   EntryStoreAccess->replaceAllUsesWith(NewStoreAccess);
   MSSA.removeMemoryAccess(SideStoreAccess);
   MSSA.verifyMemorySSA();
@@ -343,4 +342,111 @@ TEST_F(MemorySSATest, TestStoreDoubleQuery) {
   LiveOnEntry = Walker->getClobberingMemoryAccess(SI);
   EXPECT_EQ(Clobber, StoreAccess);
   EXPECT_TRUE(MSSA.isLiveOnEntryDef(LiveOnEntry));
+}
+
+// Bug: During phi optimization, the walker wouldn't cache to the proper result
+// in the farthest-walked BB.
+//
+// Specifically, it would assume that whatever we walked to was a clobber.
+// "Whatever we walked to" isn't a clobber if we hit a cache entry.
+//
+// ...So, we need a test case that looks like:
+//    A
+//   / \
+//  B   |
+//   \ /
+//    C
+//
+// Where, when we try to optimize a thing in 'C', a blocker is found in 'B'.
+// The walk must determine that the blocker exists by using cache entries *while
+// walking* 'B'.
+TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "A", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  Constant *One = ConstantInt::get(Int8, 1);
+  Constant *Zero = ConstantInt::get(Int8, 0);
+  Value *AllocA = B.CreateAlloca(Int8, One, "a");
+  Value *AllocB = B.CreateAlloca(Int8, One, "b");
+  BasicBlock *IfThen = BasicBlock::Create(C, "B", F);
+  BasicBlock *IfEnd = BasicBlock::Create(C, "C", F);
+
+  B.CreateCondBr(UndefValue::get(Type::getInt1Ty(C)), IfThen, IfEnd);
+
+  B.SetInsertPoint(IfThen);
+  Instruction *FirstStore = B.CreateStore(Zero, AllocA);
+  B.CreateStore(Zero, AllocB);
+  Instruction *ALoad0 = B.CreateLoad(AllocA, "");
+  Instruction *BStore = B.CreateStore(Zero, AllocB);
+  // Due to use optimization/etc. we make a store to A, which is removed after
+  // we build MSSA. This helps keep the test case simple-ish.
+  Instruction *KillStore = B.CreateStore(Zero, AllocA);
+  Instruction *ALoad = B.CreateLoad(AllocA, "");
+  B.CreateBr(IfEnd);
+
+  B.SetInsertPoint(IfEnd);
+  Instruction *BelowPhi = B.CreateStore(Zero, AllocA);
+
+  setupAnalyses();
+  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  // Kill `KillStore`; it exists solely so that the load after it won't be
+  // optimized to FirstStore.
+  MSSA.removeMemoryAccess(MSSA.getMemoryAccess(KillStore));
+  KillStore->eraseFromParent();
+  auto *ALoadMA = cast<MemoryUse>(MSSA.getMemoryAccess(ALoad));
+  EXPECT_EQ(ALoadMA->getDefiningAccess(), MSSA.getMemoryAccess(BStore));
+
+  // Populate the cache for the store to AllocB directly after FirstStore. It
+  // should point to something in block B (so something in D can't be optimized
+  // to it).
+  MemoryAccess *Load0Clobber = Walker->getClobberingMemoryAccess(ALoad0);
+  EXPECT_EQ(MSSA.getMemoryAccess(FirstStore), Load0Clobber);
+
+  // If the bug exists, this will introduce a bad cache entry for %a on BStore.
+  // It will point to the store to %b after FirstStore. This only happens during
+  // phi optimization.
+  MemoryAccess *BottomClobber = Walker->getClobberingMemoryAccess(BelowPhi);
+  MemoryAccess *Phi = MSSA.getMemoryAccess(IfEnd);
+  EXPECT_EQ(BottomClobber, Phi);
+
+  // This query will first check the cache for {%a, BStore}. It should point to
+  // FirstStore, not to the store after FirstStore.
+  MemoryAccess *UseClobber = Walker->getClobberingMemoryAccess(ALoad);
+  EXPECT_EQ(UseClobber, MSSA.getMemoryAccess(FirstStore));
+}
+
+// Test that our walker properly handles loads with the invariant group
+// attribute. It's a bit hacky, since we add the invariant attribute *after*
+// building MSSA. Otherwise, the use optimizer will optimize it for us, which
+// isn't what we want.
+// FIXME: It may be easier/cleaner to just add an 'optimize uses?' flag to MSSA.
+TEST_F(MemorySSATest, WalkerInvariantLoadOpt) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+  Type *Int8 = Type::getInt8Ty(C);
+  Constant *One = ConstantInt::get(Int8, 1);
+  Value *AllocA = B.CreateAlloca(Int8, One, "");
+
+  Instruction *Store = B.CreateStore(One, AllocA);
+  Instruction *Load = B.CreateLoad(AllocA);
+
+  setupAnalyses();
+  MemorySSA &MSSA = Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  auto *LoadMA = cast<MemoryUse>(MSSA.getMemoryAccess(Load));
+  auto *StoreMA = cast<MemoryDef>(MSSA.getMemoryAccess(Store));
+  EXPECT_EQ(LoadMA->getDefiningAccess(), StoreMA);
+
+  // ...At the time of writing, no cache should exist for LoadMA. Be a bit
+  // flexible to future changes.
+  Walker->invalidateInfo(LoadMA);
+  Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(C, {}));
+
+  MemoryAccess *LoadClobber = Walker->getClobberingMemoryAccess(LoadMA);
+  EXPECT_EQ(LoadClobber, MSSA.getLiveOnEntryDef());
 }

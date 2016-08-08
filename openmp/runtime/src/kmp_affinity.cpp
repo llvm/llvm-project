@@ -1429,7 +1429,7 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
             threadLevel = level;
             coreLevel = -1;
             pkgLevel = -1;
-            __kmp_nThreadsPerCore = buf.ebx & 0xff;
+            __kmp_nThreadsPerCore = buf.ebx & 0xffff;
             if (__kmp_nThreadsPerCore == 0) {
                 *msg_id = kmp_i18n_str_InvalidCpuidInfo;
                 return -1;
@@ -1441,7 +1441,7 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
             //
             coreLevel = level;
             pkgLevel = -1;
-            nCoresPerPkg = buf.ebx & 0xff;
+            nCoresPerPkg = buf.ebx & 0xffff;
             if (nCoresPerPkg == 0) {
                 *msg_id = kmp_i18n_str_InvalidCpuidInfo;
                 return -1;
@@ -1456,7 +1456,7 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
                 continue;
             }
             pkgLevel = level;
-            nPackages = buf.ebx & 0xff;
+            nPackages = buf.ebx & 0xffff;
             if (nPackages == 0) {
                 *msg_id = kmp_i18n_str_InvalidCpuidInfo;
                 return -1;

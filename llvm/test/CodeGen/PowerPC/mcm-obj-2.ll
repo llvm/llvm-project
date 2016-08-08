@@ -1,4 +1,4 @@
-; RUN: llc -O1 -mcpu=pwr7 -code-model=medium -filetype=obj %s -o - | \
+; RUN: llc -verify-machineinstrs -O1 -mcpu=pwr7 -code-model=medium -filetype=obj %s -o - | \
 ; RUN: llvm-readobj -r | FileCheck %s
 
 ; FIXME: When asm-parse is available, could make this an assembly test.

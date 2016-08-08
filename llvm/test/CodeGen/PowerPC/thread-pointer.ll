@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-32
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-64
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-64
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-64
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s --check-prefix=CHECK-64
 
 ; Function Attrs: nounwind readnone
 declare i8* @llvm.thread.pointer() #1

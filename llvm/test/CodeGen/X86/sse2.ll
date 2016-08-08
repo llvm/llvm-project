@@ -182,10 +182,10 @@ define void @test12() nounwind {
 ; CHECK-NEXT:    movapd 0, %xmm0
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; CHECK-NEXT:    xorpd %xmm2, %xmm2
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
-; CHECK-NEXT:    addps %xmm1, %xmm0
-; CHECK-NEXT:    movaps %xmm0, 0
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
+; CHECK-NEXT:    addps %xmm1, %xmm2
+; CHECK-NEXT:    movaps %xmm2, 0
 ; CHECK-NEXT:    retl
   %tmp1 = load <4 x float>, <4 x float>* null          ; <<4 x float>> [#uses=2]
   %tmp2 = shufflevector <4 x float> %tmp1, <4 x float> < float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00 >, <4 x i32> < i32 0, i32 1, i32 6, i32 7 >             ; <<4 x float>> [#uses=1]

@@ -154,7 +154,7 @@ define <2 x double> @shuffle_v2f64_10(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @shuffle_v2f64_11(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: shuffle_v2f64_11:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v2f64_11:

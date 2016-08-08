@@ -105,12 +105,9 @@ define i1 @test9(i8 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold the same way.
-
 define <2 x i1> @test9vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> %a, <i8 123, i8 123>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[B]], <i8 34, i8 34>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> %a, <i8 89, i8 89>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = xor <2 x i8> %a, <i8 123, i8 123>
@@ -150,12 +147,9 @@ define i1 @test12(i8 %A) {
   ret i1 %c
 }
 
-; FIXME: Vectors should fold the same way.
-
 define <2 x i1> @test12vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test12vec(
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> %a, <i8 4, i8 4>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[B]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> %a, <i8 4, i8 4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = xor <2 x i8> %a, <i8 4, i8 4>

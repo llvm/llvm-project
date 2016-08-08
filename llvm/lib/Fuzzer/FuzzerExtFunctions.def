@@ -29,7 +29,8 @@ EXT_FUNC(LLVMFuzzerCustomCrossOver, size_t,
 EXT_FUNC(__lsan_enable, void, (), false);
 EXT_FUNC(__lsan_disable, void, (), false);
 EXT_FUNC(__lsan_do_recoverable_leak_check, int, (), false);
-EXT_FUNC(__sanitizer_get_coverage_pc_buffer, uintptr_t, (uintptr_t**), true);
+EXT_FUNC(__sanitizer_set_coverage_pc_buffer, void, (uintptr_t*, uintptr_t), false);
+EXT_FUNC(__sanitizer_get_coverage_pc_buffer_pos, uintptr_t, (), false);
 EXT_FUNC(__sanitizer_get_number_of_counters, size_t, (), false);
 EXT_FUNC(__sanitizer_install_malloc_and_free_hooks, int,
          (void (*malloc_hook)(const volatile void *, size_t),

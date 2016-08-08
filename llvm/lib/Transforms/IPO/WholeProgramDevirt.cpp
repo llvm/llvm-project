@@ -35,6 +35,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -610,6 +611,16 @@ bool DevirtModule::tryVirtualConstProp(
   return true;
 }
 
+static void emitTargetsRemarks(const std::vector<VirtualCallTarget> &TargetsForSlot) {
+  for (const VirtualCallTarget &Target : TargetsForSlot) {
+    Function *F = Target.Fn;
+    DISubprogram *SP = F->getSubprogram();
+    DebugLoc DL = SP ? DebugLoc::get(SP->getScopeLine(), 0, SP) : DebugLoc();
+    emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, DL,
+                           std::string("devirtualized ") + F->getName().str());
+  }
+}
+
 void DevirtModule::rebuildGlobal(VTableBits &B) {
   if (B.Before.Bytes.empty() && B.After.Bytes.empty())
     return;
@@ -815,10 +826,15 @@ bool DevirtModule::run() {
                                    S.first.ByteOffset))
       continue;
 
-    if (trySingleImplDevirt(TargetsForSlot, S.second))
+    if (trySingleImplDevirt(TargetsForSlot, S.second)) {
+      emitTargetsRemarks(TargetsForSlot);
       continue;
+    }
 
-    DidVirtualConstProp |= tryVirtualConstProp(TargetsForSlot, S.second);
+    if (tryVirtualConstProp(TargetsForSlot, S.second)) {
+      emitTargetsRemarks(TargetsForSlot);
+      DidVirtualConstProp = true;
+    }
   }
 
   // If we were able to eliminate all unsafe uses for a type checked load,

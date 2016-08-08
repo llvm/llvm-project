@@ -54,7 +54,7 @@
 #include <utility>
 using namespace clang;
 
-template class llvm::Registry<clang::PragmaHandler>;
+LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 //===----------------------------------------------------------------------===//
 ExternalPreprocessorSource::~ExternalPreprocessorSource() { }

@@ -103,3 +103,12 @@ INVALID-FAT: truncated or malformed fat file (fat_arch_64 structs would extend p
 
 RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-invalid-fat.obj.elf-x86_64 2>&1 | FileCheck -check-prefix INVALID-FAT-ELF %s
 INVALID-FAT-ELF: Mach-O universal file: {{.*}}/macho-invalid-fat.obj.elf-x86_64 for architecture x86_64 is not a Mach-O file or an archive file
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF %s
+INVALID-SEGMENT-FILEOFF: macho-invalid-segment-fileoff': truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-nm %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF-NM %s
+INVALID-SEGMENT-FILEOFF-NM: macho-invalid-segment-fileoff truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-size %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF-SIZE %s
+INVALID-SEGMENT-FILEOFF-SIZE: macho-invalid-segment-fileoff truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)

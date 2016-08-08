@@ -367,6 +367,9 @@ protected:
   /// See PR14725.
   void fixLCSSAPHIs();
 
+  /// Predicate conditional stores on their respective conditions.
+  void predicateStores();
+ 
   /// Shrinks vector element sizes based on information in "MinBWs".
   void truncateToMinimalBitwidths();
 
@@ -3847,17 +3850,8 @@ void InnerLoopVectorizer::vectorizeLoop() {
   // Make sure DomTree is updated.
   updateAnalysis();
 
-  // Predicate any stores.
-  for (auto KV : PredicatedStores) {
-    BasicBlock::iterator I(KV.first);
-    auto *BB = SplitBlock(I->getParent(), &*std::next(I), DT, LI);
-    auto *T = SplitBlockAndInsertIfThen(KV.second, &*I, /*Unreachable=*/false,
-                                        /*BranchWeights=*/nullptr, DT, LI);
-    I->moveBefore(T);
-    I->getParent()->setName("pred.store.if");
-    BB->setName("pred.store.continue");
-  }
-  DEBUG(DT->verifyDomTree());
+  predicateStores();
+
   // Remove redundant induction instructions.
   cse(LoopVectorBody);
 }
@@ -4022,6 +4016,19 @@ void InnerLoopVectorizer::fixLCSSAPHIs() {
       LCSSAPhi->addIncoming(UndefValue::get(LCSSAPhi->getType()),
                             LoopMiddleBlock);
   }
+}
+ 
+void InnerLoopVectorizer::predicateStores() {
+  for (auto KV : PredicatedStores) {
+    BasicBlock::iterator I(KV.first);
+    auto *BB = SplitBlock(I->getParent(), &*std::next(I), DT, LI);
+    auto *T = SplitBlockAndInsertIfThen(KV.second, &*I, /*Unreachable=*/false,
+                                        /*BranchWeights=*/nullptr, DT, LI);
+    I->moveBefore(T);
+    I->getParent()->setName("pred.store.if");
+    BB->setName("pred.store.continue");
+  }
+  DEBUG(DT->verifyDomTree());
 }
 
 InnerLoopVectorizer::VectorParts
@@ -5101,7 +5108,6 @@ bool LoopVectorizationLegality::blockCanBePredicated(
       }
     }
 
-    // We don't predicate stores at the moment.
     if (I.mayWriteToMemory()) {
       auto *SI = dyn_cast<StoreInst>(&I);
       // We only support predication of stores in basic blocks with one
@@ -6086,7 +6092,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         TargetTransformInfo::OP_None;
     Value *Op2 = I->getOperand(1);
 
-    // Check for a splat of a constant or for a non uniform vector of constants.
+    // Check for a splat or for a non uniform vector of constants.
     if (isa<ConstantInt>(Op2)) {
       ConstantInt *CInt = cast<ConstantInt>(Op2);
       if (CInt && CInt->getValue().isPowerOf2())
@@ -6101,6 +6107,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
           Op2VP = TargetTransformInfo::OP_PowerOf2;
         Op2VK = TargetTransformInfo::OK_UniformConstantValue;
       }
+    } else if (Legal->isUniform(Op2)) {
+      Op2VK = TargetTransformInfo::OK_UniformValue;
     }
 
     return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK, Op2VK,

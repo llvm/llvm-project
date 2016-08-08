@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mcpu=e500mc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mcpu=e500mc < %s | FileCheck %s
 ; Check if e500 generates code with mfocrf insn.
 
 target datalayout = "E-m:e-p:32:32-i64:64-n32"

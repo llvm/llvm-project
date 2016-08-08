@@ -51,6 +51,8 @@ struct BitTracker {
   bool reached(const MachineBasicBlock *B) const;
   void visit(const MachineInstr &MI);
 
+  void print_cells(raw_ostream &OS) const;
+
 private:
   void visitPHI(const MachineInstr &PI);
   void visitNonBranch(const MachineInstr &MI);

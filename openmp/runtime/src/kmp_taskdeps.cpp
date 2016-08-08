@@ -212,7 +212,9 @@ __kmp_track_dependence ( kmp_depnode_t *source, kmp_depnode_t *sink,
 {
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
     kmp_taskdata_t * task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
-    kmp_taskdata_t * task_sink = KMP_TASK_TO_TASKDATA(sink->dn.task);    // this can be NULL when if(0) ...
+    // do not use sink->dn.task as that is only filled after the dependencies
+    // are already processed!
+    kmp_taskdata_t * task_sink = KMP_TASK_TO_TASKDATA(sink_task);
 
     __kmp_printf("%d(%s) -> %d(%s)\n", source->dn.id, task_source->td_ident->psource, sink->dn.id, task_sink->td_ident->psource);
 #endif
@@ -261,7 +263,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
                         __kmp_track_dependence(indep,node,task);
                         indep->dn.successors = __kmp_add_node(thread, indep->dn.successors, node);
                         KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n",
-                                 filter,gtid, KMP_TASK_TO_TASKDATA(indep->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
+                                 filter,gtid, KMP_TASK_TO_TASKDATA(indep->dn.task), KMP_TASK_TO_TASKDATA(task)));
                         npredecessors++;
                     }
                     KMP_RELEASE_DEPNODE(gtid,indep);
@@ -277,7 +279,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
                 __kmp_track_dependence(last_out,node,task);
                 last_out->dn.successors = __kmp_add_node(thread, last_out->dn.successors, node);
                 KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n",
-                             filter,gtid, KMP_TASK_TO_TASKDATA(last_out->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
+                             filter,gtid, KMP_TASK_TO_TASKDATA(last_out->dn.task), KMP_TASK_TO_TASKDATA(task)));
 
                 npredecessors++;
             }

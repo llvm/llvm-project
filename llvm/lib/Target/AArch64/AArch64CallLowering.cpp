@@ -95,6 +95,8 @@ bool AArch64CallLowering::lowerFormalArguments(
       // We don't care about bitcast.
       break;
     case CCValAssign::AExt:
+      // Existing high bits are fine for anyext (whatever they are).
+      break;
     case CCValAssign::SExt:
     case CCValAssign::ZExt:
       // Zero/Sign extend the register.

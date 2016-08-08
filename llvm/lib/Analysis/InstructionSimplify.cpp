@@ -3094,6 +3094,16 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (LHS->getType()->isPointerTy())
     if (auto *C = computePointerICmp(Q.DL, Q.TLI, Q.DT, Pred, Q.CxtI, LHS, RHS))
       return C;
+  if (auto *CLHS = dyn_cast<PtrToIntOperator>(LHS))
+    if (auto *CRHS = dyn_cast<PtrToIntOperator>(RHS))
+      if (Q.DL.getTypeSizeInBits(CLHS->getPointerOperandType()) ==
+              Q.DL.getTypeSizeInBits(CLHS->getType()) &&
+          Q.DL.getTypeSizeInBits(CRHS->getPointerOperandType()) ==
+              Q.DL.getTypeSizeInBits(CRHS->getType()))
+        if (auto *C = computePointerICmp(Q.DL, Q.TLI, Q.DT, Pred, Q.CxtI,
+                                         CLHS->getPointerOperand(),
+                                         CRHS->getPointerOperand()))
+          return C;
 
   if (GetElementPtrInst *GLHS = dyn_cast<GetElementPtrInst>(LHS)) {
     if (GEPOperator *GRHS = dyn_cast<GEPOperator>(RHS)) {
@@ -3121,17 +3131,16 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // If a bit is known to be zero for A and known to be one for B,
   // then A and B cannot be equal.
   if (ICmpInst::isEquality(Pred)) {
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-      uint32_t BitWidth = CI->getBitWidth();
+    const APInt *RHSVal;
+    if (match(RHS, m_APInt(RHSVal))) {
+      unsigned BitWidth = RHSVal->getBitWidth();
       APInt LHSKnownZero(BitWidth, 0);
       APInt LHSKnownOne(BitWidth, 0);
       computeKnownBits(LHS, LHSKnownZero, LHSKnownOne, Q.DL, /*Depth=*/0, Q.AC,
                        Q.CxtI, Q.DT);
-      const APInt &RHSVal = CI->getValue();
-      if (((LHSKnownZero & RHSVal) != 0) || ((LHSKnownOne & ~RHSVal) != 0))
-        return Pred == ICmpInst::ICMP_EQ
-                   ? ConstantInt::getFalse(CI->getContext())
-                   : ConstantInt::getTrue(CI->getContext());
+      if (((LHSKnownZero & *RHSVal) != 0) || ((LHSKnownOne & ~(*RHSVal)) != 0))
+        return Pred == ICmpInst::ICMP_EQ ? ConstantInt::getFalse(ITy)
+                                         : ConstantInt::getTrue(ITy);
     }
   }
 
@@ -3632,6 +3641,26 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
                          m_SpecificInt(TyAllocSize))))
           if (Value *R = PtrToIntOrZero(P))
             return R;
+      }
+    }
+  }
+
+  // gep (gep V, C), (sub 0, V) -> C
+  if (Q.DL.getTypeAllocSize(LastType) == 1 &&
+      all_of(Ops.slice(1).drop_back(1),
+             [](Value *Idx) { return match(Idx, m_Zero()); })) {
+    unsigned PtrWidth =
+        Q.DL.getPointerSizeInBits(Ops[0]->getType()->getPointerAddressSpace());
+    if (Q.DL.getTypeSizeInBits(Ops.back()->getType()) == PtrWidth) {
+      APInt BasePtrOffset(PtrWidth, 0);
+      Value *StrippedBasePtr =
+          Ops[0]->stripAndAccumulateInBoundsConstantOffsets(Q.DL,
+                                                            BasePtrOffset);
+
+      if (match(Ops.back(),
+                m_Sub(m_Zero(), m_PtrToInt(m_Specific(StrippedBasePtr))))) {
+        auto *CI = ConstantInt::get(GEPTy->getContext(), BasePtrOffset);
+        return ConstantExpr::getIntToPtr(CI, GEPTy);
       }
     }
   }
@@ -4356,7 +4385,8 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
 
     // Gracefully handle edge cases where the instruction is not wired into any
     // parent block.
-    if (I->getParent())
+    if (I->getParent() && !I->isEHPad() && !isa<TerminatorInst>(I) &&
+        !I->mayHaveSideEffects())
       I->eraseFromParent();
   } else {
     Worklist.insert(I);
@@ -4384,7 +4414,8 @@ static bool replaceAndRecursivelySimplifyImpl(Instruction *I, Value *SimpleV,
 
     // Gracefully handle edge cases where the instruction is not wired into any
     // parent block.
-    if (I->getParent())
+    if (I->getParent() && !I->isEHPad() && !isa<TerminatorInst>(I) &&
+        !I->mayHaveSideEffects())
       I->eraseFromParent();
   }
   return Simplified;

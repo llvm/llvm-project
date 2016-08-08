@@ -87,7 +87,7 @@ struct CodeMetrics {
 
   /// \brief Add information about a block to the current state.
   void analyzeBasicBlock(const BasicBlock *BB, const TargetTransformInfo &TTI,
-                         SmallPtrSetImpl<const Value*> &EphValues);
+                         const SmallPtrSetImpl<const Value*> &EphValues);
 
   /// \brief Collect a loop's ephemeral values (those used only by an assume
   /// or similar intrinsics in the loop).

@@ -534,7 +534,7 @@ private:
   /// For memory accesses of kind MK_PHI or MK_ExitPHI the access
   /// instruction of a load access is the PHI instruction. The access
   /// instruction of a PHI-store is the incoming's block's terminator
-  /// intruction.
+  /// instruction.
   ///
   /// For memory accesses of kind MK_Value the access instruction of a load
   /// access is nullptr because generally there can be multiple instructions in
@@ -648,7 +648,7 @@ private:
   /// @brief Create the access relation for the underlying memory intrinsic.
   void buildMemIntrinsicAccessRelation();
 
-  /// @brief Assemble the access relation from all availbale information.
+  /// @brief Assemble the access relation from all available information.
   ///
   /// In particular, used the information passes in the constructor and the
   /// parent ScopStmt set by setStatment().
@@ -706,7 +706,7 @@ public:
   ///
   /// After code generation moves some PHIs around during region simplification,
   /// we cannot reliably locate the original PHI node and its incoming values
-  /// anymore. For this reason we remember these explicitely for all PHI-kind
+  /// anymore. For this reason we remember these explicitly for all PHI-kind
   /// accesses.
   ArrayRef<std::pair<BasicBlock *, Value *>> getIncoming() const {
     assert(isAnyPHIKind());
@@ -783,7 +783,7 @@ public:
   /// @brief Get the ScopArrayInfo object for the base address.
   const ScopArrayInfo *getScopArrayInfo() const;
 
-  /// @brief Return a string representation of the accesse's reduction type.
+  /// @brief Return a string representation of the access's reduction type.
   const std::string getReductionOperatorStr() const;
 
   /// @brief Return a string representation of the reduction type @p RT.

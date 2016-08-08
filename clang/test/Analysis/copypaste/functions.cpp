@@ -37,12 +37,20 @@ int testBaseClass2(int a, int b) { // no-warning
   return b;
 }
 
-
+// No clone because of the different comparison operator.
 int min1(int a, int b) { // no-warning
   log();
   if (a < b)
     return a;
   return b;
+}
+
+// No clone because of the different pattern in which the variables are used.
+int min2(int a, int b) { // no-warning
+  log();
+  if (a > b)
+    return b;
+  return a;
 }
 
 int foo(int a, int b) { // no-warning

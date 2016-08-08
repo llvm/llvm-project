@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr -hexagon-bit=0 < %s | FileCheck %s
 ; CHECK: combine(r{{[0-9]+}}, r{{[0-9]+}})
 
 @j = external global i32

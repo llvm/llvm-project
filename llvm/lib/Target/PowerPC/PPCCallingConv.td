@@ -26,6 +26,9 @@ class CCIfNotSubtarget<string F, CCAction A>
 class CCIfOrigArgWasNotPPCF128<CCAction A>
     : CCIf<"!static_cast<PPCCCState *>(&State)->WasOriginalArgPPCF128(ValNo)",
            A>;
+class CCIfOrigArgWasPPCF128<CCAction A>
+    : CCIf<"static_cast<PPCCCState *>(&State)->WasOriginalArgPPCF128(ValNo)",
+           A>;
 
 //===----------------------------------------------------------------------===//
 // Return Value Calling Convention
@@ -142,6 +145,9 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   CCIfType<[i32],
   CCIfSplit<CCIfNotSubtarget<"useSoftFloat()", 
                             CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>>,
+  CCIfSplit<CCIfSubtarget<"useSoftFloat()",
+                          CCIfOrigArgWasPPCF128<CCCustom<
+                          "CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128">>>>,
 
   // The 'nest' parameter, if any, is passed in R11.
   CCIfNest<CCAssignToReg<[R11]>>,

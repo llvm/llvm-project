@@ -828,7 +828,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     }
   }
 
-  if (Ptr->isNullValue() || BasePtr != 0) {
+  auto *PTy = cast<PointerType>(Ptr->getType());
+  if ((Ptr->isNullValue() || BasePtr != 0) &&
+      !DL.isNonIntegralPointerType(PTy)) {
     Constant *C = ConstantInt::get(Ptr->getContext(), Offset + BasePtr);
     return ConstantExpr::getIntToPtr(C, ResTy);
   }
@@ -837,8 +839,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // we eliminate over-indexing of the notional static type array bounds.
   // This makes it easy to determine if the getelementptr is "inbounds".
   // Also, this helps GlobalOpt do SROA on GlobalVariables.
-  Type *Ty = Ptr->getType();
-  assert(Ty->isPointerTy() && "Forming regular GEP of non-pointer type");
+  Type *Ty = PTy;
   SmallVector<Constant *, 32> NewIdxs;
 
   do {

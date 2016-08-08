@@ -277,47 +277,47 @@ define void @constant_zextload_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <
 ; FUNC-LABEL: {{^}}constant_sextload_v32i32_to_v32i64:
 
 ; GCN: s_load_dwordx16
-; GCN: s_load_dwordx16
+; GCN-DAG: s_load_dwordx16
 
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
-; GCN-NOHSA: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
+; GCN-NOHSA-DAG: buffer_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
 define void @constant_sextload_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i32> addrspace(2)* %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(2)* %in

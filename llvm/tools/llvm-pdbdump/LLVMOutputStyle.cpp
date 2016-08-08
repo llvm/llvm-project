@@ -83,7 +83,7 @@ static void printSectionOffset(llvm::raw_ostream &OS,
 }
 
 LLVMOutputStyle::LLVMOutputStyle(PDBFile &File)
-    : File(File), P(outs()), TD(&P, false) {}
+    : File(File), P(outs()), Dumper(&P, false) {}
 
 Error LLVMOutputStyle::dump() {
   if (auto EC = dumpFileHeaders())
@@ -291,9 +291,8 @@ Error LLVMOutputStyle::dumpFreePageMap() {
 
   recordKnownUsedPage(PS, 0); // MSF Super Block
 
-  uint32_t BlocksPerSection = File.getBlockSize();
-  uint32_t NumSections =
-      llvm::alignTo(File.getBlockCount(), BlocksPerSection) / BlocksPerSection;
+  uint32_t BlocksPerSection = msf::getFpmIntervalLength(File.getMsfLayout());
+  uint32_t NumSections = msf::getNumFpmIntervals(File.getMsfLayout());
   for (uint32_t I = 0; I < NumSections; ++I) {
     uint32_t Fpm0 = 1 + BlocksPerSection * I;
     // 2 Fpm blocks spaced at `getBlockSize()` block intervals
@@ -483,7 +482,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
       DictScope DD(P, "");
 
       if (DumpRecords) {
-        if (auto EC = TD.dump(Type))
+        if (auto EC = Dumper.dump(Type))
           return EC;
       }
 
@@ -499,16 +498,16 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     // iterate them in order to build the list of types so that we can print
     // them when dumping module symbols. So when they want to dump symbols
     // but not types, use a null output stream.
-    ScopedPrinter *OldP = TD.getPrinter();
-    TD.setPrinter(nullptr);
+    ScopedPrinter *OldP = Dumper.getPrinter();
+    Dumper.setPrinter(nullptr);
 
     bool HadError = false;
     for (auto &Type : Tpi->types(&HadError)) {
-      if (auto EC = TD.dump(Type))
+      if (auto EC = Dumper.dump(Type))
         return EC;
     }
 
-    TD.setPrinter(OldP);
+    Dumper.setPrinter(OldP);
     dumpTpiHash(P, *Tpi);
     if (HadError)
       return make_error<RawError>(raw_error_code::corrupt_file,
@@ -587,7 +586,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
 
         if (ShouldDumpSymbols) {
           ListScope SS(P, "Symbols");
-          codeview::CVSymbolDumper SD(P, TD, nullptr, false);
+          codeview::CVSymbolDumper SD(P, Dumper, nullptr, false);
           bool HadError = false;
           for (const auto &S : ModS.symbols(&HadError)) {
             DictScope DD(P, "");
@@ -797,7 +796,7 @@ Error LLVMOutputStyle::dumpPublicsStream() {
   P.printList("Section Offsets", Publics->getSectionOffsets(),
               printSectionOffset);
   ListScope L(P, "Symbols");
-  codeview::CVSymbolDumper SD(P, TD, nullptr, false);
+  codeview::CVSymbolDumper SD(P, Dumper, nullptr, false);
   bool HadError = false;
   for (auto S : Publics->getSymbols(&HadError)) {
     DictScope DD(P, "");

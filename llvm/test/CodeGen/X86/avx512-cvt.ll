@@ -36,6 +36,7 @@ define <8 x double> @sltof864(<8 x i64> %a) {
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
 ; KNL-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm3
 ; KNL-NEXT:    vmovq %xmm0, %rax
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm0
 ; KNL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; KNL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
@@ -62,6 +63,7 @@ define <4 x double> @sltof464(<4 x i64> %a) {
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
 ; KNL-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm2
 ; KNL-NEXT:    vmovq %xmm0, %rax
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm0
 ; KNL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; KNL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -81,6 +83,7 @@ define <2 x float> @sltof2f32(<2 x i64> %a) {
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm1
 ; KNL-NEXT:    vmovq %xmm0, %rax
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm0
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm1
@@ -111,6 +114,7 @@ define <4 x float> @sltof4f32_mem(<4 x i64>* %a) {
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm2
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm0
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; KNL-NEXT:    retq
@@ -191,6 +195,7 @@ define <4 x float> @sltof432(<4 x i64> %a) {
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm2
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
 ; KNL-NEXT:    vpextrq $1, %xmm0, %rax
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm0
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; KNL-NEXT:    retq
@@ -884,6 +889,7 @@ define <2 x float> @sitofp_2i1_float(<2 x float> %a) {
 ; KNL-NEXT:    vmovq %xmm0, %rdx
 ; KNL-NEXT:    testb $1, %dl
 ; KNL-NEXT:    cmovnel %eax, %ecx
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2ssl %ecx, %xmm0, %xmm0
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; KNL-NEXT:    retq
@@ -1089,6 +1095,7 @@ define <2 x float> @uitofp_2i1_float(<2 x i32> %a) {
 ; KNL-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm1
 ; KNL-NEXT:    vmovq %xmm0, %rax
 ; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; KNL-NEXT:    retq

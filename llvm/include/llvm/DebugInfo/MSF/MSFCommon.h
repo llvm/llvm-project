@@ -84,6 +84,19 @@ inline uint64_t blockToOffset(uint64_t BlockNumber, uint64_t BlockSize) {
   return BlockNumber * BlockSize;
 }
 
+inline uint32_t getFpmIntervalLength(const MSFLayout &L) {
+  return L.SB->BlockSize;
+}
+
+inline uint32_t getNumFpmIntervals(const MSFLayout &L) {
+  uint32_t Length = getFpmIntervalLength(L);
+  return llvm::alignTo(L.SB->NumBlocks, Length) / Length;
+}
+
+inline uint32_t getFullFpmByteSize(const MSFLayout &L) {
+  return llvm::alignTo(L.SB->NumBlocks, 8) / 8;
+}
+
 Error validateSuperBlock(const SuperBlock &SB);
 } // namespace msf
 } // namespace llvm

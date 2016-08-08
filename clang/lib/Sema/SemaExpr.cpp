@@ -103,18 +103,9 @@ static bool HasRedeclarationWithoutAvailabilityInCategory(const Decl *D) {
   return false;
 }
 
-static AvailabilityResult
-DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
-                           const ObjCInterfaceDecl *UnknownObjCClass,
-                           bool ObjCPropertyAccess) {
-  VersionTuple ContextVersion;
-  if (const DeclContext *DC = S.getCurObjCLexicalContext())
-    ContextVersion = S.getVersionForDecl(cast<Decl>(DC));
-
-  // See if this declaration is unavailable, deprecated, or partial in the
-  // current context.
-  std::string Message;
-  AvailabilityResult Result = D->getAvailability(&Message, ContextVersion);
+AvailabilityResult Sema::ShouldDiagnoseAvailabilityOfDecl(
+    NamedDecl *&D, VersionTuple ContextVersion, std::string *Message) {
+  AvailabilityResult Result = D->getAvailability(Message, ContextVersion);
 
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
@@ -122,18 +113,18 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     if (Result == AR_Available) {
       if (const TagType *TT = TD->getUnderlyingType()->getAs<TagType>()) {
         D = TT->getDecl();
-        Result = D->getAvailability(&Message, ContextVersion);
+        Result = D->getAvailability(Message, ContextVersion);
         continue;
       }
     }
     break;
   }
-    
+
   // Forward class declarations get their attributes from their definition.
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
       D = IDecl->getDefinition();
-      Result = D->getAvailability(&Message, ContextVersion);
+      Result = D->getAvailability(Message, ContextVersion);
     }
   }
 
@@ -141,12 +132,59 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     if (Result == AR_Available) {
       const DeclContext *DC = ECD->getDeclContext();
       if (const EnumDecl *TheEnumDecl = dyn_cast<EnumDecl>(DC))
-        Result = TheEnumDecl->getAvailability(&Message, ContextVersion);
+        Result = TheEnumDecl->getAvailability(Message, ContextVersion);
     }
 
-  const ObjCPropertyDecl *ObjCPDecl = nullptr;
-  if (Result == AR_Deprecated || Result == AR_Unavailable ||
-      Result == AR_NotYetIntroduced) {
+  switch (Result) {
+  case AR_Available:
+    return Result;
+
+  case AR_Unavailable:
+  case AR_Deprecated:
+    return getCurContextAvailability() != Result ? Result : AR_Available;
+
+  case AR_NotYetIntroduced: {
+    // Don't do this for enums, they can't be redeclared.
+    if (isa<EnumConstantDecl>(D) || isa<EnumDecl>(D))
+      return AR_Available;
+
+    bool Warn = !D->getAttr<AvailabilityAttr>()->isInherited();
+    // Objective-C method declarations in categories are not modelled as
+    // redeclarations, so manually look for a redeclaration in a category
+    // if necessary.
+    if (Warn && HasRedeclarationWithoutAvailabilityInCategory(D))
+      Warn = false;
+    // In general, D will point to the most recent redeclaration. However,
+    // for `@class A;` decls, this isn't true -- manually go through the
+    // redecl chain in that case.
+    if (Warn && isa<ObjCInterfaceDecl>(D))
+      for (Decl *Redecl = D->getMostRecentDecl(); Redecl && Warn;
+           Redecl = Redecl->getPreviousDecl())
+        if (!Redecl->hasAttr<AvailabilityAttr>() ||
+            Redecl->getAttr<AvailabilityAttr>()->isInherited())
+          Warn = false;
+
+    return Warn ? AR_NotYetIntroduced : AR_Available;
+  }
+  }
+  llvm_unreachable("Unknown availability result!");
+}
+
+static void
+DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
+                           const ObjCInterfaceDecl *UnknownObjCClass,
+                           bool ObjCPropertyAccess) {
+  VersionTuple ContextVersion;
+  if (const DeclContext *DC = S.getCurObjCLexicalContext())
+    ContextVersion = S.getVersionForDecl(cast<Decl>(DC));
+
+  std::string Message;
+  // See if this declaration is unavailable, deprecated, or partial in the
+  // current context.
+  if (AvailabilityResult Result =
+          S.ShouldDiagnoseAvailabilityOfDecl(D, ContextVersion, &Message)) {
+
+    const ObjCPropertyDecl *ObjCPDecl = nullptr;
     if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
       if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
         AvailabilityResult PDeclResult =
@@ -155,56 +193,10 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
           ObjCPDecl = PD;
       }
     }
+
+    S.EmitAvailabilityWarning(Result, D, Message, Loc, UnknownObjCClass,
+                              ObjCPDecl, ObjCPropertyAccess);
   }
-  
-  switch (Result) {
-    case AR_Available:
-      break;
-
-    case AR_Deprecated:
-      if (S.getCurContextAvailability() != AR_Deprecated)
-        S.EmitAvailabilityWarning(Sema::AD_Deprecation,
-                                  D, Message, Loc, UnknownObjCClass, ObjCPDecl,
-                                  ObjCPropertyAccess);
-      break;
-
-    case AR_NotYetIntroduced: {
-      // Don't do this for enums, they can't be redeclared.
-      if (isa<EnumConstantDecl>(D) || isa<EnumDecl>(D))
-        break;
- 
-      bool Warn = !D->getAttr<AvailabilityAttr>()->isInherited();
-      // Objective-C method declarations in categories are not modelled as
-      // redeclarations, so manually look for a redeclaration in a category
-      // if necessary.
-      if (Warn && HasRedeclarationWithoutAvailabilityInCategory(D))
-        Warn = false;
-      // In general, D will point to the most recent redeclaration. However,
-      // for `@class A;` decls, this isn't true -- manually go through the
-      // redecl chain in that case.
-      if (Warn && isa<ObjCInterfaceDecl>(D))
-        for (Decl *Redecl = D->getMostRecentDecl(); Redecl && Warn;
-             Redecl = Redecl->getPreviousDecl())
-          if (!Redecl->hasAttr<AvailabilityAttr>() ||
-              Redecl->getAttr<AvailabilityAttr>()->isInherited())
-            Warn = false;
- 
-      if (Warn)
-        S.EmitAvailabilityWarning(Sema::AD_Partial, D, Message, Loc,
-                                  UnknownObjCClass, ObjCPDecl,
-                                  ObjCPropertyAccess);
-      break;
-    }
-
-    case AR_Unavailable:
-      if (S.getCurContextAvailability() != AR_Unavailable)
-        S.EmitAvailabilityWarning(Sema::AD_Unavailable,
-                                  D, Message, Loc, UnknownObjCClass, ObjCPDecl,
-                                  ObjCPropertyAccess);
-      break;
-
-    }
-  return Result;
 }
 
 /// \brief Emit a note explaining that this function is deleted.

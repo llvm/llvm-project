@@ -166,6 +166,9 @@ public:
 
   const char* getTargetNodeName(unsigned Opcode) const override;
 
+  bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
+    return true;
+  }
   SDValue getRsqrtEstimate(SDValue Operand,
                            DAGCombinerInfo &DCI,
                            unsigned &RefinementSteps,

@@ -249,6 +249,19 @@ def FeatureSoftFloat
 def FeatureFastPartialYMMWrite
     : SubtargetFeature<"fast-partial-ymm-write", "HasFastPartialYMMWrite",
                        "true", "Partial writes to YMM registers are fast">;
+// FeatureFastScalarFSQRT should be enabled if scalar FSQRT has shorter latency
+// than the corresponding NR code. FeatureFastVectorFSQRT should be enabled if
+// vector FSQRT has higher throughput than the corresponding NR code.
+// The idea is that throughput bound code is likely to be vectorized, so for
+// vectorized code we should care about the throughput of SQRT operations.
+// But if the code is scalar that probably means that the code has some kind of
+// dependency and we should care more about reducing the latency.
+def FeatureFastScalarFSQRT
+    : SubtargetFeature<"fast-scalar-fsqrt", "HasFastScalarFSQRT",
+                       "true", "Scalar SQRT is fast (disable Newton-Raphson)">;
+def FeatureFastVectorFSQRT
+    : SubtargetFeature<"fast-vector-fsqrt", "HasFastVectorFSQRT",
+                       "true", "Vector SQRT is fast (disable Newton-Raphson)">;
 
 //===----------------------------------------------------------------------===//
 // X86 processors supported.
@@ -442,7 +455,8 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeaturePCLMUL,
   FeatureXSAVE,
   FeatureXSAVEOPT,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureFastScalarFSQRT
 ]>;
 
 class SandyBridgeProc<string Name> : ProcModel<Name, SandyBridgeModel,
@@ -500,7 +514,8 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
   FeatureXSAVEC,
   FeatureXSAVES,
   FeatureSGX,
-  FeatureCLFLUSHOPT
+  FeatureCLFLUSHOPT,
+  FeatureFastVectorFSQRT
 ]>;
 
 // FIXME: define SKL model

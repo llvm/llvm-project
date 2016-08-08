@@ -589,6 +589,10 @@ public:
   /// determine whether MemoryAccess \p A dominates MemoryAccess \p B.
   bool dominates(const MemoryAccess *A, const MemoryAccess *B) const;
 
+  /// \brief Given a MemoryAccess and a Use, determine whether MemoryAccess \p A
+  /// dominates Use \p B.
+  bool dominates(const MemoryAccess *A, const Use &B) const;
+
   /// \brief Verify that MemorySSA is self consistent (IE definitions dominate
   /// all uses, uses appear in the right places).  This is used by unit tests.
   void verifyMemorySSA() const;

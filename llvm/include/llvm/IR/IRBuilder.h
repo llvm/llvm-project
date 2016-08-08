@@ -67,6 +67,23 @@ protected:
   }
 };
 
+/// Provides an 'InsertHelper' that calls a user-provided callback after
+/// performing the default insertion.
+class IRBuilderCallbackInserter : IRBuilderDefaultInserter {
+  std::function<void(Instruction *)> Callback;
+
+public:
+  IRBuilderCallbackInserter(std::function<void(Instruction *)> Callback)
+      : Callback(Callback) {}
+
+protected:
+  void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock *BB, BasicBlock::iterator InsertPt) const {
+    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    Callback(I);
+  }
+};
+
 /// \brief Common base class shared among various IRBuilders.
 class IRBuilderBase {
   DebugLoc CurDbgLocation;

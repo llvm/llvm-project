@@ -170,6 +170,7 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
   }
 };
 }
+
 namespace {
 struct UpwardsMemoryQuery {
   // True if our original query started off as a call
@@ -192,6 +193,72 @@ struct UpwardsMemoryQuery {
   }
 };
 
+static bool lifetimeEndsAt(MemoryDef *MD, const MemoryLocation &Loc,
+                           AliasAnalysis &AA) {
+  Instruction *Inst = MD->getMemoryInst();
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+      return AA.isMustAlias(MemoryLocation(II->getArgOperand(1)), Loc);
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+enum class Reorderability { Always, IfNoAlias, Never };
+
+/// This does one-way checks to see if Use could theoretically be hoisted above
+/// MayClobber. This will not check the other way around.
+///
+/// This assumes that, for the purposes of MemorySSA, Use comes directly after
+/// MayClobber, with no potentially clobbering operations in between them.
+/// (Where potentially clobbering ops are memory barriers, aliased stores, etc.)
+static Reorderability getLoadReorderability(const LoadInst *Use,
+                                            const LoadInst *MayClobber) {
+  bool VolatileUse = Use->isVolatile();
+  bool VolatileClobber = MayClobber->isVolatile();
+  // Volatile operations may never be reordered with other volatile operations.
+  if (VolatileUse && VolatileClobber)
+    return Reorderability::Never;
+
+  // The lang ref allows reordering of volatile and non-volatile operations.
+  // Whether an aliasing nonvolatile load and volatile load can be reordered,
+  // though, is ambiguous. Because it may not be best to exploit this ambiguity,
+  // we only allow volatile/non-volatile reordering if the volatile and
+  // non-volatile operations don't alias.
+  Reorderability Result = VolatileUse || VolatileClobber
+                              ? Reorderability::IfNoAlias
+                              : Reorderability::Always;
+
+  // If a load is seq_cst, it cannot be moved above other loads. If its ordering
+  // is weaker, it can be moved above other loads. We just need to be sure that
+  // MayClobber isn't an acquire load, because loads can't be moved above
+  // acquire loads.
+  //
+  // Note that this explicitly *does* allow the free reordering of monotonic (or
+  // weaker) loads of the same address.
+  bool SeqCstUse = Use->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  bool MayClobberIsAcquire = isAtLeastOrStrongerThan(MayClobber->getOrdering(),
+                                                     AtomicOrdering::Acquire);
+  if (SeqCstUse || MayClobberIsAcquire)
+    return Reorderability::Never;
+  return Result;
+}
+
+static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
+                                                   const Instruction *I) {
+  // If the memory can't be changed, then loads of the memory can't be
+  // clobbered.
+  //
+  // FIXME: We should handle invariant groups, as well. It's a bit harder,
+  // because we need to pay close attention to invariant group barriers.
+  return isa<LoadInst>(I) && (I->getMetadata(LLVMContext::MD_invariant_load) ||
+                              AA.pointsToConstantMemory(I));
+}
+
 static bool instructionClobbersQuery(MemoryDef *MD,
                                      const MemoryLocation &UseLoc,
                                      const Instruction *UseInst,
@@ -199,11 +266,40 @@ static bool instructionClobbersQuery(MemoryDef *MD,
   Instruction *DefInst = MD->getMemoryInst();
   assert(DefInst && "Defining instruction not actually an instruction");
 
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
+    // These intrinsics will show up as affecting memory, but they are just
+    // markers.
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::lifetime_start:
+    case Intrinsic::lifetime_end:
+    case Intrinsic::invariant_start:
+    case Intrinsic::invariant_end:
+    case Intrinsic::assume:
+      return false;
+    default:
+      break;
+    }
+  }
+
   ImmutableCallSite UseCS(UseInst);
   if (UseCS) {
     ModRefInfo I = AA.getModRefInfo(DefInst, UseCS);
     return I != MRI_NoModRef;
   }
+
+  if (auto *DefLoad = dyn_cast<LoadInst>(DefInst)) {
+    if (auto *UseLoad = dyn_cast<LoadInst>(UseInst)) {
+      switch (getLoadReorderability(UseLoad, DefLoad)) {
+      case Reorderability::Always:
+        return false;
+      case Reorderability::Never:
+        return true;
+      case Reorderability::IfNoAlias:
+        return !AA.isNoAlias(UseLoc, MemoryLocation::get(DefLoad));
+      }
+    }
+  }
+
   return AA.getModRefInfo(DefInst, UseLoc) & MRI_Mod;
 }
 
@@ -564,7 +660,7 @@ class ClobberWalker {
   ///
   /// If this returns None, NewPaused is a vector of searches that terminated
   /// at StopWhere. Otherwise, NewPaused is left in an unspecified state.
-  Optional<ListIndex>
+  Optional<TerminatedPath>
   getBlockingAccess(MemoryAccess *StopWhere,
                     SmallVectorImpl<ListIndex> &PausedSearches,
                     SmallVectorImpl<ListIndex> &NewPaused,
@@ -603,11 +699,12 @@ class ClobberWalker {
         assert(Res.Result != StopWhere || Res.FromCache);
         // If this wasn't a cache hit, we hit a clobber when walking. That's a
         // failure.
+        TerminatedPath Term{Res.Result, PathIndex};
         if (!Res.FromCache || !MSSA.dominates(Res.Result, StopWhere))
-          return PathIndex;
+          return Term;
 
         // Otherwise, it's a valid thing to potentially optimize to.
-        Terminated.push_back({Res.Result, PathIndex});
+        Terminated.push_back(Term);
         continue;
       }
 
@@ -739,22 +836,21 @@ class ClobberWalker {
       // liveOnEntry, and we'll happily wait for that to disappear (read: never)
       // For the moment, this is fine, since we do basically nothing with
       // blocker info.
-      if (Optional<ListIndex> Blocker = getBlockingAccess(
+      if (Optional<TerminatedPath> Blocker = getBlockingAccess(
               Target, PausedSearches, NewPaused, TerminatedPaths)) {
-        MemoryAccess *BlockingAccess = Paths[*Blocker].Last;
         // Cache our work on the blocking node, since we know that's correct.
-        cacheDefPath(Paths[*Blocker], BlockingAccess);
+        cacheDefPath(Paths[Blocker->LastNode], Blocker->Clobber);
 
         // Find the node we started at. We can't search based on N->Last, since
         // we may have gone around a loop with a different MemoryLocation.
-        auto Iter = find_if(def_path(*Blocker), [&](const DefPath &N) {
+        auto Iter = find_if(def_path(Blocker->LastNode), [&](const DefPath &N) {
           return defPathIndex(N) < PriorPathsSize;
         });
         assert(Iter != def_path_iterator());
 
         DefPath &CurNode = *Iter;
         assert(CurNode.Last == Current);
-        CurNode.Blocker = BlockingAccess;
+        CurNode.Blocker = Blocker->Clobber;
 
         // Two things:
         // A. We can't reliably cache all of NewPaused back. Consider a case
@@ -1140,6 +1236,8 @@ MemorySSA::MemorySSA(MemorySSA &&MSSA)
       ValueToMemoryAccess(std::move(MSSA.ValueToMemoryAccess)),
       PerBlockAccesses(std::move(MSSA.PerBlockAccesses)),
       LiveOnEntryDef(std::move(MSSA.LiveOnEntryDef)),
+      BlockNumberingValid(std::move(MSSA.BlockNumberingValid)),
+      BlockNumbering(std::move(MSSA.BlockNumbering)),
       Walker(std::move(MSSA.Walker)), NextID(MSSA.NextID) {
   // Update the Walker MSSA pointer so it doesn't point to the moved-from MSSA
   // object any more.
@@ -1244,6 +1342,11 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       continue;
     }
 
+    if (isUseTriviallyOptimizableToLiveOnEntry(*AA, MU->getMemoryInst())) {
+      MU->setDefiningAccess(MSSA->getLiveOnEntryDef());
+      continue;
+    }
+
     MemoryLocOrCall UseMLOC(MU);
     auto &LocInfo = LocStackInfo[UseMLOC];
     // If the pop epoch changed, it means we've removed stuff from top of
@@ -1308,7 +1411,14 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       }
 
       MemoryDef *MD = cast<MemoryDef>(VersionStack[UpperBound]);
-
+      // If the lifetime of the pointer ends at this instruction, it's live on
+      // entry.
+      if (!UseMLOC.IsCall && lifetimeEndsAt(MD, UseMLOC.getLoc(), *AA)) {
+        // Reset UpperBound to liveOnEntryDef's place in the stack
+        UpperBound = 0;
+        FoundClobberResult = true;
+        break;
+      }
       if (instructionClobbersQuery(MD, MU, UseMLOC, *AA)) {
         FoundClobberResult = true;
         break;
@@ -1342,29 +1452,13 @@ void MemorySSA::OptimizeUses::optimizeUses() {
   SmallVector<MemoryAccess *, 16> VersionStack;
   SmallVector<StackInfo, 16> DomTreeWorklist;
   DenseMap<MemoryLocOrCall, MemlocStackInfo> LocStackInfo;
-  DomTreeWorklist.push_back({DT->getRootNode(), DT->getRootNode()->begin()});
-  // Bottom of the version stack is always live on entry.
   VersionStack.push_back(MSSA->getLiveOnEntryDef());
 
   unsigned long StackEpoch = 1;
   unsigned long PopEpoch = 1;
-  while (!DomTreeWorklist.empty()) {
-    const auto *DomNode = DomTreeWorklist.back().Node;
-    const auto DomIter = DomTreeWorklist.back().Iter;
-    BasicBlock *BB = DomNode->getBlock();
-    optimizeUsesInBlock(BB, StackEpoch, PopEpoch, VersionStack, LocStackInfo);
-    if (DomIter == DomNode->end()) {
-      // Hit the end, pop the worklist
-      DomTreeWorklist.pop_back();
-      continue;
-    }
-    // Move the iterator to the next child for the next time we get to process
-    // children
-    ++DomTreeWorklist.back().Iter;
-
-    // Now visit the next child
-    DomTreeWorklist.push_back({*DomIter, (*DomIter)->begin()});
-  }
+  for (const auto *DomNode : depth_first(DT->getRootNode()))
+    optimizeUsesInBlock(DomNode->getBlock(), StackEpoch, PopEpoch, VersionStack,
+                        LocStackInfo);
 }
 
 void MemorySSA::buildMemorySSA() {
@@ -1755,70 +1849,38 @@ void MemorySSA::verifyOrdering(Function &F) const {
 /// \brief Verify the domination properties of MemorySSA by checking that each
 /// definition dominates all of its uses.
 void MemorySSA::verifyDomination(Function &F) const {
+#ifndef NDEBUG
   for (BasicBlock &B : F) {
     // Phi nodes are attached to basic blocks
-    if (MemoryPhi *MP = getMemoryAccess(&B)) {
-      for (User *U : MP->users()) {
-        BasicBlock *UseBlock;
-        // Phi operands are used on edges, we simulate the right domination by
-        // acting as if the use occurred at the end of the predecessor block.
-        if (MemoryPhi *P = dyn_cast<MemoryPhi>(U)) {
-          for (const auto &Arg : P->operands()) {
-            if (Arg == MP) {
-              UseBlock = P->getIncomingBlock(Arg);
-              break;
-            }
-          }
-        } else {
-          UseBlock = cast<MemoryAccess>(U)->getBlock();
-        }
-        (void)UseBlock;
-        assert(DT->dominates(MP->getBlock(), UseBlock) &&
-               "Memory PHI does not dominate it's uses");
-      }
-    }
+    if (MemoryPhi *MP = getMemoryAccess(&B))
+      for (const Use &U : MP->uses())
+        assert(dominates(MP, U) && "Memory PHI does not dominate it's uses");
 
     for (Instruction &I : B) {
       MemoryAccess *MD = dyn_cast_or_null<MemoryDef>(getMemoryAccess(&I));
       if (!MD)
         continue;
 
-      for (User *U : MD->users()) {
-        BasicBlock *UseBlock;
-        (void)UseBlock;
-        // Things are allowed to flow to phi nodes over their predecessor edge.
-        if (auto *P = dyn_cast<MemoryPhi>(U)) {
-          for (const auto &Arg : P->operands()) {
-            if (Arg == MD) {
-              UseBlock = P->getIncomingBlock(Arg);
-              break;
-            }
-          }
-        } else {
-          UseBlock = cast<MemoryAccess>(U)->getBlock();
-        }
-        assert(DT->dominates(MD->getBlock(), UseBlock) &&
-               "Memory Def does not dominate it's uses");
-      }
+      for (const Use &U : MD->uses())
+        assert(dominates(MD, U) && "Memory Def does not dominate it's uses");
     }
   }
+#endif
 }
 
 /// \brief Verify the def-use lists in MemorySSA, by verifying that \p Use
 /// appears in the use list of \p Def.
-///
-/// llvm_unreachable is used instead of asserts because this may be called in
-/// a build without asserts. In that case, we don't want this to turn into a
-/// nop.
+
 void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
+#ifndef NDEBUG
   // The live on entry use may cause us to get a NULL def here
-  if (!Def) {
-    if (!isLiveOnEntryDef(Use))
-      llvm_unreachable("Null def but use not point to live on entry def");
-  } else if (std::find(Def->user_begin(), Def->user_end(), Use) ==
-             Def->user_end()) {
-    llvm_unreachable("Did not find use in def's use list");
-  }
+  if (!Def)
+    assert(isLiveOnEntryDef(Use) &&
+           "Null def but use not point to live on entry def");
+  else
+    assert(find(Def->users(), Use) != Def->user_end() &&
+           "Did not find use in def's use list");
+#endif
 }
 
 /// \brief Verify the immediate use information, by walking all the memory
@@ -1915,6 +1977,20 @@ bool MemorySSA::dominates(const MemoryAccess *Dominator,
   if (Dominator->getBlock() != Dominatee->getBlock())
     return DT->dominates(Dominator->getBlock(), Dominatee->getBlock());
   return locallyDominates(Dominator, Dominatee);
+}
+
+bool MemorySSA::dominates(const MemoryAccess *Dominator,
+                          const Use &Dominatee) const {
+  if (MemoryPhi *MP = dyn_cast<MemoryPhi>(Dominatee.getUser())) {
+    BasicBlock *UseBB = MP->getIncomingBlock(Dominatee);
+    // The def must dominate the incoming block of the phi.
+    if (UseBB != Dominator->getBlock())
+      return DT->dominates(Dominator->getBlock(), UseBB);
+    // If the UseBB and the DefBB are the same, compare locally.
+    return locallyDominates(Dominator, cast<MemoryAccess>(Dominatee));
+  }
+  // If it's not a PHI node use, the normal dominates can already handle it.
+  return dominates(Dominator, cast<MemoryAccess>(Dominatee.getUser()));
 }
 
 const static char LiveOnEntryStr[] = "liveOnEntry";
@@ -2150,6 +2226,12 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
 
   if (auto *CacheResult = Cache.lookup(StartingAccess, Q.StartingLoc, Q.IsCall))
     return CacheResult;
+
+  if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
+    MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();
+    Cache.insert(StartingAccess, LiveOnEntry, Q.StartingLoc, Q.IsCall);
+    return LiveOnEntry;
+  }
 
   // Start with the thing we already think clobbers this location
   MemoryAccess *DefiningAccess = StartingAccess->getDefiningAccess();

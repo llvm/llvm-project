@@ -48,6 +48,11 @@ static cl::opt<bool> AvoidReuse(
     cl::desc("Try to avoid reuse of byte array addresses using aliases"),
     cl::Hidden, cl::init(true));
 
+static cl::opt<unsigned> BitsetsLevel(
+    "lowertypetests-bitsets-level",
+    cl::desc("Whether to generate bitsets: 0 - never, 1 - only if no loads, 2 - always."),
+    cl::Hidden, cl::init(2));
+
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -473,8 +478,10 @@ Value *LowerTypeTests::lowerBitSetCall(
   Constant *BitSizeConst = ConstantInt::get(IntPtrTy, BSI.BitSize);
   Value *OffsetInRange = B.CreateICmpULT(BitOffset, BitSizeConst);
 
-  // If the bit set is all ones, testing against it is unnecessary.
-  if (BSI.isAllOnes())
+  // If the bit set is all ones (or we treat it as such), testing against it
+  // is unnecessary.
+  if (BSI.isAllOnes() || BitsetsLevel == 0 ||
+      (BitsetsLevel == 1 && BSI.BitSize > 64))
     return OffsetInRange;
 
   TerminatorInst *Term = SplitBlockAndInsertIfThen(OffsetInRange, CI, false);

@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck %s
 
 ; Test peephole optimization for medium code model (32-bit TOC offsets)
 ; for loading and storing a file-scope static variable.

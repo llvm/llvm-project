@@ -1091,7 +1091,10 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
     // for all allocations we have found
     for (const uint64_t alloc_addr : allocs)
     {
-        AllocationDetails* alloc = LookUpAllocation(alloc_addr, true);
+        AllocationDetails *alloc = LookUpAllocation(alloc_addr);
+        if (!alloc)
+            alloc = CreateAllocation(alloc_addr);
+
         if (alloc)
         {
             // save the allocation address
@@ -1207,7 +1210,7 @@ RenderScriptRuntime::CaptureAllocationInit(RuntimeHook *hook_info, ExecutionCont
         log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 ",0x%" PRIx64 " .", __FUNCTION__, uint64_t(args[eRsContext]),
                     uint64_t(args[eRsAlloc]), uint64_t(args[eRsForceZero]));
 
-    AllocationDetails *alloc = LookUpAllocation(uint64_t(args[eRsAlloc]), true);
+    AllocationDetails *alloc = CreateAllocation(uint64_t(args[eRsAlloc]));
     if (alloc)
         alloc->context = uint64_t(args[eRsContext]);
 }
@@ -3467,7 +3470,7 @@ RenderScriptRuntime::LookUpScript(addr_t address, bool create)
 }
 
 RenderScriptRuntime::AllocationDetails *
-RenderScriptRuntime::LookUpAllocation(addr_t address, bool create)
+RenderScriptRuntime::LookUpAllocation(addr_t address)
 {
     for (const auto &a : m_allocations)
     {
@@ -3475,14 +3478,35 @@ RenderScriptRuntime::LookUpAllocation(addr_t address, bool create)
             if (*a->address == address)
                 return a.get();
     }
-    if (create)
-    {
-        std::unique_ptr<AllocationDetails> a(new AllocationDetails);
-        a->address = address;
-        m_allocations.push_back(std::move(a));
-        return m_allocations.back().get();
-    }
     return nullptr;
+}
+
+RenderScriptRuntime::AllocationDetails *
+RenderScriptRuntime::CreateAllocation(addr_t address)
+{
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    // Remove any previous allocation which contains the same address
+    auto it = m_allocations.begin();
+    while (it != m_allocations.end())
+    {
+        if (*((*it)->address) == address)
+        {
+            if (log)
+                log->Printf("%s - Removing allocation id: %d, address: 0x%" PRIx64, __FUNCTION__, (*it)->id, address);
+
+            it = m_allocations.erase(it);
+        }
+        else
+        {
+            it++;
+        }
+    }
+
+    std::unique_ptr<AllocationDetails> a(new AllocationDetails);
+    a->address = address;
+    m_allocations.push_back(std::move(a));
+    return m_allocations.back().get();
 }
 
 void

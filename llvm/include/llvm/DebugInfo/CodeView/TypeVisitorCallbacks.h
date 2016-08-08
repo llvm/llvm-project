@@ -41,16 +41,11 @@ public:
     return Error::success();
   }
 
-  virtual Error visitFieldListBegin(const CVRecord<TypeLeafKind> &Record) {
-    return Error::success();
-  }
-
-  virtual Error visitFieldListEnd(const CVRecord<TypeLeafKind> &Record) {
-    return Error::success();
-  }
-
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  virtual Error visit##Name(Name##Record &Record) { return Error::success(); }
+  virtual Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,            \
+                                 Name##Record &Record) {                       \
+    return Error::success();                                                   \
+  }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
