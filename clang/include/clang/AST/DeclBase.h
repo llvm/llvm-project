@@ -17,6 +17,7 @@
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -603,7 +604,12 @@ public:
   /// AR_Available, will be set to a (possibly empty) message
   /// describing why the declaration has not been introduced, is
   /// deprecated, or is unavailable.
-  AvailabilityResult getAvailability(std::string *Message = nullptr) const;
+  ///
+  /// \param EnclosingVersion The version to compare with. If empty, assume the
+  /// deployment target version.
+  AvailabilityResult
+  getAvailability(std::string *Message = nullptr,
+                  VersionTuple EnclosingVersion = VersionTuple()) const;
 
   /// \brief Determine whether this declaration is marked 'deprecated'.
   ///

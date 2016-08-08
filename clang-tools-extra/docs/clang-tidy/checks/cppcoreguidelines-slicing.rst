@@ -10,13 +10,13 @@ This can be misleading especially for member function slicing, for example:
 
 .. code:: c++
 
-	struct B { int a; virtual int f(); };
-	struct D : B { int b; int f() override; };
-	void use(B b) {  // Missing reference, intended ?
-	  b.f();  // Calls B::f.
-	}
-	D d;
-	use(d);  // Slice.
+        struct B { int a; virtual int f(); };
+        struct D : B { int b; int f() override; };
+        void use(B b) {  // Missing reference, intended ?
+          b.f();  // Calls B::f.
+        }
+        D d;
+        use(d);  // Slice.
 
 See the relevant CppCoreGuidelines sections for details:
 https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es63-dont-slice

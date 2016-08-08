@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=powerpc-linux-gnu | FileCheck %s -check-prefix=ELF
-; RUN: llc < %s -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=DARWIN
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=DARWIN8
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-linux-gnu | FileCheck %s -check-prefix=ELF
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin9 | FileCheck %s -check-prefix=DARWIN
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s -check-prefix=DARWIN8
 
 @a = global i1 true
 ; no alignment

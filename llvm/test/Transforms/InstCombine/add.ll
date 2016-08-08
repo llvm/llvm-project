@@ -109,12 +109,10 @@ define i1 @test10(i8 %A, i8 %b) {
   ret i1 %c
 }
 
-; FIXME: Vectors should fold the same way.
-
 define <2 x i1> @test10vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @test10vec(
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i8> %a, %b
-; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> [[C]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> zeroinitializer, %b
+; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> %a, [[C]]
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %c = add <2 x i8> %a, %b
@@ -133,11 +131,9 @@ define i1 @test11(i8 %A) {
   ret i1 %c
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test11vec(<2 x i8> %a) {
 ; CHECK-LABEL: @test11vec(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i8> %a, <i8 -1, i8 -1>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[B]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> %a, <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i8> %a, <i8 -1, i8 -1>
@@ -268,11 +264,9 @@ define i1 @test21(i32 %x) {
   ret i1 %y
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test21vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test21vec(
-; CHECK-NEXT:    [[T:%.*]] = add <2 x i32> %x, <i32 4, i32 4>
-; CHECK-NEXT:    [[Y:%.*]] = icmp eq <2 x i32> [[T]], <i32 123, i32 123>
+; CHECK-NEXT:    [[Y:%.*]] = icmp eq <2 x i32> %x, <i32 119, i32 119>
 ; CHECK-NEXT:    ret <2 x i1> [[Y]]
 ;
   %t = add <2 x i32> %x, <i32 4, i32 4>

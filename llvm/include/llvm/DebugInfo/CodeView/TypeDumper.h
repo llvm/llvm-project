@@ -72,7 +72,8 @@ public:
   Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error visit##Name(Name##Record &Record) override;
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
+                         Name##Record &Record) override;
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)

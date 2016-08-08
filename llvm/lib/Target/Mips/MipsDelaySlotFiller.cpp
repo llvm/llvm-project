@@ -543,6 +543,9 @@ Iter Filler::replaceWithCompactBranch(MachineBasicBlock &MBB, Iter Branch,
 
 // For given opcode returns opcode of corresponding instruction with short
 // delay slot.
+// For the pseudo TAILCALL*_MM instrunctions return the short delay slot
+// form. Unfortunately, TAILCALL<->b16 is denied as b16 has a limited range
+// that is too short to make use of for tail calls.
 static int getEquivalentCallShort(int Opcode) {
   switch (Opcode) {
   case Mips::BGEZAL:
@@ -555,6 +558,10 @@ static int getEquivalentCallShort(int Opcode) {
     return Mips::JALRS_MM;
   case Mips::JALR16_MM:
     return Mips::JALRS16_MM;
+  case Mips::TAILCALL_MM:
+    llvm_unreachable("Attempting to shorten the TAILCALL_MM pseudo!");
+  case Mips::TAILCALLREG_MM:
+    return Mips::JR16_MM;
   default:
     llvm_unreachable("Unexpected call instruction for microMIPS.");
   }
@@ -602,10 +609,16 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
         // Get instruction with delay slot.
         MachineBasicBlock::instr_iterator DSI = I.getInstrIterator();
 
-        if (InMicroMipsMode && TII->GetInstSizeInBytes(*std::next(DSI)) == 2 &&
+        if (InMicroMipsMode && TII->getInstSizeInBytes(*std::next(DSI)) == 2 &&
             DSI->isCall()) {
           // If instruction in delay slot is 16b change opcode to
           // corresponding instruction with short delay slot.
+
+          // TODO: Implement an instruction mapping table of 16bit opcodes to
+          // 32bit opcodes so that an instruction can be expanded. This would
+          // save 16 bits as a TAILCALL_MM pseudo requires a fullsized nop.
+          // TODO: Permit b16 when branching backwards to the the same function
+          // if it is in range.
           DSI->setDesc(TII->get(getEquivalentCallShort(DSI->getOpcode())));
         }
         continue;
@@ -692,9 +705,14 @@ bool Filler::searchRange(MachineBasicBlock &MBB, IterTy Begin, IterTy End,
     bool InMicroMipsMode = STI.inMicroMipsMode();
     const MipsInstrInfo *TII = STI.getInstrInfo();
     unsigned Opcode = (*Slot).getOpcode();
-    if (InMicroMipsMode && TII->GetInstSizeInBytes(*CurrI) == 2 &&
+    // This is complicated by the tail call optimization. For non-PIC code
+    // there is only a 32bit sized unconditional branch which can be assumed
+    // to be able to reach the target. b16 only has a range of +/- 1 KB.
+    // It's entirely possible that the target function is reachable with b16
+    // but we don't have enough information to make that decision.
+     if (InMicroMipsMode && TII->getInstSizeInBytes(*CurrI) == 2 &&
         (Opcode == Mips::JR || Opcode == Mips::PseudoIndirectBranch ||
-         Opcode == Mips::PseudoReturn))
+         Opcode == Mips::PseudoReturn || Opcode == Mips::TAILCALL))
       continue;
 
     Filler = CurrI;
@@ -710,7 +728,7 @@ bool Filler::searchBackward(MachineBasicBlock &MBB, Iter Slot) const {
 
   auto *Fn = MBB.getParent();
   RegDefsUses RegDU(*Fn->getSubtarget().getRegisterInfo());
-  MemDefsUses MemDU(Fn->getDataLayout(), Fn->getFrameInfo());
+  MemDefsUses MemDU(Fn->getDataLayout(), &Fn->getFrameInfo());
   ReverseIter Filler;
 
   RegDU.init(*Slot);
@@ -776,8 +794,8 @@ bool Filler::searchSuccBBs(MachineBasicBlock &MBB, Iter Slot) const {
   if (HasMultipleSuccs) {
     IM.reset(new LoadFromStackOrConst());
   } else {
-    const MachineFrameInfo *MFI = Fn->getFrameInfo();
-    IM.reset(new MemDefsUses(Fn->getDataLayout(), MFI));
+    const MachineFrameInfo &MFI = Fn->getFrameInfo();
+    IM.reset(new MemDefsUses(Fn->getDataLayout(), &MFI));
   }
 
   if (!searchRange(MBB, SuccBB->begin(), SuccBB->end(), RegDU, *IM, Slot,

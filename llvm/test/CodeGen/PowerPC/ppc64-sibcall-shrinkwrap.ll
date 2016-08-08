@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=false | FileCheck %s -check-prefix=CHECK-SCO-ONLY
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=true | FileCheck %s -check-prefix=CHECK-SCO-SHRK
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=false | FileCheck %s -check-prefix=CHECK-SCO-ONLY
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=true | FileCheck %s -check-prefix=CHECK-SCO-SHRK
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=false | FileCheck %s -check-prefix=CHECK-SCO-ONLY
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=true | FileCheck %s -check-prefix=CHECK-SCO-SHRK
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=false | FileCheck %s -check-prefix=CHECK-SCO-ONLY
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-sco=false --enable-shrink-wrap=true | FileCheck %s -check-prefix=CHECK-SCO-SHRK
 
 %"class.clang::NamedDecl" = type { i32 }
 declare void @__assert_fail();

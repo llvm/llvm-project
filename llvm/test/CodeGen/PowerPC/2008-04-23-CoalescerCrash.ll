@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
 
 @_ZL10DeviceCode = internal global i16 0		; <i16*> [#uses=1]
 @.str19 = internal constant [64 x i8] c"unlock_then_erase_sector: failed to erase block (status= 0x%x)\0A\00"		; <[64 x i8]*> [#uses=1]

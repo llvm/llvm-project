@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 ; rdar://5538377
 
         %struct.disk_unsigned = type { i32 }

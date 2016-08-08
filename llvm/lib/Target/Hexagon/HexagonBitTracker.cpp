@@ -26,7 +26,7 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
                                    MachineRegisterInfo &mri,
                                    const HexagonInstrInfo &tii,
                                    MachineFunction &mf)
-    : MachineEvaluator(tri, mri), MF(mf), MFI(*mf.getFrameInfo()), TII(tii) {
+    : MachineEvaluator(tri, mri), MF(mf), MFI(mf.getFrameInfo()), TII(tii) {
   // Populate the VRX map (VR to extension-type).
   // Go over all the formal parameters of the function. If a given parameter
   // P is sign- or zero-extended, locate the virtual register holding that
@@ -679,6 +679,8 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case A4_combineir:
     case A4_combineri:
     case A2_combinew:
+    case V6_vcombine:
+    case V6_vcombine_128B:
       assert(W0 % 2 == 0);
       return rr0(cop(2, W0/2).cat(cop(1, W0/2)), Outputs);
     case A2_combine_ll:

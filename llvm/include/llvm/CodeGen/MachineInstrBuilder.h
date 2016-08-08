@@ -83,6 +83,21 @@ public:
     return *this;
   }
 
+  /// Add a virtual register definition operand.
+  const MachineInstrBuilder &addDef(unsigned RegNo, unsigned Flags = 0,
+                                    unsigned SubReg = 0) const {
+    return addReg(RegNo, Flags | RegState::Define, SubReg);
+  }
+
+  /// Add a virtual register use operand. It is an error for Flags to contain
+  /// `RegState::Define` when calling this function.
+  const MachineInstrBuilder &addUse(unsigned RegNo, unsigned Flags = 0,
+                                    unsigned SubReg = 0) const {
+    assert(!(Flags & RegState::Define) &&
+           "Misleading addUse defines register, use addReg instead.");
+    return addReg(RegNo, Flags, SubReg);
+  }
+
   /// Add a new immediate operand.
   const MachineInstrBuilder &addImm(int64_t Val) const {
     MI->addOperand(*MF, MachineOperand::CreateImm(Val));
@@ -187,6 +202,11 @@ public:
 
   const MachineInstrBuilder &addCFIIndex(unsigned CFIIndex) const {
     MI->addOperand(*MF, MachineOperand::CreateCFIIndex(CFIIndex));
+    return *this;
+  }
+
+  const MachineInstrBuilder &addIntrinsicID(Intrinsic::ID ID) const {
+    MI->addOperand(*MF, MachineOperand::CreateIntrinsicID(ID));
     return *this;
   }
 

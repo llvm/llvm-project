@@ -100,10 +100,20 @@ multiclass ARGUMENT<WebAssemblyRegClass vt> {
   def ARGUMENT_#vt : I<(outs vt:$res), (ins i32imm:$argno),
                        [(set vt:$res, (WebAssemblyargument timm:$argno))]>;
 }
+multiclass SIMD_ARGUMENT<ValueType vt> {
+  let hasSideEffects = 1, Uses = [ARGUMENTS], isCodeGenOnly = 1 in
+  def ARGUMENT_#vt : SIMD_I<(outs V128:$res), (ins i32imm:$argno),
+                            [(set (vt V128:$res),
+                                  (WebAssemblyargument timm:$argno))]>;
+}
 defm : ARGUMENT<I32>;
 defm : ARGUMENT<I64>;
 defm : ARGUMENT<F32>;
 defm : ARGUMENT<F64>;
+defm : SIMD_ARGUMENT<v16i8>;
+defm : SIMD_ARGUMENT<v8i16>;
+defm : SIMD_ARGUMENT<v4i32>;
+defm : SIMD_ARGUMENT<v4f32>;
 
 let Defs = [ARGUMENTS] in {
 
@@ -131,6 +141,7 @@ defm : LOCAL<I32>;
 defm : LOCAL<I64>;
 defm : LOCAL<F32>;
 defm : LOCAL<F64>;
+defm : LOCAL<V128>, Requires<[HasSIMD128]>;
 
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 def CONST_I32 : I<(outs I32:$res), (ins i32imm:$imm),

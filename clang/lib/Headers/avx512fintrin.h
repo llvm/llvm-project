@@ -54,6 +54,19 @@ typedef unsigned short __mmask16;
 #define _MM_FROUND_TO_ZERO          0x03
 #define _MM_FROUND_CUR_DIRECTION    0x04
 
+/* Constants for integer comparison predicates */
+typedef enum {
+    _MM_CMPINT_EQ,      /* Equal */
+    _MM_CMPINT_LT,      /* Less than */
+    _MM_CMPINT_LE,      /* Less than or Equal */
+    _MM_CMPINT_UNUSED,
+    _MM_CMPINT_NE,      /* Not Equal */
+    _MM_CMPINT_NLT,     /* Not Less than */
+#define _MM_CMPINT_GE   _MM_CMPINT_NLT  /* Greater than or Equal */
+    _MM_CMPINT_NLE      /* Not Less than or Equal */
+#define _MM_CMPINT_GT   _MM_CMPINT_NLE  /* Greater than */
+} _MM_CMPINT_ENUM;
+
 typedef enum
 {
   _MM_PERM_AAAA = 0x00, _MM_PERM_AAAB = 0x01, _MM_PERM_AAAC = 0x02,
@@ -7502,7 +7515,6 @@ _mm512_mask_cvtsepi64_storeu_epi8 (void * __P, __mmask8 __M, __m512i __A)
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm512_cvtsepi64_epi32 (__m512i __A)
 {
-  __v8si __O;
   return (__m256i) __builtin_ia32_pmovsqd512_mask ((__v8di) __A,
                (__v8si) _mm256_undefined_si256 (),
                (__mmask8) -1);

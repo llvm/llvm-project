@@ -335,6 +335,9 @@ let Defs = [CC] in {
   def BRCTG : BranchUnaryRI<"brctg", 0xA77, GR64>;
 }
 
+def BRXH : BranchBinaryRSI<"brxh", 0x84, GR64>;
+def BRXLE : BranchBinaryRSI<"brxle", 0x85, GR64>;
+
 //===----------------------------------------------------------------------===//
 // Select instructions
 //===----------------------------------------------------------------------===//
@@ -1680,6 +1683,25 @@ let hasSideEffects = 1 in {
                      "exrl\t$R1, $I2", []>;
 }
 
+let Defs = [CC] in {
+  let hasSideEffects = 1 in
+    def PR : InstE<0x0101, (outs), (ins), "pr", []>;
+
+  let mayLoad = 1, mayStore = 1 in
+    def MVCK : InstSSd<0xD9, (outs),
+                             (ins bdxaddr12only:$XBD1, bdaddr12only:$BD2,
+                                  GR64:$R3),
+                       "mvck\t$XBD1, $BD2, $R3", []>;
+}
+
+let mayStore = 1 in
+  def STRAG : InstSSE<0xE502, (outs), (ins bdaddr12only:$BD1, bdaddr12only:$BD2),
+                      "strag\t$BD1, $BD2", []>;
+
+let Defs = [R0D, R1D], mayLoad = 1 in
+  def ECTG : InstSSF<0xC81, (outs),
+                            (ins bdaddr12only:$BD1, bdaddr12only:$BD2, GR64:$R3),
+                     "ectg\t$BD1, $BD2, $R3", []>;
 
 //===----------------------------------------------------------------------===//
 // Peepholes.

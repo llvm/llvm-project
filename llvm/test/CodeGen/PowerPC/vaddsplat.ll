@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mcpu=pwr7 <%s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 <%s | FileCheck %s
 
 ; Test optimizations of build_vector for 6-bit immediates.
 

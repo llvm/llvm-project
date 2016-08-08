@@ -538,7 +538,7 @@ std::error_code COFFObjectFile::initImportTablePtr() {
   if (std::error_code EC = checkOffset(Data, IntPtr, DataEntry->Size))
     return EC;
   ImportDirectory = reinterpret_cast<
-      const import_directory_table_entry *>(IntPtr);
+      const coff_import_directory_table_entry *>(IntPtr);
   return std::error_code();
 }
 
@@ -772,7 +772,7 @@ basic_symbol_iterator COFFObjectFile::symbol_end_impl() const {
 import_directory_iterator COFFObjectFile::import_directory_begin() const {
   if (!ImportDirectory)
     return import_directory_end();
-  if (ImportDirectory[0].ImportLookupTableRVA == 0)
+  if (ImportDirectory->isNull())
     return import_directory_end();
   return import_directory_iterator(
       ImportDirectoryEntryRef(ImportDirectory, 0, this));
@@ -1201,14 +1201,14 @@ operator==(const ImportDirectoryEntryRef &Other) const {
 
 void ImportDirectoryEntryRef::moveNext() {
   ++Index;
-  if (ImportTable[Index].ImportLookupTableRVA == 0) {
+  if (ImportTable[Index].isNull()) {
     Index = -1;
     ImportTable = nullptr;
   }
 }
 
 std::error_code ImportDirectoryEntryRef::getImportTableEntry(
-    const import_directory_table_entry *&Result) const {
+    const coff_import_directory_table_entry *&Result) const {
   return getObject(Result, OwningObject->Data, ImportTable + Index);
 }
 
@@ -1250,19 +1250,34 @@ importedSymbolEnd(uint32_t RVA, const COFFObjectFile *Object) {
 
 imported_symbol_iterator
 ImportDirectoryEntryRef::imported_symbol_begin() const {
-  return importedSymbolBegin(ImportTable[Index].ImportLookupTableRVA,
+  return importedSymbolBegin(ImportTable[Index].ImportAddressTableRVA,
                              OwningObject);
 }
 
 imported_symbol_iterator
 ImportDirectoryEntryRef::imported_symbol_end() const {
-  return importedSymbolEnd(ImportTable[Index].ImportLookupTableRVA,
+  return importedSymbolEnd(ImportTable[Index].ImportAddressTableRVA,
                            OwningObject);
 }
 
 iterator_range<imported_symbol_iterator>
 ImportDirectoryEntryRef::imported_symbols() const {
   return make_range(imported_symbol_begin(), imported_symbol_end());
+}
+
+imported_symbol_iterator ImportDirectoryEntryRef::lookup_table_begin() const {
+  return importedSymbolBegin(ImportTable[Index].ImportLookupTableRVA,
+                             OwningObject);
+}
+
+imported_symbol_iterator ImportDirectoryEntryRef::lookup_table_end() const {
+  return importedSymbolEnd(ImportTable[Index].ImportLookupTableRVA,
+                           OwningObject);
+}
+
+iterator_range<imported_symbol_iterator>
+ImportDirectoryEntryRef::lookup_table_symbols() const {
+  return make_range(lookup_table_begin(), lookup_table_end());
 }
 
 std::error_code ImportDirectoryEntryRef::getName(StringRef &Result) const {

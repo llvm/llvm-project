@@ -525,7 +525,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
     if (SelfRegion != IvarRegion->getSuperRegion())
       continue;
 
-      const ObjCIvarDecl *IvarDecl = IvarRegion->getDecl();
+    const ObjCIvarDecl *IvarDecl = IvarRegion->getDecl();
     // Prevent an inlined call to -dealloc in a super class from warning
     // about the values the subclass's -dealloc should release.
     if (IvarDecl->getContainingInterface() !=

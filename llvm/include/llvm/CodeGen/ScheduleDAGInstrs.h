@@ -100,7 +100,7 @@ namespace llvm {
   class ScheduleDAGInstrs : public ScheduleDAG {
   protected:
     const MachineLoopInfo *MLI;
-    const MachineFrameInfo *MFI;
+    const MachineFrameInfo &MFI;
 
     /// TargetSchedModel provides an interface to the machine model.
     TargetSchedModel SchedModel;

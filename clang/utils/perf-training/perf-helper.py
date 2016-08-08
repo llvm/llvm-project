@@ -75,7 +75,7 @@ def dtrace(args):
       target = "oneshot$target:::entry"
   else:
       target = "pid$target:::entry"
-  predicate = '%s/probemod=="%s"/' % (target, os.path.basename(args[0]))
+  predicate = '%s/probemod=="%s"/' % (target, os.path.basename(cmd[0]))
   log_timestamp = 'printf("dtrace-TS: %d\\n", timestamp)'
   if opts.use_ustack:
       action = 'ustack(1);'
@@ -102,6 +102,7 @@ def dtrace(args):
   start_time = time.time()
 
   with open("%d.dtrace" % os.getpid(), "w") as f:
+    f.write("### Command: %s" % dtrace_args)
     subprocess.check_call(dtrace_args, stdout=f, stderr=subprocess.PIPE)
 
   elapsed = time.time() - start_time

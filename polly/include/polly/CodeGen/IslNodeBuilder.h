@@ -37,7 +37,20 @@ struct SubtreeReferences {
   BlockGenerator &BlockGen;
 };
 
-isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr);
+/// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
+///
+/// This includes the SCEVUnknowns referenced by the SCEVs used in the
+/// statement and the base pointers of the memory accesses. For scalar
+/// statements we force the generation of alloca memory locations and list
+/// these locations in the set of out-of-scop values as well.
+///
+/// @param Stmt             The statement for which to extract the information.
+/// @param UserPtr          A void pointer that can be casted to a
+///                         SubtreeReferences structure.
+/// @param CreateScalarRefs Should the result include allocas of scalar
+///                         references?
+isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                               bool CreateScalarRefs = true);
 
 class IslNodeBuilder {
 public:
@@ -54,6 +67,9 @@ public:
 
   void addParameters(__isl_take isl_set *Context);
   void create(__isl_take isl_ast_node *Node);
+
+  /// @brief Allocate memory for all new arrays created by Polly.
+  void allocateNewArrays();
 
   /// @brief Preload all memory loads that are invariant.
   bool preloadInvariantLoads();
@@ -126,7 +142,7 @@ protected:
   /// Generate code for a given SCEV*
   ///
   /// This function generates code for a given SCEV expression. It generated
-  /// code is emmitted at the end of the basic block our Builder currently
+  /// code is emitted at the end of the basic block our Builder currently
   /// points to and the resulting value is returned.
   ///
   /// @param Expr The expression to code generate.
@@ -148,7 +164,7 @@ protected:
   /// @param All If not set only parameters referred to by the constraints in
   ///            @p Set will be materialized, otherwise all.
   ///
-  /// @returns False, iff a problem occured and the value was not materialized.
+  /// @returns False, iff a problem occurred and the value was not materialized.
   bool materializeParameters(__isl_take isl_set *Set, bool All);
 
   // Extract the upper bound of this loop
@@ -166,7 +182,7 @@ protected:
   //    It must not be calculated at each loop iteration and can often even be
   //    hoisted out further by the loop invariant code motion.
   //
-  // 2. OpenMP needs a loop invarient upper bound to calculate the number
+  // 2. OpenMP needs a loop invariant upper bound to calculate the number
   //    of loop iterations.
   //
   // 3. With the existing code, upper bounds have been easier to implement.
@@ -258,7 +274,7 @@ protected:
   /// map all members of @p IAClass to that preloaded value, potentially casted
   /// to the required type.
   ///
-  /// @returns False, iff a problem occured and the load was not preloaded.
+  /// @returns False, iff a problem occurred and the load was not preloaded.
   bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
   void createForVector(__isl_take isl_ast_node *For, int VectorWidth);

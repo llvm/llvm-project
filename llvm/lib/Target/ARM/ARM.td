@@ -798,6 +798,12 @@ def : ProcNoItin<"exynos-m1",                           [ARMv8a, ProcExynosM1,
                                                          FeatureCrypto,
                                                          FeatureCRC]>;
 
+def : ProcNoItin<"exynos-m2",                           [ARMv8a, ProcExynosM1,
+                                                         FeatureHWDiv,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC]>;
+
 //===----------------------------------------------------------------------===//
 // Register File Description
 //===----------------------------------------------------------------------===//

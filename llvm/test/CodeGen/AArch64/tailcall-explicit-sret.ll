@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple arm64-apple-darwin -aarch64-load-store-opt=false -asm-verbose=false -disable-post-ra | FileCheck %s
+; RUN: llc < %s -mtriple arm64-apple-darwin -aarch64-enable-ldst-opt=false -asm-verbose=false -disable-post-ra | FileCheck %s
 ; Disable the load/store optimizer to avoid having LDP/STPs and simplify checks.
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

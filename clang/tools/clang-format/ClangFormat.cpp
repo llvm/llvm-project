@@ -266,17 +266,17 @@ static bool format(StringRef FileName) {
   bool IncompleteFormat = false;
   Replacements FormatChanges = reformat(FormatStyle, *ChangedCode, Ranges,
                                         AssumedFileName, &IncompleteFormat);
-  Replaces = tooling::mergeReplacements(Replaces, FormatChanges);
+  Replaces = Replaces.merge(FormatChanges);
   if (OutputXML) {
     outs() << "<?xml version='1.0'?>\n<replacements "
               "xml:space='preserve' incomplete_format='"
            << (IncompleteFormat ? "true" : "false") << "'>\n";
     if (Cursor.getNumOccurrences() != 0)
       outs() << "<cursor>"
-             << tooling::shiftedCodePosition(FormatChanges, CursorPosition)
+             << FormatChanges.getShiftedCodePosition(CursorPosition)
              << "</cursor>\n";
 
-    outputReplacementsXML(Replaces); 
+    outputReplacementsXML(Replaces);
     outs() << "</replacements>\n";
   } else {
     IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -298,7 +298,7 @@ static bool format(StringRef FileName) {
     } else {
       if (Cursor.getNumOccurrences() != 0)
         outs() << "{ \"Cursor\": "
-               << tooling::shiftedCodePosition(FormatChanges, CursorPosition)
+               << FormatChanges.getShiftedCodePosition(CursorPosition)
                << ", \"IncompleteFormat\": "
                << (IncompleteFormat ? "true" : "false") << " }\n";
       Rewrite.getEditBuffer(ID).write(outs());

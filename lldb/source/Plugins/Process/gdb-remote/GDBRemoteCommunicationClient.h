@@ -105,9 +105,7 @@ public:
     SendAsyncSignal (int signo);
 
     bool
-    SendInterrupt (Mutex::Locker &locker, 
-                   uint32_t seconds_to_wait_for_stop, 
-                   bool &timed_out);
+    SendInterrupt(std::unique_lock<std::recursive_mutex> &lock, uint32_t seconds_to_wait_for_stop, bool &timed_out);
 
     lldb::pid_t
     GetCurrentProcessID (bool allow_lazy = true);

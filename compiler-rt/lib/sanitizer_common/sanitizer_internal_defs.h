@@ -296,12 +296,12 @@ inline void Trap() {
 }
 #else
 extern "C" void* _ReturnAddress(void);
+extern "C" void* _AddressOfReturnAddress(void);
 # pragma intrinsic(_ReturnAddress)
+# pragma intrinsic(_AddressOfReturnAddress)
 # define GET_CALLER_PC() (uptr)_ReturnAddress()
 // CaptureStackBackTrace doesn't need to know BP on Windows.
-// FIXME: This macro is still used when printing error reports though it's not
-// clear if the BP value is needed in the ASan reports on Windows.
-# define GET_CURRENT_FRAME() (uptr)0xDEADBEEF
+# define GET_CURRENT_FRAME() (((uptr)_AddressOfReturnAddress()) + sizeof(uptr))
 
 extern "C" void __ud2(void);
 # pragma intrinsic(__ud2)

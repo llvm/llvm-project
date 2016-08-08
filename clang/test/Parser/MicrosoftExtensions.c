@@ -106,3 +106,12 @@ __declspec(align(16)) struct align_before_key3 {} *align_before_key3_var;
 _Static_assert(__alignof(struct align_before_key1) == 16, "");
 _Static_assert(__alignof(struct align_before_key2) == 16, "");
 _Static_assert(__alignof(struct align_before_key3) == 16, "");
+
+void PR28782(int i) {
+foo:
+  int n;
+  switch (i) {
+  case 0:
+    int m;
+  }
+}

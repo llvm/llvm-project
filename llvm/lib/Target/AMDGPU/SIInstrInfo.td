@@ -2382,10 +2382,10 @@ multiclass VOPC_Helper <vopc op, string opName, list<dag> pat32,
 
 // Special case for class instructions which only have modifiers on
 // the 1st source operand.
-multiclass VOPC_Class_Helper <vopc op, string opName, list<dag> pat32,
+multiclass VOPC_Class_Helper <vopc op, string opName,
                               list<dag> pat64, bit DefExec, string revOp,
                               VOPProfile p, list<SchedReadWrite> sched> {
-  defm _e32 : VOPC_m <op, p.Ins32, p.Asm32, pat32, opName, DefExec, p, sched>;
+  defm _e32 : VOPC_m <op, p.Ins32, p.Asm32, [], opName, DefExec, p, sched>;
 
   defm _e64 : VOP3_C_m <op, (outs VOPDstS64:$sdst), p.Ins64, opName#p.Asm64, pat64,
                         opName, p.HasModifiers, DefExec, revOp, sched>,
@@ -2417,14 +2417,13 @@ multiclass VOPCInst <vopc op, string opName,
 multiclass VOPCClassInst <vopc op, string opName, VOPProfile P,
                      bit DefExec = 0,
                      list<SchedReadWrite> sched> : VOPC_Class_Helper <
-  op, opName, [],
-  !if(P.HasModifiers,
-      [(set i1:$sdst,
-          (AMDGPUfp_class (P.Src0VT (VOP3Mods0Clamp0OMod P.Src0VT:$src0, i32:$src0_modifiers)), P.Src1VT:$src1))],
-      [(set i1:$sdst, (AMDGPUfp_class P.Src0VT:$src0, P.Src1VT:$src1))]),
+  op, opName,
+  [(set i1:$sdst,
+     (AMDGPUfp_class
+       (P.Src0VT (VOP3Mods0Clamp0OMod P.Src0VT:$src0, i32:$src0_modifiers)),
+       P.Src1VT:$src1))],
   DefExec, opName, P, sched
 >;
-
 
 multiclass VOPC_F32 <vopc op, string opName, PatLeaf cond = COND_NULL, string revOp = opName> :
   VOPCInst <op, opName, VOPC_I1_F32_F32, cond, revOp>;
@@ -2586,266 +2585,6 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
 }
 
 //===----------------------------------------------------------------------===//
-// Vector I/O classes
-//===----------------------------------------------------------------------===//
-
-class DS_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
-  DS <outs, ins, "", pattern>,
-  SIMCInstr <opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
-
-class DS_Real_si <bits<8> op, string opName, dag outs, dag ins, string asm> :
-  DS <outs, ins, asm, []>,
-  DSe <op>,
-  SIMCInstr <opName, SIEncodingFamily.SI> {
-  let isCodeGenOnly = 0;
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace="SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class DS_Real_vi <bits<8> op, string opName, dag outs, dag ins, string asm> :
-  DS <outs, ins, asm, []>,
-  DSe_vi <op>,
-  SIMCInstr <opName, SIEncodingFamily.VI> {
-  let isCodeGenOnly = 0;
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace="VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-class DS_Off16_Real_si <bits<8> op, string opName, dag outs, dag ins, string asm> :
-  DS_Real_si <op,opName, outs, ins, asm> {
-
-  // Single load interpret the 2 i8imm operands as a single i16 offset.
-  bits<16> offset;
-  let offset0 = offset{7-0};
-  let offset1 = offset{15-8};
-}
-
-class DS_Off16_Real_vi <bits<8> op, string opName, dag outs, dag ins, string asm> :
-  DS_Real_vi <op, opName, outs, ins, asm> {
-
-  // Single load interpret the 2 i8imm operands as a single i16 offset.
-  bits<16> offset;
-  let offset0 = offset{7-0};
-  let offset1 = offset{15-8};
-}
-
-multiclass DS_1A_RET_ <dsop op, string opName, RegisterClass rc,
-  dag outs = (outs rc:$vdst),
-  dag ins = (ins VGPR_32:$addr, offset:$offset, gds:$gds),
-  string asm = opName#" $vdst, $addr"#"$offset$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let data0 = 0, data1 = 0 in {
-    def _si : DS_Off16_Real_si <op.SI, opName, outs, ins, asm>;
-    def _vi : DS_Off16_Real_vi <op.VI, opName, outs, ins, asm>;
-  }
-}
-
-// TODO: DS_1A_RET can be inherited from DS_1A_RET_ but its not working
-// for some reason. In fact we can remove this class if use dsop everywhere
-multiclass DS_1A_RET <bits<8> op, string opName, RegisterClass rc,
-  dag outs = (outs rc:$vdst),
-  dag ins = (ins VGPR_32:$addr, offset:$offset, gds:$gds),
-  string asm = opName#" $vdst, $addr"#"$offset$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let data0 = 0, data1 = 0 in {
-    def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_1A_Off8_RET <bits<8> op, string opName, RegisterClass rc,
-  dag outs = (outs rc:$vdst),
-  dag ins = (ins VGPR_32:$addr, offset0:$offset0, offset1:$offset1,
-                 gds:$gds),
-  string asm = opName#" $vdst, $addr"#"$offset0"#"$offset1$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let data0 = 0, data1 = 0, AsmMatchConverter = "cvtDSOffset01" in {
-    def _si : DS_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_1A1D_NORET <bits<8> op, string opName, RegisterClass rc,
-  dag outs = (outs),
-  dag ins = (ins VGPR_32:$addr, rc:$data0, offset:$offset, gds:$gds),
-  string asm = opName#" $addr, $data0"#"$offset$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>,
-           AtomicNoRet<opName, 0>;
-
-  let data1 = 0, vdst = 0 in {
-    def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_1A_Off8_NORET <bits<8> op, string opName,
-  dag outs = (outs),
-  dag ins = (ins VGPR_32:$addr,
-              offset0:$offset0, offset1:$offset1, gds:$gds),
-  string asm = opName#" $addr $offset0"#"$offset1$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let data0 = 0, data1 = 0, vdst = 0, AsmMatchConverter = "cvtDSOffset01" in {
-    def _si : DS_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_1A2D_Off8_NORET <bits<8> op, string opName, RegisterClass rc,
-  dag outs = (outs),
-  dag ins = (ins VGPR_32:$addr, rc:$data0, rc:$data1,
-              offset0:$offset0, offset1:$offset1, gds:$gds),
-  string asm = opName#" $addr, $data0, $data1$offset0$offset1$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let vdst = 0, AsmMatchConverter = "cvtDSOffset01" in {
-    def _si : DS_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_1A1D_RET <bits<8> op, string opName, RegisterClass rc,
-                        string noRetOp = "",
-  dag outs = (outs rc:$vdst),
-  dag ins = (ins VGPR_32:$addr, rc:$data0, offset:$offset, gds:$gds),
-  string asm = opName#" $vdst, $addr, $data0"#"$offset$gds"> {
-
-  let hasPostISelHook = 1 in {
-    def "" : DS_Pseudo <opName, outs, ins, []>,
-             AtomicNoRet<noRetOp, 1>;
-
-    let data1 = 0 in {
-      def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-      def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-    }
-  }
-}
-
-multiclass DS_1A1D_PERMUTE <bits<8> op, string opName, RegisterClass rc,
-                            SDPatternOperator node = null_frag,
-  dag outs = (outs rc:$vdst),
-  dag ins = (ins VGPR_32:$addr, rc:$data0, offset:$offset),
-  string asm = opName#" $vdst, $addr, $data0"#"$offset"> {
-
-  let mayLoad = 0, mayStore = 0, isConvergent = 1 in {
-    def "" : DS_Pseudo <opName, outs, ins,
-     [(set i32:$vdst,
-         (node (DS1Addr1Offset i32:$addr, i16:$offset), i32:$data0))]>;
-
-    let data1 = 0, gds = 0  in {
-      def "_vi" : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-    }
-  }
-}
-
-multiclass DS_1A2D_RET_m <bits<8> op, string opName, RegisterClass rc,
-                          string noRetOp = "", dag ins,
-  dag outs = (outs rc:$vdst),
-  string asm = opName#" $vdst, $addr, $data0, $data1"#"$offset"#"$gds"> {
-
-  let hasPostISelHook = 1 in {
-    def "" : DS_Pseudo <opName, outs, ins, []>,
-             AtomicNoRet<noRetOp, 1>;
-
-    def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_1A2D_RET <bits<8> op, string asm, RegisterClass rc,
-                        string noRetOp = "", RegisterClass src = rc> :
-  DS_1A2D_RET_m <op, asm, rc, noRetOp,
-                 (ins VGPR_32:$addr, src:$data0, src:$data1,
-                      offset:$offset, gds:$gds)
->;
-
-multiclass DS_1A2D_NORET <bits<8> op, string opName, RegisterClass rc,
-                          string noRetOp = opName,
-  dag outs = (outs),
-  dag ins = (ins VGPR_32:$addr, rc:$data0, rc:$data1,
-                 offset:$offset, gds:$gds),
-  string asm = opName#" $addr, $data0, $data1"#"$offset"#"$gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>,
-           AtomicNoRet<noRetOp, 0>;
-
-  let vdst = 0 in {
-    def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass DS_0A_RET <bits<8> op, string opName,
-  dag outs = (outs VGPR_32:$vdst),
-  dag ins = (ins offset:$offset, gds:$gds),
-  string asm = opName#" $vdst"#"$offset"#"$gds"> {
-
-  let mayLoad = 1, mayStore = 1 in {
-    def "" : DS_Pseudo <opName, outs, ins, []>;
-
-    let addr = 0, data0 = 0, data1 = 0 in {
-      def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-      def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-    } // end addr = 0, data0 = 0, data1 = 0
-  } // end mayLoad = 1, mayStore = 1
-}
-
-multiclass DS_1A_RET_GDS <bits<8> op, string opName,
-  dag outs = (outs VGPR_32:$vdst),
-  dag ins = (ins VGPR_32:$addr, offset:$offset),
-  string asm = opName#" $vdst, $addr"#"$offset gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let data0 = 0, data1 = 0, gds = 1 in {
-    def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-  } // end data0 = 0, data1 = 0, gds = 1
-}
-
-multiclass DS_1A_GDS <bits<8> op, string opName,
-  dag outs = (outs),
-  dag ins = (ins VGPR_32:$addr),
-  string asm = opName#" $addr gds"> {
-
-  def "" : DS_Pseudo <opName, outs, ins, []>;
-
-  let vdst = 0, data0 = 0, data1 = 0, offset0 = 0, offset1 = 0, gds = 1 in {
-    def _si : DS_Real_si <op, opName, outs, ins, asm>;
-    def _vi : DS_Real_vi <op, opName, outs, ins, asm>;
-  } // end vdst = 0, data = 0, data1 = 0, gds = 1
-}
-
-multiclass DS_1A <bits<8> op, string opName,
-  dag outs = (outs),
-  dag ins = (ins VGPR_32:$addr, offset:$offset, gds:$gds),
-  string asm = opName#" $addr"#"$offset"#"$gds"> {
-
-  let mayLoad = 1, mayStore = 1 in {
-    def "" : DS_Pseudo <opName, outs, ins, []>;
-
-    let vdst = 0, data0 = 0, data1 = 0 in {
-      def _si : DS_Off16_Real_si <op, opName, outs, ins, asm>;
-      def _vi : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
-    } // let vdst = 0, data0 = 0, data1 = 0
-  } // end mayLoad = 1, mayStore = 1
-}
-
-//===----------------------------------------------------------------------===//
 // MTBUF classes
 //===----------------------------------------------------------------------===//
 
@@ -2984,6 +2723,10 @@ multiclass MUBUF_m <mubuf op, string opName, dag outs, dag ins, string asm,
   def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
            MUBUFAddr64Table <0>;
 
+  let DisableWQM = 1 in {
+    def "_exact" : MUBUF_Pseudo <opName, outs, ins, []>;
+  }
+
   let addr64 = 0, isCodeGenOnly = 0 in {
     def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
   }
@@ -3054,7 +2797,8 @@ multiclass MUBUFAtomicOther_m <mubuf op, string opName, dag outs, dag ins,
 multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
                          ValueType vt, SDPatternOperator atomic> {
 
-  let mayStore = 1, mayLoad = 1, hasPostISelHook = 1, hasSideEffects = 1 in {
+  let mayStore = 1, mayLoad = 1, hasPostISelHook = 1, hasSideEffects = 1,
+      DisableWQM = 1 in {
 
     // No return variants
     let glc = 0, AsmMatchConverter = "cvtMubufAtomic" in {
@@ -3458,6 +3202,7 @@ class MIMG_Store_Helper <bits<7> op, string asm,
   let mayStore = 1;
   let hasSideEffects = 1;
   let hasPostISelHook = 0;
+  let DisableWQM = 1;
 }
 
 multiclass MIMG_Store_Addr_Helper <bits<7> op, string asm,
@@ -3489,6 +3234,7 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
   let mayStore = 1;
   let hasSideEffects = 1;
   let hasPostISelHook = 0;
+  let DisableWQM = 1;
   let Constraints = "$vdst = $vdata";
   let AsmMatchConverter = "cvtMIMGAtomic";
 }
@@ -3728,3 +3474,5 @@ def getAtomicNoRetOp : InstrMapping {
 include "SIInstructions.td"
 include "CIInstructions.td"
 include "VIInstructions.td"
+
+include "DSInstructions.td"

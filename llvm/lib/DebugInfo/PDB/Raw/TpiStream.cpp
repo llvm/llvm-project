@@ -11,11 +11,11 @@
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/Hash.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -97,17 +97,28 @@ public:
                   uint32_t NumHashBuckets)
       : HashValues(HashValues), NumHashBuckets(NumHashBuckets) {}
 
-  Error visitUdtSourceLine(UdtSourceLineRecord &Rec) override {
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         UdtSourceLineRecord &Rec) override {
     return verifySourceLine(Rec);
   }
 
-  Error visitUdtModSourceLine(UdtModSourceLineRecord &Rec) override {
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         UdtModSourceLineRecord &Rec) override {
     return verifySourceLine(Rec);
   }
 
-  Error visitClass(ClassRecord &Rec) override { return verify(Rec); }
-  Error visitEnum(EnumRecord &Rec) override { return verify(Rec); }
-  Error visitUnion(UnionRecord &Rec) override { return verify(Rec); }
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         ClassRecord &Rec) override {
+    return verify(Rec);
+  }
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         EnumRecord &Rec) override {
+    return verify(Rec);
+  }
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         UnionRecord &Rec) override {
+    return verify(Rec);
+  }
 
   Error visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) override {
     ++Index;
@@ -149,7 +160,8 @@ private:
 // Currently we only verify SRC_LINE records.
 Error TpiStream::verifyHashValues() {
   TpiHashVerifier Verifier(HashValues, Header->NumHashBuckets);
-  CVTypeVisitor Visitor(Verifier);
+  TypeDeserializer Deserializer(Verifier);
+  CVTypeVisitor Visitor(Deserializer);
   return Visitor.visitTypeStream(TypeRecords);
 }
 
@@ -189,12 +201,9 @@ Error TpiStream::reload() {
   if (Header->HashStreamIndex >= Pdb.getNumStreams())
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid TPI hash stream index.");
-
-  auto HS =
-      MappedBlockStream::createIndexedStream(Header->HashStreamIndex, Pdb);
-  if (!HS)
-    return HS.takeError();
-  StreamReader HSR(**HS);
+  auto HS = MappedBlockStream::createIndexedStream(
+      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex);
+  StreamReader HSR(*HS);
 
   uint32_t NumHashValues = Header->HashValueBuffer.Length / sizeof(ulittle32_t);
   if (NumHashValues != NumTypeRecords())
@@ -217,7 +226,7 @@ Error TpiStream::reload() {
   if (auto EC = HSR.readArray(HashAdjustments, NumHashAdjustments))
     return EC;
 
-  HashStream = std::move(*HS);
+  HashStream = std::move(HS);
 
   // TPI hash table is a parallel array for the type records.
   // Verify that the hash values match with type records.

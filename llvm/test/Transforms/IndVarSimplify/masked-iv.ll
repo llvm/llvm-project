@@ -1,11 +1,13 @@
-; RUN: opt < %s -indvars -S > %t
-; RUN: not grep trunc %t
-; RUN: grep and %t | count 1
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 ; Indvars should do the IV arithmetic in the canonical IV type (i64),
 ; and only use one truncation.
 
 define void @foo(i64* %A, i64* %B, i64 %n, i64 %a, i64 %s) nounwind {
+; CHECK-LABEL: @foo(
+; CHECK-NOT: trunc
+; CHECK: and
+; CHECK-NOT: and
 entry:
 	%t0 = icmp sgt i64 %n, 0		; <i1> [#uses=1]
 	br i1 %t0, label %bb.preheader, label %return

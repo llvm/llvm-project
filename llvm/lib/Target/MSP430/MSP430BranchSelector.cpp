@@ -70,7 +70,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
   for (MachineBasicBlock &MBB : Fn) {
     unsigned BlockSize = 0;
     for (MachineInstr &MI : MBB)
-      BlockSize += TII->GetInstSizeInBytes(MI);
+      BlockSize += TII->getInstSizeInBytes(MI);
 
     BlockSizes[MBB.getNumber()] = BlockSize;
     FuncSize += BlockSize;
@@ -107,7 +107,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
            I != E; ++I) {
         if ((I->getOpcode() != MSP430::JCC || I->getOperand(0).isImm()) &&
             I->getOpcode() != MSP430::JMP) {
-          MBBStartOffset += TII->GetInstSizeInBytes(*I);
+          MBBStartOffset += TII->getInstSizeInBytes(*I);
           continue;
         }
 

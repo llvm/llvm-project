@@ -167,7 +167,7 @@ public:
   BitcodeFile *file() { return (BitcodeFile *)this->File; }
 };
 
-class DefinedCommon : public Defined {
+template <class ELFT> class DefinedCommon : public Defined {
 public:
   DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t StOther,
                 uint8_t Type, InputFile *File);
@@ -178,7 +178,7 @@ public:
 
   // The output offset of this common symbol in the output bss. Computed by the
   // writer.
-  uint64_t OffsetInBss;
+  uint64_t Offset;
 
   // The maximum alignment we have seen for this symbol.
   uint64_t Alignment;
@@ -433,7 +433,8 @@ struct Symbol {
   // assume that the size and alignment of ELF64LE symbols is sufficient for any
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
-      DefinedBitcode, DefinedCommon, DefinedRegular<llvm::object::ELF64LE>,
+      DefinedBitcode, DefinedCommon<llvm::object::ELF64LE>,
+      DefinedRegular<llvm::object::ELF64LE>,
       DefinedSynthetic<llvm::object::ELF64LE>, Undefined,
       SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
       Body;

@@ -166,6 +166,9 @@ public:
 
   const char* getTargetNodeName(unsigned Opcode) const override;
 
+  bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
+    return true;
+  }
   SDValue getRsqrtEstimate(SDValue Operand,
                            DAGCombinerInfo &DCI,
                            unsigned &RefinementSteps,
@@ -223,6 +226,9 @@ enum NodeType : unsigned {
   DWORDADDR,
   FRACT,
   CLAMP,
+  // This is SETCC with the full mask result which is used for a compare with a 
+  // result bit per item in the wavefront.
+  SETCC,    
 
   // SIN_HW, COS_HW - f32 for SI, 1 ULP max error, valid from -100 pi to 100 pi.
   // Denormals handled on some parts.

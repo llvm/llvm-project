@@ -197,7 +197,7 @@ AsmToken AsmLexer::LexLineComment() {
     CurChar = getNextChar();
 
   IsAtStartOfLine = true;
-  // Whis is a whole line comment. leave newline
+  // This is a whole line comment. leave newline
   if (IsAtStartOfStatement)
     return AsmToken(AsmToken::EndOfStatement,
                     StringRef(TokStart, CurPtr - TokStart));

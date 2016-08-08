@@ -60,4 +60,8 @@ void f() {
   __readcr3();
   __writecr3(0);
 #endif
+
+#ifdef _M_ARM
+  __dmb(_ARM_BARRIER_ISHST);
+#endif
 }

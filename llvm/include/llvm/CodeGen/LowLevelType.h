@@ -47,36 +47,34 @@ public:
     Unsized,
   };
 
-  /// \brief get a low-level scalar or aggregate "bag of bits".
+  /// Get a low-level scalar or aggregate "bag of bits".
   static LLT scalar(unsigned SizeInBits) {
+    assert(SizeInBits > 0 && "invalid scalar size");
     return LLT{Scalar, 1, SizeInBits};
   }
 
-  /// \brief get a low-level pointer in the given address space (defaulting to
-  /// 0).
+  /// Get a low-level pointer in the given address space (defaulting to 0).
   static LLT pointer(unsigned AddressSpace) {
     return LLT{Pointer, 1, AddressSpace};
   }
 
-  /// \brief get a low-level vector of some number of elements and element
-  /// width. \p NumElements must be at least 2.
+  /// Get a low-level vector of some number of elements and element width.
+  /// \p NumElements must be at least 2.
   static LLT vector(uint16_t NumElements, unsigned ScalarSizeInBits) {
     assert(NumElements > 1 && "invalid number of vector elements");
     return LLT{Vector, NumElements, ScalarSizeInBits};
   }
 
-  /// \brief get a low-level vector of some number of elements and element
-  /// type
+  /// Get a low-level vector of some number of elements and element type.
   static LLT vector(uint16_t NumElements, LLT ScalarTy) {
     assert(NumElements > 1 && "invalid number of vector elements");
     assert(ScalarTy.isScalar() && "invalid vector element type");
     return LLT{Vector, NumElements, ScalarTy.getSizeInBits()};
   }
 
-  /// \brief get an unsized but valid low-level type (e.g. for a label).
-
+  /// Get an unsized but valid low-level type (e.g. for a label).
   static LLT unsized() {
-    return LLT{Unsized, 1, 0};
+    return LLT{Unsized, 0, 0};
   }
 
   explicit LLT(TypeKind Kind, uint16_t NumElements, unsigned SizeOrAddrSpace)
@@ -87,7 +85,7 @@ public:
 
   explicit LLT() : SizeOrAddrSpace(0), NumElements(0), Kind(Invalid) {}
 
-  /// \brief construct a low-level type based on an LLVM type.
+  /// Construct a low-level type based on an LLVM type.
   explicit LLT(const Type &Ty);
 
   bool isValid() const { return Kind != Invalid; }
@@ -100,15 +98,14 @@ public:
 
   bool isSized() const { return Kind == Scalar || Kind == Vector; }
 
-  /// \brief Returns the number of elements in a vector LLT. Must only be called
-  /// on vector types.
+  /// Returns the number of elements in a vector LLT. Must only be called on
+  /// vector types.
   uint16_t getNumElements() const {
     assert(isVector() && "cannot get number of elements on scalar/aggregate");
     return NumElements;
   }
 
-  /// \brief Returns the total size of the type. Must only be called on sized
-  /// types.
+  /// Returns the total size of the type. Must only be called on sized types.
   unsigned getSizeInBits() const {
     assert(isSized() && "attempt to get size of unsized type");
     return SizeOrAddrSpace * NumElements;
@@ -124,32 +121,33 @@ public:
     return SizeOrAddrSpace;
   }
 
-  /// \brief Returns the vector's element type. Only valid for vector types.
+  /// Returns the vector's element type. Only valid for vector types.
   LLT getElementType() const {
     assert(isVector() && "cannot get element type of scalar/aggregate");
     return scalar(SizeOrAddrSpace);
   }
 
-  /// \brief get a low-level type with half the size of the original, by halving
-  /// the size of the scalar type involved. For example `s32` will become
-  /// `s16`, `<2 x s32>` will become `<2 x s16>`.
+  /// Get a low-level type with half the size of the original, by halving the
+  /// size of the scalar type involved. For example `s32` will become `s16`,
+  /// `<2 x s32>` will become `<2 x s16>`.
   LLT halfScalarSize() const {
-    assert(isSized() && "cannot change size of this type");
+    assert(isSized() && getScalarSizeInBits() > 1 &&
+           getScalarSizeInBits() % 2 == 0 && "cannot half size of this type");
     return LLT{Kind, NumElements, SizeOrAddrSpace / 2};
   }
 
-  /// \brief get a low-level type with twice the size of the original, by
-  /// doubling the size of the scalar type involved. For example `s32` will
-  /// become `s64`, `<2 x s32>` will become `<2 x s64>`.
+  /// Get a low-level type with twice the size of the original, by doubling the
+  /// size of the scalar type involved. For example `s32` will become `s64`,
+  /// `<2 x s32>` will become `<2 x s64>`.
   LLT doubleScalarSize() const {
     assert(isSized() && "cannot change size of this type");
     return LLT{Kind, NumElements, SizeOrAddrSpace * 2};
   }
 
-  /// \brief get a low-level type with half the size of the original, by halving
-  /// the number of vector elements of the scalar type involved. The source must
-  /// be a vector type with an even number of elements. For example `<4 x
-  /// s32>` will become `<2 x s32>`, `<2 x s32>` will become `s32`.
+  /// Get a low-level type with half the size of the original, by halving the
+  /// number of vector elements of the scalar type involved. The source must be
+  /// a vector type with an even number of elements. For example `<4 x s32>`
+  /// will become `<2 x s32>`, `<2 x s32>` will become `s32`.
   LLT halfElements() const {
     assert(isVector() && NumElements % 2 == 0 && "cannot half odd vector");
     if (NumElements == 2)
@@ -158,20 +156,22 @@ public:
     return LLT{Vector, static_cast<uint16_t>(NumElements / 2), SizeOrAddrSpace};
   }
 
-  /// \brief get a low-level type with twice the size of the original, by
-  /// doubling the number of vector elements of the scalar type involved. The
-  /// source must be a vector type. For example `<2 x s32>` will become `<4 x
-  /// s32>`. Doubling the number of elements in sN produces <2 x sN>.
+  /// Get a low-level type with twice the size of the original, by doubling the
+  /// number of vector elements of the scalar type involved. The source must be
+  /// a vector type. For example `<2 x s32>` will become `<4 x s32>`. Doubling
+  /// the number of elements in sN produces <2 x sN>.
   LLT doubleElements() const {
     return LLT{Vector, static_cast<uint16_t>(NumElements * 2), SizeOrAddrSpace};
   }
 
   void print(raw_ostream &OS) const;
 
-  bool operator ==(const LLT &RHS) const {
+  bool operator==(const LLT &RHS) const {
     return Kind == RHS.Kind && SizeOrAddrSpace == RHS.SizeOrAddrSpace &&
            NumElements == RHS.NumElements;
   }
+
+  bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
 
   friend struct DenseMapInfo<LLT>;
 private:
@@ -179,6 +179,11 @@ private:
   uint16_t NumElements;
   TypeKind Kind;
 };
+
+inline raw_ostream& operator<<(raw_ostream &OS, const LLT &Ty) {
+  Ty.print(OS);
+  return OS;
+}
 
 template<> struct DenseMapInfo<LLT> {
   static inline LLT getEmptyKey() {

@@ -85,8 +85,9 @@ public:
   /// addVectorizableFunctionsFromVecLib for filling up the tables of
   /// vectorizable functions.
   enum VectorLibrary {
-    NoLibrary, // Don't use any vector library.
-    Accelerate // Use Accelerate framework.
+    NoLibrary,  // Don't use any vector library.
+    Accelerate, // Use Accelerate framework.
+    SVML        // Intel short vector math library.
   };
 
   TargetLibraryInfoImpl();
@@ -251,7 +252,7 @@ public:
     case LibFunc::exp2:      case LibFunc::exp2f:      case LibFunc::exp2l:
     case LibFunc::memcmp:    case LibFunc::strcmp:     case LibFunc::strcpy:
     case LibFunc::stpcpy:    case LibFunc::strlen:     case LibFunc::strnlen:
-    case LibFunc::memchr:
+    case LibFunc::memchr:    case LibFunc::mempcpy:
       return true;
     }
     return false;

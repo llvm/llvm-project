@@ -12,8 +12,6 @@ DWORD CALLBACK work_item(LPVOID) {
 // CHECK: AddressSanitizer: stack-buffer-underflow on address [[ADDR:0x[0-9a-f]+]]
 // CHECK: WRITE of size 1 at [[ADDR]] thread T1
 // CHECK:   {{#0 .* work_item.*queue_user_work_item_report.cc}}:[[@LINE-3]]
-// CHECK: Address [[ADDR]] is located in stack of thread T1 at offset {{.*}} in frame
-// CHECK:   work_item
   SetEvent(done);
   return 0;
 }

@@ -1,9 +1,3 @@
-// RUN: clang-rename -offset=289 -new-name=U %s -- | FileCheck %s
-
-// Currently unsupported test.
-// FIXME: clang-rename should be able to rename template parameters correctly.
-// XFAIL: *
-
 template <typename T>             // CHECK: template <typename U>
 class Foo {
 T foo(T arg, T& ref, T* ptr) {    // CHECK: U foo(U arg, U& ref, U* ptr) {
@@ -18,3 +12,7 @@ static void foo(T value) {}       // CHECK: static void foo(U value) {}
 
 T member;                         // CHECK: U member;
 };
+
+// RUN: cat %s > %t.cpp
+// RUN: clang-rename -offset=99 -new-name=U %t.cpp -i -- -fno-delayed-template-parsing
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s

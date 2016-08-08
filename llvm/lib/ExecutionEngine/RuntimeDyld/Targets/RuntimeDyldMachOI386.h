@@ -24,7 +24,7 @@ public:
   typedef uint32_t TargetPtrT;
 
   RuntimeDyldMachOI386(RuntimeDyld::MemoryManager &MM,
-                       RuntimeDyld::SymbolResolver &Resolver)
+                       JITSymbolResolver &Resolver)
       : RuntimeDyldMachOCRTPBase(MM, Resolver) {}
 
   unsigned getMaxStubSize() override { return 0; }

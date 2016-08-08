@@ -21,7 +21,7 @@
 ; CONFIG: .section .AMDGPU.config
 ; CONFIG-NEXT: .long   45096
 ; TYPICAL-NEXT: .long   0
-; TONGA-NEXT: .long   576
+; TONGA-NEXT: .long   704
 ; CONFIG: .p2align 8
 ; CONFIG: test:
 define amdgpu_ps void @test(i32 %p) {

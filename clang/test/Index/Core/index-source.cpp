@@ -7,3 +7,15 @@ class TemplCls {
   // CHECK: [[@LINE-1]]:3 | constructor/C++ | TemplCls | c:@ST>1#T@TemplCls@F@TemplCls#I# | <no-cgname> | Decl,RelChild | rel: 1
   // CHECK-NEXT: RelChild | TemplCls | c:@ST>1#T@TemplCls
 };
+
+template <typename T>
+class BT {
+  struct KLR {
+    int idx;
+  };
+
+  // CHECK: [[@LINE+1]]:7 | instance-method/C++ | foo |
+  KLR foo() {
+    return { .idx = 0 }; // Make sure this doesn't trigger a crash.
+  }
+};

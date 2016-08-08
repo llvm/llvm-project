@@ -349,7 +349,7 @@ bool DwarfDebug::isLexicalScopeDIENull(LexicalScope *Scope) {
   return !getLabelAfterInsn(Ranges.front().second);
 }
 
-template <typename Func> void forBothCUs(DwarfCompileUnit &CU, Func F) {
+template <typename Func> static void forBothCUs(DwarfCompileUnit &CU, Func F) {
   F(CU);
   if (auto *SkelCU = CU.getSkeleton())
     F(*SkelCU);

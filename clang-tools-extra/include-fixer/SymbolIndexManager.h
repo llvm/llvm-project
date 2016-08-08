@@ -28,12 +28,15 @@ public:
   /// Search for header files to be included for an identifier.
   /// \param Identifier The identifier being searched for. May or may not be
   ///                   fully qualified.
-  /// \returns A list of inclusion candidates, in a format ready for being
-  ///          pasted after an #include token.
-  // FIXME: Move mapping from SymbolInfo to headers out of
-  // SymbolIndexManager::search and return SymbolInfos instead of header paths.
+  /// \param IsNestedSearch Whether searching nested classes. If true, the
+  ///        method tries to strip identifier name parts from the end until it
+  ///        finds the corresponding candidates in database (e.g for identifier
+  ///        "b::foo", the method will try to find "b" if it fails to find
+  ///        "b::foo").
+  ///
+  /// \returns A list of symbol candidates.
   std::vector<find_all_symbols::SymbolInfo>
-  search(llvm::StringRef Identifier) const;
+  search(llvm::StringRef Identifier, bool IsNestedSearch = true) const;
 
 private:
   std::vector<std::unique_ptr<SymbolIndex>> SymbolIndices;

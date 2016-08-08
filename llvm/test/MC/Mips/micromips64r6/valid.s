@@ -322,5 +322,9 @@ a:
         sdc2 $2, 8($16)          # CHECK: sdc2 $2, 8($16)         # encoding: [0x20,0x50,0xa0,0x08]
         swc1 $f6, 369($13)       # CHECK: swc1 $f6, 369($13)      # encoding: [0x98,0xcd,0x01,0x71]
         swc2 $7, 777($17)        # CHECK: swc2 $7, 777($17)       # encoding: [0x20,0xf1,0x83,0x09]
+        cfc1 $1, $2              # CHECK: cfc1 $1, $2             # encoding: [0x54,0x22,0x10,0x3b]
+        cfc2 $3, $4              # CHECK: cfc2 $3, $4             # encoding: [0x00,0x64,0xcd,0x3c]
+        ctc1 $5, $6              # CHECK: ctc1 $5, $6             # encoding: [0x54,0xa6,0x18,0x3b]
+        ctc2 $7, $8              # CHECK: ctc2 $7, $8             # encoding: [0x00,0xe8,0xdd,0x3c]
 
 1:

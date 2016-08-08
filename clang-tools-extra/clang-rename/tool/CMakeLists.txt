@@ -10,3 +10,10 @@ target_link_libraries(clang-rename
   )
 
 install(TARGETS clang-rename RUNTIME DESTINATION bin)
+
+install(PROGRAMS clang-rename.py
+  DESTINATION share/clang
+  COMPONENT clang-rename)
+install(PROGRAMS clang-rename.el
+  DESTINATION share/clang
+  COMPONENT clang-rename)

@@ -46,7 +46,7 @@ ExecutionEngine*
 MCJIT::createJIT(std::unique_ptr<Module> M,
                  std::string *ErrorStr,
                  std::shared_ptr<MCJITMemoryManager> MemMgr,
-                 std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+                 std::shared_ptr<JITSymbolResolver> Resolver,
                  std::unique_ptr<TargetMachine> TM) {
   // Try to register the program as a source of symbols to resolve against.
   //
@@ -67,7 +67,7 @@ MCJIT::createJIT(std::unique_ptr<Module> M,
 
 MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
              std::shared_ptr<MCJITMemoryManager> MemMgr,
-             std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver)
+             std::shared_ptr<JITSymbolResolver> Resolver)
     : ExecutionEngine(TM->createDataLayout(), std::move(M)), TM(std::move(TM)),
       Ctx(nullptr), MemMgr(std::move(MemMgr)),
       Resolver(*this, std::move(Resolver)), Dyld(*this->MemMgr, this->Resolver),
@@ -276,14 +276,14 @@ void MCJIT::finalizeModule(Module *M) {
   finalizeLoadedModules();
 }
 
-RuntimeDyld::SymbolInfo MCJIT::findExistingSymbol(const std::string &Name) {
+JITSymbol MCJIT::findExistingSymbol(const std::string &Name) {
   SmallString<128> FullName;
   Mangler::getNameWithPrefix(FullName, Name, getDataLayout());
 
   if (void *Addr = getPointerToGlobalIfAvailable(FullName))
-    return RuntimeDyld::SymbolInfo(static_cast<uint64_t>(
-                                     reinterpret_cast<uintptr_t>(Addr)),
-                                   JITSymbolFlags::Exported);
+    return JITSymbol(static_cast<uint64_t>(
+                         reinterpret_cast<uintptr_t>(Addr)),
+                     JITSymbolFlags::Exported);
 
   return Dyld.getSymbol(FullName);
 }
@@ -316,8 +316,8 @@ uint64_t MCJIT::getSymbolAddress(const std::string &Name,
   return findSymbol(Name, CheckFunctionsOnly).getAddress();
 }
 
-RuntimeDyld::SymbolInfo MCJIT::findSymbol(const std::string &Name,
-                                          bool CheckFunctionsOnly) {
+JITSymbol MCJIT::findSymbol(const std::string &Name,
+                            bool CheckFunctionsOnly) {
   MutexGuard locked(lock);
 
   // First, check to see if we already have this symbol.
@@ -367,7 +367,7 @@ RuntimeDyld::SymbolInfo MCJIT::findSymbol(const std::string &Name,
   if (LazyFunctionCreator) {
     auto Addr = static_cast<uint64_t>(
                   reinterpret_cast<uintptr_t>(LazyFunctionCreator(Name)));
-    return RuntimeDyld::SymbolInfo(Addr, JITSymbolFlags::Exported);
+    return JITSymbol(Addr, JITSymbolFlags::Exported);
   }
 
   return nullptr;
@@ -644,7 +644,7 @@ void MCJIT::NotifyFreeingObject(const object::ObjectFile& Obj) {
     L->NotifyFreeingObject(Obj);
 }
 
-RuntimeDyld::SymbolInfo
+JITSymbol
 LinkingSymbolResolver::findSymbol(const std::string &Name) {
   auto Result = ParentEngine.findSymbol(Name, false);
   // If the symbols wasn't found and it begins with an underscore, try again

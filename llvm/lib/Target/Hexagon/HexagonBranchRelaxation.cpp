@@ -104,7 +104,7 @@ void HexagonBranchRelaxation::computeOffset(MachineFunction &MF,
     }
     OffsetMap[&B] = InstOffset;
     for (auto &MI : B.instrs())
-      InstOffset += HII->getSize(&MI);
+      InstOffset += HII->getSize(MI);
   }
 }
 
@@ -152,13 +152,13 @@ bool HexagonBranchRelaxation::isJumpOutOfRange(MachineInstr &MI,
     // Could not analyze it. See if this is something we can recognize.
     // If it is a NVJ, it should always have its target in
     // a fixed location.
-    if (HII->isNewValueJump(&*FirstTerm))
-      TBB = FirstTerm->getOperand(HII->getCExtOpNum(&*FirstTerm)).getMBB();
+    if (HII->isNewValueJump(*FirstTerm))
+      TBB = FirstTerm->getOperand(HII->getCExtOpNum(*FirstTerm)).getMBB();
   }
   if (TBB && &MI == &*FirstTerm) {
     Distance = std::abs((long long)InstOffset - BlockToInstOffset[TBB])
                 + BranchRelaxSafetyBuffer;
-    return !HII->isJumpWithinBranchRange(&*FirstTerm, Distance);
+    return !HII->isJumpWithinBranchRange(*FirstTerm, Distance);
   }
   if (FBB) {
     // Look for second terminator.
@@ -171,7 +171,7 @@ bool HexagonBranchRelaxation::isJumpOutOfRange(MachineInstr &MI,
     // Analyze the second branch in the BB.
     Distance = std::abs((long long)InstOffset - BlockToInstOffset[FBB])
                 + BranchRelaxSafetyBuffer;
-    return !HII->isJumpWithinBranchRange(&*SecondTerm, Distance);
+    return !HII->isJumpWithinBranchRange(*SecondTerm, Distance);
   }
   return false;
 }
@@ -186,16 +186,16 @@ bool HexagonBranchRelaxation::reGenerateBranch(MachineFunction &MF,
       if (!MI.isBranch() || !isJumpOutOfRange(MI, BlockToInstOffset))
         continue;
       DEBUG(dbgs() << "Long distance jump. isExtendable("
-                   << HII->isExtendable(&MI) << ") isConstExtended("
-                   << HII->isConstExtended(&MI) << ") " << MI);
+                   << HII->isExtendable(MI) << ") isConstExtended("
+                   << HII->isConstExtended(MI) << ") " << MI);
 
       // Since we have not merged HW loops relaxation into
       // this code (yet), soften our approach for the moment.
-      if (!HII->isExtendable(&MI) && !HII->isExtended(&MI)) {
+      if (!HII->isExtendable(MI) && !HII->isExtended(MI)) {
         DEBUG(dbgs() << "\tUnderimplemented relax branch instruction.\n");
       } else {
         // Find which operand is expandable.
-        int ExtOpNum = HII->getCExtOpNum(&MI);
+        int ExtOpNum = HII->getCExtOpNum(MI);
         MachineOperand &MO = MI.getOperand(ExtOpNum);
         // This need to be something we understand. So far we assume all
         // branches have only MBB address as expandable field.

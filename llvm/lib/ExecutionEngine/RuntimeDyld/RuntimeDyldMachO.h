@@ -50,7 +50,7 @@ protected:
   SmallVector<EHFrameRelatedSections, 2> UnregisteredEHFrameSections;
 
   RuntimeDyldMachO(RuntimeDyld::MemoryManager &MemMgr,
-                   RuntimeDyld::SymbolResolver &Resolver)
+                   JITSymbolResolver &Resolver)
       : RuntimeDyldImpl(MemMgr, Resolver) {}
 
   /// This convenience method uses memcpy to extract a contiguous addend (the
@@ -124,7 +124,7 @@ public:
   static std::unique_ptr<RuntimeDyldMachO>
   create(Triple::ArchType Arch,
          RuntimeDyld::MemoryManager &MemMgr,
-         RuntimeDyld::SymbolResolver &Resolver);
+         JITSymbolResolver &Resolver);
 
   std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
   loadObject(const object::ObjectFile &O) override;
@@ -152,7 +152,7 @@ private:
 
 public:
   RuntimeDyldMachOCRTPBase(RuntimeDyld::MemoryManager &MemMgr,
-                           RuntimeDyld::SymbolResolver &Resolver)
+                           JITSymbolResolver &Resolver)
     : RuntimeDyldMachO(MemMgr, Resolver) {}
 
   Error finalizeLoad(const ObjectFile &Obj,

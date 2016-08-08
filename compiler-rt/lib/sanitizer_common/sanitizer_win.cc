@@ -221,8 +221,12 @@ void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
 }
 
 void *MmapNoAccess(uptr size) {
-  // FIXME: unsupported.
-  return nullptr;
+  void *res = VirtualAlloc(nullptr, size, MEM_RESERVE, PAGE_NOACCESS);
+  if (res == 0)
+    Report("WARNING: %s failed to "
+           "mprotect %p (%zd) bytes (error code: %d)\n",
+           SanitizerToolName, size, size, GetLastError());
+  return res;
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {
@@ -330,8 +334,8 @@ void DumpProcessMap() {
   InternalScopedBuffer<ModuleInfo> module_infos(num_modules);
   for (size_t i = 0; i < num_modules; ++i) {
     module_infos[i].filepath = modules[i].full_name();
-    module_infos[i].base_address = modules[i].base_address();
-    module_infos[i].end_address = modules[i].ranges().front()->end;
+    module_infos[i].base_address = modules[i].ranges().front()->beg;
+    module_infos[i].end_address = modules[i].ranges().back()->end;
   }
   qsort(module_infos.data(), num_modules, sizeof(ModuleInfo),
         CompareModulesBase);

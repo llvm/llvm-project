@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple armv7-ios5.0 -std=c++11 -fobjc-arc -Os -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @[[STR0:.*]] = private unnamed_addr constant [5 x i8] c"str0\00", section "__TEXT,__cstring,cstring_literals"
-// CHECK: @[[UNNAMED_CFSTRING0:.*]] = private constant %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @[[STR0]], i32 0, i32 0), i32 4 }, section "__DATA,__cfstring"
+// CHECK: @[[UNNAMED_CFSTRING0:.*]] = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @[[STR0]], i32 0, i32 0), i32 4 }, section "__DATA,__cfstring"
 // CHECK: @[[STR1:.*]] = private unnamed_addr constant [5 x i8] c"str1\00", section "__TEXT,__cstring,cstring_literals"
-// CHECK: @[[UNNAMED_CFSTRING1:.*]] = private constant %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @[[STR1]], i32 0, i32 0), i32 4 }, section "__DATA,__cfstring"
+// CHECK: @[[UNNAMED_CFSTRING1:.*]] = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @[[STR1]], i32 0, i32 0), i32 4 }, section "__DATA,__cfstring"
 // CHECK: @[[REFTMP:.*]] = private constant [2 x i8*] [i8* bitcast (%struct.__NSConstantString_tag* @[[UNNAMED_CFSTRING0]] to i8*), i8* bitcast (%struct.__NSConstantString_tag* @[[UNNAMED_CFSTRING1]] to i8*)]
 
 typedef __SIZE_TYPE__ size_t;

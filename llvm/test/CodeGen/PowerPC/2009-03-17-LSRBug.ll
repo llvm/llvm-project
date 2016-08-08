@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin10
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin10
 ; rdar://6692215
 
 define fastcc void @_qsort(i8* %a, i32 %n, i32 %es, i32 (i8*, i8*)* %cmp, i32 %depth_limit) nounwind optsize ssp {

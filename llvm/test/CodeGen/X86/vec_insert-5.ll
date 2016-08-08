@@ -58,16 +58,14 @@ define <4 x float> @t3(<4 x float>* %P) nounwind {
 ; X32-LABEL: t3:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movapd (%eax), %xmm0
-; X32-NEXT:    xorpd %xmm1, %xmm1
-; X32-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    xorps %xmm0, %xmm0
+; X32-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:
 ; X64:       # BB#0:
-; X64-NEXT:    movapd (%rdi), %xmm0
-; X64-NEXT:    xorpd %xmm1, %xmm1
-; X64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X64-NEXT:    retq
   %tmp1 = load <4 x float>, <4 x float>* %P
   %tmp2 = shufflevector <4 x float> %tmp1, <4 x float> zeroinitializer, <4 x i32> < i32 2, i32 3, i32 4, i32 4 >

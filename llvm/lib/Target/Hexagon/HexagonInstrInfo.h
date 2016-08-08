@@ -103,6 +103,22 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL) const override;
 
+  /// Analyze the loop code, return true if it cannot be understood. Upon
+  /// success, this function returns false and returns information about the
+  /// induction variable and compare instruction used at the end.
+  bool analyzeLoop(MachineLoop &L, MachineInstr *&IndVarInst,
+                   MachineInstr *&CmpInst) const override;
+
+  /// Generate code to reduce the loop iteration by one and check if the loop is
+  /// finished.  Return the value/register of the the new loop count.  We need
+  /// this function when peeling off one or more iterations of a loop. This
+  /// function assumes the nth iteration is peeled first.
+  unsigned reduceLoopCount(MachineBasicBlock &MBB,
+                           MachineInstr *IndVar, MachineInstr &Cmp,
+                           SmallVectorImpl<MachineOperand> &Cond,
+                           SmallVectorImpl<MachineInstr *> &PrevInsts,
+                           unsigned Iter, unsigned MaxIter) const override;
+
   /// Return true if it's profitable to predicate
   /// instructions with accumulated instruction latency of "NumCycles"
   /// of the specified basic block, where the probability of the instructions
@@ -172,6 +188,11 @@ public:
   /// anything was changed.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  /// \brief Get the base register and byte offset of a load/store instr.
+  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
+                             int64_t &Offset,
+                             const TargetRegisterInfo *TRI) const override;
+
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
   bool ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond)
@@ -183,6 +204,9 @@ public:
 
   /// Returns true if the instruction is already predicated.
   bool isPredicated(const MachineInstr &MI) const override;
+
+  /// Return true for post-incremented instructions.
+  bool isPostIncrement(const MachineInstr &MI) const override;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.
@@ -248,6 +272,14 @@ public:
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;
 
+  /// For instructions with a base and offset, return the position of the
+  /// base register and offset operands.
+  bool getBaseAndOffsetPosition(const MachineInstr &MI, unsigned &BasePos,
+                                unsigned &OffsetPos) const override;
+
+  /// If the instruction is an increment of a constant value, return the amount.
+  bool getIncrementValue(const MachineInstr &MI, int &Value) const override;
+
   /// HexagonInstrInfo specifics.
   ///
 
@@ -255,49 +287,48 @@ public:
 
   unsigned createVR(MachineFunction* MF, MVT VT) const;
 
-  bool isAbsoluteSet(const MachineInstr* MI) const;
-  bool isAccumulator(const MachineInstr *MI) const;
-  bool isComplex(const MachineInstr *MI) const;
-  bool isCompoundBranchInstr(const MachineInstr *MI) const;
-  bool isCondInst(const MachineInstr *MI) const;
-  bool isConditionalALU32 (const MachineInstr* MI) const;
-  bool isConditionalLoad(const MachineInstr* MI) const;
-  bool isConditionalStore(const MachineInstr* MI) const;
-  bool isConditionalTransfer(const MachineInstr* MI) const;
-  bool isConstExtended(const MachineInstr *MI) const;
-  bool isDeallocRet(const MachineInstr *MI) const;
-  bool isDependent(const MachineInstr *ProdMI,
-                   const MachineInstr *ConsMI) const;
-  bool isDotCurInst(const MachineInstr* MI) const;
-  bool isDotNewInst(const MachineInstr* MI) const;
-  bool isDuplexPair(const MachineInstr *MIa, const MachineInstr *MIb) const;
-  bool isEarlySourceInstr(const MachineInstr *MI) const;
+  bool isAbsoluteSet(const MachineInstr &MI) const;
+  bool isAccumulator(const MachineInstr &MI) const;
+  bool isComplex(const MachineInstr &MI) const;
+  bool isCompoundBranchInstr(const MachineInstr &MI) const;
+  bool isCondInst(const MachineInstr &MI) const;
+  bool isConditionalALU32 (const MachineInstr &MI) const;
+  bool isConditionalLoad(const MachineInstr &MI) const;
+  bool isConditionalStore(const MachineInstr &MI) const;
+  bool isConditionalTransfer(const MachineInstr &MI) const;
+  bool isConstExtended(const MachineInstr &MI) const;
+  bool isDeallocRet(const MachineInstr &MI) const;
+  bool isDependent(const MachineInstr &ProdMI,
+                   const MachineInstr &ConsMI) const;
+  bool isDotCurInst(const MachineInstr &MI) const;
+  bool isDotNewInst(const MachineInstr &MI) const;
+  bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
+  bool isEarlySourceInstr(const MachineInstr &MI) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
-  bool isExtendable(const MachineInstr* MI) const;
-  bool isExtended(const MachineInstr* MI) const;
-  bool isFloat(const MachineInstr *MI) const;
-  bool isHVXMemWithAIndirect(const MachineInstr *I,
-                             const MachineInstr *J) const;
-  bool isIndirectCall(const MachineInstr *MI) const;
-  bool isIndirectL4Return(const MachineInstr *MI) const;
-  bool isJumpR(const MachineInstr *MI) const;
-  bool isJumpWithinBranchRange(const MachineInstr *MI, unsigned offset) const;
-  bool isLateInstrFeedsEarlyInstr(const MachineInstr *LRMI,
-                                  const MachineInstr *ESMI) const;
-  bool isLateResultInstr(const MachineInstr *MI) const;
-  bool isLateSourceInstr(const MachineInstr *MI) const;
-  bool isLoopN(const MachineInstr *MI) const;
-  bool isMemOp(const MachineInstr *MI) const;
-  bool isNewValue(const MachineInstr* MI) const;
+  bool isExtendable(const MachineInstr &MI) const;
+  bool isExtended(const MachineInstr &MI) const;
+  bool isFloat(const MachineInstr &MI) const;
+  bool isHVXMemWithAIndirect(const MachineInstr &I,
+                             const MachineInstr &J) const;
+  bool isIndirectCall(const MachineInstr &MI) const;
+  bool isIndirectL4Return(const MachineInstr &MI) const;
+  bool isJumpR(const MachineInstr &MI) const;
+  bool isJumpWithinBranchRange(const MachineInstr &MI, unsigned offset) const;
+  bool isLateInstrFeedsEarlyInstr(const MachineInstr &LRMI,
+                                  const MachineInstr &ESMI) const;
+  bool isLateResultInstr(const MachineInstr &MI) const;
+  bool isLateSourceInstr(const MachineInstr &MI) const;
+  bool isLoopN(const MachineInstr &MI) const;
+  bool isMemOp(const MachineInstr &MI) const;
+  bool isNewValue(const MachineInstr &MI) const;
   bool isNewValue(unsigned Opcode) const;
-  bool isNewValueInst(const MachineInstr* MI) const;
-  bool isNewValueJump(const MachineInstr* MI) const;
+  bool isNewValueInst(const MachineInstr &MI) const;
+  bool isNewValueJump(const MachineInstr &MI) const;
   bool isNewValueJump(unsigned Opcode) const;
-  bool isNewValueStore(const MachineInstr* MI) const;
+  bool isNewValueStore(const MachineInstr &MI) const;
   bool isNewValueStore(unsigned Opcode) const;
-  bool isOperandExtended(const MachineInstr *MI, unsigned OperandNum) const;
-  bool isPostIncrement(const MachineInstr* MI) const;
+  bool isOperandExtended(const MachineInstr &MI, unsigned OperandNum) const;
   bool isPredicatedNew(const MachineInstr &MI) const;
   bool isPredicatedNew(unsigned Opcode) const;
   bool isPredicatedTrue(const MachineInstr &MI) const;
@@ -305,87 +336,85 @@ public:
   bool isPredicated(unsigned Opcode) const;
   bool isPredicateLate(unsigned Opcode) const;
   bool isPredictedTaken(unsigned Opcode) const;
-  bool isSaveCalleeSavedRegsCall(const MachineInstr *MI) const;
+  bool isSaveCalleeSavedRegsCall(const MachineInstr &MI) const;
   bool isSignExtendingLoad(const MachineInstr &MI) const;
-  bool isSolo(const MachineInstr* MI) const;
-  bool isSpillPredRegOp(const MachineInstr *MI) const;
-  bool isTailCall(const MachineInstr *MI) const;
-  bool isTC1(const MachineInstr *MI) const;
-  bool isTC2(const MachineInstr *MI) const;
-  bool isTC2Early(const MachineInstr *MI) const;
-  bool isTC4x(const MachineInstr *MI) const;
-  bool isToBeScheduledASAP(const MachineInstr *MI1,
-                           const MachineInstr *MI2) const;
-  bool isV60VectorInstruction(const MachineInstr *MI) const;
+  bool isSolo(const MachineInstr &MI) const;
+  bool isSpillPredRegOp(const MachineInstr &MI) const;
+  bool isTailCall(const MachineInstr &MI) const;
+  bool isTC1(const MachineInstr &MI) const;
+  bool isTC2(const MachineInstr &MI) const;
+  bool isTC2Early(const MachineInstr &MI) const;
+  bool isTC4x(const MachineInstr &MI) const;
+  bool isToBeScheduledASAP(const MachineInstr &MI1,
+                           const MachineInstr &MI2) const;
+  bool isV60VectorInstruction(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
   bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
-  bool isVecAcc(const MachineInstr *MI) const;
-  bool isVecALU(const MachineInstr *MI) const;
-  bool isVecUsableNextPacket(const MachineInstr *ProdMI,
-                             const MachineInstr *ConsMI) const;
+  bool isVecAcc(const MachineInstr &MI) const;
+  bool isVecALU(const MachineInstr &MI) const;
+  bool isVecUsableNextPacket(const MachineInstr &ProdMI,
+                             const MachineInstr &ConsMI) const;
   bool isZeroExtendingLoad(const MachineInstr &MI) const;
 
-  bool addLatencyToSchedule(const MachineInstr *MI1,
-                            const MachineInstr *MI2) const;
-  bool canExecuteInBundle(const MachineInstr *First,
-                          const MachineInstr *Second) const;
+  bool addLatencyToSchedule(const MachineInstr &MI1,
+                            const MachineInstr &MI2) const;
+  bool canExecuteInBundle(const MachineInstr &First,
+                          const MachineInstr &Second) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
-  bool hasNonExtEquivalent(const MachineInstr *MI) const;
-  bool hasPseudoInstrPair(const MachineInstr *MI) const;
+  bool hasNonExtEquivalent(const MachineInstr &MI) const;
+  bool hasPseudoInstrPair(const MachineInstr &MI) const;
   bool hasUncondBranch(const MachineBasicBlock *B) const;
-  bool mayBeCurLoad(const MachineInstr* MI) const;
-  bool mayBeNewStore(const MachineInstr* MI) const;
-  bool producesStall(const MachineInstr *ProdMI,
-                     const MachineInstr *ConsMI) const;
-  bool producesStall(const MachineInstr *MI,
+  bool mayBeCurLoad(const MachineInstr &MI) const;
+  bool mayBeNewStore(const MachineInstr &MI) const;
+  bool producesStall(const MachineInstr &ProdMI,
+                     const MachineInstr &ConsMI) const;
+  bool producesStall(const MachineInstr &MI,
                      MachineBasicBlock::const_instr_iterator MII) const;
-  bool predCanBeUsedAsDotNew(const MachineInstr *MI, unsigned PredReg) const;
+  bool predCanBeUsedAsDotNew(const MachineInstr &MI, unsigned PredReg) const;
   bool PredOpcodeHasJMP_c(unsigned Opcode) const;
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
 
-  short getAbsoluteForm(const MachineInstr *MI) const;
-  unsigned getAddrMode(const MachineInstr* MI) const;
-  unsigned getBaseAndOffset(const MachineInstr *MI, int &Offset,
+  short getAbsoluteForm(const MachineInstr &MI) const;
+  unsigned getAddrMode(const MachineInstr &MI) const;
+  unsigned getBaseAndOffset(const MachineInstr &MI, int &Offset,
                             unsigned &AccessSize) const;
-  bool getBaseAndOffsetPosition(const MachineInstr *MI, unsigned &BasePos,
-                                unsigned &OffsetPos) const;
   short getBaseWithLongOffset(short Opcode) const;
-  short getBaseWithLongOffset(const MachineInstr *MI) const;
-  short getBaseWithRegOffset(const MachineInstr *MI) const;
+  short getBaseWithLongOffset(const MachineInstr &MI) const;
+  short getBaseWithRegOffset(const MachineInstr &MI) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
-  unsigned getCExtOpNum(const MachineInstr *MI) const;
+  unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup
-  getCompoundCandidateGroup(const MachineInstr *MI) const;
-  unsigned getCompoundOpcode(const MachineInstr *GA,
-                             const MachineInstr *GB) const;
+  getCompoundCandidateGroup(const MachineInstr &MI) const;
+  unsigned getCompoundOpcode(const MachineInstr &GA,
+                             const MachineInstr &GB) const;
   int getCondOpcode(int Opc, bool sense) const;
-  int getDotCurOp(const MachineInstr* MI) const;
-  int getDotNewOp(const MachineInstr* MI) const;
-  int getDotNewPredJumpOp(const MachineInstr *MI,
+  int getDotCurOp(const MachineInstr &MI) const;
+  int getDotNewOp(const MachineInstr &MI) const;
+  int getDotNewPredJumpOp(const MachineInstr &MI,
                           const MachineBranchProbabilityInfo *MBPI) const;
-  int getDotNewPredOp(const MachineInstr *MI,
+  int getDotNewPredOp(const MachineInstr &MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
   int getDotOldOp(const int opc) const;
-  HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr *MI)
+  HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
                                                          const;
-  short getEquivalentHWInstr(const MachineInstr *MI) const;
+  short getEquivalentHWInstr(const MachineInstr &MI) const;
   MachineInstr *getFirstNonDbgInst(MachineBasicBlock *BB) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
-                                      const MachineInstr *MI) const;
+                                      const MachineInstr &MI) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
   unsigned getInvertedPredicatedOpcode(const int Opc) const;
-  int getMaxValue(const MachineInstr *MI) const;
-  unsigned getMemAccessSize(const MachineInstr* MI) const;
-  int getMinValue(const MachineInstr *MI) const;
-  short getNonExtOpcode(const MachineInstr *MI) const;
+  int getMaxValue(const MachineInstr &MI) const;
+  unsigned getMemAccessSize(const MachineInstr &MI) const;
+  int getMinValue(const MachineInstr &MI) const;
+  short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, unsigned &PredReg,
                   unsigned &PredRegPos, unsigned &PredRegFlags) const;
-  short getPseudoInstrPair(const MachineInstr *MI) const;
-  short getRegForm(const MachineInstr *MI) const;
-  unsigned getSize(const MachineInstr *MI) const;
-  uint64_t getType(const MachineInstr* MI) const;
-  unsigned getUnits(const MachineInstr* MI) const;
+  short getPseudoInstrPair(const MachineInstr &MI) const;
+  short getRegForm(const MachineInstr &MI) const;
+  unsigned getSize(const MachineInstr &MI) const;
+  uint64_t getType(const MachineInstr &MI) const;
+  unsigned getUnits(const MachineInstr &MI) const;
   unsigned getValidSubTargets(const unsigned Opcode) const;
 
 
@@ -395,14 +424,14 @@ public:
   unsigned nonDbgBundleSize(MachineBasicBlock::const_iterator BundleHead) const;
 
 
-  void immediateExtend(MachineInstr *MI) const;
-  bool invertAndChangeJumpTarget(MachineInstr* MI,
+  void immediateExtend(MachineInstr &MI) const;
+  bool invertAndChangeJumpTarget(MachineInstr &MI,
                                  MachineBasicBlock* NewTarget) const;
   void genAllInsnTimingClasses(MachineFunction &MF) const;
-  bool reversePredSense(MachineInstr* MI) const;
+  bool reversePredSense(MachineInstr &MI) const;
   unsigned reversePrediction(unsigned Opcode) const;
   bool validateBranchCond(const ArrayRef<MachineOperand> &Cond) const;
-  short xformRegToImmOffset(const MachineInstr *MI) const;
+  short xformRegToImmOffset(const MachineInstr &MI) const;
 };
 
 }

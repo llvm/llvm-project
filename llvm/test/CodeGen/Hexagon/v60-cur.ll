@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner=false < %s | FileCheck %s
 
 ; Test that we generate a .cur
 

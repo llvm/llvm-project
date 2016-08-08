@@ -17,8 +17,8 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 define void @preserve_order_32(%struct.buffer_t* noalias %buff) #0 {
 entry:
   %tmp1 = getelementptr inbounds %struct.buffer_t, %struct.buffer_t* %buff, i32 0, i32 1
-  %buff.p = load i8*, i8** %tmp1, align 8
-  %buff.val = load i8, i8* %buff.p, align 8
+  %buff.p = load i8*, i8** %tmp1
+  %buff.val = load i8, i8* %buff.p
   store i8 0, i8* %buff.p, align 8
   %tmp0 = getelementptr inbounds %struct.buffer_t, %struct.buffer_t* %buff, i32 0, i32 0
   %buff.int = load i32, i32* %tmp0, align 8

@@ -58,7 +58,7 @@ MachineMemOperand *
 MipsInstrInfo::GetMemOperand(MachineBasicBlock &MBB, int FI,
                              MachineMemOperand::Flags Flags) const {
   MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
 
   return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
@@ -282,6 +282,7 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR:
     case Mips::PseudoReturn:
     case Mips::PseudoIndirectBranch:
+    case Mips::TAILCALLREG_MM:
       canUseShortMicroMipsCTI = true;
       break;
     }
@@ -362,6 +363,8 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR:
     case Mips::PseudoReturn:
     case Mips::PseudoIndirectBranch:
+    case Mips::TAILCALLREG_MM:
+    case Mips::TAILCALLREG_R6:
       if (canUseShortMicroMipsCTI)
         return Mips::JRC16_MM;
       return Mips::JIC;
@@ -370,6 +373,7 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR64:
     case Mips::PseudoReturn64:
     case Mips::PseudoIndirectBranch64:
+    case Mips::TAILCALLREG64_R6:
       return Mips::JIC64;
     case Mips::JALR64Pseudo:
       return Mips::JIALC64;
@@ -398,7 +402,7 @@ bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
 }
 
 /// Return the number of bytes of code the specified instruction may be.
-unsigned MipsInstrInfo::GetInstSizeInBytes(const MachineInstr &MI) const {
+unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.getDesc().getSize();

@@ -64,7 +64,7 @@ typedef signed Signed;
 
 struct Test5 { unsigned n : 2; } t5;
 // Bitfield is unsigned
-struct Test5 sometest5 = {-1}; // expected-warning {{implicit truncation from 'int' to bitfield changes value from -1 to 3}}
+struct Test5 sometest5 = {-1};
 typedef __typeof__(+t5.n) Signed;  // ... but promotes to signed.
 
 typedef __typeof__(t5.n + 0) Signed; // Arithmetic promotes.

@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
@@ -25,7 +25,7 @@ class ModiSubstreamBuilder {};
 
 DbiStreamBuilder::DbiStreamBuilder(BumpPtrAllocator &Allocator)
     : Allocator(Allocator), Age(1), BuildNumber(0), PdbDllVersion(0),
-      PdbDllRbld(0), Flags(0), MachineType(PDB_Machine::x86) {}
+      PdbDllRbld(0), Flags(0), MachineType(PDB_Machine::x86), Header(nullptr) {}
 
 void DbiStreamBuilder::setVersionHeader(PdbRaw_DbiVer V) { VerHeader = V; }
 
@@ -108,7 +108,7 @@ Error DbiStreamBuilder::generateModiSubstream() {
   uint32_t Size = calculateModiSubstreamSize();
   auto Data = Allocator.Allocate<uint8_t>(Size);
 
-  ModInfoBuffer = ByteStream<true>(MutableArrayRef<uint8_t>(Data, Size));
+  ModInfoBuffer = MutableByteStream(MutableArrayRef<uint8_t>(Data, Size));
 
   StreamWriter ModiWriter(ModInfoBuffer);
   for (const auto &M : ModuleInfoList) {
@@ -134,9 +134,10 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   auto Data = Allocator.Allocate<uint8_t>(Size);
   uint32_t NamesOffset = Size - NameSize;
 
-  FileInfoBuffer = ByteStream<true>(MutableArrayRef<uint8_t>(Data, Size));
+  FileInfoBuffer = MutableByteStream(MutableArrayRef<uint8_t>(Data, Size));
 
-  StreamRef MetadataBuffer = StreamRef(FileInfoBuffer).keep_front(NamesOffset);
+  WritableStreamRef MetadataBuffer =
+      WritableStreamRef(FileInfoBuffer).keep_front(NamesOffset);
   StreamWriter MetadataWriter(MetadataBuffer);
 
   uint16_t ModiCount = std::min<uint16_t>(UINT16_MAX, ModuleInfos.size());
@@ -159,7 +160,7 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   // A side effect of this is that this will actually compute the various
   // file name offsets, so we can then go back and write the FileNameOffsets
   // array to the other substream.
-  NamesBuffer = StreamRef(FileInfoBuffer).drop_front(NamesOffset);
+  NamesBuffer = WritableStreamRef(FileInfoBuffer).drop_front(NamesOffset);
   StreamWriter NameBufferWriter(NamesBuffer);
   for (auto &Name : SourceFileNames) {
     Name.second = NameBufferWriter.getOffset();
@@ -190,21 +191,16 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   return Error::success();
 }
 
-Expected<std::unique_ptr<DbiStream>> DbiStreamBuilder::build(PDBFile &File) {
-  if (!VerHeader.hasValue())
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Missing DBI Stream Version");
+Error DbiStreamBuilder::finalize() {
+  if (Header)
+    return Error::success();
 
-  auto DbiS = MappedBlockStream::createIndexedStream(StreamDBI, File);
-  if (!DbiS)
-    return DbiS.takeError();
-  auto DS = std::move(*DbiS);
-  DbiStreamHeader *H = DS->getAllocator().Allocate<DbiStreamHeader>(1);
+  DbiStreamHeader *H = Allocator.Allocate<DbiStreamHeader>();
 
   if (auto EC = generateModiSubstream())
-    return std::move(EC);
+    return EC;
   if (auto EC = generateFileInfoSubstream())
-    return std::move(EC);
+    return EC;
 
   H->VersionHeader = *VerHeader;
   H->VersionSignature = -1;
@@ -227,13 +223,50 @@ Expected<std::unique_ptr<DbiStream>> DbiStreamBuilder::build(PDBFile &File) {
   H->MFCTypeServerIndex = kInvalidStreamIndex;
   H->GlobalSymbolStreamIndex = kInvalidStreamIndex;
 
-  auto Dbi = llvm::make_unique<DbiStream>(File, std::move(DS));
-  Dbi->Header = H;
-  Dbi->FileInfoSubstream = StreamRef(FileInfoBuffer);
-  Dbi->ModInfoSubstream = StreamRef(ModInfoBuffer);
+  Header = H;
+  return Error::success();
+}
+
+Expected<std::unique_ptr<DbiStream>>
+DbiStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
+  if (!VerHeader.hasValue())
+    return make_error<RawError>(raw_error_code::unspecified,
+                                "Missing DBI Stream Version");
+  if (auto EC = finalize())
+    return std::move(EC);
+
+  auto StreamData = MappedBlockStream::createIndexedStream(File.getMsfLayout(),
+                                                           Buffer, StreamDBI);
+  auto Dbi = llvm::make_unique<DbiStream>(File, std::move(StreamData));
+  Dbi->Header = Header;
+  Dbi->FileInfoSubstream = ReadableStreamRef(FileInfoBuffer);
+  Dbi->ModInfoSubstream = ReadableStreamRef(ModInfoBuffer);
   if (auto EC = Dbi->initializeModInfoArray())
     return std::move(EC);
   if (auto EC = Dbi->initializeFileInfo())
     return std::move(EC);
   return std::move(Dbi);
+}
+
+Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
+                               const msf::WritableStream &Buffer) {
+  if (auto EC = finalize())
+    return EC;
+
+  auto InfoS =
+      WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamDBI);
+
+  StreamWriter Writer(*InfoS);
+  if (auto EC = Writer.writeObject(*Header))
+    return EC;
+
+  if (auto EC = Writer.writeStreamRef(ModInfoBuffer))
+    return EC;
+  if (auto EC = Writer.writeStreamRef(FileInfoBuffer))
+    return EC;
+
+  if (Writer.bytesRemaining() > 0)
+    return make_error<RawError>(raw_error_code::invalid_format,
+                                "Unexpected bytes found in DBI Stream");
+  return Error::success();
 }

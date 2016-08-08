@@ -103,6 +103,9 @@ struct TrieNode {
 
   void addSymbol(const Export &entry, BumpPtrAllocator &allocator,
                  std::vector<TrieNode *> &allNodes);
+
+  void addOrderedNodes(const Export &entry,
+                       std::vector<TrieNode *> &allNodes);
   bool updateOffset(uint32_t &offset);
   void appendToByteBuffer(ByteBuffer &out);
 
@@ -115,6 +118,7 @@ private:
   StringRef                 _importedName;
   uint32_t                  _trieOffset;
   bool                      _hasExportInfo;
+  bool                      _ordered = false;
 };
 
 /// Utility class for writing a mach-o binary file given an in-memory
@@ -1289,6 +1293,24 @@ void TrieNode::addSymbol(const Export& entry,
   allNodes.push_back(newNode);
 }
 
+void TrieNode::addOrderedNodes(const Export& entry,
+                               std::vector<TrieNode*> &orderedNodes) {
+  if (!_ordered) {
+    orderedNodes.push_back(this);
+    _ordered = true;
+  }
+
+  StringRef partialStr = entry.name.drop_front(_cummulativeString.size());
+  for (TrieEdge &edge : _children) {
+    StringRef edgeStr = edge._subString;
+    if (partialStr.startswith(edgeStr)) {
+      // Already have matching edge, go down that path.
+      edge._child->addOrderedNodes(entry, orderedNodes);
+      return;
+    }
+  }
+}
+
 bool TrieNode::updateOffset(uint32_t& offset) {
   uint32_t nodeSize = 1; // Length when no export info
   if (_hasExportInfo) {
@@ -1394,20 +1416,26 @@ void MachOFileLayout::buildExportTrie() {
     rootNode->addSymbol(entry, allocator, allNodes);
   }
 
+  std::vector<TrieNode*> orderedNodes;
+  orderedNodes.reserve(allNodes.size());
+
+  for (const Export& entry : _file.exportInfo)
+    rootNode->addOrderedNodes(entry, orderedNodes);
+
   // Assign each node in the vector an offset in the trie stream, iterating
   // until all uleb128 sizes have stabilized.
   bool more;
   do {
     uint32_t offset = 0;
     more = false;
-    for (TrieNode* node : allNodes) {
+    for (TrieNode* node : orderedNodes) {
       if (node->updateOffset(offset))
         more = true;
     }
   } while (more);
 
   // Serialize trie to ByteBuffer.
-  for (TrieNode* node : allNodes) {
+  for (TrieNode* node : orderedNodes) {
     node->appendToByteBuffer(_exportTrie);
   }
   _exportTrie.align(_is64 ? 8 : 4);

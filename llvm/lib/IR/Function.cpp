@@ -488,7 +488,7 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
 
 /// \brief This does the actual lookup of an intrinsic ID which
 /// matches the given function name.
-static Intrinsic::ID lookupIntrinsicID(StringRef Name) {
+Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
   ArrayRef<const char *> NameTable = findTargetSubtable(Name);
   int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
   if (Idx == -1)
@@ -506,11 +506,12 @@ static Intrinsic::ID lookupIntrinsicID(StringRef Name) {
 }
 
 void Function::recalculateIntrinsicID() {
-  if (!hasLLVMReservedName()) {
+  const ValueName *ValName = this->getValueName();
+  if (!ValName || !isIntrinsic()) {
     IntID = Intrinsic::not_intrinsic;
     return;
   }
-  IntID = lookupIntrinsicID(getName());
+  IntID = lookupIntrinsicID(ValName->getKey());
 }
 
 /// Returns a stable mangling for the type specified for use in the name
@@ -1261,7 +1262,10 @@ Optional<uint64_t> Function::getEntryCount() const {
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
       if (MDS->getString().equals("function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        return CI->getValue().getZExtValue();
+        uint64_t Count = CI->getValue().getZExtValue();
+        if (Count == 0)
+          return None;
+        return Count;
       }
   return None;
 }

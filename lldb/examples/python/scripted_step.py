@@ -64,6 +64,19 @@
 #    to allow you to do whatever cleanup is required.  I haven't gotten to that
 #    yet.  For now you should do that at the same time you mark your plan complete.
 #
+# 3) After the round of negotiation over whether to stop or not is done, all the
+#    plans get asked if they are "stale".  If they are say they are stale
+#    then they will get popped.  This question is asked with the "is_stale" method.
+#
+#    This is useful, for instance, in the FinishPrintAndContinue plan.  What might
+#    happen here is that after continuing but before the finish is done, the program
+#    could hit another breakpoint and stop.  Then the user could use the step
+#    command repeatedly until they leave the frame of interest by stepping.  
+#    In that case, the step plan is the one that will be responsible for stopping, 
+#    and the finish plan won't be asked should_stop, it will just be asked if it
+#    is stale.  In this case, if the step_out plan that the FinishPrintAndContinue
+#    plan is driving is stale, so is ours, and it is time to do our printing.
+#
 # Both examples show stepping through an address range for 20 bytes from the
 # current PC.  The first one does it by single stepping and checking a condition.
 # It doesn't, however handle the case where you step into another frame while
@@ -195,17 +208,26 @@ class FinishPrintAndContinue:
         self.step_out_thread_plan = thread_plan.QueueThreadPlanForStepOut(0, True)
         self.thread = self.thread_plan.GetThread()
 
+    def is_stale (self):
+        if self.step_out_thread_plan.IsPlanStale():
+            self.do_print()
+            return True
+        else:
+            return False
+
     def explains_stop (self, event):
         return False
 
     def should_stop (self, event):
         if  self.step_out_thread_plan.IsPlanComplete():
-            frame_0 = self.thread.frames[0]
-            rax_value = frame_0.FindRegister("rax")
-            if rax_value.GetError().Success():
-                print "RAX on exit: ", rax_value.GetValue()
-            else:
-                print "Couldn't get rax value:", rax_value.GetError().GetCString()
-
+            self.do_print()
             self.thread_plan.SetPlanComplete(True)
         return False
+
+    def do_print (self):
+        frame_0 = self.thread.frames[0]
+        rax_value = frame_0.FindRegister("rax")
+        if rax_value.GetError().Success():
+            print "RAX on exit: ", rax_value.GetValue()
+        else:
+            print "Couldn't get rax value:", rax_value.GetError().GetCString()

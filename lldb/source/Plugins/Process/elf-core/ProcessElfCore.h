@@ -166,9 +166,9 @@ private:
     std::vector<NT_FILE_Entry> m_nt_file_entries;
 
     // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
-    void
-    ParseThreadContextsFromNoteSegment (const elf::ELFProgramHeader *segment_header,
-                                        lldb_private::DataExtractor segment_data);
+    lldb_private::Error
+    ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *segment_header,
+                                       lldb_private::DataExtractor segment_data);
 
     // Returns number of thread contexts stored in the core file
     uint32_t

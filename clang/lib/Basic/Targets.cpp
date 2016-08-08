@@ -2126,8 +2126,13 @@ public:
       Opts.cl_khr_fp16 = 1;
       Opts.cl_khr_int64_base_atomics = 1;
       Opts.cl_khr_int64_extended_atomics = 1;
+      Opts.cl_khr_mipmap_image = 1;
       Opts.cl_khr_3d_image_writes = 1;
     }
+  }
+
+  LangAS::ID getOpenCLImageAddrSpace() const override {
+    return LangAS::opencl_constant;
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
@@ -5726,19 +5731,9 @@ public:
   }
 
   bool setCPU(const std::string &Name) override {
-    bool CPUKnown = llvm::StringSwitch<bool>(Name)
-      .Case("cortex-a35", true)
-      .Case("cortex-a53", true)
-      .Case("cortex-a57", true)
-      .Case("cortex-a72", true)
-      .Case("cortex-a73", true)
-      .Case("cyclone", true)
-      .Case("exynos-m1", true)
-      .Case("generic", true)
-      .Case("kryo", true)
-      .Case("vulcan", true)
-      .Default(false);
-    return CPUKnown;
+    return Name == "generic" ||
+           llvm::AArch64::parseCPUArch(Name) !=
+           static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID);
   }
 
   void getTargetDefines(const LangOptions &Opts,

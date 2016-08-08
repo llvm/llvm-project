@@ -16,14 +16,18 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLY_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLY_H
 
+#include "llvm/PassRegistry.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
 class WebAssemblyTargetMachine;
+class ModulePass;
 class FunctionPass;
 
 // LLVM IR passes.
+ModulePass *createWebAssemblyLowerEmscriptenExceptions();
+void initializeWebAssemblyLowerEmscriptenExceptionsPass(PassRegistry &);
 FunctionPass *createWebAssemblyOptimizeReturned();
 
 // ISel and immediate followup passes.

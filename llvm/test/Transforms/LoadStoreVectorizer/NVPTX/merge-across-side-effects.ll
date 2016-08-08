@@ -22,9 +22,9 @@ declare void @fn_readnone() #5
 define void @load_fn(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn()
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -35,9 +35,9 @@ define void @load_fn(i32* %p) #0 {
 define void @load_fn_nounwind(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn_nounwind() #0
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -48,9 +48,9 @@ define void @load_fn_nounwind(i32* %p) #0 {
 define void @load_fn_nounwind_writeonly(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn_nounwind_writeonly() #1
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -60,9 +60,9 @@ define void @load_fn_nounwind_writeonly(i32* %p) #0 {
 define void @load_fn_nounwind_readonly(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn_nounwind_readonly() #2
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -73,9 +73,9 @@ define void @load_fn_nounwind_readonly(i32* %p) #0 {
 define void @load_fn_readonly(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn_readonly() #4
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -86,9 +86,9 @@ define void @load_fn_readonly(i32* %p) #0 {
 define void @load_fn_writeonly(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn_writeonly() #3
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -98,9 +98,9 @@ define void @load_fn_writeonly(i32* %p) #0 {
 define void @load_fn_readnone(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  %v0 = load i32, i32* %p
+  %v0 = load i32, i32* %p, align 8
   call void @fn_readnone() #5
-  %v1 = load i32, i32* %p.1
+  %v1 = load i32, i32* %p.1, align 4
   ret void
 }
 
@@ -193,9 +193,9 @@ define void @store_fn_writeonly(i32* %p) #0 {
 define void @store_fn_readnone(i32* %p) #0 {
   %p.1 = getelementptr i32, i32* %p, i32 1
 
-  store i32 0, i32* %p
+  store i32 0, i32* %p, align 8
   call void @fn_readnone() #5
-  store i32 0, i32* %p.1
+  store i32 0, i32* %p.1, align 8
   ret void
 }
 

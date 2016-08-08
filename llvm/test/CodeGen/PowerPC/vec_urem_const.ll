@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr6 -mattr=+altivec < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr6 -mattr=+altivec < %s
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"

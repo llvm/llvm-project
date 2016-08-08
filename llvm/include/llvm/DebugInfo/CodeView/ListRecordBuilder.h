@@ -35,7 +35,7 @@ public:
     SubrecordStart = 0;
   }
 
-  void writeListContinuation(const ListContinuationRecord &R);
+  void writeMemberType(const ListContinuationRecord &R);
 
   /// Writes this list record as a possible sequence of records.
   TypeIndex writeListRecord(TypeTableBuilder &Table);

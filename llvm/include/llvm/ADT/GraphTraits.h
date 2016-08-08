@@ -27,18 +27,23 @@ template<class GraphType>
 struct GraphTraits {
   // Elements to provide:
 
+  // NOTICE: We are in a transition from migration interfaces that require
+  // NodeType *, to NodeRef. NodeRef is required to be cheap to copy, but does
+  // not have to be a raw pointer. In the transition, user should define
+  // NodeType, and NodeRef = NodeType *.
+  //
   // typedef NodeType          - Type of Node in the graph
+  // typedef NodeRef           - NodeType *
   // typedef ChildIteratorType - Type used to iterate over children in graph
 
-  // static NodeType *getEntryNode(const GraphType &)
+  // static NodeRef getEntryNode(const GraphType &)
   //    Return the entry node of the graph
 
-  // static ChildIteratorType child_begin(NodeType *)
-  // static ChildIteratorType child_end  (NodeType *)
+  // static ChildIteratorType child_begin(NodeRef)
+  // static ChildIteratorType child_end  (NodeRef)
   //    Return iterators that point to the beginning and ending of the child
   //    node list for the specified node.
   //
-
 
   // typedef  ...iterator nodes_iterator;
   // static nodes_iterator nodes_begin(GraphType *G)
@@ -57,7 +62,7 @@ struct GraphTraits {
   // your argument to XXX_begin(...) is unknown or needs to have the proper .h
   // file #include'd.
   //
-  typedef typename GraphType::UnknownGraphTypeError NodeType;
+  typedef typename GraphType::UnknownGraphTypeError NodeRef;
 };
 
 

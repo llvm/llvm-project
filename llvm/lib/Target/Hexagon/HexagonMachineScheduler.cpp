@@ -51,6 +51,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "misched"
 
+namespace {
 class HexagonCallMutation : public ScheduleDAGMutation {
 public:
   void apply(ScheduleDAGInstrs *DAG) override;
@@ -58,6 +59,7 @@ private:
   bool shouldTFRICallBind(const HexagonInstrInfo &HII,
                           const SUnit &Inst1, const SUnit &Inst2) const;
 };
+} // end anonymous namespace
 
 // Check if a call and subsequent A2_tfrpi instructions should maintain
 // scheduling affinity. We are looking for the TFRI to be consumed in
@@ -72,7 +74,7 @@ bool HexagonCallMutation::shouldTFRICallBind(const HexagonInstrInfo &HII,
     return false;
 
   // TypeXTYPE are 64 bit operations.
-  if (HII.getType(Inst2.getInstr()) == HexagonII::TypeXTYPE)
+  if (HII.getType(*Inst2.getInstr()) == HexagonII::TypeXTYPE)
     return true;
   return false;
 }
@@ -168,7 +170,7 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU) {
       continue;
 
     // Enable .cur formation.
-    if (QII.mayBeCurLoad(Packet[i]->getInstr()))
+    if (QII.mayBeCurLoad(*Packet[i]->getInstr()))
       continue;
 
     for (SUnit::const_succ_iterator I = Packet[i]->Succs.begin(),
@@ -616,7 +618,7 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
   if (!SU || SU->isScheduled)
     return ResCount;
 
-  MachineInstr *Instr = SU->getInstr();
+  MachineInstr &Instr = *SU->getInstr();
 
   DEBUG(if (verbose) dbgs() << ((Q.getID() == TopQID) ? "(top|" : "(bot|"));
   // Forced priority is high.
@@ -705,7 +707,7 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
   // available for it.
   auto &QST = DAG->MF.getSubtarget<HexagonSubtarget>();
   auto &QII = *QST.getInstrInfo();
-  if (SU->isInstr() && QII.mayBeCurLoad(SU->getInstr())) {
+  if (SU->isInstr() && QII.mayBeCurLoad(*SU->getInstr())) {
     if (Q.getID() == TopQID && Top.ResourceModel->isResourceAvailable(SU)) {
       ResCount += PriorityTwo;
       DEBUG(if (verbose) dbgs() << "C|");
@@ -744,11 +746,11 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
     // Check for stalls in the previous packet.
     if (Q.getID() == TopQID) {
       for (auto J : Top.ResourceModel->OldPacket)
-        if (QII.producesStall(J->getInstr(), Instr))
+        if (QII.producesStall(*J->getInstr(), Instr))
           ResCount -= PriorityOne;
     } else {
       for (auto J : Bot.ResourceModel->OldPacket)
-        if (QII.producesStall(Instr, J->getInstr()))
+        if (QII.producesStall(Instr, *J->getInstr()))
           ResCount -= PriorityOne;
     }
   }
@@ -841,8 +843,8 @@ pickNodeFromQueue(ReadyQueue &Q, const RegPressureTracker &RPTracker,
       const MachineInstr *CandI = Candidate.SU->getInstr();
       const InstrItineraryData *InstrItins = QST.getInstrItineraryData();
 
-      unsigned InstrLatency = QII.getInstrTimingClassLatency(InstrItins, MI);
-      unsigned CandLatency = QII.getInstrTimingClassLatency(InstrItins, CandI);
+      unsigned InstrLatency = QII.getInstrTimingClassLatency(InstrItins, *MI);
+      unsigned CandLatency = QII.getInstrTimingClassLatency(InstrItins, *CandI);
       DEBUG(dbgs() << "TC Tie Breaker Cand: "
                    << CandLatency << " Instr:" << InstrLatency << "\n"
                    << *MI << *CandI << "\n");

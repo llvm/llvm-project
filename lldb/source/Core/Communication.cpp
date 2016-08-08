@@ -156,18 +156,14 @@ Communication::Read (void *dst, size_t dst_len, uint32_t timeout_usec, Connectio
             status = eConnectionStatusNoConnection;
             return 0;
         }
-        // Set the timeout appropriately
-        TimeValue timeout_time;
-        if (timeout_usec != UINT32_MAX)
-        {
-            timeout_time = TimeValue::Now();
-            timeout_time.OffsetWithMicroSeconds (timeout_usec);
-        }
 
         ListenerSP listener_sp(Listener::MakeListener("Communication::Read"));
         listener_sp->StartListeningForEvents (this, eBroadcastBitReadThreadGotBytes | eBroadcastBitReadThreadDidExit);
         EventSP event_sp;
-        while (listener_sp->WaitForEvent (timeout_time.IsValid() ? &timeout_time : nullptr, event_sp))
+        std::chrono::microseconds timeout = std::chrono::microseconds(0);
+        if (timeout_usec != UINT32_MAX)
+            timeout = std::chrono::microseconds(timeout_usec);
+        while (listener_sp->WaitForEvent(timeout, event_sp))
         {
             const uint32_t event_type = event_sp->GetType();
             if (event_type & eBroadcastBitReadThreadGotBytes)
@@ -439,7 +435,7 @@ Communication::SynchronizeWithReadThread ()
 
     // Wait for the synchronization event.
     EventSP event_sp;
-    listener_sp->WaitForEvent(nullptr, event_sp);
+    listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
 }
 
 void

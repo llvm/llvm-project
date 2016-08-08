@@ -24,13 +24,13 @@
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR(reg, alt, lldb_kind)           \
     { #reg, alt, GPR_SIZE(reg), GPR_OFFSET(reg), eEncodingUint, \
-      eFormatHex, { dwarf_##reg##_powerpc, dwarf_##reg##_powerpc, lldb_kind, LLDB_INVALID_REGNUM, gpr_##reg##_powerpc }, NULL, NULL }
+      eFormatHex, { dwarf_##reg##_powerpc, dwarf_##reg##_powerpc, lldb_kind, LLDB_INVALID_REGNUM, gpr_##reg##_powerpc }, NULL, NULL, NULL, 0}
 #define DEFINE_FPR(reg, lldb_kind)           \
     { #reg, NULL, 8, FPR_OFFSET(reg), eEncodingIEEE754, \
-      eFormatFloat, { dwarf_##reg##_powerpc, dwarf_##reg##_powerpc, lldb_kind, LLDB_INVALID_REGNUM, fpr_##reg##_powerpc }, NULL, NULL }
+      eFormatFloat, { dwarf_##reg##_powerpc, dwarf_##reg##_powerpc, lldb_kind, LLDB_INVALID_REGNUM, fpr_##reg##_powerpc }, NULL, NULL, NULL, 0}
 #define DEFINE_VMX(reg, lldb_kind)           \
     { #reg, NULL, 16, VMX_OFFSET(reg), eEncodingVector, \
-      eFormatVectorOfUInt32, { dwarf_##reg##_powerpc, dwarf_##reg##_powerpc, lldb_kind, LLDB_INVALID_REGNUM, vmx_##reg##_powerpc }, NULL, NULL }
+      eFormatVectorOfUInt32, { dwarf_##reg##_powerpc, dwarf_##reg##_powerpc, lldb_kind, LLDB_INVALID_REGNUM, vmx_##reg##_powerpc }, NULL, NULL, NULL, 0}
 
     // General purpose registers.            EH_Frame,                  DWARF,              Generic,                Process Plugin
 #define POWERPC_REGS \
@@ -136,8 +136,8 @@
     DEFINE_VMX(v29,      LLDB_INVALID_REGNUM), \
     DEFINE_VMX(v30,      LLDB_INVALID_REGNUM), \
     DEFINE_VMX(v31,      LLDB_INVALID_REGNUM), \
-    { "vrsave", NULL, 4, VMX_OFFSET(vrsave), eEncodingUint, eFormatHex, { dwarf_vrsave_powerpc, dwarf_vrsave_powerpc, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vrsave_powerpc }, NULL, NULL }, \
-    { "vscr", NULL, 4, VMX_OFFSET(vscr), eEncodingUint, eFormatHex, { dwarf_vscr_powerpc, dwarf_vscr_powerpc, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_powerpc }, NULL, NULL },
+    { "vrsave", NULL, 4, VMX_OFFSET(vrsave), eEncodingUint, eFormatHex, { dwarf_vrsave_powerpc, dwarf_vrsave_powerpc, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vrsave_powerpc }, NULL, NULL, NULL, 0}, \
+    { "vscr", NULL, 4, VMX_OFFSET(vscr), eEncodingUint, eFormatHex, { dwarf_vscr_powerpc, dwarf_vscr_powerpc, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_powerpc }, NULL, NULL, NULL, 0},
 
 static RegisterInfo
 g_register_infos_powerpc64[] =

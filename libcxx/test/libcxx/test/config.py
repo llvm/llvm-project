@@ -653,7 +653,7 @@ class Configuration(object):
 
     def configure_substitutions(self):
         sub = self.config.substitutions
-        # Configure compiler substitions
+        # Configure compiler substitutions
         sub.append(('%cxx', self.cxx.path))
         # Configure flags substitutions
         flags_str = ' '.join(self.cxx.flags)

@@ -143,6 +143,7 @@ class Parser : public CodeCompletionHandler {
 
   /// C++0x contextual keywords.
   mutable IdentifierInfo *Ident_final;
+  mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
 
   // C++ type trait keywords that can be reverted to identifiers and still be

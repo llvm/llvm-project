@@ -34,53 +34,56 @@
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
-static cl::opt<bool>
-EnableCCMP("aarch64-ccmp", cl::desc("Enable the CCMP formation pass"),
-           cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
+                                cl::desc("Enable the CCMP formation pass"),
+                                cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnableMCR("aarch64-mcr",
+static cl::opt<bool> EnableMCR("aarch64-enable-mcr",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
 
-static cl::opt<bool>
-EnableStPairSuppress("aarch64-stp-suppress", cl::desc("Suppress STP for AArch64"),
-                     cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableStPairSuppress("aarch64-enable-stp-suppress",
+                                          cl::desc("Suppress STP for AArch64"),
+                                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableAdvSIMDScalar(
+    "aarch64-enable-simd-scalar",
+    cl::desc("Enable use of AdvSIMD scalar integer instructions"),
+    cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
-EnableAdvSIMDScalar("aarch64-simd-scalar", cl::desc("Enable use of AdvSIMD scalar"
-                    " integer instructions"), cl::init(false), cl::Hidden);
+    EnablePromoteConstant("aarch64-enable-promote-const",
+                          cl::desc("Enable the promote constant pass"),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableCollectLOH(
+    "aarch64-enable-collect-loh",
+    cl::desc("Enable the pass that emits the linker optimization hints (LOH)"),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-EnablePromoteConstant("aarch64-promote-const", cl::desc("Enable the promote "
-                      "constant pass"), cl::init(true), cl::Hidden);
+    EnableDeadRegisterElimination("aarch64-enable-dead-defs", cl::Hidden,
+                                  cl::desc("Enable the pass that removes dead"
+                                           " definitons and replaces stores to"
+                                           " them with stores to the zero"
+                                           " register"),
+                                  cl::init(true));
 
-static cl::opt<bool>
-EnableCollectLOH("aarch64-collect-loh", cl::desc("Enable the pass that emits the"
-                 " linker optimization hints (LOH)"), cl::init(true),
-                 cl::Hidden);
+static cl::opt<bool> EnableRedundantCopyElimination(
+    "aarch64-enable-copyelim",
+    cl::desc("Enable the redundant copy elimination pass"), cl::init(true),
+    cl::Hidden);
 
-static cl::opt<bool>
-EnableDeadRegisterElimination("aarch64-dead-def-elimination", cl::Hidden,
-                              cl::desc("Enable the pass that removes dead"
-                                       " definitons and replaces stores to"
-                                       " them with stores to the zero"
-                                       " register"),
-                              cl::init(true));
+static cl::opt<bool> EnableLoadStoreOpt("aarch64-enable-ldst-opt",
+                                        cl::desc("Enable the load/store pair"
+                                                 " optimization pass"),
+                                        cl::init(true), cl::Hidden);
 
-static cl::opt<bool>
-EnableRedundantCopyElimination("aarch64-redundant-copy-elim",
-              cl::desc("Enable the redundant copy elimination pass"),
-              cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-EnableLoadStoreOpt("aarch64-load-store-opt", cl::desc("Enable the load/store pair"
-                   " optimization pass"), cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-EnableAtomicTidy("aarch64-atomic-cfg-tidy", cl::Hidden,
-                 cl::desc("Run SimplifyCFG after expanding atomic operations"
-                          " to make use of cmpxchg flow-based information"),
-                 cl::init(true));
+static cl::opt<bool> EnableAtomicTidy(
+    "aarch64-enable-atomic-cfg-tidy", cl::Hidden,
+    cl::desc("Run SimplifyCFG after expanding atomic operations"
+             " to make use of cmpxchg flow-based information"),
+    cl::init(true));
 
 static cl::opt<bool>
 EnableEarlyIfConversion("aarch64-enable-early-ifcvt", cl::Hidden,
@@ -88,9 +91,9 @@ EnableEarlyIfConversion("aarch64-enable-early-ifcvt", cl::Hidden,
                         cl::init(true));
 
 static cl::opt<bool>
-EnableCondOpt("aarch64-condopt",
-              cl::desc("Enable the condition optimizer pass"),
-              cl::init(true), cl::Hidden);
+    EnableCondOpt("aarch64-enable-condopt",
+                  cl::desc("Enable the condition optimizer pass"),
+                  cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
@@ -98,17 +101,26 @@ EnableA53Fix835769("aarch64-fix-cortex-a53-835769", cl::Hidden,
                 cl::init(false));
 
 static cl::opt<bool>
-EnableGEPOpt("aarch64-gep-opt", cl::Hidden,
-             cl::desc("Enable optimizations on complex GEPs"),
-             cl::init(false));
+    EnableAddressTypePromotion("aarch64-enable-type-promotion", cl::Hidden,
+                               cl::desc("Enable the type promotion pass"),
+                               cl::init(true));
+
+static cl::opt<bool>
+    EnableGEPOpt("aarch64-enable-gep-opt", cl::Hidden,
+                 cl::desc("Enable optimizations on complex GEPs"),
+                 cl::init(false));
+
+static cl::opt<bool>
+    BranchRelaxation("aarch64-enable-branch-relax", cl::Hidden, cl::init(true),
+                     cl::desc("Relax out of range conditional branches"));
 
 // FIXME: Unify control over GlobalMerge.
 static cl::opt<cl::boolOrDefault>
-EnableGlobalMerge("aarch64-global-merge", cl::Hidden,
-                  cl::desc("Enable the global merge pass"));
+    EnableGlobalMerge("aarch64-enable-global-merge", cl::Hidden,
+                      cl::desc("Enable the global merge pass"));
 
 static cl::opt<bool>
-    EnableLoopDataPrefetch("aarch64-loop-data-prefetch", cl::Hidden,
+    EnableLoopDataPrefetch("aarch64-enable-loop-data-prefetch", cl::Hidden,
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
@@ -119,8 +131,21 @@ extern "C" void LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> Z(TheARM64Target);
   auto PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeAArch64A53Fix835769Pass(*PR);
+  initializeAArch64A57FPLoadBalancingPass(*PR);
+  initializeAArch64AddressTypePromotionPass(*PR);
+  initializeAArch64AdvSIMDScalarPass(*PR);
+  initializeAArch64BranchRelaxationPass(*PR);
+  initializeAArch64CollectLOHPass(*PR);
+  initializeAArch64ConditionalComparesPass(*PR);
+  initializeAArch64ConditionOptimizerPass(*PR);
+  initializeAArch64DeadRegisterDefinitionsPass(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
+  initializeAArch64PromoteConstantPass(*PR);
+  initializeAArch64RedundantCopyEliminationPass(*PR);
+  initializeAArch64StorePairSuppressPass(*PR);
+  initializeLDTLSCleanupPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -374,7 +399,7 @@ bool AArch64PassConfig::addPreISel() {
     addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize));
   }
 
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOpt::None && EnableAddressTypePromotion)
     addPass(createAArch64AddressTypePromotionPass());
 
   return false;
@@ -461,7 +486,8 @@ void AArch64PassConfig::addPreEmitPass() {
     addPass(createAArch64A53Fix835769());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
-  addPass(createAArch64BranchRelaxation());
+  if (BranchRelaxation)
+    addPass(createAArch64BranchRelaxation());
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());

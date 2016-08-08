@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=-vsx -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s
 
 define double @fabs(double %f) {
 ; CHECK-LABEL: fabs:

@@ -316,7 +316,7 @@ void GCMachineCodeAnalysis::FindStackOffsets(MachineFunction &MF) {
   for (GCFunctionInfo::roots_iterator RI = FI->roots_begin();
        RI != FI->roots_end();) {
     // If the root references a dead object, no need to keep it.
-    if (MF.getFrameInfo()->isDeadObjectIndex(RI->Num)) {
+    if (MF.getFrameInfo().isDeadObjectIndex(RI->Num)) {
       RI = FI->removeStackRoot(RI);
     } else {
       unsigned FrameReg; // FIXME: surely GCRoot ought to store the
@@ -338,11 +338,11 @@ bool GCMachineCodeAnalysis::runOnMachineFunction(MachineFunction &MF) {
 
   // Find the size of the stack frame.  There may be no correct static frame
   // size, we use UINT64_MAX to represent this.
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  const bool DynamicFrameSize = MFI->hasVarSizedObjects() ||
+  const bool DynamicFrameSize = MFI.hasVarSizedObjects() ||
     RegInfo->needsStackRealignment(MF);
-  FI->setFrameSize(DynamicFrameSize ? UINT64_MAX : MFI->getStackSize());
+  FI->setFrameSize(DynamicFrameSize ? UINT64_MAX : MFI.getStackSize());
 
   // Find all safe points.
   if (FI->getStrategy().needsSafePoints())

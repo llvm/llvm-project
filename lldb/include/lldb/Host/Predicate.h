@@ -15,11 +15,12 @@
 #include <time.h>
 
 // C++ Includes
+#include <condition_variable>
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-defines.h"
-#include "lldb/Host/Mutex.h"
-#include "lldb/Host/Condition.h"
 
 //#define DB_PTHREAD_LOG_EVENTS
 
@@ -97,7 +98,7 @@ public:
     T
     GetValue () const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
         T value = m_value;
         return value;
     }
@@ -120,7 +121,7 @@ public:
     void
     SetValue (T value, PredicateBroadcastType broadcast_type)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
         printf("%s (value = 0x%8.8x, broadcast_type = %i)\n", __FUNCTION__, value, broadcast_type);
 #endif
@@ -148,7 +149,7 @@ public:
     void
     SetValueBits (T bits, PredicateBroadcastType broadcast_type)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
         printf("%s (bits = 0x%8.8x, broadcast_type = %i)\n", __FUNCTION__, bits, broadcast_type);
 #endif
@@ -176,7 +177,7 @@ public:
     void
     ResetValueBits (T bits, PredicateBroadcastType broadcast_type)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
         printf("%s (bits = 0x%8.8x, broadcast_type = %i)\n", __FUNCTION__, bits, broadcast_type);
 #endif
@@ -213,21 +214,30 @@ public:
     ///     occurred.
     //------------------------------------------------------------------
     T
-    WaitForSetValueBits(T bits, const TimeValue *abstime = nullptr)
+    WaitForSetValueBits(T bits, const std::chrono::microseconds &timeout = std::chrono::microseconds(0))
     {
-        int err = 0;
         // pthread_cond_timedwait() or pthread_cond_wait() will atomically
         // unlock the mutex and wait for the condition to be set. When either
         // function returns, they will re-lock the mutex. We use an auto lock/unlock
-        // class (Mutex::Locker) to allow us to return at any point in this
+        // class (std::lock_guard) to allow us to return at any point in this
         // function and not have to worry about unlocking the mutex.
-        Mutex::Locker locker(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
-        printf("%s (bits = 0x%8.8x, abstime = %p), m_value = 0x%8.8x\n", __FUNCTION__, bits, abstime, m_value);
+        printf("%s (bits = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n", __FUNCTION__, bits, timeout.count(),
+               m_value);
 #endif
-        while (err == 0 && ((m_value & bits) == 0))
+        while ((m_value & bits) == 0)
         {
-            err = m_condition.Wait (m_mutex, abstime);
+            if (timeout == std::chrono::microseconds(0))
+            {
+                m_condition.wait(lock);
+            }
+            else
+            {
+                std::cv_status result = m_condition.wait_for(lock, timeout);
+                if (result == std::cv_status::timeout)
+                    break;
+            }
         }
 #ifdef DB_PTHREAD_LOG_EVENTS
         printf("%s (bits = 0x%8.8x), m_value = 0x%8.8x, returning 0x%8.8x\n", __FUNCTION__, bits, m_value, m_value & bits);
@@ -262,23 +272,31 @@ public:
     ///     unrecoverable error occurs.
     //------------------------------------------------------------------
     T
-    WaitForResetValueBits(T bits, const TimeValue *abstime = nullptr)
+    WaitForResetValueBits(T bits, const std::chrono::microseconds &timeout = std::chrono::microseconds(0))
     {
-        int err = 0;
-
         // pthread_cond_timedwait() or pthread_cond_wait() will atomically
         // unlock the mutex and wait for the condition to be set. When either
         // function returns, they will re-lock the mutex. We use an auto lock/unlock
-        // class (Mutex::Locker) to allow us to return at any point in this
+        // class (std::lock_guard) to allow us to return at any point in this
         // function and not have to worry about unlocking the mutex.
-        Mutex::Locker locker(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
 
 #ifdef DB_PTHREAD_LOG_EVENTS
-        printf("%s (bits = 0x%8.8x, abstime = %p), m_value = 0x%8.8x\n", __FUNCTION__, bits, abstime, m_value);
+        printf("%s (bits = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n", __FUNCTION__, bits, timeout.count(),
+               m_value);
 #endif
-        while (err == 0 && ((m_value & bits) != 0))
+        while ((m_value & bits) != 0)
         {
-            err = m_condition.Wait (m_mutex, abstime);
+            if (timeout == std::chrono::microseconds(0))
+            {
+                m_condition.wait(lock);
+            }
+            else
+            {
+                std::cv_status result = m_condition.wait_for(lock, timeout);
+                if (result == std::cv_status::timeout)
+                    break;
+            }
         }
 
 #ifdef DB_PTHREAD_LOG_EVENTS
@@ -317,25 +335,39 @@ public:
     ///     @li \b false otherwise
     //------------------------------------------------------------------
     bool
-    WaitForValueEqualTo(T value, const TimeValue *abstime = nullptr, bool *timed_out = nullptr)
+    WaitForValueEqualTo(T value, const std::chrono::microseconds &timeout = std::chrono::microseconds(0),
+                        bool *timed_out = nullptr)
     {
-        int err = 0;
         // pthread_cond_timedwait() or pthread_cond_wait() will atomically
         // unlock the mutex and wait for the condition to be set. When either
         // function returns, they will re-lock the mutex. We use an auto lock/unlock
-        // class (Mutex::Locker) to allow us to return at any point in this
+        // class (std::lock_guard) to allow us to return at any point in this
         // function and not have to worry about unlocking the mutex.
-        Mutex::Locker locker(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
 
 #ifdef DB_PTHREAD_LOG_EVENTS
-        printf("%s (value = 0x%8.8x, abstime = %p), m_value = 0x%8.8x\n", __FUNCTION__, value, abstime, m_value);
+        printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n", __FUNCTION__, value, timeout.count(),
+               m_value);
 #endif
         if (timed_out)
             *timed_out = false;
 
-        while (err == 0 && m_value != value)
+        while (m_value != value)
         {
-            err = m_condition.Wait (m_mutex, abstime, timed_out);
+            if (timeout == std::chrono::microseconds(0))
+            {
+                m_condition.wait(lock);
+            }
+            else
+            {
+                std::cv_status result = m_condition.wait_for(lock, timeout);
+                if (result == std::cv_status::timeout)
+                {
+                    if (timed_out)
+                        *timed_out = true;
+                    break;
+                }
+            }
         }
 
         return m_value == value;
@@ -378,26 +410,39 @@ public:
     //------------------------------------------------------------------
     bool
     WaitForValueEqualToAndSetValueTo(T wait_value, T new_value,
-                                     const TimeValue *abstime = nullptr,
+                                     const std::chrono::microseconds &timeout = std::chrono::microseconds(0),
                                      bool *timed_out = nullptr)
     {
-        int err = 0;
         // pthread_cond_timedwait() or pthread_cond_wait() will atomically
         // unlock the mutex and wait for the condition to be set. When either
         // function returns, they will re-lock the mutex. We use an auto lock/unlock
-        // class (Mutex::Locker) to allow us to return at any point in this
+        // class (std::lock_guard) to allow us to return at any point in this
         // function and not have to worry about unlocking the mutex.
-        Mutex::Locker locker(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
 
 #ifdef DB_PTHREAD_LOG_EVENTS
-        printf("%s (wait_value = 0x%8.8x, new_value = 0x%8.8x, abstime = %p), m_value = 0x%8.8x\n", __FUNCTION__, wait_value, new_value, abstime, m_value);
+        printf("%s (wait_value = 0x%8.8x, new_value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n", __FUNCTION__,
+               wait_value, new_value, timeout.count(), m_value);
 #endif
         if (timed_out)
             *timed_out = false;
 
-        while (err == 0 && m_value != wait_value)
+        while (m_value != wait_value)
         {
-            err = m_condition.Wait (m_mutex, abstime, timed_out);
+            if (timeout == std::chrono::microseconds(0))
+            {
+                m_condition.wait(lock);
+            }
+            else
+            {
+                std::cv_status result = m_condition.wait_for(lock, timeout);
+                if (result == std::cv_status::timeout)
+                {
+                    if (timed_out)
+                        *timed_out = true;
+                    break;
+                }
+            }
         }
 
         if (m_value == wait_value)
@@ -438,21 +483,31 @@ public:
     ///     @li \b false otherwise
     //------------------------------------------------------------------
     bool
-    WaitForValueNotEqualTo(T value, T &new_value, const TimeValue *abstime = nullptr)
+    WaitForValueNotEqualTo(T value, T &new_value,
+                           const std::chrono::microseconds &timeout = std::chrono::microseconds(0))
     {
-        int err = 0;
         // pthread_cond_timedwait() or pthread_cond_wait() will atomically
         // unlock the mutex and wait for the condition to be set. When either
         // function returns, they will re-lock the mutex. We use an auto lock/unlock
-        // class (Mutex::Locker) to allow us to return at any point in this
+        // class (std::lock_guard) to allow us to return at any point in this
         // function and not have to worry about unlocking the mutex.
-        Mutex::Locker locker(m_mutex);
+        std::unique_lock<std::mutex> lock(m_mutex);
 #ifdef DB_PTHREAD_LOG_EVENTS
-        printf("%s (value = 0x%8.8x, abstime = %p), m_value = 0x%8.8x\n", __FUNCTION__, value, abstime, m_value);
+        printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n", __FUNCTION__, value, timeout.count(),
+               m_value);
 #endif
-        while (err == 0 && m_value == value)
+        while (m_value == value)
         {
-            err = m_condition.Wait (m_mutex, abstime);
+            if (timeout == std::chrono::microseconds(0))
+            {
+                m_condition.wait(lock);
+            }
+            else
+            {
+                std::cv_status result = m_condition.wait_for(lock, timeout);
+                if (result == std::cv_status::timeout)
+                    break;
+            }
         }
 
         if (m_value != value)
@@ -469,8 +524,9 @@ protected:
     // blocking between the main thread and the spotlight index thread.
     //----------------------------------------------------------------------
     T           m_value;        ///< The templatized value T that we are protecting access to
-    mutable Mutex m_mutex;      ///< The mutex to use when accessing the data
-    Condition   m_condition;    ///< The pthread condition variable to use for signaling that data available or changed.
+    mutable std::mutex m_mutex; ///< The mutex to use when accessing the data
+    std::condition_variable
+        m_condition; ///< The pthread condition variable to use for signaling that data available or changed.
 
 private:
     //------------------------------------------------------------------
@@ -496,7 +552,7 @@ private:
         printf("%s (old_value = 0x%8.8x, broadcast_type = %i) m_value = 0x%8.8x, broadcast = %u\n", __FUNCTION__, old_value, broadcast_type, m_value, broadcast);
 #endif
         if (broadcast)
-            m_condition.Broadcast();
+            m_condition.notify_all();
     }
 
     DISALLOW_COPY_AND_ASSIGN(Predicate);

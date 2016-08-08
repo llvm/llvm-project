@@ -111,16 +111,15 @@ class OrcMCJITReplacement : public ExecutionEngine {
     std::shared_ptr<MCJITMemoryManager> ClientMM;
   };
 
-  class LinkingResolver : public RuntimeDyld::SymbolResolver {
+  class LinkingResolver : public JITSymbolResolver {
   public:
     LinkingResolver(OrcMCJITReplacement &M) : M(M) {}
 
-    RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
+    JITSymbol findSymbol(const std::string &Name) override {
       return M.findMangledSymbol(Name);
     }
 
-    RuntimeDyld::SymbolInfo
-    findSymbolInLogicalDylib(const std::string &Name) override {
+    JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
       return M.ClientResolver->findSymbol(Name);
     }
 
@@ -133,7 +132,7 @@ private:
   static ExecutionEngine *
   createOrcMCJITReplacement(std::string *ErrorMsg,
                             std::shared_ptr<MCJITMemoryManager> MemMgr,
-                            std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+                            std::shared_ptr<JITSymbolResolver> Resolver,
                             std::unique_ptr<TargetMachine> TM) {
     return new OrcMCJITReplacement(std::move(MemMgr), std::move(Resolver),
                                    std::move(TM));
@@ -146,7 +145,7 @@ public:
 
   OrcMCJITReplacement(
       std::shared_ptr<MCJITMemoryManager> MemMgr,
-      std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver,
+      std::shared_ptr<JITSymbolResolver> ClientResolver,
       std::unique_ptr<TargetMachine> TM)
       : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
         MemMgr(*this, std::move(MemMgr)), Resolver(*this),
@@ -193,7 +192,7 @@ public:
     return findSymbol(Name).getAddress();
   }
 
-  RuntimeDyld::SymbolInfo findSymbol(StringRef Name) {
+  JITSymbol findSymbol(StringRef Name) {
     return findMangledSymbol(Mangle(Name));
   }
 
@@ -243,13 +242,13 @@ public:
 
 private:
 
-  RuntimeDyld::SymbolInfo findMangledSymbol(StringRef Name) {
+  JITSymbol findMangledSymbol(StringRef Name) {
     if (auto Sym = LazyEmitLayer.findSymbol(Name, false))
-      return Sym.toRuntimeDyldSymbol();
+      return Sym;
     if (auto Sym = ClientResolver->findSymbol(Name))
       return Sym;
     if (auto Sym = scanArchives(Name))
-      return Sym.toRuntimeDyldSymbol();
+      return Sym;
 
     return nullptr;
   }
@@ -346,7 +345,7 @@ private:
   std::unique_ptr<TargetMachine> TM;
   MCJITReplacementMemMgr MemMgr;
   LinkingResolver Resolver;
-  std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver;
+  std::shared_ptr<JITSymbolResolver> ClientResolver;
   Mangler Mang;
 
   NotifyObjectLoadedT NotifyObjectLoaded;

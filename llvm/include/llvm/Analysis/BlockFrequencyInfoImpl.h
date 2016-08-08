@@ -482,6 +482,8 @@ public:
   BlockFrequency getBlockFreq(const BlockNode &Node) const;
   Optional<uint64_t> getBlockProfileCount(const Function &F,
                                           const BlockNode &Node) const;
+  Optional<uint64_t> getProfileCountFromFreq(const Function &F,
+                                             uint64_t Freq) const;
 
   void setBlockFreq(const BlockNode &Node, uint64_t Freq);
 
@@ -924,6 +926,10 @@ public:
   Optional<uint64_t> getBlockProfileCount(const Function &F,
                                           const BlockT *BB) const {
     return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB));
+  }
+  Optional<uint64_t> getProfileCountFromFreq(const Function &F,
+                                             uint64_t Freq) const {
+    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq);
   }
   void setBlockFreq(const BlockT *BB, uint64_t Freq);
   Scaled64 getFloatingBlockFreq(const BlockT *BB) const {

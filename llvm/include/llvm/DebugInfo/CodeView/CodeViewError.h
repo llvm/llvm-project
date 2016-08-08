@@ -21,6 +21,7 @@ enum class cv_error_code {
   insufficient_buffer,
   operation_unsupported,
   corrupt_record,
+  unknown_member_record,
 };
 
 /// Base class for errors originating when parsing raw PDB files

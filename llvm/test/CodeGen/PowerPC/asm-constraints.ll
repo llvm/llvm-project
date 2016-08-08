@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=pwr8 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mcpu=pwr8 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"

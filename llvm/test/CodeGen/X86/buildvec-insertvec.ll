@@ -19,20 +19,11 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 
 ; Verify that the DAGCombiner doesn't wrongly fold a build_vector into a
 ; blend with a zero vector if the build_vector contains negative zero.
-;
-; TODO: the codegen for function 'test_negative_zero_1' is sub-optimal.
-; Ideally, we should generate a single shuffle blend operation.
 
 define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; CHECK-LABEL: test_negative_zero_1:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movapd %xmm0, %xmm1
-; CHECK-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
-; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    blendps {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2],zero
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %A, i32 0

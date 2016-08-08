@@ -273,7 +273,7 @@ t;
 )";
 
 static StructuredData::Array *
-CreateStackTrace(ValueObjectSP o, std::string trace_item_name = ".trace") {
+CreateStackTrace(ValueObjectSP o, const std::string &trace_item_name = ".trace") {
     StructuredData::Array *trace = new StructuredData::Array();
     ValueObjectSP trace_value_object = o->GetValueForExpressionPath(trace_item_name.c_str());
     for (int j = 0; j < 8; j++) {
@@ -286,7 +286,7 @@ CreateStackTrace(ValueObjectSP o, std::string trace_item_name = ".trace") {
 }
 
 static StructuredData::Array *
-ConvertToStructuredArray(ValueObjectSP return_value_sp, std::string items_name, std::string count_name, std::function <void(ValueObjectSP o, StructuredData::Dictionary *dict)> const &callback)
+ConvertToStructuredArray(ValueObjectSP return_value_sp, const std::string &items_name, const std::string &count_name, std::function <void(ValueObjectSP o, StructuredData::Dictionary *dict)> const &callback)
 {
     StructuredData::Array *array = new StructuredData::Array();
     unsigned int count = return_value_sp->GetValueForExpressionPath(count_name.c_str())->GetValueAsUnsigned(0);
@@ -303,7 +303,7 @@ ConvertToStructuredArray(ValueObjectSP return_value_sp, std::string items_name, 
 }
 
 static std::string
-RetrieveString(ValueObjectSP return_value_sp, ProcessSP process_sp, std::string expression_path)
+RetrieveString(ValueObjectSP return_value_sp, ProcessSP process_sp, const std::string &expression_path)
 {
     addr_t ptr = return_value_sp->GetValueForExpressionPath(expression_path.c_str())->GetValueAsUnsigned(0);
     std::string str;
@@ -335,10 +335,11 @@ GetRenumberedThreadIds(ProcessSP process_sp, ValueObjectSP data, std::map<uint64
 }
 
 static user_id_t Renumber(uint64_t id, std::map<uint64_t, user_id_t> &thread_id_map) {
-    if (! thread_id_map.count(id))
+    auto IT = thread_id_map.find(id);
+    if (IT == thread_id_map.end())
         return 0;
     
-    return thread_id_map[id];
+    return IT->second;
 }
 
 StructuredData::ObjectSP
@@ -785,7 +786,7 @@ ThreadSanitizerRuntime::Deactivate()
 }
 
 static std::string
-GenerateThreadName(std::string path, StructuredData::Object *o, StructuredData::ObjectSP main_info) {
+GenerateThreadName(const std::string &path, StructuredData::Object *o, StructuredData::ObjectSP main_info) {
     std::string result = "additional information";
     
     if (path == "mops") {
@@ -837,7 +838,7 @@ GenerateThreadName(std::string path, StructuredData::Object *o, StructuredData::
 }
 
 static void
-AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP process_sp, StructuredData::ObjectSP info)
+AddThreadsForPath(const std::string &path, ThreadCollectionSP threads, ProcessSP process_sp, StructuredData::ObjectSP info)
 {
     info->GetObjectForDotSeparatedPath(path)->GetAsArray()->ForEach([process_sp, threads, path, info] (StructuredData::Object *o) -> bool {
         std::vector<lldb::addr_t> pcs;

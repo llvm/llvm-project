@@ -13,7 +13,7 @@
 #include "OutputStyle.h"
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/DebugInfo/Msf/MsfCommon.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -26,7 +26,7 @@ namespace llvm {
 namespace pdb {
 
 namespace yaml {
-struct MsfHeaders {
+struct MSFHeaders {
   msf::SuperBlock SuperBlock;
   uint32_t NumDirectoryBlocks;
   std::vector<uint32_t> DirectoryBlocks;
@@ -70,7 +70,7 @@ struct PdbDbiStream {
 };
 
 struct PdbObject {
-  Optional<MsfHeaders> Headers;
+  Optional<MSFHeaders> Headers;
   Optional<std::vector<uint32_t>> StreamSizes;
   Optional<std::vector<StreamBlockList>> StreamMap;
   Optional<PdbInfoStream> PdbStream;
@@ -87,8 +87,8 @@ template <> struct MappingTraits<pdb::yaml::PdbObject> {
   static void mapping(IO &IO, pdb::yaml::PdbObject &Obj);
 };
 
-template <> struct MappingTraits<pdb::yaml::MsfHeaders> {
-  static void mapping(IO &IO, pdb::yaml::MsfHeaders &Obj);
+template <> struct MappingTraits<pdb::yaml::MSFHeaders> {
+  static void mapping(IO &IO, pdb::yaml::MSFHeaders &Obj);
 };
 
 template <> struct MappingTraits<msf::SuperBlock> {

@@ -30,6 +30,18 @@ public:
   static char ID;
   const char *getPassName() const override { return "InstructionSelect"; }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::IsSSA)
+        .set(MachineFunctionProperties::Property::Legalized)
+        .set(MachineFunctionProperties::Property::RegBankSelected);
+  }
+
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Selected);
+  }
+
   InstructionSelect();
 
   bool runOnMachineFunction(MachineFunction &MF) override;

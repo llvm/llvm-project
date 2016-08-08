@@ -361,8 +361,10 @@ defm FSQRT : ABSS_M<"sqrt.d", II_SQRT_D, fsqrt>, ABSS_FM<0x4, 17>, ISA_MIPS2;
 // regardless of register aliasing.
 
 /// Move Control Registers From/To CPU Registers
-def CFC1 : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>, MFC1_FM<2>;
-def CTC1 : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>, MFC1_FM<6>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def CFC1 : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>, MFC1_FM<2>;
+  def CTC1 : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>, MFC1_FM<6>;
+}
 def MFC1 : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
                           bitconvert>, MFC1_FM<0>;
 def MTC1 : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,

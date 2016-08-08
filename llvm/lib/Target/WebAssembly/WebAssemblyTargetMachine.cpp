@@ -29,10 +29,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
 
+// Emscripten's asm.js-style exception handling
+static cl::opt<bool> EnableEmExceptionHandling(
+    "wasm-em-exception-handling",
+    cl::desc("WebAssembly Emscripten-style exception handling"),
+    cl::init(false));
+
 extern "C" void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(TheWebAssemblyTarget32);
   RegisterTargetMachine<WebAssemblyTargetMachine> Y(TheWebAssemblyTarget64);
+
+  // Register exception handling pass to opt
+  initializeWebAssemblyLowerEmscriptenExceptionsPass(
+      *PassRegistry::getPassRegistry());
 }
 
 //===----------------------------------------------------------------------===//
@@ -148,6 +158,10 @@ void WebAssemblyPassConfig::addIRPasses() {
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyOptimizeReturned());
+
+  // Handle exceptions.
+  if (EnableEmExceptionHandling)
+    addPass(createWebAssemblyLowerEmscriptenExceptions());
 
   TargetPassConfig::addIRPasses();
 }

@@ -29,8 +29,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
-#include "llvm/DebugInfo/Msf/ByteStream.h"
-#include "llvm/DebugInfo/Msf/MsfBuilder.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -68,27 +68,6 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
-
-namespace {
-// A simple adapter that acts like a ByteStream but holds ownership over
-// and underlying FileOutputBuffer.
-class FileBufferByteStream : public ByteStream<true> {
-public:
-  FileBufferByteStream(std::unique_ptr<FileOutputBuffer> Buffer)
-      : ByteStream(MutableArrayRef<uint8_t>(Buffer->getBufferStart(),
-                                            Buffer->getBufferEnd())),
-        FileBuffer(std::move(Buffer)) {}
-
-  Error commit() const override {
-    if (FileBuffer->commit())
-      return llvm::make_error<RawError>(raw_error_code::not_writable);
-    return Error::success();
-  }
-
-private:
-  std::unique_ptr<FileOutputBuffer> FileBuffer;
-};
-}
 
 namespace opts {
 
@@ -188,6 +167,10 @@ cl::opt<bool> DumpStreamBlocks("stream-blocks",
 cl::opt<bool> DumpStreamSummary("stream-summary",
                                 cl::desc("dump summary of the PDB streams"),
                                 cl::cat(MsfOptions), cl::sub(RawSubcommand));
+cl::opt<bool> DumpPageStats(
+    "page-stats",
+    cl::desc("dump allocation stats of the pages in the MSF file"),
+    cl::cat(MsfOptions), cl::sub(RawSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool>
@@ -395,11 +378,7 @@ static void yamlToPdb(StringRef Path) {
     }
   }
 
-  auto Pdb = Builder.build(std::move(FileByteStream));
-  ExitOnErr(Pdb.takeError());
-
-  auto &PdbFile = *Pdb;
-  ExitOnErr(PdbFile->commit());
+  ExitOnErr(Builder.commit(*FileByteStream));
 }
 
 static void pdb2Yaml(StringRef Path) {
@@ -567,6 +546,7 @@ int main(int argc_, const char *argv_[]) {
     opts::raw::DumpPublics = true;
     opts::raw::DumpSectionHeaders = true;
     opts::raw::DumpStreamSummary = true;
+    opts::raw::DumpPageStats = true;
     opts::raw::DumpStreamBlocks = true;
     opts::raw::DumpTpiRecords = true;
     opts::raw::DumpTpiHash = true;

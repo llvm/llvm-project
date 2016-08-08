@@ -118,6 +118,12 @@ ThreadPlanStepOverRange::IsEquivalentContext(const SymbolContext &context)
         {
             if (m_addr_context.function && m_addr_context.function == context.function)
             {
+                // It is okay to return to a different block of a straight function, we only have to 
+                // be more careful if returning from one inlined block to another.
+                if (m_addr_context.block->GetInlinedFunctionInfo() == nullptr
+                    && context.block->GetInlinedFunctionInfo() == nullptr)
+                    return true;
+                
                 if (m_addr_context.block && m_addr_context.block == context.block)
                     return true;
             }

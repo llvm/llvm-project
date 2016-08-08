@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=ppc64le -mtriple=powerpc64le-unknown-linux-gnu < %s
+; RUN: llc -verify-machineinstrs -mcpu=ppc64le -mtriple=powerpc64le-unknown-linux-gnu < %s
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #0

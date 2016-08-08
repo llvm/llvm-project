@@ -1,4 +1,4 @@
-; RUN: llc < %s -print-after=prologepilog >%t 2>&1 && FileCheck <%t %s
+; RUN: llc -verify-machineinstrs < %s -print-after=prologepilog >%t 2>&1 && FileCheck <%t %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

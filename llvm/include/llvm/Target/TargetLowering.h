@@ -243,9 +243,10 @@ public:
     return true;
   }
 
-  /// Return true if sqrt(x) is as cheap or cheaper than 1 / rsqrt(x)
-  bool isFsqrtCheap() const {
-    return FsqrtIsCheap;
+  /// Return true if SQRT(X) shouldn't be replaced with X*RSQRT(X).
+  virtual bool isFsqrtCheap(SDValue X, SelectionDAG &DAG) const {
+    // Default behavior is to replace SQRT(X) with X*RSQRT(X).
+    return false;
   }
 
   /// Returns true if target has indicated at least one type should be bypassed.
@@ -1381,10 +1382,6 @@ protected:
   /// control.
   void setJumpIsExpensive(bool isExpensive = true);
 
-  /// Tells the code generator that fsqrt is cheap, and should not be replaced
-  /// with an alternative sequence of instructions.
-  void setFsqrtIsCheap(bool isCheap = true) { FsqrtIsCheap = isCheap; }
-
   /// Tells the code generator that this target supports floating point
   /// exceptions and cares about preserving floating point exception behavior.
   void setHasFloatingPointExceptions(bool FPExceptions = true) {
@@ -1910,9 +1907,6 @@ private:
   /// combined with "shift" to BitExtract instructions.
   bool HasExtractBitsInsn;
 
-  // Don't expand fsqrt with an approximation based on the inverse sqrt.
-  bool FsqrtIsCheap;
-
   /// Tells the code generator to bypass slow divide or remainder
   /// instructions. For example, BypassSlowDivWidths[32,8] tells the code
   /// generator to bypass 32-bit integer div/rem with an 8-bit unsigned integer
@@ -2348,6 +2342,10 @@ public:
   /// Return if the N is a constant or constant vector equal to the false value
   /// from getBooleanContents().
   bool isConstFalseVal(const SDNode *N) const;
+
+  /// Return a constant of type VT that contains a true value that respects
+  /// getBooleanContents()
+  SDValue getConstTrueVal(SelectionDAG &DAG, EVT VT, const SDLoc &DL) const;
 
   /// Return if \p N is a True value when extended to \p VT.
   bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool Signed) const;

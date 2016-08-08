@@ -199,20 +199,23 @@ public:
 };
 
 /// @brief Symbol info for RuntimeDyld. 
-class SymbolTableEntry : public JITSymbolBase {
+class SymbolTableEntry {
 public:
   SymbolTableEntry()
-    : JITSymbolBase(JITSymbolFlags::None), Offset(0), SectionID(0) {}
+      : Offset(0), SectionID(0) {}
 
   SymbolTableEntry(unsigned SectionID, uint64_t Offset, JITSymbolFlags Flags)
-    : JITSymbolBase(Flags), Offset(Offset), SectionID(SectionID) {}
+      : Offset(Offset), SectionID(SectionID), Flags(Flags) {}
 
   unsigned getSectionID() const { return SectionID; }
   uint64_t getOffset() const { return Offset; }
 
+  JITSymbolFlags getFlags() const { return Flags; }
+
 private:
   uint64_t Offset;
   unsigned SectionID;
+  JITSymbolFlags Flags;
 };
 
 typedef StringMap<SymbolTableEntry> RTDyldSymbolTable;
@@ -227,7 +230,7 @@ protected:
   RuntimeDyld::MemoryManager &MemMgr;
 
   // The symbol resolver to use for external symbols.
-  RuntimeDyld::SymbolResolver &Resolver;
+  JITSymbolResolver &Resolver;
 
   // Attached RuntimeDyldChecker instance. Null if no instance attached.
   RuntimeDyldCheckerImpl *Checker;
@@ -420,7 +423,7 @@ protected:
 
 public:
   RuntimeDyldImpl(RuntimeDyld::MemoryManager &MemMgr,
-                  RuntimeDyld::SymbolResolver &Resolver)
+                  JITSymbolResolver &Resolver)
     : MemMgr(MemMgr), Resolver(Resolver), Checker(nullptr),
       ProcessAllSections(false), HasError(false) {
   }
@@ -451,7 +454,7 @@ public:
     return getSectionAddress(SymInfo.getSectionID()) + SymInfo.getOffset();
   }
 
-  RuntimeDyld::SymbolInfo getSymbol(StringRef Name) const {
+  JITEvaluatedSymbol getSymbol(StringRef Name) const {
     // FIXME: Just look up as a function for now. Overly simple of course.
     // Work in progress.
     RTDyldSymbolTable::const_iterator pos = GlobalSymbolTable.find(Name);
@@ -462,7 +465,7 @@ public:
     if (SymEntry.getSectionID() != AbsoluteSymbolSection)
       SectionAddr = getSectionLoadAddress(SymEntry.getSectionID());
     uint64_t TargetAddr = SectionAddr + SymEntry.getOffset();
-    return RuntimeDyld::SymbolInfo(TargetAddr, SymEntry.getFlags());
+    return JITEvaluatedSymbol(TargetAddr, SymEntry.getFlags());
   }
 
   void resolveRelocations();

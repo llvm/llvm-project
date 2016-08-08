@@ -19,7 +19,7 @@ Initiative (OSI).
 Can I modify LLVM source code and redistribute the modified source?
 -------------------------------------------------------------------
 Yes.  The modified source distribution must retain the copyright notice and
-follow the three bulletted conditions listed in the `LLVM license
+follow the three bulleted conditions listed in the `LLVM license
 <http://llvm.org/svn/llvm-project/llvm/trunk/LICENSE.TXT>`_.
 
 

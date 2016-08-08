@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 
-#include "llvm/DebugInfo/Msf/ByteStream.h"
-#include "llvm/DebugInfo/Msf/StreamInterface.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -25,21 +25,6 @@
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
-
-namespace {
-// We need a class which behaves like an immutable ByteStream, but whose data
-// is backed by an llvm::MemoryBuffer.  It also needs to own the underlying
-// MemoryBuffer, so this simple adapter is a good way to achieve that.
-class InputByteStream : public ByteStream<false> {
-public:
-  explicit InputByteStream(std::unique_ptr<MemoryBuffer> Buffer)
-      : ByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
-                                     Buffer->getBuffer().bytes_end())),
-        MemBuffer(std::move(Buffer)) {}
-
-  std::unique_ptr<MemoryBuffer> MemBuffer;
-};
-}
 
 RawSession::RawSession(std::unique_ptr<PDBFile> PdbFile,
                        std::unique_ptr<BumpPtrAllocator> Allocator)
@@ -57,7 +42,7 @@ Error RawSession::createFromPdb(StringRef Path,
     return llvm::make_error<GenericError>(generic_error_code::invalid_path);
 
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
-  auto Stream = llvm::make_unique<InputByteStream>(std::move(Buffer));
+  auto Stream = llvm::make_unique<MemoryBufferByteStream>(std::move(Buffer));
 
   auto Allocator = llvm::make_unique<BumpPtrAllocator>();
   auto File = llvm::make_unique<PDBFile>(std::move(Stream), *Allocator);

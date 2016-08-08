@@ -16,6 +16,8 @@
 #ifndef AARCH64_ARCH
 #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)
 #endif
+AARCH64_ARCH("invalid", AK_INVALID, nullptr, nullptr,
+             ARMBuildAttrs::CPUArch::v8_A, FK_NONE, AArch64::AEK_NONE)
 AARCH64_ARCH("armv8-a", AK_ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
              FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
@@ -62,6 +64,8 @@ AARCH64_CPU_NAME("cortex-a73", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
 AARCH64_CPU_NAME("cyclone", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_SIMD | AArch64::AEK_CRYPTO))
 AARCH64_CPU_NAME("exynos-m1", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO))
+AARCH64_CPU_NAME("exynos-m2", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO))
 AARCH64_CPU_NAME("kryo", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO))

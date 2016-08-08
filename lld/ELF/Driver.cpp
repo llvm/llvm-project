@@ -70,6 +70,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
+          .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Case("elf_x86_64", {ELF64LEKind, EM_X86_64})
           .Default({ELFNoneKind, EM_NONE});
 
@@ -364,6 +365,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
+  Config->Target1Rel = Args.hasArg(OPT_target1_rel);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);

@@ -33,7 +33,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/COFF.h"
@@ -954,7 +954,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
                                                         SectionContents);
 
   CVSymbolDumper CVSD(W, CVTD, std::move(CODD), opts::CodeViewSubsectionBytes);
-  ByteStream<> Stream(BinaryData);
+  ByteStream Stream(BinaryData);
   CVSymbolArray Symbols;
   StreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {
@@ -1062,7 +1062,7 @@ void COFFDumper::mergeCodeViewTypes(MemoryTypeTableBuilder &CVTypes) {
         error(object_error::parse_failed);
       ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
                               Data.size());
-      ByteStream<> Stream(Bytes);
+      ByteStream Stream(Bytes);
       CVTypeArray Types;
       StreamReader Reader(Stream);
       if (auto EC = Reader.readArray(Types, Reader.getLength())) {

@@ -275,8 +275,11 @@ private:
     // 1. lookup a::b::foo.
     // 2. lookup b::foo.
     std::string QueryString = ScopedQualifiers.str() + Query.str();
-    MatchedSymbols = SymbolIndexMgr.search(QueryString);
-    if (MatchedSymbols.empty() && !ScopedQualifiers.empty())
+    // It's unsafe to do nested search for the identifier with scoped namespace
+    // context, it might treat the identifier as a nested class of the scoped
+    // namespace.
+    MatchedSymbols = SymbolIndexMgr.search(QueryString, /*IsNestedSearch=*/false);
+    if (MatchedSymbols.empty())
       MatchedSymbols = SymbolIndexMgr.search(Query);
     DEBUG(llvm::dbgs() << "Having found " << MatchedSymbols.size()
                        << " symbols\n");
@@ -352,23 +355,36 @@ llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
   std::string IncludeName =
       "#include " + Context.getHeaderInfos().front().Header + "\n";
   // Create replacements for the new header.
-  clang::tooling::Replacements Insertions = {
-      tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName)};
+  clang::tooling::Replacements Insertions;
+  auto Err =
+      Insertions.add(tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName));
+  if (Err)
+    return std::move(Err);
 
   auto CleanReplaces = cleanupAroundReplacements(Code, Insertions, Style);
   if (!CleanReplaces)
     return CleanReplaces;
 
+  auto Replaces = std::move(*CleanReplaces);
   if (AddQualifiers) {
     for (const auto &Info : Context.getQuerySymbolInfos()) {
       // Ignore the empty range.
-      if (Info.Range.getLength() > 0)
-        CleanReplaces->insert({FilePath, Info.Range.getOffset(),
-                               Info.Range.getLength(),
-                               Context.getHeaderInfos().front().QualifiedName});
+      if (Info.Range.getLength() > 0) {
+        auto R = tooling::Replacement(
+            {FilePath, Info.Range.getOffset(), Info.Range.getLength(),
+             Context.getHeaderInfos().front().QualifiedName});
+        auto Err = Replaces.add(R);
+        if (Err) {
+          llvm::consumeError(std::move(Err));
+          R = tooling::Replacement(
+              R.getFilePath(), Replaces.getShiftedCodePosition(R.getOffset()),
+              R.getLength(), R.getReplacementText());
+          Replaces = Replaces.merge(tooling::Replacements(R));
+        }
+      }
     }
   }
-  return formatReplacements(Code, *CleanReplaces, Style);
+  return formatReplacements(Code, Replaces, Style);
 }
 
 } // namespace include_fixer

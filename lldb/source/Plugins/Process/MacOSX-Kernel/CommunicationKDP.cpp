@@ -210,11 +210,10 @@ CommunicationKDP::GetSequenceMutex(std::unique_lock<std::recursive_mutex> &lock)
     return (lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex, std::try_to_lock)).owns_lock();
 }
 
-
 bool
-CommunicationKDP::WaitForNotRunningPrivate (const TimeValue *timeout_ptr)
+CommunicationKDP::WaitForNotRunningPrivate(const std::chrono::microseconds &timeout)
 {
-    return m_is_running.WaitForValueEqualTo (false, timeout_ptr, NULL);
+    return m_is_running.WaitForValueEqualTo(false, timeout, NULL);
 }
 
 size_t

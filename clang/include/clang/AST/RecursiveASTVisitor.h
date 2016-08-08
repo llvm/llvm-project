@@ -2266,6 +2266,9 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
        C != CEnd; ++C) {
     TRY_TO(TraverseLambdaCapture(S, C));
   }
+  for (Expr *Init : S->capture_inits()) {
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(Init);
+  }
 
   TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
   FunctionProtoTypeLoc Proto = TL.castAs<FunctionProtoTypeLoc>();
@@ -2587,6 +2590,9 @@ DEF_TRAVERSE_STMT(OMPTargetParallelForSimdDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPTargetSimdDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPTeamsDistributeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 // OpenMP clauses.

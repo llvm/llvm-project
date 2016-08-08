@@ -99,11 +99,6 @@ def MOVT_D32_MM : MMRel, CMov_F_F_FT<"movt.d", AFGR64Opnd, II_MOVT_D,
                                      MipsCMovFP_T>, CMov_F_F_FM_MM<0x60, 1>;
 def MOVF_D32_MM : MMRel, CMov_F_F_FT<"movf.d", AFGR64Opnd, II_MOVF_D,
                                      MipsCMovFP_F>, CMov_F_F_FM_MM<0x20, 1>;
-
-def CFC1_MM : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>,
-              MFC1_FM_MM<0x40>;
-def CTC1_MM : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>,
-              MFC1_FM_MM<0x60>;
 def MFC1_MM : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd,
                              II_MFC1, bitconvert>, MFC1_FM_MM<0x80>;
 def MTC1_MM : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd,
@@ -141,6 +136,12 @@ let AdditionalPredicates = [InMicroMips] in {
              MFC1_FM_MM<0xe0>, ISA_MIPS32R2, FGR_32;
   def MFHC1_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
                  MFC1_FM_MM<0xc0>, ISA_MIPS32R2, FGR_32;
+  let DecoderNamespace = "MicroMips" in {
+    def CFC1_MM : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>,
+                  MFC1_FM_MM<0x40>;
+    def CTC1_MM : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>,
+                  MFC1_FM_MM<0x60>;
+  }
   let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
     def LDC1_MM : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, II_LDC1, load>,
                   LW_FM_MM<0x2f>, FGR_32 {

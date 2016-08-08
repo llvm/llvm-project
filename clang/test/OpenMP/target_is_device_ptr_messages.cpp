@@ -142,6 +142,7 @@ T tmain(T argc) {
   T *&z = k;
   T aa[10];
   auto &raa = aa;
+  S6 *ps;
 #pragma omp target is_device_ptr // expected-error {{expected '(' after 'is_device_ptr'}}
   {}
 #pragma omp target is_device_ptr( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
@@ -178,6 +179,22 @@ T tmain(T argc) {
   {}
 #pragma omp target is_device_ptr(da) // OK
   {}
+#pragma omp target map(ps) is_device_ptr(ps) // expected-error{{variable already marked as mapped in current construct}} expected-note{{used here}}
+  {}
+#pragma omp target is_device_ptr(ps) map(ps) // expected-error{{variable already marked as mapped in current construct}} expected-note{{used here}}
+  {}
+#pragma omp target map(ps->a) is_device_ptr(ps) // expected-error{{variable already marked as mapped in current construct}} expected-note{{used here}}
+  {}
+#pragma omp target is_device_ptr(ps) map(ps->a) // expected-error{{pointer cannot be mapped along with a section derived from itself}} expected-note{{used here}}
+  {}
+#pragma omp target is_device_ptr(ps) firstprivate(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}}
+  {}
+#pragma omp target firstprivate(ps) is_device_ptr(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}} expected-note{{defined as firstprivate}}
+  {}
+#pragma omp target is_device_ptr(ps) private(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}}
+  {}
+#pragma omp target private(ps) is_device_ptr(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}} expected-note{{defined as private}}
+  {}
   return 0;
 }
 
@@ -194,6 +211,7 @@ int main(int argc, char **argv) {
   int *&z = k;
   int aa[10];
   auto &raa = aa;
+  S6 *ps;
 #pragma omp target is_device_ptr // expected-error {{expected '(' after 'is_device_ptr'}}
   {}
 #pragma omp target is_device_ptr( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
@@ -229,6 +247,22 @@ int main(int argc, char **argv) {
 #pragma omp target is_device_ptr(d) // expected-error{{expected pointer, array, reference to pointer, or reference to array in 'is_device_ptr clause'}}
   {}
 #pragma omp target is_device_ptr(da) // OK
+  {}
+#pragma omp target map(ps) is_device_ptr(ps) // expected-error{{variable already marked as mapped in current construct}} expected-note{{used here}}
+  {}
+#pragma omp target is_device_ptr(ps) map(ps) // expected-error{{variable already marked as mapped in current construct}} expected-note{{used here}}
+  {}
+#pragma omp target map(ps->a) is_device_ptr(ps) // expected-error{{variable already marked as mapped in current construct}} expected-note{{used here}}
+  {}
+#pragma omp target is_device_ptr(ps) map(ps->a) // expected-error{{pointer cannot be mapped along with a section derived from itself}} expected-note{{used here}}
+  {}
+#pragma omp target is_device_ptr(ps) firstprivate(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}}
+  {}
+#pragma omp target firstprivate(ps) is_device_ptr(ps) // expected-error{{firstprivate variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}} expected-note{{defined as firstprivate}}
+  {}
+#pragma omp target is_device_ptr(ps) private(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}}
+  {}
+#pragma omp target private(ps) is_device_ptr(ps) // expected-error{{private variable cannot be in a is_device_ptr clause in '#pragma omp target' directive}} expected-note{{defined as private}}
   {}
   return tmain<int, 3>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}}
 }

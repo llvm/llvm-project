@@ -2890,7 +2890,13 @@ private:
 
     (void)New;
     DEBUG(dbgs() << "          to: " << *New << "\n");
-    return true;
+
+    // Lifetime intrinsics are only promotable if they cover the whole alloca.
+    // (In theory, intrinsics which partially cover an alloca could be
+    // promoted, but PromoteMemToReg doesn't handle that case.)
+    bool IsWholeAlloca = NewBeginOffset == NewAllocaBeginOffset &&
+                         NewEndOffset == NewAllocaEndOffset;
+    return IsWholeAlloca;
   }
 
   bool visitPHINode(PHINode &PN) {

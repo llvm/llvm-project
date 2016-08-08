@@ -114,13 +114,14 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   HadError = true;
   errs() << ToolName << ": " << FileName;
 
-  ErrorOr<StringRef> NameOrErr = C.getName();
+  Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
   // the index of which archive member this is and or its offset in the
   // archive instead of "???" as the name.
-  if (NameOrErr.getError())
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
     errs() << "(" << "???" << ")";
-  else
+  } else
     errs() << "(" << NameOrErr.get() << ")";
 
   if (!ArchitectureName.empty())
@@ -520,7 +521,7 @@ static void printFileSectionSizes(StringRef file) {
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
   if (!BinaryOrErr) {
-    error(errorToErrorCode(BinaryOrErr.takeError()));
+    error(BinaryOrErr.takeError(), file);
     return;
   }
   Binary &Bin = *BinaryOrErr.get().getBinary();

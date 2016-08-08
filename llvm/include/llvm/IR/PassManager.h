@@ -987,6 +987,47 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
   }
 };
 
+/// A utility pass template that simply runs another pass multiple times.
+///
+/// This can be useful when debugging or testing passes. It also serves as an
+/// example of how to extend the pass manager in ways beyond composition.
+template <typename PassT>
+class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
+public:
+  RepeatedPass(int Count, PassT P) : Count(Count), P(std::move(P)) {}
+  // We have to explicitly define all the special member functions because MSVC
+  // refuses to generate them.
+  RepeatedPass(const RepeatedPass &Arg) : Count(Arg.Count), P(Arg.P) {}
+  RepeatedPass(RepeatedPass &&Arg) : Count(Arg.Count), P(std::move(Arg.P)) {}
+  friend void swap(RepeatedPass &LHS, RepeatedPass &RHS) {
+    using std::swap;
+    swap(LHS.Count, RHS.Count);
+    swap(LHS.P, RHS.P);
+  }
+  RepeatedPass &operator=(RepeatedPass RHS) {
+    swap(*this, RHS);
+    return *this;
+  }
+
+  template <typename IRUnitT, typename... Ts>
+  PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> &AM,
+                        Ts... Args) {
+    auto PA = PreservedAnalyses::all();
+    for (int i = 0; i < Count; ++i)
+      PA.intersect(P.run(Arg, AM, Args...));
+    return PA;
+  }
+
+private:
+  int Count;
+  PassT P;
+};
+
+template <typename PassT>
+RepeatedPass<PassT> createRepeatedPass(int Count, PassT P) {
+  return RepeatedPass<PassT>(Count, std::move(P));
+}
+
 }
 
 #endif

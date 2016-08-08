@@ -1499,13 +1499,13 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp0OMod(SDValue In, SDValue &Src,
 }
 
 void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
-  MachineFrameInfo *MFI = CurDAG->getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = CurDAG->getMachineFunction().getFrameInfo();
 
   // Handle the perverse case where a frame index is being stored. We don't
   // want to see multiple frame index operands on the same instruction since
   // it complicates things and violates some assumptions about frame index
   // lowering.
-  for (int I = MFI->getObjectIndexBegin(), E = MFI->getObjectIndexEnd();
+  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
        I != E; ++I) {
     SDValue FI = CurDAG->getTargetFrameIndex(I, MVT::i32);
 

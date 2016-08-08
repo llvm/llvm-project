@@ -202,11 +202,11 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
   if (!getDFG().IsCode<NodeAttrs::Stmt>(IA))
     return false;
   DataFlowGraph &DFG = getDFG();
-  MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
+  MachineInstr &MI = *NodeAddr<StmtNode*>(IA).Addr->getCode();
   auto &HII = static_cast<const HexagonInstrInfo&>(DFG.getTII());
   if (HII.getAddrMode(MI) != HexagonII::PostInc)
     return false;
-  unsigned Opc = MI->getOpcode();
+  unsigned Opc = MI.getOpcode();
   unsigned OpNum, NewOpc;
   switch (Opc) {
     case Hexagon::L2_loadri_pi:
@@ -240,7 +240,7 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
     return getDeadNodes().count(DA.Id);
   };
   NodeList Defs;
-  MachineOperand &Op = MI->getOperand(OpNum);
+  MachineOperand &Op = MI.getOperand(OpNum);
   for (NodeAddr<DefNode*> DA : IA.Addr->members_if(DFG.IsDef, DFG)) {
     if (&DA.Addr->getOp() != &Op)
       continue;
@@ -255,12 +255,12 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
     Remove.insert(D.Id);
 
   if (trace())
-    dbgs() << "Rewriting: " << *MI;
-  MI->setDesc(HII.get(NewOpc));
-  MI->getOperand(OpNum+2).setImm(0);
+    dbgs() << "Rewriting: " << MI;
+  MI.setDesc(HII.get(NewOpc));
+  MI.getOperand(OpNum+2).setImm(0);
   removeOperand(IA, OpNum);
   if (trace())
-    dbgs() << "       to: " << *MI;
+    dbgs() << "       to: " << MI;
 
   return true;
 }

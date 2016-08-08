@@ -493,7 +493,7 @@ declare i32 @someVariadicFunc(i32, ...)
 ; CHECK-LABEL: noreturn:
 ; DISABLE: mflr {{[0-9]+}}
 ;
-; CHECK: cmplwi 3, 0
+; CHECK: cmplwi 0, 3, 0
 ; CHECK-NEXT: bne{{[-]?}} 0, .[[ABORT:LBB[0-9_]+]]
 ;
 ; CHECK: li 3, 42

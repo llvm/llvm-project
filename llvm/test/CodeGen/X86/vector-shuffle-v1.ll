@@ -200,7 +200,6 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf8i1_10_2_9_u_3_u_2_u:
@@ -213,7 +212,6 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
   %c = shufflevector < 8 x i1> %b, <8 x i1> zeroinitializer, <8 x i32> <i32 10, i32 2, i32 9, i32 undef, i32 3, i32 undef, i32 2, i32 undef>
@@ -231,7 +229,6 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf8i1_0_1_4_5_u_u_u_u:
@@ -242,7 +239,6 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
   %c = shufflevector < 8 x i1> %b, <8 x i1> undef, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -262,7 +258,6 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf8i1_9_6_1_0_3_7_7_0:
@@ -275,7 +270,6 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
   %c = shufflevector <8 x i1> %b, <8 x i1> zeroinitializer, <8 x i32> <i32 9, i32 6, i32 1, i32 0, i32 3, i32 7, i32 7, i32 0>
@@ -295,7 +289,6 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf8i1_9_6_1_10_3_7_7_0:
@@ -308,7 +301,6 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
   %c = shufflevector <8 x i1> zeroinitializer, <8 x i1> %b, <8 x i32> <i32 9, i32 6, i32 1, i32 10, i32 3, i32 7, i32 7, i32 0>
@@ -330,7 +322,6 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf8i1__9_6_1_10_3_7_7_1:
@@ -345,7 +336,6 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
   %c = shufflevector <8 x i1> <i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x i1> %b, <8 x i32> <i32 9, i32 6, i32 1, i32 0, i32 3, i32 7, i32 7, i32 1>
@@ -366,7 +356,6 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf8i1_9_6_1_10_3_7_7_0_all_ones:
@@ -380,7 +369,6 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; VL_BW_DQ-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovb %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %c = shufflevector <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i1> %a, <8 x i32> <i32 9, i32 6, i32 1, i32 0, i32 3, i32 7, i32 7, i32 0>
   %c1 = bitcast <8 x i1>%c to i8
@@ -398,7 +386,6 @@ define i16 @shuf16i1_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0(i16 %a) {
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf16i1_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0:
@@ -409,7 +396,6 @@ define i16 @shuf16i1_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0(i16 %a) {
 ; VL_BW_DQ-NEXT:    vpslld $31, %zmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovw %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i16 %a to <16 x i1>
   %c = shufflevector < 16 x i1> %b, <16 x i1> undef, <16 x i32> zeroinitializer

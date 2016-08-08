@@ -66,6 +66,11 @@ static cl::opt<int> ColdThreshold(
     "inlinecold-threshold", cl::Hidden, cl::init(225),
     cl::desc("Threshold for inlining functions with cold attribute"));
 
+static cl::opt<int>
+    HotCallSiteThreshold("hot-callsite-threshold", cl::Hidden, cl::init(3000),
+                         cl::ZeroOrMore,
+                         cl::desc("Threshold for hot callsites "));
+
 namespace {
 
 class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
@@ -637,17 +642,21 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   bool HotCallsite = false;
   uint64_t TotalWeight;
   if (CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
-      PSI->isHotCount(TotalWeight))
+      PSI->isHotCount(TotalWeight)) {
     HotCallsite = true;
+  }
 
   // Listen to the inlinehint attribute or profile based hotness information
   // when it would increase the threshold and the caller does not need to
   // minimize its size.
   bool InlineHint = Callee.hasFnAttribute(Attribute::InlineHint) ||
-                    PSI->isHotFunction(&Callee) ||
-                    HotCallsite;
+                    PSI->isHotFunction(&Callee);
   if (InlineHint && HintThreshold > Threshold && !Caller->optForMinSize())
     Threshold = HintThreshold;
+
+  if (HotCallsite && HotCallSiteThreshold > Threshold &&
+      !Caller->optForMinSize())
+    Threshold = HotCallSiteThreshold;
 
   bool ColdCallee = PSI->isColdFunction(&Callee);
   // Command line argument for DefaultInlineThreshold will override the default
@@ -655,7 +664,7 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // do not use the default cold threshold even if it is smaller.
   if ((DefaultInlineThreshold.getNumOccurrences() == 0 ||
        ColdThreshold.getNumOccurrences() > 0) &&
-      ColdCallee && ColdThreshold < Threshold)
+       ColdCallee && ColdThreshold < Threshold)
     Threshold = ColdThreshold;
 
   // Finally, take the target-specific inlining threshold multiplier into

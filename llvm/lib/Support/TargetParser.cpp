@@ -52,7 +52,7 @@ static const struct {
 // of the triples and are not conforming with their official names.
 // Check to see if the expectation should be changed.
 // FIXME: TableGen this.
-static const struct {
+template <typename T> struct ArchNames {
   const char *NameCStr;
   size_t NameLength;
   const char *CPUAttrCStr;
@@ -61,7 +61,7 @@ static const struct {
   size_t SubArchLength;
   unsigned DefaultFPU;
   unsigned ArchBaseExtensions;
-  ARM::ArchKind ID;
+  T ID;
   ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
@@ -71,17 +71,21 @@ static const struct {
 
   // Sub-Arch name.
   StringRef getSubArch() const { return StringRef(SubArchCStr, SubArchLength); }
-} ARCHNames[] = {
+};
+ArchNames<ARM::ArchKind> ARCHNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
   {NAME, sizeof(NAME) - 1, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
    sizeof(SUB_ARCH) - 1, ARCH_FPU, ARCH_BASE_EXT, ID, ARCH_ATTR},
 #include "llvm/Support/ARMTargetParser.def"
-},AArch64ARCHNames[] = {
-#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
-  {NAME, sizeof(NAME) - 1, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
-   sizeof(SUB_ARCH) - 1, ARCH_FPU, ARCH_BASE_EXT, ID, ARCH_ATTR},
-#include "llvm/Support/AArch64TargetParser.def"
 };
+
+ArchNames<AArch64::ArchKind> AArch64ARCHNames[] = {
+ #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
+   {NAME, sizeof(NAME) - 1, CPU_ATTR, sizeof(CPU_ATTR) - 1, SUB_ARCH,       \
+    sizeof(SUB_ARCH) - 1, ARCH_FPU, ARCH_BASE_EXT, AArch64::ArchKind::ID, ARCH_ATTR},
+ #include "llvm/Support/AArch64TargetParser.def"
+ };
+
 
 // List of Arch Extension names.
 // FIXME: TableGen this.
@@ -122,23 +126,26 @@ static const struct {
 // When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
 // When this becomes table-generated, we'd probably need two tables.
 // FIXME: TableGen this.
-static const struct {
+template <typename T> struct CpuNames {
   const char *NameCStr;
   size_t NameLength;
-  ARM::ArchKind ArchID;
+  T ArchID;
   bool Default; // is $Name the default CPU for $ArchID ?
   unsigned DefaultExtensions;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
-} CPUNames[] = {
+};
+CpuNames<ARM::ArchKind> CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
   { NAME, sizeof(NAME) - 1, ID, IS_DEFAULT, DEFAULT_EXT },
 #include "llvm/Support/ARMTargetParser.def"
-},AArch64CPUNames[] = {
-#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
-  { NAME, sizeof(NAME) - 1, ID, IS_DEFAULT, DEFAULT_EXT },
-#include "llvm/Support/AArch64TargetParser.def"
 };
+
+CpuNames<AArch64::ArchKind> AArch64CPUNames[] = {
+ #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
+   { NAME, sizeof(NAME) - 1, AArch64::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT },
+ #include "llvm/Support/AArch64TargetParser.def"
+ };
 
 } // namespace
 
@@ -416,7 +423,7 @@ unsigned llvm::AArch64::getDefaultExtensions(StringRef CPU, unsigned ArchKind) {
 
   return StringSwitch<unsigned>(CPU)
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
-    .Case(NAME, AArch64ARCHNames[ID].ArchBaseExtensions | DEFAULT_EXT)
+    .Case(NAME, DEFAULT_EXT)
 #include "llvm/Support/AArch64TargetParser.def"
     .Default(AArch64::AEK_INVALID);
 }
@@ -452,48 +459,44 @@ bool llvm::AArch64::getFPUFeatures(unsigned FPUKind,
 
 bool llvm::AArch64::getArchFeatures(unsigned ArchKind,
                                      std::vector<const char *> &Features) {
-  if (ArchKind == ARM::AK_INVALID || ArchKind >= ARM::AK_LAST)
-    return false;
-
-  if (ArchKind == ARM::AK_ARMV8_1A)
+  if (ArchKind == static_cast<unsigned>(AArch64::ArchKind::AK_ARMV8_1A))
     Features.push_back("+v8.1a");
-  if (ArchKind == ARM::AK_ARMV8_2A)
+  if (ArchKind == static_cast<unsigned>(AArch64::ArchKind::AK_ARMV8_2A))
     Features.push_back("+v8.2a");
 
-  return true;
+  return ArchKind > static_cast<unsigned>(AArch64::ArchKind::AK_INVALID) &&
+         ArchKind < static_cast<unsigned>(AArch64::ArchKind::AK_LAST);
 }
 
 StringRef llvm::AArch64::getArchName(unsigned ArchKind) {
-  for (const auto &AI : AArch64ARCHNames)
-    if (AI.ID == ArchKind)
-      return AI.getName();
-  return StringRef();
+  if (ArchKind >= static_cast<unsigned>(AArch64::ArchKind::AK_LAST))
+    return StringRef();
+  return AArch64ARCHNames[ArchKind].getName();
 }
 
 StringRef llvm::AArch64::getCPUAttr(unsigned ArchKind) {
-  for (const auto &AI : AArch64ARCHNames)
-    if (AI.ID == ArchKind)
-      return AI.getCPUAttr();
-  return StringRef();
+  if (ArchKind == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID) ||
+      ArchKind >= static_cast<unsigned>(AArch64::ArchKind::AK_LAST))
+    return StringRef();
+  return AArch64ARCHNames[ArchKind].getCPUAttr();
 }
 
 StringRef llvm::AArch64::getSubArch(unsigned ArchKind) {
-  for (const auto &AI : AArch64ARCHNames)
-    if (AI.ID == ArchKind)
-      return AI.getSubArch();
-  return StringRef();
+  if (ArchKind == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID) ||
+      ArchKind >= static_cast<unsigned>(AArch64::ArchKind::AK_LAST))
+    return StringRef();
+  return AArch64ARCHNames[ArchKind].getSubArch();
 }
 
 unsigned llvm::AArch64::getArchAttr(unsigned ArchKind) {
-  for (const auto &AI : AArch64ARCHNames)
-    if (AI.ID == ArchKind)
-      return AI.ArchAttr;
-  return ARMBuildAttrs::CPUArch::v8_A;
+  if (ArchKind >= static_cast<unsigned>(AArch64::ArchKind::AK_LAST))
+    return ARMBuildAttrs::CPUArch::v8_A;
+  return AArch64ARCHNames[ArchKind].ArchAttr;
 }
 
-StringRef llvm::AArch64::getArchExtName(unsigned AArchExtKind) {
+StringRef llvm::AArch64::getArchExtName(unsigned ArchExtKind) {
   for (const auto &AE : AArch64ARCHExtNames)
-    if (AArchExtKind == AE.ID)
+    if (ArchExtKind == AE.ID)
       return AE.getName();
   return StringRef();
 }
@@ -515,12 +518,12 @@ const char *llvm::AArch64::getArchExtFeature(StringRef ArchExt) {
 
 StringRef llvm::AArch64::getDefaultCPU(StringRef Arch) {
   unsigned AK = parseArch(Arch);
-  if (AK == ARM::AK_INVALID)
+  if (AK == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID))
     return StringRef();
 
   // Look for multiple AKs to find the default for pair AK+Name.
   for (const auto &CPU : AArch64CPUNames)
-    if (CPU.ArchID == AK && CPU.Default)
+    if (static_cast<unsigned>(CPU.ArchID) == AK && CPU.Default)
       return CPU.getName();
 
   // If we can't find a default then target the architecture instead
@@ -685,7 +688,7 @@ unsigned llvm::ARM::parseArchISA(StringRef Arch) {
       .StartsWith("arm64", ARM::IK_AARCH64)
       .StartsWith("thumb", ARM::IK_THUMB)
       .StartsWith("arm", ARM::IK_ARM)
-      .Default(ARM::EK_INVALID);
+      .Default(ARM::IK_INVALID);
 }
 
 // Little/Big endian
@@ -784,14 +787,14 @@ unsigned llvm::AArch64::parseFPU(StringRef FPU) {
 unsigned llvm::AArch64::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   if (checkArchVersion(Arch) < 8)
-    return ARM::AK_INVALID;
+    return static_cast<unsigned>(AArch64::ArchKind::AK_INVALID);
 
   StringRef Syn = getArchSynonym(Arch);
   for (const auto A : AArch64ARCHNames) {
     if (A.getName().endswith(Syn))
-      return A.ID;
+      return static_cast<unsigned>(A.ID);
   }
-  return ARM::AK_INVALID;
+  return static_cast<unsigned>(AArch64::ArchKind::AK_INVALID);
 }
 
 unsigned llvm::AArch64::parseArchExt(StringRef ArchExt) {
@@ -805,9 +808,9 @@ unsigned llvm::AArch64::parseArchExt(StringRef ArchExt) {
 unsigned llvm::AArch64::parseCPUArch(StringRef CPU) {
   for (const auto C : AArch64CPUNames) {
     if (CPU == C.getName())
-      return C.ArchID;
+      return static_cast<unsigned>(C.ArchID);
   }
-  return ARM::AK_INVALID;
+  return static_cast<unsigned>(AArch64::ArchKind::AK_INVALID);
 }
 
 // ARM, Thumb, AArch64

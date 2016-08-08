@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-runtime -unroll-count=8 | FileCheck %s  -check-prefix=EPILOG
+; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-runtime -unroll-runtime-epilog=true  -unroll-count=8 | FileCheck %s  -check-prefix=EPILOG
 ; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-runtime -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; Choose a smaller, power-of-two, unroll count if the loop is too large.

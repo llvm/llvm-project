@@ -37,6 +37,7 @@ namespace raw {
 extern llvm::cl::opt<bool> DumpHeaders;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 extern llvm::cl::opt<bool> DumpStreamSummary;
+extern llvm::cl::opt<bool> DumpPageStats;
 extern llvm::cl::opt<bool> DumpTpiHash;
 extern llvm::cl::opt<bool> DumpTpiRecordBytes;
 extern llvm::cl::opt<bool> DumpTpiRecords;

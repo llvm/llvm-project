@@ -152,23 +152,22 @@ GDBRemoteCommunication::History::Dump (Log *log) const
 //----------------------------------------------------------------------
 // GDBRemoteCommunication constructor
 //----------------------------------------------------------------------
-GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name, 
-                                               const char *listener_name) :
-    Communication(comm_name),
+GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name, const char *listener_name)
+    : Communication(comm_name),
 #ifdef LLDB_CONFIGURATION_DEBUG
-    m_packet_timeout (1000),
+      m_packet_timeout(1000),
 #else
-    m_packet_timeout (1),
+      m_packet_timeout(1),
 #endif
-    m_echo_number(0),
-    m_supports_qEcho (eLazyBoolCalculate),
-    m_sequence_mutex (Mutex::eMutexTypeRecursive),
-    m_public_is_running (false),
-    m_private_is_running (false),
-    m_history (512),
-    m_send_acks (true),
-    m_compression_type (CompressionType::None),
-    m_listen_url ()
+      m_echo_number(0),
+      m_supports_qEcho(eLazyBoolCalculate),
+      m_sequence_mutex(),
+      m_public_is_running(false),
+      m_private_is_running(false),
+      m_history(512),
+      m_send_acks(true),
+      m_compression_type(CompressionType::None),
+      m_listen_url()
 {
 }
 
@@ -229,7 +228,7 @@ GDBRemoteCommunication::SendNack ()
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendPacket (const char *payload, size_t payload_length)
 {
-    Mutex::Locker locker(m_sequence_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
     return SendPacketNoLock (payload, payload_length);
 }
 
@@ -323,20 +322,19 @@ GDBRemoteCommunication::GetAck ()
 }
 
 bool
-GDBRemoteCommunication::GetSequenceMutex (Mutex::Locker& locker, const char *failure_message)
+GDBRemoteCommunication::GetSequenceMutex(std::unique_lock<std::recursive_mutex> &lock, const char *failure_message)
 {
     if (IsRunning())
-        return locker.TryLock (m_sequence_mutex, failure_message);
+        return (lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex, std::try_to_lock)).owns_lock();
 
-    locker.Lock (m_sequence_mutex);
+    lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex);
     return true;
 }
 
-
 bool
-GDBRemoteCommunication::WaitForNotRunningPrivate (const TimeValue *timeout_ptr)
+GDBRemoteCommunication::WaitForNotRunningPrivate(const std::chrono::microseconds &timeout)
 {
-    return m_private_is_running.WaitForValueEqualTo (false, timeout_ptr, NULL);
+    return m_private_is_running.WaitForValueEqualTo(false, timeout, NULL);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -356,20 +354,22 @@ GDBRemoteCommunication::ReadPacket (StringExtractorGDBRemote &response, uint32_t
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::PopPacketFromQueue (StringExtractorGDBRemote &response, uint32_t timeout_usec)
 {
-    // Calculate absolute timeout value
-    TimeValue timeout = TimeValue::Now();
-    timeout.OffsetWithMicroSeconds(timeout_usec);
+    auto until = std::chrono::system_clock::now() + std::chrono::microseconds(timeout_usec);
 
-    do
+    while (true)
     {
         // scope for the mutex
         {
             // lock down the packet queue
-            Mutex::Locker locker(m_packet_queue_mutex);
+            std::unique_lock<std::mutex> lock(m_packet_queue_mutex);
 
             // Wait on condition variable.
             if (m_packet_queue.size() == 0)
-                m_condition_queue_not_empty.Wait(m_packet_queue_mutex, &timeout);
+            {
+                std::cv_status result = m_condition_queue_not_empty.wait_until(lock, until);
+                if (result == std::cv_status::timeout)
+                  break;
+            }
 
             if (m_packet_queue.size() > 0)
             {
@@ -389,7 +389,7 @@ GDBRemoteCommunication::PopPacketFromQueue (StringExtractorGDBRemote &response, 
              return PacketResult::ErrorDisconnected;
 
       // Loop while not timed out
-    } while (TimeValue::Now() < timeout);
+    }
 
     return PacketResult::ErrorReplyTimeout;
 }
@@ -1479,12 +1479,11 @@ void GDBRemoteCommunication::AppendBytesToCache (const uint8_t * bytes, size_t l
             // scope for the mutex
             {
                 // lock down the packet queue
-                Mutex::Locker locker(m_packet_queue_mutex);
+                std::lock_guard<std::mutex> guard(m_packet_queue_mutex);
                 // push a new packet into the queue
                 m_packet_queue.push(packet);
                 // Signal condition variable that we have a packet
-                m_condition_queue_not_empty.Signal();
-
+                m_condition_queue_not_empty.notify_one();
             }
         }
 

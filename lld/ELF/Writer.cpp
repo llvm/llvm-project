@@ -48,7 +48,7 @@ private:
 
   void copyLocalSymbols();
   void addReservedSymbols();
-  std::vector<OutputSectionBase<ELFT> *> createSections();
+  void createSections();
   void forEachRelSec(
       std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
           Fn);
@@ -67,8 +67,6 @@ private:
   void writeHeader();
   void writeSections();
   void writeBuildId();
-
-  void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
 
   std::unique_ptr<FileOutputBuffer> Buffer;
 
@@ -217,15 +215,30 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   Writer<ELFT>(*Symtab).run();
 }
 
+template <class ELFT>
+static std::vector<DefinedCommon<ELFT> *> getCommonSymbols() {
+  std::vector<DefinedCommon<ELFT> *> V;
+  for (Symbol *S : Symtab<ELFT>::X->getSymbols())
+    if (auto *B = dyn_cast<DefinedCommon<ELFT>>(S->body()))
+      V.push_back(B);
+  return V;
+}
+
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
 
-  OutputSections = ScriptConfig->DoLayout
-                       ? Script<ELFT>::X->createSections(Factory)
-                       : createSections();
+  CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
+  CommonInputSection<ELFT>::X = &Common;
+
+  Script<ELFT>::X->OutputSections = &OutputSections;
+  if (ScriptConfig->HasContents)
+    Script<ELFT>::X->createSections(Factory);
+  else
+    createSections();
+
   finalizeSections();
   if (HasError)
     return;
@@ -233,12 +246,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    Phdrs = Script<ELFT>::X->hasPhdrsCommands()
-                ? Script<ELFT>::X->createPhdrs(OutputSections)
-                : createPhdrs();
+    Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
+                                                : createPhdrs();
     fixHeaders();
-    if (ScriptConfig->DoLayout) {
-      Script<ELFT>::X->assignAddresses(OutputSections);
+    if (ScriptConfig->HasContents) {
+      Script<ELFT>::X->assignAddresses();
     } else {
       fixSectionAlignments();
       assignAddresses();
@@ -490,30 +502,6 @@ void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
   H.p_align = std::max<typename ELFT::uint>(H.p_align, Sec->getAlignment());
 }
 
-// Until this function is called, common symbols do not belong to any section.
-// This function adds them to end of BSS section.
-template <class ELFT>
-void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
-  if (Syms.empty())
-    return;
-
-  // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(Syms.begin(), Syms.end(),
-                   [](const DefinedCommon *A, const DefinedCommon *B) {
-                     return A->Alignment > B->Alignment;
-                   });
-
-  uintX_t Off = Out<ELFT>::Bss->getSize();
-  for (DefinedCommon *C : Syms) {
-    Off = alignTo(Off, C->Alignment);
-    Out<ELFT>::Bss->updateAlignment(C->Alignment);
-    C->OffsetInBss = Off;
-    Off += C->Size;
-  }
-
-  Out<ELFT>::Bss->setSize(Off);
-}
-
 template <class ELFT>
 static Symbol *addOptionalSynthetic(SymbolTable<ELFT> &Table, StringRef Name,
                                     OutputSectionBase<ELFT> *Sec,
@@ -649,10 +637,7 @@ void Writer<ELFT>::forEachRelSec(
   }
 }
 
-template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *> Writer<ELFT>::createSections() {
-  std::vector<OutputSectionBase<ELFT> *> Result;
-
+template <class ELFT> void Writer<ELFT>::createSections() {
   for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
        Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
@@ -664,11 +649,10 @@ std::vector<OutputSectionBase<ELFT> *> Writer<ELFT>::createSections() {
       bool IsNew;
       std::tie(Sec, IsNew) = Factory.create(C, getOutputSectionName(C));
       if (IsNew)
-        Result.push_back(Sec);
+        OutputSections.push_back(Sec);
       Sec->addSection(C);
     }
   }
-  return Result;
 }
 
 // Create output section objects and add them to OutputSections.
@@ -734,7 +718,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
-  std::vector<DefinedCommon *> CommonSymbols;
   for (Symbol *S : Symtab.getSymbols()) {
     SymbolBody *Body = S->body();
 
@@ -742,9 +725,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // will accept an undefined reference in bitcode if it can be optimized out.
     if (S->IsUsedInRegularObj && Body->isUndefined() && !S->isWeak())
       reportUndefined<ELFT>(Symtab, Body);
-
-    if (auto *C = dyn_cast<DefinedCommon>(Body))
-      CommonSymbols.push_back(C);
 
     if (!includeInSymtab<ELFT>(*Body))
       continue;
@@ -763,7 +743,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (HasError)
     return;
 
-  addCommonSymbols(CommonSymbols);
+  // If linker script processor hasn't added common symbol section yet,
+  // then add it to .bss now.
+  if (!CommonInputSection<ELFT>::X->OutSec) {
+    Out<ELFT>::Bss->addSection(CommonInputSection<ELFT>::X);
+    Out<ELFT>::Bss->assignOffsets();
+  }
 
   // So far we have added sections from input object files.
   // This function adds linker-created Out<ELFT>::* sections.
@@ -1048,7 +1033,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->ImageBase;
+  uintX_t BaseVA = ScriptConfig->HasContents ? 0 : Config->ImageBase;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
@@ -1147,26 +1132,207 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
     // so round up the size to make sure the offsets are correct.
     if (H.p_type == PT_TLS) {
       Out<ELFT>::TlsPhdr = &H;
-      H.p_memsz = alignTo(H.p_memsz, H.p_align);
+      if (H.p_memsz)
+        H.p_memsz = alignTo(H.p_memsz, H.p_align);
     }
   }
 }
 
-template <class ELFT> static uint32_t getMipsEFlags() {
-  // FIXME: ELF flags depends on ELF flags of all input object files and
-  // selected emulation. For now pick the arch flag from the fisrt input file
-  // and use hard coded values for other flags.
-  uint32_t FirstElfFlags =
-      cast<ELFFileBase<ELFT>>(Config->FirstElf)->getObj().getHeader()->e_flags;
-  uint32_t ElfFlags = FirstElfFlags & EF_MIPS_ARCH;
-  if (ELFT::Is64Bits)
-    ElfFlags |= EF_MIPS_CPIC | EF_MIPS_PIC;
-  else {
-    ElfFlags |= EF_MIPS_CPIC | EF_MIPS_ABI_O32;
-    if (Config->Shared)
-      ElfFlags |= EF_MIPS_PIC;
+namespace {
+struct MipsIsaTreeEdge {
+  uint32_t Child;
+  uint32_t Parent;
+};
+}
+
+static MipsIsaTreeEdge MipsIsaTree[] = {
+    // MIPS32R6 and MIPS64R6 are not compatible with other extensions
+    // MIPS64 extensions.
+    {EF_MIPS_ARCH_64R2, EF_MIPS_ARCH_64},
+    // MIPS V extensions.
+    {EF_MIPS_ARCH_64, EF_MIPS_ARCH_5},
+    // MIPS IV extensions.
+    {EF_MIPS_ARCH_5, EF_MIPS_ARCH_4},
+    // MIPS III extensions.
+    {EF_MIPS_ARCH_4, EF_MIPS_ARCH_3},
+    // MIPS32 extensions.
+    {EF_MIPS_ARCH_32R2, EF_MIPS_ARCH_32},
+    // MIPS II extensions.
+    {EF_MIPS_ARCH_3, EF_MIPS_ARCH_2},
+    {EF_MIPS_ARCH_32, EF_MIPS_ARCH_2},
+    // MIPS I extensions.
+    {EF_MIPS_ARCH_2, EF_MIPS_ARCH_1},
+};
+
+static bool isMipsIsaMatched(uint32_t New, uint32_t Res) {
+  if (New == Res)
+    return true;
+  if (New == EF_MIPS_ARCH_32 && isMipsIsaMatched(EF_MIPS_ARCH_64, Res))
+    return true;
+  if (New == EF_MIPS_ARCH_32R2 && isMipsIsaMatched(EF_MIPS_ARCH_64R2, Res))
+    return true;
+  for (const auto &Edge : MipsIsaTree) {
+    if (Res == Edge.Child) {
+      Res = Edge.Parent;
+      if (Res == New)
+        return true;
+    }
   }
-  return ElfFlags;
+  return false;
+}
+
+static StringRef getMipsIsaName(uint32_t Flags) {
+  switch (Flags) {
+  case EF_MIPS_ARCH_1:
+    return "mips1";
+  case EF_MIPS_ARCH_2:
+    return "mips2";
+  case EF_MIPS_ARCH_3:
+    return "mips3";
+  case EF_MIPS_ARCH_4:
+    return "mips4";
+  case EF_MIPS_ARCH_5:
+    return "mips5";
+  case EF_MIPS_ARCH_32:
+    return "mips32";
+  case EF_MIPS_ARCH_64:
+    return "mips64";
+  case EF_MIPS_ARCH_32R2:
+    return "mips32r2";
+  case EF_MIPS_ARCH_64R2:
+    return "mips64r2";
+  case EF_MIPS_ARCH_32R6:
+    return "mips32r6";
+  case EF_MIPS_ARCH_64R6:
+    return "mips64r6";
+  default:
+    return "unknown";
+  }
+}
+
+static StringRef getMipsAbiName(uint32_t Flags) {
+  switch (Flags) {
+  case 0:
+    return "n64";
+  case EF_MIPS_ABI2:
+    return "n32";
+  case EF_MIPS_ABI_O32:
+    return "o32";
+  case EF_MIPS_ABI_O64:
+    return "o64";
+  case EF_MIPS_ABI_EABI32:
+    return "eabi32";
+  case EF_MIPS_ABI_EABI64:
+    return "eabi64";
+  default:
+    return "unknown";
+  }
+}
+
+static StringRef getMipsNanName(bool IsNan2008) {
+  return IsNan2008 ? "2008" : "legacy";
+}
+
+static StringRef getMipsFpName(bool IsFp64) { return IsFp64 ? "64" : "32"; }
+
+static uint32_t updateMipsPicFlags(uint32_t ResFlags, uint32_t NewFlags,
+                                   StringRef FName) {
+  uint32_t NewPic = NewFlags & (EF_MIPS_PIC | EF_MIPS_CPIC);
+  uint32_t ResPic = ResFlags & (EF_MIPS_PIC | EF_MIPS_CPIC);
+
+  // Check PIC / CPIC flags compatibility.
+  if (NewPic && !ResPic)
+    warning("linking non-abicalls code with abicalls file: " + FName);
+  if (!NewPic && ResPic)
+    warning("linking abicalls code with non-abicalls file: " + FName);
+
+  if (!(NewPic & EF_MIPS_PIC))
+    ResFlags &= ~EF_MIPS_PIC;
+  if (NewPic)
+    ResFlags |= EF_MIPS_CPIC;
+  return ResFlags;
+}
+
+static uint32_t updateMipsIsaFlags(uint32_t ResFlags, uint32_t NewFlags,
+                                   StringRef FName) {
+  uint32_t NewIsa = NewFlags & EF_MIPS_ARCH;
+  uint32_t ResIsa = ResFlags & EF_MIPS_ARCH;
+
+  // Check ISA compatibility.
+  if (isMipsIsaMatched(NewIsa, ResIsa))
+    return ResFlags;
+  if (!isMipsIsaMatched(ResIsa, NewIsa)) {
+    error("target isa '" + getMipsIsaName(ResIsa) + "' is incompatible with '" +
+          getMipsIsaName(NewIsa) + "': " + FName);
+    return ResFlags;
+  }
+  ResFlags &= ~EF_MIPS_ARCH;
+  ResFlags |= NewIsa;
+  return ResFlags;
+}
+
+static void checkMipsAbiFlags(uint32_t ResFlags, uint32_t NewFlags,
+                              StringRef FName) {
+  uint32_t NewAbi = NewFlags & (EF_MIPS_ABI | EF_MIPS_ABI2);
+  uint32_t ResAbi = ResFlags & (EF_MIPS_ABI | EF_MIPS_ABI2);
+  // Check ABI compatibility.
+  if (NewAbi != ResAbi)
+    error("target ABI '" + getMipsAbiName(ResAbi) + "' is incompatible with '" +
+          getMipsAbiName(NewAbi) + "': " + FName);
+}
+
+static void checkMipsNanFlags(uint32_t ResFlags, uint32_t NewFlags,
+                              StringRef FName) {
+  bool NewNan2008 = NewFlags & EF_MIPS_NAN2008;
+  bool ResNan2008 = ResFlags & EF_MIPS_NAN2008;
+  // Check -mnan flags compatibility.
+  if (NewNan2008 != ResNan2008)
+    error("target -mnan=" + getMipsNanName(ResNan2008) +
+          " is incompatible with -mnan=" + getMipsNanName(NewNan2008) + ": " +
+          FName);
+}
+
+static void checkMipsFpFlags(uint32_t ResFlags, uint32_t NewFlags,
+                             StringRef FName) {
+  bool NewFp64 = NewFlags & EF_MIPS_FP64;
+  bool ResFp64 = ResFlags & EF_MIPS_FP64;
+  // Check FP64 compatibility.
+  if (NewFp64 != ResFp64)
+    error("target -mfp" + getMipsFpName(ResFp64) +
+          " is incompatible with -mfp" + getMipsFpName(NewFp64) + ": " + FName);
+}
+
+template <class ELFT> static uint32_t getMipsEFlags() {
+  // Iterates over all object files andretrieve ELF header flags
+  // to check that ISA, ABI and features declared by these flags
+  // are compatible with each other.
+  uint32_t ResFlags = 0;
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab<ELFT>::X->getObjectFiles()) {
+    uint32_t NewFlags = F->getObj().getHeader()->e_flags;
+    if (ResFlags == 0) {
+      if (NewFlags & EF_MIPS_PIC)
+        // PIC code is inherently CPIC
+        // and may not set CPIC flag explicitly.
+        NewFlags |= EF_MIPS_CPIC;
+      ResFlags = NewFlags;
+      continue;
+    }
+
+    ResFlags = updateMipsPicFlags(ResFlags, NewFlags, F->getName());
+    ResFlags = updateMipsIsaFlags(ResFlags, NewFlags, F->getName());
+
+    checkMipsAbiFlags(ResFlags, NewFlags, F->getName());
+    checkMipsNanFlags(ResFlags, NewFlags, F->getName());
+    checkMipsFpFlags(ResFlags, NewFlags, F->getName());
+
+    ResFlags |= NewFlags & EF_MIPS_ARCH_ASE;
+    ResFlags |= NewFlags & EF_MIPS_NOREORDER;
+    ResFlags |= NewFlags & EF_MIPS_MICROMIPS;
+    ResFlags |= NewFlags & EF_MIPS_NAN2008;
+    ResFlags |= NewFlags & EF_MIPS_32BITMODE;
+  }
+  return ResFlags;
 }
 
 template <class ELFT> static typename ELFT::uint getEntryAddr() {

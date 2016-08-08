@@ -9,17 +9,19 @@
 
 #include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-InfoStreamBuilder::InfoStreamBuilder() {}
+InfoStreamBuilder::InfoStreamBuilder()
+    : Ver(PdbRaw_ImplVer::PdbImplVC70), Sig(-1), Age(0) {}
 
 void InfoStreamBuilder::setVersion(PdbRaw_ImplVer V) { Ver = V; }
 
@@ -34,35 +36,38 @@ NameMapBuilder &InfoStreamBuilder::getNamedStreamsBuilder() {
 }
 
 uint32_t InfoStreamBuilder::calculateSerializedLength() const {
-  return sizeof(InfoStream::HeaderInfo) +
-         NamedStreams.calculateSerializedLength();
+  return sizeof(InfoStreamHeader) + NamedStreams.calculateSerializedLength();
 }
 
-Expected<std::unique_ptr<InfoStream>> InfoStreamBuilder::build(PDBFile &File) {
-  if (!Ver.hasValue())
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Missing PDB Stream Version");
-  if (!Sig.hasValue())
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Missing PDB Stream Signature");
-  if (!Age.hasValue())
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Missing PDB Stream Age");
-  if (!Guid.hasValue())
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Missing PDB Stream Guid");
-
-  auto InfoS = MappedBlockStream::createIndexedStream(StreamPDB, File);
-  if (!InfoS)
-    return InfoS.takeError();
-  auto Info = llvm::make_unique<InfoStream>(std::move(*InfoS));
-  Info->Version = *Ver;
-  Info->Signature = *Sig;
-  Info->Age = *Age;
-  Info->Guid = *Guid;
+Expected<std::unique_ptr<InfoStream>>
+InfoStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
+  auto StreamData = MappedBlockStream::createIndexedStream(File.getMsfLayout(),
+                                                           Buffer, StreamPDB);
+  auto Info = llvm::make_unique<InfoStream>(std::move(StreamData));
+  Info->Version = Ver;
+  Info->Signature = Sig;
+  Info->Age = Age;
+  Info->Guid = Guid;
   auto NS = NamedStreams.build();
   if (!NS)
     return NS.takeError();
   Info->NamedStreams = **NS;
   return std::move(Info);
+}
+
+Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
+                                const msf::WritableStream &Buffer) const {
+  auto InfoS =
+      WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamPDB);
+  StreamWriter Writer(*InfoS);
+
+  InfoStreamHeader H;
+  H.Age = Age;
+  H.Signature = Sig;
+  H.Version = Ver;
+  H.Guid = Guid;
+  if (auto EC = Writer.writeObject(H))
+    return EC;
+
+  return NamedStreams.commit(Writer);
 }

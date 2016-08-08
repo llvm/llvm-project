@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr7 < %s | FileCheck %s
-; RUN: llc -mcpu=a2q < %s | FileCheck %s --check-prefix=QPX
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=a2q < %s | FileCheck %s --check-prefix=QPX
 target triple = "powerpc64-unknown-linux-gnu"
 
 declare float @fabsf(float)

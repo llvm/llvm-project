@@ -24,7 +24,7 @@ void IndirectStubsManager::anchor() {}
 
 std::unique_ptr<JITCompileCallbackManager>
 createLocalCompileCallbackManager(const Triple &T,
-                                  TargetAddress ErrorHandlerAddress) {
+                                  JITTargetAddress ErrorHandlerAddress) {
   switch (T.getArch()) {
     default: return nullptr;
 
@@ -71,7 +71,7 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
   }
 }
 
-Constant* createIRTypedAddress(FunctionType &FT, TargetAddress Addr) {
+Constant* createIRTypedAddress(FunctionType &FT, JITTargetAddress Addr) {
   Constant *AddrIntVal =
     ConstantInt::get(Type::getInt64Ty(FT.getContext()), Addr);
   Constant *AddrPtrVal =

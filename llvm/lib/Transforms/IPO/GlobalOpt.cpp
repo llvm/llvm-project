@@ -2079,10 +2079,10 @@ OptimizeGlobalVars(Module &M, TargetLibraryInfo *TLI,
       GV->setLinkage(GlobalValue::InternalLinkage);
     // Simplify the initializer.
     if (GV->hasInitializer())
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(GV->getInitializer())) {
+      if (auto *C = dyn_cast<Constant>(GV->getInitializer())) {
         auto &DL = M.getDataLayout();
-        Constant *New = ConstantFoldConstantExpression(CE, DL, TLI);
-        if (New && New != CE)
+        Constant *New = ConstantFoldConstant(C, DL, TLI);
+        if (New && New != C)
           GV->setInitializer(New);
       }
 

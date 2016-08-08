@@ -1032,7 +1032,7 @@ namespace llvm {
     SDValue LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
                              const SmallVectorImpl<ISD::InputArg> &ArgInfo,
                              const SDLoc &dl, SelectionDAG &DAG,
-                             const CCValAssign &VA, MachineFrameInfo *MFI,
+                             const CCValAssign &VA, MachineFrameInfo &MFI,
                              unsigned i) const;
     SDValue LowerMemOpCallTo(SDValue Chain, SDValue StackPtr, SDValue Arg,
                              const SDLoc &dl, SelectionDAG &DAG,
@@ -1218,6 +1218,9 @@ namespace llvm {
 
     /// Convert a comparison if required by the subtarget.
     SDValue ConvertCmpIfNecessary(SDValue Cmp, SelectionDAG &DAG) const;
+
+    /// Check if replacement of SQRT with RSQRT should be disabled.
+    bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override;
 
     /// Use rsqrt* to speed up sqrt calculations.
     SDValue getRsqrtEstimate(SDValue Operand, DAGCombinerInfo &DCI,

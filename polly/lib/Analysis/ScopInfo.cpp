@@ -169,13 +169,21 @@ static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
 
 ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
                              ArrayRef<const SCEV *> Sizes, enum MemoryKind Kind,
-                             const DataLayout &DL, Scop *S)
+                             const DataLayout &DL, Scop *S,
+                             const char *BaseName)
     : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S) {
   std::string BasePtrName =
-      getIslCompatibleName("MemRef_", BasePtr, Kind == MK_PHI ? "__phi" : "");
+      BaseName ? BaseName : getIslCompatibleName("MemRef_", BasePtr,
+                                                 Kind == MK_PHI ? "__phi" : "");
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
+
+  if (!BasePtr) {
+    BasePtrOriginSAI = nullptr;
+    return;
+  }
+
   BasePtrOriginSAI = identifyBasePtrOriginSAI(S, BasePtr);
   if (BasePtrOriginSAI)
     const_cast<ScopArrayInfo *>(BasePtrOriginSAI)->addDerivedSAI(this);
@@ -375,7 +383,7 @@ void MemoryAccess::updateDimensionality() {
   // two subsequent values of 'i' index two values that are stored next to
   // each other in memory. By this division we make this characteristic
   // obvious again. If the base pointer was accessed with offsets not divisible
-  // by the accesses element size, we will have choosen a smaller ArrayElemSize
+  // by the accesses element size, we will have chosen a smaller ArrayElemSize
   // that divides the offsets of all accesses to this base pointer.
   if (DimsAccess == 1) {
     isl_val *V = isl_val_int_from_si(Ctx, ArrayElemSize);
@@ -3133,7 +3141,9 @@ Scop::~Scop() {
   // Explicitly release all Scop objects and the underlying isl objects before
   // we relase the isl context.
   Stmts.clear();
+  ScopArrayInfoSet.clear();
   ScopArrayInfoMap.clear();
+  ScopArrayNameMap.clear();
   AccFuncMap.clear();
 }
 
@@ -3476,15 +3486,19 @@ void Scop::hoistInvariantLoads() {
   isl_union_map_free(Writes);
 }
 
-const ScopArrayInfo *
-Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
-                               ArrayRef<const SCEV *> Sizes,
-                               ScopArrayInfo::MemoryKind Kind) {
-  auto &SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)];
+const ScopArrayInfo *Scop::getOrCreateScopArrayInfo(
+    Value *BasePtr, Type *ElementType, ArrayRef<const SCEV *> Sizes,
+    ScopArrayInfo::MemoryKind Kind, const char *BaseName) {
+  assert((BasePtr || BaseName) &&
+         "BasePtr and BaseName can not be nullptr at the same time.");
+  assert(!(BasePtr && BaseName) && "BaseName is redundant.");
+  auto &SAI = BasePtr ? ScopArrayInfoMap[std::make_pair(BasePtr, Kind)]
+                      : ScopArrayNameMap[BaseName];
   if (!SAI) {
     auto &DL = getFunction().getParent()->getDataLayout();
     SAI.reset(new ScopArrayInfo(BasePtr, ElementType, getIslCtx(), Sizes, Kind,
-                                DL, this));
+                                DL, this, BaseName));
+    ScopArrayInfoSet.insert(SAI.get());
   } else {
     SAI->updateElementType(ElementType);
     // In case of mismatching array sizes, we bail out by setting the run-time
@@ -3493,6 +3507,21 @@ Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
       invalidate(DELINEARIZATION, DebugLoc());
   }
   return SAI.get();
+}
+
+const ScopArrayInfo *
+Scop::createScopArrayInfo(Type *ElementType, const std::string &BaseName,
+                          const std::vector<unsigned> &Sizes) {
+  auto *DimSizeType = Type::getInt64Ty(getSE()->getContext());
+  std::vector<const SCEV *> SCEVSizes;
+
+  for (auto size : Sizes)
+    SCEVSizes.push_back(getSE()->getConstant(DimSizeType, size, false));
+
+  auto *SAI =
+      getOrCreateScopArrayInfo(nullptr, ElementType, SCEVSizes,
+                               ScopArrayInfo::MK_Array, BaseName.c_str());
+  return SAI;
 }
 
 const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr,
@@ -3781,14 +3810,14 @@ void Scop::printArrayInfo(raw_ostream &OS) const {
   OS << "Arrays {\n";
 
   for (auto &Array : arrays())
-    Array.second->print(OS);
+    Array->print(OS);
 
   OS.indent(4) << "}\n";
 
   OS.indent(4) << "Arrays (Bounds as pw_affs) {\n";
 
   for (auto &Array : arrays())
-    Array.second->print(OS, /* SizeAsPwAff */ true);
+    Array->print(OS, /* SizeAsPwAff */ true);
 
   OS.indent(4) << "}\n";
 }
@@ -4185,6 +4214,14 @@ int Scop::getRelativeLoopDepth(const Loop *L) const {
   if (!OuterLoop)
     return -1;
   return L->getLoopDepth() - OuterLoop->getLoopDepth();
+}
+
+ScopArrayInfo *Scop::getArrayInfoByName(const std::string BaseName) {
+  for (auto &SAI : arrays()) {
+    if (SAI->getName() == BaseName)
+      return SAI;
+  }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

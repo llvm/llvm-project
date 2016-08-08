@@ -1660,10 +1660,10 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   //unsigned numRegClasses = TRI->getNumRegClasses();
 
   // Emit the Fake Stack Object
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-  int NumBytes = (int) MFI->getStackSize();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  int NumBytes = (int) MFI.getStackSize();
   if (NumBytes) {
-    O << "\t.local .align " << MFI->getMaxAlignment() << " .b8 \t" << DEPOTNAME
+    O << "\t.local .align " << MFI.getMaxAlignment() << " .b8 \t" << DEPOTNAME
       << getFunctionNumber() << "[" << NumBytes << "];\n";
     if (static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit()) {
       O << "\t.reg .b64 \t%SP;\n";
@@ -1848,9 +1848,9 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         ConvertIntToBytes<>(ptr, int32);
         aggBuffer->addBytes(ptr, 4, Bytes);
         break;
-      } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-        if (const ConstantInt *constInt = dyn_cast<ConstantInt>(
-                ConstantFoldConstantExpression(Cexpr, DL))) {
+      } else if (const auto *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
+        if (const auto *constInt = dyn_cast_or_null<ConstantInt>(
+                ConstantFoldConstant(Cexpr, DL))) {
           int int32 = (int)(constInt->getZExtValue());
           ConvertIntToBytes<>(ptr, int32);
           aggBuffer->addBytes(ptr, 4, Bytes);
@@ -1871,8 +1871,8 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         aggBuffer->addBytes(ptr, 8, Bytes);
         break;
       } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-        if (const ConstantInt *constInt = dyn_cast<ConstantInt>(
-                ConstantFoldConstantExpression(Cexpr, DL))) {
+        if (const auto *constInt = dyn_cast_or_null<ConstantInt>(
+                ConstantFoldConstant(Cexpr, DL))) {
           long long int64 = (long long)(constInt->getZExtValue());
           ConvertIntToBytes<>(ptr, int64);
           aggBuffer->addBytes(ptr, 8, Bytes);
@@ -2074,8 +2074,8 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     // If the code isn't optimized, there may be outstanding folding
     // opportunities. Attempt to fold the expression using DataLayout as a
     // last resort before giving up.
-    if (Constant *C = ConstantFoldConstantExpression(CE, getDataLayout()))
-      if (C != CE)
+    if (Constant *C = ConstantFoldConstant(CE, getDataLayout()))
+      if (C && C != CE)
         return lowerConstantForGV(C, ProcessingGeneric);
 
     // Otherwise report the problem to the user.

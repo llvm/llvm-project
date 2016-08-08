@@ -128,21 +128,44 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   if (RC == &X86::GR8_NOREXRegClass)
     return RC;
 
+  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+
   const TargetRegisterClass *Super = RC;
   TargetRegisterClass::sc_iterator I = RC->getSuperClasses();
   do {
     switch (Super->getID()) {
+    case X86::FR32RegClassID:
+    case X86::FR64RegClassID:
+      // If AVX-512 isn't supported we should only inflate to these classes.
+      if (!Subtarget.hasAVX512() && Super->getSize() == RC->getSize())
+        return Super;
+      break;
+    case X86::VR128RegClassID:
+    case X86::VR256RegClassID:
+      // If VLX isn't supported we should only inflate to these classes.
+      if (!Subtarget.hasVLX() && Super->getSize() == RC->getSize())
+        return Super;
+      break;
+    case X86::FR32XRegClassID:
+    case X86::FR64XRegClassID:
+      // If VLX isn't support we shouldn't inflate to these classes.
+      if (!Subtarget.hasVLX())
+        break;
+      // Fallthrough. The VLX check above passed, AVX512 check below will pass.
+    case X86::VR128XRegClassID:
+    case X86::VR256XRegClassID:
+      // If AVX-512 isn't support we shouldn't inflate to these classes.
+      if (!Subtarget.hasAVX512())
+        break;
+      // Fallthrough.
     case X86::GR8RegClassID:
     case X86::GR16RegClassID:
     case X86::GR32RegClassID:
     case X86::GR64RegClassID:
-    case X86::FR32RegClassID:
-    case X86::FR64RegClassID:
     case X86::RFP32RegClassID:
     case X86::RFP64RegClassID:
     case X86::RFP80RegClassID:
-    case X86::VR128RegClassID:
-    case X86::VR256RegClassID:
+    case X86::VR512RegClassID:
       // Don't return a super-class that would shrink the spill size.
       // That can happen with the vector and float classes.
       if (Super->getSize() == RC->getSize())
@@ -526,12 +549,12 @@ void X86RegisterInfo::adjustStackMapLiveOutMask(uint32_t *Mask) const {
 // Stack Frame Processing methods
 //===----------------------------------------------------------------------===//
 
-static bool CantUseSP(const MachineFrameInfo *MFI) {
-  return MFI->hasVarSizedObjects() || MFI->hasOpaqueSPAdjustment();
+static bool CantUseSP(const MachineFrameInfo &MFI) {
+  return MFI.hasVarSizedObjects() || MFI.hasOpaqueSPAdjustment();
 }
 
 bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-   const MachineFrameInfo *MFI = MF.getFrameInfo();
+   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
    if (!EnableBasePointer)
      return false;
@@ -549,7 +572,7 @@ bool X86RegisterInfo::canRealignStack(const MachineFunction &MF) const {
   if (!TargetRegisterInfo::canRealignStack(MF))
     return false;
 
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   // Stack realignment requires a frame pointer.  If we already started
@@ -622,8 +645,8 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FIOffset;
   if (AfterFPPop) {
     // Tail call jmp happens after FP is popped.
-    const MachineFrameInfo *MFI = MF.getFrameInfo();
-    FIOffset = MFI->getObjectOffset(FrameIndex) - TFI->getOffsetOfLocalArea();
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    FIOffset = MFI.getObjectOffset(FrameIndex) - TFI->getOffsetOfLocalArea();
   } else
     FIOffset = TFI->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
 

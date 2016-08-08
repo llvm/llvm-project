@@ -38,6 +38,17 @@ template <class T> T check(ErrorOr<T> EO) {
   return std::move(*EO);
 }
 
+template <class T> T check(Expected<T> E) {
+  if (!E) {
+    std::string Buf;
+    llvm::raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(E.takeError(), OS, "");
+    OS.flush();
+    fatal(Buf);
+  }
+  return std::move(*E);
+}
+
 } // namespace coff
 } // namespace lld
 

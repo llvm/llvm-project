@@ -1047,6 +1047,19 @@ let AddedComplexity = 40 in {
   def: Storexs_pat<store,         I64, S4_storerd_rr>;
 }
 
+def s30_2ProperPred  : PatLeaf<(i32 imm), [{
+  int64_t v = (int64_t)N->getSExtValue();
+  return isShiftedInt<30,2>(v) && !isShiftedInt<29,3>(v);
+}]>;
+def RoundTo8 : SDNodeXForm<imm, [{
+   int32_t Imm = N->getSExtValue();
+   return CurDAG->getTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
+}]>;
+
+let AddedComplexity = 40 in
+def: Pat<(store I64:$Ru, (add I32:$Rs, s30_2ProperPred:$Off)),
+         (S2_storerd_io (A2_addi I32:$Rs, 4), (RoundTo8 $Off), I64:$Ru)>;
+
 class Store_rr_pat<PatFrag Store, PatFrag Value, InstHexagon MI>
   : Pat<(Store Value:$Ru, (add I32:$Rs, I32:$Rt)),
         (MI IntRegs:$Rs, IntRegs:$Rt, 0, Value:$Ru)>;

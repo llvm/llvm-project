@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
-; REQUIRES: global-isel
+
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -14,6 +14,17 @@ target triple = "aarch64-apple-ios"
 ; CHECK-NEXT: RET_ReallyLR implicit %x0 
 define i64 @addi64(i64 %arg1, i64 %arg2) {
   %res = add i64 %arg1, %arg2
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: muli64
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
+; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_MUL s64 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %x0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %x0
+define i64 @muli64(i64 %arg1, i64 %arg2) {
+  %res = mul i64 %arg1, %arg2
   ret i64 %res
 }
 
@@ -58,6 +69,37 @@ end:
   ret void
 }
 
+; Tests for conditional br.
+; CHECK-LABEL: name: condbr
+; CHECK: body:
+;
+; Entry basic block.
+; CHECK: {{[0-9a-zA-Z._-]+}}:
+;
+; Make sure we have two successors
+; CHECK-NEXT: successors: %[[TRUE:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 50.00%),
+; CHECK:                  %[[FALSE:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 50.00%)
+;
+; Check that we emit the correct branch.
+; CHECK: [[ADDR:%.*]](64) = COPY %x0
+; CHECK: [[TST:%.*]](1) = G_LOAD { s1, p0 } [[ADDR]]
+; CHECK: G_BRCOND s1 [[TST]], %[[TRUE]]
+; CHECK: G_BR unsized %[[FALSE]]
+;
+; Check that each successor contains the return instruction.
+; CHECK: [[TRUE]]:
+; CHECK-NEXT: RET_ReallyLR
+; CHECK: [[FALSE]]:
+; CHECK-NEXT: RET_ReallyLR
+define void @condbr(i1* %tstaddr) {
+  %tst = load i1, i1* %tstaddr
+  br i1 %tst, label %true, label %false
+true:
+  ret void
+false:
+  ret void
+}
+
 ; Tests for or.
 ; CHECK-LABEL: name: ori64
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
@@ -78,6 +120,29 @@ define i64 @ori64(i64 %arg1, i64 %arg2) {
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
 define i32 @ori32(i32 %arg1, i32 %arg2) {
   %res = or i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; Tests for xor.
+; CHECK-LABEL: name: xori64
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
+; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_XOR s64 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %x0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %x0
+define i64 @xori64(i64 %arg1, i64 %arg2) {
+  %res = xor i64 %arg1, %arg2
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: xori32
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_XOR s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @xori32(i32 %arg1, i32 %arg2) {
+  %res = xor i32 %arg1, %arg2
   ret i32 %res
 }
 
@@ -169,6 +234,19 @@ define i64 @bitcast(i64 %a) {
   ret i64 %res2
 }
 
+; CHECK-LABEL: name: trunc
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK: [[VEC:%[0-9]+]](128) = G_LOAD { <4 x s32>, p0 }
+; CHECK: [[RES1:%[0-9]+]](8) = G_TRUNC { s8, s64 } [[ARG1]]
+; CHECK: [[RES2:%[0-9]+]](64) = G_TRUNC { <4 x s16>, <4 x s32> } [[VEC]]
+define void @trunc(i64 %a) {
+  %vecptr = alloca <4 x i32>
+  %vec = load <4 x i32>, <4 x i32>* %vecptr
+  %res1 = trunc i64 %a to i8
+  %res2 = trunc <4 x i32> %vec to <4 x i16>
+  ret void
+}
+
 ; CHECK-LABEL: name: load
 ; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
 ; CHECK: [[ADDR42:%[0-9]+]](64) = COPY %x1
@@ -197,4 +275,60 @@ define void @store(i64* %addr, i64 addrspace(42)* %addr42, i64 %val1, i64 %val2)
   store i64 %val2, i64 addrspace(42)* %addr42
   %sum = add i64 %val1, %val2
   ret void
+}
+
+; CHECK-LABEL: name: intrinsics
+; CHECK: [[CUR:%[0-9]+]](32) = COPY %w0
+; CHECK: [[BITS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[PTR:%[0-9]+]](64) = G_INTRINSIC { p0, s32 } intrinsic(@llvm.returnaddress), 0
+; CHECK: [[PTR_VEC:%[0-9]+]](64) = G_FRAME_INDEX p0 %stack.0.ptr.vec
+; CHECK: [[VEC:%[0-9]+]](64) = G_LOAD { <8 x s8>, p0 } [[PTR_VEC]]
+; CHECK: G_INTRINSIC_W_SIDE_EFFECTS { unsized, <8 x s8>, <8 x s8>, p0 } intrinsic(@llvm.aarch64.neon.st2), [[VEC]], [[VEC]], [[PTR]]
+; CHECK: RET_ReallyLR
+declare i8* @llvm.returnaddress(i32)
+declare void @llvm.aarch64.neon.st2.v8i8.p0i8(<8 x i8>, <8 x i8>, i8*)
+declare { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0v8i8(<8 x i8>*)
+define void @intrinsics(i32 %cur, i32 %bits) {
+  %ptr = call i8* @llvm.returnaddress(i32 0)
+  %ptr.vec = alloca <8 x i8>
+  %vec = load <8 x i8>, <8 x i8>* %ptr.vec
+  call void @llvm.aarch64.neon.st2.v8i8.p0i8(<8 x i8> %vec, <8 x i8> %vec, i8* %ptr)
+  ret void
+}
+
+; CHECK-LABEL: name: test_phi
+; CHECK:     G_BRCOND s1 {{%.*}}, %[[TRUE:bb\.[0-9]+]]
+; CHECK:     G_BR unsized %[[FALSE:bb\.[0-9]+]]
+
+; CHECK: [[TRUE]]:
+; CHECK:     [[RES1:%[0-9]+]](32) = G_LOAD { s32, p0 }
+
+; CHECK: [[FALSE]]:
+; CHECK:     [[RES2:%[0-9]+]](32) = G_LOAD { s32, p0 }
+
+; CHECK:     [[RES:%[0-9]+]](32) = PHI [[RES1]], %[[TRUE]], [[RES2]], %[[FALSE]]
+; CHECK:     %w0 = COPY [[RES]]
+define i32 @test_phi(i32* %addr1, i32* %addr2, i1 %tst) {
+  br i1 %tst, label %true, label %false
+
+true:
+  %res1 = load i32, i32* %addr1
+  br label %end
+
+false:
+  %res2 = load i32, i32* %addr2
+  br label %end
+
+end:
+  %res = phi i32 [%res1, %true], [%res2, %false]
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: unreachable
+; CHECK: G_ADD
+; CHECK-NEXT: {{^$}}
+; CHECK-NEXT: ...
+define void @unreachable(i32 %a) {
+  %sum = add i32 %a, %a
+  unreachable
 }

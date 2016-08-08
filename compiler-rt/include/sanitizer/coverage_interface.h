@@ -41,13 +41,6 @@ extern "C" {
   // Some of the entries in *data will be zero.
   uintptr_t __sanitizer_get_coverage_guards(uintptr_t **data);
 
-  // Set *data to the growing buffer with covered PCs and return the size
-  // of the buffer. The entries are never zero.
-  // When only unique pcs are collected, the size is equal to
-  // __sanitizer_get_total_unique_coverage.
-  // WARNING: EXPERIMENTAL API.
-  uintptr_t __sanitizer_get_coverage_pc_buffer(uintptr_t **data);
-
   // The coverage instrumentation may optionally provide imprecise counters.
   // Rather than exposing the counter values to the user we instead map
   // the counters to a bitset.
@@ -65,6 +58,15 @@ extern "C" {
   // __sanitizer_get_number_of_counters bytes long and 8-aligned.
   uintptr_t
   __sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
+
+  // EXPERIMENTAL API
+  // Set allocated buffer to record new coverage PCs as they are executed.
+  // Buffer length is specified in uptrs.
+  void __sanitizer_set_coverage_pc_buffer(uintptr_t *buffer, uintptr_t length);
+  // Number of pcs recorded in the buffer.
+  // Reset by __sanitizer_reset_coverage();
+  uintptr_t __sanitizer_get_coverage_pc_buffer_pos();
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

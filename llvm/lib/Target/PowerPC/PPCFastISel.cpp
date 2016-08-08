@@ -146,11 +146,11 @@ class PPCFastISel final : public FastISel {
     bool isTypeLegal(Type *Ty, MVT &VT);
     bool isLoadTypeLegal(Type *Ty, MVT &VT);
     bool isValueAvailable(const Value *V) const;
-    bool isVSFRCRegister(unsigned Register) const {
-      return MRI.getRegClass(Register)->getID() == PPC::VSFRCRegClassID;
+    bool isVSFRCRegClass(const TargetRegisterClass *RC) const {
+      return RC->getID() == PPC::VSFRCRegClassID;
     }
-    bool isVSSRCRegister(unsigned Register) const {
-      return MRI.getRegClass(Register)->getID() == PPC::VSSRCRegClassID;
+    bool isVSSRCRegClass(const TargetRegisterClass *RC) const {
+      return RC->getID() == PPC::VSSRCRegClassID;
     }
     bool PPCEmitCmp(const Value *Src1Value, const Value *Src2Value,
                     bool isZExt, unsigned DestReg);
@@ -521,10 +521,10 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
 
   // If this is a potential VSX load with an offset of 0, a VSX indexed load can
   // be used.
-  bool IsVSSRC = (ResultReg != 0) && isVSSRCRegister(ResultReg);
-  bool IsVSFRC = (ResultReg != 0) && isVSFRCRegister(ResultReg);
+  bool IsVSSRC = isVSSRCRegClass(UseRC);
+  bool IsVSFRC = isVSFRCRegClass(UseRC);
   bool Is32VSXLoad = IsVSSRC && Opc == PPC::LFS;
-  bool Is64VSXLoad = IsVSSRC && Opc == PPC::LFD;
+  bool Is64VSXLoad = IsVSFRC && Opc == PPC::LFD;
   if ((Is32VSXLoad || Is64VSXLoad) &&
       (Addr.BaseType != Address::FrameIndexBase) && UseOffset &&
       (Addr.Offset == 0)) {
@@ -579,8 +579,18 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
       case PPC::LFS:    Opc = IsVSSRC ? PPC::LXSSPX : PPC::LFSX; break;
       case PPC::LFD:    Opc = IsVSFRC ? PPC::LXSDX : PPC::LFDX; break;
     }
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
-      .addReg(Addr.Base.Reg).addReg(IndexReg);
+
+    auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+		       TII.get(Opc), ResultReg);
+
+    // If we have an index register defined we use it in the store inst,
+    // otherwise we use X0 as base as it makes the vector instructions to
+    // use zero in the computation of the effective address regardless the
+    // content of the register.
+    if (IndexReg)
+      MIB.addReg(Addr.Base.Reg).addReg(IndexReg);
+    else
+      MIB.addReg(PPC::ZERO8).addReg(Addr.Base.Reg);
   }
 
   return true;
@@ -657,8 +667,8 @@ bool PPCFastISel::PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr) {
 
   // If this is a potential VSX store with an offset of 0, a VSX indexed store
   // can be used.
-  bool IsVSSRC = isVSSRCRegister(SrcReg);
-  bool IsVSFRC = isVSFRCRegister(SrcReg);
+  bool IsVSSRC = isVSSRCRegClass(RC);
+  bool IsVSFRC = isVSFRCRegClass(RC);
   bool Is32VSXStore = IsVSSRC && Opc == PPC::STFS;
   bool Is64VSXStore = IsVSFRC && Opc == PPC::STFD;
   if ((Is32VSXStore || Is64VSXStore) &&
@@ -1907,7 +1917,9 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
   unsigned Align = DL.getPrefTypeAlignment(CFP->getType());
   assert(Align > 0 && "Unexpectedly missing alignment information!");
   unsigned Idx = MCP.getConstantPoolIndex(cast<Constant>(CFP), Align);
-  unsigned DestReg = createResultReg(TLI.getRegClassFor(VT));
+  const TargetRegisterClass *RC =
+    (VT == MVT::f32) ? &PPC::F4RCRegClass : &PPC::F8RCRegClass;
+  unsigned DestReg = createResultReg(RC);
   CodeModel::Model CModel = TM.getCodeModel();
 
   MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(

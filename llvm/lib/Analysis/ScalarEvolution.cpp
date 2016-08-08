@@ -4168,7 +4168,9 @@ static bool BrPHIToSelect(DominatorTree &DT, BranchInst *BI, PHINode *Merge,
 }
 
 const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
-  if (PN->getNumIncomingValues() == 2) {
+  auto IsReachable =
+      [&](BasicBlock *BB) { return DT.isReachableFromEntry(BB); };
+  if (PN->getNumIncomingValues() == 2 && all_of(PN->blocks(), IsReachable)) {
     const Loop *L = LI.getLoopFor(PN->getParent());
 
     // We don't want to break LCSSA, even in a SCEV expression tree.

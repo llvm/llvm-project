@@ -2522,8 +2522,8 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
 
     // This needs to be set before we call getPtrSizedFrameRegister, otherwise
     // we get the wrong frame register.
-    MachineFrameInfo *MFI = MF->getFrameInfo();
-    MFI->setFrameAddressIsTaken(true);
+    MachineFrameInfo &MFI = MF->getFrameInfo();
+    MFI.setFrameAddressIsTaken(true);
 
     const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
     unsigned FrameReg = RegInfo->getPtrSizedFrameRegister(*MF);

@@ -203,9 +203,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         return false;  // no volatile/atomic accesses.
       }
       Constant *Ptr = getVal(SI->getOperand(1));
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Ptr)) {
+      if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI)) {
         DEBUG(dbgs() << "Folding constant ptr expression: " << *Ptr);
-        Ptr = ConstantFoldConstantExpression(CE, DL, TLI);
+        Ptr = FoldedPtr;
         DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
       if (!isSimpleEnoughPointerToCommit(Ptr)) {
@@ -249,8 +249,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
               Constant * const IdxList[] = {IdxZero, IdxZero};
 
               Ptr = ConstantExpr::getGetElementPtr(nullptr, Ptr, IdxList);
-              if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Ptr))
-                Ptr = ConstantFoldConstantExpression(CE, DL, TLI);
+              if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI))
+                Ptr = FoldedPtr;
 
             // If we can't improve the situation by introspecting NewTy,
             // we have to give up.
@@ -324,8 +324,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Ptr)) {
-        Ptr = ConstantFoldConstantExpression(CE, DL, TLI);
+      if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI)) {
+        Ptr = FoldedPtr;
         DEBUG(dbgs() << "Found a constant pointer expression, constant "
               "folding: " << *Ptr << "\n");
       }
@@ -512,8 +512,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
     }
 
     if (!CurInst->use_empty()) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(InstResult))
-        InstResult = ConstantFoldConstantExpression(CE, DL, TLI);
+      if (auto *FoldedInstResult = ConstantFoldConstant(InstResult, DL, TLI))
+        InstResult = FoldedInstResult;
 
       setVal(&*CurInst, InstResult);
     }

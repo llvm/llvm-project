@@ -35,6 +35,8 @@ ninja/
 *xcuserdata
 test/20*
 __pycache__/
+*.lock
+*.so
 
 clang-module-cache
 

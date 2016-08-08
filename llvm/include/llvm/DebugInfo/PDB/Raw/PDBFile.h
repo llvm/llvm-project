@@ -11,10 +11,10 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/DebugInfo/Msf/IMsfFile.h"
-#include "llvm/DebugInfo/Msf/MsfCommon.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamInterface.h"
+#include "llvm/DebugInfo/MSF/IMSFFile.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -26,7 +26,7 @@ namespace llvm {
 
 namespace msf {
 class MappedBlockStream;
-class StreamInterface;
+class WritableStream;
 }
 
 namespace pdb {
@@ -38,11 +38,11 @@ class PublicsStream;
 class SymbolStream;
 class TpiStream;
 
-class PDBFile : public msf::IMsfFile {
+class PDBFile : public msf::IMSFFile {
   friend PDBFileBuilder;
 
 public:
-  PDBFile(std::unique_ptr<msf::StreamInterface> PdbFileBuffer,
+  PDBFile(std::unique_ptr<msf::ReadableStream> PdbFileBuffer,
           BumpPtrAllocator &Allocator);
   ~PDBFile() override;
 
@@ -67,12 +67,17 @@ public:
   Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                      ArrayRef<uint8_t> Data) const override;
 
+  ArrayRef<uint32_t> getFpmPages() const { return FpmPages; }
+
   ArrayRef<support::ulittle32_t> getStreamSizes() const {
-    return MsfLayout.StreamSizes;
+    return ContainerLayout.StreamSizes;
   }
   ArrayRef<ArrayRef<support::ulittle32_t>> getStreamMap() const {
-    return MsfLayout.StreamMap;
+    return ContainerLayout.StreamMap;
   }
+
+  const msf::MSFLayout &getMsfLayout() const { return ContainerLayout; }
+  const msf::ReadableStream &getMsfBuffer() const { return *Buffer; }
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
@@ -87,14 +92,13 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<NameHashTable &> getStringTable();
 
-  Error commit();
-
 private:
   BumpPtrAllocator &Allocator;
 
-  std::unique_ptr<msf::StreamInterface> Buffer;
+  std::unique_ptr<msf::ReadableStream> Buffer;
 
-  msf::Layout MsfLayout;
+  std::vector<uint32_t> FpmPages;
+  msf::MSFLayout ContainerLayout;
 
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;

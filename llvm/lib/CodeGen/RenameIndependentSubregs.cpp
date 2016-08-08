@@ -219,9 +219,9 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     if (!MO.isDef() && !MO.readsReg())
       continue;
 
-    MachineInstr &MI = *MO.getParent();
-
-    SlotIndex Pos = LIS->getInstructionIndex(MI);
+    SlotIndex Pos = LIS->getInstructionIndex(*MO.getParent());
+    Pos = MO.isDef() ? Pos.getRegSlot(MO.isEarlyClobber())
+                     : Pos.getBaseIndex();
     unsigned SubRegIdx = MO.getSubReg();
     LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
 
@@ -230,13 +230,12 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
       const LiveInterval::SubRange &SR = *SRInfo.SR;
       if ((SR.LaneMask & LaneMask) == 0)
         continue;
-      LiveRange::const_iterator I = SR.find(Pos);
-      if (I == SR.end())
+      const VNInfo *VNI = SR.getVNInfoAt(Pos);
+      if (VNI == nullptr)
         continue;
 
-      const VNInfo &VNI = *I->valno;
       // Map to local representant ID.
-      unsigned LocalID = SRInfo.ConEQ.getEqClass(&VNI);
+      unsigned LocalID = SRInfo.ConEQ.getEqClass(VNI);
       // Global ID
       ID = Classes[LocalID + SRInfo.Index];
       break;

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O2 -mtriple=powerpc-unknown-linux-gnu < %s | FileCheck %s
 
 @x = global ppc_fp128 0xM405EDA5E353F7CEE0000000000000000, align 16
 @.str = private unnamed_addr constant [5 x i8] c"%Lf\0A\00", align 1

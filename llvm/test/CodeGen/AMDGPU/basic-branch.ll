@@ -6,7 +6,6 @@
 ; GCN-LABEL: {{^}}test_branch:
 ; GCNNOOPT: v_writelane_b32
 ; GCNNOOPT: v_writelane_b32
-; GCNNOOPT: v_writelane_b32
 ; GCN: s_cbranch_scc1 [[END:BB[0-9]+_[0-9]+]]
 
 ; GCN: ; BB#1

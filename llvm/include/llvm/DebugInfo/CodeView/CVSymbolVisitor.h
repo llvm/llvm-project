@@ -58,10 +58,12 @@ public:
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \
   case EnumName: {                                                             \
     SymbolRecordKind RK = static_cast<SymbolRecordKind>(EnumName);             \
-    auto Result = Name::deserialize(RK, RecordOffset, Data);                   \
-    if (Result.getError())                                                     \
+    auto ExpectedResult = Name::deserialize(RK, RecordOffset, Data);           \
+    if (!ExpectedResult) {                                                     \
+      consumeError(ExpectedResult.takeError());                                \
       return parseError();                                                     \
-    DerivedThis->visit##Name(Record.Type, *Result);                            \
+    }                                                                          \
+    DerivedThis->visit##Name(Record.Type, *ExpectedResult);                    \
     break;                                                                     \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                \

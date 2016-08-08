@@ -5,11 +5,11 @@
 # CHECK: .text:
 # CHECK: 402000 01104000 00000000 00000000 00000000
 # CHECK: 402010 01100000 00000000 00000000 00000000
-# CHECK: 402020 01000100 00004000 00000000 00000000
+# CHECK: 402020 41f20009 c0f24009 00000000 00000000
 # CHECK: 402030 fe07e62f 00000000 00000000 00000000
 # CHECK: 402040 3e04de2f 00000000 00000000 00000000
 # CHECK: 402050 fe07d62f 00000000 00000000 00000000
-# CHECK: 402060 00000000 00000000 00000000 00000000
+# CHECK: 402060 fef0cef7 00000000 00000000 00000000
 
 --- !COFF
 header:
@@ -23,7 +23,7 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_PURGEABLE, IMAGE_SCN_MEM_16BIT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       4096
-    SectionData:     00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    SectionData:     00000000000000000000000000000000000000000000000000000000000000004ff6ff79cff6ff79000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f000f8000000000000000000000000
     Relocations:
       - VirtualAddress:  0
         SymbolName:      foo
@@ -33,16 +33,19 @@ sections:
         Type:            2  # IMAGE_REL_ARM_ADDR32NB
       - VirtualAddress:  32
         SymbolName:      foo
-        Type:            17  # IMAGE_REL_AMD64_MOV32T
+        Type:            17  # IMAGE_REL_ARM_MOV32T
       - VirtualAddress:  48
         SymbolName:      foo
-        Type:            20  # IMAGE_REL_AMD64_BRANCH24T
+        Type:            20  # IMAGE_REL_ARM_BRANCH24T
       - VirtualAddress:  64
         SymbolName:      foo
         Type:            18  # IMAGE_REL_ARM_BRANCH20T
       - VirtualAddress:  80
         SymbolName:      foo
-        Type:            21  # IMAGE_REL_AMD64_BLX23T
+        Type:            21  # IMAGE_REL_ARM_BLX23T
+      - VirtualAddress:  96
+        SymbolName:      bar
+        Type:            20  # IMAGE_REL_ARM_BRANCH24T
 symbols:
   - Name:            .aaa
     Value:           0
@@ -64,6 +67,12 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            foo
     Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            bar
+    Value:           0x500000
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL

@@ -198,6 +198,8 @@ declare zeroext i1 @return_i1()
 define zeroext i1 @call_test() {
 ; CHECK: [[REG:%.+]] = call i1
   %result = call i1 @return_i1()
+; CHECK: [[REG:%.+]] = zext i1 {{%.+}} to i32
+; CHECK: [[REG:%.+]] = trunc i32 {{%.+}} to i1
 ; CHECK: ret i1 [[REG]]
   ret i1 %result
 }

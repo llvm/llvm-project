@@ -73,8 +73,8 @@ void VirtRegMap::grow() {
 }
 
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
-  int SS = MF->getFrameInfo()->CreateSpillStackObject(RC->getSize(),
-                                                      RC->getAlignment());
+  int SS = MF->getFrameInfo().CreateSpillStackObject(RC->getSize(),
+                                                     RC->getAlignment());
   ++NumSpillSlots;
   return SS;
 }
@@ -110,7 +110,7 @@ void VirtRegMap::assignVirt2StackSlot(unsigned virtReg, int SS) {
   assert(Virt2StackSlotMap[virtReg] == NO_STACK_SLOT &&
          "attempt to assign stack slot to already spilled register");
   assert((SS >= 0 ||
-          (SS >= MF->getFrameInfo()->getObjectIndexBegin())) &&
+          (SS >= MF->getFrameInfo().getObjectIndexBegin())) &&
          "illegal fixed frame index");
   Virt2StackSlotMap[virtReg] = SS;
 }

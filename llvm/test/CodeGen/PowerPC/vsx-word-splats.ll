@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr7 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mcpu=pwr7 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-BE
 
 define <4 x float> @test0f(<4 x float> %a) {

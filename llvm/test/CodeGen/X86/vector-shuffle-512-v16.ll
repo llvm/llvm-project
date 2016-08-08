@@ -190,7 +190,7 @@ define <16 x i32> @shuffle_v16i32_01_02_03_16_05_06_07_20_09_10_11_24_13_14_15_2
 define <16 x float> @shuffle_v16f32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01(<16 x float> %a)  {
 ; ALL-LABEL: shuffle_v16f32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqa32 {{.*#+}} zmm1 = <2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,1>
+; ALL-NEXT:    vmovaps {{.*#+}} zmm1 = <2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,1>
 ; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %c = shufflevector <16 x float> %a, <16 x float> undef, <16 x i32> <i32 2, i32 5, i32 undef, i32 undef, i32 7, i32 undef, i32 10, i32 1,  i32 0, i32 5, i32 undef, i32 4, i32 7, i32 undef, i32 10, i32 1>
@@ -296,4 +296,15 @@ define <16 x float> @shuffle_v16f32_00_01_10_10_04_05_14_14_08_09_18_18_0c_0d_1c
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 4, i32 5, i32 20, i32 20, i32 8, i32 9, i32 24, i32 24, i32 12, i32 13, i32 28, i32 28>
   ret <16 x float> %shuffle
+}
+
+define <16 x i32> @insert_mem_and_zero_v16i32(i32* %ptr) {
+; ALL-LABEL: insert_mem_and_zero_v16i32:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    retq
+  %a = load i32, i32* %ptr
+  %v = insertelement <16 x i32> undef, i32 %a, i32 0
+  %shuffle = shufflevector <16 x i32> %v, <16 x i32> zeroinitializer, <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <16 x i32> %shuffle
 }

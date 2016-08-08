@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin | grep extsw | count 2
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin | grep extsw | count 2
 
 @lens = external global i8*             ; <i8**> [#uses=1]
 @vals = external global i32*            ; <i32**> [#uses=1]

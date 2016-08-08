@@ -31,6 +31,10 @@
 ; IR-LABEL: polly.loop_header:                                ; preds = %polly.loop_header, %polly.loop_preheader
 ; IR-NEXT:   %polly.indvar = phi i64 [ 0, %polly.loop_preheader ], [ %polly.indvar_next, %polly.loop_header ]
 ; ...
+; IR:  store i64 %polly.indvar, i64* %polly_launch_0_param_1
+; IR-NEXT:  %6 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT:  %7 = bitcast i64* %polly_launch_0_param_1 to i8*
+; IR-NEXT:  store i8* %7, i8** %6
 ; IR: call i8* @polly_getKernel
 ; ...
 ; IR: call void @polly_freeKernel
@@ -38,7 +42,7 @@
 ; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, 98
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
-; KERNEL-IR: define ptx_kernel void @kernel_0(i8* %MemRef_A, i64 %c0) {
+; KERNEL-IR: define ptx_kernel void @kernel_0(i8* %MemRef_A, i64 %c0)
 ; KERNEL-IR-LABEL: entry:
 ; KERNEL-IR-NEXT:   %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-IR-NEXT:   %b0 = zext i32 %0 to i64

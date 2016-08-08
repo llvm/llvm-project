@@ -1477,7 +1477,10 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
                               StringRef ArchitectureName = StringRef()) {
   if (print_offset)
     outs() << C.getChildOffset() << "\t";
-  sys::fs::perms Mode = C.getAccessMode();
+  Expected<sys::fs::perms> ModeOrErr = C.getAccessMode();
+  if (!ModeOrErr)
+    report_error(Filename, C, ModeOrErr.takeError(), ArchitectureName);
+  sys::fs::perms Mode = ModeOrErr.get();
   if (verbose) {
     // FIXME: this first dash, "-", is for (Mode & S_IFMT) == S_IFREG.
     // But there is nothing in sys::fs::perms for S_IFMT or S_IFREG.
@@ -1495,9 +1498,15 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
     outs() << format("0%o ", Mode);
   }
 
-  unsigned UID = C.getUID();
+  Expected<unsigned> UIDOrErr = C.getUID();
+  if (!UIDOrErr)
+    report_error(Filename, C, UIDOrErr.takeError(), ArchitectureName);
+  unsigned UID = UIDOrErr.get();
   outs() << format("%3d/", UID);
-  unsigned GID = C.getGID();
+  Expected<unsigned> GIDOrErr = C.getGID();
+  if (!GIDOrErr)
+    report_error(Filename, C, GIDOrErr.takeError(), ArchitectureName);
+  unsigned GID = GIDOrErr.get();
   outs() << format("%-3d ", GID);
   Expected<uint64_t> Size = C.getRawSize();
   if (!Size)
@@ -1508,7 +1517,8 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
   if (verbose) {
     unsigned Seconds;
     if (RawLastModified.getAsInteger(10, Seconds))
-      outs() << "(date: \"%s\" contains non-decimal chars) " << RawLastModified;
+      outs() << "(date: \"" << RawLastModified
+             << "\" contains non-decimal chars) ";
     else {
       // Since cime(3) returns a 26 character string of the form:
       // "Sun Sep 16 01:03:52 1973\n\0"
@@ -1521,16 +1531,23 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
   }
 
   if (verbose) {
-    ErrorOr<StringRef> NameOrErr = C.getName();
-    if (NameOrErr.getError()) {
-      StringRef RawName = C.getRawName();
+    Expected<StringRef> NameOrErr = C.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      Expected<StringRef> NameOrErr = C.getRawName();
+      if (!NameOrErr)
+        report_error(Filename, C, NameOrErr.takeError(), ArchitectureName);
+      StringRef RawName = NameOrErr.get();
       outs() << RawName << "\n";
     } else {
       StringRef Name = NameOrErr.get();
       outs() << Name << "\n";
     }
   } else {
-    StringRef RawName = C.getRawName();
+    Expected<StringRef> NameOrErr = C.getRawName();
+    if (!NameOrErr)
+      report_error(Filename, C, NameOrErr.takeError(), ArchitectureName);
+    StringRef RawName = NameOrErr.get();
     outs() << RawName << "\n";
   }
 }

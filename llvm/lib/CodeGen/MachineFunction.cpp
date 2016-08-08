@@ -57,19 +57,33 @@ void MachineFunctionInitializer::anchor() {}
 void MachineFunctionProperties::print(raw_ostream &ROS, bool OnlySet) const {
   // Leave this function even in NDEBUG as an out-of-line anchor.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  bool NeedsComma = false;
   for (BitVector::size_type i = 0; i < Properties.size(); ++i) {
     bool HasProperty = Properties[i];
     if (OnlySet && !HasProperty)
       continue;
+    if (NeedsComma)
+      ROS << ", ";
+    else
+      NeedsComma = true;
     switch(static_cast<Property>(i)) {
       case Property::IsSSA:
-        ROS << (HasProperty ? "SSA, " : "Post SSA, ");
+        ROS << (HasProperty ? "SSA" : "Post SSA");
         break;
       case Property::TracksLiveness:
-        ROS << (HasProperty ? "" : "not ") << "tracking liveness, ";
+        ROS << (HasProperty ? "" : "not ") << "tracking liveness";
         break;
       case Property::AllVRegsAllocated:
         ROS << (HasProperty ? "AllVRegsAllocated" : "HasVRegs");
+        break;
+      case Property::Legalized:
+        ROS << (HasProperty ? "" : "not ") << "legalized";
+        break;
+      case Property::RegBankSelected:
+        ROS << (HasProperty ? "" : "not ") << "RegBank-selected";
+        break;
+      case Property::Selected:
+        ROS << (HasProperty ? "" : "not ") << "selected";
         break;
       default:
         break;

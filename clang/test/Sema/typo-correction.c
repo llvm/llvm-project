@@ -65,3 +65,18 @@ int fn_with_rs(int r) { r = TYPO + r * TYPO; } // expected-error 2 {{use of unde
 void fn_with_unknown(int a, int b) {
   fn_with_unknown(unknown, unknown | unknown); // expected-error 3 {{use of undeclared identifier}}
 }
+
+// Two typos in a parenthesized expression or argument list with a conditional
+// expression caused a crash in C mode.
+//
+// r272587 fixed a similar bug for binary operations. The same fix was needed for
+// conditional expressions.
+
+int g(int x, int y) {
+  return x + y;
+}
+
+int h() {
+  g(x, 5 ? z : 0); // expected-error 2 {{use of undeclared identifier}}
+  (x, 5 ? z : 0);  // expected-error 2 {{use of undeclared identifier}}
+}

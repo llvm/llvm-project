@@ -1,9 +1,13 @@
 // RUN: %clang_cc1 %s -triple "spir-unknown-unknown" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-SPIR
 // RUN: %clang_cc1 %s -triple "amdgcn--amdhsa" -emit-llvm -o - -O0 | FileCheck %s --check-prefix=CHECK-AMDGCN
 
-constant sampler_t glb_smp = 7;
-// CHECK-SPIR: constant i32 7
-// CHECK-AMDGCN: addrspace(2) constant i32 7
+#define CLK_ADDRESS_CLAMP_TO_EDGE       2
+#define CLK_NORMALIZED_COORDS_TRUE      1
+#define CLK_FILTER_NEAREST              0x10
+#define CLK_FILTER_LINEAR               0x20
+
+constant sampler_t glb_smp = CLK_ADDRESS_CLAMP_TO_EDGE|CLK_NORMALIZED_COORDS_TRUE|CLK_FILTER_NEAREST;
+// CHECK-SPIR-NOT: constant i32
 
 void fnc1(image1d_t img) {}
 // CHECK-SPIR: @fnc1(%opencl.image1d_ro_t addrspace(1)*
@@ -30,18 +34,19 @@ void fnc3(image3d_t img) {}
 // CHECK-AMDGCN: @fnc3(%opencl.image3d_ro_t addrspace(2)*
 
 void fnc4smp(sampler_t s) {}
-// CHECK-SPIR-LABEL: define {{.*}}void @fnc4smp(i32
+// CHECK-SPIR-LABEL: define {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
+// CHECK-AMDGCN-LABEL: define {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
 
 kernel void foo(image1d_t img) {
-  sampler_t smp = 5;
-  // CHECK-SPIR: alloca i32
+  sampler_t smp = CLK_ADDRESS_CLAMP_TO_EDGE|CLK_NORMALIZED_COORDS_TRUE|CLK_FILTER_LINEAR;
+  // CHECK-SPIR: alloca %opencl.sampler_t addrspace(2)*
   event_t evt;
   // CHECK-SPIR: alloca %opencl.event_t*
-  // CHECK-SPIR: store i32 5,
+  // CHECK-SPIR: store %opencl.sampler_t addrspace(2)*
   fnc4smp(smp);
-  // CHECK-SPIR: call {{.*}}void @fnc4smp(i32
+  // CHECK-SPIR: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
   fnc4smp(glb_smp);
-  // CHECK-SPIR: call {{.*}}void @fnc4smp(i32
+  // CHECK-SPIR: call {{.*}}void @fnc4smp(%opencl.sampler_t addrspace(2)*
 }
 
 void __attribute__((overloadable)) bad1(image1d_t b, image2d_t c, image2d_t d) {}

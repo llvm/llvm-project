@@ -61,7 +61,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  const MachineFrameInfo &MFI = *MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   int64_t FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
 
   // If this is the address operand of a load or store, make it relative to SP

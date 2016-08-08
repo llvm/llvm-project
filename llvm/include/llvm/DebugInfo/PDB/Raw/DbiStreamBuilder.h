@@ -14,8 +14,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
-#include "llvm/DebugInfo/Msf/ByteStream.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -23,6 +23,7 @@
 namespace llvm {
 namespace pdb {
 class DbiStream;
+struct DbiStreamHeader;
 class PDBFile;
 
 class DbiStreamBuilder {
@@ -45,9 +46,13 @@ public:
   Error addModuleInfo(StringRef ObjFile, StringRef Module);
   Error addModuleSourceFile(StringRef Module, StringRef File);
 
-  Expected<std::unique_ptr<DbiStream>> build(PDBFile &File);
+  Expected<std::unique_ptr<DbiStream>> build(PDBFile &File,
+                                             const msf::WritableStream &Buffer);
+  Error commit(const msf::MSFLayout &Layout,
+               const msf::WritableStream &Buffer);
 
 private:
+  Error finalize();
   uint32_t calculateModiSubstreamSize() const;
   uint32_t calculateFileInfoSubstreamSize() const;
   uint32_t calculateNamesBufferSize() const;
@@ -71,14 +76,16 @@ private:
   uint16_t Flags;
   PDB_Machine MachineType;
 
+  const DbiStreamHeader *Header;
+
   StringMap<std::unique_ptr<ModuleInfo>> ModuleInfos;
   std::vector<ModuleInfo *> ModuleInfoList;
 
   StringMap<uint32_t> SourceFileNames;
 
-  msf::StreamRef NamesBuffer;
-  msf::ByteStream<true> ModInfoBuffer;
-  msf::ByteStream<true> FileInfoBuffer;
+  msf::WritableStreamRef NamesBuffer;
+  msf::MutableByteStream ModInfoBuffer;
+  msf::MutableByteStream FileInfoBuffer;
 };
 }
 }

@@ -6198,13 +6198,27 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       }
     }
 
-    // sext(setcc x, y, cc) -> (select (setcc x, y, cc), -1, 0)
-    unsigned ElementWidth = VT.getScalarType().getSizeInBits();
+    // sext(setcc x, y, cc) -> (select (setcc x, y, cc), T, 0)
+    // Here, T can be 1 or -1, depending on the type of the setcc and
+    // getBooleanContents().
+    unsigned SetCCWidth = N0.getValueType().getScalarSizeInBits();
+
     SDLoc DL(N);
-    SDValue NegOne =
-      DAG.getConstant(APInt::getAllOnesValue(ElementWidth), DL, VT);
+    // To determine the "true" side of the select, we need to know the high bit
+    // of the value returned by the setcc if it evaluates to true.
+    // If the type of the setcc is i1, then the true case of the select is just
+    // sext(i1 1), that is, -1.
+    // If the type of the setcc is larger (say, i8) then the value of the high
+    // bit depends on getBooleanContents(). So, ask TLI for a real "true" value
+    // of the appropriate width.
+    SDValue ExtTrueVal =
+        (SetCCWidth == 1)
+            ? DAG.getConstant(APInt::getAllOnesValue(VT.getScalarSizeInBits()),
+                              DL, VT)
+            : TLI.getConstTrueVal(DAG, VT, DL);
+
     if (SDValue SCC = SimplifySelectCC(
-            DL, N0.getOperand(0), N0.getOperand(1), NegOne,
+            DL, N0.getOperand(0), N0.getOperand(1), ExtTrueVal,
             DAG.getConstant(0, DL, VT),
             cast<CondCodeSDNode>(N0.getOperand(2))->get(), true))
       return SCC;
@@ -6215,10 +6229,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
           TLI.isOperationLegal(ISD::SETCC, N0.getOperand(0).getValueType())) {
         SDLoc DL(N);
         ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-        SDValue SetCC = DAG.getSetCC(DL, SetCCVT,
-                                     N0.getOperand(0), N0.getOperand(1), CC);
-        return DAG.getSelect(DL, VT, SetCC,
-                             NegOne, DAG.getConstant(0, DL, VT));
+        SDValue SetCC =
+            DAG.getSetCC(DL, SetCCVT, N0.getOperand(0), N0.getOperand(1), CC);
+        return DAG.getSelect(DL, VT, SetCC, ExtTrueVal,
+                             DAG.getConstant(0, DL, VT));
       }
     }
   }
@@ -8893,14 +8907,18 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitFSQRT(SDNode *N) {
-  if (!DAG.getTarget().Options.UnsafeFPMath || TLI.isFsqrtCheap())
+  if (!DAG.getTarget().Options.UnsafeFPMath)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (TLI.isFsqrtCheap(N0, DAG))
     return SDValue();
 
   // TODO: FSQRT nodes should have flags that propagate to the created nodes.
   // For now, create a Flags object for use with all unsafe math transforms.
   SDNodeFlags Flags;
   Flags.setUnsafeAlgebra(true);
-  return buildSqrtEstimate(N->getOperand(0), &Flags);
+  return buildSqrtEstimate(N0, &Flags);
 }
 
 /// copysign(x, fp_extend(y)) -> copysign(x, y)
@@ -11532,7 +11550,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
   if (StoreNodes.size() < 2)
     return false;
 
-  // only do dep endence check in AA case
+  // only do dependence check in AA case
   bool UseAA = CombinerAA.getNumOccurrences() > 0 ? CombinerAA
                                                   : DAG.getSubtarget().useAA();
   if (UseAA && !checkMergeStoreCandidatesForDependencies(StoreNodes))
@@ -14757,9 +14775,9 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   // To catch this case, look up the actual index of frame indices to compute
   // the real alias relationship.
   if (isFrameIndex1 && isFrameIndex2) {
-    MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-    Offset1 += MFI->getObjectOffset(cast<FrameIndexSDNode>(Base1)->getIndex());
-    Offset2 += MFI->getObjectOffset(cast<FrameIndexSDNode>(Base2)->getIndex());
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+    Offset1 += MFI.getObjectOffset(cast<FrameIndexSDNode>(Base1)->getIndex());
+    Offset2 += MFI.getObjectOffset(cast<FrameIndexSDNode>(Base2)->getIndex());
     return !((Offset1 + (Op0->getMemoryVT().getSizeInBits() >> 3)) <= Offset2 ||
              (Offset2 + (Op1->getMemoryVT().getSizeInBits() >> 3)) <= Offset1);
   }

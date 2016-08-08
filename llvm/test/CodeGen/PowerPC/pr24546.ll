@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s
 
 ; Verify that we no longer crash in VSX swap removal when debug values
 ; are in the code stream.

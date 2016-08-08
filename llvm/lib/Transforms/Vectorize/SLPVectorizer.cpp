@@ -3942,7 +3942,7 @@ static Value *createRdxShuffleMask(unsigned VecLen, unsigned NumEltsToRdx,
   return ConstantVector::get(ShuffleMask);
 }
 
-
+namespace {
 /// Model horizontal reductions.
 ///
 /// A horizontal reduction is a tree of reduction operations (currently add and
@@ -4228,6 +4228,7 @@ private:
     return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
   }
 };
+} // end anonymous namespace
 
 /// \brief Recognize construction of vectors like
 ///  %ra = insertelement <4 x float> undef, float %s0, i32 0

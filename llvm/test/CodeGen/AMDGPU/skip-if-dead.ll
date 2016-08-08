@@ -348,7 +348,6 @@ bb7:                                              ; preds = %bb4
 ; CHECK: image_sample_c
 
 ; CHECK: v_cmp_neq_f32_e32 vcc, 0,
-; CHECK: s_and_b64 exec, exec,
 ; CHECK: s_and_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
 ; CHECK: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, exec
 ; CHECK: mask branch [[END:BB[0-9]+_[0-9]+]]
@@ -385,6 +384,7 @@ bb9:                                              ; preds = %bb4
 
 declare void @llvm.AMDGPU.kill(float) #0
 declare <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) nounwind
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

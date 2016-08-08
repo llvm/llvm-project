@@ -308,9 +308,9 @@ forAllAssociatedToolChains(Compilation &C, const JobAction &JA,
   // Apply Work on all the offloading tool chains associated with the current
   // action.
   if (JA.isHostOffloading(Action::OFK_Cuda))
-    Work(*C.getSingleOffloadToolChain<Action::OFK_Host>());
-  else if (JA.isDeviceOffloading(Action::OFK_Cuda))
     Work(*C.getSingleOffloadToolChain<Action::OFK_Cuda>());
+  else if (JA.isDeviceOffloading(Action::OFK_Cuda))
+    Work(*C.getSingleOffloadToolChain<Action::OFK_Host>());
 
   //
   // TODO: Add support for other offloading programming models here.
@@ -2340,24 +2340,8 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
   text.split(Split, StringRef("+"), -1, false);
 
   for (StringRef Feature : Split) {
-    const char *result = llvm::StringSwitch<const char *>(Feature)
-                             .Case("fp", "+fp-armv8")
-                             .Case("simd", "+neon")
-                             .Case("crc", "+crc")
-                             .Case("crypto", "+crypto")
-                             .Case("fp16", "+fullfp16")
-                             .Case("profile", "+spe")
-                             .Case("ras", "+ras")
-                             .Case("nofp", "-fp-armv8")
-                             .Case("nosimd", "-neon")
-                             .Case("nocrc", "-crc")
-                             .Case("nocrypto", "-crypto")
-                             .Case("nofp16", "-fullfp16")
-                             .Case("noprofile", "-spe")
-                             .Case("noras", "-ras")
-                             .Default(nullptr);
-    if (result)
-      Features.push_back(result);
+    if (const char *FeatureName = llvm::AArch64::getArchExtFeature(Feature))
+      Features.push_back(FeatureName);
     else if (Feature == "neon" || Feature == "noneon")
       D.Diag(diag::err_drv_no_neon_modifier);
     else
@@ -2372,20 +2356,16 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<const char *> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
-  if (CPU == "cortex-a53" || CPU == "cortex-a57" ||
-      CPU == "cortex-a72" || CPU == "cortex-a35" || CPU == "exynos-m1" ||
-      CPU == "kryo"       || CPU == "cortex-a73" || CPU == "vulcan") {
-    Features.push_back("+neon");
-    Features.push_back("+crc");
-    Features.push_back("+crypto");
-  } else if (CPU == "cyclone") {
-    Features.push_back("+neon");
-    Features.push_back("+crypto");
-  } else if (CPU == "generic") {
+
+  if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    return false;
-  }
+    unsigned ArchKind = llvm::AArch64::parseCPUArch(CPU);
+    unsigned Extersion = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+
+    if (!llvm::AArch64::getExtensionFeatures(Extersion, Features))
+      return false;
+   }
 
   if (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features))
     return false;
@@ -2400,17 +2380,10 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
-  if (Split.first == "armv8-a" || Split.first == "armv8a") {
-    // ok, no additional features.
-  } else if (Split.first == "armv8.1-a" || Split.first == "armv8.1a") {
-    Features.push_back("+v8.1a");
-  } else if (Split.first == "armv8.2-a" || Split.first == "armv8.2a" ) {
-    Features.push_back("+v8.2a");
-  } else {
-    return false;
-  }
-
-  if (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features))
+  unsigned ArchKind = llvm::AArch64::parseArch(Split.first);
+  if (ArchKind == static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID) ||
+      !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
+      (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features)))
     return false;
 
   return true;
@@ -5035,9 +5008,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_show_template_tree);
   Args.AddLastArg(CmdArgs, options::OPT_fno_elide_type);
 
-  // Forward flags for OpenMP
+  // Forward flags for OpenMP. We don't do this if the current action is an
+  // device offloading action.
+  //
+  // TODO: Allow OpenMP offload actions when they become available.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                   options::OPT_fno_openmp, false)) {
+                   options::OPT_fno_openmp, false) &&
+      JA.isDeviceOffloading(Action::OFK_None)) {
     switch (getOpenMPRuntime(getToolChain(), Args)) {
     case OMPRT_OMP:
     case OMPRT_IOMP5:

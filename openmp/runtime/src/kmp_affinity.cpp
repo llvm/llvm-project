@@ -1429,7 +1429,7 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
             threadLevel = level;
             coreLevel = -1;
             pkgLevel = -1;
-            __kmp_nThreadsPerCore = buf.ebx & 0xff;
+            __kmp_nThreadsPerCore = buf.ebx & 0xffff;
             if (__kmp_nThreadsPerCore == 0) {
                 *msg_id = kmp_i18n_str_InvalidCpuidInfo;
                 return -1;
@@ -1441,7 +1441,7 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
             //
             coreLevel = level;
             pkgLevel = -1;
-            nCoresPerPkg = buf.ebx & 0xff;
+            nCoresPerPkg = buf.ebx & 0xffff;
             if (nCoresPerPkg == 0) {
                 *msg_id = kmp_i18n_str_InvalidCpuidInfo;
                 return -1;
@@ -1456,7 +1456,7 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
                 continue;
             }
             pkgLevel = level;
-            nPackages = buf.ebx & 0xff;
+            nPackages = buf.ebx & 0xffff;
             if (nPackages == 0) {
                 *msg_id = kmp_i18n_str_InvalidCpuidInfo;
                 return -1;
@@ -3520,6 +3520,86 @@ _exit:
     }
 }
 
+//
+// This function figures out the deepest level at which there is at least one cluster/core
+// with more than one processing unit bound to it.
+//
+static int
+__kmp_affinity_find_core_level(const AddrUnsPair *address2os, int nprocs, int bottom_level)
+{
+    int core_level = 0;
+
+    for( int i = 0; i < nprocs; i++ ) {
+        for( int j = bottom_level; j > 0; j-- ) {
+            if( address2os[i].first.labels[j] > 0 ) {
+                if( core_level < ( j - 1 ) ) {
+                    core_level = j - 1;
+                }
+            }
+        }
+    }
+    return core_level;
+}
+
+//
+// This function counts number of clusters/cores at given level.
+//
+static int __kmp_affinity_compute_ncores(const AddrUnsPair *address2os, int nprocs, int bottom_level, int core_level)
+{
+    int ncores = 0;
+    int i, j;
+
+    j = bottom_level;
+    for( i = 0; i < nprocs; i++ ) {
+        for ( j = bottom_level; j > core_level; j-- ) {
+            if( ( i + 1 ) < nprocs ) {
+                if( address2os[i + 1].first.labels[j] > 0 ) {
+                    break;
+                }
+            }
+        }
+        if( j == core_level ) {
+            ncores++;
+        }
+    }
+    if( j > core_level ) {
+        //
+        // In case of ( nprocs < __kmp_avail_proc ) we may end too deep and miss one core.
+        // May occur when called from __kmp_affinity_find_core().
+        //
+        ncores++;
+    }
+    return ncores;
+}
+
+//
+// This function finds to which cluster/core given processing unit is bound.
+//
+static int __kmp_affinity_find_core(const AddrUnsPair *address2os, int proc, int bottom_level, int core_level)
+{
+    return __kmp_affinity_compute_ncores(address2os, proc + 1, bottom_level, core_level) - 1;
+}
+
+//
+// This function finds maximal number of processing units bound to a cluster/core at given level.
+//
+static int __kmp_affinity_max_proc_per_core(const AddrUnsPair *address2os, int nprocs, int bottom_level, int core_level)
+{
+    int maxprocpercore = 0;
+
+    if( core_level < bottom_level ) {
+        for( int i = 0; i < nprocs; i++ ) {
+            int percore = address2os[i].first.labels[core_level + 1] + 1;
+
+            if( percore > maxprocpercore ) {
+                maxprocpercore = percore;
+            }
+       }
+    } else {
+        maxprocpercore = 1;
+    }
+    return maxprocpercore;
+}
 
 static AddrUnsPair *address2os = NULL;
 static int           * procarr = NULL;
@@ -3959,8 +4039,7 @@ __kmp_aux_affinity_initialize(void)
         goto sortAddresses;
 
         case affinity_balanced:
-        // Balanced works only for the case of a single package
-        if( nPackages > 1 ) {
+        if( depth <= 1 ) {
             if( __kmp_affinity_verbose || __kmp_affinity_warnings ) {
                 KMP_WARNING( AffBalancedNotAvail, "KMP_AFFINITY" );
             }
@@ -3973,39 +4052,38 @@ __kmp_aux_affinity_initialize(void)
             // Save the depth for further usage
             __kmp_aff_depth = depth;
 
-            // Number of hyper threads per core in HT machine
-            int nth_per_core = __kmp_nThreadsPerCore;
+            int core_level = __kmp_affinity_find_core_level(address2os, __kmp_avail_proc, depth - 1);
+            int ncores = __kmp_affinity_compute_ncores(address2os, __kmp_avail_proc, depth - 1, core_level);
+            int maxprocpercore = __kmp_affinity_max_proc_per_core(address2os, __kmp_avail_proc, depth - 1, core_level);
 
-            int core_level;
-            if( nth_per_core > 1 ) {
-                core_level = depth - 2;
-            } else {
-                core_level = depth - 1;
+            int nproc = ncores * maxprocpercore;
+            if( ( nproc < 2 ) || ( nproc < __kmp_avail_proc ) ) {
+                if( __kmp_affinity_verbose || __kmp_affinity_warnings ) {
+                    KMP_WARNING( AffBalancedNotAvail, "KMP_AFFINITY" );
+                }
+                __kmp_affinity_type = affinity_none;
+                return;
             }
-            int ncores = address2os[ __kmp_avail_proc - 1 ].first.labels[ core_level ] + 1;
-            int nproc = nth_per_core * ncores;
 
             procarr = ( int * )__kmp_allocate( sizeof( int ) * nproc );
             for( int i = 0; i < nproc; i++ ) {
                 procarr[ i ] = -1;
             }
 
+            int lastcore = -1;
+            int inlastcore = 0;
             for( int i = 0; i < __kmp_avail_proc; i++ ) {
                 int proc = address2os[ i ].second;
-                // If depth == 3 then level=0 - package, level=1 - core, level=2 - thread.
-                // If there is only one thread per core then depth == 2: level 0 - package,
-                // level 1 - core.
-                int level = depth - 1;
+                int core = __kmp_affinity_find_core(address2os, i, depth - 1, core_level);
 
-                // __kmp_nth_per_core == 1
-                int thread = 0;
-                int core = address2os[ i ].first.labels[ level ];
-                // If the thread level exists, that is we have more than one thread context per core
-                if( nth_per_core > 1 ) {
-                    thread = address2os[ i ].first.labels[ level ] % nth_per_core;
-                    core = address2os[ i ].first.labels[ level - 1 ];
+                if ( core == lastcore ) {
+                    inlastcore++;
+                } else {
+                    inlastcore = 0;
                 }
-                procarr[ core * nth_per_core + thread ] = proc;
+                lastcore = core;
+
+                procarr[ core * maxprocpercore + inlastcore ] = proc;
             }
 
             break;
@@ -4552,6 +4630,26 @@ __kmp_aux_get_affinity_mask_proc(int proc, void **mask)
 // Dynamic affinity settings - Affinity balanced
 void __kmp_balanced_affinity( int tid, int nthreads )
 {
+    bool fine_gran = true;
+
+    switch (__kmp_affinity_gran) {
+        case affinity_gran_fine:
+        case affinity_gran_thread:
+            break;
+        case affinity_gran_core:
+            if( __kmp_nThreadsPerCore > 1) {
+                fine_gran = false;
+            }
+            break;
+        case affinity_gran_package:
+            if( nCoresPerPkg > 1) {
+                fine_gran = false;
+            }
+            break;
+        default:
+            fine_gran = false;
+    }
+
     if( __kmp_affinity_uniform_topology() ) {
         int coreID;
         int threadID;
@@ -4559,6 +4657,10 @@ void __kmp_balanced_affinity( int tid, int nthreads )
         int __kmp_nth_per_core = __kmp_avail_proc / __kmp_ncores;
         // Number of cores
         int ncores = __kmp_ncores;
+        if( ( nPackages > 1 ) && ( __kmp_nth_per_core <= 1 ) ) {
+            __kmp_nth_per_core = __kmp_avail_proc / nPackages;
+            ncores = nPackages;
+        }
         // How many threads will be bound to each core
         int chunk = nthreads / ncores;
         // How many cores will have an additional thread bound to it - "big cores"
@@ -4580,11 +4682,10 @@ void __kmp_balanced_affinity( int tid, int nthreads )
         KMP_CPU_ALLOC_ON_STACK(mask);
         KMP_CPU_ZERO(mask);
 
-        // Granularity == thread
-        if( __kmp_affinity_gran == affinity_gran_fine || __kmp_affinity_gran == affinity_gran_thread) {
+        if( fine_gran ) {
             int osID = address2os[ coreID * __kmp_nth_per_core + threadID ].second;
             KMP_CPU_SET( osID, mask);
-        } else if( __kmp_affinity_gran == affinity_gran_core ) { // Granularity == core
+        } else {
             for( int i = 0; i < __kmp_nth_per_core; i++ ) {
                 int osID;
                 osID = address2os[ coreID * __kmp_nth_per_core + i ].second;
@@ -4605,41 +4706,25 @@ void __kmp_balanced_affinity( int tid, int nthreads )
         KMP_CPU_ALLOC_ON_STACK(mask);
         KMP_CPU_ZERO(mask);
 
-        // Number of hyper threads per core in HT machine
-        int nth_per_core = __kmp_nThreadsPerCore;
-        int core_level;
-        if( nth_per_core > 1 ) {
-            core_level = __kmp_aff_depth - 2;
-        } else {
-            core_level = __kmp_aff_depth - 1;
-        }
-
-        // Number of cores - maximum value; it does not count trail cores with 0 processors
-        int ncores = address2os[ __kmp_avail_proc - 1 ].first.labels[ core_level ] + 1;
+        int core_level = __kmp_affinity_find_core_level(address2os, __kmp_avail_proc, __kmp_aff_depth - 1);
+        int ncores = __kmp_affinity_compute_ncores(address2os, __kmp_avail_proc, __kmp_aff_depth - 1, core_level);
+        int nth_per_core = __kmp_affinity_max_proc_per_core(address2os, __kmp_avail_proc, __kmp_aff_depth - 1, core_level);
 
         // For performance gain consider the special case nthreads == __kmp_avail_proc
         if( nthreads == __kmp_avail_proc ) {
-            if( __kmp_affinity_gran == affinity_gran_fine || __kmp_affinity_gran == affinity_gran_thread) {
+            if( fine_gran ) {
                 int osID = address2os[ tid ].second;
                 KMP_CPU_SET( osID, mask);
-            } else if( __kmp_affinity_gran == affinity_gran_core ) { // Granularity == core
-                int coreID = address2os[ tid ].first.labels[ core_level ];
-                // We'll count found osIDs for the current core; they can be not more than nth_per_core;
-                // since the address2os is sortied we can break when cnt==nth_per_core
-                int cnt = 0;
+            } else {
+                int core = __kmp_affinity_find_core(address2os, tid, __kmp_aff_depth - 1, core_level);
                 for( int i = 0; i < __kmp_avail_proc; i++ ) {
                     int osID = address2os[ i ].second;
-                    int core = address2os[ i ].first.labels[ core_level ];
-                    if( core == coreID ) {
+                    if( __kmp_affinity_find_core(address2os, i,  __kmp_aff_depth - 1, core_level) == core ) {
                         KMP_CPU_SET( osID, mask);
-                        cnt++;
-                        if( cnt == nth_per_core ) {
-                            break;
-                        }
                     }
                 }
             }
-        } else if( nthreads <= __kmp_ncores ) {
+        } else if( nthreads <= ncores ) {
 
             int core = 0;
             for( int i = 0; i < ncores; i++ ) {
@@ -4657,8 +4742,8 @@ void __kmp_balanced_affinity( int tid, int nthreads )
                             int osID = procarr[ i * nth_per_core + j ];
                             if( osID != -1 ) {
                                 KMP_CPU_SET( osID, mask );
-                                // For granularity=thread it is enough to set the first available osID for this core
-                                if( __kmp_affinity_gran == affinity_gran_fine || __kmp_affinity_gran == affinity_gran_thread) {
+                                // For fine granularity it is enough to set the first available osID for this core
+                                if( fine_gran) {
                                     break;
                                 }
                             }
@@ -4670,7 +4755,7 @@ void __kmp_balanced_affinity( int tid, int nthreads )
                 }
             }
 
-        } else { // nthreads > __kmp_ncores
+        } else { // nthreads > ncores
 
             // Array to save the number of processors at each core
             int* nproc_at_core = (int*)KMP_ALLOCA(sizeof(int)*ncores);
@@ -4750,11 +4835,10 @@ void __kmp_balanced_affinity( int tid, int nthreads )
             for( int i = 0; i < nproc; i++ ) {
                 sum += newarr[ i ];
                 if( sum > tid ) {
-                    // Granularity == thread
-                    if( __kmp_affinity_gran == affinity_gran_fine || __kmp_affinity_gran == affinity_gran_thread) {
+                    if( fine_gran) {
                         int osID = procarr[ i ];
                         KMP_CPU_SET( osID, mask);
-                    } else if( __kmp_affinity_gran == affinity_gran_core ) { // Granularity == core
+                    } else {
                         int coreID = i / nth_per_core;
                         for( int ii = 0; ii < nth_per_core; ii++ ) {
                             int osID = procarr[ coreID * nth_per_core + ii ];

@@ -16,6 +16,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
+class BitVector;
 namespace pdb {
 class LLVMOutputStyle : public OutputStyle {
 public:
@@ -26,6 +27,7 @@ public:
 private:
   Error dumpFileHeaders();
   Error dumpStreamSummary();
+  Error dumpFreePageMap();
   Error dumpStreamBlocks();
   Error dumpStreamData();
   Error dumpInfoStream();
@@ -38,11 +40,13 @@ private:
   Error dumpSectionHeaders();
   Error dumpFpoStream();
 
+  void dumpBitVector(StringRef Name, const BitVector &V);
+
   void flush();
 
   PDBFile &File;
   ScopedPrinter P;
-  codeview::CVTypeDumper TD;
+  codeview::CVTypeDumper Dumper;
 };
 }
 }

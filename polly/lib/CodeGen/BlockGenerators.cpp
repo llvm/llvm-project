@@ -363,6 +363,8 @@ Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
+  assert(!Access.isArrayKind() && "Trying to get alloca for array kind");
+
   if (Access.isPHIKind())
     return getOrCreatePHIAlloca(Access.getBaseAddr());
   else
@@ -370,6 +372,8 @@ Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
+  assert(!Array->isArrayKind() && "Trying to get alloca for array kind");
+
   if (Array->isPHIKind())
     return getOrCreatePHIAlloca(Array->getBasePtr());
   else
@@ -485,8 +489,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
 
   Builder.SetInsertPoint(StartBB->getTerminator());
 
-  for (auto &Pair : S.arrays()) {
-    auto &Array = Pair.second;
+  for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
       continue;
     if (Array->isPHIKind()) {
@@ -544,8 +547,8 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
   for (const auto &EscapeMapping : EscapeMap) {
     // Extract the escaping instruction and the escaping users as well as the
     // alloca the instruction was demoted to.
-    Instruction *EscapeInst = EscapeMapping.getFirst();
-    const auto &EscapeMappingValue = EscapeMapping.getSecond();
+    Instruction *EscapeInst = EscapeMapping.first;
+    const auto &EscapeMappingValue = EscapeMapping.second;
     const EscapeUserVectorTy &EscapeUsers = EscapeMappingValue.second;
     Value *ScalarAddr = EscapeMappingValue.first;
 
@@ -576,8 +579,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
 }
 
 void BlockGenerator::findOutsideUsers(Scop &S) {
-  for (auto &Pair : S.arrays()) {
-    auto &Array = Pair.second;
+  for (auto &Array : S.arrays()) {
 
     if (Array->getNumberOfDimensions() != 0)
       continue;
@@ -613,8 +615,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
 
   Builder.SetInsertPoint(OptExitBB->getTerminator());
 
-  for (auto &Pair : S.arrays()) {
-    auto &SAI = Pair.second;
+  for (auto &SAI : S.arrays()) {
     auto *Val = SAI->getBasePtr();
 
     // Only Value-like scalars need a merge PHI. Exit block PHIs receive either
@@ -895,7 +896,7 @@ bool VectorBlockGenerator::extractScalarValues(const Instruction *Inst,
 
       // If there is one scalar extracted, all scalar elements should have
       // already been extracted by the code here. So no need to check for the
-      // existance of all of them.
+      // existence of all of them.
       if (SM.count(Operand))
         break;
 

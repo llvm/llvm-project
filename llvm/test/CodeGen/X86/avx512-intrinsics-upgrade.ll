@@ -504,7 +504,6 @@ define i16 @test_pcmpeq_d(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.d.512(<16 x i32> %a, <16 x i32> %b, i16 -1)
   ret i16 %res
@@ -516,7 +515,6 @@ define i16 @test_mask_pcmpeq_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.d.512(<16 x i32> %a, <16 x i32> %b, i16 %mask)
   ret i16 %res
@@ -529,7 +527,6 @@ define i8 @test_pcmpeq_q(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.mask.pcmpeq.q.512(<8 x i64> %a, <8 x i64> %b, i8 -1)
   ret i8 %res
@@ -541,7 +538,6 @@ define i8 @test_mask_pcmpeq_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.mask.pcmpeq.q.512(<8 x i64> %a, <8 x i64> %b, i8 %mask)
   ret i8 %res
@@ -554,7 +550,6 @@ define i16 @test_pcmpgt_d(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.d.512(<16 x i32> %a, <16 x i32> %b, i16 -1)
   ret i16 %res
@@ -566,7 +561,6 @@ define i16 @test_mask_pcmpgt_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.d.512(<16 x i32> %a, <16 x i32> %b, i16 %mask)
   ret i16 %res
@@ -579,7 +573,6 @@ define i8 @test_pcmpgt_q(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.mask.pcmpgt.q.512(<8 x i64> %a, <8 x i64> %b, i8 -1)
   ret i8 %res
@@ -591,7 +584,6 @@ define i8 @test_mask_pcmpgt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.x86.avx512.mask.pcmpgt.q.512(<8 x i64> %a, <8 x i64> %b, i8 %mask)
   ret i8 %res
@@ -1025,7 +1017,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.pand.d.512(<16 x i32>, <16 x i32>, <16 
 define <8 x i64> @test_xor_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_xor_epi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.pxor.q.512(<8 x i64> %a,<8 x i64> %b, <8 x i64>zeroinitializer, i8 -1)
   ret < 8 x i64> %res
@@ -1047,7 +1039,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.pxor.q.512(<8 x i64>, <8 x i64>, <8 x i6
 define <8 x i64> @test_or_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_or_epi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vorps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.por.q.512(<8 x i64> %a,<8 x i64> %b, <8 x i64>zeroinitializer, i8 -1)
   ret < 8 x i64> %res
@@ -1069,7 +1061,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.por.q.512(<8 x i64>, <8 x i64>, <8 x i64
 define <8 x i64> @test_and_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_and_epi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vandps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.pand.q.512(<8 x i64> %a,<8 x i64> %b, <8 x i64>zeroinitializer, i8 -1)
   ret < 8 x i64> %res

@@ -1,7 +1,7 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
 ; RUN:  --check-prefix=CHECK-BE
-; RUN: llc -mcpu=pwr7 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
 ; RUN:  --check-prefix=CHECK-P7
 
 ; Function Attrs: norecurse nounwind readnone

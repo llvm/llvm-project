@@ -415,7 +415,6 @@ define i16 @test_pcmpeq_w_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x75,0xc1]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16> %a, <16 x i16> %b, i16 -1)
   ret i16 %res
@@ -427,7 +426,6 @@ define i16 @test_mask_pcmpeq_w_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x75,0xc1]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16> %a, <16 x i16> %b, i16 %mask)
   ret i16 %res
@@ -463,7 +461,6 @@ define i16 @test_pcmpgt_w_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x65,0xc1]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16> %a, <16 x i16> %b, i16 -1)
   ret i16 %res
@@ -475,7 +472,6 @@ define i16 @test_mask_pcmpgt_w_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x65,0xc1]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16> %a, <16 x i16> %b, i16 %mask)
   ret i16 %res

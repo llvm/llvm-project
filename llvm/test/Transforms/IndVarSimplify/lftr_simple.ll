@@ -1,6 +1,6 @@
 ; LFTR should eliminate the need for the computation of i*i completely.  It
 ; is only used to compute the exit value.
-; RUN: opt < %s -indvars -dce -S | not grep mul
+; RUN: opt < %s -indvars -dce -S | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"
@@ -9,6 +9,8 @@ target datalayout = "n8:16:32:64"
 @A = external global i32                ; <i32*> [#uses=1]
 
 define i32 @quadratic_setlt() {
+; CHECK-LABEL: @quadratic_setlt(
+; CHECK-NOT: mul
 entry:
         br label %loop
 

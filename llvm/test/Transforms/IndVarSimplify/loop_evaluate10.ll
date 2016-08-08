@@ -1,5 +1,4 @@
-; RUN: opt < %s -indvars -S \
-; RUN:   | grep "%b.1 = phi i32 [ 2, %bb ], [ 1, %bb2 ]"
+; RUN: opt < %s -indvars -S | FileCheck %s
 ;
 ; This loop has multiple exits, and the value of %b1 depends on which
 ; exit is taken. Indvars should correctly compute the exit values.
@@ -15,6 +14,8 @@ target triple = "x86_64-pc-linux-gnu"
 	%struct..0anon = type <{ i8, [3 x i8] }>
 
 define i32 @main() nounwind {
+; CHECK-LABEL: @main(
+; CHECK: %b.1 = phi i32 [ 2, %bb ], [ 1, %bb2 ]
 entry:
 	br label %bb2
 

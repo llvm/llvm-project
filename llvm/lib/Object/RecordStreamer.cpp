@@ -92,6 +92,8 @@ bool RecordStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
                                          MCSymbolAttr Attribute) {
   if (Attribute == MCSA_Global || Attribute == MCSA_Weak)
     markGlobal(*Symbol, Attribute);
+  if (Attribute == MCSA_LazyReference)
+    markUsed(*Symbol);
   return true;
 }
 

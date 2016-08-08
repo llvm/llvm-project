@@ -27,6 +27,7 @@ set( LLDB_USED_LIBS
   lldbPluginJavaLanguage
   lldbPluginObjCLanguage
   lldbPluginObjCPlusPlusLanguage
+  lldbPluginOCamlLanguage
 
   lldbPluginObjectFileELF
   lldbPluginObjectFileJIT
@@ -201,6 +202,7 @@ set(LLVM_LINK_COMPONENTS
   option
   support
   coverage
+  target
   )
 
 if ( NOT LLDB_DISABLE_PYTHON )

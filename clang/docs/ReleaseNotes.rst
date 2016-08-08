@@ -133,6 +133,10 @@ libclang
 
 ...
 
+With the option --show-description, scan-build's list of defects will also
+show the description of the defects.
+
+
 Static Analyzer
 ---------------
 

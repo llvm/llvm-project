@@ -241,6 +241,11 @@ OPTIONS
 
  Use the specified output format. The supported formats are: "text", "html".
 
+.. option:: -tab-size=<TABSIZE>
+
+ Replace tabs with <TABSIZE> spaces when preparing reports. Currently, this is
+ only supported for the html format.
+
 .. option:: -output-dir=PATH
 
  Specify a directory to write coverage reports into. If the directory does not

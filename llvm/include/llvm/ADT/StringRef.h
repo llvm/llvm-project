@@ -446,6 +446,30 @@ namespace llvm {
       return substr(0, size()-N);
     }
 
+    /// Returns true if this StringRef has the given prefix and removes that
+    /// prefix.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    bool consume_front(StringRef Prefix) {
+      if (!startswith(Prefix))
+        return false;
+
+      *this = drop_front(Prefix.size());
+      return true;
+    }
+
+    /// Returns true if this StringRef has the given suffix and removes that
+    /// suffix.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    bool consume_back(StringRef Suffix) {
+      if (!endswith(Suffix))
+        return false;
+
+      *this = drop_back(Suffix.size());
+      return true;
+    }
+
     /// Return a reference to the substring from [Start, End).
     ///
     /// \param Start The index of the starting character in the substring; if

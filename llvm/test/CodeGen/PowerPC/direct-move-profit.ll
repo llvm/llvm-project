@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O2 -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind
 define void @test1(float* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* nocapture readnone %c, i32 signext %n) #0 {

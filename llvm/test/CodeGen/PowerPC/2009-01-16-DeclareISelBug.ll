@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin9.5
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin9.5
 ; rdar://6499616
 
 @"\01LC" = internal constant [13 x i8] c"conftest.val\00"		; <[13 x i8]*> [#uses=1]

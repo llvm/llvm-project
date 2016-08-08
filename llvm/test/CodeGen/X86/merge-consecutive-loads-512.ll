@@ -419,13 +419,13 @@ define <16 x i32> @merge_16i32_i32_23u5uuuuuuuuuuuu(i32* %ptr) nounwind uwtable 
 define <16 x i32> @merge_16i32_i32_0uu3uuuuuuuuCuEF(i32* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_16i32_i32_0uu3uuuuuuuuCuEF:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqu32 (%rdi), %zmm0
+; ALL-NEXT:    vmovups (%rdi), %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X32-AVX512F-LABEL: merge_16i32_i32_0uu3uuuuuuuuCuEF:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vmovdqu32 (%eax), %zmm0
+; X32-AVX512F-NEXT:    vmovups (%eax), %zmm0
 ; X32-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds i32, i32* %ptr, i64 0
   %ptr3 = getelementptr inbounds i32, i32* %ptr, i64 3

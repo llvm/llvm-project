@@ -1823,6 +1823,23 @@ ScriptInterpreterPython::ScriptedThreadPlanShouldStop(StructuredData::ObjectSP i
     return should_stop;
 }
 
+bool
+ScriptInterpreterPython::ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp, bool &script_error)
+{
+    bool is_stale = true;
+    StructuredData::Generic *generic = nullptr;
+    if (implementor_sp)
+        generic = implementor_sp->GetAsGeneric();
+    if (generic)
+    {
+        Locker py_lock(this, Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+        is_stale = g_swig_call_thread_plan(generic->GetValue(), "is_stale", nullptr, script_error);
+        if (script_error)
+            return true;
+    }
+    return is_stale;
+}
+
 lldb::StateType
 ScriptInterpreterPython::ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp, bool &script_error)
 {

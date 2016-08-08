@@ -162,6 +162,13 @@ BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB) const {
   return BFI->getBlockProfileCount(*getFunction(), BB);
 }
 
+Optional<uint64_t>
+BlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
+  if (!BFI)
+    return None;
+  return BFI->getProfileCountFromFreq(*getFunction(), Freq);
+}
+
 void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB, uint64_t Freq) {
   assert(BFI && "Expected analysis to be available");
   BFI->setBlockFreq(BB, Freq);

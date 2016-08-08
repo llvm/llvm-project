@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=powerpc64-unknown-linux-gnu -O2 -o - -optimize-regalloc=false -regalloc=fast | FileCheck %s
+; RUN: llc -verify-machineinstrs %s -mtriple=powerpc64-unknown-linux-gnu -O2 -o - -optimize-regalloc=false -regalloc=fast | FileCheck %s
 
 declare void @func(i8*, i64, i64)
 

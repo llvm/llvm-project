@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64 > %t
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 > %t
 ; RUN: grep  __floattitf %t
 ; RUN: grep  __fixunstfti %t
 

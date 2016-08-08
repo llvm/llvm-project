@@ -14,7 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_LOGICALDYLIB_H
 #define LLVM_EXECUTIONENGINE_ORC_LOGICALDYLIB_H
 
-#include "llvm/ExecutionEngine/Orc/JITSymbol.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include <string>
 #include <vector>
 
@@ -46,7 +46,7 @@ private:
 public:
 
   typedef typename BaseLayerHandleList::iterator BaseLayerHandleIterator;
-  typedef typename LogicalModuleList::iterator LogicalModuleHandle;
+  typedef typename LogicalModuleList::size_type LogicalModuleHandle;
 
   LogicalDylib(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
 
@@ -65,34 +65,35 @@ public:
 
   LogicalModuleHandle createLogicalModule() {
     LogicalModules.push_back(LogicalModule());
-    return std::prev(LogicalModules.end());
+    return LogicalModules.size() - 1;
   }
 
   void addToLogicalModule(LogicalModuleHandle LMH,
                           BaseLayerModuleSetHandleT BaseLayerHandle) {
-    LMH->BaseLayerHandles.push_back(BaseLayerHandle);
+    LogicalModules[LMH].BaseLayerHandles.push_back(BaseLayerHandle);
   }
 
   LogicalModuleResources& getLogicalModuleResources(LogicalModuleHandle LMH) {
-    return LMH->Resources;
+    return LogicalModules[LMH].Resources;
   }
 
   BaseLayerHandleIterator moduleHandlesBegin(LogicalModuleHandle LMH) {
-    return LMH->BaseLayerHandles.begin();
+    return LogicalModules[LMH].BaseLayerHandles.begin();
   }
 
   BaseLayerHandleIterator moduleHandlesEnd(LogicalModuleHandle LMH) {
-    return LMH->BaseLayerHandles.end();
+    return LogicalModules[LMH].BaseLayerHandles.end();
   }
 
   JITSymbol findSymbolInLogicalModule(LogicalModuleHandle LMH,
                                       const std::string &Name,
                                       bool ExportedSymbolsOnly) {
 
-    if (auto StubSym = LMH->Resources.findSymbol(Name, ExportedSymbolsOnly))
+    if (auto StubSym =
+          LogicalModules[LMH].Resources.findSymbol(Name, ExportedSymbolsOnly))
       return StubSym;
 
-    for (auto BLH : LMH->BaseLayerHandles)
+    for (auto BLH : LogicalModules[LMH].BaseLayerHandles)
       if (auto Symbol = BaseLayer.findSymbolIn(BLH, Name, ExportedSymbolsOnly))
         return Symbol;
     return nullptr;
@@ -103,10 +104,10 @@ public:
     if (auto Symbol = findSymbolInLogicalModule(LMH, Name, false))
       return Symbol;
 
-    for (auto LMI = LogicalModules.begin(), LME = LogicalModules.end();
-           LMI != LME; ++LMI) {
-      if (LMI != LMH)
-        if (auto Symbol = findSymbolInLogicalModule(LMI, Name, false))
+    for (typename LogicalModuleList::size_type I = 0, E = LogicalModules.size();
+         I != E; ++I) {
+      if (I != LMH)
+        if (auto Symbol = findSymbolInLogicalModule(I, Name, false))
           return Symbol;
     }
 
@@ -114,14 +115,24 @@ public:
   }
 
   JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
-    for (auto LMI = LogicalModules.begin(), LME = LogicalModules.end();
-         LMI != LME; ++LMI)
-      if (auto Sym = findSymbolInLogicalModule(LMI, Name, ExportedSymbolsOnly))
+    for (typename LogicalModuleList::size_type I = 0, E = LogicalModules.size();
+         I != E; ++I)
+      if (auto Sym = findSymbolInLogicalModule(I, Name, ExportedSymbolsOnly))
         return Sym;
     return nullptr;
   }
 
   LogicalDylibResources& getDylibResources() { return DylibResources; }
+
+  LogicalModuleResources*
+  getLogicalModuleResourcesForSymbol(const std::string &Name,
+                                     bool ExportedSymbolsOnly) {
+    for (typename LogicalModuleList::size_type I = 0, E = LogicalModules.size();
+         I != E; ++I)
+      if (auto Sym = LogicalModules[I].Resources.findSymbol(Name, ExportedSymbolsOnly))
+        return &LogicalModules[I]->Resources;
+    return nullptr;
+  }
 
 protected:
   BaseLayerT BaseLayer;

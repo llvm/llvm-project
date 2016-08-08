@@ -92,30 +92,30 @@ const MipsFrameLowering *MipsFrameLowering::create(const MipsSubtarget &ST) {
 // if it needs dynamic stack realignment, if frame pointer elimination is
 // disabled, or if the frame address is taken.
 bool MipsFrameLowering::hasFP(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-      MFI->hasVarSizedObjects() || MFI->isFrameAddressTaken() ||
+      MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       TRI->needsStackRealignment(MF);
 }
 
 bool MipsFrameLowering::hasBP(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return MFI->hasVarSizedObjects() && TRI->needsStackRealignment(MF);
+  return MFI.hasVarSizedObjects() && TRI->needsStackRealignment(MF);
 }
 
 uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   int64_t Offset = 0;
 
   // Iterate over fixed sized objects.
-  for (int I = MFI->getObjectIndexBegin(); I != 0; ++I)
-    Offset = std::max(Offset, -MFI->getObjectOffset(I));
+  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
+    Offset = std::max(Offset, -MFI.getObjectOffset(I));
 
   // Conservatively assume all callee-saved registers will be saved.
   for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
@@ -123,19 +123,19 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
     Offset = alignTo(Offset + Size, Size);
   }
 
-  unsigned MaxAlign = MFI->getMaxAlignment();
+  unsigned MaxAlign = MFI.getMaxAlignment();
 
   // Check that MaxAlign is not zero if there is a stack object that is not a
   // callee-saved spill.
-  assert(!MFI->getObjectIndexEnd() || MaxAlign);
+  assert(!MFI.getObjectIndexEnd() || MaxAlign);
 
   // Iterate over other objects.
-  for (unsigned I = 0, E = MFI->getObjectIndexEnd(); I != E; ++I)
-    Offset = alignTo(Offset + MFI->getObjectSize(I), MaxAlign);
+  for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I)
+    Offset = alignTo(Offset + MFI.getObjectSize(I), MaxAlign);
 
   // Call frame.
-  if (MFI->adjustsStack() && hasReservedCallFrame(MF))
-    Offset = alignTo(Offset + MFI->getMaxCallFrameSize(),
+  if (MFI.adjustsStack() && hasReservedCallFrame(MF))
+    Offset = alignTo(Offset + MFI.getMaxCallFrameSize(),
                      std::max(MaxAlign, getStackAlignment()));
 
   return alignTo(Offset, getStackAlignment());

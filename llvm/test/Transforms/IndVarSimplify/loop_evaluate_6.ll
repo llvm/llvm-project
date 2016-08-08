@@ -1,6 +1,10 @@
-; RUN: opt < %s -indvars -loop-deletion -S | grep phi | count 1
+; RUN: opt < %s -indvars -loop-deletion -S | FileCheck %s
 
 define i32 @test(i32 %x_offs) nounwind readnone {
+; CHECK-LABEL: @test(
+; CHECK: phi
+; CHECK-NOT: phi
+
 entry:
 	%0 = icmp sgt i32 %x_offs, 4		; <i1> [#uses=1]
 	br i1 %0, label %bb.nph, label %bb2

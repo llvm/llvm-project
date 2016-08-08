@@ -108,7 +108,7 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
 
     unsigned BlockSize = 0;
     for (MachineInstr &MI : *MBB)
-      BlockSize += TII->GetInstSizeInBytes(MI);
+      BlockSize += TII->getInstSizeInBytes(MI);
 
     BlockSizes[MBB->getNumber()] = BlockSize;
     FuncSize += BlockSize;
@@ -155,7 +155,7 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
           Dest = I->getOperand(0).getMBB();
 
         if (!Dest) {
-          MBBStartOffset += TII->GetInstSizeInBytes(*I);
+          MBBStartOffset += TII->getInstSizeInBytes(*I);
           continue;
         }
         

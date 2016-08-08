@@ -21,6 +21,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -260,7 +261,7 @@ protected:
         if (!m_filtersp)
             m_filtersp.reset(new SearchFilterForUnconstrainedSearches(target));
     }
-    
+
     void
     FixupScriptDetails(lldb_renderscript::RSModuleDescriptorSP rsmodule_sp);
 
@@ -321,10 +322,11 @@ protected:
     bool m_breakAllKernels;
     static const HookDefn s_runtimeHookDefns[];
     static const size_t s_runtimeHookCount;
+    LLVMUserExpression::IRPasses *m_ir_passes;
 
 private:
     RenderScriptRuntime(Process *process); // Call CreateInstance instead.
-    
+
     static bool
     HookCallback(void *baton, StoppointCallbackContext *ctx, lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
@@ -406,10 +408,19 @@ private:
 
     // Search for a previously saved allocation detail object using a target address.
     // If an allocation does not exist for this address then nullptr will be returned.
-    // If 'create' is true and there is no previous allocation then a new allocation
-    // detail object will be created for this address and returned.
     AllocationDetails *
-    LookUpAllocation(lldb::addr_t address, bool create);
+    LookUpAllocation(lldb::addr_t address);
+
+    // Creates a new allocation with the specified address assigning a new ID and removes
+    // any previous stored allocation which has the same address.
+    AllocationDetails *
+    CreateAllocation(lldb::addr_t address);
+
+    bool
+    GetOverrideExprOptions(clang::TargetOptions &prototype) override;
+
+    bool
+    GetIRPasses(LLVMUserExpression::IRPasses &passes) override;
 };
 
 } // namespace lldb_private

@@ -223,8 +223,11 @@ ProcessElfCore::DoLoadCore ()
 
         // Parse thread contexts and auxv structure
         if (header->p_type == llvm::ELF::PT_NOTE)
-            ParseThreadContextsFromNoteSegment(header, data);
-
+        {
+            error = ParseThreadContextsFromNoteSegment(header, data);
+            if (error.Fail())
+                return error;
+        }
         // PT_LOAD segments contains address map
         if (header->p_type == llvm::ELF::PT_LOAD)
         {
@@ -533,7 +536,7 @@ ParseFreeBSDThrMisc(ThreadData &thread_data, DataExtractor &data)
 ///        new thread when it finds NT_PRSTATUS or NT_PRPSINFO NOTE entry.
 ///    For case (b) there may be either one NT_PRPSINFO per thread, or a single
 ///    one that applies to all threads (depending on the platform type).
-void
+Error
 ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *segment_header,
                                                    DataExtractor segment_data)
 {
@@ -549,6 +552,7 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
     ELFLinuxPrStatus prstatus;
     size_t header_size;
     size_t len;
+    Error error;
 
     // Loop through the NOTE entires in the segment
     while (offset < segment_header->p_filesz)
@@ -610,7 +614,9 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
             {
                 case NT_PRSTATUS:
                     have_prstatus = true;
-                    prstatus.Parse(note_data, arch);
+                    error = prstatus.Parse(note_data, arch);
+                    if (error.Fail())
+                        return error;
                     thread_data->signo = prstatus.pr_cursig;
                     thread_data->tid = prstatus.pr_pid;
                     header_size = ELFLinuxPrStatus::GetSize(arch);
@@ -622,7 +628,9 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
                     break;
                 case NT_PRPSINFO:
                     have_prpsinfo = true;
-                    prpsinfo.Parse(note_data, arch);
+                    error = prpsinfo.Parse(note_data, arch);
+                    if (error.Fail())
+                        return error;
                     thread_data->name = prpsinfo.pr_fname;
                     SetID(prpsinfo.pr_pid);
                     break;
@@ -663,6 +671,8 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
     {
         m_thread_data.push_back(*thread_data);
     }
+
+    return error;
 }
 
 uint32_t

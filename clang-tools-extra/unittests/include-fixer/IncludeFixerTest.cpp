@@ -77,6 +77,12 @@ static std::string runIncludeFixer(
       SymbolInfo("Vector", SymbolInfo::SymbolKind::Class, "\"Vector.h\"", 2,
                  {{SymbolInfo::ContextType::Namespace, "a"}},
                  /*num_occurrences=*/1),
+      SymbolInfo("StrCat", SymbolInfo::SymbolKind::Class, "\"strcat.h\"",
+                 1, {{SymbolInfo::ContextType::Namespace, "str"}}),
+      SymbolInfo("str", SymbolInfo::SymbolKind::Class, "\"str.h\"",
+                 1, {}),
+      SymbolInfo("foo2", SymbolInfo::SymbolKind::Class, "\"foo2.h\"",
+                 1, {}),
   };
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
   SymbolIndexMgr->addSymbolIndex(
@@ -189,6 +195,16 @@ TEST(IncludeFixer, ScopedNamespaceSymbols) {
   // full match.
   EXPECT_EQ("#include \"bar.h\"\nnamespace A {\na::b::bar b;\n}",
             runIncludeFixer("namespace A {\nb::bar b;\n}"));
+
+  // Finds candidates for "str::StrCat".
+  EXPECT_EQ("#include \"strcat.h\"\nnamespace foo2 {\nstr::StrCat b;\n}",
+            runIncludeFixer("namespace foo2 {\nstr::StrCat b;\n}"));
+  // str::StrCat2 doesn't exist.
+  // In these two cases, StrCat2 is a nested class of class str.
+  EXPECT_EQ("#include \"str.h\"\nnamespace foo2 {\nstr::StrCat2 b;\n}",
+            runIncludeFixer("namespace foo2 {\nstr::StrCat2 b;\n}"));
+  EXPECT_EQ("#include \"str.h\"\nnamespace ns {\nstr::StrCat2 b;\n}",
+            runIncludeFixer("namespace ns {\nstr::StrCat2 b;\n}"));
 }
 
 TEST(IncludeFixer, EnumConstantSymbols) {
@@ -253,7 +269,7 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
   // Test nested classes.
   EXPECT_EQ("#include \"bar.h\"\nnamespace d {\na::b::bar::t b;\n}\n",
             runIncludeFixer("namespace d {\nbar::t b;\n}\n"));
-  EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar::t b;\n}\n",
+  EXPECT_EQ("#include \"bar.h\"\nnamespace c {\na::b::bar::t b;\n}\n",
             runIncludeFixer("namespace c {\nbar::t b;\n}\n"));
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nb::bar::t b;\n}\n",
             runIncludeFixer("namespace a {\nbar::t b;\n}\n"));

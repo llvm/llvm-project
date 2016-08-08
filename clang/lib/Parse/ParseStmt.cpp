@@ -206,7 +206,8 @@ Retry:
   }
 
   default: {
-    if ((getLangOpts().CPlusPlus || Allowed == ACK_Any) &&
+    if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
+         Allowed == ACK_Any) &&
         isDeclarationStatement()) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl = ParseDeclaration(Declarator::BlockContext,

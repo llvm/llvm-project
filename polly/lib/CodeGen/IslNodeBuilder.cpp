@@ -193,17 +193,8 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   return 0;
 }
 
-/// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
-///
-/// This includes the SCEVUnknowns referenced by the SCEVs used in the
-/// statement and the base pointers of the memory accesses. For scalar
-/// statements we force the generation of alloca memory locations and list
-/// these locations in the set of out-of-scop values as well.
-///
-/// @param Stmt    The statement for which to extract the information.
-/// @param UserPtr A void pointer that can be casted to a SubtreeReferences
-///                structure.
-isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
+isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                               bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())
@@ -226,7 +217,8 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
       continue;
     }
 
-    References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
+    if (CreateScalarRefs)
+      References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
   }
 
   return isl_stat_ok;
@@ -1066,14 +1058,14 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   if (ValueMap.count(MA->getAccessInstruction()))
     return true;
 
-  // Check for recurrsion which can be caused by additional constraints, e.g.,
-  // non-finitie loop contraints. In such a case we have to bail out and insert
+  // Check for recursion which can be caused by additional constraints, e.g.,
+  // non-finite loop constraints. In such a case we have to bail out and insert
   // a "false" runtime check that will cause the original code to be executed.
   auto PtrId = std::make_pair(IAClass.IdentifyingPointer, IAClass.AccessType);
   if (!PreloadedPtrs.insert(PtrId).second)
     return false;
 
-  // The exectution context of the IAClass.
+  // The execution context of the IAClass.
   isl_set *&ExecutionCtx = IAClass.ExecutionContext;
 
   // If the base pointer of this class is dependent on another one we have to
@@ -1155,6 +1147,32 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   }
 
   return true;
+}
+
+void IslNodeBuilder::allocateNewArrays() {
+  for (auto &SAI : S.arrays()) {
+    if (SAI->getBasePtr())
+      continue;
+
+    Type *NewArrayType = nullptr;
+    for (unsigned i = SAI->getNumberOfDimensions() - 1; i >= 1; i--) {
+      auto *DimSize = SAI->getDimensionSize(i);
+      unsigned UnsignedDimSize = static_cast<const SCEVConstant *>(DimSize)
+                                     ->getAPInt()
+                                     .getLimitedValue();
+
+      if (!NewArrayType)
+        NewArrayType = SAI->getElementType();
+
+      NewArrayType = ArrayType::get(NewArrayType, UnsignedDimSize);
+    }
+
+    auto InstIt =
+        Builder.GetInsertBlock()->getParent()->getEntryBlock().getTerminator();
+    Value *CreatedArray =
+        new AllocaInst(NewArrayType, SAI->getName(), &*InstIt);
+    SAI->setBasePtr(CreatedArray);
+  }
 }
 
 bool IslNodeBuilder::preloadInvariantLoads() {

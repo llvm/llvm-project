@@ -198,13 +198,14 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   HadError = true;
   errs() << ToolName << ": " << FileName;
 
-  ErrorOr<StringRef> NameOrErr = C.getName();
+  Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
   // the index of which archive member this is and or its offset in the
   // archive instead of "???" as the name.
-  if (NameOrErr.getError())
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
     errs() << "(" << "???" << ")";
-  else
+  } else
     errs() << "(" << NameOrErr.get() << ")";
 
   if (!ArchitectureName.empty())
@@ -1084,7 +1085,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
   Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(
       BufferOrErr.get()->getMemBufferRef(), NoLLVMBitcode ? nullptr : &Context);
   if (!BinaryOrErr) {
-    error(errorToErrorCode(BinaryOrErr.takeError()), Filename);
+    error(BinaryOrErr.takeError(), Filename);
     return;
   }
   Binary &Bin = *BinaryOrErr.get();
@@ -1096,12 +1097,14 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
       if (I != E) {
         outs() << "Archive map\n";
         for (; I != E; ++I) {
-          ErrorOr<Archive::Child> C = I->getMember();
-          if (error(C.getError()))
+          Expected<Archive::Child> C = I->getMember();
+          if (!C)
+            error(C.takeError(), Filename);
+          Expected<StringRef> FileNameOrErr = C->getName();
+          if (!FileNameOrErr) {
+            error(FileNameOrErr.takeError(), Filename);
             return;
-          ErrorOr<StringRef> FileNameOrErr = C->getName();
-          if (error(FileNameOrErr.getError()))
-            return;
+          }
           StringRef SymName = I->getName();
           outs() << SymName << " in " << FileNameOrErr.get() << "\n";
         }

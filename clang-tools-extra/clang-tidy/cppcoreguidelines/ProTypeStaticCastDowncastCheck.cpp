@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
-  
+
 void ProTypeStaticCastDowncastCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;

@@ -1,0 +1,6 @@
+// RUN: rm -fr %t.prof
+// RUN: %clangxx_pgogen=%t.prof/ -o %t.gen -O2 %S/../Inputs/comdat_rename_1.cc %S/../Inputs/comdat_rename_2.cc
+// RUN: %t.gen
+// RUN: llvm-profdata merge -o %t.profdata %t.prof/
+// RUN: %clangxx_profuse=%t.profdata  -O2 -emit-llvm -S %S/../Inputs/comdat_rename_1.cc -o - | FileCheck %S/../Inputs/comdat_rename_1.cc
+// RUN: %clangxx_profuse=%t.profdata  -O2 -emit-llvm -S %S/../Inputs/comdat_rename_2.cc -o - | FileCheck %S/../Inputs/comdat_rename_2.cc

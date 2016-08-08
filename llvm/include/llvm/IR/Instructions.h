@@ -46,8 +46,7 @@ enum SynchronizationScope {
 //                                AllocaInst Class
 //===----------------------------------------------------------------------===//
 
-/// AllocaInst - an instruction to allocate memory on the stack
-///
+/// an instruction to allocate memory on the stack
 class AllocaInst : public UnaryInstruction {
   Type *AllocatedType;
 
@@ -74,65 +73,56 @@ public:
   // Out of line virtual method, so the vtable, etc. has a home.
   ~AllocaInst() override;
 
-  /// isArrayAllocation - Return true if there is an allocation size parameter
-  /// to the allocation instruction that is not 1.
-  ///
+  /// Return true if there is an allocation size parameter to the allocation
+  /// instruction that is not 1.
   bool isArrayAllocation() const;
 
-  /// getArraySize - Get the number of elements allocated. For a simple
-  /// allocation of a single element, this will return a constant 1 value.
-  ///
+  /// Get the number of elements allocated. For a simple allocation of a single
+  /// element, this will return a constant 1 value.
   const Value *getArraySize() const { return getOperand(0); }
   Value *getArraySize() { return getOperand(0); }
 
-  /// getType - Overload to return most specific pointer type
-  ///
+  /// Overload to return most specific pointer type.
   PointerType *getType() const {
     return cast<PointerType>(Instruction::getType());
   }
 
-  /// getAllocatedType - Return the type that is being allocated by the
-  /// instruction.
-  ///
+  /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
-  /// \brief for use only in special circumstances that need to generically
+  /// for use only in special circumstances that need to generically
   /// transform a whole instruction (eg: IR linking and vectorization).
   void setAllocatedType(Type *Ty) { AllocatedType = Ty; }
 
-  /// getAlignment - Return the alignment of the memory that is being allocated
-  /// by the instruction.
-  ///
+  /// Return the alignment of the memory that is being allocated by the
+  /// instruction.
   unsigned getAlignment() const {
     return (1u << (getSubclassDataFromInstruction() & 31)) >> 1;
   }
   void setAlignment(unsigned Align);
 
-  /// isStaticAlloca - Return true if this alloca is in the entry block of the
-  /// function and is a constant size.  If so, the code generator will fold it
-  /// into the prolog/epilog code, so it is basically free.
+  /// Return true if this alloca is in the entry block of the function and is a
+  /// constant size. If so, the code generator will fold it into the
+  /// prolog/epilog code, so it is basically free.
   bool isStaticAlloca() const;
 
-  /// \brief Return true if this alloca is used as an inalloca argument to a
-  /// call.  Such allocas are never considered static even if they are in the
-  /// entry block.
+  /// Return true if this alloca is used as an inalloca argument to a call. Such
+  /// allocas are never considered static even if they are in the entry block.
   bool isUsedWithInAlloca() const {
     return getSubclassDataFromInstruction() & 32;
   }
 
-  /// \brief Specify whether this alloca is used to represent the arguments to
-  /// a call.
+  /// Specify whether this alloca is used to represent the arguments to a call.
   void setUsedWithInAlloca(bool V) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~32) |
                                (V ? 32 : 0));
   }
 
-  /// \brief Return true if this alloca is used as a swifterror argument to a
-  /// call.
+  /// Return true if this alloca is used as a swifterror argument to a call.
   bool isSwiftError() const {
     return getSubclassDataFromInstruction() & 64;
   }
 
-  /// \brief Specify whether this alloca is used to represent a swifterror.
+  /// Specify whether this alloca is used to represent a swifterror.
   void setSwiftError(bool V) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~64) |
                                (V ? 64 : 0));
@@ -158,9 +148,8 @@ private:
 //                                LoadInst Class
 //===----------------------------------------------------------------------===//
 
-/// LoadInst - an instruction for reading from memory.  This uses the
-/// SubclassData field in Value to store whether or not the load is volatile.
-///
+/// An instruction for reading from memory. This uses the SubclassData field in
+/// Value to store whether or not the load is volatile.
 class LoadInst : public UnaryInstruction {
   void AssertOK();
 
@@ -214,20 +203,16 @@ public:
   LoadInst(Value *Ptr, const char *NameStr, bool isVolatile,
            BasicBlock *InsertAtEnd);
 
-  /// isVolatile - Return true if this is a load from a volatile memory
-  /// location.
-  ///
+  /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassDataFromInstruction() & 1; }
 
-  /// setVolatile - Specify whether this is a volatile load or not.
-  ///
+  /// Specify whether this is a volatile load or not.
   void setVolatile(bool V) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
                                (V ? 1 : 0));
   }
 
-  /// getAlignment - Return the alignment of the access that is being performed
-  ///
+  /// Return the alignment of the access that is being performed.
   unsigned getAlignment() const {
     return (1 << ((getSubclassDataFromInstruction() >> 1) & 31)) >> 1;
   }
@@ -275,7 +260,7 @@ public:
   const Value *getPointerOperand() const { return getOperand(0); }
   static unsigned getPointerOperandIndex() { return 0U; }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
     return getPointerOperand()->getType()->getPointerAddressSpace();
   }
@@ -300,8 +285,7 @@ private:
 //                                StoreInst Class
 //===----------------------------------------------------------------------===//
 
-/// StoreInst - an instruction for storing to memory
-///
+/// An instruction for storing to memory.
 class StoreInst : public Instruction {
   void *operator new(size_t, unsigned) = delete;
   void AssertOK();
@@ -334,13 +318,10 @@ public:
             SynchronizationScope SynchScope,
             BasicBlock *InsertAtEnd);
 
-  /// isVolatile - Return true if this is a store to a volatile memory
-  /// location.
-  ///
+  /// Return true if this is a store to a volatile memory location.
   bool isVolatile() const { return getSubclassDataFromInstruction() & 1; }
 
-  /// setVolatile - Specify whether this is a volatile store or not.
-  ///
+  /// Specify whether this is a volatile store or not.
   void setVolatile(bool V) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
                                (V ? 1 : 0));
@@ -349,8 +330,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// getAlignment - Return the alignment of the access that is being performed
-  ///
+  /// Return the alignment of the access that is being performed
   unsigned getAlignment() const {
     return (1 << ((getSubclassDataFromInstruction() >> 1) & 31)) >> 1;
   }
@@ -401,7 +381,7 @@ public:
   const Value *getPointerOperand() const { return getOperand(1); }
   static unsigned getPointerOperandIndex() { return 1U; }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
     return getPointerOperand()->getType()->getPointerAddressSpace();
   }
@@ -432,8 +412,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(StoreInst, Value)
 //                                FenceInst Class
 //===----------------------------------------------------------------------===//
 
-/// FenceInst - an instruction for ordering other memory operations
-///
+/// An instruction for ordering other memory operations.
 class FenceInst : public Instruction {
   void *operator new(size_t, unsigned) = delete;
   void Init(AtomicOrdering Ordering, SynchronizationScope SynchScope);
@@ -502,7 +481,7 @@ private:
 //                                AtomicCmpXchgInst Class
 //===----------------------------------------------------------------------===//
 
-/// AtomicCmpXchgInst - an instruction that atomically checks whether a
+/// an instruction that atomically checks whether a
 /// specified value is in a memory location, and, if it is, stores a new value
 /// there.  Returns the value that was loaded.
 ///
@@ -533,14 +512,14 @@ public:
                     SynchronizationScope SynchScope,
                     BasicBlock *InsertAtEnd);
 
-  /// isVolatile - Return true if this is a cmpxchg from a volatile memory
+  /// Return true if this is a cmpxchg from a volatile memory
   /// location.
   ///
   bool isVolatile() const {
     return getSubclassDataFromInstruction() & 1;
   }
 
-  /// setVolatile - Specify whether this is a volatile cmpxchg.
+  /// Specify whether this is a volatile cmpxchg.
   ///
   void setVolatile(bool V) {
      setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
@@ -609,12 +588,12 @@ public:
   Value *getNewValOperand() { return getOperand(2); }
   const Value *getNewValOperand() const { return getOperand(2); }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
     return getPointerOperand()->getType()->getPointerAddressSpace();
   }
 
-  /// \brief Returns the strongest permitted ordering on failure, given the
+  /// Returns the strongest permitted ordering on failure, given the
   /// desired ordering on success.
   ///
   /// If the comparison in a cmpxchg operation fails, there is no atomic store
@@ -664,7 +643,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(AtomicCmpXchgInst, Value)
 //                                AtomicRMWInst Class
 //===----------------------------------------------------------------------===//
 
-/// AtomicRMWInst - an instruction that atomically reads a memory location,
+/// an instruction that atomically reads a memory location,
 /// combines it with another value, and then stores the result back.  Returns
 /// the old value.
 ///
@@ -731,13 +710,13 @@ public:
                                (Operation << 5));
   }
 
-  /// isVolatile - Return true if this is a RMW on a volatile memory location.
+  /// Return true if this is a RMW on a volatile memory location.
   ///
   bool isVolatile() const {
     return getSubclassDataFromInstruction() & 1;
   }
 
-  /// setVolatile - Specify whether this is a volatile RMW or not.
+  /// Specify whether this is a volatile RMW or not.
   ///
   void setVolatile(bool V) {
      setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
@@ -781,7 +760,7 @@ public:
   Value *getValOperand() { return getOperand(1); }
   const Value *getValOperand() const { return getOperand(1); }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
     return getPointerOperand()->getType()->getPointerAddressSpace();
   }
@@ -823,7 +802,7 @@ inline Type *checkGEPType(Type *Ty) {
   return Ty;
 }
 
-/// GetElementPtrInst - an instruction for type-safe pointer arithmetic to
+/// an instruction for type-safe pointer arithmetic to
 /// access elements of arrays and structs
 ///
 class GetElementPtrInst : public Instruction {
@@ -935,14 +914,14 @@ public:
     return ResultElementType;
   }
 
-  /// \brief Returns the address space of this instruction's pointer type.
+  /// Returns the address space of this instruction's pointer type.
   unsigned getAddressSpace() const {
     // Note that this is always the same as the pointer operand's address space
     // and that is cheaper to compute, so cheat here.
     return getPointerAddressSpace();
   }
 
-  /// getIndexedType - Returns the type of the element that would be loaded with
+  /// Returns the type of the element that would be loaded with
   /// a load instruction with the specified parameters.
   ///
   /// Null is returned if the indices are invalid for the specified
@@ -967,18 +946,18 @@ public:
     return 0U;    // get index for modifying correct operand.
   }
 
-  /// getPointerOperandType - Method to return the pointer operand as a
+  /// Method to return the pointer operand as a
   /// PointerType.
   Type *getPointerOperandType() const {
     return getPointerOperand()->getType();
   }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
     return getPointerOperandType()->getPointerAddressSpace();
   }
 
-  /// GetGEPReturnType - Returns the pointer type returned by the GEP
+  /// Returns the pointer type returned by the GEP
   /// instruction, which may be a vector of pointers.
   static Type *getGEPReturnType(Value *Ptr, ArrayRef<Value *> IdxList) {
     return getGEPReturnType(
@@ -1011,24 +990,24 @@ public:
     return getNumOperands() > 1;
   }
 
-  /// hasAllZeroIndices - Return true if all of the indices of this GEP are
+  /// Return true if all of the indices of this GEP are
   /// zeros.  If so, the result pointer and the first operand have the same
   /// value, just potentially different types.
   bool hasAllZeroIndices() const;
 
-  /// hasAllConstantIndices - Return true if all of the indices of this GEP are
+  /// Return true if all of the indices of this GEP are
   /// constant integers.  If so, the result pointer and the first operand have
   /// a constant offset between them.
   bool hasAllConstantIndices() const;
 
-  /// setIsInBounds - Set or clear the inbounds flag on this GEP instruction.
+  /// Set or clear the inbounds flag on this GEP instruction.
   /// See LangRef.html for the meaning of inbounds on a getelementptr.
   void setIsInBounds(bool b = true);
 
-  /// isInBounds - Determine whether the GEP has the inbounds flag.
+  /// Determine whether the GEP has the inbounds flag.
   bool isInBounds() const;
 
-  /// \brief Accumulate the constant address offset of this GEP if possible.
+  /// Accumulate the constant address offset of this GEP if possible.
   ///
   /// This routine accepts an APInt into which it will accumulate the constant
   /// offset of this GEP if the GEP is in fact constant. If the GEP is not
@@ -1088,7 +1067,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrInst, Value)
 /// This instruction compares its operands according to the predicate given
 /// to the constructor. It only operates on integers or pointers. The operands
 /// must be identical types.
-/// \brief Represent an integer comparison operator.
+/// Represent an integer comparison operator.
 class ICmpInst: public CmpInst {
   void anchor() override;
 
@@ -1107,11 +1086,11 @@ class ICmpInst: public CmpInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical ICmpInst
+  /// Clone an identical ICmpInst
   ICmpInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics.
+  /// Constructor with insert-before-instruction semantics.
   ICmpInst(
     Instruction *InsertBefore,  ///< Where to insert
     Predicate pred,  ///< The predicate to use for the comparison
@@ -1126,7 +1105,7 @@ public:
 #endif
   }
 
-  /// \brief Constructor with insert-at-end semantics.
+  /// Constructor with insert-at-end semantics.
   ICmpInst(
     BasicBlock &InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
@@ -1141,7 +1120,7 @@ public:
 #endif
   }
 
-  /// \brief Constructor with no-insertion semantics
+  /// Constructor with no-insertion semantics
   ICmpInst(
     Predicate pred, ///< The predicate to use for the comparison
     Value *LHS,     ///< The left-hand-side of the expression
@@ -1157,64 +1136,64 @@ public:
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
-  /// \brief Return the signed version of the predicate
+  /// Return the signed version of the predicate
   Predicate getSignedPredicate() const {
     return getSignedPredicate(getPredicate());
   }
 
   /// This is a static version that you can use without an instruction.
-  /// \brief Return the signed version of the predicate.
+  /// Return the signed version of the predicate.
   static Predicate getSignedPredicate(Predicate pred);
 
   /// For example, EQ->EQ, SLE->ULE, UGT->UGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as unsigned.
-  /// \brief Return the unsigned version of the predicate
+  /// Return the unsigned version of the predicate
   Predicate getUnsignedPredicate() const {
     return getUnsignedPredicate(getPredicate());
   }
 
   /// This is a static version that you can use without an instruction.
-  /// \brief Return the unsigned version of the predicate.
+  /// Return the unsigned version of the predicate.
   static Predicate getUnsignedPredicate(Predicate pred);
 
-  /// isEquality - Return true if this predicate is either EQ or NE.  This also
+  /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
   static bool isEquality(Predicate P) {
     return P == ICMP_EQ || P == ICMP_NE;
   }
 
-  /// isEquality - Return true if this predicate is either EQ or NE.  This also
+  /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
   bool isEquality() const {
     return isEquality(getPredicate());
   }
 
   /// @returns true if the predicate of this ICmpInst is commutative
-  /// \brief Determine if this relation is commutative.
+  /// Determine if this relation is commutative.
   bool isCommutative() const { return isEquality(); }
 
-  /// isRelational - Return true if the predicate is relational (not EQ or NE).
+  /// Return true if the predicate is relational (not EQ or NE).
   ///
   bool isRelational() const {
     return !isEquality();
   }
 
-  /// isRelational - Return true if the predicate is relational (not EQ or NE).
+  /// Return true if the predicate is relational (not EQ or NE).
   ///
   static bool isRelational(Predicate P) {
     return !isEquality(P);
   }
 
   /// Initialize a set of values that all satisfy the predicate with C.
-  /// \brief Make a ConstantRange for a relation with a constant value.
+  /// Make a ConstantRange for a relation with a constant value.
   static ConstantRange makeConstantRange(Predicate pred, const APInt &C);
 
   /// Exchange the two operands to this instruction in such a way that it does
   /// not modify the semantics of the instruction. The predicate value may be
   /// changed to retain the same result if the predicate is order dependent
   /// (e.g. ult).
-  /// \brief Swap operands and adjust predicate.
+  /// Swap operands and adjust predicate.
   void swapOperands() {
     setPredicate(getSwappedPredicate());
     Op<0>().swap(Op<1>());
@@ -1236,16 +1215,16 @@ public:
 /// This instruction compares its operands according to the predicate given
 /// to the constructor. It only operates on floating point values or packed
 /// vectors of floating point values. The operands must be identical types.
-/// \brief Represents a floating point comparison operator.
+/// Represents a floating point comparison operator.
 class FCmpInst: public CmpInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical FCmpInst
+  /// Clone an identical FCmpInst
   FCmpInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics.
+  /// Constructor with insert-before-instruction semantics.
   FCmpInst(
     Instruction *InsertBefore, ///< Where to insert
     Predicate pred,  ///< The predicate to use for the comparison
@@ -1264,7 +1243,7 @@ public:
            "Invalid operand types for FCmp instruction");
   }
 
-  /// \brief Constructor with insert-at-end semantics.
+  /// Constructor with insert-at-end semantics.
   FCmpInst(
     BasicBlock &InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
@@ -1283,7 +1262,7 @@ public:
            "Invalid operand types for FCmp instruction");
   }
 
-  /// \brief Constructor with no-insertion semantics
+  /// Constructor with no-insertion semantics
   FCmpInst(
     Predicate pred, ///< The predicate to use for the comparison
     Value *LHS,     ///< The left-hand-side of the expression
@@ -1301,18 +1280,18 @@ public:
   }
 
   /// @returns true if the predicate of this instruction is EQ or NE.
-  /// \brief Determine if this is an equality predicate.
+  /// Determine if this is an equality predicate.
   static bool isEquality(Predicate Pred) {
     return Pred == FCMP_OEQ || Pred == FCMP_ONE || Pred == FCMP_UEQ ||
            Pred == FCMP_UNE;
   }
 
   /// @returns true if the predicate of this instruction is EQ or NE.
-  /// \brief Determine if this is an equality predicate.
+  /// Determine if this is an equality predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
   /// @returns true if the predicate of this instruction is commutative.
-  /// \brief Determine if this is a commutative predicate.
+  /// Determine if this is a commutative predicate.
   bool isCommutative() const {
     return isEquality() ||
            getPredicate() == FCMP_FALSE ||
@@ -1322,20 +1301,20 @@ public:
   }
 
   /// @returns true if the predicate is relational (not EQ or NE).
-  /// \brief Determine if this a relational predicate.
+  /// Determine if this a relational predicate.
   bool isRelational() const { return !isEquality(); }
 
   /// Exchange the two operands to this instruction in such a way that it does
   /// not modify the semantics of the instruction. The predicate value may be
   /// changed to retain the same result if the predicate is order dependent
   /// (e.g. ult).
-  /// \brief Swap operands and adjust predicate.
+  /// Swap operands and adjust predicate.
   void swapOperands() {
     setPredicate(getSwappedPredicate());
     Op<0>().swap(Op<1>());
   }
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::FCmp;
   }
@@ -1345,7 +1324,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// CallInst - This class represents a function call, abstracting a target
+/// This class represents a function call, abstracting a target
 /// machine's calling convention.  This class uses low bit of the SubClassData
 /// field to indicate whether or not this is a tail call.  The rest of the bits
 /// hold the calling convention of the call.
@@ -1366,7 +1345,7 @@ class CallInst : public Instruction,
   void init(Value *Func, const Twine &NameStr);
 
   /// Construct a CallInst given a range of arguments.
-  /// \brief Construct a CallInst from a range of arguments
+  /// Construct a CallInst from a range of arguments
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
                   Instruction *InsertBefore);
@@ -1382,7 +1361,7 @@ class CallInst : public Instruction,
       : CallInst(Func, Args, None, NameStr, InsertBefore) {}
 
   /// Construct a CallInst given a range of arguments.
-  /// \brief Construct a CallInst from a range of arguments
+  /// Construct a CallInst from a range of arguments
   inline CallInst(Value *Func, ArrayRef<Value *> Args,
                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
                   BasicBlock *InsertAtEnd);
@@ -1456,7 +1435,7 @@ public:
     return new(1) CallInst(F, NameStr, InsertAtEnd);
   }
 
-  /// \brief Create a clone of \p CI with a different set of operand bundles and
+  /// Create a clone of \p CI with a different set of operand bundles and
   /// insert it before \p InsertPt.
   ///
   /// The returned call instruction is identical \p CI in every way except that
@@ -1465,7 +1444,7 @@ public:
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
 
-  /// CreateMalloc - Generate the IR for a call to malloc:
+  /// Generate the IR for a call to malloc:
   /// 1. Compute the malloc call's argument as the specified type's size,
   ///    possibly multiplied by the array size if the array size is not
   ///    constant 1.
@@ -1493,7 +1472,7 @@ public:
                                    ArrayRef<OperandBundleDef> Bundles = None,
                                    Function* MallocF = nullptr,
                                    const Twine &Name = "");
-  /// CreateFree - Generate the IR for a call to the builtin free function.
+  /// Generate the IR for a call to the builtin free function.
   static Instruction *CreateFree(Value *Source,
                                  Instruction *InsertBefore);
   static Instruction *CreateFree(Value *Source,
@@ -1542,7 +1521,7 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// getNumArgOperands - Return the number of call arguments.
+  /// Return the number of call arguments.
   ///
   unsigned getNumArgOperands() const {
     return getNumOperands() - getNumTotalBundleOperands() - 1;
@@ -1559,35 +1538,35 @@ public:
     setOperand(i, v);
   }
 
-  /// \brief Return the iterator pointing to the beginning of the argument list.
+  /// Return the iterator pointing to the beginning of the argument list.
   op_iterator arg_begin() { return op_begin(); }
 
-  /// \brief Return the iterator pointing to the end of the argument list.
+  /// Return the iterator pointing to the end of the argument list.
   op_iterator arg_end() {
     // [ call args ], [ operand bundles ], callee
     return op_end() - getNumTotalBundleOperands() - 1;
   }
 
-  /// \brief Iteration adapter for range-for loops.
+  /// Iteration adapter for range-for loops.
   iterator_range<op_iterator> arg_operands() {
     return make_range(arg_begin(), arg_end());
   }
 
-  /// \brief Return the iterator pointing to the beginning of the argument list.
+  /// Return the iterator pointing to the beginning of the argument list.
   const_op_iterator arg_begin() const { return op_begin(); }
 
-  /// \brief Return the iterator pointing to the end of the argument list.
+  /// Return the iterator pointing to the end of the argument list.
   const_op_iterator arg_end() const {
     // [ call args ], [ operand bundles ], callee
     return op_end() - getNumTotalBundleOperands() - 1;
   }
 
-  /// \brief Iteration adapter for range-for loops.
+  /// Iteration adapter for range-for loops.
   iterator_range<const_op_iterator> arg_operands() const {
     return make_range(arg_begin(), arg_end());
   }
 
-  /// \brief Wrappers for getting the \c Use of a call argument.
+  /// Wrappers for getting the \c Use of a call argument.
   const Use &getArgOperandUse(unsigned i) const {
     assert(i < getNumArgOperands() && "Out of bounds!");
     return getOperandUse(i);
@@ -1613,61 +1592,61 @@ public:
                                (ID << 2));
   }
 
-  /// getAttributes - Return the parameter attributes for this call.
+  /// Return the parameter attributes for this call.
   ///
   const AttributeSet &getAttributes() const { return AttributeList; }
 
-  /// setAttributes - Set the parameter attributes for this call.
+  /// Set the parameter attributes for this call.
   ///
   void setAttributes(const AttributeSet &Attrs) { AttributeList = Attrs; }
 
-  /// addAttribute - adds the attribute to the list of attributes.
+  /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind Kind);
 
-  /// addAttribute - adds the attribute to the list of attributes.
+  /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, StringRef Kind, StringRef Value);
 
-  /// addAttribute - adds the attribute to the list of attributes.
+  /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute Attr);
 
-  /// removeAttribute - removes the attribute from the list of attributes.
+  /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
-  /// removeAttribute - removes the attribute from the list of attributes.
+  /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
 
-  /// removeAttribute - removes the attribute from the list of attributes.
+  /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute Attr);
 
-  /// \brief adds the dereferenceable attribute to the list of attributes.
+  /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
 
-  /// \brief adds the dereferenceable_or_null attribute to the list of
+  /// adds the dereferenceable_or_null attribute to the list of
   /// attributes.
   void addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes);
 
-  /// \brief Determine whether this call has the given attribute.
+  /// Determine whether this call has the given attribute.
   bool hasFnAttr(Attribute::AttrKind Kind) const {
     assert(Kind != Attribute::NoBuiltin &&
            "Use CallInst::isNoBuiltin() to check for Attribute::NoBuiltin");
     return hasFnAttrImpl(Kind);
   }
 
-  /// \brief Determine whether this call has the given attribute.
+  /// Determine whether this call has the given attribute.
   bool hasFnAttr(StringRef Kind) const {
     return hasFnAttrImpl(Kind);
   }
 
-  /// \brief Determine whether the call or the callee has the given attributes.
+  /// Determine whether the call or the callee has the given attributes.
   bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const;
 
-  /// \brief Get the attribute of a given kind at a position.
+  /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
 
-  /// \brief Get the attribute of a given kind at a position.
+  /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, StringRef Kind) const;
 
-  /// \brief Return true if the data operand at index \p i has the attribute \p
+  /// Return true if the data operand at index \p i has the attribute \p
   /// A.
   ///
   /// Data operands include call arguments and values used in operand bundles,
@@ -1682,18 +1661,18 @@ public:
   ///     (\p i - 1) in the operand list.
   bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const;
 
-  /// \brief Extract the alignment for a call or parameter (0=unknown).
+  /// Extract the alignment for a call or parameter (0=unknown).
   unsigned getParamAlignment(unsigned i) const {
     return AttributeList.getParamAlignment(i);
   }
 
-  /// \brief Extract the number of dereferenceable bytes for a call or
+  /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableBytes(unsigned i) const {
     return AttributeList.getDereferenceableBytes(i);
   }
 
-  /// \brief Extract the number of dereferenceable_or_null bytes for a call or
+  /// Extract the number of dereferenceable_or_null bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned i) const {
     return AttributeList.getDereferenceableOrNullBytes(i);
@@ -1706,20 +1685,20 @@ public:
     return AttributeList.hasAttribute(n, Attribute::NoAlias);
   }
 
-  /// \brief Return true if the call should not be treated as a call to a
+  /// Return true if the call should not be treated as a call to a
   /// builtin.
   bool isNoBuiltin() const {
     return hasFnAttrImpl(Attribute::NoBuiltin) &&
       !hasFnAttrImpl(Attribute::Builtin);
   }
 
-  /// \brief Return true if the call should not be inlined.
+  /// Return true if the call should not be inlined.
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
   void setIsNoInline() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoInline);
   }
 
-  /// \brief Return true if the call can return twice
+  /// Return true if the call can return twice
   bool canReturnTwice() const {
     return hasFnAttr(Attribute::ReturnsTwice);
   }
@@ -1727,7 +1706,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReturnsTwice);
   }
 
-  /// \brief Determine if the call does not access memory.
+  /// Determine if the call does not access memory.
   bool doesNotAccessMemory() const {
     return hasFnAttr(Attribute::ReadNone);
   }
@@ -1735,7 +1714,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone);
   }
 
-  /// \brief Determine if the call does not access or only reads memory.
+  /// Determine if the call does not access or only reads memory.
   bool onlyReadsMemory() const {
     return doesNotAccessMemory() || hasFnAttr(Attribute::ReadOnly);
   }
@@ -1743,7 +1722,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly);
   }
 
-  /// \brief Determine if the call does not access or only writes memory.
+  /// Determine if the call does not access or only writes memory.
   bool doesNotReadMemory() const {
     return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
   }
@@ -1760,25 +1739,25 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ArgMemOnly);
   }
 
-  /// \brief Determine if the call cannot return.
+  /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
   void setDoesNotReturn() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoReturn);
   }
 
-  /// \brief Determine if the call cannot unwind.
+  /// Determine if the call cannot unwind.
   bool doesNotThrow() const { return hasFnAttr(Attribute::NoUnwind); }
   void setDoesNotThrow() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoUnwind);
   }
 
-  /// \brief Determine if the call cannot be duplicated.
+  /// Determine if the call cannot be duplicated.
   bool cannotDuplicate() const {return hasFnAttr(Attribute::NoDuplicate); }
   void setCannotDuplicate() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoDuplicate);
   }
 
-  /// \brief Determine if the call is convergent
+  /// Determine if the call is convergent
   bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }
   void setConvergent() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
@@ -1788,7 +1767,7 @@ public:
                     Attribute::get(getContext(), Attribute::Convergent));
   }
 
-  /// \brief Determine if the call returns a structure through first
+  /// Determine if the call returns a structure through first
   /// pointer argument.
   bool hasStructRetAttr() const {
     if (getNumArgOperands() == 0)
@@ -1798,24 +1777,24 @@ public:
     return paramHasAttr(1, Attribute::StructRet);
   }
 
-  /// \brief Determine if any call argument is an aggregate passed by value.
+  /// Determine if any call argument is an aggregate passed by value.
   bool hasByValArgument() const {
     return AttributeList.hasAttrSomewhere(Attribute::ByVal);
   }
 
-  /// getCalledFunction - Return the function called, or null if this is an
+  /// Return the function called, or null if this is an
   /// indirect function invocation.
   ///
   Function *getCalledFunction() const {
     return dyn_cast<Function>(Op<-1>());
   }
 
-  /// getCalledValue - Get a pointer to the function that is invoked by this
+  /// Get a pointer to the function that is invoked by this
   /// instruction.
   const Value *getCalledValue() const { return Op<-1>(); }
         Value *getCalledValue()       { return Op<-1>(); }
 
-  /// setCalledFunction - Set the function called.
+  /// Set the function called.
   void setCalledFunction(Value* Fn) {
     setCalledFunction(
         cast<FunctionType>(cast<PointerType>(Fn->getType())->getElementType()),
@@ -1828,7 +1807,7 @@ public:
     Op<-1>() = Fn;
   }
 
-  /// isInlineAsm - Check if this call is an inline asm statement.
+  /// Check if this call is an inline asm statement.
   bool isInlineAsm() const {
     return isa<InlineAsm>(Op<-1>());
   }
@@ -1899,7 +1878,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallInst, Value)
 //                               SelectInst Class
 //===----------------------------------------------------------------------===//
 
-/// SelectInst - This class represents the LLVM 'select' instruction.
+/// This class represents the LLVM 'select' instruction.
 ///
 class SelectInst : public Instruction {
   void init(Value *C, Value *S1, Value *S2) {
@@ -1952,7 +1931,7 @@ public:
   void setTrueValue(Value *V) { Op<1>() = V; }
   void setFalseValue(Value *V) { Op<2>() = V; }
 
-  /// areInvalidOperands - Return a string if the specified operands are invalid
+  /// Return a string if the specified operands are invalid
   /// for a select operation, otherwise return null.
   static const char *areInvalidOperands(Value *Cond, Value *True, Value *False);
 
@@ -1982,7 +1961,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(SelectInst, Value)
 //                                VAArgInst Class
 //===----------------------------------------------------------------------===//
 
-/// VAArgInst - This class represents the va_arg llvm instruction, which returns
+/// This class represents the va_arg llvm instruction, which returns
 /// an argument of the specified type given a va_list and increments that list
 ///
 class VAArgInst : public UnaryInstruction {
@@ -2020,7 +1999,7 @@ public:
 //                                ExtractElementInst Class
 //===----------------------------------------------------------------------===//
 
-/// ExtractElementInst - This instruction extracts a single (scalar)
+/// This instruction extracts a single (scalar)
 /// element from a VectorType value
 ///
 class ExtractElementInst : public Instruction {
@@ -2046,7 +2025,7 @@ public:
     return new(2) ExtractElementInst(Vec, Idx, NameStr, InsertAtEnd);
   }
 
-  /// isValidOperands - Return true if an extractelement instruction can be
+  /// Return true if an extractelement instruction can be
   /// formed with the specified operands.
   static bool isValidOperands(const Value *Vec, const Value *Idx);
 
@@ -2082,7 +2061,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ExtractElementInst, Value)
 //                                InsertElementInst Class
 //===----------------------------------------------------------------------===//
 
-/// InsertElementInst - This instruction inserts a single (scalar)
+/// This instruction inserts a single (scalar)
 /// element into a VectorType value
 ///
 class InsertElementInst : public Instruction {
@@ -2109,12 +2088,12 @@ public:
     return new(3) InsertElementInst(Vec, NewElt, Idx, NameStr, InsertAtEnd);
   }
 
-  /// isValidOperands - Return true if an insertelement instruction can be
+  /// Return true if an insertelement instruction can be
   /// formed with the specified operands.
   static bool isValidOperands(const Value *Vec, const Value *NewElt,
                               const Value *Idx);
 
-  /// getType - Overload to return most specific vector type.
+  /// Overload to return most specific vector type.
   ///
   VectorType *getType() const {
     return cast<VectorType>(Instruction::getType());
@@ -2143,7 +2122,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 //                           ShuffleVectorInst Class
 //===----------------------------------------------------------------------===//
 
-/// ShuffleVectorInst - This instruction constructs a fixed permutation of two
+/// This instruction constructs a fixed permutation of two
 /// input vectors.
 ///
 class ShuffleVectorInst : public Instruction {
@@ -2163,12 +2142,12 @@ public:
   ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                     const Twine &NameStr, BasicBlock *InsertAtEnd);
 
-  /// isValidOperands - Return true if a shufflevector instruction can be
+  /// Return true if a shufflevector instruction can be
   /// formed with the specified operands.
   static bool isValidOperands(const Value *V1, const Value *V2,
                               const Value *Mask);
 
-  /// getType - Overload to return most specific vector type.
+  /// Overload to return most specific vector type.
   ///
   VectorType *getType() const {
     return cast<VectorType>(Instruction::getType());
@@ -2181,7 +2160,7 @@ public:
     return cast<Constant>(getOperand(2));
   }
 
-  /// getMaskValue - Return the index from the shuffle mask for the specified
+  /// Return the index from the shuffle mask for the specified
   /// output result.  This is either -1 if the element is undef or a number less
   /// than 2*numelements.
   static int getMaskValue(Constant *Mask, unsigned i);
@@ -2190,7 +2169,7 @@ public:
     return getMaskValue(getMask(), i);
   }
 
-  /// getShuffleMask - Return the full mask for this instruction, where each
+  /// Return the full mask for this instruction, where each
   /// element is the element number and undef's are returned as -1.
   static void getShuffleMask(Constant *Mask, SmallVectorImpl<int> &Result);
 
@@ -2224,7 +2203,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorInst, Value)
 //                                ExtractValueInst Class
 //===----------------------------------------------------------------------===//
 
-/// ExtractValueInst - This instruction extracts a struct member or array
+/// This instruction extracts a struct member or array
 /// element value from an aggregate value.
 ///
 class ExtractValueInst : public UnaryInstruction {
@@ -2268,7 +2247,7 @@ public:
     return new ExtractValueInst(Agg, Idxs, NameStr, InsertAtEnd);
   }
 
-  /// getIndexedType - Returns the type of the element that would be extracted
+  /// Returns the type of the element that would be extracted
   /// with an extractvalue instruction with the specified parameters.
   ///
   /// Null is returned if the indices are invalid for the specified type.
@@ -2333,7 +2312,7 @@ ExtractValueInst::ExtractValueInst(Value *Agg,
 //                                InsertValueInst Class
 //===----------------------------------------------------------------------===//
 
-/// InsertValueInst - This instruction inserts a struct field of array element
+/// This instruction inserts a struct field of array element
 /// value into an aggregate value.
 ///
 class InsertValueInst : public Instruction {
@@ -2479,7 +2458,7 @@ class PHINode : public Instruction {
   void anchor() override;
 
   void *operator new(size_t, unsigned) = delete;
-  /// ReservedSpace - The number of operands actually allocated.  NumOperands is
+  /// The number of operands actually allocated.  NumOperands is
   /// the number actually in use.
   unsigned ReservedSpace;
   PHINode(const PHINode &PN);
@@ -2570,11 +2549,11 @@ public:
 
   const_op_range incoming_values() const { return operands(); }
 
-  /// getNumIncomingValues - Return the number of incoming edges
+  /// Return the number of incoming edges
   ///
   unsigned getNumIncomingValues() const { return getNumOperands(); }
 
-  /// getIncomingValue - Return incoming value number x
+  /// Return incoming value number x
   ///
   Value *getIncomingValue(unsigned i) const {
     return getOperand(i);
@@ -2592,13 +2571,13 @@ public:
     return i;
   }
 
-  /// getIncomingBlock - Return incoming basic block number @p i.
+  /// Return incoming basic block number @p i.
   ///
   BasicBlock *getIncomingBlock(unsigned i) const {
     return block_begin()[i];
   }
 
-  /// getIncomingBlock - Return incoming basic block corresponding
+  /// Return incoming basic block corresponding
   /// to an operand of the PHI.
   ///
   BasicBlock *getIncomingBlock(const Use &U) const {
@@ -2606,7 +2585,7 @@ public:
     return getIncomingBlock(unsigned(&U - op_begin()));
   }
 
-  /// getIncomingBlock - Return incoming basic block corresponding
+  /// Return incoming basic block corresponding
   /// to value use iterator.
   ///
   BasicBlock *getIncomingBlock(Value::const_user_iterator I) const {
@@ -2618,7 +2597,7 @@ public:
     block_begin()[i] = BB;
   }
 
-  /// addIncoming - Add an incoming value to the end of the PHI list
+  /// Add an incoming value to the end of the PHI list
   ///
   void addIncoming(Value *V, BasicBlock *BB) {
     if (getNumOperands() == ReservedSpace)
@@ -2629,7 +2608,7 @@ public:
     setIncomingBlock(getNumOperands() - 1, BB);
   }
 
-  /// removeIncomingValue - Remove an incoming value.  This is useful if a
+  /// Remove an incoming value.  This is useful if a
   /// predecessor basic block is deleted.  The value removed is returned.
   ///
   /// If the last incoming value for a PHI node is removed (and DeletePHIIfEmpty
@@ -2645,7 +2624,7 @@ public:
     return removeIncomingValue(Idx, DeletePHIIfEmpty);
   }
 
-  /// getBasicBlockIndex - Return the first index of the specified basic
+  /// Return the first index of the specified basic
   /// block in the value list for this PHI.  Returns -1 if no instance.
   ///
   int getBasicBlockIndex(const BasicBlock *BB) const {
@@ -2661,11 +2640,11 @@ public:
     return getIncomingValue(Idx);
   }
 
-  /// hasConstantValue - If the specified PHI node always merges together the
+  /// If the specified PHI node always merges together the
   /// same value, return the value, otherwise return null.
   Value *hasConstantValue() const;
 
-  /// hasConstantOrUndefValue - Whether the specified PHI node always merges
+  /// Whether the specified PHI node always merges
   /// together the same value, assuming undefs are equal to a unique
   /// non-undef value.
   bool hasConstantOrUndefValue() const;
@@ -2693,7 +2672,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PHINode, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// LandingPadInst - The landingpad instruction holds all of the information
+/// The landingpad instruction holds all of the information
 /// necessary to generate correct exception handling. The landingpad instruction
 /// cannot be moved from the top of a landing pad block, which itself is
 /// accessible only from the 'unwind' edge of an invoke. This uses the
@@ -2701,7 +2680,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PHINode, Value)
 /// cleanup.
 ///
 class LandingPadInst : public Instruction {
-  /// ReservedSpace - The number of operands actually allocated.  NumOperands is
+  /// The number of operands actually allocated.  NumOperands is
   /// the number actually in use.
   unsigned ReservedSpace;
   LandingPadInst(const LandingPadInst &LP);
@@ -2740,12 +2719,12 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// isCleanup - Return 'true' if this landingpad instruction is a
+  /// Return 'true' if this landingpad instruction is a
   /// cleanup. I.e., it should be run when unwinding even if its landing pad
   /// doesn't catch the exception.
   bool isCleanup() const { return getSubclassDataFromInstruction() & 1; }
 
-  /// setCleanup - Indicate that this landingpad instruction is a cleanup.
+  /// Indicate that this landingpad instruction is a cleanup.
   void setCleanup(bool V) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
                                (V ? 1 : 0));
@@ -2760,20 +2739,20 @@ public:
     return cast<Constant>(getOperandList()[Idx]);
   }
 
-  /// isCatch - Return 'true' if the clause and index Idx is a catch clause.
+  /// Return 'true' if the clause and index Idx is a catch clause.
   bool isCatch(unsigned Idx) const {
     return !isa<ArrayType>(getOperandList()[Idx]->getType());
   }
 
-  /// isFilter - Return 'true' if the clause and index Idx is a filter clause.
+  /// Return 'true' if the clause and index Idx is a filter clause.
   bool isFilter(unsigned Idx) const {
     return isa<ArrayType>(getOperandList()[Idx]->getType());
   }
 
-  /// getNumClauses - Get the number of clauses for this landing pad.
+  /// Get the number of clauses for this landing pad.
   unsigned getNumClauses() const { return getNumOperands(); }
 
-  /// reserveClauses - Grow the size of the operand list to accommodate the new
+  /// Grow the size of the operand list to accommodate the new
   /// number of clauses.
   void reserveClauses(unsigned Size) { growOperands(Size); }
 
@@ -2797,7 +2776,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(LandingPadInst, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// ReturnInst - Return a value (possibly void), from a function.  Execution
+/// Return a value (possibly void), from a function.  Execution
 /// does not continue in this function any longer.
 ///
 class ReturnInst : public TerminatorInst {
@@ -2874,7 +2853,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ReturnInst, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// BranchInst - Conditional or Unconditional Branch instruction.
+/// Conditional or Unconditional Branch instruction.
 ///
 class BranchInst : public TerminatorInst {
   /// Ops list - Branches are strange.  The operands are ordered:
@@ -2947,7 +2926,7 @@ public:
     *(&Op<-1>() - idx) = NewSucc;
   }
 
-  /// \brief Swap the successors of this branch instruction.
+  /// Swap the successors of this branch instruction.
   ///
   /// Swaps the successors of the branch instruction. This also swaps any
   /// branch weight metadata associated with the instruction so that it
@@ -3286,7 +3265,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(SwitchInst, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// IndirectBrInst - Indirect Branch Instruction.
+/// Indirect Branch Instruction.
 ///
 class IndirectBrInst : public TerminatorInst {
   void *operator new(size_t, unsigned) = delete;
@@ -3302,13 +3281,13 @@ class IndirectBrInst : public TerminatorInst {
   void *operator new(size_t s) {
     return User::operator new(s);
   }
-  /// IndirectBrInst ctor - Create a new indirectbr instruction, specifying an
+  /// Create a new indirectbr instruction, specifying an
   /// Address to jump to.  The number of expected destinations can be specified
   /// here to make memory allocation more efficient.  This constructor can also
   /// autoinsert before another instruction.
   IndirectBrInst(Value *Address, unsigned NumDests, Instruction *InsertBefore);
 
-  /// IndirectBrInst ctor - Create a new indirectbr instruction, specifying an
+  /// Create a new indirectbr instruction, specifying an
   /// Address to jump to.  The number of expected destinations can be specified
   /// here to make memory allocation more efficient.  This constructor also
   /// autoinserts at the end of the specified BasicBlock.
@@ -3337,19 +3316,19 @@ public:
   const Value *getAddress() const { return getOperand(0); }
   void setAddress(Value *V) { setOperand(0, V); }
 
-  /// getNumDestinations - return the number of possible destinations in this
+  /// return the number of possible destinations in this
   /// indirectbr instruction.
   unsigned getNumDestinations() const { return getNumOperands()-1; }
 
-  /// getDestination - Return the specified destination.
+  /// Return the specified destination.
   BasicBlock *getDestination(unsigned i) { return getSuccessor(i); }
   const BasicBlock *getDestination(unsigned i) const { return getSuccessor(i); }
 
-  /// addDestination - Add a destination.
+  /// Add a destination.
   ///
   void addDestination(BasicBlock *Dest);
 
-  /// removeDestination - This method removes the specified successor from the
+  /// This method removes the specified successor from the
   /// indirectbr instruction.
   void removeDestination(unsigned i);
 
@@ -3385,7 +3364,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IndirectBrInst, Value)
 //                               InvokeInst Class
 //===----------------------------------------------------------------------===//
 
-/// InvokeInst - Invoke instruction.  The SubclassData field is used to hold the
+/// Invoke instruction.  The SubclassData field is used to hold the
 /// calling convention of the call.
 ///
 class InvokeInst : public TerminatorInst,
@@ -3406,7 +3385,7 @@ class InvokeInst : public TerminatorInst,
 
   /// Construct an InvokeInst given a range of arguments.
   ///
-  /// \brief Construct an InvokeInst from a range of arguments
+  /// Construct an InvokeInst from a range of arguments
   inline InvokeInst(Value *Func, BasicBlock *IfNormal, BasicBlock *IfException,
                     ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
                     unsigned Values, const Twine &NameStr,
@@ -3422,7 +3401,7 @@ class InvokeInst : public TerminatorInst,
                     const Twine &NameStr, Instruction *InsertBefore);
   /// Construct an InvokeInst given a range of arguments.
   ///
-  /// \brief Construct an InvokeInst from a range of arguments
+  /// Construct an InvokeInst from a range of arguments
   inline InvokeInst(Value *Func, BasicBlock *IfNormal, BasicBlock *IfException,
                     ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
                     unsigned Values, const Twine &NameStr,
@@ -3496,7 +3475,7 @@ public:
                    InsertAtEnd);
   }
 
-  /// \brief Create a clone of \p II with a different set of operand bundles and
+  /// Create a clone of \p II with a different set of operand bundles and
   /// insert it before \p InsertPt.
   ///
   /// The returned invoke instruction is identical to \p II in every way except
@@ -3515,7 +3494,7 @@ public:
     this->FTy = FTy;
   }
 
-  /// getNumArgOperands - Return the number of invoke arguments.
+  /// Return the number of invoke arguments.
   ///
   unsigned getNumArgOperands() const {
     return getNumOperands() - getNumTotalBundleOperands() - 3;
@@ -3532,35 +3511,35 @@ public:
     setOperand(i, v);
   }
 
-  /// \brief Return the iterator pointing to the beginning of the argument list.
+  /// Return the iterator pointing to the beginning of the argument list.
   op_iterator arg_begin() { return op_begin(); }
 
-  /// \brief Return the iterator pointing to the end of the argument list.
+  /// Return the iterator pointing to the end of the argument list.
   op_iterator arg_end() {
     // [ invoke args ], [ operand bundles ], normal dest, unwind dest, callee
     return op_end() - getNumTotalBundleOperands() - 3;
   }
 
-  /// \brief Iteration adapter for range-for loops.
+  /// Iteration adapter for range-for loops.
   iterator_range<op_iterator> arg_operands() {
     return make_range(arg_begin(), arg_end());
   }
 
-  /// \brief Return the iterator pointing to the beginning of the argument list.
+  /// Return the iterator pointing to the beginning of the argument list.
   const_op_iterator arg_begin() const { return op_begin(); }
 
-  /// \brief Return the iterator pointing to the end of the argument list.
+  /// Return the iterator pointing to the end of the argument list.
   const_op_iterator arg_end() const {
     // [ invoke args ], [ operand bundles ], normal dest, unwind dest, callee
     return op_end() - getNumTotalBundleOperands() - 3;
   }
 
-  /// \brief Iteration adapter for range-for loops.
+  /// Iteration adapter for range-for loops.
   iterator_range<const_op_iterator> arg_operands() const {
     return make_range(arg_begin(), arg_end());
   }
 
-  /// \brief Wrappers for getting the \c Use of a invoke argument.
+  /// Wrappers for getting the \c Use of a invoke argument.
   const Use &getArgOperandUse(unsigned i) const {
     assert(i < getNumArgOperands() && "Out of bounds!");
     return getOperandUse(i);
@@ -3585,58 +3564,58 @@ public:
     setInstructionSubclassData(ID);
   }
 
-  /// getAttributes - Return the parameter attributes for this invoke.
+  /// Return the parameter attributes for this invoke.
   ///
   const AttributeSet &getAttributes() const { return AttributeList; }
 
-  /// setAttributes - Set the parameter attributes for this invoke.
+  /// Set the parameter attributes for this invoke.
   ///
   void setAttributes(const AttributeSet &Attrs) { AttributeList = Attrs; }
 
-  /// addAttribute - adds the attribute to the list of attributes.
+  /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind Kind);
 
-  /// addAttribute - adds the attribute to the list of attributes.
+  /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute Attr);
 
-  /// removeAttribute - removes the attribute from the list of attributes.
+  /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
-  /// removeAttribute - removes the attribute from the list of attributes.
+  /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
 
-  /// removeAttribute - removes the attribute from the list of attributes.
+  /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute Attr);
 
-  /// \brief adds the dereferenceable attribute to the list of attributes.
+  /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
 
-  /// \brief adds the dereferenceable_or_null attribute to the list of
+  /// adds the dereferenceable_or_null attribute to the list of
   /// attributes.
   void addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes);
 
-  /// \brief Determine whether this call has the given attribute.
+  /// Determine whether this call has the given attribute.
   bool hasFnAttr(Attribute::AttrKind Kind) const {
     assert(Kind != Attribute::NoBuiltin &&
            "Use CallInst::isNoBuiltin() to check for Attribute::NoBuiltin");
     return hasFnAttrImpl(Kind);
   }
 
-  /// \brief Determine whether this call has the given attribute.
+  /// Determine whether this call has the given attribute.
   bool hasFnAttr(StringRef Kind) const {
     return hasFnAttrImpl(Kind);
   }
 
-  /// \brief Determine whether the call or the callee has the given attributes.
+  /// Determine whether the call or the callee has the given attributes.
   bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const;
 
-  /// \brief Get the attribute of a given kind at a position.
+  /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
 
-  /// \brief Get the attribute of a given kind at a position.
+  /// Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, StringRef Kind) const;
 
-  /// \brief Return true if the data operand at index \p i has the attribute \p
+  /// Return true if the data operand at index \p i has the attribute \p
   /// A.
   ///
   /// Data operands include invoke arguments and values used in operand bundles,
@@ -3652,18 +3631,18 @@ public:
   ///     (\p i - 1) in the operand list.
   bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const;
 
-  /// \brief Extract the alignment for a call or parameter (0=unknown).
+  /// Extract the alignment for a call or parameter (0=unknown).
   unsigned getParamAlignment(unsigned i) const {
     return AttributeList.getParamAlignment(i);
   }
 
-  /// \brief Extract the number of dereferenceable bytes for a call or
+  /// Extract the number of dereferenceable bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableBytes(unsigned i) const {
     return AttributeList.getDereferenceableBytes(i);
   }
 
-  /// \brief Extract the number of dereferenceable_or_null bytes for a call or
+  /// Extract the number of dereferenceable_or_null bytes for a call or
   /// parameter (0=unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned i) const {
     return AttributeList.getDereferenceableOrNullBytes(i);
@@ -3676,7 +3655,7 @@ public:
     return AttributeList.hasAttribute(n, Attribute::NoAlias);
   }
 
-  /// \brief Return true if the call should not be treated as a call to a
+  /// Return true if the call should not be treated as a call to a
   /// builtin.
   bool isNoBuiltin() const {
     // We assert in hasFnAttr if one passes in Attribute::NoBuiltin, so we have
@@ -3685,13 +3664,13 @@ public:
       !hasFnAttrImpl(Attribute::Builtin);
   }
 
-  /// \brief Return true if the call should not be inlined.
+  /// Return true if the call should not be inlined.
   bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
   void setIsNoInline() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoInline);
   }
 
-  /// \brief Determine if the call does not access memory.
+  /// Determine if the call does not access memory.
   bool doesNotAccessMemory() const {
     return hasFnAttr(Attribute::ReadNone);
   }
@@ -3699,7 +3678,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone);
   }
 
-  /// \brief Determine if the call does not access or only reads memory.
+  /// Determine if the call does not access or only reads memory.
   bool onlyReadsMemory() const {
     return doesNotAccessMemory() || hasFnAttr(Attribute::ReadOnly);
   }
@@ -3707,7 +3686,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly);
   }
 
-  /// \brief Determine if the call does not access or only writes memory.
+  /// Determine if the call does not access or only writes memory.
   bool doesNotReadMemory() const {
     return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
   }
@@ -3724,25 +3703,25 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ArgMemOnly);
   }
 
-  /// \brief Determine if the call cannot return.
+  /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
   void setDoesNotReturn() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoReturn);
   }
 
-  /// \brief Determine if the call cannot unwind.
+  /// Determine if the call cannot unwind.
   bool doesNotThrow() const { return hasFnAttr(Attribute::NoUnwind); }
   void setDoesNotThrow() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoUnwind);
   }
 
-  /// \brief Determine if the invoke cannot be duplicated.
+  /// Determine if the invoke cannot be duplicated.
   bool cannotDuplicate() const {return hasFnAttr(Attribute::NoDuplicate); }
   void setCannotDuplicate() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoDuplicate);
   }
 
-  /// \brief Determine if the invoke is convergent
+  /// Determine if the invoke is convergent
   bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }
   void setConvergent() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
@@ -3752,7 +3731,7 @@ public:
                     Attribute::get(getContext(), Attribute::Convergent));
   }
 
-  /// \brief Determine if the call returns a structure through first
+  /// Determine if the call returns a structure through first
   /// pointer argument.
   bool hasStructRetAttr() const {
     if (getNumArgOperands() == 0)
@@ -3762,24 +3741,24 @@ public:
     return paramHasAttr(1, Attribute::StructRet);
   }
 
-  /// \brief Determine if any call argument is an aggregate passed by value.
+  /// Determine if any call argument is an aggregate passed by value.
   bool hasByValArgument() const {
     return AttributeList.hasAttrSomewhere(Attribute::ByVal);
   }
 
-  /// getCalledFunction - Return the function called, or null if this is an
+  /// Return the function called, or null if this is an
   /// indirect function invocation.
   ///
   Function *getCalledFunction() const {
     return dyn_cast<Function>(Op<-3>());
   }
 
-  /// getCalledValue - Get a pointer to the function that is invoked by this
+  /// Get a pointer to the function that is invoked by this
   /// instruction
   const Value *getCalledValue() const { return Op<-3>(); }
         Value *getCalledValue()       { return Op<-3>(); }
 
-  /// setCalledFunction - Set the function called.
+  /// Set the function called.
   void setCalledFunction(Value* Fn) {
     setCalledFunction(
         cast<FunctionType>(cast<PointerType>(Fn->getType())->getElementType()),
@@ -3806,7 +3785,7 @@ public:
     Op<-1>() = reinterpret_cast<Value*>(B);
   }
 
-  /// getLandingPadInst - Get the landingpad instruction from the landing pad
+  /// Get the landingpad instruction from the landing pad
   /// block (the unwind destination).
   LandingPadInst *getLandingPadInst() const;
 
@@ -3888,7 +3867,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InvokeInst, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// ResumeInst - Resume the propagation of an exception.
+/// Resume the propagation of an exception.
 ///
 class ResumeInst : public TerminatorInst {
   ResumeInst(const ResumeInst &RI);
@@ -3943,7 +3922,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ResumeInst, Value)
 //===----------------------------------------------------------------------===//
 class CatchSwitchInst : public TerminatorInst {
   void *operator new(size_t, unsigned) = delete;
-  /// ReservedSpace - The number of operands actually allocated.  NumOperands is
+  /// The number of operands actually allocated.  NumOperands is
   /// the number actually in use.
   unsigned ReservedSpace;
   // Operand[0] = Outer scope
@@ -3954,7 +3933,7 @@ class CatchSwitchInst : public TerminatorInst {
   void growOperands(unsigned Size);
   // allocate space for exactly zero operands
   void *operator new(size_t s) { return User::operator new(s); }
-  /// CatchSwitchInst ctor - Create a new switch instruction, specifying a
+  /// Create a new switch instruction, specifying a
   /// default destination.  The number of additional handlers can be specified
   /// here to make memory allocation more efficient.
   /// This constructor can also autoinsert before another instruction.
@@ -3962,7 +3941,7 @@ class CatchSwitchInst : public TerminatorInst {
                   unsigned NumHandlers, const Twine &NameStr,
                   Instruction *InsertBefore);
 
-  /// CatchSwitchInst ctor - Create a new switch instruction, specifying a
+  /// Create a new switch instruction, specifying a
   /// default destination.  The number of additional handlers can be specified
   /// here to make memory allocation more efficient.
   /// This constructor also autoinserts at the end of the specified BasicBlock.
@@ -4011,7 +3990,7 @@ public:
     setOperand(1, UnwindDest);
   }
 
-  /// getNumHandlers - return the number of 'handlers' in this catchswitch
+  /// return the number of 'handlers' in this catchswitch
   /// instruction, except the default handler
   unsigned getNumHandlers() const {
     if (hasUnwindDest())
@@ -4063,17 +4042,17 @@ public:
     return const_handler_iterator(op_end(), ConstDerefFnTy(handler_helper));
   }
 
-  /// handlers - iteration adapter for range-for loops.
+  /// iteration adapter for range-for loops.
   handler_range handlers() {
     return make_range(handler_begin(), handler_end());
   }
 
-  /// handlers - iteration adapter for range-for loops.
+  /// iteration adapter for range-for loops.
   const_handler_range handlers() const {
     return make_range(handler_begin(), handler_end());
   }
 
-  /// addHandler - Add an entry to the switch instruction...
+  /// Add an entry to the switch instruction...
   /// Note:
   /// This action invalidates handler_end(). Old handler_end() iterator will
   /// point to the added handler.
@@ -4143,7 +4122,7 @@ public:
         CleanupPadInst(ParentPad, Args, Values, NameStr, InsertAtEnd);
   }
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::CleanupPad;
   }
@@ -4192,7 +4171,7 @@ public:
     Op<-1>() = CatchSwitch;
   }
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::CatchPad;
   }
@@ -4371,7 +4350,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CleanupReturnInst, Value)
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
-/// UnreachableInst - This function has undefined behavior.  In particular, the
+/// This function has undefined behavior.  In particular, the
 /// presence of this instruction indicates some higher level knowledge that the
 /// end of the block cannot be reached.
 ///
@@ -4411,16 +4390,16 @@ private:
 //                                 TruncInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a truncation of integer types.
+/// This class represents a truncation of integer types.
 class TruncInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical TruncInst
+  /// Clone an identical TruncInst
   TruncInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   TruncInst(
     Value *S,                           ///< The value to be truncated
     Type *Ty,                           ///< The (smaller) type to truncate to
@@ -4428,7 +4407,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   TruncInst(
     Value *S,                     ///< The value to be truncated
     Type *Ty,                     ///< The (smaller) type to truncate to
@@ -4436,7 +4415,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == Trunc;
   }
@@ -4449,16 +4428,16 @@ public:
 //                                 ZExtInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents zero extension of integer types.
+/// This class represents zero extension of integer types.
 class ZExtInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical ZExtInst
+  /// Clone an identical ZExtInst
   ZExtInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   ZExtInst(
     Value *S,                           ///< The value to be zero extended
     Type *Ty,                           ///< The type to zero extend to
@@ -4466,7 +4445,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end semantics.
+  /// Constructor with insert-at-end semantics.
   ZExtInst(
     Value *S,                     ///< The value to be zero extended
     Type *Ty,                     ///< The type to zero extend to
@@ -4474,7 +4453,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == ZExt;
   }
@@ -4487,16 +4466,16 @@ public:
 //                                 SExtInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a sign extension of integer types.
+/// This class represents a sign extension of integer types.
 class SExtInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical SExtInst
+  /// Clone an identical SExtInst
   SExtInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   SExtInst(
     Value *S,                           ///< The value to be sign extended
     Type *Ty,                           ///< The type to sign extend to
@@ -4504,7 +4483,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   SExtInst(
     Value *S,                     ///< The value to be sign extended
     Type *Ty,                     ///< The type to sign extend to
@@ -4512,7 +4491,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == SExt;
   }
@@ -4525,16 +4504,16 @@ public:
 //                                 FPTruncInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a truncation of floating point types.
+/// This class represents a truncation of floating point types.
 class FPTruncInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical FPTruncInst
+  /// Clone an identical FPTruncInst
   FPTruncInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   FPTruncInst(
     Value *S,                           ///< The value to be truncated
     Type *Ty,                           ///< The type to truncate to
@@ -4542,7 +4521,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   FPTruncInst(
     Value *S,                     ///< The value to be truncated
     Type *Ty,                     ///< The type to truncate to
@@ -4550,7 +4529,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == FPTrunc;
   }
@@ -4563,16 +4542,16 @@ public:
 //                                 FPExtInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents an extension of floating point types.
+/// This class represents an extension of floating point types.
 class FPExtInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical FPExtInst
+  /// Clone an identical FPExtInst
   FPExtInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   FPExtInst(
     Value *S,                           ///< The value to be extended
     Type *Ty,                           ///< The type to extend to
@@ -4580,7 +4559,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   FPExtInst(
     Value *S,                     ///< The value to be extended
     Type *Ty,                     ///< The type to extend to
@@ -4588,7 +4567,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == FPExt;
   }
@@ -4601,16 +4580,16 @@ public:
 //                                 UIToFPInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a cast unsigned integer to floating point.
+/// This class represents a cast unsigned integer to floating point.
 class UIToFPInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical UIToFPInst
+  /// Clone an identical UIToFPInst
   UIToFPInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   UIToFPInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
@@ -4618,7 +4597,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   UIToFPInst(
     Value *S,                     ///< The value to be converted
     Type *Ty,                     ///< The type to convert to
@@ -4626,7 +4605,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == UIToFP;
   }
@@ -4639,16 +4618,16 @@ public:
 //                                 SIToFPInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a cast from signed integer to floating point.
+/// This class represents a cast from signed integer to floating point.
 class SIToFPInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical SIToFPInst
+  /// Clone an identical SIToFPInst
   SIToFPInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   SIToFPInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
@@ -4656,7 +4635,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   SIToFPInst(
     Value *S,                     ///< The value to be converted
     Type *Ty,                     ///< The type to convert to
@@ -4664,7 +4643,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == SIToFP;
   }
@@ -4677,16 +4656,16 @@ public:
 //                                 FPToUIInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a cast from floating point to unsigned integer
+/// This class represents a cast from floating point to unsigned integer
 class FPToUIInst  : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical FPToUIInst
+  /// Clone an identical FPToUIInst
   FPToUIInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   FPToUIInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
@@ -4694,7 +4673,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   FPToUIInst(
     Value *S,                     ///< The value to be converted
     Type *Ty,                     ///< The type to convert to
@@ -4702,7 +4681,7 @@ public:
     BasicBlock *InsertAtEnd       ///< Where to insert the new instruction
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == FPToUI;
   }
@@ -4715,16 +4694,16 @@ public:
 //                                 FPToSIInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a cast from floating point to signed integer.
+/// This class represents a cast from floating point to signed integer.
 class FPToSIInst  : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical FPToSIInst
+  /// Clone an identical FPToSIInst
   FPToSIInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   FPToSIInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
@@ -4732,7 +4711,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   FPToSIInst(
     Value *S,                     ///< The value to be converted
     Type *Ty,                     ///< The type to convert to
@@ -4740,7 +4719,7 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == FPToSI;
   }
@@ -4753,10 +4732,10 @@ public:
 //                                 IntToPtrInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a cast from an integer to a pointer.
+/// This class represents a cast from an integer to a pointer.
 class IntToPtrInst : public CastInst {
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   IntToPtrInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
@@ -4764,7 +4743,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   IntToPtrInst(
     Value *S,                     ///< The value to be converted
     Type *Ty,                     ///< The type to convert to
@@ -4774,10 +4753,10 @@ public:
 
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical IntToPtrInst
+  /// Clone an identical IntToPtrInst.
   IntToPtrInst *cloneImpl() const;
 
-  /// \brief Returns the address space of this instruction's pointer type.
+  /// Returns the address space of this instruction's pointer type.
   unsigned getAddressSpace() const {
     return getType()->getPointerAddressSpace();
   }
@@ -4795,16 +4774,16 @@ public:
 //                                 PtrToIntInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a cast from a pointer to an integer
+/// This class represents a cast from a pointer to an integer.
 class PtrToIntInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical PtrToIntInst
+  /// Clone an identical PtrToIntInst.
   PtrToIntInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   PtrToIntInst(
     Value *S,                           ///< The value to be converted
     Type *Ty,                           ///< The type to convert to
@@ -4812,7 +4791,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   PtrToIntInst(
     Value *S,                     ///< The value to be converted
     Type *Ty,                     ///< The type to convert to
@@ -4820,14 +4799,14 @@ public:
     BasicBlock *InsertAtEnd       ///< The block to insert the instruction into
   );
 
-  /// \brief Gets the pointer operand.
+  /// Gets the pointer operand.
   Value *getPointerOperand() { return getOperand(0); }
-  /// \brief Gets the pointer operand.
+  /// Gets the pointer operand.
   const Value *getPointerOperand() const { return getOperand(0); }
-  /// \brief Gets the operand index of the pointer operand.
+  /// Gets the operand index of the pointer operand.
   static unsigned getPointerOperandIndex() { return 0U; }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {
     return getPointerOperand()->getType()->getPointerAddressSpace();
   }
@@ -4845,16 +4824,16 @@ public:
 //                             BitCastInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a no-op cast from one type to another.
+/// This class represents a no-op cast from one type to another.
 class BitCastInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical BitCastInst
+  /// Clone an identical BitCastInst.
   BitCastInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   BitCastInst(
     Value *S,                           ///< The value to be casted
     Type *Ty,                           ///< The type to casted to
@@ -4862,7 +4841,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   BitCastInst(
     Value *S,                     ///< The value to be casted
     Type *Ty,                     ///< The type to casted to
@@ -4883,17 +4862,17 @@ public:
 //                          AddrSpaceCastInst Class
 //===----------------------------------------------------------------------===//
 
-/// \brief This class represents a conversion between pointers from
-/// one address space to another.
+/// This class represents a conversion between pointers from one address space
+/// to another.
 class AddrSpaceCastInst : public CastInst {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// \brief Clone an identical AddrSpaceCastInst
+  /// Clone an identical AddrSpaceCastInst.
   AddrSpaceCastInst *cloneImpl() const;
 
 public:
-  /// \brief Constructor with insert-before-instruction semantics
+  /// Constructor with insert-before-instruction semantics
   AddrSpaceCastInst(
     Value *S,                           ///< The value to be casted
     Type *Ty,                           ///< The type to casted to
@@ -4901,7 +4880,7 @@ public:
     Instruction *InsertBefore = nullptr ///< Where to insert the new instruction
   );
 
-  /// \brief Constructor with insert-at-end-of-block semantics
+  /// Constructor with insert-at-end-of-block semantics
   AddrSpaceCastInst(
     Value *S,                     ///< The value to be casted
     Type *Ty,                     ///< The type to casted to
@@ -4917,27 +4896,27 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
-  /// \brief Gets the pointer operand.
+  /// Gets the pointer operand.
   Value *getPointerOperand() {
     return getOperand(0);
   }
 
-  /// \brief Gets the pointer operand.
+  /// Gets the pointer operand.
   const Value *getPointerOperand() const {
     return getOperand(0);
   }
 
-  /// \brief Gets the operand index of the pointer operand.
+  /// Gets the operand index of the pointer operand.
   static unsigned getPointerOperandIndex() {
     return 0U;
   }
 
-  /// \brief Returns the address space of the pointer operand.
+  /// Returns the address space of the pointer operand.
   unsigned getSrcAddressSpace() const {
     return getPointerOperand()->getType()->getPointerAddressSpace();
   }
 
-  /// \brief Returns the address space of the result.
+  /// Returns the address space of the result.
   unsigned getDestAddressSpace() const {
     return getType()->getPointerAddressSpace();
   }

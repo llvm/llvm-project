@@ -72,7 +72,11 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
     case WebAssembly::ARGUMENT_I32:
     case WebAssembly::ARGUMENT_I64:
     case WebAssembly::ARGUMENT_F32:
-    case WebAssembly::ARGUMENT_F64: {
+    case WebAssembly::ARGUMENT_F64:
+    case WebAssembly::ARGUMENT_v16i8:
+    case WebAssembly::ARGUMENT_v8i16:
+    case WebAssembly::ARGUMENT_v4i32:
+    case WebAssembly::ARGUMENT_v4f32: {
       int64_t Imm = MI.getOperand(1).getImm();
       DEBUG(dbgs() << "Arg VReg " << MI.getOperand(0).getReg() << " -> WAReg "
                    << Imm << "\n");

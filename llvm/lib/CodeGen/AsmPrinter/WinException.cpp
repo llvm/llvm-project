@@ -966,11 +966,11 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
 
     // Retrieve the Guard Stack slot.
     int GSCookieOffset = -2;
-    const MachineFrameInfo *MFI = MF->getFrameInfo();
-    if (MFI->hasStackProtectorIndex()) {
+    const MachineFrameInfo &MFI = MF->getFrameInfo();
+    if (MFI.hasStackProtectorIndex()) {
       unsigned UnusedReg;
       const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
-      int SSPIdx = MFI->getStackProtectorIndex();
+      int SSPIdx = MFI.getStackProtectorIndex();
       GSCookieOffset = TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg);
     }
 

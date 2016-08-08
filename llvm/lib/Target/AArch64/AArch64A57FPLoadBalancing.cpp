@@ -95,10 +95,6 @@ static bool isMla(MachineInstr *MI) {
   }
 }
 
-namespace llvm {
-static void initializeAArch64A57FPLoadBalancingPass(PassRegistry &);
-}
-
 //===----------------------------------------------------------------------===//
 
 namespace {

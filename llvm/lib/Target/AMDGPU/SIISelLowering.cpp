@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 
@@ -438,8 +439,12 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
 
   // TODO: I think v3i32 should allow unaligned accesses on CI with DS_READ_B96,
   // which isn't a simple VT.
-  if (!VT.isSimple() || VT == MVT::Other)
+  // Until MVT is extended to handle this, simply check for the size and
+  // rely on the condition below: allow accesses if the size is a multiple of 4.
+  if (VT == MVT::Other || (VT != MVT::Other && VT.getSizeInBits() > 1024 &&
+                           VT.getStoreSize() > 16)) {
     return false;
+  }
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
@@ -534,8 +539,8 @@ SITargetLowering::getPreferredVectorAction(EVT VT) const {
 
 bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                          Type *Ty) const {
-  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-  return TII->isInlineConstant(Imm);
+  // FIXME: Could be smarter if called for vector constants.
+  return true;
 }
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
@@ -863,7 +868,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   // Now that we've figured out where the scratch register inputs are, see if
   // should reserve the arguments and use them directly.
-  bool HasStackObjects = MF.getFrameInfo()->hasStackObjects();
+  bool HasStackObjects = MF.getFrameInfo().hasStackObjects();
   // Record that we know we have non-spill stack objects so we don't need to
   // check all stack objects later.
   if (HasStackObjects)
@@ -1644,10 +1649,10 @@ void SITargetLowering::createDebuggerPrologueStackObjects(
   // For each dimension:
   for (unsigned i = 0; i < 3; ++i) {
     // Create fixed stack object for work group ID.
-    ObjectIdx = MF.getFrameInfo()->CreateFixedObject(4, i * 4, true);
+    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4, true);
     Info->setDebuggerWorkGroupIDStackObjectIndex(i, ObjectIdx);
     // Create fixed stack object for work item ID.
-    ObjectIdx = MF.getFrameInfo()->CreateFixedObject(4, i * 4 + 16, true);
+    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4 + 16, true);
     Info->setDebuggerWorkItemIDStackObjectIndex(i, ObjectIdx);
   }
 }
@@ -2213,6 +2218,34 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
                        Denominator, Numerator);
   }
+  case Intrinsic::amdgcn_icmp: {
+    const auto *CD = dyn_cast<ConstantSDNode>(Op.getOperand(3));
+    int CondCode = CD->getSExtValue();
+
+    if (CondCode < ICmpInst::Predicate::FIRST_ICMP_PREDICATE ||
+	       CondCode >= ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+      return DAG.getUNDEF(VT);
+
+    ICmpInst::Predicate IcInput =
+	   static_cast<ICmpInst::Predicate>(CondCode);
+    ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
+    return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
+                       Op.getOperand(2), DAG.getCondCode(CCOpcode));
+  }
+  case Intrinsic::amdgcn_fcmp: {
+    const auto *CD = dyn_cast<ConstantSDNode>(Op.getOperand(3));
+    int CondCode = CD->getSExtValue();
+
+    if (CondCode <= FCmpInst::Predicate::FCMP_FALSE ||
+	       CondCode >= FCmpInst::Predicate::FCMP_TRUE)
+      return DAG.getUNDEF(VT);
+
+    FCmpInst::Predicate IcInput =
+	   static_cast<FCmpInst::Predicate>(CondCode);
+    ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
+    return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
+                       Op.getOperand(2), DAG.getCondCode(CCOpcode));
+  }
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT,
                        Op.getOperand(1), Op.getOperand(2));
@@ -2435,22 +2468,31 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   bool Unsafe = DAG.getTarget().Options.UnsafeFPMath;
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
-    if ((Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals())) &&
-        CLHS->isExactlyValue(1.0)) {
-      // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
-      // the CI documentation has a worst case error of 1 ulp.
-      // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
-      // use it as long as we aren't trying to use denormals.
+    if ((Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals()))) {
 
-      // 1.0 / sqrt(x) -> rsq(x)
-      //
-      // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
-      // error seems really high at 2^29 ULP.
-      if (RHS.getOpcode() == ISD::FSQRT)
-        return DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0));
+      if (CLHS->isExactlyValue(1.0)) {
+        // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
+        // the CI documentation has a worst case error of 1 ulp.
+        // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
+        // use it as long as we aren't trying to use denormals.
 
-      // 1.0 / x -> rcp(x)
-      return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
+        // 1.0 / sqrt(x) -> rsq(x)
+        //
+        // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
+        // error seems really high at 2^29 ULP.
+        if (RHS.getOpcode() == ISD::FSQRT)
+          return DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0));
+
+        // 1.0 / x -> rcp(x)
+        return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
+      }
+
+      // Same as for 1.0, but expand the sign out of the constant.
+      if (CLHS->isExactlyValue(-1.0)) {
+        // -1.0 / x -> rcp (fneg x)
+        SDValue FNegRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
+        return DAG.getNode(AMDGPUISD::RCP, SL, VT, FNegRHS);
+      }
     }
   }
 

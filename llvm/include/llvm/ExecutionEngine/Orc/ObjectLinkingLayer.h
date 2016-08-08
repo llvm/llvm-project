@@ -14,9 +14,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
 
-#include "JITSymbol.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include <list>
 #include <memory>
@@ -46,13 +46,13 @@ protected:
     getSymbolMaterializer(std::string Name) = 0;
 
     virtual void mapSectionAddress(const void *LocalAddress,
-                                   TargetAddress TargetAddr) const = 0;
+                                   JITTargetAddress TargetAddr) const = 0;
 
     JITSymbol getSymbol(StringRef Name, bool ExportedSymbolsOnly) {
       auto SymEntry = SymbolTable.find(Name);
       if (SymEntry == SymbolTable.end())
         return nullptr;
-      if (!SymEntry->second.isExported() && ExportedSymbolsOnly)
+      if (!SymEntry->second.getFlags().isExported() && ExportedSymbolsOnly)
         return nullptr;
       if (!Finalized)
         return JITSymbol(getSymbolMaterializer(Name),
@@ -60,7 +60,7 @@ protected:
       return JITSymbol(SymEntry->second);
     }
   protected:
-    StringMap<RuntimeDyld::SymbolInfo> SymbolTable;
+    StringMap<JITEvaluatedSymbol> SymbolTable;
     bool Finalized = false;
   };
 
@@ -122,10 +122,10 @@ private:
       RTDyld.setProcessAllSections(PFC->ProcessAllSections);
       PFC->RTDyld = &RTDyld;
 
+      this->Finalized = true;
       PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Objects),
                      [&]() {
                        this->updateSymbolTable(RTDyld);
-                       this->Finalized = true;
                      });
 
       // Release resources.
@@ -144,7 +144,7 @@ private:
     }
 
     void mapSectionAddress(const void *LocalAddress,
-                           TargetAddress TargetAddr) const override {
+                           JITTargetAddress TargetAddr) const override {
       assert(PFC && "mapSectionAddress called on finalized LinkedObjectSet");
       assert(PFC->RTDyld && "mapSectionAddress called on raw LinkedObjectSet");
       PFC->RTDyld->mapSectionAddress(LocalAddress, TargetAddr);
@@ -163,9 +163,9 @@ private:
             consumeError(SymbolName.takeError());
             continue;
           }
-          auto Flags = JITSymbol::flagsFromObjectSymbol(Symbol);
+          auto Flags = JITSymbolFlags::fromObjectSymbol(Symbol);
           SymbolTable.insert(
-            std::make_pair(*SymbolName, RuntimeDyld::SymbolInfo(0, Flags)));
+            std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
         }
     }
 
@@ -322,7 +322,7 @@ public:
 
   /// @brief Map section addresses for the objects associated with the handle H.
   void mapSectionAddress(ObjSetHandleT H, const void *LocalAddress,
-                         TargetAddress TargetAddr) {
+                         JITTargetAddress TargetAddr) {
     (*H)->mapSectionAddress(LocalAddress, TargetAddr);
   }
 

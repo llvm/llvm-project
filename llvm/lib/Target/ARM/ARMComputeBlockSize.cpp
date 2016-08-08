@@ -42,8 +42,8 @@ void computeBlockSize(MachineFunction *MF, MachineBasicBlock *MBB,
   BBI.PostAlign = 0;
 
   for (MachineInstr &I : *MBB) {
-    BBI.Size += TII->GetInstSizeInBytes(I);
-    // For inline asm, GetInstSizeInBytes returns a conservative estimate.
+    BBI.Size += TII->getInstSizeInBytes(I);
+    // For inline asm, getInstSizeInBytes returns a conservative estimate.
     // The actual size may be smaller, but still a multiple of the instr size.
     if (I.isInlineAsm())
       BBI.Unalign = isThumb ? 1 : 2;

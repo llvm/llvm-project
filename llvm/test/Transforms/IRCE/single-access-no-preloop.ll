@@ -31,12 +31,13 @@ define void @single_access_no_preloop_no_offset(i32 *%arr, i32 *%a_len_ptr, i32 
 ; CHECK: br i1 true, label %in.bounds, label %out.of.bounds
 
 ; CHECK: main.exit.selector:
-; CHECK-NEXT: [[continue:%[^ ]+]] = icmp slt i32 %idx.next, %n
+; CHECK-NEXT: %idx.next.lcssa = phi i32 [ %idx.next, %in.bounds ]
+; CHECK-NEXT: [[continue:%[^ ]+]] = icmp slt i32 %idx.next.lcssa, %n
 ; CHECK-NEXT: br i1 [[continue]], label %main.pseudo.exit, label %exit.loopexit
 
 ; CHECK: main.pseudo.exit:
-; CHECK-NEXT: %idx.copy = phi i32 [ 0, %loop.preheader ], [ %idx.next, %main.exit.selector ]
-; CHECK-NEXT: %indvar.end = phi i32 [ 0, %loop.preheader ], [ %idx.next, %main.exit.selector ]
+; CHECK-NEXT: %idx.copy = phi i32 [ 0, %loop.preheader ], [ %idx.next.lcssa, %main.exit.selector ]
+; CHECK-NEXT: %indvar.end = phi i32 [ 0, %loop.preheader ], [ %idx.next.lcssa, %main.exit.selector ]
 ; CHECK-NEXT: br label %postloop
 
 ; CHECK: postloop:
@@ -92,7 +93,7 @@ define void @single_access_no_preloop_with_offset(i32 *%arr, i32 *%a_len_ptr, i3
 ; CHECK: [[exit_main_loop_at_loclamp_cmp:[^ ]+]] = icmp sgt i32 [[exit_main_loop_at_hiclamp]], 0
 ; CHECK: [[exit_main_loop_at_loclamp:[^ ]+]] = select i1 [[exit_main_loop_at_loclamp_cmp]], i32 [[exit_main_loop_at_hiclamp]], i32 0
 ; CHECK: [[enter_main_loop:[^ ]+]] = icmp slt i32 0, [[exit_main_loop_at_loclamp]]
-; CHECK: br i1 [[enter_main_loop]], label %loop, label %main.pseudo.exit
+; CHECK: br i1 [[enter_main_loop]], label %loop.preheader2, label %main.pseudo.exit
 
 ; CHECK: loop:
 ; CHECK: br i1 true, label %in.bounds, label %out.of.bounds
@@ -102,7 +103,7 @@ define void @single_access_no_preloop_with_offset(i32 *%arr, i32 *%a_len_ptr, i3
 ; CHECK: br i1 [[continue_main_loop]], label %loop, label %main.exit.selector
 
 ; CHECK: main.pseudo.exit:
-; CHECK:  %idx.copy = phi i32 [ 0, %loop.preheader ], [ %idx.next, %main.exit.selector ]
+; CHECK:  %idx.copy = phi i32 [ 0, %loop.preheader ], [ %idx.next.lcssa, %main.exit.selector ]
 ; CHECK:  br label %postloop
 
 ; CHECK: loop.postloop:

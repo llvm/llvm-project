@@ -194,8 +194,10 @@ static Value *GetShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     else
       V = IC.Builder->CreateLShr(C, NumBits);
     // If we got a constantexpr back, try to simplify it with TD info.
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
-      V = ConstantFoldConstantExpression(CE, DL, IC.getTargetLibraryInfo());
+    if (auto *C = dyn_cast<Constant>(V))
+      if (auto *FoldedC =
+              ConstantFoldConstant(C, DL, &IC.getTargetLibraryInfo()))
+        V = FoldedC;
     return V;
   }
 
@@ -699,7 +701,7 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
 
   if (Value *V =
           SimplifyShlInst(I.getOperand(0), I.getOperand(1), I.hasNoSignedWrap(),
-                          I.hasNoUnsignedWrap(), DL, TLI, DT, AC))
+                          I.hasNoUnsignedWrap(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *V = commonShiftTransforms(I))
@@ -740,7 +742,7 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyLShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
-                                  DL, TLI, DT, AC))
+                                  DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = commonShiftTransforms(I))
@@ -784,7 +786,7 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyAShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
-                                  DL, TLI, DT, AC))
+                                  DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = commonShiftTransforms(I))

@@ -19,6 +19,7 @@
 
 using namespace llvm;
 
+namespace {
 // Compute a "unique" hash for the module based on the name of the public
 // functions.
 class ModuleHasher {
@@ -57,6 +58,7 @@ public:
     return TheHash;
   }
 };
+} // end anonymous namespace
 
 // Rename all the anon functions in the module
 bool llvm::nameUnamedFunctions(Module &M) {

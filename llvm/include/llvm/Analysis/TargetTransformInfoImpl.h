@@ -253,7 +253,8 @@ public:
 
   bool isFPVectorizationPotentiallyUnsafe() { return false; }
 
-  bool allowsMisalignedMemoryAccesses(unsigned BitWidth,
+  bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                      unsigned BitWidth,
                                       unsigned AddressSpace,
                                       unsigned Alignment,
                                       bool *Fast) { return false; }

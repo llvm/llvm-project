@@ -876,3 +876,7 @@ def InvalidOrNonExistentDirectory : DiagGroup<"invalid-or-nonexistent-directory"
 def OptionIgnored : DiagGroup<"option-ignored">;
 
 def UnknownArgument : DiagGroup<"unknown-argument">;
+
+// A warning group for warnings about code that clang accepts when
+// compiling OpenCL C/C++ but which is not compatible with the SPIR spec.
+def SpirCompat : DiagGroup<"spir-compat">;

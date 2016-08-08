@@ -26,7 +26,7 @@ public:
 
 class DummyStubsManager : public orc::IndirectStubsManager {
 public:
-  Error createStub(StringRef StubName, TargetAddress InitAddr,
+  Error createStub(StringRef StubName, JITTargetAddress InitAddr,
                    JITSymbolFlags Flags) override {
     llvm_unreachable("Not implemented");
   }
@@ -43,7 +43,7 @@ public:
     llvm_unreachable("Not implemented");
   }
 
-  Error updatePointer(StringRef Name, TargetAddress NewAddr) override {
+  Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override {
     llvm_unreachable("Not implemented");
   }
 };

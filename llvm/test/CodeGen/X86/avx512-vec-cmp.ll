@@ -79,7 +79,7 @@ define <4 x float> @test7(<4 x float> %a, <4 x float> %b) {
 ;
 ; SKX-LABEL: test7:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vcmpltps %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -99,7 +99,7 @@ define <2 x double> @test8(<2 x double> %a, <2 x double> %b) {
 ;
 ; SKX-LABEL: test8:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vcmpltpd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vblendmpd %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -166,7 +166,6 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %res = icmp eq <16 x i64> %a, %b
   %res1 = bitcast <16 x i1> %res to i16

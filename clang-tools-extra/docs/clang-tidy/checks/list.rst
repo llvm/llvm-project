@@ -30,6 +30,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-type-union-access
    cppcoreguidelines-pro-type-vararg
    cppcoreguidelines-slicing
+   cppcoreguidelines-special-member-functions
    google-build-explicit-make-pair
    google-build-namespaces
    google-build-using-namespace
@@ -109,9 +110,11 @@ Clang-Tidy Checks
    modernize-use-nullptr
    modernize-use-override
    modernize-use-using
+   mpi-type-mismatch
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-cast-in-loop
+   performance-inefficient-string-concatenation
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param
    readability-avoid-const-params-in-decls

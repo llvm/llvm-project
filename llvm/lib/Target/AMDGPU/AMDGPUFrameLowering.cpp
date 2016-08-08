@@ -75,7 +75,7 @@ unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
 int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                 int FI,
                                                 unsigned &FrameReg) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const AMDGPURegisterInfo *RI
     = MF.getSubtarget<AMDGPUSubtarget>().getRegisterInfo();
 
@@ -86,18 +86,18 @@ int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // XXX: We should only do this when the shader actually uses this
   // information.
   unsigned OffsetBytes = 2 * (getStackWidth(MF) * 4);
-  int UpperBound = FI == -1 ? MFI->getNumObjects() : FI;
+  int UpperBound = FI == -1 ? MFI.getNumObjects() : FI;
 
-  for (int i = MFI->getObjectIndexBegin(); i < UpperBound; ++i) {
-    OffsetBytes = alignTo(OffsetBytes, MFI->getObjectAlignment(i));
-    OffsetBytes += MFI->getObjectSize(i);
+  for (int i = MFI.getObjectIndexBegin(); i < UpperBound; ++i) {
+    OffsetBytes = alignTo(OffsetBytes, MFI.getObjectAlignment(i));
+    OffsetBytes += MFI.getObjectSize(i);
     // Each register holds 4 bytes, so we must always align the offset to at
     // least 4 bytes, so that 2 frame objects won't share the same register.
     OffsetBytes = alignTo(OffsetBytes, 4);
   }
 
   if (FI != -1)
-    OffsetBytes = alignTo(OffsetBytes, MFI->getObjectAlignment(FI));
+    OffsetBytes = alignTo(OffsetBytes, MFI.getObjectAlignment(FI));
 
   return OffsetBytes / (getStackWidth(MF) * 4);
 }

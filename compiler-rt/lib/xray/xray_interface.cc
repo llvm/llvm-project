@@ -14,12 +14,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "xray_interface_internal.h"
+
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <errno.h>
 #include <limits>
 #include <sys/mman.h>
+
+#include "sanitizer_common/sanitizer_common.h"
 
 namespace __xray {
 
@@ -79,12 +82,34 @@ int __xray_set_handler(void (*entry)(int32_t, XRayEntryType)) {
   return 0;
 }
 
+int __xray_remove_handler() { return __xray_set_handler(nullptr); }
+
 std::atomic<bool> XRayPatching{false};
 
 using namespace __xray;
 
-XRayPatchingStatus __xray_patch() {
-  // FIXME: Make this happen asynchronously. For now just do this sequentially.
+// FIXME: Figure out whether we can move this class to sanitizer_common instead
+// as a generic "scope guard".
+template <class Function> class CleanupInvoker {
+  Function Fn;
+
+public:
+  explicit CleanupInvoker(Function Fn) : Fn(Fn) {}
+  CleanupInvoker(const CleanupInvoker &) = default;
+  CleanupInvoker(CleanupInvoker &&) = default;
+  CleanupInvoker &operator=(const CleanupInvoker &) = delete;
+  CleanupInvoker &operator=(CleanupInvoker &&) = delete;
+  ~CleanupInvoker() { Fn(); }
+};
+
+template <class Function> CleanupInvoker<Function> ScopeCleanup(Function Fn) {
+  return CleanupInvoker<Function>{Fn};
+}
+
+// ControlPatching implements the common internals of the patching/unpatching
+// implementation. |Enable| defines whether we're enabling or disabling the
+// runtime XRay instrumentation.
+XRayPatchingStatus ControlPatching(bool Enable) {
   if (!XRayInitialized.load(std::memory_order_acquire))
     return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
 
@@ -95,6 +120,13 @@ XRayPatchingStatus __xray_patch() {
     return XRayPatchingStatus::ONGOING; // Already patching.
   }
 
+  bool PatchingSuccess = false;
+  auto XRayPatchingStatusResetter = ScopeCleanup([&PatchingSuccess] {
+    if (!PatchingSuccess) {
+      XRayPatching.store(false, std::memory_order_release);
+    }
+  });
+
   // Step 1: Compute the function id, as a unique identifier per function in the
   // instrumentation map.
   XRaySledMap InstrMap = XRayInstrMap.load(std::memory_order_acquire);
@@ -104,7 +136,9 @@ XRayPatchingStatus __xray_patch() {
   int32_t FuncId = 1;
   static constexpr uint8_t CallOpCode = 0xe8;
   static constexpr uint16_t MovR10Seq = 0xba41;
+  static constexpr uint16_t Jmp9Seq = 0x09eb;
   static constexpr uint8_t JmpOpCode = 0xe9;
+  static constexpr uint8_t RetOpCode = 0xc3;
   uint64_t CurFun = 0;
   for (std::size_t I = 0; I < InstrMap.Entries; I++) {
     auto Sled = InstrMap.Sleds[I];
@@ -131,6 +165,7 @@ XRayPatchingStatus __xray_patch() {
     static constexpr int64_t MinOffset{std::numeric_limits<int32_t>::min()};
     static constexpr int64_t MaxOffset{std::numeric_limits<int32_t>::max()};
     if (Sled.Kind == XRayEntryType::ENTRY) {
+      // FIXME: Implement this in a more extensible manner, per-platform.
       // Here we do the dance of replacing the following sled:
       //
       // xray_sled_n:
@@ -157,18 +192,29 @@ XRayPatchingStatus __xray_patch() {
           reinterpret_cast<int64_t>(__xray_FunctionEntry) -
           (static_cast<int64_t>(Sled.Address) + 11);
       if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
-        // FIXME: Print out an error here.
+        Report("XRay Entry trampoline (%p) too far from sled (%p); distance = "
+               "%ld\n",
+               __xray_FunctionEntry, reinterpret_cast<void *>(Sled.Address),
+               TrampolineOffset);
         continue;
       }
-      *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
-      *reinterpret_cast<uint8_t *>(Sled.Address + 6) = CallOpCode;
-      *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
-      std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
-          std::memory_order_release);
+      if (Enable) {
+        *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
+        *reinterpret_cast<uint8_t *>(Sled.Address + 6) = CallOpCode;
+        *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
+        std::atomic_store_explicit(
+            reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
+            std::memory_order_release);
+      } else {
+        std::atomic_store_explicit(
+            reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp9Seq,
+            std::memory_order_release);
+        // FIXME: Write out the nops still?
+      }
     }
 
     if (Sled.Kind == XRayEntryType::EXIT) {
+      // FIXME: Implement this in a more extensible manner, per-platform.
       // Here we do the dance of replacing the following sled:
       //
       // xray_sled_n:
@@ -193,17 +239,32 @@ XRayPatchingStatus __xray_patch() {
           reinterpret_cast<int64_t>(__xray_FunctionExit) -
           (static_cast<int64_t>(Sled.Address) + 11);
       if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
-        // FIXME: Print out an error here.
+        Report("XRay Exit trampoline (%p) too far from sled (%p); distance = "
+               "%ld\n",
+               __xray_FunctionExit, reinterpret_cast<void *>(Sled.Address),
+               TrampolineOffset);
         continue;
       }
-      *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
-      *reinterpret_cast<uint8_t *>(Sled.Address + 6) = JmpOpCode;
-      *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
-      std::atomic_store_explicit(
-          reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
-          std::memory_order_release);
+      if (Enable) {
+        *reinterpret_cast<uint32_t *>(Sled.Address + 2) = FuncId;
+        *reinterpret_cast<uint8_t *>(Sled.Address + 6) = JmpOpCode;
+        *reinterpret_cast<uint32_t *>(Sled.Address + 7) = TrampolineOffset;
+        std::atomic_store_explicit(
+            reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
+            std::memory_order_release);
+      } else {
+        std::atomic_store_explicit(
+            reinterpret_cast<std::atomic<uint8_t> *>(Sled.Address), RetOpCode,
+            std::memory_order_release);
+        // FIXME: Write out the nops still?
+      }
     }
   }
   XRayPatching.store(false, std::memory_order_release);
-  return XRayPatchingStatus::NOTIFIED;
+  PatchingSuccess = true;
+  return XRayPatchingStatus::SUCCESS;
 }
+
+XRayPatchingStatus __xray_patch() { return ControlPatching(true); }
+
+XRayPatchingStatus __xray_unpatch() { return ControlPatching(false); }

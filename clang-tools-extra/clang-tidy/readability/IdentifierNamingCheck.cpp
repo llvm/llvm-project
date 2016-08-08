@@ -9,13 +9,13 @@
 
 #include "IdentifierNamingCheck.h"
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/DenseMapInfo.h"
 
 #define DEBUG_TYPE "clang-tidy"
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 ; The SplitIndexingFromLoad tranformation exposed an isel backend bug.  This
 ; testcase used to generate stwx 4, 3, 64.  stwx does not have an

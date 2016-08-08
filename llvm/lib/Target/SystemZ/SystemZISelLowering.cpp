@@ -864,7 +864,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SystemZMachineFunctionInfo *FuncInfo =
       MF.getInfo<SystemZMachineFunctionInfo>();
@@ -927,8 +927,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       assert(VA.isMemLoc() && "Argument not register or memory");
 
       // Create the frame index object for this incoming parameter.
-      int FI = MFI->CreateFixedObject(LocVT.getSizeInBits() / 8,
-                                      VA.getLocMemOffset(), true);
+      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                     VA.getLocMemOffset(), true);
 
       // Create the SelectionDAG nodes corresponding to a load
       // from this parameter.  Unpromoted ints and floats are
@@ -971,12 +971,12 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     // Likewise the address (in the form of a frame index) of where the
     // first stack vararg would be.  The 1-byte size here is arbitrary.
     int64_t StackSize = CCInfo.getNextStackOffset();
-    FuncInfo->setVarArgsFrameIndex(MFI->CreateFixedObject(1, StackSize, true));
+    FuncInfo->setVarArgsFrameIndex(MFI.CreateFixedObject(1, StackSize, true));
 
     // ...and a similar frame index for the caller-allocated save area
     // that will be used to store the incoming registers.
     int64_t RegSaveOffset = TFL->getOffsetOfLocalArea();
-    unsigned RegSaveIndex = MFI->CreateFixedObject(1, RegSaveOffset, true);
+    unsigned RegSaveIndex = MFI.CreateFixedObject(1, RegSaveOffset, true);
     FuncInfo->setRegSaveFrameIndex(RegSaveIndex);
 
     // Store the FPR varargs in the reserved frame slots.  (We store the
@@ -985,7 +985,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       SDValue MemOps[SystemZ::NumArgFPRs];
       for (unsigned I = NumFixedFPRs; I < SystemZ::NumArgFPRs; ++I) {
         unsigned Offset = TFL->getRegSpillOffset(SystemZ::ArgFPRs[I]);
-        int FI = MFI->CreateFixedObject(8, RegSaveOffset + Offset, true);
+        int FI = MFI.CreateFixedObject(8, RegSaveOffset + Offset, true);
         SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
         unsigned VReg = MF.addLiveIn(SystemZ::ArgFPRs[I],
                                      &SystemZ::FP64BitRegClass);
@@ -2691,8 +2691,8 @@ SDValue SystemZTargetLowering::lowerConstantPool(ConstantPoolSDNode *CP,
 SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setFrameAddressIsTaken(true);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
 
   SDLoc DL(Op);
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
@@ -2703,7 +2703,7 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
   int BackChainIdx = FI->getFramePointerSaveIndex();
   if (!BackChainIdx) {
     // By definition, the frame address is the address of the back chain.
-    BackChainIdx = MFI->CreateFixedObject(8, -SystemZMC::CallFrameSize, false);
+    BackChainIdx = MFI.CreateFixedObject(8, -SystemZMC::CallFrameSize, false);
     FI->setFramePointerSaveIndex(BackChainIdx);
   }
   SDValue BackChain = DAG.getFrameIndex(BackChainIdx, PtrVT);
@@ -2719,8 +2719,8 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
 SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setReturnAddressIsTaken(true);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setReturnAddressIsTaken(true);
 
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
