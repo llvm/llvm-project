@@ -1455,7 +1455,37 @@ void run() {
 }
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'D'
 // CHECK-ELIDE-NOTREE: note: candidate function [with x = TypeAlias::X::X1] not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(TypeAlias::X)0>' for 1st argument
+}
 
+namespace TypeAlias2 {
+template <typename T>
+class A {};
+
+template <typename T>
+using A_reg = A<T>;
+void take_reg(A_reg<int>);
+
+template <typename T>
+using A_ptr = A<T> *;
+void take_ptr(A_ptr<int>);
+
+template <typename T>
+using A_ref = const A<T> &;
+void take_ref(A_ref<int>);
+
+void run(A_reg<float> reg, A_ptr<float> ptr, A_ref<float> ref) {
+  take_reg(reg);
+// CHECK-ELIDE-NOTREE: error: no matching function for call to 'take_reg'
+// CHECK-ELIDE-NOTREE: note:     candidate function not viable: no known conversion from 'A_reg<float>' to 'A_reg<int>' for 1st argument
+
+  take_ptr(ptr);
+// CHECK-ELIDE-NOTREE: error: no matching function for call to 'take_ptr'
+// CHECK-ELIDE-NOTREE: note:     candidate function not viable: no known conversion from 'A_ptr<float>' to 'A_ptr<int>' for 1st argument
+
+  take_ref(ref);
+// CHECK-ELIDE-NOTREE: error: no matching function for call to 'take_ref'
+// CHECK-ELIDE-NOTREE: note: candidate function not viable: no known conversion from 'const A<float>' to 'const A<int>' for 1st argument
+}
 }
 
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
