@@ -539,6 +539,7 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
                 ConstString set_name;
                 std::vector<uint32_t> value_regs;
                 std::vector<uint32_t> invalidate_regs;
+                std::vector<uint8_t> dwarf_opcode_bytes;
                 RegisterInfo reg_info = { NULL,                 // Name
                     NULL,                 // Alt name
                     0,                    // byte size
@@ -553,7 +554,9 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
                         reg_num           // native register number
                     },
                     NULL,
-                    NULL
+                    NULL,
+                    NULL, // Dwarf expression opcode bytes pointer
+                    0     // Dwarf expression opcode bytes length
                 };
 
                 while (response.GetNameColonValue(name, value))
@@ -637,6 +640,23 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
                     else if (name.compare("invalidate-regs") == 0)
                     {
                         SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 16);
+                    }
+                    else if (name.compare("dynamic_size_dwarf_expr_bytes") == 0)
+                    {
+                       size_t dwarf_opcode_len = value.length () / 2;
+                       assert (dwarf_opcode_len > 0);
+
+                       dwarf_opcode_bytes.resize (dwarf_opcode_len);
+                       StringExtractor opcode_extractor;
+                       reg_info.dynamic_size_dwarf_len = dwarf_opcode_len; 
+
+                       // Swap "value" over into "opcode_extractor"
+                       opcode_extractor.GetStringRef ().swap (value);
+                       uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
+                                                                           dwarf_opcode_len);
+                       assert (dwarf_opcode_len == ret_val);
+
+                       reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data ();
                     }
                 }
 
@@ -4373,6 +4393,7 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
         ConstString set_name;
         std::vector<uint32_t> value_regs;
         std::vector<uint32_t> invalidate_regs;
+        std::vector<uint8_t> dwarf_opcode_bytes;
         bool encoding_set = false;
         bool format_set = false;
         RegisterInfo reg_info = { NULL,                 // Name
@@ -4389,10 +4410,12 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
                 cur_reg_num         // native register number
             },
             NULL,
-            NULL
+            NULL,
+            NULL,  // Dwarf Expression opcode bytes pointer
+            0      // Dwarf Expression opcode bytes length 
         };
 
-        reg_node.ForEachAttribute([&target_info, &gdb_group, &gdb_type, &reg_name, &alt_name, &set_name, &value_regs, &invalidate_regs, &encoding_set, &format_set, &reg_info, &cur_reg_num, &reg_offset](const llvm::StringRef &name, const llvm::StringRef &value) -> bool {
+        reg_node.ForEachAttribute([&target_info, &gdb_group, &gdb_type, &reg_name, &alt_name, &set_name, &value_regs, &invalidate_regs, &encoding_set, &format_set, &reg_info, &cur_reg_num, &reg_offset, &dwarf_opcode_bytes](const llvm::StringRef &name, const llvm::StringRef &value) -> bool {
             if (name == "name")
             {
                 reg_name.SetString(value);
@@ -4479,6 +4502,22 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
             else if (name == "invalidate_regnums")
             {
                 SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 0);
+            }
+            else if (name == "dynamic_size_dwarf_expr_bytes")
+            {
+                StringExtractor opcode_extractor;
+                std::string opcode_string = value.str ();
+                size_t dwarf_opcode_len = opcode_string.length () / 2;
+                assert (dwarf_opcode_len > 0);
+
+                dwarf_opcode_bytes.resize (dwarf_opcode_len);
+                reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
+                opcode_extractor.GetStringRef ().swap (opcode_string);
+                uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
+                                                                    dwarf_opcode_len);
+                assert (dwarf_opcode_len == ret_val);
+
+                reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data ();
             }
             else
             {

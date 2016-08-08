@@ -1630,6 +1630,14 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo (StringExtractorGDBRemote
         response.PutChar (';');
     }
 
+    if (reg_info->dynamic_size_dwarf_expr_bytes)
+    {
+       const size_t dwarf_opcode_len = reg_info->dynamic_size_dwarf_len;
+       response.PutCString("dynamic_size_dwarf_expr_bytes:");
+       for(uint32_t i = 0; i < dwarf_opcode_len; ++i)
+           response.PutHex8 (reg_info->dynamic_size_dwarf_expr_bytes[i]);
+       response.PutChar(';');
+    }
     return SendPacketNoLock(response.GetData(), response.GetSize());
 }
 
@@ -1825,7 +1833,10 @@ GDBRemoteCommunicationServerLLGS::Handle_P (StringExtractorGDBRemote &packet)
         return SendErrorResponse (0x47);
     }
 
-    if (reg_size != reg_info->byte_size)
+    // The dwarf expression are evaluate on host site
+    // which may cause register size to change
+    // Hence the reg_size may not be same as reg_info->bytes_size
+    if ((reg_size != reg_info->byte_size) && !(reg_info->dynamic_size_dwarf_expr_bytes))
     {
         return SendIllFormedResponse (packet, "P packet register size is incorrect");
     }

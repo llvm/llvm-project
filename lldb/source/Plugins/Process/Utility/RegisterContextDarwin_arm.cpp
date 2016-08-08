@@ -177,7 +177,7 @@ enum
 #define EXC_OFFSET(idx) ((idx) * 4 + sizeof (RegisterContextDarwin_arm::GPR) + sizeof (RegisterContextDarwin_arm::FPU))
 #define DBG_OFFSET(reg) ((LLVM_EXTENSION offsetof (RegisterContextDarwin_arm::DBG, reg) + sizeof (RegisterContextDarwin_arm::GPR) + sizeof (RegisterContextDarwin_arm::FPU) + sizeof (RegisterContextDarwin_arm::EXC)))
 
-#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextDarwin_arm::DBG *)NULL)->reg[i]), DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, NULL, NULL
+#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextDarwin_arm::DBG *)NULL)->reg[i]), DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, NULL, NULL, NULL, 0
 #define REG_CONTEXT_SIZE (sizeof (RegisterContextDarwin_arm::GPR) + sizeof (RegisterContextDarwin_arm::FPU) + sizeof (RegisterContextDarwin_arm::EXC))
 
 static RegisterInfo g_register_infos[] = {
