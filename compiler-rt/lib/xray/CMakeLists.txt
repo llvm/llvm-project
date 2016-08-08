@@ -41,7 +41,3 @@ foreach (arch ${XRAY_SUPPORTED_ARCH})
 endforeach()
 
 add_dependencies(compiler-rt xray)
-
-# if(COMPILER_RT_INCLUDE_TESTS)
-#   add_subdirectory(tests)
-# endif()

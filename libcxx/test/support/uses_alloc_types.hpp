@@ -119,7 +119,7 @@ using detail::EnableIfB;
 
 struct AllocLastTag {};
 
-template <class Alloc>
+template <class Self, class Alloc>
 struct UsesAllocatorTestBase {
 public:
     using CtorAlloc = typename std::conditional<
@@ -151,6 +151,16 @@ public:
 protected:
     explicit UsesAllocatorTestBase(const TypeID* aid)
         : args_id(aid), constructor_called(UA_None), allocator()
+    {}
+
+    UsesAllocatorTestBase(UsesAllocatorTestBase const&)
+        : args_id(&makeArgumentID<Self const&>()), constructor_called(UA_None),
+          allocator()
+    {}
+
+    UsesAllocatorTestBase(UsesAllocatorTestBase&&)
+        : args_id(&makeArgumentID<Self&&>()), constructor_called(UA_None),
+          allocator()
     {}
 
     template <class ...Args>
@@ -188,12 +198,12 @@ private:
 };
 
 template <class Alloc, size_t Arity>
-class UsesAllocatorV1 : public UsesAllocatorTestBase<Alloc>
+class UsesAllocatorV1 : public UsesAllocatorTestBase<UsesAllocatorV1<Alloc, Arity>, Alloc>
 {
 public:
     typedef Alloc allocator_type;
 
-    using Base = UsesAllocatorTestBase<Alloc>;
+    using Base = UsesAllocatorTestBase<UsesAllocatorV1, Alloc>;
     using CtorAlloc = typename Base::CtorAlloc;
 
     UsesAllocatorV1() : Base(&makeArgumentID<>()) {}
@@ -218,12 +228,12 @@ public:
 
 
 template <class Alloc, size_t Arity>
-class UsesAllocatorV2 : public UsesAllocatorTestBase<Alloc>
+class UsesAllocatorV2 : public UsesAllocatorTestBase<UsesAllocatorV2<Alloc, Arity>, Alloc>
 {
 public:
     typedef Alloc allocator_type;
 
-    using Base = UsesAllocatorTestBase<Alloc>;
+    using Base = UsesAllocatorTestBase<UsesAllocatorV2, Alloc>;
     using CtorAlloc = typename Base::CtorAlloc;
 
     UsesAllocatorV2() : Base(&makeArgumentID<>()) {}
@@ -240,12 +250,12 @@ public:
 };
 
 template <class Alloc, size_t Arity>
-class UsesAllocatorV3 : public UsesAllocatorTestBase<Alloc>
+class UsesAllocatorV3 : public UsesAllocatorTestBase<UsesAllocatorV3<Alloc, Arity>, Alloc>
 {
 public:
     typedef Alloc allocator_type;
 
-    using Base = UsesAllocatorTestBase<Alloc>;
+    using Base = UsesAllocatorTestBase<UsesAllocatorV3, Alloc>;
     using CtorAlloc = typename Base::CtorAlloc;
 
     UsesAllocatorV3() : Base(&makeArgumentID<>()) {}
@@ -268,12 +278,12 @@ public:
 };
 
 template <class Alloc, size_t Arity>
-class NotUsesAllocator : public UsesAllocatorTestBase<Alloc>
+class NotUsesAllocator : public UsesAllocatorTestBase<NotUsesAllocator<Alloc, Arity>, Alloc>
 {
 public:
     // no allocator_type typedef provided
 
-    using Base = UsesAllocatorTestBase<Alloc>;
+    using Base = UsesAllocatorTestBase<NotUsesAllocator, Alloc>;
     using CtorAlloc = typename Base::CtorAlloc;
 
     NotUsesAllocator() : Base(&makeArgumentID<>()) {}
