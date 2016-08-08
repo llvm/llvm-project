@@ -578,6 +578,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!isOutputDynamic<ELFT>())
     Symtab.addIgnored("__tls_get_addr");
 
+  // If linker script do layout we do not need to create any standart symbols.
+  if (ScriptConfig->HasContents)
+    return;
+
   auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
                        DefinedRegular<ELFT> *&Sym2) {
     Sym1 = Symtab.addIgnored(S, STV_DEFAULT);

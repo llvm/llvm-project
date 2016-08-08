@@ -54,6 +54,19 @@ typedef unsigned short __mmask16;
 #define _MM_FROUND_TO_ZERO          0x03
 #define _MM_FROUND_CUR_DIRECTION    0x04
 
+/* Constants for integer comparison predicates */
+typedef enum {
+    _MM_CMPINT_EQ,      /* Equal */
+    _MM_CMPINT_LT,      /* Less than */
+    _MM_CMPINT_LE,      /* Less than or Equal */
+    _MM_CMPINT_UNUSED,
+    _MM_CMPINT_NE,      /* Not Equal */
+    _MM_CMPINT_NLT,     /* Not Less than */
+#define _MM_CMPINT_GE   _MM_CMPINT_NLT  /* Greater than or Equal */
+    _MM_CMPINT_NLE      /* Not Less than or Equal */
+#define _MM_CMPINT_GT   _MM_CMPINT_NLE  /* Greater than */
+} _MM_CMPINT_ENUM;
+
 typedef enum
 {
   _MM_PERM_AAAA = 0x00, _MM_PERM_AAAB = 0x01, _MM_PERM_AAAC = 0x02,

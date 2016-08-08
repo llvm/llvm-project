@@ -377,3 +377,19 @@ void testDoubleDeleteEmptyClass() {
   delete foo;
   delete foo;  // expected-warning {{Attempt to delete released memory}}
 }
+
+struct Base {
+  virtual ~Base() {}
+};
+
+struct Derived : Base {
+};
+
+Base *allocate() {
+  return new Derived;
+}
+
+void shouldNotReportLeak() {
+  Derived *p = (Derived *)allocate();
+  delete p;
+}

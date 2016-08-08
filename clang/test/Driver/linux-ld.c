@@ -1613,10 +1613,16 @@
 // RUN:     --target=thumb-pc-linux-musleabihf \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMHF %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=thumbv7-pc-linux-musleabi -mhard-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=thumbeb-pc-linux-musleabi \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEB %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=thumbeb-pc-linux-musleabihf \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=thumbv7eb-pc-linux-musleabi -mhard-float \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-pc-linux-musleabi \
@@ -1625,10 +1631,16 @@
 // RUN:     --target=arm-pc-linux-musleabihf \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMHF %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-pc-linux-musleabi -mhard-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armeb-pc-linux-musleabi \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEB %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armeb-pc-linux-musleabihf \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7eb-pc-linux-musleabi -mhard-float \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=aarch64-pc-linux-musleabi \
