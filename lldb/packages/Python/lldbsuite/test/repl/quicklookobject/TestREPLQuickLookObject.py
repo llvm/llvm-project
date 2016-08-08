@@ -22,7 +22,7 @@ class REPLQuickLookTestCase (REPLTest):
     mydir = REPLTest.compute_mydir(__file__)
 
     def doTest(self):
-        self.command('PlaygroundQuickLook(reflecting: true)', patterns=['bool = true'])
-        self.command('PlaygroundQuickLook(reflecting: 1.25)', patterns=['double = 1.25'])
-        self.command('PlaygroundQuickLook(reflecting: Float(1.25))', patterns=['float = 1.25'])
-        self.command('PlaygroundQuickLook(reflecting: "Hello")', patterns=['text = \"Hello\"'])
+        self.command('_PlaygroundQuickLook(reflecting: true)', patterns=['bool = true'])
+        self.command('_PlaygroundQuickLook(reflecting: 1.25)', patterns=['double = 1.25'])
+        self.command('_PlaygroundQuickLook(reflecting: Float(1.25))', patterns=['float = 1.25'])
+        self.command('_PlaygroundQuickLook(reflecting: "Hello")', patterns=['text = \"Hello\"'])
