@@ -192,7 +192,47 @@ Changes to the ARM Targets
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+**During this release the MIPS target has:**
+
+* Enabled the Integrated Assembler by default for all ``mips-*`` and
+  ``mipsel-*`` triples.
+* Significantly improved the Integrated Assembler support for the n64 ABI.
+* Added the Clang frontend ``-mcompact-branches={never,optimal,always}`` option
+  that controls how LLVM generates compact branches for MIPS targets.
+* Improved performance and code size for stack pointer adjustments in functions
+  with large frames.
+* Implemented many instructions from the microMIPS32R6 ISA and added CodeGen
+  support for most of them.
+* Added support for the triple used by Debian Stretch for little endian
+  MIPS64, ie. ``mips64el-linux-gnuabi64``.
+* Removed EABI which was neither tested nor properly supported.
+* Gained the ability to self-host on MIPS32R6.
+* Gained the ability to self-host on MIPS64R2 and MIPS64R6 when using the n64
+  ABI.
+* Added support for the ``LA`` macro in PIC mode for o32.
+* Added support for safestack in compiler-rt.
+* Added support for the MIPS n64 ABI in LLD.
+* Added LLD support for TLS relocations for both o32 and n64 MIPS ABIs.
+
+**The MIPS target has also fixed various bugs including the following notable
+fixes:**
+
+* Delay slots are no longer filled multiple times when either ``-save-temps``
+  or ``-via-file-asm`` are used.
+* Updated n32 and n64 to follow the standard ELF conventions for label prefixes
+  (``.L``), whereas o32 still uses its own (``$``).
+* Properly sign-extend values to GPR width for instructions that expect 32-bit
+  values on 64-bit ISAs.
+* Several fixes for the delay-slot filler pass, including correct
+  forbidden-slot hazard handling.
+* Fixed several errors caught by the machine verifier when turned on for MIPS.
+* Fixed broken predicate for ``SELECT`` patterns in MIPS64.
+* Fixed wrong truncation of memory address for ``LL``/``SC`` seqeuences in
+  MIPS64.
+* Fixed the o32, n32 and n64 handling of ``.cprestore`` directives when inside
+  a ``.set noat`` region by the Integrated Assembler.
+* Fixed the ordering of ``HI``/``LO`` pairs in the relocation table.
+* Fixed the generated ELF ``EFlags`` when Octeon is the target.
 
 
 Changes to the PowerPC Target
