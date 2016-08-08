@@ -31,7 +31,6 @@ MCAsmInfo::MCAsmInfo() {
   HasSubsectionsViaSymbols = false;
   HasMachoZeroFillDirective = false;
   HasMachoTBSSDirective = false;
-  HasStaticCtorDtorReferenceInStaticMode = false;
   MaxInstLength = 4;
   MinInstAlignment = 1;
   DollarIsPC = false;

@@ -71,7 +71,7 @@ extern cl::opt<unsigned> DefMaxInstsToScan;
 /// the only relevant load gets deleted.)
 ///
 /// \param Load The load we want to replace.
-/// \param ScanBB The basic block to scan. FIXME: This is redundant.
+/// \param ScanBB The basic block to scan.
 /// \param [in,out] ScanFrom The location to start scanning from. When this
 /// function returns, it points at the last instruction scanned.
 /// \param MaxInstsToScan The maximum number of instructions to scan. If this
@@ -89,7 +89,6 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
                                 AliasAnalysis *AA = nullptr,
-                                AAMDNodes *AATags = nullptr,
                                 bool *IsLoadCSE = nullptr);
 
 }

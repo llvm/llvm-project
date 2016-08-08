@@ -1288,6 +1288,7 @@ private:
     // Note: Correctness depends on this being initialized to 0, which densemap
     // does
     unsigned long LowerBound;
+    const BasicBlock *LowerBoundBlock;
     // This is where the last walk for this memory location ended.
     unsigned long LastKill;
     bool LastKillValid;
@@ -1333,7 +1334,6 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       VersionStack.pop_back();
     ++PopEpoch;
   }
-
   for (MemoryAccess &MA : *Accesses) {
     auto *MU = dyn_cast<MemoryUse>(&MA);
     if (!MU) {
@@ -1355,13 +1355,24 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     if (LocInfo.PopEpoch != PopEpoch) {
       LocInfo.PopEpoch = PopEpoch;
       LocInfo.StackEpoch = StackEpoch;
-      // If the lower bound was in the info we popped, we have to reset it.
-      if (LocInfo.LowerBound >= VersionStack.size()) {
+      // If the lower bound was in something that no longer dominates us, we
+      // have to reset it.
+      // We can't simply track stack size, because the stack may have had
+      // pushes/pops in the meantime.
+      // XXX: This is non-optimal, but only is slower cases with heavily
+      // branching dominator trees.  To get the optimal number of queries would
+      // be to make lowerbound and lastkill a per-loc stack, and pop it until
+      // the top of that stack dominates us.  This does not seem worth it ATM.
+      // A much cheaper optimization would be to always explore the deepest
+      // branch of the dominator tree first. This will guarantee this resets on
+      // the smallest set of blocks.
+      if (LocInfo.LowerBoundBlock && LocInfo.LowerBoundBlock != BB &&
+          !DT->dominates(LocInfo.LowerBoundBlock, BB)){
         // Reset the lower bound of things to check.
         // TODO: Some day we should be able to reset to last kill, rather than
         // 0.
-
         LocInfo.LowerBound = 0;
+        LocInfo.LowerBoundBlock = VersionStack[0]->getBlock();
         LocInfo.LastKillValid = false;
       }
     } else if (LocInfo.StackEpoch != StackEpoch) {
@@ -1437,6 +1448,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       MU->setDefiningAccess(VersionStack[LocInfo.LastKill]);
     }
     LocInfo.LowerBound = VersionStack.size() - 1;
+    LocInfo.LowerBoundBlock = BB;
   }
 }
 

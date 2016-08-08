@@ -6691,12 +6691,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
       if (ExtVT == MVT::i32 || ExtVT == MVT::f32 || ExtVT == MVT::f64 ||
           (ExtVT == MVT::i64 && Subtarget.is64Bit())) {
-        if (VT.is512BitVector()) {
-          SDValue ZeroVec = getZeroVector(VT, Subtarget, DAG, dl);
-          return DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, ZeroVec,
-                             Item, DAG.getIntPtrConstant(0, dl));
-        }
-        assert((VT.is128BitVector() || VT.is256BitVector()) &&
+        assert((VT.is128BitVector() || VT.is256BitVector() ||
+                VT.is512BitVector()) &&
                "Expected an SSE value type!");
         Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Item);
         // Turn it into a MOVL (i.e. movss, movsd, or movd) to a zero vector.
@@ -12091,6 +12087,16 @@ static SDValue lower512BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   assert(Subtarget.hasAVX512() &&
          "Cannot lower 512-bit vectors w/ basic ISA!");
 
+  // If we have a single input to the zero element, insert that into V1 if we
+  // can do so cheaply.
+  int NumElts = Mask.size();
+  int NumV2Elements = count_if(Mask, [NumElts](int M) { return M >= NumElts; });
+
+  if (NumV2Elements == 1 && Mask[0] >= NumElts)
+    if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
+                              DL, VT, V1, V2, Mask, Subtarget, DAG))
+      return Insertion;
+
   // Check for being able to broadcast a single element.
   if (SDValue Broadcast =
           lowerVectorShuffleAsBroadcast(DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -12280,6 +12286,15 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
             M = -1;
         return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
       }
+
+  // Ensure that undefined mask elements only use SM_SentinelUndef.
+  if (llvm::any_of(Mask, [](int M) { return M < SM_SentinelUndef; })) {
+    SmallVector<int, 8> NewMask(Mask.begin(), Mask.end());
+    for (int &M : NewMask)
+      if (M < SM_SentinelUndef)
+        M = SM_SentinelUndef;
+    return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
+  }
 
   // We actually see shuffles that are entirely re-arrangements of a set of
   // zero inputs. This mostly happens while decomposing complex shuffles into

@@ -58,11 +58,6 @@ public:
       : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC),
         DT(Arg.DT), LI(Arg.LI) {}
 
-  /// Handle invalidation events from the new pass manager.
-  ///
-  /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
-
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
 
   ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc);
