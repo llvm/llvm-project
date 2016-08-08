@@ -2209,8 +2209,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       NewArg = Builder.CreateAddrSpaceCast(Arg0, NewArgT);
     else
       NewArg = Builder.CreateBitOrPointerCast(Arg0, NewArgT);
-    auto NewCall = Builder.CreateCall(CGM.CreateRuntimeFunction(FTy,
-      E->getDirectCallee()->getName()), {NewArg});
+    auto NewName = std::string("__") + E->getDirectCallee()->getName().str();
+    auto NewCall =
+        Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, NewName), {NewArg});
     return RValue::get(Builder.CreateBitOrPointerCast(NewCall,
       ConvertType(E->getType())));
   }
