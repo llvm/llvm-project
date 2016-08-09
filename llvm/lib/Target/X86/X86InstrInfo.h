@@ -230,7 +230,7 @@ public:
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                       unsigned LEAOpcode, bool AllowSP, unsigned &NewSrc,
                       bool &isKill, bool &isUndef,
-                      MachineOperand &ImplicitOp) const;
+                      MachineOperand &ImplicitOp, LiveVariables *LV) const;
 
   /// convertToThreeAddress - This method must be implemented by targets that
   /// set the M_CONVERTIBLE_TO_3_ADDR flag.  When this flag is set, the target
