@@ -253,6 +253,10 @@ Changes to the X86 Target
   extensions using ``-march=knl``. The switch enables the ISA extensions
   AVX-512{F, CD, ER, PF}.
 
+* LLVM will now prefer ``PUSH`` instructions rather than ``%esp``-relative
+  ``MOV`` instructions for function calls at all optimization levels greater
+  than ``-O0``. Previously this transformation only occurred at ``-Os``.
+
 Changes to the AMDGPU Target
 -----------------------------
 
