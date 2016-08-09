@@ -24,7 +24,7 @@
 /// This pass does following things:
 ///
 /// 1) Create three global variables: __THREW__, threwValue, and tempRet0.
-///    tempRet0 will be set within ___cxa_find_matching_catch() function in
+///    tempRet0 will be set within __cxa_find_matching_catch() function in
 ///    JS library, and __THREW__ and threwValue will be set in invoke wrappers
 ///    in JS glue code. For what invoke wrappers are, refer to 3).
 ///
@@ -77,31 +77,33 @@
 ///      %val = landingpad catch c1 catch c2 catch c3 ...
 ///      ... use %val ...
 ///    into
-///      %fmc = call @___cxa_find_matching_catch_N(c1, c2, c3, ...)
+///      %fmc = call @__cxa_find_matching_catch_N(c1, c2, c3, ...)
 ///      %val = {%fmc, tempRet0}
 ///      ... use %val ...
 ///    Here N is a number calculated based on the number of clauses.
-///    Global variable tempRet0 is set within ___cxa_find_matching_catch() in
+///    Global variable tempRet0 is set within __cxa_find_matching_catch() in
 ///    JS glue code.
 ///
 /// 5) Lower
 ///      resume {%a, %b}
 ///    into
-///      call @___resumeException(%a)
-///    where ___resumeException() is a function in JS glue code.
+///      call @__resumeException(%a)
+///    where __resumeException() is a function in JS glue code.
 ///
-/// TODO: Handle i64 types
+/// 6) Lower
+///      call @llvm.eh.typeid.for(type) (intrinsic)
+///    into
+///      call @llvm_eh_typeid_for(type)
+///    llvm_eh_typeid_for function will be generated in JS glue code.
 ///
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "llvm/ADT/IndexedMap.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
 
 using namespace llvm;
 
@@ -114,9 +116,9 @@ class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
   }
 
   bool runOnFunction(Function &F);
-  // Returns ___cxa_find_matching_catch_N function, where N = NumClauses + 2.
+  // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
   // This is because a landingpad instruction contains two more arguments,
-  // a personality function and a cleanup bit, and ___cxa_find_matching_catch_N
+  // a personality function and a cleanup bit, and __cxa_find_matching_catch_N
   // functions are named after the number of arguments in the original
   // landingpad instruction.
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
@@ -126,8 +128,9 @@ class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
   GlobalVariable *ThrewGV;      // __THREW__
   GlobalVariable *ThrewValueGV; // threwValue
   GlobalVariable *TempRet0GV;   // tempRet0
-  Function *ResumeF;
-  // ___cxa_find_matching_catch_N functions.
+  Function *ResumeF;            // __resumeException
+  Function *EHTypeIdF;          // llvm_eh_typeid_for
+  // __cxa_find_matching_catch_N functions.
   // Indexed by the number of clauses in an original landingpad instruction.
   DenseMap<int, Function *> FindMatchingCatches;
   // Map of <function signature string, invoke_ wrappers>
@@ -178,9 +181,9 @@ static inline std::string createGlobalValueName(const Module &M,
 
 // Simple function name mangler.
 // This function simply takes LLVM's string representation of parameter types
-// concatenate them with '_'. There are non-alphanumeric characters but llc is
-// ok with it, and we need to postprocess these names after the lowering phase
-// anyway.
+// and concatenate them with '_'. There are non-alphanumeric characters but llc
+// is ok with it, and we need to postprocess these names after the lowering
+// phase anyway.
 static std::string getSignature(FunctionType *FTy) {
   std::string Sig;
   raw_string_ostream OS(Sig);
@@ -191,6 +194,9 @@ static std::string getSignature(FunctionType *FTy) {
     OS << "_...";
   Sig = OS.str();
   Sig.erase(std::remove_if(Sig.begin(), Sig.end(), isspace), Sig.end());
+  // When s2wasm parses .s file, a comma means the end of an argument. So a
+  // mangled function name can contain any character but a comma.
+  std::replace(Sig.begin(), Sig.end(), ',', '.');
   return Sig;
 }
 
@@ -203,7 +209,7 @@ Function *WebAssemblyLowerEmscriptenExceptions::getFindMatchingCatch(
   FunctionType *FTy = FunctionType::get(Int8PtrTy, Args, false);
   Function *F = Function::Create(
       FTy, GlobalValue::ExternalLinkage,
-      "___cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
+      "__cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
   FindMatchingCatches[NumClauses] = F;
   return F;
 }
@@ -239,10 +245,12 @@ WebAssemblyLowerEmscriptenExceptions::getInvokeWrapper(Module &M,
 }
 
 bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
-  IRBuilder<> Builder(M.getContext());
+  LLVMContext &C = M.getContext();
+  IRBuilder<> Builder(C);
   IntegerType *Int1Ty = Builder.getInt1Ty();
   PointerType *Int8PtrTy = Builder.getInt8PtrTy();
   IntegerType *Int32Ty = Builder.getInt32Ty();
+  Type *VoidTy = Builder.getVoidTy();
 
   // Create global variables __THREW__, threwValue, and tempRet0
   ThrewGV = new GlobalVariable(M, Int1Ty, false, GlobalValue::ExternalLinkage,
@@ -255,11 +263,15 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
       M, Int32Ty, false, GlobalValue::ExternalLinkage, Builder.getInt32(0),
       createGlobalValueName(M, "tempRet0"));
 
-  // Register ___resumeException function
-  Type *VoidTy = Type::getVoidTy(M.getContext());
+  // Register __resumeException function
   FunctionType *ResumeFTy = FunctionType::get(VoidTy, Int8PtrTy, false);
   ResumeF = Function::Create(ResumeFTy, GlobalValue::ExternalLinkage,
-                             "___resumeException", &M);
+                             "__resumeException", &M);
+
+  // Register llvm_eh_typeid_for function
+  FunctionType *EHTypeIdTy = FunctionType::get(Int32Ty, Int8PtrTy, false);
+  EHTypeIdF = Function::Create(EHTypeIdTy, GlobalValue::ExternalLinkage,
+                               "llvm_eh_typeid_for", &M);
 
   bool Changed = false;
   for (Function &F : M) {
@@ -283,9 +295,9 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
   Argument *Arg2 = &*(++F->arg_begin());
   Arg1->setName("threw");
   Arg2->setName("value");
-  BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", F);
-  BasicBlock *ThenBB = BasicBlock::Create(M.getContext(), "if.then", F);
-  BasicBlock *EndBB = BasicBlock::Create(M.getContext(), "if.end", F);
+  BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
+  BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", F);
+  BasicBlock *EndBB = BasicBlock::Create(C, "if.end", F);
 
   Builder.SetInsertPoint(EntryBB);
   Value *Threw = Builder.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
@@ -305,7 +317,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
   FTy = FunctionType::get(VoidTy, Params, false);
   F = Function::Create(FTy, GlobalValue::ExternalLinkage, "setTempRet0", &M);
   F->arg_begin()->setName("value");
-  EntryBB = BasicBlock::Create(M.getContext(), "entry", F);
+  EntryBB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(EntryBB);
   Builder.CreateStore(&*F->arg_begin(), TempRet0GV);
   Builder.CreateRetVoid();
@@ -315,10 +327,12 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
 
 bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
   Module &M = *F.getParent();
-  IRBuilder<> Builder(M.getContext());
+  LLVMContext &C = F.getContext();
+  IRBuilder<> Builder(C);
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
+  bool AllowExceptions = true; // will later change based on whitelist option
 
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());
@@ -328,7 +342,8 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
     LandingPads.insert(II->getLandingPadInst());
     Builder.SetInsertPoint(II);
 
-    if (canThrow(II->getCalledValue())) {
+    bool NeedInvoke = AllowExceptions && canThrow(II->getCalledValue());
+    if (NeedInvoke) {
       // If we are calling a function that is noreturn, we must remove that
       // attribute. The code we insert here does expect it to return, after we
       // catch the exception.
@@ -336,7 +351,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
         if (auto *F = dyn_cast<Function>(II->getCalledValue()))
           F->removeFnAttr(Attribute::NoReturn);
         AttributeSet NewAttrs = II->getAttributes();
-        NewAttrs.removeAttribute(M.getContext(), AttributeSet::FunctionIndex,
+        NewAttrs.removeAttribute(C, AttributeSet::FunctionIndex,
                                  Attribute::NoReturn);
         II->setAttributes(NewAttrs);
       }
@@ -354,8 +369,32 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       CallInst *NewCall = Builder.CreateCall(getInvokeWrapper(M, II), CallArgs);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
-      NewCall->setAttributes(II->getAttributes());
       NewCall->setDebugLoc(II->getDebugLoc());
+
+      // Because we added the pointer to the callee as first argument, all
+      // argument attribute indices have to be incremented by one.
+      SmallVector<AttributeSet, 8> AttributesVec;
+      const AttributeSet &InvokePAL = II->getAttributes();
+      CallSite::arg_iterator AI = II->arg_begin();
+      unsigned i = 1; // Argument attribute index starts from 1
+      for (unsigned e = II->getNumArgOperands(); i <= e; ++AI, ++i) {
+        if (InvokePAL.hasAttributes(i)) {
+          AttrBuilder B(InvokePAL, i);
+          AttributesVec.push_back(AttributeSet::get(C, i + 1, B));
+        }
+      }
+      // Add any return attributes.
+      if (InvokePAL.hasAttributes(AttributeSet::ReturnIndex))
+        AttributesVec.push_back(
+            AttributeSet::get(C, InvokePAL.getRetAttributes()));
+      // Add any function attributes.
+      if (InvokePAL.hasAttributes(AttributeSet::FunctionIndex))
+        AttributesVec.push_back(
+            AttributeSet::get(C, InvokePAL.getFnAttributes()));
+      // Reconstruct the AttributesList based on the vector we constructed.
+      AttributeSet NewCallPAL = AttributeSet::get(C, AttributesVec);
+      NewCall->setAttributes(NewCallPAL);
+
       II->replaceAllUsesWith(NewCall);
       ToErase.push_back(II);
 
@@ -374,8 +413,8 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       CallInst *NewCall = Builder.CreateCall(II->getCalledValue(), CallArgs);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
-      NewCall->setAttributes(II->getAttributes());
       NewCall->setDebugLoc(II->getDebugLoc());
+      NewCall->setAttributes(II->getAttributes());
       II->replaceAllUsesWith(NewCall);
       ToErase.push_back(II);
 
@@ -399,13 +438,33 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       Builder.SetInsertPoint(RI);
       Value *Low = Builder.CreateExtractValue(Input, 0, "low");
 
-      // Create a call to ___resumeException function
+      // Create a call to __resumeException function
       Value *Args[] = {Low};
       Builder.CreateCall(ResumeF, Args);
 
       // Add a terminator to the block
       Builder.CreateUnreachable();
       ToErase.push_back(RI);
+    }
+  }
+
+  // Process llvm.eh.typeid.for intrinsics
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (!CI)
+        continue;
+      const Function *Callee = CI->getCalledFunction();
+      if (!Callee)
+        continue;
+      if (Callee->getIntrinsicID() != Intrinsic::eh_typeid_for)
+        continue;
+
+      Builder.SetInsertPoint(CI);
+      CallInst *NewCI =
+          Builder.CreateCall(EHTypeIdF, CI->getArgOperand(0), "typeid");
+      CI->replaceAllUsesWith(NewCI);
+      ToErase.push_back(CI);
     }
   }
 
@@ -437,7 +496,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
         FMCArgs.push_back(Clause);
     }
 
-    // Create a call to ___cxa_find_matching_catch_N function
+    // Create a call to __cxa_find_matching_catch_N function
     Function *FMCF = getFindMatchingCatch(M, FMCArgs.size());
     CallInst *FMCI = Builder.CreateCall(FMCF, FMCArgs, "fmc");
     Value *Undef = UndefValue::get(LPI->getType());

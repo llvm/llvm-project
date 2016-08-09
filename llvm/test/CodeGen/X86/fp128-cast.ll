@@ -351,8 +351,8 @@ cleanup:                                          ; preds = %entry, %if.then
 ;
 ; X64-LABEL: TestTruncCopysign:
 ; X64:       callq __trunctfdf2
-; X64-NEXT:  andpd {{.*}}, %xmm0
-; X64-NEXT:  orpd {{.*}}, %xmm0
+; X64-NEXT:  andps {{.*}}, %xmm0
+; X64-NEXT:  orps {{.*}}, %xmm0
 ; X64-NEXT:  callq __extenddftf2
 ; X64:       retq
 }

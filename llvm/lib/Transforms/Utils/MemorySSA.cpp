@@ -1025,6 +1025,8 @@ public:
 #endif
     return Result;
   }
+
+  void verify(const MemorySSA *MSSA) { assert(MSSA == &this->MSSA); }
 };
 
 struct RenamePassData {
@@ -1104,6 +1106,11 @@ public:
   /// earliest-MemoryAccess-we-can-optimize-to". This is necessary if we're
   /// going to have DT updates, if we remove MemoryAccesses, etc.
   void resetClobberWalker() { Walker.reset(); }
+
+  void verify(const MemorySSA *MSSA) override {
+    MemorySSAWalker::verify(MSSA);
+    Walker.verify(MSSA);
+  }
 };
 
 /// \brief Rename a single basic block into MemorySSA form.
@@ -1229,19 +1236,6 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
     : AA(AA), DT(DT), F(Func), LiveOnEntryDef(nullptr), Walker(nullptr),
       NextID(0) {
   buildMemorySSA();
-}
-
-MemorySSA::MemorySSA(MemorySSA &&MSSA)
-    : AA(MSSA.AA), DT(MSSA.DT), F(MSSA.F),
-      ValueToMemoryAccess(std::move(MSSA.ValueToMemoryAccess)),
-      PerBlockAccesses(std::move(MSSA.PerBlockAccesses)),
-      LiveOnEntryDef(std::move(MSSA.LiveOnEntryDef)),
-      BlockNumberingValid(std::move(MSSA.BlockNumberingValid)),
-      BlockNumbering(std::move(MSSA.BlockNumbering)),
-      Walker(std::move(MSSA.Walker)), NextID(MSSA.NextID) {
-  // Update the Walker MSSA pointer so it doesn't point to the moved-from MSSA
-  // object any more.
-  Walker->MSSA = this;
 }
 
 MemorySSA::~MemorySSA() {
@@ -1818,6 +1812,7 @@ void MemorySSA::verifyMemorySSA() const {
   verifyDefUses(F);
   verifyDomination(F);
   verifyOrdering(F);
+  Walker->verify(this);
 }
 
 /// \brief Verify that the order and existence of MemoryAccesses matches the
@@ -2083,23 +2078,24 @@ bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {
 
 char MemorySSAAnalysis::PassID;
 
-MemorySSA MemorySSAAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+MemorySSAAnalysis::Result
+MemorySSAAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  return MemorySSA(F, &AA, &DT);
+  return MemorySSAAnalysis::Result(make_unique<MemorySSA>(F, &AA, &DT));
 }
 
 PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   OS << "MemorySSA for function: " << F.getName() << "\n";
-  AM.getResult<MemorySSAAnalysis>(F).print(OS);
+  AM.getResult<MemorySSAAnalysis>(F).getMSSA().print(OS);
 
   return PreservedAnalyses::all();
 }
 
 PreservedAnalyses MemorySSAVerifierPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
-  AM.getResult<MemorySSAAnalysis>(F).verifyMemorySSA();
+  AM.getResult<MemorySSAAnalysis>(F).getMSSA().verifyMemorySSA();
 
   return PreservedAnalyses::all();
 }

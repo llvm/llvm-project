@@ -209,6 +209,10 @@ namespace Mips {
     // resulting in - R_MICROMIPS_TLS_TPREL_LO16
     fixup_MICROMIPS_TLS_TPREL_LO16,
 
+    // resulting in - R_MIPS_SUB/R_MICROMIPS_SUB
+    fixup_Mips_SUB,
+    fixup_MICROMIPS_SUB,
+
     // Marker
     LastTargetFixupKind,
     NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

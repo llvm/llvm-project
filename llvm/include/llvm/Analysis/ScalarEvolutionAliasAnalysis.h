@@ -45,7 +45,7 @@ class SCEVAA : public AnalysisInfoMixin<SCEVAA> {
 public:
   typedef SCEVAAResult Result;
 
-  SCEVAAResult run(Function &F, AnalysisManager<Function> &AM);
+  SCEVAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the SCEVAAResult object.

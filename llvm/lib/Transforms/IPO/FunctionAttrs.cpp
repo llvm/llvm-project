@@ -1267,7 +1267,7 @@ bool ReversePostOrderFunctionAttrsLegacyPass::runOnModule(Module &M) {
 }
 
 PreservedAnalyses
-ReversePostOrderFunctionAttrsPass::run(Module &M, AnalysisManager<Module> &AM) {
+ReversePostOrderFunctionAttrsPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &CG = AM.getResult<CallGraphAnalysis>(M);
 
   bool Changed = deduceFunctionAttributeInRPO(M, CG);

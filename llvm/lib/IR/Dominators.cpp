@@ -301,7 +301,7 @@ void DominatorTree::verifyDomTree() const {
 //===----------------------------------------------------------------------===//
 
 DominatorTree DominatorTreeAnalysis::run(Function &F,
-                                         AnalysisManager<Function> &) {
+                                         FunctionAnalysisManager &) {
   DominatorTree DT;
   DT.recalculate(F);
   return DT;

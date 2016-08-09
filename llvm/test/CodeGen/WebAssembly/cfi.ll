@@ -14,13 +14,13 @@ define void @h() !type !0 {
 }
 
 ; CHECK-LABEL: f:
-; CHECK: .indidx 0
+; CHECK: .indidx 1
 define void @f() !type !0 {
   ret void
 }
 
 ; CHECK-LABEL: g:
-; CHECK: .indidx 1
+; CHECK: .indidx 2
 define void @g() !type !1 {
   ret void
 }

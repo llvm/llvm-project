@@ -18,7 +18,8 @@
 namespace clang {
 namespace include_fixer {
 
-/// \brief A context for the symbol being queried.
+/// \brief A context for a file being processed. It includes all query
+/// information, e.g. symbols being queried in database, all header candidates.
 class IncludeFixerContext {
 public:
   struct HeaderInfo {
@@ -46,7 +47,8 @@ public:
   };
 
   IncludeFixerContext() = default;
-  IncludeFixerContext(std::vector<QuerySymbolInfo> QuerySymbols,
+  IncludeFixerContext(StringRef FilePath,
+                      std::vector<QuerySymbolInfo> QuerySymbols,
                       std::vector<find_all_symbols::SymbolInfo> Symbols);
 
   /// \brief Get symbol name.
@@ -59,6 +61,9 @@ public:
     return QuerySymbolInfos.front().Range;
   }
 
+  /// \brief Get the file path to the file being processed.
+  StringRef getFilePath() const { return FilePath; }
+
   /// \brief Get header information.
   const std::vector<HeaderInfo> &getHeaderInfos() const { return HeaderInfos; }
 
@@ -69,6 +74,9 @@ public:
 
 private:
   friend struct llvm::yaml::MappingTraits<IncludeFixerContext>;
+
+  /// \brief The file path to the file being processed.
+  std::string FilePath;
 
   /// \brief All instances of an unidentified symbol being queried.
   std::vector<QuerySymbolInfo> QuerySymbolInfos;

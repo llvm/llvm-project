@@ -619,7 +619,7 @@ bool LoopRotate::processLoop(Loop *L) {
 
 LoopRotatePass::LoopRotatePass() {}
 
-PreservedAnalyses LoopRotatePass::run(Loop &L, AnalysisManager<Loop> &AM) {
+PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();
 

@@ -63,7 +63,7 @@ public:
   /// internalizing a function (by removing any edge from the "external node")
   bool internalizeModule(Module &TheModule, CallGraph *CG = nullptr);
 
-  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Helper function to internalize functions and variables in a Module.

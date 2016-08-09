@@ -279,23 +279,20 @@ void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
 }
 
 void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
-  for (auto I = BB->rbegin(), E = BB->rend(); I != E; I++) {
-    Instruction *Inst = &*I;
-    Value *NewVal = BBMap[Inst];
-
-    if (!NewVal)
-      continue;
-
-    Instruction *NewInst = dyn_cast<Instruction>(NewVal);
-
-    if (!NewInst)
-      continue;
+  auto NewBB = Builder.GetInsertBlock();
+  for (auto I = NewBB->rbegin(); I != NewBB->rend(); I++) {
+    Instruction *NewInst = &*I;
 
     if (!isInstructionTriviallyDead(NewInst))
       continue;
 
-    BBMap.erase(Inst);
+    for (auto Pair : BBMap)
+      if (Pair.second == NewInst) {
+        BBMap.erase(Pair.first);
+      }
+
     NewInst->eraseFromParent();
+    I = NewBB->rbegin();
   }
 }
 

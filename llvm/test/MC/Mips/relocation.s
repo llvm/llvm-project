@@ -153,7 +153,10 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %got_lo(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %got_lo(foo), kind: fixup_Mips_GOT_LO16
 
-//      addiu $2, $3, %neg(foo)            // FIXME: R_MIPS_SUB foo
+        // It turns out that %neg() isn't actually usable for anything. It's
+        // not supported in .quad and it doesn't make sense to use a 64-bit
+        // reloc on a 32-bit instruction.
+        // .quad %neg(foo)                 // ?????: R_MIPS_SUB foo
                                            // ?????: R_MIPS_INSERT_A
                                            // ?????: R_MIPS_INSERT_B
                                            // ?????: R_MIPS_DELETE

@@ -242,10 +242,26 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       Type = ELF::R_ARM_JUMP24;
       break;
     case ARM::fixup_arm_movt_hi16:
-      Type = ELF::R_ARM_MOVT_ABS;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_ARM_MOVT_ABS;
+        break;
+      case MCSymbolRefExpr::VK_ARM_SBREL:
+        Type = ELF:: R_ARM_MOVT_BREL;
+        break;
+      }
       break;
     case ARM::fixup_arm_movw_lo16:
-      Type = ELF::R_ARM_MOVW_ABS_NC;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_ARM_MOVW_ABS_NC;
+        break;
+      case MCSymbolRefExpr::VK_ARM_SBREL:
+        Type = ELF:: R_ARM_MOVW_BREL_NC;
+        break;
+      }
       break;
     case ARM::fixup_t2_movt_hi16:
       Type = ELF::R_ARM_THM_MOVT_ABS;

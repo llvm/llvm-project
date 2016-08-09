@@ -1161,8 +1161,12 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
 
   int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
 
-  for (long i = 0; i < NumVars; i++)
-    Args.push_back(Builder.getInt64Ty());
+  for (long i = 0; i < NumVars; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Args.push_back(Val->getType());
+  }
 
   for (auto *V : SubtreeValues)
     Args.push_back(V->getType());

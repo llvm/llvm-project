@@ -2565,7 +2565,7 @@ static bool optimizeGlobalsInModule(
   return Changed;
 }
 
-PreservedAnalyses GlobalOptPass::run(Module &M, AnalysisManager<Module> &AM) {
+PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     auto &DL = M.getDataLayout();
     auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
     auto &FAM =

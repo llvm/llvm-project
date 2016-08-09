@@ -329,6 +329,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MIPS_HIGHER;
   case Mips::fixup_Mips_HIGHEST:
     return ELF::R_MIPS_HIGHEST;
+  case Mips::fixup_Mips_SUB:
+    return ELF::R_MIPS_SUB;
   case Mips::fixup_Mips_GOT_HI16:
     return ELF::R_MIPS_GOT_HI16;
   case Mips::fixup_Mips_GOT_LO16:
@@ -365,6 +367,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_TLS_TPREL_HI16;
   case Mips::fixup_MICROMIPS_TLS_TPREL_LO16:
     return ELF::R_MICROMIPS_TLS_TPREL_LO16;
+  case Mips::fixup_MICROMIPS_SUB:
+    return ELF::R_MICROMIPS_SUB;
   }
 
   llvm_unreachable("invalid fixup kind!");

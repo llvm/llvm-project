@@ -964,7 +964,7 @@ bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {
 }
 
 PreservedAnalyses PGOInstrumentationGen::run(Module &M,
-                                             AnalysisManager<Module> &AM) {
+                                             ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto LookupBPI = [&FAM](Function &F) {
@@ -1056,7 +1056,7 @@ PGOInstrumentationUse::PGOInstrumentationUse(std::string Filename)
 }
 
 PreservedAnalyses PGOInstrumentationUse::run(Module &M,
-                                             AnalysisManager<Module> &AM) {
+                                             ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto LookupBPI = [&FAM](Function &F) {

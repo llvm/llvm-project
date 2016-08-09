@@ -1874,7 +1874,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // operation. There is a pattern that will match i64 mul and transform it
   // to a series of instructions.
   setOperationAction(ISD::MUL,   MVT::i64, Expand);
-  setOperationAction(ISD::MULHS, MVT::i64, Expand);
 
   for (unsigned IntExpOp :
        { ISD::SDIV,      ISD::UDIV,      ISD::SREM,      ISD::UREM,

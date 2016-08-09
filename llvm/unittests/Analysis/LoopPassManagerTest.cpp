@@ -42,7 +42,7 @@ public:
   TestLoopAnalysis(int &Runs) : Runs(Runs) {}
 
   /// \brief Run the analysis pass over the loop and return a result.
-  Result run(Loop &L, AnalysisManager<Loop> &AM) {
+  Result run(Loop &L, LoopAnalysisManager &AM) {
     ++Runs;
     int Count = 0;
 
@@ -65,7 +65,7 @@ public:
       : VisitedLoops(VisitedLoops), AnalyzedBlockCount(AnalyzedBlockCount),
         OnlyUseCachedResults(OnlyUseCachedResults) {}
 
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM) {
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM) {
     VisitedLoops.push_back(L.getName());
 
     if (OnlyUseCachedResults) {
@@ -91,7 +91,7 @@ class TestLoopInvalidatingPass {
 public:
   TestLoopInvalidatingPass(StringRef LoopName) : Name(LoopName) {}
 
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM) {
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM) {
     return L.getName() == Name ? getLoopPassPreservedAnalyses()
                                : PreservedAnalyses::all();
   }

@@ -17,28 +17,28 @@ define void @test_copysign_const_magnitude_d(double %X) {
 ; CHECK: id
   %iX = call double @id_d(double %X)
 
-; CHECK-NEXT: andpd [[SIGNMASK]](%rip), %xmm0
+; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
   %d0 = call double @copysign(double 0.000000e+00, double %iX)
 
 ; CHECK-NEXT: id
   %id0 = call double @id_d(double %d0)
 
-; CHECK-NEXT: andpd [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orpd [[ZERO]](%rip), %xmm0
+; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
+; CHECK-NEXT: orps [[ZERO]](%rip), %xmm0
   %dn0 = call double @copysign(double -0.000000e+00, double %id0)
 
 ; CHECK-NEXT: id
   %idn0 = call double @id_d(double %dn0)
 
-; CHECK-NEXT: andpd [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orpd [[ONE]](%rip), %xmm0
+; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
+; CHECK-NEXT: orps [[ONE]](%rip), %xmm0
   %d1 = call double @copysign(double 1.000000e+00, double %idn0)
 
 ; CHECK-NEXT: id
   %id1 = call double @id_d(double %d1)
 
-; CHECK-NEXT: andpd [[SIGNMASK]](%rip), %xmm0
-; CHECK-NEXT: orpd [[ONE]](%rip), %xmm0
+; CHECK-NEXT: andps [[SIGNMASK]](%rip), %xmm0
+; CHECK-NEXT: orps [[ONE]](%rip), %xmm0
   %dn1 = call double @copysign(double -1.000000e+00, double %id1)
 
 ; CHECK-NEXT: id

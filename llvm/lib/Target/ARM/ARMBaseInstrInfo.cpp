@@ -4119,6 +4119,9 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
 void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
                                                 unsigned LoadImmOpc,
                                                 unsigned LoadOpc) const {
+  assert(!Subtarget.isROPI() && !Subtarget.isRWPI() &&
+         "ROPI/RWPI not currently supported with stack guard");
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   unsigned Reg = MI->getOperand(0).getReg();

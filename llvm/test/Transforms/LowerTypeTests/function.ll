@@ -30,11 +30,11 @@ declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 
 define i1 @foo(i8* %p) {
   ; X64: sub i64 {{.*}}, ptrtoint ([2 x <{ i8, i32, i8, i8, i8 }>]* @[[JT]] to i64)
-  ; WASM32: sub i64 {{.*}}, 0
+  ; WASM32: sub i64 {{.*}}, 1
   ; WASM32: icmp ult i64 {{.*}}, 2
   %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
   ret i1 %x
 }
 
-; WASM32: ![[I0]] = !{i64 0}
-; WASM32: ![[I1]] = !{i64 1}
+; WASM32: ![[I0]] = !{i64 1}
+; WASM32: ![[I1]] = !{i64 2}

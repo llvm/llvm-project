@@ -53,7 +53,7 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
   return Changed;
 }
 
-PreservedAnalyses PromotePass::run(Function &F, AnalysisManager<Function> &AM) {
+PreservedAnalyses PromotePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   if (!promoteMemoryToRegister(F, DT, AC))
