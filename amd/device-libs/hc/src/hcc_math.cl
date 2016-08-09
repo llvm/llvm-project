@@ -16,8 +16,8 @@
   }
 
 #define FUNC1A(name) \
-  FUNC1(opencl_##name, __ocml_##name##_f32, float) \
-  FUNC1(opencl_##name##_double, __ocml_##name##_f64, double)
+  FUNC1(__hc_##name, __ocml_##name##_f32, float) \
+  FUNC1(__hc_##name##_double, __ocml_##name##_f64, double)
 
 #define FUNC2(name, ocml_name, T) \
   ATTR T name(T x, T y) \
@@ -26,8 +26,8 @@
   }
 
 #define FUNC2A(name) \
-  FUNC2(opencl_##name, __ocml_##name##_f32, float) \
-  FUNC2(opencl_##name##_double, __ocml_##name##_f64, double)
+  FUNC2(__hc_##name, __ocml_##name##_f32, float) \
+  FUNC2(__hc_##name##_double, __ocml_##name##_f64, double)
 
 FUNC1A(acos)
 FUNC1A(acosh)
