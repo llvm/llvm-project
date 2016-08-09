@@ -69,7 +69,7 @@ class FunctionImportPass : public PassInfoMixin<FunctionImportPass> {
 public:
   FunctionImportPass(const ModuleSummaryIndex *Index = nullptr)
       : Index(Index) {}
-  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   const ModuleSummaryIndex *Index;

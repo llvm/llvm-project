@@ -1662,7 +1662,7 @@ void MemoryDependenceResults::verifyRemoved(Instruction *D) const {
 char MemoryDependenceAnalysis::PassID;
 
 MemoryDependenceResults
-MemoryDependenceAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AA = AM.getResult<AAManager>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);

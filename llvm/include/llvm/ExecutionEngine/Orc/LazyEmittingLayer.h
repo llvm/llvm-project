@@ -20,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
 #include <list>
 
 namespace llvm {

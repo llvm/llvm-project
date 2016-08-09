@@ -43,6 +43,7 @@ namespace ARMCP {
     GOTTPOFF,    /// Global Offset Table, Thread Pointer Offset
     TPOFF,       /// Thread Pointer Offset
     SECREL,      /// Section Relative (Windows TLS)
+    SBREL,       /// Static Base Relative (RWPI)
   };
 }
 

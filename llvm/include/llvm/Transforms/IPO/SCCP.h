@@ -28,7 +28,7 @@ namespace llvm {
 /// Pass to perform interprocedural constant propagation.
 class IPSCCPPass : public PassInfoMixin<IPSCCPPass> {
 public:
-  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 }
 #endif // LLVM_TRANSFORMS_IPO_SCCP_H

@@ -108,9 +108,9 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    addss %xmm2, %xmm1
 ; X64-NEXT:    cvtss2sd %xmm1, %xmm1
-; X64-NEXT:    andpd {{.*}}(%rip), %xmm1
-; X64-NEXT:    andpd {{.*}}(%rip), %xmm0
-; X64-NEXT:    orpd %xmm1, %xmm0
+; X64-NEXT:    andps {{.*}}(%rip), %xmm1
+; X64-NEXT:    andps {{.*}}(%rip), %xmm0
+; X64-NEXT:    orps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %tmp1 = fadd float %b, %c
   %tmp2 = fpext float %tmp1 to double

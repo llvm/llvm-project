@@ -155,7 +155,7 @@ bool CrossDSOCFI::runOnModule(Module &M) {
   return true;
 }
 
-PreservedAnalyses CrossDSOCFIPass::run(Module &M, AnalysisManager<Module> &AM) {
+PreservedAnalyses CrossDSOCFIPass::run(Module &M, ModuleAnalysisManager &AM) {
   CrossDSOCFI Impl;
   bool Changed = Impl.runOnModule(M);
   if (!Changed)

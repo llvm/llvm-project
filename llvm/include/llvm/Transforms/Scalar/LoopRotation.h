@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOOPROTATION_H
 
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -23,7 +24,7 @@ namespace llvm {
 class LoopRotatePass : public PassInfoMixin<LoopRotatePass> {
 public:
   LoopRotatePass();
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM);
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM);
 };
 }
 

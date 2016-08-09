@@ -48,18 +48,9 @@ public:
         // Ignore implicit initializers.
         continue;
       }
-      if (const clang::FieldDecl *FieldDecl = Initializer->getAnyMember()) {
+      if (const clang::FieldDecl *FieldDecl = Initializer->getMember()) {
         if (USRSet.find(getUSRForDecl(FieldDecl)) != USRSet.end()) {
-          // The initializer refers to a field that is to be renamed.
-          SourceLocation Location = Initializer->getSourceLocation();
-          StringRef TokenName = Lexer::getSourceText(
-              CharSourceRange::getTokenRange(Location),
-              Context.getSourceManager(), Context.getLangOpts());
-          if (TokenName == PrevName) {
-            // The token of the source location we find actually has the old
-            // name.
-            LocationsFound.push_back(Initializer->getSourceLocation());
-          }
+          LocationsFound.push_back(Initializer->getSourceLocation());
         }
       }
     }

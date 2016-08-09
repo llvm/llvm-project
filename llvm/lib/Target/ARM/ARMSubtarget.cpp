@@ -199,6 +199,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       (Options.UnsafeFPMath || isTargetDarwin()))
     UseNEONForSinglePrecisionFP = true;
 
+  if (isRWPI())
+    ReserveR9 = true;
+
   // FIXME: Teach TableGen to deal with these instead of doing it manually here.
   switch (ARMProcFamily) {
   case Others:
@@ -259,6 +262,15 @@ bool ARMSubtarget::isAAPCS_ABI() const {
 bool ARMSubtarget::isAAPCS16_ABI() const {
   assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
   return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+}
+
+bool ARMSubtarget::isROPI() const {
+  return TM.getRelocationModel() == Reloc::ROPI ||
+         TM.getRelocationModel() == Reloc::ROPI_RWPI;
+}
+bool ARMSubtarget::isRWPI() const {
+  return TM.getRelocationModel() == Reloc::RWPI ||
+         TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {

@@ -66,7 +66,7 @@ public:
 
 } // anonymous namespace
 
-PreservedAnalyses InstrProfiling::run(Module &M, AnalysisManager<Module> &AM) {
+PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
   if (!run(M))
     return PreservedAnalyses::all();
 

@@ -857,7 +857,7 @@ bool LoopSimplify::runOnFunction(Function &F) {
 }
 
 PreservedAnalyses LoopSimplifyPass::run(Function &F,
-                                        AnalysisManager<Function> &AM) {
+                                        FunctionAnalysisManager &AM) {
   bool Changed = false;
   LoopInfo *LI = &AM.getResult<LoopAnalysis>(F);
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);

@@ -703,14 +703,14 @@ void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
 
 char BranchProbabilityAnalysis::PassID;
 BranchProbabilityInfo
-BranchProbabilityAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+BranchProbabilityAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   BranchProbabilityInfo BPI;
   BPI.calculate(F, AM.getResult<LoopAnalysis>(F));
   return BPI;
 }
 
 PreservedAnalyses
-BranchProbabilityPrinterPass::run(Function &F, AnalysisManager<Function> &AM) {
+BranchProbabilityPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
   OS << "Printing analysis results of BPI for function "
      << "'" << F.getName() << "':"
      << "\n";

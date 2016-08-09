@@ -1704,6 +1704,102 @@ let Defs = [R0D, R1D], mayLoad = 1 in
                      "ectg\t$BD1, $BD2, $R3", []>;
 
 //===----------------------------------------------------------------------===//
+// .insn directive instructions
+//===----------------------------------------------------------------------===//
+
+let isCodeGenOnly = 1 in {
+  def InsnE   : DirectiveInsnE<(outs), (ins imm64zx16:$enc), ".insn e,$enc", []>;
+  def InsnRI  : DirectiveInsnRI<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
+                                             imm32sx16:$I2),
+                                ".insn ri,$enc,$R1,$I2", []>;
+  def InsnRIE : DirectiveInsnRIE<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
+                                              AnyReg:$R3, brtarget16:$I2),
+                                 ".insn rie,$enc,$R1,$R3,$I2", []>;
+  def InsnRIL : DirectiveInsnRIL<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
+                                              brtarget32:$I2),
+                                 ".insn ril,$enc,$R1,$I2", []>;
+  def InsnRILU : DirectiveInsnRIL<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
+                                               uimm32:$I2),
+                                  ".insn rilu,$enc,$R1,$I2", []>;
+  def InsnRIS : DirectiveInsnRIS<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1,
+                                      imm32sx8:$I2, imm32zx4:$M3,
+                                      bdaddr12only:$BD4),
+                                 ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
+  def InsnRR : DirectiveInsnRR<(outs),
+                               (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
+                               ".insn rr,$enc,$R1,$R2", []>;
+  def InsnRRE : DirectiveInsnRRE<(outs), (ins imm64zx32:$enc,
+                                              AnyReg:$R1, AnyReg:$R2),
+                                 ".insn rre,$enc,$R1,$R2", []>;
+  def InsnRRF : DirectiveInsnRRF<(outs),
+                                 (ins imm64zx32:$enc, AnyReg:$R1, AnyReg:$R2,
+                                      AnyReg:$R3, imm32zx4:$R4),
+                                 ".insn rrf,$enc,$R1,$R2,$R3,$R4", []>;
+  def InsnRRS : DirectiveInsnRRS<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1,
+                                      AnyReg:$R2, imm32zx4:$M3,
+                                      bdaddr12only:$BD4),
+                                 ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
+  def InsnRS  : DirectiveInsnRS<(outs),
+                                (ins imm64zx32:$enc, AnyReg:$R1,
+                                     AnyReg:$R3, bdaddr12only:$BD2),
+                                ".insn rs,$enc,$R1,$R3,$BD2", []>;
+  def InsnRSE : DirectiveInsnRSE<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1,
+                                      AnyReg:$R3, bdaddr12only:$BD2),
+                                 ".insn rse,$enc,$R1,$R3,$BD2", []>;
+  def InsnRSI : DirectiveInsnRSI<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1,
+                                      AnyReg:$R3, brtarget16:$RI2),
+                                 ".insn rsi,$enc,$R1,$R3,$RI2", []>;
+  def InsnRSY : DirectiveInsnRSY<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1,
+                                      AnyReg:$R3, bdaddr20only:$BD2),
+                                 ".insn rsy,$enc,$R1,$R3,$BD2", []>;
+  def InsnRX  : DirectiveInsnRX<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
+                                             bdxaddr12only:$XBD2),
+                                ".insn rx,$enc,$R1,$XBD2", []>;
+  def InsnRXE : DirectiveInsnRXE<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
+                                              bdxaddr12only:$XBD2),
+                                 ".insn rxe,$enc,$R1,$XBD2", []>;
+  def InsnRXF : DirectiveInsnRXF<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1,
+                                      AnyReg:$R3, bdxaddr12only:$XBD2),
+                                 ".insn rxf,$enc,$R1,$R3,$XBD2", []>;
+  def InsnRXY : DirectiveInsnRXY<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
+                                              bdxaddr20only:$XBD2),
+                                 ".insn rxy,$enc,$R1,$XBD2", []>;
+  def InsnS : DirectiveInsnS<(outs),
+                             (ins imm64zx32:$enc, bdaddr12only:$BD2),
+                             ".insn s,$enc,$BD2", []>;
+  def InsnSI : DirectiveInsnSI<(outs),
+                               (ins imm64zx32:$enc, bdaddr12only:$BD1,
+                                    imm32sx8:$I2),
+                               ".insn si,$enc,$BD1,$I2", []>;
+  def InsnSIY : DirectiveInsnSIY<(outs),
+                                 (ins imm64zx48:$enc,
+                                      bdaddr20only:$BD1, imm32zx8:$I2),
+                                 ".insn siy,$enc,$BD1,$I2", []>;
+  def InsnSIL : DirectiveInsnSIL<(outs),
+                                 (ins imm64zx48:$enc, bdaddr12only:$BD1,
+                                      imm32zx16:$I2),
+                                 ".insn sil,$enc,$BD1,$I2", []>;
+  def InsnSS : DirectiveInsnSS<(outs),
+                               (ins imm64zx48:$enc, bdxaddr12only:$XBD1,
+                                    bdaddr12only:$BD2, AnyReg:$R3),
+                               ".insn ss,$enc,$XBD1,$BD2,$R3", []>;
+  def InsnSSE : DirectiveInsnSSE<(outs),
+                                 (ins imm64zx48:$enc,
+                                      bdaddr12only:$BD1,bdaddr12only:$BD2),
+                                 ".insn sse,$enc,$BD1,$BD2", []>;
+  def InsnSSF : DirectiveInsnSSF<(outs),
+                                 (ins imm64zx48:$enc, bdaddr12only:$BD1,
+                                      bdaddr12only:$BD2, AnyReg:$R3),
+                                 ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
+}
+
+//===----------------------------------------------------------------------===//
 // Peepholes.
 //===----------------------------------------------------------------------===//
 

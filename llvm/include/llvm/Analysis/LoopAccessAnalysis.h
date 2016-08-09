@@ -20,6 +20,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
@@ -775,7 +776,7 @@ class LoopAccessAnalysis
 
 public:
   typedef LoopAccessInfo Result;
-  Result run(Loop &, AnalysisManager<Loop> &);
+  Result run(Loop &, LoopAnalysisManager &);
   static StringRef name() { return "LoopAccessAnalysis"; }
 };
 
@@ -786,7 +787,7 @@ class LoopAccessInfoPrinterPass
 
 public:
   explicit LoopAccessInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM);
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM);
 };
 
 inline Instruction *MemoryDepChecker::Dependence::getSource(

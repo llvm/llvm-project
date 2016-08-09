@@ -2213,7 +2213,7 @@ bool IndVarSimplify::run(Loop *L) {
   return Changed;
 }
 
-PreservedAnalyses IndVarSimplifyPass::run(Loop &L, AnalysisManager<Loop> &AM) {
+PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getParent()->getDataLayout();

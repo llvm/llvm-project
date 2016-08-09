@@ -37,6 +37,7 @@ public:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
+    FilePath = InFile;
     return llvm::make_unique<clang::ASTConsumer>();
   }
 
@@ -228,7 +229,7 @@ public:
                                     Symbol.getContexts(),
                                     Symbol.getNumOccurrences());
     }
-    return IncludeFixerContext(QuerySymbolInfos, SymbolCandidates);
+    return IncludeFixerContext(FilePath, QuerySymbolInfos, SymbolCandidates);
   }
 
 private:
@@ -297,6 +298,9 @@ private:
   /// recovery.
   std::vector<find_all_symbols::SymbolInfo> MatchedSymbols;
 
+  /// The file path to the file being processed.
+  std::string FilePath;
+
   /// Whether we should use the smallest possible include path.
   bool MinimizeIncludePaths = true;
 };
@@ -304,9 +308,10 @@ private:
 } // namespace
 
 IncludeFixerActionFactory::IncludeFixerActionFactory(
-    SymbolIndexManager &SymbolIndexMgr, IncludeFixerContext &Context,
-    StringRef StyleName, bool MinimizeIncludePaths)
-    : SymbolIndexMgr(SymbolIndexMgr), Context(Context),
+    SymbolIndexManager &SymbolIndexMgr,
+    std::vector<IncludeFixerContext> &Contexts, StringRef StyleName,
+    bool MinimizeIncludePaths)
+    : SymbolIndexMgr(SymbolIndexMgr), Contexts(Contexts),
       MinimizeIncludePaths(MinimizeIncludePaths) {}
 
 IncludeFixerActionFactory::~IncludeFixerActionFactory() = default;
@@ -337,9 +342,9 @@ bool IncludeFixerActionFactory::runInvocation(
       llvm::make_unique<Action>(SymbolIndexMgr, MinimizeIncludePaths);
   Compiler.ExecuteAction(*ScopedToolAction);
 
-  Context = ScopedToolAction->getIncludeFixerContext(
+  Contexts.push_back(ScopedToolAction->getIncludeFixerContext(
       Compiler.getSourceManager(),
-      Compiler.getPreprocessor().getHeaderSearchInfo());
+      Compiler.getPreprocessor().getHeaderSearchInfo()));
 
   // Technically this should only return true if we're sure that we have a
   // parseable file. We don't know that though. Only inform users of fatal
@@ -348,10 +353,11 @@ bool IncludeFixerActionFactory::runInvocation(
 }
 
 llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
-    StringRef Code, StringRef FilePath, const IncludeFixerContext &Context,
+    StringRef Code, const IncludeFixerContext &Context,
     const clang::format::FormatStyle &Style, bool AddQualifiers) {
   if (Context.getHeaderInfos().empty())
     return tooling::Replacements();
+  StringRef FilePath = Context.getFilePath();
   std::string IncludeName =
       "#include " + Context.getHeaderInfos().front().Header + "\n";
   // Create replacements for the new header.

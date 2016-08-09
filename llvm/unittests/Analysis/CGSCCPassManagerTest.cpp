@@ -198,7 +198,7 @@ struct TestSCCPass {
 struct TestFunctionPass {
   TestFunctionPass(int &RunCount) : RunCount(RunCount) {}
 
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &) {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     ++RunCount;
     return PreservedAnalyses::none();
   }

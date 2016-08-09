@@ -62,6 +62,8 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_GPRel_4:
   case FK_Data_4:
   case FK_Data_8:
+  case Mips::fixup_Mips_SUB:
+  case Mips::fixup_MICROMIPS_SUB:
     break;
   case Mips::fixup_Mips_PC16:
     // The displacement is then divided by 4 to give us an 18 bit
@@ -361,7 +363,9 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_MICROMIPS_TLS_DTPREL_HI16", 0,     16,   0 },
     { "fixup_MICROMIPS_TLS_DTPREL_LO16", 0,     16,   0 },
     { "fixup_MICROMIPS_TLS_TPREL_HI16",  0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_TPREL_LO16",  0,     16,   0 }
+    { "fixup_MICROMIPS_TLS_TPREL_LO16",  0,     16,   0 },
+    { "fixup_Mips_SUB",                  0,     64,   0 },
+    { "fixup_MICROMIPS_SUB",             0,     64,   0 }
   };
 
   const static MCFixupKindInfo BigEndianInfos[Mips::NumTargetFixupKinds] = {
@@ -430,7 +434,9 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_MICROMIPS_TLS_DTPREL_HI16", 16,     16,   0 },
     { "fixup_MICROMIPS_TLS_DTPREL_LO16", 16,     16,   0 },
     { "fixup_MICROMIPS_TLS_TPREL_HI16",  16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_TPREL_LO16",  16,     16,   0 }
+    { "fixup_MICROMIPS_TLS_TPREL_LO16",  16,     16,   0 },
+    { "fixup_Mips_SUB",                   0,     64,   0 },
+    { "fixup_MICROMIPS_SUB",              0,     64,   0 }
   };
 
   if (Kind < FirstTargetFixupKind)

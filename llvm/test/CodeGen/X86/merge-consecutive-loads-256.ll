@@ -547,29 +547,17 @@ define <16 x i16> @merge_16i16_i16_0uu3uuuuuuuuCuEF(i16* %ptr) nounwind uwtable 
 }
 
 define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF(i16* %ptr) nounwind uwtable noinline ssp {
-; AVX1-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [65535,0,0,65535,0,0,0,0,0,0,0,0,65535,0,65535,65535]
-; AVX1-NEXT:    vandps (%rdi), %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovups (%rdi), %ymm0
-; AVX2-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovups (%rdi), %ymm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    retq
+; AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovups (%rdi), %ymm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    retq
 ;
 ; X32-AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [65535,0,0,65535,0,0,0,0,0,0,0,0,65535,0,65535,65535]
-; X32-AVX-NEXT:    vandps (%eax), %ymm0, %ymm0
+; X32-AVX-NEXT:    vmovups (%eax), %ymm0
+; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 0
   %ptr3 = getelementptr inbounds i16, i16* %ptr, i64 3

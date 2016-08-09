@@ -22,3 +22,4 @@ declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 
 !0 = !{i64 0, !"void"}
 ; WASM-NOT: !{i64 0}
+; WASM-NOT: !{i64 1}

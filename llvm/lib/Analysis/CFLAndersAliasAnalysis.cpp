@@ -869,7 +869,7 @@ AliasResult CFLAndersAAResult::alias(const MemoryLocation &LocA,
 
 char CFLAndersAA::PassID;
 
-CFLAndersAAResult CFLAndersAA::run(Function &F, AnalysisManager<Function> &AM) {
+CFLAndersAAResult CFLAndersAA::run(Function &F, FunctionAnalysisManager &AM) {
   return CFLAndersAAResult(AM.getResult<TargetLibraryAnalysis>(F));
 }
 

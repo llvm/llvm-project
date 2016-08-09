@@ -185,7 +185,7 @@ public:
   typedef BranchProbabilityInfo Result;
 
   /// \brief Run the analysis pass over a function and produce BPI.
-  BranchProbabilityInfo run(Function &F, AnalysisManager<Function> &AM);
+  BranchProbabilityInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Printer pass for the \c BranchProbabilityAnalysis results.
@@ -195,7 +195,7 @@ class BranchProbabilityPrinterPass
 
 public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c BranchProbabilityInfo.

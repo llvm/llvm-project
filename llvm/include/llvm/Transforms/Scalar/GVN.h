@@ -45,7 +45,7 @@ class GVN : public PassInfoMixin<GVN> {
 public:
 
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
@@ -232,7 +232,7 @@ FunctionPass *createGVNPass(bool NoLoads = false);
 /// from sibling branches.
 struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 }

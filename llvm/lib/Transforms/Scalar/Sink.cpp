@@ -254,7 +254,7 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
   return EverMadeChange;
 }
 
-PreservedAnalyses SinkingPass::run(Function &F, AnalysisManager<Function> &AM) {
+PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);

@@ -7,12 +7,12 @@
 define <2 x double> @fabs_v2f64(<2 x double> %p) {
 ; X32-LABEL: fabs_v2f64:
 ; X32:       # BB#0:
-; X32-NEXT:    vandpd .LCPI0_0, %xmm0, %xmm0
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fabs_v2f64:
 ; X64:       # BB#0:
-; X64-NEXT:    vandpd {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %t = call <2 x double> @llvm.fabs.v2f64(<2 x double> %p)
   ret <2 x double> %t
@@ -22,7 +22,7 @@ declare <2 x double> @llvm.fabs.v2f64(<2 x double> %p)
 define <4 x float> @fabs_v4f32(<4 x float> %p) {
 ; X32-LABEL: fabs_v4f32:
 ; X32:       # BB#0:
-; X32-NEXT:    vandps .LCPI1_0, %xmm0, %xmm0
+; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fabs_v4f32:
@@ -37,12 +37,12 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float> %p)
 define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ; X32-LABEL: fabs_v4f64:
 ; X32:       # BB#0:
-; X32-NEXT:    vandpd .LCPI2_0, %ymm0, %ymm0
+; X32-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fabs_v4f64:
 ; X64:       # BB#0:
-; X64-NEXT:    vandpd {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
   %t = call <4 x double> @llvm.fabs.v4f64(<4 x double> %p)
   ret <4 x double> %t
@@ -52,7 +52,7 @@ declare <4 x double> @llvm.fabs.v4f64(<4 x double> %p)
 define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ; X32-LABEL: fabs_v8f32:
 ; X32:       # BB#0:
-; X32-NEXT:    vandps .LCPI3_0, %ymm0, %ymm0
+; X32-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fabs_v8f32:

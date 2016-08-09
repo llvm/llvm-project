@@ -90,6 +90,25 @@ public:
                      TypeEndLoc);
   }
 
+  bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
+    for (auto &Initializer : ConstructorDecl->inits()) {
+      if (Initializer->getSourceOrder() == -1) {
+        // Ignore implicit initializers.
+        continue;
+      }
+      if (const clang::FieldDecl *FieldDecl = Initializer->getMember()) {
+        const SourceLocation InitBeginLoc = Initializer->getSourceLocation(),
+                             InitEndLoc = Lexer::getLocForEndOfToken(
+                                 InitBeginLoc, 0, Context.getSourceManager(),
+                                 Context.getLangOpts());
+        if (!setResult(FieldDecl, InitBeginLoc, InitEndLoc)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   // Other:
 
   const NamedDecl *getNamedDecl() { return Result; }

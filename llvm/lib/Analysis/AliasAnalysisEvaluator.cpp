@@ -88,7 +88,7 @@ static inline bool isInterestingPointer(Value *V) {
       && !isa<ConstantPointerNull>(V);
 }
 
-PreservedAnalyses AAEvaluator::run(Function &F, AnalysisManager<Function> &AM) {
+PreservedAnalyses AAEvaluator::run(Function &F, FunctionAnalysisManager &AM) {
   runInternal(F, AM.getResult<AAManager>(F));
   return PreservedAnalyses::all();
 }

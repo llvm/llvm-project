@@ -31,7 +31,7 @@ namespace llvm {
 class MergedLoadStoreMotionPass
     : public PassInfoMixin<MergedLoadStoreMotionPass> {
 public:
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 }

@@ -5068,23 +5068,46 @@ def: Pat<(i32 (anyext (i1 PredRegs:$src1))),
 def: Pat<(i64 (anyext (i1 PredRegs:$src1))),
          (A2_sxtw (C2_muxii PredRegs:$src1, 1, 0))>;
 
-// Multiply 64-bit unsigned and use upper result.
-def : Pat <(mulhu (i64 DoubleRegs:$src1), (i64 DoubleRegs:$src2)),
+// Clear the sign bit in a 64-bit register.
+def ClearSign : OutPatFrag<(ops node:$Rss),
+  (A2_combinew (S2_clrbit_i (HiReg $Rss), 31), (LoReg $Rss))>;
+
+def MulHU : OutPatFrag<(ops node:$Rss, node:$Rtt),
   (A2_addp
     (M2_dpmpyuu_acc_s0
       (S2_lsr_i_p
         (A2_addp
           (M2_dpmpyuu_acc_s0
-            (S2_lsr_i_p (M2_dpmpyuu_s0 (LoReg $src1), (LoReg $src2)), 32),
-            (HiReg $src1),
-            (LoReg $src2)),
+            (S2_lsr_i_p (M2_dpmpyuu_s0 (LoReg $Rss), (LoReg $Rtt)), 32),
+            (HiReg $Rss),
+            (LoReg $Rtt)),
           (A2_combinew (A2_tfrsi 0),
-                       (LoReg (M2_dpmpyuu_s0 (LoReg $src1), (HiReg $src2))))),
+                       (LoReg (M2_dpmpyuu_s0 (LoReg $Rss), (HiReg $Rtt))))),
         32),
-      (HiReg $src1),
-      (HiReg $src2)),
-    (S2_lsr_i_p (M2_dpmpyuu_s0 (LoReg $src1), (HiReg $src2)), 32)
-)>;
+      (HiReg $Rss),
+      (HiReg $Rtt)),
+    (S2_lsr_i_p (M2_dpmpyuu_s0 (LoReg $Rss), (HiReg $Rtt)), 32))>;
+
+// Multiply 64-bit unsigned and use upper result.
+def : Pat <(mulhu I64:$Rss, I64:$Rtt), (MulHU $Rss, $Rtt)>;
+
+// Multiply 64-bit signed and use upper result.
+//
+// For two signed 64-bit integers A and B, let A' and B' denote A and B
+// with the sign bit cleared. Then A = -2^63*s(A) + A', where s(A) is the
+// sign bit of A (and identically for B). With this notation, the signed
+// product A*B can be written as:
+//   AB = (-2^63 s(A) + A') * (-2^63 s(B) + B')
+//      = 2^126 s(A)s(B) - 2^63 [s(A)B'+s(B)A'] + A'B'
+//      = 2^126 s(A)s(B) + 2^63 [s(A)B'+s(B)A'] + A'B' - 2*2^63 [s(A)B'+s(B)A']
+//      = (unsigned product AB) - 2^64 [s(A)B'+s(B)A']
+
+def : Pat <(mulhs I64:$Rss, I64:$Rtt),
+  (A2_subp
+    (MulHU $Rss, $Rtt),
+    (A2_addp
+      (A2_andp (S2_asr_i_p $Rss, 63), (ClearSign $Rtt)),
+      (A2_andp (S2_asr_i_p $Rtt, 63), (ClearSign $Rss))))>;
 
 // Hexagon specific ISD nodes.
 def SDTHexagonALLOCA : SDTypeProfile<1, 2,

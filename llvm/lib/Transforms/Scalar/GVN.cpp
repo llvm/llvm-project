@@ -583,7 +583,7 @@ void GVN::ValueTable::verifyRemoved(const Value *V) const {
 //                                GVN Pass
 //===----------------------------------------------------------------------===//
 
-PreservedAnalyses GVN::run(Function &F, AnalysisManager<Function> &AM) {
+PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
   // be less effective! We should fix memdep and basic-aa to not exhibit this

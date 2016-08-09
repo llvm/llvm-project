@@ -1016,6 +1016,196 @@ class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 //===----------------------------------------------------------------------===//
+// Instruction classes for .insn directives
+//===----------------------------------------------------------------------===//
+
+class DirectiveInsnE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstE<0, outs, ins, asmstr, pattern> {
+  bits<16> enc;
+
+  let Inst = enc;
+}
+
+class DirectiveInsnRI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRI<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+  let Inst{19-16} = enc{19-16};
+}
+
+class DirectiveInsnRIE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIEd<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRIL<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIL<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+  string type;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{35-32} = enc{35-32};
+}
+
+class DirectiveInsnRIS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRIS<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRR<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRR<0, outs, ins, asmstr, pattern> {
+  bits<16> enc;
+
+  let Inst{15-8} = enc{15-8};
+}
+
+class DirectiveInsnRRE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRE<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
+class DirectiveInsnRRF<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRF<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
+class DirectiveInsnRRS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRRS<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRS<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+}
+
+// RSE is like RSY except with a 12 bit displacement (instead of 20).
+class DirectiveInsnRSE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSY<6, outs, ins, asmstr, pattern> {
+  bits <48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{31-16} = BD2{15-0};
+  let Inst{15-8}  = 0;
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRSI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSI<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+}
+
+class DirectiveInsnRSY<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRSY<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRX<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRX<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+}
+
+class DirectiveInsnRXE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRXE<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let M3 = 0;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRXF<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRXF<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnRXY<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstRXY<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstS<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-16} = enc{31-16};
+}
+
+class DirectiveInsnSI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSI<0, outs, ins, asmstr, pattern> {
+  bits<32> enc;
+
+  let Inst{31-24} = enc{31-24};
+}
+
+class DirectiveInsnSIY<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSIY<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnSIL<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSIL<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-32} = enc{47-32};
+}
+
+class DirectiveInsnSS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSd<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+}
+
+class DirectiveInsnSSE<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSE<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-32} = enc{47-32};
+}
+
+class DirectiveInsnSSF<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSSF<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{35-32} = enc{35-32};
+}
+
+//===----------------------------------------------------------------------===//
 // Instruction definitions with semantics
 //===----------------------------------------------------------------------===//
 //
