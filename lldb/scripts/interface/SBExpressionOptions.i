@@ -98,6 +98,12 @@ public:
     void
     SetPlaygroundTransformEnabled (bool enable_playground_transform = true);
 
+    bool
+    GetREPLMode () const;
+    
+    void
+    SetREPLMode (bool enable_repl = true);
+
     %feature ("docstring", "Sets the language that LLDB should assume the expression is written in") SetLanguage;
     void
     SetLanguage (lldb::LanguageType language);

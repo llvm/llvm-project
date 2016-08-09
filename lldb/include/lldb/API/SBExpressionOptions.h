@@ -98,6 +98,12 @@ public:
     
     void
     SetPlaygroundTransformEnabled (bool enable_playground_transform = true);
+    
+    bool
+    GetREPLMode () const;
+    
+    void
+    SetREPLMode (bool enable_repl_mode = true);
 
     bool
     GetGenerateDebugInfo ();
