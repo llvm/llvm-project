@@ -118,6 +118,28 @@ void INSTR_PROF_VALUE_PROF_FUNC(
 int __llvm_profile_write_file(void);
 
 /*!
+ * \brief this is a wrapper interface to \c __llvm_profile_write_file.
+ * After this interface is invoked, a arleady dumped flag will be set
+ * so that profile won't be dumped again during program exit. 
+ * Invocation of interface __llvm_profile_reset_counters will clear
+ * the flag. This interface is designed to be used to collect profile
+ * data from user selected hot regions. The use model is
+ *      __llvm_profile_reset_counters();
+ *      ... hot region 1
+ *      __llvm_profile_dump();
+ *      .. some other code
+ *      __llvm_profile_reset_counters();
+ *       ... hot region 2
+ *      __llvm_profile_dump();
+ *
+ *  It is expected that on-line profile merging is on with \c %m specifier
+ *  used in profile filename . If merging is  not turned on, user is expected
+ *  to invoke __llvm_profile_set_filename  to specify different profile names
+ *  for different regions before dumping to avoid profile write clobbering.
+ */
+int __llvm_profile_dump(void);
+
+/*!
  * \brief Set the filename for writing instrumentation data.
  *
  * Sets the filename to be used for subsequent calls to

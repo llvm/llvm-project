@@ -23,7 +23,7 @@ template <class ELFT> class OutputSectionBase;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SymbolTable;
-template <class ELFT> void writeResult(SymbolTable<ELFT> *Symtab);
+template <class ELFT> void writeResult();
 template <class ELFT> void markLive();
 template <class ELFT> bool isOutputDynamic();
 template <class ELFT> bool isRelroSection(OutputSectionBase<ELFT> *Sec);

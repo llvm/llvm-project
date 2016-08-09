@@ -104,12 +104,17 @@ option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode.
 option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBUNWIND_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBUNWIND_ENABLE_SHARED "Build libunwind as a shared library." ON)
+option(LIBUNWIND_ENABLE_STATIC "Build libunwind as a static library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
 option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX registers." OFF)
 
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+
+if (NOT LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_STATIC)
+  message(FATAL_ERROR "libunwind must be built as either a shared or static library.")
+endif()
 
 # Check that we can build with 32 bits if requested.
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)

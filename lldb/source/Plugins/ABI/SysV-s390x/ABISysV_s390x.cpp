@@ -118,7 +118,7 @@ enum dwarf_regnums
     {                                                                                                      \
         #name, alt, size, 0, eEncodingUint, eFormatHex,                                                    \
         { dwarf_##name##_s390x, dwarf_##name##_s390x, generic, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, \
-        NULL, NULL,                                                                                        \
+        nullptr, nullptr, nullptr, 0                                                                       \
     }
 
 static RegisterInfo g_register_infos[] =

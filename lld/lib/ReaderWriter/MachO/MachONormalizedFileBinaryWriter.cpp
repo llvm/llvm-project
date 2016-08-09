@@ -1106,7 +1106,9 @@ void MachOFileLayout::writeSymbolTable() {
   // Write symbol table and symbol strings in parallel.
   uint32_t symOffset = _startOfSymbols;
   uint32_t strOffset = _startOfSymbolStrings;
-  _buffer[strOffset++] = '\0'; // Reserve n_strx offset of zero to mean no name.
+  // Reserve n_strx offset of zero to mean no name.
+  _buffer[strOffset++] = ' ';
+  _buffer[strOffset++] = '\0';
   appendSymbols(_file.stabsSymbols, symOffset, strOffset);
   appendSymbols(_file.localSymbols, symOffset, strOffset);
   appendSymbols(_file.globalSymbols, symOffset, strOffset);
@@ -1448,7 +1450,8 @@ void MachOFileLayout::computeSymbolTableSizes() {
                                 + _file.localSymbols.size()
                                 + _file.globalSymbols.size()
                                 + _file.undefinedSymbols.size());
-  _symbolStringPoolSize = 1; // Always reserve 1-byte for the empty string.
+  // Always reserve 1-byte for the empty string and 1-byte for its terminator.
+  _symbolStringPoolSize = 2;
   for (const Symbol &sym : _file.stabsSymbols) {
     _symbolStringPoolSize += (sym.name.size()+1);
   }
