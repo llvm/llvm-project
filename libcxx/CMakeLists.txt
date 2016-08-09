@@ -52,6 +52,7 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
+option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
 option(LIBCXX_ENABLE_FILESYSTEM
         "Build filesystem as part of libc++experimental.a" ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
@@ -67,6 +68,10 @@ option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY "Install libc++experimental.a" OFF)
 set(LIBCXX_ABI_VERSION 1 CACHE STRING "ABI version of libc++.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
+
+if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
+  message(FATAL_ERROR "libc++ must be built as either a shared or static library.")
+endif()
 
 # ABI Library options ---------------------------------------------------------
 set(LIBCXX_CXX_ABI "${LIBCXX_CXX_ABI}" CACHE STRING
