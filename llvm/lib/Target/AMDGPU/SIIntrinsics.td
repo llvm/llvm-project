@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SI Intrinsic Definitions
+// Backend internal SI Intrinsic Definitions. User code should not
+// directly use these.
 //
 //===----------------------------------------------------------------------===//
 
@@ -177,6 +178,12 @@ let TargetPrefix = "SI", isTarget = 1 in {
 } // End TargetPrefix = "SI", isTarget = 1
 
 let TargetPrefix = "amdgcn", isTarget = 1 in {
+  // Emit 2.5 ulp, no denormal division. Should only be inserted by
+  // pass based on !fpmath metadata.
+  def int_amdgcn_fdiv_fast : Intrinsic<
+    [llvm_float_ty], [llvm_float_ty], [IntrNoMem]
+  >;
+
   /* Control flow Intrinsics */
 
   def int_amdgcn_if : Intrinsic<[llvm_i64_ty], [llvm_i1_ty, llvm_empty_ty], []>;

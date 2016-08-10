@@ -1792,6 +1792,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::LOAD_CONSTANT, DL,
                                    Op->getVTList(), Ops, VT, MMO);
   }
+  case AMDGPUIntrinsic::amdgcn_fdiv_fast: {
+    return lowerFDIV_FAST(Op, DAG);
+  }
   case AMDGPUIntrinsic::SI_vs_load_input:
     return DAG.getNode(AMDGPUISD::LOAD_INPUT, DL, VT,
                        Op.getOperand(1),
@@ -2098,7 +2101,8 @@ SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
 // Catch division cases where we can use shortcuts with rcp and rsq
 // instructions.
-SDValue SITargetLowering::LowerFastFDIV(SDValue Op, SelectionDAG &DAG) const {
+SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
+                                              SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -2139,47 +2143,48 @@ SDValue SITargetLowering::LowerFastFDIV(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// Faster 2.5 ULP division that does not support denormals.
+SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+
+  SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS);
+
+  const APFloat K0Val(BitsToFloat(0x6f800000));
+  const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
+
+  const APFloat K1Val(BitsToFloat(0x2f800000));
+  const SDValue K1 = DAG.getConstantFP(K1Val, SL, MVT::f32);
+
+  const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
+
+  EVT SetCCVT =
+    getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+
+  SDValue r2 = DAG.getSetCC(SL, SetCCVT, r1, K0, ISD::SETOGT);
+
+  SDValue r3 = DAG.getNode(ISD::SELECT, SL, MVT::f32, r2, K1, One);
+
+  // TODO: Should this propagate fast-math-flags?
+  r1 = DAG.getNode(ISD::FMUL, SL, MVT::f32, RHS, r3);
+
+  // rcp does not support denormals.
+  SDValue r0 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, r1);
+
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f32, LHS, r0);
+
+  return DAG.getNode(ISD::FMUL, SL, MVT::f32, r3, Mul);
+}
+
 SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
-  if (SDValue FastLowered = LowerFastFDIV(Op, DAG))
+  if (SDValue FastLowered = lowerFastUnsafeFDIV(Op, DAG))
     return FastLowered;
 
   SDLoc SL(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  // faster 2.5 ulp fdiv when using -amdgpu-fast-fdiv flag
-  if (EnableAMDGPUFastFDIV) {
-    // This does not support denormals.
-    SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS);
-
-    const APFloat K0Val(BitsToFloat(0x6f800000));
-    const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
-
-    const APFloat K1Val(BitsToFloat(0x2f800000));
-    const SDValue K1 = DAG.getConstantFP(K1Val, SL, MVT::f32);
-
-    const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
-
-    EVT SetCCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
-
-    SDValue r2 = DAG.getSetCC(SL, SetCCVT, r1, K0, ISD::SETOGT);
-
-    SDValue r3 = DAG.getNode(ISD::SELECT, SL, MVT::f32, r2, K1, One);
-
-    // TODO: Should this propagate fast-math-flags?
-
-    r1 = DAG.getNode(ISD::FMUL, SL, MVT::f32, RHS, r3);
-
-    // rcp does not support denormals.
-    SDValue r0 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, r1);
-
-    SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f32, LHS, r0);
-
-    return DAG.getNode(ISD::FMUL, SL, MVT::f32, r3, Mul);
-  }
-
-  // Generates more precise fpdiv32.
   const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
 
   SDVTList ScaleVT = DAG.getVTList(MVT::f32, MVT::i1);
@@ -2209,7 +2214,7 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::LowerFDIV64(SDValue Op, SelectionDAG &DAG) const {
   if (DAG.getTarget().Options.UnsafeFPMath)
-    return LowerFastFDIV(Op, DAG);
+    return lowerFastUnsafeFDIV(Op, DAG);
 
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
