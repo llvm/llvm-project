@@ -530,7 +530,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     unsigned Align =
         std::max(DL->getPrefTypeAlignment(Ty), StackGuardSlot->getAlignment());
     SSL.addObject(StackGuardSlot, getStaticAllocaAllocationSize(StackGuardSlot),
-                  Align, SSC.getLiveRange(StackGuardSlot));
+                  Align, SSC.getFullLiveRange());
   }
 
   for (Argument *Arg : ByValArguments) {
