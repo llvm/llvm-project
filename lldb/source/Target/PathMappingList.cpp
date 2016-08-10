@@ -17,6 +17,7 @@
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Target/PathMappingList.h"
 
 using namespace lldb;

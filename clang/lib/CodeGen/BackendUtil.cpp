@@ -525,6 +525,12 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
     RM = llvm::Reloc::Static;
   } else if (CodeGenOpts.RelocationModel == "pic") {
     RM = llvm::Reloc::PIC_;
+  } else if (CodeGenOpts.RelocationModel == "ropi") {
+    RM = llvm::Reloc::ROPI;
+  } else if (CodeGenOpts.RelocationModel == "rwpi") {
+    RM = llvm::Reloc::RWPI;
+  } else if (CodeGenOpts.RelocationModel == "ropi-rwpi") {
+    RM = llvm::Reloc::ROPI_RWPI;
   } else {
     assert(CodeGenOpts.RelocationModel == "dynamic-no-pic" &&
            "Invalid PIC model!");

@@ -163,6 +163,13 @@ void lprofSetupValueProfiler();
  * to dump merged profile data into its own profile file. */
 uint64_t lprofGetLoadModuleSignature();
 
+/* 
+ * Return non zero value if the profile data has already been
+ * dumped to the file.
+ */
+unsigned lprofProfileDumped();
+void lprofSetProfileDumped();
+
 COMPILER_RT_VISIBILITY extern char *(*GetEnvHook)(const char *);
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;

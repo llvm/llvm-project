@@ -229,6 +229,11 @@ bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
     ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins);
     return true;
   }
+  if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
+    ento::printEnabledCheckerList(llvm::outs(),
+                                  Clang->getFrontendOpts().Plugins,
+                                  *Clang->getAnalyzerOpts());
+  }
 #endif
 
   // If there were errors in processing arguments, don't do anything else.

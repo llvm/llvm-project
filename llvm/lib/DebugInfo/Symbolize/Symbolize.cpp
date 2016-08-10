@@ -391,10 +391,10 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   // If this is a COFF object containing PDB info, use a PDBContext to
   // symbolize. Otherwise, use DWARF.
   if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
-    const debug_pdb_info *PDBInfo;
+    const codeview::DebugInfo *DebugInfo;
     StringRef PDBFileName;
-    auto EC = CoffObject->getDebugPDBInfo(PDBInfo, PDBFileName);
-    if (!EC && PDBInfo != nullptr) {
+    auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
+    if (!EC && DebugInfo != nullptr) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
       if (auto Err = loadDataForEXE(PDB_ReaderType::DIA,

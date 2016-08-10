@@ -172,7 +172,9 @@ PlatformiOSSimulator::GetDescriptionStatic()
 //------------------------------------------------------------------
 PlatformiOSSimulator::PlatformiOSSimulator () :
 PlatformAppleSimulator (),
-m_sdk_directory ()
+m_sdk_dir_mutex (),
+m_sdk_directory (),
+m_build_update ()
 {
 }
 
@@ -308,7 +310,7 @@ EnumerateDirectoryCallback (void *baton, FileSpec::FileType file_type, const Fil
 const char *
 PlatformiOSSimulator::GetSDKDirectoryAsCString()
 {
-    std::lock_guard<std::mutex> guard(m_mutex);
+    std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
     if (m_sdk_directory.empty())
     {
         const char *developer_dir = GetDeveloperDirectory();

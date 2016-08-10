@@ -822,6 +822,7 @@ void LowerTypeTests::buildBitSetsFromFunctionsWASM(
 
   // Build consecutive monotonic integer ranges for each call target set
   DenseMap<GlobalObject *, uint64_t> GlobalLayout;
+
   for (Function *F : Functions) {
     // Skip functions that are not address taken, to avoid bloating the table
     if (!F->hasAddressTaken())
@@ -1049,7 +1050,7 @@ static void init(LowerTypeTests *LTT, Module &M) {
   LTT->Int64Ty = Type::getInt64Ty(M.getContext());
   LTT->IntPtrTy = DL.getIntPtrType(M.getContext(), 0);
   LTT->TypeTestCallSites.clear();
-  LTT->IndirectIndex = 0;
+  LTT->IndirectIndex = 1;
 }
 
 bool LowerTypeTests::runOnModule(Module &M) {
@@ -1060,7 +1061,7 @@ bool LowerTypeTests::runOnModule(Module &M) {
 }
 
 PreservedAnalyses LowerTypeTestsPass::run(Module &M,
-                                          AnalysisManager<Module> &AM) {
+                                          ModuleAnalysisManager &AM) {
   LowerTypeTests Impl;
   init(&Impl, M);
   bool Changed = Impl.lower();

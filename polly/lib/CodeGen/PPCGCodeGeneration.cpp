@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include "isl/union_map.h"
 
@@ -435,6 +437,11 @@ private:
 };
 
 void GPUNodeBuilder::initializeAfterRTH() {
+  BasicBlock *NewBB = SplitBlock(Builder.GetInsertBlock(),
+                                 &*Builder.GetInsertPoint(), &DT, &LI);
+  NewBB->setName("polly.acc.initialize");
+  Builder.SetInsertPoint(&NewBB->front());
+
   GPUContext = createCallInitContext();
   allocateDeviceArrays();
 }
@@ -715,14 +722,14 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   auto ScopArray = (ScopArrayInfo *)(Array->user);
 
   Value *Size = getArraySize(Array);
-  Value *HostPtr = ScopArray->getBasePtr();
-
   Value *DevPtr = DeviceAllocations[ScopArray];
 
-  if (gpu_array_is_scalar(Array)) {
-    HostPtr = Builder.CreateAlloca(ScopArray->getElementType());
-    Builder.CreateStore(ScopArray->getBasePtr(), HostPtr);
-  }
+  Value *HostPtr;
+
+  if (gpu_array_is_scalar(Array))
+    HostPtr = BlockGen.getOrCreateAlloca(ScopArray);
+  else
+    HostPtr = ScopArray->getBasePtr();
 
   HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
 
@@ -1067,6 +1074,10 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   Instruction &HostInsertPoint = *Builder.GetInsertPoint();
   IslExprBuilder::IDToValueTy HostIDs = IDToValue;
   ValueMapT HostValueMap = ValueMap;
+  BlockGenerator::ScalarAllocaMapTy HostScalarMap = ScalarMap;
+  BlockGenerator::ScalarAllocaMapTy HostPHIOpMap = PHIOpMap;
+  ScalarMap.clear();
+  PHIOpMap.clear();
 
   SetVector<const Loop *> Loops;
 
@@ -1095,9 +1106,9 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   Builder.SetInsertPoint(&HostInsertPoint);
   IDToValue = HostIDs;
 
-  ValueMap = HostValueMap;
-  ScalarMap.clear();
-  PHIOpMap.clear();
+  ValueMap = std::move(HostValueMap);
+  ScalarMap = std::move(HostScalarMap);
+  PHIOpMap = std::move(HostPHIOpMap);
   EscapeMap.clear();
   IDToSAI.clear();
   Annotator.resetAlternativeAliasBases();
@@ -1160,8 +1171,12 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
 
   int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
 
-  for (long i = 0; i < NumVars; i++)
-    Args.push_back(Builder.getInt64Ty());
+  for (long i = 0; i < NumVars; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Args.push_back(Val->getType());
+  }
 
   for (auto *V : SubtreeValues)
     Args.push_back(V->getType());
@@ -1212,6 +1227,8 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
   for (long i = 0; i < NumVars; i++) {
     isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
     Arg->setName(isl_id_get_name(Id));
+    Value *Val = IDToValue[Id];
+    ValueMap[Val] = &*Arg;
     IDToValue[Id] = &*Arg;
     KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
     Arg++;
@@ -1270,7 +1287,7 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
     }
 
-    Value *Alloca = BlockGen.getOrCreateScalarAlloca(SAI->getBasePtr());
+    Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
     Value *ArgPtr = &*Arg;
     Type *TypePtr = SAI->getElementType()->getPointerTo();
     Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
@@ -2038,10 +2055,17 @@ public:
         executeScopConditionally(*S, this, Builder.getTrue());
 
     // TODO: Handle LICM
-    // TODO: Verify run-time checks
     auto SplitBlock = StartBlock->getSinglePredecessor();
     Builder.SetInsertPoint(SplitBlock->getTerminator());
     NodeBuilder.addParameters(S->getContext());
+
+    isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
+    isl_ast_expr *Condition = IslAst::buildRunCondition(S, Build);
+    isl_ast_build_free(Build);
+
+    Value *RTC = NodeBuilder.createRTC(Condition);
+    Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
+
     Builder.SetInsertPoint(&*StartBlock->begin());
 
     NodeBuilder.initializeAfterRTH();

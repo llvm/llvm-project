@@ -40,6 +40,7 @@ struct fltSemantics;
 namespace clang {
 class DiagnosticsEngine;
 class LangOptions;
+class CodeGenOptions;
 class MacroBuilder;
 class SourceLocation;
 class SourceManager;
@@ -796,6 +797,10 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration.
   virtual void adjust(const LangOptions &Opts);
+
+  /// \brief Adjust target options based on codegen options.
+  virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,
+                                   TargetOptions &TargetOpts) const {}
 
   /// \brief Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.

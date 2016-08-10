@@ -97,7 +97,7 @@ public:
 
   /// \brief Run the analysis pass over a function and produce demanded bits
   /// information.
-  DemandedBits run(Function &F, AnalysisManager<Function> &AM);
+  DemandedBits run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Printer pass for DemandedBits
@@ -106,7 +106,7 @@ class DemandedBitsPrinterPass : public PassInfoMixin<DemandedBitsPrinterPass> {
 
 public:
   explicit DemandedBitsPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Create a demanded bits analysis pass.

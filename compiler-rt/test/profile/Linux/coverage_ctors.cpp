@@ -15,9 +15,9 @@ struct Base {
 };
 
 struct Derived : public Base {
-  Derived(const Derived &) = default; // CHECK:  2| [[@LINE]]|  Derived(const Derived &) = default;
-  Derived(Derived &&) = default;      // CHECK:  1| [[@LINE]]|  Derived(Derived &&) = default;
-  Derived() = default;                // CHECK:  1| [[@LINE]]|  Derived() = default
+  Derived(const Derived &) = default; // CHECK:  [[@LINE]]| 2|  Derived(const Derived &) = default;
+  Derived(Derived &&) = default;      // CHECK:  [[@LINE]]| 1| Derived(Derived &&) = default;
+  Derived() = default;                // CHECK:  [[@LINE]]| 1| Derived() = default
 };
 
 Derived dd;
@@ -27,6 +27,6 @@ int main() {
   Derived dd4(static_cast<Derived &&>(dd3));
 
   if (dd.B != 0 || dd2.B != 5 || dd3.B != 10 || dd4.B != 20)
-    return 1;                         // CHECK: 0| [[@LINE]]|     return 1;
+    return 1;                         // CHECK: [[@LINE]]| 0|     return 1;
   return 0;
 }

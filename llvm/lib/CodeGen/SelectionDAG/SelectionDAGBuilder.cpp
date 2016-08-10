@@ -6450,6 +6450,19 @@ public:
     : TargetLowering::AsmOperandInfo(info), CallOperand(nullptr,0) {
   }
 
+  /// Whether or not this operand accesses memory
+  bool hasMemory(const TargetLowering &TLI) const {
+    // Indirect operand accesses access memory.
+    if (isIndirect)
+      return true;
+
+    for (const auto &Code : Codes)
+      if (TLI.getConstraintType(Code) == TargetLowering::C_Memory)
+        return true;
+
+    return false;
+  }
+
   /// getCallOperandValEVT - Return the EVT of the Value* that this operand
   /// corresponds to.  If there is no Value* for this operand, it returns
   /// MVT::Other.
@@ -6501,6 +6514,75 @@ public:
 typedef SmallVector<SDISelAsmOperandInfo,16> SDISelAsmOperandInfoVector;
 
 } // end anonymous namespace
+
+/// Make sure that the output operand \p OpInfo and its corresponding input
+/// operand \p MatchingOpInfo have compatible constraint types (otherwise error
+/// out).
+static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
+                               SDISelAsmOperandInfo &MatchingOpInfo,
+                               SelectionDAG &DAG) {
+  if (OpInfo.ConstraintVT == MatchingOpInfo.ConstraintVT)
+    return;
+
+  const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
+  const auto &TLI = DAG.getTargetLoweringInfo();
+
+  std::pair<unsigned, const TargetRegisterClass *> MatchRC =
+      TLI.getRegForInlineAsmConstraint(TRI, OpInfo.ConstraintCode,
+                                       OpInfo.ConstraintVT);
+  std::pair<unsigned, const TargetRegisterClass *> InputRC =
+      TLI.getRegForInlineAsmConstraint(TRI, MatchingOpInfo.ConstraintCode,
+                                       MatchingOpInfo.ConstraintVT);
+  if ((OpInfo.ConstraintVT.isInteger() !=
+       MatchingOpInfo.ConstraintVT.isInteger()) ||
+      (MatchRC.second != InputRC.second)) {
+    // FIXME: error out in a more elegant fashion
+    report_fatal_error("Unsupported asm: input constraint"
+                       " with a matching output constraint of"
+                       " incompatible type!");
+  }
+  MatchingOpInfo.ConstraintVT = OpInfo.ConstraintVT;
+}
+
+/// Get a direct memory input to behave well as an indirect operand.
+/// This may introduce stores, hence the need for a \p Chain.
+/// \return The (possibly updated) chain.
+static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
+                                        SDISelAsmOperandInfo &OpInfo,
+                                        SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // If we don't have an indirect input, put it in the constpool if we can,
+  // otherwise spill it to a stack slot.
+  // TODO: This isn't quite right. We need to handle these according to
+  // the addressing mode that the constraint wants. Also, this may take
+  // an additional register for the computation and we don't want that
+  // either.
+
+  // If the operand is a float, integer, or vector constant, spill to a
+  // constant pool entry to get its address.
+  const Value *OpVal = OpInfo.CallOperandVal;
+  if (isa<ConstantFP>(OpVal) || isa<ConstantInt>(OpVal) ||
+      isa<ConstantVector>(OpVal) || isa<ConstantDataVector>(OpVal)) {
+    OpInfo.CallOperand = DAG.getConstantPool(
+        cast<Constant>(OpVal), TLI.getPointerTy(DAG.getDataLayout()));
+    return Chain;
+  }
+
+  // Otherwise, create a stack slot and emit a store to it before the asm.
+  Type *Ty = OpVal->getType();
+  auto &DL = DAG.getDataLayout();
+  uint64_t TySize = DL.getTypeAllocSize(Ty);
+  unsigned Align = DL.getPrefTypeAlignment(Ty);
+  MachineFunction &MF = DAG.getMachineFunction();
+  int SSFI = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
+  SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getPointerTy(DL));
+  Chain = DAG.getStore(Chain, Location, OpInfo.CallOperand, StackSlot,
+                       MachinePointerInfo::getFixedStack(MF, SSFI));
+  OpInfo.CallOperand = StackSlot;
+
+  return Chain;
+}
 
 /// GetRegistersForValue - Assign registers (virtual or physical) for the
 /// specified operand.  We prefer to assign virtual registers, to allow the
@@ -6610,6 +6692,73 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
   // Otherwise, we couldn't allocate enough registers for this.
 }
 
+static unsigned
+findMatchingInlineAsmOperand(unsigned OperandNo,
+                             const std::vector<SDValue> &AsmNodeOperands) {
+  // Scan until we find the definition we already emitted of this operand.
+  unsigned CurOp = InlineAsm::Op_FirstOperand;
+  for (; OperandNo; --OperandNo) {
+    // Advance to the next operand.
+    unsigned OpFlag =
+        cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
+    assert((InlineAsm::isRegDefKind(OpFlag) ||
+            InlineAsm::isRegDefEarlyClobberKind(OpFlag) ||
+            InlineAsm::isMemKind(OpFlag)) &&
+           "Skipped past definitions?");
+    CurOp += InlineAsm::getNumOperandRegisters(OpFlag) + 1;
+  }
+  return CurOp;
+}
+
+/// Fill \p Regs with \p NumRegs new virtual registers of type \p RegVT
+/// \return true if it has succeeded, false otherwise
+static bool createVirtualRegs(SmallVector<unsigned, 4> &Regs, unsigned NumRegs,
+                              MVT RegVT, SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
+  for (unsigned i = 0, e = NumRegs; i != e; ++i) {
+    if (const TargetRegisterClass *RC = TLI.getRegClassFor(RegVT))
+      Regs.push_back(RegInfo.createVirtualRegister(RC));
+    else
+      return false;
+  }
+  return true;
+}
+
+class ExtraFlags {
+  unsigned Flags = 0;
+
+public:
+  explicit ExtraFlags(ImmutableCallSite CS) {
+    const InlineAsm *IA = cast<InlineAsm>(CS.getCalledValue());
+    if (IA->hasSideEffects())
+      Flags |= InlineAsm::Extra_HasSideEffects;
+    if (IA->isAlignStack())
+      Flags |= InlineAsm::Extra_IsAlignStack;
+    if (CS.isConvergent())
+      Flags |= InlineAsm::Extra_IsConvergent;
+    Flags |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
+  }
+
+  void update(const llvm::TargetLowering::AsmOperandInfo &OpInfo) {
+    // Ideally, we would only check against memory constraints.  However, the
+    // meaning of an Other constraint can be target-specific and we can't easily
+    // reason about it.  Therefore, be conservative and set MayLoad/MayStore
+    // for Other constraints as well.
+    if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
+        OpInfo.ConstraintType == TargetLowering::C_Other) {
+      if (OpInfo.Type == InlineAsm::isInput)
+        Flags |= InlineAsm::Extra_MayLoad;
+      else if (OpInfo.Type == InlineAsm::isOutput)
+        Flags |= InlineAsm::Extra_MayStore;
+      else if (OpInfo.Type == InlineAsm::isClobber)
+        Flags |= (InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore);
+    }
+  }
+
+  unsigned get() const { return Flags; }
+};
+
 /// visitInlineAsm - Handle a call to an InlineAsm object.
 ///
 void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
@@ -6624,6 +6773,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   bool hasMemory = false;
 
+  // Remember the HasSideEffect, AlignStack, AsmDialect, MayLoad and MayStore
+  ExtraFlags ExtraInfo(CS);
+
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0;   // ResNo - The result number of the next output.
   for (unsigned i = 0, e = TargetConstraints.size(); i != e; ++i) {
@@ -6633,14 +6785,25 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     MVT OpVT = MVT::Other;
 
     // Compute the value type for each operand.
-    switch (OpInfo.Type) {
-    case InlineAsm::isOutput:
-      // Indirect outputs just consume an argument.
-      if (OpInfo.isIndirect) {
-        OpInfo.CallOperandVal = const_cast<Value *>(CS.getArgument(ArgNo++));
-        break;
+    if (OpInfo.Type == InlineAsm::isInput ||
+        (OpInfo.Type == InlineAsm::isOutput && OpInfo.isIndirect)) {
+      OpInfo.CallOperandVal = const_cast<Value *>(CS.getArgument(ArgNo++));
+
+      // Process the call argument. BasicBlocks are labels, currently appearing
+      // only in asm's.
+      if (const BasicBlock *BB = dyn_cast<BasicBlock>(OpInfo.CallOperandVal)) {
+        OpInfo.CallOperand = DAG.getBasicBlock(FuncInfo.MBBMap[BB]);
+      } else {
+        OpInfo.CallOperand = getValue(OpInfo.CallOperandVal);
       }
 
+      OpVT =
+          OpInfo
+              .getCallOperandValEVT(*DAG.getContext(), TLI, DAG.getDataLayout())
+              .getSimpleVT();
+    }
+
+    if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
       // The return value of the call is this value.  As such, there is no
       // corresponding argument.
       assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
@@ -6652,43 +6815,21 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         OpVT = TLI.getSimpleValueType(DAG.getDataLayout(), CS.getType());
       }
       ++ResNo;
-      break;
-    case InlineAsm::isInput:
-      OpInfo.CallOperandVal = const_cast<Value *>(CS.getArgument(ArgNo++));
-      break;
-    case InlineAsm::isClobber:
-      // Nothing to do.
-      break;
-    }
-
-    // If this is an input or an indirect output, process the call argument.
-    // BasicBlocks are labels, currently appearing only in asm's.
-    if (OpInfo.CallOperandVal) {
-      if (const BasicBlock *BB = dyn_cast<BasicBlock>(OpInfo.CallOperandVal)) {
-        OpInfo.CallOperand = DAG.getBasicBlock(FuncInfo.MBBMap[BB]);
-      } else {
-        OpInfo.CallOperand = getValue(OpInfo.CallOperandVal);
-      }
-
-      OpVT = OpInfo.getCallOperandValEVT(*DAG.getContext(), TLI,
-                                         DAG.getDataLayout()).getSimpleVT();
     }
 
     OpInfo.ConstraintVT = OpVT;
 
-    // Indirect operand accesses access memory.
-    if (OpInfo.isIndirect)
-      hasMemory = true;
-    else {
-      for (unsigned j = 0, ee = OpInfo.Codes.size(); j != ee; ++j) {
-        TargetLowering::ConstraintType
-          CType = TLI.getConstraintType(OpInfo.Codes[j]);
-        if (CType == TargetLowering::C_Memory) {
-          hasMemory = true;
-          break;
-        }
-      }
-    }
+    if (!hasMemory)
+      hasMemory = OpInfo.hasMemory(TLI);
+
+    // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
+    // FIXME: Could we compute this on OpInfo rather than TargetConstraints[i]?
+    auto TargetConstraint = TargetConstraints[i];
+
+    // Compute the constraint code and ConstraintType to use.
+    TLI.ComputeConstraintToUse(TargetConstraint, SDValue());
+
+    ExtraInfo.update(TargetConstraint);
   }
 
   SDValue Chain, Flag;
@@ -6711,24 +6852,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     // error.
     if (OpInfo.hasMatchingInput()) {
       SDISelAsmOperandInfo &Input = ConstraintOperands[OpInfo.MatchingInput];
-
-      if (OpInfo.ConstraintVT != Input.ConstraintVT) {
-        const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
-        std::pair<unsigned, const TargetRegisterClass *> MatchRC =
-            TLI.getRegForInlineAsmConstraint(TRI, OpInfo.ConstraintCode,
-                                             OpInfo.ConstraintVT);
-        std::pair<unsigned, const TargetRegisterClass *> InputRC =
-            TLI.getRegForInlineAsmConstraint(TRI, Input.ConstraintCode,
-                                             Input.ConstraintVT);
-        if ((OpInfo.ConstraintVT.isInteger() !=
-             Input.ConstraintVT.isInteger()) ||
-            (MatchRC.second != InputRC.second)) {
-          report_fatal_error("Unsupported asm: input constraint"
-                             " with a matching output constraint of"
-                             " incompatible type!");
-        }
-        Input.ConstraintVT = OpInfo.ConstraintVT;
-      }
+      patchMatchingInput(OpInfo, Input, DAG);
     }
 
     // Compute the constraint code and ConstraintType to use.
@@ -6746,37 +6870,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
               (OpInfo.Type == InlineAsm::isInput)) &&
              "Can only indirectify direct input operands!");
 
-      // Memory operands really want the address of the value.  If we don't have
-      // an indirect input, put it in the constpool if we can, otherwise spill
-      // it to a stack slot.
-      // TODO: This isn't quite right. We need to handle these according to
-      // the addressing mode that the constraint wants. Also, this may take
-      // an additional register for the computation and we don't want that
-      // either.
-
-      // If the operand is a float, integer, or vector constant, spill to a
-      // constant pool entry to get its address.
-      const Value *OpVal = OpInfo.CallOperandVal;
-      if (isa<ConstantFP>(OpVal) || isa<ConstantInt>(OpVal) ||
-          isa<ConstantVector>(OpVal) || isa<ConstantDataVector>(OpVal)) {
-        OpInfo.CallOperand = DAG.getConstantPool(
-            cast<Constant>(OpVal), TLI.getPointerTy(DAG.getDataLayout()));
-      } else {
-        // Otherwise, create a stack slot and emit a store to it before the
-        // asm.
-        Type *Ty = OpVal->getType();
-        auto &DL = DAG.getDataLayout();
-        uint64_t TySize = DL.getTypeAllocSize(Ty);
-        unsigned Align = DL.getPrefTypeAlignment(Ty);
-        MachineFunction &MF = DAG.getMachineFunction();
-        int SSFI = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
-        SDValue StackSlot =
-            DAG.getFrameIndex(SSFI, TLI.getPointerTy(DAG.getDataLayout()));
-        Chain = DAG.getStore(
-            Chain, getCurSDLoc(), OpInfo.CallOperand, StackSlot,
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
-        OpInfo.CallOperand = StackSlot;
-      }
+      // Memory operands really want the address of the value.
+      Chain = getAddressForMemoryInput(Chain, getCurSDLoc(), OpInfo, DAG);
 
       // There is no longer a Value* corresponding to this operand.
       OpInfo.CallOperandVal = nullptr;
@@ -6791,7 +6886,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo);
   }
 
-  // Second pass - Loop over all of the operands, assigning virtual or physregs
+  // Third pass - Loop over all of the operands, assigning virtual or physregs
   // to register class operands.
   for (unsigned i = 0, e = ConstraintOperands.size(); i != e; ++i) {
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands[i];
@@ -6816,40 +6911,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   // Remember the HasSideEffect, AlignStack, AsmDialect, MayLoad and MayStore
   // bits as operand 3.
-  unsigned ExtraInfo = 0;
-  if (IA->hasSideEffects())
-    ExtraInfo |= InlineAsm::Extra_HasSideEffects;
-  if (IA->isAlignStack())
-    ExtraInfo |= InlineAsm::Extra_IsAlignStack;
-  if (CS.isConvergent())
-    ExtraInfo |= InlineAsm::Extra_IsConvergent;
-  // Set the asm dialect.
-  ExtraInfo |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
-
-  // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
-  for (unsigned i = 0, e = TargetConstraints.size(); i != e; ++i) {
-    TargetLowering::AsmOperandInfo &OpInfo = TargetConstraints[i];
-
-    // Compute the constraint code and ConstraintType to use.
-    TLI.ComputeConstraintToUse(OpInfo, SDValue());
-
-    // Ideally, we would only check against memory constraints.  However, the
-    // meaning of an other constraint can be target-specific and we can't easily
-    // reason about it.  Therefore, be conservative and set MayLoad/MayStore
-    // for other constriants as well.
-    if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
-        OpInfo.ConstraintType == TargetLowering::C_Other) {
-      if (OpInfo.Type == InlineAsm::isInput)
-        ExtraInfo |= InlineAsm::Extra_MayLoad;
-      else if (OpInfo.Type == InlineAsm::isOutput)
-        ExtraInfo |= InlineAsm::Extra_MayStore;
-      else if (OpInfo.Type == InlineAsm::isClobber)
-        ExtraInfo |= (InlineAsm::Extra_MayLoad | InlineAsm::Extra_MayStore);
-    }
-  }
-
   AsmNodeOperands.push_back(DAG.getTargetConstant(
-      ExtraInfo, getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
+      ExtraInfo.get(), getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
 
   // Loop over all of the inputs, copying the operand values into the
   // appropriate registers and processing the output regs.
@@ -6917,24 +6980,11 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     case InlineAsm::isInput: {
       SDValue InOperandVal = OpInfo.CallOperand;
 
-      if (OpInfo.isMatchingInputConstraint()) {   // Matching constraint?
+      if (OpInfo.isMatchingInputConstraint()) {
         // If this is required to match an output register we have already set,
         // just use its register.
-        unsigned OperandNo = OpInfo.getMatchedOperand();
-
-        // Scan until we find the definition we already emitted of this operand.
-        // When we find it, create a RegsForValue operand.
-        unsigned CurOp = InlineAsm::Op_FirstOperand;
-        for (; OperandNo; --OperandNo) {
-          // Advance to the next operand.
-          unsigned OpFlag =
-            cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
-          assert((InlineAsm::isRegDefKind(OpFlag) ||
-                  InlineAsm::isRegDefEarlyClobberKind(OpFlag) ||
-                  InlineAsm::isMemKind(OpFlag)) && "Skipped past definitions?");
-          CurOp += InlineAsm::getNumOperandRegisters(OpFlag)+1;
-        }
-
+        auto CurOp = findMatchingInlineAsmOperand(OpInfo.getMatchedOperand(),
+                                                  AsmNodeOperands);
         unsigned OpFlag =
           cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
         if (InlineAsm::isRegDefKind(OpFlag) ||
@@ -6948,22 +6998,19 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
             return;
           }
 
-          RegsForValue MatchedRegs;
-          MatchedRegs.ValueVTs.push_back(InOperandVal.getValueType());
           MVT RegVT = AsmNodeOperands[CurOp+1].getSimpleValueType();
-          MatchedRegs.RegVTs.push_back(RegVT);
-          MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
-          for (unsigned i = 0, e = InlineAsm::getNumOperandRegisters(OpFlag);
-               i != e; ++i) {
-            if (const TargetRegisterClass *RC = TLI.getRegClassFor(RegVT))
-              MatchedRegs.Regs.push_back(RegInfo.createVirtualRegister(RC));
-            else {
-              emitInlineAsmError(
-                  CS, "inline asm error: This value"
-                      " type register class is not natively supported!");
-              return;
-            }
+          SmallVector<unsigned, 4> Regs;
+
+          if (!createVirtualRegs(Regs,
+                                 InlineAsm::getNumOperandRegisters(OpFlag),
+                                 RegVT, DAG)) {
+            emitInlineAsmError(CS, "inline asm error: This value type register "
+                                   "class is not natively supported!");
+            return;
           }
+
+          RegsForValue MatchedRegs(Regs, RegVT, InOperandVal.getValueType());
+
           SDLoc dl = getCurSDLoc();
           // Use the produced MatchedRegs object to
           MatchedRegs.getCopyToRegs(InOperandVal, DAG, dl,

@@ -167,7 +167,7 @@ enum ehframe_dwarf_regnums
 // sizes and offsets.
 #define DEFINE_GPR(reg, alt)    #reg, alt, sizeof(((RegisterContextDarwin_x86_64::GPR *)NULL)->reg), GPR_OFFSET(reg), eEncodingUint, eFormatHex
 #define DEFINE_FPU_UINT(reg)    #reg, NULL, sizeof(((RegisterContextDarwin_x86_64::FPU *)NULL)->reg), FPU_OFFSET(reg), eEncodingUint, eFormatHex
-#define DEFINE_FPU_VECT(reg, i) #reg#i, NULL, sizeof(((RegisterContextDarwin_x86_64::FPU *)NULL)->reg[i].bytes), FPU_OFFSET(reg[i]), eEncodingVector, eFormatVectorOfUInt8, { ehframe_dwarf_fpu_##reg##i, ehframe_dwarf_fpu_##reg##i, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpu_##reg##i }, NULL, NULL
+#define DEFINE_FPU_VECT(reg, i) #reg#i, NULL, sizeof(((RegisterContextDarwin_x86_64::FPU *)NULL)->reg[i].bytes), FPU_OFFSET(reg[i]), eEncodingVector, eFormatVectorOfUInt8, { ehframe_dwarf_fpu_##reg##i, ehframe_dwarf_fpu_##reg##i, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpu_##reg##i }, nullptr, nullptr, nullptr, 0
 #define DEFINE_EXC(reg)         #reg, NULL, sizeof(((RegisterContextDarwin_x86_64::EXC *)NULL)->reg), EXC_OFFSET(reg), eEncodingUint, eFormatHex
 
 #define REG_CONTEXT_SIZE (sizeof (RegisterContextDarwin_x86_64::GPR) + sizeof (RegisterContextDarwin_x86_64::FPU) + sizeof (RegisterContextDarwin_x86_64::EXC))
@@ -175,40 +175,40 @@ enum ehframe_dwarf_regnums
 // General purpose registers for 64 bit
 static RegisterInfo g_register_infos[] =
 {
-//  Macro auto defines most stuff   EH_FRAME                    DWARF                    GENERIC                    PROCESS PLUGIN       LLDB                VALUE REGS    INVALIDATE REGS
-//  =============================== ======================      ===================      ========================== ==================== =================== ==========    ===============
-    { DEFINE_GPR (rax   , NULL)     , { ehframe_dwarf_gpr_rax  , ehframe_dwarf_gpr_rax  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rax       },       NULL,              NULL},
-    { DEFINE_GPR (rbx   , NULL)     , { ehframe_dwarf_gpr_rbx  , ehframe_dwarf_gpr_rbx  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rbx       },       NULL,              NULL},
-    { DEFINE_GPR (rcx   , NULL)     , { ehframe_dwarf_gpr_rcx  , ehframe_dwarf_gpr_rcx  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rcx       },       NULL,              NULL},
-    { DEFINE_GPR (rdx   , NULL)     , { ehframe_dwarf_gpr_rdx  , ehframe_dwarf_gpr_rdx  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rdx       },       NULL,              NULL},
-    { DEFINE_GPR (rdi   , NULL)     , { ehframe_dwarf_gpr_rdi  , ehframe_dwarf_gpr_rdi  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rdi       },       NULL,              NULL},
-    { DEFINE_GPR (rsi   , NULL)     , { ehframe_dwarf_gpr_rsi  , ehframe_dwarf_gpr_rsi  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rsi       },       NULL,              NULL},
-    { DEFINE_GPR (rbp   , "fp")     , { ehframe_dwarf_gpr_rbp  , ehframe_dwarf_gpr_rbp  , LLDB_REGNUM_GENERIC_FP   , LLDB_INVALID_REGNUM, gpr_rbp       },       NULL,              NULL},
-    { DEFINE_GPR (rsp   , "sp")     , { ehframe_dwarf_gpr_rsp  , ehframe_dwarf_gpr_rsp  , LLDB_REGNUM_GENERIC_SP   , LLDB_INVALID_REGNUM, gpr_rsp       },       NULL,              NULL},
-    { DEFINE_GPR (r8    , NULL)     , { ehframe_dwarf_gpr_r8   , ehframe_dwarf_gpr_r8   , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r8        },       NULL,              NULL},
-    { DEFINE_GPR (r9    , NULL)     , { ehframe_dwarf_gpr_r9   , ehframe_dwarf_gpr_r9   , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r9        },       NULL,              NULL},
-    { DEFINE_GPR (r10   , NULL)     , { ehframe_dwarf_gpr_r10  , ehframe_dwarf_gpr_r10  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r10       },       NULL,              NULL},
-    { DEFINE_GPR (r11   , NULL)     , { ehframe_dwarf_gpr_r11  , ehframe_dwarf_gpr_r11  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r11       },       NULL,              NULL},
-    { DEFINE_GPR (r12   , NULL)     , { ehframe_dwarf_gpr_r12  , ehframe_dwarf_gpr_r12  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r12       },       NULL,              NULL},
-    { DEFINE_GPR (r13   , NULL)     , { ehframe_dwarf_gpr_r13  , ehframe_dwarf_gpr_r13  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r13       },       NULL,              NULL},
-    { DEFINE_GPR (r14   , NULL)     , { ehframe_dwarf_gpr_r14  , ehframe_dwarf_gpr_r14  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r14       },       NULL,              NULL},
-    { DEFINE_GPR (r15   , NULL)     , { ehframe_dwarf_gpr_r15  , ehframe_dwarf_gpr_r15  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r15       },       NULL,              NULL},
-    { DEFINE_GPR (rip   , "pc")     , { ehframe_dwarf_gpr_rip  , ehframe_dwarf_gpr_rip  , LLDB_REGNUM_GENERIC_PC   , LLDB_INVALID_REGNUM, gpr_rip       },       NULL,              NULL},
-    { DEFINE_GPR (rflags, "flags")  , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM, gpr_rflags    },       NULL,              NULL},
-    { DEFINE_GPR (cs    , NULL)     , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_cs        },       NULL,              NULL},
-    { DEFINE_GPR (fs    , NULL)     , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_fs        },       NULL,              NULL},
-    { DEFINE_GPR (gs    , NULL)     , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_gs        },       NULL,              NULL},
+//  Macro auto defines most stuff   EH_FRAME                    DWARF                    GENERIC                    PROCESS PLUGIN       LLDB
+//  =============================== ======================      ===================      ========================== ==================== ===================
+    { DEFINE_GPR (rax   , NULL)     , { ehframe_dwarf_gpr_rax  , ehframe_dwarf_gpr_rax  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rax       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rbx   , NULL)     , { ehframe_dwarf_gpr_rbx  , ehframe_dwarf_gpr_rbx  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rbx       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rcx   , NULL)     , { ehframe_dwarf_gpr_rcx  , ehframe_dwarf_gpr_rcx  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rcx       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rdx   , NULL)     , { ehframe_dwarf_gpr_rdx  , ehframe_dwarf_gpr_rdx  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rdx       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rdi   , NULL)     , { ehframe_dwarf_gpr_rdi  , ehframe_dwarf_gpr_rdi  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rdi       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rsi   , NULL)     , { ehframe_dwarf_gpr_rsi  , ehframe_dwarf_gpr_rsi  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_rsi       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rbp   , "fp")     , { ehframe_dwarf_gpr_rbp  , ehframe_dwarf_gpr_rbp  , LLDB_REGNUM_GENERIC_FP   , LLDB_INVALID_REGNUM, gpr_rbp       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rsp   , "sp")     , { ehframe_dwarf_gpr_rsp  , ehframe_dwarf_gpr_rsp  , LLDB_REGNUM_GENERIC_SP   , LLDB_INVALID_REGNUM, gpr_rsp       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r8    , NULL)     , { ehframe_dwarf_gpr_r8   , ehframe_dwarf_gpr_r8   , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r8        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r9    , NULL)     , { ehframe_dwarf_gpr_r9   , ehframe_dwarf_gpr_r9   , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r9        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r10   , NULL)     , { ehframe_dwarf_gpr_r10  , ehframe_dwarf_gpr_r10  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r10       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r11   , NULL)     , { ehframe_dwarf_gpr_r11  , ehframe_dwarf_gpr_r11  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r11       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r12   , NULL)     , { ehframe_dwarf_gpr_r12  , ehframe_dwarf_gpr_r12  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r12       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r13   , NULL)     , { ehframe_dwarf_gpr_r13  , ehframe_dwarf_gpr_r13  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r13       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r14   , NULL)     , { ehframe_dwarf_gpr_r14  , ehframe_dwarf_gpr_r14  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r14       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (r15   , NULL)     , { ehframe_dwarf_gpr_r15  , ehframe_dwarf_gpr_r15  , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_r15       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rip   , "pc")     , { ehframe_dwarf_gpr_rip  , ehframe_dwarf_gpr_rip  , LLDB_REGNUM_GENERIC_PC   , LLDB_INVALID_REGNUM, gpr_rip       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (rflags, "flags")  , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM, gpr_rflags    }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (cs    , NULL)     , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_cs        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (fs    , NULL)     , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_fs        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_GPR (gs    , NULL)     , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, gpr_gs        }, nullptr, nullptr, nullptr, 0},
 
-    { DEFINE_FPU_UINT(fcw)          , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_fcw       },       NULL,              NULL},
-    { DEFINE_FPU_UINT(fsw)          , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_fsw       },       NULL,              NULL},
-    { DEFINE_FPU_UINT(ftw)          , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_ftw       },       NULL,              NULL},
-    { DEFINE_FPU_UINT(fop)          , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_fop       },       NULL,              NULL},
-    { DEFINE_FPU_UINT(ip)           , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_ip        },       NULL,              NULL},
-    { DEFINE_FPU_UINT(cs)           , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_cs        },       NULL,              NULL},
-    { DEFINE_FPU_UINT(dp)           , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_dp        },       NULL,              NULL},
-    { DEFINE_FPU_UINT(ds)           , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_ds        },       NULL,              NULL},
-    { DEFINE_FPU_UINT(mxcsr)        , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_mxcsr     },       NULL,              NULL},
-    { DEFINE_FPU_UINT(mxcsrmask)    , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_mxcsrmask },       NULL,              NULL},
+    { DEFINE_FPU_UINT(fcw)          , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_fcw       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(fsw)          , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_fsw       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(ftw)          , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_ftw       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(fop)          , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_fop       }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(ip)           , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_ip        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(cs)           , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_cs        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(dp)           , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_dp        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(ds)           , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_ds        }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(mxcsr)        , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_mxcsr     }, nullptr, nullptr, nullptr, 0},
+    { DEFINE_FPU_UINT(mxcsrmask)    , { LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM    , LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, fpu_mxcsrmask }, nullptr, nullptr, nullptr, 0},
     { DEFINE_FPU_VECT(stmm,0)   },
     { DEFINE_FPU_VECT(stmm,1)   },
     { DEFINE_FPU_VECT(stmm,2)   },
@@ -234,9 +234,9 @@ static RegisterInfo g_register_infos[] =
     { DEFINE_FPU_VECT(xmm,14)   },
     { DEFINE_FPU_VECT(xmm,15)   },
 
-    { DEFINE_EXC(trapno)            , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, exc_trapno     },      NULL,              NULL},
-    { DEFINE_EXC(err)               , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, exc_err        },      NULL,              NULL},
-    { DEFINE_EXC(faultvaddr)        , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, exc_faultvaddr },      NULL,              NULL}
+    { DEFINE_EXC(trapno)            , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, exc_trapno     },nullptr, nullptr, nullptr, 0},
+    { DEFINE_EXC(err)               , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, exc_err        },nullptr, nullptr, nullptr, 0},
+    { DEFINE_EXC(faultvaddr)        , { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM      , LLDB_INVALID_REGNUM, exc_faultvaddr },nullptr, nullptr, nullptr, 0}
 };
 
 static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);

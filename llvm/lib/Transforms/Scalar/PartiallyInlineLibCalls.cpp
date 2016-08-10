@@ -123,7 +123,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
 }
 
 PreservedAnalyses
-PartiallyInlineLibCallsPass::run(Function &F, AnalysisManager<Function> &AM) {
+PartiallyInlineLibCallsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   if (!runPartiallyInlineLibCalls(F, &TLI, &TTI))

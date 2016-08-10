@@ -12,6 +12,8 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/FileSpec.h"
@@ -59,6 +61,7 @@ public:
                   lldb_private::Error &error) override;
 
 protected:
+    std::mutex m_core_sim_path_mutex;
     llvm::Optional<lldb_private::FileSpec> m_core_simulator_framework_path;
     llvm::Optional<CoreSimulatorSupport::Device> m_device;
     

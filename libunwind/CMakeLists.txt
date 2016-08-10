@@ -2,7 +2,7 @@
 # Setup Project
 #===============================================================================
 
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.4.3)
 
 if (POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
@@ -28,11 +28,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     if (NOT HAD_ERROR)
       string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";"
              CONFIG_OUTPUT ${CONFIG_OUTPUT})
-    else ()
+    else()
       string(REPLACE ";" " " CONFIG_COMMAND_STR "${CONFIG_COMMAND}")
       message(STATUS "${CONFIG_COMMAND_STR}")
       message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-    endif ()
+    endif()
 
     list(GET CONFIG_OUTPUT 0 INCLUDE_DIR)
     list(GET CONFIG_OUTPUT 1 LLVM_OBJ_ROOT)
@@ -43,32 +43,32 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
     set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     set(LLVM_LIT_PATH "${LLVM_PATH}/utils/lit/lit.py")
-  else ()
+  else()
     message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
                         "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
                         "or -DLLVM_PATH=path/to/llvm-source-root.")
-  endif ()
+  endif()
 
   if (EXISTS ${LLVM_CMAKE_PATH})
     list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
     include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
     include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")
-  else ()
+  else()
     message(FATAL_ERROR "Not found: ${LLVM_CMAKE_PATH}")
-  endif ()
+  endif()
 
   set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 3.8.0svn)
+  set(PACKAGE_VERSION 4.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
     set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-  else ()
+  else()
     # Seek installed Lit.
     find_program(LLVM_LIT "lit.py" ${LLVM_MAIN_SRC_DIR}/utils/lit
                  DOC "Path to lit.py")
-  endif ()
+  endif()
 
   if (LLVM_LIT)
     # Define the default arguments to use with 'lit', and an option for the user
@@ -76,16 +76,16 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LIT_ARGS_DEFAULT "-sv")
     if (MSVC OR XCODE)
       set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
-    endif ()
+    endif()
     set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
     # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
     if (WIN32 AND NOT CYGWIN)
       set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
-    endif ()
-  else ()
+    endif()
+  else()
     set(LLVM_INCLUDE_TESTS OFF)
-  endif ()
+  endif()
 
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
@@ -104,6 +104,7 @@ option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode.
 option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBUNWIND_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBUNWIND_ENABLE_SHARED "Build libunwind as a shared library." ON)
+option(LIBUNWIND_ENABLE_STATIC "Build libunwind as a static library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
 option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX registers." OFF)
 
@@ -111,6 +112,9 @@ set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling."
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
 
+if (NOT LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_STATIC)
+  message(FATAL_ERROR "libunwind must be built as either a shared or static library.")
+endif()
 
 # Check that we can build with 32 bits if requested.
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
@@ -220,23 +224,23 @@ if (LIBUNWIND_ENABLE_ASSERTIONS)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
   if (NOT MSVC)
     list(APPEND LIBUNWIND_COMPILE_FLAGS -D_DEBUG)
-  endif ()
+  endif()
 
   # On Release builds cmake automatically defines NDEBUG, so we
   # explicitly undefine it:
   if (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
     list(APPEND LIBUNWIND_COMPILE_FLAGS -UNDEBUG)
-  endif ()
+  endif()
 else()
   if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
     list(APPEND LIBUNWIND_COMPILE_FLAGS -DNDEBUG)
-  endif ()
-endif ()
+  endif()
+endif()
 
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_IS_NATIVE_ONLY)
-endif ()
+endif()
 
 # ARM WMMX register support
 if (LIBUNWIND_ENABLE_ARM_WMMX)
@@ -245,12 +249,12 @@ if (LIBUNWIND_ENABLE_ARM_WMMX)
   # provide the option to explicitly enable support for WMMX registers in the
   # unwinder.
   list(APPEND LIBUNWIND_COMPILE_FLAGS -D__ARM_WMMX)
-endif ()
+endif()
 
 # This is the _ONLY_ place where add_definitions is called.
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif ()
+endif()
 
 #===============================================================================
 # Setup Source Code

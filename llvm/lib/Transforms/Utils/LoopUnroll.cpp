@@ -377,6 +377,15 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   LoopBlocksDFS::RPOIterator BlockEnd = DFS.endRPO();
 
   std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
+
+  // Loop Unrolling might create new loops. While we do preserve LoopInfo, we
+  // might break loop-simplified form for these loops (as they, e.g., would
+  // share the same exit blocks). We'll keep track of loops for which we can
+  // break this so that later we can re-simplify them.
+  SmallSetVector<Loop *, 4> LoopsToSimplify;
+  for (Loop *SubLoop : *L)
+    LoopsToSimplify.insert(SubLoop);
+
   for (unsigned It = 1; It != Count; ++It) {
     std::vector<BasicBlock*> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -407,6 +416,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                  "Expected parent loop before sub-loop in RPO");
           NewLoop = new Loop;
           NewLoopParent->addChildLoop(NewLoop);
+          LoopsToSimplify.insert(NewLoop);
 
           // Forget the old loop, since its inputs may have changed.
           if (SE)
@@ -658,6 +668,11 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     if (!OuterL && !CompletelyUnroll)
       OuterL = L;
     if (OuterL) {
+      // OuterL includes all loops for which we can break loop-simplify, so
+      // it's sufficient to simplify only it (it'll recursively simplify inner
+      // loops too).
+      // TODO: That potentially might be compile-time expensive. We should try
+      // to fix the loop-simplified form incrementally.
       simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
@@ -673,6 +688,10 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       else
         assert(OuterL->isLCSSAForm(*DT) &&
                "Loops should be in LCSSA form after loop-unroll.");
+    } else {
+      // Simplify loops for which we might've broken loop-simplify form.
+      for (Loop *SubLoop : LoopsToSimplify)
+        simplifyLoop(SubLoop, DT, LI, SE, AC, PreserveLCSSA);
     }
   }
 

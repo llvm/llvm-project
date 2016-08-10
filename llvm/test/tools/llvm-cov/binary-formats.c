@@ -1,6 +1,6 @@
 // Checks for reading various formats.
 
-// CHECK: 100| [[@LINE+1]]|int main
+// CHECK: [[@LINE+1]]| 100|int main
 int main(int argc, const char *argv[]) {}
 
 // RUN: llvm-profdata merge %S/Inputs/binary-formats.proftext -o %t.profdata

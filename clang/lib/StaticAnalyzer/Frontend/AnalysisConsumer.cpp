@@ -265,19 +265,8 @@ public:
       else
         assert(Mode == (AM_Syntax | AM_Path) && "Unexpected mode!");
 
-      llvm::errs() << ": " << Loc.getFilename();
-      if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
-        const NamedDecl *ND = cast<NamedDecl>(D);
-        llvm::errs() << ' ' << ND->getQualifiedNameAsString() << '\n';
-      }
-      else if (isa<BlockDecl>(D)) {
-        llvm::errs() << ' ' << "block(line:" << Loc.getLine() << ",col:"
-                     << Loc.getColumn() << '\n';
-      }
-      else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-        Selector S = MD->getSelector();
-        llvm::errs() << ' ' << S.getAsString();
-      }
+      llvm::errs() << ": " << Loc.getFilename() << ' '
+                           << getFunctionName(D) << '\n';
     }
   }
 
@@ -377,6 +366,7 @@ public:
 
 private:
   void storeTopLevelDecls(DeclGroupRef DG);
+  std::string getFunctionName(const Decl *D);
 
   /// \brief Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
@@ -568,16 +558,64 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 
 }
 
-static std::string getFunctionName(const Decl *D) {
-  if (const ObjCMethodDecl *ID = dyn_cast<ObjCMethodDecl>(D)) {
-    return ID->getSelector().getAsString();
+std::string AnalysisConsumer::getFunctionName(const Decl *D) {
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    OS << FD->getQualifiedNameAsString();
+
+    // In C++, there are overloads.
+    if (Ctx->getLangOpts().CPlusPlus) {
+      OS << '(';
+      for (const auto &P : FD->parameters()) {
+        if (P != *FD->param_begin())
+          OS << ", ";
+        OS << P->getType().getAsString();
+      }
+      OS << ')';
+    }
+
+  } else if (isa<BlockDecl>(D)) {
+    PresumedLoc Loc = Ctx->getSourceManager().getPresumedLoc(D->getLocation());
+
+    if (Loc.isValid()) {
+      OS << "block (line: " << Loc.getLine() << ", col: " << Loc.getColumn()
+         << ')';
+    }
+
+  } else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D)) {
+
+    // FIXME: copy-pasted from CGDebugInfo.cpp.
+    OS << (OMD->isInstanceMethod() ? '-' : '+') << '[';
+    const DeclContext *DC = OMD->getDeclContext();
+    if (const auto *OID = dyn_cast<ObjCImplementationDecl>(DC)) {
+      OS << OID->getName();
+    } else if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(DC)) {
+      OS << OID->getName();
+    } else if (const auto *OC = dyn_cast<ObjCCategoryDecl>(DC)) {
+      if (OC->IsClassExtension()) {
+        OS << OC->getClassInterface()->getName();
+      } else {
+        OS << OC->getIdentifier()->getNameStart() << '('
+           << OC->getIdentifier()->getNameStart() << ')';
+      }
+    } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
+      OS << ((const NamedDecl *)OCD)->getIdentifier()->getNameStart() << '('
+         << OCD->getIdentifier()->getNameStart() << ')';
+    } else if (isa<ObjCProtocolDecl>(DC)) {
+      // We can extract the type of the class from the self pointer.
+      if (ImplicitParamDecl *SelfDecl = OMD->getSelfDecl()) {
+        QualType ClassTy =
+            cast<ObjCObjectPointerType>(SelfDecl->getType())->getPointeeType();
+        ClassTy.print(OS, PrintingPolicy(LangOptions()));
+      }
+    }
+    OS << ' ' << OMD->getSelector().getAsString() << ']';
+
   }
-  if (const FunctionDecl *ND = dyn_cast<FunctionDecl>(D)) {
-    IdentifierInfo *II = ND->getIdentifier();
-    if (II)
-      return II->getName();
-  }
-  return "";
+
+  return OS.str();
 }
 
 AnalysisConsumer::AnalysisMode

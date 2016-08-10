@@ -17,3 +17,13 @@ target_link_libraries(
     ${GTEST_BOTH_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT})
 add_test(KernelSpecTest kernel_spec_test)
+
+add_executable(
+    packed_kernel_argument_array_test
+    PackedKernelArgumentArrayTest.cpp)
+target_link_libraries(
+    packed_kernel_argument_array_test
+    ${llvm_libs}
+    ${GTEST_BOTH_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
+add_test(PackedKernelArgumentArrayTest packed_kernel_argument_array_test)

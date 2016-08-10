@@ -19,24 +19,18 @@
 #include <numeric>
 
 // Other libraries and framework includes
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamGDBRemote.h"
 #include "lldb/Core/StreamString.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/Endian.h"
-#include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/UnixSignals.h"
+#include "lldb/Target/Target.h"
 
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
@@ -56,7 +50,7 @@ using namespace lldb_private::process_gdb_remote;
 // GDBRemoteCommunicationClient constructor
 //----------------------------------------------------------------------
 GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
-    : GDBRemoteCommunication("gdb-remote.client", "gdb-remote.client.rx_packet"),
+    : GDBRemoteClientBase("gdb-remote.client", "gdb-remote.client.rx_packet"),
       m_supports_not_sending_acks(eLazyBoolCalculate),
       m_supports_thread_suffix(eLazyBoolCalculate),
       m_supports_threads_in_stop_reply(eLazyBoolCalculate),
@@ -88,7 +82,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_augmented_libraries_svr4_read(eLazyBoolCalculate),
       m_supports_jThreadExtendedInfo(eLazyBoolCalculate),
       m_supports_jLoadedDynamicLibrariesInfos(eLazyBoolCalculate),
-      m_supports_jGetSharedCacheInfo (eLazyBoolCalculate),
+      m_supports_jGetSharedCacheInfo(eLazyBoolCalculate),
       m_supports_qProcessInfoPID(true),
       m_supports_qfProcessInfo(true),
       m_supports_qUserName(true),
@@ -109,14 +103,6 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_curr_tid(LLDB_INVALID_THREAD_ID),
       m_curr_tid_run(LLDB_INVALID_THREAD_ID),
       m_num_supported_hardware_watchpoints(0),
-      m_async_mutex(),
-      m_async_packet_predicate(false),
-      m_async_packet(),
-      m_async_result(PacketResult::Success),
-      m_async_response(),
-      m_async_signal(-1),
-      m_interrupt_sent(false),
-      m_thread_id_to_used_usec_map(),
       m_host_arch(),
       m_process_arch(),
       m_os_version_major(UINT32_MAX),
@@ -720,10 +706,8 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
     std::string &response_string
 )
 {
-    std::unique_lock<std::recursive_mutex> lock;
-    if (!GetSequenceMutex(
-            lock,
-            "ProcessGDBRemote::SendPacketsAndConcatenateResponses() failed due to not getting the sequence mutex"))
+    Lock lock(*this, false);
+    if (!lock)
     {
         Log *log (ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet (GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
         if (log)
@@ -745,9 +729,7 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
         // Construct payload
         char sizeDescriptor[128];
         snprintf(sizeDescriptor, sizeof(sizeDescriptor), "%x,%x", offset, response_size);
-        PacketResult result = SendPacketAndWaitForResponse((payload_prefix_str + sizeDescriptor).c_str(),
-                                                           this_response,
-                                                           /*send_async=*/false);
+        PacketResult result = SendPacketAndWaitForResponseNoLock(payload_prefix_str + sizeDescriptor, this_response);
         if (result != PacketResult::Success)
             return result;
 
@@ -765,722 +747,6 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
             // We're done
             return PacketResult::Success;
     }
-}
-
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
-(
-    const char *payload,
-    StringExtractorGDBRemote &response,
-    bool send_async
-)
-{
-    return SendPacketAndWaitForResponse (payload, 
-                                         ::strlen (payload),
-                                         response,
-                                         send_async);
-}
-
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketAndWaitForResponseNoLock (const char *payload,
-                                                                  size_t payload_length,
-                                                                  StringExtractorGDBRemote &response)
-{
-    PacketResult packet_result = SendPacketNoLock(payload, payload_length);
-    if (packet_result == PacketResult::Success)
-    {
-        const size_t max_response_retries = 3;
-        for (size_t i=0; i<max_response_retries; ++i)
-        {
-            packet_result = ReadPacket(response, GetPacketTimeoutInMicroSeconds (), true);
-            // Make sure we received a response
-            if (packet_result != PacketResult::Success)
-                return packet_result;
-            // Make sure our response is valid for the payload that was sent
-            if (response.ValidateResponse())
-                return packet_result;
-            // Response says it wasn't valid
-            Log *log = ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS);
-            if (log)
-                log->Printf("error: packet with payload \"%*s\" got invalid response \"%s\": %s",
-                            (int)payload_length,
-                            payload,
-                            response.GetStringRef().c_str(),
-                            (i == (max_response_retries - 1)) ? "using invalid response and giving up" : "ignoring response and waiting for another");
-        }
-    }
-    return packet_result;
-}
-
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
-(
-    const char *payload,
-    size_t payload_length,
-    StringExtractorGDBRemote &response,
-    bool send_async
-)
-{
-    PacketResult packet_result = PacketResult::ErrorSendFailed;
-    std::unique_lock<std::recursive_mutex> lock;
-    Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
-
-    // In order to stop async notifications from being processed in the middle of the
-    // send/receive sequence Hijack the broadcast. Then rebroadcast any events when we are done.
-    static ListenerSP hijack_listener_sp(Listener::MakeListener("lldb.NotifyHijacker"));
-    HijackBroadcaster(hijack_listener_sp, eBroadcastBitGdbReadThreadGotNotify);
-
-    if (GetSequenceMutex(lock))
-    {
-        packet_result = SendPacketAndWaitForResponseNoLock (payload, payload_length, response);
-    }
-    else
-    {
-        if (send_async)
-        {
-            if (IsRunning())
-            {
-                std::lock_guard<std::recursive_mutex> guard(m_async_mutex);
-                m_async_packet.assign(payload, payload_length);
-                m_async_response.CopyResponseValidator(response);
-                m_async_packet_predicate.SetValue (true, eBroadcastNever);
-                
-                if (log) 
-                    log->Printf ("async: async packet = %s", m_async_packet.c_str());
-
-                bool timed_out = false;
-                if (SendInterrupt(lock, 2, timed_out))
-                {
-                    if (m_interrupt_sent)
-                    {
-                        m_interrupt_sent = false;
-
-                        std::chrono::time_point<std::chrono::system_clock> until;
-                        until = std::chrono::system_clock::now() + std::chrono::seconds(m_packet_timeout);
-
-                        if (log) 
-                            log->Printf ("async: sent interrupt");
-
-                        if (m_async_packet_predicate.WaitForValueEqualTo(
-                                false, std::chrono::duration_cast<std::chrono::microseconds>(
-                                           until - std::chrono::system_clock::now()),
-                                &timed_out))
-                        {
-                            if (log) 
-                                log->Printf ("async: got response");
-
-                            // Swap the response buffer to avoid malloc and string copy
-                            response.GetStringRef().swap (m_async_response.GetStringRef());
-                            packet_result = m_async_result;
-                        }
-                        else
-                        {
-                            if (log) 
-                                log->Printf ("async: timed out waiting for response");
-                        }
-                        
-                        // Make sure we wait until the continue packet has been sent again...
-                        if (m_private_is_running.WaitForValueEqualTo(
-                                true, std::chrono::duration_cast<std::chrono::microseconds>(
-                                          until - std::chrono::system_clock::now()),
-                                &timed_out))
-                        {
-                            if (log)
-                            {
-                                if (timed_out) 
-                                    log->Printf ("async: timed out waiting for process to resume, but process was resumed");
-                                else
-                                    log->Printf ("async: async packet sent");
-                            }
-                        }
-                        else
-                        {
-                            if (log) 
-                                log->Printf ("async: timed out waiting for process to resume");
-                        }
-                    }
-                    else
-                    {
-                        // We had a racy condition where we went to send the interrupt
-                        // yet we were able to get the lock, so the process must have
-                        // just stopped?
-                        if (log) 
-                            log->Printf ("async: got lock without sending interrupt");
-                        // Send the packet normally since we got the lock
-                        packet_result = SendPacketAndWaitForResponseNoLock (payload, payload_length, response);
-                    }
-                }
-                else
-                {
-                    if (log) 
-                        log->Printf ("async: failed to interrupt");
-                }
-
-                m_async_response.SetResponseValidator(nullptr, nullptr);
-
-            }
-            else
-            {
-                if (log) 
-                    log->Printf ("async: not running, async is ignored");
-            }
-        }
-        else
-        {
-            if (log) 
-                log->Printf("error: failed to get packet sequence mutex, not sending packet '%*s'", (int) payload_length, payload);
-        }
-    }
-
-    // Remove our Hijacking listener from the broadcast.
-    RestoreBroadcaster();
-
-    // If a notification event occurred, rebroadcast since it can now be processed safely.
-    EventSP event_sp;
-    if (hijack_listener_sp->GetNextEvent(event_sp))
-        BroadcastEvent(event_sp);
-
-    return packet_result;
-}
-
-static const char *end_delimiter = "--end--;";
-static const int end_delimiter_len = 8;
-
-std::string
-GDBRemoteCommunicationClient::HarmonizeThreadIdsForProfileData
-(   ProcessGDBRemote *process,
-    StringExtractorGDBRemote& profileDataExtractor
-)
-{
-    std::map<uint64_t, uint32_t> new_thread_id_to_used_usec_map;
-    std::stringstream final_output;
-    std::string name, value;
-
-    // Going to assuming thread_used_usec comes first, else bail out.
-    while (profileDataExtractor.GetNameColonValue(name, value))
-    {
-        if (name.compare("thread_used_id") == 0)
-        {
-            StringExtractor threadIDHexExtractor(value.c_str());
-            uint64_t thread_id = threadIDHexExtractor.GetHexMaxU64(false, 0);
-            
-            bool has_used_usec = false;
-            uint32_t curr_used_usec = 0;
-            std::string usec_name, usec_value;
-            uint32_t input_file_pos = profileDataExtractor.GetFilePos();
-            if (profileDataExtractor.GetNameColonValue(usec_name, usec_value))
-            {
-                if (usec_name.compare("thread_used_usec") == 0)
-                {
-                    has_used_usec = true;
-                    curr_used_usec = strtoull(usec_value.c_str(), NULL, 0);
-                }
-                else
-                {
-                    // We didn't find what we want, it is probably
-                    // an older version. Bail out.
-                    profileDataExtractor.SetFilePos(input_file_pos);
-                }
-            }
-
-            if (has_used_usec)
-            {
-                uint32_t prev_used_usec = 0;
-                std::map<uint64_t, uint32_t>::iterator iterator = m_thread_id_to_used_usec_map.find(thread_id);
-                if (iterator != m_thread_id_to_used_usec_map.end())
-                {
-                    prev_used_usec = m_thread_id_to_used_usec_map[thread_id];
-                }
-                
-                uint32_t real_used_usec = curr_used_usec - prev_used_usec;
-                // A good first time record is one that runs for at least 0.25 sec
-                bool good_first_time = (prev_used_usec == 0) && (real_used_usec > 250000);
-                bool good_subsequent_time = (prev_used_usec > 0) &&
-                    ((real_used_usec > 0) || (process->HasAssignedIndexIDToThread(thread_id)));
-                
-                if (good_first_time || good_subsequent_time)
-                {
-                    // We try to avoid doing too many index id reservation,
-                    // resulting in fast increase of index ids.
-                    
-                    final_output << name << ":";
-                    int32_t index_id = process->AssignIndexIDToThread(thread_id);
-                    final_output << index_id << ";";
-                    
-                    final_output << usec_name << ":" << usec_value << ";";
-                }
-                else
-                {
-                    // Skip past 'thread_used_name'.
-                    std::string local_name, local_value;
-                    profileDataExtractor.GetNameColonValue(local_name, local_value);
-                }
-                
-                // Store current time as previous time so that they can be compared later.
-                new_thread_id_to_used_usec_map[thread_id] = curr_used_usec;
-            }
-            else
-            {
-                // Bail out and use old string.
-                final_output << name << ":" << value << ";";
-            }
-        }
-        else
-        {
-            final_output << name << ":" << value << ";";
-        }
-    }
-    final_output << end_delimiter;
-    m_thread_id_to_used_usec_map = new_thread_id_to_used_usec_map;
-    
-    return final_output.str();
-}
-
-bool
-GDBRemoteCommunicationClient::SendvContPacket
-(
-    ProcessGDBRemote *process,
-    const char *payload,
-    size_t packet_length,
-    StringExtractorGDBRemote &response
-)
-{
-
-    m_curr_tid = LLDB_INVALID_THREAD_ID;
-    Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-    if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
-
-    // we want to lock down packet sending while we continue
-    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
-
-    // here we broadcast this before we even send the packet!!
-    // this signals doContinue() to exit
-    BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
-
-    // set the public state to running
-    m_public_is_running.SetValue(true, eBroadcastNever);
-
-    // Set the starting continue packet into "continue_packet". This packet
-    // may change if we are interrupted and we continue after an async packet...
-    std::string continue_packet(payload, packet_length);
-
-    if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s () sending vCont packet: %s", __FUNCTION__, continue_packet.c_str());
-
-    if (SendPacketNoLock(continue_packet.c_str(), continue_packet.size()) != PacketResult::Success)
-         return false;
-
-    // set the private state to running and broadcast this
-    m_private_is_running.SetValue(true, eBroadcastAlways);
-
-    if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s () ReadPacket(%s)", __FUNCTION__, continue_packet.c_str());
-
-    // wait for the response to the vCont
-    if (ReadPacket(response, UINT32_MAX, false) == PacketResult::Success)
-    {
-        if (response.IsOKResponse())
-            return true;
-    }
-
-    return false;
-}
-
-StateType
-GDBRemoteCommunicationClient::SendContinuePacketAndWaitForResponse
-(
-    ProcessGDBRemote *process,
-    const char *payload,
-    size_t packet_length,
-    StringExtractorGDBRemote &response
-)
-{
-    m_curr_tid = LLDB_INVALID_THREAD_ID;
-    Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
-    if (log)
-        log->Printf ("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
-
-    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
-    StateType state = eStateRunning;
-
-    m_public_is_running.SetValue (true, eBroadcastNever);
-    // Set the starting continue packet into "continue_packet". This packet
-    // may change if we are interrupted and we continue after an async packet...
-    std::string continue_packet(payload, packet_length);
-
-    const auto sigstop_signo = process->GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
-    const auto sigint_signo = process->GetUnixSignals()->GetSignalNumberFromName("SIGINT");
-
-    bool got_async_packet = false;
-    bool broadcast_sent = false;
-    
-    while (state == eStateRunning)
-    {
-        if (!got_async_packet)
-        {
-            if (log)
-                log->Printf ("GDBRemoteCommunicationClient::%s () sending continue packet: %s", __FUNCTION__, continue_packet.c_str());
-            if (SendPacketNoLock(continue_packet.c_str(), continue_packet.size()) != PacketResult::Success)
-                state = eStateInvalid;
-            else
-                m_interrupt_sent = false;
-        
-            if (! broadcast_sent)
-            {
-                BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
-                broadcast_sent = true;
-            }
-
-            m_private_is_running.SetValue (true, eBroadcastAlways);
-        }
-        
-        got_async_packet = false;
-
-        if (log)
-            log->Printf ("GDBRemoteCommunicationClient::%s () ReadPacket(%s)", __FUNCTION__, continue_packet.c_str());
-
-        if (ReadPacket(response, UINT32_MAX, false) == PacketResult::Success)
-        {
-            if (response.Empty())
-                state = eStateInvalid;
-            else
-            {
-                const char stop_type = response.GetChar();
-                if (log)
-                    log->Printf ("GDBRemoteCommunicationClient::%s () got packet: %s", __FUNCTION__, response.GetStringRef().c_str());
-                switch (stop_type)
-                {
-                case 'T':
-                case 'S':
-                    {
-                        if (process->GetStopID() == 0)
-                        {
-                            if (process->GetID() == LLDB_INVALID_PROCESS_ID)
-                            {
-                                lldb::pid_t pid = GetCurrentProcessID ();
-                                if (pid != LLDB_INVALID_PROCESS_ID)
-                                    process->SetID (pid);
-                            }
-                            process->BuildDynamicRegisterInfo (true);
-                        }
-
-                        // Privately notify any internal threads that we have stopped
-                        // in case we wanted to interrupt our process, yet we might
-                        // send a packet and continue without returning control to the
-                        // user.
-                        m_private_is_running.SetValue (false, eBroadcastAlways);
-
-                        const uint8_t signo = response.GetHexU8 (UINT8_MAX);
-
-                        bool continue_after_async = m_async_signal != -1 || m_async_packet_predicate.GetValue();
-                        if (continue_after_async || m_interrupt_sent)
-                        {
-                            // We sent an interrupt packet to stop the inferior process
-                            // for an async signal or to send an async packet while running
-                            // but we might have been single stepping and received the
-                            // stop packet for the step instead of for the interrupt packet.
-                            // Typically when an interrupt is sent a SIGINT or SIGSTOP
-                            // is used, so if we get anything else, we need to try and
-                            // get another stop reply packet that may have been sent
-                            // due to sending the interrupt when the target is stopped
-                            // which will just re-send a copy of the last stop reply
-                            // packet. If we don't do this, then the reply for our
-                            // async packet will be the repeat stop reply packet and cause
-                            // a lot of trouble for us! We also have some debugserver
-                            // binaries that would send two stop replies anytime the process
-                            // was interrupted, so we need to also check for an extra
-                            // stop reply packet if we interrupted the process
-                            const bool received_nonstop_signal = signo != sigint_signo && signo != sigstop_signo;
-                            if (m_interrupt_sent || received_nonstop_signal)
-                            {
-                                if (received_nonstop_signal)
-                                    continue_after_async = false;
-
-                                // Try for a very brief time (0.1s) to get another stop reply
-                                // packet to make sure it doesn't get in the way
-                                StringExtractorGDBRemote extra_stop_reply_packet;
-                                uint32_t timeout_usec = 100000;
-                                if (ReadPacket (extra_stop_reply_packet, timeout_usec, false) == PacketResult::Success)
-                                {
-                                    switch (extra_stop_reply_packet.GetChar())
-                                    {
-                                    case 'T':
-                                    case 'S':
-                                        // We did get an extra stop reply, which means
-                                        // our interrupt didn't stop the target so we
-                                        // shouldn't continue after the async signal
-                                        // or packet is sent...
-                                        continue_after_async = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (m_async_signal != -1)
-                        {
-                            if (log)
-                                log->Printf ("async: send signo = %s", Host::GetSignalAsCString (m_async_signal));
-
-                            // Save off the async signal we are supposed to send
-                            const int async_signal = m_async_signal;
-                            // Clear the async signal member so we don't end up
-                            // sending the signal multiple times...
-                            m_async_signal = -1;
-                            // Check which signal we stopped with
-                            if (signo == async_signal)
-                            {
-                                if (log) 
-                                    log->Printf ("async: stopped with signal %s, we are done running", Host::GetSignalAsCString (signo));
-
-                                // We already stopped with a signal that we wanted
-                                // to stop with, so we are done
-                            }
-                            else
-                            {
-                                // We stopped with a different signal that the one
-                                // we wanted to stop with, so now we must resume
-                                // with the signal we want
-                                char signal_packet[32];
-                                int signal_packet_len = 0;
-                                signal_packet_len = ::snprintf (signal_packet,
-                                                                sizeof (signal_packet),
-                                                                "C%2.2x",
-                                                                async_signal);
-
-                                if (log) 
-                                    log->Printf ("async: stopped with signal %s, resume with %s", 
-                                                       Host::GetSignalAsCString (signo),
-                                                       Host::GetSignalAsCString (async_signal));
-
-                                // Set the continue packet to resume even if the
-                                // interrupt didn't cause our stop (ignore continue_after_async)
-                                continue_packet.assign(signal_packet, signal_packet_len);
-                                continue;
-                            }
-                        }
-                        else if (m_async_packet_predicate.GetValue())
-                        {
-                            Log * packet_log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PACKETS));
-
-                            // We are supposed to send an asynchronous packet while
-                            // we are running.
-                            m_async_response.Clear();
-                            if (m_async_packet.empty())
-                            {
-                                m_async_result = PacketResult::ErrorSendFailed;
-                                if (packet_log)
-                                    packet_log->Printf ("async: error: empty async packet");                            
-
-                            }
-                            else
-                            {
-                                if (packet_log) 
-                                    packet_log->Printf ("async: sending packet");
-                                
-                                m_async_result = SendPacketAndWaitForResponse (&m_async_packet[0],
-                                                                               m_async_packet.size(),
-                                                                               m_async_response,
-                                                                               false);
-                            }
-                            // Let the other thread that was trying to send the async
-                            // packet know that the packet has been sent and response is
-                            // ready...
-                            m_async_packet_predicate.SetValue(false, eBroadcastAlways);
-
-                            if (packet_log) 
-                                packet_log->Printf ("async: sent packet, continue_after_async = %i", continue_after_async);
-
-                            // Set the continue packet to resume if our interrupt
-                            // for the async packet did cause the stop
-                            if (continue_after_async)
-                            {
-                                // Reverting this for now as it is causing deadlocks
-                                // in programs (<rdar://problem/11529853>). In the future
-                                // we should check our thread list and "do the right thing"
-                                // for new threads that show up while we stop and run async
-                                // packets. Setting the packet to 'c' to continue all threads
-                                // is the right thing to do 99.99% of the time because if a
-                                // thread was single stepping, and we sent an interrupt, we
-                                // will notice above that we didn't stop due to an interrupt
-                                // but stopped due to stepping and we would _not_ continue.
-                                continue_packet.assign (1, 'c');
-                                continue;
-                            }
-                        }
-                        // Stop with signal and thread info
-                        state = eStateStopped;
-                    }
-                    break;
-
-                case 'W':
-                case 'X':
-                    // process exited
-                    state = eStateExited;
-                    break;
-
-                case 'O':
-                    // STDOUT
-                    {
-                        got_async_packet = true;
-                        std::string inferior_stdout;
-                        inferior_stdout.reserve(response.GetBytesLeft () / 2);
-
-                        uint8_t ch;
-                        while (response.GetHexU8Ex(ch))
-                        {
-                            if (ch != 0)
-                                inferior_stdout.append(1, (char)ch);
-                        }
-                        process->AppendSTDOUT (inferior_stdout.c_str(), inferior_stdout.size());
-                    }
-                    break;
-
-                case 'A':
-                    // Async miscellaneous reply. Right now, only profile data is coming through this channel.
-                    {
-                        got_async_packet = true;
-                        std::string input = response.GetStringRef().substr(1); // '1' to move beyond 'A'
-                        if (m_partial_profile_data.length() > 0)
-                        {
-                            m_partial_profile_data.append(input);
-                            input = m_partial_profile_data;
-                            m_partial_profile_data.clear();
-                        }
-                        
-                        size_t found, pos = 0, len = input.length();
-                        while ((found = input.find(end_delimiter, pos)) != std::string::npos)
-                        {
-                            StringExtractorGDBRemote profileDataExtractor(input.substr(pos, found).c_str());
-                            std::string profile_data = HarmonizeThreadIdsForProfileData(process, profileDataExtractor);
-                            process->BroadcastAsyncProfileData (profile_data);
-                            
-                            pos = found + end_delimiter_len;
-                        }
-                        
-                        if (pos < len)
-                        {
-                            // Last incomplete chunk.
-                            m_partial_profile_data = input.substr(pos);
-                        }
-                    }
-                    break;
-
-                case 'E':
-                    // ERROR
-                    state = eStateInvalid;
-                    break;
-
-                default:
-                    if (log)
-                        log->Printf ("GDBRemoteCommunicationClient::%s () unrecognized async packet", __FUNCTION__);
-                    state = eStateInvalid;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            if (log)
-                log->Printf ("GDBRemoteCommunicationClient::%s () ReadPacket(...) => false", __FUNCTION__);
-            state = eStateInvalid;
-        }
-    }
-    if (log)
-        log->Printf ("GDBRemoteCommunicationClient::%s () => %s", __FUNCTION__, StateAsCString(state));
-    response.SetFilePos(0);
-    m_private_is_running.SetValue (false, eBroadcastAlways);
-    m_public_is_running.SetValue (false, eBroadcastAlways);
-    return state;
-}
-
-bool
-GDBRemoteCommunicationClient::SendAsyncSignal (int signo)
-{
-    std::lock_guard<std::recursive_mutex> guard(m_async_mutex);
-    m_async_signal = signo;
-    bool timed_out = false;
-    std::unique_lock<std::recursive_mutex> lock;
-    if (SendInterrupt(lock, 1, timed_out))
-        return true;
-    m_async_signal = -1;
-    return false;
-}
-
-// This function takes a mutex locker as a parameter in case the GetSequenceMutex
-// actually succeeds. If it doesn't succeed in acquiring the sequence mutex 
-// (the expected result), then it will send the halt packet. If it does succeed
-// then the caller that requested the interrupt will want to keep the sequence
-// locked down so that no one else can send packets while the caller has control.
-// This function usually gets called when we are running and need to stop the 
-// target. It can also be used when we are running and we need to do something
-// else (like read/write memory), so we need to interrupt the running process
-// (gdb remote protocol requires this), and do what we need to do, then resume.
-
-bool
-GDBRemoteCommunicationClient::SendInterrupt(std::unique_lock<std::recursive_mutex> &lock,
-                                            uint32_t seconds_to_wait_for_stop, bool &timed_out)
-{
-    timed_out = false;
-    Log *log (ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet (GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
-
-    if (IsRunning())
-    {
-        // Only send an interrupt if our debugserver is running...
-        if (GetSequenceMutex(lock))
-        {
-            if (log)
-                log->Printf ("SendInterrupt () - got sequence mutex without having to interrupt");
-        }
-        else
-        {
-            // Someone has the mutex locked waiting for a response or for the
-            // inferior to stop, so send the interrupt on the down low...
-            char ctrl_c = '\x03';
-            ConnectionStatus status = eConnectionStatusSuccess;
-            size_t bytes_written = Write (&ctrl_c, 1, status, NULL);
-            if (log)
-                log->PutCString("send packet: \\x03");
-            if (bytes_written > 0)
-            {
-                m_interrupt_sent = true;
-                if (seconds_to_wait_for_stop)
-                {
-                    if (m_private_is_running.WaitForValueEqualTo(false, std::chrono::seconds(seconds_to_wait_for_stop),
-                                                                 &timed_out))
-                    {
-                        if (log)
-                            log->PutCString ("SendInterrupt () - sent interrupt, private state stopped");
-                        return true;
-                    }
-                    else
-                    {
-                        if (log)
-                            log->Printf ("SendInterrupt () - sent interrupt, timed out wating for async thread resume");
-                    }
-                }
-                else
-                {
-                    if (log)
-                        log->Printf ("SendInterrupt () - sent interrupt, not waiting for stop...");
-                    return true;
-                }
-            }
-            else
-            {
-                if (log)
-                    log->Printf ("SendInterrupt () - failed to write interrupt");
-            }
-            return false;
-        }
-    }
-    else
-    {
-        if (log)
-            log->Printf ("SendInterrupt () - not running");
-    }
-    return true;
 }
 
 lldb::pid_t
@@ -3651,18 +2917,18 @@ size_t
 GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thread_ids, 
                                                    bool &sequence_mutex_unavailable)
 {
-    std::unique_lock<std::recursive_mutex> lock;
     thread_ids.clear();
 
-    if (GetSequenceMutex(lock, "ProcessGDBRemote::UpdateThreadList() failed due to not getting the sequence mutex"))
+    Lock lock(*this, false);
+    if (lock)
     {
         sequence_mutex_unavailable = false;
         StringExtractorGDBRemote response;
         
         PacketResult packet_result;
-        for (packet_result = SendPacketAndWaitForResponseNoLock ("qfThreadInfo", strlen("qfThreadInfo"), response);
+        for (packet_result = SendPacketAndWaitForResponseNoLock("qfThreadInfo", response);
              packet_result == PacketResult::Success && response.IsNormalResponse();
-             packet_result = SendPacketAndWaitForResponseNoLock ("qsThreadInfo", strlen("qsThreadInfo"), response))
+             packet_result = SendPacketAndWaitForResponseNoLock("qsThreadInfo", response))
         {
             char ch = response.GetChar();
             if (ch == 'l')
@@ -3710,7 +2976,8 @@ GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thr
 lldb::addr_t
 GDBRemoteCommunicationClient::GetShlibInfoAddr()
 {
-    if (!IsRunning())
+    Lock lock(*this, false);
+    if (lock)
     {
         StringExtractorGDBRemote response;
         if (SendPacketAndWaitForResponse("qShlibInfoAddr", ::strlen ("qShlibInfoAddr"), response, false) == PacketResult::Success)
@@ -3718,6 +2985,11 @@ GDBRemoteCommunicationClient::GetShlibInfoAddr()
             if (response.IsNormalResponse())
                 return response.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
         }
+    }
+    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+    {
+        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for qShlibInfoAddr packet.",
+                    __FUNCTION__);
     }
     return LLDB_INVALID_ADDRESS;
 }
@@ -4201,8 +3473,8 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
 bool
 GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, StringExtractorGDBRemote &response)
 {
-    std::unique_lock<std::recursive_mutex> lock;
-    if (GetSequenceMutex(lock, "Didn't get sequence mutex for p packet."))
+    Lock lock(*this, false);
+    if (lock)
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
         
@@ -4218,6 +3490,10 @@ GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, String
             return SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success;
         }
     }
+    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+    {
+        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for p packet.", __FUNCTION__);
+    }
     return false;
 
 }
@@ -4226,8 +3502,8 @@ GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, String
 bool
 GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractorGDBRemote &response)
 {
-    std::unique_lock<std::recursive_mutex> lock;
-    if (GetSequenceMutex(lock, "Didn't get sequence mutex for g packet."))
+    Lock lock(*this, false);
+    if (lock)
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
 
@@ -4244,6 +3520,10 @@ GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractor
             return SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success;
         }
     }
+    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+    {
+        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for g packet.", __FUNCTION__);
+    }
     return false;
 }
 bool
@@ -4254,8 +3534,8 @@ GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save
         return false;
     
     m_supports_QSaveRegisterState = eLazyBoolYes;
-    std::unique_lock<std::recursive_mutex> lock;
-    if (GetSequenceMutex(lock, "Didn't get sequence mutex for QSaveRegisterState."))
+    Lock lock(*this, false);
+    if (lock)
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
         if (thread_suffix_supported || SetCurrentThread(tid))
@@ -4285,6 +3565,11 @@ GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save
             }
         }
     }
+    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+    {
+        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for QSaveRegisterState packet.",
+                    __FUNCTION__);
+    }
     return false;
 }
 
@@ -4297,8 +3582,8 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
 
-    std::unique_lock<std::recursive_mutex> lock;
-    if (GetSequenceMutex(lock, "Didn't get sequence mutex for QRestoreRegisterState."))
+    Lock lock(*this, false);
+    if (lock)
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
         if (thread_suffix_supported || SetCurrentThread(tid))
@@ -4325,6 +3610,11 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
                 }
             }
         }
+    }
+    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+    {
+        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for QRestoreRegisterState packet.",
+                    __FUNCTION__);
     }
     return false;
 }
@@ -4528,15 +3818,13 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
 
     if (m_supports_qSymbol && m_qSymbol_requests_done == false)
     {
-        std::unique_lock<std::recursive_mutex> lock;
-        if (GetSequenceMutex(
-                lock,
-                "GDBRemoteCommunicationClient::ServeSymbolLookups() failed due to not getting the sequence mutex"))
+        Lock lock(*this, false);
+        if (lock)
         {
             StreamString packet;
             packet.PutCString ("qSymbol::");
             StringExtractorGDBRemote response;
-            while (SendPacketAndWaitForResponseNoLock(packet.GetData(), packet.GetSize(), response) == PacketResult::Success)
+            while (SendPacketAndWaitForResponseNoLock(packet.GetString(), response) == PacketResult::Success)
             {
                 if (response.IsOKResponse())
                 {
@@ -4648,6 +3936,18 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             return;
 
         }
+        else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+        {
+            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex.", __FUNCTION__);
+        }
     }
 }
 
+void
+GDBRemoteCommunicationClient::OnRunPacketSent(bool first)
+{
+    GDBRemoteClientBase::OnRunPacketSent(first);
+    if (first)
+        BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
+    m_curr_tid = LLDB_INVALID_THREAD_ID;
+}

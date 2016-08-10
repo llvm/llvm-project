@@ -13,7 +13,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
 
-#include <objc/objc-auto.h>
 #include <pthread.h>
 
 using namespace lldb_private;
@@ -30,22 +29,7 @@ class MacOSXDarwinThread
     MacOSXDarwinThread()
         : m_pool(nil)
     {
-        // Register our thread with the collector if garbage collection is enabled.
-        if (objc_collectingEnabled())
-        {
-#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_5
-            // On Leopard and earlier there is no way objc_registerThreadWithCollector
-            // function, so we do it manually.
-            auto_zone_register_thread(auto_zone());
-#else
-            // On SnowLeopard and later we just call the thread registration function.
-            objc_registerThreadWithCollector();
-#endif
-        }
-        else
-        {
-            m_pool = [[NSAutoreleasePool alloc] init];
-        }
+        m_pool = [[NSAutoreleasePool alloc] init];
     }
 
     ~MacOSXDarwinThread()

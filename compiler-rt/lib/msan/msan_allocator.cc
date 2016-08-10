@@ -56,7 +56,7 @@ struct MsanMapUnmapCallback {
 #else
   static const uptr kAllocatorSpace = 0x600000000000ULL;
 #endif
-  static const uptr kAllocatorSize = 0x80000000000; // 8T.
+  static const uptr kAllocatorSize = 0x40000000000; // 4T.
   static const uptr kMetadataSize  = sizeof(Metadata);
   static const uptr kMaxAllowedMallocSize = 8UL << 30;
 

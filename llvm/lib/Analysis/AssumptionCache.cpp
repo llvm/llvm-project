@@ -77,7 +77,7 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
 char AssumptionAnalysis::PassID;
 
 PreservedAnalyses AssumptionPrinterPass::run(Function &F,
-                                             AnalysisManager<Function> &AM) {
+                                             FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
 
   OS << "Cached assumptions for function: " << F.getName() << "\n";

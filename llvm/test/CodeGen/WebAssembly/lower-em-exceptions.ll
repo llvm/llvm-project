@@ -30,17 +30,20 @@ lpad:                                             ; preds = %entry
   %2 = extractvalue { i8*, i32 } %0, 1
   br label %catch.dispatch
 ; CHECK: lpad:
-; CHECK-NEXT: %[[FMC:.*]] = call i8* @___cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* null)
+; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* null)
 ; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
 ; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @[[TEMPRET0]]
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
-; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 1
+; CHECK-NEXT: %[[CDR:.*]] = extractvalue { i8*, i32 } %[[IVI2]], 1
 
 catch.dispatch:                                   ; preds = %lpad
   %3 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
   %matches = icmp eq i32 %2, %3
   br i1 %matches, label %catch1, label %catch
+; CHECK: catch.dispatch:
+; CHECK-NEXT: %[[TYPEID:.*]] = call i32 @llvm_eh_typeid_for(i8* bitcast (i8** @_ZTIi to i8*))
+; CHECK-NEXT: %matches = icmp eq i32 %[[CDR]], %[[TYPEID]]
 
 catch1:                                           ; preds = %catch.dispatch
   %4 = call i8* @__cxa_begin_catch(i8* %1)
@@ -81,7 +84,7 @@ lpad:                                             ; preds = %entry
   %2 = extractvalue { i8*, i32 } %0, 1
   br label %filter.dispatch
 ; CHECK: lpad:
-; CHECK-NEXT: %[[FMC:.*]] = call i8* @___cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTIc to i8*))
+; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTIc to i8*))
 ; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
 ; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @[[TEMPRET0]]
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
@@ -104,11 +107,54 @@ eh.resume:                                        ; preds = %filter.dispatch
 ; CHECK-NEXT: insertvalue
 ; CHECK-NEXT: %[[LPAD_VAL:.*]] = insertvalue
 ; CHECK-NEXT: %[[LOW:.*]] = extractvalue { i8*, i32 } %[[LPAD_VAL]], 0
-; CHECK-NEXT: call void @___resumeException(i8* %[[LOW]])
+; CHECK-NEXT: call void @__resumeException(i8* %[[LOW]])
 ; CHECK-NEXT: unreachable
 }
 
+; Test if argument attributes indices in newly created call instructions are correct
+define void @arg_attributes() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @arg_attributes(
+entry:
+  %0 = invoke noalias i8* @bar(i8 signext 1, i8 zeroext 2)
+          to label %invoke.cont unwind label %lpad
+; CHECK: entry:
+; CHECK-NEXT: store i1 false, i1* @[[__THREW__]]
+; CHECK-NEXT: %0 = call noalias i8* @"__invoke_i8*_i8_i8"(i8* (i8, i8)* @bar, i8 signext 1, i8 zeroext 2)
+
+invoke.cont:                                      ; preds = %entry
+  br label %try.cont
+
+lpad:                                             ; preds = %entry
+  %1 = landingpad { i8*, i32 }
+          catch i8* bitcast (i8** @_ZTIi to i8*)
+          catch i8* null
+  %2 = extractvalue { i8*, i32 } %1, 0
+  %3 = extractvalue { i8*, i32 } %1, 1
+  br label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %lpad
+  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %matches = icmp eq i32 %3, %4
+  br i1 %matches, label %catch1, label %catch
+
+catch1:                                           ; preds = %catch.dispatch
+  %5 = call i8* @__cxa_begin_catch(i8* %2)
+  %6 = bitcast i8* %5 to i32*
+  %7 = load i32, i32* %6, align 4
+  call void @__cxa_end_catch()
+  br label %try.cont
+
+try.cont:                                         ; preds = %catch, %catch1, %invoke.cont
+  ret void
+
+catch:                                            ; preds = %catch.dispatch
+  %8 = call i8* @__cxa_begin_catch(i8* %2)
+  call void @__cxa_end_catch()
+  br label %try.cont
+}
+
 declare void @foo(i32)
+declare i8* @bar(i8, i8)
 
 declare i32 @__gxx_personality_v0(...)
 declare i32 @llvm.eh.typeid.for(i8*)
@@ -117,9 +163,9 @@ declare void @__cxa_end_catch()
 declare void @__cxa_call_unexpected(i8*)
 
 ; JS glue functions and invoke wrappers registration
-; CHECK: declare void @___resumeException(i8*)
+; CHECK: declare void @__resumeException(i8*)
 ; CHECK: declare void @__invoke_void_i32(void (i32)*, i32)
-; CHECK: declare i8* @___cxa_find_matching_catch_4(i8*, i8*)
+; CHECK: declare i8* @__cxa_find_matching_catch_4(i8*, i8*)
 
 ; setThrew function creation
 ; CHECK-LABEL: define void @setThrew(i1 %threw, i32 %value) {

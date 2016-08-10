@@ -316,6 +316,12 @@ bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr);
 /// Metadata not listed as known via KnownIDs is removed
 void combineMetadata(Instruction *K, const Instruction *J, ArrayRef<unsigned> KnownIDs);
 
+/// Combine the metadata of two instructions so that K can replace J. This
+/// specifically handles the case of CSE-like transformations.
+///
+/// Unknown metadata is removed.
+void combineMetadataForCSE(Instruction *K, const Instruction *J);
+
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge.  Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,

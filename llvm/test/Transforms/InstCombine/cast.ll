@@ -387,7 +387,6 @@ define i16 @test35(i16 %a) {
   ret i16 %c2
 }
 
-; icmp sgt i32 %a, -1
 ; rdar://6480391
 define i1 @test36(i32 %a) {
 ; CHECK-LABEL: @test36(
@@ -400,7 +399,20 @@ define i1 @test36(i32 %a) {
   ret i1 %d
 }
 
-; ret i1 false
+; FIXME: Vectors should fold too.
+define <2 x i1> @test36vec(<2 x i32> %a) {
+; CHECK-LABEL: @test36vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i32> %a, <i32 31, i32 31>
+; CHECK-NEXT:    [[C:%.*]] = trunc <2 x i32> [[B]] to <2 x i8>
+; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i8> [[C]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %b = lshr <2 x i32> %a, <i32 31, i32 31>
+  %c = trunc <2 x i32> %b to <2 x i8>
+  %d = icmp eq <2 x i8> %c, zeroinitializer
+  ret <2 x i1> %d
+}
+
 define i1 @test37(i32 %a) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:    ret i1 false

@@ -21,8 +21,6 @@
 #include <thread>
 
 // Other libraries and framework includes
-#include "llvm/ADT/Triple.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
@@ -37,13 +35,16 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Host/common/NativeThreadProtocol.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
@@ -490,8 +491,7 @@ GetRegistersAsJSON(NativeThreadProtocol &thread, bool abridged)
         StreamString stream;
         WriteRegisterValueInHexFixedWidth(stream, reg_ctx_sp, *reg_info_p, &reg_value);
 
-        register_object_sp->SetObject(std::to_string(reg_num),
-                std::make_shared<JSONString>(stream.GetString()));
+        register_object_sp->SetObject(llvm::to_string(reg_num), std::make_shared<JSONString>(stream.GetString()));
     }
 
     return register_object_sp;

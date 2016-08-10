@@ -54,6 +54,12 @@ cl::opt<Reloc::Model> RelocModel(
                    "Fully relocatable, position independent code"),
         clEnumValN(Reloc::DynamicNoPIC, "dynamic-no-pic",
                    "Relocatable external references, non-relocatable code"),
+        clEnumValN(Reloc::ROPI, "ropi",
+                   "Code and read-only data relocatable, accessed PC-relative"),
+        clEnumValN(Reloc::RWPI, "rwpi",
+                   "Read-write data relocatable, accessed relative to static base"),
+        clEnumValN(Reloc::ROPI_RWPI, "ropi-rwpi",
+                   "Combination of ropi and rwpi"),
         clEnumValEnd));
 
 static inline Optional<Reloc::Model> getRelocModel() {

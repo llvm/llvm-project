@@ -19,14 +19,14 @@ CompileOnDemand layer the JIT from `Chapter 2 <BuildingAJIT2.html>`_.
 Lazy Compilation
 ================
 
-When we add a module to the KaleidoscopeJIT class described in Chapter 2 it is
+When we add a module to the KaleidoscopeJIT class from Chapter 2 it is
 immediately optimized, compiled and linked for us by the IRTransformLayer,
 IRCompileLayer and ObjectLinkingLayer respectively. This scheme, where all the
-work to make a Module executable is done up front, is simple to understand its
-performance characteristics are easy to reason about. However, it will lead to
-very high startup times if the amount of code to be compiled is large, and may
-also do a lot of unnecessary compilation if only a few compiled functions are
-ever called at runtime. A truly "just-in-time" compiler should allow us to
+work to make a Module executable is done up front, is simple to understand and
+its performance characteristics are easy to reason about. However, it will lead
+to very high startup times if the amount of code to be compiled is large, and
+may also do a lot of unnecessary compilation if only a few compiled functions
+are ever called at runtime. A truly "just-in-time" compiler should allow us to
 defer the compilation of any given function until the moment that function is
 first called, improving launch times and eliminating redundant work. In fact,
 the ORC APIs provide us with a layer to lazily compile LLVM IR:

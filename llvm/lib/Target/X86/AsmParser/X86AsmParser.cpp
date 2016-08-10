@@ -2331,6 +2331,30 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     static_cast<X86Operand &>(*Operands[0]).setTokenValue(Repl);
   }
 
+  // Moving a 32 or 16 bit value into a segment register has the same
+  // behavior. Modify such instructions to always take shorter form.
+  if ((Name == "mov" || Name == "movw" || Name == "movl") &&
+      (Operands.size() == 3)) {
+    X86Operand &Op1 = (X86Operand &)*Operands[1];
+    X86Operand &Op2 = (X86Operand &)*Operands[2];
+    SMLoc Loc = Op1.getEndLoc();
+    if (Op1.isReg() && Op2.isReg() &&
+        X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(
+            Op2.getReg()) &&
+        (X86MCRegisterClasses[X86::GR16RegClassID].contains(Op1.getReg()) ||
+         X86MCRegisterClasses[X86::GR32RegClassID].contains(Op1.getReg()))) {
+      // Change instruction name to match new instruction.
+      if (Name != "mov" && Name[3] == (is16BitMode() ? 'l' : 'w')) {
+        Name = is16BitMode() ? "movw" : "movl";
+        Operands[0] = X86Operand::CreateToken(Name, NameLoc);
+      }
+      // Select the correct equivalent 16-/32-bit source register.
+      unsigned Reg =
+          getX86SubSuperRegisterOrZero(Op1.getReg(), is16BitMode() ? 16 : 32);
+      Operands[1] = X86Operand::CreateReg(Reg, Loc, Loc);
+    }
+  }
+
   // This is a terrible hack to handle "out[s]?[bwl]? %al, (%dx)" ->
   // "outb %al, %dx".  Out doesn't take a memory form, but this is a widely
   // documented form in various unofficial manuals, so a lot of code uses it.

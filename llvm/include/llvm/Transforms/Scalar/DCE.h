@@ -22,7 +22,7 @@ namespace llvm {
 /// Basic Dead Code Elimination pass.
 class DCEPass : public PassInfoMixin<DCEPass> {
 public:
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }
 

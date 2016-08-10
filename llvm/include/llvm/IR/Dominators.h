@@ -208,7 +208,7 @@ public:
   typedef DominatorTree Result;
 
   /// \brief Run the analysis pass over a function and produce a dominator tree.
-  DominatorTree run(Function &F, AnalysisManager<Function> &);
+  DominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
 /// \brief Printer pass for the \c DominatorTree.
@@ -218,12 +218,12 @@ class DominatorTreePrinterPass
 
 public:
   explicit DominatorTreePrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Verifier pass for the \c DominatorTree.
 struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Legacy analysis pass which computes a \c DominatorTree.

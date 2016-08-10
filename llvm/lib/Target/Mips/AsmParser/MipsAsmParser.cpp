@@ -252,9 +252,6 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool reportParseError(SMLoc Loc, Twine ErrorMsg);
 
   bool parseMemOffset(const MCExpr *&Res, bool isParenExpr);
-  bool parseRelocOperand(const MCExpr *&Res);
-
-  const MCExpr *evaluateRelocExpr(const MCExpr *Expr, StringRef RelocStr);
 
   bool isEvaluated(const MCExpr *Expr);
   bool parseSetMips0Directive();
@@ -552,6 +549,64 @@ public:
   void warnIfNoMacro(SMLoc Loc);
 
   bool isLittle() const { return IsLittleEndian; }
+
+  const MCExpr *createTargetUnaryExpr(const MCExpr *E,
+                                      AsmToken::TokenKind OperatorToken,
+                                      MCContext &Ctx) override {
+    switch(OperatorToken) {
+    default:
+      llvm_unreachable("Unknown token");
+      return nullptr;
+    case AsmToken::PercentCall16:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, E, Ctx);
+    case AsmToken::PercentCall_Hi:
+      return MipsMCExpr::create(MipsMCExpr::MEK_CALL_HI16, E, Ctx);
+    case AsmToken::PercentCall_Lo:
+      return MipsMCExpr::create(MipsMCExpr::MEK_CALL_LO16, E, Ctx);
+    case AsmToken::PercentDtprel_Hi:
+      return MipsMCExpr::create(MipsMCExpr::MEK_DTPREL_HI, E, Ctx);
+    case AsmToken::PercentDtprel_Lo:
+      return MipsMCExpr::create(MipsMCExpr::MEK_DTPREL_LO, E, Ctx);
+    case AsmToken::PercentGot:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT, E, Ctx);
+    case AsmToken::PercentGot_Disp:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_DISP, E, Ctx);
+    case AsmToken::PercentGot_Hi:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_HI16, E, Ctx);
+    case AsmToken::PercentGot_Lo:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_LO16, E, Ctx);
+    case AsmToken::PercentGot_Ofst:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_OFST, E, Ctx);
+    case AsmToken::PercentGot_Page:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_PAGE, E, Ctx);
+    case AsmToken::PercentGottprel:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GOTTPREL, E, Ctx);
+    case AsmToken::PercentGp_Rel:
+      return MipsMCExpr::create(MipsMCExpr::MEK_GPREL, E, Ctx);
+    case AsmToken::PercentHi:
+      return MipsMCExpr::create(MipsMCExpr::MEK_HI, E, Ctx);
+    case AsmToken::PercentHigher:
+      return MipsMCExpr::create(MipsMCExpr::MEK_HIGHER, E, Ctx);
+    case AsmToken::PercentHighest:
+      return MipsMCExpr::create(MipsMCExpr::MEK_HIGHEST, E, Ctx);
+    case AsmToken::PercentLo:
+      return MipsMCExpr::create(MipsMCExpr::MEK_LO, E, Ctx);
+    case AsmToken::PercentNeg:
+      return MipsMCExpr::create(MipsMCExpr::MEK_NEG, E, Ctx);
+    case AsmToken::PercentPcrel_Hi:
+      return MipsMCExpr::create(MipsMCExpr::MEK_PCREL_HI16, E, Ctx);
+    case AsmToken::PercentPcrel_Lo:
+      return MipsMCExpr::create(MipsMCExpr::MEK_PCREL_LO16, E, Ctx);
+    case AsmToken::PercentTlsgd:
+      return MipsMCExpr::create(MipsMCExpr::MEK_TLSGD, E, Ctx);
+    case AsmToken::PercentTlsldm:
+      return MipsMCExpr::create(MipsMCExpr::MEK_TLSLDM, E, Ctx);
+    case AsmToken::PercentTprel_Hi:
+      return MipsMCExpr::create(MipsMCExpr::MEK_TPREL_HI, E, Ctx);
+    case AsmToken::PercentTprel_Lo:
+      return MipsMCExpr::create(MipsMCExpr::MEK_TPREL_LO, E, Ctx);
+    }
+  }
 };
 }
 
@@ -4187,9 +4242,6 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   DEBUG(dbgs() << ".. Generic Parser\n");
 
   switch (getLexer().getKind()) {
-  default:
-    Error(Parser.getTok().getLoc(), "unexpected token in operand");
-    return true;
   case AsmToken::Dollar: {
     // Parse the register.
     SMLoc S = Parser.getTok().getLoc();
@@ -4216,70 +4268,21 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     Operands.push_back(MipsOperand::CreateImm(Res, S, E, *this));
     return false;
   }
-  // Else drop to expression parsing.
-  case AsmToken::LParen:
-  case AsmToken::Minus:
-  case AsmToken::Plus:
-  case AsmToken::Integer:
-  case AsmToken::Tilde:
-  case AsmToken::String: {
-    DEBUG(dbgs() << ".. generic integer\n");
-    OperandMatchResultTy ResTy = parseImm(Operands);
-    return ResTy != MatchOperand_Success;
-  }
-  case AsmToken::Percent: {
-    // It is a symbol reference or constant expression.
-    const MCExpr *IdVal;
+  default: {
+    DEBUG(dbgs() << ".. generic integer expression\n");
+
+    const MCExpr *Expr;
     SMLoc S = Parser.getTok().getLoc(); // Start location of the operand.
-    if (parseRelocOperand(IdVal))
+    if (getParser().parseExpression(Expr))
       return true;
 
     SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
-    Operands.push_back(MipsOperand::CreateImm(IdVal, S, E, *this));
+    Operands.push_back(MipsOperand::CreateImm(Expr, S, E, *this));
     return false;
-  } // case AsmToken::Percent
+  }
   } // switch(getLexer().getKind())
   return true;
-}
-
-const MCExpr *MipsAsmParser::evaluateRelocExpr(const MCExpr *Expr,
-                                               StringRef RelocStr) {
-  if (RelocStr == "hi(%neg(%gp_rel")
-    return MipsMCExpr::createGpOff(MipsMCExpr::MEK_HI, Expr, getContext());
-  else if (RelocStr == "lo(%neg(%gp_rel")
-    return MipsMCExpr::createGpOff(MipsMCExpr::MEK_LO, Expr, getContext());
-
-  MipsMCExpr::MipsExprKind Kind =
-      StringSwitch<MipsMCExpr::MipsExprKind>(RelocStr)
-          .Case("call16", MipsMCExpr::MEK_GOT_CALL)
-          .Case("call_hi", MipsMCExpr::MEK_CALL_HI16)
-          .Case("call_lo", MipsMCExpr::MEK_CALL_LO16)
-          .Case("dtprel_hi", MipsMCExpr::MEK_DTPREL_HI)
-          .Case("dtprel_lo", MipsMCExpr::MEK_DTPREL_LO)
-          .Case("got", MipsMCExpr::MEK_GOT)
-          .Case("got_disp", MipsMCExpr::MEK_GOT_DISP)
-          .Case("got_hi", MipsMCExpr::MEK_GOT_HI16)
-          .Case("got_lo", MipsMCExpr::MEK_GOT_LO16)
-          .Case("got_ofst", MipsMCExpr::MEK_GOT_OFST)
-          .Case("got_page", MipsMCExpr::MEK_GOT_PAGE)
-          .Case("gottprel", MipsMCExpr::MEK_GOTTPREL)
-          .Case("gp_rel", MipsMCExpr::MEK_GPREL)
-          .Case("hi", MipsMCExpr::MEK_HI)
-          .Case("higher", MipsMCExpr::MEK_HIGHER)
-          .Case("highest", MipsMCExpr::MEK_HIGHEST)
-          .Case("lo", MipsMCExpr::MEK_LO)
-          .Case("neg", MipsMCExpr::MEK_NEG)
-          .Case("pcrel_hi", MipsMCExpr::MEK_PCREL_HI16)
-          .Case("pcrel_lo", MipsMCExpr::MEK_PCREL_LO16)
-          .Case("tlsgd", MipsMCExpr::MEK_TLSGD)
-          .Case("tlsldm", MipsMCExpr::MEK_TLSLDM)
-          .Case("tprel_hi", MipsMCExpr::MEK_TPREL_HI)
-          .Case("tprel_lo", MipsMCExpr::MEK_TPREL_LO)
-          .Default(MipsMCExpr::MEK_None);
-
-  assert(Kind != MipsMCExpr::MEK_None);
-  return MipsMCExpr::create(Kind, Expr, getContext());
 }
 
 bool MipsAsmParser::isEvaluated(const MCExpr *Expr) {
@@ -4300,49 +4303,6 @@ bool MipsAsmParser::isEvaluated(const MCExpr *Expr) {
   case MCExpr::Target:
     return true;
   }
-  return false;
-}
-
-bool MipsAsmParser::parseRelocOperand(const MCExpr *&Res) {
-  MCAsmParser &Parser = getParser();
-  Parser.Lex();                          // Eat the % token.
-  const AsmToken &Tok = Parser.getTok(); // Get next token, operation.
-  if (Tok.isNot(AsmToken::Identifier))
-    return true;
-
-  std::string Str = Tok.getIdentifier();
-
-  Parser.Lex(); // Eat the identifier.
-  // Now make an expression from the rest of the operand.
-  const MCExpr *IdVal;
-  SMLoc EndLoc;
-
-  if (getLexer().getKind() == AsmToken::LParen) {
-    while (1) {
-      Parser.Lex(); // Eat the '(' token.
-      if (getLexer().getKind() == AsmToken::Percent) {
-        Parser.Lex(); // Eat the % token.
-        const AsmToken &nextTok = Parser.getTok();
-        if (nextTok.isNot(AsmToken::Identifier))
-          return true;
-        Str += "(%";
-        Str += nextTok.getIdentifier();
-        Parser.Lex(); // Eat the identifier.
-        if (getLexer().getKind() != AsmToken::LParen)
-          return true;
-      } else
-        break;
-    }
-    if (getParser().parseParenExpression(IdVal, EndLoc))
-      return true;
-
-    while (getLexer().getKind() == AsmToken::RParen)
-      Parser.Lex(); // Eat the ')' token.
-
-  } else
-    return true; // Parenthesis must follow the relocation operand.
-
-  Res = evaluateRelocExpr(IdVal, Str);
   return false;
 }
 
@@ -4373,35 +4333,11 @@ bool MipsAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
 }
 
 bool MipsAsmParser::parseMemOffset(const MCExpr *&Res, bool isParenExpr) {
-  MCAsmParser &Parser = getParser();
   SMLoc S;
-  bool Result = true;
-  unsigned NumOfLParen = 0;
 
-  while (getLexer().getKind() == AsmToken::LParen) {
-    Parser.Lex();
-    ++NumOfLParen;
-  }
-
-  switch (getLexer().getKind()) {
-  default:
-    return true;
-  case AsmToken::Identifier:
-  case AsmToken::LParen:
-  case AsmToken::Integer:
-  case AsmToken::Minus:
-  case AsmToken::Plus:
-    if (isParenExpr)
-      Result = getParser().parseParenExprOfDepth(NumOfLParen, Res, S);
-    else
-      Result = (getParser().parseExpression(Res));
-    while (getLexer().getKind() == AsmToken::RParen)
-      Parser.Lex();
-    break;
-  case AsmToken::Percent:
-    Result = parseRelocOperand(Res);
-  }
-  return Result;
+  if (isParenExpr)
+    return getParser().parseParenExprOfDepth(0, Res, S);
+  return getParser().parseExpression(Res);
 }
 
 MipsAsmParser::OperandMatchResultTy
@@ -4632,47 +4568,18 @@ MipsAsmParser::parseAnyRegister(OperandVector &Operands) {
 }
 
 MipsAsmParser::OperandMatchResultTy
-MipsAsmParser::parseImm(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-  switch (getLexer().getKind()) {
-  default:
-    return MatchOperand_NoMatch;
-  case AsmToken::LParen:
-  case AsmToken::Minus:
-  case AsmToken::Plus:
-  case AsmToken::Integer:
-  case AsmToken::Tilde:
-  case AsmToken::String:
-    break;
-  }
-
-  const MCExpr *IdVal;
-  SMLoc S = Parser.getTok().getLoc();
-  if (getParser().parseExpression(IdVal))
-    return MatchOperand_ParseFail;
-
-  SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Operands.push_back(MipsOperand::CreateImm(IdVal, S, E, *this));
-  return MatchOperand_Success;
-}
-
-MipsAsmParser::OperandMatchResultTy
 MipsAsmParser::parseJumpTarget(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   DEBUG(dbgs() << "parseJumpTarget\n");
 
   SMLoc S = getLexer().getLoc();
 
-  // Integers and expressions are acceptable
-  OperandMatchResultTy ResTy = parseImm(Operands);
-  if (ResTy != MatchOperand_NoMatch)
-    return ResTy;
-
   // Registers are a valid target and have priority over symbols.
-  ResTy = parseAnyRegister(Operands);
+  OperandMatchResultTy ResTy = parseAnyRegister(Operands);
   if (ResTy != MatchOperand_NoMatch)
     return ResTy;
 
+  // Integers and expressions are acceptable
   const MCExpr *Expr = nullptr;
   if (Parser.parseExpression(Expr)) {
     // We have no way of knowing if a symbol was consumed so we must ParseFail

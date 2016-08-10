@@ -367,6 +367,18 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x8e,0xc8]
         movl %eax, %cs
 
+// CHECK: movl	%eax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        movw %ax, %cs
+
+// CHECK: movl	%eax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        mov %eax, %cs
+
+// CHECK: movl	%eax, %cs
+// CHECK:  encoding: [0x8e,0xc8]
+        mov %ax, %cs
+
 // CHECK: movl	(%eax), %cs
 // CHECK:  encoding: [0x8e,0x08]
         movl (%eax), %cs

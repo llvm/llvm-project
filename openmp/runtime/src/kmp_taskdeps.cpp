@@ -482,7 +482,8 @@ __kmpc_omp_task_with_deps( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_ta
 
     bool serial = current_task->td_flags.team_serial || current_task->td_flags.tasking_ser || current_task->td_flags.final;
 #if OMP_45_ENABLED
-    serial = serial && !(new_taskdata->td_flags.proxy == TASK_PROXY);
+    kmp_task_team_t * task_team = thread->th.th_task_team;
+    serial = serial && !(task_team && task_team->tt.tt_found_proxy_tasks);
 #endif
 
     if ( !serial && ( ndeps > 0 || ndeps_noalias > 0 )) {
@@ -507,14 +508,8 @@ __kmpc_omp_task_with_deps( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_ta
             return TASK_CURRENT_NOT_QUEUED;
         }
     } else {
-#if OMP_45_ENABLED
-        kmp_task_team_t * task_team = thread->th.th_task_team;
-        if ( task_team && task_team->tt.tt_found_proxy_tasks )
-           __kmpc_omp_wait_deps ( loc_ref, gtid, ndeps, dep_list, ndeps_noalias, noalias_dep_list );
-        else
-#endif
-           KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d ignored dependencies for task (serialized)"
-                           "loc=%p task=%p\n", gtid, loc_ref, new_taskdata ) );
+        KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d ignored dependencies for task (serialized)"
+                      "loc=%p task=%p\n", gtid, loc_ref, new_taskdata ) );
     }
 
     KA_TRACE(10, ("__kmpc_omp_task_with_deps(exit): T#%d task had no blocking dependencies : "

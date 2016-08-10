@@ -16,8 +16,8 @@
 ; CHECK-NEXT:    br label %exit
 
 ; CHECK-LABEL: polly.start:
-; CHECK-NEXT:    sext
 ; CHECK-NEXT:    store float 0.000000e+00, float* %tmp.0.phiops
+; CHECK-NEXT:    sext
 
 ; CHECK-LABEL: polly.exiting:
 ; CHECK-NEXT:    %tmp.0.final_reload = load float, float* %tmp.0.s2a

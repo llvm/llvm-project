@@ -302,11 +302,11 @@ llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
            "to scan backward from a given instruction, when searching for "
            "available loaded value"));
 
-Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load,
+                                      BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
                                       unsigned MaxInstsToScan,
-                                      AliasAnalysis *AA, AAMDNodes *AATags,
-                                      bool *IsLoadCSE) {
+                                      AliasAnalysis *AA, bool *IsLoadCSE) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
@@ -356,8 +356,6 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
         if (LI->isAtomic() < Load->isAtomic())
           return nullptr;
 
-        if (AATags)
-          LI->getAAMetadata(*AATags);
         if (IsLoadCSE)
             *IsLoadCSE = true;
         return LI;
@@ -377,8 +375,8 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
         if (SI->isAtomic() < Load->isAtomic())
           return nullptr;
 
-        if (AATags)
-          SI->getAAMetadata(*AATags);
+        if (IsLoadCSE)
+          *IsLoadCSE = false;
         return SI->getOperand(0);
       }
 

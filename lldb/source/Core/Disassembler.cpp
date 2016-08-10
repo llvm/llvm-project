@@ -48,7 +48,7 @@ using namespace lldb_private;
 DisassemblerSP
 Disassembler::FindPlugin (const ArchSpec &arch, const char *flavor, const char *plugin_name)
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                         arch.GetArchitectureName(),
                         plugin_name);

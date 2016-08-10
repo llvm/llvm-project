@@ -37,32 +37,55 @@ template <const uptr kSpaceBeg, const uptr kSpaceSize,
 class SizeClassAllocator64 {
  public:
   struct TransferBatch {
-    static const uptr kMaxNumCached = SizeClassMap::kMaxNumCached;
+    static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 4;
     void SetFromRange(uptr region_beg, uptr beg_offset, uptr step, uptr count) {
       count_ = count;
       CHECK_LE(count_, kMaxNumCached);
+      region_beg_ = region_beg;
       for (uptr i = 0; i < count; i++)
-        batch_[i] = (void*)(region_beg + beg_offset + i * step);
+        batch_[i] = static_cast<u32>((beg_offset + i * step) >> 4);
     }
-    void SetFromArray(void *batch[], uptr count) {
+    void SetFromArray(uptr region_beg, void *batch[], uptr count) {
       count_ = count;
       CHECK_LE(count_, kMaxNumCached);
+      region_beg_ = region_beg;
       for (uptr i = 0; i < count; i++)
-        batch_[i] = batch[i];
+        batch_[i] = static_cast<u32>(
+            ((reinterpret_cast<uptr>(batch[i])) - region_beg) >> 4);
     }
-    void *Get(uptr idx) {
-      CHECK_LT(idx, count_);
-      return batch_[idx];
+    void CopyToArray(void *to_batch[]) {
+      for (uptr i = 0, n = Count(); i < n; i++)
+        to_batch[i] = reinterpret_cast<void*>(Get(i));
     }
     uptr Count() const { return count_; }
+
+    // How much memory do we need for a batch containing n elements.
+    static uptr AllocationSizeRequiredForNElements(uptr n) {
+      return sizeof(uptr) * 2 + sizeof(u32) * n;
+    }
+    static uptr MaxCached(uptr class_id) {
+      return Min(kMaxNumCached, SizeClassMap::MaxCachedHint(class_id));
+    }
+
     TransferBatch *next;
 
    private:
-    uptr count_;
-    void *batch_[kMaxNumCached];
+    uptr Get(uptr i) {
+      return region_beg_ + (static_cast<uptr>(batch_[i]) << 4);
+    }
+    // Instead of storing 64-bit pointers we store 32-bit offsets from the
+    // region start divided by 4. This imposes two limitations:
+    // * all allocations are 16-aligned,
+    // * regions are not larger than 2^36.
+    uptr region_beg_ : SANITIZER_WORDSIZE - 10;  // Region-beg is 4096-aligned.
+    uptr count_      : 10;
+    u32 batch_[kMaxNumCached];
   };
   static const uptr kBatchSize = sizeof(TransferBatch);
   COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
+  COMPILER_CHECK(sizeof(TransferBatch) ==
+                 SizeClassMap::kMaxNumCachedHint * sizeof(u32));
+  COMPILER_CHECK(TransferBatch::kMaxNumCached < 1024);  // count_ uses 10 bits.
 
   static uptr ClassIdToSize(uptr class_id) {
     return class_id == SizeClassMap::kBatchClassID
@@ -134,6 +157,10 @@ class SizeClassAllocator64 {
     uptr space_beg = SpaceBeg();
     return ((reinterpret_cast<uptr>(p)  - space_beg) & ~(kRegionSize - 1)) +
         space_beg;
+  }
+
+  uptr GetRegionBeginBySizeClass(uptr class_id) {
+    return SpaceBeg() + kRegionSize * class_id;
   }
 
   uptr GetSizeClass(const void *p) {
@@ -277,6 +304,8 @@ class SizeClassAllocator64 {
   uptr SpaceEnd() const { return  SpaceBeg() + kSpaceSize; }
   // kRegionSize must be >= 2^32.
   COMPILER_CHECK((kRegionSize) >= (1ULL << (SANITIZER_WORDSIZE / 2)));
+  // kRegionSize must be <= 2^36, see TransferBatch.
+  COMPILER_CHECK((kRegionSize) <= (1ULL << (SANITIZER_WORDSIZE / 2 + 4)));
   // Call mmap for user memory with at least this size.
   static const uptr kUserMapSize = 1 << 16;
   // Call mmap for metadata memory with at least this size.
@@ -320,7 +349,7 @@ class SizeClassAllocator64 {
     if (b)
       return b;
     uptr size = ClassIdToSize(class_id);
-    uptr count = SizeClassMap::MaxCached(class_id);
+    uptr count = TransferBatch::MaxCached(class_id);
     uptr beg_idx = region->allocated_user;
     uptr end_idx = beg_idx + count * size;
     uptr region_beg = SpaceBeg() + kRegionSize * class_id;

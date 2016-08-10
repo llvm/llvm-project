@@ -52,7 +52,9 @@ PlatformAppleSimulator::Terminate ()
 //------------------------------------------------------------------
 PlatformAppleSimulator::PlatformAppleSimulator () :
     PlatformDarwin (true),
-    m_core_simulator_framework_path()
+    m_core_sim_path_mutex (),
+    m_core_simulator_framework_path(),
+    m_device ()
 {
 }
 
@@ -105,7 +107,7 @@ PlatformAppleSimulator::GetStatus (Stream &strm)
     // current simulator
     PlatformAppleSimulator::LoadCoreSimulator();
 
-    CoreSimulatorSupport::DeviceSet devices = CoreSimulatorSupport::DeviceSet::GetAvailableDevices();
+    CoreSimulatorSupport::DeviceSet devices = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(GetDeveloperDirectory());
     const size_t num_devices = devices.GetNumDevices();
     if (num_devices)
     {
@@ -155,7 +157,7 @@ PlatformAppleSimulator::ConnectRemote (Args& args)
         if (arg_cstr)
         {
             std::string arg_str(arg_cstr);
-            CoreSimulatorSupport::DeviceSet devices = CoreSimulatorSupport::DeviceSet::GetAvailableDevices();
+            CoreSimulatorSupport::DeviceSet devices = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(GetDeveloperDirectory());
             devices.ForEach([this, &arg_str](const CoreSimulatorSupport::Device &device) -> bool {
                 if (arg_str == device.GetUDID() || arg_str == device.GetName())
                 {
@@ -252,7 +254,7 @@ FileSpec
 PlatformAppleSimulator::GetCoreSimulatorPath()
 {
 #if defined(__APPLE__)
-    std::lock_guard<std::mutex> guard(m_mutex);
+    std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
     if (!m_core_simulator_framework_path.hasValue())
     {
         const char *developer_dir = GetDeveloperDirectory();
@@ -291,7 +293,7 @@ PlatformAppleSimulator::GetSimulatorDevice ()
     if (!m_device.hasValue())
     {
         const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id = CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone;
-        m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices().GetFanciest(dev_id);
+        m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(GetDeveloperDirectory()).GetFanciest(dev_id);
     }
     
     if (m_device.hasValue())

@@ -30,7 +30,7 @@
 #include <sys/syscall.h>
 // Try to define a macro to encapsulate the tgkill syscall
 #define tgkill(pid, tid, sig) \
-    syscall(SYS_tgkill, static_cast< ::pid_t>(pid), static_cast< ::pid_t>(tid), sig)
+    syscall(__NR_tgkill, static_cast< ::pid_t>(pid), static_cast< ::pid_t>(tid), sig)
 
 using namespace lldb;
 using namespace lldb_private;

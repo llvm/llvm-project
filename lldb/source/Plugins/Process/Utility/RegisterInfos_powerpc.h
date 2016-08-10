@@ -103,7 +103,7 @@
     DEFINE_FPR(f29,      LLDB_INVALID_REGNUM), \
     DEFINE_FPR(f30,      LLDB_INVALID_REGNUM), \
     DEFINE_FPR(f31,      LLDB_INVALID_REGNUM), \
-    { "fpscr", NULL, 8, FPR_OFFSET(fpscr), eEncodingUint, eFormatHex, { dwarf_fpscr_powerpc, dwarf_fpscr_powerpc, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_fpscr_powerpc }, NULL, NULL }, \
+    { "fpscr", NULL, 8, FPR_OFFSET(fpscr), eEncodingUint, eFormatHex, { dwarf_fpscr_powerpc, dwarf_fpscr_powerpc, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, fpr_fpscr_powerpc }, NULL, NULL, NULL, 0 }, \
     DEFINE_VMX(v0,       LLDB_INVALID_REGNUM), \
     DEFINE_VMX(v1,       LLDB_INVALID_REGNUM), \
     DEFINE_VMX(v2,       LLDB_INVALID_REGNUM), \

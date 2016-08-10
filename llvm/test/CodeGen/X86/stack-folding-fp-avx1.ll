@@ -1,4 +1,4 @@
-; RUN: llc -O3 -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx,+f16c < %s | FileCheck %s
+; RUN: llc -O3 -verify-machineinstrs -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx,+f16c < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
@@ -1559,7 +1559,13 @@ define double @stack_fold_roundsd(double %a0) optsize {
 }
 declare double @llvm.floor.f64(double) nounwind readnone
 
-; TODO stack_fold_roundsd_int
+define <2 x double> @stack_fold_roundsd_int(<2 x double> %a0, <2 x double> %a1) optsize {
+  ;CHECK-LABEL: stack_fold_roundsd_int
+  ;CHECK:       vroundsd $7, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
+  %2 = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 7)
+  ret <2 x double> %2
+}
 declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
 
 define float @stack_fold_roundss(float %a0) optsize {
@@ -1571,7 +1577,13 @@ define float @stack_fold_roundss(float %a0) optsize {
 }
 declare float @llvm.floor.f32(float) nounwind readnone
 
-; TODO stack_fold_roundss_int
+define <4 x float> @stack_fold_roundss_int(<4 x float> %a0, <4 x float> %a1) optsize {
+  ;CHECK-LABEL: stack_fold_roundss_int
+  ;CHECK:       vroundss $7, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
+  %2 = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 7)
+  ret <4 x float> %2
+}
 declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
 
 ; TODO stack_fold_rsqrtps

@@ -265,7 +265,7 @@ define float @movmsk(float %x) {
 define double @bitcast_fabs(double %x) {
 ; CHECK-LABEL: bitcast_fabs:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andpd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64

@@ -97,7 +97,7 @@ public:
   typedef BlockFrequencyInfo Result;
 
   /// \brief Run the analysis pass over a function and produce BFI.
-  Result run(Function &F, AnalysisManager<Function> &AM);
+  Result run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Printer pass for the \c BlockFrequencyInfo results.
@@ -107,7 +107,7 @@ class BlockFrequencyPrinterPass
 
 public:
   explicit BlockFrequencyPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c BlockFrequencyInfo.

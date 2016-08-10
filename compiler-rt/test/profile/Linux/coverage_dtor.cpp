@@ -12,7 +12,7 @@ struct Base {
 
 struct Derived : public Base {
   Derived(int K) : Base(K) {}
-  ~Derived() = default; // CHECK:  2| [[@LINE]]|  ~Derived() = default;
+  ~Derived() = default; // CHECK:  [[@LINE]]| 2|  ~Derived() = default;
 };
 
 int main() {
@@ -21,6 +21,6 @@ int main() {
     Derived dd2(90);
   }
   if (g != 0)
-    return 1;          // CHECK:  0| [[@LINE]]|    return 1;
+    return 1;          // CHECK:  [[@LINE]]|  0|   return 1;
   return 0;
 }

@@ -173,7 +173,7 @@ private:
 };
 }
 
-PreservedAnalyses LICMPass::run(Loop &L, AnalysisManager<Loop> &AM) {
+PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM) {
   const auto &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();

@@ -28,7 +28,7 @@ namespace llvm {
 /// expected that a later pass of GVN will catch the interesting/hard cases.
 struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 }

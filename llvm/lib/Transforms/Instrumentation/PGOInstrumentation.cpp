@@ -124,7 +124,7 @@ static cl::opt<bool> DoComdatRenaming(
 
 // Command line option to enable/disable the warning about missing profile
 // information.
-static cl::opt<bool> NoPGOWarnMissing("no-pgo-warn-missing", cl::init(false),
+static cl::opt<bool> NoPGOWarnMissing("no-pgo-warn-missing", cl::init(true),
                                       cl::Hidden);
 
 // Command line option to enable/disable the warning about a hash mismatch in
@@ -964,7 +964,7 @@ bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {
 }
 
 PreservedAnalyses PGOInstrumentationGen::run(Module &M,
-                                             AnalysisManager<Module> &AM) {
+                                             ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto LookupBPI = [&FAM](Function &F) {
@@ -1056,7 +1056,7 @@ PGOInstrumentationUse::PGOInstrumentationUse(std::string Filename)
 }
 
 PreservedAnalyses PGOInstrumentationUse::run(Module &M,
-                                             AnalysisManager<Module> &AM) {
+                                             ModuleAnalysisManager &AM) {
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto LookupBPI = [&FAM](Function &F) {

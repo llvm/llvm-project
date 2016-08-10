@@ -544,6 +544,9 @@ public:
   bool isAAPCS_ABI() const;
   bool isAAPCS16_ABI() const;
 
+  bool isROPI() const;
+  bool isRWPI() const;
+
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }

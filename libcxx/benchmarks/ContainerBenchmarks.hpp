@@ -10,7 +10,7 @@ namespace ContainerBenchmarks {
 
 template <class Container, class GenInputs>
 void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.end();
     benchmark::DoNotOptimize(&in);
     while (st.KeepRunning()) {
@@ -21,7 +21,7 @@ void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
 
 template <class Container, class GenInputs>
 void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.end();
     while (st.KeepRunning()) {
         c.clear();
@@ -34,7 +34,7 @@ void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
 
 template <class Container, class GenInputs>
 void BM_InsertValueRehash(benchmark::State& st, Container c, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.end();
     while (st.KeepRunning()) {
         c.clear();
@@ -49,7 +49,7 @@ void BM_InsertValueRehash(benchmark::State& st, Container c, GenInputs gen) {
 
 template <class Container, class GenInputs>
 void BM_InsertDuplicate(benchmark::State& st, Container c, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.end();
     c.insert(in.begin(), in.end());
     benchmark::DoNotOptimize(&c);
@@ -65,7 +65,7 @@ void BM_InsertDuplicate(benchmark::State& st, Container c, GenInputs gen) {
 
 template <class Container, class GenInputs>
 void BM_EmplaceDuplicate(benchmark::State& st, Container c, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.end();
     c.insert(in.begin(), in.end());
     benchmark::DoNotOptimize(&c);
@@ -80,7 +80,7 @@ void BM_EmplaceDuplicate(benchmark::State& st, Container c, GenInputs gen) {
 
 template <class Container, class GenInputs>
 static void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     c.insert(in.begin(), in.end());
     benchmark::DoNotOptimize(&(*c.begin()));
     const auto end = in.data() + in.size();
@@ -95,7 +95,7 @@ static void BM_Find(benchmark::State& st, Container c, GenInputs gen) {
 template <class Container, class GenInputs>
 static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
     c.rehash(8);
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     c.insert(in.begin(), in.end());
     benchmark::DoNotOptimize(&(*c.begin()));
     const auto end = in.data() + in.size();

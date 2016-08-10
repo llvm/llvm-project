@@ -438,7 +438,7 @@ void SystemInitializerFull::InitializeSWIG()
 void
 SystemInitializerFull::Terminate()
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     Debugger::SettingsTerminate();
 

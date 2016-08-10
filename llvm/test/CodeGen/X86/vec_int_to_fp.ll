@@ -1953,15 +1953,15 @@ define <8 x float> @uitofp_8i32_to_8f32(<8 x i32> %a) {
 ;
 ; AVX1-LABEL: uitofp_8i32_to_8f32:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsrld $16, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmulps {{.*}}(%rip), %ymm1, %ymm1
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: uitofp_8i32_to_8f32:
@@ -3890,16 +3890,16 @@ define <8 x float> @uitofp_load_8i32_to_8f32(<8 x i32> *%a) {
 ;
 ; AVX1-LABEL: uitofp_load_8i32_to_8f32:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps (%rdi), %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm1
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsrld $16, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmulps {{.*}}(%rip), %ymm1, %ymm1
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: uitofp_load_8i32_to_8f32:

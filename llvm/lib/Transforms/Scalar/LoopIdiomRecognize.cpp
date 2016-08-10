@@ -172,7 +172,7 @@ public:
 } // End anonymous namespace.
 
 PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L,
-                                              AnalysisManager<Loop> &AM) {
+                                              LoopAnalysisManager &AM) {
   const auto &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();

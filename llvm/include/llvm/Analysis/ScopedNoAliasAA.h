@@ -54,7 +54,7 @@ class ScopedNoAliasAA : public AnalysisInfoMixin<ScopedNoAliasAA> {
 public:
   typedef ScopedNoAliasAAResult Result;
 
-  ScopedNoAliasAAResult run(Function &F, AnalysisManager<Function> &AM);
+  ScopedNoAliasAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the ScopedNoAliasAAResult object.

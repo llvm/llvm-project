@@ -42,14 +42,6 @@ To get an offset of a symbol in a file run
   $ grep -FUbo 'foo' file.cpp
 
 
-You can also identify one or more symbols to be renamed by giving the fully qualified
-name:
-
-.. code-block:: console
-
-  $ clang-rename rename-all -old-name=foo -new-name=bar test.cpp
-
-
 The tool currently supports renaming actions inside a single Translation Unit
 only. It is planned to extend the tool's functionality to support multi-TU
 renaming actions in the future.
@@ -59,6 +51,43 @@ editors, such as Vim and Emacs, and improve the workflow of users.
 
 Although a command line interface exists, it is highly recommended to use the
 text editor interface instead for better experience.
+
+You can also identify one or more symbols to be renamed by giving the fully qualified
+name:
+
+.. code-block:: console
+
+  $ clang-rename rename-all -old-name=foo -new-name=bar test.cpp
+
+
+Alternatively, old name / new name pairs can be put into a YAML file:
+
+.. code-block:: yaml
+
+  ---
+  - OldName:        foo
+    NewName:        bar
+  ...
+
+
+That way you can avoid spelling out all the names as commandline arguments:
+
+.. code-block:: console
+
+  $ clang-rename rename-all -input=test.yaml test.cpp
+
+
+The YAML file also supports offsets:
+
+.. code-block:: yaml
+
+  ---
+  - Offset:         42
+    NewName:        foo
+  ...
+
+
+:program:`clang-rename` offers the following options:
 
 .. code-block:: console
 
@@ -125,6 +154,7 @@ text editor interface instead for better experience.
     -extra-arg=<string>        - Additional argument to append to the compiler command line
     -extra-arg-before=<string> - Additional argument to prepend to the compiler command line
     -i                         - Overwrite edited <file>s.
+    -input=<string>            - YAML file to load oldname-newname pairs from.
     -new-name=<string>         - The new name to change the symbol to.
     -offset=<uint>             - Locates the symbol by offset as opposed to <line>:<column>.
     -old-name=<string>         - The fully qualified name of the symbol, if -offset is not used.

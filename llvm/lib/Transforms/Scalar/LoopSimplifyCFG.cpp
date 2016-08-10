@@ -64,7 +64,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI) {
   return Changed;
 }
 
-PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, AnalysisManager<Loop> &AM) {
+PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM) {
   const auto &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();

@@ -92,6 +92,9 @@
 ; IR-NEXT:    br i1 true, label %polly.start, label %bb2
 
 ; IR: polly.start:
+; IR-NEXT: br label %polly.acc.initialize
+
+; IR: polly.acc.initialize:
 ; IR-NEXT:    [[GPUContext:%.*]] = call i8* @polly_initContext()
 ; IR-NEXT:    %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 4194304)
 ; IR-NEXT:    [[HostPtr:%.*]] = bitcast [1024 x float]* %A to i8*

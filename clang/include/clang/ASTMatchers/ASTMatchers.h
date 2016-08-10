@@ -2468,6 +2468,25 @@ hasDeclaration(const internal::Matcher<Decl> &InnerMatcher) {
       void(internal::HasDeclarationSupportedTypes)>(InnerMatcher);
 }
 
+/// \brief Matches a \c NamedDecl whose underlying declaration matches the given
+/// matcher.
+///
+/// Given
+/// \code
+///   namespace N { template<class T> void f(T t); }
+///   template <class T> void g() { using N::f; f(T()); }
+/// \endcode
+/// \c unresolvedLookupExpr(hasAnyDeclaration(
+///     namedDecl(hasUnderlyingDecl(hasName("::N::f")))))
+///   matches the use of \c f in \c g() .
+AST_MATCHER_P(NamedDecl, hasUnderlyingDecl, internal::Matcher<NamedDecl>,
+              InnerMatcher) {
+  const NamedDecl *UnderlyingDecl = Node.getUnderlyingDecl();
+
+  return UnderlyingDecl != nullptr &&
+         InnerMatcher.matches(*UnderlyingDecl, Finder, Builder);
+}
+
 /// \brief Matches on the implicit object argument of a member call expression.
 ///
 /// Example matches y.x()
@@ -2821,6 +2840,27 @@ AST_MATCHER_P(DeclRefExpr, throughUsingDecl,
   if (const UsingShadowDecl *UsingDecl = dyn_cast<UsingShadowDecl>(FoundDecl))
     return InnerMatcher.matches(*UsingDecl, Finder, Builder);
   return false;
+}
+
+/// \brief Matches an \c OverloadExpr if any of the declarations in the set of
+/// overloads matches the given matcher.
+///
+/// Given
+/// \code
+///   template <typename T> void foo(T);
+///   template <typename T> void bar(T);
+///   template <typename T> void baz(T t) {
+///     foo(t);
+///     bar(t);
+///   }
+/// \endcode
+/// unresolvedLookupExpr(hasAnyDeclaration(
+///     functionTemplateDecl(hasName("foo"))))
+///   matches \c foo in \c foo(t); but not \c bar in \c bar(t);
+AST_MATCHER_P(OverloadExpr, hasAnyDeclaration, internal::Matcher<Decl>,
+              InnerMatcher) {
+  return matchesFirstInPointerRange(InnerMatcher, Node.decls_begin(),
+                                    Node.decls_end(), Finder, Builder);
 }
 
 /// \brief Matches the Decl of a DeclStmt which has a single declaration.
