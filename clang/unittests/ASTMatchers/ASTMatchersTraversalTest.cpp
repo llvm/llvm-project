@@ -241,6 +241,21 @@ TEST(HasDeclaration, HasDeclarationOfTemplateSpecializationType) {
                         hasDeclaration(namedDecl(hasName("A"))))))));
 }
 
+TEST(HasUnderlyingDecl, Matches) {
+  EXPECT_TRUE(matches("namespace N { template <class T> void f(T t); }"
+                      "template <class T> void g() { using N::f; f(T()); }",
+                      unresolvedLookupExpr(hasAnyDeclaration(
+                          namedDecl(hasUnderlyingDecl(hasName("::N::f")))))));
+  EXPECT_TRUE(matches(
+      "namespace N { template <class T> void f(T t); }"
+      "template <class T> void g() { N::f(T()); }",
+      unresolvedLookupExpr(hasAnyDeclaration(namedDecl(hasName("::N::f"))))));
+  EXPECT_TRUE(notMatches(
+      "namespace N { template <class T> void f(T t); }"
+      "template <class T> void g() { using N::f; f(T()); }",
+      unresolvedLookupExpr(hasAnyDeclaration(namedDecl(hasName("::N::f"))))));
+}
+
 TEST(HasType, TakesQualTypeMatcherAndMatchesExpr) {
   TypeMatcher ClassX = hasDeclaration(recordDecl(hasName("X")));
   EXPECT_TRUE(
@@ -2070,6 +2085,25 @@ TEST(Matcher, ForEachOverriden) {
                                                           2)));
   // A1::f overrides nothing.
   EXPECT_TRUE(notMatches(Code2, ForEachOverriddenInClass("A1")));
+}
+
+TEST(Matcher, HasAnyDeclaration) {
+  std::string Fragment = "void foo(int p1);"
+                         "void foo(int *p2);"
+                         "void bar(int p3);"
+                         "template <typename T> void baz(T t) { foo(t); }";
+
+  EXPECT_TRUE(
+      matches(Fragment, unresolvedLookupExpr(hasAnyDeclaration(functionDecl(
+                            hasParameter(0, parmVarDecl(hasName("p1"))))))));
+  EXPECT_TRUE(
+      matches(Fragment, unresolvedLookupExpr(hasAnyDeclaration(functionDecl(
+                            hasParameter(0, parmVarDecl(hasName("p2"))))))));
+  EXPECT_TRUE(
+      notMatches(Fragment, unresolvedLookupExpr(hasAnyDeclaration(functionDecl(
+                               hasParameter(0, parmVarDecl(hasName("p3"))))))));
+  EXPECT_TRUE(notMatches(Fragment, unresolvedLookupExpr(hasAnyDeclaration(
+                                       functionDecl(hasName("bar"))))));
 }
 
 } // namespace ast_matchers

@@ -67,7 +67,7 @@ StmtSequence::iterator StmtSequence::begin() const {
 
 StmtSequence::iterator StmtSequence::end() const {
   if (!holdsSequence()) {
-    return &S + 1;
+    return reinterpret_cast<StmtSequence::iterator>(&S) + 1;
   }
   auto CS = cast<CompoundStmt>(S);
   return CS->body_begin() + EndIndex;

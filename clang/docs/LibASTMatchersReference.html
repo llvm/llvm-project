@@ -4970,6 +4970,19 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Block
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasUnderlyingDecl0')"><a name="hasUnderlyingDecl0Anchor">hasUnderlyingDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasUnderlyingDecl0"><pre>Matches a NamedDecl whose underlying declaration matches the given
+matcher.
+
+Given
+  namespace N { template&lt;class T&gt; void f(T t); }
+  template &lt;class T&gt; void g() { using N::f; f(T()); }
+unresolvedLookupExpr(hasAnyDeclaration(
+    namedDecl(hasUnderlyingDecl(hasName("::N::f")))))
+  matches the use of f in g() .
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;</td><td class="name" onclick="toggle('hasPrefix1')"><a name="hasPrefix1Anchor">hasPrefix</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasPrefix1"><pre>Matches on the prefix of a NestedNameSpecifierLoc.
 
@@ -5055,6 +5068,23 @@ matches the [webView ...] message invocation.
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1OpaqueValueExpr.html">OpaqueValueExpr</a>&gt;</td><td class="name" onclick="toggle('hasSourceExpression1')"><a name="hasSourceExpression1Anchor">hasSourceExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasSourceExpression1"><pre></pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1OverloadExpr.html">OverloadExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyDeclaration0')"><a name="hasAnyDeclaration0Anchor">hasAnyDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyDeclaration0"><pre>Matches an OverloadExpr if any of the declarations in the set of
+overloads matches the given matcher.
+
+Given
+  template &lt;typename T&gt; void foo(T);
+  template &lt;typename T&gt; void bar(T);
+  template &lt;typename T&gt; void baz(T t) {
+    foo(t);
+    bar(t);
+  }
+unresolvedLookupExpr(hasAnyDeclaration(
+    functionTemplateDecl(hasName("foo"))))
+  matches foo in foo(t); but not bar in bar(t);
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParenType.html">ParenType</a>&gt;</td><td class="name" onclick="toggle('innerType0')"><a name="innerType0Anchor">innerType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>

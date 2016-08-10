@@ -549,6 +549,9 @@ struct FormatStyle {
   /// \brief If ``true``, a space may be inserted after C style casts.
   bool SpaceAfterCStyleCast;
 
+  /// \brief If \c true, a space will be inserted after the 'template' keyword.
+  bool SpaceAfterTemplateKeyword;
+
   /// \brief If ``false``, spaces will be removed before assignment operators.
   bool SpaceBeforeAssignmentOperators;
 
@@ -698,6 +701,7 @@ struct FormatStyle {
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
            PointerAlignment == R.PointerAlignment &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
+           SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
            SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&

@@ -60,6 +60,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 
   std::pair<ELFKind, uint16_t> Ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
+          .Case("aarch64elf", {ELF64LEKind, EM_AARCH64})
           .Case("aarch64linux", {ELF64LEKind, EM_AARCH64})
           .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
