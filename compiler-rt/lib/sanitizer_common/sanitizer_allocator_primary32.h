@@ -42,16 +42,12 @@ template <const uptr kSpaceBeg, const u64 kSpaceSize,
 class SizeClassAllocator32 {
  public:
   struct TransferBatch {
-    static const uptr kMaxNumCached = SizeClassMap::kMaxNumCached;
-    void SetFromArray(void *batch[], uptr count) {
+    static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 2;
+    void SetFromArray(uptr region_beg_unused, void *batch[], uptr count) {
       count_ = count;
       CHECK_LE(count_, kMaxNumCached);
       for (uptr i = 0; i < count; i++)
         batch_[i] = batch[i];
-    }
-    void *Get(uptr idx) {
-      CHECK_LT(idx, count_);
-      return batch_[idx];
     }
     uptr Count() const { return count_; }
     void Clear() { count_ = 0; }
@@ -59,6 +55,19 @@ class SizeClassAllocator32 {
       batch_[count_++] = ptr;
       CHECK_LE(count_, kMaxNumCached);
     }
+    void CopyToArray(void *to_batch[]) {
+      for (uptr i = 0, n = Count(); i < n; i++)
+        to_batch[i] = batch_[i];
+    }
+
+    // How much memory do we need for a batch containing n elements.
+    static uptr AllocationSizeRequiredForNElements(uptr n) {
+      return sizeof(uptr) * 2 + sizeof(void *) * n;
+    }
+    static uptr MaxCached(uptr class_id) {
+      return Min(kMaxNumCached, SizeClassMap::MaxCachedHint(class_id));
+    }
+
     TransferBatch *next;
 
    private:
@@ -68,6 +77,8 @@ class SizeClassAllocator32 {
 
   static const uptr kBatchSize = sizeof(TransferBatch);
   COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
+  COMPILER_CHECK(sizeof(TransferBatch) ==
+                 SizeClassMap::kMaxNumCachedHint * sizeof(uptr));
 
   static uptr ClassIdToSize(uptr class_id) {
     return class_id == SizeClassMap::kBatchClassID
@@ -133,6 +144,8 @@ class SizeClassAllocator32 {
     CHECK_GT(b->Count(), 0);
     sci->free_list.push_front(b);
   }
+
+  uptr GetRegionBeginBySizeClass(uptr class_id) { return 0; }
 
   bool PointerIsMine(const void *p) {
     uptr mem = reinterpret_cast<uptr>(p);
@@ -262,7 +275,7 @@ class SizeClassAllocator32 {
     uptr size = ClassIdToSize(class_id);
     uptr reg = AllocateRegion(stat, class_id);
     uptr n_chunks = kRegionSize / (size + kMetadataSize);
-    uptr max_count = SizeClassMap::MaxCached(class_id);
+    uptr max_count = TransferBatch::MaxCached(class_id);
     TransferBatch *b = nullptr;
     for (uptr i = reg; i < reg + n_chunks * size; i += size) {
       if (!b) {

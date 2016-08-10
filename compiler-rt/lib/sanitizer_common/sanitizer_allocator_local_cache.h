@@ -74,7 +74,7 @@ struct SizeClassAllocatorLocalCache {
   struct PerClass {
     uptr count;
     uptr max_count;
-    void *batch[2 * SizeClassMap::kMaxNumCached];
+    void *batch[2 * TransferBatch::kMaxNumCached];
   };
   PerClass per_class_[kNumClasses];
   AllocatorStats stats_;
@@ -84,7 +84,7 @@ struct SizeClassAllocatorLocalCache {
       return;
     for (uptr i = 0; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      c->max_count = 2 * SizeClassMap::MaxCached(i);
+      c->max_count = 2 * TransferBatch::MaxCached(i);
     }
   }
 
@@ -109,9 +109,8 @@ struct SizeClassAllocatorLocalCache {
                  ? 0
                  : SizeClassMap::kBatchClassID;
     if (Allocator::ClassIdToSize(class_id) <
-        sizeof(TransferBatch) -
-            sizeof(uptr) * (SizeClassMap::kMaxNumCached -
-                            SizeClassMap::MaxCached(class_id)))
+        TransferBatch::AllocationSizeRequiredForNElements(
+            TransferBatch::MaxCached(class_id)))
       return SizeClassMap::ClassID(sizeof(TransferBatch));
     return 0;
   }
@@ -140,8 +139,7 @@ struct SizeClassAllocatorLocalCache {
     PerClass *c = &per_class_[class_id];
     TransferBatch *b = allocator->AllocateBatch(&stats_, this, class_id);
     CHECK_GT(b->Count(), 0);
-    for (uptr i = 0; i < b->Count(); i++)
-      c->batch[i] = b->Get(i);
+    b->CopyToArray(c->batch);
     c->count = b->Count();
     DestroyBatch(class_id, allocator, b);
   }
@@ -153,7 +151,8 @@ struct SizeClassAllocatorLocalCache {
     uptr first_idx_to_drain = c->count - cnt;
     TransferBatch *b = CreateBatch(
         class_id, allocator, (TransferBatch *)c->batch[first_idx_to_drain]);
-    b->SetFromArray(&c->batch[first_idx_to_drain], cnt);
+    b->SetFromArray(allocator->GetRegionBeginBySizeClass(class_id),
+                    &c->batch[first_idx_to_drain], cnt);
     c->count -= cnt;
     allocator->DeallocateBatch(&stats_, class_id, b);
   }

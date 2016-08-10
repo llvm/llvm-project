@@ -43,8 +43,8 @@ public:
   // Declaration visitors:
 
   bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
-    for (auto &Initializer : ConstructorDecl->inits()) {
-      if (Initializer->getSourceOrder() == -1) {
+    for (const auto *Initializer : ConstructorDecl->inits()) {
+      if (!Initializer->isWritten()) {
         // Ignore implicit initializers.
         continue;
       }

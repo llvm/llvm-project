@@ -1768,13 +1768,6 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
 }
 
 template <class ELFT>
-OutputSectionBase<ELFT> *OutputSectionFactory<ELFT>::lookup(StringRef Name,
-                                                            uint32_t Type,
-                                                            uintX_t Flags) {
-  return Map.lookup({Name, Type, Flags, 0});
-}
-
-template <class ELFT>
 SectionKey<ELFT::Is64Bits>
 OutputSectionFactory<ELFT>::createKey(InputSectionBase<ELFT> *C,
                                       StringRef OutsecName) {

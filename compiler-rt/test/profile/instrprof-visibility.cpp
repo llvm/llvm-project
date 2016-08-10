@@ -56,34 +56,34 @@ int main() {
 
 // --- Check coverage for functions in the anonymous namespace.
 // COV-DAG: instrprof-visibility.cpp:_ZN12_GLOBAL__N_14callEv
-// COV-DAG: 1|{{.*}}|void call() {
-// COV-DAG: 1|{{.*}}|  f1();
-// COV-DAG: 1|{{.*}}|#ifndef NO_WEAK
-// COV-DAG:  |{{.*}}|  f2();
-// COV-DAG:  |{{.*}}|#endif
-// COV-DAG: 1|{{.*}}|  f3();
-// COV-DAG: 1|{{.*}}|#ifndef NO_EXTERN
-// COV-DAG:  |{{.*}}|  f4();
-// COV-DAG:  |{{.*}}|#endif
-// COV-DAG: 1|{{.*}}|  f5();
-// COV-DAG: 1|{{.*}}|  f6();
-// COV-DAG: 1|{{.*}}|  f7();
-// COV-DAG: 1|{{.*}}|}
+// COV-DAG: [[CALL:[0-9]+]]|{{ *}}1|void call() {
+// COV-DAG: {{.*}}|{{ *}}1|  f1();
+// COV-DAG: {{.*}}|{{ *}}1|#ifndef NO_WEAK
+// COV-DAG: {{.*}}|{{ *}} |  f2();
+// COV-DAG: {{.*}}|{{ *}} |#endif
+// COV-DAG: {{.*}}|{{ *}}1|  f3();
+// COV-DAG: {{.*}}|{{ *}}1|#ifndef NO_EXTERN
+// COV-DAG: {{.*}}|{{ *}} |  f4();
+// COV-DAG: {{.*}}|{{ *}} |#endif
+// COV-DAG: {{.*}}|{{ *}}1|  f5();
+// COV-DAG: {{.*}}|{{ *}}1|  f6();
+// COV-DAG: {{.*}}|{{ *}}1|  f7();
+// COV-DAG: {{.*}}|{{ *}}1|}
 
 // --- Check coverage for functions in namespace N1.
 // COV-DAG: _ZN2N14callEv
-// COV-DAG: 1|{{.*}}|void call() {
-// COV-DAG: 1|{{.*}}|  f1();
-// COV-DAG: 1|{{.*}}|#ifndef NO_WEAK
-// COV-DAG: 1|{{.*}}|  f2();
-// COV-DAG: 1|{{.*}}|#endif
-// COV-DAG: 1|{{.*}}|  f3();
-// COV-DAG: 1|{{.*}}|#ifndef NO_EXTERN
-// COV-DAG: 1|{{.*}}|  f4();
-// COV-DAG: 1|{{.*}}|#endif
-// COV-DAG: 1|{{.*}}|  f5();
-// COV-DAG: 1|{{.*}}|  f6();
-// COV-DAG: 1|{{.*}}|  f7();
-// COV-DAG: 1|{{.*}}|}
+// COV-DAG: {{ *}}[[CALL]]|{{ *}}1|void call() {
+// COV-DAG: {{.*}}|{{ *}}1|  f1();
+// COV-DAG: {{.*}}|{{ *}}1|#ifndef NO_WEAK
+// COV-DAG: {{.*}}|{{ *}}1|  f2();
+// COV-DAG: {{.*}}|{{ *}}1|#endif
+// COV-DAG: {{.*}}|{{ *}}1|  f3();
+// COV-DAG: {{.*}}|{{ *}}1|#ifndef NO_EXTERN
+// COV-DAG: {{.*}}|{{ *}}1|  f4();
+// COV-DAG: {{.*}}|{{ *}}1|#endif
+// COV-DAG: {{.*}}|{{ *}}1|  f5();
+// COV-DAG: {{.*}}|{{ *}}1|  f6();
+// COV-DAG: {{.*}}|{{ *}}1|  f7();
+// COV-DAG: {{.*}}|{{ *}}1|}
 
 // COV-DAG: instrprof-visibility.cpp

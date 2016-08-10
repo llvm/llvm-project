@@ -30,7 +30,7 @@ namespace include_fixer {
 class IncludeFixerActionFactory : public clang::tooling::ToolAction {
 public:
   /// \param SymbolIndexMgr A source for matching symbols to header files.
-  /// \param Context A context for the symbol being queried.
+  /// \param Contexts The contexts for the symbols being queried.
   /// \param StyleName Fallback style for reformatting.
   /// \param MinimizeIncludePaths whether inserted include paths are optimized.
   IncludeFixerActionFactory(SymbolIndexManager &SymbolIndexMgr,
