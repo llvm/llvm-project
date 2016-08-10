@@ -989,7 +989,7 @@ protected:
 void
 ScriptInterpreterPython::ExecuteInterpreterLoop ()
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     Debugger &debugger = GetCommandInterpreter().GetDebugger();
 
@@ -2025,7 +2025,7 @@ ScriptInterpreterPython::GetScriptedSummary(const char *python_function_name, ll
                                             std::string &retval)
 {
     
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
     
     if (!valobj.get())
     {
@@ -3191,7 +3191,7 @@ ScriptInterpreterPython::InitializePrivate ()
 
     g_initialized = true;
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     // RAII-based initialization which correctly handles multiple-initialization, version-
     // specific differences among Python 2 and Python 3, and saving and restoring various

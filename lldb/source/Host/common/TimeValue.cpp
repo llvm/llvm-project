@@ -20,6 +20,8 @@
 #endif
 
 // C++ Includes
+#include <chrono>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Stream.h"
@@ -48,7 +50,7 @@ TimeValue::TimeValue(const struct timespec& ts) :
 {
 }
 
-TimeValue::TimeValue(uint32_t seconds, uint32_t nanos) :
+TimeValue::TimeValue(uint32_t seconds, uint64_t nanos) :
     m_nano_seconds((uint64_t) seconds * NanoSecPerSec + nanos)
 {
 }
@@ -123,23 +125,11 @@ TimeValue::OffsetWithNanoSeconds (uint64_t nsec)
 TimeValue
 TimeValue::Now()
 {
-    uint32_t seconds, nanoseconds;
-#if _MSC_VER
-    SYSTEMTIME st;
-    GetSystemTime(&st);
-    nanoseconds = st.wMilliseconds * 1000000;
-    FILETIME ft;
-    SystemTimeToFileTime(&st, &ft);
+  using namespace std::chrono;
+  auto now = system_clock::now();
+  auto ns_since_epoch = duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
 
-    seconds = ((((uint64_t)ft.dwHighDateTime) << 32 | ft.dwLowDateTime) / 10000000) - 11644473600ULL;
-#else
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    seconds = tv.tv_sec;
-    nanoseconds = tv.tv_usec * NanoSecPerMicroSec;
-#endif
-    TimeValue now(seconds, nanoseconds);
-    return now;
+  return TimeValue(0, ns_since_epoch);
 }
 
 //----------------------------------------------------------------------

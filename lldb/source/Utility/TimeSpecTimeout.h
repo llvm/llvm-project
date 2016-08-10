@@ -10,6 +10,7 @@
 #ifndef utility_TimeSpecTimeout_h_
 #define utility_TimeSpecTimeout_h_
 
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Host/TimeValue.h"
 
 namespace lldb_private {

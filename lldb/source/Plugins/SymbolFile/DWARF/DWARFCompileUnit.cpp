@@ -157,7 +157,7 @@ DWARFCompileUnit::ExtractDIEsIfNeeded (bool cu_die_only)
     if ((cu_die_only && initial_die_array_size > 0) || initial_die_array_size > 1)
         return 0; // Already parsed
 
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "%8.8x: DWARFCompileUnit::ExtractDIEsIfNeeded( cu_die_only = %i )",
                         m_offset,
                         cu_die_only);

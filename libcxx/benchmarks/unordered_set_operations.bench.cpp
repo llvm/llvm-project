@@ -109,7 +109,7 @@ struct UInt64Hash2 {
 
 template <class HashFn, class GenInputs>
 void BM_Hash(benchmark::State& st, HashFn fn, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.data() + in.size();
     std::size_t last_hash = 0;
     benchmark::DoNotOptimize(&last_hash);

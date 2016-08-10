@@ -17,19 +17,19 @@
 // RUN: llvm-profdata merge -o %t.pie.profdata %t.pie.profraw
 // RUN: llvm-cov show %t.pie -instr-profile %t.pie.profdata -filename-equivalence 2>&1 | FileCheck %s
 
-void foo(bool cond) { // CHECK:  1| [[@LINE]]|void foo(
-  if (cond) {         // CHECK:  1| [[@LINE]]|  if (cond) {
-  }                   // CHECK:  0| [[@LINE]]|  }
-}                     // CHECK:  1| [[@LINE]]|}
-void bar() {          // CHECK:  1| [[@LINE]]|void bar() {
-}                     // CHECK:  1| [[@LINE]]|}
-void func() {         // CHECK:  0| [[@LINE]]|void func(
-}                     // CHECK:  0| [[@LINE]]|}
-int main() {          // CHECK:  1| [[@LINE]]|int main(
-  foo(false);         // CHECK:  1| [[@LINE]]|  foo(
-  bar();              // CHECK:  1| [[@LINE]]|  bar(
-  return 0;           // CHECK:  1| [[@LINE]]|  return
-}                     // CHECK:  1| [[@LINE]]|}
+void foo(bool cond) { // CHECK:  [[@LINE]]| 1|void foo(
+  if (cond) {         // CHECK:  [[@LINE]]| 1| if (cond) {
+  }                   // CHECK:  [[@LINE]]| 0|  }
+}                     // CHECK:  [[@LINE]]| 1|}
+void bar() {          // CHECK:  [[@LINE]]| 1|void bar() {
+}                     // CHECK:  [[@LINE]]| 1|}
+void func() {         // CHECK:  [[@LINE]]| 0|void func(
+}                     // CHECK:  [[@LINE]]| 0|}
+int main() {          // CHECK:  [[@LINE]]| 1|int main(
+  foo(false);         // CHECK:  [[@LINE]]| 1| foo(
+  bar();              // CHECK:  [[@LINE]]| 1|  bar(
+  return 0;           // CHECK:  [[@LINE]]| 1| return
+}                     // CHECK:  [[@LINE]]| 1|}
 
 // COVMAP: __llvm_covmap {{.*}}
 

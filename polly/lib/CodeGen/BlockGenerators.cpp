@@ -484,7 +484,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
   if (StartBB == S.getEntry())
     StartBB = SplitBBTerm->getSuccessor(1);
 
-  Builder.SetInsertPoint(StartBB->getTerminator());
+  Builder.SetInsertPoint(&*StartBB->begin());
 
   for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)

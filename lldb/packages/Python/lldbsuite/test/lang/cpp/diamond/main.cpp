@@ -17,7 +17,7 @@ public:
     virtual ~VBase() {}
     void Print() 
     {
-        printf("%p: %s\n%p: m_value = 0x%8.8x\n", this, __PRETTY_FUNCTION__, &m_value, m_value);
+        printf("%p: %s\n%p: m_value = 0x%8.8x\n", this, LLVM_PRETTY_FUNCTION, &m_value, m_value);
     }
     int m_value;
 };
@@ -28,7 +28,7 @@ public:
     Derived1() {};
     void Print ()
     {
-        printf("%p: %s\n", this, __PRETTY_FUNCTION__);
+        printf("%p: %s\n", this, LLVM_PRETTY_FUNCTION);
         VBase::Print();
     }
 
@@ -41,7 +41,7 @@ public:
     
     void Print ()
     {
-        printf("%p: %s\n", this, __PRETTY_FUNCTION__);
+        printf("%p: %s\n", this, LLVM_PRETTY_FUNCTION);
         VBase::Print();
     }
 };
@@ -56,7 +56,7 @@ public:
     {
         printf("%p: %s \n%p: m_joiner1 = 0x%8.8x\n%p: m_joiner2 = 0x%8.8x\n",
                this,
-               __PRETTY_FUNCTION__,
+               LLVM_PRETTY_FUNCTION,
                &m_joiner1,
                m_joiner1,
                &m_joiner2,

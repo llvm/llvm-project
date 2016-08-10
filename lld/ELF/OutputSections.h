@@ -678,8 +678,6 @@ public:
   std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
                                                     StringRef OutsecName);
 
-  OutputSectionBase<ELFT> *lookup(StringRef Name, uint32_t Type, uintX_t Flags);
-
 private:
   Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
 

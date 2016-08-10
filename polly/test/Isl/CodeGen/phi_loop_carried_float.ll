@@ -17,8 +17,8 @@
 ; CHECK-NEXT:    ret
 
 ; CHECK-LABEL: polly.start:
-; CHECK-NEXT:    sext
 ; CHECK-NEXT:    store float 0.000000e+00, float* %tmp.0.phiops
+; CHECK-NEXT:    sext
 
 ; CHECK-LABEL: polly.exiting:
 ; CHECK-NEXT:    br label %polly.merge_new_and_old

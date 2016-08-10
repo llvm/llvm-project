@@ -241,14 +241,14 @@ ThreadPlanNull::ValidatePlan (Stream *error)
 {
 #ifdef LLDB_CONFIGURATION_DEBUG
     fprintf(stderr, "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-            __PRETTY_FUNCTION__,
+            LLVM_PRETTY_FUNCTION,
             m_thread.GetID(),
             m_thread.GetProtocolID());
 #else
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
     if (log)
         log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-                    __PRETTY_FUNCTION__,
+                    LLVM_PRETTY_FUNCTION,
                     m_thread.GetID(),
                     m_thread.GetProtocolID());
 #endif
@@ -260,14 +260,14 @@ ThreadPlanNull::ShouldStop (Event *event_ptr)
 {
 #ifdef LLDB_CONFIGURATION_DEBUG
     fprintf(stderr, "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-            __PRETTY_FUNCTION__,
+            LLVM_PRETTY_FUNCTION,
             m_thread.GetID(),
             m_thread.GetProtocolID());
 #else
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
     if (log)
         log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-                    __PRETTY_FUNCTION__,
+                    LLVM_PRETTY_FUNCTION,
                     m_thread.GetID(),
                     m_thread.GetProtocolID());
 #endif
@@ -279,14 +279,14 @@ ThreadPlanNull::WillStop ()
 {
 #ifdef LLDB_CONFIGURATION_DEBUG
     fprintf(stderr, "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-            __PRETTY_FUNCTION__,
+            LLVM_PRETTY_FUNCTION,
             m_thread.GetID(),
             m_thread.GetProtocolID());
 #else
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
     if (log)
         log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-                    __PRETTY_FUNCTION__,
+                    LLVM_PRETTY_FUNCTION,
                     m_thread.GetID(),
                     m_thread.GetProtocolID());
 #endif
@@ -298,14 +298,14 @@ ThreadPlanNull::DoPlanExplainsStop (Event *event_ptr)
 {
 #ifdef LLDB_CONFIGURATION_DEBUG
     fprintf(stderr, "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-            __PRETTY_FUNCTION__,
+            LLVM_PRETTY_FUNCTION,
             m_thread.GetID(),
             m_thread.GetProtocolID());
 #else
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
     if (log)
         log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-                   __PRETTY_FUNCTION__,
+                   LLVM_PRETTY_FUNCTION,
                    m_thread.GetID(),
                    m_thread.GetProtocolID());
 #endif
@@ -319,14 +319,14 @@ ThreadPlanNull::MischiefManaged ()
     // The null plan is never done.
 #ifdef LLDB_CONFIGURATION_DEBUG
     fprintf(stderr, "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-            __PRETTY_FUNCTION__,
+            LLVM_PRETTY_FUNCTION,
             m_thread.GetID(),
             m_thread.GetProtocolID());
 #else
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
     if (log)
         log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-                   __PRETTY_FUNCTION__,
+                   LLVM_PRETTY_FUNCTION,
                    m_thread.GetID(),
                    m_thread.GetProtocolID());
 #endif
@@ -339,14 +339,14 @@ ThreadPlanNull::GetPlanRunState ()
     // Not sure what to return here.  This is a dead thread.
 #ifdef LLDB_CONFIGURATION_DEBUG
     fprintf(stderr, "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-            __PRETTY_FUNCTION__,
+            LLVM_PRETTY_FUNCTION,
             m_thread.GetID(),
             m_thread.GetProtocolID());
 #else
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
     if (log)
         log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64 ", ptid = 0x%" PRIx64 ")",
-                   __PRETTY_FUNCTION__,
+                   LLVM_PRETTY_FUNCTION,
                    m_thread.GetID(),
                    m_thread.GetProtocolID());
 #endif

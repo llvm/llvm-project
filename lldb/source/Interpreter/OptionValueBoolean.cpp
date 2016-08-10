@@ -15,6 +15,7 @@
 // Project includes
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/Args.h"
 #include "llvm/ADT/STLExtras.h"
 

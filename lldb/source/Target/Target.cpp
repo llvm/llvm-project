@@ -1239,7 +1239,7 @@ Target::SetExecutableModule (ModuleSP& executable_sp, bool get_dependent_files)
     
     if (executable_sp)
     {
-        Timer scoped_timer (__PRETTY_FUNCTION__,
+        Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                             "Target::SetExecutableModule (executable = '%s')",
                             executable_sp->GetFileSpec().GetPath().c_str());
 

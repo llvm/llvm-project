@@ -747,7 +747,7 @@ ObjectFileELF::GetModuleSpecifications (const lldb_private::FileSpec& file,
 
                         if (!gnu_debuglink_crc)
                         {
-                            lldb_private::Timer scoped_timer (__PRETTY_FUNCTION__,
+                            lldb_private::Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                                                               "Calculating module crc32 %s with size %" PRIu64 " KiB",
                                                               file.GetLastPathComponent().AsCString(),
                                                               (file.GetByteSize()-file_offset)/1024);
