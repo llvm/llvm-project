@@ -424,6 +424,10 @@
 // Z7GMLT: "-gcodeview"
 // Z7GMLT: "-debug-info-kind=line-tables-only"
 
+// RUN: %clang_cl -gline-tables-only /c -### -- %s 2>&1 | FileCheck -check-prefix=ZGMLT %s
+// ZGMLT: "-gcodeview"
+// ZGMLT: "-debug-info-kind=line-tables-only"
+
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=BreproDefault %s
 // BreproDefault: "-mincremental-linker-compatible"
 
