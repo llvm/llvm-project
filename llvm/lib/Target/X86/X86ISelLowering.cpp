@@ -3844,6 +3844,8 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
   default: return false;
   case X86ISD::PSHUFB:
   case X86ISD::VPERMILPV:
+  case X86ISD::VPERMIL2:
+  case X86ISD::VPPERM:
     return true;
   }
 }
@@ -25287,6 +25289,49 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return true;
   }
 
+  // With XOP, binary shuffles of 128/256-bit floating point vectors can combine
+  // to VPERMIL2PD/VPERMIL2PS.
+  if ((Depth >= 3 || HasVariableMask) && Subtarget.hasXOP() &&
+      (MaskVT == MVT::v2f64 || MaskVT == MVT::v4f64 || MaskVT == MVT::v4f32 ||
+       MaskVT == MVT::v8f32)) {
+    // VPERMIL2 Operation.
+    // Bits[3] - Match Bit.
+    // Bits[2:1] - (Per Lane) PD Shuffle Mask.
+    // Bits[2:0] - (Per Lane) PS Shuffle Mask.
+    unsigned NumLanes = MaskVT.getSizeInBits() / 128;
+    unsigned NumEltsPerLane = NumMaskElts / NumLanes;
+    SmallVector<SDValue, 8> VPerm2Idx;
+    MVT MaskIdxSVT = MVT::getIntegerVT(MaskVT.getScalarSizeInBits());
+    MVT MaskIdxVT = MVT::getVectorVT(MaskIdxSVT, NumMaskElts);
+    unsigned M2ZImm = 0;
+    for (int M : Mask) {
+      if (M == SM_SentinelUndef) {
+        VPerm2Idx.push_back(DAG.getUNDEF(MaskIdxSVT));
+        continue;
+      }
+      if (M == SM_SentinelZero) {
+        M2ZImm = 2;
+        VPerm2Idx.push_back(DAG.getConstant(8, DL, MaskIdxSVT));
+        continue;
+      }
+      int Index = (M % NumEltsPerLane) + ((M / NumMaskElts) * NumEltsPerLane);
+      Index = (MaskVT.getScalarSizeInBits() == 64 ? Index << 1 : Index);
+      VPerm2Idx.push_back(DAG.getConstant(Index, DL, MaskIdxSVT));
+    }
+    V1 = DAG.getBitcast(MaskVT, V1);
+    DCI.AddToWorklist(V1.getNode());
+    V2 = DAG.getBitcast(MaskVT, V2);
+    DCI.AddToWorklist(V2.getNode());
+    SDValue VPerm2MaskOp = DAG.getBuildVector(MaskIdxVT, DL, VPerm2Idx);
+    DCI.AddToWorklist(VPerm2MaskOp.getNode());
+    Res = DAG.getNode(X86ISD::VPERMIL2, DL, MaskVT, V1, V2, VPerm2MaskOp,
+                      DAG.getConstant(M2ZImm, DL, MVT::i8));
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
+  }
+
   // If we have 3 or more shuffle instructions or a chain involving a variable
   // mask, we can replace them with a single PSHUFB instruction profitably.
   // Intel's manuals suggest only using PSHUFB if doing so replacing 5
@@ -25319,6 +25364,44 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     SDValue PSHUFBMaskOp = DAG.getBuildVector(ByteVT, DL, PSHUFBMask);
     DCI.AddToWorklist(PSHUFBMaskOp.getNode());
     Res = DAG.getNode(X86ISD::PSHUFB, DL, ByteVT, Res, PSHUFBMaskOp);
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
+  }
+
+  // With XOP, if we have a 128-bit binary input shuffle we can always combine
+  // to VPPERM. We match the depth requirement of PSHUFB - VPPERM is never
+  // slower than PSHUFB on targets that support both.
+  if ((Depth >= 3 || HasVariableMask) && RootVT.is128BitVector() &&
+      Subtarget.hasXOP()) {
+    // VPPERM Mask Operation
+    // Bits[4:0] - Byte Index (0 - 31)
+    // Bits[7:5] - Permute Operation (0 - Source byte, 4 - ZERO)
+    SmallVector<SDValue, 16> VPPERMMask;
+    int NumBytes = 16;
+    int Ratio = NumBytes / NumMaskElts;
+    for (int i = 0; i < NumBytes; ++i) {
+      int M = Mask[i / Ratio];
+      if (M == SM_SentinelUndef) {
+        VPPERMMask.push_back(DAG.getUNDEF(MVT::i8));
+        continue;
+      }
+      if (M == SM_SentinelZero) {
+        VPPERMMask.push_back(DAG.getConstant(128, DL, MVT::i8));
+        continue;
+      }
+      M = Ratio * M + i % Ratio;
+      VPPERMMask.push_back(DAG.getConstant(M, DL, MVT::i8));
+    }
+    MVT ByteVT = MVT::v16i8;
+    V1 = DAG.getBitcast(ByteVT, V1);
+    DCI.AddToWorklist(V1.getNode());
+    V2 = DAG.getBitcast(ByteVT, V2);
+    DCI.AddToWorklist(V2.getNode());
+    SDValue VPPERMMaskOp = DAG.getBuildVector(ByteVT, DL, VPPERMMask);
+    DCI.AddToWorklist(VPPERMMaskOp.getNode());
+    Res = DAG.getNode(X86ISD::VPPERM, DL, ByteVT, V1, V2, VPPERMMaskOp);
     DCI.AddToWorklist(Res.getNode());
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
                   /*AddTo*/ true);

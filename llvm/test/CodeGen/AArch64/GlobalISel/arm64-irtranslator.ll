@@ -332,3 +332,41 @@ define void @unreachable(i32 %a) {
   %sum = add i32 %a, %a
   unreachable
 }
+
+  ; It's important that constants are after argument passing, but before the
+  ; rest of the entry block.
+; CHECK-LABEL: name: constant_int
+; CHECK: [[IN:%[0-9]+]](32) = COPY %w0
+; CHECK: [[ONE:%[0-9]+]](32) = G_CONSTANT s32 1
+; CHECK: G_BR unsized
+
+; CHECK: [[SUM1:%[0-9]+]](32) = G_ADD s32 [[IN]], [[ONE]]
+; CHECK: [[SUM2:%[0-9]+]](32) = G_ADD s32 [[IN]], [[ONE]]
+; CHECK: [[RES:%[0-9]+]](32) = G_ADD s32 [[SUM1]], [[SUM2]]
+; CHECK: %w0 = COPY [[RES]]
+
+define i32 @constant_int(i32 %in) {
+  br label %next
+
+next:
+  %sum1 = add i32 %in, 1
+  %sum2 = add i32 %in, 1
+  %res = add i32 %sum1, %sum2
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: constant_int_start
+; CHECK: [[TWO:%[0-9]+]](32) = G_CONSTANT s32 2
+; CHECK: [[ANSWER:%[0-9]+]](32) = G_CONSTANT s32 42
+; CHECK: [[RES:%[0-9]+]](32) = G_ADD s32 [[TWO]], [[ANSWER]]
+define i32 @constant_int_start() {
+  %res = add i32 2, 42
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_undef
+; CHECK: [[UNDEF:%[0-9]+]](32) = IMPLICIT_DEF
+; CHECK: %w0 = COPY [[UNDEF]]
+define i32 @test_undef() {
+  ret i32 undef
+}

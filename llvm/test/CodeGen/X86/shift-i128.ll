@@ -92,3 +92,27 @@ entry:
 	store <2 x i128> %0, <2 x i128>* %r, align 16
 	ret void
 }
+
+define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+entry:
+	%0 = lshr <2 x i128> %x, <i128 -1, i128 -1>
+	%1 = lshr <2 x i128> %0, <i128  1, i128  1>
+	store <2 x i128> %1, <2 x i128>* %r, align 16
+	ret void
+}
+
+define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+entry:
+	%0 = ashr <2 x i128> %x, <i128 -1, i128 -1>
+	%1 = ashr <2 x i128> %0, <i128  1, i128  1>
+	store <2 x i128> %1, <2 x i128>* %r, align 16
+	ret void
+}
+
+define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+entry:
+	%0 = shl <2 x i128> %x, <i128 -1, i128 -1>
+	%1 = shl <2 x i128> %0, <i128  1, i128  1>
+	store <2 x i128> %1, <2 x i128>* %r, align 16
+	ret void
+}

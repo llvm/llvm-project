@@ -1258,6 +1258,7 @@ RuntimeDyldELF::processRelocationRef(
       break;
     }
     case SymbolRef::ST_Data:
+    case SymbolRef::ST_Function:
     case SymbolRef::ST_Unknown: {
       Value.SymbolName = TargetName.data();
       Value.Addend = Addend;

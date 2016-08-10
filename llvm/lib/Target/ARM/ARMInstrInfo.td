@@ -3416,6 +3416,12 @@ def SXTAB : AI_exta_rrot<0b01101010,
 def SXTAH : AI_exta_rrot<0b01101011,
                "sxtah", BinOpFrag<(add node:$LHS, (sext_inreg node:$RHS,i16))>>;
 
+def : ARMV6Pat<(add rGPR:$Rn, (sext_inreg (srl rGPR:$Rm, rot_imm:$rot), i8)),
+               (SXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+def : ARMV6Pat<(add rGPR:$Rn, (sext_inreg (srl rGPR:$Rm, imm8_or_16:$rot),
+                                          i16)),
+               (SXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+
 def SXTB16  : AI_ext_rrot_np<0b01101000, "sxtb16">;
 
 def SXTAB16 : AI_exta_rrot_np<0b01101000, "sxtab16">;
@@ -3443,6 +3449,11 @@ def UXTAB : AI_exta_rrot<0b01101110, "uxtab",
                         BinOpFrag<(add node:$LHS, (and node:$RHS, 0x00FF))>>;
 def UXTAH : AI_exta_rrot<0b01101111, "uxtah",
                         BinOpFrag<(add node:$LHS, (and node:$RHS, 0xFFFF))>>;
+
+def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, rot_imm:$rot), 0xFF)),
+               (UXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot), 0xFFFF)),
+               (UXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 }
 
 // This isn't safe in general, the add is two 16-bit units, not a 32-bit add.

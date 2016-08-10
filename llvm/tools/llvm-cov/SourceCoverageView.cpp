@@ -182,10 +182,10 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
         LineCount.addRegionStartCount(S->Count);
 
     renderLinePrefix(OS, ViewDepth);
-    if (getOptions().ShowLineStats)
-      renderLineCoverageColumn(OS, LineCount);
     if (getOptions().ShowLineNumbers)
       renderLineNumberColumn(OS, LI.line_number());
+    if (getOptions().ShowLineStats)
+      renderLineCoverageColumn(OS, LineCount);
 
     // If there are expansion subviews, we want to highlight the first one.
     unsigned ExpansionColumn = 0;

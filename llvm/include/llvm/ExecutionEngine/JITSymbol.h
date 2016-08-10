@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_JITSYMBOL_H
 
 #include "llvm/Support/DataTypes.h"
+#include <string>
 #include <cassert>
 #include <functional>
 

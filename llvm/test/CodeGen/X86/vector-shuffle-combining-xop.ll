@@ -30,6 +30,16 @@ define <4 x double> @combine_vpermil2pd256_identity(<4 x double> %a0, <4 x doubl
   ret <4 x double> %res1
 }
 
+define <4 x double> @combine_vpermil2pd256_0z73(<4 x double> %a0, <4 x double> %a1) {
+; CHECK-LABEL: combine_vpermil2pd256_0z73:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm0[0],zero,ymm1[3],ymm0[3]
+; CHECK-NEXT:    retq
+  %res0 = shufflevector <4 x double> %a0, <4 x double> %a1, <4 x i32> <i32 0, i32 undef, i32 7, i32 3>
+  %res1 = shufflevector <4 x double> %res0, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
+  ret <4 x double> %res1
+}
+
 define <4 x float> @combine_vpermil2ps_identity(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: combine_vpermil2ps_identity:
 ; CHECK:       # BB#0:
@@ -40,6 +50,16 @@ define <4 x float> @combine_vpermil2ps_identity(<4 x float> %a0, <4 x float> %a1
   ret <4 x float> %res1
 }
 
+define <4 x float> @combine_vpermil2ps_1z74(<4 x float> %a0, <4 x float> %a1) {
+; CHECK-LABEL: combine_vpermil2ps_1z74:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[1],zero,xmm1[3,0]
+; CHECK-NEXT:    retq
+  %res0 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 1, i32 1, i32 7, i32 4>, i8 0)
+  %res1 = shufflevector <4 x float> %res0, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
+  ret <4 x float> %res1
+}
+
 define <8 x float> @combine_vpermil2ps256_identity(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: combine_vpermil2ps256_identity:
 ; CHECK:       # BB#0:
@@ -47,6 +67,16 @@ define <8 x float> @combine_vpermil2ps256_identity(<8 x float> %a0, <8 x float> 
 ; CHECK-NEXT:    retq
   %res0 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a1, <8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 1, i32 0, i32 3, i32 2>, i8 0)
   %res1 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %res0, <8 x float> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 1, i32 0, i32 3, i32 2>, i8 0)
+  ret <8 x float> %res1
+}
+
+define <8 x float> @combine_vpermil2ps256_08z945Az(<8 x float> %a0, <8 x float> %a1) {
+; CHECK-LABEL: combine_vpermil2ps256_08z945Az:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],ymm1[0],zero,ymm1[1],ymm0[4,5],ymm1[6],zero
+; CHECK-NEXT:    retq
+  %res0 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 0, i32 1, i32 6, i32 7>, i8 0)
+  %res1 = shufflevector <8 x float> %res0, <8 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 8, i32 3, i32 4, i32 5, i32 6, i32 8>
   ret <8 x float> %res1
 }
 
@@ -130,4 +160,16 @@ define <16 x i8> @combine_vpperm_as_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
   ret <16 x i8> %res0
+}
+
+define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: combine_vpperm_10zz32BA:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[2,3,0,1],zero,zero,zero,zero,xmm0[6,7,4,5],xmm1[6,7,4,5]
+; CHECK-NEXT:    retq
+  %res0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %res1 = bitcast <4 x i32> %res0 to <16 x i8>
+  %res2 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %res1, <16 x i8> undef, <16 x i8> <i8 2, i8 3, i8 0, i8 1, i8 128, i8 128, i8 128, i8 128, i8 10, i8 11, i8 8, i8 9, i8 14, i8 15, i8 12, i8 13>)
+  %res3 = bitcast <16 x i8> %res2 to <4 x i32>
+  ret <4 x i32> %res3
 }

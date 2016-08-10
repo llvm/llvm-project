@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
@@ -237,11 +238,9 @@ static bool InlineCallIfPossible(
   return true;
 }
 
-static void emitAnalysis(CallSite CS, const Twine &Msg) {
-  Function *Caller = CS.getCaller();
-  LLVMContext &Ctx = Caller->getContext();
-  DebugLoc DLoc = CS.getInstruction()->getDebugLoc();
-  emitOptimizationRemarkAnalysis(Ctx, DEBUG_TYPE, *Caller, DLoc, Msg);
+static void emitAnalysis(CallSite CS, OptimizationRemarkEmitter &ORE,
+                         const Twine &Msg) {
+  ORE.emitOptimizationRemarkAnalysis(DEBUG_TYPE, CS.getInstruction(), Msg);
 }
 
 /// Return true if inlining of CS can block the caller from being
@@ -323,22 +322,23 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
 
 /// Return true if the inliner should attempt to inline at the given CallSite.
 static bool shouldInline(CallSite CS,
-                         function_ref<InlineCost(CallSite CS)> GetInlineCost) {
+                         function_ref<InlineCost(CallSite CS)> GetInlineCost,
+                         OptimizationRemarkEmitter &ORE) {
   InlineCost IC = GetInlineCost(CS);
 
   if (IC.isAlways()) {
     DEBUG(dbgs() << "    Inlining: cost=always"
                  << ", Call: " << *CS.getInstruction() << "\n");
-    emitAnalysis(CS, Twine(CS.getCalledFunction()->getName()) +
-                         " should always be inlined (cost=always)");
+    emitAnalysis(CS, ORE, Twine(CS.getCalledFunction()->getName()) +
+                              " should always be inlined (cost=always)");
     return true;
   }
 
   if (IC.isNever()) {
     DEBUG(dbgs() << "    NOT Inlining: cost=never"
                  << ", Call: " << *CS.getInstruction() << "\n");
-    emitAnalysis(CS, Twine(CS.getCalledFunction()->getName() +
-                           " should never be inlined (cost=never)"));
+    emitAnalysis(CS, ORE, Twine(CS.getCalledFunction()->getName() +
+                                " should never be inlined (cost=never)"));
     return false;
   }
 
@@ -347,10 +347,10 @@ static bool shouldInline(CallSite CS,
     DEBUG(dbgs() << "    NOT Inlining: cost=" << IC.getCost()
                  << ", thres=" << (IC.getCostDelta() + IC.getCost())
                  << ", Call: " << *CS.getInstruction() << "\n");
-    emitAnalysis(CS, Twine(CS.getCalledFunction()->getName() +
-                           " too costly to inline (cost=") +
-                         Twine(IC.getCost()) + ", threshold=" +
-                         Twine(IC.getCostDelta() + IC.getCost()) + ")");
+    emitAnalysis(CS, ORE, Twine(CS.getCalledFunction()->getName() +
+                                " too costly to inline (cost=") +
+                              Twine(IC.getCost()) + ", threshold=" +
+                              Twine(IC.getCostDelta() + IC.getCost()) + ")");
     return false;
   }
 
@@ -359,20 +359,22 @@ static bool shouldInline(CallSite CS,
     DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction()
                  << " Cost = " << IC.getCost()
                  << ", outer Cost = " << TotalSecondaryCost << '\n');
-    emitAnalysis(CS, Twine("Not inlining. Cost of inlining " +
-                           CS.getCalledFunction()->getName() +
-                           " increases the cost of inlining " +
-                           CS.getCaller()->getName() + " in other contexts"));
+    emitAnalysis(CS, ORE,
+                 Twine("Not inlining. Cost of inlining " +
+                       CS.getCalledFunction()->getName() +
+                       " increases the cost of inlining " +
+                       CS.getCaller()->getName() + " in other contexts"));
     return false;
   }
 
   DEBUG(dbgs() << "    Inlining: cost=" << IC.getCost()
                << ", thres=" << (IC.getCostDelta() + IC.getCost())
                << ", Call: " << *CS.getInstruction() << '\n');
-  emitAnalysis(
-      CS, CS.getCalledFunction()->getName() + Twine(" can be inlined into ") +
-              CS.getCaller()->getName() + " with cost=" + Twine(IC.getCost()) +
-              " (threshold=" + Twine(IC.getCostDelta() + IC.getCost()) + ")");
+  emitAnalysis(CS, ORE, CS.getCalledFunction()->getName() +
+                            Twine(" can be inlined into ") +
+                            CS.getCaller()->getName() + " with cost=" +
+                            Twine(IC.getCost()) + " (threshold=" +
+                            Twine(IC.getCostDelta() + IC.getCost()) + ")");
   return true;
 }
 
@@ -513,18 +515,21 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
             InlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory))
           continue;
 
-        LLVMContext &CallerCtx = Caller->getContext();
-
         // Get DebugLoc to report. CS will be invalid after Inliner.
         DebugLoc DLoc = CS.getInstruction()->getDebugLoc();
+        BasicBlock *Block = CS.getParent();
+        // FIXME for new PM: because of the old PM we currently generate ORE and
+        // in turn BFI on demand.  With the new PM, the ORE dependency should
+        // just become a regular analysis dependency.
+        OptimizationRemarkEmitter ORE(Caller);
 
         // If the policy determines that we should inline this function,
         // try to do so.
-        if (!shouldInline(CS, GetInlineCost)) {
-          emitOptimizationRemarkMissed(CallerCtx, DEBUG_TYPE, *Caller, DLoc,
-                                       Twine(Callee->getName() +
-                                             " will not be inlined into " +
-                                             Caller->getName()));
+        if (!shouldInline(CS, GetInlineCost, ORE)) {
+          ORE.emitOptimizationRemarkMissed(DEBUG_TYPE, DLoc, Block,
+                                           Twine(Callee->getName() +
+                                                 " will not be inlined into " +
+                                                 Caller->getName()));
           continue;
         }
 
@@ -532,17 +537,17 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         if (!InlineCallIfPossible(CS, InlineInfo, InlinedArrayAllocas,
                                   InlineHistoryID, InsertLifetime, AARGetter,
                                   ImportedFunctionsStats)) {
-          emitOptimizationRemarkMissed(CallerCtx, DEBUG_TYPE, *Caller, DLoc,
-                                       Twine(Callee->getName() +
-                                             " will not be inlined into " +
-                                             Caller->getName()));
+          ORE.emitOptimizationRemarkMissed(DEBUG_TYPE, DLoc, Block,
+                                           Twine(Callee->getName() +
+                                                 " will not be inlined into " +
+                                                 Caller->getName()));
           continue;
         }
         ++NumInlined;
 
         // Report the inline decision.
-        emitOptimizationRemark(
-            CallerCtx, DEBUG_TYPE, *Caller, DLoc,
+        ORE.emitOptimizationRemark(
+            DEBUG_TYPE, DLoc, Block,
             Twine(Callee->getName() + " inlined into " + Caller->getName()));
 
         // If inlining this function gave us any new call sites, throw them

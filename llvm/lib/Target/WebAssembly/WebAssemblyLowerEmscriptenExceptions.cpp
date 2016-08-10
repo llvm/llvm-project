@@ -109,6 +109,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower-em-exceptions"
 
+static cl::list<std::string>
+    Whitelist("emscripten-cxx-exceptions-whitelist",
+              cl::desc("The list of function names in which Emscripten-style "
+                       "exception handling is enabled (see emscripten "
+                       "EMSCRIPTEN_CATCHING_WHITELIST options)"),
+              cl::CommaSeparated);
+
 namespace {
 class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
   const char *getPassName() const override {
@@ -124,6 +131,7 @@ class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
   Function *getInvokeWrapper(Module &M, InvokeInst *II);
+  bool areAllExceptionsAllowed() const { return WhitelistSet.empty(); }
 
   GlobalVariable *ThrewGV;      // __THREW__
   GlobalVariable *ThrewValueGV; // threwValue
@@ -135,13 +143,17 @@ class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
   DenseMap<int, Function *> FindMatchingCatches;
   // Map of <function signature string, invoke_ wrappers>
   StringMap<Function *> InvokeWrappers;
+  // Set of whitelisted function names
+  std::set<std::string> WhitelistSet;
 
 public:
   static char ID;
 
   WebAssemblyLowerEmscriptenExceptions()
       : ModulePass(ID), ThrewGV(nullptr), ThrewValueGV(nullptr),
-        TempRet0GV(nullptr) {}
+        TempRet0GV(nullptr) {
+    WhitelistSet.insert(Whitelist.begin(), Whitelist.end());
+  }
   bool runOnModule(Module &M) override;
 };
 } // End anonymous namespace
@@ -332,7 +344,8 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
-  bool AllowExceptions = true; // will later change based on whitelist option
+  bool AllowExceptions =
+      areAllExceptionsAllowed() || WhitelistSet.count(F.getName());
 
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());

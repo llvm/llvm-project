@@ -405,12 +405,16 @@
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
+#ifdef __cplusplus
 extern "C" {
+#endif
 void AnnotateHappensAfter(const char *file, int line, const volatile void *cv);
 void AnnotateHappensBefore(const char *file, int line, const volatile void *cv);
 void AnnotateIgnoreWritesBegin(const char *file, int line);
 void AnnotateIgnoreWritesEnd(const char *file, int line);
+#ifdef __cplusplus
 }
+#endif
 
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
@@ -447,6 +451,19 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
 #else
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
+#endif
+
+/// \macro LLVM_PRETTY_FUNCTION
+/// \brief Gets a user-friendly looking function signature for the current scope
+/// using the best available method on each platform.  The exact format of the
+/// resulting string is implementation specific and non-portable, so this should
+/// only be used, for example, for logging or diagnostics.
+#if defined(_MSC_VER)
+#define LLVM_PRETTY_FUNCTION __FUNCSIG__
+#elif defined(__GNUC__) || defined(__clang__)
+#define LLVM_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#else 
+#define LLVM_PRETTY_FUNCTION __func__
 #endif
 
 /// \macro LLVM_THREAD_LOCAL

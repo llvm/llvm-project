@@ -12,13 +12,13 @@
 // RUN: llvm-cov show %S/Inputs/prefer_used_to_unused.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck %s
 
 // Coverage data for this function has a non-zero hash value if it is used in the translation unit.
-inline int sampleFunc(int A) { // CHECK:      1| [[@LINE]]|inline int sampleFunc(int A) {
-  if (A > 0)                   // CHECK-NEXT: 1| [[@LINE]]|  if (A > 0)
-    return A;                  // CHECK-NEXT: 1| [[@LINE]]|    return A;
-  return 0;                    // CHECK-NEXT: 0| [[@LINE]]|  return 0;
-}                              // CHECK-NEXT: 1| [[@LINE]]|}
+inline int sampleFunc(int A) { // CHECK:      [[@LINE]]| 1|inline int sampleFunc(int A) {
+  if (A > 0)                   // CHECK-NEXT: [[@LINE]]| 1|  if (A > 0)
+    return A;                  // CHECK-NEXT: [[@LINE]]| 1|    return A;
+  return 0;                    // CHECK-NEXT: [[@LINE]]| 0|  return 0;
+}                              // CHECK-NEXT: [[@LINE]]| 1|}
 
 // The hash for this function is zero in both cases, either it is used in the translation unit or not.
-inline int simpleFunc(int A) { // CHECK:      1| [[@LINE]]|inline int simpleFunc(int A) {
-  return A;                    // CHECK-NEXT: 1| [[@LINE]]|  return A;
-}                              // CHECK-NEXT: 1| [[@LINE]]|}
+inline int simpleFunc(int A) { // CHECK:      [[@LINE]]| 1|inline int simpleFunc(int A) {
+  return A;                    // CHECK-NEXT: [[@LINE]]| 1|  return A;
+}                              // CHECK-NEXT: [[@LINE]]| 1|}

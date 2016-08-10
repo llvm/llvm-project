@@ -13,12 +13,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 
 using namespace llvm;
+
+OptimizationRemarkEmitter::OptimizationRemarkEmitter(Function *F)
+    : F(F), BFI(nullptr) {
+  if (!F->getContext().getDiagnosticHotnessRequested())
+    return;
+
+  // First create a dominator tree.
+  DominatorTree DT;
+  DT.recalculate(*F);
+
+  // Generate LoopInfo from it.
+  LoopInfo LI;
+  LI.analyze(DT);
+
+  // Then compute BranchProbabilityInfo.
+  BranchProbabilityInfo BPI;
+  BPI.calculate(*F, LI);
+
+  // Finally compute BFI.
+  OwnedBFI = llvm::make_unique<BlockFrequencyInfo>(*F, BPI, LI);
+  BFI = OwnedBFI.get();
+}
 
 Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(const Value *V) {
   if (!BFI)

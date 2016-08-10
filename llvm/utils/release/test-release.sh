@@ -38,7 +38,6 @@ do_test_suite="yes"
 do_openmp="yes"
 do_lldb="no"
 BuildDir="`pwd`"
-use_autoconf="no"
 ExtraConfigureFlags=""
 ExportBranch=""
 
@@ -57,7 +56,6 @@ function usage() {
     echo " -no-compare-files    Don't test that phase 2 and 3 files are identical."
     echo " -use-gzip            Use gzip instead of xz."
     echo " -configure-flags FLAGS  Extra flags to pass to the configure step."
-    echo " -use-autoconf        Use autoconf instead of cmake"
     echo " -svn-path DIR        Use the specified DIR instead of a release."
     echo "                      For example -svn-path trunk or -svn-path branches/release_37"
     echo " -no-rt               Disable check-out & build Compiler-RT"
@@ -127,9 +125,6 @@ while [ $# -gt 0 ]; do
         -use-gzip | --use-gzip )
             use_gzip="yes"
             ;;
-        -use-autoconf | --use-autoconf )
-            use_autoconf="yes"
-            ;;
         -no-rt )
             do_rt="no"
             ;;
@@ -164,13 +159,11 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-if [ "$use_autoconf" = "no" ]; then
-  if [ "$do_test_suite" = "yes" ]; then
-    # See llvm.org/PR26146.
-    echo Skipping test-suite build when using CMake.
-    echo It will still be exported.
-    do_test_suite="export-only"
-  fi
+if [ "$do_test_suite" = "yes" ]; then
+  # See llvm.org/PR26146.
+  echo Skipping test-suite build when using CMake.
+  echo It will still be exported.
+  do_test_suite="export-only"
 fi
 
 # Check required arguments.
@@ -337,17 +330,14 @@ function configure_llvmCore() {
         Release )
             BuildType="Release"
             Assertions="OFF"
-            ConfigureFlags="--enable-optimized --disable-assertions"
             ;;
         Release+Asserts )
             BuildType="Release"
             Assertions="ON"
-            ConfigureFlags="--enable-optimized --enable-assertions"
             ;;
         Debug )
             BuildType="Debug"
             Assertions="ON"
-            ConfigureFlags="--disable-optimized --enable-assertions"
             ;;
         * )
             echo "# Invalid flavor '$Flavor'"
@@ -362,29 +352,18 @@ function configure_llvmCore() {
     cd $ObjDir
     echo "# Configuring llvm $Release-$RC $Flavor"
 
-    if [ "$use_autoconf" = "yes" ]; then
-        echo "#" env CC="$c_compiler" CXX="$cxx_compiler" \
-            $BuildDir/llvm.src/configure \
-            $ConfigureFlags --disable-timestamps $ExtraConfigureFlags \
-            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
-        env CC="$c_compiler" CXX="$cxx_compiler" \
-            $BuildDir/llvm.src/configure \
-            $ConfigureFlags --disable-timestamps $ExtraConfigureFlags \
-            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
-    else
-        echo "#" env CC="$c_compiler" CXX="$cxx_compiler" \
-            cmake -G "Unix Makefiles" \
-            -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
-            -DLLVM_CONFIGTIME="(timestamp not enabled)" \
-            $ExtraConfigureFlags $BuildDir/llvm.src \
-            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
-        env CC="$c_compiler" CXX="$cxx_compiler" \
-            cmake -G "Unix Makefiles" \
-            -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
-            -DLLVM_CONFIGTIME="(timestamp not enabled)" \
-            $ExtraConfigureFlags $BuildDir/llvm.src \
-            2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
-    fi
+    echo "#" env CC="$c_compiler" CXX="$cxx_compiler" \
+        cmake -G "Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
+        -DLLVM_CONFIGTIME="(timestamp not enabled)" \
+        $ExtraConfigureFlags $BuildDir/llvm.src \
+        2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
+    env CC="$c_compiler" CXX="$cxx_compiler" \
+        cmake -G "Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
+        -DLLVM_CONFIGTIME="(timestamp not enabled)" \
+        $ExtraConfigureFlags $BuildDir/llvm.src \
+        2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
 
     cd $BuildDir
 }
@@ -418,14 +397,6 @@ function test_llvmCore() {
     if ! ( ${MAKE} -j $NumJobs -k check-all \
         2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
       deferred_error $Phase $Flavor "check-all failed"
-    fi
-
-    if [ "$use_autoconf" = "yes" ]; then
-        # In the cmake build, unit tests are run as part of check-all.
-        if ! ( ${MAKE} -k unittests 2>&1 | \
-            tee $LogDir/llvm.unittests-Phase$Phase-$Flavor.log ) ; then
-          deferred_error $Phase $Flavor "unittests failed"
-        fi
     fi
 
     cd $BuildDir
