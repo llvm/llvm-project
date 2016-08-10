@@ -318,7 +318,7 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
         Phdr.add(Out<ELFT>::Interp);
       break;
     case PT_DYNAMIC:
-      if (isOutputDynamic<ELFT>()) {
+      if (Out<ELFT>::DynSymTab) {
         Phdr.H.p_flags = Out<ELFT>::Dynamic->getPhdrFlags();
         Phdr.add(Out<ELFT>::Dynamic);
       }
@@ -913,7 +913,6 @@ static uint64_t getSectionSize(StringRef Name) {
   default:
     llvm_unreachable("unsupported target");
   }
-  return 0;
 }
 
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {

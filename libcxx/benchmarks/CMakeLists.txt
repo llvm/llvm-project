@@ -87,7 +87,12 @@ macro(add_benchmark_test name source_file)
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
   add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
   add_dependencies(libcxx-benchmarks ${libcxx_target})
-  target_link_libraries(${libcxx_target} cxx -lbenchmark)
+  if (LIBCXX_ENABLE_SHARED)
+    target_link_libraries(${libcxx_target} cxx_shared)
+  else()
+    target_link_libraries(${libcxx_target} cxx_static)
+  endif()
+  target_link_libraries(${libcxx_target} -lbenchmark)
   set_target_properties(${libcxx_target}
     PROPERTIES
           OUTPUT_NAME "${name}.libcxx.out"

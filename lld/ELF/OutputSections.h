@@ -328,8 +328,6 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool hasRelocs() const { return !Relocs.empty(); }
 
-  bool Static = false;
-
 private:
   bool Sort;
   std::vector<DynamicReloc<ELFT>> Relocs;
@@ -527,10 +525,6 @@ public:
   explicit DynamicSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
-
-  OutputSectionBase<ELFT> *PreInitArraySec = nullptr;
-  OutputSectionBase<ELFT> *InitArraySec = nullptr;
-  OutputSectionBase<ELFT> *FiniArraySec = nullptr;
 };
 
 template <class ELFT>
@@ -657,6 +651,10 @@ template <class ELFT> struct Out {
   static Elf_Phdr *TlsPhdr;
   static OutputSectionBase<ELFT> *ElfHeader;
   static OutputSectionBase<ELFT> *ProgramHeaders;
+
+  static OutputSectionBase<ELFT> *PreinitArray;
+  static OutputSectionBase<ELFT> *InitArray;
+  static OutputSectionBase<ELFT> *FiniArray;
 };
 
 template <bool Is64Bits> struct SectionKey {
@@ -679,8 +677,6 @@ template <class ELFT> class OutputSectionFactory {
 public:
   std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
                                                     StringRef OutsecName);
-
-  OutputSectionBase<ELFT> *lookup(StringRef Name, uint32_t Type, uintX_t Flags);
 
 private:
   Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
@@ -716,6 +712,9 @@ template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::PreinitArray;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::InitArray;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::FiniArray;
 
 } // namespace elf
 } // namespace lld

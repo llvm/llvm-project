@@ -28,6 +28,7 @@
 ;
 ; IR:      polly.loop_preheader:
 ; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i64 1
+; IR-NEXT:   %26 = add i64 %val, 1
 ; IR-NEXT:   br label %polly.loop_header
 ;
 ;

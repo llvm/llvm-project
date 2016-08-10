@@ -14,6 +14,7 @@
 
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Stream.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/ObjectFile.h"
 
 #include "DWARFDebugAranges.h"

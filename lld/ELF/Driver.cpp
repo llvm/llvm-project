@@ -588,5 +588,5 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
         MS->splitIntoPieces();
     }
 
-  writeResult<ELFT>(&Symtab);
+  writeResult<ELFT>();
 }

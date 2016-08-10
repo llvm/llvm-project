@@ -239,6 +239,7 @@ void InitializeSystemInfo() {
   }
 // TODO: also figure out cpuinfo_num_cpus
 
+
 #elif defined BENCHMARK_OS_WINDOWS
   // In NT, read MHz from the registry. If we fail to do so or we're in win9x
   // then make a crude estimate.
@@ -251,7 +252,12 @@ void InitializeSystemInfo() {
     cpuinfo_cycles_per_second = static_cast<double>((int64_t)data * (int64_t)(1000 * 1000));  // was mhz
   else
     cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
-// TODO: also figure out cpuinfo_num_cpus
+
+  SYSTEM_INFO sysinfo;
+  // Use memset as opposed to = {} to avoid GCC missing initializer false positives.
+  std::memset(&sysinfo, 0, sizeof(SYSTEM_INFO));
+  GetSystemInfo(&sysinfo);
+  cpuinfo_num_cpus = sysinfo.dwNumberOfProcessors; // number of logical processors in the current group
 
 #elif defined BENCHMARK_OS_MACOSX
   // returning "mach time units" per second. the current number of elapsed

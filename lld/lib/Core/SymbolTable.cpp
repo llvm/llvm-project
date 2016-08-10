@@ -303,17 +303,4 @@ std::vector<const UndefinedAtom *> SymbolTable::undefines() {
   return ret;
 }
 
-std::vector<StringRef> SymbolTable::tentativeDefinitions() {
-  std::vector<StringRef> ret;
-  for (auto entry : _nameTable) {
-    const Atom *atom = entry.second;
-    StringRef name   = entry.first;
-    assert(atom != nullptr);
-    if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom))
-      if (defAtom->merge() == DefinedAtom::mergeAsTentative)
-        ret.push_back(name);
-  }
-  return ret;
-}
-
 } // namespace lld

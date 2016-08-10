@@ -800,8 +800,8 @@ SymbolFileDWARF::DebugInfo()
 {
     if (m_info.get() == NULL)
     {
-        Timer scoped_timer(__PRETTY_FUNCTION__, "%s this = %p",
-                           __PRETTY_FUNCTION__, static_cast<void*>(this));
+        Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s this = %p",
+                           LLVM_PRETTY_FUNCTION, static_cast<void*>(this));
         if (get_debug_info_data().GetByteSize() > 0)
         {
             m_info.reset(new DWARFDebugInfo());
@@ -846,8 +846,8 @@ SymbolFileDWARF::DebugRanges()
 {
     if (m_ranges.get() == NULL)
     {
-        Timer scoped_timer(__PRETTY_FUNCTION__, "%s this = %p",
-                           __PRETTY_FUNCTION__, static_cast<void*>(this));
+        Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s this = %p",
+                           LLVM_PRETTY_FUNCTION, static_cast<void*>(this));
         if (get_debug_ranges_data().GetByteSize() > 0)
         {
             m_ranges.reset(new DWARFDebugRanges());
@@ -1921,7 +1921,7 @@ SymbolFileDWARF::GetGlobalAranges()
 uint32_t
 SymbolFileDWARF::ResolveSymbolContext (const Address& so_addr, uint32_t resolve_scope, SymbolContext& sc)
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "SymbolFileDWARF::ResolveSymbolContext (so_addr = { section = %p, offset = 0x%" PRIx64 " }, resolve_scope = 0x%8.8x)",
                        static_cast<void*>(so_addr.GetSection().get()),
                        so_addr.GetOffset(), resolve_scope);
@@ -2182,7 +2182,7 @@ SymbolFileDWARF::Index ()
     if (m_indexed)
         return;
     m_indexed = true;
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "SymbolFileDWARF::Index (%s)",
                         GetObjectFile()->GetFileSpec().GetFilename().AsCString("<Unknown>"));
 
@@ -2719,7 +2719,7 @@ SymbolFileDWARF::FindFunctions (const ConstString &name,
                                 bool append, 
                                 SymbolContextList& sc_list)
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "SymbolFileDWARF::FindFunctions (name = '%s')",
                         name.AsCString());
 
@@ -3034,7 +3034,7 @@ SymbolFileDWARF::FindFunctions (const ConstString &name,
 uint32_t
 SymbolFileDWARF::FindFunctions(const RegularExpression& regex, bool include_inlines, bool append, SymbolContextList& sc_list)
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "SymbolFileDWARF::FindFunctions (regex = '%s')",
                         regex.GetText());
 

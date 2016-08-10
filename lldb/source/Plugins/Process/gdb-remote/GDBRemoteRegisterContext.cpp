@@ -380,12 +380,6 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
         return false;
 
     GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *)process)->GetGDBRemote());
-// FIXME: This check isn't right because IsRunning checks the Public state, but this
-// is work you need to do - for instance in ShouldStop & friends - before the public
-// state has been changed.
-//    if (gdb_comm.IsRunning())
-//        return false;
-
 
 #if defined (LLDB_CONFIGURATION_DEBUG)
     assert (m_reg_data.GetByteSize() >= reg_info->byte_offset + reg_info->byte_size);
@@ -409,8 +403,8 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
                                   reg_info->byte_size,          // dst length
                                   m_reg_data.GetByteOrder()))   // dst byte order
     {
-        std::unique_lock<std::recursive_mutex> lock;
-        if (gdb_comm.GetSequenceMutex(lock, "Didn't get sequence mutex for write register."))
+        GDBRemoteClientBase::Lock lock(gdb_comm, false);
+        if (lock)
         {
             const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
             ProcessSP process_sp (m_thread.GetProcess());
@@ -578,8 +572,8 @@ GDBRemoteRegisterContext::ReadAllRegisterValues (lldb::DataBufferSP &data_sp)
 
     const bool use_g_packet = gdb_comm.AvoidGPackets ((ProcessGDBRemote *)process) == false;
 
-    std::unique_lock<std::recursive_mutex> lock;
-    if (gdb_comm.GetSequenceMutex(lock, "Didn't get sequence mutex for read all registers."))
+    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    if (lock)
     {
         SyncThreadState(process);
         
@@ -687,8 +681,8 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
     const bool use_g_packet = gdb_comm.AvoidGPackets ((ProcessGDBRemote *)process) == false;
 
     StringExtractorGDBRemote response;
-    std::unique_lock<std::recursive_mutex> lock;
-    if (gdb_comm.GetSequenceMutex(lock, "Didn't get sequence mutex for write all registers."))
+    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    if (lock)
     {
         const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
         ProcessSP process_sp (m_thread.GetProcess());

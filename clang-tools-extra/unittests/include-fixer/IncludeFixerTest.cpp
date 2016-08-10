@@ -88,15 +88,15 @@ static std::string runIncludeFixer(
   SymbolIndexMgr->addSymbolIndex(
       llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols));
 
-  IncludeFixerContext FixerContext;
-  IncludeFixerActionFactory Factory(*SymbolIndexMgr, FixerContext, "llvm");
-
+  std::vector<IncludeFixerContext> FixerContexts;
+  IncludeFixerActionFactory Factory(*SymbolIndexMgr, FixerContexts, "llvm");
   std::string FakeFileName = "input.cc";
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
-  if (FixerContext.getHeaderInfos().empty())
+  assert(FixerContexts.size() == 1);
+  if (FixerContexts.front().getHeaderInfos().empty())
     return Code;
   auto Replaces = clang::include_fixer::createIncludeFixerReplacements(
-      Code, FakeFileName, FixerContext);
+      Code, FixerContexts.front());
   EXPECT_TRUE(static_cast<bool>(Replaces))
       << llvm::toString(Replaces.takeError()) << "\n";
   if (!Replaces)

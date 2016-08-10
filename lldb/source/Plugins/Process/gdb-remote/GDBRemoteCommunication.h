@@ -114,19 +114,10 @@ public:
     CalculcateChecksum (const char *payload,
                         size_t payload_length);
 
-    bool
-    GetSequenceMutex(std::unique_lock<std::recursive_mutex> &lock, const char *failure_message = nullptr);
-
     PacketType
     CheckForPacket (const uint8_t *src, 
                     size_t src_len, 
                     StringExtractorGDBRemote &packet);
-
-    bool
-    IsRunning() const
-    {
-        return m_public_is_running.GetValue();
-    }
 
     bool
     GetSendAcks ()
@@ -285,13 +276,6 @@ protected:
     uint32_t m_packet_timeout;
     uint32_t m_echo_number;
     LazyBool m_supports_qEcho;
-#ifdef ENABLE_MUTEX_ERROR_CHECKING
-#error TrackingMutex is no longer supported
-#else
-    std::recursive_mutex m_sequence_mutex; // Restrict access to sending/receiving packets to a single thread at a time
-#endif
-    Predicate<bool> m_public_is_running;
-    Predicate<bool> m_private_is_running;
     History m_history;
     bool m_send_acks;
     bool m_is_platform; // Set to true if this class represents a platform,
@@ -299,10 +283,6 @@ protected:
                         // a single process
     
     CompressionType m_compression_type;
-
-    PacketResult
-    SendPacket (const char *payload,
-                size_t payload_length);
 
     PacketResult
     SendPacketNoLock (const char *payload, 
@@ -319,9 +299,6 @@ protected:
     WaitForPacketWithTimeoutMicroSecondsNoLock (StringExtractorGDBRemote &response, 
                                                 uint32_t timeout_usec,
                                                 bool sync_on_timeout);
-
-    bool
-    WaitForNotRunningPrivate(const std::chrono::microseconds &timeout);
 
     bool
     CompressionIsEnabled ()

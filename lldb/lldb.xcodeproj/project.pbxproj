@@ -72,6 +72,8 @@
 		233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */; };
 		236124A41986B4E2004EFC37 /* IOObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A21986B4E2004EFC37 /* IOObject.cpp */; };
 		236124A51986B4E2004EFC37 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A31986B4E2004EFC37 /* Socket.cpp */; };
+		2374D7521D4BB299005C9575 /* GDBRemoteClientBase.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2374D74F1D4BB299005C9575 /* GDBRemoteClientBase.h */; };
+		2374D7531D4BB2FF005C9575 /* GDBRemoteClientBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
 		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
 		239504DE1BDD453200963CEA /* SocketAddressTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */; };
@@ -1145,6 +1147,7 @@
 			dstSubfolderSpec = 0;
 			files = (
 				23D0658E1D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h in CopyFiles */,
+				2374D7521D4BB299005C9575 /* GDBRemoteClientBase.h in CopyFiles */,
 				23D0658C1D4A7BDA0008EDE6 /* RenderScriptRuntime.h in CopyFiles */,
 				23D0658A1D4A7BDA0008EDE6 /* RenderScriptExpressionOpts.h in CopyFiles */,
 				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */,
@@ -1217,6 +1220,8 @@
 		236124A31986B4E2004EFC37 /* Socket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Socket.cpp; sourceTree = "<group>"; };
 		236124A61986B50E004EFC37 /* IOObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOObject.h; path = include/lldb/Host/IOObject.h; sourceTree = "<group>"; };
 		236124A71986B50E004EFC37 /* Socket.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Socket.h; path = include/lldb/Host/Socket.h; sourceTree = "<group>"; };
+		2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteClientBase.cpp; sourceTree = "<group>"; };
+		2374D74F1D4BB299005C9575 /* GDBRemoteClientBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GDBRemoteClientBase.h; sourceTree = "<group>"; };
 		2377C2F719E613C100737875 /* PipePosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PipePosix.cpp; sourceTree = "<group>"; };
 		237C577A19AF9D9F00213D59 /* HostInfoLinux.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostInfoLinux.h; path = include/lldb/Host/linux/HostInfoLinux.h; sourceTree = SOURCE_ROOT; };
 		239481851C59EBDD00DF7168 /* libncurses.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libncurses.dylib; path = ../../../../../usr/lib/libncurses.dylib; sourceTree = "<group>"; };
@@ -5531,6 +5536,8 @@
 		4CEE62F71145F1C70064CF93 /* GDB Remote */ = {
 			isa = PBXGroup;
 			children = (
+				2374D74F1D4BB299005C9575 /* GDBRemoteClientBase.h */,
+				2374D74E1D4BB299005C9575 /* GDBRemoteClientBase.cpp */,
 				6D55B2931A8A808400A70529 /* GDBRemoteCommunicationServerCommon.h */,
 				6D55B2941A8A808400A70529 /* GDBRemoteCommunicationServerLLGS.h */,
 				6D55B2951A8A808400A70529 /* GDBRemoteCommunicationServerPlatform.h */,
@@ -7099,6 +7106,7 @@
 				264A1300137252C700875C42 /* ARM64_DWARF_Registers.cpp in Sources */,
 				26DB3E161379E7AD0080DC73 /* ABIMacOSX_arm.cpp in Sources */,
 				26DB3E191379E7AD0080DC73 /* ABIMacOSX_arm64.cpp in Sources */,
+				2374D7531D4BB2FF005C9575 /* GDBRemoteClientBase.cpp in Sources */,
 				8C2D6A5E197A250F006989C9 /* MemoryHistoryASan.cpp in Sources */,
 				26F006561B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp in Sources */,
 				26DB3E1C1379E7AD0080DC73 /* ABIMacOSX_i386.cpp in Sources */,

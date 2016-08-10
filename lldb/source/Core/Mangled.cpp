@@ -269,7 +269,7 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
     if (m_mangled && !m_demangled)
     {
         // We need to generate and cache the demangled name.
-        Timer scoped_timer (__PRETTY_FUNCTION__,
+        Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                             "Mangled::GetDemangledName (m_mangled = %s)",
                             m_mangled.GetCString());
 

@@ -9,11 +9,8 @@
 
 #include <fcntl.h>
 
-#if defined(_WIN32)
-#include "lldb/Host/Windows/win32.h" // For O_NOCTTY
-#endif
-
 #include "lldb/Core/Stream.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Target/FileAction.h"
 
 using namespace lldb_private;

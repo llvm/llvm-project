@@ -162,9 +162,6 @@ GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name, const char
 #endif
       m_echo_number(0),
       m_supports_qEcho(eLazyBoolCalculate),
-      m_sequence_mutex(),
-      m_public_is_running(false),
-      m_private_is_running(false),
       m_history(512),
       m_send_acks(true),
       m_compression_type(CompressionType::None),
@@ -224,13 +221,6 @@ GDBRemoteCommunication::SendNack ()
         log->Printf("<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
     m_history.AddPacket (ch, History::ePacketTypeSend, bytes_written);
     return bytes_written;
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunication::SendPacket (const char *payload, size_t payload_length)
-{
-    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
-    return SendPacketNoLock (payload, payload_length);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -322,22 +312,6 @@ GDBRemoteCommunication::GetAck ()
     return result;
 }
 
-bool
-GDBRemoteCommunication::GetSequenceMutex(std::unique_lock<std::recursive_mutex> &lock, const char *failure_message)
-{
-    if (IsRunning())
-        return (lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex, std::try_to_lock)).owns_lock();
-
-    lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex);
-    return true;
-}
-
-bool
-GDBRemoteCommunication::WaitForNotRunningPrivate(const std::chrono::microseconds &timeout)
-{
-    return m_private_is_running.WaitForValueEqualTo(false, timeout, NULL);
-}
-
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::ReadPacket (StringExtractorGDBRemote &response, uint32_t timeout_usec, bool sync_on_timeout)
 {
@@ -417,7 +391,7 @@ GDBRemoteCommunication::WaitForPacketWithTimeoutMicroSecondsNoLock (StringExtrac
         
         if (log)
             log->Printf ("%s: Read (buffer, (sizeof(buffer), timeout_usec = 0x%x, status = %s, error = %s) => bytes_read = %" PRIu64,
-                         __PRETTY_FUNCTION__,
+                         LLVM_PRETTY_FUNCTION,
                          timeout_usec, 
                          Communication::ConnectionStatusAsCString (status),
                          error.AsCString(), 

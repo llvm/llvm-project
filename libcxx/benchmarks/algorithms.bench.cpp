@@ -10,7 +10,7 @@ constexpr std::size_t TestNumInputs = 1024;
 template <class GenInputs>
 void BM_Sort(benchmark::State& st, GenInputs gen) {
     using ValueType = typename decltype(gen(0))::value_type;
-    const auto in = gen(st.range_x());
+    const auto in = gen(st.range(0));
     std::vector<ValueType> inputs[5];
     auto reset_inputs = [&]() {
         for (auto& C : inputs) {

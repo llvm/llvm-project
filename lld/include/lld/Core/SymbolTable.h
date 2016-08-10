@@ -56,9 +56,6 @@ public:
   /// @brief returns vector of remaining UndefinedAtoms
   std::vector<const UndefinedAtom *> undefines();
 
-  /// returns vector of tentative definitions
-  std::vector<StringRef> tentativeDefinitions();
-
   /// @brief add atom to replacement table
   void addReplacement(const Atom *replaced, const Atom *replacement);
 
