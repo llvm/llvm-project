@@ -18,22 +18,9 @@
 #include <sys/ioctl.h>
 #endif
 
-#ifdef _WIN32
-#include "lldb/Host/windows/win32.h"
-typedef uint32_t pid_t;
-// empty functions
-int posix_openpt(int flag) { return 0; }
+#include "lldb/Host/PosixApi.h"
 
-int strerror_r(int errnum, char *buf, size_t buflen) { return 0; }
-
-int unlockpt(int fd) { return 0; }
-int grantpt(int fd) { return 0; }
-char *ptsname(int fd) { return 0; }
-
-pid_t fork(void) { return 0; }
-pid_t setsid(void) { return 0; }
-#elif defined(__ANDROID_NDK__)
-#include "lldb/Host/android/Android.h"
+#if defined(__ANDROID_NDK__)
 int posix_openpt(int flags);
 #endif
 

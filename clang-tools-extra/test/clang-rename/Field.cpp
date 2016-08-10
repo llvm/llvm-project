@@ -1,14 +1,15 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=148 -new-name=Bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
-
 class Baz {
-  int Foo;              // CHECK: Bar;
+  int Foo; /* Test 1 */ // CHECK: int Bar;
 public:
   Baz();
 };
 
-Baz::Baz() : Foo(0) {}  // CHECK: Baz::Baz() : Bar(0) {}
+Baz::Baz() : Foo(0) /* Test 2 */ {}  // CHECK: Baz::Baz() : Bar(0)
 
-// Use grep -FUbo 'Foo' <file> to get the correct offset of foo when changing
-// this file.
+// Test 1.
+// RUN: clang-rename -offset=18 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// Test 2.
+// RUN: clang-rename -offset=89 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+
+// To find offsets after modifying the file, use:
+//   grep -Ubo 'Foo.*' <file>

@@ -1,0 +1,6 @@
+---
+- OldName:        Foo1
+  NewName:        Bar1
+- OldName:        Foo2
+  NewName:        Bar2
+...

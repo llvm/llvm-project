@@ -1,0 +1,13 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.name_suffix = "@XRAY_TEST_CONFIG_SUFFIX@"
+config.xray_lit_source_dir = "@XRAY_LIT_SOURCE_DIR@"
+config.target_cflags = "@XRAY_TEST_TARGET_CFLAGS@"
+config.target_arch = "@XRAY_TEST_TARGET_ARCH@"
+
+# Load common config for all compiler-rt lit tests
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@XRAY_LIT_SOURCE_DIR@/lit.cfg")

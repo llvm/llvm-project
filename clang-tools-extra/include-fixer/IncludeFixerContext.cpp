@@ -76,9 +76,9 @@ std::string createQualifiedNameForReplacement(
 } // anonymous namespace
 
 IncludeFixerContext::IncludeFixerContext(
-    std::vector<QuerySymbolInfo> QuerySymbols,
+    StringRef FilePath, std::vector<QuerySymbolInfo> QuerySymbols,
     std::vector<find_all_symbols::SymbolInfo> Symbols)
-    : QuerySymbolInfos(std::move(QuerySymbols)),
+    : FilePath(FilePath), QuerySymbolInfos(std::move(QuerySymbols)),
       MatchedSymbols(std::move(Symbols)) {
   // Remove replicated QuerySymbolInfos with the same range.
   //

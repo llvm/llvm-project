@@ -37,7 +37,6 @@ set(DEBUGSERVER_USED_LIBS
 add_lldb_executable(debugserver
   HasAVX.s
   CFBundle.cpp
-  CFData.cpp
   CFString.cpp
   Genealogy.cpp
   MachException.cpp

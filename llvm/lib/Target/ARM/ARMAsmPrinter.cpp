@@ -725,16 +725,27 @@ void ARMAsmPrinter::emitAttributes() {
       ATS.emitFPU(ARM::FK_VFPV2);
   }
 
+  // RW data addressing.
   if (isPositionIndependent()) {
-    // PIC specific attributes.
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
                       ARMBuildAttrs::AddressRWPCRel);
+  } else if (STI.isRWPI()) {
+    // RWPI specific attributes.
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
+                      ARMBuildAttrs::AddressRWSBRel);
+  }
+
+  // RO data addressing.
+  if (isPositionIndependent() || STI.isROPI()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RO_data,
                       ARMBuildAttrs::AddressROPCRel);
+  }
+
+  // GOT use.
+  if (isPositionIndependent()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_GOT_use,
                       ARMBuildAttrs::AddressGOT);
   } else {
-    // Allow direct addressing of imported data for all other relocation models.
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_GOT_use,
                       ARMBuildAttrs::AddressDirect);
   }
@@ -858,14 +869,16 @@ void ARMAsmPrinter::emitAttributes() {
     }
   }
 
-  // TODO: We currently only support either reserving the register, or treating
-  // it as another callee-saved register, but not as SB or a TLS pointer; It
-  // would instead be nicer to push this from the frontend as metadata, as we do
-  // for the wchar and enum size tags
-  if (STI.isR9Reserved())
-    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use, ARMBuildAttrs::R9Reserved);
+  // We currently do not support using R9 as the TLS pointer.
+  if (STI.isRWPI())
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
+                      ARMBuildAttrs::R9IsSB);
+  else if (STI.isR9Reserved())
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
+                      ARMBuildAttrs::R9Reserved);
   else
-    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use, ARMBuildAttrs::R9IsGPR);
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
+                      ARMBuildAttrs::R9IsGPR);
 
   if (STI.hasTrustZone() && STI.hasVirtualization())
     ATS.emitAttribute(ARMBuildAttrs::Virtualization_use,
@@ -899,6 +912,8 @@ getModifierVariantKind(ARMCP::ARMCPModifier Modifier) {
     return MCSymbolRefExpr::VK_TPOFF;
   case ARMCP::GOTTPOFF:
     return MCSymbolRefExpr::VK_GOTTPOFF;
+  case ARMCP::SBREL:
+    return MCSymbolRefExpr::VK_ARM_SBREL;
   case ARMCP::GOT_PREL:
     return MCSymbolRefExpr::VK_ARM_GOT_PREL;
   case ARMCP::SECREL:
@@ -1037,7 +1052,7 @@ void ARMAsmPrinter::EmitJumpTableAddrs(const MachineInstr *MI) {
     //    .word (LBB1 - LJTI_0_0)
     const MCExpr *Expr = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
 
-    if (isPositionIndependent())
+    if (isPositionIndependent() || Subtarget->isROPI())
       Expr = MCBinaryExpr::createSub(Expr, MCSymbolRefExpr::create(JTISymbol,
                                                                    OutContext),
                                      OutContext);

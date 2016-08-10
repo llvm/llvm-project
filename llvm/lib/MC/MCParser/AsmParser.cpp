@@ -1064,6 +1064,43 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
       return true;
     Res = MCUnaryExpr::createNot(Res, getContext());
     return false;
+  // MIPS unary expression operators. The lexer won't generate these tokens if
+  // MCAsmInfo::HasMipsExpressions is false for the target.
+  case AsmToken::PercentCall16:
+  case AsmToken::PercentCall_Hi:
+  case AsmToken::PercentCall_Lo:
+  case AsmToken::PercentDtprel_Hi:
+  case AsmToken::PercentDtprel_Lo:
+  case AsmToken::PercentGot:
+  case AsmToken::PercentGot_Disp:
+  case AsmToken::PercentGot_Hi:
+  case AsmToken::PercentGot_Lo:
+  case AsmToken::PercentGot_Ofst:
+  case AsmToken::PercentGot_Page:
+  case AsmToken::PercentGottprel:
+  case AsmToken::PercentGp_Rel:
+  case AsmToken::PercentHi:
+  case AsmToken::PercentHigher:
+  case AsmToken::PercentHighest:
+  case AsmToken::PercentLo:
+  case AsmToken::PercentNeg:
+  case AsmToken::PercentPcrel_Hi:
+  case AsmToken::PercentPcrel_Lo:
+  case AsmToken::PercentTlsgd:
+  case AsmToken::PercentTlsldm:
+  case AsmToken::PercentTprel_Hi:
+  case AsmToken::PercentTprel_Lo:
+    Lex(); // Eat the operator.
+    if (Lexer.isNot(AsmToken::LParen))
+      return TokError("expected '(' after operator");
+    Lex(); // Eat the operator.
+    if (parseExpression(Res, EndLoc))
+      return true;
+    if (Lexer.isNot(AsmToken::RParen))
+      return TokError("expected ')'");
+    Lex(); // Eat the operator.
+    Res = getTargetParser().createTargetUnaryExpr(Res, FirstTokenKind, Ctx);
+    return !Res;
   }
 }
 

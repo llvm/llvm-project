@@ -1253,7 +1253,7 @@ bool SampleProfileLoader::runOnFunction(Function &F) {
 }
 
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
-                                               AnalysisManager<Module> &AM) {
+                                               ModuleAnalysisManager &AM) {
 
   SampleProfileLoader SampleLoader(SampleProfileFile);
 

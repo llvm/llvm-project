@@ -670,14 +670,16 @@ void COFFDumper::printCOFFDebugDirectory() {
     W.printHex("AddressOfRawData", D.AddressOfRawData);
     W.printHex("PointerToRawData", D.PointerToRawData);
     if (D.Type == COFF::IMAGE_DEBUG_TYPE_CODEVIEW) {
-      const debug_pdb_info *PDBInfo;
+      const codeview::DebugInfo *DebugInfo;
       StringRef PDBFileName;
-      error(Obj->getDebugPDBInfo(&D, PDBInfo, PDBFileName));
+      error(Obj->getDebugPDBInfo(&D, DebugInfo, PDBFileName));
       DictScope PDBScope(W, "PDBInfo");
-      W.printHex("PDBSignature", PDBInfo->Signature);
-      W.printBinary("PDBGUID", makeArrayRef(PDBInfo->Guid));
-      W.printNumber("PDBAge", PDBInfo->Age);
-      W.printString("PDBFileName", PDBFileName);
+      W.printHex("PDBSignature", DebugInfo->Signature.CVSignature);
+      if (DebugInfo->Signature.CVSignature == OMF::Signature::PDB70) {
+        W.printBinary("PDBGUID", makeArrayRef(DebugInfo->PDB70.Signature));
+        W.printNumber("PDBAge", DebugInfo->PDB70.Age);
+        W.printString("PDBFileName", PDBFileName);
+      }
     } else {
       // FIXME: Type values of 12 and 13 are commonly observed but are not in
       // the documented type enum.  Figure out what they mean.

@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <map>
 #include <mutex>
+#include <sstream>
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Interpreter/Args.h"
@@ -2733,9 +2734,6 @@ ProcessGDBRemote::DoHalt (bool &caused_stop)
 {
     Error error;
 
-    bool timed_out = false;
-    std::unique_lock<std::recursive_mutex> lock;
-
     if (m_public_state.GetValue() == eStateAttaching)
     {
         // We are being asked to halt during an attach. We need to just close
@@ -2743,17 +2741,7 @@ ProcessGDBRemote::DoHalt (bool &caused_stop)
         m_gdb_comm.Disconnect();
     }
     else
-    {
-        if (!m_gdb_comm.SendInterrupt(lock, 2, timed_out))
-        {
-            if (timed_out)
-                error.SetErrorString("timed out sending interrupt packet");
-            else
-                error.SetErrorString("unknown error sending interrupt packet");
-        }
-
-        caused_stop = m_gdb_comm.GetInterruptWasSent ();
-    }
+        caused_stop = m_gdb_comm.Interrupt();
     return error;
 }
 
@@ -3906,7 +3894,8 @@ ProcessGDBRemote::AsyncThread (void *arg)
                                 if (process->GetTarget().GetNonStopModeEnabled())
                                 {
                                     // send the vCont packet
-                                    if (!process->GetGDBRemote().SendvContPacket(process, continue_cstr, continue_cstr_len, response))
+                                    if (!process->GetGDBRemote().SendvContPacket(
+                                            llvm::StringRef(continue_cstr, continue_cstr_len), response))
                                     {
                                         // Something went wrong
                                         done = true;
@@ -3916,7 +3905,9 @@ ProcessGDBRemote::AsyncThread (void *arg)
                                 // If in All-Stop-Mode
                                 else
                                 {
-                                    StateType stop_state = process->GetGDBRemote().SendContinuePacketAndWaitForResponse (process, continue_cstr, continue_cstr_len, response);
+                                    StateType stop_state = process->GetGDBRemote().SendContinuePacketAndWaitForResponse(
+                                        *process, *process->GetUnixSignals(),
+                                        llvm::StringRef(continue_cstr, continue_cstr_len), response);
 
                                     // We need to immediately clear the thread ID list so we are sure to get a valid list of threads.
                                     // The thread ID list might be contained within the "response", or the stop reply packet that
@@ -5077,6 +5068,144 @@ ProcessGDBRemote::ModulesDidLoad (ModuleList &module_list)
     m_gdb_comm.ServeSymbolLookups(this);
 }
 
+void
+ProcessGDBRemote::HandleAsyncStdout(llvm::StringRef out)
+{
+    AppendSTDOUT(out.data(), out.size());
+}
+
+static const char *end_delimiter = "--end--;";
+static const int end_delimiter_len = 8;
+
+void
+ProcessGDBRemote::HandleAsyncMisc(llvm::StringRef data)
+{
+    std::string input = data.str(); // '1' to move beyond 'A'
+    if (m_partial_profile_data.length() > 0)
+    {
+        m_partial_profile_data.append(input);
+        input = m_partial_profile_data;
+        m_partial_profile_data.clear();
+    }
+
+    size_t found, pos = 0, len = input.length();
+    while ((found = input.find(end_delimiter, pos)) != std::string::npos)
+    {
+        StringExtractorGDBRemote profileDataExtractor(input.substr(pos, found).c_str());
+        std::string profile_data = HarmonizeThreadIdsForProfileData(profileDataExtractor);
+        BroadcastAsyncProfileData(profile_data);
+
+        pos = found + end_delimiter_len;
+    }
+
+    if (pos < len)
+    {
+        // Last incomplete chunk.
+        m_partial_profile_data = input.substr(pos);
+    }
+}
+
+std::string
+ProcessGDBRemote::HarmonizeThreadIdsForProfileData(StringExtractorGDBRemote &profileDataExtractor)
+{
+    std::map<uint64_t, uint32_t> new_thread_id_to_used_usec_map;
+    std::stringstream final_output;
+    std::string name, value;
+
+    // Going to assuming thread_used_usec comes first, else bail out.
+    while (profileDataExtractor.GetNameColonValue(name, value))
+    {
+        if (name.compare("thread_used_id") == 0)
+        {
+            StringExtractor threadIDHexExtractor(value.c_str());
+            uint64_t thread_id = threadIDHexExtractor.GetHexMaxU64(false, 0);
+
+            bool has_used_usec = false;
+            uint32_t curr_used_usec = 0;
+            std::string usec_name, usec_value;
+            uint32_t input_file_pos = profileDataExtractor.GetFilePos();
+            if (profileDataExtractor.GetNameColonValue(usec_name, usec_value))
+            {
+                if (usec_name.compare("thread_used_usec") == 0)
+                {
+                    has_used_usec = true;
+                    curr_used_usec = strtoull(usec_value.c_str(), NULL, 0);
+                }
+                else
+                {
+                    // We didn't find what we want, it is probably
+                    // an older version. Bail out.
+                    profileDataExtractor.SetFilePos(input_file_pos);
+                }
+            }
+
+            if (has_used_usec)
+            {
+                uint32_t prev_used_usec = 0;
+                std::map<uint64_t, uint32_t>::iterator iterator = m_thread_id_to_used_usec_map.find(thread_id);
+                if (iterator != m_thread_id_to_used_usec_map.end())
+                {
+                    prev_used_usec = m_thread_id_to_used_usec_map[thread_id];
+                }
+
+                uint32_t real_used_usec = curr_used_usec - prev_used_usec;
+                // A good first time record is one that runs for at least 0.25 sec
+                bool good_first_time = (prev_used_usec == 0) && (real_used_usec > 250000);
+                bool good_subsequent_time =
+                    (prev_used_usec > 0) && ((real_used_usec > 0) || (HasAssignedIndexIDToThread(thread_id)));
+
+                if (good_first_time || good_subsequent_time)
+                {
+                    // We try to avoid doing too many index id reservation,
+                    // resulting in fast increase of index ids.
+
+                    final_output << name << ":";
+                    int32_t index_id = AssignIndexIDToThread(thread_id);
+                    final_output << index_id << ";";
+
+                    final_output << usec_name << ":" << usec_value << ";";
+                }
+                else
+                {
+                    // Skip past 'thread_used_name'.
+                    std::string local_name, local_value;
+                    profileDataExtractor.GetNameColonValue(local_name, local_value);
+                }
+
+                // Store current time as previous time so that they can be compared later.
+                new_thread_id_to_used_usec_map[thread_id] = curr_used_usec;
+            }
+            else
+            {
+                // Bail out and use old string.
+                final_output << name << ":" << value << ";";
+            }
+        }
+        else
+        {
+            final_output << name << ":" << value << ";";
+        }
+    }
+    final_output << end_delimiter;
+    m_thread_id_to_used_usec_map = new_thread_id_to_used_usec_map;
+
+    return final_output.str();
+}
+
+void
+ProcessGDBRemote::HandleStopReply()
+{
+    if (GetStopID() != 0)
+        return;
+
+    if (GetID() == LLDB_INVALID_PROCESS_ID)
+    {
+        lldb::pid_t pid = m_gdb_comm.GetCurrentProcessID();
+        if (pid != LLDB_INVALID_PROCESS_ID)
+            SetID(pid);
+    }
+    BuildDynamicRegisterInfo(true);
+}
 
 class CommandObjectProcessGDBRemoteSpeedTest: public CommandObjectParsed
 {
@@ -5284,7 +5413,7 @@ public:
 
                 if (strstr(packet_cstr, "qGetProfileData") != NULL)
                 {
-                    response_str = process->GetGDBRemote().HarmonizeThreadIdsForProfileData(process, response);
+                    response_str = process->HarmonizeThreadIdsForProfileData(response);
                 }
 
                 if (response_str.empty())

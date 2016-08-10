@@ -43,7 +43,7 @@ namespace process_gdb_remote {
 
 class ThreadGDBRemote;
 
-class ProcessGDBRemote : public Process
+class ProcessGDBRemote : public Process, private GDBRemoteClientBase::ContinueDelegate
 {
 public:
     ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
@@ -273,6 +273,9 @@ public:
     StructuredData::ObjectSP
     GetSharedCacheInfo () override;
 
+    std::string
+    HarmonizeThreadIdsForProfileData(StringExtractorGDBRemote &inputStringExtractor);
+
 protected:
     friend class ThreadGDBRemote;
     friend class GDBRemoteCommunicationClient;
@@ -485,11 +488,24 @@ private:
     //------------------------------------------------------------------
     // For ProcessGDBRemote only
     //------------------------------------------------------------------
+    std::string m_partial_profile_data;
+    std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
+
     static bool
     NewThreadNotifyBreakpointHit (void *baton,
                          StoppointCallbackContext *context,
                          lldb::user_id_t break_id,
                          lldb::user_id_t break_loc_id);
+
+    //------------------------------------------------------------------
+    // ContinueDelegate interface
+    //------------------------------------------------------------------
+    void
+    HandleAsyncStdout(llvm::StringRef out) override;
+    void
+    HandleAsyncMisc(llvm::StringRef data) override;
+    void
+    HandleStopReply() override;
 
     DISALLOW_COPY_AND_ASSIGN (ProcessGDBRemote);
 };

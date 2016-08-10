@@ -85,12 +85,6 @@ protected:
   /// directive for emitting thread local BSS Symbols.  Default is false.
   bool HasMachoTBSSDirective;
 
-  /// True if the compiler should emit a ".reference .constructors_used" or
-  /// ".reference .destructors_used" directive after the static ctor/dtor
-  /// list.  This directive is only emitted in Static relocation model.  Default
-  /// is false.
-  bool HasStaticCtorDtorReferenceInStaticMode;
-
   /// This is the maximum possible length of an instruction, which is needed to
   /// compute the size of an inline asm.  Defaults to 4.
   unsigned MaxInstLength;
@@ -369,6 +363,10 @@ protected:
   // X86_64 ELF.
   bool RelaxELFRelocations = true;
 
+  // If true, then the lexer and expression parser will support %neg(),
+  // %hi(), and similar unary operators.
+  bool HasMipsExpressions = false;
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -449,9 +447,6 @@ public:
 
   bool hasMachoZeroFillDirective() const { return HasMachoZeroFillDirective; }
   bool hasMachoTBSSDirective() const { return HasMachoTBSSDirective; }
-  bool hasStaticCtorDtorReferenceInStaticMode() const {
-    return HasStaticCtorDtorReferenceInStaticMode;
-  }
   unsigned getMaxInstLength() const { return MaxInstLength; }
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
@@ -591,6 +586,7 @@ public:
 
   bool canRelaxRelocations() const { return RelaxELFRelocations; }
   void setRelaxELFRelocations(bool V) { RelaxELFRelocations = V; }
+  bool hasMipsExpressions() const { return HasMipsExpressions; }
 };
 }
 

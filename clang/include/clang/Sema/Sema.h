@@ -4954,16 +4954,41 @@ public:
                                        bool *CanCorrect = nullptr);
   NamedDecl *FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS);
 
+  /// \brief Keeps information about an identifier in a nested-name-spec.
+  ///
+  struct NestedNameSpecInfo {
+    /// \brief The type of the object, if we're parsing nested-name-specifier in
+    /// a member access expression.
+    ParsedType ObjectType;
+
+    /// \brief The identifier preceding the '::'.
+    IdentifierInfo *Identifier;
+
+    /// \brief The location of the identifier.
+    SourceLocation IdentifierLoc;
+
+    /// \brief The location of the '::'.
+    SourceLocation CCLoc;
+
+    /// \brief Creates info object for the most typical case.
+    NestedNameSpecInfo(IdentifierInfo *II, SourceLocation IdLoc,
+             SourceLocation ColonColonLoc, ParsedType ObjectType = ParsedType())
+      : ObjectType(ObjectType), Identifier(II), IdentifierLoc(IdLoc),
+        CCLoc(ColonColonLoc) {
+    }
+
+    NestedNameSpecInfo(IdentifierInfo *II, SourceLocation IdLoc,
+                       SourceLocation ColonColonLoc, QualType ObjectType)
+      : ObjectType(ParsedType::make(ObjectType)), Identifier(II),
+        IdentifierLoc(IdLoc), CCLoc(ColonColonLoc) {
+    }
+  };
+
   bool isNonTypeNestedNameSpecifier(Scope *S, CXXScopeSpec &SS,
-                                    SourceLocation IdLoc,
-                                    IdentifierInfo &II,
-                                    ParsedType ObjectType);
+                                    NestedNameSpecInfo &IdInfo);
 
   bool BuildCXXNestedNameSpecifier(Scope *S,
-                                   IdentifierInfo &Identifier,
-                                   SourceLocation IdentifierLoc,
-                                   SourceLocation CCLoc,
-                                   QualType ObjectType,
+                                   NestedNameSpecInfo &IdInfo,
                                    bool EnteringContext,
                                    CXXScopeSpec &SS,
                                    NamedDecl *ScopeLookupResult,
@@ -4974,14 +4999,8 @@ public:
   ///
   /// \param S The scope in which this nested-name-specifier occurs.
   ///
-  /// \param Identifier The identifier preceding the '::'.
-  ///
-  /// \param IdentifierLoc The location of the identifier.
-  ///
-  /// \param CCLoc The location of the '::'.
-  ///
-  /// \param ObjectType The type of the object, if we're parsing
-  /// nested-name-specifier in a member access expression.
+  /// \param IdInfo Parser information about an identifier in the
+  /// nested-name-spec.
   ///
   /// \param EnteringContext Whether we're entering the context nominated by
   /// this nested-name-specifier.
@@ -5000,10 +5019,7 @@ public:
   ///
   /// \returns true if an error occurred, false otherwise.
   bool ActOnCXXNestedNameSpecifier(Scope *S,
-                                   IdentifierInfo &Identifier,
-                                   SourceLocation IdentifierLoc,
-                                   SourceLocation CCLoc,
-                                   ParsedType ObjectType,
+                                   NestedNameSpecInfo &IdInfo,
                                    bool EnteringContext,
                                    CXXScopeSpec &SS,
                                    bool ErrorRecoveryLookup = false,
@@ -5016,10 +5032,7 @@ public:
                                            SourceLocation ColonColonLoc);
 
   bool IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
-                                 IdentifierInfo &Identifier,
-                                 SourceLocation IdentifierLoc,
-                                 SourceLocation ColonLoc,
-                                 ParsedType ObjectType,
+                                 NestedNameSpecInfo &IdInfo,
                                  bool EnteringContext);
 
   /// \brief The parser has parsed a nested-name-specifier
@@ -9130,8 +9143,7 @@ public:
     CFP_Never,      // Invalid caller/callee combination.
     CFP_WrongSide,  // Calls from host-device to host or device
                     // function that do not match current compilation
-                    // mode. Only in effect if
-                    // LangOpts.CUDADisableTargetCallChecks is true.
+                    // mode.
     CFP_HostDevice, // Any calls to host/device functions.
     CFP_SameSide,   // Calls from host-device to host or device
                     // function matching current compilation mode.
@@ -9149,9 +9161,13 @@ public:
                                                 const FunctionDecl *Callee);
 
   /// Determines whether Caller may invoke Callee, based on their CUDA
-  /// host/device attributes.  Returns true if the call is not allowed.
-  bool CheckCUDATarget(const FunctionDecl *Caller, const FunctionDecl *Callee) {
-    return IdentifyCUDAPreference(Caller, Callee) == CFP_Never;
+  /// host/device attributes.  Returns false if the call is not allowed.
+  ///
+  /// Note: Will return true for CFP_WrongSide calls.  These may appear in
+  /// semantically correct CUDA programs, but only if they're never codegen'ed.
+  bool IsAllowedCUDACall(const FunctionDecl *Caller,
+                         const FunctionDecl *Callee) {
+    return IdentifyCUDAPreference(Caller, Callee) != CFP_Never;
   }
 
   /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to FD,

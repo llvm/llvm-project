@@ -338,6 +338,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
+    IO.mapOptional("SpaceAfterTemplateKeyword", Style.SpaceAfterTemplateKeyword);
     IO.mapOptional("SpaceBeforeAssignmentOperators",
                    Style.SpaceBeforeAssignmentOperators);
     IO.mapOptional("SpaceBeforeParens", Style.SpaceBeforeParens);
@@ -552,6 +553,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.SpacesInContainerLiterals = true;
   LLVMStyle.SpacesInCStyleCastParentheses = false;
   LLVMStyle.SpaceAfterCStyleCast = false;
+  LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
   LLVMStyle.SpacesInAngles = false;
@@ -663,6 +665,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.ObjCSpaceBeforeProtocolList = false;
   MozillaStyle.PenaltyReturnTypeOnItsOwnLine = 200;
   MozillaStyle.PointerAlignment = FormatStyle::PAS_Left;
+  MozillaStyle.SpaceAfterTemplateKeyword = false;
   return MozillaStyle;
 }
 

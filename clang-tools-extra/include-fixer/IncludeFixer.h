@@ -30,11 +30,12 @@ namespace include_fixer {
 class IncludeFixerActionFactory : public clang::tooling::ToolAction {
 public:
   /// \param SymbolIndexMgr A source for matching symbols to header files.
-  /// \param Context A context for the symbol being queried.
+  /// \param Contexts The contexts for the symbols being queried.
   /// \param StyleName Fallback style for reformatting.
   /// \param MinimizeIncludePaths whether inserted include paths are optimized.
   IncludeFixerActionFactory(SymbolIndexManager &SymbolIndexMgr,
-                            IncludeFixerContext &Context, StringRef StyleName,
+                            std::vector<IncludeFixerContext> &Contexts,
+                            StringRef StyleName,
                             bool MinimizeIncludePaths = true);
 
   ~IncludeFixerActionFactory() override;
@@ -49,8 +50,8 @@ private:
   /// The client to use to find cross-references.
   SymbolIndexManager &SymbolIndexMgr;
 
-  /// The context that contains all information about the symbol being queried.
-  IncludeFixerContext &Context;
+  /// Multiple contexts for files being processed.
+  std::vector<IncludeFixerContext> &Contexts;
 
   /// Whether inserted include paths should be optimized.
   bool MinimizeIncludePaths;
@@ -65,7 +66,6 @@ private:
 /// first header for insertion.
 ///
 /// \param Code The source code.
-/// \param FilePath The source file path.
 /// \param Context The context which contains all information for creating
 /// include-fixer replacements.
 /// \param Style clang-format style being used.
@@ -76,7 +76,7 @@ private:
 /// qualifiers on success; otherwise, an llvm::Error carrying llvm::StringError
 /// is returned.
 llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
-    StringRef Code, StringRef FilePath, const IncludeFixerContext &Context,
+    StringRef Code, const IncludeFixerContext &Context,
     const format::FormatStyle &Style = format::getLLVMStyle(),
     bool AddQualifiers = true);
 

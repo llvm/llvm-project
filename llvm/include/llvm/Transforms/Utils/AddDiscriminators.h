@@ -22,7 +22,7 @@ namespace llvm {
 
 class AddDiscriminatorsPass : public PassInfoMixin<AddDiscriminatorsPass> {
 public:
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm
 

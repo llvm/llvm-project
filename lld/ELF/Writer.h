@@ -23,9 +23,8 @@ template <class ELFT> class OutputSectionBase;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SymbolTable;
-template <class ELFT> void writeResult(SymbolTable<ELFT> *Symtab);
+template <class ELFT> void writeResult();
 template <class ELFT> void markLive();
-template <class ELFT> bool isOutputDynamic();
 template <class ELFT> bool isRelroSection(OutputSectionBase<ELFT> *Sec);
 
 // This describes a program header entry.
@@ -45,6 +44,8 @@ template <class ELFT>
 llvm::StringRef getOutputSectionName(InputSectionBase<ELFT> *S);
 
 template <class ELFT> void reportDiscarded(InputSectionBase<ELFT> *IS);
+
+template <class ELFT> uint32_t getMipsEFlags();
 }
 }
 

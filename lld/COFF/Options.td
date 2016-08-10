@@ -62,7 +62,9 @@ def deffile : Joined<["/", "-"], "def:">,
     HelpText<"Use module-definition file">;
 
 def debug : F<"debug">, HelpText<"Embed a symbol table in the image">;
+def debugtype : P<"debugtype", "Debug Info Options">;
 def dll : F<"dll">, HelpText<"Create a DLL">;
+def driver : P<"driver", "Generate a Windows NT Kernel Mode Driver">;
 def nodefaultlib_all : F<"nodefaultlib">;
 def noentry : F<"noentry">;
 def profile : F<"profile">;

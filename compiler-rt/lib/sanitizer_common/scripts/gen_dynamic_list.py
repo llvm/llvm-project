@@ -42,11 +42,12 @@ versioned_functions = set(['memcpy', 'pthread_attr_getaffinity_np',
 
 def get_global_functions(library):
   functions = []
-  nm_proc = subprocess.Popen(['nm', library], stdout=subprocess.PIPE,
+  nm = os.environ.get('NM', 'nm')
+  nm_proc = subprocess.Popen([nm, library], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
   nm_out = nm_proc.communicate()[0].decode().split('\n')
   if nm_proc.returncode != 0:
-    raise subprocess.CalledProcessError(nm_proc.returncode, 'nm')
+    raise subprocess.CalledProcessError(nm_proc.returncode, nm)
   func_symbols = ['T', 'W']
   # On PowerPC, nm prints function descriptors from .data section.
   if os.uname()[4] in ["powerpc", "ppc64"]:

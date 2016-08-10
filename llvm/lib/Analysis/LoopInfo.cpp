@@ -651,7 +651,7 @@ void LoopInfo::markAsRemoved(Loop *Unloop) {
 
 char LoopAnalysis::PassID;
 
-LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: Currently we create a LoopInfo from scratch for every function.
   // This may prove to be too wasteful due to deallocating and re-allocating
   // memory each time for the underlying map and vector datastructures. At some
@@ -664,7 +664,7 @@ LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
 }
 
 PreservedAnalyses LoopPrinterPass::run(Function &F,
-                                       AnalysisManager<Function> &AM) {
+                                       FunctionAnalysisManager &AM) {
   AM.getResult<LoopAnalysis>(F).print(OS);
   return PreservedAnalyses::all();
 }
@@ -720,7 +720,7 @@ void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
 }
 
 PreservedAnalyses LoopVerifierPass::run(Function &F,
-                                        AnalysisManager<Function> &AM) {
+                                        FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   LI.verify();
   return PreservedAnalyses::all();

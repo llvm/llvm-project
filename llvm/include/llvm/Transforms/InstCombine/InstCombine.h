@@ -43,7 +43,7 @@ public:
     return *this;
   }
 
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief The legacy pass manager's instcombine pass.

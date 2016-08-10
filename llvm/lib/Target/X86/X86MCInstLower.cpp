@@ -1105,7 +1105,6 @@ void X86AsmPrinter::EmitXRayTable() {
       Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
                                          ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
                                          Fn->getComdat()->getName());
-      OutStreamer->SwitchSection(Section);
     } else {
       Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
                                          ELF::SHF_ALLOC);

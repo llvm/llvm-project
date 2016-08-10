@@ -1058,7 +1058,7 @@ Pass *llvm::createSimpleLoopUnrollPass() {
   return llvm::createLoopUnrollPass(-1, -1, 0, 0);
 }
 
-PreservedAnalyses LoopUnrollPass::run(Loop &L, AnalysisManager<Loop> &AM) {
+PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM) {
   const auto &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();

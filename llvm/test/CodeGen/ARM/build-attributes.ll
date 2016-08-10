@@ -147,6 +147,9 @@
 ; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=RELOC-OTHER
 ; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=PCS-R9-USE
 ; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+reserve-r9,+strict-align | FileCheck %s --check-prefix=PCS-R9-RESERVE
+; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align -relocation-model=ropi | FileCheck %s --check-prefix=RELOC-ROPI
+; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align -relocation-model=rwpi | FileCheck %s --check-prefix=RELOC-RWPI
+; RUN: llc < %s -mtriple=arm-none-linux-gnueabi -mattr=+strict-align -relocation-model=ropi-rwpi | FileCheck %s --check-prefix=RELOC-ROPI-RWPI
 
 ; ARMv8.1a (AArch32)
 ; RUN: llc < %s -mtriple=armv8.1a-none-linux-gnueabi | FileCheck %s --check-prefix=NO-STRICT-ALIGN
@@ -1522,6 +1525,15 @@
 ; RELOC-PIC:  .eabi_attribute 16, 1
 ; RELOC-PIC:  .eabi_attribute 17, 2
 ; RELOC-OTHER:  .eabi_attribute 17, 1
+; RELOC-ROPI-NOT:  .eabi_attribute 15,
+; RELOC-ROPI:      .eabi_attribute 16, 1
+; RELOC-ROPI:      .eabi_attribute 17, 1
+; RELOC-RWPI:      .eabi_attribute 15, 2
+; RELOC-RWPI-NOT:  .eabi_attribute 16,
+; RELOC-RWPI:      .eabi_attribute 17, 1
+; RELOC-ROPI-RWPI: .eabi_attribute 15, 2
+; RELOC-ROPI-RWPI: .eabi_attribute 16, 1
+; RELOC-ROPI-RWPI:  .eabi_attribute 17, 1
 
 ; PCS-R9-USE:  .eabi_attribute 14, 0
 ; PCS-R9-RESERVE:  .eabi_attribute 14, 3

@@ -529,7 +529,7 @@ DWARFDebugLine::ParseStatementTable
 
     const dw_offset_t debug_line_offset = *offset_ptr;
 
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "DWARFDebugLine::ParseStatementTable (.debug_line[0x%8.8x])",
                         debug_line_offset);
 

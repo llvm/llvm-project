@@ -134,6 +134,11 @@ void SystemZInstPrinter::printU32ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<32>(MI, OpNum, O);
 }
 
+void SystemZInstPrinter::printU48ImmOperand(const MCInst *MI, int OpNum,
+                                            raw_ostream &O) {
+  printUImmOperand<48>(MI, OpNum, O);
+}
+
 void SystemZInstPrinter::printAccessRegOperand(const MCInst *MI, int OpNum,
                                                raw_ostream &O) {
   uint64_t Value = MI->getOperand(OpNum).getImm();

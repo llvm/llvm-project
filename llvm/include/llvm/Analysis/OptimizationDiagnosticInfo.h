@@ -16,11 +16,11 @@
 #define LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-class BlockFrequencyInfo;
 class DebugLoc;
 class Function;
 class LLVMContext;
@@ -29,10 +29,29 @@ class Pass;
 class Twine;
 class Value;
 
+/// The optimization diagnostic interface.
+///
+/// It allows reporting when optimizations are performed and when they are not
+/// along with the reasons for it.  Hotness information of the corresponding
+/// code region can be included in the remark if DiagnosticHotnessRequested is
+/// enabled in the LLVM context.
 class OptimizationRemarkEmitter {
 public:
   OptimizationRemarkEmitter(Function *F, BlockFrequencyInfo *BFI)
       : F(F), BFI(BFI) {}
+
+  /// \brief This variant can be used to generate ORE on demand (without the
+  /// analysis pass).
+  ///
+  /// Note that this ctor has a very different cost depending on whether
+  /// F->getContext().getDiagnosticHotnessRequested() is on or not.  If it's off
+  /// the operation is free.
+  ///
+  /// Whereas if DiagnosticHotnessRequested is on, it is fairly expensive
+  /// operation since BFI and all its required analyses are computed.  This is
+  /// for example useful for CGSCC passes that can't use function analyses
+  /// passes in the old PM.
+  OptimizationRemarkEmitter(Function *F);
 
   OptimizationRemarkEmitter(OptimizationRemarkEmitter &&Arg)
       : F(Arg.F), BFI(Arg.BFI) {}
@@ -149,6 +168,9 @@ private:
 
   BlockFrequencyInfo *BFI;
 
+  /// If we generate BFI on demand, we need to free it when ORE is freed.
+  std::unique_ptr<BlockFrequencyInfo> OwnedBFI;
+
   Optional<uint64_t> computeHotness(const Value *V);
 
   OptimizationRemarkEmitter(const OptimizationRemarkEmitter &) = delete;
@@ -183,7 +205,7 @@ public:
   typedef OptimizationRemarkEmitter Result;
 
   /// \brief Run the analysis pass over a function and produce BFI.
-  Result run(Function &F, AnalysisManager<Function> &AM);
+  Result run(Function &F, FunctionAnalysisManager &AM);
 };
 }
 #endif // LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H

@@ -28,6 +28,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Stream.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/UnwindPlan.h"
 
 #include "llvm/ADT/STLExtras.h"

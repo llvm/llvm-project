@@ -49,7 +49,12 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     unsigned Size = DL->getTypeSizeInBits(Val.getType());
     unsigned VReg = MRI->createGenericVirtualRegister(Size);
     ValReg = VReg;
-    assert(!isa<Constant>(Val) && "Not yet implemented");
+
+    if (auto CV = dyn_cast<Constant>(&Val)) {
+      bool Success = translate(*CV, VReg);
+      if (!Success)
+        report_fatal_error("unable to translate constant");
+    }
   }
   return ValReg;
 }
@@ -312,6 +317,17 @@ bool IRTranslator::translate(const Instruction &Inst) {
   }
 }
 
+bool IRTranslator::translate(const Constant &C, unsigned Reg) {
+  if (auto CI = dyn_cast<ConstantInt>(&C))
+    EntryBuilder.buildConstant(LLT{*CI->getType()}, Reg, CI->getZExtValue());
+  else if (isa<UndefValue>(C))
+    EntryBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Reg);
+  else
+    llvm_unreachable("unhandled constant kind");
+
+  return true;
+}
+
 
 void IRTranslator::finalize() {
   // Release the memory used by the different maps we
@@ -326,6 +342,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     return false;
   CLI = MF.getSubtarget().getCallLowering();
   MIRBuilder.setMF(MF);
+  EntryBuilder.setMF(MF);
   MRI = &MF.getRegInfo();
   DL = &F.getParent()->getDataLayout();
 
@@ -341,6 +358,13 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
       CLI->lowerFormalArguments(MIRBuilder, F.getArgumentList(), VRegArgs);
   if (!Succeeded)
     report_fatal_error("Unable to lower arguments");
+
+  // Now that we've got the ABI handling code, it's safe to set a location for
+  // any Constants we find in the IR.
+  if (MBB.empty())
+    EntryBuilder.setMBB(MBB);
+  else
+    EntryBuilder.setInstr(MBB.back(), /* Before */ false);
 
   for (const BasicBlock &BB: F) {
     MachineBasicBlock &MBB = getOrCreateBB(BB);

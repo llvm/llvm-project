@@ -799,7 +799,7 @@ bool LazyValueInfoCache::solveBlockValueNonLocal(LVILatticeVal &BBLV,
     if (Result.isOverdefined()) {
       DEBUG(dbgs() << " compute BB '" << BB->getName()
             << "' - overdefined because of pred (non local).\n");
-      // Bofore giving up, see if we can prove the pointer non-null local to
+      // Before giving up, see if we can prove the pointer non-null local to
       // this particular block.
       if (Val->getType()->isPointerTy() &&
           isObjectDereferencedInBlock(Val, BB)) {
@@ -1183,40 +1183,61 @@ bool getValueFromCondition(Value *Val, Value *Cond, LVILatticeVal &Result,
   if (!ICI)
     return false;
 
-  if (isa<Constant>(ICI->getOperand(1))) {
-    if (ICI->isEquality() && ICI->getOperand(0) == Val) {
+  Value *LHS = ICI->getOperand(0);
+  Value *RHS = ICI->getOperand(1);
+  CmpInst::Predicate Predicate = ICI->getPredicate();
+
+  if (isa<Constant>(RHS)) {
+    if (ICI->isEquality() && LHS == Val) {
       // We know that V has the RHS constant if this is a true SETEQ or
       // false SETNE.
-      if (isTrueDest == (ICI->getPredicate() == ICmpInst::ICMP_EQ))
-        Result = LVILatticeVal::get(cast<Constant>(ICI->getOperand(1)));
+      if (isTrueDest == (Predicate == ICmpInst::ICMP_EQ))
+        Result = LVILatticeVal::get(cast<Constant>(RHS));
       else
-        Result = LVILatticeVal::getNot(cast<Constant>(ICI->getOperand(1)));
+        Result = LVILatticeVal::getNot(cast<Constant>(RHS));
       return true;
     }
+  }
 
-    // Recognize the range checking idiom that InstCombine produces.
-    // (X-C1) u< C2 --> [C1, C1+C2)
-    ConstantInt *NegOffset = nullptr;
-    if (ICI->getPredicate() == ICmpInst::ICMP_ULT)
-      match(ICI->getOperand(0), m_Add(m_Specific(Val),
-                                      m_ConstantInt(NegOffset)));
+  if (!Val->getType()->isIntegerTy())
+    return false;
 
-    ConstantInt *CI = dyn_cast<ConstantInt>(ICI->getOperand(1));
-    if (CI && (ICI->getOperand(0) == Val || NegOffset)) {
-      // Calculate the range of values that are allowed by the comparison
-      ConstantRange CmpRange(CI->getValue());
-      ConstantRange TrueValues =
-          ConstantRange::makeAllowedICmpRegion(ICI->getPredicate(), CmpRange);
+  // Use ConstantRange::makeAllowedICmpRegion in order to determine the possible
+  // range of Val guaranteed by the condition. Recognize comparisons in the from
+  // of:
+  //  icmp <pred> Val, ...
+  //  icmp ult (add Val, Offset), ...
+  // The latter is the range checking idiom that InstCombine produces. Subtract
+  // the offset from the allowed range for RHS in this case.
 
-      if (NegOffset) // Apply the offset from above.
-        TrueValues = TrueValues.subtract(NegOffset->getValue());
+  // Val or (add Val, Offset) can be on either hand of the comparison
+  if (LHS != Val && !match(LHS, m_Add(m_Specific(Val), m_ConstantInt()))) {
+    std::swap(LHS, RHS);
+    Predicate = CmpInst::getSwappedPredicate(Predicate);
+  }
 
-      // If we're interested in the false dest, invert the condition.
-      if (!isTrueDest) TrueValues = TrueValues.inverse();
+  ConstantInt *Offset = nullptr;
+  if (Predicate == ICmpInst::ICMP_ULT)
+    match(LHS, m_Add(m_Specific(Val), m_ConstantInt(Offset)));
 
-      Result = LVILatticeVal::getRange(std::move(TrueValues));
-      return true;
-    }
+  if (LHS == Val || Offset) {
+    // Calculate the range of values that are allowed by the comparison
+    ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+                           /*isFullSet=*/true);
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
+      RHSRange = ConstantRange(CI->getValue());
+
+    // If we're interested in the false dest, invert the condition
+    CmpInst::Predicate Pred =
+            isTrueDest ? Predicate : CmpInst::getInversePredicate(Predicate);
+    ConstantRange TrueValues =
+            ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+
+    if (Offset) // Apply the offset from above.
+      TrueValues = TrueValues.subtract(Offset->getValue());
+
+    Result = LVILatticeVal::getRange(std::move(TrueValues));
+    return true;
   }
 
   return false;

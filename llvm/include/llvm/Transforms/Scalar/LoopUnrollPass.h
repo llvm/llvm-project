@@ -11,6 +11,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOOPUNROLLPASS_H
 
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -21,7 +22,7 @@ struct LoopUnrollPass : public PassInfoMixin<LoopUnrollPass> {
   Optional<bool> ProvidedAllowPartial;
   Optional<bool> ProvidedRuntime;
 
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM);
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM);
 };
 } // end namespace llvm
 

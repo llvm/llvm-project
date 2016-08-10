@@ -48,7 +48,7 @@ public:
                        [](BasicBlock *BB) { return BB; });
     if (BBI != L->blocks().end() &&
         isFunctionInPrintList((*BBI)->getParent()->getName())) {
-      AnalysisManager<Loop> DummyLAM;
+      LoopAnalysisManager DummyLAM;
       P.run(*L, DummyLAM);
     }
     return false;

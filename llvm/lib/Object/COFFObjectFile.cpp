@@ -487,17 +487,18 @@ std::error_code COFFObjectFile::getHintName(uint32_t Rva, uint16_t &Hint,
   return std::error_code();
 }
 
-std::error_code COFFObjectFile::getDebugPDBInfo(const debug_directory *DebugDir,
-                                                const debug_pdb_info *&PDBInfo,
-                                                StringRef &PDBFileName) const {
+std::error_code
+COFFObjectFile::getDebugPDBInfo(const debug_directory *DebugDir,
+                                const codeview::DebugInfo *&PDBInfo,
+                                StringRef &PDBFileName) const {
   ArrayRef<uint8_t> InfoBytes;
   if (std::error_code EC = getRvaAndSizeAsBytes(
           DebugDir->AddressOfRawData, DebugDir->SizeOfData, InfoBytes))
     return EC;
-  if (InfoBytes.size() < sizeof(debug_pdb_info) + 1)
+  if (InfoBytes.size() < sizeof(*PDBInfo) + 1)
     return object_error::parse_failed;
-  PDBInfo = reinterpret_cast<const debug_pdb_info *>(InfoBytes.data());
-  InfoBytes = InfoBytes.drop_front(sizeof(debug_pdb_info));
+  PDBInfo = reinterpret_cast<const codeview::DebugInfo *>(InfoBytes.data());
+  InfoBytes = InfoBytes.drop_front(sizeof(*PDBInfo));
   PDBFileName = StringRef(reinterpret_cast<const char *>(InfoBytes.data()),
                           InfoBytes.size());
   // Truncate the name at the first null byte. Ignore any padding.
@@ -505,8 +506,9 @@ std::error_code COFFObjectFile::getDebugPDBInfo(const debug_directory *DebugDir,
   return std::error_code();
 }
 
-std::error_code COFFObjectFile::getDebugPDBInfo(const debug_pdb_info *&PDBInfo,
-                                                StringRef &PDBFileName) const {
+std::error_code
+COFFObjectFile::getDebugPDBInfo(const codeview::DebugInfo *&PDBInfo,
+                                StringRef &PDBFileName) const {
   for (const debug_directory &D : debug_directories())
     if (D.Type == COFF::IMAGE_DEBUG_TYPE_CODEVIEW)
       return getDebugPDBInfo(&D, PDBInfo, PDBFileName);

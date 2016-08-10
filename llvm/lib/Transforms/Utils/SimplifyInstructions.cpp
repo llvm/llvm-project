@@ -126,7 +126,7 @@ FunctionPass *llvm::createInstructionSimplifierPass() {
 }
 
 PreservedAnalyses InstSimplifierPass::run(Function &F,
-                                      AnalysisManager<Function> &AM) {
+                                      FunctionAnalysisManager &AM) {
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);

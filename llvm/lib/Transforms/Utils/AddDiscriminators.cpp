@@ -249,7 +249,7 @@ bool AddDiscriminatorsLegacyPass::runOnFunction(Function &F) {
   return addDiscriminators(F);
 }
 PreservedAnalyses AddDiscriminatorsPass::run(Function &F,
-                                             AnalysisManager<Function> &AM) {
+                                             FunctionAnalysisManager &AM) {
   if (!addDiscriminators(F))
     return PreservedAnalyses::all();
 

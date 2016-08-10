@@ -55,7 +55,7 @@ class TypeBasedAA : public AnalysisInfoMixin<TypeBasedAA> {
 public:
   typedef TypeBasedAAResult Result;
 
-  TypeBasedAAResult run(Function &F, AnalysisManager<Function> &AM);
+  TypeBasedAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the TypeBasedAAResult object.

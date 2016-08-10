@@ -1025,6 +1025,8 @@ public:
 #endif
     return Result;
   }
+
+  void verify(const MemorySSA *MSSA) { assert(MSSA == &this->MSSA); }
 };
 
 struct RenamePassData {
@@ -1104,6 +1106,11 @@ public:
   /// earliest-MemoryAccess-we-can-optimize-to". This is necessary if we're
   /// going to have DT updates, if we remove MemoryAccesses, etc.
   void resetClobberWalker() { Walker.reset(); }
+
+  void verify(const MemorySSA *MSSA) override {
+    MemorySSAWalker::verify(MSSA);
+    Walker.verify(MSSA);
+  }
 };
 
 /// \brief Rename a single basic block into MemorySSA form.
@@ -1231,19 +1238,6 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
   buildMemorySSA();
 }
 
-MemorySSA::MemorySSA(MemorySSA &&MSSA)
-    : AA(MSSA.AA), DT(MSSA.DT), F(MSSA.F),
-      ValueToMemoryAccess(std::move(MSSA.ValueToMemoryAccess)),
-      PerBlockAccesses(std::move(MSSA.PerBlockAccesses)),
-      LiveOnEntryDef(std::move(MSSA.LiveOnEntryDef)),
-      BlockNumberingValid(std::move(MSSA.BlockNumberingValid)),
-      BlockNumbering(std::move(MSSA.BlockNumbering)),
-      Walker(std::move(MSSA.Walker)), NextID(MSSA.NextID) {
-  // Update the Walker MSSA pointer so it doesn't point to the moved-from MSSA
-  // object any more.
-  Walker->MSSA = this;
-}
-
 MemorySSA::~MemorySSA() {
   // Drop all our references
   for (const auto &Pair : PerBlockAccesses)
@@ -1288,6 +1282,7 @@ private:
     // Note: Correctness depends on this being initialized to 0, which densemap
     // does
     unsigned long LowerBound;
+    const BasicBlock *LowerBoundBlock;
     // This is where the last walk for this memory location ended.
     unsigned long LastKill;
     bool LastKillValid;
@@ -1333,7 +1328,6 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       VersionStack.pop_back();
     ++PopEpoch;
   }
-
   for (MemoryAccess &MA : *Accesses) {
     auto *MU = dyn_cast<MemoryUse>(&MA);
     if (!MU) {
@@ -1355,13 +1349,24 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     if (LocInfo.PopEpoch != PopEpoch) {
       LocInfo.PopEpoch = PopEpoch;
       LocInfo.StackEpoch = StackEpoch;
-      // If the lower bound was in the info we popped, we have to reset it.
-      if (LocInfo.LowerBound >= VersionStack.size()) {
+      // If the lower bound was in something that no longer dominates us, we
+      // have to reset it.
+      // We can't simply track stack size, because the stack may have had
+      // pushes/pops in the meantime.
+      // XXX: This is non-optimal, but only is slower cases with heavily
+      // branching dominator trees.  To get the optimal number of queries would
+      // be to make lowerbound and lastkill a per-loc stack, and pop it until
+      // the top of that stack dominates us.  This does not seem worth it ATM.
+      // A much cheaper optimization would be to always explore the deepest
+      // branch of the dominator tree first. This will guarantee this resets on
+      // the smallest set of blocks.
+      if (LocInfo.LowerBoundBlock && LocInfo.LowerBoundBlock != BB &&
+          !DT->dominates(LocInfo.LowerBoundBlock, BB)){
         // Reset the lower bound of things to check.
         // TODO: Some day we should be able to reset to last kill, rather than
         // 0.
-
         LocInfo.LowerBound = 0;
+        LocInfo.LowerBoundBlock = VersionStack[0]->getBlock();
         LocInfo.LastKillValid = false;
       }
     } else if (LocInfo.StackEpoch != StackEpoch) {
@@ -1437,6 +1442,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       MU->setDefiningAccess(VersionStack[LocInfo.LastKill]);
     }
     LocInfo.LowerBound = VersionStack.size() - 1;
+    LocInfo.LowerBoundBlock = BB;
   }
 }
 
@@ -1806,6 +1812,7 @@ void MemorySSA::verifyMemorySSA() const {
   verifyDefUses(F);
   verifyDomination(F);
   verifyOrdering(F);
+  Walker->verify(this);
 }
 
 /// \brief Verify that the order and existence of MemoryAccesses matches the
@@ -2071,23 +2078,24 @@ bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {
 
 char MemorySSAAnalysis::PassID;
 
-MemorySSA MemorySSAAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+MemorySSAAnalysis::Result
+MemorySSAAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  return MemorySSA(F, &AA, &DT);
+  return MemorySSAAnalysis::Result(make_unique<MemorySSA>(F, &AA, &DT));
 }
 
 PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   OS << "MemorySSA for function: " << F.getName() << "\n";
-  AM.getResult<MemorySSAAnalysis>(F).print(OS);
+  AM.getResult<MemorySSAAnalysis>(F).getMSSA().print(OS);
 
   return PreservedAnalyses::all();
 }
 
 PreservedAnalyses MemorySSAVerifierPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
-  AM.getResult<MemorySSAAnalysis>(F).verifyMemorySSA();
+  AM.getResult<MemorySSAAnalysis>(F).getMSSA().verifyMemorySSA();
 
   return PreservedAnalyses::all();
 }

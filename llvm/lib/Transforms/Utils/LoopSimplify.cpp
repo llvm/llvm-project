@@ -361,39 +361,11 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     // Fix LCSSA form for L. Some values, which previously were only used inside
     // L, can now be used in NewOuter loop. We need to insert phi-nodes for them
     // in corresponding exit blocks.
+    // We don't need to form LCSSA recursively, because there cannot be uses
+    // inside a newly created loop of defs from inner loops as those would
+    // already be a use of an LCSSA phi node.
+    formLCSSA(*L, *DT, LI, SE);
 
-    // Go through all instructions in OuterLoopBlocks and check if they are
-    // using operands from the inner loop. In this case we'll need to fix LCSSA
-    // for these instructions.
-    SmallSetVector<Instruction *, 8> WorklistSet;
-    for (BasicBlock *OuterBB: OuterLoopBlocks) {
-      for (Instruction &I : *OuterBB) {
-        for (Value *Op : I.operands()) {
-          Instruction *OpI = dyn_cast<Instruction>(Op);
-          if (!OpI || !L->contains(OpI))
-            continue;
-          WorklistSet.insert(OpI);
-        }
-      }
-    }
-    // We also need to check exit blocks of the outer loop - it might be using
-    // values from what now became an inner loop.
-    SmallVector<BasicBlock*, 8> ExitBlocks;
-    NewOuter->getExitBlocks(ExitBlocks);
-    for (BasicBlock *ExitBB: ExitBlocks) {
-      for (Instruction &I : *ExitBB) {
-        for (Value *Op : I.operands()) {
-          Instruction *OpI = dyn_cast<Instruction>(Op);
-          if (!OpI || !L->contains(OpI))
-            continue;
-          WorklistSet.insert(OpI);
-        }
-      }
-    }
-
-    SmallVector<Instruction *, 8> Worklist(WorklistSet.begin(),
-                                           WorklistSet.end());
-    formLCSSAForInstructions(Worklist, *DT, *LI);
     assert(NewOuter->isRecursivelyLCSSAForm(*DT) &&
            "LCSSA is broken after separating nested loops!");
   }
@@ -857,7 +829,7 @@ bool LoopSimplify::runOnFunction(Function &F) {
 }
 
 PreservedAnalyses LoopSimplifyPass::run(Function &F,
-                                        AnalysisManager<Function> &AM) {
+                                        FunctionAnalysisManager &AM) {
   bool Changed = false;
   LoopInfo *LI = &AM.getResult<LoopAnalysis>(F);
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
@@ -868,6 +840,10 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   // are in canonical SSA form, and that the pass itself preserves this form.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
     Changed |= simplifyLoop(*I, DT, LI, SE, AC, true /* PreserveLCSSA */);
+
+  // FIXME: We need to invalidate this to avoid PR28400. Is there a better
+  // solution?
+  AM.invalidate<ScalarEvolutionAnalysis>(F);
 
   if (!Changed)
     return PreservedAnalyses::all();

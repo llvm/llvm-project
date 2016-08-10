@@ -1151,12 +1151,16 @@ Region *ScopDetection::expandRegion(Region &R) {
       //  - if false, .tbd. => stop  (should this really end the loop?)
       if (!allBlocksValid(Context) || Context.Log.hasErrors()) {
         removeCachedResults(*ExpandedRegion);
+        DetectionContextMap.erase(It.first);
         break;
       }
 
       // Store this region, because it is the greatest valid (encountered so
       // far).
-      removeCachedResults(*LastValidRegion);
+      if (LastValidRegion) {
+        removeCachedResults(*LastValidRegion);
+        DetectionContextMap.erase(getBBPairForRegion(LastValidRegion.get()));
+      }
       LastValidRegion = std::move(ExpandedRegion);
 
       // Create and test the next greater region (if any)
@@ -1166,6 +1170,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     } else {
       // Create and test the next greater region (if any)
       removeCachedResults(*ExpandedRegion);
+      DetectionContextMap.erase(It.first);
       ExpandedRegion =
           std::unique_ptr<Region>(ExpandedRegion->getExpandedRegion());
     }

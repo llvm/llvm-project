@@ -842,6 +842,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // created. This complexity should be lifted elsewhere.
   getTarget().adjust(getLangOpts());
 
+  // Adjust target options based on codegen options.
+  getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
+
   // rewriter project will change target built-in bool type from its default. 
   if (getFrontendOpts().ProgramAction == frontend::RewriteObjC)
     getTarget().noSignedCharForObjCBool();

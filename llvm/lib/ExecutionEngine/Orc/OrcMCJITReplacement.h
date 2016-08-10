@@ -116,11 +116,13 @@ class OrcMCJITReplacement : public ExecutionEngine {
     LinkingResolver(OrcMCJITReplacement &M) : M(M) {}
 
     JITSymbol findSymbol(const std::string &Name) override {
-      return M.findMangledSymbol(Name);
+      return M.ClientResolver->findSymbol(Name);
     }
 
     JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
-      return M.ClientResolver->findSymbol(Name);
+      if (auto Sym = M.findMangledSymbol(Name))
+        return Sym;
+      return M.ClientResolver->findSymbolInLogicalDylib(Name);
     }
 
   private:

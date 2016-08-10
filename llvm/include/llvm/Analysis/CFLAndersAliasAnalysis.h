@@ -108,7 +108,7 @@ class CFLAndersAA : public AnalysisInfoMixin<CFLAndersAA> {
 public:
   typedef CFLAndersAAResult Result;
 
-  CFLAndersAAResult run(Function &F, AnalysisManager<Function> &AM);
+  CFLAndersAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the CFLAndersAAResult object.

@@ -31,7 +31,7 @@ using namespace llvm;
 
 // Emscripten's asm.js-style exception handling
 static cl::opt<bool> EnableEmExceptionHandling(
-    "wasm-em-exception-handling",
+    "enable-emscripten-cxx-exceptions",
     cl::desc("WebAssembly Emscripten-style exception handling"),
     cl::init(false));
 

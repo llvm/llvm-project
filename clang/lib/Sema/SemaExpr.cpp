@@ -1741,7 +1741,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   if (getLangOpts().CUDA)
     if (const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext))
       if (const FunctionDecl *Callee = dyn_cast<FunctionDecl>(D)) {
-        if (CheckCUDATarget(Caller, Callee)) {
+        if (!IsAllowedCUDACall(Caller, Callee)) {
           Diag(NameInfo.getLoc(), diag::err_ref_bad_target)
             << IdentifyCUDATarget(Callee) << D->getIdentifier()
             << IdentifyCUDATarget(Caller);

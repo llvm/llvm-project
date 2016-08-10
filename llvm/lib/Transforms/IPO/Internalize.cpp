@@ -239,7 +239,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
 
 InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
 
-PreservedAnalyses InternalizePass::run(Module &M, AnalysisManager<Module> &AM) {
+PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!internalizeModule(M, AM.getCachedResult<CallGraphAnalysis>(M)))
     return PreservedAnalyses::all();
 

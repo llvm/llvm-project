@@ -73,6 +73,7 @@ template <> struct MappingTraits<IncludeFixerContext> {
   static void mapping(IO &IO, IncludeFixerContext &Context) {
     IO.mapRequired("QuerySymbolInfos", Context.QuerySymbolInfos);
     IO.mapRequired("HeaderInfos", Context.HeaderInfos);
+    IO.mapRequired("FilePath", Context.FilePath);
   }
 };
 } // namespace yaml
@@ -203,7 +204,9 @@ createSymbolIndexManager(StringRef FilePath) {
 
 void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
   OS << "{\n"
-        "  \"QuerySymbolInfos\": [\n";
+     << "  \"FilePath\": \""
+     << llvm::yaml::escape(Context.getFilePath()) << "\",\n"
+     << "  \"QuerySymbolInfos\": [\n";
   for (const auto &Info : Context.getQuerySymbolInfos()) {
     OS << "     {\"RawIdentifier\": \"" << Info.RawIdentifier << "\",\n";
     OS << "      \"Range\":{";
@@ -251,9 +254,6 @@ int includeFixerMain(int argc, const char **argv) {
     tool.mapVirtualFile(options.getSourcePathList().front(), Code->getBuffer());
   }
 
-  StringRef FilePath = options.getSourcePathList().front();
-  format::FormatStyle InsertStyle = format::getStyle("file", FilePath, Style);
-
   if (!InsertHeader.empty()) {
     if (!STDINMode) {
       errs() << "Should be running in STDIN mode\n";
@@ -289,9 +289,10 @@ int includeFixerMain(int argc, const char **argv) {
            const IncludeFixerContext::HeaderInfo &RHS) {
           return LHS.QualifiedName == RHS.QualifiedName;
         });
-
+    format::FormatStyle InsertStyle =
+        format::getStyle("file", Context.getFilePath(), Style);
     auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
-        Code->getBuffer(), FilePath, Context, InsertStyle,
+        Code->getBuffer(), Context, InsertStyle,
         /*AddQualifiers=*/IsUniqueQualifiedName);
     if (!Replacements) {
       errs() << "Failed to create replacements: "
@@ -316,8 +317,8 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
 
   // Now run our tool.
-  include_fixer::IncludeFixerContext Context;
-  include_fixer::IncludeFixerActionFactory Factory(*SymbolIndexMgr, Context,
+  std::vector<include_fixer::IncludeFixerContext> Contexts;
+  include_fixer::IncludeFixerActionFactory Factory(*SymbolIndexMgr, Contexts,
                                                    Style, MinimizeIncludePaths);
 
   if (tool.run(&Factory) != 0) {
@@ -326,43 +327,49 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
   }
 
+  assert(!Contexts.empty());
+
   if (OutputHeaders) {
-    writeToJson(llvm::outs(), Context);
+    // FIXME: Print contexts of all processing files instead of the first one.
+    writeToJson(llvm::outs(), Contexts.front());
     return 0;
   }
 
-  if (Context.getHeaderInfos().empty())
-    return 0;
+  std::vector<tooling::Replacements> FixerReplacements;
+  for (const auto &Context : Contexts) {
+    StringRef FilePath = Context.getFilePath();
+    format::FormatStyle InsertStyle = format::getStyle("file", FilePath, Style);
+    auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
+    if (!Buffer) {
+      errs() << "Couldn't open file: " + FilePath.str() + ": "
+             << Buffer.getError().message() + "\n";
+      return 1;
+    }
 
-  auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
-  if (!Buffer) {
-    errs() << "Couldn't open file: " << FilePath << ": "
-           << Buffer.getError().message() << '\n';
-    return 1;
+    auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
+        Buffer.get()->getBuffer(), Context, InsertStyle);
+    if (!Replacements) {
+      errs() << "Failed to create replacement: "
+             << llvm::toString(Replacements.takeError()) << "\n";
+      return 1;
+    }
+    FixerReplacements.push_back(*Replacements);
   }
 
-  auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
-      /*Code=*/Buffer.get()->getBuffer(), FilePath, Context, InsertStyle);
-  if (!Replacements) {
-    errs() << "Failed to create header insertion replacement: "
-           << llvm::toString(Replacements.takeError()) << "\n";
-    return 1;
+  if (!Quiet) {
+    for (const auto &Context : Contexts) {
+      if (!Context.getHeaderInfos().empty()) {
+        llvm::errs() << "Added #include "
+                     << Context.getHeaderInfos().front().Header << " for "
+                     << Context.getFilePath() << "\n";
+      }
+    }
   }
-
-  if (!Quiet)
-    llvm::errs() << "Added #include " << Context.getHeaderInfos().front().Header
-                 << "\n";
-
-  // Set up a new source manager for applying the resulting replacements.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
-  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
-  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
-  SourceManager SM(Diagnostics, tool.getFiles());
-  Diagnostics.setClient(&DiagnosticPrinter, false);
 
   if (STDINMode) {
-    auto ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
+    assert(FixerReplacements.size() == 1);
+    auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(),
+                                                     FixerReplacements.front());
     if (!ChangedCode) {
       llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
       return 1;
@@ -371,9 +378,21 @@ int includeFixerMain(int argc, const char **argv) {
     return 0;
   }
 
+  // Set up a new source manager for applying the resulting replacements.
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
+  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
+  SourceManager SM(Diagnostics, tool.getFiles());
+  Diagnostics.setClient(&DiagnosticPrinter, false);
+
   // Write replacements to disk.
   Rewriter Rewrites(SM, LangOptions());
-  tooling::applyAllReplacements(*Replacements, Rewrites);
+  for (const auto Replacement : FixerReplacements) {
+    if (!tooling::applyAllReplacements(Replacement, Rewrites)) {
+      llvm::errs() << "Failed to apply replacements.\n";
+      return 1;
+    }
+  }
   return Rewrites.overwriteChangedFiles();
 }
 

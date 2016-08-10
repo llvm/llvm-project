@@ -28,6 +28,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <thread>
 
@@ -68,6 +69,12 @@ DEFINE_int32(benchmark_repetitions, 1,
 DEFINE_string(benchmark_format, "console",
               "The format to use for console output. Valid values are "
               "'console', 'json', or 'csv'.");
+
+DEFINE_string(benchmark_out_format, "json",
+              "The format to use for file output. Valid values are "
+              "'console', 'json', or 'csv'.");
+
+DEFINE_string(benchmark_out, "", "The file to write additonal output to");
 
 DEFINE_bool(color_print, true, "Enables colorized logging.");
 
@@ -306,23 +313,20 @@ namespace internal {
 
 // Information kept per benchmark we may want to run
 struct Benchmark::Instance {
-  std::string    name;
-  Benchmark*     benchmark;
-  bool           has_arg1;
-  int            arg1;
-  bool           has_arg2;
-  int            arg2;
-  TimeUnit       time_unit;
-  int            range_multiplier;
-  bool           use_real_time;
-  bool           use_manual_time;
-  BigO           complexity;
-  BigOFunc*      complexity_lambda;
-  bool           last_benchmark_instance;
-  int            repetitions;
-  double         min_time;
-  int            threads;    // Number of concurrent threads to use
-  bool           multithreaded;  // Is benchmark multi-threaded?
+  std::string      name;
+  Benchmark*       benchmark;
+  std::vector<int> arg;
+  TimeUnit         time_unit;
+  int              range_multiplier;
+  bool             use_real_time;
+  bool             use_manual_time;
+  BigO             complexity;
+  BigOFunc*        complexity_lambda;
+  bool             last_benchmark_instance;
+  int              repetitions;
+  double           min_time;
+  int              threads;    // Number of concurrent threads to use
+  bool             multithreaded;  // Is benchmark multi-threaded?
 };
 
 // Class for managing registered benchmarks.  Note that each registered
@@ -354,9 +358,9 @@ public:
   void Arg(int x);
   void Unit(TimeUnit unit);
   void Range(int start, int limit);
-  void DenseRange(int start, int limit);
-  void ArgPair(int start, int limit);
-  void RangePair(int lo1, int hi1, int lo2, int hi2);
+  void DenseRange(int start, int limit, int step = 1);
+  void Args(const std::vector<int>& args);
+  void Ranges(const std::vector<std::pair<int, int>>& ranges);
   void RangeMultiplier(int multiplier);
   void MinTime(double n);
   void Repetitions(int n);
@@ -371,12 +375,13 @@ public:
 
   static void AddRange(std::vector<int>* dst, int lo, int hi, int mult);
 
+  int ArgsCnt() const { return args_.empty() ? -1 : static_cast<int>(args_.front().size()); }
+
 private:
   friend class BenchmarkFamilies;
 
   std::string name_;
-  int arg_count_;
-  std::vector< std::pair<int, int> > args_;  // Args for all benchmark runs
+  std::vector< std::vector<int> > args_;  // Args for all benchmark runs
   TimeUnit time_unit_;
   int range_multiplier_;
   double min_time_;
@@ -424,10 +429,10 @@ bool BenchmarkFamilies::FindBenchmarks(
     if (!bench_family) continue;
     BenchmarkImp* family = bench_family->imp_;
 
-    if (family->arg_count_ == -1) {
-      family->arg_count_ = 0;
-      family->args_.emplace_back(-1, -1);
+    if (family->ArgsCnt() == -1) {
+      family->Args({});
     }
+
     for (auto const& args : family->args_) {
       const std::vector<int>* thread_counts =
         (family->thread_counts_.empty()
@@ -438,10 +443,7 @@ bool BenchmarkFamilies::FindBenchmarks(
         Benchmark::Instance instance;
         instance.name = family->name_;
         instance.benchmark = bench_family.get();
-        instance.has_arg1 = family->arg_count_ >= 1;
-        instance.arg1 = args.first;
-        instance.has_arg2 = family->arg_count_ == 2;
-        instance.arg2 = args.second;
+        instance.arg = args;
         instance.time_unit = family->time_unit_;
         instance.range_multiplier = family->range_multiplier_;
         instance.min_time = family->min_time_;
@@ -454,12 +456,10 @@ bool BenchmarkFamilies::FindBenchmarks(
         instance.multithreaded = !(family->thread_counts_.empty());
 
         // Add arguments to instance name
-        if (family->arg_count_ >= 1) {
-          AppendHumanReadable(instance.arg1, &instance.name);
+        for (auto const& arg : args) {
+          AppendHumanReadable(arg, &instance.name);
         }
-        if (family->arg_count_ >= 2) {
-          AppendHumanReadable(instance.arg2, &instance.name);
-        }
+
         if (!IsZero(family->min_time_)) {
           instance.name +=  StringPrintF("/min_time:%0.3f",  family->min_time_);
         }
@@ -488,7 +488,7 @@ bool BenchmarkFamilies::FindBenchmarks(
 }
 
 BenchmarkImp::BenchmarkImp(const char* name)
-    : name_(name), arg_count_(-1), time_unit_(kNanosecond),
+    : name_(name), time_unit_(kNanosecond),
       range_multiplier_(kRangeMultiplier), min_time_(0.0), repetitions_(0),
       use_real_time_(false), use_manual_time_(false),
       complexity_(oNone) {
@@ -498,9 +498,8 @@ BenchmarkImp::~BenchmarkImp() {
 }
 
 void BenchmarkImp::Arg(int x) {
-  CHECK(arg_count_ == -1 || arg_count_ == 1);
-  arg_count_ = 1;
-  args_.emplace_back(x, -1);
+  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
+  args_.push_back({x});
 }
 
 void BenchmarkImp::Unit(TimeUnit unit) {
@@ -508,42 +507,54 @@ void BenchmarkImp::Unit(TimeUnit unit) {
 }
 
 void BenchmarkImp::Range(int start, int limit) {
-  CHECK(arg_count_ == -1 || arg_count_ == 1);
-  arg_count_ = 1;
+  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
   std::vector<int> arglist;
   AddRange(&arglist, start, limit, range_multiplier_);
 
   for (int i : arglist) {
-    args_.emplace_back(i, -1);
+    args_.push_back({i});
   }
 }
 
-void BenchmarkImp::DenseRange(int start, int limit) {
-  CHECK(arg_count_ == -1 || arg_count_ == 1);
-  arg_count_ = 1;
+void BenchmarkImp::DenseRange(int start, int limit, int step) {
+  CHECK(ArgsCnt() == -1 || ArgsCnt() == 1);
   CHECK_GE(start, 0);
   CHECK_LE(start, limit);
-  for (int arg = start; arg <= limit; arg++) {
-    args_.emplace_back(arg, -1);
+  for (int arg = start; arg <= limit; arg+= step) {
+    args_.push_back({arg});
   }
 }
 
-void BenchmarkImp::ArgPair(int x, int y) {
-  CHECK(arg_count_ == -1 || arg_count_ == 2);
-  arg_count_ = 2;
-  args_.emplace_back(x, y);
+void BenchmarkImp::Args(const std::vector<int>& args)
+{
+  args_.push_back(args);
 }
 
-void BenchmarkImp::RangePair(int lo1, int hi1, int lo2, int hi2) {
-  CHECK(arg_count_ == -1 || arg_count_ == 2);
-  arg_count_ = 2;
-  std::vector<int> arglist1, arglist2;
-  AddRange(&arglist1, lo1, hi1, range_multiplier_);
-  AddRange(&arglist2, lo2, hi2, range_multiplier_);
+void BenchmarkImp::Ranges(const std::vector<std::pair<int, int>>& ranges) {
+  std::vector<std::vector<int>> arglists(ranges.size());
+  int total = 1;
+  for (std::size_t i = 0; i < ranges.size(); i++) {
+    AddRange(&arglists[i], ranges[i].first, ranges[i].second, range_multiplier_);
+    total *= arglists[i].size();
+  }
 
-  for (int i : arglist1) {
-    for (int j : arglist2) {
-      args_.emplace_back(i, j);
+  std::vector<std::size_t> ctr(total, 0);
+
+  for (int i = 0; i < total; i++) {
+    std::vector<int> tmp;
+
+    for (std::size_t j = 0; j < arglists.size(); j++) {
+      tmp.push_back(arglists[j][ctr[j]]);
+    }
+
+    args_.push_back(tmp);
+
+    for (std::size_t j = 0; j < arglists.size(); j++) {
+      if (ctr[j] + 1 < arglists[j].size()) {
+        ++ctr[j];
+        break;
+      }
+      ctr[j] = 0;
     }
   }
 }
@@ -641,6 +652,7 @@ Benchmark::Benchmark(Benchmark const& other)
 }
 
 Benchmark* Benchmark::Arg(int x) {
+  CHECK(imp_->ArgsCnt() == -1 || imp_->ArgsCnt() == 1);
   imp_->Arg(x);
   return this;
 }
@@ -651,22 +663,27 @@ Benchmark* Benchmark::Unit(TimeUnit unit) {
 }
 
 Benchmark* Benchmark::Range(int start, int limit) {
+  CHECK(imp_->ArgsCnt() == -1 || imp_->ArgsCnt() == 1);
   imp_->Range(start, limit);
   return this;
 }
 
-Benchmark* Benchmark::DenseRange(int start, int limit) {
-  imp_->DenseRange(start, limit);
+Benchmark* Benchmark::Ranges(const std::vector<std::pair<int, int>>& ranges)
+{
+  CHECK(imp_->ArgsCnt() == -1 || imp_->ArgsCnt() == static_cast<int>(ranges.size()));
+  imp_->Ranges(ranges);
   return this;
 }
 
-Benchmark* Benchmark::ArgPair(int x, int y) {
-  imp_->ArgPair(x, y);
+Benchmark* Benchmark::DenseRange(int start, int limit, int step) {
+  CHECK(imp_->ArgsCnt() == -1 || imp_->ArgsCnt() == 1);
+  imp_->DenseRange(start, limit, step);
   return this;
 }
 
-Benchmark* Benchmark::RangePair(int lo1, int hi1, int lo2, int hi2) {
-  imp_->RangePair(lo1, hi1, lo2, hi2);
+Benchmark* Benchmark::Args(const std::vector<int>& args) {
+  CHECK(imp_->ArgsCnt() == -1 || imp_->ArgsCnt() == static_cast<int>(args.size()));
+  imp_->Args(args);
   return this;
 }
 
@@ -744,7 +761,7 @@ namespace {
 void RunInThread(const benchmark::internal::Benchmark::Instance* b,
                  size_t iters, int thread_id,
                  ThreadStats* total) EXCLUDES(GetBenchmarkLock()) {
-  State st(iters, b->has_arg1, b->arg1, b->has_arg2, b->arg2, thread_id, b->threads);
+  State st(iters, b->arg, thread_id, b->threads);
   b->benchmark->Run(st);
   CHECK(st.iterations() == st.max_iterations) <<
     "Benchmark returned before State::KeepRunning() returned false!";
@@ -758,13 +775,12 @@ void RunInThread(const benchmark::internal::Benchmark::Instance* b,
   timer_manager->Finalize();
 }
 
-void RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
-                  BenchmarkReporter* br,
-                  std::vector<BenchmarkReporter::Run>& complexity_reports)
+std::vector<BenchmarkReporter::Run>
+RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
+             std::vector<BenchmarkReporter::Run>* complexity_reports)
   EXCLUDES(GetBenchmarkLock()) {
+   std::vector<BenchmarkReporter::Run> reports; // return value
   size_t iters = 1;
-
-  std::vector<BenchmarkReporter::Run> reports;
 
   std::vector<std::thread> pool;
   if (b.multithreaded)
@@ -872,7 +888,7 @@ void RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
           report.complexity = b.complexity;
           report.complexity_lambda = b.complexity_lambda;
           if(report.complexity != oNone)
-            complexity_reports.push_back(report);
+            complexity_reports->push_back(report);
         }
 
         reports.push_back(report);
@@ -903,27 +919,26 @@ void RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
                  additional_run_stats.end());
 
   if((b.complexity != oNone) && b.last_benchmark_instance) {
-    additional_run_stats = ComputeBigO(complexity_reports);
+    additional_run_stats = ComputeBigO(*complexity_reports);
     reports.insert(reports.end(), additional_run_stats.begin(),
                    additional_run_stats.end());
-    complexity_reports.clear();
+    complexity_reports->clear();
   }
-
-  br->ReportRuns(reports);
 
   if (b.multithreaded) {
     for (std::thread& thread : pool)
       thread.join();
   }
+
+  return reports;
 }
 
 }  // namespace
 
-State::State(size_t max_iters, bool has_x, int x, bool has_y, int y,
+State::State(size_t max_iters, const std::vector<int>& ranges,
              int thread_i, int n_threads)
     : started_(false), finished_(false), total_iterations_(0),
-      has_range_x_(has_x), range_x_(x),
-      has_range_y_(has_y), range_y_(y),
+      range_(ranges),
       bytes_processed_(0), items_processed_(0),
       complexity_n_(0),
       error_occurred_(false),
@@ -975,8 +990,10 @@ namespace internal {
 namespace {
 
 void RunMatchingBenchmarks(const std::vector<Benchmark::Instance>& benchmarks,
-                           BenchmarkReporter* reporter) {
-  CHECK(reporter != nullptr);
+                           BenchmarkReporter* console_reporter,
+                           BenchmarkReporter* file_reporter) {
+  // Note the file_reporter can be null.
+  CHECK(console_reporter != nullptr);
 
   // Determine the width of the name field using a minimum width of 10.
   bool has_repetitions = FLAGS_benchmark_repetitions > 1;
@@ -1000,23 +1017,30 @@ void RunMatchingBenchmarks(const std::vector<Benchmark::Instance>& benchmarks,
   // Keep track of runing times of all instances of current benchmark
   std::vector<BenchmarkReporter::Run> complexity_reports;
 
-  if (reporter->ReportContext(context)) {
+  if (console_reporter->ReportContext(context)
+      && (!file_reporter || file_reporter->ReportContext(context))) {
     for (const auto& benchmark : benchmarks) {
-      RunBenchmark(benchmark, reporter, complexity_reports);
+      std::vector<BenchmarkReporter::Run> reports =
+          RunBenchmark(benchmark, &complexity_reports);
+      console_reporter->ReportRuns(reports);
+      if (file_reporter) file_reporter->ReportRuns(reports);
     }
   }
+  console_reporter->Finalize();
+  if (file_reporter) file_reporter->Finalize();
 }
 
-std::unique_ptr<BenchmarkReporter> GetDefaultReporter() {
+std::unique_ptr<BenchmarkReporter>
+CreateReporter(std::string const& name, ConsoleReporter::OutputOptions allow_color) {
   typedef std::unique_ptr<BenchmarkReporter> PtrType;
-  if (FLAGS_benchmark_format == "console") {
-    return PtrType(new ConsoleReporter);
-  } else if (FLAGS_benchmark_format == "json") {
+  if (name == "console") {
+    return PtrType(new ConsoleReporter(allow_color));
+  } else if (name == "json") {
     return PtrType(new JSONReporter);
-  } else if (FLAGS_benchmark_format == "csv") {
+  } else if (name == "csv") {
     return PtrType(new CSVReporter);
   } else {
-    std::cerr << "Unexpected format: '" << FLAGS_benchmark_format << "'\n";
+    std::cerr << "Unexpected format: '" << name << "'\n";
     std::exit(1);
   }
 }
@@ -1025,10 +1049,17 @@ std::unique_ptr<BenchmarkReporter> GetDefaultReporter() {
 } // end namespace internal
 
 size_t RunSpecifiedBenchmarks() {
-  return RunSpecifiedBenchmarks(nullptr);
+  return RunSpecifiedBenchmarks(nullptr, nullptr);
 }
 
-size_t RunSpecifiedBenchmarks(BenchmarkReporter* reporter) {
+
+size_t RunSpecifiedBenchmarks(BenchmarkReporter* console_reporter) {
+  return RunSpecifiedBenchmarks(console_reporter, nullptr);
+}
+
+
+size_t RunSpecifiedBenchmarks(BenchmarkReporter* console_reporter,
+                              BenchmarkReporter* file_reporter) {
   std::string spec = FLAGS_benchmark_filter;
   if (spec.empty() || spec == "all")
     spec = ".";  // Regexp that matches all benchmarks
@@ -1041,13 +1072,38 @@ size_t RunSpecifiedBenchmarks(BenchmarkReporter* reporter) {
     for (auto const& benchmark : benchmarks)
       std::cout <<  benchmark.name << "\n";
   } else {
-    std::unique_ptr<BenchmarkReporter> default_reporter;
-    if (!reporter) {
-      default_reporter = internal::GetDefaultReporter();
-      reporter = default_reporter.get();
+    // Setup the reporters
+    std::ofstream output_file;
+    std::unique_ptr<BenchmarkReporter> default_console_reporter;
+    std::unique_ptr<BenchmarkReporter> default_file_reporter;
+    if (!console_reporter) {
+      auto output_opts = FLAGS_color_print ? ConsoleReporter::OO_Color
+                                           : ConsoleReporter::OO_None;
+      default_console_reporter = internal::CreateReporter(
+          FLAGS_benchmark_format, output_opts);
+      console_reporter = default_console_reporter.get();
     }
-    internal::RunMatchingBenchmarks(benchmarks, reporter);
-    reporter->Finalize();
+    std::string const& fname = FLAGS_benchmark_out;
+    if (fname == "" && file_reporter) {
+      std::cerr << "A custom file reporter was provided but "
+                   "--benchmark_out=<file> was not specified." << std::endl;
+      std::exit(1);
+    }
+    if (fname != "") {
+      output_file.open(fname);
+      if (!output_file.is_open()) {
+        std::cerr << "invalid file name: '" << fname << std::endl;
+        std::exit(1);
+      }
+      if (!file_reporter) {
+        default_file_reporter = internal::CreateReporter(
+            FLAGS_benchmark_out_format, ConsoleReporter::OO_None);
+        file_reporter = default_file_reporter.get();
+      }
+      file_reporter->SetOutputStream(&output_file);
+      file_reporter->SetErrorStream(&output_file);
+    }
+    internal::RunMatchingBenchmarks(benchmarks, console_reporter, file_reporter);
   }
   return benchmarks.size();
 }
@@ -1062,6 +1118,8 @@ void PrintUsageAndExit() {
           "          [--benchmark_min_time=<min_time>]\n"
           "          [--benchmark_repetitions=<num_repetitions>]\n"
           "          [--benchmark_format=<console|json|csv>]\n"
+          "          [--benchmark_out=<filename>]\n"
+          "          [--benchmark_out_format=<json|console|csv>]\n"
           "          [--color_print={true|false}]\n"
           "          [--v=<verbosity>]\n");
   exit(0);
@@ -1081,6 +1139,10 @@ void ParseCommandLineFlags(int* argc, char** argv) {
                        &FLAGS_benchmark_repetitions) ||
         ParseStringFlag(argv[i], "benchmark_format",
                         &FLAGS_benchmark_format) ||
+        ParseStringFlag(argv[i], "benchmark_out",
+                        &FLAGS_benchmark_out) ||
+        ParseStringFlag(argv[i], "benchmark_out_format",
+                        &FLAGS_benchmark_out_format) ||
         ParseBoolFlag(argv[i], "color_print",
                        &FLAGS_color_print) ||
         ParseInt32Flag(argv[i], "v", &FLAGS_v)) {
@@ -1092,10 +1154,9 @@ void ParseCommandLineFlags(int* argc, char** argv) {
       PrintUsageAndExit();
     }
   }
-
-  if (FLAGS_benchmark_format != "console" &&
-      FLAGS_benchmark_format != "json" &&
-      FLAGS_benchmark_format != "csv") {
+  for (auto const* flag : {&FLAGS_benchmark_format,
+                           &FLAGS_benchmark_out_format})
+  if (*flag != "console" && *flag != "json" && *flag != "csv") {
     PrintUsageAndExit();
   }
 }

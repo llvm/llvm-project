@@ -2845,51 +2845,6 @@ let isCodeGenOnly = 1 in {
                   SSE_BIT_ITINS_P>;
 }
 
-// Multiclass for vectors using the X86 logical operation aliases for FP.
-multiclass sse12_fp_packed_vector_logical_alias<
-    bits<8> opc, string OpcodeStr, SDNode OpNode, OpndItins itins> {
-  let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
-  defm V#NAME#PS : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode,
-              VR128, v4f32, f128mem, loadv4f32, SSEPackedSingle, itins, 0>,
-              PS, VEX_4V;
-
-  defm V#NAME#PD : sse12_fp_packed<opc, !strconcat(OpcodeStr, "pd"), OpNode,
-        VR128, v2f64, f128mem, loadv2f64, SSEPackedDouble, itins, 0>,
-        PD, VEX_4V;
-
-  defm V#NAME#PSY : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode,
-        VR256, v8f32, f256mem, loadv8f32, SSEPackedSingle, itins, 0>,
-        PS, VEX_4V, VEX_L;
-
-  defm V#NAME#PDY : sse12_fp_packed<opc, !strconcat(OpcodeStr, "pd"), OpNode,
-        VR256, v4f64, f256mem, loadv4f64, SSEPackedDouble, itins, 0>,
-        PD, VEX_4V, VEX_L;
-  }
-
-  let Constraints = "$src1 = $dst" in {
-    defm PS : sse12_fp_packed<opc, !strconcat(OpcodeStr, "ps"), OpNode, VR128,
-                v4f32, f128mem, memopv4f32, SSEPackedSingle, itins>,
-                PS;
-
-    defm PD : sse12_fp_packed<opc, !strconcat(OpcodeStr, "pd"), OpNode, VR128,
-                v2f64, f128mem, memopv2f64, SSEPackedDouble, itins>,
-                PD;
-  }
-}
-
-let isCodeGenOnly = 1 in {
-  defm FvAND  : sse12_fp_packed_vector_logical_alias<0x54, "and", X86fand,
-                SSE_BIT_ITINS_P>;
-  defm FvOR   : sse12_fp_packed_vector_logical_alias<0x56, "or", X86for,
-                SSE_BIT_ITINS_P>;
-  defm FvXOR  : sse12_fp_packed_vector_logical_alias<0x57, "xor", X86fxor,
-                SSE_BIT_ITINS_P>;
-
-  let isCommutable = 0 in
-    defm FvANDN : sse12_fp_packed_vector_logical_alias<0x55, "andn", X86fandn,
-                  SSE_BIT_ITINS_P>;
-}
-
 /// sse12_fp_packed_logical - SSE 1 & 2 packed FP logical ops
 ///
 multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
@@ -2897,7 +2852,8 @@ multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
   let Predicates = [HasAVX, NoVLX] in {
   defm V#NAME#PSY : sse12_fp_packed_logical_rm<opc, VR256, SSEPackedSingle,
         !strconcat(OpcodeStr, "ps"), f256mem,
-        [(set VR256:$dst, (v4i64 (OpNode VR256:$src1, VR256:$src2)))],
+        [(set VR256:$dst, (OpNode (bc_v4i64 (v8f32 VR256:$src1)),
+                                  (bc_v4i64 (v8f32 VR256:$src2))))],
         [(set VR256:$dst, (OpNode (bc_v4i64 (v8f32 VR256:$src1)),
                            (loadv4i64 addr:$src2)))], 0>, PS, VEX_4V, VEX_L;
 
@@ -2909,12 +2865,10 @@ multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
                                   (loadv4i64 addr:$src2)))], 0>,
                                   PD, VEX_4V, VEX_L;
 
-  // In AVX no need to add a pattern for 128-bit logical rr ps, because they
-  // are all promoted to v2i64, and the patterns are covered by the int
-  // version. This is needed in SSE only, because v2i64 isn't supported on
-  // SSE1, but only on SSE2.
   defm V#NAME#PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
-       !strconcat(OpcodeStr, "ps"), f128mem, [],
+       !strconcat(OpcodeStr, "ps"), f128mem,
+       [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
+                                 (bc_v2i64 (v4f32 VR128:$src2))))],
        [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
                                  (loadv2i64 addr:$src2)))], 0>, PS, VEX_4V;
 
@@ -2930,7 +2884,8 @@ multiclass sse12_fp_packed_logical<bits<8> opc, string OpcodeStr,
   let Constraints = "$src1 = $dst" in {
     defm PS : sse12_fp_packed_logical_rm<opc, VR128, SSEPackedSingle,
          !strconcat(OpcodeStr, "ps"), f128mem,
-         [(set VR128:$dst, (v2i64 (OpNode VR128:$src1, VR128:$src2)))],
+         [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
+                                   (bc_v2i64 (v4f32 VR128:$src2))))],
          [(set VR128:$dst, (OpNode (bc_v2i64 (v4f32 VR128:$src1)),
                                    (memopv2i64 addr:$src2)))]>, PS;
 
@@ -2949,17 +2904,140 @@ defm XOR  : sse12_fp_packed_logical<0x57, "xor", xor>;
 let isCommutable = 0 in
   defm ANDN : sse12_fp_packed_logical<0x55, "andn", X86andnp>;
 
-// AVX1 requires type coercions in order to fold loads directly into logical
-// operations.
+// If only AVX1 is supported, we need to handle integer operations with
+// floating point instructions since the integer versions aren't available.
 let Predicates = [HasAVX1Only] in {
-  def : Pat<(bc_v8f32 (and VR256:$src1, (loadv4i64 addr:$src2))),
+  def : Pat<(v4i64 (and VR256:$src1, VR256:$src2)),
+            (VANDPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v4i64 (or VR256:$src1, VR256:$src2)),
+            (VORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v4i64 (xor VR256:$src1, VR256:$src2)),
+            (VXORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v4i64 (X86andnp VR256:$src1, VR256:$src2)),
+            (VANDNPSYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(and VR256:$src1, (loadv4i64 addr:$src2)),
             (VANDPSYrm VR256:$src1, addr:$src2)>;
-  def : Pat<(bc_v8f32 (or VR256:$src1, (loadv4i64 addr:$src2))),
+  def : Pat<(or VR256:$src1, (loadv4i64 addr:$src2)),
             (VORPSYrm VR256:$src1, addr:$src2)>;
-  def : Pat<(bc_v8f32 (xor VR256:$src1, (loadv4i64 addr:$src2))),
+  def : Pat<(xor VR256:$src1, (loadv4i64 addr:$src2)),
             (VXORPSYrm VR256:$src1, addr:$src2)>;
-  def : Pat<(bc_v8f32 (X86andnp VR256:$src1, (loadv4i64 addr:$src2))),
+  def : Pat<(X86andnp VR256:$src1, (loadv4i64 addr:$src2)),
             (VANDNPSYrm VR256:$src1, addr:$src2)>;
+}
+
+let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
+  def : Pat<(v4f32 (X86fand VR128:$src1, VR128:$src2)),
+            (VANDPSrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4f32 (X86for VR128:$src1, VR128:$src2)),
+            (VORPSrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4f32 (X86fxor VR128:$src1, VR128:$src2)),
+            (VXORPSrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4f32 (X86fandn VR128:$src1, VR128:$src2)),
+            (VANDNPSrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(X86fand VR128:$src1, (loadv4f32 addr:$src2)),
+            (VANDPSrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86for VR128:$src1, (loadv4f32 addr:$src2)),
+            (VORPSrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fxor VR128:$src1, (loadv4f32 addr:$src2)),
+            (VXORPSrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fandn VR128:$src1, (loadv4f32 addr:$src2)),
+            (VANDNPSrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(v2f64 (X86fand VR128:$src1, VR128:$src2)),
+            (VANDPDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v2f64 (X86for VR128:$src1, VR128:$src2)),
+            (VORPDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v2f64 (X86fxor VR128:$src1, VR128:$src2)),
+            (VXORPDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v2f64 (X86fandn VR128:$src1, VR128:$src2)),
+            (VANDNPDrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(X86fand VR128:$src1, (loadv2f64 addr:$src2)),
+            (VANDPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86for VR128:$src1, (loadv2f64 addr:$src2)),
+            (VORPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fxor VR128:$src1, (loadv2f64 addr:$src2)),
+            (VXORPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fandn VR128:$src1, (loadv2f64 addr:$src2)),
+            (VANDNPDrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(v8f32 (X86fand VR256:$src1, VR256:$src2)),
+            (VANDPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8f32 (X86for VR256:$src1, VR256:$src2)),
+            (VORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8f32 (X86fxor VR256:$src1, VR256:$src2)),
+            (VXORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8f32 (X86fandn VR256:$src1, VR256:$src2)),
+            (VANDNPSYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(X86fand VR256:$src1, (loadv8f32 addr:$src2)),
+            (VANDPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86for VR256:$src1, (loadv8f32 addr:$src2)),
+            (VORPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86fxor VR256:$src1, (loadv8f32 addr:$src2)),
+            (VXORPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86fandn VR256:$src1, (loadv8f32 addr:$src2)),
+            (VANDNPSYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(v4f64 (X86fand VR256:$src1, VR256:$src2)),
+            (VANDPDYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v4f64 (X86for VR256:$src1, VR256:$src2)),
+            (VORPDYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v4f64 (X86fxor VR256:$src1, VR256:$src2)),
+            (VXORPDYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v4f64 (X86fandn VR256:$src1, VR256:$src2)),
+            (VANDNPDYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(X86fand VR256:$src1, (loadv4f64 addr:$src2)),
+            (VANDPDYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86for VR256:$src1, (loadv4f64 addr:$src2)),
+            (VORPDYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86fxor VR256:$src1, (loadv4f64 addr:$src2)),
+            (VXORPDYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86fandn VR256:$src1, (loadv4f64 addr:$src2)),
+            (VANDNPDYrm VR256:$src1, addr:$src2)>;
+}
+
+let Predicates = [UseSSE1] in {
+  def : Pat<(v4f32 (X86fand VR128:$src1, VR128:$src2)),
+            (ANDPSrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4f32 (X86for VR128:$src1, VR128:$src2)),
+            (ORPSrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4f32 (X86fxor VR128:$src1, VR128:$src2)),
+            (XORPSrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4f32 (X86fandn VR128:$src1, VR128:$src2)),
+            (ANDNPSrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(X86fand VR128:$src1, (memopv4f32 addr:$src2)),
+            (ANDPSrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86for VR128:$src1, (memopv4f32 addr:$src2)),
+            (ORPSrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fxor VR128:$src1, (memopv4f32 addr:$src2)),
+            (XORPSrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fandn VR128:$src1, (memopv4f32 addr:$src2)),
+            (ANDNPSrm VR128:$src1, addr:$src2)>;
+}
+
+let Predicates = [UseSSE2] in {
+  def : Pat<(v2f64 (X86fand VR128:$src1, VR128:$src2)),
+            (ANDPDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v2f64 (X86for VR128:$src1, VR128:$src2)),
+            (ORPDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v2f64 (X86fxor VR128:$src1, VR128:$src2)),
+            (XORPDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v2f64 (X86fandn VR128:$src1, VR128:$src2)),
+            (ANDNPDrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(X86fand VR128:$src1, (memopv2f64 addr:$src2)),
+            (ANDPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86for VR128:$src1, (memopv2f64 addr:$src2)),
+            (ORPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fxor VR128:$src1, (memopv2f64 addr:$src2)),
+            (XORPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86fandn VR128:$src1, (memopv2f64 addr:$src2)),
+            (ANDNPDrm VR128:$src1, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6331,6 +6409,17 @@ let ExeDomain = GenericDomain in {
               "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
       []>, Sched<[WriteFAdd]>;
 
+  // Operation, mem.
+  let mayLoad = 1 in
+  def SSm : SS4AIi8<opcss, MRMSrcMem,
+        (outs FR32:$dst), (ins FR32:$src1, f32mem:$src2, i32u8imm:$src3),
+        !if(Is2Addr,
+            !strconcat(OpcodeStr,
+                "ss\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+            !strconcat(OpcodeStr,
+                "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
+        []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+
   // Intrinsic operation, reg.
   let isCodeGenOnly = 1 in
   def SSr_Int : SS4AIi8<opcss, MRMSrcReg,
@@ -6344,7 +6433,8 @@ let ExeDomain = GenericDomain in {
         Sched<[WriteFAdd]>;
 
   // Intrinsic operation, mem.
-  def SSm : SS4AIi8<opcss, MRMSrcMem,
+  let isCodeGenOnly = 1 in
+  def SSm_Int : SS4AIi8<opcss, MRMSrcMem,
         (outs VR128:$dst), (ins VR128:$src1, ssmem:$src2, i32u8imm:$src3),
         !if(Is2Addr,
             !strconcat(OpcodeStr,
@@ -6366,6 +6456,17 @@ let ExeDomain = GenericDomain in {
                 "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
         []>, Sched<[WriteFAdd]>;
 
+  // Operation, mem.
+  let mayLoad = 1 in
+  def SDm : SS4AIi8<opcsd, MRMSrcMem,
+        (outs FR64:$dst), (ins FR64:$src1, f64mem:$src2, i32u8imm:$src3),
+        !if(Is2Addr,
+            !strconcat(OpcodeStr,
+                "sd\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+            !strconcat(OpcodeStr,
+                "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
+        []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+
   // Intrinsic operation, reg.
   let isCodeGenOnly = 1 in
   def SDr_Int : SS4AIi8<opcsd, MRMSrcReg,
@@ -6379,7 +6480,8 @@ let ExeDomain = GenericDomain in {
         Sched<[WriteFAdd]>;
 
   // Intrinsic operation, mem.
-  def SDm : SS4AIi8<opcsd, MRMSrcMem,
+  let isCodeGenOnly = 1 in
+  def SDm_Int : SS4AIi8<opcsd, MRMSrcMem,
         (outs VR128:$dst), (ins VR128:$src1, sdmem:$src2, i32u8imm:$src3),
         !if(Is2Addr,
             !strconcat(OpcodeStr,

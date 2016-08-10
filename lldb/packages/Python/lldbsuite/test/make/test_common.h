@@ -18,6 +18,12 @@
 #include <eh.h>
 #endif
 
+#if defined(_WIN32)
+#define LLVM_PRETTY_FUNCTION __FUNCSIG__
+#else
+#define LLVM_PRETTY_FUNCTION LLVM_PRETTY_FUNCTION
+#endif
+
 
 // On some systems (e.g., some versions of linux) it is not possible to attach to a process
 // without it giving us special permissions. This defines the lldb_enable_attach macro, which

@@ -203,3 +203,115 @@ define i1 @test11() {
 next:
   ret i1 %test
 }
+
+define i32 @test12(i32 %a, i32 %b) {
+; CHECK-LABEL: @test12(
+; CHECK: then:
+; CHECK-NEXT: br i1 false, label %end, label %else
+  %cmp = icmp ult i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, -1
+  br i1 %dead, label %end, label %else
+
+else:
+  ret i32 1
+
+end:
+  ret i32 2
+}
+
+define i32 @test12_swap(i32 %a, i32 %b) {
+; CHECK-LABEL: @test12_swap(
+; CHECK: then:
+; CHECK-NEXT: br i1 false, label %end, label %else
+  %cmp = icmp ugt i32 %b, %a
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, -1
+  br i1 %dead, label %end, label %else
+
+else:
+  ret i32 1
+
+end:
+  ret i32 2
+}
+
+define i32 @test12_neg(i32 %a, i32 %b) {
+; The same as @test12 but the second check is on the false path
+; CHECK-LABEL: @test12_neg(
+; CHECK: else:
+; CHECK-NEXT: %alive = icmp eq i32 %a, -1
+  %cmp = icmp ult i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+else:
+  %alive = icmp eq i32 %a, -1
+  br i1 %alive, label %end, label %then
+
+then:
+  ret i32 1
+
+end:
+  ret i32 2
+}
+
+define i32 @test12_signed(i32 %a, i32 %b) {
+; The same as @test12 but with signed comparison
+; CHECK-LABEL: @test12_signed(
+; CHECK: then:
+; CHECK-NEXT: br i1 false, label %end, label %else
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, 2147483647
+  br i1 %dead, label %end, label %else
+
+else:
+  ret i32 1
+
+end:
+  ret i32 2
+}
+
+define i32 @test13(i32 %a, i32 %b) {
+; CHECK-LABEL: @test13(
+; CHECK: then:
+; CHECK-NEXT: br i1 false, label %end, label %else
+  %a.off = add i32 %a, -8
+  %cmp = icmp ult i32 %a.off, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, 7
+  br i1 %dead, label %end, label %else
+
+else:
+  ret i32 1
+
+end:
+  ret i32 2
+}
+
+define i32 @test13_swap(i32 %a, i32 %b) {
+; CHECK-LABEL: @test13_swap(
+; CHECK: then:
+; CHECK-NEXT: br i1 false, label %end, label %else
+  %a.off = add i32 %a, -8
+  %cmp = icmp ugt i32 %b, %a.off
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, 7
+  br i1 %dead, label %end, label %else
+
+else:
+  ret i32 1
+
+end:
+  ret i32 2
+}

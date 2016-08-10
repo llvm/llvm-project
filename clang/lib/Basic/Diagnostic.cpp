@@ -1010,7 +1010,7 @@ PartialDiagnostic::StorageAllocator::StorageAllocator() {
 PartialDiagnostic::StorageAllocator::~StorageAllocator() {
   // Don't assert if we are in a CrashRecovery context, as this invariant may
   // be invalidated during a crash.
-  assert((NumFreeListEntries == NumCached || 
-          llvm::CrashRecoveryContext::isRecoveringFromCrash()) && 
-         "A partial is on the lamb");
+  assert((NumFreeListEntries == NumCached ||
+          llvm::CrashRecoveryContext::isRecoveringFromCrash()) &&
+         "A partial is on the lam");
 }

@@ -175,3 +175,22 @@ void CheckerRegistry::printHelp(raw_ostream &out,
     out << '\n';
   }
 }
+
+void CheckerRegistry::printList(
+    raw_ostream &out, SmallVectorImpl<CheckerOptInfo> &opts) const {
+  std::sort(Checkers.begin(), Checkers.end(), checkerNameLT);
+
+  // Collect checkers enabled by the options.
+  CheckerInfoSet enabledCheckers;
+  for (SmallVectorImpl<CheckerOptInfo>::iterator i = opts.begin(),
+                                                       e = opts.end();
+       i != e; ++i) {
+    collectCheckers(Checkers, Packages, *i, enabledCheckers);
+  }
+
+  for (CheckerInfoSet::const_iterator i = enabledCheckers.begin(),
+                                      e = enabledCheckers.end();
+       i != e; ++i) {
+    out << (*i)->FullName << '\n';
+  }
+}

@@ -1734,6 +1734,9 @@ void CodeGenModule::ConstructAttributeList(
                            llvm::utostr(CodeGenOpts.SSPBufferSize));
     FuncAttrs.addAttribute("no-signed-zeros-fp-math",
                            llvm::toStringRef(CodeGenOpts.NoSignedZeros));
+    FuncAttrs.addAttribute(
+        "correctly-rounded-divide-sqrt-fp-math",
+        llvm::toStringRef(CodeGenOpts.CorrectlyRoundedDivSqrt));
 
     if (CodeGenOpts.StackRealignment)
       FuncAttrs.addAttribute("stackrealign");

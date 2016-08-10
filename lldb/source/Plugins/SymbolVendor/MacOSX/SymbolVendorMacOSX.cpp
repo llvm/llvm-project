@@ -132,7 +132,7 @@ SymbolVendorMacOSX::CreateInstance (const lldb::ModuleSP &module_sp, lldb_privat
     if (obj_name != obj_file_macho)
         return NULL;
 
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "SymbolVendorMacOSX::CreateInstance (module = %s)",
                         module_sp->GetFileSpec().GetPath().c_str());
     SymbolVendorMacOSX* symbol_vendor = new SymbolVendorMacOSX(module_sp);

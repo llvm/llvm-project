@@ -914,7 +914,7 @@ Platform::MakeDirectory(const FileSpec &file_spec, uint32_t permissions)
     else
     {
         Error error;
-        error.SetErrorStringWithFormat("remote platform %s doesn't support %s", GetPluginName().GetCString(), __PRETTY_FUNCTION__);
+        error.SetErrorStringWithFormat("remote platform %s doesn't support %s", GetPluginName().GetCString(), LLVM_PRETTY_FUNCTION);
         return error;
     }
 }
@@ -927,7 +927,7 @@ Platform::GetFilePermissions(const FileSpec &file_spec, uint32_t &file_permissio
     else
     {
         Error error;
-        error.SetErrorStringWithFormat("remote platform %s doesn't support %s", GetPluginName().GetCString(), __PRETTY_FUNCTION__);
+        error.SetErrorStringWithFormat("remote platform %s doesn't support %s", GetPluginName().GetCString(), LLVM_PRETTY_FUNCTION);
         return error;
     }
 }
@@ -940,7 +940,7 @@ Platform::SetFilePermissions(const FileSpec &file_spec, uint32_t file_permission
     else
     {
         Error error;
-        error.SetErrorStringWithFormat("remote platform %s doesn't support %s", GetPluginName().GetCString(), __PRETTY_FUNCTION__);
+        error.SetErrorStringWithFormat("remote platform %s doesn't support %s", GetPluginName().GetCString(), LLVM_PRETTY_FUNCTION);
         return error;
     }
 }

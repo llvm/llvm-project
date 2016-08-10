@@ -276,7 +276,6 @@ define i16 @test13(i32 %a, i32 %b) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test13:
@@ -288,7 +287,6 @@ define i16 @test13(i32 %a, i32 %b) {
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    korw %k0, %k1, %k0
 ; SKX-NEXT:    kmovw %k0, %eax
-; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %cmp_res = icmp ult i32 %a, %b
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %cmp_res, i32 0
@@ -358,7 +356,6 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; KNL-NEXT:    kshiftlw $10, %k0, %k0
 ; KNL-NEXT:    korw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test16:
@@ -370,7 +367,6 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; SKX-NEXT:    kshiftlw $10, %k0, %k0
 ; SKX-NEXT:    korw %k0, %k1, %k0
 ; SKX-NEXT:    kmovw %k0, %eax
-; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
   %a1 = bitcast i16 %a to <16 x i1>
@@ -389,7 +385,6 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; KNL-NEXT:    kshiftlw $4, %k0, %k0
 ; KNL-NEXT:    korw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test17:
@@ -401,7 +396,6 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; SKX-NEXT:    kshiftlb $4, %k0, %k0
 ; SKX-NEXT:    korb %k0, %k1, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
-; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
   %a1 = bitcast i8 %a to <8 x i1>

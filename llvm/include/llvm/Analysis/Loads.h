@@ -71,15 +71,13 @@ extern cl::opt<unsigned> DefMaxInstsToScan;
 /// the only relevant load gets deleted.)
 ///
 /// \param Load The load we want to replace.
-/// \param ScanBB The basic block to scan. FIXME: This is redundant.
+/// \param ScanBB The basic block to scan.
 /// \param [in,out] ScanFrom The location to start scanning from. When this
 /// function returns, it points at the last instruction scanned.
 /// \param MaxInstsToScan The maximum number of instructions to scan. If this
 /// is zero, the whole block will be scanned.
 /// \param AA Optional pointer to alias analysis, to make the scan more
 /// precise.
-/// \param [out] AATags The aliasing metadata for the operation which produced
-/// the value. FIXME: This is basically useless.
 /// \param [out] IsLoadCSE Whether the returned value is a load from the same
 /// location in memory, as opposed to the value operand of a store.
 ///
@@ -89,7 +87,6 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
                                 AliasAnalysis *AA = nullptr,
-                                AAMDNodes *AATags = nullptr,
                                 bool *IsLoadCSE = nullptr);
 
 }

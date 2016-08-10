@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -loop-unroll -S | FileCheck %s
+; RUN: opt < %s -lcssa -loop-simplify -indvars -S | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; PR28272, PR28825
@@ -105,4 +105,35 @@ bb6:
 bb_end:
   %x = getelementptr i32, i32* %b
   br label %bb_end
+}
+
+; When LoopSimplify separates nested loops, it might break LCSSA form: values
+; from the original loop might occur in a loop, which is now a sibling of the
+; original loop (before separating it was a subloop of the original loop, and
+; thus didn't require an lcssa phi nodes).
+; CHECK-LABEL: @foo4
+define void @foo4() {
+bb1:
+  br label %bb2
+
+; CHECK: bb2.loopexit:
+bb2.loopexit:                                     ; preds = %bb3
+  %i.ph = phi i32 [ 0, %bb3 ]
+  br label %bb2
+
+; CHECK: bb2.outer:
+; CHECK: bb2:
+bb2:                                              ; preds = %bb2.loopexit, %bb2, %bb1
+  %i = phi i32 [ 0, %bb1 ], [ %i, %bb2 ], [ %i.ph, %bb2.loopexit ]
+  %x = load i32, i32* undef, align 8
+  br i1 undef, label %bb2, label %bb3.preheader
+
+; CHECK: bb3.preheader:
+bb3.preheader:                                    ; preds = %bb2
+; CHECK: %x.lcssa = phi i32 [ %x, %bb2 ]
+  br label %bb3
+
+bb3:                                              ; preds = %bb3.preheader, %bb3
+  %y = add i32 2, %x
+  br i1 true, label %bb2.loopexit, label %bb3
 }

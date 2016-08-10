@@ -77,8 +77,8 @@ protected:
       assert(Range.getBegin().isFileID() && Range.getEnd().isFileID() &&
              "Only file locations supported in fix-it hints.");
 
-      auto Err =
-          Error.Fix.add(tooling::Replacement(SM, Range, FixIt.CodeToInsert));
+      tooling::Replacement Replacement(SM, Range, FixIt.CodeToInsert);
+      llvm::Error Err = Error.Fix[Replacement.getFilePath()].add(Replacement);
       // FIXME: better error handling.
       if (Err) {
         llvm::errs() << "Fix conflicts with existing fix! "
@@ -495,25 +495,29 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors(
   std::vector<int> Sizes;
   for (const auto &Error : Errors) {
     int Size = 0;
-    for (const auto &Replace : Error.Fix)
-      Size += Replace.getLength();
+    for (const auto &FileAndReplaces : Error.Fix) {
+      for (const auto &Replace : FileAndReplaces.second)
+        Size += Replace.getLength();
+    }
     Sizes.push_back(Size);
   }
 
   // Build events from error intervals.
   std::map<std::string, std::vector<Event>> FileEvents;
   for (unsigned I = 0; I < Errors.size(); ++I) {
-    for (const auto &Replace : Errors[I].Fix) {
-      unsigned Begin = Replace.getOffset();
-      unsigned End = Begin + Replace.getLength();
-      const std::string &FilePath = Replace.getFilePath();
-      // FIXME: Handle empty intervals, such as those from insertions.
-      if (Begin == End)
-        continue;
-      FileEvents[FilePath].push_back(
-          Event(Begin, End, Event::ET_Begin, I, Sizes[I]));
-      FileEvents[FilePath].push_back(
-          Event(Begin, End, Event::ET_End, I, Sizes[I]));
+    for (const auto &FileAndReplace : Errors[I].Fix) {
+      for (const auto &Replace : FileAndReplace.second) {
+        unsigned Begin = Replace.getOffset();
+        unsigned End = Begin + Replace.getLength();
+        const std::string &FilePath = Replace.getFilePath();
+        // FIXME: Handle empty intervals, such as those from insertions.
+        if (Begin == End)
+          continue;
+        FileEvents[FilePath].push_back(
+            Event(Begin, End, Event::ET_Begin, I, Sizes[I]));
+        FileEvents[FilePath].push_back(
+            Event(Begin, End, Event::ET_End, I, Sizes[I]));
+      }
     }
   }
 

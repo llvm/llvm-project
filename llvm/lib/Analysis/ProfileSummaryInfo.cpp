@@ -148,7 +148,7 @@ ProfileSummaryInfo ProfileSummaryAnalysis::run(Module &M,
 // FIXME: This only tests isHotFunction and isColdFunction and not the
 // isHotCount and isColdCount calls.
 PreservedAnalyses ProfileSummaryPrinterPass::run(Module &M,
-                                                 AnalysisManager<Module> &AM) {
+                                                 ModuleAnalysisManager &AM) {
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
 
   OS << "Functions in " << M.getName() << " with hot/cold annotations: \n";

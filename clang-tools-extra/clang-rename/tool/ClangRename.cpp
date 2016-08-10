@@ -56,6 +56,33 @@ static int renameAtMain(int argc, const char *argv[]);
 static int renameAllMain(int argc, const char *argv[]);
 static int helpMain(int argc, const char *argv[]);
 
+/// \brief An oldname -> newname rename.
+struct RenameAllInfo {
+  std::string OldName;
+  unsigned Offset;
+  std::string NewName;
+
+  RenameAllInfo() : Offset(0) {}
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(RenameAllInfo)
+
+namespace llvm {
+namespace yaml {
+
+/// \brief Specialized MappingTraits to describe how a RenameAllInfo is /
+/// (de)serialized.
+template <> struct MappingTraits<RenameAllInfo> {
+  static void mapping(IO &IO, RenameAllInfo &Info) {
+    IO.mapOptional("OldName", Info.OldName);
+    IO.mapOptional("Offset", Info.Offset);
+    IO.mapRequired("NewName", Info.NewName);
+  }
+};
+
+} // end namespace yaml
+} // end namespace llvm
+
 int main(int argc, const char **argv) {
   if (argc > 1) {
     using MainFunction = std::function<int(int, const char *[])>;
@@ -91,7 +118,7 @@ int subcommandMain(bool isRenameAll, int argc, const char **argv) {
 
   cl::list<std::string> NewNames(
       "new-name", cl::desc("The new name to change the symbol to."),
-      (isRenameAll ? cl::OneOrMore : cl::Required), cl::cat(*Category));
+      (isRenameAll ? cl::ZeroOrMore : cl::Required), cl::cat(*Category));
   cl::list<unsigned> SymbolOffsets(
       "offset",
       cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
@@ -114,10 +141,39 @@ int subcommandMain(bool isRenameAll, int argc, const char **argv) {
   cl::opt<std::string> ExportFixes(
       "export-fixes", cl::desc("YAML file to store suggested fixes in."),
       cl::value_desc("filename"), cl::cat(*Category));
+  cl::opt<std::string> Input(
+      "input", cl::desc("YAML file to load oldname-newname pairs from."),
+      cl::Optional, cl::cat(ClangRenameAllCategory));
 
   tooling::CommonOptionsParser OP(argc, argv, *Category, Usage);
 
+  if (!Input.empty()) {
+    // Populate OldNames and NewNames from a YAML file.
+    auto Buffer = llvm::MemoryBuffer::getFile(Input);
+    if (!Buffer) {
+      errs() << "clang-rename: failed to read " << Input << ": "
+             << Buffer.getError().message() << "\n";
+      exit(1);
+    }
+
+    std::vector<RenameAllInfo> Infos;
+    llvm::yaml::Input YAML(Buffer.get()->getBuffer());
+    YAML >> Infos;
+    for (const auto &Info : Infos) {
+      if (!Info.OldName.empty())
+        OldNames.push_back(Info.OldName);
+      else
+        SymbolOffsets.push_back(Info.Offset);
+      NewNames.push_back(Info.NewName);
+    }
+  }
+
   // Check the arguments for correctness.
+
+  if (NewNames.empty()) {
+    errs() << "clang-rename: either -new-name or -input is required.\n\n";
+    exit(1);
+  }
 
   // Check if NewNames is a valid identifier in C++17.
   for (const auto &NewName : NewNames) {

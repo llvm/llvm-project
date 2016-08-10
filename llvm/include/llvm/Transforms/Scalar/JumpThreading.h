@@ -98,7 +98,7 @@ public:
                bool HasProfileData_, std::unique_ptr<BlockFrequencyInfo> BFI_,
                std::unique_ptr<BranchProbabilityInfo> BPI_);
 
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   void releaseMemory() {
     BFI.reset();

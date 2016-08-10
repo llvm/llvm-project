@@ -10191,6 +10191,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
   CHECK_PARSE_BOOL(SpacesInCStyleCastParentheses);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
+  CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
   CHECK_PARSE_BOOL(SpaceBeforeAssignmentOperators);
 
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
@@ -11327,6 +11328,12 @@ TEST_F(FormatTest, SpacesInAngles) {
 
   Spaces.SpacesInAngles = false;
   verifyFormat("A<A<int>>();", Spaces);
+}
+
+TEST_F(FormatTest, SpaceAfterTemplateKeyword) {
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceAfterTemplateKeyword = false;
+  verifyFormat("template<int> void foo();", Style);
 }
 
 TEST_F(FormatTest, TripleAngleBrackets) {

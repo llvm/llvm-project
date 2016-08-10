@@ -228,6 +228,12 @@ public:
   /// Ensure that all previously parsed instructions have been emitted to the
   /// output streamer, if the target does not emit them immediately.
   virtual void flushPendingInstructions(MCStreamer &Out) { }
+
+  virtual const MCExpr *createTargetUnaryExpr(const MCExpr *E,
+                                              AsmToken::TokenKind OperatorToken,
+                                              MCContext &Ctx) {
+    return nullptr;
+  }
 };
 
 } // End llvm namespace

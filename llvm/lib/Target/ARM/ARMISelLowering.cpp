@@ -2530,7 +2530,7 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
   SDValue CPAddr;
-  bool IsPositionIndependent = isPositionIndependent();
+  bool IsPositionIndependent = isPositionIndependent() || Subtarget->isROPI();
   if (!IsPositionIndependent) {
     CPAddr = DAG.getTargetConstantPool(BA, PtrVT, 4);
   } else {
@@ -2800,6 +2800,11 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   SDLoc dl(Op);
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
   const TargetMachine &TM = getTargetMachine();
+  if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
+    GV = GA->getBaseObject();
+  bool IsRO =
+      (isa<GlobalVariable>(GV) && cast<GlobalVariable>(GV)->isConstant()) ||
+      isa<Function>(GV);
   if (isPositionIndependent()) {
     bool UseGOT_PREL = !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
 
@@ -2826,6 +2831,23 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
           DAG.getLoad(PtrVT, dl, Chain, Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
     return Result;
+  } else if (Subtarget->isROPI() && IsRO) {
+    // PC-relative.
+    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT);
+    SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
+    return Result;
+  } else if (Subtarget->isRWPI() && !IsRO) {
+    // SB-relative.
+    ARMConstantPoolValue *CPV =
+      ARMConstantPoolConstant::Create(GV, ARMCP::SBREL);
+    SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, 4);
+    CPAddr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
+    SDValue G = DAG.getLoad(
+        PtrVT, dl, DAG.getEntryNode(), CPAddr,
+        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+    SDValue SB = DAG.getCopyFromReg(DAG.getEntryNode(), dl, ARM::R9, PtrVT);
+    SDValue Result = DAG.getNode(ISD::ADD, dl, PtrVT, SB, G);
+    return Result;
   }
 
   // If we have T2 ops, we can materialize the address directly via movt/movw
@@ -2847,6 +2869,8 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
 
 SDValue ARMTargetLowering::LowerGlobalAddressDarwin(SDValue Op,
                                                     SelectionDAG &DAG) const {
+  assert(!Subtarget->isROPI() && !Subtarget->isRWPI() &&
+         "ROPI/RWPI not currently supported for Darwin");
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc dl(Op);
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
@@ -2873,6 +2897,8 @@ SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
   assert(Subtarget->isTargetWindows() && "non-Windows COFF is not supported");
   assert(Subtarget->useMovt(DAG.getMachineFunction()) &&
          "Windows on ARM expects to use movw/movt");
+  assert(!Subtarget->isROPI() && !Subtarget->isRWPI() &&
+         "ROPI/RWPI not currently supported for Windows");
 
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
   const ARMII::TOF TargetFlags =
@@ -4123,7 +4149,7 @@ SDValue ARMTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ARMISD::BR2_JT, dl, MVT::Other, Chain,
                        Addr, Op.getOperand(2), JTI);
   }
-  if (isPositionIndependent()) {
+  if (isPositionIndependent() || Subtarget->isROPI()) {
     Addr =
         DAG.getLoad((EVT)MVT::i32, dl, Chain, Addr,
                     MachinePointerInfo::getJumpTable(DAG.getMachineFunction()));
@@ -7271,6 +7297,8 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
                                                MachineBasicBlock *MBB,
                                                MachineBasicBlock *DispatchBB,
                                                int FI) const {
+  assert(!Subtarget->isROPI() && !Subtarget->isRWPI() &&
+         "ROPI/RWPI not currently supported with SjLj");
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
   MachineFunction *MF = MBB->getParent();

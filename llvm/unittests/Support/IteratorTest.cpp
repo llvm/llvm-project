@@ -16,6 +16,24 @@ using namespace llvm;
 
 namespace {
 
+template <int> struct Shadow;
+
+struct WeirdIter : std::iterator<std::input_iterator_tag, Shadow<0>, Shadow<1>,
+                                 Shadow<2>, Shadow<3>> {};
+
+struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
+
+// Test that iterator_adaptor_base forwards typedefs, if value_type is
+// unchanged.
+static_assert(std::is_same<typename AdaptedIter::value_type, Shadow<0>>::value,
+              "");
+static_assert(
+    std::is_same<typename AdaptedIter::difference_type, Shadow<1>>::value, "");
+static_assert(std::is_same<typename AdaptedIter::pointer, Shadow<2>>::value,
+              "");
+static_assert(std::is_same<typename AdaptedIter::reference, Shadow<3>>::value,
+              "");
+
 TEST(PointeeIteratorTest, Basic) {
   int arr[4] = { 1, 2, 3, 4 };
   SmallVector<int *, 4> V;

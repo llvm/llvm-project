@@ -147,20 +147,15 @@ define <8 x double> @shuffle_v8f64_06000000(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @shuffle_v8f64_70000000(<8 x double> %a, <8 x double> %b) {
 ; AVX512F-LABEL: shuffle_v8f64_70000000:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; AVX512F-NEXT:    movl $7, %eax
-; AVX512F-NEXT:    vpinsrq $0, %rax, %xmm1, %xmm2
-; AVX512F-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovq %rax, %xmm1
 ; AVX512F-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: shuffle_v8f64_70000000:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-32-NEXT:    movl $7, %eax
-; AVX512F-32-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
-; AVX512F-32-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
+; AVX512F-32-NEXT:    vmovd %eax, %xmm1
 ; AVX512F-32-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
   %shuffle = shufflevector <8 x double> %a, <8 x double> %b, <8 x i32> <i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
@@ -1116,20 +1111,15 @@ define <8 x i64> @shuffle_v8i64_70000000(<8 x i64> %a, <8 x i64> %b) {
 ;
 ; AVX512F-LABEL: shuffle_v8i64_70000000:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; AVX512F-NEXT:    movl $7, %eax
-; AVX512F-NEXT:    vpinsrq $0, %rax, %xmm1, %xmm2
-; AVX512F-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovq %rax, %xmm1
 ; AVX512F-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: shuffle_v8i64_70000000:
 ; AVX512F-32:       # BB#0:
-; AVX512F-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-32-NEXT:    movl $7, %eax
-; AVX512F-32-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
-; AVX512F-32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
-; AVX512F-32-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
+; AVX512F-32-NEXT:    vmovd %eax, %xmm1
 ; AVX512F-32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>

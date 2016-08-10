@@ -36,10 +36,9 @@ endif()
 
 if (NOT LIBCXXABI_BUILT_STANDALONE)
   list(APPEND LIBCXXABI_TEST_DEPS cxx)
-endif()
-
-if (LIBCXXABI_USE_LLVM_UNWINDER)
-  list(APPEND LIBCXXABI_TEST_DEPS unwind)
+  if (LIBCXXABI_USE_LLVM_UNWINDER)
+    list(APPEND LIBCXXABI_TEST_DEPS unwind)
+  endif()
 endif()
 
 add_lit_testsuite(check-libcxxabi "Running libcxxabi tests"

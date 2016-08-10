@@ -494,7 +494,6 @@ class MemorySSAWalker;
 class MemorySSA {
 public:
   MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
-  MemorySSA(MemorySSA &&);
   ~MemorySSA();
 
   MemorySSAWalker *getWalker();
@@ -676,9 +675,21 @@ class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
   static char PassID;
 
 public:
-  typedef MemorySSA Result;
+  // Wrap MemorySSA result to ensure address stability of internal MemorySSA
+  // pointers after construction.  Use a wrapper class instead of plain
+  // unique_ptr<MemorySSA> to avoid build breakage on MSVC.
+  struct Result {
+    Result(std::unique_ptr<MemorySSA> &&MSSA) : MSSA(std::move(MSSA)) {}
+    Result(Result &&R) : MSSA(std::move(R.MSSA)) {}
+    MemorySSA &getMSSA() { return *MSSA.get(); }
 
-  MemorySSA run(Function &F, AnalysisManager<Function> &AM);
+    Result(const Result &) = delete;
+    void operator=(const Result &) = delete;
+
+    std::unique_ptr<MemorySSA> MSSA;
+  };
+
+  Result run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Printer pass for \c MemorySSA.
@@ -687,12 +698,12 @@ class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
 
 public:
   explicit MemorySSAPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Verifier pass for \c MemorySSA.
 struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c MemorySSA.
@@ -785,6 +796,8 @@ public:
   /// invalidation.  This will be called by MemorySSA at appropriate times for
   /// the walker it uses or returns.
   virtual void invalidateInfo(MemoryAccess *) {}
+
+  virtual void verify(const MemorySSA *MSSA) { assert(MSSA == this->MSSA); }
 
 protected:
   friend class MemorySSA; // For updating MSSA pointer in MemorySSA move

@@ -479,7 +479,7 @@ class MemoryDependenceAnalysis
 public:
   typedef MemoryDependenceResults Result;
 
-  MemoryDependenceResults run(Function &F, AnalysisManager<Function> &AM);
+  MemoryDependenceResults run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// A wrapper analysis pass for the legacy pass manager that exposes a \c
