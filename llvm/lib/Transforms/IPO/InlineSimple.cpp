@@ -39,20 +39,15 @@ namespace {
 /// inliner pass and the always inliner pass. The two passes use different cost
 /// analyses to determine when to inline.
 class SimpleInliner : public Inliner {
-  // This field is populated based on one of the following:
-  //  * optimization or size-optimization levels,
-  //  * the --inline-threshold flag, or
-  //  * a user specified value.
-  int DefaultThreshold;
+
+  InlineParams Params;
 
 public:
-  SimpleInliner()
-      : Inliner(ID), DefaultThreshold(llvm::getDefaultInlineThreshold()) {
+  SimpleInliner() : Inliner(ID), Params(llvm::getInlineParams()) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
-  explicit SimpleInliner(int Threshold)
-      : Inliner(ID), DefaultThreshold(Threshold) {
+  explicit SimpleInliner(InlineParams Params) : Inliner(ID), Params(Params) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
@@ -65,8 +60,7 @@ public:
         [&](Function &F) -> AssumptionCache & {
       return ACT->getAssumptionCache(F);
     };
-    return llvm::getInlineCost(CS, DefaultThreshold, TTI, GetAssumptionCache,
-                               PSI);
+    return llvm::getInlineCost(CS, Params, TTI, GetAssumptionCache, PSI);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
@@ -74,6 +68,7 @@ public:
 
 private:
   TargetTransformInfoWrapperPass *TTIWP;
+
 };
 
 } // end anonymous namespace
@@ -92,13 +87,12 @@ INITIALIZE_PASS_END(SimpleInliner, "inline", "Function Integration/Inlining",
 Pass *llvm::createFunctionInliningPass() { return new SimpleInliner(); }
 
 Pass *llvm::createFunctionInliningPass(int Threshold) {
-  return new SimpleInliner(Threshold);
+  return new SimpleInliner(llvm::getInlineParams(Threshold));
 }
 
 Pass *llvm::createFunctionInliningPass(unsigned OptLevel,
                                        unsigned SizeOptLevel) {
-  return new SimpleInliner(
-      llvm::computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
+  return new SimpleInliner(llvm::getInlineParams(OptLevel, SizeOptLevel));
 }
 
 bool SimpleInliner::runOnSCC(CallGraphSCC &SCC) {

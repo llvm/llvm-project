@@ -40,18 +40,7 @@ using namespace llvm;
 
 STATISTIC(NumCallsAnalyzed, "Number of call sites analyzed");
 
-// Threshold to use when optsize is specified (and there is no
-// -inline-threshold).
-const int OptSizeThreshold = 75;
-
-// Threshold to use when -Oz is specified (and there is no -inline-threshold).
-const int OptMinSizeThreshold = 25;
-
-// Threshold to use when -O[34] is specified (and there is no
-// -inline-threshold).
-const int OptAggressiveThreshold = 275;
-
-static cl::opt<int> DefaultInlineThreshold(
+static cl::opt<int> InlineThreshold(
     "inline-threshold", cl::Hidden, cl::init(225), cl::ZeroOrMore,
     cl::desc("Control the amount of inlining to perform (default = 225)"));
 
@@ -93,6 +82,9 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   // analysis in the caller function; we want the inline cost query to be
   // easily cacheable. Instead, use the cover function paramHasAttr.
   CallSite CandidateCS;
+
+  // Tunable parameters that control the analysis.
+  const InlineParams &Params;
 
   int Threshold;
   int Cost;
@@ -210,11 +202,11 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 public:
   CallAnalyzer(const TargetTransformInfo &TTI,
                std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
-               ProfileSummaryInfo *PSI, Function &Callee, int Threshold,
-               CallSite CSArg)
+               ProfileSummaryInfo *PSI, Function &Callee, CallSite CSArg,
+               const InlineParams &Params)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), PSI(PSI), F(Callee),
-        CandidateCS(CSArg), Threshold(Threshold), Cost(0),
-        IsCallerRecursive(false), IsRecursiveCall(false),
+        CandidateCS(CSArg), Params(Params), Threshold(Params.DefaultThreshold),
+        Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
         HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
@@ -626,18 +618,18 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   }
 
   Function *Caller = CS.getCaller();
-  if (DefaultInlineThreshold.getNumOccurrences() > 0) {
-    // Explicitly specified -inline-threhold overrides the threshold passed to
-    // CallAnalyzer's constructor.
-    Threshold = DefaultInlineThreshold;
-  } else {
-    // If -inline-threshold is not given, listen to the optsize and minsize
-    // attributes when they would decrease the threshold.
-    if (Caller->optForMinSize() && OptMinSizeThreshold < Threshold)
-      Threshold = OptMinSizeThreshold;
-    else if (Caller->optForSize() && OptSizeThreshold < Threshold)
-      Threshold = OptSizeThreshold;
-  }
+
+  // return min(A, B) if B is valid.
+  auto MinIfValid = [](int A, Optional<int> B) {
+    return B ? std::min(A, B.getValue()) : A;
+  };
+
+  // Use the OptMinSizeThreshold or OptSizeThreshold knob if they are available
+  // and reduce the threshold if the caller has the necessary attribute.
+  if (Caller->optForMinSize())
+    Threshold = MinIfValid(Threshold, Params.OptMinSizeThreshold);
+  else if (Caller->optForSize())
+    Threshold = MinIfValid(Threshold, Params.OptSizeThreshold);
 
   bool HotCallsite = false;
   uint64_t TotalWeight;
@@ -651,21 +643,18 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // minimize its size.
   bool InlineHint = Callee.hasFnAttribute(Attribute::InlineHint) ||
                     PSI->isHotFunction(&Callee);
-  if (InlineHint && HintThreshold > Threshold && !Caller->optForMinSize())
-    Threshold = HintThreshold;
+  if (InlineHint && !Caller->optForMinSize())
+    Threshold = std::max(Threshold, Params.HintThreshold);
 
   if (HotCallsite && HotCallSiteThreshold > Threshold &&
       !Caller->optForMinSize())
-    Threshold = HotCallSiteThreshold;
+    Threshold = std::max(Threshold, Params.HotCallSiteThreshold);
 
   bool ColdCallee = PSI->isColdFunction(&Callee);
-  // Command line argument for DefaultInlineThreshold will override the default
-  // ColdThreshold. If we have -inline-threshold but no -inlinecold-threshold,
-  // do not use the default cold threshold even if it is smaller.
-  if ((DefaultInlineThreshold.getNumOccurrences() == 0 ||
-       ColdThreshold.getNumOccurrences() > 0) &&
-       ColdCallee && ColdThreshold < Threshold)
-    Threshold = ColdThreshold;
+  // For cold callees, use the ColdThreshold knob if it is available and reduces
+  // the threshold.
+  if (ColdCallee)
+    Threshold = MinIfValid(Threshold, Params.ColdThreshold);
 
   // Finally, take the target-specific inlining threshold multiplier into
   // account.
@@ -967,8 +956,9 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   // during devirtualization and so we want to give it a hefty bonus for
   // inlining, but cap that bonus in the event that inlining wouldn't pan
   // out. Pretend to inline the function, with a custom threshold.
-  CallAnalyzer CA(TTI, GetAssumptionCache, PSI, *F,
-                  InlineConstants::IndirectCallThreshold, CS);
+  auto IndirectCallParams = Params;
+  IndirectCallParams.DefaultThreshold = InlineConstants::IndirectCallThreshold;
+  CallAnalyzer CA(TTI, GetAssumptionCache, PSI, *F, CS, Params);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
     // threshold to get the bonus we want to apply, but don't go below zero.
@@ -1454,28 +1444,15 @@ static bool functionsHaveCompatibleAttributes(Function *Caller,
 }
 
 InlineCost llvm::getInlineCost(
-    CallSite CS, int DefaultThreshold, TargetTransformInfo &CalleeTTI,
+    CallSite CS, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     ProfileSummaryInfo *PSI) {
-  return getInlineCost(CS, CS.getCalledFunction(), DefaultThreshold, CalleeTTI,
+  return getInlineCost(CS, CS.getCalledFunction(), Params, CalleeTTI,
                        GetAssumptionCache, PSI);
 }
 
-int llvm::computeThresholdFromOptLevels(unsigned OptLevel,
-                                        unsigned SizeOptLevel) {
-  if (OptLevel > 2)
-    return OptAggressiveThreshold;
-  if (SizeOptLevel == 1) // -Os
-    return OptSizeThreshold;
-  if (SizeOptLevel == 2) // -Oz
-    return OptMinSizeThreshold;
-  return DefaultInlineThreshold;
-}
-
-int llvm::getDefaultInlineThreshold() { return DefaultInlineThreshold; }
-
 InlineCost llvm::getInlineCost(
-    CallSite CS, Function *Callee, int DefaultThreshold,
+    CallSite CS, Function *Callee, const InlineParams &Params,
     TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     ProfileSummaryInfo *PSI) {
@@ -1512,7 +1489,7 @@ InlineCost llvm::getInlineCost(
   DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                      << "...\n");
 
-  CallAnalyzer CA(CalleeTTI, GetAssumptionCache, PSI, *Callee, DefaultThreshold, CS);
+  CallAnalyzer CA(CalleeTTI, GetAssumptionCache, PSI, *Callee, CS, Params);
   bool ShouldInline = CA.analyzeCall(CS);
 
   DEBUG(CA.dump());
@@ -1559,4 +1536,68 @@ bool llvm::isInlineViable(Function &F) {
   }
 
   return true;
+}
+
+// APIs to create InlineParams based on command line flags and/or other
+// parameters.
+
+InlineParams llvm::getInlineParams(int Threshold) {
+  InlineParams Params;
+
+  // This field is the threshold to use for a callee by default. This is
+  // derived from one or more of:
+  //  * optimization or size-optimization levels,
+  //  * a value passed to createFunctionInliningPass function, or
+  //  * the -inline-threshold flag.
+  //  If the -inline-threshold flag is explicitly specified, that is used
+  //  irrespective of anything else.
+  if (InlineThreshold.getNumOccurrences() > 0)
+    Params.DefaultThreshold = InlineThreshold;
+  else
+    Params.DefaultThreshold = Threshold;
+
+  // Set the HintThreshold knob from the -inlinehint-threshold.
+  Params.HintThreshold = HintThreshold;
+
+  // Set the HotCallSiteThreshold knob from the -hot-callsite-threshold.
+  Params.HotCallSiteThreshold = HotCallSiteThreshold;
+
+  // Set the OptMinSizeThreshold and OptSizeThreshold params only if the
+  // Set the OptMinSizeThreshold and OptSizeThreshold params only if the
+  // -inlinehint-threshold commandline option is not explicitly given. If that
+  // option is present, then its value applies even for callees with size and
+  // minsize attributes.
+  // If the -inline-threshold is not specified, set the ColdThreshold from the
+  // -inlinecold-threshold even if it is not explicitly passed. If
+  // -inline-threshold is specified, then -inlinecold-threshold needs to be
+  // explicitly specified to set the ColdThreshold knob
+  if (InlineThreshold.getNumOccurrences() == 0) {
+    Params.OptMinSizeThreshold = InlineConstants::OptMinSizeThreshold;
+    Params.OptSizeThreshold = InlineConstants::OptSizeThreshold;
+    Params.ColdThreshold = ColdThreshold;
+  } else if (ColdThreshold.getNumOccurrences() > 0) {
+    Params.ColdThreshold = ColdThreshold;
+  }
+  return Params;
+}
+
+InlineParams llvm::getInlineParams() {
+  return getInlineParams(InlineThreshold);
+}
+
+// Compute the default threshold for inlining based on the opt level and the
+// size opt level.
+static int computeThresholdFromOptLevels(unsigned OptLevel,
+                                         unsigned SizeOptLevel) {
+  if (OptLevel > 2)
+    return InlineConstants::OptAggressiveThreshold;
+  if (SizeOptLevel == 1) // -Os
+    return InlineConstants::OptSizeThreshold;
+  if (SizeOptLevel == 2) // -Oz
+    return InlineConstants::OptMinSizeThreshold;
+  return InlineThreshold;
+}
+
+InlineParams llvm::getInlineParams(unsigned OptLevel, unsigned SizeOptLevel) {
+  return getInlineParams(computeThresholdFromOptLevels(OptLevel, SizeOptLevel));
 }

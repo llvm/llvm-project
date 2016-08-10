@@ -1199,6 +1199,9 @@ bool getValueFromCondition(Value *Val, Value *Cond, LVILatticeVal &Result,
     }
   }
 
+  if (!Val->getType()->isIntegerTy())
+    return false;
+
   // Use ConstantRange::makeAllowedICmpRegion in order to determine the possible
   // range of Val guaranteed by the condition. Recognize comparisons in the from
   // of:

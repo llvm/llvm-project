@@ -124,7 +124,7 @@ static cl::opt<bool> DoComdatRenaming(
 
 // Command line option to enable/disable the warning about missing profile
 // information.
-static cl::opt<bool> NoPGOWarnMissing("no-pgo-warn-missing", cl::init(false),
+static cl::opt<bool> NoPGOWarnMissing("no-pgo-warn-missing", cl::init(true),
                                       cl::Hidden);
 
 // Command line option to enable/disable the warning about a hash mismatch in

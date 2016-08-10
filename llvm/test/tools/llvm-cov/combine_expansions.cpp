@@ -5,22 +5,22 @@
 
 #define SIMPLE_OP \
   ++x
-// CHECK:       | [[@LINE-2]]|#define SIMPLE_OP
-// CHECK-NEXT: 2| [[@LINE-2]]|  ++x
+// CHECK:      [[@LINE-2]]|  |#define SIMPLE_OP
+// CHECK-NEXT: [[@LINE-2]]| 2|  ++x
 
 #define DO_SOMETHING \
   {                  \
     int x = 0;       \
     SIMPLE_OP;       \
   }
-// CHECK:       | [[@LINE-5]]|#define DO_SOMETHING
-// CHECK-NEXT: 2| [[@LINE-5]]|  {
-// CHECK-NEXT: 2| [[@LINE-5]]|    int x = 0;
-// CHECK-NEXT: 2| [[@LINE-5]]|    SIMPLE_OP;
-// CHECK-NEXT: 2| [[@LINE-5]]|  }
+// CHECK:      [[@LINE-5]]|  |#define DO_SOMETHING
+// CHECK-NEXT: [[@LINE-5]]| 2|  {
+// CHECK-NEXT: [[@LINE-5]]| 2|    int x = 0;
+// CHECK-NEXT: [[@LINE-5]]| 2|    SIMPLE_OP;
+// CHECK-NEXT: [[@LINE-5]]| 2|  }
 
-int main() {    // CHECK:      1| [[@LINE]]|int main() {
-  DO_SOMETHING; // CHECK-NEXT: 1| [[@LINE]]|  DO_SOMETHING;
-  DO_SOMETHING; // CHECK-NEXT: 1| [[@LINE]]|  DO_SOMETHING;
-  return 0;     // CHECK-NEXT: 1| [[@LINE]]|  return 0;
-}               // CHECK-NEXT: 1| [[@LINE]]|}
+int main() {    // CHECK:      [[@LINE]]| 1|int main() {
+  DO_SOMETHING; // CHECK-NEXT: [[@LINE]]| 1|  DO_SOMETHING;
+  DO_SOMETHING; // CHECK-NEXT: [[@LINE]]| 1|  DO_SOMETHING;
+  return 0;     // CHECK-NEXT: [[@LINE]]| 1|  return 0;
+}               // CHECK-NEXT: [[@LINE]]| 1|}

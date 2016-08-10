@@ -27,6 +27,7 @@ class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class InlineCost;
+class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 template <class PtrType, unsigned SmallSize> class SmallPtrSet;
 

@@ -100,6 +100,13 @@ private:
   /// \return true if the translation succeeded.
   bool translate(const Instruction &Inst);
 
+  /// Materialize \p C into virtual-register \p Reg. The generic instructions
+  /// performing this materialization will be inserted into the entry block of
+  /// the function.
+  ///
+  /// \return true if the materialization succeeded.
+  bool translate(const Constant &C, unsigned Reg);
+
   /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
   /// emitted.
   bool translateBitCast(const CastInst &CI);
@@ -150,6 +157,10 @@ private:
   // in the current block, it can creates block, etc., basically a kind of
   // IRBuilder, but for Machine IR.
   MachineIRBuilder MIRBuilder;
+
+  // Builder set to the entry block (just after ABI lowering instructions). Used
+  // as a convenient location for Constants.
+  MachineIRBuilder EntryBuilder;
 
   /// MachineRegisterInfo used to create virtual registers.
   MachineRegisterInfo *MRI;
