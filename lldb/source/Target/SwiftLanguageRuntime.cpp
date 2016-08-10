@@ -1694,6 +1694,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
                             // --------------
                             // Metadata
                             // WitnessTable
+                            // hashable Metadata
+                            // hashable WitnessTable
                             // --------------
                             // tail allocated actual object data *
                             // }
@@ -1720,7 +1722,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
             MetadataPromiseSP promise_sp(GetMetadataPromise(error_descriptor.m_bridgeable_native.metadata_ptr_value,swift_ast_ctx));
             if (!promise_sp)
                 return false;
-            error_descriptor.m_bridgeable_native.metadata_location += 2*ptr_size;
+            error_descriptor.m_bridgeable_native.metadata_location += 4*ptr_size;
             if (!promise_sp->IsStaticallyDetermined())
             {
                 // figure out the actual dynamic type via the metadata at the "isa" pointer
