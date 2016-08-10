@@ -59,10 +59,8 @@ static int helpMain(int argc, const char *argv[]);
 /// \brief An oldname -> newname rename.
 struct RenameAllInfo {
   std::string OldName;
-  unsigned Offset;
+  unsigned Offset = 0;
   std::string NewName;
-
-  RenameAllInfo() : Offset(0) {}
 };
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(RenameAllInfo)
@@ -70,7 +68,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(RenameAllInfo)
 namespace llvm {
 namespace yaml {
 
-/// \brief Specialized MappingTraits to describe how a RenameAllInfo is /
+/// \brief Specialized MappingTraits to describe how a RenameAllInfo is
 /// (de)serialized.
 template <> struct MappingTraits<RenameAllInfo> {
   static void mapping(IO &IO, RenameAllInfo &Info) {
@@ -149,11 +147,12 @@ int subcommandMain(bool isRenameAll, int argc, const char **argv) {
 
   if (!Input.empty()) {
     // Populate OldNames and NewNames from a YAML file.
-    auto Buffer = llvm::MemoryBuffer::getFile(Input);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
+        llvm::MemoryBuffer::getFile(Input);
     if (!Buffer) {
       errs() << "clang-rename: failed to read " << Input << ": "
              << Buffer.getError().message() << "\n";
-      exit(1);
+      return 1;
     }
 
     std::vector<RenameAllInfo> Infos;

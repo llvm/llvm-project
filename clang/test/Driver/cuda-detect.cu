@@ -72,6 +72,11 @@
 // RUN:   | FileCheck %s -check-prefix COMMON \
 // RUN:     -check-prefix NOCUDAINC -check-prefix NOLIBDEVICE
 
+// Verify that C++ include paths are passed for both host and device frontends.
+// RUN: %clang -### -no-canonical-prefixes -target x86_64-linux-gnu %s \
+// RUN: --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 2>&1 \
+// RUN: | FileCheck %s --check-prefix CHECK-CXXINCLUDE
+
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA/usr/local/cuda
 // NOCUDA-NOT: Found CUDA installation:
 
@@ -92,3 +97,8 @@
 // CUDAINC-SAME: "-include" "__clang_cuda_runtime_wrapper.h"
 // NOCUDAINC-NOT: "-include" "__clang_cuda_runtime_wrapper.h"
 // COMMON-SAME: "-x" "cuda"
+// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
+// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "x86_64--linux-gnu"
+// CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
+// CHECK-CXXINCLUDE: ld{{.*}}"

@@ -1984,9 +1984,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Right.isOneOf(tok::semi, tok::comma))
     return false;
   if (Right.is(tok::less) &&
-      (Left.is(tok::kw_template) ||
-       (Line.Type == LT_ObjCDecl && Style.ObjCSpaceBeforeProtocolList)))
+      Line.Type == LT_ObjCDecl && Style.ObjCSpaceBeforeProtocolList)
     return true;
+  if (Right.is(tok::less) && Left.is(tok::kw_template))
+    return Style.SpaceAfterTemplateKeyword;
   if (Left.isOneOf(tok::exclaim, tok::tilde))
     return false;
   if (Left.is(tok::at) &&

@@ -42,7 +42,7 @@ To get an offset of a symbol in a file run
   $ grep -FUbo 'foo' file.cpp
 
 
-The tool currently supports renaming actions inside a single Translation Unit
+The tool currently supports renaming actions inside a single translation unit
 only. It is planned to extend the tool's functionality to support multi-TU
 renaming actions in the future.
 

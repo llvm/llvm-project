@@ -79,7 +79,7 @@ does not enable any checks itself).
 
 Clang diagnostics have check names starting with ``clang-diagnostic-``.
 Diagnostics which have a corresponding warning option, are named
-``clang-diagostic-<warning-option>``, e.g. Clang warning controlled by
+``clang-diagnostic-<warning-option>``, e.g. Clang warning controlled by
 ``-Wliteral-conversion`` will be reported with check name
 ``clang-diagnostic-literal-conversion``.
 
@@ -140,7 +140,7 @@ An overview of all the command-line options:
                                    report to stderr.
     -export-fixes=<filename>     - 
                                    YAML file to store suggested fixes in. The
-                                   stored fixes can be applied to the input sorce
+                                   stored fixes can be applied to the input source
                                    code with clang-apply-replacements.
     -extra-arg=<string>          - Additional argument to append to the compiler command line
     -extra-arg-before=<string>   - Additional argument to prepend to the compiler command line
@@ -246,7 +246,7 @@ rest of this document explains how to do this.
 There are a few tools particularly useful when developing clang-tidy checks:
   * ``add_new_check.py`` is a script to automate the process of adding a new
     check, it will create the check, update the CMake file and create a test;
-  * ``rename_check.py`` does what the script name suggest, renames an existsing
+  * ``rename_check.py`` does what the script name suggest, renames an existing
     check;
   * :program:`clang-query` is invaluable for interactive prototyping of AST
     matchers and exploration of the Clang AST;
@@ -562,7 +562,7 @@ source code is at `test/clang-tidy/google-readability-casting.cpp`_):
   }
 
 There are many dark corners in the C++ language, and it may be difficult to make
-your check work perfectly in all cases, especially if it issues fixit hints. The
+your check work perfectly in all cases, especially if it issues fix-it hints. The
 most frequent pitfalls are macros and templates:
 
 1. code written in a macro body/template definition may have a different meaning
@@ -570,7 +570,7 @@ most frequent pitfalls are macros and templates:
 2. multiple macro expansions/template instantiations may result in the same code
    being inspected by the check multiple times (possibly, with different
    meanings, see 1), and the same warning (or a slightly different one) may be
-   issued by the check multipe times; clang-tidy will deduplicate _identical_
+   issued by the check multiple times; clang-tidy will deduplicate _identical_
    warnings, but if the warnings are slightly different, all of them will be
    shown to the user (and used for applying fixes, if any);
 3. making replacements to a macro body/template definition may be fine for some
