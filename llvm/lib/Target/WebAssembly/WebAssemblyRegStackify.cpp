@@ -303,7 +303,7 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
 
     // Ask LiveIntervals whether moving this virtual register use or def to
     // Insert will change which value numbers are seen.
-    // 
+    //
     // If the operand is a use of a register that is also defined in the same
     // instruction, test that the newly defined value reaches the insert point,
     // since the operand will be moving along with the def.
@@ -384,7 +384,7 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         //
         // This is needed as a consequence of using implicit get_locals for
         // uses and implicit set_locals for defs.
-        if (UseInst->getDesc().getNumDefs() == 0) 
+        if (UseInst->getDesc().getNumDefs() == 0)
           return false;
         const MachineOperand &MO = UseInst->getOperand(0);
         if (!MO.isReg())

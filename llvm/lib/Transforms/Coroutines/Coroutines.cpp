@@ -122,3 +122,21 @@ bool coro::declaresIntrinsics(Module &M,
 
   return false;
 }
+
+// Find all llvm.coro.free instructions associated with the provided coro.begin
+// and replace them with the provided replacement value.
+void coro::replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement) {
+  SmallVector<CoroFreeInst *, 4> CoroFrees;
+  for (User *FramePtr: CB->users())
+    for (User *U : FramePtr->users())
+      if (auto *CF = dyn_cast<CoroFreeInst>(U))
+        CoroFrees.push_back(CF);
+
+  if (CoroFrees.empty())
+    return;
+
+  for (CoroFreeInst *CF : CoroFrees) {
+    CF->replaceAllUsesWith(Replacement);
+    CF->eraseFromParent();
+  }
+}

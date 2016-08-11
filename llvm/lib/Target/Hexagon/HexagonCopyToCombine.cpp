@@ -628,8 +628,7 @@ void HexagonCopyToCombine::emitConst64(MachineBasicBlock::iterator &InsertPt,
 
   int64_t V = HiOperand.getImm();
   V = (V << 32) | (0x0ffffffffLL & LoOperand.getImm());
-  BuildMI(*BB, InsertPt, DL, TII->get(Hexagon::CONST64_Int_Real),
-    DoubleDestReg)
+  BuildMI(*BB, InsertPt, DL, TII->get(Hexagon::CONST64), DoubleDestReg)
     .addImm(V);
 }
 

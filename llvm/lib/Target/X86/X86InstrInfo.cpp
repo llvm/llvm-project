@@ -68,7 +68,7 @@ static cl::opt<unsigned>
 UndefRegClearance("undef-reg-clearance",
                   cl::desc("How many idle instructions we would like before "
                            "certain undef register reads"),
-                  cl::init(64), cl::Hidden);
+                  cl::init(128), cl::Hidden);
 
 enum {
   // Select which memory operand is being unfolded.

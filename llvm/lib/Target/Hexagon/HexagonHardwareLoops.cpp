@@ -1490,8 +1490,8 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
     case TargetOpcode::COPY:
     case Hexagon::A2_tfrsi:
     case Hexagon::A2_tfrpi:
-    case Hexagon::CONST32_Int_Real:
-    case Hexagon::CONST64_Int_Real: {
+    case Hexagon::CONST32:
+    case Hexagon::CONST64: {
       // Call recursively to avoid an extra check whether operand(1) is
       // indeed an immediate (it could be a global address, for example),
       // plus we can handle COPY at the same time.

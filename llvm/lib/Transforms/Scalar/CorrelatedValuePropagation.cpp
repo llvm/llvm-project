@@ -18,6 +18,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -381,6 +382,59 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processAdd(BinaryOperator *AddOp, LazyValueInfo *LVI) {
+  typedef OverflowingBinaryOperator OBO;
+
+  if (AddOp->getType()->isVectorTy() || hasLocalDefs(AddOp))
+    return false;
+
+  bool NSW = AddOp->hasNoSignedWrap();
+  bool NUW = AddOp->hasNoUnsignedWrap();
+  if (NSW && NUW)
+    return false;
+
+  BasicBlock *BB = AddOp->getParent();
+
+  Value *LHS = AddOp->getOperand(0);
+  Value *RHS = AddOp->getOperand(1);
+
+  ConstantRange LRange = LVI->getConstantRange(LHS, BB, AddOp);
+
+  // Initialize RRange only if we need it. If we know that guaranteed no wrap
+  // range for the given LHS range is empty don't spend time calculating the
+  // range for the RHS.
+  Optional<ConstantRange> RRange;
+  auto LazyRRange = [&] () {
+      if (!RRange)
+        RRange = LVI->getConstantRange(RHS, BB, AddOp);
+      return RRange.getValue();
+  };
+
+  bool Changed = false;
+  if (!NUW) {
+    ConstantRange NUWRange =
+            LRange.makeGuaranteedNoWrapRegion(BinaryOperator::Add, LRange,
+                                              OBO::NoUnsignedWrap);
+    if (!NUWRange.isEmptySet()) {
+      bool NewNUW = NUWRange.contains(LazyRRange());
+      AddOp->setHasNoUnsignedWrap(NewNUW);
+      Changed |= NewNUW;
+    }
+  }
+  if (!NSW) {
+    ConstantRange NSWRange =
+            LRange.makeGuaranteedNoWrapRegion(BinaryOperator::Add, LRange,
+                                              OBO::NoSignedWrap);
+    if (!NSWRange.isEmptySet()) {
+      bool NewNSW = NSWRange.contains(LazyRRange());
+      AddOp->setHasNoSignedWrap(NewNSW);
+      Changed |= NewNSW;
+    }
+  }
+
+  return Changed;
+}
+
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (Constant *C = LVI->getConstant(V, At->getParent(), At))
     return C;
@@ -435,6 +489,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI) {
         break;
       case Instruction::SDiv:
         BBChanged |= processSDiv(cast<BinaryOperator>(II), LVI);
+        break;
+      case Instruction::Add:
+        BBChanged |= processAdd(cast<BinaryOperator>(II), LVI);
         break;
       }
     }

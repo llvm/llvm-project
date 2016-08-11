@@ -555,11 +555,10 @@ Note: non-integral pointer types are a work in progress, and they should be
 considered experimental at this time.
 
 LLVM IR optionally allows the frontend to denote pointers in certain address
-spaces as "non-integral" via the :ref:```datalayout``
-string<langref_datalayout>`.  Non-integral pointer types represent pointers that
-have an *unspecified* bitwise representation; that is, the integral
-representation may be target dependent or unstable (not backed by a fixed
-integer).
+spaces as "non-integral" via the :ref:`datalayout string<langref_datalayout>`.
+Non-integral pointer types represent pointers that have an *unspecified* bitwise
+representation; that is, the integral representation may be target dependent or
+unstable (not backed by a fixed integer).
 
 ``inttoptr`` instructions converting integers to non-integral pointer types are
 ill-typed, and so are ``ptrtoint`` instructions converting values of

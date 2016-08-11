@@ -39,16 +39,15 @@ define void @signum64a(<2 x double>*) {
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm3
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm3, %xmm3
 ; AVX1-NEXT:    vmovq %xmm2, %rax
-; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm2
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm2
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX1-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm1
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm1
 ; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm0
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vmovapd %xmm0, (%rdi)
@@ -60,16 +59,15 @@ define void @signum64a(<2 x double>*) {
 ; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm3
+; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm3, %xmm3
 ; AVX2-NEXT:    vmovq %xmm2, %rax
-; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm2
+; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm2
 ; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX2-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm1
+; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm1
 ; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm0
+; AVX2-NEXT:    vcvtsi2sdq %rax, %xmm4, %xmm0
 ; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vmovapd %xmm0, (%rdi)

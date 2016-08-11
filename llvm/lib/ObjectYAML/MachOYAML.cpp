@@ -138,7 +138,8 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
   IO.mapOptional("BindOpcodes", LinkEditData.BindOpcodes);
   IO.mapOptional("WeakBindOpcodes", LinkEditData.WeakBindOpcodes);
   IO.mapOptional("LazyBindOpcodes", LinkEditData.LazyBindOpcodes);
-  IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
+  if(LinkEditData.ExportTrie.Children.size() > 0 || !IO.outputting())
+    IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
   IO.mapOptional("NameList", LinkEditData.NameList);
   IO.mapOptional("StringTable", LinkEditData.StringTable);
 }

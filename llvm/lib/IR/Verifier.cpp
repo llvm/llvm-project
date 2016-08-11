@@ -1785,7 +1785,7 @@ void Verifier::verifyStatepoint(ImmutableCallSite CS) {
     Assert(Call, "illegal use of statepoint token", &CI, U);
     if (!Call) continue;
     Assert(isa<GCRelocateInst>(Call) || isa<GCResultInst>(Call),
-           "gc.result or gc.relocate are the only value uses"
+           "gc.result or gc.relocate are the only value uses "
            "of a gc.statepoint",
            &CI, U);
     if (isa<GCResultInst>(Call)) {
