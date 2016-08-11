@@ -7,6 +7,7 @@
 
 file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.ll
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
