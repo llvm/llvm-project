@@ -290,9 +290,9 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
          "RegScavenger required if spilling");
 
   if (MayNeedScavengingEmergencySlot) {
-    int ScavengeFI = MFI.CreateSpillStackObject(
+    int ScavengeFI = MFI.CreateStackObject(
       AMDGPU::SGPR_32RegClass.getSize(),
-      AMDGPU::SGPR_32RegClass.getAlignment());
+      AMDGPU::SGPR_32RegClass.getAlignment(), false);
     RS->addScavengingFrameIndex(ScavengeFI);
   }
 }

@@ -124,8 +124,9 @@ static cl::opt<bool> DoComdatRenaming(
 
 // Command line option to enable/disable the warning about missing profile
 // information.
-static cl::opt<bool> NoPGOWarnMissing("no-pgo-warn-missing", cl::init(true),
-                                      cl::Hidden);
+static cl::opt<bool> PGOWarnMissing("pgo-warn-missing-function",
+                                     cl::init(false),
+                                     cl::Hidden);
 
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data.
@@ -707,7 +708,7 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
       bool SkipWarning = false;
       if (Err == instrprof_error::unknown_function) {
         NumOfPGOMissing++;
-        SkipWarning = NoPGOWarnMissing;
+        SkipWarning = !PGOWarnMissing;
       } else if (Err == instrprof_error::hash_mismatch ||
                  Err == instrprof_error::malformed) {
         NumOfPGOMismatch++;

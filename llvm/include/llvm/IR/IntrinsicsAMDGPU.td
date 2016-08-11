@@ -257,6 +257,101 @@ class AMDGPUImageStore : Intrinsic <
 def int_amdgcn_image_store : AMDGPUImageStore;
 def int_amdgcn_image_store_mip : AMDGPUImageStore;
 
+class AMDGPUImageSample : Intrinsic <
+    [llvm_anyfloat_ty], // vdata(VGPR)
+    [llvm_anyfloat_ty,  // vaddr(VGPR)
+     llvm_anyint_ty,    // rsrc(SGPR)
+     llvm_v4i32_ty,     // sampler(SGPR)
+     llvm_i32_ty,       // dmask(imm)
+     llvm_i1_ty,        // unorm(imm)
+     llvm_i1_ty,        // glc(imm)
+     llvm_i1_ty,        // slc(imm)
+     llvm_i1_ty,        // lwe(imm)
+     llvm_i1_ty],       // da(imm)
+     [IntrReadMem]>;
+
+// Basic sample
+def int_amdgcn_image_sample : AMDGPUImageSample;
+def int_amdgcn_image_sample_cl : AMDGPUImageSample;
+def int_amdgcn_image_sample_d : AMDGPUImageSample;
+def int_amdgcn_image_sample_d_cl : AMDGPUImageSample;
+def int_amdgcn_image_sample_l : AMDGPUImageSample;
+def int_amdgcn_image_sample_b : AMDGPUImageSample;
+def int_amdgcn_image_sample_b_cl : AMDGPUImageSample;
+def int_amdgcn_image_sample_lz : AMDGPUImageSample;
+def int_amdgcn_image_sample_cd : AMDGPUImageSample;
+def int_amdgcn_image_sample_cd_cl : AMDGPUImageSample;
+
+// Sample with comparison
+def int_amdgcn_image_sample_c : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_cl : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_d : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_d_cl : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_l : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_b : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_b_cl : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_lz : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_cd : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_cd_cl : AMDGPUImageSample;
+
+// Sample with offsets
+def int_amdgcn_image_sample_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_d_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_d_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_l_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_b_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_b_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_lz_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_cd_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_cd_cl_o : AMDGPUImageSample;
+
+// Sample with comparison and offsets
+def int_amdgcn_image_sample_c_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_d_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_d_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_l_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_b_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_b_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_lz_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_cd_o : AMDGPUImageSample;
+def int_amdgcn_image_sample_c_cd_cl_o : AMDGPUImageSample;
+
+// Basic gather4
+def int_amdgcn_image_gather4 : AMDGPUImageSample;
+def int_amdgcn_image_gather4_cl : AMDGPUImageSample;
+def int_amdgcn_image_gather4_l : AMDGPUImageSample;
+def int_amdgcn_image_gather4_b : AMDGPUImageSample;
+def int_amdgcn_image_gather4_b_cl : AMDGPUImageSample;
+def int_amdgcn_image_gather4_lz : AMDGPUImageSample;
+
+// Gather4 with comparison
+def int_amdgcn_image_gather4_c : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_cl : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_l : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_b : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_b_cl : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_lz : AMDGPUImageSample;
+
+// Gather4 with offsets
+def int_amdgcn_image_gather4_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_l_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_b_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_b_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_lz_o : AMDGPUImageSample;
+
+// Gather4 with comparison and offsets
+def int_amdgcn_image_gather4_c_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_l_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_b_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_b_cl_o : AMDGPUImageSample;
+def int_amdgcn_image_gather4_c_lz_o : AMDGPUImageSample;
+
+def int_amdgcn_image_getlod : AMDGPUImageSample;
+
 class AMDGPUImageAtomic : Intrinsic <
   [llvm_i32_ty],
   [llvm_i32_ty,       // vdata(VGPR)

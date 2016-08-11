@@ -624,6 +624,11 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
     return B ? std::min(A, B.getValue()) : A;
   };
 
+  // return max(A, B) if B is valid.
+  auto MaxIfValid = [](int A, Optional<int> B) {
+    return B ? std::max(A, B.getValue()) : A;
+  };
+
   // Use the OptMinSizeThreshold or OptSizeThreshold knob if they are available
   // and reduce the threshold if the caller has the necessary attribute.
   if (Caller->optForMinSize())
@@ -644,11 +649,10 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   bool InlineHint = Callee.hasFnAttribute(Attribute::InlineHint) ||
                     PSI->isHotFunction(&Callee);
   if (InlineHint && !Caller->optForMinSize())
-    Threshold = std::max(Threshold, Params.HintThreshold);
+    Threshold = MaxIfValid(Threshold, Params.HintThreshold);
 
-  if (HotCallsite && HotCallSiteThreshold > Threshold &&
-      !Caller->optForMinSize())
-    Threshold = std::max(Threshold, Params.HotCallSiteThreshold);
+  if (HotCallsite && !Caller->optForMinSize())
+    Threshold = MaxIfValid(Threshold, Params.HotCallSiteThreshold);
 
   bool ColdCallee = PSI->isColdFunction(&Callee);
   // For cold callees, use the ColdThreshold knob if it is available and reduces
@@ -1257,7 +1261,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   bool OnlyOneCallAndLocalLinkage =
       F.hasLocalLinkage() && F.hasOneUse() && &F == CS.getCalledFunction();
   if (OnlyOneCallAndLocalLinkage)
-    Cost += InlineConstants::LastCallToStaticBonus;
+    Cost -= InlineConstants::LastCallToStaticBonus;
 
   // If this function uses the coldcc calling convention, prefer not to inline
   // it.

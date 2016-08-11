@@ -823,7 +823,7 @@ void HexagonDAGToDAGISel::SelectZeroExtend(SDNode *N) {
       Bit <<= ES;
     }
     SDValue Ones = CurDAG->getTargetConstant(MV, dl, MVT::i64);
-    SDNode *OnesReg = CurDAG->getMachineNode(Hexagon::CONST64_Int_Real, dl,
+    SDNode *OnesReg = CurDAG->getMachineNode(Hexagon::CONST64, dl,
                                              MVT::i64, Ones);
     if (ExVT.getSizeInBits() == 32) {
       SDNode *And = CurDAG->getMachineNode(Hexagon::A2_andp, dl, MVT::i64,
@@ -918,19 +918,15 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
 void HexagonDAGToDAGISel::SelectConstantFP(SDNode *N) {
   SDLoc dl(N);
   ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N);
-  const APFloat &APF = CN->getValueAPF();
+  APInt A = CN->getValueAPF().bitcastToAPInt();
   if (N->getValueType(0) == MVT::f32) {
-    ReplaceNode(
-        N, CurDAG->getMachineNode(Hexagon::TFRI_f, dl, MVT::f32,
-                                  CurDAG->getTargetConstantFP(
-                                      APF.convertToFloat(), dl, MVT::f32)));
+    SDValue V = CurDAG->getTargetConstant(A.getZExtValue(), dl, MVT::i32);
+    ReplaceNode(N, CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::f32, V));
     return;
   }
   if (N->getValueType(0) == MVT::f64) {
-    ReplaceNode(
-        N, CurDAG->getMachineNode(Hexagon::CONST64_Float_Real, dl, MVT::f64,
-                                  CurDAG->getTargetConstantFP(
-                                      APF.convertToDouble(), dl, MVT::f64)));
+    SDValue V = CurDAG->getTargetConstant(A.getZExtValue(), dl, MVT::i64);
+    ReplaceNode(N, CurDAG->getMachineNode(Hexagon::CONST64, dl, MVT::f64, V));
     return;
   }
 

@@ -55,10 +55,14 @@ HANDLE_TARGET_OPCODE(INSERT_SUBREG)
 /// IMPLICIT_DEF - This is the MachineInstr-level equivalent of undef.
 HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 
-/// SUBREG_TO_REG - This instruction is similar to INSERT_SUBREG except that
-/// the first operand is an immediate integer constant. This constant is
-/// often zero, because it is commonly used to assert that the instruction
-/// defining the register implicitly clears the high bits.
+/// SUBREG_TO_REG - Assert the value of bits in a super register.
+/// The result of this instruction is the value of the second operand inserted
+/// into the subregister specified by the third operand. All other bits are
+/// assumed to be equal to the bits in the immediate integer constant in the
+/// first operand. This instruction just communicates information; No code
+/// should be generated.
+/// This is typically used after an instruction where the write to a subregister
+/// implicitly cleared the bits in the super registers.
 HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 
 /// COPY_TO_REGCLASS - This instruction is a placeholder for a plain

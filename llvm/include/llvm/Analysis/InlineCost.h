@@ -42,7 +42,7 @@ const int OptAggressiveThreshold = 275;
 const int InstrCost = 5;
 const int IndirectCallThreshold = 100;
 const int CallPenalty = 25;
-const int LastCallToStaticBonus = -15000;
+const int LastCallToStaticBonus = 15000;
 const int ColdccPenalty = 2000;
 const int NoreturnPenalty = 10000;
 /// Do not inline functions which allocate this many bytes on the stack
@@ -124,7 +124,7 @@ struct InlineParams {
   int DefaultThreshold;
 
   /// Threshold to use for callees with inline hint.
-  int HintThreshold;
+  Optional<int> HintThreshold;
 
   /// Threshold to use for cold callees.
   Optional<int> ColdThreshold;
@@ -136,7 +136,7 @@ struct InlineParams {
   Optional<int> OptMinSizeThreshold;
 
   /// Threshold to use when the callsite is considered hot.
-  int HotCallSiteThreshold;
+  Optional<int> HotCallSiteThreshold;
 };
 
 /// Generate the parameters to tune the inline cost analysis based only on the

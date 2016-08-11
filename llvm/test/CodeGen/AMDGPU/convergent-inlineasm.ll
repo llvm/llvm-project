@@ -4,7 +4,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; GCN-LABEL: {{^}}convergent_inlineasm:
 ; GCN: BB#0:
 ; GCN: v_cmp_ne_i32_e64
-; GCN: BB#1:
+; GCN: ; mask branch
+; GCN: BB{{[0-9]+_[0-9]+}}:
 define void @convergent_inlineasm(i64 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -22,9 +23,12 @@ bb5:                                              ; preds = %bb3, %bb
 }
 
 ; GCN-LABEL: {{^}}nonconvergent_inlineasm:
-; GCN: BB#1:
+; GCN: ; mask branch
+
+; GCN: BB{{[0-9]+_[0-9]+}}:
 ; GCN: v_cmp_ne_i32_e64
-; GCN: BB1_2:
+
+; GCN: BB{{[0-9]+_[0-9]+}}:
 define void @nonconvergent_inlineasm(i64 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

@@ -28,6 +28,7 @@
 
 #include "test_macros.h"
 #include "archetypes.hpp"
+using namespace ImplicitTypes; // Get implicitly archetypes
 
 int main()
 {

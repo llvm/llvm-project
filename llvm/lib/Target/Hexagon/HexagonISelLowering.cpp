@@ -2215,7 +2215,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((HexagonISD::NodeType)Opcode) {
   case HexagonISD::ALLOCA:        return "HexagonISD::ALLOCA";
-  case HexagonISD::ARGEXTEND:     return "HexagonISD::ARGEXTEND";
   case HexagonISD::AT_GOT:        return "HexagonISD::AT_GOT";
   case HexagonISD::AT_PCREL:      return "HexagonISD::AT_PCREL";
   case HexagonISD::BARRIER:       return "HexagonISD::BARRIER";
@@ -2230,7 +2229,6 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::EH_RETURN:     return "HexagonISD::EH_RETURN";
   case HexagonISD::EXTRACTU:      return "HexagonISD::EXTRACTU";
   case HexagonISD::EXTRACTURP:    return "HexagonISD::EXTRACTURP";
-  case HexagonISD::FCONST32:      return "HexagonISD::FCONST32";
   case HexagonISD::INSERT:        return "HexagonISD::INSERT";
   case HexagonISD::INSERTRP:      return "HexagonISD::INSERTRP";
   case HexagonISD::JT:            return "HexagonISD::JT";
