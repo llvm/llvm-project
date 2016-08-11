@@ -249,8 +249,11 @@ public:
   })
 
   //--- Calls --------------------------------------------------------------//
-  DEF_ADD_DATA(CallExpr,
-               { addData(S->getDirectCallee()->getQualifiedNameAsString()); })
+  DEF_ADD_DATA(CallExpr, {
+    // Function pointers don't have a callee and we just skip hashing it.
+    if (S->getDirectCallee())
+      addData(S->getDirectCallee()->getQualifiedNameAsString());
+  })
 
   //--- Exceptions ---------------------------------------------------------//
   DEF_ADD_DATA(CXXCatchStmt, { addData(S->getCaughtType()); })

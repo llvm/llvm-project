@@ -125,10 +125,15 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
 
   llvm::Constant *init = llvm::ConstantStruct::getAnon(elements);
 
+  unsigned AddrSpace = 0;
+  if (C.getLangOpts().OpenCL)
+    AddrSpace = C.getTargetAddressSpace(LangAS::opencl_constant);
   llvm::GlobalVariable *global =
     new llvm::GlobalVariable(CGM.getModule(), init->getType(), true,
                              llvm::GlobalValue::InternalLinkage,
-                             init, "__block_descriptor_tmp");
+                             init, "__block_descriptor_tmp", nullptr,
+                             llvm::GlobalValue::NotThreadLocal,
+                             AddrSpace);
 
   return llvm::ConstantExpr::getBitCast(global, CGM.getBlockDescriptorType());
 }
@@ -927,7 +932,10 @@ llvm::Type *CodeGenModule::getBlockDescriptorType() {
                              UnsignedLongTy, UnsignedLongTy, nullptr);
 
   // Now form a pointer to that.
-  BlockDescriptorType = llvm::PointerType::getUnqual(BlockDescriptorType);
+  unsigned AddrSpace = 0;
+  if (getLangOpts().OpenCL)
+    AddrSpace = getContext().getTargetAddressSpace(LangAS::opencl_constant);
+  BlockDescriptorType = llvm::PointerType::get(BlockDescriptorType, AddrSpace);
   return BlockDescriptorType;
 }
 

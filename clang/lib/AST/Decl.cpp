@@ -3408,6 +3408,10 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BIstrlen:
     return Builtin::BIstrlen;
 
+  case Builtin::BI__builtin_bzero:
+  case Builtin::BIbzero:
+    return Builtin::BIbzero;
+
   default:
     if (isExternC()) {
       if (FnInfo->isStr("memset"))
@@ -3430,6 +3434,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIstrndup;
       else if (FnInfo->isStr("strlen"))
         return Builtin::BIstrlen;
+      else if (FnInfo->isStr("bzero"))
+        return Builtin::BIbzero;
     }
     break;
   }
