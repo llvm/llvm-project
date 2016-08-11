@@ -100,9 +100,15 @@ if(COMPILER_RT_INCLUDE_TESTS)
   endif()
 endif()
 
+set(LIT_ARGS)
+if(ANDROID)
+  set(LIT_ARGS -j5)
+endif()
+
 add_lit_testsuite(check-asan "Running the AddressSanitizer tests"
   ${ASAN_TESTSUITES}
-  DEPENDS ${ASAN_TEST_DEPS})
+  DEPENDS ${ASAN_TEST_DEPS}
+  ARGS ${LIT_ARGS})
 set_target_properties(check-asan PROPERTIES FOLDER "Compiler-RT Misc")
 
 if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)

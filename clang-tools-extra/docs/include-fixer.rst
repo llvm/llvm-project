@@ -105,7 +105,7 @@ See ``clang-include-fixer.el`` for more details.
 How it Works
 ============
 
-To get the most information out of clang at parse time,
+To get the most information out of Clang at parse time,
 :program:`clang-include-fixer` runs in tandem with the parse and receives
 callbacks from Clang's semantic analysis. In particular it reuses the existing
 support for typo corrections. Whenever Clang tries to correct a potential typo

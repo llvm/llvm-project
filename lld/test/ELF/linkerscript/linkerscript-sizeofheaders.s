@@ -3,7 +3,7 @@
 # RUN: echo " SECTIONS {             \
 # RUN:          . = SIZEOF_HEADERS;  \
 # RUN:          _size = SIZEOF_HEADERS;  \
-# RUN:          .text : {*(.text.*)} \
+# RUN:          .text : {*(.text*)} \
 # RUN:          }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck %s

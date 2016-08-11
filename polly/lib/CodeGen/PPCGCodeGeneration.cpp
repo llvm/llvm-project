@@ -1700,21 +1700,78 @@ public:
 
   /// Derive the extent of an array.
   ///
-  /// The extent of an array is defined by the set of memory locations for
-  /// which a memory access in the iteration domain exists.
+  /// The extent of an array is the set of elements that are within the
+  /// accessed array. For the inner dimensions, the extent constraints are
+  /// 0 and the size of the corresponding array dimension. For the first
+  /// (outermost) dimension, the extent constraints are the minimal and maximal
+  /// subscript value for the first dimension.
   ///
   /// @param Array The array to derive the extent for.
   ///
   /// @returns An isl_set describing the extent of the array.
   __isl_give isl_set *getExtent(ScopArrayInfo *Array) {
+    unsigned NumDims = Array->getNumberOfDimensions();
     isl_union_map *Accesses = S->getAccesses();
     Accesses = isl_union_map_intersect_domain(Accesses, S->getDomains());
+    Accesses = isl_union_map_detect_equalities(Accesses);
     isl_union_set *AccessUSet = isl_union_map_range(Accesses);
+    AccessUSet = isl_union_set_coalesce(AccessUSet);
+    AccessUSet = isl_union_set_detect_equalities(AccessUSet);
+    AccessUSet = isl_union_set_coalesce(AccessUSet);
+
+    if (isl_union_set_is_empty(AccessUSet)) {
+      isl_union_set_free(AccessUSet);
+      return isl_set_empty(Array->getSpace());
+    }
+
+    if (Array->getNumberOfDimensions() == 0) {
+      isl_union_set_free(AccessUSet);
+      return isl_set_universe(Array->getSpace());
+    }
+
     isl_set *AccessSet =
         isl_union_set_extract_set(AccessUSet, Array->getSpace());
-    isl_union_set_free(AccessUSet);
 
-    return AccessSet;
+    isl_union_set_free(AccessUSet);
+    isl_local_space *LS = isl_local_space_from_space(Array->getSpace());
+
+    isl_pw_aff *Val =
+        isl_pw_aff_from_aff(isl_aff_var_on_domain(LS, isl_dim_set, 0));
+
+    isl_pw_aff *OuterMin = isl_set_dim_min(isl_set_copy(AccessSet), 0);
+    isl_pw_aff *OuterMax = isl_set_dim_max(AccessSet, 0);
+    OuterMin = isl_pw_aff_add_dims(OuterMin, isl_dim_in,
+                                   isl_pw_aff_dim(Val, isl_dim_in));
+    OuterMax = isl_pw_aff_add_dims(OuterMax, isl_dim_in,
+                                   isl_pw_aff_dim(Val, isl_dim_in));
+    OuterMin =
+        isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in, Array->getBasePtrId());
+    OuterMax =
+        isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in, Array->getBasePtrId());
+
+    isl_set *Extent = isl_set_universe(Array->getSpace());
+
+    Extent = isl_set_intersect(
+        Extent, isl_pw_aff_le_set(OuterMin, isl_pw_aff_copy(Val)));
+    Extent = isl_set_intersect(Extent, isl_pw_aff_ge_set(OuterMax, Val));
+
+    for (unsigned i = 1; i < NumDims; ++i)
+      Extent = isl_set_lower_bound_si(Extent, isl_dim_set, i, 0);
+
+    for (unsigned i = 1; i < NumDims; ++i) {
+      isl_pw_aff *PwAff =
+          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i));
+      isl_pw_aff *Val = isl_pw_aff_from_aff(isl_aff_var_on_domain(
+          isl_local_space_from_space(Array->getSpace()), isl_dim_set, i));
+      PwAff = isl_pw_aff_add_dims(PwAff, isl_dim_in,
+                                  isl_pw_aff_dim(Val, isl_dim_in));
+      PwAff = isl_pw_aff_set_tuple_id(PwAff, isl_dim_in,
+                                      isl_pw_aff_get_tuple_id(Val, isl_dim_in));
+      auto *Set = isl_pw_aff_gt_set(PwAff, Val);
+      Extent = isl_set_intersect(Set, Extent);
+    }
+
+    return Extent;
   }
 
   /// Derive the bounds of an array.
@@ -1827,7 +1884,6 @@ public:
         isl_union_map_copy(PPCGScop->tagged_must_kills);
     PPCGProg->to_inner = getArrayIdentity();
     PPCGProg->to_outer = getArrayIdentity();
-    PPCGProg->may_persist = compute_may_persist(PPCGProg);
     PPCGProg->any_to_outer = nullptr;
     PPCGProg->array_order = nullptr;
     PPCGProg->n_stmts = std::distance(S->begin(), S->end());
@@ -1837,6 +1893,8 @@ public:
                                        PPCGProg->n_array);
 
     createArrays(PPCGProg);
+
+    PPCGProg->may_persist = compute_may_persist(PPCGProg);
 
     return PPCGProg;
   }

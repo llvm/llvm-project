@@ -246,7 +246,7 @@ rest of this document explains how to do this.
 There are a few tools particularly useful when developing clang-tidy checks:
   * ``add_new_check.py`` is a script to automate the process of adding a new
     check, it will create the check, update the CMake file and create a test;
-  * ``rename_check.py`` does what the script name suggest, renames an existing
+  * ``rename_check.py`` does what the script name suggests, renames an existing
     check;
   * :program:`clang-query` is invaluable for interactive prototyping of AST
     matchers and exploration of the Clang AST;

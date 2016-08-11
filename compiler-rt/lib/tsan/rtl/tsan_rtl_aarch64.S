@@ -1,5 +1,61 @@
 #include "sanitizer_common/sanitizer_asm.h"
+
+.section .bss
+.type	__tsan_pointer_chk_guard, %object
+.size	__tsan_pointer_chk_guard, 8
+__tsan_pointer_chk_guard:
+.zero	8
+
 .section .text
+
+// GLIBC mangles the function pointers in jmp_buf (used in {set,long}*jmp
+// functions) by XORing them with a random guard pointer.  For AArch64 it is a
+// global variable rather than a TCB one (as for x86_64/powerpc) and althought
+// its value is exported by the loader, it lies within a private GLIBC
+// namespace (meaning it should be only used by GLIBC itself and the ABI is
+// not stable). So InitializeGuardPtr obtains the pointer guard value by
+// issuing a setjmp and checking the resulting pointers values against the
+// original ones.
+.hidden _Z18InitializeGuardPtrv
+.global _Z18InitializeGuardPtrv
+.type _Z18InitializeGuardPtrv, @function
+_Z18InitializeGuardPtrv:
+  CFI_STARTPROC
+  // Allocates a jmp_buf for the setjmp call.
+  stp	x29, x30, [sp, -336]!
+  CFI_DEF_CFA_OFFSET (336)
+  CFI_OFFSET (29, -336)
+  CFI_OFFSET (30, -328)
+  add	x29, sp, 0
+  CFI_DEF_CFA_REGISTER (29)
+  add	x0, x29, 24
+
+  // Call libc setjmp that mangle the stack pointer value
+  adrp  x1, :got:_ZN14__interception12real__setjmpE
+  ldr   x1, [x1, #:got_lo12:_ZN14__interception12real__setjmpE]
+  ldr   x1, [x1]
+  blr   x1
+
+  // glibc setjmp mangles both the frame pointer (FP, pc+4 on blr) and the
+  // stack pointer (SP). FP will be placed on ((uintptr*)jmp_buf)[11] and
+  // SP at ((uintptr*)jmp_buf)[13].
+  // The mangle operation is just 'value' xor 'pointer guard value' and
+  // if we know the original value (SP) and the expected one, we can derive
+  // the guard pointer value.
+  mov	x0, sp
+
+  // Loads the mangled SP pointer.
+  ldr	x1, [x29, 128]
+  eor	x0, x0, x1
+  adrp	x2, __tsan_pointer_chk_guard
+  str	x0, [x2, #:lo12:__tsan_pointer_chk_guard]
+  ldp	x29, x30, [sp], 336
+  CFI_RESTORE (30)
+  CFI_RESTORE (19)
+  CFI_DEF_CFA (31, 0)
+  ret
+  CFI_ENDPROC
+.size _Z18InitializeGuardPtrv, .-_Z18InitializeGuardPtrv
 
 .hidden __tsan_setjmp
 .comm _ZN14__interception11real_setjmpE,8,8
@@ -23,10 +79,9 @@ setjmp:
   mov     x19, x0
 
   // SP pointer mangling (see glibc setjmp)
-  adrp    x2, :got:__pointer_chk_guard
-  ldr     x2, [x2, #:got_lo12:__pointer_chk_guard]
+  adrp    x2, __tsan_pointer_chk_guard
+  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
   add     x0, x29, 32
-  ldr     x2, [x2]
   eor     x1, x2, x0
 
   // call tsan interceptor
@@ -71,10 +126,9 @@ _setjmp:
   mov     x19, x0
 
   // SP pointer mangling (see glibc setjmp)
-  adrp    x2, :got:__pointer_chk_guard
-  ldr     x2, [x2, #:got_lo12:__pointer_chk_guard]
+  adrp    x2, __tsan_pointer_chk_guard
+  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
   add     x0, x29, 32
-  ldr     x2, [x2]
   eor     x1, x2, x0
 
   // call tsan interceptor
@@ -121,10 +175,9 @@ sigsetjmp:
   mov     x19, x0
 
   // SP pointer mangling (see glibc setjmp)
-  adrp    x2, :got:__pointer_chk_guard
-  ldr     x2, [x2, #:got_lo12:__pointer_chk_guard]
+  adrp    x2, __tsan_pointer_chk_guard
+  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
   add     x0, x29, 32
-  ldr     x2, [x2]
   eor     x1, x2, x0
 
   // call tsan interceptor
@@ -173,10 +226,9 @@ __sigsetjmp:
   mov     x19, x0
 
   // SP pointer mangling (see glibc setjmp)
-  adrp    x2, :got:__pointer_chk_guard
-  ldr     x2, [x2, #:got_lo12:__pointer_chk_guard]
+  adrp    x2, __tsan_pointer_chk_guard
+  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
   add     x0, x29, 32
-  ldr     x2, [x2]
   eor     x1, x2, x0
 
   // call tsan interceptor

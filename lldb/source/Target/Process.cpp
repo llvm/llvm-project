@@ -62,6 +62,7 @@
 #include "lldb/Target/ThreadPlanBase.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/SelectHelper.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -4925,25 +4926,20 @@ public:
         m_is_running = true;
         while (!GetIsDone())
         {
-            fd_set read_fdset;
-            FD_ZERO (&read_fdset);
-            FD_SET (read_fd, &read_fdset);
-            FD_SET (pipe_read_fd, &read_fdset);
-            const int nfds = std::max<int>(read_fd, pipe_read_fd) + 1;
-            int num_set_fds = select(nfds, &read_fdset, nullptr, nullptr, nullptr);
+            SelectHelper select_helper;
+            select_helper.FDSetRead(read_fd);
+            select_helper.FDSetRead(pipe_read_fd);
+            Error error = select_helper.Select();
 
-            if (num_set_fds < 0)
+            if (error.Fail())
             {
-                const int select_errno = errno;
-
-                if (select_errno != EINTR)
-                    SetIsDone(true);
+                SetIsDone(true);
             }
-            else if (num_set_fds > 0)
+            else
             {
                 char ch = 0;
                 size_t n;
-                if (FD_ISSET (read_fd, &read_fdset))
+                if (select_helper.FDIsSetRead(read_fd))
                 {
                     n = 1;
                     if (m_read_file.Read(&ch, n).Success() && n == 1)
@@ -4954,7 +4950,7 @@ public:
                     else
                         SetIsDone(true);
                 }
-                if (FD_ISSET (pipe_read_fd, &read_fdset))
+                if (select_helper.FDIsSetRead(pipe_read_fd))
                 {
                     size_t bytes_read;
                     // Consume the interrupt byte

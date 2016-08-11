@@ -119,13 +119,33 @@ static uint32_t getPicFlags(ArrayRef<FileFlags> Files) {
 
 static ArchTreeEdge ArchTree[] = {
     // MIPS32R6 and MIPS64R6 are not compatible with other extensions
+    // MIPS64R2 extensions.
+    {EF_MIPS_ARCH_64R2 | EF_MIPS_MACH_OCTEON3, EF_MIPS_ARCH_64R2},
+    {EF_MIPS_ARCH_64R2 | EF_MIPS_MACH_OCTEON2, EF_MIPS_ARCH_64R2},
+    {EF_MIPS_ARCH_64R2 | EF_MIPS_MACH_OCTEON, EF_MIPS_ARCH_64R2},
+    {EF_MIPS_ARCH_64R2 | EF_MIPS_MACH_LS3A, EF_MIPS_ARCH_64R2},
     // MIPS64 extensions.
+    {EF_MIPS_ARCH_64 | EF_MIPS_MACH_SB1, EF_MIPS_ARCH_64},
+    {EF_MIPS_ARCH_64 | EF_MIPS_MACH_XLR, EF_MIPS_ARCH_64},
     {EF_MIPS_ARCH_64R2, EF_MIPS_ARCH_64},
     // MIPS V extensions.
     {EF_MIPS_ARCH_64, EF_MIPS_ARCH_5},
+    // R5000 extensions.
+    {EF_MIPS_ARCH_4 | EF_MIPS_MACH_5500, EF_MIPS_ARCH_4 | EF_MIPS_MACH_5400},
     // MIPS IV extensions.
+    {EF_MIPS_ARCH_4 | EF_MIPS_MACH_5400, EF_MIPS_ARCH_4},
+    {EF_MIPS_ARCH_4 | EF_MIPS_MACH_9000, EF_MIPS_ARCH_4},
     {EF_MIPS_ARCH_5, EF_MIPS_ARCH_4},
+    // VR4100 extensions.
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_4111, EF_MIPS_ARCH_3 | EF_MIPS_MACH_4100},
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_4120, EF_MIPS_ARCH_3 | EF_MIPS_MACH_4100},
     // MIPS III extensions.
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_4010, EF_MIPS_ARCH_3},
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_4100, EF_MIPS_ARCH_3},
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_4650, EF_MIPS_ARCH_3},
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_5900, EF_MIPS_ARCH_3},
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_LS2E, EF_MIPS_ARCH_3},
+    {EF_MIPS_ARCH_3 | EF_MIPS_MACH_LS2F, EF_MIPS_ARCH_3},
     {EF_MIPS_ARCH_4, EF_MIPS_ARCH_3},
     // MIPS32 extensions.
     {EF_MIPS_ARCH_32R2, EF_MIPS_ARCH_32},
@@ -133,6 +153,7 @@ static ArchTreeEdge ArchTree[] = {
     {EF_MIPS_ARCH_3, EF_MIPS_ARCH_2},
     {EF_MIPS_ARCH_32, EF_MIPS_ARCH_2},
     // MIPS I extensions.
+    {EF_MIPS_ARCH_1 | EF_MIPS_MACH_3900, EF_MIPS_ARCH_1},
     {EF_MIPS_ARCH_2, EF_MIPS_ARCH_1},
 };
 
@@ -183,10 +204,10 @@ static StringRef getArchName(uint32_t Flags) {
 }
 
 static uint32_t getArchFlags(ArrayRef<FileFlags> Files) {
-  uint32_t Ret = Files[0].Flags & EF_MIPS_ARCH;
+  uint32_t Ret = Files[0].Flags & (EF_MIPS_ARCH | EF_MIPS_MACH);
 
   for (const FileFlags &F : Files.slice(1)) {
-    uint32_t New = F.Flags & EF_MIPS_ARCH;
+    uint32_t New = F.Flags & (EF_MIPS_ARCH | EF_MIPS_MACH);
 
     // Check ISA compatibility.
     if (isArchMatched(New, Ret))
