@@ -293,6 +293,7 @@ endif()
 option(LLVM_ENABLE_CXX1Y "Compile with C++1y enabled." OFF)
 option(LLVM_ENABLE_LIBCXX "Use libc++ if available." OFF)
 option(LLVM_ENABLE_LIBCXXABI "Use libc++abi when using libc++." OFF)
+option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
 option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LLVM_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 

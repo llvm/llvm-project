@@ -144,6 +144,12 @@ function(add_flag_or_print_warning flag name)
   endif()
 endfunction()
 
+if(LLVM_ENABLE_LLD)
+  check_cxx_compiler_flag("-fuse-ld=lld" CXX_SUPPORTS_LLD)
+  append_if(CXX_SUPPORTS_LLD "-fuse-ld=lld"
+    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
 if( LLVM_ENABLE_PIC )
   if( XCODE )
     # Xcode has -mdynamic-no-pic on by default, which overrides -fPIC. I don't
