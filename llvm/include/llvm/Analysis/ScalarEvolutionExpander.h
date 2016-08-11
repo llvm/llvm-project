@@ -196,6 +196,13 @@ namespace llvm {
     /// block.
     Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I);
 
+    /// \brief Insert code to directly compute the specified SCEV expression
+    /// into the program.  The inserted code is inserted into the SCEVExpander's
+    /// current insertion point. If a type is specified, the result will be
+    /// expanded to have that type, with a cast if necessary.
+    Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
+
+
     /// \brief Generates a code sequence that evaluates this predicate.
     /// The inserted instructions will be at position \p Loc.
     /// The result will be of type i1 and will have a value of 0 when the
@@ -252,6 +259,15 @@ namespace llvm {
     void disableCanonicalMode() { CanonicalMode = false; }
 
     void enableLSRMode() { LSRMode = true; }
+
+    /// \brief Set the current insertion point. This is useful if multiple calls
+    /// to expandCodeFor() are going to be made with the same insert point and
+    /// the insert point may be moved during one of the expansions (e.g. if the
+    /// insert point is not a block terminator).
+    void setInsertPoint(Instruction *IP) {
+      assert(IP);
+      Builder.SetInsertPoint(IP);
+    }
 
     /// \brief Clear the current insertion point. This is useful if the
     /// instruction that had been serving as the insertion point may have been
@@ -312,12 +328,6 @@ namespace llvm {
     Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
 
     Value *expand(const SCEV *S);
-
-    /// \brief Insert code to directly compute the specified SCEV expression
-    /// into the program.  The inserted code is inserted into the SCEVExpander's
-    /// current insertion point. If a type is specified, the result will be
-    /// expanded to have that type, with a cast if necessary.
-    Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
 
     /// \brief Determine the most "relevant" loop for the given SCEV.
     const Loop *getRelevantLoop(const SCEV *);

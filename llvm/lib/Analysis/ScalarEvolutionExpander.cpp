@@ -1610,8 +1610,7 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
 
 Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty,
                                    Instruction *IP) {
-  assert(IP);
-  Builder.SetInsertPoint(IP);
+  setInsertPoint(IP);
   return expandCodeFor(SH, Ty);
 }
 
