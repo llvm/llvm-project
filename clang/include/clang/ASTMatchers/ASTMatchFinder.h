@@ -229,6 +229,10 @@ private:
 /// Multiple results occur when using matchers like \c forEachDescendant,
 /// which generate a result for each sub-match.
 ///
+/// If you want to find all matches on the sub-tree rooted at \c Node (rather
+/// than only the matches on \c Node itself), surround the \c Matcher with a
+/// \c findAll().
+///
 /// \see selectFirst
 /// @{
 template <typename MatcherT, typename NodeT>

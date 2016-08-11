@@ -187,11 +187,7 @@ _mm512_maskz_and_ps (__mmask16 __U, __m512 __A, __m512 __B) {
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_andnot_pd (__m512d __A, __m512d __B) {
-  return (__m512d) __builtin_ia32_andnpd512_mask ((__v8df) __A,
-              (__v8df) __B,
-              (__v8df)
-              _mm512_setzero_pd (),
-              (__mmask8) -1);
+  return (__m512d)(~(__v8du)__A & (__v8du)__B);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
@@ -213,11 +209,7 @@ _mm512_maskz_andnot_pd (__mmask8 __U, __m512d __A, __m512d __B) {
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
 _mm512_andnot_ps (__m512 __A, __m512 __B) {
-  return (__m512) __builtin_ia32_andnps512_mask ((__v16sf) __A,
-             (__v16sf) __B,
-             (__v16sf)
-             _mm512_setzero_ps (),
-             (__mmask16) -1);
+  return (__m512)(~(__v16su)__A & (__v16su)__B);
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
