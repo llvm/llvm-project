@@ -43,6 +43,7 @@ add_subdirectory(oclc)
 add_subdirectory(ocml)
 add_subdirectory(ockl)
 add_subdirectory(opencl)
+add_subdirectory(hc)
 add_subdirectory(test/opencl)
 add_subdirectory(test/opencl_conformance)
 
