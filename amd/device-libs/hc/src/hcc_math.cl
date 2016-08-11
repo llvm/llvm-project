@@ -9,25 +9,40 @@
 
 #define ATTR __attribute__((always_inline))
 
-#define FUNC1(name, ocml_name, T) \
-  ATTR T name(T x) \
+#define FUNC1(name, ocml_name, Tr, Ta) \
+  ATTR Tr name(Ta x) \
   { \
     return ocml_name(x); \
   }
 
 #define FUNC1A(name) \
-  FUNC1(__hc_##name, __ocml_##name##_f32, float) \
-  FUNC1(__hc_##name##_double, __ocml_##name##_f64, double)
+  FUNC1(__hc_##name, __ocml_##name##_f32, float, float) \
+  FUNC1(__hc_##name##_double, __ocml_##name##_f64, double, double)
 
-#define FUNC2(name, ocml_name, T) \
-  ATTR T name(T x, T y) \
+#define FUNC1P(name) \
+  FUNC1(__hc_##name, __ocml_##name##_f32, int, float) \
+  FUNC1(__hc_##name##_double, __ocml_##name##_f64, int, double)
+
+#define FUNC2(name, ocml_name, Tr, Ta1, Ta2) \
+  ATTR Tr name(Ta1 x, Ta2 y) \
   { \
     return ocml_name(x, y); \
   }
 
 #define FUNC2A(name) \
-  FUNC2(__hc_##name, __ocml_##name##_f32, float) \
-  FUNC2(__hc_##name##_double, __ocml_##name##_f64, double)
+  FUNC2(__hc_##name, __ocml_##name##_f32, float, float, float) \
+  FUNC2(__hc_##name##_double, __ocml_##name##_f64, double, double, double)
+
+#define FUNC3(name, ocml_name, T) \
+  ATTR T name(T x, T y, T z) \
+  { \
+    return ocml_name(x, y, z); \
+  }
+
+#define FUNC3A(name) \
+  FUNC3(__hc_##name, __ocml_##name##_f32, float) \
+  FUNC3(__hc_##name##_double, __ocml_##name##_f64, double)
+
 
 FUNC1A(acos)
 FUNC1A(acosh)
@@ -51,7 +66,7 @@ FUNC1A(expm1)
 FUNC1A(fabs)
 FUNC2A(fdim)
 FUNC1A(floor)
-//FUNC3A(fma)
+FUNC3A(fma)
 FUNC2A(fmax)
 FUNC2A(fmin)
 FUNC2A(fmod)
@@ -59,11 +74,11 @@ FUNC2A(fmod)
 // frexp_global
 // frexp_local
 FUNC2A(hypot)
-// ilogb
-// isfinite
-// isinf
-// isnan
-// isnormal
+FUNC1P(ilogb)
+FUNC1P(isfinite)
+FUNC1P(isinf)
+FUNC1P(isnan)
+FUNC1P(isnormal)
 // lgammaf
 // lgamma
 FUNC1A(log)
@@ -83,8 +98,9 @@ FUNC2A(remainder)
 FUNC1A(round)
 FUNC1A(rsqrt)
 FUNC1A(sinpi)
-// ldexp
-// signbit
+FUNC2(__hc_ldexp, ldexp, float, float, int)
+FUNC2(__hc_ldexp_double, ldexp, double, double, int)
+FUNC1P(signbit)
 FUNC1A(sin)
 // sincos
 FUNC1A(sinh)
