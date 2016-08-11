@@ -146,8 +146,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
       // These instructions may be marked as mayLoad, but they are generating
       // immediate values, so skip them.
       case CONST32:
-      case CONST32_Int_Real:
-      case CONST64_Int_Real:
+      case CONST64:
         break;
       default:
         return evaluateLoad(MI, Inputs, Outputs);
@@ -257,8 +256,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case A2_tfrsi:
     case A2_tfrpi:
     case CONST32:
-    case CONST32_Int_Real:
-    case CONST64_Int_Real:
+    case CONST64:
       return rr0(eIMM(im(1), W0), Outputs);
     case TFR_PdFalse:
       return rr0(RegisterCell(W0).fill(0, W0, BT::BitValue::Zero), Outputs);

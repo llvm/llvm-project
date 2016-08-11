@@ -1223,15 +1223,50 @@ static bool affectsRange(ArrayRef<tooling::Range> Ranges, unsigned Start,
   return false;
 }
 
-// Sorts a block of includes given by 'Includes' alphabetically adding the
-// necessary replacement to 'Replaces'. 'Includes' must be in strict source
-// order.
+// Returns a pair (Index, OffsetToEOL) describing the position of the cursor
+// before sorting/deduplicating. Index is the index of the include under the
+// cursor in the original set of includes. If this include has duplicates, it is
+// the index of the first of the duplicates as the others are going to be
+// removed. OffsetToEOL describes the cursor's position relative to the end of
+// its current line.
+// If `Cursor` is not on any #include, `Index` will be UINT_MAX.
+static std::pair<unsigned, unsigned>
+FindCursorIndex(const SmallVectorImpl<IncludeDirective> &Includes,
+                const SmallVectorImpl<unsigned> &Indices, unsigned Cursor) {
+  unsigned CursorIndex = UINT_MAX;
+  unsigned OffsetToEOL = 0;
+  for (int i = 0, e = Includes.size(); i != e; ++i) {
+    unsigned Start = Includes[Indices[i]].Offset;
+    unsigned End = Start + Includes[Indices[i]].Text.size();
+    if (!(Cursor >= Start && Cursor < End))
+      continue;
+    CursorIndex = Indices[i];
+    OffsetToEOL = End - Cursor;
+    // Put the cursor on the only remaining #include among the duplicate
+    // #includes.
+    while (--i >= 0 && Includes[CursorIndex].Text == Includes[Indices[i]].Text)
+      CursorIndex = i;
+    break;
+  }
+  return std::make_pair(CursorIndex, OffsetToEOL);
+}
+
+// Sorts and deduplicate a block of includes given by 'Includes' alphabetically
+// adding the necessary replacement to 'Replaces'. 'Includes' must be in strict
+// source order.
+// #include directives with the same text will be deduplicated, and only the
+// first #include in the duplicate #includes remains. If the `Cursor` is
+// provided and put on a deleted #include, it will be moved to the remaining
+// #include in the duplicate #includes.
 static void sortCppIncludes(const FormatStyle &Style,
-                         const SmallVectorImpl<IncludeDirective> &Includes,
-                         ArrayRef<tooling::Range> Ranges, StringRef FileName,
-                         tooling::Replacements &Replaces, unsigned *Cursor) {
-  if (!affectsRange(Ranges, Includes.front().Offset,
-                    Includes.back().Offset + Includes.back().Text.size()))
+                            const SmallVectorImpl<IncludeDirective> &Includes,
+                            ArrayRef<tooling::Range> Ranges, StringRef FileName,
+                            tooling::Replacements &Replaces, unsigned *Cursor) {
+  unsigned IncludesBeginOffset = Includes.front().Offset;
+  unsigned IncludesBlockSize = Includes.back().Offset +
+                               Includes.back().Text.size() -
+                               IncludesBeginOffset;
+  if (!affectsRange(Ranges, IncludesBeginOffset, IncludesBlockSize))
     return;
   SmallVector<unsigned, 16> Indices;
   for (unsigned i = 0, e = Includes.size(); i != e; ++i)
@@ -1241,37 +1276,39 @@ static void sortCppIncludes(const FormatStyle &Style,
         return std::tie(Includes[LHSI].Category, Includes[LHSI].Filename) <
                std::tie(Includes[RHSI].Category, Includes[RHSI].Filename);
       });
+  // The index of the include on which the cursor will be put after
+  // sorting/deduplicating.
+  unsigned CursorIndex;
+  // The offset from cursor to the end of line.
+  unsigned CursorToEOLOffset;
+  if (Cursor)
+    std::tie(CursorIndex, CursorToEOLOffset) =
+        FindCursorIndex(Includes, Indices, *Cursor);
+
+  // Deduplicate #includes.
+  Indices.erase(std::unique(Indices.begin(), Indices.end(),
+                            [&](unsigned LHSI, unsigned RHSI) {
+                              return Includes[LHSI].Text == Includes[RHSI].Text;
+                            }),
+                Indices.end());
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
-  if (std::is_sorted(Indices.begin(), Indices.end()))
+  if (Indices.size() == Includes.size() &&
+      std::is_sorted(Indices.begin(), Indices.end()))
     return;
 
   std::string result;
-  bool CursorMoved = false;
   for (unsigned Index : Indices) {
     if (!result.empty())
       result += "\n";
     result += Includes[Index].Text;
-
-    if (Cursor && !CursorMoved) {
-      unsigned Start = Includes[Index].Offset;
-      unsigned End = Start + Includes[Index].Text.size();
-      if (*Cursor >= Start && *Cursor < End) {
-        *Cursor = Includes.front().Offset + result.size() + *Cursor - End;
-        CursorMoved = true;
-      }
-    }
+    if (Cursor && CursorIndex == Index)
+      *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
   }
 
-  // Sorting #includes shouldn't change their total number of characters.
-  // This would otherwise mess up 'Ranges'.
-  assert(result.size() ==
-         Includes.back().Offset + Includes.back().Text.size() -
-             Includes.front().Offset);
-
   auto Err = Replaces.add(tooling::Replacement(
-      FileName, Includes.front().Offset, result.size(), result));
+      FileName, Includes.front().Offset, IncludesBlockSize, result));
   // FIXME: better error handling. For now, just skip the replacement for the
   // release version.
   if (Err)

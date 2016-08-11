@@ -47,7 +47,7 @@ end:
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
 
-; SI: ; BB#1
+; SI: BB{{[0-9]+_[0-9]+}}:
 ; SI: buffer_store_dword
 ; SI: s_endpgm
 
@@ -68,7 +68,7 @@ exit:
   ret void
 }
 
-; SI-LABEL: @simple_test_v_loop
+; SI-LABEL: {{^}}simple_test_v_loop:
 ; SI: v_cmp_ne_i32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: s_and_saveexec_b64 [[BR_SREG:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[BR_SREG]], exec, [[BR_SREG]]
@@ -106,7 +106,7 @@ exit:
   ret void
 }
 
-; SI-LABEL: @multi_vcond_loop
+; SI-LABEL: {{^}}multi_vcond_loop:
 
 ; Load loop limit from buffer
 ; Branch to exit if uniformly not taken
@@ -118,7 +118,7 @@ exit:
 ; SI: s_cbranch_execz [[LABEL_EXIT:BB[0-9]+_[0-9]+]]
 
 ; Initialize inner condition to false
-; SI: ; BB#1:
+; SI: BB{{[0-9]+_[0-9]+}}: ; %bb10.preheader
 ; SI: s_mov_b64 [[ZERO:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 ; SI: s_mov_b64 [[COND_STATE:s\[[0-9]+:[0-9]+\]]], [[ZERO]]
 
@@ -133,7 +133,7 @@ exit:
 ; SI: s_xor_b64 [[ORNEG2]], exec, [[ORNEG2]]
 ; SI: s_cbranch_execz [[LABEL_FLOW:BB[0-9]+_[0-9]+]]
 
-; SI: BB#3:
+; SI: BB{{[0-9]+_[0-9]+}}: ; %bb20
 ; SI: buffer_store_dword
 ; SI: v_cmp_ge_i64_e32 [[CMP:s\[[0-9]+:[0-9]+\]|vcc]]
 ; SI: s_or_b64 [[TMP:s\[[0-9]+:[0-9]+\]]], [[CMP]], [[COND_STATE]]

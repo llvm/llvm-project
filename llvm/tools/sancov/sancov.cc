@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
@@ -319,6 +320,11 @@ static std::vector<AddrInfo> getAddrInfo(const std::string &ObjectFile,
   return Result;
 }
 
+static bool isCoveragePointSymbol(StringRef Name) {
+  return Name == "__sanitizer_cov" || Name == "__sanitizer_cov_with_check" ||
+         Name == "__sanitizer_cov_trace_func_enter";
+}
+
 // Locate __sanitizer_cov* function addresses that are used for coverage
 // reporting.
 static std::set<uint64_t>
@@ -333,10 +339,25 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     FailIfError(errorToErrorCode(NameOrErr.takeError()));
     StringRef Name = NameOrErr.get();
 
-    if (Name == "__sanitizer_cov" || Name == "__sanitizer_cov_with_check" ||
-        Name == "__sanitizer_cov_trace_func_enter") {
+    if (isCoveragePointSymbol(Name)) {
       if (!(Symbol.getFlags() & object::BasicSymbolRef::SF_Undefined))
         Result.insert(AddressOrErr.get());
+    }
+  }
+
+  if (const auto *CO = dyn_cast<object::COFFObjectFile>(&O)) {
+    for (const object::ExportDirectoryEntryRef &Export :
+         CO->export_directories()) {
+      uint32_t RVA;
+      std::error_code EC = Export.getExportRVA(RVA);
+      FailIfError(EC);
+
+      StringRef Name;
+      EC = Export.getSymbolName(Name);
+      FailIfError(EC);
+
+      if (isCoveragePointSymbol(Name))
+        Result.insert(CO->getImageBase() + RVA);
     }
   }
 
@@ -577,14 +598,14 @@ public:
       return BufOrErr.getError();
     std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
     if (Buf->getBufferSize() < 8) {
-      errs() << "File too small (<8): " << Buf->getBufferSize();
+      errs() << "File too small (<8): " << Buf->getBufferSize() << '\n';
       return make_error_code(errc::illegal_byte_sequence);
     }
     const FileHeader *Header =
         reinterpret_cast<const FileHeader *>(Buf->getBufferStart());
 
     if (Header->Magic != BinCoverageMagic) {
-      errs() << "Wrong magic: " << Header->Magic;
+      errs() << "Wrong magic: " << Header->Magic << '\n';
       return make_error_code(errc::illegal_byte_sequence);
     }
 
@@ -600,7 +621,7 @@ public:
                          Addrs.get());
       break;
     default:
-      errs() << "Unsupported bitness: " << Header->Bitness;
+      errs() << "Unsupported bitness: " << Header->Bitness << '\n';
       return make_error_code(errc::illegal_byte_sequence);
     }
 

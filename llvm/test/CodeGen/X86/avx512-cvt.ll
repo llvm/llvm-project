@@ -415,9 +415,9 @@ define <4 x float> @fptrunc02(<4 x double> %b, <4 x i1> %mask) {
 ; KNL-LABEL: fptrunc02:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
+; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL-NEXT:    vcvtpd2psy %ymm0, %xmm0
-; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
+; KNL-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fptrunc02:
@@ -445,8 +445,7 @@ define <4 x double> @fpext01(<4 x float> %b, <4 x double>%b1, <4 x double>%a1) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; KNL-NEXT:    vcmpltpd %ymm2, %ymm1, %ymm1
-; KNL-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
-; KNL-NEXT:    vblendvpd %ymm1, %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vandpd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fpext01:

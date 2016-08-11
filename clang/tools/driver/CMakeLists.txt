@@ -101,8 +101,15 @@ if(LD64_EXECUTABLE AND CLANG_ORDER_FILE)
   # This is a test to ensure the actual order file works with the linker.
   check_linker_flag("-Wl,-order_file,${CLANG_ORDER_FILE}"
     LINKER_ORDER_FILE_WORKS)
-  
-  if(LINKER_ORDER_FILE_WORKS)
+
+  # Passing an empty order file disables some linker layout optimizations.
+  # To work around this and enable workflows for re-linking when the order file
+  # changes we check during configuration if the file is empty, and make it a
+  # configuration dependency.
+  file(READ ${CLANG_ORDER_FILE} ORDER_FILE LIMIT 20)
+  if("${ORDER_FILE}" STREQUAL "\n")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CLANG_ORDER_FILE})
+  elseif(LINKER_ORDER_FILE_WORKS)
     target_link_libraries(clang "-Wl,-order_file,${CLANG_ORDER_FILE}")
     set_target_properties(clang PROPERTIES LINK_DEPENDS ${CLANG_ORDER_FILE})
   endif()

@@ -517,6 +517,9 @@ struct CompareInsn {
   bool operator() (StringRef LHS, const InsnMatchEntry &RHS) {
     return LHS < RHS.Format;
   }
+  bool operator() (const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
+    return LHS.Format < RHS.Format;
+  }
 };
 
 // Table initializing information for parsing the .insn directive.

@@ -16,15 +16,15 @@ namespace a {
         ~c();
         void func1() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
         void func2() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
         void func3() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
     };
 
@@ -39,11 +39,11 @@ namespace b {
         ~c();
         void func1() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
         void func3() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
     };
 
@@ -58,11 +58,11 @@ namespace c {
         ~d() {}
         void func2() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
         void func3() 
         {
-            puts (LLVM_PRETTY_FUNCTION);
+            puts (__PRETTY_FUNCTION__);
         }
     };
 }

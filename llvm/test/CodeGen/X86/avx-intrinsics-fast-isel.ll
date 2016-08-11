@@ -1026,9 +1026,8 @@ define <4 x i64> @test_mm256_insert_epi64(<4 x i64> %a0, i64 %a1) nounwind {
 ; X32:       # BB#0:
 ; X32-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm1, %xmm2
+; X32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
 ; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X32-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_insert_epi64:

@@ -904,12 +904,10 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
   case AMDGPU::SI_PC_ADD_REL_OFFSET: {
-    const SIRegisterInfo *TRI
-      = static_cast<const SIRegisterInfo *>(ST.getRegisterInfo());
     MachineFunction &MF = *MBB.getParent();
     unsigned Reg = MI.getOperand(0).getReg();
-    unsigned RegLo = TRI->getSubReg(Reg, AMDGPU::sub0);
-    unsigned RegHi = TRI->getSubReg(Reg, AMDGPU::sub1);
+    unsigned RegLo = RI.getSubReg(Reg, AMDGPU::sub0);
+    unsigned RegHi = RI.getSubReg(Reg, AMDGPU::sub1);
 
     // Create a bundle so these instructions won't be re-ordered by the
     // post-RA scheduler.

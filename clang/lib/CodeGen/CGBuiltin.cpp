@@ -7020,7 +7020,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vbroadcastf128_pd256:
   case X86::BI__builtin_ia32_vbroadcastf128_ps256: {
     llvm::Type *DstTy = ConvertType(E->getType());
-    return EmitX86SubVectorBroadcast(*this, Ops, DstTy, 128, 16);
+    return EmitX86SubVectorBroadcast(*this, Ops, DstTy, 128, 1);
   }
 
   case X86::BI__builtin_ia32_storehps:

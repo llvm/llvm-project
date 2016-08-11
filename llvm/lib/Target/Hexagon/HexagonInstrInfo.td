@@ -4765,62 +4765,16 @@ let isAsmParserOnly = 1 in {
   def HI : REG_IMMED<".h", 0b0, 0b010, 0b1>;
 }
 
-let  isMoveImm = 1, isCodeGenOnly = 1 in
-def LO_PIC : ALU32_ri<(outs IntRegs:$dst), (ins bblabel:$label),
-             "$dst.l = #LO($label@GOTREL)",
-             []>;
+let isReMaterializable = 1, isMoveImm = 1, isAsmParserOnly = 1 in {
+  def CONST32 : CONSTLDInst<(outs IntRegs:$Rd), (ins i32imm:$v),
+                "$Rd = CONST32(#$v)", [(set I32:$Rd, imm:$v)]>;
+  def CONST64 : CONSTLDInst<(outs DoubleRegs:$Rd), (ins i64imm:$v),
+                "$Rd = CONST64(#$v)", [(set I64:$Rd, imm:$v)]>;
+}
 
-let  isMoveImm = 1, isCodeGenOnly = 1 in
-def HI_PIC : ALU32_ri<(outs IntRegs:$dst), (ins bblabel:$label),
-             "$dst.h = #HI($label@GOTREL)",
-             []>;
-
-let isReMaterializable = 1, isMoveImm = 1,
-    isCodeGenOnly = 1, hasSideEffects = 0 in
-def HI_GOT : ALU32_ri<(outs IntRegs:$dst), (ins globaladdress:$global),
-             "$dst.h = #HI($global@GOT)",
-             []>;
-
-let isReMaterializable = 1, isMoveImm = 1,
-    isCodeGenOnly = 1, hasSideEffects = 0 in
-def LO_GOT : ALU32_ri<(outs IntRegs:$dst), (ins globaladdress:$global),
-             "$dst.l = #LO($global@GOT)",
-             []>;
-
-let isReMaterializable = 1, isMoveImm = 1,
-    isCodeGenOnly = 1, hasSideEffects = 0 in
-def HI_GOTREL : ALU32_ri<(outs IntRegs:$dst), (ins globaladdress:$global),
-                "$dst.h = #HI($global@GOTREL)",
-                []>;
-
-let isReMaterializable = 1, isMoveImm = 1,
-    isCodeGenOnly = 1, hasSideEffects = 0 in
-def LO_GOTREL : ALU32_ri<(outs IntRegs:$dst), (ins globaladdress:$global),
-               "$dst.l = #LO($global@GOTREL)",
-               []>;
-
-// This pattern is incorrect. When we add small data, we should change
-// this pattern to use memw(#foo).
-// This is for sdata.
-let isMoveImm = 1, isAsmParserOnly = 1 in
-def CONST32 : CONSTLDInst<(outs IntRegs:$dst), (ins globaladdress:$global),
-              "$dst = CONST32(#$global)",
-              [(set (i32 IntRegs:$dst),
-                    (load (HexagonCONST32 tglobaltlsaddr:$global)))]>;
-
-let isReMaterializable = 1, isMoveImm = 1, isAsmParserOnly = 1 in
-def CONST32_Int_Real : CONSTLDInst<(outs IntRegs:$dst), (ins i32imm:$global),
-                       "$dst = CONST32(#$global)",
-                       [(set (i32 IntRegs:$dst), imm:$global) ]>;
-
-// Map TLS addressses to a CONST32 instruction
+// Map TLS addressses to A2_tfrsi.
 def: Pat<(HexagonCONST32 tglobaltlsaddr:$addr), (A2_tfrsi s16Ext:$addr)>;
 def: Pat<(HexagonCONST32 bbl:$label),           (A2_tfrsi s16Ext:$label)>;
-
-let isReMaterializable = 1, isMoveImm = 1, isAsmParserOnly = 1 in
-def CONST64_Int_Real : CONSTLDInst<(outs DoubleRegs:$dst), (ins i64imm:$global),
-                       "$dst = CONST64(#$global)",
-                       [(set (i64 DoubleRegs:$dst), imm:$global)]>;
 
 let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
     isCodeGenOnly = 1 in
@@ -5126,18 +5080,6 @@ def ALLOCA: ALU32Inst<(outs IntRegs:$Rd),
 
 let isCodeGenOnly = 1, isPseudo = 1, Uses = [R30], hasSideEffects = 0 in
 def ALIGNA : ALU32Inst<(outs IntRegs:$Rd), (ins u32Imm:$A), "", []>;
-
-def SDTHexagonARGEXTEND : SDTypeProfile<1, 1, [SDTCisVT<0, i32>]>;
-def Hexagon_ARGEXTEND : SDNode<"HexagonISD::ARGEXTEND", SDTHexagonARGEXTEND>;
-let isCodeGenOnly = 1 in
-def ARGEXTEND : ALU32_rr <(outs IntRegs:$dst), (ins IntRegs:$src1),
-                "$dst = $src1",
-                [(set (i32 IntRegs:$dst),
-                      (Hexagon_ARGEXTEND (i32 IntRegs:$src1)))]>;
-
-let AddedComplexity = 100 in
-def: Pat<(i32 (sext_inreg (Hexagon_ARGEXTEND (i32 IntRegs:$src1)), i16)),
-         (i32 IntRegs:$src1)>;
 
 def HexagonJT:     SDNode<"HexagonISD::JT", SDTIntUnaryOp>;
 def HexagonCP:     SDNode<"HexagonISD::CP", SDTIntUnaryOp>;

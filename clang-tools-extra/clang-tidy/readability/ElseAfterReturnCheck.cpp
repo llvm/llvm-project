@@ -19,20 +19,29 @@ namespace tidy {
 namespace readability {
 
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
-  // FIXME: Support continue, break and throw.
+  const auto ControlFlowInterruptorMatcher =
+      stmt(anyOf(returnStmt().bind("return"), continueStmt().bind("continue"),
+                 breakStmt().bind("break"), cxxThrowExpr().bind("throw")));
   Finder->addMatcher(
-      compoundStmt(
-          forEach(ifStmt(hasThen(stmt(anyOf(returnStmt(),
-                                            compoundStmt(has(returnStmt()))))),
-                         hasElse(stmt().bind("else")))
-                      .bind("if"))),
+      stmt(forEach(
+          ifStmt(hasThen(stmt(
+                     anyOf(ControlFlowInterruptorMatcher,
+                           compoundStmt(has(ControlFlowInterruptorMatcher))))),
+                 hasElse(stmt().bind("else")))
+              .bind("if"))),
       this);
 }
 
 void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
   SourceLocation ElseLoc = If->getElseLoc();
-  DiagnosticBuilder Diag = diag(ElseLoc, "don't use else after return");
+  std::string ControlFlowInterruptor;
+  for (const auto *BindingName : {"return", "continue", "break", "throw"})
+    if (Result.Nodes.getNodeAs<Stmt>(BindingName))
+      ControlFlowInterruptor = BindingName;
+
+  DiagnosticBuilder Diag = diag(ElseLoc, "do not use 'else' after '%0'")
+                           << ControlFlowInterruptor;
   Diag << tooling::fixit::createRemoval(ElseLoc);
 
   // FIXME: Removing the braces isn't always safe. Do a more careful analysis.

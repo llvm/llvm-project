@@ -563,7 +563,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
     // Subtract offset from frame pointer.
     // We use a caller-saved non-parameter register for that.
     unsigned CallerSavedReg = HRI.getFirstCallerSavedNonParamReg();
-    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::CONST32_Int_Real),
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::CONST32),
             CallerSavedReg).addImm(NumBytes);
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_sub), SP)
       .addReg(SP)

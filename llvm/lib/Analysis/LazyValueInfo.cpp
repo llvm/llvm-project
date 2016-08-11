@@ -859,9 +859,8 @@ bool LazyValueInfoCache::solveBlockValuePHINode(LVILatticeVal &BBLV,
   return true;
 }
 
-static bool getValueFromCondition(Value *Val, Value *Cond,
-                                  LVILatticeVal &Result,
-                                  bool isTrueDest = true);
+static LVILatticeVal getValueFromCondition(Value *Val, Value *Cond,
+                                           bool isTrueDest = true);
 
 // If we can determine a constraint on the value given conditions assumed by
 // the program, intersect those constraints with BBLV
@@ -879,9 +878,7 @@ void LazyValueInfoCache::intersectAssumeBlockValueConstantRange(Value *Val,
     if (!isValidAssumeForContext(I, BBI, DT))
       continue;
 
-    LVILatticeVal Result;
-    if (getValueFromCondition(Val, I->getArgOperand(0), Result))
-      BBLV = intersect(BBLV, Result);
+    BBLV = intersect(BBLV, getValueFromCondition(Val, I->getArgOperand(0)));
   }
 }
 
@@ -952,14 +949,10 @@ bool LazyValueInfoCache::solveBlockValueSelect(LVILatticeVal &BBLV,
   // condition itself?  This shows up with idioms like e.g. select(a > 5, a, 5).
   // TODO: We could potentially refine an overdefined true value above.
   Value *Cond = SI->getCondition();
-  LVILatticeVal TrueValTaken, FalseValTaken;
-  if (!getValueFromCondition(SI->getTrueValue(), Cond, TrueValTaken, true))
-    TrueValTaken.markOverdefined();
-  if (!getValueFromCondition(SI->getFalseValue(), Cond, FalseValTaken, false))
-    FalseValTaken.markOverdefined();
-
-  TrueVal = intersect(TrueVal, TrueValTaken);
-  FalseVal = intersect(FalseVal, FalseValTaken);
+  TrueVal = intersect(TrueVal,
+                      getValueFromCondition(SI->getTrueValue(), Cond, true));
+  FalseVal = intersect(FalseVal,
+                       getValueFromCondition(SI->getFalseValue(), Cond, false));
 
   // Handle clamp idioms such as:
   //   %24 = constantrange<0, 17>
@@ -1174,15 +1167,8 @@ bool LazyValueInfoCache::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
   return true;
 }
 
-bool getValueFromCondition(Value *Val, Value *Cond, LVILatticeVal &Result,
-                           bool isTrueDest) {
-  assert(Cond && "precondition");
-
-  // For now we only support ICmpInst conditions
-  ICmpInst *ICI = dyn_cast<ICmpInst>(Cond);
-  if (!ICI)
-    return false;
-
+static LVILatticeVal getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
+                                               bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
   CmpInst::Predicate Predicate = ICI->getPredicate();
@@ -1192,15 +1178,14 @@ bool getValueFromCondition(Value *Val, Value *Cond, LVILatticeVal &Result,
       // We know that V has the RHS constant if this is a true SETEQ or
       // false SETNE.
       if (isTrueDest == (Predicate == ICmpInst::ICMP_EQ))
-        Result = LVILatticeVal::get(cast<Constant>(RHS));
+        return LVILatticeVal::get(cast<Constant>(RHS));
       else
-        Result = LVILatticeVal::getNot(cast<Constant>(RHS));
-      return true;
+        return LVILatticeVal::getNot(cast<Constant>(RHS));
     }
   }
 
   if (!Val->getType()->isIntegerTy())
-    return false;
+    return LVILatticeVal::getOverdefined();
 
   // Use ConstantRange::makeAllowedICmpRegion in order to determine the possible
   // range of Val guaranteed by the condition. Recognize comparisons in the from
@@ -1236,11 +1221,50 @@ bool getValueFromCondition(Value *Val, Value *Cond, LVILatticeVal &Result,
     if (Offset) // Apply the offset from above.
       TrueValues = TrueValues.subtract(Offset->getValue());
 
-    Result = LVILatticeVal::getRange(std::move(TrueValues));
-    return true;
+    return LVILatticeVal::getRange(std::move(TrueValues));
   }
 
-  return false;
+  return LVILatticeVal::getOverdefined();
+}
+
+static LVILatticeVal
+getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
+                      DenseMap<Value*, LVILatticeVal> &Visited);
+
+static LVILatticeVal
+getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
+                          DenseMap<Value*, LVILatticeVal> &Visited) {
+  if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
+    return getValueFromICmpCondition(Val, ICI, isTrueDest);
+
+  // Handle conditions in the form of (cond1 && cond2), we know that on the
+  // true dest path both of the conditions hold.
+  if (!isTrueDest)
+    return LVILatticeVal::getOverdefined();
+
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(Cond);
+  if (!BO || BO->getOpcode() != BinaryOperator::And)
+    return LVILatticeVal::getOverdefined();
+
+  auto RHS = getValueFromCondition(Val, BO->getOperand(0), isTrueDest, Visited);
+  auto LHS = getValueFromCondition(Val, BO->getOperand(1), isTrueDest, Visited);
+  return intersect(RHS, LHS);
+}
+
+static LVILatticeVal
+getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
+                      DenseMap<Value*, LVILatticeVal> &Visited) {
+  auto I = Visited.find(Cond);
+  if (I != Visited.end())
+    return I->second;
+  return Visited[Cond] = getValueFromConditionImpl(Val, Cond, isTrueDest,
+                                                   Visited);
+}
+
+LVILatticeVal getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest) {
+  assert(Cond && "precondition");
+  DenseMap<Value*, LVILatticeVal> Visited;
+  return getValueFromCondition(Val, Cond, isTrueDest, Visited);
 }
 
 /// \brief Compute the value of Val on the edge BBFrom -> BBTo. Returns false if
@@ -1269,7 +1293,8 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
 
       // If the condition of the branch is an equality comparison, we may be
       // able to infer the value.
-      if (getValueFromCondition(Val, BI->getCondition(), Result, isTrueDest))
+      Result = getValueFromCondition(Val, BI->getCondition(), isTrueDest);
+      if (!Result.isOverdefined())
         return true;
     }
   }
@@ -1537,11 +1562,14 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
   const DataLayout &DL = BB->getModule()->getDataLayout();
   LVILatticeVal Result =
       getCache(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
-  assert(!Result.isConstant());
   if (Result.isUndefined())
     return ConstantRange(Width, /*isFullSet=*/false);
   if (Result.isConstantRange())
     return Result.getConstantRange();
+  // We represent ConstantInt constants as constant ranges but other kinds
+  // of integer constants, i.e. ConstantExpr will be tagged as constants
+  assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
+         "ConstantInt value must be represented as constantrange");
   return ConstantRange(Width, /*isFullSet=*/true);
 }
 

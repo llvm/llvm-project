@@ -1658,14 +1658,9 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
   // Translate a "$Rx =  CONST32(#imm)" to "$Rx = memw(gp+#LABEL) "
   case Hexagon::CONST32:
-  case Hexagon::CONST32_Float_Real:
-  case Hexagon::CONST32_Int_Real:
-  case Hexagon::FCONST32_nsdata:
     is32bit = true;
   // Translate a "$Rx:y =  CONST64(#imm)" to "$Rx:y = memd(gp+#LABEL) "
-  case Hexagon::CONST64_Float_Real:
-  case Hexagon::CONST64_Int_Real:
-
+  case Hexagon::CONST64:
     // FIXME: need better way to detect AsmStreamer (upstream removed getKind())
     if (!Parser.getStreamer().hasRawTextSupport()) {
       MCELFStreamer *MES = static_cast<MCELFStreamer *>(&Parser.getStreamer());

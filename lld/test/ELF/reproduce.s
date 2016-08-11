@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, cpio
 
 # Extracting the cpio archive can get over the path limit on windows.
 # REQUIRES: shell

@@ -1052,9 +1052,11 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     if (CI->hasUnsafeAlgebra()) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
-      Value *Sqrt = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::sqrt,
-                                              Op1->getType());
-      return B.CreateCall(Sqrt, Op1, "sqrt");
+
+      // Unlike other math intrinsics, sqrt has differerent semantics
+      // from the libc function. See LangRef for details.
+      return emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc::sqrt), B,
+                                  Callee->getAttributes());
     }
 
     // Expand pow(x, 0.5) to (x == -infinity ? +infinity : fabs(sqrt(x))).
