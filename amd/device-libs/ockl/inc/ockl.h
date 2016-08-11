@@ -20,6 +20,7 @@
 #define OCKL_MANGLE_Tx(N,T) MANGLE3x(__ockl, N, T)
 #define OCKL_MANGLE_I32(N) OCKL_MANGLE_T(N, i32)
 #define OCKL_MANGLE_U32(N) OCKL_MANGLE_T(N, u32)
+#define OCKL_MANGLE_F32(N) OCKL_MANGLE_T(N, f32)
 #define OCKL_MANGLE_I64(N) OCKL_MANGLE_T(N, i64)
 #define OCKL_MANGLE_U64(N) OCKL_MANGLE_T(N, u64)
 
@@ -73,6 +74,11 @@
 #define DECL_PURE_OCKL_TERNARY_I32(N) _DECL_X_OCKL_TERNARY_I32(pure, N)
 #define DECL_CONST_OCKL_TERNARY_I32(N) _DECL_X_OCKL_TERNARY_I32(const, N)
 
+#define DECL_OCKL_TERNARY_F32(N) extern float OCKL_MANGLE_F32(N)(float,float,float);
+#define _DECL_X_OCKL_TERNARY_F32(A,N) extern __attribute__((A)) float OCKL_MANGLE_F32(N)(float,float,float);
+#define DECL_PURE_OCKL_TERNARY_F32(N) _DECL_X_OCKL_TERNARY_F32(pure, N)
+#define DECL_CONST_OCKL_TERNARY_F32(N) _DECL_X_OCKL_TERNARY_F32(const, N)
+
 #define DECL_OCKL_TERNARY_I64(N) extern long OCKL_MANGLE_I64(N)(long,long,long);
 #define _DECL_X_OCKL_TERNARY_I64(A,N) extern __attribute__((A)) long OCKL_MANGLE_I64(N)(long,long,long);
 #define DECL_PURE_OCKL_TERNARY_I64(N) _DECL_X_OCKL_TERNARY_I64(pure, N)
@@ -114,7 +120,6 @@ DECL_CONST_OCKL_BINARY_U32(mul24)
 
 DECL_OCKL_NULLARY_U32(activelane)
 
-DECL_CONST_OCKL_TERNARY_U32(lerp)
 
 extern half OCKL_MANGLE_T(wfred_add,f16)(half x);
 extern float OCKL_MANGLE_T(wfred_add,f32)(float x);
@@ -187,6 +192,31 @@ extern __attribute__((const)) bool OCKL_MANGLE_I32(wfany)(int e);
 extern __attribute__((const)) bool OCKL_MANGLE_I32(wfall)(int e);
 extern __attribute__((const)) bool OCKL_MANGLE_I32(wfsame)(int e);
 
+DECL_CONST_OCKL_BINARY_U32(bfm)
+extern __attribute__((const)) int OCKL_MANGLE_I32(bfe)(int, uint, uint);
+DECL_CONST_OCKL_TERNARY_U32(bfe)
+DECL_CONST_OCKL_TERNARY_I32(bitalign)
+DECL_CONST_OCKL_TERNARY_U32(bitalign)
+DECL_CONST_OCKL_TERNARY_U32(bytealign)
+DECL_CONST_OCKL_TERNARY_U32(lerp)
+DECL_CONST_OCKL_TERNARY_F32(max3)
+DECL_CONST_OCKL_TERNARY_F32(median3)
+DECL_CONST_OCKL_TERNARY_F32(min3)
+DECL_CONST_OCKL_TERNARY_I32(max3)
+DECL_CONST_OCKL_TERNARY_I32(median3)
+DECL_CONST_OCKL_TERNARY_I32(min3)
+DECL_CONST_OCKL_TERNARY_U32(max3)
+DECL_CONST_OCKL_TERNARY_U32(median3)
+DECL_CONST_OCKL_TERNARY_U32(min3)
+extern __attribute__((const)) ulong OCKL_MANGLE_U64(mqsad)(ulong, uint, ulong);
+extern __attribute__((const)) uint OCKL_MANGLE_U32(pack)(float4);
+extern __attribute__((const)) ulong OCKL_MANGLE_U64(qsad)(ulong, uint, ulong);
+DECL_CONST_OCKL_TERNARY_U32(sad)
+DECL_CONST_OCKL_TERNARY_U32(sadd)
+DECL_CONST_OCKL_TERNARY_U32(sadhi)
+DECL_CONST_OCKL_TERNARY_U32(sadw)
+
+
 #define SSHARP __constant uint *
 #define TSHARP __constant uint *
 
@@ -198,27 +228,39 @@ extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,2Da)(TSHARP i, int4
 extern __attribute__((pure)) float OCKL_MANGLE_T(image_load,2Dad)(TSHARP i, int4 c);
 extern __attribute__((pure)) float OCKL_MANGLE_T(image_load,2Dd)(TSHARP i, int2 c);
 extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,3D)(TSHARP i, int4 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load_mip,1D)(TSHARP i, int c, int l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load_mip,1Da)(TSHARP i, int2 c, int l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load_mip,2D)(TSHARP i, int2 c, int l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load_mip,2Da)(TSHARP i, int4 c, int l);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_load_mip,2Dad)(TSHARP i, int4 c, int l);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_load_mip,2Dd)(TSHARP i, int2 c, int l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load_mip,3D)(TSHARP i, int4 c, int l);
 extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,1D)(TSHARP i, int c);
 extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,1Da)(TSHARP i, int2 c);
 extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,1Db)(TSHARP i, int c);
 extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,2D)(TSHARP i, int2 c);
 extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,2Da)(TSHARP i, int4 c);
 extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,3D)(TSHARP i, int4 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh_mip,1D)(TSHARP i, int c, int l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh_mip,1Da)(TSHARP i, int2 c, int l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh_mip,2D)(TSHARP i, int2 c, int l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh_mip,2Da)(TSHARP i, int4 c, int l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh_mip,3D)(TSHARP i, int4 c, int l);
 
 extern void OCKL_MANGLE_T(image_store,1D)(TSHARP i, int c, float4 p);
 extern void OCKL_MANGLE_T(image_store,1Da)(TSHARP i, int2 c, float4 p);
 extern void OCKL_MANGLE_T(image_store,1Db)(TSHARP i, int c, float4 p);
 extern void OCKL_MANGLE_T(image_store,2D)(TSHARP i, int2 c, float4 p);
 extern void OCKL_MANGLE_T(image_store,2Da)(TSHARP i, int4 c, float4 p);
-extern void OCKL_MANGLE_T(image_store,2Dad)(TSHARP i, int4 c, float4 p);
-extern void OCKL_MANGLE_T(image_store,2Dd)(TSHARP i, int2 c, float4 p);
+extern void OCKL_MANGLE_T(image_store,2Dad)(TSHARP i, int4 c, float p);
+extern void OCKL_MANGLE_T(image_store,2Dd)(TSHARP i, int2 c, float p);
 extern void OCKL_MANGLE_T(image_store,3D)(TSHARP i, int4 c, float4 p);
 extern void OCKL_MANGLE_T(image_store_lod,1D)(TSHARP i, int c, int l, float4 p);
 extern void OCKL_MANGLE_T(image_store_lod,1Da)(TSHARP i, int2 c, int l, float4 p);
 extern void OCKL_MANGLE_T(image_store_lod,2D)(TSHARP i, int2 c, int l, float4 p);
 extern void OCKL_MANGLE_T(image_store_lod,2Da)(TSHARP i, int4 c, int l, float4 p);
-extern void OCKL_MANGLE_T(image_store_lod,2Dad)(TSHARP i, int4 c, int l, float4 p);
-extern void OCKL_MANGLE_T(image_store_lod,2Dd)(TSHARP i, int2 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,2Dad)(TSHARP i, int4 c, int l, float p);
+extern void OCKL_MANGLE_T(image_store_lod,2Dd)(TSHARP i, int2 c, int l, float p);
 extern void OCKL_MANGLE_T(image_store_lod,3D)(TSHARP i, int4 c, int l, float4 p);
 extern void OCKL_MANGLE_T(image_storeh,1D)(TSHARP i, int c, half4 p);
 extern void OCKL_MANGLE_T(image_storeh,1Da)(TSHARP i, int2 c, half4 p);
