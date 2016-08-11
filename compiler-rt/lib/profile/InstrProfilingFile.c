@@ -59,7 +59,7 @@ static const char *getPNSStr(ProfileNameSpecifier PNS) {
 }
 
 #define MAX_PID_SIZE 16
-/* Data structure holding the result of parsed filename pattern.  */
+/* Data structure holding the result of parsed filename pattern. */
 typedef struct lprofFilename {
   /* File name string possibly with %p or %h specifiers. */
   const char *FilenamePat;

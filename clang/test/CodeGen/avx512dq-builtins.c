@@ -133,7 +133,8 @@ __m512 test_mm512_maskz_and_ps (__mmask16 __U, __m512 __A, __m512 __B) {
 
 __m512d test_mm512_andnot_pd (__m512d __A, __m512d __B) {
   // CHECK-LABEL: @test_mm512_andnot_pd
-  // CHECK: @llvm.x86.avx512.mask.andn.pd.512
+  // CHECK: xor <8 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: and <8 x i64>
   return (__m512d) _mm512_andnot_pd(__A, __B);
 }
 
@@ -151,7 +152,8 @@ __m512d test_mm512_maskz_andnot_pd (__mmask8 __U, __m512d __A, __m512d __B) {
 
 __m512 test_mm512_andnot_ps (__m512 __A, __m512 __B) {
   // CHECK-LABEL: @test_mm512_andnot_ps
-  // CHECK: @llvm.x86.avx512.mask.andn.ps.512
+  // CHECK: xor <16 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: and <16 x i32>
   return (__m512) _mm512_andnot_ps(__A, __B);
 }
 

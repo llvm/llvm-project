@@ -1257,7 +1257,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   bool OnlyOneCallAndLocalLinkage =
       F.hasLocalLinkage() && F.hasOneUse() && &F == CS.getCalledFunction();
   if (OnlyOneCallAndLocalLinkage)
-    Cost += InlineConstants::LastCallToStaticBonus;
+    Cost -= InlineConstants::LastCallToStaticBonus;
 
   // If this function uses the coldcc calling convention, prefer not to inline
   // it.

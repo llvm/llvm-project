@@ -1005,6 +1005,9 @@ class Thumb2DSPPat<dag pattern, dag result> : Pat<pattern, result> {
 class Thumb2DSPMulPat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsThumb2, UseMulOps, HasDSP];
 }
+class Thumb2ExtractPat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [IsThumb2, HasT2ExtractPack];
+}
 //===----------------------------------------------------------------------===//
 // Thumb Instruction Format Definitions.
 //

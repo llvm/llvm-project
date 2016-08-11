@@ -1971,14 +1971,13 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
     default:
       return false;
     case Hexagon::A2_tfrsi:
-    case Hexagon::CONST32:
     case Hexagon::A2_tfrpi:
-    case Hexagon::CONST32_Int_Real:
-    case Hexagon::CONST64_Int_Real:
+    case Hexagon::CONST32:
+    case Hexagon::CONST64:
     {
       const MachineOperand &VO = MI.getOperand(1);
-      // The operand of CONST32_Int_Real can be a blockaddress, e.g.
-      //   %vreg0<def> = CONST32_Int_Real <blockaddress(@eat, %L)>
+      // The operand of CONST32 can be a blockaddress, e.g.
+      //   %vreg0<def> = CONST32 <blockaddress(@eat, %L)>
       // Do this check for all instructions for safety.
       if (!VO.isImm())
         return false;
@@ -2326,10 +2325,9 @@ bool HexagonConstEvaluator::rewrite(MachineInstr &MI, const CellMap &Inputs) {
     default:
       break;
     case Hexagon::A2_tfrsi:
-    case Hexagon::CONST32:
     case Hexagon::A2_tfrpi:
-    case Hexagon::CONST32_Int_Real:
-    case Hexagon::CONST64_Int_Real:
+    case Hexagon::CONST32:
+    case Hexagon::CONST64:
     case Hexagon::TFR_PdTrue:
     case Hexagon::TFR_PdFalse:
       return false;
@@ -2921,7 +2919,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
                       .addImm(Hi)
                       .addImm(Lo);
           } else {
-            NewD = &HII.get(Hexagon::CONST64_Int_Real);
+            NewD = &HII.get(Hexagon::CONST64);
             NewMI = BuildMI(B, At, DL, *NewD, NewR)
                       .addImm(V);
           }

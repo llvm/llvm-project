@@ -183,14 +183,14 @@ RNBRemote::RNBRemote () :
     m_enable_compression_next_send_packet (false),
     m_compression_mode (compression_types::none)
 {
-    DNBLogThreadedIf (LOG_RNB_REMOTE, "%s", LLVM_PRETTY_FUNCTION);
+    DNBLogThreadedIf (LOG_RNB_REMOTE, "%s", __PRETTY_FUNCTION__);
     CreatePacketTable ();
 }
 
 
 RNBRemote::~RNBRemote()
 {
-    DNBLogThreadedIf (LOG_RNB_REMOTE, "%s", LLVM_PRETTY_FUNCTION);
+    DNBLogThreadedIf (LOG_RNB_REMOTE, "%s", __PRETTY_FUNCTION__);
     StopReadRemoteDataThread();
 }
 

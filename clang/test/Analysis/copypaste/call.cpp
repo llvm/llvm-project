@@ -22,3 +22,15 @@ bool foo2(int x) {
     return b();
   return true;
 }
+
+// Test that we don't crash on function pointer calls
+
+bool (*funcPtr)(int);
+
+bool fooPtr1(int x) {
+  if (x > 0)
+    return false;
+  else if (x < 0)
+    return funcPtr(1);
+  return true;
+}

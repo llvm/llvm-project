@@ -579,6 +579,7 @@
 		2697A54D133A6305004E4240 /* PlatformDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2697A54B133A6305004E4240 /* PlatformDarwin.cpp */; };
 		2698699B15E6CBD0002415FF /* OperatingSystemPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2698699815E6CBD0002415FF /* OperatingSystemPython.cpp */; };
 		269DDD4A1B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 269DDD481B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp */; };
+		26A375811D59462700D6CBDB /* SelectHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26A3757F1D59462700D6CBDB /* SelectHelper.cpp */; };
 		26A527C114E24F5F00F3A14A /* ProcessMachCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26A527BD14E24F5F00F3A14A /* ProcessMachCore.cpp */; };
 		26A527C314E24F5F00F3A14A /* ThreadMachCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26A527BF14E24F5F00F3A14A /* ThreadMachCore.cpp */; };
 		26A69C5F137A17A500262477 /* RegisterValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C6886E137880C400407EDF /* RegisterValue.cpp */; };
@@ -1562,7 +1563,6 @@
 		265ABF6210F42EE900531910 /* DebugSymbols.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DebugSymbols.framework; path = /System/Library/PrivateFrameworks/DebugSymbols.framework; sourceTree = "<absolute>"; };
 		265E9BE1115C2BAA00D0DCCB /* debugserver.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = debugserver.xcodeproj; path = tools/debugserver/debugserver.xcodeproj; sourceTree = "<group>"; };
 		2660D9F611922A1300958FBD /* StringExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringExtractor.cpp; path = source/Utility/StringExtractor.cpp; sourceTree = "<group>"; };
-		2660D9F711922A1300958FBD /* StringExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringExtractor.h; path = source/Utility/StringExtractor.h; sourceTree = "<group>"; };
 		2660D9FE11922A7F00958FBD /* ThreadPlanStepUntil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanStepUntil.cpp; path = source/Target/ThreadPlanStepUntil.cpp; sourceTree = "<group>"; };
 		26651A14133BEC76005B64B7 /* lldb-public.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "lldb-public.h"; path = "include/lldb/lldb-public.h"; sourceTree = "<group>"; };
 		26651A15133BF9CC005B64B7 /* Opcode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Opcode.h; path = include/lldb/Core/Opcode.h; sourceTree = "<group>"; };
@@ -1838,6 +1838,9 @@
 		26A0604711A5BC7A00F75969 /* Baton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Baton.h; path = include/lldb/Core/Baton.h; sourceTree = "<group>"; };
 		26A0604811A5D03C00F75969 /* Baton.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Baton.cpp; path = source/Core/Baton.cpp; sourceTree = "<group>"; };
 		26A0DA4D140F721D006DA411 /* HashedNameToDIE.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HashedNameToDIE.h; sourceTree = "<group>"; };
+		26A3757F1D59462700D6CBDB /* SelectHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SelectHelper.cpp; path = source/Utility/SelectHelper.cpp; sourceTree = "<group>"; };
+		26A375831D59486000D6CBDB /* StringExtractor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = StringExtractor.h; path = include/lldb/Utility/StringExtractor.h; sourceTree = "<group>"; };
+		26A375841D59487700D6CBDB /* SelectHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SelectHelper.h; path = include/lldb/Utility/SelectHelper.h; sourceTree = "<group>"; };
 		26A3B4AC1181454800381BC2 /* ObjectContainerBSDArchive.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjectContainerBSDArchive.cpp; sourceTree = "<group>"; };
 		26A3B4AD1181454800381BC2 /* ObjectContainerBSDArchive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectContainerBSDArchive.h; sourceTree = "<group>"; };
 		26A4EEB511682AAC007A372A /* LLDBWrapPython.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = LLDBWrapPython.cpp; sourceTree = BUILT_PRODUCTS_DIR; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -3917,10 +3920,12 @@
 				2682F16B115EDA0D00CCFF99 /* PseudoTerminal.h */,
 				2682F16A115EDA0D00CCFF99 /* PseudoTerminal.cpp */,
 				4CAB257C18EC9DB800BAD33E /* SafeMachO.h */,
+				26A375841D59487700D6CBDB /* SelectHelper.h */,
+				26A3757F1D59462700D6CBDB /* SelectHelper.cpp */,
 				261B5A5211C3F2AD00AABD0A /* SharingPtr.cpp */,
 				4C2FAE2E135E3A70001EDE44 /* SharedCluster.h */,
 				261B5A5311C3F2AD00AABD0A /* SharingPtr.h */,
-				2660D9F711922A1300958FBD /* StringExtractor.h */,
+				26A375831D59486000D6CBDB /* StringExtractor.h */,
 				2660D9F611922A1300958FBD /* StringExtractor.cpp */,
 				2676A094119C93C8008A98EF /* StringExtractorGDBRemote.h */,
 				2676A093119C93C8008A98EF /* StringExtractorGDBRemote.cpp */,
@@ -7232,6 +7237,7 @@
 				2698699B15E6CBD0002415FF /* OperatingSystemPython.cpp in Sources */,
 				947A1D641616476B0017C8D1 /* CommandObjectPlugin.cpp in Sources */,
 				2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */,
+				26A375811D59462700D6CBDB /* SelectHelper.cpp in Sources */,
 				AE44FB471BB4BB090033EB62 /* GoLanguage.cpp in Sources */,
 				262ED0081631FA3A00879631 /* OptionGroupString.cpp in Sources */,
 				94F48F251A01C687005C0EC6 /* StringPrinter.cpp in Sources */,

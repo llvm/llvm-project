@@ -109,47 +109,128 @@ private:
 
   /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
   /// emitted.
-  bool translateBitCast(const CastInst &CI);
+  bool translateBitCast(const User &U);
 
   /// Translate an LLVM load instruction into generic IR.
-  bool translateLoad(const LoadInst &LI);
+  bool translateLoad(const User &U);
 
   /// Translate an LLVM store instruction into generic IR.
-  bool translateStore(const StoreInst &SI);
+  bool translateStore(const User &U);
 
   /// Translate call instruction.
-  /// \pre \p Inst is a branch instruction.
-  bool translateCall(const CallInst &Inst);
+  /// \pre \p U is a call instruction.
+  bool translateCall(const User &U);
 
   /// Translate one of LLVM's cast instructions into MachineInstrs, with the
   /// given generic Opcode.
-  bool translateCast(unsigned Opcode, const CastInst &CI);
+  bool translateCast(unsigned Opcode, const User &U);
 
   /// Translate static alloca instruction (i.e. one  of constant size and in the
   /// first basic block).
   bool translateStaticAlloca(const AllocaInst &Inst);
 
   /// Translate a phi instruction.
-  bool translatePhi(const PHINode &PI);
+  bool translatePHI(const User &U);
 
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
 
   /// Translate \p Inst into a binary operation \p Opcode.
-  /// \pre \p Inst is a binary operation.
-  bool translateBinaryOp(unsigned Opcode, const BinaryOperator &Inst);
+  /// \pre \p U is a binary operation.
+  bool translateBinaryOp(unsigned Opcode, const User &U);
 
   /// Translate branch (br) instruction.
-  /// \pre \p Inst is a branch instruction.
-  bool translateBr(const BranchInst &Inst);
+  /// \pre \p U is a branch instruction.
+  bool translateBr(const User &U);
 
+  bool translateAdd(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_ADD, U);
+  }
+  bool translateSub(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_SUB, U);
+  }
+  bool translateAnd(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_AND, U);
+  }
+  bool translateMul(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_MUL, U);
+  }
+  bool translateOr(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_OR, U);
+  }
+  bool translateXor(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_XOR, U);
+  }
+  bool translateAlloca(const User &U) {
+    return translateStaticAlloca(cast<AllocaInst>(U));
+  }
+  bool translateIntToPtr(const User &U) {
+    return translateCast(TargetOpcode::G_INTTOPTR, U);
+  }
+  bool translatePtrToInt(const User &U) {
+    return translateCast(TargetOpcode::G_PTRTOINT, U);
+  }
+  bool translateTrunc(const User &U) {
+    return translateCast(TargetOpcode::G_TRUNC, U);
+  }
+  bool translateUnreachable(const User &U) { return true; }
 
   /// Translate return (ret) instruction.
   /// The target needs to implement CallLowering::lowerReturn for
   /// this to succeed.
-  /// \pre \p Inst is a return instruction.
-  bool translateReturn(const ReturnInst &Inst);
+  /// \pre \p U is a return instruction.
+  bool translateRet(const User &U);
+
+  // Stubs to keep the compiler happy while we implement the rest of the
+  // translation.
+  bool translateSwitch(const User &U) { return false; }
+  bool translateIndirectBr(const User &U) { return false; }
+  bool translateInvoke(const User &U) { return false; }
+  bool translateResume(const User &U) { return false; }
+  bool translateCleanupRet(const User &U) { return false; }
+  bool translateCatchRet(const User &U) { return false; }
+  bool translateCatchSwitch(const User &U) { return false; }
+  bool translateFAdd(const User &U) { return false; }
+  bool translateFSub(const User &U) { return false; }
+  bool translateFMul(const User &U) { return false; }
+  bool translateUDiv(const User &U) { return false; }
+  bool translateSDiv(const User &U) { return false; }
+  bool translateFDiv(const User &U) { return false; }
+  bool translateURem(const User &U) { return false; }
+  bool translateSRem(const User &U) { return false; }
+  bool translateFRem(const User &U) { return false; }
+  bool translateShl(const User &U) { return false; }
+  bool translateLShr(const User &U) { return false; }
+  bool translateAShr(const User &U) { return false; }
+  bool translateGetElementPtr(const User &U) { return false; }
+  bool translateFence(const User &U) { return false; }
+  bool translateAtomicCmpXchg(const User &U) { return false; }
+  bool translateAtomicRMW(const User &U) { return false; }
+  bool translateSExt(const User &U) { return false; }
+  bool translateZExt(const User &U) { return false; }
+  bool translateFPToUI(const User &U) { return false; }
+  bool translateFPToSI(const User &U) { return false; }
+  bool translateUIToFP(const User &U) { return false; }
+  bool translateSIToFP(const User &U) { return false; }
+  bool translateFPTrunc(const User &U) { return false; }
+  bool translateFPExt(const User &U) { return false; }
+  bool translateAddrSpaceCast(const User &U) { return false; }
+  bool translateCleanupPad(const User &U) { return false; }
+  bool translateCatchPad(const User &U) { return false; }
+  bool translateICmp(const User &U) { return false; }
+  bool translateFCmp(const User &U) { return false; }
+  bool translateSelect(const User &U) { return false; }
+  bool translateUserOp1(const User &U) { return false; }
+  bool translateUserOp2(const User &U) { return false; }
+  bool translateVAArg(const User &U) { return false; }
+  bool translateExtractElement(const User &U) { return false; }
+  bool translateInsertElement(const User &U) { return false; }
+  bool translateShuffleVector(const User &U) { return false; }
+  bool translateExtractValue(const User &U) { return false; }
+  bool translateInsertValue(const User &U) { return false; }
+  bool translateLandingPad(const User &U) { return false; }
+
   /// @}
 
   // Builder for machine instruction a la IRBuilder.

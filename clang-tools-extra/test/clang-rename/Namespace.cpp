@@ -1,14 +1,13 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=143 -new-name=llvm %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
-
-namespace foo { // CHECK: namespace llvm {
+namespace gcc /* Test 1 */ {  // CHECK: namespace clang /* Test 1 */ {
   int x;
 }
 
 void boo() {
-  foo::x = 42;  // CHECK: llvm::x = 42;
+  gcc::x = 42;                // CHECK: clang::x = 42;
 }
 
-// Use grep -FUbo 'foo;' <file> to get the correct offset of foo when changing
-// this file.
+// Test 1.
+// RUN: clang-rename -offset=10 -new-name=clang %s -- | sed 's,//.*,,' | FileCheck %s
+
+// To find offsets after modifying the file, use:
+//   grep -Ubo 'Foo.*' <file>

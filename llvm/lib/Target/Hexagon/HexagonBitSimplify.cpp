@@ -1353,8 +1353,8 @@ bool ConstGeneration::isTfrConst(const MachineInstr &MI) {
     case Hexagon::A2_tfrpi:
     case Hexagon::TFR_PdTrue:
     case Hexagon::TFR_PdFalse:
-    case Hexagon::CONST32_Int_Real:
-    case Hexagon::CONST64_Int_Real:
+    case Hexagon::CONST32:
+    case Hexagon::CONST64:
       return true;
   }
   return false;
@@ -1389,7 +1389,7 @@ unsigned ConstGeneration::genTfrConst(const TargetRegisterClass *RC, int64_t C,
       return Reg;
     }
 
-    BuildMI(B, At, DL, HII.get(Hexagon::CONST64_Int_Real), Reg)
+    BuildMI(B, At, DL, HII.get(Hexagon::CONST64), Reg)
         .addImm(C);
     return Reg;
   }

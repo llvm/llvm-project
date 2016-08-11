@@ -31,9 +31,7 @@ bool isPositiveHalfWord(SDNode *N);
 
       CONST32 = OP_BEGIN,
       CONST32_GP,  // For marking data present in GP.
-      FCONST32,
       ALLOCA,
-      ARGEXTEND,
 
       AT_GOT,      // Index in GOT.
       AT_PCREL,    // Offset relative to PC.

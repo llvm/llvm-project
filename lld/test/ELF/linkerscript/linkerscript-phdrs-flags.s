@@ -3,7 +3,7 @@
 # RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS FLAGS (1 + 0x2);} \
 # RUN:       SECTIONS { \
 # RUN:           . = 0x10000200; \
-# RUN:           .text : {*(.text.*)} :all \
+# RUN:           .text : {*(.text*)} :all \
 # RUN:           .foo : {*(.foo.*)} :all \
 # RUN:           .data : {*(.data.*)} :all}" > %t.script
 

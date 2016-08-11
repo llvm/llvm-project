@@ -108,9 +108,10 @@ namespace
     static inline bool ClangASTContextSupportsLanguage (lldb::LanguageType language)
     {
         return language == eLanguageTypeUnknown || // Clang is the default type system
-               Language::LanguageIsC (language) ||
-               Language::LanguageIsCPlusPlus (language) ||
-               Language::LanguageIsObjC (language) ||
+               Language::LanguageIsC(language) ||
+               Language::LanguageIsCPlusPlus(language) ||
+               Language::LanguageIsObjC(language) ||
+               Language::LanguageIsPascal(language) ||
                // Use Clang for Rust until there is a proper language plugin for it
                language == eLanguageTypeRust ||
                language == eLanguageTypeExtRenderScript;

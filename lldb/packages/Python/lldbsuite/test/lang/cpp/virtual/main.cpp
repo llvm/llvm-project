@@ -10,17 +10,17 @@ public:
     
     virtual const char * a()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
 
     virtual const char * b()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
 
     virtual const char * c()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
 protected:
     char m_pad;
@@ -34,7 +34,7 @@ public:
 
     virtual const char * aa()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
   
 protected:
@@ -50,12 +50,12 @@ public:
     
     virtual const char * a()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
 
     virtual const char * b()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
 protected:
     char m_pad;
@@ -70,7 +70,7 @@ public:
     
     virtual const char * a()
     {
-        return LLVM_PRETTY_FUNCTION;
+        return __PRETTY_FUNCTION__;
     }
 protected:
     char m_pad;

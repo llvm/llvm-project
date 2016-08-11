@@ -1042,11 +1042,7 @@ APInt APInt::ashr(unsigned shiftAmt) const {
   if (isSingleWord()) {
     if (shiftAmt == BitWidth)
       return APInt(BitWidth, 0); // undefined
-    else {
-      unsigned SignBit = APINT_BITS_PER_WORD - BitWidth;
-      return APInt(BitWidth,
-        (((int64_t(VAL) << SignBit) >> SignBit) >> shiftAmt));
-    }
+    return APInt(BitWidth, SignExtend64(VAL, BitWidth) >> shiftAmt);
   }
 
   // If all the bits were shifted out, the result is, technically, undefined.

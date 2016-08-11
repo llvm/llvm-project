@@ -260,9 +260,8 @@ static bool format(StringRef FileName) {
     llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
     return true;
   }
-  for (const auto &R : Replaces)
-    Ranges.push_back({R.getOffset(), R.getLength()});
-
+  // Get new affected ranges after sorting `#includes`.
+  Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
   bool IncompleteFormat = false;
   Replacements FormatChanges = reformat(FormatStyle, *ChangedCode, Ranges,
                                         AssumedFileName, &IncompleteFormat);

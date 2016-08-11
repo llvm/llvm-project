@@ -10,6 +10,7 @@
 #include "lldb/Host/posix/PipePosix.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/SelectHelper.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -63,73 +64,6 @@ std::chrono::time_point<std::chrono::steady_clock>
 Now()
 {
     return std::chrono::steady_clock::now();
-}
-
-Error
-SelectIO(int handle, bool is_read, const std::function<Error(bool&)> &io_handler, const std::chrono::microseconds &timeout)
-{
-    Error error;
-    fd_set fds;
-    bool done = false;
-
-    using namespace std::chrono;
-
-    const auto finish_time = Now() + timeout;
-
-    while (!done)
-    {
-        struct timeval tv = {0, 0};
-        if (timeout != microseconds::zero())
-        {
-            const auto remaining_dur = duration_cast<microseconds>(finish_time - Now());
-            if (remaining_dur.count() <= 0)
-            {
-                error.SetErrorString("timeout exceeded");
-                break;
-            }
-            const auto dur_secs = duration_cast<seconds>(remaining_dur);
-            const auto dur_usecs = remaining_dur % seconds(1);
-
-            tv.tv_sec = dur_secs.count();
-            tv.tv_usec = dur_usecs.count();
-        }
-        else
-            tv.tv_sec = 1;
-
-        FD_ZERO(&fds);
-        FD_SET(handle, &fds);
-
-        const auto retval = ::select(handle + 1,
-                                     (is_read) ? &fds : nullptr,
-                                     (is_read) ? nullptr : &fds,
-                                     nullptr, &tv);
-        if (retval == -1)
-        {
-            if (errno == EINTR)
-                continue;
-            error.SetErrorToErrno();
-            break;
-        }
-        if (retval == 0)
-        {
-            error.SetErrorString("timeout exceeded");
-            break;
-        }
-        if (!FD_ISSET(handle, &fds))
-        {
-            error.SetErrorString("invalid state");
-            break;
-        }
-
-        error = io_handler(done);
-        if (error.Fail())
-        {
-          if (error.GetError() == EINTR)
-              continue;
-            break;
-        }
-    }
-    return error;
 }
 
 }
@@ -383,27 +317,33 @@ PipePosix::ReadWithTimeout(void *buf, size_t size, const std::chrono::microsecon
     if (!CanRead())
         return Error(EINVAL, eErrorTypePOSIX);
 
-    auto handle = GetReadFileDescriptor();
-    return SelectIO(handle,
-                    true,
-                    [=, &bytes_read](bool &done)
-                    {
-                      Error error;
-                      auto result = ::read(handle,
-                                           reinterpret_cast<char*>(buf) + bytes_read,
-                                           size - bytes_read);
-                      if (result != -1)
-                      {
-                          bytes_read += result;
-                          if (bytes_read == size || result == 0)
-                              done = true;
-                      }
-                      else
-                          error.SetErrorToErrno();
+    const int fd = GetReadFileDescriptor();
 
-                      return error;
-                  },
-                  timeout);
+    SelectHelper select_helper;
+    select_helper.SetTimeout(timeout);
+    select_helper.FDSetRead(fd);
+
+    Error error;
+    while (error.Success())
+    {
+        error = select_helper.Select();
+        if (error.Success())
+        {
+            auto result = ::read(fd, reinterpret_cast<char*>(buf) + bytes_read, size - bytes_read);
+            if (result != -1)
+            {
+                bytes_read += result;
+                if (bytes_read == size || result == 0)
+                    break;
+            }
+            else
+            {
+                error.SetErrorToErrno();
+                break;
+            }
+        }
+    }
+    return error;
 }
 
 Error
@@ -413,25 +353,29 @@ PipePosix::Write(const void *buf, size_t size, size_t &bytes_written)
     if (!CanWrite())
         return Error(EINVAL, eErrorTypePOSIX);
 
-    auto handle = GetWriteFileDescriptor();
-    return SelectIO(handle,
-                    false,
-                    [=, &bytes_written](bool &done)
-                    {
-                        Error error;
-                        auto result = ::write(handle,
-                                              reinterpret_cast<const char*>(buf) + bytes_written,
-                                              size - bytes_written);
-                        if (result != -1)
-                        {
-                            bytes_written += result;
-                            if (bytes_written == size)
-                                done = true;
-                        }
-                        else
-                            error.SetErrorToErrno();
+    const int fd = GetWriteFileDescriptor();
+    SelectHelper select_helper;
+    select_helper.SetTimeout(std::chrono::seconds(0));
+    select_helper.FDSetWrite(fd);
 
-                        return error;
-                    },
-                    std::chrono::microseconds::zero());
+    Error error;
+    while (error.Success())
+    {
+        error = select_helper.Select();
+        if (error.Success())
+        {
+            auto result = ::write(fd, reinterpret_cast<const char*>(buf) + bytes_written, size - bytes_written);
+            if (result != -1)
+            {
+                bytes_written += result;
+                if (bytes_written == size)
+                    break;
+            }
+            else
+            {
+                error.SetErrorToErrno();
+            }
+        }
+    }
+    return error;
 }

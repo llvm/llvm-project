@@ -214,12 +214,31 @@ define i64* @inttoptr(i64 %a) {
 
 ; CHECK-LABEL: name: trivial_bitcast
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
-; CHECK: [[RES:%[0-9]+]](64) = COPY [[ARG1]]
-; CHECK: %x0 = COPY [[RES]]
+; CHECK: %x0 = COPY [[ARG1]]
 ; CHECK: RET_ReallyLR implicit %x0
 define i64* @trivial_bitcast(i8* %a) {
   %val = bitcast i8* %a to i64*
   ret i64* %val
+}
+
+; CHECK-LABEL: name: trivial_bitcast_with_copy
+; CHECK:     [[A:%[0-9]+]](64) = COPY %x0
+; CHECK:     G_BR unsized %[[CAST:bb\.[0-9]+]]
+
+; CHECK: [[CAST]]:
+; CHECK:     {{%[0-9]+}}(64) = COPY [[A]]
+; CHECK:     G_BR unsized %[[END:bb\.[0-9]+]]
+
+; CHECK: [[END]]:
+define i64* @trivial_bitcast_with_copy(i8* %a) {
+  br label %cast
+
+end:
+  ret i64* %val
+
+cast:
+  %val = bitcast i8* %a to i64*
+  br label %end
 }
 
 ; CHECK-LABEL: name: bitcast
@@ -369,4 +388,12 @@ define i32 @constant_int_start() {
 ; CHECK: %w0 = COPY [[UNDEF]]
 define i32 @test_undef() {
   ret i32 undef
+}
+
+; CHECK-LABEL: name: test_constant_inttoptr
+; CHECK: [[ONE:%[0-9]+]](64) = G_CONSTANT s64 1
+; CHECK: [[PTR:%[0-9]+]](64) = G_INTTOPTR { p0, s64 } [[ONE]]
+; CHECK: %x0 = COPY [[PTR]]
+define i8* @test_constant_inttoptr() {
+  ret i8* inttoptr(i64 1 to i8*)
 }

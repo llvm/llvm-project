@@ -1,5 +1,5 @@
 template <typename T>
-class Foo {               // CHECK: class Bar {
+class Foo { /* Test 1 */   // CHECK: class Bar { /* Test 1 */
 public:
   T foo(T arg, T& ref, T* ptr) {
     T value;
@@ -14,31 +14,29 @@ public:
 
 template <typename T>
 void func() {
-  Foo<T> obj;             // CHECK: Bar<T> obj;
+  Foo<T> obj; /* Test 2 */  // CHECK: Bar<T> obj;
   obj.member = T();
-  Foo<T>::foo();          // CHECK: Bar<T>::foo();
+  Foo<T>::foo();            // CHECK: Bar<T>::foo();
 }
 
 int main() {
-  Foo<int> i;             // CHECK: Bar<int> i;
+  Foo<int> i; /* Test 3 */  // CHECK: Bar<int> i;
   i.member = 0;
-  Foo<int>::foo(0);       // CHECK: Bar<int>::foo(0);
+  Foo<int>::foo(0);         // CHECK: Bar<int>::foo(0);
 
-  Foo<bool> b;            // CHECK: Bar<bool> b;
+  Foo<bool> b;              // CHECK: Bar<bool> b;
   b.member = false;
-  Foo<bool>::foo(false);  // CHECK: Bar<bool>::foo(false);
+  Foo<bool>::foo(false);    // CHECK: Bar<bool>::foo(false);
 
   return 0;
 }
 
-// RUN: cat %s > %t-0.cpp
-// RUN: clang-rename -offset=29 -new-name=Bar %t-0.cpp -i -- -fno-delayed-template-parsing
-// RUN: sed 's,//.*,,' %t-0.cpp | FileCheck %s
+// Test 1.
+// RUN: clang-rename -offset=29 -new-name=Bar %s -- -fno-delayed-template-parsing | sed 's,//.*,,' | FileCheck %s
+// Test 2.
+// RUN: clang-rename -offset=324 -new-name=Bar %s -- -fno-delayed-template-parsing | sed 's,//.*,,' | FileCheck %s
+// Test 3.
+// RUN: clang-rename -offset=463 -new-name=Bar %s -- -fno-delayed-template-parsing | sed 's,//.*,,' | FileCheck %s
 
-// RUN: cat %s > %t-1.cpp
-// RUN: clang-rename -offset=311 -new-name=Bar %t-1.cpp -i -- -fno-delayed-template-parsing
-// RUN: sed 's,//.*,,' %t-1.cpp | FileCheck %s
-
-// RUN: cat %s > %t-2.cpp
-// RUN: clang-rename -offset=445 -new-name=Bar %t-2.cpp -i -- -fno-delayed-template-parsing
-// RUN: sed 's,//.*,,' %t-2.cpp | FileCheck %s
+// To find offsets after modifying the file, use:
+//   grep -Ubo 'Foo.*' <file>

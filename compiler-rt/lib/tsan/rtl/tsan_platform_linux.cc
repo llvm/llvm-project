@@ -38,6 +38,7 @@
 #include <sys/mman.h>
 #if SANITIZER_LINUX
 #include <sys/personality.h>
+#include <setjmp.h>
 #endif
 #include <sys/syscall.h>
 #include <sys/socket.h>
@@ -65,6 +66,10 @@
 #if SANITIZER_FREEBSD
 extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
+#endif
+
+#if SANITIZER_LINUX && defined(__aarch64__)
+void InitializeGuardPtr() __attribute__((visibility("hidden")));
 #endif
 
 namespace __tsan {
@@ -264,6 +269,8 @@ void InitializePlatform() {
       CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
       reexec = true;
     }
+    // Initialize the guard pointer used in {sig}{set,long}jump.
+    InitializeGuardPtr();
 #endif
     if (reexec)
       ReExec();

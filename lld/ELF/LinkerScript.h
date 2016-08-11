@@ -149,6 +149,7 @@ public:
   void addScriptedSymbols();
   bool hasPhdrsCommands();
   uintX_t getOutputSectionSize(StringRef Name);
+  uintX_t getSizeOfHeaders();
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 

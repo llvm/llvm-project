@@ -6,7 +6,7 @@ define double @pow_half(double %x) {
 }
 
 ; CHECK-LABEL: define double @pow_half(
-; CHECK-NEXT:  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+; CHECK-NEXT:  %sqrt = call fast double @sqrt(double %x)
 ; CHECK-NEXT:  ret double %sqrt
 
 declare double @llvm.pow.f64(double, double)
