@@ -1632,16 +1632,16 @@ reverse_iterator<const _Ep*> rend(initializer_list<_Ep> __il)
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-auto cbegin(const _Cp& __c) -> decltype(begin(__c))
+auto cbegin(const _Cp& __c) -> decltype(_VSTD::begin(__c))
 {
-    return begin(__c);
+    return _VSTD::begin(__c);
 }
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-auto cend(const _Cp& __c) -> decltype(end(__c))
+auto cend(const _Cp& __c) -> decltype(_VSTD::end(__c))
 {
-    return end(__c);
+    return _VSTD::end(__c);
 }
 
 template <class _Cp>
@@ -1674,16 +1674,16 @@ auto rend(const _Cp& __c) -> decltype(__c.rend())
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
-auto crbegin(const _Cp& __c) -> decltype(rbegin(__c))
+auto crbegin(const _Cp& __c) -> decltype(_VSTD::rbegin(__c))
 {
-    return rbegin(__c);
+    return _VSTD::rbegin(__c);
 }
 
 template <class _Cp>
 inline _LIBCPP_INLINE_VISIBILITY
-auto crend(const _Cp& __c) -> decltype(rend(__c))
+auto crend(const _Cp& __c) -> decltype(_VSTD::rend(__c))
 {
-    return rend(__c);
+    return _VSTD::rend(__c);
 }
 
 #endif

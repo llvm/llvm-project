@@ -70,7 +70,7 @@ Alternatively, old name / new name pairs can be put into a YAML file:
   ...
 
 
-That way you can avoid spelling out all the names as commandline arguments:
+That way you can avoid spelling out all the names as command line arguments:
 
 .. code-block:: console
 
@@ -122,12 +122,12 @@ The YAML file also supports offsets:
   clang-rename rename-at options:
 
     -export-fixes=<filename>   - YAML file to store suggested fixes in.
-    -extra-arg=<string>        - Additional argument to append to the compiler command line
-    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line
+    -extra-arg=<string>        - Additional argument to append to the compiler command line.
+    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line.
     -i                         - Overwrite edited <file>s.
     -new-name=<string>         - The new name to change the symbol to.
     -offset=<uint>             - Locates the symbol by offset as opposed to <line>:<column>.
-    -p=<string>                - Build path
+    -p=<string>                - Build path.
     -pl                        - Print the locations affected by renaming to stderr.
     -pn                        - Print the found symbol's name prior to renaming to stderr.
 
@@ -144,21 +144,21 @@ The YAML file also supports offsets:
 
   Generic Options:
 
-    -help                      - Display available options (-help-hidden for more)
-    -help-list                 - Display list of available options (-help-list-hidden for more)
-    -version                   - Display the version of this program
+    -help                      - Display available options (-help-hidden for more).
+    -help-list                 - Display list of available options (-help-list-hidden for more).
+    -version                   - Display the version of this program.
 
   clang-rename rename-all options:
 
     -export-fixes=<filename>   - YAML file to store suggested fixes in.
-    -extra-arg=<string>        - Additional argument to append to the compiler command line
-    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line
+    -extra-arg=<string>        - Additional argument to append to the compiler command line.
+    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line.
     -i                         - Overwrite edited <file>s.
     -input=<string>            - YAML file to load oldname-newname pairs from.
     -new-name=<string>         - The new name to change the symbol to.
     -offset=<uint>             - Locates the symbol by offset as opposed to <line>:<column>.
     -old-name=<string>         - The fully qualified name of the symbol, if -offset is not used.
-    -p=<string>                - Build path
+    -p=<string>                - Build path.
 
 
 Vim Integration

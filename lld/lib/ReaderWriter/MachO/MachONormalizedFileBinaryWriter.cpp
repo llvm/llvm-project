@@ -643,7 +643,9 @@ llvm::Error MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
   seg->vmsize = _file.sections.back().address
               + _file.sections.back().content.size();
   seg->fileoff = _endOfLoadCommands;
-  seg->filesize = seg->vmsize;
+  seg->filesize = _sectInfo[&_file.sections.back()].fileOffset +
+                  _file.sections.back().content.size() -
+                  _sectInfo[&_file.sections.front()].fileOffset;
   seg->maxprot = VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE;
   seg->initprot = VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE;
   seg->nsects = _file.sections.size();
