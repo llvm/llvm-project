@@ -29,7 +29,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
@@ -539,6 +539,16 @@ regsAreCompatible(unsigned RegA, unsigned RegB, const TargetRegisterInfo *TRI) {
   return TRI->regsOverlap(RegA, RegB);
 }
 
+// Returns true if Reg is equal or aliased to at least one register in Set.
+static bool regOverlapsSet(const SmallVectorImpl<unsigned> &Set, unsigned Reg,
+                           const TargetRegisterInfo *TRI) {
+  for (unsigned R : Set)
+    if (TRI->regsOverlap(R, Reg))
+      return true;
+
+  return false;
+}
+
 /// Return true if it's potentially profitable to commute the two-address
 /// instruction that's being processed.
 bool
@@ -864,9 +874,9 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
     // FIXME: Needs more sophisticated heuristics.
     return false;
 
-  SmallSet<unsigned, 2> Uses;
-  SmallSet<unsigned, 2> Kills;
-  SmallSet<unsigned, 2> Defs;
+  SmallVector<unsigned, 2> Uses;
+  SmallVector<unsigned, 2> Kills;
+  SmallVector<unsigned, 2> Defs;
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg())
       continue;
@@ -874,12 +884,12 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
     if (!MOReg)
       continue;
     if (MO.isDef())
-      Defs.insert(MOReg);
+      Defs.push_back(MOReg);
     else {
-      Uses.insert(MOReg);
+      Uses.push_back(MOReg);
       if (MOReg != Reg && (MO.isKill() ||
                            (LIS && isPlainlyKilled(MI, MOReg, LIS))))
-        Kills.insert(MOReg);
+        Kills.push_back(MOReg);
     }
   }
 
@@ -888,8 +898,9 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   MachineBasicBlock::iterator AfterMI = std::next(Begin);
 
   MachineBasicBlock::iterator End = AfterMI;
-  while (End->isCopy() && Defs.count(End->getOperand(1).getReg())) {
-    Defs.insert(End->getOperand(0).getReg());
+  while (End->isCopy() &&
+         regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI)) {
+    Defs.push_back(End->getOperand(0).getReg());
     ++End;
   }
 
@@ -915,21 +926,21 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
       if (!MOReg)
         continue;
       if (MO.isDef()) {
-        if (Uses.count(MOReg))
+        if (regOverlapsSet(Uses, MOReg, TRI))
           // Physical register use would be clobbered.
           return false;
-        if (!MO.isDead() && Defs.count(MOReg))
+        if (!MO.isDead() && regOverlapsSet(Defs, MOReg, TRI))
           // May clobber a physical register def.
           // FIXME: This may be too conservative. It's ok if the instruction
           // is sunken completely below the use.
           return false;
       } else {
-        if (Defs.count(MOReg))
+        if (regOverlapsSet(Defs, MOReg, TRI))
           return false;
         bool isKill =
             MO.isKill() || (LIS && isPlainlyKilled(&OtherMI, MOReg, LIS));
-        if (MOReg != Reg &&
-            ((isKill && Uses.count(MOReg)) || Kills.count(MOReg)))
+        if (MOReg != Reg && ((isKill && regOverlapsSet(Uses, MOReg, TRI)) ||
+                             regOverlapsSet(Kills, MOReg, TRI)))
           // Don't want to extend other live ranges and update kills.
           return false;
         if (MOReg == Reg && !isKill)
