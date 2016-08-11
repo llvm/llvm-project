@@ -238,6 +238,9 @@ template <class ELFT> void Writer<ELFT>::run() {
     copyLocalSymbols();
   addReservedSymbols();
 
+  if (Target->NeedsThunks)
+    forEachRelSec(createThunks<ELFT>);
+
   CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
   CommonInputSection<ELFT>::X = &Common;
 
@@ -659,6 +662,14 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       Sec->addSection(C);
     }
   }
+
+  sortInitFini(findSection(".init_array"));
+  sortInitFini(findSection(".fini_array"));
+  sortCtorsDtors(findSection(".ctors"));
+  sortCtorsDtors(findSection(".dtors"));
+
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    Sec->assignOffsets();
 }
 
 // Create output section objects and add them to OutputSections.
@@ -666,12 +677,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   Out<ELFT>::PreinitArray = findSection(".preinit_array");
   Out<ELFT>::InitArray = findSection(".init_array");
   Out<ELFT>::FiniArray = findSection(".fini_array");
-
-  // Sort section contents for __attribute__((init_priority(N)).
-  sortInitFini(Out<ELFT>::InitArray);
-  sortInitFini(Out<ELFT>::FiniArray);
-  sortCtorsDtors(findSection(".ctors"));
-  sortCtorsDtors(findSection(".dtors"));
 
   // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
   // symbols for sections, so that the runtime can get the start and end
@@ -692,20 +697,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
 
-  // Add scripted symbols with zero values now.
-  // Real values will be assigned later
-  Script<ELFT>::X->addScriptedSymbols();
-
   if (!Out<ELFT>::EhFrame->empty()) {
     OutputSections.push_back(Out<ELFT>::EhFrame);
     Out<ELFT>::EhFrame->finalize();
   }
-
-  if (Target->NeedsThunks)
-    forEachRelSec(createThunks<ELFT>);
-
-  for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    Sec->assignOffsets();
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.

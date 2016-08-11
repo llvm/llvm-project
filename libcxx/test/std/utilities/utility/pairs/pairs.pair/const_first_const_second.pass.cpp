@@ -20,6 +20,7 @@
 
 #include "archetypes.hpp"
 #include "test_convertible.hpp"
+using namespace ImplicitTypes; // Get implicitly archetypes
 
 struct ExplicitT {
   constexpr explicit ExplicitT(int x) : value(x) {}
@@ -62,13 +63,13 @@ int main()
     }
     {
         test_sfinae<AllCtors>();
-        test_sfinae<ExplicitAllCtors, true, false>();
+        test_sfinae<ExplicitTypes::AllCtors, true, false>();
         test_sfinae<CopyOnly>();
-        test_sfinae<ExplicitCopyOnly, true, false>();
+        test_sfinae<ExplicitTypes::CopyOnly, true, false>();
         test_sfinae<MoveOnly, false>();
-        test_sfinae<ExplicitMoveOnly, false>();
+        test_sfinae<ExplicitTypes::MoveOnly, false>();
         test_sfinae<NonCopyable, false>();
-        test_sfinae<ExplicitNonCopyable, false>();
+        test_sfinae<ExplicitTypes::NonCopyable, false>();
     }
 #if TEST_STD_VER > 11
     {

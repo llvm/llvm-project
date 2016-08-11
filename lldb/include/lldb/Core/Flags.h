@@ -9,10 +9,9 @@
 
 #ifndef liblldb_Flags_h_
 #define liblldb_Flags_h_
-#if defined(__cplusplus)
 
-
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 
@@ -248,5 +247,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif  // #if defined(__cplusplus)
 #endif  // liblldb_Flags_h_

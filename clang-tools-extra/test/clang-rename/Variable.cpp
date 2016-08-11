@@ -1,27 +1,32 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=148 -new-name=Bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
-
 namespace A {
-int Foo;                // CHECK: int Bar;
+int Foo;          /* Test 1 */        // CHECK: int Bar;
 }
-int Foo;                // CHECK: int Foo;
-int Qux = Foo;          // CHECK: int Qux = Foo;
-int Baz = A::Foo;       // CHECK: Baz = A::Bar;
+int Foo;                              // CHECK: int Foo;
+int Qux = Foo;                        // CHECK: int Qux = Foo;
+int Baz = A::Foo; /* Test 2 */        // CHECK: Baz = A::Bar;
 void fun() {
   struct {
-    int Foo;            // CHECK: int Foo;
+    int Foo;                          // CHECK: int Foo;
   } b = {100};
-  int Foo = 100;        // CHECK: int Foo = 100;
-  Baz = Foo;            // CHECK: Baz = Foo;
+  int Foo = 100;                      // CHECK: int Foo = 100;
+  Baz = Foo;                          // CHECK: Baz = Foo;
   {
-    extern int Foo;     // CHECK: extern int Foo;
-    Baz = Foo;          // CHECK: Baz = Foo;
-    Foo = A::Foo + Baz; // CHECK: Foo = A::Bar + Baz;
-    A::Foo = b.Foo;     // CHECK: A::Bar = b.Foo;
+    extern int Foo;                   // CHECK: extern int Foo;
+    Baz = Foo;                        // CHECK: Baz = Foo;
+    Foo = A::Foo /* Test 3 */ + Baz;  // CHECK: Foo = A::Bar /* Test 3 */ + Baz;
+    A::Foo /* Test 4 */ = b.Foo;      // CHECK: A::Bar /* Test 4 */ = b.Foo;
   }
-  Foo = b.Foo;          // Foo = b.Foo;
+  Foo = b.Foo;                        // Foo = b.Foo;
 }
 
-// Use grep -FUbo 'Foo' <file> to get the correct offset of foo when changing
-// this file.
+// Test 1.
+// RUN: clang-rename -offset=18 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// Test 2.
+// RUN: clang-rename -offset=206 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// Test 3.
+// RUN: clang-rename -offset=613 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+// Test 4.
+// RUN: clang-rename -offset=688 -new-name=Bar %s -- | sed 's,//.*,,' | FileCheck %s
+
+// To find offsets after modifying the file, use:
+//   grep -Ubo 'Foo.*' <file>

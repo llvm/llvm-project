@@ -595,3 +595,27 @@ TEST_F(PythonDataObjectsTest, TestObjectAttributes)
     EXPECT_TRUE(numerator_attr.IsAllocated());
     EXPECT_EQ(42, numerator_attr.GetInteger());
 }
+
+TEST_F(PythonDataObjectsTest, TestExtractingUInt64ThroughStructuredData)
+{
+    // Make up a custom dictionary with "sys" pointing to the `sys` module.
+    const char *key_name = "addr";
+    const uint64_t value = 0xf000000000000000ull;
+    PythonDictionary python_dict(PyInitialValue::Empty);
+    PythonInteger python_ull_value(PyRefType::Owned, PyLong_FromUnsignedLongLong(value));
+    python_dict.SetItemForKey(PythonString(key_name), python_ull_value);
+    StructuredData::ObjectSP structured_data_sp = python_dict.CreateStructuredObject();
+    EXPECT_TRUE((bool)structured_data_sp);
+    if (structured_data_sp)
+    {
+        StructuredData::Dictionary *structured_dict_ptr = structured_data_sp->GetAsDictionary();
+        EXPECT_TRUE(structured_dict_ptr != nullptr);
+        if (structured_dict_ptr)
+        {
+            StructuredData::ObjectSP structured_addr_value_sp = structured_dict_ptr->GetValueForKey(key_name);
+            EXPECT_TRUE((bool)structured_addr_value_sp);
+            const uint64_t extracted_value = structured_addr_value_sp->GetIntegerValue(123);
+            EXPECT_TRUE(extracted_value == value);
+        }
+    }
+}

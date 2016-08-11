@@ -22,6 +22,7 @@
 
 #include "archetypes.hpp"
 #include "test_convertible.hpp"
+using namespace ImplicitTypes; // Get implicitly archetypes
 
 template <class T1, class T1Arg,
           bool CanCopy = true, bool CanConvert = CanCopy>
@@ -58,20 +59,20 @@ int main()
         // Test non-const lvalue and rvalue types
         test_sfinae<AllCtors, AllCtors&>();
         test_sfinae<AllCtors, AllCtors&&>();
-        test_sfinae<ExplicitAllCtors, ExplicitAllCtors&, true, false>();
-        test_sfinae<ExplicitAllCtors, ExplicitAllCtors&&, true, false>();
+        test_sfinae<ExplicitTypes::AllCtors, ExplicitTypes::AllCtors&, true, false>();
+        test_sfinae<ExplicitTypes::AllCtors, ExplicitTypes::AllCtors&&, true, false>();
         test_sfinae<CopyOnly, CopyOnly&>();
         test_sfinae<CopyOnly, CopyOnly&&>();
-        test_sfinae<ExplicitCopyOnly, ExplicitCopyOnly&, true, false>();
-        test_sfinae<ExplicitCopyOnly, ExplicitCopyOnly&&, true, false>();
+        test_sfinae<ExplicitTypes::CopyOnly, ExplicitTypes::CopyOnly&, true, false>();
+        test_sfinae<ExplicitTypes::CopyOnly, ExplicitTypes::CopyOnly&&, true, false>();
         test_sfinae<MoveOnly, MoveOnly&, false>();
         test_sfinae<MoveOnly, MoveOnly&&>();
-        test_sfinae<ExplicitMoveOnly, ExplicitMoveOnly&, false>();
-        test_sfinae<ExplicitMoveOnly, ExplicitMoveOnly&&, true, false>();
+        test_sfinae<ExplicitTypes::MoveOnly, ExplicitTypes::MoveOnly&, false>();
+        test_sfinae<ExplicitTypes::MoveOnly, ExplicitTypes::MoveOnly&&, true, false>();
         test_sfinae<NonCopyable, NonCopyable&, false>();
         test_sfinae<NonCopyable, NonCopyable&&, false>();
-        test_sfinae<ExplicitNonCopyable, ExplicitNonCopyable&, false>();
-        test_sfinae<ExplicitNonCopyable, ExplicitNonCopyable&&, false>();
+        test_sfinae<ExplicitTypes::NonCopyable, ExplicitTypes::NonCopyable&, false>();
+        test_sfinae<ExplicitTypes::NonCopyable, ExplicitTypes::NonCopyable&&, false>();
     }
     {
         // Test converting types
@@ -79,10 +80,10 @@ int main()
         test_sfinae<ConvertingType, const int&>();
         test_sfinae<ConvertingType, int&&>();
         test_sfinae<ConvertingType, const int&&>();
-        test_sfinae<ExplicitConvertingType, int&, true, false>();
-        test_sfinae<ExplicitConvertingType, const int&, true, false>();
-        test_sfinae<ExplicitConvertingType, int&&, true, false>();
-        test_sfinae<ExplicitConvertingType, const int&&, true, false>();
+        test_sfinae<ExplicitTypes::ConvertingType, int&, true, false>();
+        test_sfinae<ExplicitTypes::ConvertingType, const int&, true, false>();
+        test_sfinae<ExplicitTypes::ConvertingType, int&&, true, false>();
+        test_sfinae<ExplicitTypes::ConvertingType, const int&&, true, false>();
     }
 #if TEST_STD_VER > 11
     { // explicit constexpr test
