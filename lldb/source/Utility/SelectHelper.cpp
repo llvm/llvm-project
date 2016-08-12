@@ -100,6 +100,12 @@ lldb_private::Error
 SelectHelper::Select()
 {
     lldb_private::Error error;
+#ifdef _MSC_VER
+    // On windows FD_SETSIZE limits the number of file descriptors, not their numeric value.
+    lldbassert(m_fd_map.size() <= FD_SETSIZE);
+    if (m_fd_map.size() > FD_SETSIZE)
+        return lldb_private::Error("Too many file descriptors for select()");
+#endif
 
     int max_read_fd = -1;
     int max_write_fd = -1;
@@ -109,7 +115,7 @@ SelectHelper::Select()
     {
         pair.second.PrepareForSelect();
         const int fd = pair.first;
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(_MSC_VER)
         lldbassert(fd < FD_SETSIZE);
         if (fd >= FD_SETSIZE)
         {

@@ -1,5 +1,7 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t 2>&1
 
+// XFAIL: target-is-mips64el
+
 #include <assert.h>
 #include <sys/eventfd.h>
 
