@@ -68,19 +68,11 @@ struct TrieEdge : public llvm::ilist_node<TrieEdge> {
 namespace llvm {
   using lld::mach_o::normalized::TrieEdge;
   template <>
-  struct ilist_traits<TrieEdge>
-    : public ilist_default_traits<TrieEdge> {
-  private:
-    mutable ilist_half_node<TrieEdge> Sentinel;
-  public:
-    TrieEdge *createSentinel() const {
-      return static_cast<TrieEdge*>(&Sentinel);
-    }
-    void destroySentinel(TrieEdge *) const {}
+  struct ilist_sentinel_traits<TrieEdge>
+      : public ilist_half_embedded_sentinel_traits<TrieEdge> {};
 
-    TrieEdge *provideInitialHead() const { return createSentinel(); }
-    TrieEdge *ensureHead(TrieEdge*) const { return createSentinel(); }
-    static void noteHead(TrieEdge*, TrieEdge*) {}
+  template <>
+  struct ilist_traits<TrieEdge> : public ilist_default_traits<TrieEdge> {
     void deleteNode(TrieEdge *N) {}
 
   private:
