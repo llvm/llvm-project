@@ -28,7 +28,6 @@
 
 #include "test_macros.h"
 #include "archetypes.hpp"
-using namespace ImplicitTypes; // Get implicitly archetypes
 
 int main()
 {
@@ -46,6 +45,7 @@ int main()
         static_assert(p.second == nullptr, "");
     }
     {
+        using NoDefault = ImplicitTypes::NoDefault;
         using P = std::pair<int, NoDefault>;
         static_assert(!std::is_default_constructible<P>::value, "");
         using P2 = std::pair<NoDefault, int>;

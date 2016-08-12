@@ -71,6 +71,7 @@ template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (SectionKind) {
   case Regular:
+  case Layout:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
@@ -129,7 +130,7 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
 
 template <class ELFT>
 bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
-  return S->SectionKind == Base::Regular;
+  return S->SectionKind == Base::Regular || S->SectionKind == Base::Layout;
 }
 
 template <class ELFT>

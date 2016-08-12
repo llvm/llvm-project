@@ -1,25 +1,25 @@
 # Check we accept -install_name correctly:
 # RUN: lld -flavor darwin -arch x86_64 -install_name libwibble.dylib -dylib \
 # RUN:     -compatibility_version 2.0 -current_version 5.3 \
-# RUN:     %p/Inputs/libSystem.yaml %s -o %t.dylib
+# RUN:     %p/Inputs/x86_64/libSystem.yaml %s -o %t.dylib
 # RUN: llvm-objdump -private-headers %t.dylib | FileCheck %s --check-prefix=CHECK-BINARY-WRITE
 
 # Check we read LC_ID_DYLIB correctly:
 # RUN: lld -flavor darwin -arch x86_64 %p/Inputs/use-dylib-install-names.yaml \
-# RUN:      %p/Inputs/libSystem.yaml %t.dylib -dylib -o %t2.dylib
+# RUN:      %p/Inputs/x86_64/libSystem.yaml %t.dylib -dylib -o %t2.dylib
 # RUN: llvm-objdump -private-headers %t2.dylib | FileCheck %s --check-prefix=CHECK-BINARY-READ
 
 # Check we default the install-name to the output file:
 # RUN: lld -flavor darwin -arch x86_64 -dylib %s -o libwibble.dylib \
 # RUN:     -compatibility_version 2.0 -current_version 5.3 \
-# RUN:     %p/Inputs/libSystem.yaml
+# RUN:     %p/Inputs/x86_64/libSystem.yaml
 # RUN: llvm-objdump -private-headers libwibble.dylib | FileCheck %s --check-prefix=CHECK-BINARY-WRITE
 # RUN: rm -f libwibble.dylib
 
 # Check -single_module does nothing
 # RUN: lld -flavor darwin -arch x86_64 -dylib %s -install_name libwibble.dylib \
 # RUN:     -compatibility_version 2.0 -current_version 5.3 \
-# RUN:     -single_module -o %t2.dylib %p/Inputs/libSystem.yaml
+# RUN:     -single_module -o %t2.dylib %p/Inputs/x86_64/libSystem.yaml
 # RUN: llvm-objdump -private-headers %t2.dylib | FileCheck %s --check-prefix=CHECK-BINARY-WRITE
 
 --- !mach-o
@@ -63,8 +63,8 @@ global-symbols:
 # CHECK-BINARY-READ-NEXT: cmdsize 56
 # CHECK-BINARY-READ-NEXT:  name /usr/lib/libSystem.B.dylib (offset 24)
 # CHECK-BINARY-READ-NEXT:  time stamp 2
-# CHECK-BINARY-READ-NEXT:  current version 0.16.0
-# CHECK-BINARY-READ-NEXT:  compatibility version 0.16.0
+# CHECK-BINARY-READ-NEXT:  current version 1.0.0
+# CHECK-BINARY-READ-NEXT:  compatibility version 1.0.0
 
 # CHECK-BINARY-READ: cmd LC_LOAD_DYLIB
 # CHECK-BINARY-READ-NEXT: cmdsize 40

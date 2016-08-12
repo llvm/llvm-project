@@ -37,16 +37,18 @@ using namespace lldb_private;
 //
 
 CommandObjectArgs::CommandOptions::CommandOptions (CommandInterpreter &interpreter) :
-    Options(interpreter)
+    Options()
 {
     // Keep only one place to reset the values to their defaults
-    OptionParsingStarting();
+    OptionParsingStarting(nullptr);
 }
 
 CommandObjectArgs::CommandOptions::~CommandOptions() = default;
 
 Error
-CommandObjectArgs::CommandOptions::SetOptionValue (uint32_t option_idx, const char *option_arg)
+CommandObjectArgs::CommandOptions::SetOptionValue(uint32_t option_idx,
+                                                  const char *option_arg,
+                                            ExecutionContext *execution_context)
 {
     Error error;
     
@@ -57,7 +59,8 @@ CommandObjectArgs::CommandOptions::SetOptionValue (uint32_t option_idx, const ch
 }
 
 void
-CommandObjectArgs::CommandOptions::OptionParsingStarting ()
+CommandObjectArgs::CommandOptions::OptionParsingStarting(
+                                            ExecutionContext *execution_context)
 {
 }
 

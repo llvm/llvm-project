@@ -56,9 +56,6 @@ public:
   /// @brief returns vector of remaining UndefinedAtoms
   std::vector<const UndefinedAtom *> undefines();
 
-  /// @brief add atom to replacement table
-  void addReplacement(const Atom *replaced, const Atom *replacement);
-
   /// @brief if atom has been coalesced away, return replacement, else return atom
   const Atom *replacement(const Atom *);
 

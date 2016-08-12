@@ -56,24 +56,18 @@ public:
         return 1;
     }
     
-    void
-    ModulesDidLoad(lldb_private::ModuleList &module_list) override;
-    
-    bool
-    IsActive() override;
-    
 private:
-    AddressSanitizerRuntime(const lldb::ProcessSP &process_sp);
+    AddressSanitizerRuntime(const lldb::ProcessSP &process_sp) : lldb_private::InstrumentationRuntime(process_sp) {}
 
-    lldb::ProcessSP
-    GetProcessSP ()
-    {
-        return m_process_wp.lock();
-    }
+    const RegularExpression &
+    GetPatternForRuntimeLibrary() override;
+
+    bool
+    CheckIfRuntimeIsValid(const lldb::ModuleSP module_sp) override;
 
     void
-    Activate();
-    
+    Activate() override;
+
     void
     Deactivate();
     
@@ -85,11 +79,6 @@ private:
     
     std::string
     FormatDescription(StructuredData::ObjectSP report);
-    
-    bool m_is_active;
-    lldb::ModuleSP m_runtime_module;
-    lldb::ProcessWP m_process_wp;
-    lldb::user_id_t m_breakpoint_id;
 };
     
 } // namespace lldb_private

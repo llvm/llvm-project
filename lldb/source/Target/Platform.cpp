@@ -1593,7 +1593,7 @@ OptionGroupPlatformRSync::GetDefinitions ()
 }
 
 void
-OptionGroupPlatformRSync::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupPlatformRSync::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_rsync = false;
     m_rsync_opts.clear();
@@ -1602,9 +1602,9 @@ OptionGroupPlatformRSync::OptionParsingStarting (CommandInterpreter &interpreter
 }
 
 lldb_private::Error
-OptionGroupPlatformRSync::SetOptionValue (CommandInterpreter &interpreter,
-                uint32_t option_idx,
-                const char *option_arg)
+OptionGroupPlatformRSync::SetOptionValue(uint32_t option_idx,
+                                         const char *option_arg,
+                                         ExecutionContext *execution_context)
 {
     Error error;
     char short_option = (char) GetDefinitions()[option_idx].short_option;
@@ -1653,16 +1653,17 @@ OptionGroupPlatformSSH::GetDefinitions ()
 }
 
 void
-OptionGroupPlatformSSH::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupPlatformSSH::OptionParsingStarting(ExecutionContext
+                                              *execution_context)
 {
     m_ssh = false;
     m_ssh_opts.clear();
 }
 
 lldb_private::Error
-OptionGroupPlatformSSH::SetOptionValue (CommandInterpreter &interpreter,
-                                          uint32_t option_idx,
-                                          const char *option_arg)
+OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
+                                       const char *option_arg,
+                                       ExecutionContext *execution_context)
 {
     Error error;
     char short_option = (char) GetDefinitions()[option_idx].short_option;
@@ -1697,15 +1698,16 @@ OptionGroupPlatformCaching::GetDefinitions ()
 }
 
 void
-OptionGroupPlatformCaching::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupPlatformCaching::OptionParsingStarting(ExecutionContext
+                                                  *execution_context)
 {
     m_cache_dir.clear();
 }
 
 lldb_private::Error
-OptionGroupPlatformCaching::SetOptionValue (CommandInterpreter &interpreter,
-                                        uint32_t option_idx,
-                                        const char *option_arg)
+OptionGroupPlatformCaching::SetOptionValue(uint32_t option_idx,
+                                           const char *option_arg,
+                                           ExecutionContext *execution_context)
 {
     Error error;
     char short_option = (char) GetDefinitions()[option_idx].short_option;

@@ -66,9 +66,9 @@ OptionGroupFormat::GetDefinitions ()
 }
 
 Error
-OptionGroupFormat::SetOptionValue (CommandInterpreter &interpreter,
-                                   uint32_t option_idx,
-                                   const char *option_arg)
+OptionGroupFormat::SetOptionValue(uint32_t option_idx,
+                                  const char *option_arg,
+                                  ExecutionContext *execution_context)
 {
     Error error;
     const int short_option = g_option_table[option_idx].short_option;
@@ -123,7 +123,9 @@ OptionGroupFormat::SetOptionValue (CommandInterpreter &interpreter,
                 Format format = eFormatDefault;
                 uint32_t byte_size = 0;
                 
-                while (ParserGDBFormatLetter (interpreter, gdb_format_cstr[0], format, byte_size))
+                while (ParserGDBFormatLetter (execution_context,
+                                              gdb_format_cstr[0], format,
+                                              byte_size))
                 {
                     ++gdb_format_cstr;
                 }
@@ -143,7 +145,8 @@ OptionGroupFormat::SetOptionValue (CommandInterpreter &interpreter,
                 // Anything that wasn't set correctly should be set to the
                 // previous default
                 if (format == eFormatInvalid)
-                    ParserGDBFormatLetter (interpreter, m_prev_gdb_format, format, byte_size);
+                    ParserGDBFormatLetter (execution_context, m_prev_gdb_format,
+                                           format, byte_size);
                 
                 const bool byte_size_enabled = m_byte_size.GetDefaultValue() < UINT64_MAX;
                 const bool count_enabled = m_count.GetDefaultValue() < UINT64_MAX;
@@ -151,7 +154,7 @@ OptionGroupFormat::SetOptionValue (CommandInterpreter &interpreter,
                 {
                     // Byte size is enabled
                     if (byte_size == 0)
-                        ParserGDBFormatLetter (interpreter, m_prev_gdb_size, format, byte_size);
+                        ParserGDBFormatLetter (execution_context, m_prev_gdb_size, format, byte_size);
                 }
                 else
                 {
@@ -205,7 +208,9 @@ OptionGroupFormat::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 bool
-OptionGroupFormat::ParserGDBFormatLetter (CommandInterpreter &interpreter, char format_letter, Format &format, uint32_t &byte_size)
+OptionGroupFormat::ParserGDBFormatLetter(ExecutionContext *execution_context,
+                                         char format_letter, Format &format,
+                                         uint32_t &byte_size)
 {
     m_has_gdb_format = true;
     switch (format_letter)
@@ -218,10 +223,10 @@ OptionGroupFormat::ParserGDBFormatLetter (CommandInterpreter &interpreter, char 
         case 'f': format = eFormatFloat;        m_prev_gdb_format = format_letter; return true;
         case 'a': format = eFormatAddressInfo;
         {
-            ExecutionContext exe_ctx(interpreter.GetExecutionContext());
-            Target *target = exe_ctx.GetTargetPtr();
-            if (target)
-                byte_size = target->GetArchitecture().GetAddressByteSize();
+            TargetSP target_sp = execution_context ?
+                execution_context->GetTargetSP() : TargetSP();
+            if (target_sp)
+                byte_size = target_sp->GetArchitecture().GetAddressByteSize();
             m_prev_gdb_format = format_letter;
             return true;
         }
@@ -258,7 +263,7 @@ OptionGroupFormat::ParserGDBFormatLetter (CommandInterpreter &interpreter, char 
 }
 
 void
-OptionGroupFormat::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupFormat::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_format.Clear();
     m_byte_size.Clear();

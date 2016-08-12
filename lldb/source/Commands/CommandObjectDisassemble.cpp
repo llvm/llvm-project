@@ -34,8 +34,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-CommandObjectDisassemble::CommandOptions::CommandOptions (CommandInterpreter &interpreter) :
-    Options(interpreter),
+CommandObjectDisassemble::CommandOptions::CommandOptions() :
+    Options(),
     num_lines_context(0),
     num_instructions (0),
     func_name(),
@@ -50,13 +50,15 @@ CommandObjectDisassemble::CommandOptions::CommandOptions (CommandInterpreter &in
     some_location_specified (false),
     symbol_containing_addr () 
 {
-    OptionParsingStarting();
+    OptionParsingStarting(nullptr);
 }
 
 CommandObjectDisassemble::CommandOptions::~CommandOptions() = default;
 
 Error
-CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, const char *option_arg)
+CommandObjectDisassemble::CommandOptions::SetOptionValue(uint32_t option_idx,
+                                                         const char *option_arg,
+                                            ExecutionContext *execution_context)
 {
     Error error;
 
@@ -88,16 +90,16 @@ CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, c
 
     case 's':
         {
-            ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-            start_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+            start_addr = Args::StringToAddress(execution_context, option_arg,
+                                               LLDB_INVALID_ADDRESS, &error);
             if (start_addr != LLDB_INVALID_ADDRESS)
                 some_location_specified = true;
         }
         break;
     case 'e':
         {
-            ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-            end_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+            end_addr = Args::StringToAddress(execution_context, option_arg,
+                                             LLDB_INVALID_ADDRESS, &error);
             if (end_addr != LLDB_INVALID_ADDRESS)
                 some_location_specified = true;
         }
@@ -127,9 +129,11 @@ CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, c
 
     case 'F':
         {
-            Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
-            if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86
-                || target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86_64)
+            TargetSP target_sp = execution_context ?
+                execution_context->GetTargetSP() : TargetSP();
+            if (target_sp &&
+                (target_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86
+                || target_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86_64))
             {
                 flavor_string.assign (option_arg);
             }
@@ -148,14 +152,22 @@ CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, c
         break;
 
     case 'A':
-        if (!arch.SetTriple (option_arg, m_interpreter.GetPlatform (true).get()))
-            arch.SetTriple (option_arg);
+        if (execution_context)
+        {
+            auto target_sp = execution_context ?
+                execution_context->GetTargetSP() : TargetSP();
+            auto platform_sp =
+                target_sp ? target_sp->GetPlatform() : PlatformSP();
+            if (!arch.SetTriple (option_arg, platform_sp.get()))
+                arch.SetTriple (option_arg);
+        }
         break;
 
     case 'a':
         {
-            ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-            symbol_containing_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+            symbol_containing_addr =
+                Args::StringToAddress(execution_context,option_arg,
+                                      LLDB_INVALID_ADDRESS, &error);
             if (symbol_containing_addr != LLDB_INVALID_ADDRESS)
             {
                 some_location_specified = true;
@@ -172,7 +184,8 @@ CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, c
 }
 
 void
-CommandObjectDisassemble::CommandOptions::OptionParsingStarting ()
+CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
+                                            ExecutionContext *execution_context)
 {
     show_mixed = false;
     show_bytes = false;
@@ -188,7 +201,8 @@ CommandObjectDisassemble::CommandOptions::OptionParsingStarting ()
     raw = false;
     plugin_name.clear();
     
-    Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+    Target *target =
+        execution_context ? execution_context->GetTargetPtr() : nullptr;
     
     // This is a hack till we get the ability to specify features based on architecture.  For now GetDisassemblyFlavor
     // is really only valid for x86 (and for the llvm assembler plugin, but I'm papering over that since that is the
@@ -212,7 +226,8 @@ CommandObjectDisassemble::CommandOptions::OptionParsingStarting ()
 }
 
 Error
-CommandObjectDisassemble::CommandOptions::OptionParsingFinished ()
+CommandObjectDisassemble::CommandOptions::OptionParsingFinished(
+                                            ExecutionContext *execution_context)
 {
     if (!some_location_specified)
         current_function = true;
@@ -262,7 +277,7 @@ CommandObjectDisassemble::CommandObjectDisassemble(CommandInterpreter &interpret
                                                       "Defaults to the current function for the current thread and "
                                                       "stack frame.",
                           "disassemble [<cmd-options>]"),
-      m_options(interpreter)
+      m_options()
 {
 }
 
@@ -315,7 +330,10 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
     if (command.GetArgumentCount() != 0)
     {
         result.AppendErrorWithFormat ("\"disassemble\" arguments are specified as options.\n");
-        GetOptions()->GenerateOptionUsage (result.GetErrorStream(), this);
+        const int terminal_width =
+            GetCommandInterpreter().GetDebugger().GetTerminalWidth();
+        GetOptions()->GenerateOptionUsage(result.GetErrorStream(), this,
+                                          terminal_width);
         result.SetStatus (eReturnStatusFailed);
         return false;
     }

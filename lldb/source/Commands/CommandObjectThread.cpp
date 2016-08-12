@@ -153,17 +153,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -206,7 +207,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_count = UINT32_MAX;
             m_start = 0;
@@ -236,7 +237,7 @@ public:
                                                "to see all threads.",
               nullptr, eCommandRequiresProcess | eCommandRequiresThread | eCommandTryTargetAPILock |
                            eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -334,17 +335,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -429,14 +431,16 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_step_in_avoid_no_debug = eLazyBoolCalculate;
             m_step_out_avoid_no_debug = eLazyBoolCalculate;
             m_run_mode = eOnlyDuringStepping;
 
             // Check if we are in Non-Stop mode
-            lldb::TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
+            TargetSP target_sp =
+                execution_context ? execution_context->GetTargetSP() :
+                TargetSP();
             if (target_sp && target_sp->GetNonStopModeEnabled())
                 m_run_mode = eOnlyThisThread;
 
@@ -484,7 +488,7 @@ public:
                              eCommandProcessMustBePaused   ),
         m_step_type (step_type),
         m_step_scope (step_scope),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData thread_id_arg;
@@ -1007,19 +1011,20 @@ public:
         uint32_t m_thread_idx;
         uint32_t m_frame_idx;
 
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions() :
+            Options(),
             m_thread_idx(LLDB_INVALID_THREAD_ID),
             m_frame_idx(LLDB_INVALID_FRAME_ID)
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1028,8 +1033,9 @@ public:
             {
                 case 'a':
                 {
-                    ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-                    lldb::addr_t tmp_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                    lldb::addr_t tmp_addr =
+                        Args::StringToAddress(execution_context, option_arg,
+                                              LLDB_INVALID_ADDRESS, &error);
                     if (error.Success())
                         m_until_addrs.push_back(tmp_addr);
                 }
@@ -1070,7 +1076,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_thread_idx = LLDB_INVALID_THREAD_ID;
             m_frame_idx = 0;
@@ -1101,7 +1107,7 @@ public:
                                                            "the current function as a safety measure.",
                               nullptr, eCommandRequiresThread | eCommandTryTargetAPILock |
                                            eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData line_num_arg;
@@ -1461,23 +1467,24 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_json_thread = false;
             m_json_stopinfo = false;
         }
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             const int short_option = m_getopt_table[option_idx].val;
             Error error;
@@ -1516,7 +1523,7 @@ public:
               "Show an extended summary of one or more threads.  Defaults to the current thread.", "thread info",
               eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                   eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
         m_add_return = false;
     }
@@ -1574,18 +1581,19 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
-            m_from_expression (false)
+        CommandOptions() :
+            Options(),
+            m_from_expression(false)
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1612,7 +1620,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_from_expression = false;
         }
@@ -1639,7 +1647,7 @@ public:
                            "frame.",
                            "thread return", eCommandRequiresFrame | eCommandTryTargetAPILock |
                                                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData expression_arg;
@@ -1770,16 +1778,16 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_filenames.Clear();
             m_line_num = 0;
@@ -1789,7 +1797,8 @@ public:
         }
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             bool success;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1813,10 +1822,10 @@ public:
                         return Error("invalid line offset: '%s'.", option_arg);
                     break;
                 case 'a':
-                    {
-                        ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-                        m_load_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
-                    }
+                    m_load_addr = Args::StringToAddress(execution_context,
+                                                        option_arg,
+                                                        LLDB_INVALID_ADDRESS,
+                                                        &error);
                     break;
                 case 'r':
                     m_force = true;
@@ -1851,7 +1860,7 @@ public:
                           eCommandTryTargetAPILock      |
                           eCommandProcessMustBeLaunched |
                           eCommandProcessMustBePaused   ),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -1967,17 +1976,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1998,7 +2008,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_verbose = false;
             m_internal = false;
@@ -2026,7 +2036,7 @@ public:
               "current thread.  Use the thread-index \"all\" to see all threads.",
               nullptr, eCommandRequiresProcess | eCommandRequiresThread | eCommandTryTargetAPILock |
                            eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
     }
 

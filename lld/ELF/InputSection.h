@@ -48,7 +48,7 @@ protected:
   SmallVector<char, 0> Uncompressed;
 
 public:
-  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions };
+  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions, Layout };
   Kind SectionKind;
 
   InputSectionBase() : Repl(this) {}

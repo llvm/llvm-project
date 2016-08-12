@@ -1762,8 +1762,10 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   case InputSectionBase<ELFT>::MipsOptions:
     Sec = new MipsOptionsOutputSection<ELFT>();
     break;
+  case InputSectionBase<ELFT>::Layout:
+    llvm_unreachable("Invalid section type");
   }
-  OwningSections.emplace_back(Sec);
+  Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
 }
 

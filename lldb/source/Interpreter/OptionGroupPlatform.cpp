@@ -70,7 +70,7 @@ OptionGroupPlatform::CreatePlatformWithOptions (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupPlatform::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupPlatform::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_platform_name.clear();
     m_sdk_sysroot.Clear();
@@ -107,9 +107,9 @@ OptionGroupPlatform::GetNumDefinitions ()
 
 
 Error
-OptionGroupPlatform::SetOptionValue (CommandInterpreter &interpreter,
-                                     uint32_t option_idx,
-                                     const char *option_arg)
+OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
+                                    const char *option_arg,
+                                    ExecutionContext *execution_context)
 {
     Error error;
     if (!m_include_platform_option)

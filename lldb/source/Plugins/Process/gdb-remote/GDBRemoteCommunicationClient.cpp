@@ -3947,7 +3947,5 @@ void
 GDBRemoteCommunicationClient::OnRunPacketSent(bool first)
 {
     GDBRemoteClientBase::OnRunPacketSent(first);
-    if (first)
-        BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
     m_curr_tid = LLDB_INVALID_THREAD_ID;
 }
