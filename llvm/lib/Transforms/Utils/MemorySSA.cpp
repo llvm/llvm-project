@@ -1614,9 +1614,8 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
   auto *Accesses = getOrCreateAccessList(BB);
   if (Point == Beginning) {
     // It goes after any phi nodes
-    auto AI = std::find_if(
-        Accesses->begin(), Accesses->end(),
-        [](const MemoryAccess &MA) { return !isa<MemoryPhi>(MA); });
+    auto AI = find_if(
+        *Accesses, [](const MemoryAccess &MA) { return !isa<MemoryPhi>(MA); });
 
     Accesses->insert(AI, NewAccess);
   } else {
@@ -1885,7 +1884,7 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
     assert(isLiveOnEntryDef(Use) &&
            "Null def but use not point to live on entry def");
   else
-    assert(find(Def->users(), Use) != Def->user_end() &&
+    assert(is_contained(Def->users(), Use) &&
            "Did not find use in def's use list");
 #endif
 }

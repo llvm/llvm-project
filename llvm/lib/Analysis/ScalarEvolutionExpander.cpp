@@ -549,9 +549,8 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
       if (!L->isLoopInvariant(V)) break;
 
-      bool AnyIndexNotLoopInvariant =
-          std::any_of(GepIndices.begin(), GepIndices.end(),
-                      [L](Value *Op) { return !L->isLoopInvariant(Op); });
+      bool AnyIndexNotLoopInvariant = any_of(
+          GepIndices, [L](Value *Op) { return !L->isLoopInvariant(Op); });
 
       if (AnyIndexNotLoopInvariant)
         break;
@@ -1610,8 +1609,7 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
 
 Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty,
                                    Instruction *IP) {
-  assert(IP);
-  Builder.SetInsertPoint(IP);
+  setInsertPoint(IP);
   return expandCodeFor(SH, Ty);
 }
 

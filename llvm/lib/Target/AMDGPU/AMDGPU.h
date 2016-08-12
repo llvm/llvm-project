@@ -11,22 +11,16 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
-
 namespace llvm {
 
-class AMDGPUInstrPrinter;
-class AMDGPUSubtarget;
 class AMDGPUTargetMachine;
 class FunctionPass;
 class GCNTargetMachine;
-struct MachineSchedContext;
-class MCAsmInfo;
-class raw_ostream;
-class ScheduleDAGInstrs;
+class ModulePass;
+class Pass;
 class Target;
 class TargetMachine;
+class PassRegistry;
 
 // R600 Passes
 FunctionPass *createR600VectorRegMerger(TargetMachine &tm);
@@ -48,12 +42,9 @@ FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSILowerControlFlowPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIFixSGPRCopiesPass();
-FunctionPass *createSICodeEmitterPass(formatted_raw_ostream &OS);
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass(const GCNTargetMachine *TM = nullptr);
-
-ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C);
 
 ModulePass *createAMDGPUAnnotateKernelFeaturesPass();
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
@@ -86,7 +77,6 @@ FunctionPass *createAMDGPUPromoteAlloca(const TargetMachine *TM = nullptr);
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
 
-FunctionPass *createAMDGPUAddDivergenceMetadata(const AMDGPUSubtarget &ST);
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &tm);
 ModulePass *createAMDGPUAlwaysInlinePass();

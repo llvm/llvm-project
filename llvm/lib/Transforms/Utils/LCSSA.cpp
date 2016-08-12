@@ -54,7 +54,7 @@ STATISTIC(NumLCSSA, "Number of live out of a loop variables");
 /// Return true if the specified block is in the list.
 static bool isExitBlock(BasicBlock *BB,
                         const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
-  return find(ExitBlocks, BB) != ExitBlocks.end();
+  return is_contained(ExitBlocks, BB);
 }
 
 /// For every instruction from the worklist, check to see if it has any uses
@@ -229,7 +229,7 @@ blockDominatesAnExit(BasicBlock *BB,
                      DominatorTree &DT,
                      const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
   DomTreeNode *DomNode = DT.getNode(BB);
-  return llvm::any_of(ExitBlocks, [&](BasicBlock * EB) {
+  return any_of(ExitBlocks, [&](BasicBlock *EB) {
     return DT.dominates(DomNode, DT.getNode(EB));
   });
 }

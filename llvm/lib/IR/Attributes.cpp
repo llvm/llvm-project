@@ -721,10 +721,11 @@ AttributeSet AttributeSet::get(LLVMContext &C,
                            const std::pair<unsigned, Attribute> &RHS) {
                           return LHS.first < RHS.first;
                         }) && "Misordered Attributes list!");
-  assert(std::none_of(Attrs.begin(), Attrs.end(),
-                      [](const std::pair<unsigned, Attribute> &Pair) {
-                        return Pair.second.hasAttribute(Attribute::None);
-                      }) && "Pointless attribute!");
+  assert(none_of(Attrs,
+                 [](const std::pair<unsigned, Attribute> &Pair) {
+                   return Pair.second.hasAttribute(Attribute::None);
+                 }) &&
+         "Pointless attribute!");
 
   // Create a vector if (unsigned, AttributeSetNode*) pairs from the attributes
   // list.
@@ -738,8 +739,7 @@ AttributeSet AttributeSet::get(LLVMContext &C,
       ++I;
     }
 
-    AttrPairVec.push_back(std::make_pair(Index,
-                                         AttributeSetNode::get(C, AttrVec)));
+    AttrPairVec.emplace_back(Index, AttributeSetNode::get(C, AttrVec));
   }
 
   return getImpl(C, AttrPairVec);
@@ -791,13 +791,12 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
     default:
       Attr = Attribute::get(C, Kind);
     }
-    Attrs.push_back(std::make_pair(Index, Attr));
+    Attrs.emplace_back(Index, Attr);
   }
 
   // Add target-dependent (string) attributes.
   for (const auto &TDA : B.td_attrs())
-    Attrs.push_back(
-        std::make_pair(Index, Attribute::get(C, TDA.first, TDA.second)));
+    Attrs.emplace_back(Index, Attribute::get(C, TDA.first, TDA.second));
 
   return get(C, Attrs);
 }
@@ -806,7 +805,7 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
                                ArrayRef<Attribute::AttrKind> Kinds) {
   SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
   for (Attribute::AttrKind K : Kinds)
-    Attrs.push_back(std::make_pair(Index, Attribute::get(C, K)));
+    Attrs.emplace_back(Index, Attribute::get(C, K));
   return get(C, Attrs);
 }
 
@@ -814,7 +813,7 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
                                ArrayRef<StringRef> Kinds) {
   SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
   for (StringRef K : Kinds)
-    Attrs.push_back(std::make_pair(Index, Attribute::get(C, K)));
+    Attrs.emplace_back(Index, Attribute::get(C, K));
   return get(C, Attrs);
 }
 

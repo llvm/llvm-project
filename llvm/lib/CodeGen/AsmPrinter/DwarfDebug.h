@@ -134,7 +134,7 @@ public:
 
     Expr.append(V.Expr.begin(), V.Expr.end());
     FrameIndex.append(V.FrameIndex.begin(), V.FrameIndex.end());
-    assert(std::all_of(Expr.begin(), Expr.end(), [](const DIExpression *E) {
+    assert(all_of(Expr, [](const DIExpression *E) {
              return E && E->isBitPiece();
            }) && "conflicting locations for variable");
   }

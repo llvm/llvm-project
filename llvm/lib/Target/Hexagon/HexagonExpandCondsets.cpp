@@ -305,7 +305,7 @@ bool HexagonExpandCondsets::isCondset(const MachineInstr &MI) {
     case Hexagon::C2_muxii:
     case Hexagon::C2_muxir:
     case Hexagon::C2_muxri:
-    case Hexagon::MUX64_rr:
+    case Hexagon::PS_pselect:
         return true;
       break;
   }
@@ -398,8 +398,7 @@ void HexagonExpandCondsets::removeImpDefSegments(LiveRange &Range) {
     return S.start.isRegister() &&
            LocalImpDefs.count(LIS->getInstructionFromIndex(S.start));
   };
-  Range.segments.erase(std::remove_if(Range.begin(), Range.end(), StartImpDef),
-                       Range.end());
+  Range.segments.erase(remove_if(Range, StartImpDef), Range.end());
 }
 
 void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,

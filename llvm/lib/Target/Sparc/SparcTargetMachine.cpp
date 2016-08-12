@@ -171,8 +171,11 @@ void SparcPassConfig::addPreEmitPass() {
   if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad()) {
     addPass(new InsertNOPLoad(getSparcTargetMachine()));
   }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->flushCacheLineSWAP()) {
-    addPass(new FlushCacheLineSWAP(getSparcTargetMachine()));
+  if (this->getSparcTargetMachine().getSubtargetImpl()->fillDataCache()) {
+    addPass(new FillDataCache(getSparcTargetMachine()));
+  }
+  if (this->getSparcTargetMachine().getSubtargetImpl()->restoreExecAddr()) {
+    addPass(new RestoreExecAddress(getSparcTargetMachine()));
   }
   if (this->getSparcTargetMachine()
           .getSubtargetImpl()

@@ -729,9 +729,9 @@ def C2_muxii: ALU32Inst <(outs IntRegs:$Rd),
   }
 
 let isCodeGenOnly = 1, isPseudo = 1 in
-def MUX64_rr : ALU64_rr<(outs DoubleRegs:$Rd),
-               (ins PredRegs:$Pu, DoubleRegs:$Rs, DoubleRegs:$Rt),
-               ".error \"should not emit\" ", []>;
+def PS_pselect : ALU64_rr<(outs DoubleRegs:$Rd),
+      (ins PredRegs:$Pu, DoubleRegs:$Rs, DoubleRegs:$Rt),
+      ".error \"should not emit\" ", []>;
 
 
 //===----------------------------------------------------------------------===//

@@ -1338,7 +1338,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // However, there is no dependence edge between (1)->(3). This results
       // in all 3 instructions going in the same packet. We ignore dependce
       // only once to avoid this situation.
-      auto Itr = std::find(IgnoreDepMIs.begin(), IgnoreDepMIs.end(), &J);
+      auto Itr = find(IgnoreDepMIs, &J);
       if (Itr != IgnoreDepMIs.end()) {
         Dependence = true;
         return false;

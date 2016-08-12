@@ -107,7 +107,8 @@ def : Processor<"leon2", LEON2Itineraries, [ FeatureLeon ]>;
 // AT697E: Provides full coverage of AT697E - covers all the erratum fixes for
 // LEON2 AT697E
 def : Processor<"at697e", LEON2Itineraries, [
-  FeatureLeon, ReplaceSDIV, FixCALL, IgnoreZeroFlag, InsertNOPDoublePrecision
+  FeatureLeon, ReplaceSDIV, FixCALL, IgnoreZeroFlag, InsertNOPDoublePrecision,
+  FillDataCache, RestoreExecAddress
 ]>;
 
 // LEON 2 FT (AT697F)
@@ -124,7 +125,7 @@ def : Processor<"leon3", LEON3Itineraries, [ FeatureLeon, UMACSMACSupport ]>;
 // instruction.
 def : Processor<"ut699", LEON3Itineraries, [
   FeatureLeon, FixFSMULD, ReplaceFMULS, PreventRoundChange,
-  FixAllFDIVSQRT, InsertNOPLoad, FlushCacheLineSWAP, InsertNOPsLoadStore
+  FixAllFDIVSQRT, InsertNOPLoad, InsertNOPsLoadStore
 ]>;
 
 // LEON3 FT (GR712RC). Provides features for the GR712RC processor.

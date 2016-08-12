@@ -61,8 +61,7 @@ define <16 x float> @test5(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    vxorps {{.*}}(%rip), %zmm2, %zmm2
-; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm0, %zmm1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -73,8 +72,8 @@ entry:
 define <16 x float> @test6(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfnmsub213ps {ru-sae}, %zmm2, %zmm0, %zmm1
-; CHECK-NEXT:    vxorps {{.*}}(%rip), %zmm1, %zmm0
+; CHECK-NEXT:    vfnmsub213ps {ru-sae}, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vxorps {{.*}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 2) #2

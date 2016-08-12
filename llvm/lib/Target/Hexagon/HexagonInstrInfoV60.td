@@ -1033,29 +1033,33 @@ class VSELInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               IType type = TypeCVI_VA_DV>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
 
-multiclass VSelect<RegisterClass RC, ValueType V> {
-  let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-    def NAME : VSELInst<(outs RC:$dst),
-                        (ins PredRegs:$src1, RC:$src2, RC:$src3),
-                        ".error \"should not emit\" ",
-                        []>;
-  }
-
-  def : Pat <(V (selectcc (i32 IntRegs:$lhs), (i32 IntRegs:$rhs), (V RC:$tval),
-                          (V RC:$fval), SETEQ)),
-             (V (!cast<Instruction>(NAME) (i32 (C2_cmpeq (i32 IntRegs:$lhs),
-                                               (i32 IntRegs:$rhs))),
-                                          (V RC:$tval), (V RC:$fval)))>;
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
+  def PS_vselect: VSELInst<(outs VectorRegs:$dst),
+        (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3), "", []>,
+        Requires<[HasV60T,UseHVXSgl]>;
+  def PS_vselect_128B: VSELInst<(outs VectorRegs128B:$dst),
+        (ins PredRegs:$src1, VectorRegs128B:$src2, VectorRegs128B:$src3),
+        "", []>, Requires<[HasV60T,UseHVXDbl]>;
+  def PS_wselect: VSELInst<(outs VecDblRegs:$dst),
+        (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3), "", []>,
+        Requires<[HasV60T,UseHVXSgl]>;
+  def PS_wselect_128B: VSELInst<(outs VecDblRegs128B:$dst),
+        (ins PredRegs:$src1, VecDblRegs128B:$src2, VecDblRegs128B:$src3),
+        "", []>, Requires<[HasV60T,UseHVXDbl]>;
 }
 
-defm VSelectPseudo_V6 : VSelect<VectorRegs, v16i32>,
-                        Requires<[HasV60T,UseHVXSgl]>;
-defm VSelectDblPseudo_V6 : VSelect<VecDblRegs, v32i32>,
-                           Requires<[HasV60T,UseHVXSgl]>;
-defm VSelectPseudo_V6_128B : VSelect<VectorRegs128B, v32i32>,
-                             Requires<[HasV60T,UseHVXDbl]>;
-defm VSelectDblPseudo_V6_128B : VSelect<VecDblRegs128B, v64i32>,
-                                Requires<[HasV60T,UseHVXDbl]>;
+class VSelPat<ValueType VT, RegisterClass RC, InstHexagon MI>
+  : Pat<(selectcc I32:$lhs, I32:$rhs, (VT RC:$tval), (VT RC:$fval), SETEQ),
+        (MI (C2_cmpeq I32:$lhs, I32:$rhs), RC:$tval, RC:$fval)>;
+
+def: VSelPat<v16i32, VectorRegs, PS_vselect>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def: VSelPat<v32i32, VecDblRegs, PS_wselect>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def: VSelPat<v32i32, VectorRegs128B, PS_vselect_128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
+def: VSelPat<v64i32, VecDblRegs128B, PS_wselect_128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
 
 let hasNewValue = 1 in
 class T_vmpy <string asmString, RegisterClass RCout, RegisterClass RCin>

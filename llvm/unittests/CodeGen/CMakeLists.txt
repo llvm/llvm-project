@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 set(CodeGenSources
   DIEHashTest.cpp
   LowLevelTypeTest.cpp
+  MachineInstrBundleIteratorTest.cpp
   )
 
 add_llvm_unittest(CodeGenTests

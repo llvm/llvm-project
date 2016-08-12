@@ -22,17 +22,16 @@ declare void @CustomFree(i8*)
 ; a coroutine start function
 define i8* @f() personality i8* null {
 entry:
-  %elide = call i8* @llvm.coro.alloc()
-  %need.dyn.alloc = icmp ne i8* %elide, null
-  br i1 %need.dyn.alloc, label %coro.begin, label %dyn.alloc
+  %id = call token @llvm.coro.id(i32 0, i8* null,
+                      i8* bitcast ([2 x void (%f.frame*)*]* @f.resumers to i8*))
+  %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
+  br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 dyn.alloc:
   %alloc = call i8* @CustomAlloc(i32 4)
   br label %coro.begin
 coro.begin:
-  %phi = phi i8* [ %elide, %entry ], [ %alloc, %dyn.alloc ]
-  %beg = call token @llvm.coro.begin(i8* %phi, i8* %elide, i32 0, i8* null,
-                          i8* bitcast ([2 x void (%f.frame*)*]* @f.resumers to i8*))
-  %hdl = call i8* @llvm.coro.frame(token %beg)
+  %phi = phi i8* [ null, %entry ], [ %alloc, %dyn.alloc ]
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* %phi)
   invoke void @may_throw() 
     to label %ret unwind label %ehcleanup
 ret:          
@@ -84,10 +83,10 @@ entry:
 ; coro.begin not pointint to coro.alloc)
 define i8* @f_no_elision() personality i8* null {
 entry:
+  %id = call token @llvm.coro.id(i32 0, i8* null,
+                      i8* bitcast ([2 x void (%f.frame*)*]* @f.resumers to i8*))
   %alloc = call i8* @CustomAlloc(i32 4)
-  %beg = call token @llvm.coro.begin(i8* %alloc, i8* null, i32 0, i8* null,
-                          i8* bitcast ([2 x void (%f.frame*)*]* @f.resumers to i8*))
-  %hdl = call i8* @llvm.coro.frame(token %beg)
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* %alloc)
   ret i8* %hdl
 }
 
@@ -117,9 +116,9 @@ entry:
   ret void
 }
 
-
-declare i8* @llvm.coro.alloc()
+declare token @llvm.coro.id(i32, i8*, i8*)
+declare i1 @llvm.coro.alloc(token)
 declare i8* @llvm.coro.free(i8*)
-declare token @llvm.coro.begin(i8*, i8*, i32, i8*, i8*)
+declare i8* @llvm.coro.begin(token, i8*)
 declare i8* @llvm.coro.frame(token)
 declare i8* @llvm.coro.subfn.addr(i8*, i8)

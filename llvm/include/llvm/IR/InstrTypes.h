@@ -1478,7 +1478,7 @@ public:
   bool hasOperandBundlesOtherThan(ArrayRef<uint32_t> IDs) const {
     for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
       uint32_t ID = getOperandBundleAt(i).getTagID();
-      if (std::find(IDs.begin(), IDs.end(), ID) == IDs.end())
+      if (!is_contained(IDs, ID))
         return true;
     }
     return false;

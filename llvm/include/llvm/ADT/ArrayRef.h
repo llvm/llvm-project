@@ -13,6 +13,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
+#include <array>
 #include <vector>
 
 namespace llvm {
@@ -77,6 +78,11 @@ namespace llvm {
     template<typename A>
     /*implicit*/ ArrayRef(const std::vector<T, A> &Vec)
       : Data(Vec.data()), Length(Vec.size()) {}
+
+    /// Construct an ArrayRef from a std::array
+    template <size_t N>
+    /*implicit*/ LLVM_CONSTEXPR ArrayRef(const std::array<T, N> &Arr)
+      : Data(Arr.data()), Length(N) {}
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
@@ -256,6 +262,11 @@ namespace llvm {
     /// Construct a MutableArrayRef from a std::vector.
     /*implicit*/ MutableArrayRef(std::vector<T> &Vec)
     : ArrayRef<T>(Vec) {}
+
+    /// Construct an ArrayRef from a std::array
+    template <size_t N>
+    /*implicit*/ LLVM_CONSTEXPR MutableArrayRef(std::array<T, N> &Arr)
+      : ArrayRef<T>(Arr) {}
 
     /// Construct an MutableArrayRef from a C array.
     template <size_t N>

@@ -150,18 +150,43 @@ template <typename T> struct isPodLike<Optional<T> > {
   static const bool value = isPodLike<T>::value;
 };
 
-/// \brief Poison comparison between two \c Optional objects. Clients needs to
-/// explicitly compare the underlying values and account for empty \c Optional
-/// objects.
-///
-/// This routine will never be defined. It returns \c void to help diagnose
-/// errors at compile time.
-template<typename T, typename U>
-void operator==(const Optional<T> &X, const Optional<U> &Y);
+template <typename T, typename U>
+bool operator==(const Optional<T> &X, const Optional<U> &Y) {
+  if (X && Y)
+    return *X == *Y;
+  return X.hasValue() == Y.hasValue();
+}
+
+template <typename T, typename U>
+bool operator!=(const Optional<T> &X, const Optional<U> &Y) {
+  return !(X == Y);
+}
+
+template <typename T, typename U>
+bool operator<(const Optional<T> &X, const Optional<U> &Y) {
+  if (X && Y)
+    return *X < *Y;
+  return X.hasValue() < Y.hasValue();
+}
+
+template <typename T, typename U>
+bool operator<=(const Optional<T> &X, const Optional<U> &Y) {
+  return !(Y < X);
+}
+
+template <typename T, typename U>
+bool operator>(const Optional<T> &X, const Optional<U> &Y) {
+  return Y < X;
+}
+
+template <typename T, typename U>
+bool operator>=(const Optional<T> &X, const Optional<U> &Y) {
+  return !(X < Y);
+}
 
 template<typename T>
 bool operator==(const Optional<T> &X, NoneType) {
-  return !X.hasValue();
+  return !X;
 }
 
 template<typename T>
@@ -178,50 +203,86 @@ template<typename T>
 bool operator!=(NoneType, const Optional<T> &X) {
   return X != None;
 }
-/// \brief Poison comparison between two \c Optional objects. Clients needs to
-/// explicitly compare the underlying values and account for empty \c Optional
-/// objects.
-///
-/// This routine will never be defined. It returns \c void to help diagnose
-/// errors at compile time.
-template<typename T, typename U>
-void operator!=(const Optional<T> &X, const Optional<U> &Y);
 
-/// \brief Poison comparison between two \c Optional objects. Clients needs to
-/// explicitly compare the underlying values and account for empty \c Optional
-/// objects.
-///
-/// This routine will never be defined. It returns \c void to help diagnose
-/// errors at compile time.
-template<typename T, typename U>
-void operator<(const Optional<T> &X, const Optional<U> &Y);
+template <typename T> bool operator<(const Optional<T> &X, NoneType) {
+  return false;
+}
 
-/// \brief Poison comparison between two \c Optional objects. Clients needs to
-/// explicitly compare the underlying values and account for empty \c Optional
-/// objects.
-///
-/// This routine will never be defined. It returns \c void to help diagnose
-/// errors at compile time.
-template<typename T, typename U>
-void operator<=(const Optional<T> &X, const Optional<U> &Y);
+template <typename T> bool operator<(NoneType, const Optional<T> &X) {
+  return X.hasValue();
+}
 
-/// \brief Poison comparison between two \c Optional objects. Clients needs to
-/// explicitly compare the underlying values and account for empty \c Optional
-/// objects.
-///
-/// This routine will never be defined. It returns \c void to help diagnose
-/// errors at compile time.
-template<typename T, typename U>
-void operator>=(const Optional<T> &X, const Optional<U> &Y);
+template <typename T> bool operator<=(const Optional<T> &X, NoneType) {
+  return !(None < X);
+}
 
-/// \brief Poison comparison between two \c Optional objects. Clients needs to
-/// explicitly compare the underlying values and account for empty \c Optional
-/// objects.
-///
-/// This routine will never be defined. It returns \c void to help diagnose
-/// errors at compile time.
-template<typename T, typename U>
-void operator>(const Optional<T> &X, const Optional<U> &Y);
+template <typename T> bool operator<=(NoneType, const Optional<T> &X) {
+  return !(X < None);
+}
+
+template <typename T> bool operator>(const Optional<T> &X, NoneType) {
+  return None < X;
+}
+
+template <typename T> bool operator>(NoneType, const Optional<T> &X) {
+  return X < None;
+}
+
+template <typename T> bool operator>=(const Optional<T> &X, NoneType) {
+  return None <= X;
+}
+
+template <typename T> bool operator>=(NoneType, const Optional<T> &X) {
+  return X <= None;
+}
+
+template <typename T> bool operator==(const Optional<T> &X, const T &Y) {
+  return X && *X == Y;
+}
+
+template <typename T> bool operator==(const T &X, const Optional<T> &Y) {
+  return Y && X == *Y;
+}
+
+template <typename T> bool operator!=(const Optional<T> &X, const T &Y) {
+  return !(X == Y);
+}
+
+template <typename T> bool operator!=(const T &X, const Optional<T> &Y) {
+  return !(X == Y);
+}
+
+template <typename T> bool operator<(const Optional<T> &X, const T &Y) {
+  return !X || *X < Y;
+}
+
+template <typename T> bool operator<(const T &X, const Optional<T> &Y) {
+  return Y && X < *Y;
+}
+
+template <typename T> bool operator<=(const Optional<T> &X, const T &Y) {
+  return !(Y < X);
+}
+
+template <typename T> bool operator<=(const T &X, const Optional<T> &Y) {
+  return !(Y < X);
+}
+
+template <typename T> bool operator>(const Optional<T> &X, const T &Y) {
+  return Y < X;
+}
+
+template <typename T> bool operator>(const T &X, const Optional<T> &Y) {
+  return Y < X;
+}
+
+template <typename T> bool operator>=(const Optional<T> &X, const T &Y) {
+  return !(X < Y);
+}
+
+template <typename T> bool operator>=(const T &X, const Optional<T> &Y) {
+  return !(X < Y);
+}
 
 } // end llvm namespace
 

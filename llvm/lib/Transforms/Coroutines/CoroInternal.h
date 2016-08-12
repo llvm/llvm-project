@@ -42,6 +42,7 @@ void initializeCoroCleanupPass(PassRegistry &);
 namespace coro {
 
 bool declaresIntrinsics(Module &M, std::initializer_list<StringRef>);
+void replaceAllCoroAllocs(CoroBeginInst *CB, bool Replacement);
 void replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.

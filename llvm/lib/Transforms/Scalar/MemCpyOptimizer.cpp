@@ -521,16 +521,14 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P) {
     if (Args.erase(C))
       NeedLift = true;
     else if (MayAlias) {
-      NeedLift = std::any_of(MemLocs.begin(), MemLocs.end(),
-        [C, &AA](const MemoryLocation &ML) {
-          return AA.getModRefInfo(C, ML);
-        });
+      NeedLift = any_of(MemLocs, [C, &AA](const MemoryLocation &ML) {
+        return AA.getModRefInfo(C, ML);
+      });
 
       if (!NeedLift)
-        NeedLift = std::any_of(CallSites.begin(), CallSites.end(),
-          [C, &AA](const ImmutableCallSite &CS) {
-            return AA.getModRefInfo(C, CS);
-          });
+        NeedLift = any_of(CallSites, [C, &AA](const ImmutableCallSite &CS) {
+          return AA.getModRefInfo(C, CS);
+        });
     }
 
     if (!NeedLift)

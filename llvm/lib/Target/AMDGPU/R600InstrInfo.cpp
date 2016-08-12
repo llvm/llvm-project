@@ -665,7 +665,7 @@ bool R600InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   // handled
   if (isBranch(I->getOpcode()))
     return true;
-  if (!isJump(static_cast<MachineInstr *>(I)->getOpcode())) {
+  if (!isJump(I->getOpcode())) {
     return false;
   }
 
@@ -680,8 +680,7 @@ bool R600InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // If there is only one terminator instruction, process it.
   unsigned LastOpc = LastInst.getOpcode();
-  if (I == MBB.begin() ||
-          !isJump(static_cast<MachineInstr *>(--I)->getOpcode())) {
+  if (I == MBB.begin() || !isJump((--I)->getOpcode())) {
     if (LastOpc == AMDGPU::JUMP) {
       TBB = LastInst.getOperand(0).getMBB();
       return false;

@@ -99,11 +99,11 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
-      "llvm.coro.alloc",   "llvm.coro.begin", "llvm.coro.destroy",
-      "llvm.coro.done",    "llvm.coro.end",   "llvm.coro.frame",
-      "llvm.coro.free",    "llvm.coro.param", "llvm.coro.promise",
-      "llvm.coro.resume",  "llvm.coro.save",  "llvm.coro.size",
-      "llvm.coro.suspend",
+      "llvm.coro.alloc",   "llvm.coro.begin",   "llvm.coro.destroy",
+      "llvm.coro.done",    "llvm.coro.end",     "llvm.coro.frame",
+      "llvm.coro.free",    "llvm.coro.id",      "llvm.coro.param",
+      "llvm.coro.promise", "llvm.coro.resume",  "llvm.coro.save",
+      "llvm.coro.size",    "llvm.coro.suspend",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }
@@ -121,22 +121,4 @@ bool coro::declaresIntrinsics(Module &M,
   }
 
   return false;
-}
-
-// Find all llvm.coro.free instructions associated with the provided coro.begin
-// and replace them with the provided replacement value.
-void coro::replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement) {
-  SmallVector<CoroFreeInst *, 4> CoroFrees;
-  for (User *FramePtr: CB->users())
-    for (User *U : FramePtr->users())
-      if (auto *CF = dyn_cast<CoroFreeInst>(U))
-        CoroFrees.push_back(CF);
-
-  if (CoroFrees.empty())
-    return;
-
-  for (CoroFreeInst *CF : CoroFrees) {
-    CF->replaceAllUsesWith(Replacement);
-    CF->eraseFromParent();
-  }
 }

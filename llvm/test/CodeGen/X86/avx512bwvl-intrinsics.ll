@@ -1812,8 +1812,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmk(<4 x float> %a0, <4 x float> %a1,
 ; CHECK-LABEL: test_mask_vfmadd128_ps_rmk:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
-; CHECK-NEXT:    vmovaps (%rdi), %xmm2 ## encoding: [0x62,0xf1,0x7c,0x08,0x28,0x17]
-; CHECK-NEXT:    vfmadd132ps %xmm1, %xmm2, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x6d,0x09,0x98,0xc1]
+; CHECK-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xa8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %a2 = load <4 x float>, <4 x float>* %ptr_a2
   %res = call <4 x float> @llvm.x86.avx512.mask.vfmadd.ps.128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, i8 %mask) nounwind
@@ -1824,8 +1823,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmka(<4 x float> %a0, <4 x float> %a1
 ; CHECK-LABEL: test_mask_vfmadd128_ps_rmka:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
-; CHECK-NEXT:    vmovups (%rdi), %xmm2 ## encoding: [0x62,0xf1,0x7c,0x08,0x10,0x17]
-; CHECK-NEXT:    vfmadd132ps %xmm1, %xmm2, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x6d,0x09,0x98,0xc1]
+; CHECK-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x75,0x09,0xa8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %a2 = load <4 x float>, <4 x float>* %ptr_a2, align 8
   %res = call <4 x float> @llvm.x86.avx512.mask.vfmadd.ps.128(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, i8 %mask) nounwind
@@ -1885,8 +1883,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmba(<4 x float> %a0, <4 x float> %a1
 define <4 x float> @test_mask_vfmadd128_ps_rmbz(<4 x float> %a0, <4 x float> %a1, float* %ptr_a2) {
 ; CHECK-LABEL: test_mask_vfmadd128_ps_rmbz:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vfmadd213ps (%rdi){1to4}, %xmm0, %xmm1 ## encoding: [0x62,0xf2,0x7d,0x18,0xa8,0x0f]
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x28,0xc1]
+; CHECK-NEXT:    vfmadd213ps (%rdi){1to4}, %xmm1, %xmm0 ## encoding: [0x62,0xf2,0x75,0x18,0xa8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %q = load float, float* %ptr_a2
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
@@ -1900,8 +1897,7 @@ define <4 x float> @test_mask_vfmadd128_ps_rmbz(<4 x float> %a0, <4 x float> %a1
 define <4 x float> @test_mask_vfmadd128_ps_rmbza(<4 x float> %a0, <4 x float> %a1, float* %ptr_a2) {
 ; CHECK-LABEL: test_mask_vfmadd128_ps_rmbza:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vfmadd213ps (%rdi){1to4}, %xmm0, %xmm1 ## encoding: [0x62,0xf2,0x7d,0x18,0xa8,0x0f]
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x28,0xc1]
+; CHECK-NEXT:    vfmadd213ps (%rdi){1to4}, %xmm1, %xmm0 ## encoding: [0x62,0xf2,0x75,0x18,0xa8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %q = load float, float* %ptr_a2, align 4
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
@@ -1935,8 +1931,7 @@ define <2 x double> @test_mask_vfmadd128_pd_rmk(<2 x double> %a0, <2 x double> %
 ; CHECK-LABEL: test_mask_vfmadd128_pd_rmk:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
-; CHECK-NEXT:    vmovapd (%rdi), %xmm2 ## encoding: [0x62,0xf1,0xfd,0x08,0x28,0x17]
-; CHECK-NEXT:    vfmadd132pd %xmm1, %xmm2, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xed,0x09,0x98,0xc1]
+; CHECK-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0xa8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %a2 = load <2 x double>, <2 x double>* %ptr_a2
   %res = call <2 x double> @llvm.x86.avx512.mask.vfmadd.pd.128(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, i8 %mask) nounwind
@@ -1976,8 +1971,7 @@ define <4 x double> @test_mask_vfmadd256_pd_rmk(<4 x double> %a0, <4 x double> %
 ; CHECK-LABEL: test_mask_vfmadd256_pd_rmk:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
-; CHECK-NEXT:    vmovapd (%rdi), %ymm2 ## encoding: [0x62,0xf1,0xfd,0x28,0x28,0x17]
-; CHECK-NEXT:    vfmadd132pd %ymm1, %ymm2, %ymm0 {%k1} ## encoding: [0x62,0xf2,0xed,0x29,0x98,0xc1]
+; CHECK-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x29,0xa8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %a2 = load <4 x double>, <4 x double>* %ptr_a2
   %res = call <4 x double> @llvm.x86.avx512.mask.vfmadd.pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, i8 %mask) nounwind

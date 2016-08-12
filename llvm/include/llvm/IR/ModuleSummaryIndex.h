@@ -104,11 +104,23 @@ public:
     /// Indicate if the global value is located in a specific section.
     unsigned HasSection : 1;
 
+    /// Indicate if the function is not viable to inline.
+    unsigned IsNotViableToInline : 1;
+
     /// Convenience Constructors
-    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool HasSection)
-        : Linkage(Linkage), HasSection(HasSection) {}
+    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool HasSection,
+                     bool IsNotViableToInline)
+        : Linkage(Linkage), HasSection(HasSection),
+          IsNotViableToInline(IsNotViableToInline) {}
+
     GVFlags(const GlobalValue &GV)
-        : Linkage(GV.getLinkage()), HasSection(GV.hasSection()) {}
+        : Linkage(GV.getLinkage()), HasSection(GV.hasSection()) {
+      IsNotViableToInline = false;
+      if (const auto *F = dyn_cast<Function>(&GV))
+        // Inliner doesn't handle variadic functions.
+        // FIXME: refactor this to use the same code that inliner is using.
+        IsNotViableToInline = F->isVarArg();
+    }
   };
 
 private:
@@ -174,6 +186,8 @@ public:
   void setLinkage(GlobalValue::LinkageTypes Linkage) {
     Flags.Linkage = Linkage;
   }
+
+  bool isNotViableToInline() const { return Flags.IsNotViableToInline; }
 
   /// Return true if this summary is for a GlobalValue that needs promotion
   /// to be referenced from another module.

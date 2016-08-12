@@ -95,6 +95,10 @@ Pass *llvm::createFunctionInliningPass(unsigned OptLevel,
   return new SimpleInliner(llvm::getInlineParams(OptLevel, SizeOptLevel));
 }
 
+Pass *llvm::createFunctionInliningPass(InlineParams &Params) {
+  return new SimpleInliner(Params);
+}
+
 bool SimpleInliner::runOnSCC(CallGraphSCC &SCC) {
   TTIWP = &getAnalysis<TargetTransformInfoWrapperPass>();
   return Inliner::runOnSCC(SCC);

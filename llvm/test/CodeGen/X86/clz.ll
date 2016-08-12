@@ -427,13 +427,14 @@ define i64 @ctlz_i64_zero_test(i64 %n) {
 ;
 ; X64-LABEL: ctlz_i64_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    je .LBB11_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB11_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsrq %rdi, %rax
 ; X64-NEXT:    xorq $63, %rax
-; X64-NEXT:  .LBB11_2: # %cond.end
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB11_1:
+; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: ctlz_i64_zero_test:
@@ -601,12 +602,13 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 ;
 ; X64-LABEL: cttz_i64_zero_test:
 ; X64:       # BB#0:
-; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    je .LBB15_2
-; X64-NEXT:  # BB#1: # %cond.false
+; X64-NEXT:    je .LBB15_1
+; X64-NEXT:  # BB#2: # %cond.false
 ; X64-NEXT:    bsfq %rdi, %rax
-; X64-NEXT:  .LBB15_2: # %cond.end
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB15_1:
+; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-CLZ-LABEL: cttz_i64_zero_test:

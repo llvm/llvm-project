@@ -78,14 +78,17 @@ def InsertNOPLoad
                        "every single-cycle load instruction when the next "
                        "instruction is another load/store instruction">;
 
-def FlushCacheLineSWAP
-    : SubtargetFeature<"flshcachelineswap", "FlushCacheLineSWAP", "true",
-                       "LEON3 erratum fix: Flush cache line containing the "
-                       "lock before performing any of the atomic instructions "
-                       "SWAP and LDSTUB">;
-
 def InsertNOPsLoadStore
     : SubtargetFeature<"insertnopsloadstore", "InsertNOPsLoadStore", "true",
                        "LEON3 erratum fix: Insert NOPs between "
                        "single-precision loads and the store, so the number of "
                        "instructions between is 4">;
+
+def FillDataCache : SubtargetFeature<"filldatacache", "FillDataCache", "true",
+                                     "LEON2 erratum fix: Ensure data cache is "
+                                     "filled so that cache misses do not "
+                                     "happen later in program execution.">;
+
+def RestoreExecAddress
+    : SubtargetFeature<"restexecaddr", "RestoreExecAddress", "true",
+                       "LEON2 erratum fix: Restore execution address.">;

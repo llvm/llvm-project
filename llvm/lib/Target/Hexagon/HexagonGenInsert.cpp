@@ -1052,7 +1052,7 @@ void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
     auto IsEmpty = [] (const IFRecordWithRegSet &IR) -> bool {
       return IR.second.empty();
     };
-    auto End = std::remove_if(LL.begin(), LL.end(), IsEmpty);
+    auto End = remove_if(LL, IsEmpty);
     if (End != LL.end())
       LL.erase(End, LL.end());
   } else {
@@ -1144,7 +1144,7 @@ void HexagonGenInsert::pruneRegCopies(unsigned VR) {
   auto IsCopy = [] (const IFRecordWithRegSet &IR) -> bool {
     return IR.first.Wdh == 32 && (IR.first.Off == 0 || IR.first.Off == 32);
   };
-  auto End = std::remove_if(LL.begin(), LL.end(), IsCopy);
+  auto End = remove_if(LL, IsCopy);
   if (End != LL.end())
     LL.erase(End, LL.end());
 }

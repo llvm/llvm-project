@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Path.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -677,16 +678,15 @@ TEST_F(FileSystemTest, DirectoryIteration) {
       i.no_push();
     visited.push_back(path::filename(i->path()));
   }
-  v_t::const_iterator a0 = std::find(visited.begin(), visited.end(), "a0");
-  v_t::const_iterator aa1 = std::find(visited.begin(), visited.end(), "aa1");
-  v_t::const_iterator ab1 = std::find(visited.begin(), visited.end(), "ab1");
-  v_t::const_iterator dontlookhere = std::find(visited.begin(), visited.end(),
-                                               "dontlookhere");
-  v_t::const_iterator da1 = std::find(visited.begin(), visited.end(), "da1");
-  v_t::const_iterator z0 = std::find(visited.begin(), visited.end(), "z0");
-  v_t::const_iterator za1 = std::find(visited.begin(), visited.end(), "za1");
-  v_t::const_iterator pop = std::find(visited.begin(), visited.end(), "pop");
-  v_t::const_iterator p1 = std::find(visited.begin(), visited.end(), "p1");
+  v_t::const_iterator a0 = find(visited, "a0");
+  v_t::const_iterator aa1 = find(visited, "aa1");
+  v_t::const_iterator ab1 = find(visited, "ab1");
+  v_t::const_iterator dontlookhere = find(visited, "dontlookhere");
+  v_t::const_iterator da1 = find(visited, "da1");
+  v_t::const_iterator z0 = find(visited, "z0");
+  v_t::const_iterator za1 = find(visited, "za1");
+  v_t::const_iterator pop = find(visited, "pop");
+  v_t::const_iterator p1 = find(visited, "p1");
 
   // Make sure that each path was visited correctly.
   ASSERT_NE(a0, visited.end());

@@ -240,18 +240,17 @@ private:
   llvm::object::ObjectFile const &Object;
 };
 SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O) {
-  return SectionFilter([](llvm::object::SectionRef const &S) {
-                         if(FilterSections.empty())
-                           return true;
-                         llvm::StringRef String;
-                         std::error_code error = S.getName(String);
-                         if (error)
-                           return false;
-                         return std::find(FilterSections.begin(),
-                                          FilterSections.end(),
-                                          String) != FilterSections.end();
-                       },
-                       O);
+  return SectionFilter(
+      [](llvm::object::SectionRef const &S) {
+        if (FilterSections.empty())
+          return true;
+        llvm::StringRef String;
+        std::error_code error = S.getName(String);
+        if (error)
+          return false;
+        return is_contained(FilterSections, String);
+      },
+      O);
 }
 }
 

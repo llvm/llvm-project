@@ -92,8 +92,7 @@ public:
     /// machine instruction. Returns true if there was a kill
     /// corresponding to this instruction, false otherwise.
     bool removeKill(MachineInstr &MI) {
-      std::vector<MachineInstr *>::iterator I =
-          std::find(Kills.begin(), Kills.end(), &MI);
+      std::vector<MachineInstr *>::iterator I = find(Kills, &MI);
       if (I == Kills.end())
         return false;
       Kills.erase(I);

@@ -1080,8 +1080,7 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
-; KNL-NEXT:    kshiftlw $0, %k1, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $15, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm3
 ; KNL-NEXT:    vcmpltps %zmm0, %zmm2, %k2
@@ -1145,8 +1144,7 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
-; KNL-NEXT:    kshiftlw $0, %k2, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $15, %k2, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
 ; KNL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
@@ -1217,7 +1215,6 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
 ; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    vpinsrb $14, %eax, %xmm4, %xmm4
-; KNL-NEXT:    kshiftlw $0, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm4
@@ -1282,7 +1279,6 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
 ; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
-; KNL-NEXT:    kshiftlw $0, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm3
@@ -1694,7 +1690,6 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    vmovd %r9d, %xmm3
 ; KNL-NEXT:    kmovw %k1, %r9d
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k2
-; KNL-NEXT:    kshiftlw $0, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    vpinsrb $1, %r8d, %xmm3, %xmm2
 ; KNL-NEXT:    vpinsrb $2, %r10d, %xmm2, %xmm2
@@ -1763,8 +1758,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    vmovd %r10d, %xmm2
 ; KNL-NEXT:    kmovw %k0, %r10d
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; KNL-NEXT:    kshiftlw $0, %k2, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $15, %k2, %k0
 ; KNL-NEXT:    vpinsrb $1, %r8d, %xmm2, %xmm1
 ; KNL-NEXT:    vpinsrb $2, %r9d, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $3, %r11d, %xmm1, %xmm1
@@ -1832,7 +1826,6 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    vmovd %r10d, %xmm1
 ; KNL-NEXT:    kmovw %k0, %r10d
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kshiftlw $0, %k1, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
 ; KNL-NEXT:    vpinsrb $1, %r8d, %xmm1, %xmm0
 ; KNL-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
@@ -1912,7 +1905,6 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    vpinsrb $10, %ebp, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $11, %ebx, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; KNL-NEXT:    kshiftlw $0, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $14, %r9d, %xmm0, %xmm0

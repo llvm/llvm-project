@@ -807,15 +807,15 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
 
   if (IsNewStructor)
     SrcElements.erase(
-        std::remove_if(SrcElements.begin(), SrcElements.end(),
-                       [this](Constant *E) {
-                         auto *Key = dyn_cast<GlobalValue>(
-                             E->getAggregateElement(2)->stripPointerCasts());
-                         if (!Key)
-                           return false;
-                         GlobalValue *DGV = getLinkedToGlobal(Key);
-                         return !shouldLink(DGV, *Key);
-                       }),
+        remove_if(SrcElements,
+                  [this](Constant *E) {
+                    auto *Key = dyn_cast<GlobalValue>(
+                        E->getAggregateElement(2)->stripPointerCasts());
+                    if (!Key)
+                      return false;
+                    GlobalValue *DGV = getLinkedToGlobal(Key);
+                    return !shouldLink(DGV, *Key);
+                  }),
         SrcElements.end());
   uint64_t NewSize = DstNumElements + SrcElements.size();
   ArrayType *NewType = ArrayType::get(EltTy, NewSize);

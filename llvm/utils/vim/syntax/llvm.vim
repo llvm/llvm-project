@@ -46,6 +46,7 @@ syn keyword llvmKeyword
       \ alignstack
       \ alwaysinline
       \ appending
+      \ argmemonly
       \ arm_aapcscc
       \ arm_aapcs_vfpcc
       \ arm_apcscc
@@ -151,6 +152,7 @@ syn keyword llvmKeyword
       \ weak
       \ weak_odr
       \ within
+      \ writeonly
       \ x86_64_sysvcc
       \ x86_64_win64cc
       \ x86_fastcallcc

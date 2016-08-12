@@ -1154,7 +1154,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     return;
 
   auto FindIndex = [](ArrayRef<Value *> LiveVec, Value *Val) {
-    auto ValIt = std::find(LiveVec.begin(), LiveVec.end(), Val);
+    auto ValIt = find(LiveVec, Val);
     assert(ValIt != LiveVec.end() && "Val not found in LiveVec!");
     size_t Index = std::distance(LiveVec.begin(), ValIt);
     assert(Index < LiveVec.size() && "Bug in std::find?");
@@ -1740,9 +1740,8 @@ static void relocationViaAlloca(
 /// tests in ways which make them less useful in testing fused safepoints.
 template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
   SmallSet<T, 8> Seen;
-  Vec.erase(std::remove_if(Vec.begin(), Vec.end(), [&](const T &V) {
-              return !Seen.insert(V).second;
-            }), Vec.end());
+  Vec.erase(remove_if(Vec, [&](const T &V) { return !Seen.insert(V).second; }),
+            Vec.end());
 }
 
 /// Insert holders so that each Value is obviously live through the entire
@@ -1929,8 +1928,7 @@ static void rematerializeLiveValues(CallSite CS,
           // Assert that cloned instruction does not use any instructions from
           // this chain other than LastClonedValue
           for (auto OpValue : ClonedValue->operand_values()) {
-            assert(std::find(ChainToBase.begin(), ChainToBase.end(), OpValue) ==
-                       ChainToBase.end() &&
+            assert(!is_contained(ChainToBase, OpValue) &&
                    "incorrect use in rematerialization chain");
           }
 #endif
@@ -2268,8 +2266,7 @@ static bool shouldRewriteStatepointsIn(Function &F) {
 
 void RewriteStatepointsForGC::stripNonValidAttributes(Module &M) {
 #ifndef NDEBUG
-  assert(std::any_of(M.begin(), M.end(), shouldRewriteStatepointsIn) &&
-         "precondition!");
+  assert(any_of(M, shouldRewriteStatepointsIn) && "precondition!");
 #endif
 
   for (Function &F : M)

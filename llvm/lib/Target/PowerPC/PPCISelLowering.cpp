@@ -4060,8 +4060,7 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
     return false;
 
   // Functions containing by val parameters are not supported.
-  if (std::any_of(Ins.begin(), Ins.end(),
-                  [](const ISD::InputArg& IA) { return IA.Flags.isByVal(); }))
+  if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
     return false;
 
   // No TCO/SCO on indirect call because Caller have to restore its TOC

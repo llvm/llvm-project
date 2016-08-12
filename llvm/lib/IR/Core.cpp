@@ -2410,8 +2410,8 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
                          LLVMValueRef Instr) {
   BasicBlock *BB = unwrap(Block);
-  Instruction *I = Instr? unwrap<Instruction>(Instr) : (Instruction*) BB->end();
-  unwrap(Builder)->SetInsertPoint(BB, I->getIterator());
+  auto I = Instr ? unwrap<Instruction>(Instr)->getIterator() : BB->end();
+  unwrap(Builder)->SetInsertPoint(BB, I);
 }
 
 void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr) {

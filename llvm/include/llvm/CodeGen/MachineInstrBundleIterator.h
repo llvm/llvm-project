@@ -24,18 +24,27 @@ namespace llvm {
 template <typename Ty>
 class MachineInstrBundleIterator
     : public std::iterator<std::bidirectional_iterator_tag, Ty, ptrdiff_t> {
+  typedef std::iterator<std::bidirectional_iterator_tag, Ty, ptrdiff_t> super;
   typedef ilist_iterator<Ty> instr_iterator;
   instr_iterator MII;
 
 public:
+  typedef typename super::value_type value_type;
+  typedef typename super::difference_type difference_type;
+  typedef typename super::pointer pointer;
+  typedef typename super::reference reference;
+
+  typedef typename instr_iterator::const_pointer const_pointer;
+  typedef typename instr_iterator::const_reference const_reference;
+
   MachineInstrBundleIterator(instr_iterator MI) : MII(MI) {}
 
-  MachineInstrBundleIterator(Ty &MI) : MII(MI) {
+  MachineInstrBundleIterator(reference MI) : MII(MI) {
     assert(!MI.isBundledWithPred() && "It's not legal to initialize "
                                       "MachineInstrBundleIterator with a "
                                       "bundled MI");
   }
-  MachineInstrBundleIterator(Ty *MI) : MII(MI) {
+  MachineInstrBundleIterator(pointer MI) : MII(MI) {
     // FIXME: This conversion should be explicit.
     assert((!MI || !MI->isBundledWithPred()) && "It's not legal to initialize "
                                                 "MachineInstrBundleIterator "
@@ -43,21 +52,57 @@ public:
   }
   // Template allows conversion from const to nonconst.
   template <class OtherTy>
-  MachineInstrBundleIterator(const MachineInstrBundleIterator<OtherTy> &I)
+  MachineInstrBundleIterator(
+      const MachineInstrBundleIterator<OtherTy> &I,
+      typename std::enable_if<std::is_convertible<OtherTy *, Ty *>::value,
+                              void *>::type = nullptr)
       : MII(I.getInstrIterator()) {}
   MachineInstrBundleIterator() : MII(nullptr) {}
 
-  Ty &operator*() const { return *MII; }
-  Ty *operator->() const { return &operator*(); }
+  reference operator*() const { return *MII; }
+  pointer operator->() const { return &operator*(); }
 
-  // FIXME: This should be implemented as "return &operator*()" (or removed).
-  explicit operator Ty *() const { return MII.getNodePtrUnchecked(); }
+  /// Check for null.
+  bool isValid() const { return MII.getNodePtr(); }
 
-  bool operator==(const MachineInstrBundleIterator &X) const {
-    return MII == X.MII;
+  friend bool operator==(const MachineInstrBundleIterator &L,
+                         const MachineInstrBundleIterator &R) {
+    return L.MII == R.MII;
   }
-  bool operator!=(const MachineInstrBundleIterator &X) const {
-    return !operator==(X);
+  friend bool operator==(const MachineInstrBundleIterator &L, const_pointer R) {
+    // Avoid assertion about validity of R.
+    return L.MII == instr_iterator(const_cast<pointer>(R));
+  }
+  friend bool operator==(const_pointer L, const MachineInstrBundleIterator &R) {
+    // Avoid assertion about validity of L.
+    return instr_iterator(const_cast<pointer>(L)) == R.MII;
+  }
+  friend bool operator==(const MachineInstrBundleIterator &L,
+                         const_reference R) {
+    return L == &R; // Avoid assertion about validity of R.
+  }
+  friend bool operator==(const_reference L,
+                         const MachineInstrBundleIterator &R) {
+    return &L == R; // Avoid assertion about validity of L.
+  }
+
+  friend bool operator!=(const MachineInstrBundleIterator &L,
+                         const MachineInstrBundleIterator &R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const MachineInstrBundleIterator &L, const_pointer R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const_pointer L, const MachineInstrBundleIterator &R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const MachineInstrBundleIterator &L,
+                         const_reference R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const_reference L,
+                         const MachineInstrBundleIterator &R) {
+    return !(L == R);
   }
 
   // Increment and decrement operators...

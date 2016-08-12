@@ -834,7 +834,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
         assert(MO.isImplicit());
         unsigned DefReg = MO.getReg();
 
-        if (std::find(ImpDefs.begin(), ImpDefs.end(), DefReg) != ImpDefs.end())
+        if (is_contained(ImpDefs, DefReg))
           continue;
         // We can ignore cases where the super-reg is read and written.
         if (MI->readsRegister(DefReg))

@@ -510,7 +510,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
     }
     return true;
   };
-  UVect::iterator End = std::remove_if(DP.begin(), DP.end(), NoIndOp);
+  UVect::iterator End = remove_if(DP, NoIndOp);
   Rs.insert(DP.begin(), End);
   Rs.insert(CmpR1);
   Rs.insert(CmpR2);

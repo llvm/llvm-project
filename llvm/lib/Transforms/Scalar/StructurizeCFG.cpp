@@ -321,7 +321,7 @@ void StructurizeCFG::orderNodes() {
     BasicBlock *BB = (*I)->getEntry();
     unsigned LoopDepth = LI->getLoopDepth(BB);
 
-    if (std::find(Order.begin(), Order.end(), *I) != Order.end())
+    if (is_contained(Order, *I))
       continue;
 
     if (LoopDepth < CurrentLoopDepth) {

@@ -11,6 +11,7 @@
 define void @globalfunc1() #0 {
 entry:
   call void @funcwithpersonality()
+  call void (...) @variadic()
   ret void
 }
 
@@ -146,4 +147,8 @@ entry:
   ret void
 }
 
+; Variadic function should not be imported because inliner doesn't handle it.
+define void @variadic(...) {
+    ret void
+}
 

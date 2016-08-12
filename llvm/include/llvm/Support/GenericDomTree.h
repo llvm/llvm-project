@@ -126,7 +126,7 @@ public:
     assert(IDom && "No immediate dominator?");
     if (IDom != NewIDom) {
       typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          std::find(IDom->Children.begin(), IDom->Children.end(), this);
+          find(IDom->Children, this);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
@@ -588,7 +588,7 @@ public:
     DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
     if (IDom) {
       typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          std::find(IDom->Children.begin(), IDom->Children.end(), Node);
+          find(IDom->Children, Node);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...

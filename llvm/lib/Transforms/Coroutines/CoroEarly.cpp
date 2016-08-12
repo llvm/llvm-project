@@ -52,11 +52,11 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       switch (CS.getIntrinsicID()) {
       default:
         continue;
-      case Intrinsic::coro_begin:
+      case Intrinsic::coro_id:
         // Mark a function that comes out of the frontend that has a coro.begin
         // with a coroutine attribute.
-        if (auto *CB = cast<CoroBeginInst>(&I)) {
-          if (CB->getInfo().isPreSplit())
+        if (auto *CII = cast<CoroIdInst>(&I)) {
+          if (CII->getInfo().isPreSplit())
             F.addFnAttr(CORO_PRESPLIT_ATTR, UNPREPARED_FOR_SPLIT);
         }
         break;

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -802,8 +803,7 @@ Token &Scanner::peekNext() {
     removeStaleSimpleKeyCandidates();
     SimpleKey SK;
     SK.Tok = TokenQueue.begin();
-    if (std::find(SimpleKeys.begin(), SimpleKeys.end(), SK)
-        == SimpleKeys.end())
+    if (!is_contained(SimpleKeys, SK))
       break;
     else
       NeedMore = true;

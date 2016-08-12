@@ -211,8 +211,7 @@ void LoopBase<BlockT, LoopT>::
 replaceChildLoopWith(LoopT *OldChild, LoopT *NewChild) {
   assert(OldChild->ParentLoop == this && "This loop is already broken!");
   assert(!NewChild->ParentLoop && "NewChild already has a parent!");
-  typename std::vector<LoopT *>::iterator I =
-    std::find(SubLoops.begin(), SubLoops.end(), OldChild);
+  typename std::vector<LoopT *>::iterator I = find(SubLoops, OldChild);
   assert(I != SubLoops.end() && "OldChild not in loop!");
   *I = NewChild;
   OldChild->ParentLoop = nullptr;
@@ -289,8 +288,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
 
   // Check the parent loop pointer.
   if (ParentLoop) {
-    assert(std::find(ParentLoop->begin(), ParentLoop->end(), this) !=
-           ParentLoop->end() &&
+    assert(is_contained(*ParentLoop, this) &&
            "Loop is not a subloop of its parent!");
   }
 #endif

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -indvars -S | FileCheck %s --implicit-check-not sext --implicit-check-not zext
 
 target datalayout = "p:64:64:64-n32:64"
 
@@ -7,8 +7,8 @@ target datalayout = "p:64:64:64-n32:64"
 ; the IV is considered signed or unsigned.
 define void @foo(i32* %A, i32* %B, i32* %C, i32 %N) {
 ; CHECK-LABEL: @foo(
-; CHECK-NOT: zext
-; CHECK-NOT: sext
+; CHECK: wide.trip.count = zext
+; CHECK: ret void
 entry:
   %cmp1 = icmp slt i32 0, %N
   br i1 %cmp1, label %for.body.lr.ph, label %for.end
@@ -45,8 +45,8 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 define void @foo1(i32* %A, i32* %B, i32* %C, i32 %N) {
 ; CHECK-LABEL: @foo1(
-; CHECK-NOT: zext
-; CHECK-NOT: sext
+; CHECK: wide.trip.count = zext
+; CHECK: ret void
 entry:
   %cmp1 = icmp slt i32 0, %N
   br i1 %cmp1, label %for.body.lr.ph, label %for.end

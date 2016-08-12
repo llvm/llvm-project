@@ -323,9 +323,8 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
 }
 
 void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {
-  LiveInVector::iterator I = std::find_if(
-      LiveIns.begin(), LiveIns.end(),
-      [Reg] (const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
+  LiveInVector::iterator I = find_if(
+      LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   if (I == LiveIns.end())
     return;
 
@@ -335,9 +334,8 @@ void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {
 }
 
 bool MachineBasicBlock::isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) const {
-  livein_iterator I = std::find_if(
-      LiveIns.begin(), LiveIns.end(),
-      [Reg] (const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
+  livein_iterator I = find_if(
+      LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
   return I != livein_end() && (I->LaneMask & LaneMask) != 0;
 }
 
@@ -545,7 +543,7 @@ void MachineBasicBlock::addSuccessorWithoutProb(MachineBasicBlock *Succ) {
 
 void MachineBasicBlock::removeSuccessor(MachineBasicBlock *Succ,
                                         bool NormalizeSuccProbs) {
-  succ_iterator I = std::find(Successors.begin(), Successors.end(), Succ);
+  succ_iterator I = find(Successors, Succ);
   removeSuccessor(I, NormalizeSuccProbs);
 }
 
@@ -611,7 +609,7 @@ void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
 }
 
 void MachineBasicBlock::removePredecessor(MachineBasicBlock *Pred) {
-  pred_iterator I = std::find(Predecessors.begin(), Predecessors.end(), Pred);
+  pred_iterator I = find(Predecessors, Pred);
   assert(I != Predecessors.end() && "Pred is not a predecessor of this block!");
   Predecessors.erase(I);
 }
@@ -661,11 +659,11 @@ MachineBasicBlock::transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB) {
 }
 
 bool MachineBasicBlock::isPredecessor(const MachineBasicBlock *MBB) const {
-  return std::find(pred_begin(), pred_end(), MBB) != pred_end();
+  return is_contained(predecessors(), MBB);
 }
 
 bool MachineBasicBlock::isSuccessor(const MachineBasicBlock *MBB) const {
-  return std::find(succ_begin(), succ_end(), MBB) != succ_end();
+  return is_contained(successors(), MBB);
 }
 
 bool MachineBasicBlock::isLayoutSuccessor(const MachineBasicBlock *MBB) const {
@@ -775,7 +773,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
           continue;
 
         unsigned Reg = OI->getReg();
-        if (std::find(UsedRegs.begin(), UsedRegs.end(), Reg) == UsedRegs.end())
+        if (!is_contained(UsedRegs, Reg))
           UsedRegs.push_back(Reg);
       }
     }
@@ -802,9 +800,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
 
     for (SmallVectorImpl<MachineInstr*>::iterator I = Terminators.begin(),
         E = Terminators.end(); I != E; ++I) {
-      if (std::find(NewTerminators.begin(), NewTerminators.end(), *I) ==
-          NewTerminators.end())
-       Indexes->removeMachineInstrFromMaps(**I);
+      if (!is_contained(NewTerminators, *I))
+        Indexes->removeMachineInstrFromMaps(**I);
     }
   }
 

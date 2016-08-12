@@ -144,6 +144,12 @@ private:
   /// \pre \p U is a branch instruction.
   bool translateBr(const User &U);
 
+  /// Translate return (ret) instruction.
+  /// The target needs to implement CallLowering::lowerReturn for
+  /// this to succeed.
+  /// \pre \p U is a return instruction.
+  bool translateRet(const User &U);
+
   bool translateAdd(const User &U) {
     return translateBinaryOp(TargetOpcode::G_ADD, U);
   }
@@ -176,11 +182,23 @@ private:
   }
   bool translateUnreachable(const User &U) { return true; }
 
-  /// Translate return (ret) instruction.
-  /// The target needs to implement CallLowering::lowerReturn for
-  /// this to succeed.
-  /// \pre \p U is a return instruction.
-  bool translateRet(const User &U);
+  bool translateSExt(const User &U) {
+    return translateCast(TargetOpcode::G_SEXT, U);
+  }
+
+  bool translateZExt(const User &U) {
+    return translateCast(TargetOpcode::G_ZEXT, U);
+  }
+
+  bool translateShl(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_SHL, U);
+  }
+  bool translateLShr(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_LSHR, U);
+  }
+  bool translateAShr(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_ASHR, U);
+  }
 
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
@@ -200,15 +218,10 @@ private:
   bool translateURem(const User &U) { return false; }
   bool translateSRem(const User &U) { return false; }
   bool translateFRem(const User &U) { return false; }
-  bool translateShl(const User &U) { return false; }
-  bool translateLShr(const User &U) { return false; }
-  bool translateAShr(const User &U) { return false; }
   bool translateGetElementPtr(const User &U) { return false; }
   bool translateFence(const User &U) { return false; }
   bool translateAtomicCmpXchg(const User &U) { return false; }
   bool translateAtomicRMW(const User &U) { return false; }
-  bool translateSExt(const User &U) { return false; }
-  bool translateZExt(const User &U) { return false; }
   bool translateFPToUI(const User &U) { return false; }
   bool translateFPToSI(const User &U) { return false; }
   bool translateUIToFP(const User &U) { return false; }
@@ -252,7 +265,7 @@ private:
   // at the proper place. E.g., Entry block or dominator block
   // of each constant depending on how fancy we want to be.
   // * Clear the different maps.
-  void finalize();
+  void finalizeFunction();
 
   /// Get the VReg that represents \p Val.
   /// If such VReg does not exist, it is created.

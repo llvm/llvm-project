@@ -639,8 +639,7 @@ void HexagonCommonGEP::common() {
     // Node for removal.
     Erase.insert(*I);
   }
-  NodeVect::iterator NewE = std::remove_if(Nodes.begin(), Nodes.end(),
-                                           in_set(Erase));
+  NodeVect::iterator NewE = remove_if(Nodes, in_set(Erase));
   Nodes.resize(std::distance(Nodes.begin(), NewE));
 
   DEBUG(dbgs() << "Gep nodes after post-commoning cleanup:\n" << Nodes);

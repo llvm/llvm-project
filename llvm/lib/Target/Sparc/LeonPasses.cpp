@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -51,8 +52,7 @@ int LEONMachineFunctionPass::GetRegIndexForOperand(MachineInstr &MI,
 int LEONMachineFunctionPass::getUnusedFPRegister(MachineRegisterInfo &MRI) {
   for (int RegisterIndex = SP::F0; RegisterIndex <= SP::F31; ++RegisterIndex) {
     if (!MRI.isPhysRegUsed(RegisterIndex) &&
-        !(std::find(UsedRegisters.begin(), UsedRegisters.end(),
-                    RegisterIndex) != UsedRegisters.end())) {
+        !is_contained(UsedRegisters, RegisterIndex)) {
       return RegisterIndex;
     }
   }
@@ -90,15 +90,6 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
         MachineBasicBlock::iterator NMBBI = std::next(MBBI);
         BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
         Modified = true;
-      } else if (MI.isInlineAsm()) {
-        // Look for an inline ld or ldf instruction.
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("ld")) {
-          MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-          BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-          Modified = true;
-        }
       }
     }
   }
@@ -148,29 +139,6 @@ bool FixFSMULD::runOnMachineFunction(MachineFunction &MF) {
         Reg1Index = MI.getOperand(0).getReg();
         Reg2Index = MI.getOperand(1).getReg();
         Reg3Index = MI.getOperand(2).getReg();
-      } else if (MI.isInlineAsm()) {
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("fsmuld")) {
-          // this is an inline FSMULD instruction
-
-          unsigned StartOp = InlineAsm::MIOp_FirstOperand;
-
-          // extracts the registers from the inline assembly instruction
-          for (unsigned i = StartOp, e = MI.getNumOperands(); i != e; ++i) {
-            const MachineOperand &MO = MI.getOperand(i);
-            if (MO.isReg()) {
-              if (Reg1Index == UNASSIGNED_INDEX)
-                Reg1Index = MO.getReg();
-              else if (Reg2Index == UNASSIGNED_INDEX)
-                Reg2Index = MO.getReg();
-              else if (Reg3Index == UNASSIGNED_INDEX)
-                Reg3Index = MO.getReg();
-            }
-            if (Reg3Index != UNASSIGNED_INDEX)
-              break;
-          }
-        }
       }
 
       if (Reg1Index != UNASSIGNED_INDEX && Reg2Index != UNASSIGNED_INDEX &&
@@ -260,28 +228,6 @@ bool ReplaceFMULS::runOnMachineFunction(MachineFunction &MF) {
         Reg1Index = MI.getOperand(0).getReg();
         Reg2Index = MI.getOperand(1).getReg();
         Reg3Index = MI.getOperand(2).getReg();
-      } else if (MI.isInlineAsm()) {
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("fmuls")) {
-          // this is an inline FMULS instruction
-          unsigned StartOp = InlineAsm::MIOp_FirstOperand;
-
-          // extracts the registers from the inline assembly instruction
-          for (unsigned i = StartOp, e = MI.getNumOperands(); i != e; ++i) {
-            const MachineOperand &MO = MI.getOperand(i);
-            if (MO.isReg()) {
-              if (Reg1Index == UNASSIGNED_INDEX)
-                Reg1Index = MO.getReg();
-              else if (Reg2Index == UNASSIGNED_INDEX)
-                Reg2Index = MO.getReg();
-              else if (Reg3Index == UNASSIGNED_INDEX)
-                Reg3Index = MO.getReg();
-            }
-            if (Reg3Index != UNASSIGNED_INDEX)
-              break;
-          }
-        }
       }
 
       if (Reg1Index != UNASSIGNED_INDEX && Reg2Index != UNASSIGNED_INDEX &&
@@ -363,18 +309,6 @@ bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr &MI = *MBBI;
       unsigned Opcode = MI.getOpcode();
 
-      if (MI.isInlineAsm()) {
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("fsqrtd")) {
-          // this is an inline fsqrts instruction
-          Opcode = SP::FSQRTD;
-        } else if (AsmString.startswith_lower("fdivd")) {
-          // this is an inline fsqrts instruction
-          Opcode = SP::FDIVD;
-        }
-      }
-
       // Note: FDIVS and FSQRTS cannot be generated when this erratum fix is
       // switched on so we don't need to check for them here. They will
       // already have been converted to FSQRTD or FDIVD earlier in the
@@ -454,8 +388,6 @@ bool FixCALL::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock &MBB = *MFI;
     for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
       MachineInstr &MI = *MBBI;
-      MI.print(errs());
-      errs() << "\n";
 
       unsigned Opcode = MI.getOpcode();
       if (Opcode == SP::CALL || Opcode == SP::CALLrr) {
@@ -468,24 +400,6 @@ bool FixCALL::runOnMachineFunction(MachineFunction &MF) {
             MO.setImm(Value & 0x000fffffL);
             Modified = true;
             break;
-          }
-        }
-      } else if (MI.isInlineAsm()) // inline assembly immediate call
-      {
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("call")) {
-          // this is an inline call instruction
-          unsigned StartOp = InlineAsm::MIOp_FirstOperand;
-
-          // extracts the registers from the inline assembly instruction
-          for (unsigned i = StartOp, e = MI.getNumOperands(); i != e; ++i) {
-            MachineOperand &MO = MI.getOperand(i);
-            if (MO.isImm()) {
-              int64_t Value = MO.getImm();
-              MO.setImm(Value & 0x000fffffL);
-              Modified = true;
-            }
           }
         }
       }
@@ -563,55 +477,6 @@ bool IgnoreZeroFlag::runOnMachineFunction(MachineFunction &MF) {
         BuildMI(MBB, NextMBBI, DL, TII.get(SP::NOP));
 
         Modified = true;
-      } else if (MI.isInlineAsm()) {
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("sdivcc") ||
-            AsmString.startswith_lower("udivcc")) {
-          // this is an inline SDIVCC or UDIVCC instruction
-
-          // split the current machine basic block - just after the
-          // sdivcc/udivcc instruction
-          // create a label that help us skip the zero flag update (of PSR -
-          // Processor Status Register)
-          // if conditions are not met
-          const BasicBlock *LLVM_BB = MBB.getBasicBlock();
-          MachineFunction::iterator It =
-              std::next(MachineFunction::iterator(MBB));
-
-          MachineBasicBlock *dneBB = MF.CreateMachineBasicBlock(LLVM_BB);
-          MF.insert(It, dneBB);
-
-          // Transfer the remainder of MBB and its successor edges to dneBB.
-          dneBB->splice(dneBB->begin(), &MBB,
-                        std::next(MachineBasicBlock::iterator(MI)), MBB.end());
-          dneBB->transferSuccessorsAndUpdatePHIs(&MBB);
-
-          MBB.addSuccessor(dneBB);
-
-          MachineBasicBlock::iterator NextMBBI = std::next(MBBI);
-
-          // bvc - branch if overflow flag not set
-          BuildMI(MBB, NextMBBI, DL, TII.get(SP::BCOND))
-              .addMBB(dneBB)
-              .addImm(SPCC::ICC_VS);
-
-          // bnz - branch if not zero
-          BuildMI(MBB, NextMBBI, DL, TII.get(SP::BCOND))
-              .addMBB(dneBB)
-              .addImm(SPCC::ICC_NE);
-
-          // use the WRPSR (Write Processor State Register) instruction to set
-          // the zeo flag to 1
-          // create wr %g0, 1, %psr
-          BuildMI(MBB, NextMBBI, DL, TII.get(SP::WRPSRri))
-              .addReg(SP::G0)
-              .addImm(1);
-
-          BuildMI(MBB, NextMBBI, DL, TII.get(SP::NOP));
-
-          Modified = true;
-        }
       }
     }
   }
@@ -653,7 +518,6 @@ bool InsertNOPDoublePrecision::runOnMachineFunction(MachineFunction &MF) {
         MachineInstr &NMI = *NMBBI;
 
         unsigned NextOpcode = NMI.getOpcode();
-        // NMI.print(errs());
         if (NextOpcode == SP::FADDD || NextOpcode == SP::FSUBD ||
             NextOpcode == SP::FMULD || NextOpcode == SP::FDIVD) {
           int RegAIndex = GetRegIndexForOperand(MI, 0);
@@ -729,6 +593,12 @@ bool PreventRoundChange::runOnMachineFunction(MachineFunction &MF) {
           StringRef FuncName = MO.getGlobal()->getName();
           if (FuncName.compare_lower("fesetround") == 0) {
             MachineBasicBlock::iterator NMBBI = std::next(MBBI);
+            emitOptimizationRemark(
+                MF.getFunction()->getContext(), getPassName(), *MF.getFunction(),
+                MI.getDebugLoc(), "Warning: You are using the prvntroundchange "
+                                  "option to prevent rounding changes caused "
+                                  "by LEON errata. A call to fesetround to be "
+                                  "removed from the output.");
             MI.eraseFromParent();
             MBBI = NMBBI;
             Modified = true;
@@ -740,62 +610,6 @@ bool PreventRoundChange::runOnMachineFunction(MachineFunction &MF) {
 
   return Modified;
 }
-//*****************************************************************************
-//**** FlushCacheLineSWAP pass
-//*****************************************************************************
-// This pass inserts FLUSHW just before any SWAP atomic instruction.
-//
-char FlushCacheLineSWAP::ID = 0;
-
-FlushCacheLineSWAP::FlushCacheLineSWAP(TargetMachine &tm)
-    : LEONMachineFunctionPass(tm, ID) {}
-
-bool FlushCacheLineSWAP::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = DebugLoc();
-
-  bool Modified = false;
-  for (auto MFI = MF.begin(), E = MF.end(); MFI != E; ++MFI) {
-    MachineBasicBlock &MBB = *MFI;
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
-      MachineInstr &MI = *MBBI;
-      unsigned Opcode = MI.getOpcode();
-      if (Opcode == SP::SWAPrr || Opcode == SP::SWAPri ||
-          Opcode == SP::LDSTUBrr || Opcode == SP::LDSTUBri) {
-        // insert flush and 5 NOPs before the swap/ldstub instruction
-        BuildMI(MBB, MBBI, DL, TII.get(SP::FLUSH));
-        BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-        BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-        BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-        BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-        BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-
-        Modified = true;
-      } else if (MI.isInlineAsm()) {
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("swap") ||
-            AsmString.startswith_lower("ldstub")) {
-          // this is an inline swap or ldstub instruction
-
-          // insert flush and 5 NOPs before the swap/ldstub instruction
-          BuildMI(MBB, MBBI, DL, TII.get(SP::FLUSH));
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
-
-          Modified = true;
-        }
-      }
-    }
-  }
-
-  return Modified;
-}
-
 //*****************************************************************************
 //**** InsertNOPsLoadStore pass
 //*****************************************************************************
@@ -931,3 +745,189 @@ bool InsertNOPsLoadStore::runOnMachineFunction(MachineFunction &MF) {
 
   return Modified;
 }
+
+
+//****************************************************************************************************************
+//**** FillDataCache pass
+//****************************************************************************************************************
+// This erratum fix inserts after the first operand a loop performing 4096 NOP
+// instructions.
+//
+// mov 0, %l0
+// mov 4096, %l1
+// loop1:
+// inc %l0
+// cmp %l0, %l1
+// ble loop1
+
+char FillDataCache::ID = 0;
+bool FillDataCache::CacheFilled = false;
+
+FillDataCache::FillDataCache(TargetMachine &tm)
+    : LEONMachineFunctionPass(tm, ID) {}
+
+bool FillDataCache::runOnMachineFunction(MachineFunction &MF) {
+  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
+  DebugLoc DL = DebugLoc();
+
+  unsigned int CountInstr = 0;
+
+  bool Modified = false;
+  if (!CacheFilled) {
+    for (auto MFI = MF.begin(), E = MF.end(); MFI != E; ++MFI) {
+
+      if (CacheFilled)
+        break;
+
+      MachineBasicBlock &MBB = *MFI;
+
+      for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
+        MachineInstr &MI = *MBBI;
+
+        CountInstr++;
+        MachineBasicBlock::iterator NextMBBI = std::next(MBBI);
+        MBBI = NextMBBI;
+
+        // insert the following sequence right after the first instruction
+        // initializing the stack pointer (sp register)
+        // or %g0, 1, %g1
+        // loop1:
+        // nop
+        // add %g1, 1, %g1
+        // cmp %g1, 4096
+        // ble  .LBB0_1
+        if (CountInstr == 1) {
+          BuildMI(MBB, NextMBBI, DL, TII.get(SP::ORrr))
+              .addReg(SP::G1)
+              .addReg(SP::G0)
+              .addImm(1);
+        } else {
+          const BasicBlock *LLVM_BB = MBB.getBasicBlock();
+          MachineBasicBlock *dneBB = MF.CreateMachineBasicBlock(LLVM_BB);
+
+          MachineFunction::iterator It =
+              std::next(MachineFunction::iterator(MBB));
+
+          MF.insert(It, dneBB);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::NOP));
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::ADDri))
+              .addReg(SP::G1)
+              .addReg(SP::G1)
+              .addImm(1);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::CMPri))
+              .addReg(SP::G1)
+              .addImm(4096);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::BCOND))
+              .addMBB(dneBB)
+              .addImm(SPCC::ICC_LE);
+
+          dneBB->splice(dneBB->begin(), &MBB,
+                        std::next(MachineBasicBlock::iterator(MI)), MBB.end());
+          dneBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+          MBB.addSuccessor(dneBB);
+
+          CacheFilled = true;
+          Modified = true;
+          break;
+        }
+      }
+    }
+  }
+
+  return Modified;
+}
+
+
+//****************************************************************************************************************
+//**** RestoreExecAddress pass
+//****************************************************************************************************************
+// This erratum fix should handle user traps of FPU exceptions and restore the
+// execution address by skipping the trapped FPU instruction.
+// The algorithm:
+// find rett - return from trap
+// insert code before rett to:
+// 1. load the FSR register
+// 2. check if there is an FPU exception
+// 3. branch to old rett if there is no exception
+// 4. rett to a restored exec address
+char RestoreExecAddress::ID = 0;
+
+RestoreExecAddress::RestoreExecAddress(TargetMachine &tm)
+    : LEONMachineFunctionPass(tm, ID) {}
+
+bool RestoreExecAddress::runOnMachineFunction(MachineFunction &MF) {
+  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
+  DebugLoc DL = DebugLoc();
+
+  bool Modified = false;
+  for (auto MFI = MF.begin(), E = MF.end(); MFI != E; ++MFI) {
+    MachineBasicBlock &MBB = *MFI;
+    bool ExecAddressRestored = false;
+    for (auto NMBBI = MBB.begin(), E = MBB.end(); NMBBI != E; ++NMBBI) {
+
+      if (NMBBI != E && !ExecAddressRestored) {
+        MachineBasicBlock::iterator MBBI = std::next(NMBBI);
+        MachineInstr &MI = *MBBI;
+        unsigned Opcode = MI.getOpcode();
+
+        if (Opcode == SP::RETTrr || Opcode == SP::RETTri) {
+
+          const BasicBlock *LLVM_BB = MBB.getBasicBlock();
+
+          MachineBasicBlock *dneBB = MF.CreateMachineBasicBlock(LLVM_BB);
+
+          // gets the FSR - floating point status register;
+          // the firts 4 bits are *cexc* - current exception flags
+          BuildMI(MBB, MBBI, DL, TII.get(SP::STFSRrr)).addReg(SP::L7).addImm(0);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::LDrr))
+              .addReg(SP::L7)
+              .addReg(SP::L7)
+              .addImm(0);
+
+          // performs a bitwise AND with b1111 to check the first 4 bits of FSR
+          // (cexc)
+          // if cexc is not zero, then it is an FPU exception
+          BuildMI(MBB, MBBI, DL, TII.get(SP::ANDri))
+              .addReg(SP::L7)
+              .addReg(SP::L7)
+              .addImm(15);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::CMPri)).addReg(SP::L7).addImm(0);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::BCOND))
+              .addMBB(dneBB)
+              .addImm(SPCC::ICC_E);
+          // BuildMI(&MBB, DL,
+          // TII.get(SP::BCOND)).addMBB(dneBB).addImm(SPCC::ICC_E);
+
+          BuildMI(MBB, MBBI, DL, TII.get(SP::RETTri)).addReg(SP::L2).addImm(4);
+
+          MachineFunction::iterator It =
+              std::next(MachineFunction::iterator(MBB));
+          MF.insert(It, dneBB);
+
+          // Transfer the remainder of MBB and its successor edges to dneBB.
+          dneBB->splice(dneBB->begin(), &MBB, MachineBasicBlock::iterator(MI),
+                        MBB.end());
+          dneBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+          MBB.addSuccessor(dneBB);
+
+          ExecAddressRestored = true;
+          Modified = true;
+        }
+      }
+    }
+  }
+
+  return Modified;
+}
+

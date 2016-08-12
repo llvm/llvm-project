@@ -502,12 +502,44 @@ def int_amdgcn_lerp :
   GCCBuiltin<"__builtin_amdgcn_lerp">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
+def int_amdgcn_sad_u8 :
+  GCCBuiltin<"__builtin_amdgcn_sad_u8">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_msad_u8 :
+  GCCBuiltin<"__builtin_amdgcn_msad_u8">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_sad_hi_u8 :
+  GCCBuiltin<"__builtin_amdgcn_sad_hi_u8">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_sad_u16 :
+  GCCBuiltin<"__builtin_amdgcn_sad_u16">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_qsad_pk_u16_u8 :
+  GCCBuiltin<"__builtin_amdgcn_qsad_pk_u16_u8">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_mqsad_pk_u16_u8 :
+  GCCBuiltin<"__builtin_amdgcn_mqsad_pk_u16_u8">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_mqsad_u32_u8 :
+  GCCBuiltin<"__builtin_amdgcn_mqsad_u32_u8">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+def int_amdgcn_cvt_pk_u8_f32 :
+  GCCBuiltin<"__builtin_amdgcn_cvt_pk_u8_f32">,
+  Intrinsic<[llvm_i32_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
 def int_amdgcn_icmp :
-  Intrinsic<[llvm_i64_ty], [llvm_anyint_ty, LLVMMatchType<0>, llvm_i32_ty], 
+  Intrinsic<[llvm_i64_ty], [llvm_anyint_ty, LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent]>;
 
 def int_amdgcn_fcmp :
-  Intrinsic<[llvm_i64_ty], [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_i32_ty], 
+  Intrinsic<[llvm_i64_ty], [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent]>;
 
 //===----------------------------------------------------------------------===//

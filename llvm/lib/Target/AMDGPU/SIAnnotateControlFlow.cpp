@@ -363,7 +363,7 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 
     std::vector<BasicBlock*> Preds;
     for (pred_iterator PI = pred_begin(BB), PE = pred_end(BB); PI != PE; ++PI) {
-      if (std::find(Latches.begin(), Latches.end(), *PI) == Latches.end())
+      if (!is_contained(Latches, *PI))
         Preds.push_back(*PI);
     }
     BB = llvm::SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, false);

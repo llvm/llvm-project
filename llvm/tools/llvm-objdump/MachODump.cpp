@@ -862,9 +862,9 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
     }
 
     // First look for an external relocation entry for this literal pointer.
-    auto Reloc = std::find_if(
-        Relocs.begin(), Relocs.end(),
-        [&](const std::pair<uint64_t, SymbolRef> &P) { return P.first == i; });
+    auto Reloc = find_if(Relocs, [&](const std::pair<uint64_t, SymbolRef> &P) {
+      return P.first == i;
+    });
     if (Reloc != Relocs.end()) {
       symbol_iterator RelocSym = Reloc->second;
       Expected<StringRef> SymName = RelocSym->getName();
@@ -880,11 +880,9 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
     }
 
     // For local references see what the section the literal pointer points to.
-    auto Sect = std::find_if(LiteralSections.begin(), LiteralSections.end(),
-                             [&](const SectionRef &R) {
-                               return lp >= R.getAddress() &&
-                                      lp < R.getAddress() + R.getSize();
-                             });
+    auto Sect = find_if(LiteralSections, [&](const SectionRef &R) {
+      return lp >= R.getAddress() && lp < R.getAddress() + R.getSize();
+    });
     if (Sect == LiteralSections.end()) {
       outs() << format("0x%" PRIx64, lp) << " (not in a literal section)\n";
       continue;
@@ -2040,11 +2038,10 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     bool r_scattered = false;
     uint32_t r_value, pair_r_value, r_type, r_length, other_half;
     auto Reloc =
-        std::find_if(info->S.relocations().begin(), info->S.relocations().end(),
-                     [&](const RelocationRef &Reloc) {
-                       uint64_t RelocOffset = Reloc.getOffset();
-                       return RelocOffset == sect_offset;
-                     });
+        find_if(info->S.relocations(), [&](const RelocationRef &Reloc) {
+          uint64_t RelocOffset = Reloc.getOffset();
+          return RelocOffset == sect_offset;
+        });
 
     if (Reloc == info->S.relocations().end())
       return 0;
@@ -2179,11 +2176,10 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     uint64_t sect_addr = info->S.getAddress();
     uint64_t sect_offset = (Pc + Offset) - sect_addr;
     auto Reloc =
-        std::find_if(info->S.relocations().begin(), info->S.relocations().end(),
-                     [&](const RelocationRef &Reloc) {
-                       uint64_t RelocOffset = Reloc.getOffset();
-                       return RelocOffset == sect_offset;
-                     });
+        find_if(info->S.relocations(), [&](const RelocationRef &Reloc) {
+          uint64_t RelocOffset = Reloc.getOffset();
+          return RelocOffset == sect_offset;
+        });
 
     if (Reloc == info->S.relocations().end())
       return 0;

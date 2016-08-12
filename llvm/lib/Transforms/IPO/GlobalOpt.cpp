@@ -1737,7 +1737,7 @@ static bool isPointerValueDeadOnEntryToFunction(
 
   for (auto *L : Loads) {
     auto *LTy = L->getType();
-    if (!std::any_of(Stores.begin(), Stores.end(), [&](StoreInst *S) {
+    if (none_of(Stores, [&](const StoreInst *S) {
           auto *STy = S->getValueOperand()->getType();
           // The load is only dominated by the store if DomTree says so
           // and the number of bits loaded in L is less than or equal to

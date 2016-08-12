@@ -2104,8 +2104,8 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     GetUnderlyingObjects(RHS, RHSUObjs, DL);
 
     // Is the set of underlying objects all noalias calls?
-    auto IsNAC = [](SmallVectorImpl<Value *> &Objects) {
-      return std::all_of(Objects.begin(), Objects.end(), isNoAliasCall);
+    auto IsNAC = [](ArrayRef<Value *> Objects) {
+      return all_of(Objects, isNoAliasCall);
     };
 
     // Is the set of underlying objects all things which must be disjoint from
@@ -2114,8 +2114,8 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // live with the compared-to allocation). For globals, we exclude symbols
     // that might be resolve lazily to symbols in another dynamically-loaded
     // library (and, thus, could be malloc'ed by the implementation).
-    auto IsAllocDisjoint = [](SmallVectorImpl<Value *> &Objects) {
-      return std::all_of(Objects.begin(), Objects.end(), [](Value *V) {
+    auto IsAllocDisjoint = [](ArrayRef<Value *> Objects) {
+      return all_of(Objects, [](Value *V) {
         if (const AllocaInst *AI = dyn_cast<AllocaInst>(V))
           return AI->getParent() && AI->getFunction() && AI->isStaticAlloca();
         if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))

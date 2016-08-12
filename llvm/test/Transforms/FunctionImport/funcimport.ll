@@ -32,6 +32,7 @@ entry:
   call void (...) @weakfunc()
   call void (...) @linkoncefunc2()
   call void (...) @referencelargelinkonce()
+  call void (...) @variadic()
   ret i32 0
 }
 
@@ -104,6 +105,9 @@ declare void @linkoncefunc2(...) #1
 ; INSTLIMDEF-DAG: Import funcwithpersonality
 ; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !thinlto_src_module !0 {
 ; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.{{.*}}()
+
+; CHECK-DAG: declare void @variadic(...)
+declare void @variadic(...)
 
 ; INSTLIMDEF-DAG: Import globalfunc2
 ; INSTLIMDEF-DAG: 13 function-import - Number of functions imported

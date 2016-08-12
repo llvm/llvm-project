@@ -3,8 +3,9 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: remark: <unknown>:0:0: devirtualized call
-; CHECK-NOT: devirtualized call
+; CHECK: remark: <unknown>:0:0: single-impl: devirtualized a call to vf
+; CHECK: remark: <unknown>:0:0: devirtualized vf
+; CHECK-NOT: devirtualized
 
 @vt1 = constant [1 x i8*] [i8* bitcast (void (i8*)* @vf to i8*)], !type !0
 @vt2 = constant [1 x i8*] [i8* bitcast (void (i8*)* @vf to i8*)], !type !0

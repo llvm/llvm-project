@@ -130,6 +130,10 @@ static bool eligibleForImport(const ModuleSummaryIndex &Index,
     // FIXME: we may be able to import it by copying it without promotion.
     return false;
 
+  // Don't import functions that are not viable to inline.
+  if (Summary.isNotViableToInline())
+    return false;
+
   // Check references (and potential calls) in the same module. If the current
   // value references a global that can't be externally referenced it is not
   // eligible for import.
