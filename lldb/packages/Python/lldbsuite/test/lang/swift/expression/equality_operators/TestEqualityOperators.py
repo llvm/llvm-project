@@ -95,6 +95,12 @@ class TestUnitTests(TestBase):
         counter = value.GetValueAsUnsigned()
         self.assertTrue(counter == counter_value, "Counter value is wrong: %d (expected %d)"%(counter, counter_value))
 
+        # Make sure the presence of these type specific == operators doesn't interfere
+        # with finding other unrelated == operators.
+        value = self.frame.EvaluateExpression("1 == 2", options)
+        self.assertTrue(value.GetError().Success(), "1 == 2 expression couldn't run")
+        self.assertTrue(value.GetSummary() == "false", "1 == 2 didn't return false.")
+
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()
