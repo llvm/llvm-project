@@ -24,6 +24,7 @@
 #include "SIFrameLowering.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -108,6 +109,7 @@ protected:
   bool FeatureDisable;
 
   InstrItineraryData InstrItins;
+  SelectionDAGTargetInfo TSInfo;
 
 public:
   AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -123,6 +125,11 @@ public:
 
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
+  }
+
+  // Nothing implemented, just prevent crashes on use.
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
+    return &TSInfo;
   }
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);

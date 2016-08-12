@@ -535,7 +535,7 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
   std::vector<Value*> &WorkList) const {
 
   for (User *User : Val->users()) {
-    if (std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
+    if (is_contained(WorkList, User))
       continue;
 
     if (CallInst *CI = dyn_cast<CallInst>(User)) {

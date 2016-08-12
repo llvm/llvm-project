@@ -82,7 +82,6 @@ private:
   bool HasSpilledSGPRs;
   bool HasSpilledVGPRs;
   bool HasNonSpillStackObjects;
-  bool HasFlatInstructions;
 
   unsigned NumSpilledSGPRs;
   unsigned NumSpilledVGPRs;
@@ -306,14 +305,6 @@ public:
 
   void setHasNonSpillStackObjects(bool StackObject = true) {
     HasNonSpillStackObjects = StackObject;
-  }
-
-  bool hasFlatInstructions() const {
-    return HasFlatInstructions;
-  }
-
-  void setHasFlatInstructions(bool UseFlat = true) {
-    HasFlatInstructions = UseFlat;
   }
 
   unsigned getNumSpilledSGPRs() const {

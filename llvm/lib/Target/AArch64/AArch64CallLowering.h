@@ -36,7 +36,7 @@ class AArch64CallLowering: public CallLowering {
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallInst &CI,
                  unsigned CalleeReg, unsigned ResReg,
-                 const ArrayRef<unsigned> ArgRegs) const override;
+                 ArrayRef<unsigned> ArgRegs) const override;
 
 private:
   typedef std::function<void(MachineIRBuilder &, unsigned, unsigned)>

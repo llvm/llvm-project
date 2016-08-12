@@ -72,8 +72,7 @@ public:
   }
 
   void removeModule(ModuleHandleT H) {
-    ModuleHandles.erase(
-        std::find(ModuleHandles.begin(), ModuleHandles.end(), H));
+    ModuleHandles.erase(find(ModuleHandles, H));
     CompileLayer.removeModuleSet(H);
   }
 

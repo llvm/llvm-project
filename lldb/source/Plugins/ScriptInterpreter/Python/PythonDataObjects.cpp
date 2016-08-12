@@ -13,7 +13,6 @@
 
 #else
 
-#include "lldb-python.h"
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 

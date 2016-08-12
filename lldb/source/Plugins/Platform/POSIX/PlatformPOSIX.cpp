@@ -75,7 +75,7 @@ PlatformPOSIX::GetConnectionOptions (lldb_private::CommandInterpreter& interpret
     auto iter = m_options.find(&interpreter), end = m_options.end();
     if (iter == end)
     {
-        std::unique_ptr<lldb_private::OptionGroupOptions> options(new OptionGroupOptions(interpreter));
+        std::unique_ptr<lldb_private::OptionGroupOptions> options(new OptionGroupOptions());
         options->Append(m_option_group_platform_rsync.get());
         options->Append(m_option_group_platform_ssh.get());
         options->Append(m_option_group_platform_caching.get());

@@ -1509,7 +1509,7 @@ void DataFlowGraph::linkRefUp(NodeAddr<InstrNode*> IA, NodeAddr<T> TA,
     bool PrecUp = RAI.covers(QR, RR);
     // Skip all defs that are aliased to any of the defs that we have already
     // seen. If we encounter a covering def, stop the stack traversal early.
-    if (std::any_of(Defs.begin(), Defs.end(), AliasQR)) {
+    if (any_of(Defs, AliasQR)) {
       if (PrecUp)
         break;
       continue;

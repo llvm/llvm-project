@@ -1233,7 +1233,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     def test_software_breakpoint_set_and_remove_work_debugserver(self):
         self.init_debugserver_test()
-        self.build()
+        if self.getArchitecture() == "arm":
+            # TODO: Handle case when setting breakpoint in thumb code
+            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+        else:
+            self.build()
         self.set_inferior_startup_launch()
         self.software_breakpoint_set_and_remove_work()
 
@@ -1241,7 +1245,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_software_breakpoint_set_and_remove_work_llgs(self):
         self.init_llgs_test()
-        self.build()
+        if self.getArchitecture() == "arm":
+            # TODO: Handle case when setting breakpoint in thumb code
+            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+        else:
+            self.build()
         self.set_inferior_startup_launch()
         self.software_breakpoint_set_and_remove_work()
 

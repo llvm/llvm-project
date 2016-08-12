@@ -214,6 +214,13 @@ public:
 
   /// runFunction - Execute the specified function with the specified arguments,
   /// and return the result.
+  ///
+  /// For MCJIT execution engines, clients are encouraged to use the
+  /// "GetFunctionAddress" method (rather than runFunction) and cast the
+  /// returned uint64_t to the desired function pointer type. However, for
+  /// backwards compatibility MCJIT's implementation can execute 'main-like'
+  /// function (i.e. those returning void or int, and taking either no
+  /// arguments or (int, char*[])).
   virtual GenericValue runFunction(Function *F,
                                    ArrayRef<GenericValue> ArgValues) = 0;
 

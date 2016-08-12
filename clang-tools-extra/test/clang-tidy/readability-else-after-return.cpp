@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t
+// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -std=c++11 -fexceptions
 
 void f(int a) {
   if (a > 0)

@@ -43,7 +43,6 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include <algorithm>
 #include <cstring>
@@ -6534,157 +6533,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   return NewVD;
 }
 
-NamedDecl *
-Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
-                                   MultiTemplateParamsArg TemplateParamLists) {
-  assert(D.isDecompositionDeclarator());
-  const DecompositionDeclarator &Decomp = D.getDecompositionDeclarator();
-
-  // The syntax only allows a decomposition declarator as a simple-declaration
-  // or a for-range-declaration, but we parse it in more cases than that.
-  if (!D.mayHaveDecompositionDeclarator()) {
-    Diag(Decomp.getLSquareLoc(), diag::err_decomp_decl_context)
-      << Decomp.getSourceRange();
-    return nullptr;
-  }
-
-  if (!TemplateParamLists.empty()) {
-    // FIXME: There's no rule against this, but there are also no rules that
-    // would actually make it usable, so we reject it for now.
-    Diag(TemplateParamLists.front()->getTemplateLoc(),
-         diag::err_decomp_decl_template);
-    return nullptr;
-  }
-
-  Diag(Decomp.getLSquareLoc(), getLangOpts().CPlusPlus1z
-                                   ? diag::warn_cxx14_compat_decomp_decl
-                                   : diag::ext_decomp_decl)
-      << Decomp.getSourceRange();
-
-  // The semantic context is always just the current context.
-  DeclContext *const DC = CurContext;
-
-  // C++1z [dcl.dcl]/8:
-  //   The decl-specifier-seq shall contain only the type-specifier auto
-  //   and cv-qualifiers.
-  auto &DS = D.getDeclSpec();
-  {
-    SmallVector<StringRef, 8> BadSpecifiers;
-    SmallVector<SourceLocation, 8> BadSpecifierLocs;
-    if (auto SCS = DS.getStorageClassSpec()) {
-      BadSpecifiers.push_back(DeclSpec::getSpecifierName(SCS));
-      BadSpecifierLocs.push_back(DS.getStorageClassSpecLoc());
-    }
-    if (auto TSCS = DS.getThreadStorageClassSpec()) {
-      BadSpecifiers.push_back(DeclSpec::getSpecifierName(TSCS));
-      BadSpecifierLocs.push_back(DS.getThreadStorageClassSpecLoc());
-    }
-    if (DS.isConstexprSpecified()) {
-      BadSpecifiers.push_back("constexpr");
-      BadSpecifierLocs.push_back(DS.getConstexprSpecLoc());
-    }
-    if (DS.isInlineSpecified()) {
-      BadSpecifiers.push_back("inline");
-      BadSpecifierLocs.push_back(DS.getInlineSpecLoc());
-    }
-    if (!BadSpecifiers.empty()) {
-      auto &&Err = Diag(BadSpecifierLocs.front(), diag::err_decomp_decl_spec);
-      Err << (int)BadSpecifiers.size()
-          << llvm::join(BadSpecifiers.begin(), BadSpecifiers.end(), " ");
-      // Don't add FixItHints to remove the specifiers; we do still respect
-      // them when building the underlying variable.
-      for (auto Loc : BadSpecifierLocs)
-        Err << SourceRange(Loc, Loc);
-    }
-    // We can't recover from it being declared as a typedef.
-    if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
-      return nullptr;
-  }
-
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
-  QualType R = TInfo->getType();
-
-  if (DiagnoseUnexpandedParameterPack(D.getIdentifierLoc(), TInfo,
-                                      UPPC_DeclarationType))
-    D.setInvalidType();
-
-  // The syntax only allows a single ref-qualifier prior to the decomposition
-  // declarator. No other declarator chunks are permitted. Also check the type
-  // specifier here.
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
-      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
-      (D.getNumTypeObjects() == 1 &&
-       D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
-    Diag(Decomp.getLSquareLoc(),
-         (D.hasGroupingParens() ||
-          (D.getNumTypeObjects() &&
-           D.getTypeObject(0).Kind == DeclaratorChunk::Paren))
-             ? diag::err_decomp_decl_parens
-             : diag::err_decomp_decl_type)
-        << R;
-
-    // In most cases, there's no actual problem with an explicitly-specified
-    // type, but a function type won't work here, and ActOnVariableDeclarator
-    // shouldn't be called for such a type.
-    if (R->isFunctionType())
-      D.setInvalidType();
-  }
-
-  // Build the BindingDecls.
-  SmallVector<BindingDecl*, 8> Bindings;
-
-  // Build the BindingDecls.
-  for (auto &B : D.getDecompositionDeclarator().bindings()) {
-    // Check for name conflicts.
-    DeclarationNameInfo NameInfo(B.Name, B.NameLoc);
-    LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                          ForRedeclaration);
-    LookupName(Previous, S,
-               /*CreateBuiltins*/DC->getRedeclContext()->isTranslationUnit());
-
-    // It's not permitted to shadow a template parameter name.
-    if (Previous.isSingleResult() &&
-        Previous.getFoundDecl()->isTemplateParameter()) {
-      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(),
-                                      Previous.getFoundDecl());
-      Previous.clear();
-    }
-
-    bool ConsiderLinkage = DC->isFunctionOrMethod() &&
-                           DS.getStorageClassSpec() == DeclSpec::SCS_extern;
-    FilterLookupForScope(Previous, DC, S, ConsiderLinkage,
-                         /*AllowInlineNamespace*/false);
-    if (!Previous.empty()) {
-      auto *Old = Previous.getRepresentativeDecl();
-      Diag(B.NameLoc, diag::err_redefinition) << B.Name;
-      Diag(Old->getLocation(), diag::note_previous_definition);
-    }
-
-    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name);
-    PushOnScopeChains(BD, S, true);
-    Bindings.push_back(BD);
-    ParsingInitForAutoVars.insert(BD);
-  }
-
-  // There are no prior lookup results for the variable itself, because it
-  // is unnamed.
-  DeclarationNameInfo NameInfo((IdentifierInfo *)nullptr,
-                               Decomp.getLSquareLoc());
-  LookupResult Previous(*this, NameInfo, LookupOrdinaryName, ForRedeclaration);
-
-  // Build the variable that holds the non-decomposed object.
-  bool AddToScope = true;
-  NamedDecl *New =
-      ActOnVariableDeclarator(S, D, DC, TInfo, Previous,
-                              MultiTemplateParamsArg(), AddToScope, Bindings);
-  CurContext->addHiddenDecl(New);
-
-  if (isInOpenMPDeclareTargetContext())
-    checkDeclIsAllowedInOpenMPTarget(nullptr, New);
-
-  return New;
-}
-
 /// Enum describing the %select options in diag::warn_decl_shadow.
 enum ShadowedDeclKind { SDK_Local, SDK_Global, SDK_StaticMember, SDK_Field };
 
@@ -9604,6 +9452,9 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   assert((!VDecl || !VDecl->isInitCapture()) &&
          "init captures are expected to be deduced prior to initialization");
 
+  // FIXME: Deduction for a decomposition declaration does weird things if the
+  // initializer is an array.
+
   ArrayRef<Expr *> DeduceInits = Init;
   if (DirectInit) {
     if (auto *PL = dyn_cast<ParenListExpr>(Init))
@@ -9712,6 +9563,11 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
     RealDecl->setInvalidDecl();
     return;
   }
+
+  // C++1z [dcl.dcl]p1 grammar implies that a parenthesized initializer is not
+  // permitted.
+  if (isa<DecompositionDecl>(VDecl) && DirectInit && isa<ParenListExpr>(Init))
+    Diag(VDecl->getLocation(), diag::err_decomp_decl_paren_init) << VDecl;
 
   // C++11 [decl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   if (TypeMayContainAuto && VDecl->getType()->isUndeducedType()) {
@@ -10173,6 +10029,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl,
   if (VarDecl *Var = dyn_cast<VarDecl>(RealDecl)) {
     QualType Type = Var->getType();
 
+    // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
+    if (isa<DecompositionDecl>(RealDecl)) {
+      Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
+      Var->setInvalidDecl();
+      return;
+    }
+
     // C++11 [dcl.spec.auto]p3
     if (TypeMayContainAuto && Type->getContainedAutoType()) {
       Diag(Var->getLocation(), diag::err_auto_var_requires_init)
@@ -10580,6 +10443,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   // All the following checks are C++ only.
   if (!getLangOpts().CPlusPlus) return;
 
+  if (auto *DD = dyn_cast<DecompositionDecl>(var))
+    CheckCompleteDecompositionDeclaration(DD);
+
   QualType type = var->getType();
   if (type->isDependentType()) return;
 
@@ -10680,9 +10546,13 @@ Sema::FinalizeDeclaration(Decl *ThisDecl) {
   if (!VD)
     return;
 
-  if (auto *DD = dyn_cast<DecompositionDecl>(ThisDecl))
-    for (auto *BD : DD->bindings())
+  if (auto *DD = dyn_cast<DecompositionDecl>(ThisDecl)) {
+    for (auto *BD : DD->bindings()) {
+      if (ThisDecl->isInvalidDecl())
+        BD->setInvalidDecl();
       FinalizeDeclaration(BD);
+    }
+  }
 
   checkAttributesAfterMerging(*this, *VD);
 

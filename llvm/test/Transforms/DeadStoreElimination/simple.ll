@@ -498,3 +498,26 @@ bb3:
   ret i32 0
 }
 
+; Don't remove redundant store: unknown_func could unwind
+; CHECK-LABEL: @test34(
+; CHECK: store i32 1
+; CHECK: store i32 0
+; CHECK: ret
+define void @test34(i32* noalias %p) {
+  store i32 1, i32* %p
+  call void @unknown_func()
+  store i32 0, i32* %p
+  ret void
+}
+
+; Remove redundant store even with an unwinding function in the same block
+; CHECK-LABEL: @test35(
+; CHECK: call void @unknown_func
+; CHECK-NEXT: store i32 0
+; CHECK-NEXT: ret void
+define void @test35(i32* noalias %p) {
+  call void @unknown_func()
+  store i32 1, i32* %p
+  store i32 0, i32* %p
+  ret void
+}

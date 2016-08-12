@@ -67,7 +67,7 @@ namespace BadSpecifiers {
     // storage-class-specifiers
     static auto &[a] = n; // expected-error {{cannot be declared 'static'}}
     thread_local auto &[b] = n; // expected-error {{cannot be declared 'thread_local'}}
-    extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}}
+    extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{cannot have an initializer}}
     struct S {
       mutable auto &[d] = n; // expected-error {{not permitted in this context}}
 
@@ -97,7 +97,7 @@ namespace BadSpecifiers {
     auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{requires an initializer}}
 
     // FIXME: This should fire the 'misplaced array declarator' diagnostic.
-    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}}
+    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}} expected-error {{decomposition declaration '[K]' requires an initializer}}
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
@@ -132,4 +132,17 @@ namespace Template {
   int n[3];
   // FIXME: There's no actual rule against this...
   template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration template not supported}}
+}
+
+namespace Init {
+  void f() {
+    int arr[1];
+    struct S { int n; };
+    auto &[bad1]; // expected-error {{decomposition declaration '[bad1]' requires an initializer}}
+    const auto &[bad2](S{}); // expected-error {{decomposition declaration '[bad2]' cannot have a parenthesized initializer}}
+    auto &[good1] = arr;
+    auto &&[good2] = S{};
+    S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
+    S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
+  }
 }

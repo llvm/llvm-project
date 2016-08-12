@@ -342,18 +342,6 @@ public:
   void add(const AliasSetTracker &AST); // Add alias relations from another AST
   bool addUnknown(Instruction *I);
 
-  /// These methods are used to remove all entries that might be aliased by the
-  /// specified instruction. These methods return true if any alias sets were
-  /// eliminated.
-  bool remove(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo);
-  bool remove(LoadInst *LI);
-  bool remove(StoreInst *SI);
-  bool remove(VAArgInst *VAAI);
-  bool remove(MemSetInst *MSI);
-  bool remove(Instruction *I);
-  void remove(AliasSet &AS);
-  bool removeUnknown(Instruction *I);
-
   void clear();
 
   /// Return the alias sets that are active.
@@ -373,11 +361,6 @@ public:
                                           const AAMDNodes &AAInfo) {
     return mergeAliasSetsForPointer(P, Size, AAInfo);
   }
-
-  /// Return true if the specified location is represented by this alias set,
-  /// false otherwise. This does not modify the AST object or alias sets.
-  bool containsPointer(const Value *P, uint64_t Size,
-                       const AAMDNodes &AAInfo) const;
 
   /// Return true if the specified instruction "may" (or must) alias one of the
   /// members in any of the sets.

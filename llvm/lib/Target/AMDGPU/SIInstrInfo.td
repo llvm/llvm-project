@@ -338,36 +338,6 @@ def si_atomic_cmp_swap_glue : SDNode <"ISD::ATOMIC_CMP_SWAP", SDTAtomic3,
 
 defm si_atomic_cmp_swap : AtomicCmpSwapLocal <si_atomic_cmp_swap_glue>;
 
-// Transformation function, extract the lower 32bit of a 64bit immediate
-def LO32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & 0xffffffff, SDLoc(N),
-                                   MVT::i32);
-}]>;
-
-def LO32f : SDNodeXForm<fpimm, [{
-  APInt V = N->getValueAPF().bitcastToAPInt().trunc(32);
-  return CurDAG->getTargetConstantFP(APFloat(APFloat::IEEEsingle, V), MVT::f32);
-}]>;
-
-// Transformation function, extract the upper 32bit of a 64bit immediate
-def HI32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() >> 32, SDLoc(N), MVT::i32);
-}]>;
-
-def HI32f : SDNodeXForm<fpimm, [{
-  APInt V = N->getValueAPF().bitcastToAPInt().lshr(32).trunc(32);
-  return CurDAG->getTargetConstantFP(APFloat(APFloat::IEEEsingle, V), SDLoc(N),
-                                     MVT::f32);
-}]>;
-
-def IMM8bitDWORD : PatLeaf <(imm),
-  [{return (N->getZExtValue() & ~0x3FC) == 0;}]
->;
-
-def as_dword_i32imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() >> 2, SDLoc(N), MVT::i32);
-}]>;
-
 def as_i1imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
 }]>;
@@ -400,28 +370,12 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
-def IMM8bit : PatLeaf <(imm),
-  [{return isUInt<8>(N->getZExtValue());}]
->;
-
-def IMM12bit : PatLeaf <(imm),
-  [{return isUInt<12>(N->getZExtValue());}]
->;
-
-def IMM16bit : PatLeaf <(imm),
-  [{return isUInt<16>(N->getZExtValue());}]
->;
-
 def SIMM16bit : PatLeaf <(imm),
   [{return isInt<16>(N->getSExtValue());}]
 >;
 
 def IMM20bit : PatLeaf <(imm),
   [{return isUInt<20>(N->getZExtValue());}]
->;
-
-def IMM32bit : PatLeaf <(imm),
-  [{return isUInt<32>(N->getZExtValue());}]
 >;
 
 def mubuf_vaddr_offset : PatFrag<
@@ -455,10 +409,6 @@ class SGPRImm <dag frag> : PatLeaf<frag, [{
 //===----------------------------------------------------------------------===//
 // Custom Operands
 //===----------------------------------------------------------------------===//
-
-def FRAMEri32 : Operand<iPTR> {
-  let MIOperandInfo = (ops i32:$ptr, i32imm:$index);
-}
 
 def SoppBrTarget : AsmOperandClass {
   let Name = "SoppBrTarget";
@@ -1655,6 +1605,7 @@ def VOP_MAC : VOPProfile <[f32, f32, f32, f32]> {
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
 def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
+def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 
 // This class is used only with VOPC instructions. Use $sdst for out operand
 class SIInstAlias <string asm, Instruction inst, VOPProfile p> :

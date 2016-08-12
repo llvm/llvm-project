@@ -505,8 +505,9 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr &I1,
                                                  bool AllowC64) {
   MachineBasicBlock::iterator I2 = std::next(MachineBasicBlock::iterator(I1));
 
-  while (I2->isDebugValue())
-    ++I2;
+  if (I2 != I1.getParent()->end())
+    while (I2->isDebugValue())
+      ++I2;
 
   unsigned I1DestReg = I1.getOperand(0).getReg();
 

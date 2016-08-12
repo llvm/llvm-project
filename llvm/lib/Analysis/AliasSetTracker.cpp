@@ -229,17 +229,6 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
   return FoundSet;
 }
 
-/// containsPointer - Return true if the specified location is represented by
-/// this alias set, false otherwise.  This does not modify the AST object or
-/// alias sets.
-bool AliasSetTracker::containsPointer(const Value *Ptr, uint64_t Size,
-                                      const AAMDNodes &AAInfo) const {
-  for (const AliasSet &AS : *this)
-    if (!AS.Forward && AS.aliasesPointer(Ptr, Size, AAInfo, AA))
-      return true;
-  return false;
-}
-
 bool AliasSetTracker::containsUnknown(const Instruction *Inst) const {
   for (const AliasSet &AS : *this)
     if (!AS.Forward && AS.aliasesUnknownInst(Inst, AA))
@@ -428,124 +417,6 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
   }
 }
 
-/// remove - Remove the specified (potentially non-empty) alias set from the
-/// tracker.
-void AliasSetTracker::remove(AliasSet &AS) {
-  // Drop all call sites.
-  if (!AS.UnknownInsts.empty())
-    AS.dropRef(*this);
-  AS.UnknownInsts.clear();
-  
-  // Clear the alias set.
-  unsigned NumRefs = 0;
-  while (!AS.empty()) {
-    AliasSet::PointerRec *P = AS.PtrList;
-
-    Value *ValToRemove = P->getValue();
-    
-    // Unlink and delete entry from the list of values.
-    P->eraseFromList();
-    
-    // Remember how many references need to be dropped.
-    ++NumRefs;
-
-    // Finally, remove the entry.
-    PointerMap.erase(ValToRemove);
-  }
-  
-  // Stop using the alias set, removing it.
-  AS.RefCount -= NumRefs;
-  if (AS.RefCount == 0)
-    AS.removeFromTracker(*this);
-}
-
-bool
-AliasSetTracker::remove(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo) {
-  AliasSet *AS = mergeAliasSetsForPointer(Ptr, Size, AAInfo);
-  if (!AS) return false;
-  remove(*AS);
-  return true;
-}
-
-bool AliasSetTracker::remove(LoadInst *LI) {
-  const DataLayout &DL = LI->getModule()->getDataLayout();
-  uint64_t Size = DL.getTypeStoreSize(LI->getType());
-
-  AAMDNodes AAInfo;
-  LI->getAAMetadata(AAInfo);
-
-  AliasSet *AS = mergeAliasSetsForPointer(LI->getOperand(0), Size, AAInfo);
-  if (!AS) return false;
-  remove(*AS);
-  return true;
-}
-
-bool AliasSetTracker::remove(StoreInst *SI) {
-  const DataLayout &DL = SI->getModule()->getDataLayout();
-  uint64_t Size = DL.getTypeStoreSize(SI->getOperand(0)->getType());
-
-  AAMDNodes AAInfo;
-  SI->getAAMetadata(AAInfo);
-
-  AliasSet *AS = mergeAliasSetsForPointer(SI->getOperand(1), Size, AAInfo);
-  if (!AS) return false;
-  remove(*AS);
-  return true;
-}
-
-bool AliasSetTracker::remove(VAArgInst *VAAI) {
-  AAMDNodes AAInfo;
-  VAAI->getAAMetadata(AAInfo);
-
-  AliasSet *AS = mergeAliasSetsForPointer(VAAI->getOperand(0),
-                                          MemoryLocation::UnknownSize, AAInfo);
-  if (!AS) return false;
-  remove(*AS);
-  return true;
-}
-
-bool AliasSetTracker::remove(MemSetInst *MSI) {
-  AAMDNodes AAInfo;
-  MSI->getAAMetadata(AAInfo);
-  uint64_t Len;
-
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MSI->getLength()))
-    Len = C->getZExtValue();
-  else
-    Len = MemoryLocation::UnknownSize;
-
-  AliasSet *AS = mergeAliasSetsForPointer(MSI->getRawDest(), Len, AAInfo);
-  if (!AS)
-    return false;
-  remove(*AS);
-  return true;
-}
-
-bool AliasSetTracker::removeUnknown(Instruction *I) {
-  if (!I->mayReadOrWriteMemory())
-    return false; // doesn't alias anything
-
-  AliasSet *AS = findAliasSetForUnknownInst(I);
-  if (!AS) return false;
-  remove(*AS);
-  return true;
-}
-
-bool AliasSetTracker::remove(Instruction *I) {
-  // Dispatch to one of the other remove methods...
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return remove(LI);
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return remove(SI);
-  if (VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
-    return remove(VAAI);
-  if (MemSetInst *MSI = dyn_cast<MemSetInst>(I))
-    return remove(MSI);
-  return removeUnknown(I);
-  // FIXME: add support of memcpy and memmove. 
-}
-
-
 // deleteValue method - This method is used to remove a pointer value from the
 // AliasSetTracker entirely.  It should be used when an instruction is deleted
 // from the program to update the AST.  If you don't use this, you would have
@@ -597,8 +468,9 @@ void AliasSetTracker::copyValue(Value *From, Value *To) {
   AliasSet::PointerRec &Entry = getEntryFor(To);
   if (Entry.hasAliasSet()) return;    // Already in the tracker!
 
-  // Add it to the alias set it aliases...
+  // getEntryFor above may invalidate iterator \c I, so reinitialize it.
   I = PointerMap.find_as(From);
+  // Add it to the alias set it aliases...
   AliasSet *AS = I->second->getAliasSet(*this);
   AS->addPointer(*this, Entry, I->second->getSize(),
                  I->second->getAAInfo(),

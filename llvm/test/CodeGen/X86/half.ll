@@ -299,7 +299,7 @@ define half @test_f80trunc_nodagcombine() #0 {
 ; CHECK-F16C-NEXT: movswl (%rsi), %eax
 ; CHECK-F16C-NEXT: vmovd %eax, %xmm0
 ; CHECK-F16C-NEXT: vcvtph2ps %xmm0, %xmm0
-; CHECK-F16C-NEXT: vcvtsi2ssl %edi, %xmm0, %xmm1
+; CHECK-F16C-NEXT: vcvtsi2ssl %edi, %xmm1, %xmm1
 ; CHECK-F16C-NEXT: vcvtps2ph $4, %xmm1, %xmm1
 ; CHECK-F16C-NEXT: vcvtph2ps %xmm1, %xmm1
 ; CHECK-F16C-NEXT: vaddss %xmm1, %xmm0, %xmm0

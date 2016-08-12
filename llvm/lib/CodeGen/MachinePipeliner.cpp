@@ -58,37 +58,61 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/PassAnalysisSupport.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/PassSupport.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
 #include <climits>
+#include <cstdint>
 #include <deque>
+#include <functional>
+#include <iterator>
 #include <map>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -175,9 +199,9 @@ public:
     initializeMachinePipelinerPass(*PassRegistry::getPassRegistry());
   }
 
-  virtual bool runOnMachineFunction(MachineFunction &MF);
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addRequired<MachineLoopInfo>();
@@ -265,8 +289,8 @@ public:
         Scheduled(false), Loop(L), LIS(lis), RegClassInfo(rci),
         Topo(SUnits, &ExitSU) {}
 
-  void schedule();
-  void finishBlock();
+  void schedule() override;
+  void finishBlock() override;
 
   /// Return true if the loop kernel has been scheduled.
   bool hasNewSchedule() { return Scheduled; }
@@ -1099,7 +1123,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
              UI != UE; ++UI) {
           MachineInstr *UseMI = &*UI;
           SUnit *SU = getSUnit(UseMI);
-          if (SU != 0 && UseMI->isPHI()) {
+          if (SU != nullptr && UseMI->isPHI()) {
             if (!MI->isPHI()) {
               SDep Dep(SU, SDep::Anti, Reg);
               I.addPred(Dep);
@@ -1115,10 +1139,10 @@ void SwingSchedulerDAG::updatePhiDependences() {
       } else if (MOI->isUse()) {
         // If the register is defined by a Phi, then create a true dependence.
         MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
-        if (DefMI == 0)
+        if (DefMI == nullptr)
           continue;
         SUnit *SU = getSUnit(DefMI);
-        if (SU != 0 && DefMI->isPHI()) {
+        if (SU != nullptr && DefMI->isPHI()) {
           if (!MI->isPHI()) {
             SDep Dep(SU, SDep::Data, Reg);
             Dep.setLatency(0);
@@ -1218,6 +1242,7 @@ void SwingSchedulerDAG::changeDependences() {
 }
 
 namespace {
+
 // FuncUnitSorter - Comparison operator used to sort instructions by
 // the number of functional unit choices.
 struct FuncUnitSorter {
@@ -1270,7 +1295,8 @@ struct FuncUnitSorter {
     return MFUs1 > MFUs2;
   }
 };
-}
+
+} // end anonymous namespace
 
 /// Calculate the resource constrained minimum initiation interval for the
 /// specified loop. We use the DFA to model the resources needed for
@@ -2009,7 +2035,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         while (!R.empty()) {
           SUnit *maxHeight = nullptr;
           for (SUnit *I : R) {
-            if (maxHeight == 0 || getHeight(I) > getHeight(maxHeight))
+            if (maxHeight == nullptr || getHeight(I) > getHeight(maxHeight))
               maxHeight = I;
             else if (getHeight(I) == getHeight(maxHeight) &&
                      getMOV(I) < getMOV(maxHeight) &&
@@ -2053,7 +2079,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         while (!R.empty()) {
           SUnit *maxDepth = nullptr;
           for (SUnit *I : R) {
-            if (maxDepth == 0 || getDepth(I) > getDepth(maxDepth))
+            if (maxDepth == nullptr || getDepth(I) > getDepth(maxDepth))
               maxDepth = I;
             else if (getDepth(I) == getDepth(maxDepth) &&
                      getMOV(I) < getMOV(maxDepth) &&
@@ -2340,7 +2366,7 @@ void SwingSchedulerDAG::generateProlog(SMSchedule &Schedule, unsigned LastStage,
   unsigned numBranches = TII->RemoveBranch(*PreheaderBB);
   if (numBranches) {
     SmallVector<MachineOperand, 0> Cond;
-    TII->InsertBranch(*PreheaderBB, PrologBBs[0], 0, Cond, DebugLoc());
+    TII->InsertBranch(*PreheaderBB, PrologBBs[0], nullptr, Cond, DebugLoc());
   }
 }
 
@@ -2432,7 +2458,7 @@ void SwingSchedulerDAG::generateEpilog(SMSchedule &Schedule, unsigned LastStage,
   if (EpilogBBs.size() > 0) {
     MachineBasicBlock *LastEpilogBB = EpilogBBs.back();
     SmallVector<MachineOperand, 4> Cond1;
-    TII->InsertBranch(*LastEpilogBB, LoopExitBB, 0, Cond1, DebugLoc());
+    TII->InsertBranch(*LastEpilogBB, LoopExitBB, nullptr, Cond1, DebugLoc());
   }
 }
 
@@ -2994,7 +3020,7 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
       Prolog->addSuccessor(Epilog);
       Prolog->removeSuccessor(LastPro);
       LastEpi->removeSuccessor(Epilog);
-      numAdded = TII->InsertBranch(*Prolog, Epilog, 0, Cond, DebugLoc());
+      numAdded = TII->InsertBranch(*Prolog, Epilog, nullptr, Cond, DebugLoc());
       removePhis(Epilog, LastEpi);
       // Remove the blocks that are no longer referenced.
       if (LastPro != LastEpi) {
@@ -3004,7 +3030,7 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
       LastPro->clear();
       LastPro->eraseFromParent();
     } else {
-      numAdded = TII->InsertBranch(*Prolog, LastPro, 0, Cond, DebugLoc());
+      numAdded = TII->InsertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
       removePhis(Epilog, Prolog);
     }
     LastPro = Prolog;

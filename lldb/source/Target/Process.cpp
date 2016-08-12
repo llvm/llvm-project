@@ -442,7 +442,9 @@ ProcessInstanceInfo::DumpAsTableRow (Stream &s, Platform *platform, bool show_ar
 }
 
 Error
-ProcessLaunchCommandOptions::SetOptionValue (uint32_t option_idx, const char *option_arg)
+ProcessLaunchCommandOptions::SetOptionValue(uint32_t option_idx,
+                                            const char *option_arg,
+                                            ExecutionContext *execution_context)
 {
     Error error;
     const int short_option = m_getopt_table[option_idx].val;
@@ -503,8 +505,14 @@ ProcessLaunchCommandOptions::SetOptionValue (uint32_t option_idx, const char *op
             break;
             
         case 'a':
-            if (!launch_info.GetArchitecture().SetTriple (option_arg, m_interpreter.GetPlatform(true).get()))
-                launch_info.GetArchitecture().SetTriple (option_arg);
+            {
+                TargetSP target_sp = execution_context ?
+                    execution_context->GetTargetSP() : TargetSP();
+                PlatformSP platform_sp = target_sp ?
+                    target_sp->GetPlatform() : PlatformSP();
+                if (!launch_info.GetArchitecture().SetTriple (option_arg, platform_sp.get()))
+                    launch_info.GetArchitecture().SetTriple (option_arg);
+            }
             break;
             
         case 'A':   // Disable ASLR.

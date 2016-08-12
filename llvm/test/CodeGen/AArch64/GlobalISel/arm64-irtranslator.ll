@@ -397,3 +397,71 @@ define i32 @test_undef() {
 define i8* @test_constant_inttoptr() {
   ret i8* inttoptr(i64 1 to i8*)
 }
+
+  ; This failed purely because the Constant -> VReg map was kept across
+  ; functions, so reuse the "i64 1" from above.
+; CHECK-LABEL: name: test_reused_constant
+; CHECK: [[ONE:%[0-9]+]](64) = G_CONSTANT s64 1
+; CHECK: %x0 = COPY [[ONE]]
+define i64 @test_reused_constant() {
+  ret i64 1
+}
+
+; CHECK-LABEL: name: test_sext
+; CHECK: [[IN:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RES:%[0-9]+]](64) = G_SEXT { s64, s32 } [[IN]]
+; CHECK: %x0 = COPY [[RES]]
+define i64 @test_sext(i32 %in) {
+  %res = sext i32 %in to i64
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: test_zext
+; CHECK: [[IN:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RES:%[0-9]+]](64) = G_ZEXT { s64, s32 } [[IN]]
+; CHECK: %x0 = COPY [[RES]]
+define i64 @test_zext(i32 %in) {
+  %res = zext i32 %in to i64
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: test_shl
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_SHL s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_shl(i32 %arg1, i32 %arg2) {
+  %res = shl i32 %arg1, %arg2
+  ret i32 %res
+}
+
+
+; CHECK-LABEL: name: test_lshr
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_LSHR s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_lshr(i32 %arg1, i32 %arg2) {
+  %res = lshr i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_ashr
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_ASHR s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_ashr(i32 %arg1, i32 %arg2) {
+  %res = ashr i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_constant_null
+; CHECK: [[NULL:%[0-9]+]](64) = G_CONSTANT p0 0
+; CHECK: %x0 = COPY [[NULL]]
+define i8* @test_constant_null() {
+  ret i8* null
+}

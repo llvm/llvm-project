@@ -311,7 +311,7 @@ public:
     _reExportedDylibs.emplace_back(dylibPath);
   }
 
-  StringRef installName() { return _installName; }
+  StringRef installName() const { return _installName; }
   uint32_t currentVersion() { return _currentVersion; }
   uint32_t compatVersion() { return _compatVersion; }
 

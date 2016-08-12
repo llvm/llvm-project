@@ -134,8 +134,7 @@ class PPCBoolRetToInt : public FunctionPass {
       };
       const auto &Users = P->users();
       const auto &Operands = P->operands();
-      if (!std::all_of(Users.begin(), Users.end(), IsValidUser) ||
-          !std::all_of(Operands.begin(), Operands.end(), IsValidOperand))
+      if (!all_of(Users, IsValidUser) || !all_of(Operands, IsValidOperand))
         ToRemove.push_back(P);
     }
 
@@ -153,8 +152,7 @@ class PPCBoolRetToInt : public FunctionPass {
         // Condition 4 and 5
         const auto &Users = P->users();
         const auto &Operands = P->operands();
-        if (!std::all_of(Users.begin(), Users.end(), IsPromotable) ||
-            !std::all_of(Operands.begin(), Operands.end(), IsPromotable))
+        if (!all_of(Users, IsPromotable) || !all_of(Operands, IsPromotable))
           ToRemove.push_back(P);
       }
     }
@@ -199,7 +197,7 @@ class PPCBoolRetToInt : public FunctionPass {
     auto Defs = findAllDefs(U);
 
     // If the values are all Constants or Arguments, don't bother
-    if (!std::any_of(Defs.begin(), Defs.end(), isa<Instruction, Value *>))
+    if (none_of(Defs, isa<Instruction, Value *>))
       return false;
 
     // Presently, we only know how to handle PHINode, Constant, Arguments and

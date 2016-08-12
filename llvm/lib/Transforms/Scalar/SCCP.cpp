@@ -1534,8 +1534,7 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
     std::vector<LatticeVal> IVs = Solver.getStructLatticeValueFor(V);
-    if (std::any_of(IVs.begin(), IVs.end(),
-                    [](LatticeVal &LV) { return LV.isOverdefined(); }))
+    if (any_of(IVs, [](const LatticeVal &LV) { return LV.isOverdefined(); }))
       return false;
     std::vector<Constant *> ConstVals;
     StructType *ST = dyn_cast<StructType>(V->getType());

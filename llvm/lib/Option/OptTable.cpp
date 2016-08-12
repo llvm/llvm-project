@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Option/OptTable.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -142,8 +143,7 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
     StringRef Prefix = I->getKey();
     for (StringRef::const_iterator C = Prefix.begin(), CE = Prefix.end();
                                    C != CE; ++C)
-      if (std::find(PrefixChars.begin(), PrefixChars.end(), *C)
-            == PrefixChars.end())
+      if (!is_contained(PrefixChars, *C))
         PrefixChars.push_back(*C);
   }
 }

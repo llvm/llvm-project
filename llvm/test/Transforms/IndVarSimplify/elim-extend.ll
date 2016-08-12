@@ -41,6 +41,8 @@ entry:
   br i1 %precond, label %loop, label %return
 ; CHECK: loop:
 ; CHECK-NOT: sext
+; CHECK: wide.trip.count = sext
+; CHECK-NOT: sext
 ; CHECK: exit:
 loop:
   %iv = phi i32 [ %postiv, %loop ], [ %init, %entry ]

@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DataExtractor.h"
+#include "RegisterContextPOSIXCore_s390x.h"
+
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
-#include "RegisterContextPOSIXCore_s390x.h"
 
 using namespace lldb_private;
 

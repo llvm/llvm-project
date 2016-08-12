@@ -305,6 +305,14 @@ class Diagnostic(object):
     Error   = 3
     Fatal   = 4
 
+    DisplaySourceLocation = 0x01
+    DisplayColumn         = 0x02
+    DisplaySourceRanges   = 0x04
+    DisplayOption         = 0x08
+    DisplayCategoryId     = 0x10
+    DisplayCategoryName   = 0x20
+    _FormatOptionsMask    = 0x3f
+
     def __init__(self, ptr):
         self.ptr = ptr
 
@@ -399,9 +407,26 @@ class Diagnostic(object):
 
         return conf.lib.clang_getCString(disable)
 
+    def format(self, options=None):
+        """
+        Format this diagnostic for display. The options argument takes
+        Diagnostic.Display* flags, which can be combined using bitwise OR. If
+        the options argument is not provided, the default display options will
+        be used.
+        """
+        if options is None:
+            options = conf.lib.clang_defaultDiagnosticDisplayOptions()
+        if options & ~Diagnostic._FormatOptionsMask:
+            raise ValueError('Invalid format options')
+        formatted = conf.lib.clang_formatDiagnostic(self, options)
+        return conf.lib.clang_getCString(formatted)
+
     def __repr__(self):
         return "<Diagnostic severity %r, location %r, spelling %r>" % (
             self.severity, self.location, self.spelling)
+
+    def __str__(self):
+        return self.format()
 
     def from_param(self):
       return self.ptr
@@ -3012,6 +3037,10 @@ functionList = [
    [Cursor],
    bool),
 
+  ("clang_defaultDiagnosticDisplayOptions",
+   [],
+   c_uint),
+
   ("clang_defaultSaveOptions",
    [TranslationUnit],
    c_uint),
@@ -3052,6 +3081,10 @@ functionList = [
   ("clang_equalTypes",
    [Type, Type],
    bool),
+
+  ("clang_formatDiagnostic",
+   [Diagnostic, c_uint],
+   _CXString),
 
   ("clang_getArgType",
    [Type, c_uint],

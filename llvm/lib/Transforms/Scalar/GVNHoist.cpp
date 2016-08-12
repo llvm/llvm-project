@@ -740,10 +740,14 @@ private:
           if (!Repl || firstInBB(I, Repl))
             Repl = I;
 
+      // Keep track of whether we moved the instruction so we know whether we
+      // should move the MemoryAccess.
+      bool MoveAccess = true;
       if (Repl) {
         // Repl is already in HoistPt: it remains in place.
         assert(allOperandsAvailable(Repl, HoistPt) &&
                "instruction depends on operands that are not available");
+        MoveAccess = false;
       } else {
         // When we do not find Repl in HoistPt, select the first in the list
         // and move it to HoistPt.
@@ -771,14 +775,16 @@ private:
         DFSNumber[Repl] = DFSNumber[Last]++;
       }
 
-      MemoryAccess *NewMemAcc = nullptr;
-      if (MemoryAccess *MA = MSSA->getMemoryAccess(Repl)) {
-        if (MemoryUseOrDef *OldMemAcc = dyn_cast<MemoryUseOrDef>(MA)) {
+      MemoryAccess *NewMemAcc = MSSA->getMemoryAccess(Repl);
+
+      if (MoveAccess) {
+        if (MemoryUseOrDef *OldMemAcc =
+                dyn_cast_or_null<MemoryUseOrDef>(NewMemAcc)) {
           // The definition of this ld/st will not change: ld/st hoisting is
           // legal when the ld/st is not moved past its current definition.
           MemoryAccess *Def = OldMemAcc->getDefiningAccess();
-          NewMemAcc = MSSA->createMemoryAccessInBB(Repl, Def, HoistPt,
-                                                   MemorySSA::End);
+          NewMemAcc =
+              MSSA->createMemoryAccessInBB(Repl, Def, HoistPt, MemorySSA::End);
           OldMemAcc->replaceAllUsesWith(NewMemAcc);
           MSSA->removeMemoryAccess(OldMemAcc);
         }
@@ -837,8 +843,7 @@ private:
 
         for (auto *Phi : UsePhis) {
           auto In = Phi->incoming_values();
-          if (std::all_of(In.begin(), In.end(),
-                          [&](Use &U){return U == NewMemAcc;})) {
+          if (all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
             Phi->replaceAllUsesWith(NewMemAcc);
             MSSA->removeMemoryAccess(Phi);
           }

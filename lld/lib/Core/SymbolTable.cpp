@@ -271,11 +271,6 @@ bool SymbolTable::isDefined(StringRef sym) {
   return false;
 }
 
-void SymbolTable::addReplacement(const Atom *replaced,
-                                 const Atom *replacement) {
-  _replacedAtoms[replaced] = replacement;
-}
-
 const Atom *SymbolTable::replacement(const Atom *atom) {
   // Find the replacement for a given atom. Atoms in _replacedAtoms
   // may be chained, so find the last one.

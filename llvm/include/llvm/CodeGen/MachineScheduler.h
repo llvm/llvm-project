@@ -518,9 +518,7 @@ public:
 
   ArrayRef<SUnit*> elements() { return Queue; }
 
-  iterator find(SUnit *SU) {
-    return std::find(Queue.begin(), Queue.end(), SU);
-  }
+  iterator find(SUnit *SU) { return llvm::find(Queue, SU); }
 
   void push(SUnit *SU) {
     Queue.push_back(SU);

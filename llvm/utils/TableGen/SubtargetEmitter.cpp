@@ -783,8 +783,7 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
       RecVec SuperResources = PR->getValueAsListOfDefs("Resources");
       RecIter SubI = SubResources.begin(), SubE = SubResources.end();
       for( ; SubI != SubE; ++SubI) {
-        if (std::find(SuperResources.begin(), SuperResources.end(), *SubI)
-            == SuperResources.end()) {
+        if (!is_contained(SuperResources, *SubI)) {
           break;
         }
       }
@@ -873,8 +872,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       // Check this processor's itinerary class resources.
       for (Record *I : ProcModel.ItinRWDefs) {
         RecVec Matched = I->getValueAsListOfDefs("MatchedItinClasses");
-        if (std::find(Matched.begin(), Matched.end(), SC.ItinClassDef)
-            != Matched.end()) {
+        if (is_contained(Matched, SC.ItinClassDef)) {
           SchedModels.findRWs(I->getValueAsListOfDefs("OperandReadWrites"),
                               Writes, Reads);
           break;

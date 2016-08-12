@@ -587,7 +587,10 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
     }
   }
 
-  llvm_unreachable("Full-featured argument passing not supported yet!");
+  report_fatal_error("MCJIT::runFunction does not support full-featured "
+                     "argument passing. Please use "
+                     "ExecutionEngine::getFunctionAddress and cast the result "
+                     "to the desired function pointer type.");
 }
 
 void *MCJIT::getPointerToNamedFunction(StringRef Name, bool AbortOnFailure) {

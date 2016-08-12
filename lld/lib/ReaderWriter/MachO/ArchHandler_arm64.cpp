@@ -275,8 +275,8 @@ const ArchHandler::StubInfo ArchHandler_arm64::_sStubInfo = {
   // GOT pointer to dyld_stub_binder
   { Reference::KindArch::AArch64, pointer64, 0, 0 },
 
-  // arm64 code alignment 2^2
-  2,
+  // arm64 code alignment 2^1
+  1,
 
   // Stub size and code
   12,

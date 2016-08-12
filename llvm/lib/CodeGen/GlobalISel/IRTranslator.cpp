@@ -296,6 +296,10 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
     EntryBuilder.buildConstant(LLT{*CI->getType()}, Reg, CI->getZExtValue());
   else if (isa<UndefValue>(C))
     EntryBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Reg);
+  else if (isa<ConstantPointerNull>(C))
+    EntryBuilder.buildInstr(TargetOpcode::G_CONSTANT, LLT{*C.getType()})
+        .addDef(Reg)
+        .addImm(0);
   else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
     switch(CE->getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                         \
@@ -311,7 +315,9 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
 }
 
 
-void IRTranslator::finalize() {
+void IRTranslator::finalizeFunction() {
+  finishPendingPhis();
+
   // Release the memory used by the different maps we
   // needed during the translation.
   ValToVReg.clear();
@@ -362,7 +368,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  finishPendingPhis();
+  finalizeFunction();
 
   // Now that the MachineFrameInfo has been configured, no further changes to
   // the reserved registers are possible.

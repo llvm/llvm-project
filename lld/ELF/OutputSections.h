@@ -752,6 +752,9 @@ template <class ELFT> struct Out {
   static OutputSectionBase<ELFT> *PreinitArray;
   static OutputSectionBase<ELFT> *InitArray;
   static OutputSectionBase<ELFT> *FiniArray;
+
+  // This pool owns dynamically-allocated output sections.
+  static std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> Pool;
 };
 
 template <bool Is64Bits> struct SectionKey {
@@ -779,7 +782,6 @@ private:
   Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
 
   llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
-  std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
@@ -812,6 +814,9 @@ template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::PreinitArray;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::InitArray;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::FiniArray;
+
+template <class ELFT>
+std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> Out<ELFT>::Pool;
 
 } // namespace elf
 } // namespace lld

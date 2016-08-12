@@ -156,6 +156,7 @@ public:
 
 template <class Node, class ChildIterator> struct DomTreeGraphTraitsBase {
   typedef Node NodeType;
+  typedef Node *NodeRef;
   typedef ChildIterator ChildIteratorType;
   typedef df_iterator<Node *, SmallPtrSet<NodeType *, 8>> nodes_iterator;
 

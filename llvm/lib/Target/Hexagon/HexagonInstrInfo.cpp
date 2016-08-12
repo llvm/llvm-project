@@ -1233,7 +1233,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MRI.clearKillFlags(DstSubLo);
       return true;
     }
-    case Hexagon::MUX64_rr: {
+    case Hexagon::PS_pselect: {
       const MachineOperand &Op0 = MI.getOperand(0);
       const MachineOperand &Op1 = MI.getOperand(1);
       const MachineOperand &Op2 = MI.getOperand(2);
@@ -1257,7 +1257,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     }
-    case Hexagon::VSelectPseudo_V6: {
+    case Hexagon::PS_vselect:
+    case Hexagon::PS_vselect_128B: {
       const MachineOperand &Op0 = MI.getOperand(0);
       const MachineOperand &Op1 = MI.getOperand(1);
       const MachineOperand &Op2 = MI.getOperand(2);
@@ -1273,7 +1274,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     }
-    case Hexagon::VSelectDblPseudo_V6: {
+    case Hexagon::PS_wselect:
+    case Hexagon::PS_wselect_128B: {
       MachineOperand &Op0 = MI.getOperand(0);
       MachineOperand &Op1 = MI.getOperand(1);
       MachineOperand &Op2 = MI.getOperand(2);
@@ -2967,6 +2969,12 @@ bool HexagonInstrInfo::canExecuteInBundle(const MachineInstr &First,
     }
   }
   return false;
+}
+
+
+bool HexagonInstrInfo::doesNotReturn(const MachineInstr &CallMI) const {
+  unsigned Opc = CallMI.getOpcode();
+  return Opc == Hexagon::CALLv3nr || Opc == Hexagon::CALLRv3nr;
 }
 
 

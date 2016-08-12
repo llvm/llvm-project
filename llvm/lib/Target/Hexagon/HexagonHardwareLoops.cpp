@@ -962,8 +962,8 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   // Call is not allowed because the callee may use a hardware loop except for
   // the case when the call never returns.
-  if (MI->getDesc().isCall() && MI->getOpcode() != Hexagon::CALLv3nr)
-    return true;
+  if (MI->getDesc().isCall())
+    return !TII->doesNotReturn(*MI);
 
   // Check if the instruction defines a hardware loop register.
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {

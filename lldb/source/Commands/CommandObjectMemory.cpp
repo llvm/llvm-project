@@ -86,9 +86,9 @@ public:
     }
     
     Error
-    SetOptionValue (CommandInterpreter &interpreter,
-                    uint32_t option_idx,
-                    const char *option_arg) override
+    SetOptionValue (uint32_t option_idx,
+                    const char *option_arg,
+                    ExecutionContext *execution_context) override
     {
         Error error;
         const int short_option = g_option_table[option_idx].short_option;
@@ -125,7 +125,7 @@ public:
     }
     
     void
-    OptionParsingStarting (CommandInterpreter &interpreter) override
+    OptionParsingStarting(ExecutionContext *execution_context) override
     {
         m_num_per_line.Clear();
         m_output_as_binary = false;
@@ -323,7 +323,7 @@ public:
     CommandObjectMemoryRead(CommandInterpreter &interpreter)
         : CommandObjectParsed(interpreter, "memory read", "Read from the memory of the current target process.",
                               nullptr, eCommandRequiresTarget | eCommandProcessMustBePaused),
-          m_option_group(interpreter),
+          m_option_group(),
           m_format_options(eFormatBytesWithASCII, 1, 8),
           m_memory_options(),
           m_outfile_options(),
@@ -993,9 +993,9 @@ public:
     }
     
     Error
-    SetOptionValue (CommandInterpreter &interpreter,
-                    uint32_t option_idx,
-                    const char *option_arg) override
+    SetOptionValue (uint32_t option_idx,
+                    const char *option_arg,
+                    ExecutionContext *execution_context) override
     {
         Error error;
         const int short_option = g_memory_find_option_table[option_idx].short_option;
@@ -1028,7 +1028,7 @@ public:
     }
     
     void
-    OptionParsingStarting (CommandInterpreter &interpreter) override
+    OptionParsingStarting(ExecutionContext *execution_context) override
     {
         m_expr.Clear();
         m_string.Clear();
@@ -1044,7 +1044,7 @@ public:
   CommandObjectMemoryFind(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "memory find", "Find a value in the memory of the current target process.",
                             nullptr, eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-        m_option_group(interpreter),
+        m_option_group(),
         m_memory_options()
   {
     CommandArgumentEntry arg1;
@@ -1274,9 +1274,9 @@ public:
         }
       
         Error
-        SetOptionValue (CommandInterpreter &interpreter,
-                        uint32_t option_idx,
-                        const char *option_arg) override
+        SetOptionValue (uint32_t option_idx,
+                        const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = g_memory_write_option_table[option_idx].short_option;
@@ -1311,7 +1311,7 @@ public:
         }
         
         void
-        OptionParsingStarting (CommandInterpreter &interpreter) override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_infile.Clear();
             m_infile_offset = 0;
@@ -1324,7 +1324,7 @@ public:
     CommandObjectMemoryWrite(CommandInterpreter &interpreter)
         : CommandObjectParsed(interpreter, "memory write", "Write to the memory of the current target process.",
                               nullptr, eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-          m_option_group(interpreter),
+          m_option_group(),
           m_format_options(eFormatBytes, 1, UINT64_MAX),
           m_memory_options()
     {

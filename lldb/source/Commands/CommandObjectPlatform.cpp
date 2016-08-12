@@ -89,9 +89,9 @@ public:
     ~OptionPermissions() override = default;
 
     lldb_private::Error
-    SetOptionValue (CommandInterpreter &interpreter,
-                    uint32_t option_idx,
-                    const char *option_arg) override
+    SetOptionValue(uint32_t option_idx,
+                   const char *option_arg,
+                   ExecutionContext *execution_context) override
     {
         Error error;
         char short_option = (char) GetDefinitions()[option_idx].short_option;
@@ -152,7 +152,7 @@ public:
     }
     
     void
-    OptionParsingStarting (CommandInterpreter &interpreter) override
+    OptionParsingStarting(ExecutionContext *execution_context) override
     {
         m_permissions = 0;
     }
@@ -189,7 +189,7 @@ public:
                              "Create a platform if needed and select it as the current platform.",
                              "platform select <platform-name>",
                              0),
-        m_option_group (interpreter),
+        m_option_group (),
         m_platform_options (false) // Don't include the "--platform" option by passing false
     {
         m_option_group.Append (&m_platform_options, LLDB_OPT_SET_ALL, 1);
@@ -210,7 +210,7 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
         
-        CommandCompletions::PlatformPluginNames(m_interpreter,
+        CommandCompletions::PlatformPluginNames(GetCommandInterpreter(),
                                                 completion_str.c_str(),
                                                 match_start_point,
                                                 max_return_elements,
@@ -517,7 +517,7 @@ public:
                              "Set settings for the current target's platform, or for a platform by name.",
                              "platform settings",
                              0),
-        m_options (interpreter),
+        m_options(),
         m_option_working_dir (LLDB_OPT_SET_1, false, "working-dir", 'w', 0, eArgTypePath, "The working directory for the platform.")
     {
         m_options.Append (&m_option_working_dir, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
@@ -568,7 +568,7 @@ public:
                             "Make a new directory on the remote end.",
                             nullptr,
                             0),
-        m_options(interpreter)
+        m_options()
     {
     }
 
@@ -633,7 +633,7 @@ public:
                             "Open a file on the remote end.",
                             nullptr,
                             0),
-        m_options(interpreter)
+        m_options()
     {
     }
 
@@ -752,7 +752,7 @@ public:
                             "Read data from a file on the remote end.",
                             nullptr,
                             0),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -792,15 +792,16 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             char short_option = (char) m_getopt_table[option_idx].val;
@@ -827,7 +828,7 @@ protected:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_offset = 0;
             m_count = 1;
@@ -872,7 +873,7 @@ public:
                             "Write data to a file on the remote end.",
                             nullptr,
                             0),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -914,15 +915,16 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             char short_option = (char) m_getopt_table[option_idx].val;
@@ -947,7 +949,7 @@ protected:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_offset = 0;
             m_data.clear();
@@ -1220,7 +1222,7 @@ public:
                              "Launch a new process on a remote platform.",
                              "platform process launch program",
                              eCommandRequiresTarget | eCommandTryTargetAPILock),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -1332,7 +1334,7 @@ public:
                              "List processes on a remote platform by name, pid, or many other matching attributes.",
                              "platform process list",
                              0),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -1451,8 +1453,8 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions(CommandInterpreter &interpreter) :
-            Options(interpreter),
+        CommandOptions() :
+            Options(),
             match_info(),
             show_args(false),
             verbose(false)
@@ -1480,7 +1482,8 @@ protected:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1525,7 +1528,18 @@ protected:
                     break;
 
                 case 'a':
-                    match_info.GetProcessInfo().GetArchitecture().SetTriple (option_arg, m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform().get());
+                    {
+                        TargetSP target_sp = execution_context ?
+                        execution_context->GetTargetSP() : TargetSP();
+                        DebuggerSP debugger_sp = target_sp ?
+                            target_sp->GetDebugger().shared_from_this() :
+                            DebuggerSP();
+                        PlatformSP platform_sp = debugger_sp ?
+                            debugger_sp->GetPlatformList().GetSelectedPlatform() :
+                            PlatformSP();
+                        match_info.GetProcessInfo().GetArchitecture().SetTriple(
+                                            option_arg, platform_sp.get());
+                    }
                     break;
 
                 case 'n':
@@ -1570,7 +1584,7 @@ protected:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             match_info.Clear();
             show_args = false;
@@ -1727,17 +1741,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter)
+        CommandOptions() :
+        Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             char short_option = (char) m_getopt_table[option_idx].val;
@@ -1778,7 +1793,7 @@ public:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             attach_info.Clear();
         }
@@ -1797,6 +1812,7 @@ public:
                                         int opt_element_index,
                                         int match_start_point,
                                         int max_return_elements,
+                                        CommandInterpreter &interpreter,
                                         bool &word_complete,
                                         StringList &matches) override
         {
@@ -1816,7 +1832,7 @@ public:
                 const char *partial_name = nullptr;
                 partial_name = input.GetArgumentAtIndex(opt_arg_pos);
                 
-                PlatformSP platform_sp (m_interpreter.GetPlatform (true));
+                PlatformSP platform_sp(interpreter.GetPlatform(true));
                 if (platform_sp)
                 {
                     ProcessInstanceInfoList process_infos;
@@ -1856,7 +1872,7 @@ public:
                          "platform process attach",
                          "Attach to a process.",
                          "platform process attach <cmd-options>"),
-    m_options (interpreter)
+    m_options()
     {
     }
 
@@ -1948,8 +1964,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter),
+        CommandOptions() :
+        Options(),
         timeout(10)
         {
         }
@@ -1970,7 +1986,8 @@ public:
         
         Error
         SetOptionValue (uint32_t option_idx,
-                        const char *option_value) override
+                        const char *option_value,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             
@@ -1995,7 +2012,7 @@ public:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
         }
         
@@ -2008,7 +2025,7 @@ public:
     CommandObjectPlatformShell(CommandInterpreter &interpreter)
         : CommandObjectRaw(interpreter, "platform shell", "Run a shell command on the current platform.",
                            "platform shell <shell-command>", 0),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -2023,7 +2040,9 @@ public:
     bool
     DoExecute (const char *raw_command_line, CommandReturnObject &result) override
     {
-        m_options.NotifyOptionParsingStarting();
+        ExecutionContext exe_ctx =
+            GetCommandInterpreter().GetExecutionContext();
+        m_options.NotifyOptionParsingStarting(&exe_ctx);
         
         const char* expr = nullptr;
 

@@ -3659,7 +3659,7 @@ public:
                               "Sets a breakpoint on a renderscript kernel.",
                               "renderscript kernel breakpoint set <kernel_name> [-c x,y,z]",
                               eCommandRequiresProcess | eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -3674,12 +3674,13 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions(CommandInterpreter &interpreter) : Options(interpreter) {}
+        CommandOptions() : Options() {}
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue(uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -3726,7 +3727,7 @@ public:
         }
 
         void
-        OptionParsingStarting() override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             // -1 means the -c option hasn't been set
             m_coord[0] = -1;
@@ -3950,7 +3951,7 @@ public:
         : CommandObjectParsed(interpreter, "renderscript allocation dump",
                               "Displays the contents of a particular allocation", "renderscript allocation dump <ID>",
                               eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -3965,12 +3966,13 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions(CommandInterpreter &interpreter) : Options(interpreter) {}
+        CommandOptions() : Options() {}
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue(uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -3993,7 +3995,7 @@ public:
         }
 
         void
-        OptionParsingStarting() override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_outfile.Clear();
         }
@@ -4084,7 +4086,7 @@ public:
         : CommandObjectParsed(interpreter, "renderscript allocation list",
                               "List renderscript allocations and their information.", "renderscript allocation list",
                               eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -4099,12 +4101,13 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions(CommandInterpreter &interpreter) : Options(interpreter), m_id(0) {}
+        CommandOptions() : Options(), m_id(0) {}
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue(uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -4125,7 +4128,7 @@ public:
         }
 
         void
-        OptionParsingStarting() override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_id = 0;
         }

@@ -1,5 +1,5 @@
 # RUN: lld -flavor darwin -arch armv7 %s %p/Inputs/arm-shims.yaml \
-# RUN: -dylib %p/Inputs/libSystem.yaml -o %t
+# RUN: -dylib %p/Inputs/armv7/libSystem.yaml -o %t
 # RUN: llvm-readobj -s -sd %t | FileCheck %s
 #
 # Test b from arm to thumb or vice versa has shims added.s

@@ -13,12 +13,17 @@
 ; RUN: llvm-nm %t3.o | FileCheck %s
 ; CHECK: weakfunc
 
-; All of the preempted functions should have been eliminated (the plugin will
-; not link them in).
-; RUN: llvm-dis %t2.o.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
+; Most of the preempted functions should have been eliminated (the plugin will
+; set linkage of odr functions to available_externally and linkonce functions
+; are removed by globaldce). FIXME: Need to introduce combined index linkage
+; that means "drop this function" so we can avoid importing linkonce functions
+; and drop weak functions.
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
+; OPT2-NOT: @
+; OPT2: @weakfunc
 ; OPT2-NOT: @
 
-; RUN: llvm-dis %t.o.opt.bc -o - | FileCheck --check-prefix=OPT %s
+; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck --check-prefix=OPT %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

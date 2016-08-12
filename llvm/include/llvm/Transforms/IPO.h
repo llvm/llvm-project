@@ -20,6 +20,7 @@
 
 namespace llvm {
 
+struct InlineParams;
 class StringRef;
 class ModuleSummaryIndex;
 class ModulePass;
@@ -103,6 +104,7 @@ Pass *createFunctionImportPass(const ModuleSummaryIndex *Index = nullptr);
 Pass *createFunctionInliningPass();
 Pass *createFunctionInliningPass(int Threshold);
 Pass *createFunctionInliningPass(unsigned OptLevel, unsigned SizeOptLevel);
+Pass *createFunctionInliningPass(InlineParams &Params);
 
 //===----------------------------------------------------------------------===//
 /// createAlwaysInlinerPass - Return a new pass object that inlines only

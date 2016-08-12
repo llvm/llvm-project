@@ -169,7 +169,7 @@ bool llvm::isSampler(const llvm::Value &val) {
     if (llvm::findAllNVVMAnnotation(
             func, llvm::PropertyAnnotationNames[llvm::PROPERTY_ISSAMPLER],
             annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }
@@ -184,7 +184,7 @@ bool llvm::isImageReadOnly(const llvm::Value &val) {
                                     llvm::PropertyAnnotationNames[
                                         llvm::PROPERTY_ISREADONLY_IMAGE_PARAM],
                                     annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }
@@ -199,7 +199,7 @@ bool llvm::isImageWriteOnly(const llvm::Value &val) {
                                     llvm::PropertyAnnotationNames[
                                         llvm::PROPERTY_ISWRITEONLY_IMAGE_PARAM],
                                     annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }
@@ -214,7 +214,7 @@ bool llvm::isImageReadWrite(const llvm::Value &val) {
                                     llvm::PropertyAnnotationNames[
                                         llvm::PROPERTY_ISREADWRITE_IMAGE_PARAM],
                                     annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }

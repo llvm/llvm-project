@@ -21,6 +21,7 @@
 #define LLVM_ADT_SETVECTOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include <algorithm>
 #include <cassert>
@@ -143,8 +144,7 @@ public:
   /// \brief Remove an item from the set vector.
   bool remove(const value_type& X) {
     if (set_.erase(X)) {
-      typename vector_type::iterator I =
-        std::find(vector_.begin(), vector_.end(), X);
+      typename vector_type::iterator I = find(vector_, X);
       assert(I != vector_.end() && "Corrupted SetVector instances!");
       vector_.erase(I);
       return true;

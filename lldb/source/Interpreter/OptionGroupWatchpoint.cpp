@@ -68,9 +68,9 @@ OptionGroupWatchpoint::~OptionGroupWatchpoint ()
 }
 
 Error
-OptionGroupWatchpoint::SetOptionValue (CommandInterpreter &interpreter,
-                                       uint32_t option_idx, 
-                                       const char *option_arg)
+OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
+                                      const char *option_arg,
+                                      ExecutionContext *execution_context)
 {
     Error error;
     const int short_option = g_option_table[option_idx].short_option;
@@ -100,7 +100,8 @@ OptionGroupWatchpoint::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupWatchpoint::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupWatchpoint::OptionParsingStarting(ExecutionContext
+                                             *execution_context)
 {
     watch_type_specified = false;
     watch_type = eWatchInvalid;

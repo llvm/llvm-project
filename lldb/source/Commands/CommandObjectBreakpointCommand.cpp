@@ -42,7 +42,7 @@ public:
                               "  If no breakpoint is specified, adds the commands to the last created breakpoint.",
                               nullptr),
           IOHandlerDelegateMultiline("DONE", IOHandlerDelegate::Completion::LLDBCommand),
-          m_options(interpreter)
+          m_options()
     {
         SetHelpLong (
 R"(
@@ -295,8 +295,8 @@ are no syntax errors may indicate that a function was declared but never called.
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions () :
+            Options (),
             m_use_commands (false),
             m_use_script_language (false),
             m_script_language (eScriptLanguageNone),
@@ -309,7 +309,8 @@ are no syntax errors may indicate that a function was declared but never called.
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -363,7 +364,7 @@ are no syntax errors may indicate that a function was declared but never called.
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_use_commands = true;
             m_use_script_language = false;
@@ -566,7 +567,7 @@ public:
                             "delete",
                             "Delete the set of commands from a breakpoint.",
                             nullptr),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData bp_id_arg;
@@ -593,16 +594,17 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
-            m_use_dummy (false)
+        CommandOptions() :
+            Options(),
+            m_use_dummy(false)
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -622,7 +624,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_use_dummy = false;
         }
