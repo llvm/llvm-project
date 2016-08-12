@@ -5975,8 +5975,12 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
   SmallVector<Expr *, 16> ConvertedArgs;
   bool InitializationFailed = false;
 
+  // Ignore any variadic parameters. Converting them is pointless, since the
+  // user can't refer to them in the enable_if condition.
+  unsigned ArgSizeNoVarargs = std::min(Function->param_size(), Args.size());
+
   // Convert the arguments.
-  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
+  for (unsigned I = 0; I != ArgSizeNoVarargs; ++I) {
     ExprResult R;
     if (I == 0 && !MissingImplicitThis && isa<CXXMethodDecl>(Function) &&
         !cast<CXXMethodDecl>(Function)->isStatic() &&
