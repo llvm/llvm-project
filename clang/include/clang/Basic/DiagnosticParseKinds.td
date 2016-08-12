@@ -828,8 +828,6 @@ def warn_availability_and_unavailable : Warning<
   InGroup<Availability>;
 
 // @available(...)
-def err_avail_query_expected_condition : Error<
-  "expected an availability condition here">;
 def err_avail_query_expected_platform_name : Error<
   "expected a platform name here">;
 

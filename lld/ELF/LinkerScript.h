@@ -151,7 +151,7 @@ public:
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
   uintX_t getOutputSectionSize(StringRef Name);
-  uintX_t getSizeOfHeaders();
+  uintX_t getHeaderSize();
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
@@ -161,10 +161,11 @@ private:
 
   void discard(OutputSectionCommand &Cmd);
 
+  std::vector<InputSectionBase<ELFT> *>
+  createInputSectionList(OutputSectionCommand &Cmd);
+
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
-
-  void filter();
 
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);

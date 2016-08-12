@@ -267,6 +267,10 @@ void elf::ObjectFile<ELFT>::initializeSections(
       MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
       Sections[I] = MipsOptions.get();
       break;
+    case SHT_MIPS_ABIFLAGS:
+      MipsAbiFlags.reset(new MipsAbiFlagsInputSection<ELFT>(this, &Sec));
+      Sections[I] = MipsAbiFlags.get();
+      break;
     default:
       Sections[I] = createInputSection(Sec);
     }

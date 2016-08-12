@@ -4011,6 +4011,12 @@ public:
     // within a default initializer.
     if (isa<FieldDecl>(ExtendingDecl))
       return SD_Automatic;
+    // FIXME: This only works because storage class specifiers are not allowed
+    // on decomposition declarations.
+    if (isa<BindingDecl>(ExtendingDecl))
+      return ExtendingDecl->getDeclContext()->isFunctionOrMethod()
+                 ? SD_Automatic
+                 : SD_Static;
     return cast<VarDecl>(ExtendingDecl)->getStorageDuration();
   }
 

@@ -39,6 +39,7 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include <map>
 #include <set>
 
@@ -664,6 +665,750 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   return Invalid;
 }
 
+NamedDecl *
+Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
+                                   MultiTemplateParamsArg TemplateParamLists) {
+  assert(D.isDecompositionDeclarator());
+  const DecompositionDeclarator &Decomp = D.getDecompositionDeclarator();
+
+  // The syntax only allows a decomposition declarator as a simple-declaration
+  // or a for-range-declaration, but we parse it in more cases than that.
+  if (!D.mayHaveDecompositionDeclarator()) {
+    Diag(Decomp.getLSquareLoc(), diag::err_decomp_decl_context)
+      << Decomp.getSourceRange();
+    return nullptr;
+  }
+
+  if (!TemplateParamLists.empty()) {
+    // FIXME: There's no rule against this, but there are also no rules that
+    // would actually make it usable, so we reject it for now.
+    Diag(TemplateParamLists.front()->getTemplateLoc(),
+         diag::err_decomp_decl_template);
+    return nullptr;
+  }
+
+  Diag(Decomp.getLSquareLoc(), getLangOpts().CPlusPlus1z
+                                   ? diag::warn_cxx14_compat_decomp_decl
+                                   : diag::ext_decomp_decl)
+      << Decomp.getSourceRange();
+
+  // The semantic context is always just the current context.
+  DeclContext *const DC = CurContext;
+
+  // C++1z [dcl.dcl]/8:
+  //   The decl-specifier-seq shall contain only the type-specifier auto
+  //   and cv-qualifiers.
+  auto &DS = D.getDeclSpec();
+  {
+    SmallVector<StringRef, 8> BadSpecifiers;
+    SmallVector<SourceLocation, 8> BadSpecifierLocs;
+    if (auto SCS = DS.getStorageClassSpec()) {
+      BadSpecifiers.push_back(DeclSpec::getSpecifierName(SCS));
+      BadSpecifierLocs.push_back(DS.getStorageClassSpecLoc());
+    }
+    if (auto TSCS = DS.getThreadStorageClassSpec()) {
+      BadSpecifiers.push_back(DeclSpec::getSpecifierName(TSCS));
+      BadSpecifierLocs.push_back(DS.getThreadStorageClassSpecLoc());
+    }
+    if (DS.isConstexprSpecified()) {
+      BadSpecifiers.push_back("constexpr");
+      BadSpecifierLocs.push_back(DS.getConstexprSpecLoc());
+    }
+    if (DS.isInlineSpecified()) {
+      BadSpecifiers.push_back("inline");
+      BadSpecifierLocs.push_back(DS.getInlineSpecLoc());
+    }
+    if (!BadSpecifiers.empty()) {
+      auto &&Err = Diag(BadSpecifierLocs.front(), diag::err_decomp_decl_spec);
+      Err << (int)BadSpecifiers.size()
+          << llvm::join(BadSpecifiers.begin(), BadSpecifiers.end(), " ");
+      // Don't add FixItHints to remove the specifiers; we do still respect
+      // them when building the underlying variable.
+      for (auto Loc : BadSpecifierLocs)
+        Err << SourceRange(Loc, Loc);
+    }
+    // We can't recover from it being declared as a typedef.
+    if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
+      return nullptr;
+  }
+
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  QualType R = TInfo->getType();
+
+  if (DiagnoseUnexpandedParameterPack(D.getIdentifierLoc(), TInfo,
+                                      UPPC_DeclarationType))
+    D.setInvalidType();
+
+  // The syntax only allows a single ref-qualifier prior to the decomposition
+  // declarator. No other declarator chunks are permitted. Also check the type
+  // specifier here.
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
+      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+      (D.getNumTypeObjects() == 1 &&
+       D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
+    Diag(Decomp.getLSquareLoc(),
+         (D.hasGroupingParens() ||
+          (D.getNumTypeObjects() &&
+           D.getTypeObject(0).Kind == DeclaratorChunk::Paren))
+             ? diag::err_decomp_decl_parens
+             : diag::err_decomp_decl_type)
+        << R;
+
+    // In most cases, there's no actual problem with an explicitly-specified
+    // type, but a function type won't work here, and ActOnVariableDeclarator
+    // shouldn't be called for such a type.
+    if (R->isFunctionType())
+      D.setInvalidType();
+  }
+
+  // Build the BindingDecls.
+  SmallVector<BindingDecl*, 8> Bindings;
+
+  // Build the BindingDecls.
+  for (auto &B : D.getDecompositionDeclarator().bindings()) {
+    // Check for name conflicts.
+    DeclarationNameInfo NameInfo(B.Name, B.NameLoc);
+    LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
+                          ForRedeclaration);
+    LookupName(Previous, S,
+               /*CreateBuiltins*/DC->getRedeclContext()->isTranslationUnit());
+
+    // It's not permitted to shadow a template parameter name.
+    if (Previous.isSingleResult() &&
+        Previous.getFoundDecl()->isTemplateParameter()) {
+      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(),
+                                      Previous.getFoundDecl());
+      Previous.clear();
+    }
+
+    bool ConsiderLinkage = DC->isFunctionOrMethod() &&
+                           DS.getStorageClassSpec() == DeclSpec::SCS_extern;
+    FilterLookupForScope(Previous, DC, S, ConsiderLinkage,
+                         /*AllowInlineNamespace*/false);
+    if (!Previous.empty()) {
+      auto *Old = Previous.getRepresentativeDecl();
+      Diag(B.NameLoc, diag::err_redefinition) << B.Name;
+      Diag(Old->getLocation(), diag::note_previous_definition);
+    }
+
+    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name);
+    PushOnScopeChains(BD, S, true);
+    Bindings.push_back(BD);
+    ParsingInitForAutoVars.insert(BD);
+  }
+
+  // There are no prior lookup results for the variable itself, because it
+  // is unnamed.
+  DeclarationNameInfo NameInfo((IdentifierInfo *)nullptr,
+                               Decomp.getLSquareLoc());
+  LookupResult Previous(*this, NameInfo, LookupOrdinaryName, ForRedeclaration);
+
+  // Build the variable that holds the non-decomposed object.
+  bool AddToScope = true;
+  NamedDecl *New =
+      ActOnVariableDeclarator(S, D, DC, TInfo, Previous,
+                              MultiTemplateParamsArg(), AddToScope, Bindings);
+  CurContext->addHiddenDecl(New);
+
+  if (isInOpenMPDeclareTargetContext())
+    checkDeclIsAllowedInOpenMPTarget(nullptr, New);
+
+  return New;
+}
+
+static bool checkSimpleDecomposition(
+    Sema &S, ArrayRef<BindingDecl *> Bindings, ValueDecl *Src,
+    QualType DecompType, llvm::APSInt NumElems, QualType ElemType,
+    llvm::function_ref<ExprResult(SourceLocation, Expr *, unsigned)> GetInit) {
+  if ((int64_t)Bindings.size() != NumElems) {
+    S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
+        << DecompType << (unsigned)Bindings.size() << NumElems.toString(10)
+        << (NumElems < Bindings.size());
+    return true;
+  }
+
+  unsigned I = 0;
+  for (auto *B : Bindings) {
+    SourceLocation Loc = B->getLocation();
+    ExprResult E = S.BuildDeclRefExpr(Src, DecompType, VK_LValue, Loc);
+    if (E.isInvalid())
+      return true;
+    E = GetInit(Loc, E.get(), I++);
+    if (E.isInvalid())
+      return true;
+    B->setBinding(ElemType, E.get());
+  }
+
+  return false;
+}
+
+static bool checkArrayLikeDecomposition(Sema &S,
+                                        ArrayRef<BindingDecl *> Bindings,
+                                        ValueDecl *Src, QualType DecompType,
+                                        llvm::APSInt NumElems,
+                                        QualType ElemType) {
+  return checkSimpleDecomposition(
+      S, Bindings, Src, DecompType, NumElems, ElemType,
+      [&](SourceLocation Loc, Expr *Base, unsigned I) -> ExprResult {
+        ExprResult E = S.ActOnIntegerConstant(Loc, I);
+        if (E.isInvalid())
+          return ExprError();
+        return S.CreateBuiltinArraySubscriptExpr(Base, Loc, E.get(), Loc);
+      });
+}
+
+static bool checkArrayDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
+                                    ValueDecl *Src, QualType DecompType,
+                                    const ConstantArrayType *CAT) {
+  return checkArrayLikeDecomposition(S, Bindings, Src, DecompType,
+                                     llvm::APSInt(CAT->getSize()),
+                                     CAT->getElementType());
+}
+
+static bool checkVectorDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
+                                     ValueDecl *Src, QualType DecompType,
+                                     const VectorType *VT) {
+  return checkArrayLikeDecomposition(
+      S, Bindings, Src, DecompType, llvm::APSInt::get(VT->getNumElements()),
+      S.Context.getQualifiedType(VT->getElementType(),
+                                 DecompType.getQualifiers()));
+}
+
+static bool checkComplexDecomposition(Sema &S,
+                                      ArrayRef<BindingDecl *> Bindings,
+                                      ValueDecl *Src, QualType DecompType,
+                                      const ComplexType *CT) {
+  return checkSimpleDecomposition(
+      S, Bindings, Src, DecompType, llvm::APSInt::get(2),
+      S.Context.getQualifiedType(CT->getElementType(),
+                                 DecompType.getQualifiers()),
+      [&](SourceLocation Loc, Expr *Base, unsigned I) -> ExprResult {
+        return S.CreateBuiltinUnaryOp(Loc, I ? UO_Imag : UO_Real, Base);
+      });
+}
+
+static std::string printTemplateArgs(const PrintingPolicy &PrintingPolicy,
+                                     TemplateArgumentListInfo &Args) {
+  SmallString<128> SS;
+  llvm::raw_svector_ostream OS(SS);
+  bool First = true;
+  for (auto &Arg : Args.arguments()) {
+    if (!First)
+      OS << ", ";
+    Arg.getArgument().print(PrintingPolicy, OS);
+    First = false;
+  }
+  return OS.str();
+}
+
+static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,
+                                     SourceLocation Loc, StringRef Trait,
+                                     TemplateArgumentListInfo &Args,
+                                     unsigned DiagID) {
+  auto DiagnoseMissing = [&] {
+    if (DiagID)
+      S.Diag(Loc, DiagID) << printTemplateArgs(S.Context.getPrintingPolicy(),
+                                               Args);
+    return true;
+  };
+
+  // FIXME: Factor out duplication with lookupPromiseType in SemaCoroutine.
+  NamespaceDecl *Std = S.getStdNamespace();
+  if (!Std)
+    return DiagnoseMissing();
+
+  // Look up the trait itself, within namespace std. We can diagnose various
+  // problems with this lookup even if we've been asked to not diagnose a
+  // missing specialization, because this can only fail if the user has been
+  // declaring their own names in namespace std or we don't support the
+  // standard library implementation in use.
+  LookupResult Result(S, &S.PP.getIdentifierTable().get(Trait),
+                      Loc, Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(Result, Std))
+    return DiagnoseMissing();
+  if (Result.isAmbiguous())
+    return true;
+
+  ClassTemplateDecl *TraitTD = Result.getAsSingle<ClassTemplateDecl>();
+  if (!TraitTD) {
+    Result.suppressDiagnostics();
+    NamedDecl *Found = *Result.begin();
+    S.Diag(Loc, diag::err_std_type_trait_not_class_template) << Trait;
+    S.Diag(Found->getLocation(), diag::note_declared_at);
+    return true;
+  }
+
+  // Build the template-id.
+  QualType TraitTy = S.CheckTemplateIdType(TemplateName(TraitTD), Loc, Args);
+  if (TraitTy.isNull())
+    return true;
+  if (!S.isCompleteType(Loc, TraitTy)) {
+    if (DiagID)
+      S.RequireCompleteType(
+          Loc, TraitTy, DiagID,
+          printTemplateArgs(S.Context.getPrintingPolicy(), Args));
+    return true;
+  }
+
+  CXXRecordDecl *RD = TraitTy->getAsCXXRecordDecl();
+  assert(RD && "specialization of class template is not a class?");
+
+  // Look up the member of the trait type.
+  S.LookupQualifiedName(TraitMemberLookup, RD);
+  return TraitMemberLookup.isAmbiguous();
+}
+
+static TemplateArgumentLoc
+getTrivialIntegralTemplateArgument(Sema &S, SourceLocation Loc, QualType T,
+                                   uint64_t I) {
+  TemplateArgument Arg(S.Context, S.Context.MakeIntValue(I, T), T);
+  return S.getTrivialTemplateArgumentLoc(Arg, T, Loc);
+}
+
+static TemplateArgumentLoc
+getTrivialTypeTemplateArgument(Sema &S, SourceLocation Loc, QualType T) {
+  return S.getTrivialTemplateArgumentLoc(TemplateArgument(T), QualType(), Loc);
+}
+
+namespace { enum class IsTupleLike { TupleLike, NotTupleLike, Error }; }
+
+static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
+                               llvm::APSInt &Size) {
+  EnterExpressionEvaluationContext ContextRAII(S, Sema::ConstantEvaluated);
+
+  DeclarationName Value = S.PP.getIdentifierInfo("value");
+  LookupResult R(S, Value, Loc, Sema::LookupOrdinaryName);
+
+  // Form template argument list for tuple_size<T>.
+  TemplateArgumentListInfo Args(Loc, Loc);
+  Args.addArgument(getTrivialTypeTemplateArgument(S, Loc, T));
+
+  // If there's no tuple_size specialization, it's not tuple-like.
+  if (lookupStdTypeTraitMember(S, R, Loc, "tuple_size", Args, /*DiagID*/0))
+    return IsTupleLike::NotTupleLike;
+
+  // FIXME: According to the standard, we're not supposed to diagnose if any
+  // of the steps below fail (or if lookup for ::value is ambiguous or otherwise
+  // results in an error), but this is subject to a pending CWG issue / NB
+  // comment, which says we do diagnose if tuple_size<T> is complete but
+  // tuple_size<T>::value is not an ICE.
+
+  struct ICEDiagnoser : Sema::VerifyICEDiagnoser {
+    LookupResult &R;
+    TemplateArgumentListInfo &Args;
+    ICEDiagnoser(LookupResult &R, TemplateArgumentListInfo &Args)
+        : R(R), Args(Args) {}
+    void diagnoseNotICE(Sema &S, SourceLocation Loc, SourceRange SR) {
+      S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_not_constant)
+          << printTemplateArgs(S.Context.getPrintingPolicy(), Args);
+    }
+  } Diagnoser(R, Args);
+
+  if (R.empty()) {
+    Diagnoser.diagnoseNotICE(S, Loc, SourceRange());
+    return IsTupleLike::Error;
+  }
+
+  ExprResult E =
+      S.BuildDeclarationNameExpr(CXXScopeSpec(), R, /*NeedsADL*/false);
+  if (E.isInvalid())
+    return IsTupleLike::Error;
+
+  E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser, false);
+  if (E.isInvalid())
+    return IsTupleLike::Error;
+
+  return IsTupleLike::TupleLike;
+}
+
+/// \return std::tuple_element<I, T>::type.
+static QualType getTupleLikeElementType(Sema &S, SourceLocation Loc,
+                                        unsigned I, QualType T) {
+  // Form template argument list for tuple_element<I, T>.
+  TemplateArgumentListInfo Args(Loc, Loc);
+  Args.addArgument(
+      getTrivialIntegralTemplateArgument(S, Loc, S.Context.getSizeType(), I));
+  Args.addArgument(getTrivialTypeTemplateArgument(S, Loc, T));
+
+  DeclarationName TypeDN = S.PP.getIdentifierInfo("type");
+  LookupResult R(S, TypeDN, Loc, Sema::LookupOrdinaryName);
+  if (lookupStdTypeTraitMember(
+          S, R, Loc, "tuple_element", Args,
+          diag::err_decomp_decl_std_tuple_element_not_specialized))
+    return QualType();
+
+  auto *TD = R.getAsSingle<TypeDecl>();
+  if (!TD) {
+    R.suppressDiagnostics();
+    S.Diag(Loc, diag::err_decomp_decl_std_tuple_element_not_specialized)
+      << printTemplateArgs(S.Context.getPrintingPolicy(), Args);
+    if (!R.empty())
+      S.Diag(R.getRepresentativeDecl()->getLocation(), diag::note_declared_at);
+    return QualType();
+  }
+
+  return S.Context.getTypeDeclType(TD);
+}
+
+namespace {
+struct BindingDiagnosticTrap {
+  Sema &S;
+  DiagnosticErrorTrap Trap;
+  BindingDecl *BD;
+
+  BindingDiagnosticTrap(Sema &S, BindingDecl *BD)
+      : S(S), Trap(S.Diags), BD(BD) {}
+  ~BindingDiagnosticTrap() {
+    if (Trap.hasErrorOccurred())
+      S.Diag(BD->getLocation(), diag::note_in_binding_decl_init) << BD;
+  }
+};
+}
+
+static bool checkTupleLikeDecomposition(Sema &S,
+                                        ArrayRef<BindingDecl *> Bindings,
+                                        ValueDecl *Src, QualType DecompType,
+                                        llvm::APSInt TupleSize) {
+  if ((int64_t)Bindings.size() != TupleSize) {
+    S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
+        << DecompType << (unsigned)Bindings.size() << TupleSize.toString(10)
+        << (TupleSize < Bindings.size());
+    return true;
+  }
+
+  if (Bindings.empty())
+    return false;
+
+  DeclarationName GetDN = S.PP.getIdentifierInfo("get");
+
+  // [dcl.decomp]p3:
+  //   The unqualified-id get is looked up in the scope of E by class member
+  //   access lookup
+  LookupResult MemberGet(S, GetDN, Src->getLocation(), Sema::LookupMemberName);
+  bool UseMemberGet = false;
+  if (S.isCompleteType(Src->getLocation(), DecompType)) {
+    if (auto *RD = DecompType->getAsCXXRecordDecl())
+      S.LookupQualifiedName(MemberGet, RD);
+    if (MemberGet.isAmbiguous())
+      return true;
+    UseMemberGet = !MemberGet.empty();
+    S.FilterAcceptableTemplateNames(MemberGet);
+  }
+
+  unsigned I = 0;
+  for (auto *B : Bindings) {
+    BindingDiagnosticTrap Trap(S, B);
+    SourceLocation Loc = B->getLocation();
+
+    ExprResult E = S.BuildDeclRefExpr(Src, DecompType, VK_LValue, Loc);
+    if (E.isInvalid())
+      return true;
+
+    //   e is an lvalue if the type of the entity is an lvalue reference and
+    //   an xvalue otherwise
+    if (!Src->getType()->isLValueReferenceType())
+      E = ImplicitCastExpr::Create(S.Context, E.get()->getType(), CK_NoOp,
+                                   E.get(), nullptr, VK_XValue);
+
+    TemplateArgumentListInfo Args(Loc, Loc);
+    Args.addArgument(
+        getTrivialIntegralTemplateArgument(S, Loc, S.Context.getSizeType(), I));
+
+    if (UseMemberGet) {
+      //   if [lookup of member get] finds at least one declaration, the
+      //   initializer is e.get<i-1>().
+      E = S.BuildMemberReferenceExpr(E.get(), DecompType, Loc, false,
+                                     CXXScopeSpec(), SourceLocation(), nullptr,
+                                     MemberGet, &Args, nullptr);
+      if (E.isInvalid())
+        return true;
+
+      E = S.ActOnCallExpr(nullptr, E.get(), Loc, None, Loc);
+    } else {
+      //   Otherwise, the initializer is get<i-1>(e), where get is looked up
+      //   in the associated namespaces.
+      Expr *Get = UnresolvedLookupExpr::Create(
+          S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/true, &Args,
+          UnresolvedSetIterator(), UnresolvedSetIterator());
+
+      Expr *Arg = E.get();
+      E = S.ActOnCallExpr(nullptr, Get, Loc, Arg, Loc);
+    }
+    if (E.isInvalid())
+      return true;
+    Expr *Init = E.get();
+
+    //   Given the type T designated by std::tuple_element<i - 1, E>::type,
+    QualType T = getTupleLikeElementType(S, Loc, I, DecompType);
+    if (T.isNull())
+      return true;
+
+    //   each vi is a variable of type "reference to T" initialized with the
+    //   initializer, where the reference is an lvalue reference if the
+    //   initializer is an lvalue and an rvalue reference otherwise
+    QualType RefType =
+        S.BuildReferenceType(T, E.get()->isLValue(), Loc, B->getDeclName());
+    if (RefType.isNull())
+      return true;
+
+    InitializedEntity Entity = InitializedEntity::InitializeBinding(B, RefType);
+    InitializationKind Kind = InitializationKind::CreateCopy(Loc, Loc);
+    InitializationSequence Seq(S, Entity, Kind, Init);
+    E = Seq.Perform(S, Entity, Kind, Init);
+    if (E.isInvalid())
+      return true;
+
+    B->setBinding(T, E.get());
+    I++;
+  }
+
+  return false;
+}
+
+/// Find the base class to decompose in a built-in decomposition of a class type.
+/// This base class search is, unfortunately, not quite like any other that we
+/// perform anywhere else in C++.
+static const CXXRecordDecl *findDecomposableBaseClass(Sema &S,
+                                                      SourceLocation Loc,
+                                                      const CXXRecordDecl *RD,
+                                                      CXXCastPath &BasePath) {
+  auto BaseHasFields = [](const CXXBaseSpecifier *Specifier,
+                          CXXBasePath &Path) {
+    return Specifier->getType()->getAsCXXRecordDecl()->hasDirectFields();
+  };
+
+  const CXXRecordDecl *ClassWithFields = nullptr;
+  if (RD->hasDirectFields())
+    // [dcl.decomp]p4:
+    //   Otherwise, all of E's non-static data members shall be public direct
+    //   members of E ...
+    ClassWithFields = RD;
+  else {
+    //   ... or of ...
+    CXXBasePaths Paths;
+    Paths.setOrigin(const_cast<CXXRecordDecl*>(RD));
+    if (!RD->lookupInBases(BaseHasFields, Paths)) {
+      // If no classes have fields, just decompose RD itself. (This will work
+      // if and only if zero bindings were provided.)
+      return RD;
+    }
+
+    CXXBasePath *BestPath = nullptr;
+    for (auto &P : Paths) {
+      if (!BestPath)
+        BestPath = &P;
+      else if (!S.Context.hasSameType(P.back().Base->getType(),
+                                      BestPath->back().Base->getType())) {
+        //   ... the same ...
+        S.Diag(Loc, diag::err_decomp_decl_multiple_bases_with_members)
+          << false << RD << BestPath->back().Base->getType()
+          << P.back().Base->getType();
+        return nullptr;
+      } else if (P.Access < BestPath->Access) {
+        BestPath = &P;
+      }
+    }
+
+    //   ... unambiguous ...
+    QualType BaseType = BestPath->back().Base->getType();
+    if (Paths.isAmbiguous(S.Context.getCanonicalType(BaseType))) {
+      S.Diag(Loc, diag::err_decomp_decl_ambiguous_base)
+        << RD << BaseType << S.getAmbiguousPathsDisplayString(Paths);
+      return nullptr;
+    }
+
+    //   ... public base class of E.
+    if (BestPath->Access != AS_public) {
+      S.Diag(Loc, diag::err_decomp_decl_non_public_base)
+        << RD << BaseType;
+      for (auto &BS : *BestPath) {
+        if (BS.Base->getAccessSpecifier() != AS_public) {
+          S.Diag(BS.Base->getLocStart(), diag::note_access_constrained_by_path)
+            << (BS.Base->getAccessSpecifier() == AS_protected)
+            << (BS.Base->getAccessSpecifierAsWritten() == AS_none);
+          break;
+        }
+      }
+      return nullptr;
+    }
+
+    ClassWithFields = BaseType->getAsCXXRecordDecl();
+    S.BuildBasePathArray(Paths, BasePath);
+  }
+
+  // The above search did not check whether the selected class itself has base
+  // classes with fields, so check that now.
+  CXXBasePaths Paths;
+  if (ClassWithFields->lookupInBases(BaseHasFields, Paths)) {
+    S.Diag(Loc, diag::err_decomp_decl_multiple_bases_with_members)
+      << (ClassWithFields == RD) << RD << ClassWithFields
+      << Paths.front().back().Base->getType();
+    return nullptr;
+  }
+
+  return ClassWithFields;
+}
+
+static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
+                                     ValueDecl *Src, QualType DecompType,
+                                     const CXXRecordDecl *RD) {
+  CXXCastPath BasePath;
+  RD = findDecomposableBaseClass(S, Src->getLocation(), RD, BasePath);
+  if (!RD)
+    return true;
+  QualType BaseType = S.Context.getQualifiedType(S.Context.getRecordType(RD),
+                                                 DecompType.getQualifiers());
+
+  auto DiagnoseBadNumberOfBindings = [&]() -> bool {
+    unsigned NumFields = std::distance(RD->field_begin(), RD->field_end());
+    assert(Bindings.size() != NumFields);
+    S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
+        << DecompType << (unsigned)Bindings.size() << NumFields
+        << (NumFields < Bindings.size());
+    return true;
+  };
+
+  //   all of E's non-static data members shall be public [...] members,
+  //   E shall not have an anonymous union member, ...
+  unsigned I = 0;
+  for (auto *FD : RD->fields()) {
+    if (FD->isUnnamedBitfield())
+      continue;
+
+    if (FD->isAnonymousStructOrUnion()) {
+      S.Diag(Src->getLocation(), diag::err_decomp_decl_anon_union_member)
+        << DecompType << FD->getType()->isUnionType();
+      S.Diag(FD->getLocation(), diag::note_declared_at);
+      return true;
+    }
+
+    // We have a real field to bind.
+    if (I >= Bindings.size())
+      return DiagnoseBadNumberOfBindings();
+    auto *B = Bindings[I++];
+
+    SourceLocation Loc = B->getLocation();
+    if (FD->getAccess() != AS_public) {
+      S.Diag(Loc, diag::err_decomp_decl_non_public_member) << FD << DecompType;
+
+      // Determine whether the access specifier was explicit.
+      bool Implicit = true;
+      for (const auto *D : RD->decls()) {
+        if (declaresSameEntity(D, FD))
+          break;
+        if (isa<AccessSpecDecl>(D)) {
+          Implicit = false;
+          break;
+        }
+      }
+
+      S.Diag(FD->getLocation(), diag::note_access_natural)
+        << (FD->getAccess() == AS_protected) << Implicit;
+      return true;
+    }
+
+    // Initialize the binding to Src.FD.
+    ExprResult E = S.BuildDeclRefExpr(Src, DecompType, VK_LValue, Loc);
+    if (E.isInvalid())
+      return true;
+    E = S.ImpCastExprToType(E.get(), BaseType, CK_UncheckedDerivedToBase,
+                            VK_LValue, &BasePath);
+    if (E.isInvalid())
+      return true;
+    E = S.BuildFieldReferenceExpr(E.get(), /*IsArrow*/ false, Loc,
+                                  CXXScopeSpec(), FD,
+                                  DeclAccessPair::make(FD, FD->getAccess()),
+                                  DeclarationNameInfo(FD->getDeclName(), Loc));
+    if (E.isInvalid())
+      return true;
+
+    // If the type of the member is T, the referenced type is cv T, where cv is
+    // the cv-qualification of the decomposition expression.
+    //
+    // FIXME: We resolve a defect here: if the field is mutable, we do not add
+    // 'const' to the type of the field.
+    Qualifiers Q = DecompType.getQualifiers();
+    if (FD->isMutable())
+      Q.removeConst();
+    B->setBinding(S.BuildQualifiedType(FD->getType(), Loc, Q), E.get());
+  }
+
+  if (I != Bindings.size())
+    return DiagnoseBadNumberOfBindings();
+
+  return false;
+}
+
+void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
+  QualType DecompType = DD->getType();
+
+  // If the type of the decomposition is dependent, then so is the type of
+  // each binding.
+  if (DecompType->isDependentType()) {
+    for (auto *B : DD->bindings())
+      B->setType(Context.DependentTy);
+    return;
+  }
+
+  DecompType = DecompType.getNonReferenceType();
+  ArrayRef<BindingDecl*> Bindings = DD->bindings();
+
+  // C++1z [dcl.decomp]/2:
+  //   If E is an array type [...]
+  // As an extension, we also support decomposition of built-in complex and
+  // vector types.
+  if (auto *CAT = Context.getAsConstantArrayType(DecompType)) {
+    if (checkArrayDecomposition(*this, Bindings, DD, DecompType, CAT))
+      DD->setInvalidDecl();
+    return;
+  }
+  if (auto *VT = DecompType->getAs<VectorType>()) {
+    if (checkVectorDecomposition(*this, Bindings, DD, DecompType, VT))
+      DD->setInvalidDecl();
+    return;
+  }
+  if (auto *CT = DecompType->getAs<ComplexType>()) {
+    if (checkComplexDecomposition(*this, Bindings, DD, DecompType, CT))
+      DD->setInvalidDecl();
+    return;
+  }
+
+  // C++1z [dcl.decomp]/3:
+  //   if the expression std::tuple_size<E>::value is a well-formed integral
+  //   constant expression, [...]
+  llvm::APSInt TupleSize(32);
+  switch (isTupleLike(*this, DD->getLocation(), DecompType, TupleSize)) {
+  case IsTupleLike::Error:
+    DD->setInvalidDecl();
+    return;
+
+  case IsTupleLike::TupleLike:
+    if (checkTupleLikeDecomposition(*this, Bindings, DD, DecompType, TupleSize))
+      DD->setInvalidDecl();
+    return;
+
+  case IsTupleLike::NotTupleLike:
+    break;
+  }
+
+  // C++1z [dcl.dcl]/8:
+  //   [E shall be of array or non-union class type]
+  CXXRecordDecl *RD = DecompType->getAsCXXRecordDecl();
+  if (!RD || RD->isUnion()) {
+    Diag(DD->getLocation(), diag::err_decomp_decl_unbindable_type)
+        << DD << !RD << DecompType;
+    DD->setInvalidDecl();
+    return;
+  }
+
+  // C++1z [dcl.decomp]/4:
+  //   all of E's non-static data members shall be [...] direct members of
+  //   E or of the same unambiguous public base class of E, ...
+  if (checkMemberDecomposition(*this, Bindings, DD, DecompType, RD))
+    DD->setInvalidDecl();
+}
+
 /// \brief Merge the exception specifications of two variable declarations.
 ///
 /// This is called when there's a redeclaration of a VarDecl. The function
@@ -912,7 +1657,8 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       // C++11 and permitted in C++1y, so ignore them.
       continue;
 
-    case Decl::Var: {
+    case Decl::Var:
+    case Decl::Decomposition: {
       // C++1y [dcl.constexpr]p3 allows anything except:
       //   a definition of a variable of non-literal type or of static or
       //   thread storage duration or for which no initialization is performed.

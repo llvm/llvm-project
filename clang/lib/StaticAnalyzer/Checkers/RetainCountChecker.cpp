@@ -1171,8 +1171,9 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
         break;
       }
 
-      // For CoreGraphics ('CG') types.
-      if (cocoa::isRefType(RetTy, "CG", FName)) {
+      // For CoreGraphics ('CG') and CoreVideo ('CV') types.
+      if (cocoa::isRefType(RetTy, "CG", FName) ||
+          cocoa::isRefType(RetTy, "CV", FName)) {
         if (isRetain(FD, FName))
           S = getUnarySummary(FT, cfretain);
         else
@@ -3372,12 +3373,13 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
     // Handle: id NSMakeCollectable(CFTypeRef)
     canEval = II->isStr("NSMakeCollectable");
   } else if (ResultTy->isPointerType()) {
-    // Handle: (CF|CG)Retain
+    // Handle: (CF|CG|CV)Retain
     //         CFAutorelease
     //         CFMakeCollectable
     // It's okay to be a little sloppy here (CGMakeCollectable doesn't exist).
     if (cocoa::isRefType(ResultTy, "CF", FName) ||
-        cocoa::isRefType(ResultTy, "CG", FName)) {
+        cocoa::isRefType(ResultTy, "CG", FName) ||
+        cocoa::isRefType(ResultTy, "CV", FName)) {
       canEval = isRetain(FD, FName) || isAutorelease(FD, FName) ||
                 isMakeCollectable(FD, FName);
     }

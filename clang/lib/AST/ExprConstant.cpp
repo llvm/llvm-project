@@ -3427,6 +3427,18 @@ static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
       Val = APValue();
       return false;
     }
+
+    // Evaluate initializers for any structured bindings.
+    if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+      for (auto *BD : DD->bindings()) {
+        APValue &Val = Info.CurrentCall->createTemporary(BD, true);
+
+        LValue Result;
+        if (!EvaluateLValue(BD->getBinding(), Result, Info))
+          return false;
+        Result.moveInto(Val);
+      }
+    }
   }
 
   return true;
@@ -4724,6 +4736,7 @@ public:
     LValueExprEvaluatorBaseTy(Info, Result) {}
 
   bool VisitVarDecl(const Expr *E, const VarDecl *VD);
+  bool VisitBindingDecl(const Expr *E, const BindingDecl *BD);
   bool VisitUnaryPreIncDec(const UnaryOperator *UO);
 
   bool VisitDeclRefExpr(const DeclRefExpr *E);
@@ -4785,6 +4798,8 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
     return Success(FD);
   if (const VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
     return VisitVarDecl(E, VD);
+  if (const BindingDecl *BD = dyn_cast<BindingDecl>(E->getDecl()))
+    return VisitBindingDecl(E, BD);
   return Error(E);
 }
 
@@ -4810,6 +4825,53 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
     return false;
   }
   return Success(*V, E);
+}
+
+bool LValueExprEvaluator::VisitBindingDecl(const Expr *E,
+                                           const BindingDecl *BD) {
+  // If we've already evaluated the binding, just return the lvalue.
+  if (APValue *Value = Info.CurrentCall->getTemporary(BD)) {
+    if (Value->isUninit()) {
+      if (!Info.checkingPotentialConstantExpression())
+        Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
+      return false;
+    }
+    return Success(*Value, E);
+  }
+
+  // We've not evaluated the initializer of this binding. It's still OK if it
+  // is initialized by a constant expression.
+  //
+  // FIXME: We should check this at the point of declaration, since we're not
+  // supposed to be able to use it if it references something that was declared
+  // later.
+  auto *Binding = BD->getBinding();
+  if (!Binding) {
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+
+  // Evaluate in an independent context to check whether the binding was a
+  // constant expression in an absolute sense, and without mutating any of
+  // our local state.
+  Expr::EvalStatus InitStatus;
+  SmallVector<PartialDiagnosticAt, 8> Diag;
+  InitStatus.Diag = &Diag;
+  EvalInfo InitInfo(Info.Ctx, InitStatus, EvalInfo::EM_ConstantExpression);
+
+  if (!EvaluateLValue(Binding, Result, InitInfo) || InitStatus.HasSideEffects ||
+      !CheckLValueConstantExpression(
+          InitInfo, Binding->getExprLoc(),
+          Info.Ctx.getLValueReferenceType(BD->getType()), Result) ||
+      !Diag.empty()) {
+    // FIXME: Diagnose this better. Maybe produce the Diags to explain why
+    // the initializer was not constant.
+    if (!Info.checkingPotentialConstantExpression())
+      Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+
+  return true;
 }
 
 bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(

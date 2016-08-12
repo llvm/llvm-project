@@ -83,7 +83,7 @@ __start:
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 8
-# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:     EntrySize: 24
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 3

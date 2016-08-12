@@ -2002,37 +2002,33 @@ static bool isSameTemplateArg(ASTContext &Context,
 ///
 /// \param Loc The source location to use for the resulting template
 /// argument.
-static TemplateArgumentLoc
-getTrivialTemplateArgumentLoc(Sema &S,
-                              const TemplateArgument &Arg,
-                              QualType NTTPType,
-                              SourceLocation Loc) {
+TemplateArgumentLoc
+Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
+                                    QualType NTTPType, SourceLocation Loc) {
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
     llvm_unreachable("Can't get a NULL template argument here");
 
   case TemplateArgument::Type:
-    return TemplateArgumentLoc(Arg,
-                     S.Context.getTrivialTypeSourceInfo(Arg.getAsType(), Loc));
+    return TemplateArgumentLoc(
+        Arg, Context.getTrivialTypeSourceInfo(Arg.getAsType(), Loc));
 
   case TemplateArgument::Declaration: {
-    Expr *E
-      = S.BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
-          .getAs<Expr>();
+    Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
+                  .getAs<Expr>();
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
 
   case TemplateArgument::NullPtr: {
-    Expr *E
-      = S.BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
-          .getAs<Expr>();
+    Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
+                  .getAs<Expr>();
     return TemplateArgumentLoc(TemplateArgument(NTTPType, /*isNullPtr*/true),
                                E);
   }
 
   case TemplateArgument::Integral: {
-    Expr *E
-      = S.BuildExpressionFromIntegralTemplateArgument(Arg, Loc).getAs<Expr>();
+    Expr *E =
+        BuildExpressionFromIntegralTemplateArgument(Arg, Loc).getAs<Expr>();
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
 
@@ -2041,18 +2037,16 @@ getTrivialTemplateArgumentLoc(Sema &S,
       NestedNameSpecifierLocBuilder Builder;
       TemplateName Template = Arg.getAsTemplate();
       if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
-        Builder.MakeTrivial(S.Context, DTN->getQualifier(), Loc);
+        Builder.MakeTrivial(Context, DTN->getQualifier(), Loc);
       else if (QualifiedTemplateName *QTN =
                    Template.getAsQualifiedTemplateName())
-        Builder.MakeTrivial(S.Context, QTN->getQualifier(), Loc);
+        Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
       
       if (Arg.getKind() == TemplateArgument::Template)
-        return TemplateArgumentLoc(Arg, 
-                                   Builder.getWithLocInContext(S.Context),
+        return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(Context),
                                    Loc);
-      
-      
-      return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(S.Context),
+
+      return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(Context),
                                  Loc, Loc);
     }
 
@@ -2100,7 +2094,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
     // argument that we can check, almost as if the user had written
     // the template argument explicitly.
     TemplateArgumentLoc ArgLoc =
-        getTrivialTemplateArgumentLoc(S, Arg, NTTPType, Info.getLocation());
+        S.getTrivialTemplateArgumentLoc(Arg, NTTPType, Info.getLocation());
 
     // Check the template argument, converting it as necessary.
     return S.CheckTemplateArgument(

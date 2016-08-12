@@ -385,6 +385,40 @@ def err_decomp_decl_template : Error<
   "decomposition declaration template not supported">;
 def err_decomp_decl_not_alone : Error<
   "decomposition declaration must be the only declaration in its group">;
+def err_decomp_decl_requires_init : Error<
+  "decomposition declaration %0 requires an initializer">;
+def err_decomp_decl_paren_init : Error<
+  "decomposition declaration %0 cannot have a parenthesized initializer">;
+def err_decomp_decl_wrong_number_bindings : Error<
+  "type %0 decomposes into %2 elements, but %select{only |}3%1 "
+  "names were provided">;
+def err_decomp_decl_unbindable_type : Error<
+  "cannot decompose %select{union|non-class, non-array}1 type %2">;
+def err_decomp_decl_multiple_bases_with_members : Error<
+  "cannot decompose class type %1: "
+  "%select{its base classes %2 and|both it and its base class}0 %3 "
+  "have non-static data members">;
+def err_decomp_decl_ambiguous_base : Error<
+  "cannot decompose members of ambiguous base class %1 of %0:%2">;
+def err_decomp_decl_non_public_base : Error<
+  "cannot decompose members of non-public base class %1 of %0">;
+def err_decomp_decl_non_public_member : Error<
+  "cannot decompose non-public member %0 of %1">;
+def err_decomp_decl_anon_union_member : Error<
+  "cannot decompose class type %0 because it has an anonymous "
+  "%select{struct|union}1 member">;
+def err_decomp_decl_std_tuple_element_not_specialized : Error<
+  "cannot decompose this type; 'std::tuple_element<%0>::type' "
+  "does not name a type">;
+def err_decomp_decl_std_tuple_size_not_constant : Error<
+  "cannot decompose this type; 'std::tuple_size<%0>::value' "
+  "is not a valid integral constant expression">;
+def note_in_binding_decl_init : Note<
+  "in implicit initialization of binding declaration %0">;
+
+def err_std_type_trait_not_class_template : Error<
+  "unsupported standard library implementation: "
+  "'std::%0' is not a class template">;
 
 // C++ using declarations
 def err_using_requires_qualname : Error<
@@ -4352,8 +4386,6 @@ def note_availability_specified_here : Note<
   "%select{unavailable|deleted|deprecated|partial}1 here">;
 def note_implicitly_deleted : Note<
   "explicitly defaulted function was implicitly deleted here">;
-def note_inherited_deleted_here : Note<
-  "deleted constructor was inherited here">;
 def warn_not_enough_argument : Warning<
   "not enough variable arguments in %0 declaration to fit a sentinel">,
   InGroup<Sentinel>;
@@ -5525,6 +5557,9 @@ def warn_pointer_indirection_from_incompatible_type : Warning<
   "dereference of type %1 that was reinterpret_cast from type %0 has undefined "
   "behavior">,
   InGroup<UndefinedReinterpretCast>, DefaultIgnore;
+def warn_taking_address_of_packed_member : Warning<
+  "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
+  InGroup<DiagGroup<"address-of-packed-member">>;
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
