@@ -1,8 +1,5 @@
 # RUN: lld -flavor darwin -arch arm64 %s %p/Inputs/hello-world-arm64.yaml -o %t
-# RUN: llvm-nm -m -n %t | FileCheck %s
-# RUN: llvm-objdump -private-headers %t | FileCheck %s --check-prefix=CHECK-PRIVATE-HEADER
-#
-# Test that arm64 hello-world can be linked into a mach-o executable
+# RUN: obj2yaml %t | FileCheck %s
 #
 
 --- !mach-o
@@ -89,14 +86,58 @@ undefined-symbols:
     value:           0x0000000000000000
 ...
 
-# CHECK:	(undefined) external ___stdoutp (from libSystem)
-# CHECK:	(undefined) external _fprintf (from libSystem)
-# CHECK:	(undefined) external dyld_stub_binder (from libSystem)
-# CHECK:	{{[0-9a-f]+}} (__TEXT,__text) external _main
 
-# CHECK-PRIVATE-HEADER: sectname __stubs
-# CHECK-PRIVATE-HEADER-NEXT:  segname __TEXT
-# CHECK-PRIVATE-HEADER-NEXT:     addr 
-# CHECK-PRIVATE-HEADER-NEXT:     size 
-# CHECK-PRIVATE-HEADER-NEXT:   offset 
-# CHECK-PRIVATE-HEADER-NEXT:    align 2^1 (2)
+# CHECK:   BindOpcodes:     
+# CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+# CHECK:       Imm:             1
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          dyld_stub_binder
+# CHECK:     - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+# CHECK:       Imm:             1
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+# CHECK:       Imm:             2
+# CHECK:       ULEBExtraData:   
+# CHECK:         - 0x0000000000000000
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ___stdoutp
+# CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+# CHECK:       Imm:             2
+# CHECK:       ULEBExtraData:   
+# CHECK:         - 0x0000000000000010
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_DONE
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ''
+
+# CHECK:   LazyBindOpcodes: 
+# CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+# CHECK:       Imm:             2
+# CHECK:       ULEBExtraData:   
+# CHECK:         - 0x0000000000000018
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+# CHECK:       Imm:             1
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          _fprintf
+# CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_DONE
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ''
+# CHECK:     - Opcode:          BIND_OPCODE_DONE
+# CHECK:       Imm:             0
+# CHECK:       Symbol:          ''

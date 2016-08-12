@@ -58,7 +58,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       Offset += Addend;
       Addend = 0;
     }
-    uintX_t VA = SC->OutSec->getVA() + SC->getOffset(Offset);
+    uintX_t VA = (SC->OutSec ? SC->OutSec->getVA() : 0) + SC->getOffset(Offset);
     if (D.isTls())
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
     return VA;

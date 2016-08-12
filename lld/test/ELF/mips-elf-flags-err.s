@@ -15,6 +15,15 @@
 # RUN:         -mcpu=mips32r6 %s -o %t2.o
 # RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 | FileCheck -check-prefix=R1R6 %s
 
+# Check that lld does not allow to link incompatible ISAs.
+
+# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
+# RUN:         -mcpu=mips64r6 %S/Inputs/mips-dynamic.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
+# RUN:         -mcpu=octeon %s -o %t2.o
+# RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 \
+# RUN:   | FileCheck -check-prefix=R6OCTEON %s
+
 # Check that lld take in account EF_MIPS_MACH_XXX ISA flags
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
@@ -55,6 +64,7 @@ __start:
 # R1R2-NEXT: ]
 
 # R1R6: target ISA 'mips32' is incompatible with 'mips32r6': {{.*}}mips-elf-flags-err.s.tmp2.o
+# R6OCTEON: target ISA 'mips64r6' is incompatible with 'octeon': {{.*}}mips-elf-flags-err.s.tmp2.o
 
 # OCTEON:      Flags [
 # OCTEON-NEXT:   EF_MIPS_ARCH_64R2
