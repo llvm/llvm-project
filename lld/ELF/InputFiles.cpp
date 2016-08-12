@@ -343,10 +343,15 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index == 0)
     return nullptr;
-  if (Index >= Sections.size() || !Sections[Index])
+  if (Index >= Sections.size())
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   InputSectionBase<ELFT> *S = Sections[Index];
-  if (S == &InputSectionBase<ELFT>::Discarded)
+  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03
+  // could generate broken objects. STT_SECTION symbols can be
+  // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
+  // In this case it is fine for section to be null here as we
+  // do not allocate sections of these types.
+  if (!S || S == &InputSectionBase<ELFT>::Discarded)
     return S;
   return S->Repl;
 }

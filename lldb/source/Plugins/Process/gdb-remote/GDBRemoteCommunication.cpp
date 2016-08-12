@@ -1091,7 +1091,8 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
                                                  Platform *platform,
                                                  ProcessLaunchInfo &launch_info,
                                                  uint16_t *port,
-                                                 const Args& inferior_args)
+                                                 const Args* inferior_args,
+                                                 int pass_comm_fd)
 {
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
     if (log)
@@ -1171,6 +1172,16 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
         if (url)
             debugserver_args.AppendArgument(url);
 
+        if (pass_comm_fd >= 0)
+        {
+            StreamString fd_arg;
+            fd_arg.Printf("--fd=%i", pass_comm_fd);
+            debugserver_args.AppendArgument(fd_arg.GetData());
+            // Send "pass_comm_fd" down to the inferior so it can use it to
+            // communicate back with this process
+            launch_info.AppendDuplicateFileAction(pass_comm_fd, pass_comm_fd);
+        }
+
         // use native registers, not the GDB registers
         debugserver_args.AppendArgument("--native-regs");
 
@@ -1189,7 +1200,7 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
         // port is null when debug server should listen on domain socket -
         // we're not interested in port value but rather waiting for debug server
         // to become available.
-        if ((port != nullptr && *port == 0) || port == nullptr)
+        if (pass_comm_fd == -1 && ((port != nullptr && *port == 0) || port == nullptr))
         {
             if (url)
             {
@@ -1304,10 +1315,10 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
             }
         } while (has_env_var);
 
-        if (inferior_args.GetArgumentCount() > 0)
+        if (inferior_args && inferior_args->GetArgumentCount() > 0)
         {
             debugserver_args.AppendArgument ("--");
-            debugserver_args.AppendArguments (inferior_args);
+            debugserver_args.AppendArguments (*inferior_args);
         }
 
         // Copy the current environment to the gdbserver/debugserver instance
@@ -1337,8 +1348,7 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
         }
         error = Host::LaunchProcess(launch_info);
         
-        if (error.Success() &&
-            launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID)
+        if (error.Success() && (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) && pass_comm_fd == -1)
         {
             if (named_pipe_path.size() > 0)
             {

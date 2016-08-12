@@ -35,3 +35,8 @@
 
 // CHECK-FIXES: #include "a.h"
 // CHECK-FIXES-NEXT: #include "b.h"
+
+// CHECK-MESSAGES-NOT: [[@LINE+1]]:1: warning: #includes are not sorted properly
+#include "cross-file-c.h"
+// This line number should correspond to the position of the #include in cross-file-c.h
+#include "cross-file-a.h"
