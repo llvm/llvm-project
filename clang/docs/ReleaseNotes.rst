@@ -62,7 +62,13 @@ Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
 about them. The improvements since the 3.8 release include:
 
--  ...
+- -Wcomma is a new warning to show most uses of the builtin comma operator.
+- -Wfloat-conversion has two new sub-warnings to give finer grain control for
+  floating point to integer conversion warnings.
+  - -Wfloat-overflow-convserion detects when a constant floating point value
+    is converted to an integer type and will overflow the target type.
+  - -Wfloat-zero-conversion detects when a non-zero floating point value is
+    converted to a zero integer value.
 
 New Compiler Flags
 ------------------
