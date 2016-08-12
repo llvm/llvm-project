@@ -172,7 +172,7 @@ public:
   /// paths for a derived-to-base search.
   explicit CXXBasePaths(bool FindAmbiguities = true, bool RecordPaths = true,
                         bool DetectVirtual = true)
-      : FindAmbiguities(FindAmbiguities), RecordPaths(RecordPaths),
+      : Origin(), FindAmbiguities(FindAmbiguities), RecordPaths(RecordPaths),
         DetectVirtual(DetectVirtual), DetectedVirtual(nullptr),
         NumDeclsFound(0) {}
 

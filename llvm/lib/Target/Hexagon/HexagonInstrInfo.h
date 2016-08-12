@@ -360,6 +360,7 @@ public:
                             const MachineInstr &MI2) const;
   bool canExecuteInBundle(const MachineInstr &First,
                           const MachineInstr &Second) const;
+  bool doesNotReturn(const MachineInstr &CallMI) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
   bool hasNonExtEquivalent(const MachineInstr &MI) const;
   bool hasPseudoInstrPair(const MachineInstr &MI) const;

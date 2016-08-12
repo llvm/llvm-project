@@ -43,16 +43,16 @@ OptionGroupFile::~OptionGroupFile ()
 }
 
 Error
-OptionGroupFile::SetOptionValue (CommandInterpreter &interpreter,
-                                 uint32_t option_idx,
-                                 const char *option_arg)
+OptionGroupFile::SetOptionValue(uint32_t option_idx,
+                                const char *option_arg,
+                                ExecutionContext *execution_context)
 {
     Error error (m_file.SetValueFromString (option_arg));
     return error;
 }
 
 void
-OptionGroupFile::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupFile::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_file.Clear();
 }
@@ -84,16 +84,16 @@ OptionGroupFileList::~OptionGroupFileList ()
 }
 
 Error
-OptionGroupFileList::SetOptionValue (CommandInterpreter &interpreter,
-                                     uint32_t option_idx,
-                                     const char *option_arg)
+OptionGroupFileList::SetOptionValue(uint32_t option_idx,
+                                    const char *option_arg,
+                                    ExecutionContext *execution_context)
 {
     Error error (m_file_list.SetValueFromString (option_arg));
     return error;
 }
 
 void
-OptionGroupFileList::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupFileList::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_file_list.Clear();
 }

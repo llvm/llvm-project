@@ -20,6 +20,7 @@
 
 #include "archetypes.hpp"
 #include "test_convertible.hpp"
+using namespace ImplicitTypes; // Get implicitly archetypes
 
 template <class T1, class U1,
           bool CanCopy = true, bool CanConvert = CanCopy>
@@ -79,27 +80,27 @@ int main()
         test_pair_const<AllCtors, const AllCtors&>();
         test_pair_const<AllCtors, const AllCtors&&>();
 
-        test_pair_const<ExplicitAllCtors, ExplicitAllCtors>(); // copy construction
-        test_pair_const<ExplicitAllCtors, ExplicitAllCtors&, true, false>();
-        test_pair_const<ExplicitAllCtors, ExplicitAllCtors&&, true, false>();
-        test_pair_const<ExplicitAllCtors, const ExplicitAllCtors&, true, false>();
-        test_pair_const<ExplicitAllCtors, const ExplicitAllCtors&&, true, false>();
+        test_pair_const<ExplicitTypes::AllCtors, ExplicitTypes::AllCtors>(); // copy construction
+        test_pair_const<ExplicitTypes::AllCtors, ExplicitTypes::AllCtors&, true, false>();
+        test_pair_const<ExplicitTypes::AllCtors, ExplicitTypes::AllCtors&&, true, false>();
+        test_pair_const<ExplicitTypes::AllCtors, const ExplicitTypes::AllCtors&, true, false>();
+        test_pair_const<ExplicitTypes::AllCtors, const ExplicitTypes::AllCtors&&, true, false>();
 
         test_pair_const<MoveOnly, MoveOnly, false>(); // copy construction
         test_pair_const<MoveOnly, MoveOnly&, false>();
         test_pair_const<MoveOnly, MoveOnly&&, false>();
 
-        test_pair_const<ExplicitMoveOnly, ExplicitMoveOnly, false>(); // copy construction
-        test_pair_const<ExplicitMoveOnly, ExplicitMoveOnly&, false>();
-        test_pair_const<ExplicitMoveOnly, ExplicitMoveOnly&&, false>();
+        test_pair_const<ExplicitTypes::MoveOnly, ExplicitTypes::MoveOnly, false>(); // copy construction
+        test_pair_const<ExplicitTypes::MoveOnly, ExplicitTypes::MoveOnly&, false>();
+        test_pair_const<ExplicitTypes::MoveOnly, ExplicitTypes::MoveOnly&&, false>();
 
         test_pair_const<CopyOnly, CopyOnly>();
         test_pair_const<CopyOnly, CopyOnly&>();
         test_pair_const<CopyOnly, CopyOnly&&>();
 
-        test_pair_const<ExplicitCopyOnly, ExplicitCopyOnly>();
-        test_pair_const<ExplicitCopyOnly, ExplicitCopyOnly&, true, false>();
-        test_pair_const<ExplicitCopyOnly, ExplicitCopyOnly&&, true, false>();
+        test_pair_const<ExplicitTypes::CopyOnly, ExplicitTypes::CopyOnly>();
+        test_pair_const<ExplicitTypes::CopyOnly, ExplicitTypes::CopyOnly&, true, false>();
+        test_pair_const<ExplicitTypes::CopyOnly, ExplicitTypes::CopyOnly&&, true, false>();
 
         test_pair_const<NonCopyable, NonCopyable, false>();
         test_pair_const<NonCopyable, NonCopyable&, false>();
@@ -116,23 +117,23 @@ int main()
         test_pair_const<NonCopyable&&, NonCopyable&&, false>();
 
         test_pair_const<ConvertingType&, int, false>();
-        test_pair_const<ExplicitConvertingType&, int, false>();
+        test_pair_const<ExplicitTypes::ConvertingType&, int, false>();
         // Unfortunately the below conversions are allowed and create dangling
         // references.
         //test_pair_const<ConvertingType&&, int>();
         //test_pair_const<ConvertingType const&, int>();
         //test_pair_const<ConvertingType const&&, int>();
         // But these are not because the converting constructor is explicit.
-        test_pair_const<ExplicitConvertingType&&, int, false>();
-        test_pair_const<ExplicitConvertingType const&, int, false>();
-        test_pair_const<ExplicitConvertingType const&&, int, false>();
+        test_pair_const<ExplicitTypes::ConvertingType&&, int, false>();
+        test_pair_const<ExplicitTypes::ConvertingType const&, int, false>();
+        test_pair_const<ExplicitTypes::ConvertingType const&&, int, false>();
 
     }
     {
         test_pair_const<AllCtors, int, false>();
-        test_pair_const<ExplicitAllCtors, int, false>();
+        test_pair_const<ExplicitTypes::AllCtors, int, false>();
         test_pair_const<ConvertingType, int>();
-        test_pair_const<ExplicitConvertingType, int, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, int, true, false>();
 
         test_pair_const<ConvertingType, int>();
         test_pair_const<ConvertingType, ConvertingType>();
@@ -140,16 +141,16 @@ int main()
         test_pair_const<ConvertingType, ConvertingType&>();
         test_pair_const<ConvertingType, ConvertingType&&>();
 
-        test_pair_const<ExplicitConvertingType, int, true, false>();
-        test_pair_const<ExplicitConvertingType, int&, true, false>();
-        test_pair_const<ExplicitConvertingType, const int&, true, false>();
-        test_pair_const<ExplicitConvertingType, int&&, true, false>();
-        test_pair_const<ExplicitConvertingType, const int&&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, int, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, int&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, const int&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, int&&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, const int&&, true, false>();
 
-        test_pair_const<ExplicitConvertingType, ExplicitConvertingType>();
-        test_pair_const<ExplicitConvertingType, ExplicitConvertingType const&, true, false>();
-        test_pair_const<ExplicitConvertingType, ExplicitConvertingType&, true, false>();
-        test_pair_const<ExplicitConvertingType, ExplicitConvertingType&&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType>();
+        test_pair_const<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType const&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType&, true, false>();
+        test_pair_const<ExplicitTypes::ConvertingType, ExplicitTypes::ConvertingType&&, true, false>();
     }
 #if TEST_STD_VER > 11
     {

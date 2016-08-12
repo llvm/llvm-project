@@ -631,7 +631,7 @@ SUnit *ResourcePriorityQueue::pop() {
 
 void ResourcePriorityQueue::remove(SUnit *SU) {
   assert(!Queue.empty() && "Queue is empty!");
-  std::vector<SUnit *>::iterator I = std::find(Queue.begin(), Queue.end(), SU);
+  std::vector<SUnit *>::iterator I = find(Queue, SU);
   if (I != std::prev(Queue.end()))
     std::swap(*I, Queue.back());
 

@@ -4151,7 +4151,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512VL-NEXT:    vmovdqa %xmm0, (%r14)
+; AVX512VL-NEXT:    vmovdqa32 %xmm0, (%r14)
 ; AVX512VL-NEXT:    addq $16, %rsp
 ; AVX512VL-NEXT:    popq %rbx
 ; AVX512VL-NEXT:    popq %r14
@@ -5944,7 +5944,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512VL-NEXT:    vmovdqa %xmm0, (%r14)
+; AVX512VL-NEXT:    vmovdqa32 %xmm0, (%r14)
 ; AVX512VL-NEXT:    addq $32, %rsp
 ; AVX512VL-NEXT:    popq %rbx
 ; AVX512VL-NEXT:    popq %r14

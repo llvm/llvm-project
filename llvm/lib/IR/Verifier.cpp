@@ -4304,8 +4304,8 @@ void Verifier::verifyCompileUnits() {
   if (CUs)
     Listed.insert(CUs->op_begin(), CUs->op_end());
   Assert(
-      std::all_of(CUVisited.begin(), CUVisited.end(),
-                  [&Listed](const Metadata *CU) { return Listed.count(CU); }),
+      all_of(CUVisited,
+             [&Listed](const Metadata *CU) { return Listed.count(CU); }),
       "All DICompileUnits must be listed in llvm.dbg.cu");
   CUVisited.clear();
 }

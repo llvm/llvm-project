@@ -1056,6 +1056,10 @@ namespace clang {
       DECL_IMPLICIT_PARAM,
       /// \brief A ParmVarDecl record.
       DECL_PARM_VAR,
+      /// \brief A DecompositionDecl record.
+      DECL_DECOMPOSITION,
+      /// \brief A BindingDecl record.
+      DECL_BINDING,
       /// \brief A FileScopeAsmDecl record.
       DECL_FILE_SCOPE_ASM,
       /// \brief A BlockDecl record.

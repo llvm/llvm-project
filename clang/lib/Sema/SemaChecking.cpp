@@ -6199,6 +6199,13 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   const Expr *SizeOfArg = getSizeOfExprArg(LenExpr);
   llvm::FoldingSetNodeID SizeOfArgID;
 
+  // Although widely used, 'bzero' is not a standard function. Be more strict
+  // with the argument types before allowing diagnostics and only allow the
+  // form bzero(ptr, sizeof(...)).
+  QualType FirstArgTy = Call->getArg(0)->IgnoreParenImpCasts()->getType();
+  if (BId == Builtin::BIbzero && !FirstArgTy->getAs<PointerType>())
+    return;
+
   for (unsigned ArgIdx = 0; ArgIdx != LastArg; ++ArgIdx) {
     const Expr *Dest = Call->getArg(ArgIdx)->IgnoreParenImpCasts();
     SourceRange ArgRange = Call->getArg(ArgIdx)->getSourceRange();

@@ -50,15 +50,15 @@ defm V_EXP_LEGACY_F32 : VOP1Inst <vop1<0x46, 0x4b>, "v_exp_legacy_f32",
 // VOP3 Instructions
 //===----------------------------------------------------------------------===//
 
-defm V_QSAD_PK_U16_U8 : VOP3Inst <vop3<0x173>, "v_qsad_pk_u16_u8",
-  VOP_I32_I32_I32
->;
 defm V_MQSAD_U16_U8 : VOP3Inst <vop3<0x172>, "v_mqsad_u16_u8",
   VOP_I32_I32_I32
 >;
-defm V_MQSAD_U32_U8 : VOP3Inst <vop3<0x175>, "v_mqsad_u32_u8",
-  VOP_I32_I32_I32
->;
+
+defm V_QSAD_PK_U16_U8 : VOP3Inst <vop3<0x172, 0x1e5>, "v_qsad_pk_u16_u8",
+  VOP_I32_I32_I32_I32, int_amdgcn_qsad_pk_u16_u8>;
+
+defm V_MQSAD_U32_U8 : VOP3Inst <vop3<0x174, 0x1e7>, "v_mqsad_u32_u8",
+  VOP_I32_I32_I32_I32, int_amdgcn_mqsad_u32_u8>;
 
 let isCommutable = 1 in {
 defm V_MAD_U64_U32 : VOP3Inst <vop3<0x176>, "v_mad_u64_u32",

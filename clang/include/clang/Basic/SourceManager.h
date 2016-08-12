@@ -1357,7 +1357,7 @@ public:
   }
 
   /// \brief Returns whether \p Loc is expanded from a macro in a system header.
-  bool isInSystemMacro(SourceLocation loc) {
+  bool isInSystemMacro(SourceLocation loc) const {
     return loc.isMacroID() && isInSystemHeader(getSpellingLoc(loc));
   }
 

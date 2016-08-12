@@ -239,9 +239,7 @@ static void RemoveFunctionReferences(Module *M, const char* Name) {
 
 bool ReduceCrashingFunctions::TestFuncs(std::vector<Function*> &Funcs) {
   // If main isn't present, claim there is no problem.
-  if (KeepMain && std::find(Funcs.begin(), Funcs.end(),
-                            BD.getProgram()->getFunction("main")) ==
-                      Funcs.end())
+  if (KeepMain && !is_contained(Funcs, BD.getProgram()->getFunction("main")))
     return false;
 
   // Clone the program to try hacking it apart...

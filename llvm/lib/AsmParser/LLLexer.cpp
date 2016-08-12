@@ -817,7 +817,7 @@ lltok::Kind LLLexer::LexIdentifier() {
     int len = CurPtr-TokStart-3;
     uint32_t bits = len * 4;
     StringRef HexStr(TokStart + 3, len);
-    if (!std::all_of(HexStr.begin(), HexStr.end(), isxdigit)) {
+    if (!all_of(HexStr, isxdigit)) {
       // Bad token, return it as an error.
       CurPtr = TokStart+3;
       return lltok::Error;

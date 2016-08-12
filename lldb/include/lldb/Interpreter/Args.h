@@ -314,10 +314,22 @@ public:
     /// get processed start at the second argument. The first argument
     /// is assumed to be the command and will not be touched.
     ///
+    /// param[in] platform_sp
+    ///   The platform used for option validation.  This is necessary
+    ///   because an empty execution_context is not enough to get us
+    ///   to a reasonable platform.  If the platform isn't given,
+    ///   we'll try to get it from the execution context.  If we can't
+    ///   get it from the execution context, we'll skip validation.
+    ///
+    /// param[in] require_validation
+    ///   When true, it will fail option parsing if validation could
+    ///   not occur due to not having a platform.
+    ///
     /// @see class Options
     //------------------------------------------------------------------
     Error
-    ParseOptions (Options &options);
+    ParseOptions (Options &options, ExecutionContext *execution_context,
+                  lldb::PlatformSP platform_sp, bool require_validation);
     
     size_t
     FindArgumentIndexForOption (Option *long_options, int long_options_index);

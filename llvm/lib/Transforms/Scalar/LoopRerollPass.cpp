@@ -878,7 +878,7 @@ findRootsRecursive(Instruction *I, SmallInstructionSet SubsumedInsts) {
 
   for (User *V : I->users()) {
     Instruction *I = dyn_cast<Instruction>(V);
-    if (std::find(LoopIncs.begin(), LoopIncs.end(), I) != LoopIncs.end())
+    if (is_contained(LoopIncs, I))
       continue;
 
     if (!I || !isSimpleArithmeticOp(I) ||
@@ -1088,7 +1088,7 @@ bool LoopReroll::DAGRootTracker::isBaseInst(Instruction *I) {
 
 bool LoopReroll::DAGRootTracker::isRootInst(Instruction *I) {
   for (auto &DRS : RootSets) {
-    if (std::find(DRS.Roots.begin(), DRS.Roots.end(), I) != DRS.Roots.end())
+    if (is_contained(DRS.Roots, I))
       return true;
   }
   return false;

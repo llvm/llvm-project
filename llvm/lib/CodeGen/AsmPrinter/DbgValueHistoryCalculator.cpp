@@ -31,7 +31,7 @@ static unsigned isDescribedByReg(const MachineInstr &MI) {
   assert(MI.isDebugValue());
   assert(MI.getNumOperands() == 4);
   // If location of variable is described using a register (directly or
-  // indirecltly), this register is always a first operand.
+  // indirectly), this register is always a first operand.
   return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : 0;
 }
 
@@ -83,7 +83,7 @@ static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
   const auto &I = RegVars.find(RegNo);
   assert(RegNo != 0U && I != RegVars.end());
   auto &VarSet = I->second;
-  const auto &VarPos = std::find(VarSet.begin(), VarSet.end(), Var);
+  const auto &VarPos = find(VarSet, Var);
   assert(VarPos != VarSet.end());
   VarSet.erase(VarPos);
   // Don't keep empty sets in a map to keep it as small as possible.
@@ -96,7 +96,7 @@ static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
                                InlinedVariable Var) {
   assert(RegNo != 0U);
   auto &VarSet = RegVars[RegNo];
-  assert(std::find(VarSet.begin(), VarSet.end(), Var) == VarSet.end());
+  assert(!is_contained(VarSet, Var));
   VarSet.push_back(Var);
 }
 
@@ -164,7 +164,9 @@ static void collectChangingRegs(const MachineFunction *MF,
       // Look for register defs and register masks. Register masks are
       // typically on calls and they clobber everything not in the mask.
       for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && MO.isDef() && MO.getReg()) {
+        // Skip virtual registers since they are handled by the parent.
+        if (MO.isReg() && MO.isDef() && MO.getReg() &&
+            !TRI->isVirtualRegister(MO.getReg())) {
           for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
                ++AI)
             Regs.set(*AI);
@@ -192,12 +194,18 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
         // some variables.
         for (const MachineOperand &MO : MI.operands()) {
           if (MO.isReg() && MO.isDef() && MO.getReg()) {
+            // If this is a virtual register, only clobber it since it doesn't
+            // have aliases.
+            if (TRI->isVirtualRegister(MO.getReg()))
+              clobberRegisterUses(RegVars, MO.getReg(), Result, MI);
             // If this is a register def operand, it may end a debug value
             // range.
-            for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
-                 ++AI)
-              if (ChangingRegs.test(*AI))
-                clobberRegisterUses(RegVars, *AI, Result, MI);
+            else {
+              for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
+                   ++AI)
+                if (ChangingRegs.test(*AI))
+                  clobberRegisterUses(RegVars, *AI, Result, MI);
+            }
           } else if (MO.isRegMask()) {
             // If this is a register mask operand, clobber all debug values in
             // non-CSRs.
@@ -238,7 +246,8 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
     if (!MBB.empty() && &MBB != &MF->back()) {
       for (auto I = RegVars.begin(), E = RegVars.end(); I != E;) {
         auto CurElem = I++; // CurElem can be erased below.
-        if (ChangingRegs.test(CurElem->first))
+        if (TRI->isVirtualRegister(CurElem->first) ||
+            ChangingRegs.test(CurElem->first))
           clobberRegisterUses(RegVars, CurElem, Result, MBB.back());
       }
     }

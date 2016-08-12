@@ -2073,11 +2073,8 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     for (llvm::APSInt I(NumArgs.getBitWidth(), NumArgs.isUnsigned());
          I < NumArgs; ++I) {
       TemplateArgument TA(Context, I, ArgTy);
-      Expr *E = SemaRef.BuildExpressionFromIntegralTemplateArgument(
-                           TA, TemplateArgs[2].getLocation())
-                    .getAs<Expr>();
-      SyntheticTemplateArgs.addArgument(
-          TemplateArgumentLoc(TemplateArgument(E), E));
+      SyntheticTemplateArgs.addArgument(SemaRef.getTrivialTemplateArgumentLoc(
+          TA, ArgTy, TemplateArgs[2].getLocation()));
     }
     // The first template argument will be reused as the template decl that
     // our synthetic template arguments will be applied to.

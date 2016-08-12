@@ -117,7 +117,7 @@ namespace lldb_private {
 class Options
 {
 public:
-    Options (CommandInterpreter &interpreter);
+    Options ();
 
     virtual
     ~Options ();
@@ -160,7 +160,8 @@ public:
 
     void
     GenerateOptionUsage (Stream &strm,
-                         CommandObject *cmd);
+                         CommandObject *cmd,
+                         uint32_t screen_width);
 
     bool
     SupportsLongOption (const char *long_option);
@@ -180,10 +181,10 @@ public:
     // Option::OptionParsingStarting() like they did before. This was error
     // prone and subclasses shouldn't have to do it.
     void
-    NotifyOptionParsingStarting ();
+    NotifyOptionParsingStarting (ExecutionContext *execution_context);
     
     Error
-    NotifyOptionParsingFinished ();
+    NotifyOptionParsingFinished (ExecutionContext *execution_context);
 
     //------------------------------------------------------------------
     /// Set the value of an option.
@@ -196,12 +197,17 @@ public:
     ///     The argument value for the option that the user entered, or
     ///     nullptr if there is no argument for the current option.
     ///
+    /// @param[in] execution_context
+    ///     The execution context to use for evaluating the option.
+    ///     May be nullptr if the option is to be evaluated outside any
+    ///     particular context.
     ///
     /// @see Args::ParseOptions (Options&)
     /// @see man getopt_long_only
     //------------------------------------------------------------------
     virtual Error
-    SetOptionValue (uint32_t option_idx, const char *option_arg) = 0;
+    SetOptionValue (uint32_t option_idx, const char *option_arg,
+                    ExecutionContext *execution_context) = 0;
 
     //------------------------------------------------------------------
     /// Handles the generic bits of figuring out whether we are in an 
@@ -245,6 +251,7 @@ public:
                             int char_pos,
                             int match_start_point,
                             int max_return_elements,
+                            CommandInterpreter &interpreter,
                             bool &word_complete,
                             lldb_private::StringList &matches);
 
@@ -276,6 +283,9 @@ public:
     ///     See CommandObject::HandleCompletions for a description of 
     ///     how these work.
     ///
+    /// @param[in] interpreter
+    ///     The command interpreter in which we're doing completion.
+    ///
     /// @param[out] word_complete
     ///     \btrue if this is a complete option value (a space will 
     ///     be inserted after the completion.) \bfalse otherwise.
@@ -298,21 +308,15 @@ public:
                                     int opt_element_index,
                                     int match_start_point,
                                     int max_return_elements,
+                                    CommandInterpreter &interpreter,
                                     bool &word_complete,
                                     StringList &matches);
 
-    CommandInterpreter&
-    GetInterpreter()
-    {
-        return m_interpreter;
-    }
-    
 protected:
     // This is a set of options expressed as indexes into the options table for this Option.
     typedef std::set<int> OptionSet;
     typedef std::vector<OptionSet> OptionSetVector;
 
-    CommandInterpreter &m_interpreter;
     std::vector<Option> m_getopt_table;
     OptionSet m_seen_options;
     OptionSetVector m_required_options;
@@ -343,10 +347,10 @@ protected:
     // option parse. Each subclass must override this function and revert
     // all option settings to default values.
     virtual void
-    OptionParsingStarting () = 0;
+    OptionParsingStarting (ExecutionContext *execution_context) = 0;
 
     virtual Error
-    OptionParsingFinished ()
+    OptionParsingFinished (ExecutionContext *execution_context)
     {
         // If subclasses need to know when the options are done being parsed
         // they can implement this function to do extra checking
@@ -370,15 +374,15 @@ protected:
         GetDefinitions () = 0;
         
         virtual Error
-        SetOptionValue (CommandInterpreter &interpreter,
-                        uint32_t option_idx,
-                        const char *option_value) = 0;
+        SetOptionValue (uint32_t option_idx,
+                        const char *option_value,
+                        ExecutionContext *execution_context) = 0;
 
         virtual void
-        OptionParsingStarting (CommandInterpreter &interpreter) = 0;
+        OptionParsingStarting(ExecutionContext *execution_context) = 0;
         
         virtual Error
-        OptionParsingFinished (CommandInterpreter &interpreter)
+        OptionParsingFinished(ExecutionContext *execution_context)
         {
             // If subclasses need to know when the options are done being parsed
             // they can implement this function to do extra checking
@@ -390,8 +394,8 @@ protected:
     class OptionGroupOptions : public Options
     {
     public:
-        OptionGroupOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        OptionGroupOptions () :
+            Options (),
             m_option_defs (),
             m_option_infos (),
             m_did_finalize (false)
@@ -451,13 +455,14 @@ protected:
         
         Error
         SetOptionValue(uint32_t option_idx, 
-                       const char *option_arg) override;
+                       const char *option_arg,
+                       ExecutionContext *execution_context) override;
         
         void
-        OptionParsingStarting() override;
+        OptionParsingStarting(ExecutionContext *execution_context) override;
         
         Error
-        OptionParsingFinished() override;
+        OptionParsingFinished(ExecutionContext *execution_context) override;
         
         const OptionDefinition*
         GetDefinitions() override

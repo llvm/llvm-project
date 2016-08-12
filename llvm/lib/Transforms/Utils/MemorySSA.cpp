@@ -1885,7 +1885,7 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
     assert(isLiveOnEntryDef(Use) &&
            "Null def but use not point to live on entry def");
   else
-    assert(find(Def->users(), Use) != Def->user_end() &&
+    assert(is_contained(Def->users(), Use) &&
            "Did not find use in def's use list");
 #endif
 }

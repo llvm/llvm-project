@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/DataBufferHeap.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_s390x.h"
+#include "lldb/Core/DataExtractor.h"
 
 class RegisterContextCorePOSIX_s390x : public RegisterContextPOSIX_s390x
 {

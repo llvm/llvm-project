@@ -29,25 +29,43 @@
 
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/PassSupport.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
-#include "llvm/Transforms/Utils/Local.h"
-
+#include <algorithm>
+#include <cstddef>
+#include <map>
 #include <set>
+#include <string>
 
 using namespace llvm;
 using namespace wholeprogramdevirt;
@@ -167,7 +185,7 @@ void wholeprogramdevirt::setAfterReturnValues(
 
 VirtualCallTarget::VirtualCallTarget(Function *Fn, const TypeMemberInfo *TM)
     : Fn(Fn), TM(TM),
-      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()) {}
+      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()), WasDevirt(false) {}
 
 namespace {
 
@@ -179,7 +197,7 @@ struct VTableSlot {
   uint64_t ByteOffset;
 };
 
-}
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -202,7 +220,7 @@ template <> struct DenseMapInfo<VTableSlot> {
   }
 };
 
-}
+} // end namespace llvm
 
 namespace {
 
@@ -217,15 +235,18 @@ struct VirtualCallSite {
   // of that field for details.
   unsigned *NumUnsafeUses;
 
-  void emitRemark() {
+  void emitRemark(const Twine &OptName, const Twine &TargetName) {
     Function *F = CS.getCaller();
-    emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F,
-                           CS.getInstruction()->getDebugLoc(),
-                           "devirtualized call");
+    emitOptimizationRemark(
+        F->getContext(), DEBUG_TYPE, *F,
+        CS.getInstruction()->getDebugLoc(),
+        OptName + ": devirtualized a call to " + TargetName);
   }
 
-  void replaceAndErase(Value *New) {
-    emitRemark();
+  void replaceAndErase(const Twine &OptName, const Twine &TargetName,
+                       bool RemarksEnabled, Value *New) {
+    if (RemarksEnabled)
+      emitRemark(OptName, TargetName);
     CS->replaceAllUsesWith(New);
     if (auto II = dyn_cast<InvokeInst>(CS.getInstruction())) {
       BranchInst::Create(II->getNormalDest(), CS.getInstruction());
@@ -244,6 +265,8 @@ struct DevirtModule {
   PointerType *Int8PtrTy;
   IntegerType *Int32Ty;
 
+  bool RemarksEnabled;
+
   MapVector<VTableSlot, std::vector<VirtualCallSite>> CallSlots;
 
   // This map keeps track of the number of "unsafe" uses of a loaded function
@@ -259,7 +282,10 @@ struct DevirtModule {
   DevirtModule(Module &M)
       : M(M), Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
-        Int32Ty(Type::getInt32Ty(M.getContext())) {}
+        Int32Ty(Type::getInt32Ty(M.getContext())),
+        RemarksEnabled(areRemarksEnabled()) {}
+
+  bool areRemarksEnabled();
 
   void scanTypeTestUsers(Function *TypeTestFunc, Function *AssumeFunc);
   void scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc);
@@ -271,16 +297,16 @@ struct DevirtModule {
   tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
                             const std::set<TypeMemberInfo> &TypeMemberInfos,
                             uint64_t ByteOffset);
-  bool trySingleImplDevirt(ArrayRef<VirtualCallTarget> TargetsForSlot,
+  bool trySingleImplDevirt(MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                            MutableArrayRef<VirtualCallSite> CallSites);
   bool tryEvaluateFunctionsWithArgs(
       MutableArrayRef<VirtualCallTarget> TargetsForSlot,
       ArrayRef<ConstantInt *> Args);
   bool tryUniformRetValOpt(IntegerType *RetType,
-                           ArrayRef<VirtualCallTarget> TargetsForSlot,
+                           MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                            MutableArrayRef<VirtualCallSite> CallSites);
   bool tryUniqueRetValOpt(unsigned BitWidth,
-                          ArrayRef<VirtualCallTarget> TargetsForSlot,
+                          MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                           MutableArrayRef<VirtualCallSite> CallSites);
   bool tryVirtualConstProp(MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                            ArrayRef<VirtualCallSite> CallSites);
@@ -292,10 +318,12 @@ struct DevirtModule {
 
 struct WholeProgramDevirt : public ModulePass {
   static char ID;
+
   WholeProgramDevirt() : ModulePass(ID) {
     initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
   }
-  bool runOnModule(Module &M) {
+
+  bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
 
@@ -303,7 +331,7 @@ struct WholeProgramDevirt : public ModulePass {
   }
 };
 
-} // anonymous namespace
+} // end anonymous namespace
 
 INITIALIZE_PASS(WholeProgramDevirt, "wholeprogramdevirt",
                 "Whole program devirtualization", false, false)
@@ -393,7 +421,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
 }
 
 bool DevirtModule::trySingleImplDevirt(
-    ArrayRef<VirtualCallTarget> TargetsForSlot,
+    MutableArrayRef<VirtualCallTarget> TargetsForSlot,
     MutableArrayRef<VirtualCallSite> CallSites) {
   // See if the program contains a single implementation of this virtual
   // function.
@@ -402,9 +430,12 @@ bool DevirtModule::trySingleImplDevirt(
     if (TheFn != Target.Fn)
       return false;
 
+  if (RemarksEnabled)
+    TargetsForSlot[0].WasDevirt = true;
   // If so, update each call site to call that implementation directly.
   for (auto &&VCallSite : CallSites) {
-    VCallSite.emitRemark();
+    if (RemarksEnabled)
+      VCallSite.emitRemark("single-impl", TheFn->getName());
     VCallSite.CS.setCalledFunction(ConstantExpr::getBitCast(
         TheFn, VCallSite.CS.getCalledValue()->getType()));
     // This use is no longer unsafe.
@@ -442,7 +473,7 @@ bool DevirtModule::tryEvaluateFunctionsWithArgs(
 }
 
 bool DevirtModule::tryUniformRetValOpt(
-    IntegerType *RetType, ArrayRef<VirtualCallTarget> TargetsForSlot,
+    IntegerType *RetType, MutableArrayRef<VirtualCallTarget> TargetsForSlot,
     MutableArrayRef<VirtualCallSite> CallSites) {
   // Uniform return value optimization. If all functions return the same
   // constant, replace all calls with that constant.
@@ -453,16 +484,20 @@ bool DevirtModule::tryUniformRetValOpt(
 
   auto TheRetValConst = ConstantInt::get(RetType, TheRetVal);
   for (auto Call : CallSites)
-    Call.replaceAndErase(TheRetValConst);
+    Call.replaceAndErase("uniform-ret-val", TargetsForSlot[0].Fn->getName(),
+                         RemarksEnabled, TheRetValConst);
+  if (RemarksEnabled)
+    for (auto &&Target : TargetsForSlot)
+      Target.WasDevirt = true;
   return true;
 }
 
 bool DevirtModule::tryUniqueRetValOpt(
-    unsigned BitWidth, ArrayRef<VirtualCallTarget> TargetsForSlot,
+    unsigned BitWidth, MutableArrayRef<VirtualCallTarget> TargetsForSlot,
     MutableArrayRef<VirtualCallSite> CallSites) {
   // IsOne controls whether we look for a 0 or a 1.
   auto tryUniqueRetValOptFor = [&](bool IsOne) {
-    const TypeMemberInfo *UniqueMember = 0;
+    const TypeMemberInfo *UniqueMember = nullptr;
     for (const VirtualCallTarget &Target : TargetsForSlot) {
       if (Target.RetVal == (IsOne ? 1 : 0)) {
         if (UniqueMember)
@@ -482,8 +517,14 @@ bool DevirtModule::tryUniqueRetValOpt(
       OneAddr = B.CreateConstGEP1_64(OneAddr, UniqueMember->Offset);
       Value *Cmp = B.CreateICmp(IsOne ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
                                 Call.VTable, OneAddr);
-      Call.replaceAndErase(Cmp);
+      Call.replaceAndErase("unique-ret-val", TargetsForSlot[0].Fn->getName(),
+                           RemarksEnabled, Cmp);
     }
+    // Update devirtualization statistics for targets.
+    if (RemarksEnabled)
+      for (auto &&Target : TargetsForSlot)
+        Target.WasDevirt = true;
+
     return true;
   };
 
@@ -591,6 +632,10 @@ bool DevirtModule::tryVirtualConstProp(
       setAfterReturnValues(TargetsForSlot, AllocAfter, BitWidth, OffsetByte,
                            OffsetBit);
 
+    if (RemarksEnabled)
+      for (auto &&Target : TargetsForSlot)
+        Target.WasDevirt = true;
+
     // Rewrite each call to a load from OffsetByte/OffsetBit.
     for (auto Call : CSByConstantArg.second) {
       IRBuilder<> B(Call.CS.getInstruction());
@@ -600,25 +645,19 @@ bool DevirtModule::tryVirtualConstProp(
         Value *Bit = ConstantInt::get(Int8Ty, 1ULL << OffsetBit);
         Value *BitsAndBit = B.CreateAnd(Bits, Bit);
         auto IsBitSet = B.CreateICmpNE(BitsAndBit, ConstantInt::get(Int8Ty, 0));
-        Call.replaceAndErase(IsBitSet);
+        Call.replaceAndErase("virtual-const-prop-1-bit",
+                             TargetsForSlot[0].Fn->getName(),
+                             RemarksEnabled, IsBitSet);
       } else {
         Value *ValAddr = B.CreateBitCast(Addr, RetType->getPointerTo());
         Value *Val = B.CreateLoad(RetType, ValAddr);
-        Call.replaceAndErase(Val);
+        Call.replaceAndErase("virtual-const-prop",
+                             TargetsForSlot[0].Fn->getName(),
+                             RemarksEnabled, Val);
       }
     }
   }
   return true;
-}
-
-static void emitTargetsRemarks(const std::vector<VirtualCallTarget> &TargetsForSlot) {
-  for (const VirtualCallTarget &Target : TargetsForSlot) {
-    Function *F = Target.Fn;
-    DISubprogram *SP = F->getSubprogram();
-    DebugLoc DL = SP ? DebugLoc::get(SP->getScopeLine(), 0, SP) : DebugLoc();
-    emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, DL,
-                           std::string("devirtualized ") + F->getName().str());
-  }
 }
 
 void DevirtModule::rebuildGlobal(VTableBits &B) {
@@ -664,6 +703,15 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
   B.GV->replaceAllUsesWith(Alias);
   B.GV->eraseFromParent();
+}
+
+bool DevirtModule::areRemarksEnabled() {
+  const auto &FL = M.getFunctionList();
+  if (FL.empty())
+    return false;
+  const Function &Fn = FL.front();
+  auto DI = DiagnosticInfoOptimizationRemark(DEBUG_TYPE, Fn, DebugLoc(), "");
+  return DI.isEnabled();
 }
 
 void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc,
@@ -817,6 +865,7 @@ bool DevirtModule::run() {
 
   // For each (type, offset) pair:
   bool DidVirtualConstProp = false;
+  std::map<std::string, Function*> DevirtTargets;
   for (auto &S : CallSlots) {
     // Search each of the members of the type identifier for the virtual
     // function implementation at offset S.first.ByteOffset, and add to
@@ -826,14 +875,25 @@ bool DevirtModule::run() {
                                    S.first.ByteOffset))
       continue;
 
-    if (trySingleImplDevirt(TargetsForSlot, S.second)) {
-      emitTargetsRemarks(TargetsForSlot);
-      continue;
-    }
+    if (!trySingleImplDevirt(TargetsForSlot, S.second) &&
+        tryVirtualConstProp(TargetsForSlot, S.second))
+        DidVirtualConstProp = true;
 
-    if (tryVirtualConstProp(TargetsForSlot, S.second)) {
-      emitTargetsRemarks(TargetsForSlot);
-      DidVirtualConstProp = true;
+    // Collect functions devirtualized at least for one call site for stats.
+    if (RemarksEnabled)
+      for (const auto &T : TargetsForSlot)
+        if (T.WasDevirt)
+          DevirtTargets[T.Fn->getName()] = T.Fn;
+  }
+
+  if (RemarksEnabled) {
+    // Generate remarks for each devirtualized function.
+    for (const auto &DT : DevirtTargets) {
+      Function *F = DT.second;
+      DISubprogram *SP = F->getSubprogram();
+      DebugLoc DL = SP ? DebugLoc::get(SP->getScopeLine(), 0, SP) : DebugLoc();
+      emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, DL,
+                             Twine("devirtualized ") + F->getName());
     }
   }
 

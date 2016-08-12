@@ -1147,6 +1147,12 @@ public:
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }
 
+  /// \brief Determine whether this class has direct non-static data members.
+  bool hasDirectFields() const {
+    auto &D = data();
+    return D.HasPublicFields || D.HasProtectedFields || D.HasPrivateFields;
+  }
+
   /// Whether this class is polymorphic (C++ [class.virtual]),
   /// which means that the class contains or inherits a virtual function.
   bool isPolymorphic() const { return data().Polymorphic; }
@@ -3408,6 +3414,8 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::Binding; }
+
+  friend class ASTDeclReader;
 };
 
 /// A decomposition declaration. For instance, given:
@@ -3451,10 +3459,13 @@ public:
     return llvm::makeArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
   }
 
+  void printName(raw_ostream &os) const override;
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }
 
   friend TrailingObjects;
+  friend class ASTDeclReader;
 };
 
 /// An instance of this class represents the declaration of a property

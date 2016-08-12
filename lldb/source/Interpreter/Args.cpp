@@ -550,7 +550,8 @@ Args::SetArguments (const char **argv)
 
 
 Error
-Args::ParseOptions (Options &options)
+Args::ParseOptions (Options &options, ExecutionContext *execution_context,
+                    PlatformSP platform_sp, bool require_validation)
 {
     StreamString sstr;
     Error error;
@@ -622,17 +623,47 @@ Args::ParseOptions (Options &options)
         if (long_options_index >= 0 && long_options[long_options_index].definition)
         {
             const OptionDefinition *def = long_options[long_options_index].definition;
-            CommandInterpreter &interpreter = options.GetInterpreter();
+
+            if (!platform_sp)
+            {
+                // User did not pass in an explicit platform.  Try to grab
+                // from the execution context.
+                TargetSP target_sp = execution_context ?
+                    execution_context->GetTargetSP() : TargetSP();
+                platform_sp = target_sp ?
+                    target_sp->GetPlatform() : PlatformSP();
+            }
             OptionValidator *validator = def->validator;
-            if (validator && !validator->IsValid(*interpreter.GetPlatform(true), interpreter.GetExecutionContext()))
+
+            if (!platform_sp && require_validation)
             {
-                error.SetErrorStringWithFormat("Option \"%s\" invalid.  %s", def->long_option, def->validator->LongConditionString());
+                // Caller requires validation but we cannot validate as we
+                // don't have the mandatory platform against which to
+                // validate.
+                error.SetErrorString("cannot validate options: "
+                                     "no platform available");
+                return error;
             }
-            else
+
+            bool validation_failed = false;
+            if (platform_sp)
             {
+                // Ensure we have an execution context, empty or not.
+                ExecutionContext dummy_context;
+                ExecutionContext *exe_ctx_p =
+                    execution_context ? execution_context : &dummy_context;
+                if (validator && !validator->IsValid(*platform_sp, *exe_ctx_p))
+                {
+                    validation_failed = true;
+                    error.SetErrorStringWithFormat("Option \"%s\" invalid.  %s", def->long_option, def->validator->LongConditionString());
+                }
+            }
+
+            // As long as validation didn't fail, we set the option value.
+            if (!validation_failed)
                 error = options.SetOptionValue(long_options_index,
-                                               (def->option_has_arg == OptionParser::eNoArgument) ? nullptr : OptionParser::GetOptionArgument());
-            }
+                                                       (def->option_has_arg == OptionParser::eNoArgument) ? nullptr : OptionParser::GetOptionArgument(),
+                                                       execution_context);
         }
         else
         {

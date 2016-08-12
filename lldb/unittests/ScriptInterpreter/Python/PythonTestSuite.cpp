@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 
 #include "lldb/Host/HostInfo.h"
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 
 #include "PythonTestSuite.h"

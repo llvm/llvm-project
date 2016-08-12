@@ -108,24 +108,24 @@ bool EEVT::TypeSet::FillWithPossibleTypes(TreePattern &TP,
 /// hasIntegerTypes - Return true if this TypeSet contains iAny or an
 /// integer value type.
 bool EEVT::TypeSet::hasIntegerTypes() const {
-  return std::any_of(TypeVec.begin(), TypeVec.end(), isInteger);
+  return any_of(TypeVec, isInteger);
 }
 
 /// hasFloatingPointTypes - Return true if this TypeSet contains an fAny or
 /// a floating point value type.
 bool EEVT::TypeSet::hasFloatingPointTypes() const {
-  return std::any_of(TypeVec.begin(), TypeVec.end(), isFloatingPoint);
+  return any_of(TypeVec, isFloatingPoint);
 }
 
 /// hasScalarTypes - Return true if this TypeSet contains a scalar value type.
 bool EEVT::TypeSet::hasScalarTypes() const {
-  return std::any_of(TypeVec.begin(), TypeVec.end(), isScalar);
+  return any_of(TypeVec, isScalar);
 }
 
 /// hasVectorTypes - Return true if this TypeSet contains a vAny or a vector
 /// value type.
 bool EEVT::TypeSet::hasVectorTypes() const {
-  return std::any_of(TypeVec.begin(), TypeVec.end(), isVector);
+  return any_of(TypeVec, isVector);
 }
 
 
@@ -3602,10 +3602,9 @@ static void CombineChildVariants(TreePatternNode *Orig,
     //   (and GPRC:$a, GPRC:$b) -> (and GPRC:$b, GPRC:$a)
     // which are the same pattern.  Ignore the dups.
     if (R->canPatternMatch(ErrString, CDP) &&
-        std::none_of(OutVariants.begin(), OutVariants.end(),
-                     [&](TreePatternNode *Variant) {
-                       return R->isIsomorphicTo(Variant, DepVars);
-                     }))
+        none_of(OutVariants, [&](TreePatternNode *Variant) {
+          return R->isIsomorphicTo(Variant, DepVars);
+        }))
       OutVariants.push_back(R.release());
 
     // Increment indices to the next permutation by incrementing the

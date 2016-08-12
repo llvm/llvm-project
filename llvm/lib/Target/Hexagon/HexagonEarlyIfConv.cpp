@@ -52,7 +52,7 @@
 //         %vreg41<def> = S2_tstbit_i %vreg40<kill>, 0
 // spec->  %vreg11<def> = A2_addp %vreg6, %vreg10
 // pred->  S2_pstorerdf_io %vreg41, %vreg32, 16, %vreg11
-//         %vreg46<def> = MUX64_rr %vreg41, %vreg6, %vreg11
+//         %vreg46<def> = PS_pselect %vreg41, %vreg6, %vreg11
 //         %vreg13<def> = A2_addp %vreg7, %vreg46
 //         %vreg42<def> = C2_cmpeqi %vreg9, 10
 //         J2_jumpf %vreg42<kill>, <BB#3>, %PC<imp-def,dead>
@@ -761,15 +761,15 @@ void HexagonEarlyIfConversion::updatePhiNodes(MachineBasicBlock *WhereB,
     if (RC == &IntRegsRegClass)
       Opc = C2_mux;
     else if (RC == &DoubleRegsRegClass)
-      Opc = MUX64_rr;
+      Opc = PS_pselect;
     else if (RC == &VectorRegsRegClass)
-      Opc = VSelectPseudo_V6;
+      Opc = PS_vselect;
     else if (RC == &VecDblRegsRegClass)
-      Opc = VSelectDblPseudo_V6;
+      Opc = PS_wselect;
     else if (RC == &VectorRegs128BRegClass)
-      Opc = VSelectPseudo_V6_128B;
+      Opc = PS_vselect_128B;
     else if (RC == &VecDblRegs128BRegClass)
-      Opc = VSelectDblPseudo_V6_128B;
+      Opc = PS_wselect_128B;
     else
       llvm_unreachable("unexpected register type");
     const MCInstrDesc &D = HII->get(Opc);

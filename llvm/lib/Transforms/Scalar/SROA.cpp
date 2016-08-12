@@ -432,19 +432,18 @@ class AllocaSlices::partition_iterator
         // cannot change the max split slice end because we just checked that
         // the prior partition ended prior to that max.
         P.SplitTails.erase(
-            std::remove_if(
-                P.SplitTails.begin(), P.SplitTails.end(),
-                [&](Slice *S) { return S->endOffset() <= P.EndOffset; }),
+            remove_if(P.SplitTails,
+                      [&](Slice *S) { return S->endOffset() <= P.EndOffset; }),
             P.SplitTails.end());
-        assert(std::any_of(P.SplitTails.begin(), P.SplitTails.end(),
-                           [&](Slice *S) {
-                             return S->endOffset() == MaxSplitSliceEndOffset;
-                           }) &&
+        assert(any_of(P.SplitTails,
+                      [&](Slice *S) {
+                        return S->endOffset() == MaxSplitSliceEndOffset;
+                      }) &&
                "Could not find the current max split slice offset!");
-        assert(std::all_of(P.SplitTails.begin(), P.SplitTails.end(),
-                           [&](Slice *S) {
-                             return S->endOffset() <= MaxSplitSliceEndOffset;
-                           }) &&
+        assert(all_of(P.SplitTails,
+                      [&](Slice *S) {
+                        return S->endOffset() <= MaxSplitSliceEndOffset;
+                      }) &&
                "Max split slice end offset is not actually the max!");
       }
     }

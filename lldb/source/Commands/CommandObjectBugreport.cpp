@@ -36,7 +36,7 @@ public:
                             "bugreport unwind",
                             "Create a bugreport for a bug in the stack unwinding code.",
                             nullptr),
-        m_option_group(interpreter),
+        m_option_group(),
         m_outfile_options()
     {
         m_option_group.Append (&m_outfile_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3);

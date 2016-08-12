@@ -1339,7 +1339,7 @@ void ScheduleDAGRRList::releaseInterferences(unsigned Reg) {
     LRegsMapT::iterator LRegsPos = LRegsMap.find(SU);
     if (Reg) {
       SmallVectorImpl<unsigned> &LRegs = LRegsPos->second;
-      if (std::find(LRegs.begin(), LRegs.end(), Reg) == LRegs.end())
+      if (!is_contained(LRegs, Reg))
         continue;
     }
     SU->isPending = false;
@@ -1704,8 +1704,7 @@ public:
   void remove(SUnit *SU) override {
     assert(!Queue.empty() && "Queue is empty!");
     assert(SU->NodeQueueId != 0 && "Not in queue!");
-    std::vector<SUnit *>::iterator I = std::find(Queue.begin(), Queue.end(),
-                                                 SU);
+    std::vector<SUnit *>::iterator I = find(Queue, SU);
     if (I != std::prev(Queue.end()))
       std::swap(*I, Queue.back());
     Queue.pop_back();

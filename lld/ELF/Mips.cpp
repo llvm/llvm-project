@@ -174,8 +174,57 @@ static bool isArchMatched(uint32_t New, uint32_t Res) {
   return false;
 }
 
+static StringRef getMachName(uint32_t Flags) {
+  switch (Flags & EF_MIPS_MACH) {
+  case EF_MIPS_MACH_NONE:
+    return "";
+  case EF_MIPS_MACH_3900:
+    return "r3900";
+  case EF_MIPS_MACH_4010:
+    return "r4010";
+  case EF_MIPS_MACH_4100:
+    return "r4100";
+  case EF_MIPS_MACH_4650:
+    return "r4650";
+  case EF_MIPS_MACH_4120:
+    return "r4120";
+  case EF_MIPS_MACH_4111:
+    return "r4111";
+  case EF_MIPS_MACH_5400:
+    return "vr5400";
+  case EF_MIPS_MACH_5900:
+    return "vr5900";
+  case EF_MIPS_MACH_5500:
+    return "vr5500";
+  case EF_MIPS_MACH_9000:
+    return "rm9000";
+  case EF_MIPS_MACH_LS2E:
+    return "loongson2e";
+  case EF_MIPS_MACH_LS2F:
+    return "loongson2f";
+  case EF_MIPS_MACH_LS3A:
+    return "loongson3a";
+  case EF_MIPS_MACH_OCTEON:
+    return "octeon";
+  case EF_MIPS_MACH_OCTEON2:
+    return "octeon2";
+  case EF_MIPS_MACH_OCTEON3:
+    return "octeon3";
+  case EF_MIPS_MACH_SB1:
+    return "sb1";
+  case EF_MIPS_MACH_XLR:
+    return "xlr";
+  default:
+    return "unknown machine";
+  }
+}
+
 static StringRef getArchName(uint32_t Flags) {
-  switch (Flags) {
+  StringRef S = getMachName(Flags);
+  if (!S.empty())
+    return S;
+
+  switch (Flags & EF_MIPS_ARCH) {
   case EF_MIPS_ARCH_1:
     return "mips1";
   case EF_MIPS_ARCH_2:
@@ -199,7 +248,7 @@ static StringRef getArchName(uint32_t Flags) {
   case EF_MIPS_ARCH_64R6:
     return "mips64r6";
   default:
-    return "unknown";
+    return "unknown arch";
   }
 }
 

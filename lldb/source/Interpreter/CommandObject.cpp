@@ -159,18 +159,23 @@ CommandObject::ParseOptions
     if (options != nullptr)
     {
         Error error;
-        options->NotifyOptionParsingStarting();
+
+        auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
+        options->NotifyOptionParsingStarting(&exe_ctx);
 
         // ParseOptions calls getopt_long_only, which always skips the zero'th item in the array and starts at position 1,
         // so we need to push a dummy value into position zero.
         args.Unshift("dummy_string");
-        error = args.ParseOptions (*options);
+        const bool require_validation = true;
+        error = args.ParseOptions(*options, &exe_ctx,
+                                  GetCommandInterpreter().GetPlatform(true),
+                                  require_validation);
 
         // The "dummy_string" will have already been removed by ParseOptions,
         // so no need to remove it.
 
         if (error.Success())
-            error = options->NotifyOptionParsingFinished();
+            error = options->NotifyOptionParsingFinished(&exe_ctx);
 
         if (error.Success())
         {
@@ -188,7 +193,10 @@ CommandObject::ParseOptions
             else
             {
                 // No error string, output the usage information into result
-                options->GenerateOptionUsage (result.GetErrorStream(), this);
+                options->GenerateOptionUsage(result.GetErrorStream(), this,
+                                             GetCommandInterpreter()
+                                                .GetDebugger()
+                                                .GetTerminalWidth());
             }
         }
         result.SetStatus (eReturnStatusFailed);
@@ -393,6 +401,7 @@ CommandObject::HandleCompletion
                                                                       cursor_char_position,
                                                                       match_start_point,
                                                                       max_return_elements,
+                                                                      GetCommandInterpreter(),
                                                                       word_complete,
                                                                       matches);
             if (handled_by_options)
@@ -438,7 +447,9 @@ CommandObject::HelpTextContainsWord (const char *search_word,
         && GetOptions() != nullptr)
     {
         StreamString usage_help;
-        GetOptions()->GenerateOptionUsage (usage_help, this);
+        GetOptions()->GenerateOptionUsage(usage_help, this,
+                                          GetCommandInterpreter()
+                                            .GetDebugger().GetTerminalWidth());
         if (usage_help.GetSize() > 0)
         {
             const char *usage_text = usage_help.GetData();
@@ -929,7 +940,9 @@ CommandObject::GenerateHelpText (Stream &output_strm)
     Options *options = GetOptions();
     if (options != nullptr)
     {
-        options->GenerateOptionUsage(output_strm, this);
+        options->GenerateOptionUsage(output_strm, this,
+                                     GetCommandInterpreter()
+                                        .GetDebugger().GetTerminalWidth());
     }
     const char *long_help = GetHelpLong();
     if ((long_help != nullptr) && (strlen(long_help) > 0))

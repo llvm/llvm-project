@@ -167,15 +167,13 @@ TEST_F(InstrProfTest, get_profile_summary) {
     auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
       return PE.Cutoff == Cutoff;
     };
-    auto EightyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+    auto EightyPerc = find_if(Details, Predicate);
     Cutoff = 900000;
-    auto NinetyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+    auto NinetyPerc = find_if(Details, Predicate);
     Cutoff = 950000;
-    auto NinetyFivePerc =
-        std::find_if(Details.begin(), Details.end(), Predicate);
+    auto NinetyFivePerc = find_if(Details, Predicate);
     Cutoff = 990000;
-    auto NinetyNinePerc =
-        std::find_if(Details.begin(), Details.end(), Predicate);
+    auto NinetyNinePerc = find_if(Details, Predicate);
     ASSERT_EQ(576460752303423488U, EightyPerc->MinCount);
     ASSERT_EQ(288230376151711744U, NinetyPerc->MinCount);
     ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinCount);

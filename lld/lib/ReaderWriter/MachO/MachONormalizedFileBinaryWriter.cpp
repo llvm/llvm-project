@@ -1192,19 +1192,44 @@ void MachOFileLayout::buildRebaseInfo() {
 void MachOFileLayout::buildBindInfo() {
   // TODO: compress bind info.
   uint64_t lastAddend = 0;
+  int lastOrdinal = 0x80000000;
+  StringRef lastSymbolName;
+  BindType lastType = (BindType)0;
+  Hex32 lastSegOffset = ~0U;
+  uint8_t lastSegIndex = (uint8_t)~0U;
   for (const BindLocation& entry : _file.bindingInfo) {
-    _bindingInfo.append_byte(BIND_OPCODE_SET_TYPE_IMM | entry.kind);
-    _bindingInfo.append_byte(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
-                            | entry.segIndex);
-    _bindingInfo.append_uleb128(entry.segOffset);
-    if (entry.ordinal > 0)
-      _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                               (entry.ordinal & 0xF));
-    else
-      _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
-                               (entry.ordinal & 0xF));
-    _bindingInfo.append_byte(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM);
-    _bindingInfo.append_string(entry.symbolName);
+    if (entry.ordinal != lastOrdinal) {
+      if (entry.ordinal <= 0)
+        _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
+                                 (entry.ordinal & BIND_IMMEDIATE_MASK));
+      else if (entry.ordinal <= BIND_IMMEDIATE_MASK)
+        _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                 entry.ordinal);
+      else {
+        _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+        _bindingInfo.append_uleb128(entry.ordinal);
+      }
+      lastOrdinal = entry.ordinal;
+    }
+
+    if (lastSymbolName != entry.symbolName) {
+      _bindingInfo.append_byte(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM);
+      _bindingInfo.append_string(entry.symbolName);
+      lastSymbolName = entry.symbolName;
+    }
+
+    if (lastType != entry.kind) {
+      _bindingInfo.append_byte(BIND_OPCODE_SET_TYPE_IMM | entry.kind);
+      lastType = entry.kind;
+    }
+
+    if (lastSegIndex != entry.segIndex || lastSegOffset != entry.segOffset) {
+      _bindingInfo.append_byte(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+                               | entry.segIndex);
+      _bindingInfo.append_uleb128(entry.segOffset);
+      lastSegIndex = entry.segIndex;
+      lastSegOffset = entry.segOffset;
+    }
     if (entry.addend != lastAddend) {
       _bindingInfo.append_byte(BIND_OPCODE_SET_ADDEND_SLEB);
       _bindingInfo.append_sleb128(entry.addend);
@@ -1218,22 +1243,25 @@ void MachOFileLayout::buildBindInfo() {
 
 void MachOFileLayout::buildLazyBindInfo() {
   for (const BindLocation& entry : _file.lazyBindingInfo) {
-    _lazyBindingInfo.append_byte(BIND_OPCODE_SET_TYPE_IMM | entry.kind);
     _lazyBindingInfo.append_byte(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
                             | entry.segIndex);
-    _lazyBindingInfo.append_uleb128Fixed(entry.segOffset, 5);
-    if (entry.ordinal > 0)
-      _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                   (entry.ordinal & 0xF));
-    else
+    _lazyBindingInfo.append_uleb128(entry.segOffset);
+    if (entry.ordinal <= 0)
       _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
-                                   (entry.ordinal & 0xF));
+                                   (entry.ordinal & BIND_IMMEDIATE_MASK));
+    else if (entry.ordinal <= BIND_IMMEDIATE_MASK)
+      _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                   entry.ordinal);
+    else {
+      _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+      _lazyBindingInfo.append_uleb128(entry.ordinal);
+    }
+    // FIXME: We need to | the opcode here with flags.
     _lazyBindingInfo.append_byte(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM);
     _lazyBindingInfo.append_string(entry.symbolName);
     _lazyBindingInfo.append_byte(BIND_OPCODE_DO_BIND);
     _lazyBindingInfo.append_byte(BIND_OPCODE_DONE);
   }
-  _lazyBindingInfo.append_byte(BIND_OPCODE_DONE);
   _lazyBindingInfo.align(_is64 ? 8 : 4);
 }
 

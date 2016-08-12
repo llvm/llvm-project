@@ -329,7 +329,7 @@ public:
   /// Blocks as appropriate. This does not update the mapping in the LoopInfo
   /// class.
   void removeBlockFromLoop(BlockT *BB) {
-    auto I = std::find(Blocks.begin(), Blocks.end(), BB);
+    auto I = find(Blocks, BB);
     assert(I != Blocks.end() && "N is not in this list!");
     Blocks.erase(I);
 
@@ -594,7 +594,7 @@ public:
   /// loop.
   void changeTopLevelLoop(LoopT *OldLoop,
                           LoopT *NewLoop) {
-    auto I = std::find(TopLevelLoops.begin(), TopLevelLoops.end(), OldLoop);
+    auto I = find(TopLevelLoops, OldLoop);
     assert(I != TopLevelLoops.end() && "Old loop not at top level!");
     *I = NewLoop;
     assert(!NewLoop->ParentLoop && !OldLoop->ParentLoop &&
@@ -762,6 +762,7 @@ public:
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop*> {
   typedef const Loop NodeType;
+  typedef const Loop *NodeRef;
   typedef LoopInfo::iterator ChildIteratorType;
 
   static NodeType *getEntryNode(const Loop *L) { return L; }
@@ -775,6 +776,7 @@ template <> struct GraphTraits<const Loop*> {
 
 template <> struct GraphTraits<Loop*> {
   typedef Loop NodeType;
+  typedef Loop *NodeRef;
   typedef LoopInfo::iterator ChildIteratorType;
 
   static NodeType *getEntryNode(Loop *L) { return L; }

@@ -1689,10 +1689,15 @@ bool IfConverter::IfConvertDiamondCommon(
   // Remove the conditional branch from entry to the blocks.
   BBI.NonPredSize -= TII->RemoveBranch(*BBI.BB);
 
-  // Initialize liveins to the first BB. These are potentially redefined by
-  // predicated instructions.
+  // Initialize the Redefs:
+  // - BB2 live-in regs need implicit uses before being redefined by BB1
+  //   instructions.
+  // - BB1 live-out regs need implicit uses before being redefined by BB2
+  //   instructions. We start with BB1 live-ins so we have the live-out regs
+  //   after tracking the BB1 instructions.
   Redefs.init(TRI);
   Redefs.addLiveIns(*BBI1->BB);
+  Redefs.addLiveIns(*BBI2->BB);
 
   // Remove the duplicated instructions at the beginnings of both paths.
   // Skip dbg_value instructions

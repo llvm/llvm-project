@@ -47,20 +47,10 @@ define <4 x i32> @test_v4i32(<4 x i32>* %src) {
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: test_v4i32:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: test_v4i32:
-; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    vmovntdqa (%rdi), %xmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512VL-LABEL: test_v4i32:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_v4i32:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vmovntdqa (%rdi), %xmm0
+; AVX512-NEXT:    retq
   %1 = load <4 x i32>, <4 x i32>* %src, align 16, !nontemporal !1
   ret <4 x i32> %1
 }

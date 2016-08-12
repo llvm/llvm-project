@@ -936,6 +936,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_Base:
   case InitializedEntity::EK_Delegating:
   case InitializedEntity::EK_BlockElement:
+  case InitializedEntity::EK_Binding:
     llvm_unreachable("unexpected braced scalar init");
   }
 
@@ -2895,6 +2896,7 @@ DeclarationName InitializedEntity::getName() const {
 
   case EK_Variable:
   case EK_Member:
+  case EK_Binding:
     return VariableOrMember->getDeclName();
 
   case EK_LambdaCapture:
@@ -2918,10 +2920,11 @@ DeclarationName InitializedEntity::getName() const {
   llvm_unreachable("Invalid EntityKind!");
 }
 
-DeclaratorDecl *InitializedEntity::getDecl() const {
+ValueDecl *InitializedEntity::getDecl() const {
   switch (getKind()) {
   case EK_Variable:
   case EK_Member:
+  case EK_Binding:
     return VariableOrMember;
 
   case EK_Parameter:
@@ -2957,6 +2960,7 @@ bool InitializedEntity::allowsNRVO() const {
   case EK_Parameter:
   case EK_Parameter_CF_Audited:
   case EK_Member:
+  case EK_Binding:
   case EK_New:
   case EK_Temporary:
   case EK_CompoundLiteralInit:
@@ -2988,6 +2992,7 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   case EK_Result: OS << "Result"; break;
   case EK_Exception: OS << "Exception"; break;
   case EK_Member: OS << "Member"; break;
+  case EK_Binding: OS << "Binding"; break;
   case EK_New: OS << "New"; break;
   case EK_Temporary: OS << "Temporary"; break;
   case EK_CompoundLiteralInit: OS << "CompoundLiteral";break;
@@ -3004,9 +3009,9 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
     break;
   }
 
-  if (Decl *D = getDecl()) {
+  if (auto *D = getDecl()) {
     OS << " ";
-    cast<NamedDecl>(D)->printQualifiedName(OS);
+    D->printQualifiedName(OS);
   }
 
   OS << " '" << getType().getAsString() << "'\n";
@@ -5270,6 +5275,7 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
     return Sema::AA_Casting;
 
   case InitializedEntity::EK_Member:
+  case InitializedEntity::EK_Binding:
   case InitializedEntity::EK_ArrayElement:
   case InitializedEntity::EK_VectorElement:
   case InitializedEntity::EK_ComplexElement:
@@ -5305,6 +5311,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   case InitializedEntity::EK_Parameter_CF_Audited:
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_RelatedResult:
+  case InitializedEntity::EK_Binding:
     return true;
   }
 
@@ -5326,6 +5333,7 @@ static bool shouldDestroyTemporary(const InitializedEntity &Entity) {
       return false;
 
     case InitializedEntity::EK_Member:
+    case InitializedEntity::EK_Binding:
     case InitializedEntity::EK_Variable:
     case InitializedEntity::EK_Parameter:
     case InitializedEntity::EK_Parameter_CF_Audited:
@@ -5395,6 +5403,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
     return Entity.getThrowLoc();
 
   case InitializedEntity::EK_Variable:
+  case InitializedEntity::EK_Binding:
     return Entity.getDecl()->getLocation();
 
   case InitializedEntity::EK_LambdaCapture:
@@ -5826,6 +5835,7 @@ InitializedEntityOutlivesFullExpression(const InitializedEntity &Entity) {
   case InitializedEntity::EK_Result:
   case InitializedEntity::EK_Exception:
   case InitializedEntity::EK_Member:
+  case InitializedEntity::EK_Binding:
   case InitializedEntity::EK_New:
   case InitializedEntity::EK_Base:
   case InitializedEntity::EK_Delegating:
@@ -5873,6 +5883,11 @@ static const InitializedEntity *getEntityForTemporaryLifetimeExtension(
     //   except:
     //   -- A temporary bound to a reference member in a constructor's
     //      ctor-initializer persists until the constructor exits.
+    return Entity;
+
+  case InitializedEntity::EK_Binding:
+    // Per [dcl.decomp]p3, the binding is treated as a variable of reference
+    // type.
     return Entity;
 
   case InitializedEntity::EK_Parameter:
@@ -6250,7 +6265,7 @@ InitializationSequence::Perform(Sema &S,
           SourceRange Brackets;
 
           // Scavange the location of the brackets from the entity, if we can.
-          if (DeclaratorDecl *DD = Entity.getDecl()) {
+          if (auto *DD = dyn_cast_or_null<DeclaratorDecl>(Entity.getDecl())) {
             if (TypeSourceInfo *TInfo = DD->getTypeSourceInfo()) {
               TypeLoc TL = TInfo->getTypeLoc();
               if (IncompleteArrayTypeLoc ArrayLoc =

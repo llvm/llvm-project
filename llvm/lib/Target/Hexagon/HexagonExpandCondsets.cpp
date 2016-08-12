@@ -305,7 +305,7 @@ bool HexagonExpandCondsets::isCondset(const MachineInstr &MI) {
     case Hexagon::C2_muxii:
     case Hexagon::C2_muxir:
     case Hexagon::C2_muxri:
-    case Hexagon::MUX64_rr:
+    case Hexagon::PS_pselect:
         return true;
       break;
   }

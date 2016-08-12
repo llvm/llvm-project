@@ -671,7 +671,7 @@ void MDNodeMapper::UniquedGraph::propagateChanges() {
       if (D.HasChanged)
         continue;
 
-      if (!llvm::any_of(N->operands(), [&](const Metadata *Op) {
+      if (none_of(N->operands(), [&](const Metadata *Op) {
             auto Where = Info.find(Op);
             return Where != Info.end() && Where->second.HasChanged;
           }))

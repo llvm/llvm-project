@@ -354,10 +354,10 @@ private:
       if (Src.first->getReg() != AMDGPU::ALU_LITERAL_X)
         continue;
       int64_t Imm = Src.second;
-      std::vector<MachineOperand*>::iterator It =
-          std::find_if(Lits.begin(), Lits.end(),
-                    [&](MachineOperand* val)
-                        { return val->isImm() && (val->getImm() == Imm);});
+      std::vector<MachineOperand *>::iterator It =
+          find_if(Lits, [&](MachineOperand *val) {
+            return val->isImm() && (val->getImm() == Imm);
+          });
 
       // Get corresponding Operand
       MachineOperand &Operand = MI.getOperand(

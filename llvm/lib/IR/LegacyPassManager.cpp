@@ -841,9 +841,7 @@ bool PMDataManager::preserveHigherLevelAnalysis(Pass *P) {
          E = HigherLevelAnalysis.end(); I  != E; ++I) {
     Pass *P1 = *I;
     if (P1->getAsImmutablePass() == nullptr &&
-        std::find(PreservedSet.begin(), PreservedSet.end(),
-                  P1->getPassID()) ==
-           PreservedSet.end())
+        !is_contained(PreservedSet, P1->getPassID()))
       return false;
   }
 
@@ -881,8 +879,7 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
          E = AvailableAnalysis.end(); I != E; ) {
     DenseMap<AnalysisID, Pass*>::iterator Info = I++;
     if (Info->second->getAsImmutablePass() == nullptr &&
-        std::find(PreservedSet.begin(), PreservedSet.end(), Info->first) ==
-        PreservedSet.end()) {
+        !is_contained(PreservedSet, Info->first)) {
       // Remove this analysis
       if (PassDebugging >= Details) {
         Pass *S = Info->second;
@@ -905,8 +902,7 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
            E = InheritedAnalysis[Index]->end(); I != E; ) {
       DenseMap<AnalysisID, Pass *>::iterator Info = I++;
       if (Info->second->getAsImmutablePass() == nullptr &&
-          std::find(PreservedSet.begin(), PreservedSet.end(), Info->first) ==
-             PreservedSet.end()) {
+          !is_contained(PreservedSet, Info->first)) {
         // Remove this analysis
         if (PassDebugging >= Details) {
           Pass *S = Info->second;

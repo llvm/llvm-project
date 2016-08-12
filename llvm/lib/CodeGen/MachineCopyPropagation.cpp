@@ -245,7 +245,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // Remember source that's copied to Def. Once it's clobbered, then
       // it's no longer available for copy propagation.
       RegList &DestList = SrcMap[Src];
-      if (std::find(DestList.begin(), DestList.end(), Def) == DestList.end())
+      if (!is_contained(DestList, Def))
         DestList.push_back(Def);
 
       continue;

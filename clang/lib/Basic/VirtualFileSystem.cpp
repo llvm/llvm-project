@@ -801,6 +801,7 @@ public:
 ///   'case-sensitive': <boolean, default=true>
 ///   'use-external-names': <boolean, default=true>
 ///   'overlay-relative': <boolean, default=false>
+///   'ignore-non-existent-contents': <boolean, default=true>
 ///
 /// Virtual directories are represented as
 /// \verbatim
@@ -860,6 +861,14 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// \brief Whether to use to use the value of 'external-contents' for the
   /// names of files.  This global value is overridable on a per-file basis.
   bool UseExternalNames = true;
+
+  /// \brief Whether an invalid path obtained via 'external-contents' should
+  /// cause iteration on the VFS to stop. If 'true', the VFS should ignore
+  /// the entry and continue with the next. Allows YAML files to be shared
+  /// across multiple compiler invocations regardless of prior existent
+  /// paths in 'external-contents'. This global value is overridable on a
+  /// per-file basis.
+  bool IgnoreNonExistentContents = true;
   /// @}
 
   /// Virtual file paths and external files could be canonicalized without "..",
@@ -935,6 +944,10 @@ public:
 
   StringRef getExternalContentsPrefixDir() const {
     return ExternalContentsPrefixDir;
+  }
+
+  bool ignoreNonExistentContents() const {
+    return IgnoreNonExistentContents;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1301,6 +1314,7 @@ public:
       KeyStatusPair("case-sensitive", false),
       KeyStatusPair("use-external-names", false),
       KeyStatusPair("overlay-relative", false),
+      KeyStatusPair("ignore-non-existent-contents", false),
       KeyStatusPair("roots", true),
     };
 
@@ -1358,6 +1372,9 @@ public:
           return false;
       } else if (Key == "use-external-names") {
         if (!parseScalarBool(I->getValue(), FS->UseExternalNames))
+          return false;
+      } else if (Key == "ignore-non-existent-contents") {
+        if (!parseScalarBool(I->getValue(), FS->IgnoreNonExistentContents))
           return false;
       } else {
         llvm_unreachable("key missing from Keys");
@@ -1619,7 +1636,7 @@ public:
   JSONWriter(llvm::raw_ostream &OS) : OS(OS) {}
   void write(ArrayRef<YAMLVFSEntry> Entries, Optional<bool> UseExternalNames,
              Optional<bool> IsCaseSensitive, Optional<bool> IsOverlayRelative,
-             StringRef OverlayDir);
+             Optional<bool> IgnoreNonExistentContents, StringRef OverlayDir);
 };
 }
 
@@ -1675,6 +1692,7 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
                        Optional<bool> UseExternalNames,
                        Optional<bool> IsCaseSensitive,
                        Optional<bool> IsOverlayRelative,
+                       Optional<bool> IgnoreNonExistentContents,
                        StringRef OverlayDir) {
   using namespace llvm::sys;
 
@@ -1692,6 +1710,9 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
     OS << "  'overlay-relative': '"
        << (UseOverlayRelative ? "true" : "false") << "',\n";
   }
+  if (IgnoreNonExistentContents.hasValue())
+    OS << "  'ignore-non-existent-contents': '"
+       << (IgnoreNonExistentContents.getValue() ? "true" : "false") << "',\n";
   OS << "  'roots': [\n";
 
   if (!Entries.empty()) {
@@ -1748,7 +1769,8 @@ void YAMLVFSWriter::write(llvm::raw_ostream &OS) {
   });
 
   JSONWriter(OS).write(Mappings, UseExternalNames, IsCaseSensitive,
-                       IsOverlayRelative, OverlayDir);
+                       IsOverlayRelative, IgnoreNonExistentContents,
+                       OverlayDir);
 }
 
 VFSFromYamlDirIterImpl::VFSFromYamlDirIterImpl(

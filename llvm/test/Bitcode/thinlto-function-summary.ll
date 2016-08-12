@@ -9,13 +9,17 @@
 ; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=2 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=7
-; BC-NEXT: <ALIAS {{.*}} op0=4 op1=0 op2=3
+; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=32
+; BC-NEXT: <ALIAS {{.*}} op0=5 op1=0 op2=3
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <VALUE_SYMTAB
-; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
+; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'variadic'
 ; BC-NEXT: <FNENTRY {{.*}} op0=1 {{.*}}> record string = 'foo'
 ; BC-NEXT: <FNENTRY {{.*}} op0=2 {{.*}}> record string = 'bar'
-; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'f'
+; BC-NEXT: <FNENTRY {{.*}} op0=5 {{.*}}> record string = 'f'
+; BC-NEXT: <ENTRY {{.*}} record string = 'h'
+; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
+
 
 ; RUN: opt -name-anon-functions -module-summary < %s | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
@@ -55,4 +59,8 @@ entry:
 
 return:         ; preds = %entry
         ret void
+}
+
+define i32 @variadic(...) {
+    ret i32 42
 }

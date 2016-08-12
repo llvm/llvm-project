@@ -520,7 +520,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   unsigned ChainIdx, ChainLen;
   for (ChainIdx = 0, ChainLen = Chain.size(); ChainIdx < ChainLen; ++ChainIdx) {
     Instruction *I = Chain[ChainIdx];
-    if (!any_of(VectorizableChainInstrs,
+    if (none_of(VectorizableChainInstrs,
                 [I](std::pair<Instruction *, unsigned> CI) {
                   return I == CI.first;
                 }))

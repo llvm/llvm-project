@@ -26,6 +26,7 @@
 #include <tuple>
 
 #include "archetypes.hpp"
+using namespace ImplicitTypes; // Get implicitly archetypes
 
 namespace ConstructorTest {
 

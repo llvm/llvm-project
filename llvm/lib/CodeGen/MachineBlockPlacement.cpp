@@ -1166,8 +1166,7 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
     }
   }
 
-  BlockChain::iterator ExitIt =
-      std::find(LoopChain.begin(), LoopChain.end(), ExitingBB);
+  BlockChain::iterator ExitIt = find(LoopChain, ExitingBB);
   if (ExitIt == LoopChain.end())
     return;
 
@@ -1190,7 +1189,7 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
 void MachineBlockPlacement::rotateLoopWithProfile(
     BlockChain &LoopChain, MachineLoop &L, const BlockFilterSet &LoopBlockSet) {
   auto HeaderBB = L.getHeader();
-  auto HeaderIter = std::find(LoopChain.begin(), LoopChain.end(), HeaderBB);
+  auto HeaderIter = find(LoopChain, HeaderBB);
   auto RotationPos = LoopChain.end();
 
   BlockFrequency SmallestRotationCost = BlockFrequency::getMaxFrequency();

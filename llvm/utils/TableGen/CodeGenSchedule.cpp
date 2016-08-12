@@ -356,8 +356,7 @@ bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
       continue;
 
     RecVec ValidWrites = ReadDef->getValueAsListOfDefs("ValidWrites");
-    if (std::find(ValidWrites.begin(), ValidWrites.end(), WriteDef)
-        != ValidWrites.end()) {
+    if (is_contained(ValidWrites, WriteDef)) {
       return true;
     }
   }
@@ -1400,8 +1399,7 @@ bool CodeGenSchedModels::hasSuperGroup(RecVec &SubUnits, CodeGenProcModel &PM) {
       PM.ProcResourceDefs[i]->getValueAsListOfDefs("Resources");
     RecIter RI = SubUnits.begin(), RE = SubUnits.end();
     for ( ; RI != RE; ++RI) {
-      if (std::find(SuperUnits.begin(), SuperUnits.end(), *RI)
-          == SuperUnits.end()) {
+      if (!is_contained(SuperUnits, *RI)) {
         break;
       }
     }
@@ -1572,11 +1570,9 @@ void CodeGenSchedModels::checkCompleteness() {
         continue;
 
       const RecVec &InstRWs = SC.InstRWs;
-      auto I = std::find_if(InstRWs.begin(), InstRWs.end(),
-                            [&ProcModel] (const Record *R) {
-                              return R->getValueAsDef("SchedModel") ==
-                                     ProcModel.ModelDef;
-                            });
+      auto I = find_if(InstRWs, [&ProcModel](const Record *R) {
+        return R->getValueAsDef("SchedModel") == ProcModel.ModelDef;
+      });
       if (I == InstRWs.end()) {
         PrintError("'" + ProcModel.ModelName + "' lacks information for '" +
                    Inst->TheDef->getName() + "'");
@@ -1741,7 +1737,7 @@ void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx) {
   assert(PIdx && "don't add resources to an invalid Processor model");
 
   RecVec &WRDefs = ProcModels[PIdx].WriteResDefs;
-  RecIter WRI = std::find(WRDefs.begin(), WRDefs.end(), ProcWriteResDef);
+  RecIter WRI = find(WRDefs, ProcWriteResDef);
   if (WRI != WRDefs.end())
     return;
   WRDefs.push_back(ProcWriteResDef);
@@ -1758,15 +1754,14 @@ void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx) {
 void CodeGenSchedModels::addReadAdvance(Record *ProcReadAdvanceDef,
                                         unsigned PIdx) {
   RecVec &RADefs = ProcModels[PIdx].ReadAdvanceDefs;
-  RecIter I = std::find(RADefs.begin(), RADefs.end(), ProcReadAdvanceDef);
+  RecIter I = find(RADefs, ProcReadAdvanceDef);
   if (I != RADefs.end())
     return;
   RADefs.push_back(ProcReadAdvanceDef);
 }
 
 unsigned CodeGenProcModel::getProcResourceIdx(Record *PRDef) const {
-  RecIter PRPos = std::find(ProcResourceDefs.begin(), ProcResourceDefs.end(),
-                            PRDef);
+  RecIter PRPos = find(ProcResourceDefs, PRDef);
   if (PRPos == ProcResourceDefs.end())
     PrintFatalError(PRDef->getLoc(), "ProcResource def is not included in "
                     "the ProcResources list for " + ModelName);

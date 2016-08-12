@@ -51,8 +51,7 @@ int LEONMachineFunctionPass::GetRegIndexForOperand(MachineInstr &MI,
 int LEONMachineFunctionPass::getUnusedFPRegister(MachineRegisterInfo &MRI) {
   for (int RegisterIndex = SP::F0; RegisterIndex <= SP::F31; ++RegisterIndex) {
     if (!MRI.isPhysRegUsed(RegisterIndex) &&
-        !(std::find(UsedRegisters.begin(), UsedRegisters.end(),
-                    RegisterIndex) != UsedRegisters.end())) {
+        !is_contained(UsedRegisters, RegisterIndex)) {
       return RegisterIndex;
     }
   }

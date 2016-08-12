@@ -419,10 +419,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   SkipThreshold = SkipThresholdFlag;
 
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
   bool HaveKill = false;
-  bool NeedFlat = false;
   unsigned Depth = 0;
 
   MachineFunction::iterator NextBB;
@@ -439,10 +436,6 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       Next = std::next(I);
 
       MachineInstr &MI = *I;
-
-      // Flat uses m0 in case it needs to access LDS.
-      if (TII->isFLAT(MI))
-        NeedFlat = true;
 
       switch (MI.getOpcode()) {
         default: break;
@@ -519,13 +512,5 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
-
-  if (NeedFlat && MFI->isKernel()) {
-    // TODO: What to use with function calls?
-    // We will need to Initialize the flat scratch register pair.
-    if (NeedFlat)
-      MFI->setHasFlatInstructions(true);
-  }
-
   return true;
 }

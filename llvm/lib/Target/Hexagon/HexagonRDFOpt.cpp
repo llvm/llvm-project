@@ -245,7 +245,7 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
     if (&DA.Addr->getOp() != &Op)
       continue;
     Defs = DFG.getRelatedRefs(IA, DA);
-    if (!std::all_of(Defs.begin(), Defs.end(), IsDead))
+    if (!all_of(Defs, IsDead))
       return false;
     break;
   }

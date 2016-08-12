@@ -113,10 +113,9 @@ bool doesStoreDominatesAllLatches(BasicBlock *StoreBlock, Loop *L,
                                   DominatorTree *DT) {
   SmallVector<BasicBlock *, 8> Latches;
   L->getLoopLatches(Latches);
-  return std::all_of(Latches.begin(), Latches.end(),
-                     [&](const BasicBlock *Latch) {
-                       return DT->dominates(StoreBlock, Latch);
-                     });
+  return all_of(Latches, [&](const BasicBlock *Latch) {
+    return DT->dominates(StoreBlock, Latch);
+  });
 }
 
 /// \brief Return true if the load is not executed on all paths in the loop.

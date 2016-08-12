@@ -185,6 +185,15 @@ struct ilist_traits : public ilist_default_traits<NodeTy> {};
 template<typename Ty>
 struct ilist_traits<const Ty> : public ilist_traits<Ty> {};
 
+namespace ilist_detail {
+template <class NodeTy> struct ConstCorrectNodeType {
+  typedef ilist_node<NodeTy> type;
+};
+template <class NodeTy> struct ConstCorrectNodeType<const NodeTy> {
+  typedef const ilist_node<NodeTy> type;
+};
+} // end namespace ilist_detail
+
 //===----------------------------------------------------------------------===//
 // Iterator for intrusive list.
 //
@@ -201,10 +210,18 @@ public:
   typedef typename super::pointer pointer;
   typedef typename super::reference reference;
 
+  typedef typename ilist_detail::ConstCorrectNodeType<NodeTy>::type node_type;
+  typedef node_type *node_pointer;
+  typedef node_type &node_reference;
+
 private:
   pointer NodePtr;
 
 public:
+  /// Create from an ilist_node.
+  explicit ilist_iterator(node_reference N)
+      : NodePtr(static_cast<NodeTy *>(&N)) {}
+
   explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
   explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
   ilist_iterator() : NodePtr(nullptr) {}
@@ -258,6 +275,9 @@ public:
     ++*this;
     return tmp;
   }
+
+  /// Get the underlying ilist_node.
+  node_pointer getNodePtr() const { return static_cast<node_pointer>(NodePtr); }
 
   // Internal interface, do not use...
   pointer getNodePtrUnchecked() const { return NodePtr; }

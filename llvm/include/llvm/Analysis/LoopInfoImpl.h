@@ -211,8 +211,7 @@ void LoopBase<BlockT, LoopT>::
 replaceChildLoopWith(LoopT *OldChild, LoopT *NewChild) {
   assert(OldChild->ParentLoop == this && "This loop is already broken!");
   assert(!NewChild->ParentLoop && "NewChild already has a parent!");
-  typename std::vector<LoopT *>::iterator I =
-    std::find(SubLoops.begin(), SubLoops.end(), OldChild);
+  typename std::vector<LoopT *>::iterator I = find(SubLoops, OldChild);
   assert(I != SubLoops.end() && "OldChild not in loop!");
   *I = NewChild;
   OldChild->ParentLoop = nullptr;
