@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -111,19 +112,17 @@ private:
   AtomVector<AbsoluteAtom> _absolute;
 };
 
-class SimpleReference : public Reference {
+class SimpleReference : public Reference,
+                        public llvm::ilist_node<SimpleReference> {
 public:
   SimpleReference(Reference::KindNamespace ns, Reference::KindArch arch,
                   Reference::KindValue value, uint64_t off, const Atom *t,
                   Reference::Addend a)
-      : Reference(ns, arch, value), _target(t), _offsetInAtom(off), _addend(a),
-        _next(nullptr), _prev(nullptr) {
+      : Reference(ns, arch, value), _target(t), _offsetInAtom(off), _addend(a) {
   }
   SimpleReference()
       : Reference(Reference::KindNamespace::all, Reference::KindArch::all, 0),
-        _target(nullptr), _offsetInAtom(0), _addend(0), _next(nullptr),
-        _prev(nullptr) {
-  }
+        _target(nullptr), _offsetInAtom(0), _addend(0) {}
 
   uint64_t offsetInAtom() const override { return _offsetInAtom; }
 
@@ -135,17 +134,11 @@ public:
   Addend addend() const override { return _addend; }
   void setAddend(Addend a) override { _addend = a; }
   void setTarget(const Atom *newAtom) override { _target = newAtom; }
-  SimpleReference *getNext() const { return _next; }
-  SimpleReference *getPrev() const { return _prev; }
-  void setNext(SimpleReference *n) { _next = n; }
-  void setPrev(SimpleReference *p) { _prev = p; }
 
 private:
   const Atom *_target;
   uint64_t _offsetInAtom;
   Addend _addend;
-  SimpleReference *_next;
-  SimpleReference *_prev;
 };
 
 } // end namespace lld
@@ -232,23 +225,26 @@ public:
   }
 
   DefinedAtom::reference_iterator begin() const override {
-    const void *it = reinterpret_cast<const void *>(&*_references.begin());
+    const void *it =
+        reinterpret_cast<const void *>(_references.begin().getNodePtr());
     return reference_iterator(*this, it);
   }
 
   DefinedAtom::reference_iterator end() const override {
-    const void *it = reinterpret_cast<const void *>(&*_references.end());
+    const void *it =
+        reinterpret_cast<const void *>(_references.end().getNodePtr());
     return reference_iterator(*this, it);
   }
 
   const Reference *derefIterator(const void *it) const override {
-    return reinterpret_cast<const Reference*>(it);
+    return &*RefList::const_iterator(
+        *reinterpret_cast<const llvm::ilist_node<SimpleReference> *>(it));
   }
 
   void incrementIterator(const void *&it) const override {
-    const SimpleReference* node = reinterpret_cast<const SimpleReference*>(it);
-    const SimpleReference* next = node->getNext();
-    it = reinterpret_cast<const void*>(next);
+    RefList::const_iterator ref(
+        *reinterpret_cast<const llvm::ilist_node<SimpleReference> *>(it));
+    it = reinterpret_cast<const void *>(std::next(ref).getNodePtr());
   }
 
   void addReference(Reference::KindNamespace ns,

@@ -8,6 +8,15 @@
 // RUN:   FileCheck --check-prefix=LINUX %s
 // LINUX-NOT: "-momit-leaf-frame-pointer"
 
+// CloudABI follows the same rules as Linux.
+// RUN: %clang -### -target x86_64-unknown-cloudabi -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CLOUDABI-OPT %s
+// CLOUDABI-OPT: "-momit-leaf-frame-pointer"
+
+// RUN: %clang -### -target x86_64-unknown-cloudabi -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CLOUDABI %s
+// CLOUDABI-NOT: "-momit-leaf-frame-pointer"
+
 // Darwin disables omitting the leaf frame pointer even under optimization
 // unless the command lines are given.
 // RUN: %clang -### -target i386-apple-darwin -S %s 2>&1 | \

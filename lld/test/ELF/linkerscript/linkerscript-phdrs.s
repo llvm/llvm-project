@@ -17,9 +17,8 @@
 # CHECK-NEXT:    PhysicalAddress: 0x10000000
 # CHECK-NEXT:    FileSize: 521
 # CHECK-NEXT:    MemSize: 521
-# CHECK-NEXT:    Flags [ (0x7)
+# CHECK-NEXT:    Flags [ (0x5)
 # CHECK-NEXT:      PF_R (0x4)
-# CHECK-NEXT:      PF_W (0x2)
 # CHECK-NEXT:      PF_X (0x1)
 # CHECK-NEXT:    ]
 

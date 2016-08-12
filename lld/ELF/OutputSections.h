@@ -62,6 +62,7 @@ public:
     Merge,
     MipsReginfo,
     MipsOptions,
+    MipsAbiFlags,
     Plt,
     Regular,
     Reloc,
@@ -640,6 +641,24 @@ public:
 
 private:
   uint32_t GprMask = 0;
+};
+
+template <class ELFT>
+class MipsAbiFlagsOutputSection final : public OutputSectionBase<ELFT> {
+  typedef llvm::object::Elf_Mips_ABIFlags<ELFT> Elf_Mips_ABIFlags;
+  typedef OutputSectionBase<ELFT> Base;
+
+public:
+  MipsAbiFlagsOutputSection();
+  void writeTo(uint8_t *Buf) override;
+  void addSection(InputSectionBase<ELFT> *S) override;
+  typename Base::Kind getKind() const override { return Base::MipsAbiFlags; }
+  static bool classof(const Base *B) {
+    return B->getKind() == Base::MipsAbiFlags;
+  }
+
+private:
+  Elf_Mips_ABIFlags Flags;
 };
 
 // --eh-frame-hdr option tells linker to construct a header for all the

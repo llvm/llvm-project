@@ -2334,14 +2334,27 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                                                          unsigned ID,
                                                          unsigned NumBindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
-  auto *Result = new (C, ID, Extra) DecompositionDecl(
-      C, nullptr, SourceLocation(), SourceLocation(), QualType(), nullptr, StorageClass(), None);
+  auto *Result = new (C, ID, Extra)
+      DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                        QualType(), nullptr, StorageClass(), None);
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects<BindingDecl *>();
   for (unsigned I = 0; I != NumBindings; ++I)
     new (Trail + I) BindingDecl*(nullptr);
   return Result;
+}
+
+void DecompositionDecl::printName(llvm::raw_ostream &os) const {
+  os << '[';
+  bool Comma = false;
+  for (auto *B : bindings()) {
+    if (Comma)
+      os << ", ";
+    B->printName(os);
+    Comma = true;
+  }
+  os << ']';
 }
 
 MSPropertyDecl *MSPropertyDecl::Create(ASTContext &C, DeclContext *DC,

@@ -312,6 +312,8 @@ namespace clang {
     void VisitVarDecl(VarDecl *VD) { VisitVarDeclImpl(VD); }
     void VisitImplicitParamDecl(ImplicitParamDecl *PD);
     void VisitParmVarDecl(ParmVarDecl *PD);
+    void VisitDecompositionDecl(DecompositionDecl *DD);
+    void VisitBindingDecl(BindingDecl *BD);
     void VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
     DeclID VisitTemplateDecl(TemplateDecl *D);
     RedeclarableResult VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
@@ -1293,6 +1295,18 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
 
   // FIXME: If this is a redeclaration of a function from another module, handle
   // inheritance of default arguments.
+}
+
+void ASTDeclReader::VisitDecompositionDecl(DecompositionDecl *DD) {
+  VisitVarDecl(DD);
+  BindingDecl **BDs = DD->getTrailingObjects<BindingDecl*>();
+  for (unsigned I = 0; I != DD->NumBindings; ++I)
+    BDs[I] = ReadDeclAs<BindingDecl>(Record, Idx);
+}
+
+void ASTDeclReader::VisitBindingDecl(BindingDecl *BD) {
+  VisitValueDecl(BD);
+  BD->Binding = Reader.ReadExpr(F);
 }
 
 void ASTDeclReader::VisitFileScopeAsmDecl(FileScopeAsmDecl *AD) {
@@ -3399,6 +3413,12 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_PARM_VAR:
     D = ParmVarDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_DECOMPOSITION:
+    D = DecompositionDecl::CreateDeserialized(Context, ID, Record[Idx++]);
+    break;
+  case DECL_BINDING:
+    D = BindingDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FILE_SCOPE_ASM:
     D = FileScopeAsmDecl::CreateDeserialized(Context, ID);

@@ -38,7 +38,7 @@ class UnresolvedSetIterator : public llvm::iterator_adaptor_base<
       : iterator_adaptor_base(const_cast<DeclAccessPair *>(Iter)) {}
 
 public:
-  UnresolvedSetIterator() {}
+  UnresolvedSetIterator() = default;
 
   NamedDecl *getDecl() const { return I->getDecl(); }
   void setDecl(NamedDecl *ND) const { return I->setDecl(ND); }
