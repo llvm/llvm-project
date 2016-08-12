@@ -348,6 +348,7 @@ LoadFoundationValueTypesFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Date_SummaryProvider, "Foundation.Date summary provider", ConstString("Foundation.Date"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
     
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::NotificationName_SummaryProvider, "Notification.Name summary provider", ConstString("Foundation.Notification.Type.Name"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::NotificationName_SummaryProvider, "Notification.Name summary provider", ConstString("Foundation.Notification.Name"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
 
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::URL_SummaryProvider, "URL summary provider", ConstString("Foundation.URL"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
     
