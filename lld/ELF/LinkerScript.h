@@ -25,6 +25,7 @@ template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
 template <class ELFT> class DefinedCommon;
+template <class ELFT> class LayoutInputSection;
 
 typedef std::function<uint64_t(uint64_t)> Expr;
 
@@ -138,6 +139,8 @@ template <class ELFT> class LinkerScript {
   typedef typename ELFT::uint uintX_t;
 
 public:
+  LinkerScript();
+  ~LinkerScript();
   void createSections(OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
@@ -148,7 +151,7 @@ public:
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
   uintX_t getOutputSectionSize(StringRef Name);
-  uintX_t getSizeOfHeaders();
+  uintX_t getHeaderSize();
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
@@ -156,14 +159,19 @@ private:
   std::vector<InputSectionBase<ELFT> *>
   getInputSections(const InputSectionDescription *);
 
+  void discard(OutputSectionCommand &Cmd);
+
+  std::vector<InputSectionBase<ELFT> *>
+  createInputSectionList(OutputSectionCommand &Cmd);
+
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
-
-  void filter();
 
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
+
+  llvm::SpecificBumpPtrAllocator<LayoutInputSection<ELFT>> LAlloc;
 
   uintX_t Dot;
 };

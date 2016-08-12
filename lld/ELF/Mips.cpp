@@ -18,6 +18,7 @@
 
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/MipsABIFlags.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -174,8 +175,57 @@ static bool isArchMatched(uint32_t New, uint32_t Res) {
   return false;
 }
 
+static StringRef getMachName(uint32_t Flags) {
+  switch (Flags & EF_MIPS_MACH) {
+  case EF_MIPS_MACH_NONE:
+    return "";
+  case EF_MIPS_MACH_3900:
+    return "r3900";
+  case EF_MIPS_MACH_4010:
+    return "r4010";
+  case EF_MIPS_MACH_4100:
+    return "r4100";
+  case EF_MIPS_MACH_4650:
+    return "r4650";
+  case EF_MIPS_MACH_4120:
+    return "r4120";
+  case EF_MIPS_MACH_4111:
+    return "r4111";
+  case EF_MIPS_MACH_5400:
+    return "vr5400";
+  case EF_MIPS_MACH_5900:
+    return "vr5900";
+  case EF_MIPS_MACH_5500:
+    return "vr5500";
+  case EF_MIPS_MACH_9000:
+    return "rm9000";
+  case EF_MIPS_MACH_LS2E:
+    return "loongson2e";
+  case EF_MIPS_MACH_LS2F:
+    return "loongson2f";
+  case EF_MIPS_MACH_LS3A:
+    return "loongson3a";
+  case EF_MIPS_MACH_OCTEON:
+    return "octeon";
+  case EF_MIPS_MACH_OCTEON2:
+    return "octeon2";
+  case EF_MIPS_MACH_OCTEON3:
+    return "octeon3";
+  case EF_MIPS_MACH_SB1:
+    return "sb1";
+  case EF_MIPS_MACH_XLR:
+    return "xlr";
+  default:
+    return "unknown machine";
+  }
+}
+
 static StringRef getArchName(uint32_t Flags) {
-  switch (Flags) {
+  StringRef S = getMachName(Flags);
+  if (!S.empty())
+    return S;
+
+  switch (Flags & EF_MIPS_ARCH) {
   case EF_MIPS_ARCH_1:
     return "mips1";
   case EF_MIPS_ARCH_2:
@@ -199,10 +249,19 @@ static StringRef getArchName(uint32_t Flags) {
   case EF_MIPS_ARCH_64R6:
     return "mips64r6";
   default:
-    return "unknown";
+    return "unknown arch";
   }
 }
 
+// There are (arguably too) many MIPS ISAs out there. Their relationships
+// can be represented as a forest. If all input files have ISAs which
+// reachable by repeated proceeding from the single child to the parent,
+// these input files are compatible. In that case we need to return "highest"
+// ISA. If there are incompatible input files, we show an error.
+// For example, mips1 is a "parent" of mips2 and such files are compatible.
+// Output file gets EF_MIPS_ARCH_2 flag. From the other side mips3 and mips32
+// are incompatible because nor mips3 is a parent for misp32, nor mips32
+// is a parent for mips3.
 static uint32_t getArchFlags(ArrayRef<FileFlags> Files) {
   uint32_t Ret = Files[0].Flags & (EF_MIPS_ARCH | EF_MIPS_MACH);
 
@@ -230,6 +289,57 @@ template <class ELFT> uint32_t elf::getMipsEFlags() {
 
   checkFlags(V);
   return getMiscFlags(V) | getPicFlags(V) | getArchFlags(V);
+}
+
+static int compareMipsFpAbi(uint8_t FpA, uint8_t FpB) {
+  if (FpA == FpB)
+    return 0;
+  if (FpB == Mips::Val_GNU_MIPS_ABI_FP_ANY)
+    return 1;
+  if (FpB == Mips::Val_GNU_MIPS_ABI_FP_64A &&
+      FpA == Mips::Val_GNU_MIPS_ABI_FP_64)
+    return 1;
+  if (FpB != Mips::Val_GNU_MIPS_ABI_FP_XX)
+    return -1;
+  if (FpA == Mips::Val_GNU_MIPS_ABI_FP_DOUBLE ||
+      FpA == Mips::Val_GNU_MIPS_ABI_FP_64 ||
+      FpA == Mips::Val_GNU_MIPS_ABI_FP_64A)
+    return 1;
+  return -1;
+}
+
+static StringRef getMipsFpAbiName(uint8_t FpAbi) {
+  switch (FpAbi) {
+  case Mips::Val_GNU_MIPS_ABI_FP_ANY:
+    return "any";
+  case Mips::Val_GNU_MIPS_ABI_FP_DOUBLE:
+    return "-mdouble-float";
+  case Mips::Val_GNU_MIPS_ABI_FP_SINGLE:
+    return "-msingle-float";
+  case Mips::Val_GNU_MIPS_ABI_FP_SOFT:
+    return "-msoft-float";
+  case Mips::Val_GNU_MIPS_ABI_FP_OLD_64:
+    return "-mips32r2 -mfp64 (old)";
+  case Mips::Val_GNU_MIPS_ABI_FP_XX:
+    return "-mfpxx";
+  case Mips::Val_GNU_MIPS_ABI_FP_64:
+    return "-mgp32 -mfp64";
+  case Mips::Val_GNU_MIPS_ABI_FP_64A:
+    return "-mgp32 -mfp64 -mno-odd-spreg";
+  default:
+    return "unknown";
+  }
+}
+
+uint8_t elf::getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
+                              StringRef FileName) {
+  if (compareMipsFpAbi(NewFlag, OldFlag) >= 0)
+    return NewFlag;
+  if (compareMipsFpAbi(OldFlag, NewFlag) < 0)
+    error("target floating point ABI '" + getMipsFpAbiName(OldFlag) +
+          "' is incompatible with '" + getMipsFpAbiName(NewFlag) + "': " +
+          FileName);
+  return OldFlag;
 }
 
 template uint32_t elf::getMipsEFlags<ELF32LE>();

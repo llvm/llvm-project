@@ -126,7 +126,7 @@ public:
                                            nullptr,
                                            eCommandRequiresTarget,
                                            "restart"),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData run_args_arg;
@@ -156,8 +156,8 @@ public:
     {
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
-        
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter, 
+
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eDiskFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -328,17 +328,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -387,7 +388,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             attach_info.Clear();
         }
@@ -406,6 +407,7 @@ public:
                                         int opt_element_index,
                                         int match_start_point,
                                         int max_return_elements,
+                                        CommandInterpreter &interpreter,
                                         bool &word_complete,
                                         StringList &matches) override
         {
@@ -425,7 +427,7 @@ public:
                 const char *partial_name = nullptr;
                 partial_name = input.GetArgumentAtIndex(opt_arg_pos);
 
-                PlatformSP platform_sp (m_interpreter.GetPlatform (true));
+                PlatformSP platform_sp(interpreter.GetPlatform(true));
                 if (platform_sp)
                 {
                     ProcessInstanceInfoList process_infos;
@@ -467,7 +469,7 @@ public:
                                             "process attach <cmd-options>",
                                             0,
                                             "attach"),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -632,7 +634,7 @@ public:
                              eCommandTryTargetAPILock      |
                              eCommandProcessMustBeLaunched |
                              eCommandProcessMustBePaused   ),
-        m_options(interpreter)
+        m_options()
     {
     }
 
@@ -642,17 +644,18 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -673,7 +676,7 @@ protected:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_ignore = 0;
         }
@@ -818,16 +821,17 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -856,7 +860,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_keep_stopped = eLazyBoolCalculate;
         }
@@ -879,7 +883,7 @@ public:
         : CommandObjectParsed(interpreter, "process detach", "Detach from the current target process.",
                               "process detach",
                               eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -943,17 +947,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -972,7 +977,7 @@ public:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             plugin_name.clear();
         }
@@ -998,7 +1003,7 @@ public:
                              "Connect to a remote debug service.",
                              "process connect <remote-url>",
                              0),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -1100,17 +1105,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
             // Keep default values of all options in one place: OptionParsingStarting ()
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1129,7 +1135,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             do_install = false;
             install_path.Clear();
@@ -1158,7 +1164,7 @@ public:
                              eCommandTryTargetAPILock      |
                              eCommandProcessMustBeLaunched |
                              eCommandProcessMustBePaused   ),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -1577,16 +1583,17 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1610,7 +1617,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             stop.clear();
             notify.clear();
@@ -1639,7 +1646,7 @@ public:
               interpreter, "process handle",
               "Manage LLDB handling of OS signals for the current target process.  Defaults to showing current policy.",
               nullptr),
-          m_options(interpreter)
+          m_options()
     {
         SetHelpLong ("\nIf no signals are specified, update them all.  If no update "
                      "option is specified, list the current values.");

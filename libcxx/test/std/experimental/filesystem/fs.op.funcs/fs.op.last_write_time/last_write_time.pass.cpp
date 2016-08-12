@@ -158,7 +158,8 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
 
     TEST_CHECK(ftime2 > ftime);
     TEST_CHECK(dtime2 > dtime);
-    TEST_CHECK(LastAccessTime(file) == file_access_time);
+    TEST_CHECK(LastAccessTime(file) == file_access_time ||
+               LastAccessTime(file) == Clock::to_time_t(ftime2));
     TEST_CHECK(LastAccessTime(dir) == dir_access_time);
 }
 

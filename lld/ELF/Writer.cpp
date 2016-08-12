@@ -221,6 +221,7 @@ template <class ELFT> void elf::writeResult() {
   Out<ELFT>::FiniArray = nullptr;
 
   Writer<ELFT>().run();
+  Out<ELFT>::Pool.clear();
 }
 
 template <class ELFT>

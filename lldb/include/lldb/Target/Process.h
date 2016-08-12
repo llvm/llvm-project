@@ -421,20 +421,21 @@ protected:
 class ProcessLaunchCommandOptions : public Options
 {
 public:
-    ProcessLaunchCommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter)
+    ProcessLaunchCommandOptions () :
+        Options()
     {
         // Keep default values of all options in one place: OptionParsingStarting ()
-        OptionParsingStarting ();
+        OptionParsingStarting (nullptr);
     }
 
     ~ProcessLaunchCommandOptions() override = default;
 
     Error
-    SetOptionValue (uint32_t option_idx, const char *option_arg) override;
+    SetOptionValue (uint32_t option_idx, const char *option_arg,
+                    ExecutionContext *execution_context) override;
     
     void
-    OptionParsingStarting() override
+    OptionParsingStarting(ExecutionContext *execution_context) override
     {
         launch_info.Clear();
         disable_aslr = eLazyBoolCalculate;

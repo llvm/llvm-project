@@ -43,9 +43,9 @@ OptionGroupBoolean::~OptionGroupBoolean ()
 }
 
 Error
-OptionGroupBoolean::SetOptionValue (CommandInterpreter &interpreter,
-                                    uint32_t option_idx,
-                                    const char *option_arg)
+OptionGroupBoolean::SetOptionValue(uint32_t option_idx,
+                                   const char *option_arg,
+                                   ExecutionContext *execution_context)
 {
     Error error;
     if (m_option_definition.option_has_arg == OptionParser::eNoArgument)
@@ -62,7 +62,7 @@ OptionGroupBoolean::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupBoolean::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupBoolean::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_value.Clear();
 }

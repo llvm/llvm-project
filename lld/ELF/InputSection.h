@@ -48,7 +48,15 @@ protected:
   SmallVector<char, 0> Uncompressed;
 
 public:
-  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions, Layout };
+  enum Kind {
+    Regular,
+    EHFrame,
+    Merge,
+    MipsReginfo,
+    MipsOptions,
+    MipsAbiFlags,
+    Layout
+  };
   Kind SectionKind;
 
   InputSectionBase() : Repl(this) {}
@@ -258,6 +266,17 @@ public:
   static bool classof(const InputSectionBase<ELFT> *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
+};
+
+template <class ELFT>
+class MipsAbiFlagsInputSection : public InputSectionBase<ELFT> {
+  typedef typename ELFT::Shdr Elf_Shdr;
+
+public:
+  MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  static bool classof(const InputSectionBase<ELFT> *S);
+
+  const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
 };
 
 // Common symbols don't belong to any section. But it is easier for us

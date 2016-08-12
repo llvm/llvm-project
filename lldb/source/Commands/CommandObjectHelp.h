@@ -52,15 +52,16 @@ public:
     {
     public:
         
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
         
         ~CommandOptions() override {}
         
         Error
-        SetOptionValue(uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -85,7 +86,7 @@ public:
         }
         
         void
-        OptionParsingStarting() override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_show_aliases = true;
             m_show_user_defined = true;

@@ -63,9 +63,10 @@ OptionGroupValueObjectDisplay::GetDefinitions ()
 
 
 Error
-OptionGroupValueObjectDisplay::SetOptionValue (CommandInterpreter &interpreter,
-                                               uint32_t option_idx,
-                                               const char *option_arg)
+OptionGroupValueObjectDisplay::SetOptionValue(uint32_t option_idx,
+                                              const char *option_arg,
+                                              ExecutionContext
+                                              *execution_context)
 {
     Error error;
     const int short_option = g_option_table[option_idx].short_option;
@@ -138,7 +139,8 @@ OptionGroupValueObjectDisplay::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupValueObjectDisplay::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupValueObjectDisplay::OptionParsingStarting(ExecutionContext
+                                                     *execution_context)
 {
     // If these defaults change, be sure to modify AnyOptionWasSet().
     show_types        = false;
@@ -153,10 +155,11 @@ OptionGroupValueObjectDisplay::OptionParsingStarting (CommandInterpreter &interp
     be_raw            = false;
     ignore_cap        = false;
     run_validator     = false;
-    
-    Target *target = interpreter.GetExecutionContext().GetTargetPtr();
-    if (target != nullptr)
-        use_dynamic = target->GetPreferDynamicValue();
+
+    TargetSP target_sp =
+        execution_context ? execution_context->GetTargetSP() : TargetSP();
+    if (target_sp)
+        use_dynamic = target_sp->GetPreferDynamicValue();
     else
     {
         // If we don't have any targets, then dynamic values won't do us much good.

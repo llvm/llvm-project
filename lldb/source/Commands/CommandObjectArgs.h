@@ -32,10 +32,11 @@ namespace lldb_private {
             ~CommandOptions() override;
             
             Error
-            SetOptionValue(uint32_t option_idx, const char *option_arg) override;
+            SetOptionValue(uint32_t option_idx, const char *option_arg,
+                           ExecutionContext *execution_context) override;
             
             void
-            OptionParsingStarting() override;
+            OptionParsingStarting(ExecutionContext *execution_context) override;
             
             const OptionDefinition*
             GetDefinitions() override;

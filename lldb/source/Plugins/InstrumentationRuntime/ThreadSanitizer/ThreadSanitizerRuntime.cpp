@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
@@ -68,65 +67,9 @@ ThreadSanitizerRuntime::GetTypeStatic()
     return eInstrumentationRuntimeTypeThreadSanitizer;
 }
 
-ThreadSanitizerRuntime::ThreadSanitizerRuntime(const ProcessSP &process_sp) :
-m_is_active(false),
-m_runtime_module_wp(),
-m_process_wp(),
-m_breakpoint_id(0)
-{
-    if (process_sp)
-        m_process_wp = process_sp;
-}
-
 ThreadSanitizerRuntime::~ThreadSanitizerRuntime()
 {
     Deactivate();
-}
-
-static bool
-ModuleContainsTSanRuntime(ModuleSP module_sp)
-{
-    static ConstString g_tsan_get_current_report("__tsan_get_current_report");
-    const Symbol* symbol = module_sp->FindFirstSymbolWithNameAndType(g_tsan_get_current_report, lldb::eSymbolTypeAny);
-    return symbol != nullptr;
-}
-
-void
-ThreadSanitizerRuntime::ModulesDidLoad(lldb_private::ModuleList &module_list)
-{
-    if (IsActive())
-        return;
-    
-    if (GetRuntimeModuleSP()) {
-        Activate();
-        return;
-    }
-    
-    module_list.ForEach ([this](const lldb::ModuleSP module_sp) -> bool
-    {
-        const FileSpec & file_spec = module_sp->GetFileSpec();
-        if (! file_spec)
-            return true; // Keep iterating through modules
-        
-        llvm::StringRef module_basename(file_spec.GetFilename().GetStringRef());
-        if (module_sp->IsExecutable() || module_basename.startswith("libclang_rt.tsan_"))
-        {
-            if (ModuleContainsTSanRuntime(module_sp))
-            {
-                m_runtime_module_wp = module_sp;
-                Activate();
-                return false; // Stop iterating
-            }
-        }
-
-        return true; // Keep iterating through modules
-    });
-}
-
-bool
-ThreadSanitizerRuntime::IsActive()
-{
-    return m_is_active;
 }
 
 #define RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC 2*1000*1000
@@ -729,10 +672,24 @@ ThreadSanitizerRuntime::NotifyBreakpointHit(void *baton, StoppointCallbackContex
         return false;   // Let target run
 }
 
+const RegularExpression &
+ThreadSanitizerRuntime::GetPatternForRuntimeLibrary() {
+  static RegularExpression regex("libclang_rt.tsan_");
+  return regex;
+}
+
+bool
+ThreadSanitizerRuntime::CheckIfRuntimeIsValid(const lldb::ModuleSP module_sp)
+{
+    static ConstString g_tsan_get_current_report("__tsan_get_current_report");
+    const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(g_tsan_get_current_report, lldb::eSymbolTypeAny);
+    return symbol != nullptr;
+}
+
 void
 ThreadSanitizerRuntime::Activate()
 {
-    if (m_is_active)
+    if (IsActive())
         return;
     
     ProcessSP process_sp = GetProcessSP();
@@ -759,7 +716,7 @@ ThreadSanitizerRuntime::Activate()
     Breakpoint *breakpoint = process_sp->GetTarget().CreateBreakpoint(symbol_address, internal, hardware).get();
     breakpoint->SetCallback (ThreadSanitizerRuntime::NotifyBreakpointHit, this, true);
     breakpoint->SetBreakpointKind ("thread-sanitizer-report");
-    m_breakpoint_id = breakpoint->GetID();
+    SetBreakpointID(breakpoint->GetID());
     
     StreamFileSP stream_sp (process_sp->GetTarget().GetDebugger().GetOutputFile());
     if (stream_sp)
@@ -767,24 +724,23 @@ ThreadSanitizerRuntime::Activate()
         stream_sp->Printf ("ThreadSanitizer debugger support is active.\n");
     }
     
-    m_is_active = true;
+    SetActive(true);
 }
 
 void
 ThreadSanitizerRuntime::Deactivate()
 {
-    if (m_breakpoint_id != LLDB_INVALID_BREAK_ID)
+    if (GetBreakpointID() != LLDB_INVALID_BREAK_ID)
     {
         ProcessSP process_sp = GetProcessSP();
         if (process_sp)
         {
-            process_sp->GetTarget().RemoveBreakpointByID(m_breakpoint_id);
-            m_breakpoint_id = LLDB_INVALID_BREAK_ID;
+            process_sp->GetTarget().RemoveBreakpointByID(GetBreakpointID());
+            SetBreakpointID(LLDB_INVALID_BREAK_ID);
         }
     }
-    m_is_active = false;
+    SetActive(false);
 }
-
 static std::string
 GenerateThreadName(const std::string &path, StructuredData::Object *o, StructuredData::ObjectSP main_info) {
     std::string result = "additional information";

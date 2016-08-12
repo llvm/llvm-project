@@ -4848,6 +4848,19 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
                 }
 #if KMP_NESTED_HOT_TEAMS
             } // (__kmp_hot_teams_mode == 0)
+            else {
+                // When keeping extra threads in team, switch threads to wait on own b_go flag
+                for (f=new_nproc; f<team->t.t_nproc; ++f) {
+                    KMP_DEBUG_ASSERT(team->t.t_threads[f]);
+                    kmp_balign_t *balign = team->t.t_threads[f]->th.th_bar;
+                    for (int b=0; b<bs_last_barrier; ++b) {
+                        if (balign[b].bb.wait_flag == KMP_BARRIER_PARENT_FLAG) {
+                            balign[b].bb.wait_flag = KMP_BARRIER_SWITCH_TO_OWN_FLAG;
+                        }
+                        KMP_CHECK_UPDATE(balign[b].bb.leaf_kids, 0);
+                    }
+                }
+            }
 #endif // KMP_NESTED_HOT_TEAMS
             team->t.t_nproc =  new_nproc;
             // TODO???: team->t.t_max_active_levels = new_max_active_levels;
@@ -5331,6 +5344,7 @@ __kmp_free_thread( kmp_info_t *this_th )
         if (balign[b].bb.wait_flag == KMP_BARRIER_PARENT_FLAG)
             balign[b].bb.wait_flag = KMP_BARRIER_SWITCH_TO_OWN_FLAG;
         balign[b].bb.team = NULL;
+        balign[b].bb.leaf_kids = 0;
     }
     this_th->th.th_task_state = 0;
 

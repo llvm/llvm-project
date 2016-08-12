@@ -734,7 +734,7 @@ uint32_t MachOLinkingContext::dylibCurrentVersion(StringRef installName) const {
   if (pos != _pathToDylibMap.end())
     return pos->second->currentVersion();
   else
-    return 0x1000; // 1.0
+    return 0x10000; // 1.0
 }
 
 uint32_t MachOLinkingContext::dylibCompatVersion(StringRef installName) const {
@@ -742,7 +742,7 @@ uint32_t MachOLinkingContext::dylibCompatVersion(StringRef installName) const {
   if (pos != _pathToDylibMap.end())
     return pos->second->compatVersion();
   else
-    return 0x1000; // 1.0
+    return 0x10000; // 1.0
 }
 
 void MachOLinkingContext::createImplicitFiles(
@@ -772,7 +772,10 @@ void MachOLinkingContext::createImplicitFiles(
 void MachOLinkingContext::registerDylib(MachODylibFile *dylib,
                                         bool upward) const {
   std::lock_guard<std::mutex> lock(_dylibsMutex);
-  _allDylibs.insert(dylib);
+
+  if (std::find(_allDylibs.begin(),
+                _allDylibs.end(), dylib) == _allDylibs.end())
+    _allDylibs.push_back(dylib);
   _pathToDylibMap[dylib->installName()] = dylib;
   // If path is different than install name, register path too.
   if (!dylib->path().equals(dylib->installName()))

@@ -46,6 +46,9 @@ llvm::StringRef getOutputSectionName(InputSectionBase<ELFT> *S);
 template <class ELFT> void reportDiscarded(InputSectionBase<ELFT> *IS);
 
 template <class ELFT> uint32_t getMipsEFlags();
+
+uint8_t getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
+                         llvm::StringRef FileName);
 }
 }
 

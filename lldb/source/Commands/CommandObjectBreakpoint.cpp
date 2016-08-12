@@ -69,7 +69,7 @@ public:
                              "breakpoint set", 
                              "Sets a breakpoint or set of breakpoints in the executable.", 
                              "breakpoint set <cmd-options>"),
-        m_options (interpreter)
+        m_options ()
     {
     }
 
@@ -84,8 +84,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions () :
+            Options (),
             m_condition (),
             m_filenames (),
             m_line_num (0),
@@ -116,7 +116,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -125,8 +126,9 @@ public:
             {
                 case 'a':
                     {
-                        ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-                        m_load_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                        m_load_addr =
+                            Args::StringToAddress(execution_context, option_arg,
+                                                  LLDB_INVALID_ADDRESS, &error);
                     }
                     break;
 
@@ -279,9 +281,10 @@ public:
 
                 case 'R':
                     {
-                        ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
                         lldb::addr_t tmp_offset_addr;
-                        tmp_offset_addr = Args::StringToAddress(&exe_ctx, option_arg, 0, &error);
+                        tmp_offset_addr =
+                            Args::StringToAddress(execution_context, option_arg,
+                                                  0, &error);
                         if (error.Success())
                             m_offset_addr = tmp_offset_addr;
                     }
@@ -355,7 +358,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_condition.clear();
             m_filenames.Clear();
@@ -892,7 +895,7 @@ public:
                             "If no breakpoint is specified, acts on the last created breakpoint.  "
                             "With the exception of -e, -d and -i, passing an empty argument clears the modification.", 
                             nullptr),
-        m_options (interpreter)
+        m_options ()
     {
         CommandArgumentEntry arg;
         CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID, eArgTypeBreakpointIDRange);
@@ -911,8 +914,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions () :
+            Options (),
             m_ignore_count (0),
             m_thread_id(LLDB_INVALID_THREAD_ID),
             m_thread_id_passed(false),
@@ -935,7 +938,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1031,7 +1035,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_ignore_count = 0;
             m_thread_id = LLDB_INVALID_THREAD_ID;
@@ -1418,7 +1422,7 @@ public:
                             "breakpoint list",
                             "List some or all breakpoints at configurable levels of detail.",
                             nullptr),
-        m_options (interpreter)
+        m_options ()
     {
         CommandArgumentEntry arg;
         CommandArgumentData bp_id_arg;
@@ -1445,8 +1449,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions () :
+            Options (),
             m_level (lldb::eDescriptionLevelBrief),
             m_use_dummy(false)
         {
@@ -1455,7 +1459,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1486,7 +1491,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_level = lldb::eDescriptionLevelFull;
             m_internal = false;
@@ -1622,7 +1627,7 @@ public:
         : CommandObjectParsed(interpreter, "breakpoint clear",
                               "Delete or disable breakpoints matching the specified source file and line.",
                               "breakpoint clear <cmd-options>"),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -1637,8 +1642,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions () :
+            Options (),
             m_filename (),
             m_line_num (0)
         {
@@ -1647,7 +1652,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1671,7 +1677,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_filename.clear();
             m_line_num = 0;
@@ -1815,7 +1821,7 @@ public:
                             "breakpoint delete",
                             "Delete the specified breakpoint(s).  If no breakpoints are specified, delete them all.",
                             nullptr),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg;
         CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID, eArgTypeBreakpointIDRange);
@@ -1834,8 +1840,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions () :
+            Options (),
             m_use_dummy (false),
             m_force (false)
         {
@@ -1844,7 +1850,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1868,7 +1875,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_use_dummy = false;
             m_force = false;
@@ -2025,9 +2032,9 @@ public:
     }
 
     Error
-    SetOptionValue (CommandInterpreter &interpreter,
-                    uint32_t option_idx,
-                    const char *option_value) override
+    SetOptionValue (uint32_t option_idx,
+                    const char *option_value,
+                    ExecutionContext *execution_context) override
     {
         Error error;
         const int short_option = g_breakpoint_name_options[option_idx].short_option;
@@ -2056,7 +2063,7 @@ public:
     }
 
     void
-    OptionParsingStarting (CommandInterpreter &interpreter) override
+    OptionParsingStarting (ExecutionContext *execution_context) override
     {
         m_name.Clear();
         m_breakpoint.Clear();
@@ -2078,7 +2085,7 @@ public:
                              "Add a name to the breakpoints provided.",
                              "breakpoint name add <command-options> <breakpoint-id-list>"),
         m_name_options(),
-        m_option_group(interpreter)
+        m_option_group()
         {
             // Create the first variant for the first (and only) argument for this command.
             CommandArgumentEntry arg1;
@@ -2171,7 +2178,7 @@ public:
                              "Delete a name from the breakpoints provided.",
                              "breakpoint name delete <command-options> <breakpoint-id-list>"),
         m_name_options(),
-        m_option_group(interpreter)
+        m_option_group()
     {
         // Create the first variant for the first (and only) argument for this command.
         CommandArgumentEntry arg1;
@@ -2263,7 +2270,7 @@ public:
                              "List either the names for a breakpoint or the breakpoints for a given name.",
                              "breakpoint name list <command-options>"),
         m_name_options(),
-        m_option_group(interpreter)
+        m_option_group()
     {
         m_option_group.Append (&m_name_options);
         m_option_group.Finalize();

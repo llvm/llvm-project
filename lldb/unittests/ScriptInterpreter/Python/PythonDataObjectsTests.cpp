@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
+#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 

@@ -62,6 +62,7 @@ public:
     Merge,
     MipsReginfo,
     MipsOptions,
+    MipsAbiFlags,
     Plt,
     Regular,
     Reloc,
@@ -642,6 +643,24 @@ private:
   uint32_t GprMask = 0;
 };
 
+template <class ELFT>
+class MipsAbiFlagsOutputSection final : public OutputSectionBase<ELFT> {
+  typedef llvm::object::Elf_Mips_ABIFlags<ELFT> Elf_Mips_ABIFlags;
+  typedef OutputSectionBase<ELFT> Base;
+
+public:
+  MipsAbiFlagsOutputSection();
+  void writeTo(uint8_t *Buf) override;
+  void addSection(InputSectionBase<ELFT> *S) override;
+  typename Base::Kind getKind() const override { return Base::MipsAbiFlags; }
+  static bool classof(const Base *B) {
+    return B->getKind() == Base::MipsAbiFlags;
+  }
+
+private:
+  Elf_Mips_ABIFlags Flags;
+};
+
 // --eh-frame-hdr option tells linker to construct a header for all the
 // .eh_frame sections. This header is placed to a section named .eh_frame_hdr
 // and also to a PT_GNU_EH_FRAME segment.
@@ -752,6 +771,9 @@ template <class ELFT> struct Out {
   static OutputSectionBase<ELFT> *PreinitArray;
   static OutputSectionBase<ELFT> *InitArray;
   static OutputSectionBase<ELFT> *FiniArray;
+
+  // This pool owns dynamically-allocated output sections.
+  static std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> Pool;
 };
 
 template <bool Is64Bits> struct SectionKey {
@@ -779,7 +801,6 @@ private:
   Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
 
   llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
-  std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
@@ -812,6 +833,9 @@ template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::PreinitArray;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::InitArray;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::FiniArray;
+
+template <class ELFT>
+std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> Out<ELFT>::Pool;
 
 } // namespace elf
 } // namespace lld
