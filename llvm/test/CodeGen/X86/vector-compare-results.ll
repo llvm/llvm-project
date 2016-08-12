@@ -4420,7 +4420,6 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512-NEXT:    kmovw %k1, %eax
 ; AVX512-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
-; AVX512-NEXT:    kshiftlw $0, %k0, %k0
 ; AVX512-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm3
@@ -4488,7 +4487,6 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512-NEXT:    kmovw %k1, %eax
 ; AVX512-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
-; AVX512-NEXT:    kshiftlw $0, %k0, %k0
 ; AVX512-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
@@ -4562,7 +4560,6 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512-NEXT:    kmovw %k1, %eax
 ; AVX512-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    kshiftlw $0, %k0, %k0
 ; AVX512-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
@@ -4630,7 +4627,6 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ; AVX512-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512-NEXT:    kmovw %k1, %eax
 ; AVX512-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kshiftlw $0, %k0, %k0
 ; AVX512-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0

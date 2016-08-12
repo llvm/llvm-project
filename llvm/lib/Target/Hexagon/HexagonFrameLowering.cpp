@@ -838,7 +838,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
     auto IfR = [Reg] (const CalleeSavedInfo &C) -> bool {
       return C.getReg() == Reg;
     };
-    auto F = std::find_if(CSI.begin(), CSI.end(), IfR);
+    auto F = find_if(CSI, IfR);
     if (F == CSI.end())
       continue;
 

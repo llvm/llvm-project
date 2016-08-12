@@ -423,25 +423,21 @@ bool AMDGPUCFGStructurizer::needMigrateBlock(MachineBasicBlock *MBB) const {
 
 void AMDGPUCFGStructurizer::reversePredicateSetter(
     MachineBasicBlock::iterator I) {
-  assert(static_cast<MachineInstr *>(I) && "Expected valid iterator");
+  assert(I.isValid() && "Expected valid iterator");
   for (;; --I) {
     if (I->getOpcode() == AMDGPU::PRED_X) {
-      switch (static_cast<MachineInstr *>(I)->getOperand(2).getImm()) {
+      switch (I->getOperand(2).getImm()) {
       case OPCODE_IS_ZERO_INT:
-        static_cast<MachineInstr *>(I)->getOperand(2)
-            .setImm(OPCODE_IS_NOT_ZERO_INT);
+        I->getOperand(2).setImm(OPCODE_IS_NOT_ZERO_INT);
         return;
       case OPCODE_IS_NOT_ZERO_INT:
-        static_cast<MachineInstr *>(I)->getOperand(2)
-            .setImm(OPCODE_IS_ZERO_INT);
+        I->getOperand(2).setImm(OPCODE_IS_ZERO_INT);
         return;
       case OPCODE_IS_ZERO:
-        static_cast<MachineInstr *>(I)->getOperand(2)
-            .setImm(OPCODE_IS_NOT_ZERO);
+        I->getOperand(2).setImm(OPCODE_IS_NOT_ZERO);
         return;
       case OPCODE_IS_NOT_ZERO:
-        static_cast<MachineInstr *>(I)->getOperand(2)
-            .setImm(OPCODE_IS_ZERO);
+        I->getOperand(2).setImm(OPCODE_IS_ZERO);
         return;
       default:
         llvm_unreachable("PRED_X Opcode invalid!");

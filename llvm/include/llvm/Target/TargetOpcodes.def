@@ -232,6 +232,21 @@ HANDLE_TARGET_OPCODE(G_TRUNC)
 /// Generic integer constant.
 HANDLE_TARGET_OPCODE(G_CONSTANT)
 
+// Generic sign extend
+HANDLE_TARGET_OPCODE(G_SEXT)
+
+// Generic zero extend
+HANDLE_TARGET_OPCODE(G_ZEXT)
+
+// Generic left-shift
+HANDLE_TARGET_OPCODE(G_SHL)
+
+// Generic logical right-shift
+HANDLE_TARGET_OPCODE(G_LSHR)
+
+// Generic arithmetic right-shift
+HANDLE_TARGET_OPCODE(G_ASHR)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 

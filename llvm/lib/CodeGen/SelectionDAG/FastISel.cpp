@@ -353,8 +353,8 @@ void FastISel::recomputeInsertPt() {
 
 void FastISel::removeDeadCode(MachineBasicBlock::iterator I,
                               MachineBasicBlock::iterator E) {
-  assert(static_cast<MachineInstr *>(I) && static_cast<MachineInstr *>(E) &&
-         std::distance(I, E) > 0 && "Invalid iterator!");
+  assert(I.isValid() && E.isValid() && std::distance(I, E) > 0 &&
+         "Invalid iterator!");
   while (I != E) {
     MachineInstr *Dead = &*I;
     ++I;

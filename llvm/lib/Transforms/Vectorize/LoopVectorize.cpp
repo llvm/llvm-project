@@ -4033,8 +4033,7 @@ void InnerLoopVectorizer::predicateStores() {
 
 InnerLoopVectorizer::VectorParts
 InnerLoopVectorizer::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
-  assert(std::find(pred_begin(Dst), pred_end(Dst), Src) != pred_end(Dst) &&
-         "Invalid edge");
+  assert(is_contained(predecessors(Dst), Src) && "Invalid edge");
 
   // Look for cached value.
   std::pair<BasicBlock *, BasicBlock *> Edge(Src, Dst);

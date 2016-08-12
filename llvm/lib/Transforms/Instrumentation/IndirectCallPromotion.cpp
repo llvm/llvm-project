@@ -13,29 +13,38 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/CFG.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/PassSupport.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <string>
-#include <utility>
+#include <cassert>
+#include <cstdint>
 #include <vector>
 
 using namespace llvm;
@@ -208,6 +217,7 @@ public:
   ICallPromotionFunc(Function &Func, Module *Modu, InstrProfSymtab *Symtab)
       : F(Func), M(Modu), Symtab(Symtab) {
   }
+
   bool processFunction();
 };
 } // end anonymous namespace
@@ -474,7 +484,7 @@ static Instruction *createDirectCallInst(const Instruction *Inst,
                                      NewInst);
 
   // Clear the value profile data.
-  NewInst->setMetadata(LLVMContext::MD_prof, 0);
+  NewInst->setMetadata(LLVMContext::MD_prof, nullptr);
   CallSite NewCS(NewInst);
   FunctionType *DirectCalleeType = DirectCallee->getFunctionType();
   unsigned ParamNum = DirectCalleeType->getFunctionNumParams();
@@ -610,7 +620,7 @@ bool ICallPromotionFunc::processFunction() {
 
     Changed = true;
     // Adjust the MD.prof metadata. First delete the old one.
-    I->setMetadata(LLVMContext::MD_prof, 0);
+    I->setMetadata(LLVMContext::MD_prof, nullptr);
     // If all promoted, we don't need the MD.prof metadata.
     if (TotalCount == 0 || NumPromoted == NumVals)
       continue;

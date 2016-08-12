@@ -2101,7 +2101,7 @@ void cl::AddExtraVersionPrinter(void (*func)()) {
 StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
-  assert(std::find(Subs.begin(), Subs.end(), &Sub) != Subs.end());
+  assert(is_contained(Subs, &Sub));
   return Sub.OptionsMap;
 }
 

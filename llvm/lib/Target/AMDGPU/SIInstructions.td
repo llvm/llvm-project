@@ -1603,12 +1603,23 @@ defm V_MED3_U32 : VOP3Inst <vop3<0x159, 0x1d8>, "v_med3_u32",
   VOP_I32_I32_I32_I32, AMDGPUumed3
 >;
 
-//def V_SAD_U8 : VOP3_U8 <0x0000015a, "v_sad_u8", []>;
-//def V_SAD_HI_U8 : VOP3_U8 <0x0000015b, "v_sad_hi_u8", []>;
-//def V_SAD_U16 : VOP3_U16 <0x0000015c, "v_sad_u16", []>;
+defm V_SAD_U8 : VOP3Inst <vop3 <0x15a, 0x1d9>, "v_sad_u8",
+  VOP_I32_I32_I32_I32, int_amdgcn_sad_u8>;
+
+defm V_SAD_HI_U8 : VOP3Inst <vop3 <0x15b, 0x1da>, "v_sad_hi_u8",
+  VOP_I32_I32_I32_I32, int_amdgcn_sad_hi_u8>;
+
+defm V_SAD_U16 : VOP3Inst <vop3<0x15c, 0x1db>, "v_sad_u16",
+  VOP_I32_I32_I32_I32, int_amdgcn_sad_u16>;
+
 defm V_SAD_U32 : VOP3Inst <vop3<0x15d, 0x1dc>, "v_sad_u32",
   VOP_I32_I32_I32_I32
 >;
+
+defm V_CVT_PK_U8_F32 : VOP3Inst<vop3<0x15e, 0x1dd>, "v_cvt_pk_u8_f32",
+  VOP_I32_F32_I32_I32, int_amdgcn_cvt_pk_u8_f32
+>;
+
 //def V_CVT_PK_U8_F32 : VOP3_U8 <0x0000015e, "v_cvt_pk_u8_f32", []>;
 defm V_DIV_FIXUP_F32 : VOP3Inst <
   vop3<0x15f, 0x1de>, "v_div_fixup_f32", VOP_F32_F32_F32_F32, AMDGPUdiv_fixup
@@ -1707,8 +1718,12 @@ defm V_DIV_FMAS_F64 : VOP3_VCC_Inst <vop3<0x170, 0x1e3>, "v_div_fmas_f64",
 } // End SchedRW = [WriteDouble]
 } // End isCommutable = 1, Uses = [VCC, EXEC]
 
-//def V_MSAD_U8 : VOP3_U8 <0x00000171, "v_msad_u8", []>;
-//def V_QSAD_U8 : VOP3_U8 <0x00000172, "v_qsad_u8", []>;
+defm V_MSAD_U8 : VOP3Inst <vop3<0x171, 0x1e4>, "v_msad_u8",
+  VOP_I32_I32_I32_I32, int_amdgcn_msad_u8>;
+
+defm V_MQSAD_PK_U16_U8 : VOP3Inst <vop3<0x173, 0x1e6>, "v_mqsad_pk_u16_u8",
+  VOP_I32_I32_I32_I32, int_amdgcn_mqsad_pk_u16_u8>;
+
 //def V_MQSAD_U8 : VOP3_U8 <0x00000173, "v_mqsad_u8", []>;
 
 let SchedRW = [WriteDouble] in {

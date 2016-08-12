@@ -157,8 +157,7 @@ FindUniqueOperandCommands(std::vector<std::string> &UniqueOperandCommands,
 
     // Check to see if we already have 'Command' in UniqueOperandCommands.
     // If not, add it.
-    auto I = std::find(UniqueOperandCommands.begin(),
-                       UniqueOperandCommands.end(), Command);
+    auto I = find(UniqueOperandCommands, Command);
     if (I != UniqueOperandCommands.end()) {
       size_t idx = I - UniqueOperandCommands.begin();
       InstrsForCase[idx] += ", ";
@@ -451,10 +450,8 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
   }
 
   // Okay, delete instructions with no operand info left.
-  auto I = std::remove_if(Instructions.begin(), Instructions.end(),
-                          [](AsmWriterInst &Inst) {
-                            return Inst.Operands.empty();
-                          });
+  auto I = remove_if(Instructions,
+                     [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
   Instructions.erase(I, Instructions.end());
 
 
@@ -838,9 +835,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               Rec->isSubClassOf("Operand")) {
             std::string PrintMethod = Rec->getValueAsString("PrintMethod");
             if (PrintMethod != "" && PrintMethod != "printOperand") {
-              PrintMethodIdx = std::find(PrintMethods.begin(),
-                                         PrintMethods.end(), PrintMethod) -
-                               PrintMethods.begin();
+              PrintMethodIdx =
+                  find(PrintMethods, PrintMethod) - PrintMethods.begin();
               if (static_cast<unsigned>(PrintMethodIdx) == PrintMethods.size())
                 PrintMethods.push_back(PrintMethod);
             }

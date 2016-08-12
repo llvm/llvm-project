@@ -1108,9 +1108,7 @@ unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   // Make sure the predicate is in the table.
   Decoders.insert(StringRef(Decoder));
   // Now figure out the index for when we write out the table.
-  DecoderSet::const_iterator P = std::find(Decoders.begin(),
-                                           Decoders.end(),
-                                           Decoder.str());
+  DecoderSet::const_iterator P = find(Decoders, Decoder.str());
   return (unsigned)(P - Decoders.begin());
 }
 
@@ -1183,9 +1181,7 @@ unsigned FilterChooser::getPredicateIndex(DecoderTableInfo &TableInfo,
   // Make sure the predicate is in the table.
   TableInfo.Predicates.insert(Predicate.str());
   // Now figure out the index for when we write out the table.
-  PredicateSet::const_iterator P = std::find(TableInfo.Predicates.begin(),
-                                             TableInfo.Predicates.end(),
-                                             Predicate.str());
+  PredicateSet::const_iterator P = find(TableInfo.Predicates, Predicate.str());
   return (unsigned)(P - TableInfo.Predicates.begin());
 }
 

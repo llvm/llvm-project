@@ -1571,8 +1571,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
         break;
 
       case ISD::TokenFactor:
-        if (Op.hasOneUse() &&
-            std::find(TFs.begin(), TFs.end(), Op.getNode()) == TFs.end()) {
+        if (Op.hasOneUse() && !is_contained(TFs, Op.getNode())) {
           // Queue up for processing.
           TFs.push_back(Op.getNode());
           // Clean up in case the token factor is removed.
@@ -11611,10 +11610,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode* St) {
 
     // Check if this store interferes with any of the loads that we found.
     // If we find a load that alias with this store. Stop the sequence.
-    if (std::any_of(AliasLoadNodes.begin(), AliasLoadNodes.end(),
-                    [&](LSBaseSDNode* Ldn) {
-                      return isAlias(Ldn, StoreNodes[i].MemNode);
-                    }))
+    if (any_of(AliasLoadNodes, [&](LSBaseSDNode *Ldn) {
+          return isAlias(Ldn, StoreNodes[i].MemNode);
+        }))
       break;
 
     // Mark this node as useful.

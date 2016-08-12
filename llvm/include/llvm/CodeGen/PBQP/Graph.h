@@ -262,9 +262,7 @@ namespace PBQP {
 
     private:
       NodeId findNextInUse(NodeId NId) const {
-        while (NId < EndNId &&
-               std::find(FreeNodeIds.begin(), FreeNodeIds.end(), NId) !=
-               FreeNodeIds.end()) {
+        while (NId < EndNId && is_contained(FreeNodeIds, NId)) {
           ++NId;
         }
         return NId;
@@ -288,9 +286,7 @@ namespace PBQP {
 
     private:
       EdgeId findNextInUse(EdgeId EId) const {
-        while (EId < EndEId &&
-               std::find(FreeEdgeIds.begin(), FreeEdgeIds.end(), EId) !=
-               FreeEdgeIds.end()) {
+        while (EId < EndEId && is_contained(FreeEdgeIds, EId)) {
           ++EId;
         }
         return EId;

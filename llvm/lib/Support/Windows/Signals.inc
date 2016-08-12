@@ -470,7 +470,7 @@ void sys::DontRemoveFileOnSignal(StringRef Filename) {
   RegisterHandler();
 
   std::vector<std::string>::reverse_iterator I =
-  std::find(FilesToRemove->rbegin(), FilesToRemove->rend(), Filename);
+      find(reverse(*FilesToRemove), Filename);
   if (I != FilesToRemove->rend())
     FilesToRemove->erase(I.base()-1);
 

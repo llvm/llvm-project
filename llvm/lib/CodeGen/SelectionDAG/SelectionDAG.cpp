@@ -3394,8 +3394,8 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   // All operands must be vector types with the same number of elements as
   // the result type and must be either UNDEF or a build vector of constant
   // or UNDEF scalars.
-  if (!std::all_of(Ops.begin(), Ops.end(), IsConstantBuildVectorOrUndef) ||
-      !std::all_of(Ops.begin(), Ops.end(), IsScalarOrSameVectorSize))
+  if (!all_of(Ops, IsConstantBuildVectorOrUndef) ||
+      !all_of(Ops, IsScalarOrSameVectorSize))
     return SDValue();
 
   // If we are comparing vectors, then the result needs to be a i1 boolean

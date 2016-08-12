@@ -53,7 +53,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "ReplaceSDIV: Erratum Fix LBR25:  do not emit SDIV, but emit SDIVCC "
+    return "ReplaceSDIV: Leon erratum fix:  do not emit SDIV, but emit SDIVCC "
            "instead";
   }
 };
@@ -66,8 +66,21 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "FixCALL: Erratum Fix LBR26: restrict the size of the immediate "
+    return "FixCALL: Leon erratum fix: restrict the size of the immediate "
            "operand of the CALL instruction to 20 bits";
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY RestoreExecAddress : public LEONMachineFunctionPass {
+public:
+  static char ID;
+
+  RestoreExecAddress(TargetMachine &tm);
+  bool runOnMachineFunction(MachineFunction& MF) override;
+
+  const char *getPassName() const override {
+    return "RestoreExecAddress: Leon erratum fix: ensure execution "
+           "address is restored for bad floating point trap handlers.";
   }
 };
 
@@ -79,8 +92,21 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "IgnoreZeroFlag: Erratum Fix LBR28: do not rely on the zero bit "
+    return "IgnoreZeroFlag: Leon erratum fix: do not rely on the zero bit "
            "flag on a divide overflow for SDIVCC and UDIVCC";
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY FillDataCache : public LEONMachineFunctionPass {
+public:
+  static char ID;
+  static bool CacheFilled;
+
+  FillDataCache(TargetMachine &tm);
+  bool runOnMachineFunction(MachineFunction& MF) override;
+
+  const char *getPassName() const override {
+    return "FillDataCache: Leon erratum fix: fill data cache with values at application startup";
   }
 };
 
@@ -93,7 +119,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "InsertNOPDoublePrecision: Erratum Fix LBR30: insert a NOP before "
+    return "InsertNOPDoublePrecision: Leon erratum fix: insert a NOP before "
            "the double precision floating point instruction";
   }
 };
@@ -106,7 +132,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "FixFSMULD: Erratum Fix LBR31: do not select FSMULD";
+    return "FixFSMULD: Leon erratum fix: do not utilize FSMULD";
   }
 };
 
@@ -118,7 +144,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "ReplaceFMULS: Erratum Fix LBR32: replace FMULS instruction with a "
+    return "ReplaceFMULS: Leon erratum fix: Replace FMULS instruction with a "
            "routine using conversions/double precision operations to replace "
            "FMULS";
   }
@@ -133,7 +159,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "PreventRoundChange: Erratum Fix LBR33: prevent any rounding mode "
+    return "PreventRoundChange: Leon erratum fix: prevent any rounding mode "
            "change request: use only the round-to-nearest rounding mode";
   }
 };
@@ -146,7 +172,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "FixAllFDIVSQRT: Erratum Fix LBR34: fix FDIVS/FDIVD/FSQRTS/FSQRTD "
+    return "FixAllFDIVSQRT: Leon erratum fix: Fix FDIVS/FDIVD/FSQRTS/FSQRTD "
            "instructions with NOPs and floating-point store";
   }
 };
@@ -159,24 +185,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "InsertNOPLoad: insert a NOP instruction after "
+    return "InsertNOPLoad: Leon erratum fix: Insert a NOP instruction after "
            "every single-cycle load instruction when the next instruction is "
            "another load/store instruction";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY FlushCacheLineSWAP
-    : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  FlushCacheLineSWAP(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "FlushCacheLineSWAP: Erratum Fix LBR36: flush cache line containing "
-           "the lock before performing any of the atomic instructions SWAP and "
-           "LDSTUB";
   }
 };
 
@@ -189,7 +200,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "InsertNOPsLoadStore: Erratum Fix LBR37: insert NOPs between "
+    return "InsertNOPsLoadStore: Leon Erratum Fix: Insert NOPs between "
            "single-precision loads and the store, so the number of "
            "instructions between is 4";
   }

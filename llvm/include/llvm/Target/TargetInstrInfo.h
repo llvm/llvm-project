@@ -270,11 +270,8 @@ public:
   /// MachineSink determines on its own whether the instruction is safe to sink;
   /// this gives the target a hook to override the default behavior with regards
   /// to which instructions should be sunk.
-  /// The default behavior is to not sink insert_subreg, subreg_to_reg, and
-  /// reg_sequence. These are meant to be close to the source to make it easier
-  /// to coalesce.
   virtual bool shouldSink(const MachineInstr &MI) const {
-    return !MI.isInsertSubreg() && !MI.isSubregToReg() && !MI.isRegSequence();
+    return true;
   }
 
   /// Re-issue the specified 'original' instruction at the

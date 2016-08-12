@@ -900,7 +900,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
                                                         PE = Preds.end();
        PI != PE; ++PI) {
     MachineBasicBlock *PredBB = *PI;
-    if (std::find(TDBBs.begin(), TDBBs.end(), PredBB) != TDBBs.end())
+    if (is_contained(TDBBs, PredBB))
       continue;
 
     // EH edges

@@ -272,8 +272,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   }
 
   LiveOuts.erase(
-      std::remove_if(LiveOuts.begin(), LiveOuts.end(),
-                     [](const LiveOutReg &LO) { return LO.Reg == 0; }),
+      remove_if(LiveOuts, [](const LiveOutReg &LO) { return LO.Reg == 0; }),
       LiveOuts.end());
 
   return LiveOuts;

@@ -720,7 +720,7 @@ static GlobalValue::LinkageTypes getDecodedLinkage(unsigned Val) {
   }
 }
 
-// Decode the flags for GlobalValue in the summary
+/// Decode the flags for GlobalValue in the summary.
 static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
                                                             uint64_t Version) {
   // Summary were not emitted before LLVM 3.9, we don't need to upgrade Linkage
@@ -728,8 +728,9 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // to getDecodedLinkage() will need to be taken into account here as above.
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   RawFlags = RawFlags >> 4;
-  auto HasSection = RawFlags & 0x1; // bool
-  return GlobalValueSummary::GVFlags(Linkage, HasSection);
+  bool HasSection = RawFlags & 0x1;
+  bool IsNotViableToInline = RawFlags & 0x2;
+  return GlobalValueSummary::GVFlags(Linkage, HasSection, IsNotViableToInline);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -2874,7 +2875,7 @@ std::error_code BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
 
 static APInt readWideAPInt(ArrayRef<uint64_t> Vals, unsigned TypeBits) {
   SmallVector<uint64_t, 8> Words(Vals.size());
-  std::transform(Vals.begin(), Vals.end(), Words.begin(),
+  transform(Vals, Words.begin(),
                  BitcodeReader::decodeSignRotatedValue);
 
   return APInt(TypeBits, Words);

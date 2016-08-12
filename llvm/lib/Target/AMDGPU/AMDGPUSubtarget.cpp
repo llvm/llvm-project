@@ -116,7 +116,8 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     TexVTXClauseSize(0),
 
     FeatureDisable(false),
-    InstrItins(getInstrItineraryForCPU(GPU)) {
+    InstrItins(getInstrItineraryForCPU(GPU)),
+    TSInfo() {
   initializeSubtargetDependencies(TT, GPU, FS);
 }
 

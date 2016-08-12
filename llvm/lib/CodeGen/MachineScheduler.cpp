@@ -458,9 +458,10 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       unsigned NumRegionInstrs = 0;
       MachineBasicBlock::iterator I = RegionEnd;
       for (;I != MBB->begin(); --I) {
-        if (isSchedBoundary(&*std::prev(I), &*MBB, MF, TII))
+        MachineInstr &MI = *std::prev(I);
+        if (isSchedBoundary(&MI, &*MBB, MF, TII))
           break;
-        if (!I->isDebugValue())
+        if (!MI.isDebugValue())
           ++NumRegionInstrs;
       }
       // Notify the scheduler of the region, even if we may skip scheduling

@@ -1855,281 +1855,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
   }
 
   static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
-    // FMA foldable instructions
-    { X86::VFMADD231SSr,          X86::VFMADD231SSm,          TB_ALIGN_NONE },
-    { X86::VFMADD231SSr_Int,      X86::VFMADD231SSm_Int,      TB_ALIGN_NONE },
-    { X86::VFMADD231SDr,          X86::VFMADD231SDm,          TB_ALIGN_NONE },
-    { X86::VFMADD231SDr_Int,      X86::VFMADD231SDm_Int,      TB_ALIGN_NONE },
-    { X86::VFMADD132SSr,          X86::VFMADD132SSm,          TB_ALIGN_NONE },
-    { X86::VFMADD132SSr_Int,      X86::VFMADD132SSm_Int,      TB_ALIGN_NONE },
-    { X86::VFMADD132SDr,          X86::VFMADD132SDm,          TB_ALIGN_NONE },
-    { X86::VFMADD132SDr_Int,      X86::VFMADD132SDm_Int,      TB_ALIGN_NONE },
-    { X86::VFMADD213SSr,          X86::VFMADD213SSm,          TB_ALIGN_NONE },
-    { X86::VFMADD213SSr_Int,      X86::VFMADD213SSm_Int,      TB_ALIGN_NONE },
-    { X86::VFMADD213SDr,          X86::VFMADD213SDm,          TB_ALIGN_NONE },
-    { X86::VFMADD213SDr_Int,      X86::VFMADD213SDm_Int,      TB_ALIGN_NONE },
-    { X86::VFMADD231SSZr,         X86::VFMADD231SSZm,         TB_ALIGN_NONE },
-    { X86::VFMADD231SSZr_Int,     X86::VFMADD231SSZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMADD231SDZr,         X86::VFMADD231SDZm,         TB_ALIGN_NONE },
-    { X86::VFMADD231SDZr_Int,     X86::VFMADD231SDZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMADD132SSZr,         X86::VFMADD132SSZm,         TB_ALIGN_NONE },
-    { X86::VFMADD132SSZr_Int,     X86::VFMADD132SSZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMADD132SDZr,         X86::VFMADD132SDZm,         TB_ALIGN_NONE },
-    { X86::VFMADD132SDZr_Int,     X86::VFMADD132SDZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMADD213SSZr,         X86::VFMADD213SSZm,         TB_ALIGN_NONE },
-    { X86::VFMADD213SSZr_Int,     X86::VFMADD213SSZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMADD213SDZr,         X86::VFMADD213SDZm,         TB_ALIGN_NONE },
-    { X86::VFMADD213SDZr_Int,     X86::VFMADD213SDZm_Int,     TB_ALIGN_NONE },
-
-    { X86::VFMADD231PSr,          X86::VFMADD231PSm,          TB_ALIGN_NONE },
-    { X86::VFMADD231PDr,          X86::VFMADD231PDm,          TB_ALIGN_NONE },
-    { X86::VFMADD132PSr,          X86::VFMADD132PSm,          TB_ALIGN_NONE },
-    { X86::VFMADD132PDr,          X86::VFMADD132PDm,          TB_ALIGN_NONE },
-    { X86::VFMADD213PSr,          X86::VFMADD213PSm,          TB_ALIGN_NONE },
-    { X86::VFMADD213PDr,          X86::VFMADD213PDm,          TB_ALIGN_NONE },
-    { X86::VFMADD231PSYr,         X86::VFMADD231PSYm,         TB_ALIGN_NONE },
-    { X86::VFMADD231PDYr,         X86::VFMADD231PDYm,         TB_ALIGN_NONE },
-    { X86::VFMADD132PSYr,         X86::VFMADD132PSYm,         TB_ALIGN_NONE },
-    { X86::VFMADD132PDYr,         X86::VFMADD132PDYm,         TB_ALIGN_NONE },
-    { X86::VFMADD213PSYr,         X86::VFMADD213PSYm,         TB_ALIGN_NONE },
-    { X86::VFMADD213PDYr,         X86::VFMADD213PDYm,         TB_ALIGN_NONE },
-    { X86::VFMADD231PSZr,         X86::VFMADD231PSZm,         TB_ALIGN_NONE },
-    { X86::VFMADD231PDZr,         X86::VFMADD231PDZm,         TB_ALIGN_NONE },
-    { X86::VFMADD132PSZr,         X86::VFMADD132PSZm,         TB_ALIGN_NONE },
-    { X86::VFMADD132PDZr,         X86::VFMADD132PDZm,         TB_ALIGN_NONE },
-    { X86::VFMADD213PSZr,         X86::VFMADD213PSZm,         TB_ALIGN_NONE },
-    { X86::VFMADD213PDZr,         X86::VFMADD213PDZm,         TB_ALIGN_NONE },
-    { X86::VFMADD231PSZ128r,      X86::VFMADD231PSZ128m,      TB_ALIGN_NONE },
-    { X86::VFMADD231PDZ128r,      X86::VFMADD231PDZ128m,      TB_ALIGN_NONE },
-    { X86::VFMADD132PSZ128r,      X86::VFMADD132PSZ128m,      TB_ALIGN_NONE },
-    { X86::VFMADD132PDZ128r,      X86::VFMADD132PDZ128m,      TB_ALIGN_NONE },
-    { X86::VFMADD213PSZ128r,      X86::VFMADD213PSZ128m,      TB_ALIGN_NONE },
-    { X86::VFMADD213PDZ128r,      X86::VFMADD213PDZ128m,      TB_ALIGN_NONE },
-    { X86::VFMADD231PSZ256r,      X86::VFMADD231PSZ256m,      TB_ALIGN_NONE },
-    { X86::VFMADD231PDZ256r,      X86::VFMADD231PDZ256m,      TB_ALIGN_NONE },
-    { X86::VFMADD132PSZ256r,      X86::VFMADD132PSZ256m,      TB_ALIGN_NONE },
-    { X86::VFMADD132PDZ256r,      X86::VFMADD132PDZ256m,      TB_ALIGN_NONE },
-    { X86::VFMADD213PSZ256r,      X86::VFMADD213PSZ256m,      TB_ALIGN_NONE },
-    { X86::VFMADD213PDZ256r,      X86::VFMADD213PDZ256m,      TB_ALIGN_NONE },
-
-    { X86::VFNMADD231SSr,         X86::VFNMADD231SSm,         TB_ALIGN_NONE },
-    { X86::VFNMADD231SSr_Int,     X86::VFNMADD231SSm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMADD231SDr,         X86::VFNMADD231SDm,         TB_ALIGN_NONE },
-    { X86::VFNMADD231SDr_Int,     X86::VFNMADD231SDm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMADD132SSr,         X86::VFNMADD132SSm,         TB_ALIGN_NONE },
-    { X86::VFNMADD132SSr_Int,     X86::VFNMADD132SSm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMADD132SDr,         X86::VFNMADD132SDm,         TB_ALIGN_NONE },
-    { X86::VFNMADD132SDr_Int,     X86::VFNMADD132SDm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMADD213SSr,         X86::VFNMADD213SSm,         TB_ALIGN_NONE },
-    { X86::VFNMADD213SSr_Int,     X86::VFNMADD213SSm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMADD213SDr,         X86::VFNMADD213SDm,         TB_ALIGN_NONE },
-    { X86::VFNMADD213SDr_Int,     X86::VFNMADD213SDm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMADD231SSZr,        X86::VFNMADD231SSZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD231SSZr_Int,    X86::VFNMADD231SSZm_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADD231SDZr,        X86::VFNMADD231SDZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD231SDZr_Int,    X86::VFNMADD231SDZm_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADD132SSZr,        X86::VFNMADD132SSZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD132SSZr_Int,    X86::VFNMADD132SSZm_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADD132SDZr,        X86::VFNMADD132SDZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD132SDZr_Int,    X86::VFNMADD132SDZm_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADD213SSZr,        X86::VFNMADD213SSZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD213SSZr_Int,    X86::VFNMADD213SSZm_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADD213SDZr,        X86::VFNMADD213SDZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD213SDZr_Int,    X86::VFNMADD213SDZm_Int,    TB_ALIGN_NONE },
-
-    { X86::VFNMADD231PSr,         X86::VFNMADD231PSm,         TB_ALIGN_NONE },
-    { X86::VFNMADD231PDr,         X86::VFNMADD231PDm,         TB_ALIGN_NONE },
-    { X86::VFNMADD132PSr,         X86::VFNMADD132PSm,         TB_ALIGN_NONE },
-    { X86::VFNMADD132PDr,         X86::VFNMADD132PDm,         TB_ALIGN_NONE },
-    { X86::VFNMADD213PSr,         X86::VFNMADD213PSm,         TB_ALIGN_NONE },
-    { X86::VFNMADD213PDr,         X86::VFNMADD213PDm,         TB_ALIGN_NONE },
-    { X86::VFNMADD231PSYr,        X86::VFNMADD231PSYm,        TB_ALIGN_NONE },
-    { X86::VFNMADD231PDYr,        X86::VFNMADD231PDYm,        TB_ALIGN_NONE },
-    { X86::VFNMADD132PSYr,        X86::VFNMADD132PSYm,        TB_ALIGN_NONE },
-    { X86::VFNMADD132PDYr,        X86::VFNMADD132PDYm,        TB_ALIGN_NONE },
-    { X86::VFNMADD213PSYr,        X86::VFNMADD213PSYm,        TB_ALIGN_NONE },
-    { X86::VFNMADD213PDYr,        X86::VFNMADD213PDYm,        TB_ALIGN_NONE },
-    { X86::VFNMADD231PSZr,        X86::VFNMADD231PSZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD231PDZr,        X86::VFNMADD231PDZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD132PSZr,        X86::VFNMADD132PSZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD132PDZr,        X86::VFNMADD132PDZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD213PSZr,        X86::VFNMADD213PSZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD213PDZr,        X86::VFNMADD213PDZm,        TB_ALIGN_NONE },
-    { X86::VFNMADD231PSZ128r,     X86::VFNMADD231PSZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMADD231PDZ128r,     X86::VFNMADD231PDZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMADD132PSZ128r,     X86::VFNMADD132PSZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMADD132PDZ128r,     X86::VFNMADD132PDZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMADD213PSZ128r,     X86::VFNMADD213PSZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMADD213PDZ128r,     X86::VFNMADD213PDZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMADD231PSZ256r,     X86::VFNMADD231PSZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMADD231PDZ256r,     X86::VFNMADD231PDZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMADD132PSZ256r,     X86::VFNMADD132PSZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMADD132PDZ256r,     X86::VFNMADD132PDZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMADD213PSZ256r,     X86::VFNMADD213PSZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMADD213PDZ256r,     X86::VFNMADD213PDZ256m,     TB_ALIGN_NONE },
-
-    { X86::VFMSUB231SSr,          X86::VFMSUB231SSm,          TB_ALIGN_NONE },
-    { X86::VFMSUB231SSr_Int,      X86::VFMSUB231SSm_Int,      TB_ALIGN_NONE },
-    { X86::VFMSUB231SDr,          X86::VFMSUB231SDm,          TB_ALIGN_NONE },
-    { X86::VFMSUB231SDr_Int,      X86::VFMSUB231SDm_Int,      TB_ALIGN_NONE },
-    { X86::VFMSUB132SSr,          X86::VFMSUB132SSm,          TB_ALIGN_NONE },
-    { X86::VFMSUB132SSr_Int,      X86::VFMSUB132SSm_Int,      TB_ALIGN_NONE },
-    { X86::VFMSUB132SDr,          X86::VFMSUB132SDm,          TB_ALIGN_NONE },
-    { X86::VFMSUB132SDr_Int,      X86::VFMSUB132SDm_Int,      TB_ALIGN_NONE },
-    { X86::VFMSUB213SSr,          X86::VFMSUB213SSm,          TB_ALIGN_NONE },
-    { X86::VFMSUB213SSr_Int,      X86::VFMSUB213SSm_Int,      TB_ALIGN_NONE },
-    { X86::VFMSUB213SDr,          X86::VFMSUB213SDm,          TB_ALIGN_NONE },
-    { X86::VFMSUB213SDr_Int,      X86::VFMSUB213SDm_Int,      TB_ALIGN_NONE },
-    { X86::VFMSUB231SSZr,         X86::VFMSUB231SSZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB231SSZr_Int,     X86::VFMSUB231SSZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUB231SDZr,         X86::VFMSUB231SDZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB231SDZr_Int,     X86::VFMSUB231SDZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUB132SSZr,         X86::VFMSUB132SSZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB132SSZr_Int,     X86::VFMSUB132SSZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUB132SDZr,         X86::VFMSUB132SDZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB132SDZr_Int,     X86::VFMSUB132SDZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUB213SSZr,         X86::VFMSUB213SSZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB213SSZr_Int,     X86::VFMSUB213SSZm_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUB213SDZr,         X86::VFMSUB213SDZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB213SDZr_Int,     X86::VFMSUB213SDZm_Int,     TB_ALIGN_NONE },
-
-    { X86::VFMSUB231PSr,          X86::VFMSUB231PSm,          TB_ALIGN_NONE },
-    { X86::VFMSUB231PDr,          X86::VFMSUB231PDm,          TB_ALIGN_NONE },
-    { X86::VFMSUB132PSr,          X86::VFMSUB132PSm,          TB_ALIGN_NONE },
-    { X86::VFMSUB132PDr,          X86::VFMSUB132PDm,          TB_ALIGN_NONE },
-    { X86::VFMSUB213PSr,          X86::VFMSUB213PSm,          TB_ALIGN_NONE },
-    { X86::VFMSUB213PDr,          X86::VFMSUB213PDm,          TB_ALIGN_NONE },
-    { X86::VFMSUB231PSYr,         X86::VFMSUB231PSYm,         TB_ALIGN_NONE },
-    { X86::VFMSUB231PDYr,         X86::VFMSUB231PDYm,         TB_ALIGN_NONE },
-    { X86::VFMSUB132PSYr,         X86::VFMSUB132PSYm,         TB_ALIGN_NONE },
-    { X86::VFMSUB132PDYr,         X86::VFMSUB132PDYm,         TB_ALIGN_NONE },
-    { X86::VFMSUB213PSYr,         X86::VFMSUB213PSYm,         TB_ALIGN_NONE },
-    { X86::VFMSUB213PDYr,         X86::VFMSUB213PDYm,         TB_ALIGN_NONE },
-    { X86::VFMSUB231PSZr,         X86::VFMSUB231PSZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB231PDZr,         X86::VFMSUB231PDZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB132PSZr,         X86::VFMSUB132PSZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB132PDZr,         X86::VFMSUB132PDZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB213PSZr,         X86::VFMSUB213PSZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB213PDZr,         X86::VFMSUB213PDZm,         TB_ALIGN_NONE },
-    { X86::VFMSUB231PSZ128r,      X86::VFMSUB231PSZ128m,      TB_ALIGN_NONE },
-    { X86::VFMSUB231PDZ128r,      X86::VFMSUB231PDZ128m,      TB_ALIGN_NONE },
-    { X86::VFMSUB132PSZ128r,      X86::VFMSUB132PSZ128m,      TB_ALIGN_NONE },
-    { X86::VFMSUB132PDZ128r,      X86::VFMSUB132PDZ128m,      TB_ALIGN_NONE },
-    { X86::VFMSUB213PSZ128r,      X86::VFMSUB213PSZ128m,      TB_ALIGN_NONE },
-    { X86::VFMSUB213PDZ128r,      X86::VFMSUB213PDZ128m,      TB_ALIGN_NONE },
-    { X86::VFMSUB231PSZ256r,      X86::VFMSUB231PSZ256m,      TB_ALIGN_NONE },
-    { X86::VFMSUB231PDZ256r,      X86::VFMSUB231PDZ256m,      TB_ALIGN_NONE },
-    { X86::VFMSUB132PSZ256r,      X86::VFMSUB132PSZ256m,      TB_ALIGN_NONE },
-    { X86::VFMSUB132PDZ256r,      X86::VFMSUB132PDZ256m,      TB_ALIGN_NONE },
-    { X86::VFMSUB213PSZ256r,      X86::VFMSUB213PSZ256m,      TB_ALIGN_NONE },
-    { X86::VFMSUB213PDZ256r,      X86::VFMSUB213PDZ256m,      TB_ALIGN_NONE },
-
-    { X86::VFNMSUB231SSr,         X86::VFNMSUB231SSm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB231SSr_Int,     X86::VFNMSUB231SSm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMSUB231SDr,         X86::VFNMSUB231SDm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB231SDr_Int,     X86::VFNMSUB231SDm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMSUB132SSr,         X86::VFNMSUB132SSm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB132SSr_Int,     X86::VFNMSUB132SSm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMSUB132SDr,         X86::VFNMSUB132SDm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB132SDr_Int,     X86::VFNMSUB132SDm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMSUB213SSr,         X86::VFNMSUB213SSm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB213SSr_Int,     X86::VFNMSUB213SSm_Int,     TB_ALIGN_NONE },
-    { X86::VFNMSUB213SDr,         X86::VFNMSUB213SDm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB213SDr_Int,     X86::VFNMSUB213SDm_Int,     TB_ALIGN_NONE },
-
-    { X86::VFNMSUB231PSr,         X86::VFNMSUB231PSm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB231PDr,         X86::VFNMSUB231PDm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB132PSr,         X86::VFNMSUB132PSm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB132PDr,         X86::VFNMSUB132PDm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB213PSr,         X86::VFNMSUB213PSm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB213PDr,         X86::VFNMSUB213PDm,         TB_ALIGN_NONE },
-    { X86::VFNMSUB231PSYr,        X86::VFNMSUB231PSYm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB231PDYr,        X86::VFNMSUB231PDYm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB132PSYr,        X86::VFNMSUB132PSYm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB132PDYr,        X86::VFNMSUB132PDYm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB213PSYr,        X86::VFNMSUB213PSYm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB213PDYr,        X86::VFNMSUB213PDYm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB231PSZr,        X86::VFNMSUB231PSZm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB231PDZr,        X86::VFNMSUB231PDZm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB132PSZr,        X86::VFNMSUB132PSZm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB132PDZr,        X86::VFNMSUB132PDZm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB213PSZr,        X86::VFNMSUB213PSZm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB213PDZr,        X86::VFNMSUB213PDZm,        TB_ALIGN_NONE },
-    { X86::VFNMSUB231PSZ128r,     X86::VFNMSUB231PSZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB231PDZ128r,     X86::VFNMSUB231PDZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB132PSZ128r,     X86::VFNMSUB132PSZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB132PDZ128r,     X86::VFNMSUB132PDZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB213PSZ128r,     X86::VFNMSUB213PSZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB213PDZ128r,     X86::VFNMSUB213PDZ128m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB231PSZ256r,     X86::VFNMSUB231PSZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB231PDZ256r,     X86::VFNMSUB231PDZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB132PSZ256r,     X86::VFNMSUB132PSZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB132PDZ256r,     X86::VFNMSUB132PDZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB213PSZ256r,     X86::VFNMSUB213PSZ256m,     TB_ALIGN_NONE },
-    { X86::VFNMSUB213PDZ256r,     X86::VFNMSUB213PDZ256m,     TB_ALIGN_NONE },
-
-    { X86::VFMADDSUB231PSr,       X86::VFMADDSUB231PSm,       TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PDr,       X86::VFMADDSUB231PDm,       TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PSr,       X86::VFMADDSUB132PSm,       TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PDr,       X86::VFMADDSUB132PDm,       TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PSr,       X86::VFMADDSUB213PSm,       TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PDr,       X86::VFMADDSUB213PDm,       TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PSYr,      X86::VFMADDSUB231PSYm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PDYr,      X86::VFMADDSUB231PDYm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PSYr,      X86::VFMADDSUB132PSYm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PDYr,      X86::VFMADDSUB132PDYm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PSYr,      X86::VFMADDSUB213PSYm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PDYr,      X86::VFMADDSUB213PDYm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PSZr,      X86::VFMADDSUB231PSZm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PDZr,      X86::VFMADDSUB231PDZm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PSZr,      X86::VFMADDSUB132PSZm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PDZr,      X86::VFMADDSUB132PDZm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PSZr,      X86::VFMADDSUB213PSZm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PDZr,      X86::VFMADDSUB213PDZm,      TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PSZ128r,   X86::VFMADDSUB231PSZ128m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PDZ128r,   X86::VFMADDSUB231PDZ128m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PSZ128r,   X86::VFMADDSUB132PSZ128m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PDZ128r,   X86::VFMADDSUB132PDZ128m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PSZ128r,   X86::VFMADDSUB213PSZ128m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PDZ128r,   X86::VFMADDSUB213PDZ128m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PSZ256r,   X86::VFMADDSUB231PSZ256m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB231PDZ256r,   X86::VFMADDSUB231PDZ256m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PSZ256r,   X86::VFMADDSUB132PSZ256m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB132PDZ256r,   X86::VFMADDSUB132PDZ256m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PSZ256r,   X86::VFMADDSUB213PSZ256m,   TB_ALIGN_NONE },
-    { X86::VFMADDSUB213PDZ256r,   X86::VFMADDSUB213PDZ256m,   TB_ALIGN_NONE },
-
-    { X86::VFMSUBADD231PSr,       X86::VFMSUBADD231PSm,       TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PDr,       X86::VFMSUBADD231PDm,       TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PSr,       X86::VFMSUBADD132PSm,       TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PDr,       X86::VFMSUBADD132PDm,       TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PSr,       X86::VFMSUBADD213PSm,       TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PDr,       X86::VFMSUBADD213PDm,       TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PSYr,      X86::VFMSUBADD231PSYm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PDYr,      X86::VFMSUBADD231PDYm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PSYr,      X86::VFMSUBADD132PSYm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PDYr,      X86::VFMSUBADD132PDYm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PSYr,      X86::VFMSUBADD213PSYm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PDYr,      X86::VFMSUBADD213PDYm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PSZr,      X86::VFMSUBADD231PSZm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PDZr,      X86::VFMSUBADD231PDZm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PSZr,      X86::VFMSUBADD132PSZm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PDZr,      X86::VFMSUBADD132PDZm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PSZr,      X86::VFMSUBADD213PSZm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PDZr,      X86::VFMSUBADD213PDZm,      TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PSZ128r,   X86::VFMSUBADD231PSZ128m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PDZ128r,   X86::VFMSUBADD231PDZ128m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PSZ128r,   X86::VFMSUBADD132PSZ128m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PDZ128r,   X86::VFMSUBADD132PDZ128m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PSZ128r,   X86::VFMSUBADD213PSZ128m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PDZ128r,   X86::VFMSUBADD213PDZ128m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PSZ256r,   X86::VFMSUBADD231PSZ256m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD231PDZ256r,   X86::VFMSUBADD231PDZ256m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PSZ256r,   X86::VFMSUBADD132PSZ256m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD132PDZ256r,   X86::VFMSUBADD132PDZ256m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PSZ256r,   X86::VFMSUBADD213PSZ256m,   TB_ALIGN_NONE },
-    { X86::VFMSUBADD213PDZ256r,   X86::VFMSUBADD213PDZ256m,   TB_ALIGN_NONE },
-
     // FMA4 foldable patterns
     { X86::VFMADDSS4rr,           X86::VFMADDSS4rm,           TB_ALIGN_NONE },
     { X86::VFMADDSD4rr,           X86::VFMADDSD4rm,           TB_ALIGN_NONE },
@@ -2234,6 +1959,13 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                   // Index 3, folded load
                   Entry.Flags | TB_INDEX_3 | TB_FOLDED_LOAD);
   }
+  auto I = X86InstrFMA3Info::rm_begin();
+  auto E = X86InstrFMA3Info::rm_end();
+  for (; I != E; ++I)
+    if (!I.getGroup()->isKMasked())
+      AddTableEntry(RegOp2MemOpTable3, MemOp2RegOpTable,
+                    I.getRegOpcode(), I.getMemOpcode(),
+                    TB_ALIGN_NONE | TB_INDEX_3 | TB_FOLDED_LOAD);
 
   static const X86MemoryFoldTableEntry MemoryFoldTable4[] = {
      // AVX-512 foldable instructions
@@ -2283,6 +2015,11 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                   // Index 4, folded load
                   Entry.Flags | TB_INDEX_4 | TB_FOLDED_LOAD);
   }
+  for (I = X86InstrFMA3Info::rm_begin(); I != E; ++I)
+    if (I.getGroup()->isKMasked())
+      AddTableEntry(RegOp2MemOpTable4, MemOp2RegOpTable,
+                    I.getRegOpcode(), I.getMemOpcode(),
+                    TB_ALIGN_NONE | TB_INDEX_4 | TB_FOLDED_LOAD);
 }
 
 void
@@ -3345,241 +3082,11 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   return NewMI;
 }
 
-/// Returns true if the given instruction opcode is FMA3.
-/// Otherwise, returns false.
-/// The second parameter is optional and is used as the second return from
-/// the function. It is set to true if the given instruction has FMA3 opcode
-/// that is used for lowering of scalar FMA intrinsics, and it is set to false
-/// otherwise.
-static bool isFMA3(unsigned Opcode, bool &IsIntrinsic) {
-  IsIntrinsic = false;
+unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
+    const MachineInstr &MI, unsigned SrcOpIdx1, unsigned SrcOpIdx2,
+    const X86InstrFMA3Group &FMA3Group) const {
 
-#define FMA3_CASE(Name, Modifier) \
-case X86::Name##r##Modifier: case X86::Name##m##Modifier:
-
-#define FMA3_SCALAR_PAIR(Name, Size, Modifier) \
-  FMA3_CASE(Name##SD##Size, Modifier) \
-  FMA3_CASE(Name##SS##Size, Modifier)
-
-#define FMA3_PACKED_PAIR(Name, Size) \
-  FMA3_CASE(Name##PD##Size, ) \
-  FMA3_CASE(Name##PS##Size, )
-
-#define FMA3_PACKED_SET(Form, Size) \
-  FMA3_PACKED_PAIR(VFMADD##Form, Size) \
-  FMA3_PACKED_PAIR(VFMSUB##Form, Size) \
-  FMA3_PACKED_PAIR(VFNMADD##Form, Size) \
-  FMA3_PACKED_PAIR(VFNMSUB##Form, Size) \
-  FMA3_PACKED_PAIR(VFMADDSUB##Form, Size) \
-  FMA3_PACKED_PAIR(VFMSUBADD##Form, Size)
-
-#define FMA3_CASES(Form) \
-  FMA3_SCALAR_PAIR(VFMADD##Form, ,) \
-  FMA3_SCALAR_PAIR(VFMSUB##Form, ,) \
-  FMA3_SCALAR_PAIR(VFNMADD##Form, ,) \
-  FMA3_SCALAR_PAIR(VFNMSUB##Form, ,) \
-  FMA3_PACKED_SET(Form, ) \
-  FMA3_PACKED_SET(Form, Y) \
-
-#define FMA3_CASES_AVX512(Form) \
-  FMA3_SCALAR_PAIR(VFMADD##Form, Z, ) \
-  FMA3_SCALAR_PAIR(VFMSUB##Form, Z, ) \
-  FMA3_SCALAR_PAIR(VFNMADD##Form, Z, ) \
-  FMA3_SCALAR_PAIR(VFNMSUB##Form, Z, ) \
-  FMA3_PACKED_SET(Form, Z128) \
-  FMA3_PACKED_SET(Form, Z256) \
-  FMA3_PACKED_SET(Form, Z)
-
-#define FMA3_CASES_SCALAR_INT(Form) \
-  FMA3_SCALAR_PAIR(VFMADD##Form, , _Int) \
-  FMA3_SCALAR_PAIR(VFMSUB##Form, , _Int) \
-  FMA3_SCALAR_PAIR(VFNMADD##Form, , _Int) \
-  FMA3_SCALAR_PAIR(VFNMSUB##Form, , _Int)
-
-#define FMA3_CASES_SCALAR_INT_AVX512(Form) \
-  FMA3_SCALAR_PAIR(VFMADD##Form, Z, _Int) \
-  FMA3_SCALAR_PAIR(VFMSUB##Form, Z, _Int) \
-  FMA3_SCALAR_PAIR(VFNMADD##Form, Z, _Int) \
-  FMA3_SCALAR_PAIR(VFNMSUB##Form, Z, _Int)
-
-  switch (Opcode) {
-  FMA3_CASES(132)
-  FMA3_CASES(213)
-  FMA3_CASES(231)
-
-  // AVX-512 instructions
-  FMA3_CASES_AVX512(132)
-  FMA3_CASES_AVX512(213)
-  FMA3_CASES_AVX512(231)
-    return true;
-
-  FMA3_CASES_SCALAR_INT(132)
-  FMA3_CASES_SCALAR_INT(213)
-  FMA3_CASES_SCALAR_INT(231)
-
-  // AVX-512 instructions
-  FMA3_CASES_SCALAR_INT_AVX512(132)
-  FMA3_CASES_SCALAR_INT_AVX512(213)
-  FMA3_CASES_SCALAR_INT_AVX512(231)
-    IsIntrinsic = true;
-    return true;
-  default:
-    return false;
-  }
-  llvm_unreachable("Opcode not handled by the switch");
-
-#undef FMA3_CASE
-#undef FMA3_SCALAR_PAIR
-#undef FMA3_PACKED_PAIR
-#undef FMA3_PACKED_SET
-#undef FMA3_CASES
-#undef FMA3_CASES_AVX512
-#undef FMA3_CASES_SCALAR_INT
-#undef FMA3_CASES_SCALAR_INT_AVX512
-}
-
-/// Returns an adjusted FMA opcode that must be used in FMA instruction that
-/// performs the same computations as the given MI but which has the operands
-/// \p SrcOpIdx1 and \p SrcOpIdx2 commuted.
-/// It may return 0 if it is unsafe to commute the operands.
-///
-/// The returned FMA opcode may differ from the opcode in the given \p MI.
-/// For example, commuting the operands #1 and #3 in the following FMA
-///     FMA213 #1, #2, #3
-/// results into instruction with adjusted opcode:
-///     FMA231 #3, #2, #1
-static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
-                                               bool IsIntrinOpcode,
-                                               unsigned SrcOpIdx1,
-                                               unsigned SrcOpIdx2) {
-#define FMA3_ENTRY(Name, Suffix) \
-  { X86::Name##132##Suffix, X86::Name##213##Suffix, X86::Name##231##Suffix },
-
-#define FMA3_SCALAR_PAIR(Name, Suffix) \
-  FMA3_ENTRY(Name, SS##Suffix) \
-  FMA3_ENTRY(Name, SD##Suffix)
-
-#define FMA3_PACKED_PAIR(Name, Suffix) \
-  FMA3_ENTRY(Name, PS##Suffix) \
-  FMA3_ENTRY(Name, PD##Suffix)
-
-#define FMA3_PACKED_SIZES(Name, Suffix) \
-  FMA3_PACKED_PAIR(Name, Suffix) \
-  FMA3_PACKED_PAIR(Name, Y##Suffix)
-
-#define FMA3_TABLE_ALL(Name) \
-  FMA3_SCALAR_PAIR(Name, r) \
-  FMA3_PACKED_SIZES(Name, r) \
-  FMA3_SCALAR_PAIR(Name, m) \
-  FMA3_PACKED_SIZES(Name, m)
-
-#define FMA3_TABLE_PACKED(Name) \
-  FMA3_PACKED_SIZES(Name, r) \
-  FMA3_PACKED_SIZES(Name, m)
-
-#define FMA3_TABLE_SCALAR_INT(Name) \
-  FMA3_SCALAR_PAIR(Name, r_Int) \
-  FMA3_SCALAR_PAIR(Name, m_Int)
-
-#define FMA3_PACKED_SIZES_AVX512(Name, Suffix) \
-  FMA3_PACKED_PAIR(Name, Z128##Suffix) \
-  FMA3_PACKED_PAIR(Name, Z256##Suffix) \
-  FMA3_PACKED_PAIR(Name, Z##Suffix)
-
-#define FMA3_TABLE_ALL_AVX512(Name) \
-  FMA3_SCALAR_PAIR(Name, Zr) \
-  FMA3_PACKED_SIZES_AVX512(Name, r) \
-  FMA3_SCALAR_PAIR(Name, Zm) \
-  FMA3_PACKED_SIZES_AVX512(Name, m)
-
-#define FMA3_TABLE_PACKED_AVX512(Name) \
-  FMA3_PACKED_SIZES_AVX512(Name, r) \
-  FMA3_PACKED_SIZES_AVX512(Name, m)
-
-#define FMA3_TABLE_SCALAR_INT_AVX512(Name) \
-  FMA3_SCALAR_PAIR(Name, Zr_Int) \
-  FMA3_SCALAR_PAIR(Name, Zm_Int)
-
-  // Define the array that holds FMA opcodes in groups
-  // of 3 opcodes(132, 213, 231) in each group.
-  static const uint16_t RegularOpcodeGroups[][3] = {
-    FMA3_TABLE_ALL(VFMADD)
-    FMA3_TABLE_ALL(VFMSUB)
-    FMA3_TABLE_ALL(VFNMADD)
-    FMA3_TABLE_ALL(VFNMSUB)
-    FMA3_TABLE_PACKED(VFMADDSUB)
-    FMA3_TABLE_PACKED(VFMSUBADD)
-
-    // AVX-512 instructions
-    FMA3_TABLE_ALL_AVX512(VFMADD)
-    FMA3_TABLE_ALL_AVX512(VFMSUB)
-    FMA3_TABLE_ALL_AVX512(VFNMADD)
-    FMA3_TABLE_ALL_AVX512(VFNMSUB)
-    FMA3_TABLE_PACKED_AVX512(VFMADDSUB)
-    FMA3_TABLE_PACKED_AVX512(VFMSUBADD)
-  };
-
-  // Define the array that holds FMA*_Int opcodes in groups
-  // of 3 opcodes(132, 213, 231) in each group.
-  static const uint16_t IntrinOpcodeGroups[][3] = {
-    FMA3_TABLE_SCALAR_INT(VFMADD)
-    FMA3_TABLE_SCALAR_INT(VFMSUB)
-    FMA3_TABLE_SCALAR_INT(VFNMADD)
-    FMA3_TABLE_SCALAR_INT(VFNMSUB)
-
-    // AVX-512 instructions
-    FMA3_TABLE_SCALAR_INT_AVX512(VFMADD)
-    FMA3_TABLE_SCALAR_INT_AVX512(VFMSUB)
-    FMA3_TABLE_SCALAR_INT_AVX512(VFNMADD)
-    FMA3_TABLE_SCALAR_INT_AVX512(VFNMSUB)
-  };
-
-#undef FMA3_ENTRY
-#undef FMA3_SCALAR_PAIR
-#undef FMA3_PACKED_PAIR
-#undef FMA3_PACKED_SIZES
-#undef FMA3_TABLE_ALL
-#undef FMA3_TABLE_PACKED
-#undef FMA3_TABLE_SCALAR_INT
-#undef FMA3_SCALAR_PAIR_AVX512
-#undef FMA3_PACKED_SIZES_AVX512
-#undef FMA3_TABLE_ALL_AVX512
-#undef FMA3_TABLE_PACKED_AVX512
-#undef FMA3_TABLE_SCALAR_INT_AVX512
-
-  const unsigned Form132Index = 0;
-  const unsigned Form213Index = 1;
-  const unsigned Form231Index = 2;
-  const unsigned FormsNum = 3;
-
-  size_t GroupsNum;
-  const uint16_t (*OpcodeGroups)[3];
-  if (IsIntrinOpcode) {
-    GroupsNum = array_lengthof(IntrinOpcodeGroups);
-    OpcodeGroups = IntrinOpcodeGroups;
-  } else {
-    GroupsNum = array_lengthof(RegularOpcodeGroups);
-    OpcodeGroups = RegularOpcodeGroups;
-  }
-
-  const uint16_t *FoundOpcodesGroup = nullptr;
-  size_t FormIndex;
-
-  // Look for the input opcode in the corresponding opcodes table.
-  for (size_t GroupIndex = 0; GroupIndex < GroupsNum && !FoundOpcodesGroup;
-         ++GroupIndex) {
-    for (FormIndex = 0; FormIndex < FormsNum; ++FormIndex) {
-      if (OpcodeGroups[GroupIndex][FormIndex] == Opc) {
-        FoundOpcodesGroup = OpcodeGroups[GroupIndex];
-        break;
-      }
-    }
-  }
-
-  // The input opcode does not match with any of the opcodes from the tables.
-  // The unsupported FMA opcode must be added to one of the two opcode groups
-  // defined above.
-  assert(FoundOpcodesGroup != nullptr && "Unexpected FMA3 opcode");
+  unsigned Opc = MI.getOpcode();
 
   // Put the lowest index to SrcOpIdx1 to simplify the checks below.
   if (SrcOpIdx1 > SrcOpIdx2)
@@ -3591,15 +3098,40 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
   // not implemented yet. So, just return 0 in that case.
   // When such analysis are available this place will be the right place for
   // calling it.
-  if (IsIntrinOpcode && SrcOpIdx1 == 1)
+  if (FMA3Group.isIntrinsic() && SrcOpIdx1 == 1)
     return 0;
 
+  unsigned FMAOp1 = 1, FMAOp2 = 2, FMAOp3 = 3;
+  if (FMA3Group.isKMasked()) {
+    // The k-mask operand cannot be commuted.
+    if (SrcOpIdx1 == 2)
+      return 0;
+
+    // For k-zero-masked operations it is Ok to commute the first vector
+    // operand.
+    // For regular k-masked operations a conservative choice is done as the
+    // elements of the first vector operand, for which the corresponding bit
+    // in the k-mask operand is set to 0, are copied to the result of FMA.
+    // TODO/FIXME: The commute still may be legal if it is known that the
+    // k-mask operand is set to either all ones or all zeroes.
+    // It is also Ok to commute the 1st operand if all users of MI use only
+    // the elements enabled by the k-mask operand. For example,
+    //   v4 = VFMADD213PSZrk v1, k, v2, v3; // v1[i] = k[i] ? v2[i]*v1[i]+v3[i]
+    //                                                     : v1[i];
+    //   VMOVAPSZmrk <mem_addr>, k, v4; // this is the ONLY user of v4 ->
+    //                                  // Ok, to commute v1 in FMADD213PSZrk.
+    if (FMA3Group.isKMergeMasked() && SrcOpIdx1 == FMAOp1)
+      return 0;
+    FMAOp2++;
+    FMAOp3++;
+  }
+
   unsigned Case;
-  if (SrcOpIdx1 == 1 && SrcOpIdx2 == 2)
+  if (SrcOpIdx1 == FMAOp1 && SrcOpIdx2 == FMAOp2)
     Case = 0;
-  else if (SrcOpIdx1 == 1 && SrcOpIdx2 == 3)
+  else if (SrcOpIdx1 == FMAOp1 && SrcOpIdx2 == FMAOp3)
     Case = 1;
-  else if (SrcOpIdx1 == 2 && SrcOpIdx2 == 3)
+  else if (SrcOpIdx1 == FMAOp2 && SrcOpIdx2 == FMAOp3)
     Case = 2;
   else
     return 0;
@@ -3607,6 +3139,9 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
   // Define the FMA forms mapping array that helps to map input FMA form
   // to output FMA form to preserve the operation semantics after
   // commuting the operands.
+  const unsigned Form132Index = 0;
+  const unsigned Form213Index = 1;
+  const unsigned Form231Index = 2;
   static const unsigned FormMapping[][3] = {
     // 0: SrcOpIdx1 == 1 && SrcOpIdx2 == 2;
     // FMA132 A, C, b; ==> FMA231 C, A, b;
@@ -3625,9 +3160,24 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
     { Form213Index, Form132Index, Form231Index }
   };
 
+  unsigned FMAForms[3];
+  if (FMA3Group.isRegOpcodeFromGroup(Opc)) {
+    FMAForms[0] = FMA3Group.getReg132Opcode();
+    FMAForms[1] = FMA3Group.getReg213Opcode();
+    FMAForms[2] = FMA3Group.getReg231Opcode();
+  } else {
+    FMAForms[0] = FMA3Group.getMem132Opcode();
+    FMAForms[1] = FMA3Group.getMem213Opcode();
+    FMAForms[2] = FMA3Group.getMem231Opcode();
+  }
+  unsigned FormIndex;
+  for (FormIndex = 0; FormIndex < 3; FormIndex++)
+    if (Opc == FMAForms[FormIndex])
+      break;
+
   // Everything is ready, just adjust the FMA opcode and return it.
   FormIndex = FormMapping[Case][FormIndex];
-  return FoundOpcodesGroup[FormIndex];
+  return FMAForms[FormIndex];
 }
 
 MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
@@ -3852,11 +3402,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                    OpIdx1, OpIdx2);
   }
   default:
-    bool IsIntrinOpcode;
-    if (isFMA3(MI.getOpcode(), IsIntrinOpcode)) {
-      unsigned Opc = getFMA3OpcodeToCommuteOperands(MI.getOpcode(),
-                                                    IsIntrinOpcode,
-                                                    OpIdx1, OpIdx2);
+    const X86InstrFMA3Group *FMA3Group =
+        X86InstrFMA3Info::getFMA3Group(MI.getOpcode());
+    if (FMA3Group) {
+      unsigned Opc =
+        getFMA3OpcodeToCommuteOperands(MI, OpIdx1, OpIdx2, *FMA3Group);
       if (Opc == 0)
         return nullptr;
       auto &WorkingMI = cloneIfNew(MI);
@@ -3869,21 +3419,37 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   }
 }
 
-bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
-                                             bool IsIntrinOpcode,
-                                             unsigned &SrcOpIdx1,
-                                             unsigned &SrcOpIdx2) const {
+bool X86InstrInfo::findFMA3CommutedOpIndices(
+    const MachineInstr &MI, unsigned &SrcOpIdx1, unsigned &SrcOpIdx2,
+    const X86InstrFMA3Group &FMA3Group) const {
+  unsigned FirstCommutableVecOp = 1;
+  unsigned LastCommutableVecOp = 3;
+  unsigned KMaskOp = 0;
+  if (FMA3Group.isKMasked()) {
+    // The k-mask operand has index = 2 for masked and zero-masked operations.
+    KMaskOp = 2;
 
-  unsigned RegOpsNum = isMem(MI, 3) ? 2 : 3;
+    // The operand with index = 1 is used as a source for those elements for
+    // which the corresponding bit in the k-mask is set to 0.
+    if (FMA3Group.isKMergeMasked())
+      FirstCommutableVecOp = 3;
+
+    LastCommutableVecOp++;
+  }
+
+  if (isMem(MI, LastCommutableVecOp))
+    LastCommutableVecOp--;
 
   // Only the first RegOpsNum operands are commutable.
   // Also, the value 'CommuteAnyOperandIndex' is valid here as it means
   // that the operand is not specified/fixed.
   if (SrcOpIdx1 != CommuteAnyOperandIndex &&
-      (SrcOpIdx1 < 1 || SrcOpIdx1 > RegOpsNum))
+      (SrcOpIdx1 < FirstCommutableVecOp || SrcOpIdx1 > LastCommutableVecOp ||
+       SrcOpIdx1 == KMaskOp))
     return false;
   if (SrcOpIdx2 != CommuteAnyOperandIndex &&
-      (SrcOpIdx2 < 1 || SrcOpIdx2 > RegOpsNum))
+      (SrcOpIdx2 < FirstCommutableVecOp || SrcOpIdx2 > LastCommutableVecOp ||
+       SrcOpIdx2 == KMaskOp))
     return false;
 
   // Look for two different register operands assumed to be commutable
@@ -3898,7 +3464,7 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
     if (SrcOpIdx1 == SrcOpIdx2)
       // Both of operands are not fixed. By default set one of commutable
       // operands to the last register operand of the instruction.
-      CommutableOpIdx2 = RegOpsNum;
+      CommutableOpIdx2 = LastCommutableVecOp;
     else if (SrcOpIdx2 == CommuteAnyOperandIndex)
       // Only one of operands is not fixed.
       CommutableOpIdx2 = SrcOpIdx1;
@@ -3906,7 +3472,12 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
     // CommutableOpIdx2 is well defined now. Let's choose another commutable
     // operand and assign its index to CommutableOpIdx1.
     unsigned Op2Reg = MI.getOperand(CommutableOpIdx2).getReg();
-    for (CommutableOpIdx1 = RegOpsNum; CommutableOpIdx1 > 0; CommutableOpIdx1--) {
+    for (CommutableOpIdx1 = LastCommutableVecOp;
+         CommutableOpIdx1 >= FirstCommutableVecOp; CommutableOpIdx1--) {
+      // Just ignore and skip the k-mask operand.
+      if (CommutableOpIdx1 == KMaskOp)
+        continue;
+
       // The commuted operands must have different registers.
       // Otherwise, the commute transformation does not change anything and
       // is useless then.
@@ -3915,7 +3486,7 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
     }
 
     // No appropriate commutable operands were found.
-    if (CommutableOpIdx1 == 0)
+    if (CommutableOpIdx1 < FirstCommutableVecOp)
       return false;
 
     // Assign the found pair of commutable indices to SrcOpIdx1 and SrcOpidx2
@@ -3927,8 +3498,7 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
 
   // Check if we can adjust the opcode to preserve the semantics when
   // commute the register operands.
-  return getFMA3OpcodeToCommuteOperands(MI.getOpcode(), IsIntrinOpcode,
-                                        SrcOpIdx1, SrcOpIdx2) != 0;
+  return getFMA3OpcodeToCommuteOperands(MI, SrcOpIdx1, SrcOpIdx2, FMA3Group) != 0;
 }
 
 bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
@@ -3955,10 +3525,10 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     return false;
   }
   default:
-    bool IsIntrinOpcode;
-    if (isFMA3(MI.getOpcode(), IsIntrinOpcode))
-      return findFMA3CommutedOpIndices(MI, IsIntrinOpcode,
-                                       SrcOpIdx1, SrcOpIdx2);
+    const X86InstrFMA3Group *FMA3Group =
+        X86InstrFMA3Info::getFMA3Group(MI.getOpcode());
+    if (FMA3Group)
+      return findFMA3CommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2, *FMA3Group);
     return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
   }
   return false;

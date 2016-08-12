@@ -432,19 +432,18 @@ class AllocaSlices::partition_iterator
         // cannot change the max split slice end because we just checked that
         // the prior partition ended prior to that max.
         P.SplitTails.erase(
-            std::remove_if(
-                P.SplitTails.begin(), P.SplitTails.end(),
-                [&](Slice *S) { return S->endOffset() <= P.EndOffset; }),
+            remove_if(P.SplitTails,
+                      [&](Slice *S) { return S->endOffset() <= P.EndOffset; }),
             P.SplitTails.end());
-        assert(std::any_of(P.SplitTails.begin(), P.SplitTails.end(),
-                           [&](Slice *S) {
-                             return S->endOffset() == MaxSplitSliceEndOffset;
-                           }) &&
+        assert(any_of(P.SplitTails,
+                      [&](Slice *S) {
+                        return S->endOffset() == MaxSplitSliceEndOffset;
+                      }) &&
                "Could not find the current max split slice offset!");
-        assert(std::all_of(P.SplitTails.begin(), P.SplitTails.end(),
-                           [&](Slice *S) {
-                             return S->endOffset() <= MaxSplitSliceEndOffset;
-                           }) &&
+        assert(all_of(P.SplitTails,
+                      [&](Slice *S) {
+                        return S->endOffset() <= MaxSplitSliceEndOffset;
+                      }) &&
                "Max split slice end offset is not actually the max!");
       }
     }
@@ -996,10 +995,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     return;
   }
 
-  Slices.erase(std::remove_if(Slices.begin(), Slices.end(),
-                              [](const Slice &S) {
-                                return S.isDead();
-                              }),
+  Slices.erase(remove_if(Slices, [](const Slice &S) { return S.isDead(); }),
                Slices.end());
 
 #ifndef NDEBUG
@@ -1815,10 +1811,10 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // do that until all the backends are known to produce good code for all
   // integer vector types.
   if (!HaveCommonEltTy) {
-    CandidateTys.erase(std::remove_if(CandidateTys.begin(), CandidateTys.end(),
-                                      [](VectorType *VTy) {
-                         return !VTy->getElementType()->isIntegerTy();
-                       }),
+    CandidateTys.erase(remove_if(CandidateTys,
+                                 [](VectorType *VTy) {
+                                   return !VTy->getElementType()->isIntegerTy();
+                                 }),
                        CandidateTys.end());
 
     // If there were no integer vector types, give up.
@@ -3462,62 +3458,59 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // match relative to their starting offset. We have to verify this prior to
   // any rewriting.
   Stores.erase(
-      std::remove_if(Stores.begin(), Stores.end(),
-                     [&UnsplittableLoads, &SplitOffsetsMap](StoreInst *SI) {
-                       // Lookup the load we are storing in our map of split
-                       // offsets.
-                       auto *LI = cast<LoadInst>(SI->getValueOperand());
-                       // If it was completely unsplittable, then we're done,
-                       // and this store can't be pre-split.
-                       if (UnsplittableLoads.count(LI))
-                         return true;
+      remove_if(Stores,
+                [&UnsplittableLoads, &SplitOffsetsMap](StoreInst *SI) {
+                  // Lookup the load we are storing in our map of split
+                  // offsets.
+                  auto *LI = cast<LoadInst>(SI->getValueOperand());
+                  // If it was completely unsplittable, then we're done,
+                  // and this store can't be pre-split.
+                  if (UnsplittableLoads.count(LI))
+                    return true;
 
-                       auto LoadOffsetsI = SplitOffsetsMap.find(LI);
-                       if (LoadOffsetsI == SplitOffsetsMap.end())
-                         return false; // Unrelated loads are definitely safe.
-                       auto &LoadOffsets = LoadOffsetsI->second;
+                  auto LoadOffsetsI = SplitOffsetsMap.find(LI);
+                  if (LoadOffsetsI == SplitOffsetsMap.end())
+                    return false; // Unrelated loads are definitely safe.
+                  auto &LoadOffsets = LoadOffsetsI->second;
 
-                       // Now lookup the store's offsets.
-                       auto &StoreOffsets = SplitOffsetsMap[SI];
+                  // Now lookup the store's offsets.
+                  auto &StoreOffsets = SplitOffsetsMap[SI];
 
-                       // If the relative offsets of each split in the load and
-                       // store match exactly, then we can split them and we
-                       // don't need to remove them here.
-                       if (LoadOffsets.Splits == StoreOffsets.Splits)
-                         return false;
+                  // If the relative offsets of each split in the load and
+                  // store match exactly, then we can split them and we
+                  // don't need to remove them here.
+                  if (LoadOffsets.Splits == StoreOffsets.Splits)
+                    return false;
 
-                       DEBUG(dbgs()
-                             << "    Mismatched splits for load and store:\n"
-                             << "      " << *LI << "\n"
-                             << "      " << *SI << "\n");
+                  DEBUG(dbgs() << "    Mismatched splits for load and store:\n"
+                               << "      " << *LI << "\n"
+                               << "      " << *SI << "\n");
 
-                       // We've found a store and load that we need to split
-                       // with mismatched relative splits. Just give up on them
-                       // and remove both instructions from our list of
-                       // candidates.
-                       UnsplittableLoads.insert(LI);
-                       return true;
-                     }),
+                  // We've found a store and load that we need to split
+                  // with mismatched relative splits. Just give up on them
+                  // and remove both instructions from our list of
+                  // candidates.
+                  UnsplittableLoads.insert(LI);
+                  return true;
+                }),
       Stores.end());
   // Now we have to go *back* through all the stores, because a later store may
   // have caused an earlier store's load to become unsplittable and if it is
   // unsplittable for the later store, then we can't rely on it being split in
   // the earlier store either.
-  Stores.erase(std::remove_if(Stores.begin(), Stores.end(),
-                              [&UnsplittableLoads](StoreInst *SI) {
-                                auto *LI =
-                                    cast<LoadInst>(SI->getValueOperand());
-                                return UnsplittableLoads.count(LI);
-                              }),
+  Stores.erase(remove_if(Stores,
+                         [&UnsplittableLoads](StoreInst *SI) {
+                           auto *LI = cast<LoadInst>(SI->getValueOperand());
+                           return UnsplittableLoads.count(LI);
+                         }),
                Stores.end());
   // Once we've established all the loads that can't be split for some reason,
   // filter any that made it into our list out.
-  Loads.erase(std::remove_if(Loads.begin(), Loads.end(),
-                             [&UnsplittableLoads](LoadInst *LI) {
-                               return UnsplittableLoads.count(LI);
-                             }),
+  Loads.erase(remove_if(Loads,
+                        [&UnsplittableLoads](LoadInst *LI) {
+                          return UnsplittableLoads.count(LI);
+                        }),
               Loads.end());
-
 
   // If no loads or stores are left, there is no pre-splitting to be done for
   // this alloca.
@@ -3776,9 +3769,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   // Remove the killed slices that have ben pre-split.
-  AS.erase(std::remove_if(AS.begin(), AS.end(), [](const Slice &S) {
-    return S.isDead();
-  }), AS.end());
+  AS.erase(remove_if(AS, [](const Slice &S) { return S.isDead(); }), AS.end());
 
   // Insert our new slices. This will sort and merge them into the sorted
   // sequence.
@@ -3793,8 +3784,8 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // Finally, don't try to promote any allocas that new require re-splitting.
   // They have already been added to the worklist above.
   PromotableAllocas.erase(
-      std::remove_if(
-          PromotableAllocas.begin(), PromotableAllocas.end(),
+      remove_if(
+          PromotableAllocas,
           [&](AllocaInst *AI) { return ResplitPromotableAllocas.count(AI); }),
       PromotableAllocas.end());
 
@@ -4229,9 +4220,7 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
         auto IsInSet = [&](AllocaInst *AI) { return DeletedAllocas.count(AI); };
         Worklist.remove_if(IsInSet);
         PostPromotionWorklist.remove_if(IsInSet);
-        PromotableAllocas.erase(std::remove_if(PromotableAllocas.begin(),
-                                               PromotableAllocas.end(),
-                                               IsInSet),
+        PromotableAllocas.erase(remove_if(PromotableAllocas, IsInSet),
                                 PromotableAllocas.end());
         DeletedAllocas.clear();
       }

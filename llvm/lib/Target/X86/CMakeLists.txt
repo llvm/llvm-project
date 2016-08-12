@@ -24,6 +24,7 @@ set(sources
   X86FrameLowering.cpp
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
+  X86InstrFMA3Info.cpp
   X86InstrInfo.cpp
   X86MCInstLower.cpp
   X86MachineFunctionInfo.cpp

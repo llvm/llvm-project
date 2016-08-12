@@ -272,8 +272,9 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   // now we just recompute LCSSA for the outer loop, but it should be possible
   // to fix it in-place.
   bool NeedToFixLCSSA = PreserveLCSSA && CompletelyUnroll &&
-      std::any_of(ExitBlocks.begin(), ExitBlocks.end(),
-                  [&](BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
+                        any_of(ExitBlocks, [](const BasicBlock *BB) {
+                          return isa<PHINode>(BB->begin());
+                        });
 
   // We assume a run-time trip count if the compiler cannot
   // figure out the loop trip count and the unroll-runtime

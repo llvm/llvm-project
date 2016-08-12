@@ -21,6 +21,7 @@
 #define LLVM_SUPPORT_COMMANDLINE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -278,7 +279,7 @@ public:
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
   }
   bool isInAllSubCommands() const {
-    return std::any_of(Subs.begin(), Subs.end(), [](const SubCommand *SC) {
+    return any_of(Subs, [](const SubCommand *SC) {
       return SC == &*AllSubCommands;
     });
   }

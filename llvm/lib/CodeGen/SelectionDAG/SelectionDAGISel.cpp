@@ -3388,7 +3388,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         SelectionDAG::DAGNodeDeletedListener NDL(*CurDAG, [&](SDNode *N,
                                                               SDNode *E) {
           auto &Chain = ChainNodesMatched;
-          assert((!E || llvm::find(Chain, N) == Chain.end()) &&
+          assert((!E || !is_contained(Chain, N)) &&
                  "Chain node replaced during MorphNode");
           Chain.erase(std::remove(Chain.begin(), Chain.end(), N), Chain.end());
         });

@@ -3835,8 +3835,8 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   switch (ID) {
   default:
     break;
-  case Intrinsic::coro_begin: {
-    auto *InfoArg = CS.getArgOperand(3)->stripPointerCasts();
+  case Intrinsic::coro_id: {
+    auto *InfoArg = CS.getArgOperand(2)->stripPointerCasts();
     if (isa<ConstantPointerNull>(InfoArg))
       break;
     auto *GV = dyn_cast<GlobalVariable>(InfoArg);
@@ -4304,8 +4304,8 @@ void Verifier::verifyCompileUnits() {
   if (CUs)
     Listed.insert(CUs->op_begin(), CUs->op_end());
   Assert(
-      std::all_of(CUVisited.begin(), CUVisited.end(),
-                  [&Listed](const Metadata *CU) { return Listed.count(CU); }),
+      all_of(CUVisited,
+             [&Listed](const Metadata *CU) { return Listed.count(CU); }),
       "All DICompileUnits must be listed in llvm.dbg.cu");
   CUVisited.clear();
 }

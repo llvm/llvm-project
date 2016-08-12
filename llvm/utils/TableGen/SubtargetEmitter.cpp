@@ -783,8 +783,7 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
       RecVec SuperResources = PR->getValueAsListOfDefs("Resources");
       RecIter SubI = SubResources.begin(), SubE = SubResources.end();
       for( ; SubI != SubE; ++SubI) {
-        if (std::find(SuperResources.begin(), SuperResources.end(), *SubI)
-            == SuperResources.end()) {
+        if (!is_contained(SuperResources, *SubI)) {
           break;
         }
       }
@@ -827,9 +826,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         HasVariants = true;
         break;
       }
-      IdxIter PIPos = std::find(TI->ProcIndices.begin(),
-                                TI->ProcIndices.end(), ProcModel.Index);
-      if (PIPos != TI->ProcIndices.end()) {
+      if (is_contained(TI->ProcIndices, ProcModel.Index)) {
         HasVariants = true;
         break;
       }
@@ -844,9 +841,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     // If ProcIndices contains 0, this class applies to all processors.
     assert(!SC.ProcIndices.empty() && "expect at least one procidx");
     if (SC.ProcIndices[0] != 0) {
-      IdxIter PIPos = std::find(SC.ProcIndices.begin(),
-                                SC.ProcIndices.end(), ProcModel.Index);
-      if (PIPos == SC.ProcIndices.end())
+      if (!is_contained(SC.ProcIndices, ProcModel.Index))
         continue;
     }
     IdxVec Writes = SC.Writes;
@@ -873,8 +868,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       // Check this processor's itinerary class resources.
       for (Record *I : ProcModel.ItinRWDefs) {
         RecVec Matched = I->getValueAsListOfDefs("MatchedItinClasses");
-        if (std::find(Matched.begin(), Matched.end(), SC.ItinClassDef)
-            != Matched.end()) {
+        if (is_contained(Matched, SC.ItinClassDef)) {
           SchedModels.findRWs(I->getValueAsListOfDefs("OperandReadWrites"),
                               Writes, Reads);
           break;

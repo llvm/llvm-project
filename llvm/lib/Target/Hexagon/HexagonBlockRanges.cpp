@@ -73,7 +73,7 @@ void HexagonBlockRanges::IndexRange::merge(const IndexRange &A) {
 
 void HexagonBlockRanges::RangeList::include(const RangeList &RL) {
   for (auto &R : RL)
-    if (std::find(begin(), end(), R) == end())
+    if (!is_contained(*this, R))
       push_back(R);
 }
 

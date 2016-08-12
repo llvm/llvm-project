@@ -1167,8 +1167,7 @@ FindMostPopularDest(BasicBlock *BB,
     for (unsigned i = 0; ; ++i) {
       assert(i != TI->getNumSuccessors() && "Didn't find any successor!");
 
-      if (std::find(SamePopularity.begin(), SamePopularity.end(),
-                    TI->getSuccessor(i)) == SamePopularity.end())
+      if (!is_contained(SamePopularity, TI->getSuccessor(i)))
         continue;
 
       MostPopularDest = TI->getSuccessor(i);

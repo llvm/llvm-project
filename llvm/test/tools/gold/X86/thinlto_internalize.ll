@@ -6,7 +6,7 @@
 ; RUN:     --plugin-opt=-import-instr-limit=0 \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     -o %t3.o %t2.o %t.o
-; RUN: llvm-dis %t.o.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s
 
 ; f() should be internalized and eliminated after inlining
 ; CHECK-NOT: @f()

@@ -48,7 +48,6 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   PreventRoundChange = false;
   FixAllFDIVSQRT = false;
   InsertNOPLoad = false;
-  FlushCacheLineSWAP = false;
   InsertNOPsLoadStore = false;
 
   // Determine default and user specified characteristics

@@ -232,13 +232,13 @@ bool llvm::moduleCanBeRenamedForThinLTO(const Module &M) {
   SmallPtrSet<GlobalValue *, 8> Used;
   collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
   bool LocalIsUsed =
-      llvm::any_of(Used, [](GlobalValue *V) { return V->hasLocalLinkage(); });
+      any_of(Used, [](GlobalValue *V) { return V->hasLocalLinkage(); });
   if (!LocalIsUsed)
     return true;
 
   // Walk all the instructions in the module and find if one is inline ASM
-  auto HasInlineAsm = llvm::any_of(M, [](const Function &F) {
-    return llvm::any_of(instructions(F), [](const Instruction &I) {
+  auto HasInlineAsm = any_of(M, [](const Function &F) {
+    return any_of(instructions(F), [](const Instruction &I) {
       const CallInst *CallI = dyn_cast<CallInst>(&I);
       if (!CallI)
         return false;

@@ -449,8 +449,8 @@ DwarfDebug::constructDwarfCompileUnit(const DICompileUnit *DIUnit) {
                       DIUnit->getSplitDebugFilename());
   }
 
-  CUMap.insert(std::make_pair(DIUnit, &NewCU));
-  CUDieMap.insert(std::make_pair(&Die, &NewCU));
+  CUMap.insert({DIUnit, &NewCU});
+  CUDieMap.insert({&Die, &NewCU});
   return NewCU;
 }
 
@@ -844,8 +844,7 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
 
     // If this piece overlaps with any open ranges, truncate them.
     const DIExpression *DIExpr = Begin->getDebugExpression();
-    auto Last = std::remove_if(OpenRanges.begin(), OpenRanges.end(),
-                               [&](DebugLocEntry::Value R) {
+    auto Last = remove_if(OpenRanges, [&](DebugLocEntry::Value R) {
       return piecesOverlap(DIExpr, R.getExpression());
     });
     OpenRanges.erase(Last, OpenRanges.end());
@@ -1437,7 +1436,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   const DebugLocEntry::Value &Value = Values[0];
   if (Value.isBitPiece()) {
     // Emit all pieces that belong to the same variable and range.
-    assert(std::all_of(Values.begin(), Values.end(), [](DebugLocEntry::Value P) {
+    assert(all_of(Values, [](DebugLocEntry::Value P) {
           return P.isBitPiece();
         }) && "all values are expected to be pieces");
     assert(std::is_sorted(Values.begin(), Values.end()) &&
@@ -1889,8 +1888,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                               getDwoLineTable(CU));
   DwarfTypeUnit &NewTU = *OwnedUnit;
   DIE &UnitDie = NewTU.getUnitDie();
-  TypeUnitsUnderConstruction.push_back(
-      std::make_pair(std::move(OwnedUnit), CTy));
+  TypeUnitsUnderConstruction.emplace_back(std::move(OwnedUnit), CTy);
 
   NewTU.addUInt(UnitDie, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 CU.getLanguage());

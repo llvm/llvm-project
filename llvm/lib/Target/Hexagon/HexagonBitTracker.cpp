@@ -60,13 +60,15 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
     // Module::AnyPointerSize.
     if (Width == 0 || Width > 64)
       break;
+    AttributeSet Attrs = F.getAttributes();
+    if (Attrs.hasAttribute(AttrIdx, Attribute::ByVal))
+      continue;
     InPhysReg = getNextPhysReg(InPhysReg, Width);
     if (!InPhysReg)
       break;
     InVirtReg = getVirtRegFor(InPhysReg);
     if (!InVirtReg)
       continue;
-    AttributeSet Attrs = F.getAttributes();
     if (Attrs.hasAttribute(AttrIdx, Attribute::SExt))
       VRX.insert(std::make_pair(InVirtReg, ExtType(ExtType::SExt, Width)));
     else if (Attrs.hasAttribute(AttrIdx, Attribute::ZExt))

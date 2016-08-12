@@ -1557,7 +1557,7 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
   if (!T)
     return &N;
 
-  if (!llvm::any_of(T->operands(), isOldLoopArgument))
+  if (none_of(T->operands(), isOldLoopArgument))
     return &N;
 
   SmallVector<Metadata *, 8> Ops;

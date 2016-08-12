@@ -467,7 +467,7 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
 
   for (unsigned i = StartIdx; i < MI.getNumOperands(); ++i) {
     MachineOperand &MO = MI.getOperand(i);
-    if (std::find(Ops.begin(), Ops.end(), i) != Ops.end()) {
+    if (is_contained(Ops, i)) {
       unsigned SpillSize;
       unsigned SpillOffset;
       // Compute the spill slot size and offset.

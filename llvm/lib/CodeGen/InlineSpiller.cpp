@@ -185,10 +185,7 @@ private:
   bool isSnippet(const LiveInterval &SnipLI);
   void collectRegsToSpill();
 
-  bool isRegToSpill(unsigned Reg) {
-    return std::find(RegsToSpill.begin(),
-                     RegsToSpill.end(), Reg) != RegsToSpill.end();
-  }
+  bool isRegToSpill(unsigned Reg) { return is_contained(RegsToSpill, Reg); }
 
   bool isSibling(unsigned Reg);
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);

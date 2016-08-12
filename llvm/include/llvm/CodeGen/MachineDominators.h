@@ -272,6 +272,7 @@ public:
 template <class Node, class ChildIterator>
 struct MachineDomTreeGraphTraitsBase {
   typedef Node NodeType;
+  typedef Node *NodeRef;
   typedef ChildIterator ChildIteratorType;
 
   static NodeType *getEntryNode(NodeType *N) { return N; }

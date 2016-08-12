@@ -479,8 +479,8 @@ void X86FrameLowering::inlineStackProbe(MachineFunction &MF,
     assert(!ChkStkStub->isBundled() &&
            "Not expecting bundled instructions here");
     MachineBasicBlock::iterator MBBI = std::next(ChkStkStub->getIterator());
-    assert(std::prev(MBBI).operator==(ChkStkStub) &&
-      "MBBI expected after __chkstk_stub.");
+    assert(std::prev(MBBI) == ChkStkStub &&
+           "MBBI expected after __chkstk_stub.");
     DebugLoc DL = PrologMBB.findDebugLoc(MBBI);
     emitStackProbeInline(MF, PrologMBB, MBBI, DL, true);
     ChkStkStub->eraseFromParent();
