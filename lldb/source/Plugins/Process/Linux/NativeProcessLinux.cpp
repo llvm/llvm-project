@@ -58,7 +58,6 @@
 #include "lldb/Host/linux/Personality.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
-#include "lldb/Host/android/Android.h"
 
 #define LLDB_PERSONALITY_GET_CURRENT_SETTINGS  0xffffffff
 
