@@ -8684,11 +8684,10 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
     << RHS.get()->getSourceRange();
 }
 
-/// \brief Return the resulting type when an OpenCL vector is shifted
+/// \brief Return the resulting type when a vector is shifted
 ///        by a scalar or vector shift amount.
-static QualType checkOpenCLVectorShift(Sema &S,
-                                       ExprResult &LHS, ExprResult &RHS,
-                                       SourceLocation Loc, bool IsCompAssign) {
+static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
+                                 SourceLocation Loc, bool IsCompAssign) {
   // OpenCL v1.1 s6.3.j says RHS can be a vector only if LHS is a vector.
   if (!LHS.get()->getType()->isVectorType()) {
     S.Diag(Loc, diag::err_shift_rhs_only_vector)
@@ -8756,11 +8755,9 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
   // Vector shifts promote their scalar inputs to vector type.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType()) {
-    if (LangOpts.OpenCL)
-      return checkOpenCLVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
     if (LangOpts.ZVector) {
       // The shift operators for the z vector extensions work basically
-      // like OpenCL shifts, except that neither the LHS nor the RHS is
+      // like general shifts, except that neither the LHS nor the RHS is
       // allowed to be a "vector bool".
       if (auto LHSVecType = LHS.get()->getType()->getAs<VectorType>())
         if (LHSVecType->getVectorKind() == VectorType::AltiVecBool)
@@ -8768,11 +8765,8 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
       if (auto RHSVecType = RHS.get()->getType()->getAs<VectorType>())
         if (RHSVecType->getVectorKind() == VectorType::AltiVecBool)
           return InvalidOperands(Loc, LHS, RHS);
-      return checkOpenCLVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
     }
-    return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
-                               /*AllowBothBool*/true,
-                               /*AllowBoolConversions*/false);
+    return checkVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
   }
 
   // Shifts don't perform usual arithmetic conversions, they just do integer

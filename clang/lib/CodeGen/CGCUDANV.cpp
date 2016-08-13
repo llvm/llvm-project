@@ -55,10 +55,18 @@ private:
   /// where the C code specifies const char*.
   llvm::Constant *makeConstantString(const std::string &Str,
                                      const std::string &Name = "",
+                                     const std::string &SectionName = "",
                                      unsigned Alignment = 0) {
     llvm::Constant *Zeros[] = {llvm::ConstantInt::get(SizeTy, 0),
                                llvm::ConstantInt::get(SizeTy, 0)};
     auto ConstStr = CGM.GetAddrOfConstantCString(Str, Name.c_str());
+    llvm::GlobalVariable *GV =
+        cast<llvm::GlobalVariable>(ConstStr.getPointer());
+    if (!SectionName.empty())
+      GV->setSection(SectionName);
+    if (Alignment)
+      GV->setAlignment(Alignment);
+
     return llvm::ConstantExpr::getGetElementPtr(ConstStr.getElementType(),
                                                 ConstStr.getPointer(), Zeros);
  }
@@ -285,7 +293,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     llvm::Constant *Values[] = {
         llvm::ConstantInt::get(IntTy, 0x466243b1), // Fatbin wrapper magic.
         llvm::ConstantInt::get(IntTy, 1),          // Fatbin version.
-        makeConstantString(GpuBinaryOrErr.get()->getBuffer(), "", 16), // Data.
+        makeConstantString(GpuBinaryOrErr.get()->getBuffer(), // Data.
+                           "", ".nv_fatbin", 8),              //
         llvm::ConstantPointerNull::get(VoidPtrTy)}; // Unused in fatbin v1.
     llvm::GlobalVariable *FatbinWrapper = new llvm::GlobalVariable(
         TheModule, FatbinWrapperTy, true, llvm::GlobalValue::InternalLinkage,

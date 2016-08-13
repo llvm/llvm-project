@@ -24,6 +24,7 @@ namespace std { template<class T> struct complex { T real; T imag; }; }
 #define MPI_DATATYPE_NULL 0
 #define MPI_CHAR 0
 #define MPI_BYTE 0
+#define MPI_SHORT 0
 #define MPI_INT 0
 #define MPI_LONG 0
 #define MPI_LONG_DOUBLE 0
@@ -31,6 +32,7 @@ namespace std { template<class T> struct complex { T real; T imag; }; }
 #define MPI_INT8_T 0
 #define MPI_UINT8_T 0
 #define MPI_UINT16_T 0
+#define MPI_C_FLOAT_COMPLEX 0
 #define MPI_C_LONG_DOUBLE_COMPLEX 0
 #define MPI_FLOAT 0
 #define MPI_DOUBLE 0

@@ -315,22 +315,9 @@ public:
 } // end clang namespace
 
 namespace llvm {
-  template<> struct ilist_traits<clang::ento::BugReport>
-    : public ilist_default_traits<clang::ento::BugReport> {
-    clang::ento::BugReport *createSentinel() const {
-      return static_cast<clang::ento::BugReport *>(&Sentinel);
-    }
-    void destroySentinel(clang::ento::BugReport *) const {}
-
-    clang::ento::BugReport *provideInitialHead() const {
-      return createSentinel();
-    }
-    clang::ento::BugReport *ensureHead(clang::ento::BugReport *) const {
-      return createSentinel();
-    }
-  private:
-    mutable ilist_half_node<clang::ento::BugReport> Sentinel;
-  };
+template <>
+struct ilist_sentinel_traits<clang::ento::BugReport>
+    : public ilist_half_embedded_sentinel_traits<clang::ento::BugReport> {};
 }
 
 namespace clang {
