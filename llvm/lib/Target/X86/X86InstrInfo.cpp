@@ -3503,6 +3503,9 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(
 
 bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
                                          unsigned &SrcOpIdx2) const {
+  if (!MI.isCommutable())
+    return false;
+
   switch (MI.getOpcode()) {
   case X86::CMPPDrri:
   case X86::CMPPSrri:

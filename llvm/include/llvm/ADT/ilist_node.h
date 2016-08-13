@@ -36,17 +36,13 @@ protected:
   ilist_half_node() : Prev(nullptr) {}
 };
 
-template<typename NodeTy>
-struct ilist_nextprev_traits;
-
+struct ilist_node_access;
 template <typename NodeTy> class ilist_iterator;
 
-/// ilist_node - Base class that provides next/prev services for nodes
-/// that use ilist_nextprev_traits or ilist_default_traits.
-///
+/// Base class that provides next/prev services for ilist nodes.
 template<typename NodeTy>
 class ilist_node : private ilist_half_node<NodeTy> {
-  friend struct ilist_nextprev_traits<NodeTy>;
+  friend struct ilist_node_access;
   friend struct ilist_traits<NodeTy>;
   friend struct ilist_half_embedded_sentinel_traits<NodeTy>;
   friend struct ilist_embedded_sentinel_traits<NodeTy>;

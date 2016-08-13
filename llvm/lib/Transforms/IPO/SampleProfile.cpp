@@ -125,7 +125,7 @@ protected:
   void propagateWeights(Function &F);
   uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
   void buildEdges(Function &F);
-  bool propagateThroughEdges(Function &F);
+  bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
   void computeDominanceAndLoopInfo(Function &F);
   unsigned getOffset(unsigned L, unsigned H) const;
   void clearFunctionData();
@@ -460,10 +460,18 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
   if (!FS)
     return std::error_code();
 
-  // Ignore all dbg_value intrinsics.
-  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
-  if (II && II->getIntrinsicID() == Intrinsic::dbg_value)
+  // Ignore all intrinsics and branch instructions.
+  // Branch instruction usually contains debug info from sources outside of
+  // the residing basic block, thus we ignore them during annotation.
+  if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst))
     return std::error_code();
+
+  // If a call instruction is inlined in profile, but not inlined here,
+  // it means that the inlined callsite has no sample, thus the call
+  // instruction should have 0 count.
+  const CallInst *CI = dyn_cast<CallInst>(&Inst);
+  if (CI && findCalleeFunctionSamples(*CI))
+    return 0; 
 
   const DILocation *DIL = DLoc;
   unsigned Lineno = DLoc.getLine();
@@ -488,13 +496,6 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
                  << Inst << " (line offset: " << Lineno - HeaderLineno << "."
                  << DIL->getDiscriminator() << " - weight: " << R.get()
                  << ")\n");
-  } else {
-    // If a call instruction is inlined in profile, but not inlined here,
-    // it means that the inlined callsite has no sample, thus the call
-    // instruction should have 0 count.
-    const CallInst *CI = dyn_cast<CallInst>(&Inst);
-    if (CI && findCalleeFunctionSamples(*CI))
-      R = 0;
   }
   return R;
 }
@@ -695,6 +696,10 @@ void SampleProfileLoader::findEquivalencesFor(
     bool IsInSameLoop = LI->getLoopFor(BB1) == LI->getLoopFor(BB2);
     if (BB1 != BB2 && IsDomParent && IsInSameLoop) {
       EquivalenceClass[BB2] = EC;
+      // If BB2 is visited, then the entire EC should be marked as visited.
+      if (VisitedBlocks.count(BB2)) {
+        VisitedBlocks.insert(EC);
+      }
 
       // If BB2 is heavier than BB1, make BB2 have the same weight
       // as BB1.
@@ -707,7 +712,11 @@ void SampleProfileLoader::findEquivalencesFor(
       Weight = std::max(Weight, BlockWeights[BB2]);
     }
   }
-  BlockWeights[EC] = Weight;
+  if (EC == &EC->getParent()->getEntryBlock()) {
+    BlockWeights[EC] = Samples->getHeadSamples() + 1;
+  } else {
+    BlockWeights[EC] = Weight;
+  }
 }
 
 /// \brief Find equivalence classes.
@@ -798,9 +807,12 @@ uint64_t SampleProfileLoader::visitEdge(Edge E, unsigned *NumUnknownEdges,
 /// count of the basic block, if needed.
 ///
 /// \param F  Function to process.
+/// \param UpdateBlockCount  Whether we should update basic block counts that
+///                          has already been annotated.
 ///
 /// \returns  True if new weights were assigned to edges or blocks.
-bool SampleProfileLoader::propagateThroughEdges(Function &F) {
+bool SampleProfileLoader::propagateThroughEdges(Function &F,
+                                                bool UpdateBlockCount) {
   bool Changed = false;
   DEBUG(dbgs() << "\nPropagation through edges\n");
   for (const auto &BI : F) {
@@ -892,10 +904,34 @@ bool SampleProfileLoader::propagateThroughEdges(Function &F) {
             EdgeWeights[UnknownEdge] = BBWeight - TotalWeight;
           else
             EdgeWeights[UnknownEdge] = 0;
+          const BasicBlock *OtherEC;
+          if (i == 0)
+            OtherEC = EquivalenceClass[UnknownEdge.first];
+          else
+            OtherEC = EquivalenceClass[UnknownEdge.second];
+          // Edge weights should never exceed the BB weights it connects.
+          if (VisitedBlocks.count(OtherEC) &&
+              EdgeWeights[UnknownEdge] > BlockWeights[OtherEC])
+            EdgeWeights[UnknownEdge] = BlockWeights[OtherEC];
           VisitedEdges.insert(UnknownEdge);
           Changed = true;
           DEBUG(dbgs() << "Set weight for edge: ";
                 printEdgeWeight(dbgs(), UnknownEdge));
+        }
+      } else if (VisitedBlocks.count(EC) && BlockWeights[EC] == 0) {
+        // If a block Weights 0, all its in/out edges should weight 0.
+        if (i == 0) {
+          for (auto *Pred : Predecessors[BB]) {
+            Edge E = std::make_pair(Pred, BB);
+            EdgeWeights[E] = 0;
+            VisitedEdges.insert(E);
+          }
+        } else {
+          for (auto *Succ : Successors[BB]) {
+            Edge E = std::make_pair(BB, Succ);
+            EdgeWeights[E] = 0;
+            VisitedEdges.insert(E);
+          }
         }
       } else if (SelfReferentialEdge.first && VisitedBlocks.count(EC)) {
         uint64_t &BBWeight = BlockWeights[BB];
@@ -908,6 +944,11 @@ bool SampleProfileLoader::propagateThroughEdges(Function &F) {
         Changed = true;
         DEBUG(dbgs() << "Set self-referential edge weight to: ";
               printEdgeWeight(dbgs(), SelfReferentialEdge));
+      }
+      if (UpdateBlockCount && !VisitedBlocks.count(EC) && TotalWeight > 0) {
+        BlockWeights[EC] = TotalWeight;
+        VisitedBlocks.insert(EC);
+        Changed = true;
       }
     }
   }
@@ -968,7 +1009,21 @@ void SampleProfileLoader::propagateWeights(Function &F) {
 
   // Add an entry count to the function using the samples gathered
   // at the function entry.
-  F.setEntryCount(Samples->getHeadSamples());
+  F.setEntryCount(Samples->getHeadSamples() + 1);
+
+  // If BB weight is larger than its corresponding loop's header BB weight,
+  // use the BB weight to replace the loop header BB weight.
+  for (auto &BI : F) {
+    BasicBlock *BB = &BI;
+    Loop *L = LI->getLoopFor(BB);
+    if (!L) {
+      continue;
+    }
+    BasicBlock *Header = L->getHeader();
+    if (Header && BlockWeights[BB] > BlockWeights[Header]) {
+      BlockWeights[Header] = BlockWeights[BB];
+    }
+  }
 
   // Before propagation starts, build, for each block, a list of
   // unique predecessors and successors. This is necessary to handle
@@ -979,7 +1034,23 @@ void SampleProfileLoader::propagateWeights(Function &F) {
 
   // Propagate until we converge or we go past the iteration limit.
   while (Changed && I++ < SampleProfileMaxPropagateIterations) {
-    Changed = propagateThroughEdges(F);
+    Changed = propagateThroughEdges(F, false);
+  }
+
+  // The first propagation propagates BB counts from annotated BBs to unknown
+  // BBs. The 2nd propagation pass resets edges weights, and use all BB weights
+  // to propagate edge weights.
+  VisitedEdges.clear();
+  Changed = true;
+  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+    Changed = propagateThroughEdges(F, false);
+  }
+
+  // The 3rd propagation pass allows adjust annotated BB weights that are
+  // obviously wrong.
+  Changed = true;
+  while (Changed && I++ < SampleProfileMaxPropagateIterations) {
+    Changed = propagateThroughEdges(F, true);
   }
 
   // Generate MD_prof metadata for every branch instruction using the
@@ -1025,7 +1096,9 @@ void SampleProfileLoader::propagateWeights(Function &F) {
         DEBUG(dbgs() << " (saturated due to uint32_t overflow)");
         Weight = std::numeric_limits<uint32_t>::max();
       }
-      Weights.push_back(static_cast<uint32_t>(Weight));
+      // Weight is added by one to avoid propagation errors introduced by
+      // 0 weights.
+      Weights.push_back(static_cast<uint32_t>(Weight + 1));
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
@@ -1036,21 +1109,17 @@ void SampleProfileLoader::propagateWeights(Function &F) {
 
     // Only set weights if there is at least one non-zero weight.
     // In any other case, let the analyzer set weights.
-    if (MaxWeight > 0) {
-      DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      TI->setMetadata(llvm::LLVMContext::MD_prof,
-                      MDB.createBranchWeights(Weights));
-      DebugLoc BranchLoc = TI->getDebugLoc();
-      emitOptimizationRemark(
-          Ctx, DEBUG_TYPE, F, MaxDestLoc,
-          Twine("most popular destination for conditional branches at ") +
-              ((BranchLoc) ? Twine(BranchLoc->getFilename() + ":" +
-                                   Twine(BranchLoc.getLine()) + ":" +
-                                   Twine(BranchLoc.getCol()))
-                           : Twine("<UNKNOWN LOCATION>")));
-    } else {
-      DEBUG(dbgs() << "SKIPPED. All branch weights are zero.\n");
-    }
+    DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
+    TI->setMetadata(llvm::LLVMContext::MD_prof,
+                    MDB.createBranchWeights(Weights));
+    DebugLoc BranchLoc = TI->getDebugLoc();
+    emitOptimizationRemark(
+        Ctx, DEBUG_TYPE, F, MaxDestLoc,
+        Twine("most popular destination for conditional branches at ") +
+            ((BranchLoc) ? Twine(BranchLoc->getFilename() + ":" +
+                                 Twine(BranchLoc.getLine()) + ":" +
+                                 Twine(BranchLoc.getCol()))
+                         : Twine("<UNKNOWN LOCATION>")));
   }
 }
 

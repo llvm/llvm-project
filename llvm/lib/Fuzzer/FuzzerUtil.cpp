@@ -146,10 +146,6 @@ int NumberOfCpuCores() {
   return N;
 }
 
-int ExecuteCommand(const std::string &Command) {
-  return system(Command.c_str());
-}
-
 bool ToASCII(uint8_t *Data, size_t Size) {
   bool Changed = false;
   for (size_t i = 0; i < Size; i++) {

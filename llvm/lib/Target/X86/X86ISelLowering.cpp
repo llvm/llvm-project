@@ -4257,6 +4257,16 @@ static bool isSequentialOrUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
   return true;
 }
 
+/// Return true if every element in Mask, beginning
+/// from position Pos and ending in Pos+Size is undef or is zero.
+static bool isUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
+                                 unsigned Size) {
+  for (unsigned i = Pos, e = Pos + Size; i != e; ++i)
+    if (!isUndefOrZero(Mask[i]))
+      return false;
+  return true;
+}
+
 /// Return true if the specified EXTRACT_SUBVECTOR operand specifies a vector
 /// extract that is suitable for instruction that extract 128 or 256 bit vectors
 static bool isVEXTRACTIndex(SDNode *N, unsigned vecWidth) {
@@ -4914,6 +4924,9 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodePALIGNRMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
+    IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(0));
     break;
   case X86ISD::VSHLDQ:
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
@@ -24846,6 +24859,57 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                            const X86Subtarget &Subtarget,
                                            unsigned &Shuffle, MVT &ShuffleVT,
                                            unsigned &PermuteImm) {
+  unsigned NumMaskElts = Mask.size();
+  unsigned NumLanes = MaskVT.getSizeInBits() / 128;
+  unsigned NumEltsPerLane = NumMaskElts / NumLanes;
+  bool FloatDomain = MaskVT.isFloatingPoint();
+
+  // Attempt to match against PSLLDQ/PSRLDQ byte shifts.
+  // TODO: Share common code with lowerVectorShuffleAsShift?
+  //
+  // PSLLDQ : (little-endian) left byte shift
+  // [ zz,  0,  1,  2,  3,  4,  5,  6]
+  // [ zz, zz, -1, -1,  2,  3,  4, -1]
+  // [ zz, zz, zz, zz, zz, zz, -1,  1]
+  // PSRLDQ : (little-endian) right byte shift
+  // [  5, 6,  7, zz, zz, zz, zz, zz]
+  // [ -1, 5,  6,  7, zz, zz, zz, zz]
+  // [  1, 2, -1, -1, -1, -1, zz, zz]
+  if (!FloatDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE2()) ||
+                       (MaskVT.is256BitVector() && Subtarget.hasAVX2()))) {
+    for (unsigned Shift = 1; Shift != NumEltsPerLane; ++Shift) {
+      bool IsVSHLDQ = true;
+      bool IsVSRLDQ = true;
+
+      for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+        unsigned Base = Lane * NumEltsPerLane;
+        unsigned Ofs = NumEltsPerLane - Shift;
+
+        IsVSHLDQ &= isUndefOrZeroInRange(Mask, Base, Shift);
+        IsVSHLDQ &= isSequentialOrUndefInRange(Mask, Base + Shift, Ofs, Base);
+
+        IsVSRLDQ &= isUndefOrZeroInRange(Mask, Base + Ofs, Shift);
+        IsVSRLDQ &= isSequentialOrUndefInRange(Mask, Base, Ofs, Base + Shift);
+
+        if (!IsVSHLDQ && !IsVSRLDQ)
+          break;
+      }
+
+      if (IsVSHLDQ) {
+        Shuffle = X86ISD::VSHLDQ;
+        ShuffleVT = MVT::getVectorVT(MVT::i8, NumLanes * 16);
+        PermuteImm = Shift * (MaskVT.getScalarSizeInBits() / 8);
+        return true;
+      }
+      if (IsVSRLDQ) {
+        Shuffle = X86ISD::VSRLDQ;
+        ShuffleVT = MVT::getVectorVT(MVT::i8, NumLanes * 16);
+        PermuteImm = Shift * (MaskVT.getScalarSizeInBits() / 8);
+        return true;
+      }
+    }
+  }
+
   // Ensure we don't contain any zero elements.
   for (int M : Mask) {
     if (M == SM_SentinelZero)
@@ -24899,7 +24963,6 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
   // AVX introduced the VPERMILPD/VPERMILPS float permutes, before then we
   // had to use 2-input SHUFPD/SHUFPS shuffles (not handled here).
-  bool FloatDomain = MaskVT.isFloatingPoint();
   if (FloatDomain && !Subtarget.hasAVX())
     return false;
 
@@ -30412,19 +30475,32 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
 }
 
 /// sext(add_nsw(x, C)) --> add(sext(x), C_sext)
-/// Promoting a sign extension ahead of an 'add nsw' exposes opportunities
-/// to combine math ops, use an LEA, or use a complex addressing mode. This can
-/// eliminate extend, add, and shift instructions.
-static SDValue promoteSextBeforeAddNSW(SDNode *Sext, SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget) {
+/// zext(add_nuw(x, C)) --> add(zext(x), C_zext)
+/// Promoting a sign/zero extension ahead of a no overflow 'add' exposes
+/// opportunities to combine math ops, use an LEA, or use a complex addressing
+/// mode. This can eliminate extend, add, and shift instructions.
+static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
+  if (Ext->getOpcode() != ISD::SIGN_EXTEND &&
+      Ext->getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
   // TODO: This should be valid for other integer types.
-  EVT VT = Sext->getValueType(0);
+  EVT VT = Ext->getValueType(0);
   if (VT != MVT::i64)
     return SDValue();
 
-  // We need an 'add nsw' feeding into the 'sext'.
-  SDValue Add = Sext->getOperand(0);
-  if (Add.getOpcode() != ISD::ADD || !Add->getFlags()->hasNoSignedWrap())
+  SDValue Add = Ext->getOperand(0);
+  if (Add.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  bool Sext = Ext->getOpcode() == ISD::SIGN_EXTEND;
+  bool NSW = Add->getFlags()->hasNoSignedWrap();
+  bool NUW = Add->getFlags()->hasNoUnsignedWrap();
+
+  // We need an 'add nsw' feeding into the 'sext' or 'add nuw' feeding
+  // into the 'zext'
+  if ((Sext && !NSW) || (!Sext && !NUW))
     return SDValue();
 
   // Having a constant operand to the 'add' ensures that we are not increasing
@@ -30440,7 +30516,7 @@ static SDValue promoteSextBeforeAddNSW(SDNode *Sext, SelectionDAG &DAG,
   // of single 'add' instructions, but the cost model for selecting an LEA
   // currently has a high threshold.
   bool HasLEAPotential = false;
-  for (auto *User : Sext->uses()) {
+  for (auto *User : Ext->uses()) {
     if (User->getOpcode() == ISD::ADD || User->getOpcode() == ISD::SHL) {
       HasLEAPotential = true;
       break;
@@ -30449,17 +30525,18 @@ static SDValue promoteSextBeforeAddNSW(SDNode *Sext, SelectionDAG &DAG,
   if (!HasLEAPotential)
     return SDValue();
 
-  // Everything looks good, so pull the 'sext' ahead of the 'add'.
-  int64_t AddConstant = AddOp1->getSExtValue();
+  // Everything looks good, so pull the '{s|z}ext' ahead of the 'add'.
+  int64_t AddConstant = Sext ? AddOp1->getSExtValue() : AddOp1->getZExtValue();
   SDValue AddOp0 = Add.getOperand(0);
-  SDValue NewSext = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Sext), VT, AddOp0);
+  SDValue NewExt = DAG.getNode(Ext->getOpcode(), SDLoc(Ext), VT, AddOp0);
   SDValue NewConstant = DAG.getConstant(AddConstant, SDLoc(Add), VT);
 
   // The wider add is guaranteed to not wrap because both operands are
   // sign-extended.
   SDNodeFlags Flags;
-  Flags.setNoSignedWrap(true);
-  return DAG.getNode(ISD::ADD, SDLoc(Add), VT, NewSext, NewConstant, &Flags);
+  Flags.setNoSignedWrap(NSW);
+  Flags.setNoUnsignedWrap(NUW);
+  return DAG.getNode(ISD::ADD, SDLoc(Add), VT, NewExt, NewConstant, &Flags);
 }
 
 /// (i8,i32 {s/z}ext ({s/u}divrem (i8 x, i8 y)) ->
@@ -30618,7 +30695,7 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
     if (SDValue R = WidenMaskArithmetic(N, DAG, DCI, Subtarget))
       return R;
 
-  if (SDValue NewAdd = promoteSextBeforeAddNSW(N, DAG, Subtarget))
+  if (SDValue NewAdd = promoteExtBeforeAdd(N, DAG, Subtarget))
     return NewAdd;
 
   return SDValue();
@@ -30709,6 +30786,9 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue DivRem8 = getDivRem8(N, DAG))
     return DivRem8;
+
+  if (SDValue NewAdd = promoteExtBeforeAdd(N, DAG, Subtarget))
+    return NewAdd;
 
   return SDValue();
 }

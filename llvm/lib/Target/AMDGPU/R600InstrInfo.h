@@ -19,6 +19,14 @@
 #include "R600RegisterInfo.h"
 
 namespace llvm {
+
+namespace R600InstrFlags {
+enum {
+ REGISTER_STORE = UINT64_C(1) << 62,
+ REGISTER_LOAD = UINT64_C(1) << 63
+};
+}
+
 class AMDGPUTargetMachine;
 class DFAPacketizer;
 class MachineFunction;
@@ -301,8 +309,13 @@ public:
   void clearFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
 
   // Helper functions that check the opcode for status information
-  bool isRegisterStore(const MachineInstr &MI) const;
-  bool isRegisterLoad(const MachineInstr &MI) const;
+  bool isRegisterStore(const MachineInstr &MI) const {
+    return get(MI.getOpcode()).TSFlags & R600InstrFlags::REGISTER_STORE;
+  }
+
+  bool isRegisterLoad(const MachineInstr &MI) const {
+    return get(MI.getOpcode()).TSFlags & R600InstrFlags::REGISTER_LOAD;
+  }
 };
 
 namespace AMDGPU {

@@ -26,10 +26,18 @@
 #include <memory>
 #include <utility> // for std::pair
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+namespace detail {
+
+template <typename RangeT>
+using IterOfRange = decltype(std::begin(std::declval<RangeT>()));
+
+} // End detail namespace
 
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
@@ -233,6 +241,90 @@ auto reverse(
                            llvm::make_reverse_iterator(std::begin(C)))) {
   return make_range(llvm::make_reverse_iterator(std::end(C)),
                     llvm::make_reverse_iterator(std::begin(C)));
+}
+
+/// An iterator adaptor that filters the elements of given inner iterators.
+///
+/// The predicate parameter should be a callable object that accepts the wrapped
+/// iterator's reference type and returns a bool. When incrementing or
+/// decrementing the iterator, it will call the predicate on each element and
+/// skip any where it returns false.
+///
+/// \code
+///   int A[] = { 1, 2, 3, 4 };
+///   auto R = make_filter_range(A, [](int N) { return N % 2 == 1; });
+///   // R contains { 1, 3 }.
+/// \endcode
+template <typename WrappedIteratorT, typename PredicateT>
+class filter_iterator
+    : public iterator_adaptor_base<
+          filter_iterator<WrappedIteratorT, PredicateT>, WrappedIteratorT,
+          typename std::common_type<
+              std::forward_iterator_tag,
+              typename std::iterator_traits<
+                  WrappedIteratorT>::iterator_category>::type> {
+  using BaseT = iterator_adaptor_base<
+      filter_iterator<WrappedIteratorT, PredicateT>, WrappedIteratorT,
+      typename std::common_type<
+          std::forward_iterator_tag,
+          typename std::iterator_traits<WrappedIteratorT>::iterator_category>::
+          type>;
+
+  struct PayloadType {
+    WrappedIteratorT End;
+    PredicateT Pred;
+  };
+
+  Optional<PayloadType> Payload;
+
+  void findNextValid() {
+    assert(Payload && "Payload should be engaged when findNextValid is called");
+    while (this->I != Payload->End && !Payload->Pred(*this->I))
+      BaseT::operator++();
+  }
+
+  // Construct the begin iterator. The begin iterator requires to know where end
+  // is, so that it can properly stop when it hits end.
+  filter_iterator(WrappedIteratorT Begin, WrappedIteratorT End, PredicateT Pred)
+      : BaseT(std::move(Begin)),
+        Payload(PayloadType{std::move(End), std::move(Pred)}) {
+    findNextValid();
+  }
+
+  // Construct the end iterator. It's not incrementable, so Payload doesn't
+  // have to be engaged.
+  filter_iterator(WrappedIteratorT End) : BaseT(End) {}
+
+public:
+  using BaseT::operator++;
+
+  filter_iterator &operator++() {
+    BaseT::operator++();
+    findNextValid();
+    return *this;
+  }
+
+  template <typename RT, typename PT>
+  friend iterator_range<filter_iterator<detail::IterOfRange<RT>, PT>>
+  make_filter_range(RT &&, PT);
+};
+
+/// Convenience function that takes a range of elements and a predicate,
+/// and return a new filter_iterator range.
+///
+/// FIXME: Currently if RangeT && is a rvalue reference to a temporary, the
+/// lifetime of that temporary is not kept by the returned range object, and the
+/// temporary is going to be dropped on the floor after the make_iterator_range
+/// full expression that contains this function call.
+template <typename RangeT, typename PredicateT>
+iterator_range<filter_iterator<detail::IterOfRange<RangeT>, PredicateT>>
+make_filter_range(RangeT &&Range, PredicateT Pred) {
+  using FilterIteratorT =
+      filter_iterator<detail::IterOfRange<RangeT>, PredicateT>;
+  return make_range(FilterIteratorT(std::begin(std::forward<RangeT>(Range)),
+                                    std::end(std::forward<RangeT>(Range)),
+                                    std::move(Pred)),
+                    FilterIteratorT(std::end(std::forward<RangeT>(Range))));
 }
 
 //===----------------------------------------------------------------------===//

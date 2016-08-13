@@ -910,17 +910,17 @@ bool
 R600InstrInfo::ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   MachineOperand &MO = Cond[1];
   switch (MO.getImm()) {
-  case OPCODE_IS_ZERO_INT:
-    MO.setImm(OPCODE_IS_NOT_ZERO_INT);
+  case AMDGPU::PRED_SETE_INT:
+    MO.setImm(AMDGPU::PRED_SETNE_INT);
     break;
-  case OPCODE_IS_NOT_ZERO_INT:
-    MO.setImm(OPCODE_IS_ZERO_INT);
+  case AMDGPU::PRED_SETNE_INT:
+    MO.setImm(AMDGPU::PRED_SETE_INT);
     break;
-  case OPCODE_IS_ZERO:
-    MO.setImm(OPCODE_IS_NOT_ZERO);
+  case AMDGPU::PRED_SETE:
+    MO.setImm(AMDGPU::PRED_SETNE);
     break;
-  case OPCODE_IS_NOT_ZERO:
-    MO.setImm(OPCODE_IS_ZERO);
+  case AMDGPU::PRED_SETNE:
+    MO.setImm(AMDGPU::PRED_SETE);
     break;
   default:
     return true;
@@ -1477,12 +1477,4 @@ void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned Operand,
     InstFlags &= ~(Flag << (NUM_MO_FLAGS * Operand));
     FlagOp.setImm(InstFlags);
   }
-}
-
-bool R600InstrInfo::isRegisterStore(const MachineInstr &MI) const {
-  return get(MI.getOpcode()).TSFlags & AMDGPU_FLAG_REGISTER_STORE;
-}
-
-bool R600InstrInfo::isRegisterLoad(const MachineInstr &MI) const {
-  return get(MI.getOpcode()).TSFlags & AMDGPU_FLAG_REGISTER_LOAD;
 }

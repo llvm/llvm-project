@@ -76,7 +76,7 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
 
 SparcTargetMachine::~SparcTargetMachine() {}
 
-const SparcSubtarget *
+const SparcSubtarget * 
 SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
@@ -95,7 +95,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
       F.hasFnAttribute("use-soft-float") &&
       F.getFnAttribute("use-soft-float").getValueAsString() == "true";
 
-  if (softFloat)
+  if (softFloat)         
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
   auto &I = SubtargetMap[CPU + FS];
@@ -115,7 +115,7 @@ namespace {
 class SparcPassConfig : public TargetPassConfig {
 public:
   SparcPassConfig(SparcTargetMachine *TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+    : TargetPassConfig(TM, PM) {}
 
   SparcTargetMachine &getSparcTargetMachine() const {
     return getTM<SparcTargetMachine>();
@@ -142,49 +142,28 @@ bool SparcPassConfig::addInstSelector() {
   return false;
 }
 
-void SparcPassConfig::addPreEmitPass() {
+void SparcPassConfig::addPreEmitPass(){
   addPass(createSparcDelaySlotFillerPass(getSparcTargetMachine()));
-  if (this->getSparcTargetMachine().getSubtargetImpl()->ignoreZeroFlag()) {
-    addPass(new IgnoreZeroFlag(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->performSDIVReplace()) {
-    addPass(new ReplaceSDIV(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fixCallImmediates()) {
-    addPass(new FixCALL(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fixFSMULD()) {
-    addPass(new FixFSMULD(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->replaceFMULS()) {
-    addPass(new ReplaceFMULS(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->preventRoundChange()) {
-    addPass(new PreventRoundChange(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT()) {
-    addPass(new FixAllFDIVSQRT(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPsLoadStore()) {
-    addPass(new InsertNOPsLoadStore(getSparcTargetMachine()));
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad()) {
+
+  if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())
+  {
     addPass(new InsertNOPLoad(getSparcTargetMachine()));
   }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fillDataCache()) {
-    addPass(new FillDataCache(getSparcTargetMachine()));
+  if (this->getSparcTargetMachine().getSubtargetImpl()->fixFSMULD())
+  {
+    addPass(new FixFSMULD(getSparcTargetMachine()));
   }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->restoreExecAddr()) {
-    addPass(new RestoreExecAddress(getSparcTargetMachine()));
+  if (this->getSparcTargetMachine().getSubtargetImpl()->replaceFMULS())
+  {
+    addPass(new ReplaceFMULS(getSparcTargetMachine()));
   }
-  if (this->getSparcTargetMachine()
-          .getSubtargetImpl()
-          ->insertNOPDoublePrecision()) {
-    addPass(new InsertNOPDoublePrecision(getSparcTargetMachine()));
+  if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT())
+  {
+    addPass(new FixAllFDIVSQRT(getSparcTargetMachine()));
   }
 }
 
-void SparcV8TargetMachine::anchor() {}
+void SparcV8TargetMachine::anchor() { }
 
 SparcV8TargetMachine::SparcV8TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
@@ -194,7 +173,7 @@ SparcV8TargetMachine::SparcV8TargetMachine(const Target &T, const Triple &TT,
                                            CodeGenOpt::Level OL)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
-void SparcV9TargetMachine::anchor() {}
+void SparcV9TargetMachine::anchor() { }
 
 SparcV9TargetMachine::SparcV9TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,

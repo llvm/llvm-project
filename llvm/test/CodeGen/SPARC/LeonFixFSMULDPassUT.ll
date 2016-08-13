@@ -1,17 +1,31 @@
-; RUN: llc %s -O0 -march=sparc -mattr=fixfsmuld -o - | FileCheck %s
-; RUN: llc %s -O0 -march=sparc -o - | FileCheck %s --check-prefix=NOFIX
+; RUN: llc %s -O0 -march=sparc -mcpu=ut699 -o - | FileCheck %s
 
 ; CHECK-LABEL: test_fix_fsmuld_1
-; CHECK:       fstod %f1, %f2
-; CHECK:       fstod %f0, %f4
-; CHECK:       fmuld %f2, %f4, %f0
-; NOFIX-LABEL: test_fix_fsmuld_1
-; NOFIX:       fsmuld %f1, %f0, %f0
-define double @test_fix_fsmuld_1(float %a, float %b) {
+; CHECK:       fstod %f20, %f2
+; CHECK:       fstod %f21, %f3
+; CHECK:       fmuld %f2, %f3, %f8
+; CHECK:       fstod %f20, %f0
+define double @test_fix_fsmuld_1() {
 entry:
-  %0 = fpext float %a to double
-  %1 = fpext float %b to double
-  %mul = fmul double %0, %1
+  %a = alloca float, align 4
+  %b = alloca float, align 4
+  store float 0x402ECCCCC0000000, float* %a, align 4
+  store float 0x4022333340000000, float* %b, align 4
+  %0 = load float, float* %b, align 4
+  %1 = load float, float* %a, align 4
+  %mul = tail call double asm sideeffect "fsmuld $0, $1, $2", "={f20},{f21},{f8}"(float* %a, float* %b)
+
+  ret double %mul
+}
+
+; CHECK-LABEL: test_fix_fsmuld_2
+; CHECK:       fstod %f20, %f2
+; CHECK:       fstod %f21, %f3
+; CHECK:       fmuld %f2, %f3, %f8
+; CHECK:       fstod %f20, %f0
+define double @test_fix_fsmuld_2(float* %a, float* %b) {
+entry:
+  %mul = tail call double asm sideeffect "fsmuld $0, $1, $2", "={f20},{f21},{f8}"(float* %a, float* %b)
 
   ret double %mul
 }

@@ -1253,8 +1253,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         if (MIIsUnscaled) {
           // If the unscaled offset isn't a multiple of the MemSize, we can't
           // pair the operations together: bail and keep looking.
-          if (MIOffset % MemSize)
+          if (MIOffset % MemSize) {
+            trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+            MemInsns.push_back(&MI);
             continue;
+          }
           MIOffset /= MemSize;
         } else {
           MIOffset *= MemSize;
@@ -1419,9 +1422,6 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
   default:
     break;
   case AArch64::SUBXri:
-    // Negate the offset for a SUB instruction.
-    Offset *= -1;
-  // FALLTHROUGH
   case AArch64::ADDXri:
     // Make sure it's a vanilla immediate operand, not a relocation or
     // anything else we can't handle.
@@ -1439,6 +1439,9 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
 
     bool IsPairedInsn = isPairedLdSt(MemMI);
     int UpdateOffset = MI.getOperand(2).getImm();
+    if (MI.getOpcode() == AArch64::SUBXri)
+      UpdateOffset = -UpdateOffset;
+
     // For non-paired load/store instructions, the immediate must fit in a
     // signed 9-bit integer.
     if (!IsPairedInsn && (UpdateOffset > 255 || UpdateOffset < -256))
@@ -1453,13 +1456,13 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
         break;
 
       int ScaledOffset = UpdateOffset / Scale;
-      if (ScaledOffset > 64 || ScaledOffset < -64)
+      if (ScaledOffset > 63 || ScaledOffset < -64)
         break;
     }
 
     // If we have a non-zero Offset, we check that it matches the amount
     // we're adding to the register.
-    if (!Offset || Offset == MI.getOperand(2).getImm())
+    if (!Offset || Offset == UpdateOffset)
       return true;
     break;
   }
@@ -1744,44 +1747,10 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   //        ldp x0, x1, [x2]
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
-    MachineInstr &MI = *MBBI;
-    switch (MI.getOpcode()) {
-    default:
-      // Just move on to the next instruction.
+    if (TII->isPairableLdStInst(*MBBI) && tryToPairLdStInst(MBBI))
+      Modified = true;
+    else
       ++MBBI;
-      break;
-    // Scaled instructions.
-    case AArch64::STRSui:
-    case AArch64::STRDui:
-    case AArch64::STRQui:
-    case AArch64::STRXui:
-    case AArch64::STRWui:
-    case AArch64::LDRSui:
-    case AArch64::LDRDui:
-    case AArch64::LDRQui:
-    case AArch64::LDRXui:
-    case AArch64::LDRWui:
-    case AArch64::LDRSWui:
-    // Unscaled instructions.
-    case AArch64::STURSi:
-    case AArch64::STURDi:
-    case AArch64::STURQi:
-    case AArch64::STURWi:
-    case AArch64::STURXi:
-    case AArch64::LDURSi:
-    case AArch64::LDURDi:
-    case AArch64::LDURQi:
-    case AArch64::LDURWi:
-    case AArch64::LDURXi:
-    case AArch64::LDURSWi: {
-      if (tryToPairLdStInst(MBBI)) {
-        Modified = true;
-        break;
-      }
-      ++MBBI;
-      break;
-    }
-    }
   }
   // 4) Find base register updates that can be merged into the load or store
   //    as a base-reg writeback.
