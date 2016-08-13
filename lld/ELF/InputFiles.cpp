@@ -11,6 +11,7 @@
 #include "Driver.h"
 #include "Error.h"
 #include "InputSection.h"
+#include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
@@ -160,6 +161,14 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // We don't merge sections if -O0 (default is -O1). This makes sometimes
   // the linker significantly faster, although the output will be bigger.
   if (Config->Optimize == 0)
+    return false;
+
+  // We don't merge if linker script has SECTIONS command. When script
+  // do layout it can merge several sections with different attributes
+  // into single output sections. We currently do not support adding
+  // mergeable input sections to regular output ones as well as adding
+  // regular input sections to mergeable output.
+  if (ScriptConfig->HasContents)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -343,10 +352,15 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index == 0)
     return nullptr;
-  if (Index >= Sections.size() || !Sections[Index])
+  if (Index >= Sections.size())
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   InputSectionBase<ELFT> *S = Sections[Index];
-  if (S == &InputSectionBase<ELFT>::Discarded)
+  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03
+  // could generate broken objects. STT_SECTION symbols can be
+  // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
+  // In this case it is fine for section to be null here as we
+  // do not allocate sections of these types.
+  if (!S || S == &InputSectionBase<ELFT>::Discarded)
     return S;
   return S->Repl;
 }

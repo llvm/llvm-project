@@ -155,6 +155,9 @@ public:
   /// Whether the driver is just the preprocessor.
   bool CCCIsCPP() const { return Mode == CPPMode; }
 
+  /// Whether the driver should follow gcc like behavior.
+  bool CCCIsCC() const { return Mode == GCCMode; }
+
   /// Whether the driver should follow cl.exe like behavior.
   bool IsCLMode() const { return Mode == CLMode; }
 
@@ -291,7 +294,7 @@ public:
   /// @{
 
   /// ParseDriverMode - Look for and handle the driver mode option in Args.
-  void ParseDriverMode(ArrayRef<const char *> Args);
+  void ParseDriverMode(StringRef ProgramName, ArrayRef<const char *> Args);
 
   /// ParseArgStrings - Parse the given list of strings into an
   /// ArgList.
@@ -440,6 +443,10 @@ public:
   LTOKind getLTOMode() const { return LTOMode; }
 
 private:
+  /// Set the driver mode (cl, gcc, etc) from an option string of the form
+  /// --driver-mode=<mode>.
+  void setDriverModeFromOption(StringRef Opt);
+
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);

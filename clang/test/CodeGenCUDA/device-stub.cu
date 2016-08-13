@@ -45,10 +45,12 @@ void use_pointers() {
 // * constant unnamed string with the kernel name
 // CHECK: private unnamed_addr constant{{.*}}kernelfunc{{.*}}\00"
 // * constant unnamed string with GPU binary
-// CHECK: private unnamed_addr constant{{.*}}\00"
+// CHECK: private unnamed_addr constant{{.*GPU binary would be here.*}}\00"
+// CHECK-SAME: section ".nv_fatbin", align 8
 // * constant struct that wraps GPU binary
 // CHECK: @__cuda_fatbin_wrapper = internal constant { i32, i32, i8*, i8* } 
-// CHECK:       { i32 1180844977, i32 1, {{.*}}, i8* null }
+// CHECK-SAME: { i32 1180844977, i32 1, {{.*}}, i8* null }
+// CHECK-SAME: section ".nvFatBinSegment"
 // * variable to save GPU binary handle after initialization
 // CHECK: @__cuda_gpubin_handle = internal global i8** null
 // * Make sure our constructor/destructor was added to global ctor/dtor list.

@@ -69,6 +69,16 @@ Improvements to clang-tidy
 
   Flags classes where some, but not all, special member functions are user-defined.
 
+- New `mpi-buffer-deref
+  <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
+
+  Flags buffers which are insufficiently dereferenced when passed to an MPI function call.
+
+- New `mpi-type-mismatch
+  <http://clang.llvm.org/extra/clang-tidy/checks/mpi-type-mismatch.html>`_ check
+
+  Flags MPI function calls with a buffer type and MPI data type mismatch.
+
 - New `performance-inefficient-string-concatenation
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-string-concatenation.html>`_ check
 
