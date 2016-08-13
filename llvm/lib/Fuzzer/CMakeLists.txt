@@ -20,6 +20,8 @@ if( LLVM_USE_SANITIZE_COVERAGE )
     FuzzerSHA1.cpp
     FuzzerTracePC.cpp
     FuzzerUtil.cpp
+    FuzzerUtilDarwin.cpp
+    FuzzerUtilLinux.cpp
     )
   add_library(LLVMFuzzerNoMain STATIC
     $<TARGET_OBJECTS:LLVMFuzzerNoMainObjects>

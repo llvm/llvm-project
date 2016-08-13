@@ -1051,8 +1051,9 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   return transformToIndexedCompare(GEPLHS, RHS, Cond, DL);
 }
 
-Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca,
-                                         Value *Other) {
+Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI,
+                                         const AllocaInst *Alloca,
+                                         const Value *Other) {
   assert(ICI.isEquality() && "Cannot fold non-equality comparison.");
 
   // It would be tempting to fold away comparisons between allocas and any
@@ -1071,8 +1072,8 @@ Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca,
 
   unsigned MaxIter = 32; // Break cycles and bound to constant-time.
 
-  SmallVector<Use *, 32> Worklist;
-  for (Use &U : Alloca->uses()) {
+  SmallVector<const Use *, 32> Worklist;
+  for (const Use &U : Alloca->uses()) {
     if (Worklist.size() >= MaxIter)
       return nullptr;
     Worklist.push_back(&U);
@@ -1081,8 +1082,8 @@ Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca,
   unsigned NumCmps = 0;
   while (!Worklist.empty()) {
     assert(Worklist.size() <= MaxIter);
-    Use *U = Worklist.pop_back_val();
-    Value *V = U->getUser();
+    const Use *U = Worklist.pop_back_val();
+    const Value *V = U->getUser();
     --MaxIter;
 
     if (isa<BitCastInst>(V) || isa<GetElementPtrInst>(V) || isa<PHINode>(V) ||
@@ -1091,7 +1092,7 @@ Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca,
     } else if (isa<LoadInst>(V)) {
       // Loading from the pointer doesn't escape it.
       continue;
-    } else if (auto *SI = dyn_cast<StoreInst>(V)) {
+    } else if (const auto *SI = dyn_cast<StoreInst>(V)) {
       // Storing *to* the pointer is fine, but storing the pointer escapes it.
       if (SI->getValueOperand() == U->get())
         return nullptr;
@@ -1100,7 +1101,7 @@ Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca,
       if (NumCmps++)
         return nullptr; // Found more than one cmp.
       continue;
-    } else if (auto *Intrin = dyn_cast<IntrinsicInst>(V)) {
+    } else if (const auto *Intrin = dyn_cast<IntrinsicInst>(V)) {
       switch (Intrin->getIntrinsicID()) {
         // These intrinsics don't escape or compare the pointer. Memset is safe
         // because we don't allow ptrtoint. Memcpy and memmove are safe because
@@ -1115,7 +1116,7 @@ Instruction *InstCombiner::foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca,
     } else {
       return nullptr;
     }
-    for (Use &U : V->uses()) {
+    for (const Use &U : V->uses()) {
       if (Worklist.size() >= MaxIter)
         return nullptr;
       Worklist.push_back(&U);

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -disable-lsr -verify-machineinstrs -o - %s | FileCheck %s
 
 ; This file contains tests for the AArch64 load/store optimizer.
 
@@ -1227,6 +1227,107 @@ for.body:
   %dec.i = add nsw i64 %i, -1
   %gep3 = getelementptr double, double* %phi2, i64 -2
   %gep4 = getelementptr double, double* %phi1, i64 -2
+  %cond = icmp sgt i64 %dec.i, 0
+  br i1 %cond, label %for.body, label %end
+end:
+  ret void
+}
+
+define void @post-indexed-sub-doubleword-offset-min(i64* %a, i64* %b, i64 %count) nounwind {
+; CHECK-LABEL: post-indexed-sub-doubleword-offset-min
+; CHECK: ldr x{{[0-9]+}}, [x{{[0-9]+}}], #-256
+; CHECK: str x{{[0-9]+}}, [x{{[0-9]+}}], #-256
+  br label %for.body
+for.body:
+  %phi1 = phi i64* [ %gep4, %for.body ], [ %b, %0 ]
+  %phi2 = phi i64* [ %gep3, %for.body ], [ %a, %0 ]
+  %i = phi i64 [ %dec.i, %for.body], [ %count, %0 ]
+  %gep1 = getelementptr i64, i64* %phi1, i64 1
+  %load1 = load i64, i64* %gep1
+  %gep2 = getelementptr i64, i64* %phi2, i64 1
+  store i64 %load1, i64* %gep2
+  %load2 = load i64, i64* %phi1
+  store i64 %load2, i64* %phi2
+  %dec.i = add nsw i64 %i, -1
+  %gep3 = getelementptr i64, i64* %phi2, i64 -32
+  %gep4 = getelementptr i64, i64* %phi1, i64 -32
+  %cond = icmp sgt i64 %dec.i, 0
+  br i1 %cond, label %for.body, label %end
+end:
+  ret void
+}
+
+define void @post-indexed-doubleword-offset-out-of-range(i64* %a, i64* %b, i64 %count) nounwind {
+; CHECK-LABEL: post-indexed-doubleword-offset-out-of-range
+; CHECK: ldr x{{[0-9]+}}, [x{{[0-9]+}}]
+; CHECK: add x{{[0-9]+}}, x{{[0-9]+}}, #256
+; CHECK: str x{{[0-9]+}}, [x{{[0-9]+}}]
+; CHECK: add x{{[0-9]+}}, x{{[0-9]+}}, #256
+
+  br label %for.body
+for.body:
+  %phi1 = phi i64* [ %gep4, %for.body ], [ %b, %0 ]
+  %phi2 = phi i64* [ %gep3, %for.body ], [ %a, %0 ]
+  %i = phi i64 [ %dec.i, %for.body], [ %count, %0 ]
+  %gep1 = getelementptr i64, i64* %phi1, i64 1
+  %load1 = load i64, i64* %gep1
+  %gep2 = getelementptr i64, i64* %phi2, i64 1
+  store i64 %load1, i64* %gep2
+  %load2 = load i64, i64* %phi1
+  store i64 %load2, i64* %phi2
+  %dec.i = add nsw i64 %i, -1
+  %gep3 = getelementptr i64, i64* %phi2, i64 32
+  %gep4 = getelementptr i64, i64* %phi1, i64 32
+  %cond = icmp sgt i64 %dec.i, 0
+  br i1 %cond, label %for.body, label %end
+end:
+  ret void
+}
+
+define void @post-indexed-paired-min-offset(i64* %a, i64* %b, i64 %count) nounwind {
+; CHECK-LABEL: post-indexed-paired-min-offset
+; CHECK: ldp x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}], #-512
+; CHECK: stp x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}], #-512
+  br label %for.body
+for.body:
+  %phi1 = phi i64* [ %gep4, %for.body ], [ %b, %0 ]
+  %phi2 = phi i64* [ %gep3, %for.body ], [ %a, %0 ]
+  %i = phi i64 [ %dec.i, %for.body], [ %count, %0 ]
+  %gep1 = getelementptr i64, i64* %phi1, i64 1
+  %load1 = load i64, i64* %gep1
+  %gep2 = getelementptr i64, i64* %phi2, i64 1
+  %load2 = load i64, i64* %phi1
+  store i64 %load1, i64* %gep2
+  store i64 %load2, i64* %phi2
+  %dec.i = add nsw i64 %i, -1
+  %gep3 = getelementptr i64, i64* %phi2, i64 -64
+  %gep4 = getelementptr i64, i64* %phi1, i64 -64
+  %cond = icmp sgt i64 %dec.i, 0
+  br i1 %cond, label %for.body, label %end
+end:
+  ret void
+}
+
+define void @post-indexed-paired-offset-out-of-range(i64* %a, i64* %b, i64 %count) nounwind {
+; CHECK-LABEL: post-indexed-paired-offset-out-of-range
+; CHECK: ldp x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}]
+; CHECK: add x{{[0-9]+}}, x{{[0-9]+}}, #512
+; CHECK: stp x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}]
+; CHECK: add x{{[0-9]+}}, x{{[0-9]+}}, #512
+  br label %for.body
+for.body:
+  %phi1 = phi i64* [ %gep4, %for.body ], [ %b, %0 ]
+  %phi2 = phi i64* [ %gep3, %for.body ], [ %a, %0 ]
+  %i = phi i64 [ %dec.i, %for.body], [ %count, %0 ]
+  %gep1 = getelementptr i64, i64* %phi1, i64 1
+  %load1 = load i64, i64* %phi1
+  %gep2 = getelementptr i64, i64* %phi2, i64 1
+  %load2 = load i64, i64* %gep1
+  store i64 %load1, i64* %gep2
+  store i64 %load2, i64* %phi2
+  %dec.i = add nsw i64 %i, -1
+  %gep3 = getelementptr i64, i64* %phi2, i64 64
+  %gep4 = getelementptr i64, i64* %phi1, i64 64
   %cond = icmp sgt i64 %dec.i, 0
   br i1 %cond, label %for.body, label %end
 end:

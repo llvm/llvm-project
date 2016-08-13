@@ -37,23 +37,14 @@ class RandomNumberGenerator;
 class StructType;
 template <class PtrType> class SmallPtrSetImpl;
 
+template <>
+struct ilist_sentinel_traits<NamedMDNode>
+    : public ilist_embedded_sentinel_traits<NamedMDNode> {};
+
 template<> struct ilist_traits<NamedMDNode>
   : public ilist_default_traits<NamedMDNode> {
-  // createSentinel is used to get hold of a node that marks the end of
-  // the list...
-  NamedMDNode *createSentinel() const {
-    return static_cast<NamedMDNode*>(&Sentinel);
-  }
-  static void destroySentinel(NamedMDNode*) {}
-
-  NamedMDNode *provideInitialHead() const { return createSentinel(); }
-  NamedMDNode *ensureHead(NamedMDNode*) const { return createSentinel(); }
-  static void noteHead(NamedMDNode*, NamedMDNode*) {}
   void addNodeToList(NamedMDNode *) {}
   void removeNodeFromList(NamedMDNode *) {}
-
-private:
-  mutable ilist_node<NamedMDNode> Sentinel;
 };
 
 /// A Module instance is used to store all the information related to an

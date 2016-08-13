@@ -35,27 +35,48 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Lint.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <string>
+
 using namespace llvm;
 
 namespace {
@@ -64,7 +85,7 @@ namespace {
     static const unsigned Write    = 2;
     static const unsigned Callee   = 4;
     static const unsigned Branchee = 8;
-  }
+  } // end namespace MemRef
 
   class Lint : public FunctionPass, public InstVisitor<Lint> {
     friend class InstVisitor<Lint>;
@@ -159,7 +180,7 @@ namespace {
       WriteValues({V1, Vs...});
     }
   };
-}
+} // end anonymous namespace
 
 char Lint::ID = 0;
 INITIALIZE_PASS_BEGIN(Lint, "lint", "Statically lint-checks LLVM IR",
@@ -173,7 +194,7 @@ INITIALIZE_PASS_END(Lint, "lint", "Statically lint-checks LLVM IR",
 
 // Assert - We know that cond should be true, if not print an error message.
 #define Assert(C, ...) \
-    do { if (!(C)) { CheckFailed(__VA_ARGS__); return; } } while (0)
+    do { if (!(C)) { CheckFailed(__VA_ARGS__); return; } } while (false)
 
 // Lint::run - This is the main Analysis entry point for a
 // function.

@@ -295,4 +295,31 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
   EXPECT_FALSE(m_NUWShl(m_Value(), m_Value()).match(IRB.CreateNUWAdd(L, R)));
 }
 
+template <typename T> struct MutableConstTest : PatternMatchTest { };
+
+typedef ::testing::Types<std::tuple<Value*, Instruction*>,
+                         std::tuple<const Value*, const Instruction *>>
+    MutableConstTestTypes;
+TYPED_TEST_CASE(MutableConstTest, MutableConstTestTypes);
+
+TYPED_TEST(MutableConstTest, ICmp) {
+  auto &IRB = PatternMatchTest::IRB;
+
+  typedef typename std::tuple_element<0, TypeParam>::type ValueType;
+  typedef typename std::tuple_element<1, TypeParam>::type InstructionType;
+
+  Value *L = IRB.getInt32(1);
+  Value *R = IRB.getInt32(2);
+  ICmpInst::Predicate Pred = ICmpInst::ICMP_UGT;
+
+  ValueType MatchL;
+  ValueType MatchR;
+  ICmpInst::Predicate MatchPred;
+
+  EXPECT_TRUE(m_ICmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
+              .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+}
+
 } // anonymous namespace.

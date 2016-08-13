@@ -149,20 +149,9 @@ struct Token : ilist_node<Token> {
 }
 
 namespace llvm {
-template<>
-struct ilist_sentinel_traits<Token> {
-  Token *createSentinel() const {
-    return &Sentinel;
-  }
-  static void destroySentinel(Token*) {}
-
-  Token *provideInitialHead() const { return createSentinel(); }
-  Token *ensureHead(Token*) const { return createSentinel(); }
-  static void noteHead(Token*, Token*) {}
-
-private:
-  mutable Token Sentinel;
-};
+template <>
+struct ilist_sentinel_traits<Token>
+    : public ilist_full_embedded_sentinel_traits<Token> {};
 
 template<>
 struct ilist_node_traits<Token> {

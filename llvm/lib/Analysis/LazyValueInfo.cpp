@@ -26,6 +26,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
@@ -471,8 +472,9 @@ namespace {
                                BasicBlock *BB);
   bool solveBlockValueCast(LVILatticeVal &BBLV, Instruction *BBI,
                            BasicBlock *BB);
-  void intersectAssumeBlockValueConstantRange(Value *Val, LVILatticeVal &BBLV,
-                                              Instruction *BBI);
+  void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
+                                                     LVILatticeVal &BBLV,
+                                                     Instruction *BBI);
 
   void solve();
 
@@ -864,9 +866,8 @@ static LVILatticeVal getValueFromCondition(Value *Val, Value *Cond,
 
 // If we can determine a constraint on the value given conditions assumed by
 // the program, intersect those constraints with BBLV
-void LazyValueInfoCache::intersectAssumeBlockValueConstantRange(Value *Val,
-                                                            LVILatticeVal &BBLV,
-                                                            Instruction *BBI) {
+void LazyValueInfoCache::intersectAssumeOrGuardBlockValueConstantRange(
+        Value *Val, LVILatticeVal &BBLV, Instruction *BBI) {
   BBI = BBI ? BBI : dyn_cast<Instruction>(Val);
   if (!BBI)
     return;
@@ -879,6 +880,20 @@ void LazyValueInfoCache::intersectAssumeBlockValueConstantRange(Value *Val,
       continue;
 
     BBLV = intersect(BBLV, getValueFromCondition(Val, I->getArgOperand(0)));
+  }
+
+  // If guards are not used in the module, don't spend time looking for them
+  auto *GuardDecl = BBI->getModule()->getFunction(
+          Intrinsic::getName(Intrinsic::experimental_guard));
+  if (!GuardDecl || GuardDecl->use_empty())
+    return;
+
+  for (BasicBlock::iterator I = BBI->getIterator(),
+                            E = BBI->getParent()->begin(); I != E; I--) {
+    Value *Cond = nullptr;
+    if (!match(&*I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))
+      continue;
+    BBLV = intersect(BBLV, getValueFromCondition(Val, Cond));
   }
 }
 
@@ -1043,7 +1058,8 @@ bool LazyValueInfoCache::solveBlockValueCast(LVILatticeVal &BBLV,
   ConstantRange LHSRange = ConstantRange(OperandBitWidth);
   if (hasBlockValue(BBI->getOperand(0), BB)) {
     LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
-    intersectAssumeBlockValueConstantRange(BBI->getOperand(0), LHSVal, BBI);
+    intersectAssumeOrGuardBlockValueConstantRange(BBI->getOperand(0), LHSVal,
+                                                  BBI);
     if (LHSVal.isConstantRange())
       LHSRange = LHSVal.getConstantRange();
   }
@@ -1120,7 +1136,8 @@ bool LazyValueInfoCache::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
   ConstantRange LHSRange = ConstantRange(OperandBitWidth);
   if (hasBlockValue(BBI->getOperand(0), BB)) {
     LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
-    intersectAssumeBlockValueConstantRange(BBI->getOperand(0), LHSVal, BBI);
+    intersectAssumeOrGuardBlockValueConstantRange(BBI->getOperand(0), LHSVal,
+                                                  BBI);
     if (LHSVal.isConstantRange())
       LHSRange = LHSVal.getConstantRange();
   }
@@ -1191,7 +1208,7 @@ static LVILatticeVal getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   // range of Val guaranteed by the condition. Recognize comparisons in the from
   // of:
   //  icmp <pred> Val, ...
-  //  icmp ult (add Val, Offset), ...
+  //  icmp <pred> (add Val, Offset), ...
   // The latter is the range checking idiom that InstCombine produces. Subtract
   // the offset from the allowed range for RHS in this case.
 
@@ -1202,7 +1219,7 @@ static LVILatticeVal getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   }
 
   ConstantInt *Offset = nullptr;
-  if (Predicate == ICmpInst::ICMP_ULT)
+  if (LHS != Val)
     match(LHS, m_Add(m_Specific(Val), m_ConstantInt(Offset)));
 
   if (LHS == Val || Offset) {
@@ -1211,6 +1228,9 @@ static LVILatticeVal getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                            /*isFullSet=*/true);
     if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
       RHSRange = ConstantRange(CI->getValue());
+    else if (Instruction *I = dyn_cast<Instruction>(RHS))
+      if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
+        RHSRange = getConstantRangeFromMetadata(*Ranges);
 
     // If we're interested in the false dest, invert the condition
     CmpInst::Predicate Pred =
@@ -1257,8 +1277,10 @@ getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
   auto I = Visited.find(Cond);
   if (I != Visited.end())
     return I->second;
-  return Visited[Cond] = getValueFromConditionImpl(Val, Cond, isTrueDest,
-                                                   Visited);
+
+  auto Result = getValueFromConditionImpl(Val, Cond, isTrueDest, Visited);
+  Visited[Cond] = Result;
+  return Result;
 }
 
 LVILatticeVal getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest) {
@@ -1358,7 +1380,8 @@ bool LazyValueInfoCache::getEdgeValue(Value *Val, BasicBlock *BBFrom,
 
   // Try to intersect ranges of the BB and the constraint on the edge.
   LVILatticeVal InBlock = getBlockValue(Val, BBFrom);
-  intersectAssumeBlockValueConstantRange(Val, InBlock, BBFrom->getTerminator());
+  intersectAssumeOrGuardBlockValueConstantRange(Val, InBlock,
+                                                BBFrom->getTerminator());
   // We can use the context instruction (generically the ultimate instruction
   // the calling pass is trying to simplify) here, even though the result of
   // this function is generally cached when called from the solve* functions
@@ -1367,7 +1390,7 @@ bool LazyValueInfoCache::getEdgeValue(Value *Val, BasicBlock *BBFrom,
   // functions, the context instruction is not provided. When called from
   // LazyValueInfoCache::getValueOnEdge, the context instruction is provided,
   // but then the result is not cached.
-  intersectAssumeBlockValueConstantRange(Val, InBlock, CxtI);
+  intersectAssumeOrGuardBlockValueConstantRange(Val, InBlock, CxtI);
 
   Result = intersect(LocalResult, InBlock);
   return true;
@@ -1384,7 +1407,7 @@ LVILatticeVal LazyValueInfoCache::getValueInBlock(Value *V, BasicBlock *BB,
     solve();
   }
   LVILatticeVal Result = getBlockValue(V, BB);
-  intersectAssumeBlockValueConstantRange(V, Result, CxtI);
+  intersectAssumeOrGuardBlockValueConstantRange(V, Result, CxtI);
 
   DEBUG(dbgs() << "  Result = " << Result << "\n");
   return Result;
@@ -1400,7 +1423,7 @@ LVILatticeVal LazyValueInfoCache::getValueAt(Value *V, Instruction *CxtI) {
   LVILatticeVal Result = LVILatticeVal::getOverdefined();
   if (auto *I = dyn_cast<Instruction>(V))
     Result = getFromRangeMetadata(I);
-  intersectAssumeBlockValueConstantRange(V, Result, CxtI);
+  intersectAssumeOrGuardBlockValueConstantRange(V, Result, CxtI);
 
   DEBUG(dbgs() << "  Result = " << Result << "\n");
   return Result;

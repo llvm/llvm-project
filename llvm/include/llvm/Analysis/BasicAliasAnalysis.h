@@ -180,14 +180,17 @@ private:
 
   AliasResult aliasPHI(const PHINode *PN, uint64_t PNSize,
                        const AAMDNodes &PNAAInfo, const Value *V2,
-                       uint64_t V2Size, const AAMDNodes &V2AAInfo);
+                       uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                       const Value *UnderV2);
 
   AliasResult aliasSelect(const SelectInst *SI, uint64_t SISize,
                           const AAMDNodes &SIAAInfo, const Value *V2,
-                          uint64_t V2Size, const AAMDNodes &V2AAInfo);
+                          uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                          const Value *UnderV2);
 
   AliasResult aliasCheck(const Value *V1, uint64_t V1Size, AAMDNodes V1AATag,
-                         const Value *V2, uint64_t V2Size, AAMDNodes V2AATag);
+                         const Value *V2, uint64_t V2Size, AAMDNodes V2AATag,
+                         const Value *O1 = nullptr, const Value *O2 = nullptr);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

@@ -49,8 +49,8 @@ entry:
   %0 = load i32, i32* %argc.addr, align 4, !dbg !21
   %cmp = icmp slt i32 %0, 2, !dbg !23
   br i1 %cmp, label %if.then, label %if.end, !dbg !24
-; CHECK:  edge entry -> if.then probability is 0x4ccccccd / 0x80000000 = 60.00%
-; CHECK:  edge entry -> if.end probability is 0x33333333 / 0x80000000 = 40.00%
+; CHECK:  edge entry -> if.then probability is 0x4ccf6b16 / 0x80000000 = 60.01%
+; CHECK:  edge entry -> if.end probability is 0x333094ea / 0x80000000 = 39.99%
 
 if.then:                                          ; preds = %entry
   store i32 1, i32* %retval, align 4, !dbg !25
@@ -67,8 +67,8 @@ if.end:                                           ; preds = %entry
   %3 = load i32, i32* %limit, align 4, !dbg !32
   %cmp1 = icmp sgt i32 %3, 100, !dbg !34
   br i1 %cmp1, label %if.then.2, label %if.else, !dbg !35
-; CHECK: edge if.end -> if.then.2 probability is 0x66666666 / 0x80000000 = 80.00%
-; CHECK: edge if.end -> if.else probability is 0x1999999a / 0x80000000 = 20.00%
+; CHECK: edge if.end -> if.then.2 probability is 0x6652c748 / 0x80000000 = 79.94%
+; CHECK: edge if.end -> if.else probability is 0x19ad38b8 / 0x80000000 = 20.06%
 
 if.then.2:                                        ; preds = %if.end
   call void @llvm.dbg.declare(metadata double* %s, metadata !36, metadata !17), !dbg !38

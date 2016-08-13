@@ -174,6 +174,19 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
   }
 }
 
+char ModuleSummaryIndexAnalysis::PassID;
+
+const ModuleSummaryIndex &
+ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  IndexBuilder = llvm::make_unique<ModuleSummaryIndexBuilder>(
+      &M, [&FAM](const Function &F) {
+        return &(
+            FAM.getResult<BlockFrequencyAnalysis>(*const_cast<Function *>(&F)));
+      });
+  return IndexBuilder->getIndex();
+}
+
 char ModuleSummaryIndexWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                       "Module Summary Analysis", false, true)

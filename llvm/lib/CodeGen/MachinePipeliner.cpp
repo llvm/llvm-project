@@ -3070,7 +3070,7 @@ bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
 }
 
 /// Update the memory operand with a new offset when the pipeliner
-/// generate a new copy of the instruction that refers to a
+/// generates a new copy of the instruction that refers to a
 /// different memory location.
 void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
                                           MachineInstr &OldMI, unsigned Num) {

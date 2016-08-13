@@ -178,7 +178,7 @@ public:
         return GV->getComdat();
       return nullptr;
     }
-    size_t getCommonSize() const {
+    uint64_t getCommonSize() const {
       assert(Flags & object::BasicSymbolRef::SF_Common);
       if (!GV)
         return 0;

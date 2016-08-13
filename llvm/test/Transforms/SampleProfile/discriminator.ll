@@ -35,15 +35,15 @@ while.cond:                                       ; preds = %if.end, %entry
   %0 = load i32, i32* %i.addr, align 4, !dbg !12
   %cmp = icmp slt i32 %0, 100, !dbg !12
   br i1 %cmp, label %while.body, label %while.end, !dbg !12
-; CHECK: edge while.cond -> while.body probability is 0x7ebb907a / 0x80000000 = 99.01% [HOT edge]
-; CHECK: edge while.cond -> while.end probability is 0x01446f86 / 0x80000000 = 0.99%
+; CHECK: edge while.cond -> while.body probability is 0x7d83ba68 / 0x80000000 = 98.06% [HOT edge]
+; CHECK: edge while.cond -> while.end probability is 0x027c4598 / 0x80000000 = 1.94%
 
 while.body:                                       ; preds = %while.cond
   %1 = load i32, i32* %i.addr, align 4, !dbg !14
   %cmp1 = icmp slt i32 %1, 50, !dbg !14
   br i1 %cmp1, label %if.then, label %if.end, !dbg !14
-; CHECK: edge while.body -> if.then probability is 0x06666666 / 0x80000000 = 5.00%
-; CHECK: edge while.body -> if.end probability is 0x7999999a / 0x80000000 = 95.00% [HOT edge]
+; CHECK: edge while.body -> if.then probability is 0x07878788 / 0x80000000 = 5.88%
+; CHECK: edge while.body -> if.end probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
 
 if.then:                                          ; preds = %while.body
   %2 = load i32, i32* %x, align 4, !dbg !17

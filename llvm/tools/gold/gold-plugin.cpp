@@ -626,7 +626,8 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
         CommonRes.Prevailing = true;
         CommonRes.VisibleToRegularObj = R.VisibleToRegularObj;
       }
-      CommonRes.Size = std::max(CommonRes.Size, ObjSym.getCommonSize());
+      CommonRes.Size = std::max(CommonRes.Size,
+                                static_cast<uint64_t>(ObjSym.getCommonSize()));
       CommonRes.Align = std::max(CommonRes.Align, ObjSym.getCommonAlignment());
       R.Prevailing = false;
     }

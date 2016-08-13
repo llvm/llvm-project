@@ -490,7 +490,8 @@ int main(int argc, char **argv) {
     // layer.
     return runPassPipeline(argv[0], Context, *M, TM.get(), Out.get(),
                            PassPipeline, OK, VK, PreserveAssemblyUseListOrder,
-                           PreserveBitcodeUseListOrder)
+                           PreserveBitcodeUseListOrder, EmitSummaryIndex,
+                           EmitModuleHash)
                ? 0
                : 1;
   }

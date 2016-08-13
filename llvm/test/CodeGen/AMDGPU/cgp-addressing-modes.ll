@@ -220,11 +220,6 @@ done:
   ret void
 }
 
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-
-
-
 ; OPT-LABEL: @test_sink_constant_small_offset_i32
 ; OPT-NOT:  getelementptr i32, i32 addrspace(2)*
 ; OPT: br i1
@@ -475,6 +470,37 @@ bb34:
   unreachable
 }
 
+; Address offset is not a multiple of 4. This is a valid mubuf offset,
+; but not smrd.
+
+; OPT-LABEL: @test_sink_constant_small_max_mubuf_offset_load_i32_align_1(
+; OPT: br i1 %tmp0,
+; OPT: if:
+; OPT: %sunkaddr = ptrtoint i8 addrspace(2)* %in to i64
+; OPT: %sunkaddr1 = add i64 %sunkaddr, 4095
+define void @test_sink_constant_small_max_mubuf_offset_load_i32_align_1(i32 addrspace(1)* %out, i8 addrspace(2)* %in) {
+entry:
+  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 1024
+  %in.gep = getelementptr i8, i8 addrspace(2)* %in, i64 4095
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %bitcast = bitcast i8 addrspace(2)* %in.gep to i32 addrspace(2)*
+  %tmp1 = load i32, i32 addrspace(2)* %bitcast, align 1
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, i32 addrspace(1)* %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 
 attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }

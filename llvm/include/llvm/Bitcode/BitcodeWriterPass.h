@@ -44,7 +44,7 @@ ModulePass *createBitcodeWriterPass(raw_ostream &Str,
 ///
 /// Note that this is intended for use with the new pass manager. To construct
 /// a pass for the legacy pass manager, use the function above.
-class BitcodeWriterPass {
+class BitcodeWriterPass : public PassInfoMixin<BitcodeWriterPass> {
   raw_ostream &OS;
   bool ShouldPreserveUseListOrder;
   bool EmitSummaryIndex;
@@ -68,8 +68,6 @@ public:
   /// \brief Run the bitcode writer pass, and output the module to the selected
   /// output stream.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-
-  static StringRef name() { return "BitcodeWriterPass"; }
 };
 
 }

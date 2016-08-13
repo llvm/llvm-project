@@ -1588,7 +1588,7 @@ let isTerminator = 1, hasSideEffects = 0 in {
   defm J2_jumpr : JMPR_base<"JMPr">, PredNewRel;
 
   let isReturn = 1, isCodeGenOnly = 1 in
-  defm JMPret : JMPR_base<"JMPret">, PredNewRel;
+  defm PS_jmpret : JMPR_base<"JMPret">, PredNewRel;
 }
 
 let validSubTargets  = HasV60SubT in
@@ -1613,7 +1613,7 @@ defm J2_jump  : JMPpt_base<"JMP">;
 def: Pat<(br bb:$dst),
          (J2_jump brtarget:$dst)>;
 def: Pat<(retflag),
-         (JMPret (i32 R31))>;
+         (PS_jmpret (i32 R31))>;
 def: Pat<(brcond (i1 PredRegs:$src1), bb:$offset),
          (J2_jumpt PredRegs:$src1, bb:$offset)>;
 
@@ -4821,20 +4821,20 @@ def J2_callr : JUMPR_MISC_CALLR<0, 1>;
 // Indirect tail-call.
 let isPseudo = 1, isCall = 1, isReturn = 1, isBarrier = 1, isPredicable = 0,
     isTerminator = 1, isCodeGenOnly = 1 in
-def TCRETURNr : T_JMPr;
+def PS_tailcall_r : T_JMPr;
 
 // Direct tail-calls.
 let isPseudo = 1, isCall = 1, isReturn = 1, isBarrier = 1, isPredicable = 0,
     isTerminator = 1, isCodeGenOnly = 1 in
-def TCRETURNi : JInst<(outs), (ins calltarget:$dst), "", []>;
+def PS_tailcall_i : JInst<(outs), (ins calltarget:$dst), "", []>;
 
 //Tail calls.
 def: Pat<(HexagonTCRet tglobaladdr:$dst),
-         (TCRETURNi tglobaladdr:$dst)>;
+         (PS_tailcall_i tglobaladdr:$dst)>;
 def: Pat<(HexagonTCRet texternalsym:$dst),
-         (TCRETURNi texternalsym:$dst)>;
-def: Pat<(HexagonTCRet (i32 IntRegs:$dst)),
-         (TCRETURNr IntRegs:$dst)>;
+         (PS_tailcall_i texternalsym:$dst)>;
+def: Pat<(HexagonTCRet I32:$dst),
+         (PS_tailcall_r I32:$dst)>;
 
 // Map from r0 = and(r1, 65535) to r0 = zxth(r1)
 def: Pat<(and (i32 IntRegs:$src1), 65535),

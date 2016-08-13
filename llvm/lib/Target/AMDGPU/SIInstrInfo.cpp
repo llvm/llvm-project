@@ -1515,6 +1515,24 @@ bool SIInstrInfo::isLiteralConstant(const MachineOperand &MO,
   return MO.isImm() && !isInlineConstant(MO, OpSize);
 }
 
+bool SIInstrInfo::isLiteralConstantLike(const MachineOperand &MO,
+                                        unsigned OpSize) const {
+  switch (MO.getType()) {
+  case MachineOperand::MO_Register:
+    return false;
+  case MachineOperand::MO_Immediate:
+    return !isInlineConstant(MO, OpSize);
+  case MachineOperand::MO_FrameIndex:
+  case MachineOperand::MO_MachineBasicBlock:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_MCSymbol:
+    return true;
+  default:
+    llvm_unreachable("unexpected operand type");
+  }
+}
+
 static bool compareMachineOp(const MachineOperand &Op0,
                              const MachineOperand &Op1) {
   if (Op0.getType() != Op1.getType())
@@ -3158,14 +3176,14 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (Src0Idx == -1)
       return 4; // No operands.
 
-    if (isLiteralConstant(MI.getOperand(Src0Idx), getOpSize(MI, Src0Idx)))
+    if (isLiteralConstantLike(MI.getOperand(Src0Idx), getOpSize(MI, Src0Idx)))
       return 8;
 
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
     if (Src1Idx == -1)
       return 4;
 
-    if (isLiteralConstant(MI.getOperand(Src1Idx), getOpSize(MI, Src1Idx)))
+    if (isLiteralConstantLike(MI.getOperand(Src1Idx), getOpSize(MI, Src1Idx)))
       return 8;
 
     return 4;

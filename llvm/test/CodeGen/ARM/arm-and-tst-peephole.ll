@@ -49,7 +49,7 @@ tailrecurse.switch:                               ; preds = %tailrecurse
 ; V8-NEXT: beq
 ; V8-NEXT: %tailrecurse.switch
 ; V8: cmp
-; V8-NEXT: beq
+; V8-NEXT: bne
 ; V8-NEXT: b	
 ; The trailing space in the last line checks that the branch is unconditional
   switch i32 %and, label %sw.epilog [
