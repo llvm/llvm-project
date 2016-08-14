@@ -1429,6 +1429,8 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; ALL-NEXT:    kmovw %edi, %k0
 ; ALL-NEXT:    movw $-4, %ax
 ; ALL-NEXT:    kmovw %eax, %k1
+; ALL-NEXT:    kshiftrw $1, %k1, %k1
+; ALL-NEXT:    kshiftlw $1, %k1, %k1
 ; ALL-NEXT:    korw %k0, %k1, %k0
 ; ALL-NEXT:    kmovw %k0, %eax
 ; ALL-NEXT:    retq

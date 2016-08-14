@@ -1,7 +1,7 @@
-; RUN: opt -irce -S < %s
+; RUN: opt -verify-loop-info -irce -S < %s
 
 ; These test cases don't check the correctness of the transform, but
-; that the -irce does not crash in the presence of certain things in
+; that -irce does not crash in the presence of certain things in
 ; the IR:
 
 define void @mismatched_types_1() {
