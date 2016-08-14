@@ -1,4 +1,4 @@
-REQUIRES: x86-registered-target
+REQUIRES: x86-registered-target, aarch64-registered-target
 RUN: sancov -print-coverage-pcs %p/Inputs/test-linux_x86_64 | FileCheck %s --check-prefix=LINUX
 RUN: llvm-objdump -d %p/Inputs/test-windows_x86_64 | FileCheck %s --check-prefix=DISAS_WIN
 RUN: sancov -print-coverage-pcs %p/Inputs/test-windows_x86_64 | FileCheck %s --check-prefix=WINDOWS

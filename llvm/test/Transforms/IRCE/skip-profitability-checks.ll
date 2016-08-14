@@ -1,4 +1,4 @@
-; RUN: opt -irce-skip-profitability-checks -S -irce < %s | FileCheck %s
+; RUN: opt -irce-skip-profitability-checks -S -verify-loop-info -irce < %s | FileCheck %s
 
 define void @single_access_no_preloop_no_offset(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
 ; CHECK-LABEL: @single_access_no_preloop_no_offset(

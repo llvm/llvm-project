@@ -1,4 +1,4 @@
-; RUN: opt -S -irce < %s | FileCheck %s
+; RUN: opt -S -verify-loop-info -irce < %s | FileCheck %s
 
 define void @f_0(i32 *%arr, i32 *%a_len_ptr, i32 %n, i1* %cond_buf) {
 ; CHECK-LABEL: @f_0(
@@ -34,7 +34,7 @@ define void @f_0(i32 *%arr, i32 *%a_len_ptr, i32 %n, i1* %cond_buf) {
 ; CHECK: loop:
 ; CHECK:  %cond = load volatile i1, i1* %cond_buf
 ; CHECK:  %abc = and i1 %cond, true
-; CHECK:  br i1 %abc, label %in.bounds, label %out.of.bounds.loopexit, !prof !1
+; CHECK:  br i1 %abc, label %in.bounds, label %out.of.bounds.loopexit3, !prof !1
 
 ; CHECK: out.of.bounds.loopexit:
 ; CHECK:  br label %out.of.bounds
@@ -84,7 +84,7 @@ define void @f_1(
 
 ; CHECK: loop:
 ; CHECK:   %abc = and i1 true, true
-; CHECK:   br i1 %abc, label %in.bounds, label %out.of.bounds.loopexit, !prof !1
+; CHECK:   br i1 %abc, label %in.bounds, label %out.of.bounds.loopexit4, !prof !1
 
 ; CHECK: out.of.bounds.loopexit:
 ; CHECK-NEXT:  br label %out.of.bounds

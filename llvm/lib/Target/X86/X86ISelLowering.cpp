@@ -1550,6 +1550,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::TRUNCATE,           VT, Custom);
       setOperationAction(ISD::SETCC,              VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::SELECT,             VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
@@ -12178,8 +12179,15 @@ static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     V2 = getOnesVector(ExtVT, Subtarget, DAG, DL);
   else
     V2 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V2);
-  return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                     DAG.getVectorShuffle(ExtVT, DL, V1, V2, Mask));
+
+  SDValue Shuffle = DAG.getVectorShuffle(ExtVT, DL, V1, V2, Mask);
+  // i1 was sign extended we can use X86ISD::CVT2MASK.
+  int NumElems = VT.getVectorNumElements();
+  if ((Subtarget.hasBWI() && (NumElems >= 32)) ||
+      (Subtarget.hasDQI() && (NumElems < 32)))
+    return DAG.getNode(X86ISD::CVT2MASK, DL, VT, Shuffle);
+
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, Shuffle);
 }
 
 /// Helper function that returns true if the shuffle mask should be
@@ -12635,12 +12643,46 @@ X86TargetLowering::InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   SDValue EltInVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, Elt);
-  if (IdxVal)
+  unsigned NumElems = VecVT.getVectorNumElements();
+
+  if(Vec.isUndef()) {
+    if (IdxVal)
+      EltInVec = DAG.getNode(X86ISD::VSHLI, dl, VecVT, EltInVec,
+                             DAG.getConstant(IdxVal, dl, MVT::i8));
+    return EltInVec;
+  }
+
+  // Insertion of one bit into first or last position
+  // can be done with two SHIFTs + OR.
+  if (IdxVal == 0 ) {
+    // EltInVec already at correct index and other bits are 0.
+    // Clean the first bit in source vector.
+    Vec = DAG.getNode(X86ISD::VSRLI, dl, VecVT, Vec,
+                      DAG.getConstant(1 , dl, MVT::i8));
+    Vec = DAG.getNode(X86ISD::VSHLI, dl, VecVT, Vec,
+                      DAG.getConstant(1, dl, MVT::i8));
+
+    return DAG.getNode(ISD::OR, dl, VecVT, Vec, EltInVec);
+  }
+  if (IdxVal == NumElems -1) {
+    // Move the bit to the last position inside the vector.
     EltInVec = DAG.getNode(X86ISD::VSHLI, dl, VecVT, EltInVec,
                            DAG.getConstant(IdxVal, dl, MVT::i8));
-  if (Vec.isUndef())
-    return EltInVec;
-  return DAG.getNode(ISD::OR, dl, VecVT, Vec, EltInVec);
+    // Clean the last bit in the source vector.
+    Vec = DAG.getNode(X86ISD::VSHLI, dl, VecVT, Vec,
+                           DAG.getConstant(1, dl, MVT::i8));
+    Vec = DAG.getNode(X86ISD::VSRLI, dl, VecVT, Vec,
+                           DAG.getConstant(1 , dl, MVT::i8));
+
+    return DAG.getNode(ISD::OR, dl, VecVT, Vec, EltInVec);
+  }
+
+  // Use shuffle to insert element.
+  SmallVector<int, 64> MaskVec(NumElems);
+  for (unsigned i = 0; i != NumElems; ++i)
+    MaskVec[i] = (i == IdxVal) ? NumElems : i;
+
+  return DAG.getVectorShuffle(VecVT, dl, Vec, EltInVec, MaskVec);
 }
 
 SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,

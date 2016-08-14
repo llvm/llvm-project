@@ -3699,7 +3699,9 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
         // have been seen yet. In this case, just finish the parse now.
         if (SeenValueSymbolTable) {
           NextUnreadBit = Stream.GetCurrentBitNo();
-          return std::error_code();
+          // After the VST has been parsed, we need to make sure intrinsic name
+          // are auto-upgraded.
+          return globalCleanup();
         }
         break;
       case bitc::USELIST_BLOCK_ID:

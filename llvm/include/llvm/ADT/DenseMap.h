@@ -966,8 +966,8 @@ private:
     return NumEntries;
   }
   void setNumEntries(unsigned Num) {
-    assert(Num < std::numeric_limits<int>::max() &&
-           "Cannot support more than std::numeric_limits<int>::max() entries");
+    // NumEntries is hardcoded to be 31 bits wide.
+    assert(Num < (1U << 31) && "Cannot support more than 1<<31 entries");
     NumEntries = Num;
   }
 

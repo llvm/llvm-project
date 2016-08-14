@@ -2503,6 +2503,8 @@ defm KSET1 : avx512_mask_setop_w<immAllOnesV>;
 // With AVX-512 only, 8-bit mask is promoted to 16-bit mask.
 let Predicates = [HasAVX512] in {
   def : Pat<(v8i1 immAllZerosV), (COPY_TO_REGCLASS (KSET0W), VK8)>;
+  def : Pat<(v4i1 immAllZerosV), (COPY_TO_REGCLASS (KSET0W), VK4)>;
+  def : Pat<(v2i1 immAllZerosV), (COPY_TO_REGCLASS (KSET0W), VK2)>;
   def : Pat<(v8i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK8)>;
   def : Pat<(v4i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK4)>;
   def : Pat<(v2i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK2)>;
@@ -2556,15 +2558,24 @@ def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 16))),
 def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 32))),
           (v32i1 (COPY_TO_REGCLASS (KSHIFTRQri VK64:$src, (i8 32)), VK32))>;
 
-def : Pat<(v8i1 (X86vshli VK8:$src, (i8 imm:$imm))),
-          (v8i1 (COPY_TO_REGCLASS
-                 (KSHIFTLWri (COPY_TO_REGCLASS VK8:$src, VK16),
-                  (I8Imm $imm)), VK8))>, Requires<[HasAVX512, NoDQI]>;
 
-def : Pat<(v4i1 (X86vshli VK4:$src, (i8 imm:$imm))),
-          (v4i1 (COPY_TO_REGCLASS
-                 (KSHIFTLWri (COPY_TO_REGCLASS VK4:$src, VK16),
-                  (I8Imm $imm)), VK4))>, Requires<[HasAVX512]>;
+// Patterns for kmask shift
+multiclass mask_shift_lowering<RegisterClass RC, ValueType VT> {
+  def : Pat<(VT (X86vshli RC:$src, (i8 imm:$imm))),
+            (VT (COPY_TO_REGCLASS                
+                   (KSHIFTLWri (COPY_TO_REGCLASS RC:$src, VK16),
+                               (I8Imm $imm)), 
+                   RC))>;
+  def : Pat<(VT (X86vsrli RC:$src, (i8 imm:$imm))),
+            (VT (COPY_TO_REGCLASS                
+                   (KSHIFTRWri (COPY_TO_REGCLASS RC:$src, VK16),
+                               (I8Imm $imm)), 
+                   RC))>;
+}
+
+defm : mask_shift_lowering<VK8, v8i1>, Requires<[HasAVX512, NoDQI]>;
+defm : mask_shift_lowering<VK4, v4i1>, Requires<[HasAVX512]>;
+defm : mask_shift_lowering<VK2, v2i1>, Requires<[HasAVX512]>;
 //===----------------------------------------------------------------------===//
 // AVX-512 - Aligned and unaligned load and store
 //

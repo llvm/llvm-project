@@ -1414,11 +1414,18 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   bool IsPositionIndependent = isPositionIndependent();
   unsigned char TF = IsPositionIndependent ? HexagonII::MO_PCREL : 0;
 
+  unsigned Offset = 0;
   SDValue T;
   if (CPN->isMachineConstantPoolEntry())
-    T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, TF);
+    T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, Offset,
+                                  TF);
   else
-    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, TF);
+    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset,
+                                  TF);
+
+  assert(cast<ConstantPoolSDNode>(T)->getTargetFlags() == TF &&
+         "Inconsistent target flag encountered");
+
   if (IsPositionIndependent)
     return DAG.getNode(HexagonISD::AT_PCREL, SDLoc(Op), ValTy, T);
   return DAG.getNode(HexagonISD::CP, SDLoc(Op), ValTy, T);
