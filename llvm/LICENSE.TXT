@@ -61,8 +61,6 @@ licenses, and/or restrictions:
 
 Program             Directory
 -------             ---------
-Autoconf            llvm/autoconf
-                    llvm/projects/ModuleMaker/autoconf
 Google Test         llvm/utils/unittest/googletest
 OpenBSD regex       llvm/lib/Support/{reg*, COPYRIGHT.regex}
 pyyaml tests        llvm/test/YAMLParser/{*.data, LICENSE.TXT}
