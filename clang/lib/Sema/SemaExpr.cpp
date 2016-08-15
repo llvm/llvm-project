@@ -2838,6 +2838,10 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   return ULE;
 }
 
+static void
+diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
+                                   ValueDecl *var, DeclContext *DC);
+
 /// \brief Complete semantic analysis for a reference to the given declaration.
 ExprResult Sema::BuildDeclarationNameExpr(
     const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
@@ -2981,7 +2985,12 @@ ExprResult Sema::BuildDeclarationNameExpr(
       // These are always lvalues.
       valueKind = VK_LValue;
       type = type.getNonReferenceType();
-      // FIXME: Adjust cv-qualifiers for capture.
+      // FIXME: Support lambda-capture of BindingDecls, once CWG actually
+      // decides how that's supposed to work.
+      auto *BD = cast<BindingDecl>(VD);
+      if (BD->getDeclContext()->isFunctionOrMethod() &&
+          BD->getDeclContext() != CurContext)
+        diagnoseUncapturableValueReference(*this, Loc, BD, CurContext);
       break;
     }
         
@@ -13214,7 +13223,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
 static void
 diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
-                                   VarDecl *var, DeclContext *DC) {
+                                   ValueDecl *var, DeclContext *DC) {
   DeclContext *VarDC = var->getDeclContext();
 
   //  If the parameter still belongs to the translation unit, then
@@ -13234,25 +13243,21 @@ diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
   if (!S.getLangOpts().CPlusPlus && !S.CurContext->isFunctionOrMethod())
     return;
 
+  unsigned ValueKind = isa<BindingDecl>(var) ? 1 : 0;
+  unsigned ContextKind = 3; // unknown
   if (isa<CXXMethodDecl>(VarDC) &&
       cast<CXXRecordDecl>(VarDC->getParent())->isLambda()) {
-    S.Diag(loc, diag::err_reference_to_local_var_in_enclosing_lambda)
-      << var->getIdentifier();
-  } else if (FunctionDecl *fn = dyn_cast<FunctionDecl>(VarDC)) {
-    S.Diag(loc, diag::err_reference_to_local_var_in_enclosing_function)
-      << var->getIdentifier() << fn->getDeclName();
+    ContextKind = 2;
+  } else if (isa<FunctionDecl>(VarDC)) {
+    ContextKind = 0;
   } else if (isa<BlockDecl>(VarDC)) {
-    S.Diag(loc, diag::err_reference_to_local_var_in_enclosing_block)
-      << var->getIdentifier();
-  } else {
-    // FIXME: Is there any other context where a local variable can be
-    // declared?
-    S.Diag(loc, diag::err_reference_to_local_var_in_enclosing_context)
-      << var->getIdentifier();
+    ContextKind = 1;
   }
 
+  S.Diag(loc, diag::err_reference_to_local_in_enclosing_context)
+    << var << ValueKind << ContextKind << VarDC;
   S.Diag(var->getLocation(), diag::note_entity_declared_at)
-      << var->getIdentifier();
+      << var;
 
   // FIXME: Add additional diagnostic info about class etc. which prevents
   // capture.

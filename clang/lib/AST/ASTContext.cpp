@@ -8721,6 +8721,14 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       !VD->evaluateValue())
     return true;
 
+  // Likewise, variables with tuple-like bindings are required if their
+  // bindings have side-effects.
+  if (auto *DD = dyn_cast<DecompositionDecl>(VD))
+    for (auto *BD : DD->bindings())
+      if (auto *BindingVD = BD->getHoldingVar())
+        if (DeclMustBeEmitted(BindingVD))
+          return true;
+
   return false;
 }
 
