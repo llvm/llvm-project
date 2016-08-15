@@ -31,11 +31,13 @@ class TestUnitTests(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.expectedFailureAll(oslist=['linux'], bugnumber="<rdar://problem/27839009>")
     def test_equality_operators_fileprivate (self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
         self.do_test("Fooey.CompareEm1", "true", 1)
 
+    @decorators.expectedFailureAll(oslist=['linux'], bugnumber="<rdar://problem/27839009>")
     def test_equality_operators_private (self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
