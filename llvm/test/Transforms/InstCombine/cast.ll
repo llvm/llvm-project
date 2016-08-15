@@ -350,10 +350,25 @@ define i1 @test31(i64 %A) {
 ; CHECK-NEXT:    [[D:%.*]] = icmp eq i64 [[C]], 10
 ; CHECK-NEXT:    ret i1 [[D]]
 ;
-  %B = trunc i64 %A to i32                ; <i32> [#uses=1]
-  %C = and i32 %B, 42             ; <i32> [#uses=1]
-  %D = icmp eq i32 %C, 10         ; <i1> [#uses=1]
+  %B = trunc i64 %A to i32
+  %C = and i32 %B, 42
+  %D = icmp eq i32 %C, 10
   ret i1 %D
+}
+
+; FIXME: Vectors should fold too...or not? 
+; Does this depend on the whether the source/dest types of the trunc are legal in the data layout?
+define <2 x i1> @test31vec(<2 x i64> %A) {
+; CHECK-LABEL: @test31vec(
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> %A to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i32> [[B]], <i32 42, i32 42>
+; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[C]], <i32 10, i32 10>
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %B = trunc <2 x i64> %A to <2 x i32>
+  %C = and <2 x i32> %B, <i32 42, i32 42>
+  %D = icmp eq <2 x i32> %C, <i32 10, i32 10>
+  ret <2 x i1> %D
 }
 
 define i32 @test33(i32 %c1) {

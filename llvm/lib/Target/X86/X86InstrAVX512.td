@@ -3754,13 +3754,14 @@ multiclass avx512_packs_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_packs_rm<bits<8> opc, string OpcodeStr,
                             SDNode OpNode,X86VectorVTInfo _Src,
-                            X86VectorVTInfo _Dst> {
+                            X86VectorVTInfo _Dst, bit IsCommutable = 0> {
   defm rr : AVX512_maskable<opc, MRMSrcReg, _Dst, (outs _Dst.RC:$dst),
                             (ins _Src.RC:$src1, _Src.RC:$src2), OpcodeStr,
                             "$src2, $src1","$src1, $src2",
                             (_Dst.VT (OpNode
                                          (_Src.VT _Src.RC:$src1),
-                                         (_Src.VT _Src.RC:$src2)))>,
+                                         (_Src.VT _Src.RC:$src2))),
+                            NoItinerary, IsCommutable>,
                             EVEX_CD8<_Src.EltSize, CD8VF>, EVEX_4V;
   defm rm : AVX512_maskable<opc, MRMSrcMem, _Dst, (outs _Dst.RC:$dst),
                         (ins _Src.RC:$src1, _Src.MemOp:$src2), OpcodeStr,
@@ -3803,15 +3804,15 @@ multiclass avx512_packs_all_i16_i8<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_vpmadd<bits<8> opc, string OpcodeStr,
                             SDNode OpNode, AVX512VLVectorVTInfo _Src,
-                            AVX512VLVectorVTInfo _Dst> {
+                            AVX512VLVectorVTInfo _Dst, bit IsCommutable = 0> {
   let Predicates = [HasBWI] in
   defm NAME#Z : avx512_packs_rm<opc, OpcodeStr, OpNode, _Src.info512,
-                                _Dst.info512>, EVEX_V512;
+                                _Dst.info512, IsCommutable>, EVEX_V512;
   let Predicates = [HasBWI, HasVLX] in {
     defm NAME#Z256 : avx512_packs_rm<opc, OpcodeStr, OpNode, _Src.info256,
-                                     _Dst.info256>, EVEX_V256;
+                                     _Dst.info256, IsCommutable>, EVEX_V256;
     defm NAME#Z128 : avx512_packs_rm<opc, OpcodeStr, OpNode, _Src.info128,
-                                     _Dst.info128>, EVEX_V128;
+                                     _Dst.info128, IsCommutable>, EVEX_V128;
   }
 }
 
@@ -3823,7 +3824,7 @@ defm VPACKUSWB : avx512_packs_all_i16_i8 <0x67, "vpackuswb", X86Packus>, AVX512B
 defm VPMADDUBSW : avx512_vpmadd<0x04, "vpmaddubsw", X86vpmaddubsw,
                      avx512vl_i8_info, avx512vl_i16_info>, AVX512BIBase, T8PD;
 defm VPMADDWD   : avx512_vpmadd<0xF5, "vpmaddwd", X86vpmaddwd,
-                     avx512vl_i16_info, avx512vl_i32_info>, AVX512BIBase;
+                     avx512vl_i16_info, avx512vl_i32_info, 1>, AVX512BIBase;
 
 defm VPMAXSB : avx512_binop_rm_vl_b<0x3C, "vpmaxsb", smax,
                                      SSE_INTALU_ITINS_P, HasBWI, 1>, T8PD;

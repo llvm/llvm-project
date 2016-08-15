@@ -127,9 +127,8 @@ ModRefInfo ScopedNoAliasAAResult::getModRefInfo(ImmutableCallSite CS1,
   return AAResultBase::getModRefInfo(CS1, CS2);
 }
 
-void ScopedNoAliasAAResult::collectMDInDomain(
-    const MDNode *List, const MDNode *Domain,
-    SmallPtrSetImpl<const MDNode *> &Nodes) const {
+static void collectMDInDomain(const MDNode *List, const MDNode *Domain,
+                              SmallPtrSetImpl<const MDNode *> &Nodes) {
   for (const MDOperand &MDOp : List->operands())
     if (const MDNode *MD = dyn_cast<MDNode>(MDOp))
       if (AliasScopeNode(MD).getDomain() == Domain)
@@ -151,11 +150,13 @@ bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
   // We alias unless, for some domain, the set of noalias scopes in that domain
   // is a superset of the set of alias scopes in that domain.
   for (const MDNode *Domain : Domains) {
-    SmallPtrSet<const MDNode *, 16> NANodes, ScopeNodes;
-    collectMDInDomain(NoAlias, Domain, NANodes);
+    SmallPtrSet<const MDNode *, 16> ScopeNodes;
     collectMDInDomain(Scopes, Domain, ScopeNodes);
-    if (!ScopeNodes.size())
+    if (ScopeNodes.empty())
       continue;
+
+    SmallPtrSet<const MDNode *, 16> NANodes;
+    collectMDInDomain(NoAlias, Domain, NANodes);
 
     // To not alias, all of the nodes in ScopeNodes must be in NANodes.
     bool FoundAll = true;
