@@ -7116,14 +7116,9 @@ def ext_ms_anonymous_record : ExtWarn<
   InGroup<MicrosoftAnonTag>;
 
 // C++ local classes
-def err_reference_to_local_var_in_enclosing_function : Error<
-  "reference to local variable %0 declared in enclosing function %1">;
-def err_reference_to_local_var_in_enclosing_block : Error<
-  "reference to local variable %0 declared in enclosing block literal">;
-def err_reference_to_local_var_in_enclosing_lambda : Error<
-  "reference to local variable %0 declared in enclosing lambda expression">;
-def err_reference_to_local_var_in_enclosing_context : Error<
-  "reference to local variable %0 declared in enclosing context">;
+def err_reference_to_local_in_enclosing_context : Error<
+  "reference to local %select{variable|binding}1 %0 declared in enclosing "
+  "%select{%3|block literal|lambda expression|context}2">;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local class %1">; 

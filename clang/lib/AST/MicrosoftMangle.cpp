@@ -394,7 +394,8 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
   if (!getASTContext().getLangOpts().CPlusPlus)
     return false;
 
-  if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+  const VarDecl *VD = dyn_cast<VarDecl>(D);
+  if (VD && !isa<DecompositionDecl>(D)) {
     // C variables are not mangled.
     if (VD->isExternC())
       return false;
@@ -778,6 +779,21 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
           Out << "?A@";
           break;
         }
+      }
+
+      if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(ND)) {
+        // FIXME: Invented mangling for decomposition declarations:
+        //   [X,Y,Z]
+        // where X,Y,Z are the names of the bindings.
+        llvm::SmallString<128> Name("[");
+        for (auto *BD : DD->bindings()) {
+          if (Name.size() > 1)
+            Name += ',';
+          Name += BD->getDeclName().getAsIdentifierInfo()->getName();
+        }
+        Name += ']';
+        mangleSourceName(Name);
+        break;
       }
 
       if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
