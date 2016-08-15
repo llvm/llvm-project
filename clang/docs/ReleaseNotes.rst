@@ -191,7 +191,52 @@ Objective-C Language Changes in Clang
 OpenCL C Language Changes in Clang
 ----------------------------------
 
-...
+Clang now has support for all OpenCL 2.0 features.  In particular, the following
+features have been completed since the previous release:
+
+- Pipe builtin functions (s6.13.16.2-4).
+- Address space conversion functions ``to_{global/local/private}``.
+- ``nosvm`` attribute support.
+- Improved diagnostic and generation of Clang Blocks used in OpenCL kernel code.
+- ``opencl_unroll_hint`` pragma.
+
+Several miscellaneous improvements have been made:
+
+- Supported extensions are now part of the target representation to give correct
+  diagnostics  for unsupported target features during compilation. For example,
+  when compiling for a target that does not support the double precision
+  floating point extension, Clang will give an error when encountering the
+  ``cl_khr_fp64`` pragma. Several missing extensions were added covering up to
+  and including OpenCL 2.0.
+- Clang now comes with the OpenCL standard headers declaring builtin types and
+  functions up to and including OpenCL 2.0 in ``lib/Headers/opencl-c.h``. By
+  default, Clang will not include this header. It can be included either using
+  the regular ``-I<path to header location>`` directive or (if the default one
+  from installation is to be used) using the ``-finclude-default-header``
+  frontend flag.
+
+  Example:
+
+  .. code-block:: none
+
+    echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
+    clang -cc1 -finclude-default-header -cl-std=CL2.0 test.cl
+
+  All builtin function declarations from OpenCL 2.0 will be automatically
+  visible in test.cl.
+- Image types have been improved with better diagnostics for access qualifiers.
+  Images with one access qualifier type cannot be used in declarations for
+  another type. Also qualifiers are now propagated from the frontend down to
+  libraries and backends.
+- Diagnostic improvements for OpenCL types, address spaces and vectors.
+- Half type literal support has been added. For example, ``1.0h`` represents a
+  floating point literal in half precision, i.e., the value ``0xH3C00``.
+- The Clang driver now accepts OpenCL compiler options ``-cl-*`` (following the
+  OpenCL Spec v1.1-1.2 s5.8). For example, the ``-cl-std=CL1.2`` option from the
+  spec enables compilation for OpenCL 1.2, or ``-cl-mad-enable`` will enable
+  fusing multiply-and-add operations.
+- Clang now uses function metadata instead of module metadata to propagate
+  information related to OpenCL kernels e.g. kernel argument information.
 
 OpenMP Support in Clang
 ----------------------------------
