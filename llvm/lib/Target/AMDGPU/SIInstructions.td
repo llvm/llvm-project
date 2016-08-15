@@ -2495,32 +2495,36 @@ multiclass ImagePatterns<SDPatternOperator name, string opcode> {
   def : ImagePattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
 }
 
-class ImageLoadPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
-  (name vt:$addr, v8i32:$rsrc, imm:$dmask, imm:$r128, imm:$da, imm:$glc,
-        imm:$slc),
-  (opcode $addr, $rsrc,
+multiclass ImageLoadPattern<SDPatternOperator name, MIMG opcode, ValueType vt> {
+  def : Pat <
+    (v4f32 (name vt:$addr, v8i32:$rsrc, i32:$dmask, i1:$glc, i1:$slc, i1:$lwe,
+                i1:$da)),
+    (opcode $addr, $rsrc,
           (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $slc),
-          (as_i1imm $r128), 0, 0, (as_i1imm $da))
->;
-
-multiclass ImageLoadPatterns<SDPatternOperator name, string opcode> {
-  def : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
-  def : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
-  def : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
+          0, 0, (as_i1imm $lwe), (as_i1imm $da))
+  >;
 }
 
-class ImageStorePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
-  (name v4f32:$data, vt:$addr, v8i32:$rsrc, i32:$dmask, imm:$r128, imm:$da,
-        imm:$glc, imm:$slc),
-  (opcode $data, $addr, $rsrc,
+multiclass ImageLoadPatterns<SDPatternOperator name, string opcode> {
+  defm : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
+  defm : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
+  defm : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
+}
+
+multiclass ImageStorePattern<SDPatternOperator name, MIMG opcode, ValueType vt> {
+  def : Pat <
+    (name v4f32:$data, vt:$addr, v8i32:$rsrc, i32:$dmask, i1:$glc, i1:$slc,
+          i1:$lwe, i1:$da),
+    (opcode $data, $addr, $rsrc,
           (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $slc),
-          (as_i1imm $r128), 0, 0, (as_i1imm $da))
->;
+          0, 0, (as_i1imm $lwe), (as_i1imm $da))
+  >;
+}
 
 multiclass ImageStorePatterns<SDPatternOperator name, string opcode> {
-  def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
-  def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
-  def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
+  defm : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
+  defm : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
+  defm : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
 }
 
 class ImageAtomicPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
@@ -2649,6 +2653,7 @@ def : SampleRawPattern<int_SI_getlod, IMAGE_GET_LOD_V4_V4, v4i32>;
 // Image load
 defm : ImageLoadPatterns<int_amdgcn_image_load, "IMAGE_LOAD">;
 defm : ImageLoadPatterns<int_amdgcn_image_load_mip, "IMAGE_LOAD_MIP">;
+defm : ImageLoadPattern<int_amdgcn_image_getresinfo, IMAGE_GET_RESINFO_V4_V1, i32>;
 
 // Image store
 defm : ImageStorePatterns<int_amdgcn_image_store, "IMAGE_STORE">;
