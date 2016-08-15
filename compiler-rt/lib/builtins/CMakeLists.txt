@@ -38,8 +38,6 @@ set(GENERIC_SOURCES
   ashlti3.c
   ashrdi3.c
   ashrti3.c
-  # FIXME: atomic.c may only be compiled if host compiler understands _Atomic
-  # atomic.c
   clear_cache.c
   clzdi2.c
   clzsi2.c
@@ -161,6 +159,12 @@ set(GENERIC_SOURCES
   umoddi3.c
   umodsi3.c
   umodti3.c)
+
+if(COMPILER_RT_SUPPORTS_ATOMIC_KEYWORD)
+  set(GENERIC_SOURCES
+    ${GENERIC_SOURCES}
+    atomic.c)
+endif()
 
 set(MSVC_SOURCES
  divsc3.c
