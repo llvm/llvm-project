@@ -235,6 +235,23 @@ error: invalid operand for instruction
 @ CHECK-ERRORS: error: branch target out of range
 
 @------------------------------------------------------------------------------
+@ CBZ/CBNZ - out of range immediates for branches
+@------------------------------------------------------------------------------
+
+        cbz    r0, #-2
+        cbz    r0, #0
+        cbz    r0, #17
+        cbnz   r0, #126
+        cbnz   r0, #128
+
+@ CHECK-ERRORS-V7M: error: branch target out of range
+@ CHECK-ERRORS-V7M: error: invalid operand for instruction
+@ CHECK-ERRORS-V7M: error: branch target out of range
+@ CHECK-ERRORS-V8: error: branch target out of range
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: branch target out of range
+
+@------------------------------------------------------------------------------
 @ SEV/WFE/WFI/YIELD - are not supported pre v6M or v6T2
 @------------------------------------------------------------------------------
         sev

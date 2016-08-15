@@ -1,4 +1,5 @@
 ; RUN: llc -O3 -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; XFAIL: *
 ;
 ; Generate hardware loop when loop 'latch' block is different
 ; from the loop 'exiting' block.

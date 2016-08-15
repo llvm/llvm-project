@@ -157,13 +157,29 @@ define i53 @test15a(i1 %X) {
 	ret i53 %V
 }
 
-; CHECK-LABEL: @test16(
-; CHECK-NOT: sh
 define i1 @test16(i84 %X) {
-	%tmp.3 = ashr i84 %X, 4		; <i84> [#uses=1]
-	%tmp.6 = and i84 %tmp.3, 1	; <i84> [#uses=1]
-	%tmp.7 = icmp ne i84 %tmp.6, 0	; <i1> [#uses=1]
-	ret i1 %tmp.7
+; CHECK-LABEL: @test16(
+; CHECK-NEXT:    [[AND:%.*]] = and i84 %X, 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i84 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shr = ashr i84 %X, 4
+  %and = and i84 %shr, 1
+  %cmp = icmp ne i84 %and, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @test16vec(<2 x i84> %X) {
+; CHECK-LABEL: @test16vec(
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr <2 x i84> %X, <i84 4, i84 4>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i84> [[SHR1]], <i84 1, i84 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shr = ashr <2 x i84> %X, <i84 4, i84 4>
+  %and = and <2 x i84> %shr, <i84 1, i84 1>
+  %cmp = icmp ne <2 x i84> %and, zeroinitializer
+  ret <2 x i1> %cmp
 }
 
 ; CHECK-LABEL: @test17(

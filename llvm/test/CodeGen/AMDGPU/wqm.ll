@@ -343,11 +343,12 @@ main_body:
 ; CHECK: s_and_b64 exec, exec, [[LIVE]]
 ; CHECK: image_store
 ; CHECK: s_wqm_b64 exec, exec
-; CHECK: v_mov_b32_e32 [[CTR:v[0-9]+]], -2
+; CHECK: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
 ; CHECK: s_branch [[LOOPHDR:BB[0-9]+_[0-9]+]]
 
-; CHECK: [[LOOPHDR]]: ; %loop
 ; CHECK: v_add_i32_e32 [[CTR]], vcc, 2, [[CTR]]
+
+; CHECK: [[LOOPHDR]]: ; %loop
 ; CHECK: v_cmp_lt_i32_e32 vcc, 7, [[CTR]]
 ; CHECK: s_cbranch_vccz
 ; CHECK: ; %break

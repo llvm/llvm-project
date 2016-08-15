@@ -344,15 +344,27 @@ define i1 @test19(i32 %A) {
 }
 
 
+;; X >u ~4
 define i1 @test19a(i32 %A) {
 ; CHECK-LABEL: @test19a(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 %A, -5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %B = ashr i32 %A, 2             ; <i32> [#uses=1]
-  ;; X >u ~4
-  %C = icmp eq i32 %B, -1         ; <i1> [#uses=1]
+  %B = ashr i32 %A, 2
+  %C = icmp eq i32 %B, -1
   ret i1 %C
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @test19a_vec(<2 x i32> %A) {
+; CHECK-LABEL: @test19a_vec(
+; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i32> %A, <i32 2, i32 2>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[B]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %B = ashr <2 x i32> %A, <i32 2, i32 2>
+  %C = icmp eq <2 x i32> %B, <i32 -1, i32 -1>
+  ret <2 x i1> %C
 }
 
 define i1 @test20(i8 %A) {

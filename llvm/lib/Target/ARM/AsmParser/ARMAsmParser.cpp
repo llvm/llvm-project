@@ -6684,6 +6684,12 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error(Operands[Op]->getStartLoc(), "branch target out of range");
     break;
   }
+  case ARM::tCBZ:
+  case ARM::tCBNZ: {
+    if (!static_cast<ARMOperand &>(*Operands[2]).isUnsignedOffset<6, 1>())
+      return Error(Operands[2]->getStartLoc(), "branch target out of range");
+    break;
+  }
   case ARM::MOVi16:
   case ARM::t2MOVi16:
   case ARM::t2MOVTi16:

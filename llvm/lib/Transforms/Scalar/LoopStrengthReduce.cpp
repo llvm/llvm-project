@@ -2069,10 +2069,30 @@ void
 LSRInstance::OptimizeLoopTermCond() {
   SmallPtrSet<Instruction *, 4> PostIncs;
 
+  // We need a different set of heuristics for rotated and non-rotated loops.
+  // If a loop is rotated then the latch is also the backedge, so inserting
+  // post-inc expressions just before the latch is ideal. To reduce live ranges
+  // it also makes sense to rewrite terminating conditions to use post-inc
+  // expressions.
+  //
+  // If the loop is not rotated then the latch is not a backedge; the latch
+  // check is done in the loop head. Adding post-inc expressions before the
+  // latch will cause overlapping live-ranges of pre-inc and post-inc expressions
+  // in the loop body. In this case we do *not* want to use post-inc expressions
+  // in the latch check, and we want to insert post-inc expressions before
+  // the backedge.
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock*, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
+  if (llvm::all_of(ExitingBlocks, [&LatchBlock](const BasicBlock *BB) {
+        return LatchBlock != BB;
+      })) {
+    // The backedge doesn't exit the loop; treat this as a head-tested loop.
+    IVIncInsertPos = LatchBlock->getTerminator();
+    return;
+  }
 
+  // Otherwise treat this as a rotated loop.
   for (BasicBlock *ExitingBlock : ExitingBlocks) {
 
     // Get the terminating condition for the loop if possible.  If we
