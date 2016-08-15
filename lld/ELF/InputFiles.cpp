@@ -11,6 +11,7 @@
 #include "Driver.h"
 #include "Error.h"
 #include "InputSection.h"
+#include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
@@ -160,6 +161,14 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // We don't merge sections if -O0 (default is -O1). This makes sometimes
   // the linker significantly faster, although the output will be bigger.
   if (Config->Optimize == 0)
+    return false;
+
+  // We don't merge if linker script has SECTIONS command. When script
+  // do layout it can merge several sections with different attributes
+  // into single output sections. We currently do not support adding
+  // mergeable input sections to regular output ones as well as adding
+  // regular input sections to mergeable output.
+  if (ScriptConfig->HasContents)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have

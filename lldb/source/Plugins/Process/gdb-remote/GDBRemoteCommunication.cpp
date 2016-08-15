@@ -1254,15 +1254,17 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
     
                 ConnectionFileDescriptor *connection = (ConnectionFileDescriptor *)GetConnection ();
                 // Wait for 10 seconds to resolve the bound port
-                *port = connection->GetListeningPort(10);
-                if (*port > 0)
+                uint16_t port_ = connection->GetListeningPort(10);
+                if (port_ > 0)
                 {
                     char port_cstr[32];
-                    snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", *port);
+                    snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", port_);
                     // Send the host and port down that debugserver and specify an option
                     // so that it connects back to the port we are listening to in this process
                     debugserver_args.AppendArgument("--reverse-connect");
                     debugserver_args.AppendArgument(port_cstr);
+                    if (port)
+                        *port = port_;
                 }
                 else
                 {
