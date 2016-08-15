@@ -31,13 +31,11 @@ class TestUnitTests(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.expectedFailureAll(oslist=['linux'], bugnumber="<rdar://problem/27839009>")
     def test_equality_operators_fileprivate (self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
         self.do_test("Fooey.CompareEm1", "true", 1)
 
-    @decorators.expectedFailureAll(oslist=['linux'], bugnumber="<rdar://problem/27839009>")
     def test_equality_operators_private (self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
@@ -73,7 +71,11 @@ class TestUnitTests(TestBase):
         bkpt = target.BreakpointCreateByName(bkpt_name)
         self.assertTrue(bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, os.getcwd())
+        env_arr = None
+        if self.getPlatform() in ('freebsd', 'linux', 'netbsd'):
+            env_arr = ['LD_LIBRARY_PATH=%s'%(os.getcwd())]
+
+        process = target.LaunchSimple(None, env_arr, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint (process, bkpt)
