@@ -623,6 +623,7 @@ template <> struct GraphTraits<IrreducibleGraph> {
   typedef bfi_detail::IrreducibleGraph GraphT;
 
   typedef const GraphT::IrrNode NodeType;
+  typedef const GraphT::IrrNode *NodeRef;
   typedef GraphT::IrrNode::iterator ChildIteratorType;
 
   static const NodeType *getEntryNode(const GraphT &G) {

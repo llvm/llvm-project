@@ -332,6 +332,7 @@ struct ArgumentUsesTracker : public CaptureTracker {
 namespace llvm {
 template <> struct GraphTraits<ArgumentGraphNode *> {
   typedef ArgumentGraphNode NodeType;
+  typedef ArgumentGraphNode *NodeRef;
   typedef SmallVectorImpl<ArgumentGraphNode *>::iterator ChildIteratorType;
 
   static inline NodeType *getEntryNode(NodeType *A) { return A; }
