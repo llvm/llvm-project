@@ -60,12 +60,6 @@ struct MockServer : public GDBRemoteCommunicationServer
 {
     MockServer() : GDBRemoteCommunicationServer("mock-server", "mock-server.listener") { m_send_acks = false; }
 
-    bool
-    GetThreadSuffixSupported() override
-    {
-        return false;
-    }
-
     PacketResult
     SendPacket(llvm::StringRef payload)
     {
@@ -84,12 +78,6 @@ struct MockServer : public GDBRemoteCommunicationServer
 struct TestClient : public GDBRemoteClientBase
 {
     TestClient() : GDBRemoteClientBase("test.client", "test.client.listener") { m_send_acks = false; }
-
-    bool
-    GetThreadSuffixSupported() override
-    {
-        return false;
-    }
 };
 
 struct ContinueFixture

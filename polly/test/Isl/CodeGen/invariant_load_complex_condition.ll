@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; Extracted from h246 in SPEC 2006.
 ;

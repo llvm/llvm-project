@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; Verify the preloaded %tmp0 is stored and communicated in the same alloca.
 ; In this case, we do not reload %ncol.load from the scalar stack slot, but

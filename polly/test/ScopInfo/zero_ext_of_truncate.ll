@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ;    void f(unsigned *restrict I, unsigned *restrict A, unsigned N, unsigned M) {
 ;      for (unsigned i = 0; i < N; i++) {

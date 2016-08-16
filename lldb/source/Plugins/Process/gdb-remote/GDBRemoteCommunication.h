@@ -126,12 +126,6 @@ public:
     }
 
     //------------------------------------------------------------------
-    // Client and server must implement these pure virtual functions
-    //------------------------------------------------------------------
-    virtual bool
-    GetThreadSuffixSupported () = 0;
-
-    //------------------------------------------------------------------
     // Set the global packet timeout.
     //
     // For clients, this is the timeout that gets used when sending

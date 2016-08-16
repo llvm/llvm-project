@@ -67,7 +67,7 @@ public:
   // Expression visitors:
 
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
-    const auto *Decl = Expr->getFoundDecl();
+    const NamedDecl *Decl = Expr->getFoundDecl();
 
     if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
       const SourceManager &Manager = Decl->getASTContext().getSourceManager();
@@ -79,7 +79,7 @@ public:
   }
 
   bool VisitMemberExpr(const MemberExpr *Expr) {
-    const auto *Decl = Expr->getFoundDecl().getDecl();
+    const NamedDecl *Decl = Expr->getFoundDecl().getDecl();
     if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
       const SourceManager &Manager = Decl->getASTContext().getSourceManager();
       SourceLocation Location = Manager.getSpellingLoc(Expr->getMemberLoc());
@@ -116,7 +116,8 @@ public:
   // Namespace traversal:
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
-      const auto *Decl = NameLoc.getNestedNameSpecifier()->getAsNamespace();
+      const NamespaceDecl *Decl =
+          NameLoc.getNestedNameSpecifier()->getAsNamespace();
       if (Decl && USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
         checkAndAddLocation(NameLoc.getLocalBeginLoc());
       }
@@ -126,8 +127,8 @@ public:
 
 private:
   void checkAndAddLocation(SourceLocation Loc) {
-    const auto BeginLoc = Loc;
-    const auto EndLoc = Lexer::getLocForEndOfToken(
+    const SourceLocation BeginLoc = Loc;
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         BeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
     StringRef TokenName =
         Lexer::getSourceText(CharSourceRange::getTokenRange(BeginLoc, EndLoc),

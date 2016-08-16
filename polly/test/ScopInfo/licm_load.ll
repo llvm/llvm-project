@@ -1,5 +1,9 @@
-; RUN: opt %loadPolly -basicaa -loop-rotate -indvars       -polly-prepare -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basicaa -loop-rotate -indvars -licm -polly-prepare -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -loop-rotate -indvars       -polly-prepare \
+; RUN: -polly-invariant-load-hoisting=true -polly-scops -analyze < %s \
+; RUN: | FileCheck %s
+; RUN: opt %loadPolly -basicaa -loop-rotate -indvars -licm -polly-prepare \
+; RUN: -polly-invariant-load-hoisting=true -polly-scops -analyze < %s \
+; RUN: | FileCheck %s
 ;
 ;    void foo(int n, float A[static const restrict n],
 ;             float B[static const restrict n], int j) {

@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
+; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: SCoP begins here.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:15: Inbounds assumption:    [N, M, Debug] -> {  : N <= 0 or (N > 0 and M <= 100) }

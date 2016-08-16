@@ -319,8 +319,10 @@ template <class ELFT> void assignOffsets(OutputSectionBase<ELFT> *Sec) {
       uintX_t Value = L->Cmd->Expression(Sec->getVA() + Off) - Sec->getVA();
       if (L->Cmd->Name == ".") {
         Off = Value;
-      } else {
-        auto *Sym = cast<DefinedSynthetic<ELFT>>(L->Cmd->Sym);
+      } else if (auto *Sym =
+                     cast_or_null<DefinedSynthetic<ELFT>>(L->Cmd->Sym)) {
+        // shouldDefine could have returned false, so we need to check Sym,
+        // for non-null value.
         Sym->Section = OutSec;
         Sym->Value = Value;
       }
@@ -484,6 +486,15 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
   return Ret;
 }
 
+template <class ELFT> bool LinkerScript<ELFT>::ignoreInterpSection() {
+  // Ignore .interp section in case we have PHDRS specification
+  // and PT_INTERP isn't listed.
+  return !Opt.PhdrsCommands.empty() &&
+         llvm::find_if(Opt.PhdrsCommands, [](const PhdrsCommand &Cmd) {
+           return Cmd.Type == PT_INTERP;
+         }) == Opt.PhdrsCommands.end();
+}
+
 template <class ELFT>
 ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
@@ -600,7 +611,7 @@ private:
   InputSectionDescription *readInputSectionRules();
   unsigned readPhdrType();
   SortKind readSortKind();
-  SymbolAssignment *readProvide(bool Hidden);
+  SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
   SymbolAssignment *readProvideOrAssignment(StringRef Tok);
   Expr readAlign();
   void readSort();
@@ -967,10 +978,10 @@ std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
   return { uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V) };
 }
 
-SymbolAssignment *ScriptParser::readProvide(bool Hidden) {
+SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {
   expect("(");
   SymbolAssignment *Cmd = readAssignment(next());
-  Cmd->Provide = true;
+  Cmd->Provide = Provide;
   Cmd->Hidden = Hidden;
   expect(")");
   expect(";");
@@ -983,9 +994,11 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
     Cmd = readAssignment(Tok);
     expect(";");
   } else if (Tok == "PROVIDE") {
-    Cmd = readProvide(false);
+    Cmd = readProvideHidden(true, false);
+  } else if (Tok == "HIDDEN") {
+    Cmd = readProvideHidden(false, true);
   } else if (Tok == "PROVIDE_HIDDEN") {
-    Cmd = readProvide(true);
+    Cmd = readProvideHidden(true, true);
   }
   return Cmd;
 }

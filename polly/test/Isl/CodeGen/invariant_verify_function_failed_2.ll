@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; Check we generate valid code.
 ;

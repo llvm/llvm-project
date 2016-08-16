@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s
+; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true < %s
 ;
 ; Check that we generate valid code as we did non preload the base pointer
 ; origin of %tmp4 at some point.

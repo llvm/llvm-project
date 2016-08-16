@@ -176,12 +176,6 @@ protected:
                               });
     }
 
-    bool
-    GetThreadSuffixSupported () override
-    {
-        return true;
-    }
-
     //------------------------------------------------------------------
     /// Launch a process with the current launch settings.
     ///

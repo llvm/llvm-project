@@ -144,6 +144,7 @@ public:
   void createSections(OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
+  bool ignoreInterpSection();
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);

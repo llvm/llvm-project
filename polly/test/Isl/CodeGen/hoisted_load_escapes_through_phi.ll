@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen \
+; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s
 ;
 ; Check that we generate valid code even if the load of cont_STACKPOINTER is
 ; hoisted in one SCoP and used (through the phi node %tmp2).
