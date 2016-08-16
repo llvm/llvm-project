@@ -533,7 +533,27 @@ protected:
     std::unordered_set<std::string> m_library_negative_cache;  // We have to load swift dependent libraries by hand,
     Mutex                           m_negative_cache_mutex;    // but if they are missing, we shouldn't keep trying.
     
-    llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
+    struct SwiftErrorInternals
+    {
+        llvm::Optional<lldb::addr_t> m_native_nserror_isa;
+        uint64_t m_offsetof_metadata;
+        uint64_t m_sizeof_errorbox;
+        
+        SwiftErrorInternals() :
+            m_native_nserror_isa (LLDB_INVALID_ADDRESS),
+            m_offsetof_metadata(40),
+            m_sizeof_errorbox(72)
+        {
+        }
+        
+        uint64_t
+        GetMetadataToTailDataDistance ()
+        {
+            return m_sizeof_errorbox-m_offsetof_metadata;
+        }
+    };
+    
+    llvm::Optional<SwiftErrorInternals> m_swift_err_internals;
 
     std::shared_ptr<swift::remote::MemoryReader> m_memory_reader_sp;
     

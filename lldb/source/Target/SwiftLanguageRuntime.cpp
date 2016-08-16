@@ -86,7 +86,7 @@ SwiftLanguageRuntime::~SwiftLanguageRuntime()
 SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     LanguageRuntime (process),
     m_negative_cache_mutex(Mutex::eMutexTypeNormal),
-    m_SwiftNativeNSErrorISA(),
+    m_swift_err_internals(),
     m_memory_reader_sp(),
     m_promises_map(),
     m_resolvers_map(),
@@ -99,7 +99,8 @@ SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
 static llvm::Optional<lldb::addr_t>
 FindSymbolForSwiftObject (Target& target,
                           const ConstString& object,
-                          const SymbolType sym_type)
+                          const SymbolType sym_type = eSymbolTypeAny,
+                          bool is_ptr_to_data = false)
 {
     llvm::Optional<lldb::addr_t> retval;
     
@@ -113,7 +114,22 @@ FindSymbolForSwiftObject (Target& target,
             {
                 lldb::addr_t SwiftObject_class_addr = SwiftObject_Class.symbol->GetAddress().GetLoadAddress(&target);
                 if (SwiftObject_class_addr && SwiftObject_class_addr != LLDB_INVALID_ADDRESS)
-                    retval = SwiftObject_class_addr;
+                {
+                    if (is_ptr_to_data)
+                    {
+                        if (ProcessSP process_sp = target.GetProcessSP())
+                        {
+                            Error error;
+                            lldb::addr_t pointee_data = process_sp->ReadPointerFromMemory(SwiftObject_class_addr, error);
+                            if (pointee_data != LLDB_INVALID_ADDRESS && !error.Fail())
+                                retval = pointee_data;
+                        }
+                    }
+                    else
+                    {
+                        retval = SwiftObject_class_addr;
+                    }
+                }
             }
         }
     }
@@ -131,16 +147,47 @@ SwiftLanguageRuntime::GetObjCRuntime ()
     return nullptr;
 }
 
-void SwiftLanguageRuntime::SetupSwiftError ()
+void
+SwiftLanguageRuntime::SetupSwiftError ()
 {
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
     Target& target(m_process->GetTarget());
 
-    if (m_SwiftNativeNSErrorISA.hasValue())
+    if (m_swift_err_internals.hasValue())
         return;
+    else
+        m_swift_err_internals = SwiftErrorInternals();
     
     ConstString g_SwiftNativeNSError("_SwiftNativeNSError");
+    ConstString g_OffsetOfErrorMetadata("_swift_lldb_offsetof_SwiftError_typeMetadata");
+    ConstString g_SizeOfErrorBox("_swift_lldb_sizeof_SwiftError");
     
-    m_SwiftNativeNSErrorISA = FindSymbolForSwiftObject(target, g_SwiftNativeNSError, eSymbolTypeObjCClass);
+    const bool is_ptr_to_data = true;
+    
+    m_swift_err_internals->m_native_nserror_isa = FindSymbolForSwiftObject(target, g_SwiftNativeNSError, eSymbolTypeObjCClass, !is_ptr_to_data);
+    auto offsetof_error_metadata = FindSymbolForSwiftObject(target, g_OffsetOfErrorMetadata, eSymbolTypeAny, is_ptr_to_data);
+    auto sizeof_error_box = FindSymbolForSwiftObject(target, g_SizeOfErrorBox, eSymbolTypeAny, is_ptr_to_data);
+    
+    if (offsetof_error_metadata.hasValue() && sizeof_error_box.hasValue())
+    {
+        m_swift_err_internals->m_offsetof_metadata = *offsetof_error_metadata;
+        m_swift_err_internals->m_sizeof_errorbox = *sizeof_error_box;
+
+        if (log)
+            log->Printf("[SetupSwiftError] Read values from inferior; I got _SwiftNativeNSError = 0x%" PRIx64 ", _swift_lldb_offsetof_SwiftError_typeMetadata = %" PRIu64 ", _swift_lldb_sizeof_SwiftError = %" PRIu64,
+                        m_swift_err_internals->m_native_nserror_isa ? *m_swift_err_internals->m_native_nserror_isa : LLDB_INVALID_ADDRESS,
+                        m_swift_err_internals->m_offsetof_metadata,
+                        m_swift_err_internals->m_sizeof_errorbox);
+    }
+    else
+    {
+        if (log)
+            log->Printf("[SetupSwiftError] Using hardcoded values; I got _SwiftNativeNSError = 0x%" PRIx64 ", _swift_lldb_offsetof_SwiftError_typeMetadata = %" PRIu64 ", _swift_lldb_sizeof_SwiftError = %" PRIu64,
+                        m_swift_err_internals->m_native_nserror_isa ? *m_swift_err_internals->m_native_nserror_isa : LLDB_INVALID_ADDRESS,
+                        m_swift_err_internals->m_offsetof_metadata,
+                        m_swift_err_internals->m_sizeof_errorbox);
+    }
 }
 
 void
@@ -1599,13 +1646,13 @@ SwiftLanguageRuntime::IsValidErrorValue (ValueObject& in_value,
         return false;
     
     SetupSwiftError();
-    if (m_SwiftNativeNSErrorISA.hasValue())
+    if (m_swift_err_internals && m_swift_err_internals->m_native_nserror_isa)
     {
         if (auto objc_runtime = GetObjCRuntime())
         {
             if (auto descriptor = objc_runtime->GetClassDescriptor(*instance_type_sp))
             {
-                if (descriptor->GetISA() != m_SwiftNativeNSErrorISA.getValue())
+                if (descriptor->GetISA() != *m_swift_err_internals->m_native_nserror_isa)
                 {
                     // not a _SwiftNativeNSError - but statically typed as ErrorType
                     // return true here
@@ -1621,21 +1668,16 @@ SwiftLanguageRuntime::IsValidErrorValue (ValueObject& in_value,
         }
     }
 
+    metadata_location += m_swift_err_internals->m_offsetof_metadata;
+    Error read_ptr_error;
+    lldb::addr_t metadata_ptr_value = m_process->ReadPointerFromMemory(metadata_location, read_ptr_error);
+    if (metadata_ptr_value == 0 || metadata_ptr_value == LLDB_INVALID_ADDRESS || read_ptr_error.Fail())
+        return false;
+
     if (GetObjCRuntime())
     {
         // this is a swift native error but it can be bridged to ObjC
         // so it needs to be layout compatible
-
-        size_t ptr_size = m_process->GetAddressByteSize();
-        size_t metadata_offset = ptr_size + 4 + (ptr_size == 8 ? 4 : 0); // CFRuntimeBase
-        metadata_offset += ptr_size + ptr_size + ptr_size; // CFIndex + 2*CFRef
-        
-        metadata_location += metadata_offset;
-        Error error;
-        lldb::addr_t metadata_ptr_value = m_process->ReadPointerFromMemory(metadata_location, error);
-        if (metadata_ptr_value == 0 || metadata_ptr_value == LLDB_INVALID_ADDRESS || error.Fail())
-            return false;
-        
         if (out_error_descriptor)
         {
             *out_error_descriptor = SwiftErrorDescriptor();
@@ -1649,18 +1691,10 @@ SwiftLanguageRuntime::IsValidErrorValue (ValueObject& in_value,
         // this is a swift native error and it has no way to be bridged to ObjC
         // so it adopts a more compact layout
 
-        Error error;
-
-        size_t ptr_size = m_process->GetAddressByteSize();
-        size_t metadata_offset = 2 * ptr_size;
-        metadata_location += metadata_offset;
-        lldb::addr_t metadata_ptr_value = m_process->ReadPointerFromMemory(metadata_location, error);
-        if (metadata_ptr_value == 0 || metadata_ptr_value == LLDB_INVALID_ADDRESS || error.Fail())
-            return false;
-
+        auto ptr_size(GetProcess()->GetAddressByteSize());
         lldb::addr_t witness_table_location = metadata_location + ptr_size;
-        lldb::addr_t witness_table_ptr_value = m_process->ReadPointerFromMemory(witness_table_location, error);
-        if (witness_table_ptr_value == 0 || witness_table_ptr_value == LLDB_INVALID_ADDRESS || error.Fail())
+        lldb::addr_t witness_table_ptr_value = m_process->ReadPointerFromMemory(witness_table_location, read_ptr_error);
+        if (witness_table_ptr_value == 0 || witness_table_ptr_value == LLDB_INVALID_ADDRESS || read_ptr_error.Fail())
             return false;
 
         lldb::addr_t payload_location = witness_table_location + ptr_size;
@@ -1708,7 +1742,6 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
 
     Error error;
     CompilerType var_type(in_value.GetStaticValue()->GetCompilerType());
-    size_t ptr_size = m_process->GetAddressByteSize();
     SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem());
     if (!swift_ast_ctx)
         return false;
@@ -1722,7 +1755,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
             MetadataPromiseSP promise_sp(GetMetadataPromise(error_descriptor.m_bridgeable_native.metadata_ptr_value,swift_ast_ctx));
             if (!promise_sp)
                 return false;
-            error_descriptor.m_bridgeable_native.metadata_location += 4*ptr_size;
+            error_descriptor.m_bridgeable_native.metadata_location += (m_swift_err_internals->GetMetadataToTailDataDistance());
             if (!promise_sp->IsStaticallyDetermined())
             {
                 // figure out the actual dynamic type via the metadata at the "isa" pointer
