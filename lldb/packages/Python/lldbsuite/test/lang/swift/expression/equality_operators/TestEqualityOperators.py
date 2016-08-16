@@ -71,9 +71,7 @@ class TestUnitTests(TestBase):
         bkpt = target.BreakpointCreateByName(bkpt_name)
         self.assertTrue(bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-        env_arr = None
-        if self.getPlatform() in ('freebsd', 'linux', 'netbsd'):
-            env_arr = ['LD_LIBRARY_PATH=%s'%(os.getcwd())]
+        env_arr = self.registerSharedLibrariesWithTarget(target, ["fooey"])
 
         process = target.LaunchSimple(None, env_arr, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
