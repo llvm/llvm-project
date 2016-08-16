@@ -216,7 +216,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   case ISD::SETUEQ:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
           (VT == MVT::f64) ? RTLIB::UO_F64 :
-          (VT == MVT::f128) ? RTLIB::UO_F64 : RTLIB::UO_PPCF128;
+          (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
     LC2 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
           (VT == MVT::f64) ? RTLIB::OEQ_F64 :
           (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;

@@ -21,7 +21,7 @@
 namespace llvm {
 
 namespace R600InstrFlags {
-enum {
+enum : uint64_t {
  REGISTER_STORE = UINT64_C(1) << 62,
  REGISTER_LOAD = UINT64_C(1) << 63
 };

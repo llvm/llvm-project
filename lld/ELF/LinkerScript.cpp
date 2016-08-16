@@ -486,6 +486,15 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
   return Ret;
 }
 
+template <class ELFT> bool LinkerScript<ELFT>::ignoreInterpSection() {
+  // Ignore .interp section in case we have PHDRS specification
+  // and PT_INTERP isn't listed.
+  return !Opt.PhdrsCommands.empty() &&
+         llvm::find_if(Opt.PhdrsCommands, [](const PhdrsCommand &Cmd) {
+           return Cmd.Type == PT_INTERP;
+         }) == Opt.PhdrsCommands.end();
+}
+
 template <class ELFT>
 ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)

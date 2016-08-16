@@ -430,16 +430,17 @@ public:
   po_iterator_storage(LoopBounds &lb) : LB(lb) {}
   void finishPostorder(const MachineBasicBlock*) {}
 
-  bool insertEdge(const MachineBasicBlock *From, const MachineBasicBlock *To) {
+  bool insertEdge(Optional<const MachineBasicBlock *> From,
+                  const MachineBasicBlock *To) {
     // Skip already visited To blocks.
     MachineTraceMetrics::TraceBlockInfo &TBI = LB.Blocks[To->getNumber()];
     if (LB.Downward ? TBI.hasValidHeight() : TBI.hasValidDepth())
       return false;
     // From is null once when To is the trace center block.
     if (From) {
-      if (const MachineLoop *FromLoop = LB.Loops->getLoopFor(From)) {
+      if (const MachineLoop *FromLoop = LB.Loops->getLoopFor(*From)) {
         // Don't follow backedges, don't leave FromLoop when going upwards.
-        if ((LB.Downward ? To : From) == FromLoop->getHeader())
+        if ((LB.Downward ? To : *From) == FromLoop->getHeader())
           return false;
         // Don't leave FromLoop.
         if (isExitingLoop(FromLoop, LB.Loops->getLoopFor(To)))

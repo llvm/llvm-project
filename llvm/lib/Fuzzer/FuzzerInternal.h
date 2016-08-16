@@ -255,10 +255,12 @@ public:
   size_t Mutate_CustomCrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by shuffling bytes.
   size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by erasing a byte.
-  size_t Mutate_EraseByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by erasing bytes.
+  size_t Mutate_EraseBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by inserting a byte.
   size_t Mutate_InsertByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by inserting several repeated bytes.
+  size_t Mutate_InsertRepeatedBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by chanding one byte.
   size_t Mutate_ChangeByte(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by chanding one bit.

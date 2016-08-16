@@ -1,9 +1,8 @@
-REQUIRES: x86-registered-target, aarch64-registered-target
+REQUIRES: x86-registered-target
 RUN: sancov -print-coverage-pcs %p/Inputs/test-linux_x86_64 | FileCheck %s --check-prefix=LINUX
 RUN: llvm-objdump -d %p/Inputs/test-windows_x86_64 | FileCheck %s --check-prefix=DISAS_WIN
 RUN: sancov -print-coverage-pcs %p/Inputs/test-windows_x86_64 | FileCheck %s --check-prefix=WINDOWS
 RUN: sancov -print-coverage-pcs %p/Inputs/test-darwin_x86_64 | FileCheck %s --check-prefix=DARWIN
-RUN: not sancov -print-coverage-pcs %p/Inputs/test-linux_android_aarch64 2>&1 | FileCheck %s --check-prefix=AARCH64
 
 LINUX: 0x4e132b
 LINUX: 0x4e1472
@@ -58,6 +57,4 @@ DARWIN: 0x1000018e0
 DARWIN: 0x100001906
 DARWIN: 0x1000019dc
 DARWIN: 0x100001a28
-
-AARCH64: Error: __sanitizer_cov* functions not found
 

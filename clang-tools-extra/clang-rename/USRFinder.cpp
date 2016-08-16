@@ -179,7 +179,7 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
   NamedDeclFindingASTVisitor Visitor(Point, Context);
 
   // We only want to search the decls that exist in the same file as the point.
-  for (const auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
+  for (auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
     const SourceLocation FileLoc = CurrDecl->getLocStart();
     StringRef FileName = Context.getSourceManager().getFilename(FileLoc);
     // FIXME: Add test.

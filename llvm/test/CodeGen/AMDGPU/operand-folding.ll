@@ -109,6 +109,21 @@ entry:
   ret void
 }
 
+; A subregister use operand should not be tied.
+; CHECK-LABEL: {{^}}no_fold_tied_subregister:
+; CHECK: buffer_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; CHECK: v_mac_f32_e32 v[[LO]], 0x41200000, v[[HI]]
+; CHECK: buffer_store_dword v[[LO]]
+define void @no_fold_tied_subregister() {
+  %tmp1 = load volatile <2 x float>, <2 x float> addrspace(1)* undef
+  %tmp2 = extractelement <2 x float> %tmp1, i32 0
+  %tmp3 = extractelement <2 x float> %tmp1, i32 1
+  %tmp4 = fmul float %tmp3, 10.0
+  %tmp5 = fadd float %tmp4, %tmp2
+  store volatile float %tmp5, float addrspace(1)* undef
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }

@@ -33,6 +33,7 @@
 
 namespace llvm {
 
+class DataLayout;
 class LLVMContext;
 class Type;
 class raw_ostream;
@@ -86,7 +87,7 @@ public:
   explicit LLT() : SizeOrAddrSpace(0), NumElements(0), Kind(Invalid) {}
 
   /// Construct a low-level type based on an LLVM type.
-  explicit LLT(const Type &Ty);
+  explicit LLT(Type &Ty, const DataLayout *DL = nullptr);
 
   bool isValid() const { return Kind != Invalid; }
 

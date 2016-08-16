@@ -120,6 +120,11 @@ static cl::opt<std::string> ThinLTOModuleId(
 static cl::opt<std::string>
     ThinLTOCacheDir("thinlto-cache-dir", cl::desc("Enable ThinLTO caching."));
 
+static cl::opt<std::string> ThinLTOSaveTempsPrefix(
+    "thinlto-save-temps",
+    cl::desc("Save ThinLTO temp files using filenames created by adding "
+             "suffixes to the given file path prefix."));
+
 static cl::opt<bool>
     SaveModuleFile("save-merged-module", cl::init(false),
                    cl::desc("Write merged LTO module to file before CodeGen"));
@@ -672,6 +677,8 @@ private:
       ThinGenerator.addModule(Filename, InputBuffers.back()->getBuffer());
     }
 
+    if (!ThinLTOSaveTempsPrefix.empty())
+      ThinGenerator.setSaveTempsDir(ThinLTOSaveTempsPrefix);
     ThinGenerator.run();
 
     auto &Binaries = ThinGenerator.getProducedBinaries();

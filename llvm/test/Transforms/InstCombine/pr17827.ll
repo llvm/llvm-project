@@ -47,6 +47,26 @@ define i1 @test_shift_and_cmp_changed1(i8 %p, i8 %q) {
   ret i1 %cmp
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @test_shift_and_cmp_changed1_vec(<2 x i8> %p, <2 x i8> %q) {
+; CHECK-LABEL: @test_shift_and_cmp_changed1_vec(
+; CHECK-NEXT:    [[ANDP:%.*]] = and <2 x i8> %p, <i8 6, i8 6>
+; CHECK-NEXT:    [[ANDQ:%.*]] = and <2 x i8> %q, <i8 8, i8 8>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ANDQ]], [[ANDP]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[OR]], <i8 5, i8 5>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i8> [[SHL]], <i8 5, i8 5>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[ASHR]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %andp = and <2 x i8> %p, <i8 6, i8 6>
+  %andq = and <2 x i8> %q, <i8 8, i8 8>
+  %or = or <2 x i8> %andq, %andp
+  %shl = shl <2 x i8> %or, <i8 5, i8 5>
+  %ashr = ashr <2 x i8> %shl, <i8 5, i8 5>
+  %cmp = icmp slt <2 x i8> %ashr, <i8 1, i8 1>
+  ret <2 x i1> %cmp
+}
+
 ; Unsigned compare allows a transformation to compare against 0.
 define i1 @test_shift_and_cmp_changed2(i8 %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed2(

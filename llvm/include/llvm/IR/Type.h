@@ -430,6 +430,7 @@ template <> struct isa_impl<PointerType, Type> {
 
 template <> struct GraphTraits<Type *> {
   typedef Type NodeType;
+  typedef Type *NodeRef;
   typedef Type::subtype_iterator ChildIteratorType;
 
   static inline NodeType *getEntryNode(Type *T) { return T; }
@@ -443,6 +444,7 @@ template <> struct GraphTraits<Type *> {
 
 template <> struct GraphTraits<const Type*> {
   typedef const Type NodeType;
+  typedef const Type *NodeRef;
   typedef Type::subtype_iterator ChildIteratorType;
 
   static inline NodeType *getEntryNode(NodeType *T) { return T; }

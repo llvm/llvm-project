@@ -1064,22 +1064,13 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
   }
   case Instruction::Shl: {
     // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
-    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    auto KZF = [BitWidth, NSW](const APInt &KnownZero, unsigned ShiftAmt) {
-      APInt KZResult = (KnownZero << ShiftAmt) |
+    auto KZF = [BitWidth](const APInt &KnownZero, unsigned ShiftAmt) {
+      return (KnownZero << ShiftAmt) |
              APInt::getLowBitsSet(BitWidth, ShiftAmt); // Low bits known 0.
-      // If this shift has "nsw" keyword, then the result is either a poison 
-      // value or has the same sign bit as the first operand.
-      if (NSW && KnownZero.isNegative())
-        KZResult.setBit(BitWidth - 1);
-      return KZResult;
     };
 
-    auto KOF = [BitWidth, NSW](const APInt &KnownOne, unsigned ShiftAmt) {
-      APInt KOResult = KnownOne << ShiftAmt;
-      if (NSW && KnownOne.isNegative())
-        KOResult.setBit(BitWidth - 1);
-      return KOResult;
+    auto KOF = [BitWidth](const APInt &KnownOne, unsigned ShiftAmt) {
+      return KnownOne << ShiftAmt;
     };
 
     computeKnownBitsFromShiftOperator(I, KnownZero, KnownOne,

@@ -1,0 +1,5 @@
+# RUN: llvm-mc -arch=amdgcn -mcpu=fiji -disassemble < %s | FileCheck %s -check-prefix=VI
+
+#TODO: this test will fail when we fix v_interp_p2_f32 signature, remove it then
+#VI: v_interp_p2_f32 16, [/*Missing OP1*/], /*Missing OP2*/, /*Missing OP3*/, /*Missing OP4*/
+0xd4 0x41 0x1d 0xd4

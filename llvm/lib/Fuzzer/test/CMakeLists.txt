@@ -81,6 +81,7 @@ set(Tests
   OneHugeAllocTest
   OutOfMemoryTest
   RepeatedMemcmp
+  RepeatedBytesTest
   SimpleCmpTest
   SimpleDictionaryTest
   SimpleFnAdapterTest

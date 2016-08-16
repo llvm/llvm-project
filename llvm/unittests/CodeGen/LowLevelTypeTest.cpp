@@ -66,7 +66,7 @@ TEST(LowLevelTypeTest, Scalar) {
     EXPECT_NE(Ty, DoubleTy);
 
     // Test Type->LLT conversion.
-    const Type *IRTy = IntegerType::get(C, S);
+    Type *IRTy = IntegerType::get(C, S);
     EXPECT_EQ(Ty, LLT(*IRTy));
   }
 }
@@ -159,7 +159,7 @@ TEST(LowLevelTypeTest, Vector) {
 
       // Test Type->LLT conversion.
       Type *IRSTy = IntegerType::get(C, S);
-      const Type *IRTy = VectorType::get(IRSTy, Elts);
+      Type *IRTy = VectorType::get(IRSTy, Elts);
       EXPECT_EQ(VTy, LLT(*IRTy));
     }
   }
@@ -187,7 +187,7 @@ TEST(LowLevelTypeTest, Pointer) {
     EXPECT_FALSE(Ty != Ty);
 
     // Test Type->LLT conversion.
-    const Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
+    Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
     EXPECT_EQ(Ty, LLT(*IRTy));
   }
 }
@@ -213,7 +213,7 @@ TEST(LowLevelTypeTest, Unsized) {
   ASSERT_FALSE(Ty.isPointer());
   ASSERT_FALSE(Ty.isVector());
 
-  const Type *IRTy = Type::getLabelTy(C);
+  Type *IRTy = Type::getLabelTy(C);
   EXPECT_EQ(Ty, LLT(*IRTy));
 }
 }

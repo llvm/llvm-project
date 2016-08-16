@@ -219,19 +219,6 @@ define i1 @gep17() {
 ; CHECK-NEXT: ret i1 true
 }
 
-define i32 @gep18() {
-; CHECK-LABEL: @gep18(
-  %alloca = alloca i32, align 4                                     ; alloca + 0
-  %gep = getelementptr inbounds i32, i32* %alloca, i32 1            ; alloca + 4
-  %bc = bitcast i32* %gep to [4 x i8]*                              ; alloca + 4
-  %pti = ptrtoint i32* %alloca to i32                               ; alloca
-  %sub = sub i32 0, %pti                                            ; -alloca
-  %add = getelementptr [4 x i8], [4 x i8]* %bc, i32 0, i32 %sub     ; alloca + 4 - alloca == 4
-  %add_to_int = ptrtoint i8* %add to i32                            ; 4
-  ret i32 %add_to_int                                               ; 4
-; CHECK-NEXT: ret i32 4
-}
-
 define i1 @zext(i32 %x) {
 ; CHECK-LABEL: @zext(
   %e1 = zext i32 %x to i64
