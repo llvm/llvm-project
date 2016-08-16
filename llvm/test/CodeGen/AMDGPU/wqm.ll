@@ -7,8 +7,8 @@
 ;CHECK-NOT: s_wqm
 define amdgpu_ps <4 x float> @test1(<8 x i32> inreg %rsrc, <4 x i32> %c) {
 main_body:
-  %tex = call <4 x float> @llvm.amdgcn.image.load.v4i32(<4 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
-  call void @llvm.amdgcn.image.store.v4i32(<4 x float> %tex, <4 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
+  %tex = call <4 x float> @llvm.amdgcn.image.load.v4f32.v4i32.v8i32(<4 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
+  call void @llvm.amdgcn.image.store.v4f32.v4i32.v8i32(<4 x float> %tex, <4 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
   ret <4 x float> %tex
 }
 
@@ -355,7 +355,7 @@ main_body:
 ; CHECK: ; return
 define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 entry:
-  call void @llvm.amdgcn.image.store.v4i32(<4 x float> %in, <4 x i32> undef, <8 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0)
+  call void @llvm.amdgcn.image.store.v4f32.v4i32.v8i32(<4 x float> %in, <4 x i32> undef, <8 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0)
   br label %loop
 
 loop:
@@ -415,11 +415,11 @@ entry:
 }
 
 
-declare void @llvm.amdgcn.image.store.v4i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
+declare void @llvm.amdgcn.image.store.v4f32.v4i32.v8i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
 
-declare <4 x float> @llvm.amdgcn.image.load.v4i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.image.load.v4f32.v4i32.v8i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #2
 
 declare <4 x float> @llvm.SI.image.sample.i32(i32, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #3
