@@ -1053,58 +1053,6 @@ bool Parser::TryParseLambdaIntroducer(LambdaIntroducer &Intro) {
   return false;
 }
 
-static void
-tryConsumeMutableOrConstexprToken(Parser &P, SourceLocation &MutableLoc,
-                                  SourceLocation &ConstexprLoc,
-                                  SourceLocation &DeclEndLoc) {
-  assert(MutableLoc.isInvalid());
-  assert(ConstexprLoc.isInvalid());
-  // Consume constexpr-opt mutable-opt in any sequence, and set the DeclEndLoc
-  // to the final of those locations. Emit an error if we have multiple
-  // copies of those keywords and recover.
-
-  while (true) {
-    switch (P.getCurToken().getKind()) {
-    case tok::kw_mutable: {
-      if (MutableLoc.isValid()) {
-        P.Diag(P.getCurToken().getLocation(),
-               diag::err_lambda_decl_specifier_repeated)
-            << 0 << FixItHint::CreateRemoval(P.getCurToken().getLocation());
-      }
-      MutableLoc = P.ConsumeToken();
-      DeclEndLoc = MutableLoc;
-      break /*switch*/;
-    }
-    case tok::kw_constexpr:
-      if (ConstexprLoc.isValid()) {
-        P.Diag(P.getCurToken().getLocation(),
-               diag::err_lambda_decl_specifier_repeated)
-            << 1 << FixItHint::CreateRemoval(P.getCurToken().getLocation());
-      }
-      ConstexprLoc = P.ConsumeToken();
-      DeclEndLoc = ConstexprLoc;
-      break /*switch*/;
-    default:
-      return;
-    }
-  }
-}
-
-static void
-addConstexprToLambdaDeclSpecifier(Parser &P, SourceLocation ConstexprLoc,
-                                  DeclSpec &DS) {
-  if (ConstexprLoc.isValid()) {
-    P.Diag(ConstexprLoc, !P.getLangOpts().CPlusPlus1z
-                             ? diag::ext_constexpr_on_lambda_cxx1z
-                             : diag::warn_cxx14_compat_constexpr_on_lambda);
-    const char *PrevSpec = nullptr;
-    unsigned DiagID = 0;
-    DS.SetConstexprSpec(ConstexprLoc, PrevSpec, DiagID);
-    assert(PrevSpec == nullptr && DiagID == 0 &&
-           "Constexpr cannot have been set previously!");
-  }
-}
-
 /// ParseLambdaExpressionAfterIntroducer - Parse the rest of a lambda
 /// expression.
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
@@ -1163,13 +1111,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     // compatible with MSVC.
     MaybeParseMicrosoftDeclSpecs(Attr, &DeclEndLoc);
 
-    // Parse mutable-opt and/or constexpr-opt, and update the DeclEndLoc.
+    // Parse 'mutable'[opt].
     SourceLocation MutableLoc;
-    SourceLocation ConstexprLoc;
-    tryConsumeMutableOrConstexprToken(*this, MutableLoc, ConstexprLoc,
-                                      DeclEndLoc);
-    
-    addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
+    if (TryConsumeToken(tok::kw_mutable, MutableLoc))
+      DeclEndLoc = MutableLoc;
 
     // Parse exception-specification[opt].
     ExceptionSpecificationType ESpecType = EST_None;
@@ -1227,8 +1172,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                                            LParenLoc, FunLocalRangeEnd, D,
                                            TrailingReturnType),
                   Attr, DeclEndLoc);
-  } else if (Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
-                         tok::kw_constexpr) ||
+  } else if (Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute) ||
              (Tok.is(tok::l_square) && NextToken().is(tok::l_square))) {
     // It's common to forget that one needs '()' before 'mutable', an attribute
     // specifier, or the result type. Deal with this.
@@ -1238,7 +1182,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     case tok::arrow: TokKind = 1; break;
     case tok::kw___attribute:
     case tok::l_square: TokKind = 2; break;
-    case tok::kw_constexpr: TokKind = 3; break;
     default: llvm_unreachable("Unknown token kind");
     }
 

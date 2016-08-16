@@ -36,7 +36,6 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
@@ -2126,22 +2125,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // If this is a local variable, dig out its value.
   if (Frame) {
     Result = Frame->getTemporary(VD);
-    if (!Result) {
-      // Assume variables referenced within a lambda's call operator that were
-      // not declared within the call operator are captures and during checking
-      // of a potential constant expression, assume they are unknown constant
-      // expressions.
-      assert(isLambdaCallOperator(Frame->Callee) &&
-             (VD->getDeclContext() != Frame->Callee || VD->isInitCapture()) &&
-             "missing value for local variable");
-      if (Info.checkingPotentialConstantExpression())
-        return false;
-      // FIXME: implement capture evaluation during constant expr evaluation.
-      Info.FFDiag(E->getLocStart(),
-           diag::note_unimplemented_constexpr_lambda_feature_ast)
-          << "captures not currently allowed";
-      return false;
-    }
+    assert(Result && "missing value for local variable");
     return true;
   }
 

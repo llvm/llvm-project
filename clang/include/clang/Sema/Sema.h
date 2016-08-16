@@ -5111,8 +5111,7 @@ public:
                                        SourceRange IntroducerRange,
                                        TypeSourceInfo *MethodType,
                                        SourceLocation EndLoc,
-                                       ArrayRef<ParmVarDecl *> Params, 
-                                       bool IsConstexprSpecified);
+                                       ArrayRef<ParmVarDecl *> Params);
 
   /// \brief Endow the lambda scope info with the relevant properties.
   void buildLambdaScope(sema::LambdaScopeInfo *LSI, 
