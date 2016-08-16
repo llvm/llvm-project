@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ;   subroutine init_array(ni, nj, pi, pj, a)
 ;   implicit none

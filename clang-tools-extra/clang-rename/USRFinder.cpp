@@ -60,13 +60,13 @@ public:
   // Expression visitors:
 
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
-    const auto *Decl = Expr->getFoundDecl();
+    const NamedDecl *Decl = Expr->getFoundDecl();
     return setResult(Decl, Expr->getLocation(),
                      Decl->getNameAsString().length());
   }
 
   bool VisitMemberExpr(const MemberExpr *Expr) {
-    const auto *Decl = Expr->getFoundDecl().getDecl();
+    const NamedDecl *Decl = Expr->getFoundDecl().getDecl();
     return setResult(Decl, Expr->getMemberLoc(),
                      Decl->getNameAsString().length());
   }
@@ -74,9 +74,10 @@ public:
   // Other visitors:
 
   bool VisitTypeLoc(const TypeLoc Loc) {
-    const auto TypeBeginLoc = Loc.getBeginLoc();
-    const auto TypeEndLoc = Lexer::getLocForEndOfToken(
-        TypeBeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
+    const SourceLocation TypeBeginLoc = Loc.getBeginLoc();
+    const SourceLocation TypeEndLoc = Lexer::getLocForEndOfToken(
+                             TypeBeginLoc, 0, Context.getSourceManager(),
+                             Context.getLangOpts());
     if (const auto *TemplateTypeParm =
             dyn_cast<TemplateTypeParmType>(Loc.getType())) {
       return setResult(TemplateTypeParm->getDecl(), TypeBeginLoc, TypeEndLoc);
@@ -117,7 +118,8 @@ public:
   // \returns false on success and sets Result.
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
-      const auto *Decl = NameLoc.getNestedNameSpecifier()->getAsNamespace();
+      const NamespaceDecl *Decl =
+          NameLoc.getNestedNameSpecifier()->getAsNamespace();
       setResult(Decl, NameLoc.getLocalBeginLoc(), NameLoc.getLocalEndLoc());
       NameLoc = NameLoc.getPrefix();
     }
@@ -173,14 +175,13 @@ private:
 
 const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 const SourceLocation Point) {
-  const auto SearchFile = Context.getSourceManager().getFilename(Point);
+  StringRef SearchFile = Context.getSourceManager().getFilename(Point);
   NamedDeclFindingASTVisitor Visitor(Point, Context);
 
   // We only want to search the decls that exist in the same file as the point.
-  auto Decls = Context.getTranslationUnitDecl()->decls();
-  for (auto &CurrDecl : Decls) {
-    const auto FileLoc = CurrDecl->getLocStart();
-    const auto FileName = Context.getSourceManager().getFilename(FileLoc);
+  for (const auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
+    const SourceLocation FileLoc = CurrDecl->getLocStart();
+    StringRef FileName = Context.getSourceManager().getFilename(FileLoc);
     // FIXME: Add test.
     if (FileName == SearchFile) {
       Visitor.TraverseDecl(CurrDecl);

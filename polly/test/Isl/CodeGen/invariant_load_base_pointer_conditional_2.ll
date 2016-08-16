@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s --check-prefix=IR
-; RUN: opt %loadPolly -S -polly-codegen --polly-overflow-tracking=always < %s | FileCheck %s --check-prefix=IRA
+; RUN: opt %loadPolly -analyze -polly-scops -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true --polly-overflow-tracking=always < %s | FileCheck %s --check-prefix=IRA
 ;
 ; As (p + q) can overflow we have to check that we load from
 ; I[p + q] only if it does not.

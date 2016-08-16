@@ -25,4 +25,5 @@ struct B : A {};
 int main() {
     A* ptr = new B;
     (void)dynamic_cast<B*>(ptr);
+    delete ptr;
 }

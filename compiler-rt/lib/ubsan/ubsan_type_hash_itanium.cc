@@ -13,7 +13,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #include "ubsan_platform.h"
-#if CAN_SANITIZE_UB && !SANITIZER_WINDOWS
+#if CAN_SANITIZE_UB && UBSAN_CAN_USE_CXXABI
 #include "ubsan_type_hash.h"
 
 #include "sanitizer_common/sanitizer_common.h"

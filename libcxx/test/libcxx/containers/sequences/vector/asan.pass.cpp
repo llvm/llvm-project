@@ -61,8 +61,8 @@ int main()
         C c(std::begin(t), std::end(t));
         c.reserve(2*c.size());
         assert(is_contiguous_container_asan_correct(c));
-        assert(!__sanitizer_verify_contiguous_container ( c.data(), c.data() + 1, c.data() + c.capacity()));
-        T foo = c[c.size()];    // should trigger ASAN
+        assert(!__sanitizer_verify_contiguous_container( c.data(), c.data() + 1, c.data() + c.capacity()));
+        volatile T foo = c[c.size()]; // should trigger ASAN. Use volatile to prevent being optimized away.
         assert(false);          // if we got here, ASAN didn't trigger
     }
 }

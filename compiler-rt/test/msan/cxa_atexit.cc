@@ -1,5 +1,7 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t %p
 
+// XFAIL: target-is-mips64el
+
 // PR17377: C++ module destructors get stale argument shadow.
 
 #include <stdio.h>

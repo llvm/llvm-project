@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly  -polly-codegen -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
+; RUN: opt %loadPolly  -polly-codegen -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK-NEXT:    %0 = sext i32 %N to i64

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_allocator.h"
+#include "asan_descriptions.h"
 #include "asan_flags.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
@@ -65,7 +66,9 @@ void GetInfoForHeapAddress(uptr addr, AddressDescription *descr) {
 }
 
 void AsanLocateAddress(uptr addr, AddressDescription *descr) {
-  if (DescribeAddressIfShadow(addr, descr, /* print */ false)) {
+  ShadowAddressDescription shadow_descr;
+  if (GetShadowAddressInformation(addr, &shadow_descr)) {
+    descr->region_kind = ShadowNames[shadow_descr.kind];
     return;
   }
   if (GetInfoForAddressIfGlobal(addr, descr)) {

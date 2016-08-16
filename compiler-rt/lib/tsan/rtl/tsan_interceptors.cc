@@ -483,6 +483,8 @@ static void LongJmp(ThreadState *thr, uptr *env) {
 #elif defined(SANITIZER_LINUX)
 # ifdef __aarch64__
   uptr mangled_sp = env[13];
+# elif defined(__mips64)
+  uptr mangled_sp = env[1];
 # else
   uptr mangled_sp = env[6];
 # endif

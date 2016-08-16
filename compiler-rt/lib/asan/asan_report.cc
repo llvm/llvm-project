@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_flags.h"
+#include "asan_descriptions.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
@@ -334,26 +335,6 @@ static bool DescribeAddressIfGlobal(uptr addr, uptr size,
     }
   }
   return true;
-}
-
-bool DescribeAddressIfShadow(uptr addr, AddressDescription *descr, bool print) {
-  if (AddrIsInMem(addr))
-    return false;
-  const char *area_type = nullptr;
-  if (AddrIsInShadowGap(addr)) area_type = "shadow gap";
-  else if (AddrIsInHighShadow(addr)) area_type = "high shadow";
-  else if (AddrIsInLowShadow(addr)) area_type = "low shadow";
-  if (area_type != nullptr) {
-    if (print) {
-      Printf("Address %p is located in the %s area.\n", addr, area_type);
-    } else {
-      CHECK(descr);
-      descr->region_kind = area_type;
-    }
-    return true;
-  }
-  CHECK(0 && "Address is not in memory and not in shadow?");
-  return false;
 }
 
 // Return " (thread_name) " or an empty string if the name is empty.

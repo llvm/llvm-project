@@ -1,4 +1,6 @@
-; RUN: opt %loadPolly -polly-scops -analyze -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops \
+; RUN: -polly-invariant-load-hoisting=true \
+; RUN: -analyze -S < %s | FileCheck %s
 ;
 ; CHECK:          Invariant Accesses: {
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]

@@ -232,8 +232,7 @@ public:
       return ValidatorResult(SCEVType::INVALID);
     }
 
-    assert(Start.isConstant() && Recurrence.isConstant() &&
-           "Expected 'Start' and 'Recurrence' to be constant");
+    assert(Recurrence.isConstant() && "Expected 'Recurrence' to be constant");
 
     // Directly generate ValidatorResult for Expr if 'start' is zero.
     if (Expr->getStart()->isZero())

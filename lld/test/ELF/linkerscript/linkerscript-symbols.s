@@ -35,6 +35,12 @@
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN2 %s
 # HIDDEN2: 0000000000000000         *ABS*    00000000 somesym
 
+# Hidden symbol assignment.
+# RUN: echo "SECTIONS { HIDDEN(newsym = 1);}" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN3 %s
+# HIDDEN3: 0000000000000001         *ABS*    00000000 .hidden newsym
+
 .global _start
 _start:
  nop
