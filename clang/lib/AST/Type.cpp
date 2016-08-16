@@ -3686,10 +3686,18 @@ bool Type::isObjCARCImplicitlyUnretainedType() const {
 }
 
 bool Type::isObjCNSObjectType() const {
-  if (const TypedefType *typedefType = dyn_cast<TypedefType>(this))
-    return typedefType->getDecl()->hasAttr<ObjCNSObjectAttr>();
-  return false;
+  const Type *cur = this;
+  while (true) {
+    if (const TypedefType *typedefType = dyn_cast<TypedefType>(cur))
+      return typedefType->getDecl()->hasAttr<ObjCNSObjectAttr>();
+
+    // Single-step desugar until we run out of sugar.
+    QualType next = cur->getLocallyUnqualifiedSingleStepDesugaredType();
+    if (next.getTypePtr() == cur) return false;
+    cur = next.getTypePtr();
+  }
 }
+
 bool Type::isObjCIndependentClassType() const {
   if (const TypedefType *typedefType = dyn_cast<TypedefType>(this))
     return typedefType->getDecl()->hasAttr<ObjCIndependentClassAttr>();

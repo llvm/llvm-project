@@ -490,6 +490,10 @@ private:
   /// MDNodes.
   llvm::DenseMap<QualType, llvm::Metadata *> MetadataIdMap;
 
+  /// Diags gathered from FunctionDecl::takeDeferredDiags().  Emitted at the
+  /// very end of codegen.
+  std::vector<std::pair<SourceLocation, PartialDiagnostic>> DeferredDiags;
+
 public:
   CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,

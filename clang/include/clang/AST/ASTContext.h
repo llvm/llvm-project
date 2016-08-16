@@ -324,6 +324,12 @@ class ASTContext : public RefCountedBase<ASTContext> {
   };
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
+  /// Diagnostics that are emitted if and only if the given function is
+  /// codegen'ed.  Access these through FunctionDecl::addDeferredDiag() and
+  /// FunctionDecl::takeDeferredDiags().
+  llvm::DenseMap<const FunctionDecl *, std::vector<PartialDiagnosticAt>>
+      DeferredDiags;
+
 public:
   /// \brief A type synonym for the TemplateOrInstantiation mapping.
   typedef llvm::PointerUnion<VarTemplateDecl *, MemberSpecializationInfo *>
@@ -595,6 +601,11 @@ public:
   
   PartialDiagnostic::StorageAllocator &getDiagAllocator() {
     return DiagAllocator;
+  }
+
+  decltype(DeferredDiags) &getDeferredDiags() { return DeferredDiags; }
+  const decltype(DeferredDiags) &getDeferredDiags() const {
+    return DeferredDiags;
   }
 
   const TargetInfo &getTargetInfo() const { return *Target; }

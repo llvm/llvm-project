@@ -1730,8 +1730,8 @@ static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
   int Major = -1, Minor = -1;
   auto First = V.split('.');
   auto Second = First.second.split('.');
-  if (!First.first.getAsInteger(10, Major) ||
-      !Second.first.getAsInteger(10, Minor))
+  if (First.first.getAsInteger(10, Major) ||
+      Second.first.getAsInteger(10, Minor))
     return CudaVersion::UNKNOWN;
 
   if (Major == 7 && Minor == 0) {

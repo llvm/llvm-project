@@ -6997,7 +6997,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_xsavec:
   case X86::BI__builtin_ia32_xsavec64:
   case X86::BI__builtin_ia32_xsaves:
-  case X86::BI__builtin_ia32_xsaves64: {
+  case X86::BI__builtin_ia32_xsaves64:
+  case X86::BI__builtin_ia32_xsetbv: {
     Intrinsic::ID ID;
 #define INTRINSIC_X86_XSAVE_ID(NAME) \
     case X86::BI__builtin_ia32_##NAME: \
@@ -7017,6 +7018,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     INTRINSIC_X86_XSAVE_ID(xsavec64);
     INTRINSIC_X86_XSAVE_ID(xsaves);
     INTRINSIC_X86_XSAVE_ID(xsaves64);
+    INTRINSIC_X86_XSAVE_ID(xsetbv);
     }
 #undef INTRINSIC_X86_XSAVE_ID
     Value *Mhi = Builder.CreateTrunc(
@@ -7026,6 +7028,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops.push_back(Mlo);
     return Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
   }
+  case X86::BI__builtin_ia32_xgetbv:
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_xgetbv), Ops);
   case X86::BI__builtin_ia32_storedqudi128_mask:
   case X86::BI__builtin_ia32_storedqusi128_mask:
   case X86::BI__builtin_ia32_storedquhi128_mask:

@@ -96,6 +96,9 @@
 // NOCUDAINC-NOT: "-internal-isystem" "{{.*}}/cuda/include"
 // CUDAINC-SAME: "-include" "__clang_cuda_runtime_wrapper.h"
 // NOCUDAINC-NOT: "-include" "__clang_cuda_runtime_wrapper.h"
+// -internal-externc-isystem flags must come *after* the cuda include flags,
+// because we must search the cuda include directory first.
+// CUDAINC-SAME: "-internal-externc-isystem"
 // COMMON-SAME: "-x" "cuda"
 // CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"

@@ -1739,17 +1739,9 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        const CXXScopeSpec *SS, NamedDecl *FoundD,
                        const TemplateArgumentListInfo *TemplateArgs) {
   if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext))
-      if (const FunctionDecl *Callee = dyn_cast<FunctionDecl>(D)) {
-        if (!IsAllowedCUDACall(Caller, Callee)) {
-          Diag(NameInfo.getLoc(), diag::err_ref_bad_target)
-            << IdentifyCUDATarget(Callee) << D->getIdentifier()
-            << IdentifyCUDATarget(Caller);
-          Diag(D->getLocation(), diag::note_previous_decl)
-            << D->getIdentifier();
-          return ExprError();
-        }
-      }
+    if (FunctionDecl *Callee = dyn_cast<FunctionDecl>(D))
+      if (!CheckCUDACall(NameInfo.getLoc(), Callee))
+        return ExprError();
 
   bool RefersToCapturedVariable =
       isa<VarDecl>(D) &&
@@ -5138,37 +5130,35 @@ static bool isNumberOfArgsValidForCall(Sema &S, const FunctionDecl *Callee,
   return Callee->getMinRequiredArguments() <= NumArgs;
 }
 
-/// ActOnCallExpr - Handle a call to Fn with the specified array of arguments.
-/// This provides the location of the left/right parens and a list of comma
-/// locations.
-ExprResult
-Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
-                    MultiExprArg ArgExprs, SourceLocation RParenLoc,
-                    Expr *ExecConfig, bool IsExecConfig) {
+static ExprResult ActOnCallExprImpl(Sema &S, Scope *Scope, Expr *Fn,
+                                    SourceLocation LParenLoc,
+                                    MultiExprArg ArgExprs,
+                                    SourceLocation RParenLoc, Expr *ExecConfig,
+                                    bool IsExecConfig) {
   // Since this might be a postfix expression, get rid of ParenListExprs.
-  ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Fn);
+  ExprResult Result = S.MaybeConvertParenListExprToParenExpr(Scope, Fn);
   if (Result.isInvalid()) return ExprError();
   Fn = Result.get();
 
-  if (checkArgsForPlaceholders(*this, ArgExprs))
+  if (checkArgsForPlaceholders(S, ArgExprs))
     return ExprError();
 
-  if (getLangOpts().CPlusPlus) {
+  if (S.getLangOpts().CPlusPlus) {
     // If this is a pseudo-destructor expression, build the call immediately.
     if (isa<CXXPseudoDestructorExpr>(Fn)) {
       if (!ArgExprs.empty()) {
         // Pseudo-destructor calls should not have any arguments.
-        Diag(Fn->getLocStart(), diag::err_pseudo_dtor_call_with_args)
-          << FixItHint::CreateRemoval(
-                                    SourceRange(ArgExprs.front()->getLocStart(),
-                                                ArgExprs.back()->getLocEnd()));
+        S.Diag(Fn->getLocStart(), diag::err_pseudo_dtor_call_with_args)
+            << FixItHint::CreateRemoval(
+                   SourceRange(ArgExprs.front()->getLocStart(),
+                               ArgExprs.back()->getLocEnd()));
       }
 
-      return new (Context)
-          CallExpr(Context, Fn, None, Context.VoidTy, VK_RValue, RParenLoc);
+      return new (S.Context)
+          CallExpr(S.Context, Fn, None, S.Context.VoidTy, VK_RValue, RParenLoc);
     }
-    if (Fn->getType() == Context.PseudoObjectTy) {
-      ExprResult result = CheckPlaceholderExpr(Fn);
+    if (Fn->getType() == S.Context.PseudoObjectTy) {
+      ExprResult result = S.CheckPlaceholderExpr(Fn);
       if (result.isInvalid()) return ExprError();
       Fn = result.get();
     }
@@ -5183,50 +5173,53 @@ Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
 
     if (Dependent) {
       if (ExecConfig) {
-        return new (Context) CUDAKernelCallExpr(
-            Context, Fn, cast<CallExpr>(ExecConfig), ArgExprs,
-            Context.DependentTy, VK_RValue, RParenLoc);
+        return new (S.Context) CUDAKernelCallExpr(
+            S.Context, Fn, cast<CallExpr>(ExecConfig), ArgExprs,
+            S.Context.DependentTy, VK_RValue, RParenLoc);
       } else {
-        return new (Context) CallExpr(
-            Context, Fn, ArgExprs, Context.DependentTy, VK_RValue, RParenLoc);
+        return new (S.Context)
+            CallExpr(S.Context, Fn, ArgExprs, S.Context.DependentTy, VK_RValue,
+                     RParenLoc);
       }
     }
 
     // Determine whether this is a call to an object (C++ [over.call.object]).
     if (Fn->getType()->isRecordType())
-      return BuildCallToObjectOfClassType(S, Fn, LParenLoc, ArgExprs,
-                                          RParenLoc);
+      return S.BuildCallToObjectOfClassType(Scope, Fn, LParenLoc, ArgExprs,
+                                            RParenLoc);
 
-    if (Fn->getType() == Context.UnknownAnyTy) {
-      ExprResult result = rebuildUnknownAnyFunction(*this, Fn);
+    if (Fn->getType() == S.Context.UnknownAnyTy) {
+      ExprResult result = rebuildUnknownAnyFunction(S, Fn);
       if (result.isInvalid()) return ExprError();
       Fn = result.get();
     }
 
-    if (Fn->getType() == Context.BoundMemberTy) {
-      return BuildCallToMemberFunction(S, Fn, LParenLoc, ArgExprs, RParenLoc);
+    if (Fn->getType() == S.Context.BoundMemberTy) {
+      return S.BuildCallToMemberFunction(Scope, Fn, LParenLoc, ArgExprs,
+                                         RParenLoc);
     }
   }
 
   // Check for overloaded calls.  This can happen even in C due to extensions.
-  if (Fn->getType() == Context.OverloadTy) {
+  if (Fn->getType() == S.Context.OverloadTy) {
     OverloadExpr::FindResult find = OverloadExpr::find(Fn);
 
-    // We aren't supposed to apply this logic for if there's an '&' involved.
+    // We aren't supposed to apply this logic for if there'Scope an '&'
+    // involved.
     if (!find.HasFormOfMemberPointer) {
       OverloadExpr *ovl = find.Expression;
       if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(ovl))
-        return BuildOverloadedCallExpr(S, Fn, ULE, LParenLoc, ArgExprs,
-                                       RParenLoc, ExecConfig,
-                                       /*AllowTypoCorrection=*/true,
-                                       find.IsAddressOfOperand);
-      return BuildCallToMemberFunction(S, Fn, LParenLoc, ArgExprs, RParenLoc);
+        return S.BuildOverloadedCallExpr(
+            Scope, Fn, ULE, LParenLoc, ArgExprs, RParenLoc, ExecConfig,
+            /*AllowTypoCorrection=*/true, find.IsAddressOfOperand);
+      return S.BuildCallToMemberFunction(Scope, Fn, LParenLoc, ArgExprs,
+                                         RParenLoc);
     }
   }
 
   // If we're directly calling a function, get the appropriate declaration.
-  if (Fn->getType() == Context.UnknownAnyTy) {
-    ExprResult result = rebuildUnknownAnyFunction(*this, Fn);
+  if (Fn->getType() == S.Context.UnknownAnyTy) {
+    ExprResult result = rebuildUnknownAnyFunction(S, Fn);
     if (result.isInvalid()) return ExprError();
     Fn = result.get();
   }
@@ -5250,12 +5243,12 @@ Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
       // Rewrite the function decl for this builtin by replacing parameters
       // with no explicit address space with the address space of the arguments
       // in ArgExprs.
-      if ((FDecl = rewriteBuiltinFunctionDecl(this, Context, FDecl, ArgExprs))) {
+      if ((FDecl =
+               rewriteBuiltinFunctionDecl(&S, S.Context, FDecl, ArgExprs))) {
         NDecl = FDecl;
-        Fn = DeclRefExpr::Create(Context, FDecl->getQualifierLoc(),
-                           SourceLocation(), FDecl, false,
-                           SourceLocation(), FDecl->getType(),
-                           Fn->getValueKind(), FDecl);
+        Fn = DeclRefExpr::Create(
+            S.Context, FDecl->getQualifierLoc(), SourceLocation(), FDecl, false,
+            SourceLocation(), FDecl->getType(), Fn->getValueKind(), FDecl);
       }
     }
   } else if (isa<MemberExpr>(NakedFn))
@@ -5263,8 +5256,8 @@ Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
 
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
     if (CallingNDeclIndirectly &&
-        !checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
-                                           Fn->getLocStart()))
+        !S.checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
+                                             Fn->getLocStart()))
       return ExprError();
 
     // CheckEnableIf assumes that the we're passing in a sane number of args for
@@ -5274,22 +5267,42 @@ Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
     // number of args looks incorrect, don't do enable_if checks; we should've
     // already emitted an error about the bad call.
     if (FD->hasAttr<EnableIfAttr>() &&
-        isNumberOfArgsValidForCall(*this, FD, ArgExprs.size())) {
-      if (const EnableIfAttr *Attr = CheckEnableIf(FD, ArgExprs, true)) {
-        Diag(Fn->getLocStart(),
-             isa<CXXMethodDecl>(FD) ?
-                 diag::err_ovl_no_viable_member_function_in_call :
-                 diag::err_ovl_no_viable_function_in_call)
-          << FD << FD->getSourceRange();
-        Diag(FD->getLocation(),
-             diag::note_ovl_candidate_disabled_by_enable_if_attr)
+        isNumberOfArgsValidForCall(S, FD, ArgExprs.size())) {
+      if (const EnableIfAttr *Attr = S.CheckEnableIf(FD, ArgExprs, true)) {
+        S.Diag(Fn->getLocStart(),
+               isa<CXXMethodDecl>(FD)
+                   ? diag::err_ovl_no_viable_member_function_in_call
+                   : diag::err_ovl_no_viable_function_in_call)
+            << FD << FD->getSourceRange();
+        S.Diag(FD->getLocation(),
+               diag::note_ovl_candidate_disabled_by_enable_if_attr)
             << Attr->getCond()->getSourceRange() << Attr->getMessage();
       }
     }
   }
 
-  return BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
-                               ExecConfig, IsExecConfig);
+  return S.BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
+                                 ExecConfig, IsExecConfig);
+}
+
+/// ActOnCallExpr - Handle a call to Fn with the specified array of arguments.
+/// This provides the location of the left/right parens and a list of comma
+/// locations.
+ExprResult Sema::ActOnCallExpr(Scope *S, Expr *Fn, SourceLocation LParenLoc,
+                               MultiExprArg ArgExprs, SourceLocation RParenLoc,
+                               Expr *ExecConfig, bool IsExecConfig) {
+  ExprResult Ret = ActOnCallExprImpl(*this, S, Fn, LParenLoc, ArgExprs,
+                                     RParenLoc, ExecConfig, IsExecConfig);
+
+  // If appropriate, check that this is a valid CUDA call (and emit an error if
+  // the call is not allowed).
+  if (getLangOpts().CUDA && Ret.isUsable())
+    if (auto *Call = dyn_cast<CallExpr>(Ret.get()))
+      if (auto *FD = Call->getDirectCallee())
+        if (!CheckCUDACall(Call->getLocStart(), FD))
+          return ExprError();
+
+  return Ret;
 }
 
 /// ActOnAsTypeExpr - create a new asType (bitcast) from the arguments.
@@ -8657,7 +8670,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
 
   // If LHS does not have a signed type and non-negative value
   // then, the behavior is undefined. Warn about it.
-  if (Left.isNegative()) {
+  if (Left.isNegative() && !S.getLangOpts().isSignedOverflowDefined()) {
     S.DiagRuntimeBehavior(Loc, LHS.get(),
                           S.PDiag(diag::warn_shift_lhs_negative)
                             << LHS.get()->getSourceRange());

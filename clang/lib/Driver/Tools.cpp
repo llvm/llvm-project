@@ -410,6 +410,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Add offload include arguments specific for CUDA.  This must happen before
+  // we -I or -include anything else, because we must pick up the CUDA headers
+  // from the particular CUDA installation, rather than from e.g.
+  // /usr/local/include.
+  if (JA.isOffloading(Action::OFK_Cuda))
+    getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
+
   // Add -i* options, and automatically translate to
   // -include-pch/-include-pth for transparent PCH support. It's
   // wonky, but we include looking for .gch so we can support seamless
@@ -607,10 +614,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     // For IAMCU add special include arguments.
     getToolChain().AddIAMCUIncludeArgs(Args, CmdArgs);
   }
-
-  // Add offload include arguments specific for CUDA if that is required.
-  if (JA.isOffloading(Action::OFK_Cuda))
-    getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
 }
 
 // FIXME: Move to target hook.

@@ -644,6 +644,8 @@ TARGET_BUILTIN(__builtin_ia32_fxsave64, "vv*", "", "fxsr")
 // XSAVE
 TARGET_BUILTIN(__builtin_ia32_xsave, "vv*ULLi", "", "xsave")
 TARGET_BUILTIN(__builtin_ia32_xsave64, "vv*ULLi", "", "xsave")
+TARGET_BUILTIN(__builtin_ia32_xgetbv, "ULLiUi", "", "xsave")
+TARGET_BUILTIN(__builtin_ia32_xsetbv, "vUiULLi", "", "xsave")
 TARGET_BUILTIN(__builtin_ia32_xrstor, "vv*ULLi", "", "xsave")
 TARGET_BUILTIN(__builtin_ia32_xrstor64, "vv*ULLi", "", "xsave")
 TARGET_BUILTIN(__builtin_ia32_xsaveopt, "vv*ULLi", "", "xsaveopt")
