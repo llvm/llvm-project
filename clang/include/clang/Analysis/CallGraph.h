@@ -172,6 +172,7 @@ public:
 namespace llvm {
 template <> struct GraphTraits<clang::CallGraphNode*> {
   typedef clang::CallGraphNode NodeType;
+  typedef clang::CallGraphNode *NodeRef;
   typedef clang::CallGraphNode::CallRecord CallRecordTy;
   typedef std::pointer_to_unary_function<CallRecordTy,
                                          clang::CallGraphNode*> CGNDerefFun;
@@ -190,6 +191,7 @@ template <> struct GraphTraits<clang::CallGraphNode*> {
 
 template <> struct GraphTraits<const clang::CallGraphNode*> {
   typedef const clang::CallGraphNode NodeType;
+  typedef const clang::CallGraphNode *NodeRef;
   typedef NodeType::const_iterator ChildIteratorType;
   static NodeType *getEntryNode(const clang::CallGraphNode *CGN) { return CGN; }
   static inline ChildIteratorType child_begin(NodeType *N) { return N->begin();}

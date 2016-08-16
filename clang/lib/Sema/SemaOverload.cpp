@@ -12331,19 +12331,6 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     new (Context) CXXMemberCallExpr(Context, MemExprE, Args,
                                     ResultType, VK, RParenLoc);
 
-  // (CUDA B.1): Check for invalid calls between targets.
-  if (getLangOpts().CUDA) {
-    if (const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext)) {
-      if (!IsAllowedCUDACall(Caller, Method)) {
-        Diag(MemExpr->getMemberLoc(), diag::err_ref_bad_target)
-            << IdentifyCUDATarget(Method) << Method->getIdentifier()
-            << IdentifyCUDATarget(Caller);
-        Diag(Method->getLocation(), diag::note_previous_decl) << Method;
-        return ExprError();
-      }
-    }
-  }
-
   // Check for a valid return type.
   if (CheckCallReturnType(Method->getReturnType(), MemExpr->getMemberLoc(),
                           TheCall, Method))
