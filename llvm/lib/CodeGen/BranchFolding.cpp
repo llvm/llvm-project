@@ -996,6 +996,24 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
     MachineBasicBlock *IBB = &*I;
     MachineBasicBlock *PredBB = &*std::prev(I);
     MergePotentials.clear();
+    MachineLoop *ML;
+
+    // Bail if merging after placement and IBB is the loop header because
+    // -- If merging predecessors that belong to the same loop as IBB, the
+    // common tail of merged predecessors may become the loop top if block
+    // placement is called again and the predecessors may branch to this common
+    // tail and require more branches. This can be relaxed if
+    // MachineBlockPlacement::findBestLoopTop is more flexible.
+    // --If merging predecessors that do not belong to the same loop as IBB, the
+    // loop info of IBB's loop and the other loops may be affected. Calling the
+    // block placement again may make big change to the layout and eliminate the
+    // reason to do tail merging here.
+    if (AfterBlockPlacement && MLI) {
+      ML = MLI->getLoopFor(IBB);
+      if (ML && IBB == ML->getHeader())
+        continue;
+    }
+
     for (MachineBasicBlock *PBB : I->predecessors()) {
       if (MergePotentials.size() == TailMergeThreshold)
         break;
@@ -1015,16 +1033,12 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
       if (PBB->hasEHPadSuccessor())
         continue;
 
-      // Bail out if the loop header (IBB) is not the top of the loop chain
-      // after the block placement.  Otherwise, the common tail of IBB's
-      // predecessors may become the loop top if block placement is called again
-      // and the predecessors may branch to this common tail.
-      // FIXME: Relaxed this check if the algorithm of finding loop top is
-      // changed in MBP.
+      // After block placement, only consider predecessors that belong to the
+      // same loop as IBB.  The reason is the same as above when skipping loop
+      // header.
       if (AfterBlockPlacement && MLI)
-        if (MachineLoop *ML = MLI->getLoopFor(IBB))
-          if (IBB == ML->getHeader() && ML == MLI->getLoopFor(PBB))
-            continue;
+        if (ML != MLI->getLoopFor(PBB))
+          continue;
 
       MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand, 4> Cond;
