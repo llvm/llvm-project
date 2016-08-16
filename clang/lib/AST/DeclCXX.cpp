@@ -807,6 +807,17 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedDestructorIsDeleted = true;
         }
 
+        // For an anonymous union member, our overload resolution will perform
+        // overload resolution for its members.
+        if (Field->isAnonymousStructOrUnion()) {
+          data().NeedOverloadResolutionForMoveConstructor |=
+              FieldRec->data().NeedOverloadResolutionForMoveConstructor;
+          data().NeedOverloadResolutionForMoveAssignment |=
+              FieldRec->data().NeedOverloadResolutionForMoveAssignment;
+          data().NeedOverloadResolutionForDestructor |=
+              FieldRec->data().NeedOverloadResolutionForDestructor;
+        }
+
         // C++0x [class.ctor]p5:
         //   A default constructor is trivial [...] if:
         //    -- for all the non-static data members of its class that are of
