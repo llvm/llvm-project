@@ -465,3 +465,23 @@ define i32 @test_ashr(i32 %arg1, i32 %arg2) {
 define i8* @test_constant_null() {
   ret i8* null
 }
+
+; CHECK-LABEL: name: test_struct_memops
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](64) = G_LOAD { s64, p0 } [[ADDR]] :: (load 8 from  %ir.addr, align 4)
+; CHECK: G_STORE { s64, p0 } [[VAL]], [[ADDR]] :: (store 8 into  %ir.addr, align 4)
+define void @test_struct_memops({ i8, i32 }* %addr) {
+  %val = load { i8, i32 }, { i8, i32 }* %addr
+  store { i8, i32 } %val, { i8, i32 }* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_i1_memops
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](1) = G_LOAD { s1, p0 } [[ADDR]] :: (load 1 from  %ir.addr)
+; CHECK: G_STORE { s1, p0 } [[VAL]], [[ADDR]] :: (store 1 into  %ir.addr)
+define void @test_i1_memops(i1* %addr) {
+  %val = load i1, i1* %addr
+  store i1 %val, i1* %addr
+  ret void
+}

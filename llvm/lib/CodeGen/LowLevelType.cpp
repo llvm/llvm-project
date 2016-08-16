@@ -13,11 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-LLT::LLT(const Type &Ty) {
+LLT::LLT(Type &Ty, const DataLayout *DL) {
   if (auto VTy = dyn_cast<VectorType>(&Ty)) {
     SizeOrAddrSpace = VTy->getElementType()->getPrimitiveSizeInBits();
     NumElements = VTy->getNumElements();
@@ -30,8 +31,10 @@ LLT::LLT(const Type &Ty) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
     Kind = Scalar;
-    SizeOrAddrSpace = Ty.getPrimitiveSizeInBits();
+    SizeOrAddrSpace =
+        DL ? DL->getTypeSizeInBits(&Ty) : Ty.getPrimitiveSizeInBits();
     NumElements = 1;
+    assert(SizeOrAddrSpace != 0 && "invalid zero-sized type");
   } else {
     Kind = Unsized;
     SizeOrAddrSpace = NumElements = 0;

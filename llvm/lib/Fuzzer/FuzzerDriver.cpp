@@ -382,6 +382,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
       Printf("Executed %s in %zd ms\n", Path.c_str(), (long)MS);
     }
+    Printf("***\n"
+           "*** NOTE: fuzzing was not performed, you have only\n"
+           "***       executed the target code on a fixed set of inputs.\n"
+           "***\n");
     F.PrintFinalStats();
     exit(0);
   }

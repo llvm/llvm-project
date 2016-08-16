@@ -1020,8 +1020,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     if (Val.getNode()) {
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, Offset, false,
                                     Val)) {
-        SDV = DAG.getDbgValue(Variable, Expr, Val.getNode(), Val.getResNo(),
-                              false, Offset, dl, DbgSDNodeOrder);
+        SDV = getDbgValue(Val, Variable, Expr, Offset, dl, DbgSDNodeOrder);
         DAG.AddDbgValue(SDV, Val.getNode(), false);
       }
     } else
@@ -4742,6 +4741,32 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   return true;
 }
 
+/// Return the appropriate SDDbgValue based on N.
+SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
+                                             DILocalVariable *Variable,
+                                             DIExpression *Expr, int64_t Offset,
+                                             DebugLoc dl,
+                                             unsigned DbgSDNodeOrder) {
+  SDDbgValue *SDV;
+  auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode());
+  if (FISDN && Expr->startsWithDeref()) {
+    // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
+    // stack slot locations as such instead of as indirectly addressed
+    // locations.
+    ArrayRef<uint64_t> TrailingElements(Expr->elements_begin() + 1,
+                                        Expr->elements_end());
+    DIExpression *DerefedDIExpr =
+        DIExpression::get(*DAG.getContext(), TrailingElements);
+    int FI = FISDN->getIndex();
+    SDV = DAG.getFrameIndexDbgValue(Variable, DerefedDIExpr, FI, 0, dl,
+                                    DbgSDNodeOrder);
+  } else {
+    SDV = DAG.getDbgValue(Variable, Expr, N.getNode(), N.getResNo(), false,
+                          Offset, dl, DbgSDNodeOrder);
+  }
+  return SDV;
+}
+
 // VisualStudio defines setjmp as _setjmp
 #if defined(_MSC_VER) && defined(setjmp) && \
                          !defined(setjmp_undefined_for_msvc)
@@ -4943,8 +4968,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       if (N.getNode()) {
         if (!EmitFuncArgumentDbgValue(V, Variable, Expression, dl, Offset,
                                       false, N)) {
-          SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
-                                false, Offset, dl, SDNodeOrder);
+          SDV = getDbgValue(N, Variable, Expression, Offset, dl, SDNodeOrder);
           DAG.AddDbgValue(SDV, N.getNode(), false);
         }
       } else if (!V->use_empty() ) {

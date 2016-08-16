@@ -105,7 +105,8 @@ template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
 
 template <class ELFT> static bool needsInterpSection() {
   return !Symtab<ELFT>::X->getSharedFiles().empty() &&
-         !Config->DynamicLinker.empty();
+         !Config->DynamicLinker.empty() &&
+         !Script<ELFT>::X->ignoreInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() {

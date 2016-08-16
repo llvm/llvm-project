@@ -78,9 +78,9 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   if (TempDir.empty())
     return;
   // User asked to save temps, let dump the bitcode file after import.
-  auto SaveTempPath = TempDir + llvm::utostr(count) + Suffix;
+  std::string SaveTempPath = (TempDir + llvm::utostr(count) + Suffix).str();
   std::error_code EC;
-  raw_fd_ostream OS(SaveTempPath.str(), EC, sys::fs::F_None);
+  raw_fd_ostream OS(SaveTempPath, EC, sys::fs::F_None);
   if (EC)
     report_fatal_error(Twine("Failed to open ") + SaveTempPath +
                        " to save optimized bitcode\n");
@@ -578,7 +578,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
                            ExportLists);
 
   llvm::gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                         ImportLists,
+                                         ImportLists[ModulePath],
                                          ModuleToSummariesForIndex);
 }
 
@@ -601,7 +601,7 @@ void ThinLTOCodeGenerator::emitImports(StringRef ModulePath,
                            ExportLists);
 
   std::error_code EC;
-  if ((EC = EmitImportsFiles(ModulePath, OutputName, ImportLists)))
+  if ((EC = EmitImportsFiles(ModulePath, OutputName, ImportLists[ModulePath])))
     report_fatal_error(Twine("Failed to open ") + OutputName +
                        " to save imports lists\n");
 }

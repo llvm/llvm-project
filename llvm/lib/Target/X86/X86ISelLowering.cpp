@@ -18480,6 +18480,51 @@ static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   return SDValue(Res, 0);
 }
 
+/// Handles the lowering of builtin intrinsic that return the value
+/// of the extended control register.
+static void getExtendedControlRegister(SDNode *N, const SDLoc &DL,
+                                       SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget,
+                                       SmallVectorImpl<SDValue> &Results) {
+  assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
+  SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SDValue LO, HI;
+
+  // The ECX register is used to select the index of the XCR register to
+  // return.
+  SDValue Chain =
+      DAG.getCopyToReg(N->getOperand(0), DL, X86::ECX, N->getOperand(2));
+  SDNode *N1 = DAG.getMachineNode(X86::XGETBV, DL, Tys, Chain);
+  Chain = SDValue(N1, 0);
+
+  // Reads the content of XCR and returns it in registers EDX:EAX.
+  if (Subtarget.is64Bit()) {
+    LO = DAG.getCopyFromReg(Chain, DL, X86::RAX, MVT::i64, SDValue(N1, 1));
+    HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::RDX, MVT::i64,
+                            LO.getValue(2));
+  } else {
+    LO = DAG.getCopyFromReg(Chain, DL, X86::EAX, MVT::i32, SDValue(N1, 1));
+    HI = DAG.getCopyFromReg(LO.getValue(1), DL, X86::EDX, MVT::i32,
+                            LO.getValue(2));
+  }
+  Chain = HI.getValue(1);
+
+  if (Subtarget.is64Bit()) {
+    // Merge the two 32-bit values into a 64-bit one..
+    SDValue Tmp = DAG.getNode(ISD::SHL, DL, MVT::i64, HI,
+                              DAG.getConstant(32, DL, MVT::i8));
+    Results.push_back(DAG.getNode(ISD::OR, DL, MVT::i64, LO, Tmp));
+    Results.push_back(Chain);
+    return;
+  }
+
+  // Use a buildpair to merge the two 32-bit values into a 64-bit one.
+  SDValue Ops[] = { LO, HI };
+  SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Ops);
+  Results.push_back(Pair);
+  Results.push_back(Chain);
+}
+
 /// Handles the lowering of builtin intrinsics that read performance monitor
 /// counters (x86_rdpmc).
 static void getReadPerformanceCounter(SDNode *N, const SDLoc &DL,
@@ -18720,6 +18765,12 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   case RDPMC: {
     SmallVector<SDValue, 2> Results;
     getReadPerformanceCounter(Op.getNode(), dl, DAG, Subtarget, Results);
+    return DAG.getMergeValues(Results, dl);
+  }
+  // Get Extended Control Register.
+  case XGETBV: {
+    SmallVector<SDValue, 2> Results;
+    getExtendedControlRegister(Op.getNode(), dl, DAG, Subtarget, Results);
     return DAG.getMergeValues(Results, dl);
   }
   // XTEST intrinsics.
@@ -22176,6 +22227,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                      Results);
     case Intrinsic::x86_rdpmc:
       return getReadPerformanceCounter(N, dl, DAG, Subtarget, Results);
+
+    case Intrinsic::x86_xgetbv:
+      return getExtendedControlRegister(N, dl, DAG, Subtarget, Results);
     }
   }
   case ISD::INTRINSIC_WO_CHAIN: {

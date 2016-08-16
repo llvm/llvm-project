@@ -235,51 +235,52 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
   return Error();
 }
 
-Error lto::thinBackend(Config &C, unsigned Task, AddStreamFn AddStream,
-                       Module &M, ModuleSummaryIndex &CombinedIndex,
+Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
+                       Module &Mod, ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, MemoryBufferRef> &ModuleMap) {
-  Expected<const Target *> TOrErr = initAndLookupTarget(C, M);
+  Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
 
   std::unique_ptr<TargetMachine> TM =
-      createTargetMachine(C, M.getTargetTriple(), *TOrErr);
+      createTargetMachine(Conf, Mod.getTargetTriple(), *TOrErr);
 
-  if (C.PreOptModuleHook && !C.PreOptModuleHook(Task, M))
+  if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return Error();
 
-  thinLTOResolveWeakForLinkerModule(M, DefinedGlobals);
+  thinLTOResolveWeakForLinkerModule(Mod, DefinedGlobals);
 
-  renameModuleForThinLTO(M, CombinedIndex);
+  renameModuleForThinLTO(Mod, CombinedIndex);
 
-  if (C.PostPromoteModuleHook && !C.PostPromoteModuleHook(Task, M))
+  if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
     return Error();
 
   if (!DefinedGlobals.empty())
-    thinLTOInternalizeModule(M, DefinedGlobals);
+    thinLTOInternalizeModule(Mod, DefinedGlobals);
 
-  if (C.PostInternalizeModuleHook && !C.PostInternalizeModuleHook(Task, M))
+  if (Conf.PostInternalizeModuleHook &&
+      !Conf.PostInternalizeModuleHook(Task, Mod))
     return Error();
 
   auto ModuleLoader = [&](StringRef Identifier) {
     return std::move(getLazyBitcodeModule(MemoryBuffer::getMemBuffer(
                                               ModuleMap[Identifier], false),
-                                          M.getContext(),
+                                          Mod.getContext(),
                                           /*ShouldLazyLoadMetadata=*/true)
                          .get());
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader);
-  Importer.importFunctions(M, ImportList);
+  Importer.importFunctions(Mod, ImportList);
 
-  if (C.PostImportModuleHook && !C.PostImportModuleHook(Task, M))
+  if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return Error();
 
-  if (!opt(C, TM.get(), Task, M, /*IsThinLto=*/true))
+  if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLto=*/true))
     return Error();
 
-  codegen(C, TM.get(), AddStream, Task, M);
+  codegen(Conf, TM.get(), AddStream, Task, Mod);
   return Error();
 }

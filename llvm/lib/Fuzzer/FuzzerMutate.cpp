@@ -24,8 +24,10 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
   DefaultMutators.insert(
       DefaultMutators.begin(),
       {
-          {&MutationDispatcher::Mutate_EraseByte, "EraseByte"},
+          {&MutationDispatcher::Mutate_EraseBytes, "EraseBytes"},
           {&MutationDispatcher::Mutate_InsertByte, "InsertByte"},
+          {&MutationDispatcher::Mutate_InsertRepeatedBytes,
+           "InsertRepeatedBytes"},
           {&MutationDispatcher::Mutate_ChangeByte, "ChangeByte"},
           {&MutationDispatcher::Mutate_ChangeBit, "ChangeBit"},
           {&MutationDispatcher::Mutate_ShuffleBytes, "ShuffleBytes"},
@@ -103,14 +105,17 @@ size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
   return Size;
 }
 
-size_t MutationDispatcher::Mutate_EraseByte(uint8_t *Data, size_t Size,
-                                            size_t MaxSize) {
+size_t MutationDispatcher::Mutate_EraseBytes(uint8_t *Data, size_t Size,
+                                             size_t MaxSize) {
   assert(Size);
   if (Size == 1) return 0;
-  size_t Idx = Rand(Size);
-  // Erase Data[Idx].
-  memmove(Data + Idx, Data + Idx + 1, Size - Idx - 1);
-  return Size - 1;
+  size_t N = Rand(Size / 2) + 1;
+  assert(N < Size);
+  size_t Idx = Rand(Size - N + 1);
+  // Erase Data[Idx:Idx+N].
+  memmove(Data + Idx, Data + Idx + N, Size - Idx - N);
+  // Printf("Erase: %zd %zd => %zd; Idx %zd\n", N, Size, Size - N, Idx);
+  return Size - N;
 }
 
 size_t MutationDispatcher::Mutate_InsertByte(uint8_t *Data, size_t Size,
@@ -121,6 +126,23 @@ size_t MutationDispatcher::Mutate_InsertByte(uint8_t *Data, size_t Size,
   memmove(Data + Idx + 1, Data + Idx, Size - Idx);
   Data[Idx] = RandCh(Rand);
   return Size + 1;
+}
+
+size_t MutationDispatcher::Mutate_InsertRepeatedBytes(uint8_t *Data,
+                                                      size_t Size,
+                                                      size_t MaxSize) {
+  const size_t kMinBytesToInsert = 3;
+  if (Size + kMinBytesToInsert >= MaxSize) return 0;
+  size_t MaxBytesToInsert = std::min(MaxSize - Size, (size_t)128);
+  size_t N = Rand(MaxBytesToInsert - kMinBytesToInsert + 1) + kMinBytesToInsert;
+  assert(Size + N <= MaxSize && N);
+  size_t Idx = Rand(Size + 1);
+  // Insert new values at Data[Idx].
+  memmove(Data + Idx + N, Data + Idx, Size - Idx);
+  uint8_t Byte = RandCh(Rand);
+  for (size_t i = 0; i < N; i++)
+    Data[Idx + i] = Byte;
+  return Size + N;
 }
 
 size_t MutationDispatcher::Mutate_ChangeByte(uint8_t *Data, size_t Size,

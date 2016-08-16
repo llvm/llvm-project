@@ -578,11 +578,6 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // Offset by 4, and don't encode the low two bits.
     return ((Value - 4) >> 2) & 0xff;
   case ARM::fixup_arm_thumb_cb: {
-    // CB instructions can only branch to offsets in [0, 126] in multiples of 2
-    if (Ctx && ((int64_t)Value < 0 || Value > 0x3e || Value & 1)) {
-      Ctx->reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
     // Offset by 4 and don't encode the lower bit, which is always 0.
     // FIXME: diagnose if no Thumb2
     uint32_t Binary = (Value - 4) >> 1;

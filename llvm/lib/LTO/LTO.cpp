@@ -409,7 +409,7 @@ public:
 
   virtual ~ThinBackendProc() {}
   virtual Error start(unsigned Task, MemoryBufferRef MBRef,
-                      StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+                      const FunctionImporter::ImportMapTy &ImportList,
                       MapVector<StringRef, MemoryBufferRef> &ModuleMap) = 0;
   virtual Error wait() = 0;
 };
@@ -447,7 +447,7 @@ public:
   }
 
   Error start(unsigned Task, MemoryBufferRef MBRef,
-              StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+              const FunctionImporter::ImportMapTy &ImportList,
               MapVector<StringRef, MemoryBufferRef> &ModuleMap) override {
     StringRef ModulePath = MBRef.getBufferIdentifier();
     BackendThreadPool.async(
@@ -466,7 +466,7 @@ public:
               Err = std::move(E);
           }
         },
-        MBRef, std::ref(CombinedIndex), std::ref(ImportLists[ModulePath]),
+        MBRef, std::ref(CombinedIndex), std::ref(ImportList),
         std::ref(ModuleToDefinedGVSummaries[ModulePath]), std::ref(ModuleMap));
     return Error();
   }
@@ -530,7 +530,7 @@ public:
   }
 
   Error start(unsigned Task, MemoryBufferRef MBRef,
-              StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+              const FunctionImporter::ImportMapTy &ImportList,
               MapVector<StringRef, MemoryBufferRef> &ModuleMap) override {
     StringRef ModulePath = MBRef.getBufferIdentifier();
     std::string NewModulePath =
@@ -549,7 +549,7 @@ public:
 
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportLists, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::F_None);
@@ -558,8 +558,8 @@ public:
     WriteIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
     if (ShouldEmitImportsFiles)
-      return errorCodeToError(EmitImportsFiles(
-          ModulePath, NewModulePath + ".imports", ImportLists));
+      return errorCodeToError(
+          EmitImportsFiles(ModulePath, NewModulePath + ".imports", ImportList));
     return Error();
   }
 
@@ -633,7 +633,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream) {
   unsigned Partition = 1;
 
   for (auto &Mod : ThinLTO.ModuleMap) {
-    if (Error E = BackendProc->start(Task, Mod.second, ImportLists,
+    if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
                                      ThinLTO.ModuleMap))
       return E;
 

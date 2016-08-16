@@ -45,7 +45,6 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     // we need to concat together to produce the value.
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
-    assert(!Val.getType()->isAggregateType() && "Not yet implemented");
     unsigned Size = DL->getTypeSizeInBits(Val.getType());
     unsigned VReg = MRI->createGenericVirtualRegister(Size);
     ValReg = VReg;
@@ -139,13 +138,13 @@ bool IRTranslator::translateLoad(const User &U) {
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Res = getOrCreateVReg(LI);
   unsigned Addr = getOrCreateVReg(*LI.getPointerOperand());
-  LLT VTy{*LI.getType()}, PTy{*LI.getPointerOperand()->getType()};
+  LLT VTy{*LI.getType(), DL}, PTy{*LI.getPointerOperand()->getType()};
 
   MIRBuilder.buildLoad(
       VTy, PTy, Res, Addr,
-      *MF.getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
-                               MachineMemOperand::MOLoad,
-                               VTy.getSizeInBits() / 8, getMemOpAlignment(LI)));
+      *MF.getMachineMemOperand(
+          MachinePointerInfo(LI.getPointerOperand()), MachineMemOperand::MOLoad,
+          DL->getTypeStoreSize(LI.getType()), getMemOpAlignment(LI)));
   return true;
 }
 
@@ -156,14 +155,16 @@ bool IRTranslator::translateStore(const User &U) {
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Val = getOrCreateVReg(*SI.getValueOperand());
   unsigned Addr = getOrCreateVReg(*SI.getPointerOperand());
-  LLT VTy{*SI.getValueOperand()->getType()},
+  LLT VTy{*SI.getValueOperand()->getType(), DL},
       PTy{*SI.getPointerOperand()->getType()};
 
   MIRBuilder.buildStore(
       VTy, PTy, Val, Addr,
-      *MF.getMachineMemOperand(MachinePointerInfo(SI.getPointerOperand()),
-                               MachineMemOperand::MOStore,
-                               VTy.getSizeInBits() / 8, getMemOpAlignment(SI)));
+      *MF.getMachineMemOperand(
+          MachinePointerInfo(SI.getPointerOperand()),
+          MachineMemOperand::MOStore,
+          DL->getTypeStoreSize(SI.getValueOperand()->getType()),
+          getMemOpAlignment(SI)));
   return true;
 }
 

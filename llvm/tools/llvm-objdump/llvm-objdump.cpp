@@ -23,6 +23,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -60,6 +61,7 @@
 #include <cstring>
 #include <system_error>
 #include <utility>
+#include <unordered_map>
 
 using namespace llvm;
 using namespace object;
@@ -188,6 +190,20 @@ cl::opt<DIDumpType> llvm::DwarfDumpType(
     cl::values(clEnumValN(DIDT_Frames, "frames", ".debug_frame"),
                clEnumValEnd));
 
+cl::opt<bool> PrintSource(
+    "source",
+    cl::desc(
+        "Display source inlined with disassembly. Implies disassmble object"));
+
+cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
+                           cl::aliasopt(PrintSource));
+
+cl::opt<bool> PrintLines("line-numbers",
+                         cl::desc("Display source line numbers with "
+                                  "disassembly. Implies disassemble object"));
+
+cl::alias PrintLinesShort("l", cl::desc("Alias for -line-numbers"),
+                          cl::aliasopt(PrintLines));
 static StringRef ToolName;
 
 namespace {
@@ -360,13 +376,95 @@ bool llvm::RelocAddressLess(RelocationRef a, RelocationRef b) {
 }
 
 namespace {
+class SourcePrinter {
+protected:
+  DILineInfo OldLineInfo;
+  const ObjectFile *Obj;
+  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
+  // File name to file contents of source
+  std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
+  // Mark the line endings of the cached source
+  std::unordered_map<std::string, std::vector<StringRef>> LineCache;
+
+private:
+  bool cacheSource(std::string File);
+
+public:
+  virtual ~SourcePrinter() {}
+  SourcePrinter() : Obj(nullptr), Symbolizer(nullptr) {}
+  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
+    symbolize::LLVMSymbolizer::Options SymbolizerOpts(
+        DILineInfoSpecifier::FunctionNameKind::None, true, false, false,
+        DefaultArch);
+    Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
+  }
+  virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
+                               StringRef Delimiter = "; ");
+};
+
+bool SourcePrinter::cacheSource(std::string File) {
+  auto BufferOrError = MemoryBuffer::getFile(File);
+  if (!BufferOrError)
+    return false;
+  // Chomp the file to get lines
+  size_t BufferSize = (*BufferOrError)->getBufferSize();
+  const char *BufferStart = (*BufferOrError)->getBufferStart();
+  for (const char *Start = BufferStart, *End = BufferStart;
+       End < BufferStart + BufferSize; End++)
+    if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
+        (*End == '\r' && *(End + 1) == '\n')) {
+      LineCache[File].push_back(StringRef(Start, End - Start));
+      if (*End == '\r')
+        End++;
+      Start = End + 1;
+    }
+  SourceCache[File] = std::move(*BufferOrError);
+  return true;
+}
+
+void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
+                                    StringRef Delimiter) {
+  if (!Symbolizer)
+    return;
+  DILineInfo LineInfo = DILineInfo();
+  auto ExpectecLineInfo =
+      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
+  if (!ExpectecLineInfo)
+    consumeError(ExpectecLineInfo.takeError());
+  else
+    LineInfo = *ExpectecLineInfo;
+
+  if ((LineInfo.FileName == "<invalid>") || OldLineInfo.Line == LineInfo.Line ||
+      LineInfo.Line == 0)
+    return;
+
+  if (PrintLines)
+    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
+  if (PrintSource) {
+    if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
+      if (!cacheSource(LineInfo.FileName))
+        return;
+    auto FileBuffer = SourceCache.find(LineInfo.FileName);
+    if (FileBuffer != SourceCache.end()) {
+      auto LineBuffer = LineCache.find(LineInfo.FileName);
+      if (LineBuffer != LineCache.end())
+        // Vector begins at 0, line numbers are non-zero
+        OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
+           << "\n";
+    }
+  }
+  OldLineInfo = LineInfo;
+}
+
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter(){}
   virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
                          ArrayRef<uint8_t> Bytes, uint64_t Address,
                          raw_ostream &OS, StringRef Annot,
-                         MCSubtargetInfo const &STI) {
+                         MCSubtargetInfo const &STI, SourcePrinter *SP) {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
     OS << format("%8" PRIx64 ":", Address);
     if (!NoShowRawInsn) {
       OS << "\t";
@@ -392,10 +490,9 @@ public:
       OS << format("%08" PRIx32, opcode);
     }
   }
-  void printInst(MCInstPrinter &IP, const MCInst *MI,
-                 ArrayRef<uint8_t> Bytes, uint64_t Address,
-                 raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI) override {
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
     if (!MI) {
       printLead(Bytes, Address, OS);
       OS << " <unknown>";
@@ -440,13 +537,9 @@ HexagonPrettyPrinter HexagonPrettyPrinterInst;
 
 class AMDGCNPrettyPrinter : public PrettyPrinter {
 public:
-  void printInst(MCInstPrinter &IP,
-                 const MCInst *MI,
-                 ArrayRef<uint8_t> Bytes,
-                 uint64_t Address,
-                 raw_ostream &OS,
-                 StringRef Annot,
-                 MCSubtargetInfo const &STI) override {
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
     if (!MI) {
       OS << " <unknown>";
       return;
@@ -989,6 +1082,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   StringRef Fmt = Obj->getBytesInAddress() > 4 ? "\t\t%016" PRIx64 ":  " :
                                                  "\t\t\t%08" PRIx64 ":  ";
 
+  SourcePrinter SP(Obj, TheTarget->getName());
+
   // Create a mapping, RelocSecs = SectionRelocMap[S], where sections
   // in RelocSecs contain the relocations for section S.
   std::error_code EC;
@@ -1211,9 +1306,10 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
                                                    CommentStream);
         if (Size == 0)
           Size = 1;
+
         PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
-                      Bytes.slice(Index, Size),
-                      SectionAddr + Index, outs(), "", *STI);
+                      Bytes.slice(Index, Size), SectionAddr + Index, outs(), "",
+                      *STI, &SP);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1768,7 +1864,7 @@ int main(int argc, char **argv) {
   if (InputFilenames.size() == 0)
     InputFilenames.push_back("a.out");
 
-  if (DisassembleAll)
+  if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;
   if (!Disassemble
       && !Relocations

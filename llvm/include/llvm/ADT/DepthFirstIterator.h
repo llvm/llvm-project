@@ -64,13 +64,9 @@ template <class GraphT,
               llvm::SmallPtrSet<typename GraphTraits<GraphT>::NodeRef, 8>,
           bool ExtStorage = false, class GT = GraphTraits<GraphT>>
 class df_iterator
-    : public std::iterator<std::forward_iterator_tag, typename GT::NodeRef,
-                           ptrdiff_t, typename GT::NodeRef,
-                           typename GT::NodeRef>,
+    : public std::iterator<std::forward_iterator_tag, typename GT::NodeRef>,
       public df_iterator_storage<SetType, ExtStorage> {
-  typedef std::iterator<std::forward_iterator_tag, typename GT::NodeRef,
-                        ptrdiff_t, typename GT::NodeRef, typename GT::NodeRef>
-      super;
+  typedef std::iterator<std::forward_iterator_tag, typename GT::NodeRef> super;
 
   typedef typename GT::NodeRef NodeRef;
   typedef typename GT::ChildIteratorType ChildItTy;
@@ -145,7 +141,7 @@ public:
   }
   bool operator!=(const df_iterator &x) const { return !(*this == x); }
 
-  NodeRef operator*() const { return VisitStack.back().first; }
+  const NodeRef &operator*() const { return VisitStack.back().first; }
 
   // This is a nonstandard operator-> that dereferences the pointer an extra
   // time... so that you can actually call methods ON the Node, because

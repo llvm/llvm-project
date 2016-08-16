@@ -106,7 +106,7 @@ if.then:
 
 if.else:
   store i32 3, i32* %p, align 4
-  %incdec.ptr5 = getelementptr inbounds i32, i32* %p, i32 3
+  %incdec.ptr5 = getelementptr inbounds i32, i32* %p, i32 2
   store i32 5, i32* %incdec.ptr1, align 4
   store i32 6, i32* %incdec.ptr5, align 4
   br label %if.end

@@ -197,9 +197,21 @@ static void foldOperand(MachineOperand &OpToFold, MachineInstr *UseMI,
   const MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
 
   // FIXME: Fold operands with subregs.
-  if (UseOp.isReg() && ((UseOp.getSubReg() && OpToFold.isReg()) ||
-      UseOp.isImplicit())) {
-    return;
+  if (UseOp.isReg() && OpToFold.isReg()) {
+    if (UseOp.isImplicit() || UseOp.getSubReg() != AMDGPU::NoSubRegister)
+      return;
+
+    // Don't fold subregister extracts into tied operands, only if it is a full
+    // copy since a subregister use tied to a full register def doesn't really
+    // make sense. e.g. don't fold:
+    //
+    // %vreg1 = COPY %vreg0:sub1
+    // %vreg2<tied3> = V_MAC_F32 %vreg3, %vreg4, %vreg1<tied0>
+    //
+    //  into
+    // %vreg2<tied3> = V_MAC_F32 %vreg3, %vreg4, %vreg0:sub1<tied0>
+    if (UseOp.isTied() && OpToFold.getSubReg() != AMDGPU::NoSubRegister)
+      return;
   }
 
   bool FoldingImm = OpToFold.isImm();

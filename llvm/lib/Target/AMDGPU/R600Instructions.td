@@ -283,8 +283,8 @@ class EG_CF_RAT <bits <8> cfinst, bits <6> ratinst, bits<4> ratid, bits<4> mask,
 
 }
 
-class VTX_READ <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
-    : InstR600ISA <outs, (ins MEMxi:$src_gpr), !strconcat("  ", name), pattern>,
+class VTX_READ <string name, dag outs, list<dag> pattern>
+    : InstR600ISA <outs, (ins MEMxi:$src_gpr, i8imm:$buffer_id), !strconcat("  ", name, ", #$buffer_id"), pattern>,
       VTX_WORD1_GPR {
 
   // Static fields
@@ -333,9 +333,9 @@ class LoadParamFrag <PatFrag load_type> : PatFrag <
             (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::PARAM_I_ADDRESS); }]
 >;
 
-def load_param : LoadParamFrag<load>;
-def load_param_exti8 : LoadParamFrag<az_extloadi8>;
-def load_param_exti16 : LoadParamFrag<az_extloadi16>;
+def vtx_id3_az_extloadi8 : LoadParamFrag<az_extloadi8>;
+def vtx_id3_az_extloadi16 : LoadParamFrag<az_extloadi16>;
+def vtx_id3_load : LoadParamFrag<load>;
 
 class LoadVtxId1 <PatFrag load> : PatFrag <
   (ops node:$ptr), (load node:$ptr), [{
@@ -1366,8 +1366,8 @@ def CONST_COPY : Instruction {
 } // end usesCustomInserter = 1, isCodeGenOnly = 1, isPseudo = 1, Namespace = "AMDGPU"
 
 def TEX_VTX_CONSTBUF :
-  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$BUFFER_ID), "VTX_READ_eg $dst, $ptr",
-      [(set v4i32:$dst, (CONST_ADDRESS ADDRGA_VAR_OFFSET:$ptr, (i32 imm:$BUFFER_ID)))]>,
+  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$buffer_id), "VTX_READ_eg $dst, $ptr",
+      [(set v4i32:$dst, (CONST_ADDRESS ADDRGA_VAR_OFFSET:$ptr, (i32 imm:$buffer_id)))]>,
   VTX_WORD1_GPR, VTX_WORD0_eg {
 
   let VC_INST = 0;
@@ -1420,7 +1420,7 @@ def TEX_VTX_CONSTBUF :
 }
 
 def TEX_VTX_TEXBUF:
-  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$BUFFER_ID), "TEX_VTX_EXPLICIT_READ $dst, $ptr">,
+  InstR600ISA <(outs R600_Reg128:$dst), (ins MEMxi:$ptr, i32imm:$buffer_id), "TEX_VTX_EXPLICIT_READ $dst, $ptr">,
 VTX_WORD1_GPR, VTX_WORD0_eg {
 
 let VC_INST = 0;

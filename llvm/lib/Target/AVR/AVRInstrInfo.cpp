@@ -439,8 +439,8 @@ bool AVRInstrInfo::ReverseBranchCondition(
   return false;
 }
 
-unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr *MI) const {
-  unsigned Opcode = MI->getOpcode();
+unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
 
   switch (Opcode) {
   // A regular instruction
@@ -454,10 +454,10 @@ unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr *MI) const {
   case TargetOpcode::DBG_VALUE:
     return 0;
   case TargetOpcode::INLINEASM: {
-    const MachineFunction *MF = MI->getParent()->getParent();
+    const MachineFunction *MF = MI.getParent()->getParent();
     const AVRTargetMachine &TM = static_cast<const AVRTargetMachine&>(MF->getTarget());
     const TargetInstrInfo &TII = *TM.getSubtargetImpl()->getInstrInfo();
-    return TII.getInlineAsmLength(MI->getOperand(0).getSymbolName(),
+    return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
                                   *TM.getMCAsmInfo());
   }
   }

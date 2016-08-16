@@ -370,6 +370,11 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm, raw_ostream &O) {
 void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
 
+  if (OpNo >= MI->getNumOperands()) {
+    O << "/*Missing OP" << OpNo << "*/";
+    return;
+  }
+
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     switch (Op.getReg()) {
