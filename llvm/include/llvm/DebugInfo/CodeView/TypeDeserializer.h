@@ -15,9 +15,9 @@
 
 namespace llvm {
 namespace codeview {
-class TypeDeserializer : public TypeVisitorCallbacks {
+class TypeDeserializerBase : public TypeVisitorCallbacks {
 public:
-  explicit TypeDeserializer(TypeVisitorCallbacks &Recipient)
+  explicit TypeDeserializerBase(TypeVisitorCallbacks &Recipient)
       : Recipient(Recipient) {}
 
   Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override {
@@ -61,6 +61,39 @@ private:
       return EC;
     return Recipient.visitKnownRecord(CVR, Record);
   }
+};
+
+class TypeDeserializer : public TypeDeserializerBase {
+public:
+  explicit TypeDeserializer(TypeVisitorCallbacks &Recipient)
+      : TypeDeserializerBase(Recipient) {}
+
+  /// FieldList records need special handling.  For starters, they do not
+  /// describe their own length, so a different extraction algorithm is
+  /// necessary.  Secondly, a single FieldList record will result in the
+  /// deserialization of many records.  So even though the top level visitor
+  /// calls visitFieldBegin() on a single record, multiple records get visited
+  /// through the callback interface.
+  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+                         FieldListRecord &Record) override;
+
+private:
+  template <typename T>
+  Error visitKnownMember(ArrayRef<uint8_t> &Data, TypeLeafKind Kind,
+                         T &Record) {
+    ArrayRef<uint8_t> OldData = Data;
+    if (auto EC = deserializeRecord(Data, Kind, Record))
+      return EC;
+    assert(Data.size() < OldData.size());
+
+    CVRecord<TypeLeafKind> CVR;
+    CVR.Length = OldData.size() - Data.size();
+    CVR.Data = OldData.slice(0, CVR.Length);
+    CVR.RawData = CVR.Data;
+    return Recipient.visitKnownRecord(CVR, Record);
+  }
+
+  Error skipPadding(ArrayRef<uint8_t> &Data);
 };
 }
 }

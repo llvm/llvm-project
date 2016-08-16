@@ -10,7 +10,6 @@ add_llvm_tool(llvm-pdbdump
   llvm-pdbdump.cpp
   BuiltinDumper.cpp
   ClassDefinitionDumper.cpp
-  CodeViewYaml.cpp
   CompilandDumper.cpp
   EnumDumper.cpp
   ExternalSymbolDumper.cpp

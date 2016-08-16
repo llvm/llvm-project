@@ -31,7 +31,6 @@ private:
   Error dumpStreamDirectory();
   Error dumpPDBStream();
   Error dumpDbiStream();
-  Error dumpTpiStream();
 
   void flush();
 
