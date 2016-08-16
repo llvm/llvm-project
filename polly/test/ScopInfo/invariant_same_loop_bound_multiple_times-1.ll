@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
 ;
 ; Verify that we only have one parameter and one invariant load for all
 ; three loads that occure in the region but actually access the same

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -tbaa -polly-scops -polly-ignore-aliasing \
+; RUN: opt %loadPolly -tbaa -polly-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing \
 ; RUN:                -analyze < %s | FileCheck %s
 ;
 ; Note: The order of the invariant accesses is important because A is the

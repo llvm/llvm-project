@@ -116,14 +116,14 @@ private:
 
   void addUSRsOfOverridenFunctions(const CXXMethodDecl *MethodDecl) {
     USRSet.insert(getUSRForDecl(MethodDecl));
-    for (auto &OverriddenMethod : MethodDecl->overridden_methods()) {
+    for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
       // Recursively visit each OverridenMethod.
       addUSRsOfOverridenFunctions(OverriddenMethod);
     }
   }
 
   bool checkIfOverriddenFunctionAscends(const CXXMethodDecl *MethodDecl) {
-    for (auto &OverriddenMethod : MethodDecl->overridden_methods()) {
+    for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
       if (USRSet.find(getUSRForDecl(OverriddenMethod)) != USRSet.end()) {
         return true;
       }
@@ -143,10 +143,11 @@ private:
 
 struct NamedDeclFindingConsumer : public ASTConsumer {
   void HandleTranslationUnit(ASTContext &Context) override {
-    const auto &SourceMgr = Context.getSourceManager();
+    const SourceManager &SourceMgr = Context.getSourceManager();
     // The file we look for the USR in will always be the main source file.
-    const auto Point = SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
-                           .getLocWithOffset(SymbolOffset);
+    const SourceLocation Point =
+        SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
+            .getLocWithOffset(SymbolOffset);
     if (!Point.isValid())
       return;
     const NamedDecl *FoundDecl = nullptr;

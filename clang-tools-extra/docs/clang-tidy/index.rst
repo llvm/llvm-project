@@ -50,25 +50,24 @@ enabled by this value.
 
 There are currently the following groups of checks:
 
-* Checks related to the LLVM coding conventions have names starting with
-  ``llvm-``.
+====================== =========================================================
+Name prefix            Description
+====================== =========================================================
+``boost-``             Checks related to Boost library.
+``cert-``              Checks related to CERT Secure Coding Guidelines.
+``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
+``clang-analyzer-``    Clang Static Analyzer checks.
+``google-``            Checks related to the Google coding conventions.
+``llvm-``              Checks related to the LLVM coding conventions.
+``misc-``              Checks that we didn't have a better category for.
+``modernize-``         Checks that advocate usage of modern (currently "modern"
+                       means "C++11") language constructs.
+``mpi-``               Checks related to MPI (Message Passing Interface).
+``performance-``       Checks that target performance-related issues.
+``readability-``       Checks that target readability-related issues that don't
+                       relate to any particular coding style.
+====================== =========================================================
 
-* Checks related to the Google coding conventions have names starting with
-  ``google-``.
-
-* Checks named ``modernize-*`` advocate the usage of modern (currently "modern"
-  means "C++11") language constructs.
-
-* The ``readability-`` checks target readability-related issues that don't
-  relate to any particular coding style.
-
-* Checks with names starting with ``misc-`` the checks that we didn't have a
-  better category for.
-
-* Clang static analyzer checks are named starting with ``clang-analyzer-``.
-
-* Checks related to Boost library starts with ``boost-``. 
-  
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by clang-tidy and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect

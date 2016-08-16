@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ;    int U;
 ;    void f(int *A) {

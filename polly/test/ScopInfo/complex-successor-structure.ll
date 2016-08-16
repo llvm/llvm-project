@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
+; RUN: -polly-invariant-load-hoisting=true \
 ; RUN:     < %s 2>&1 | FileCheck %s
 
 ; We build a scop from the region for.body->B13. The CFG is of the

@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; CHECK:      entry:
 ; CHECK-NEXT:   %outvalue.141.phiops = alloca i64

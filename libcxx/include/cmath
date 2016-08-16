@@ -331,7 +331,6 @@ using ::double_t;
 using ::abs;
 #endif
 
-#ifndef __sun__
 using ::acos;
 using ::acosf;
 using ::asin;
@@ -346,54 +345,44 @@ using ::cos;
 using ::cosf;
 using ::cosh;
 using ::coshf;
-#endif // __sun__
 
 using ::exp;
 using ::expf;
 
-#ifndef __sun__
 using ::fabs;
 using ::fabsf;
 using ::floor;
 using ::floorf;
-#endif //__sun__
 
 using ::fmod;
 using ::fmodf;
 
-#ifndef __sun__
 using ::frexp;
 using ::frexpf;
 using ::ldexp;
 using ::ldexpf;
-#endif // __sun__
 
 using ::log;
 using ::logf;
 
-#ifndef __sun__
 using ::log10;
 using ::log10f;
 using ::modf;
 using ::modff;
-#endif // __sun__ 
 
 using ::pow;
 using ::powf;
 
-#ifndef __sun__
 using ::sin;
 using ::sinf;
 using ::sinh;
 using ::sinhf;
-#endif // __sun__
 
 using ::sqrt;
 using ::sqrtf;
 using ::tan;
 using ::tanf;
 
-#ifndef __sun__
 using ::tanh;
 using ::tanhf;
 
@@ -449,14 +438,12 @@ using ::lrintf;
 using ::lround;
 using ::lroundf;
 #endif // _LIBCPP_MSVCRT
-#endif // __sun__
 
 #ifndef _LIBCPP_MSVCRT
 using ::nan;
 using ::nanf;
 #endif // _LIBCPP_MSVCRT
 
-#ifndef __sun__
 #ifndef _LIBCPP_MSVCRT
 using ::nearbyint;
 using ::nearbyintf;
@@ -546,11 +533,6 @@ using ::scalbnl;
 using ::tgammal;
 using ::truncl;
 #endif // !_LIBCPP_MSVCRT
-
-#else 
-using ::lgamma;
-using ::lgammaf;
-#endif // __sun__
 
 #if _LIBCPP_STD_VER > 14
 inline _LIBCPP_INLINE_VISIBILITY float       hypot(       float x,       float y,       float z ) { return sqrt(x*x + y*y + z*z); }

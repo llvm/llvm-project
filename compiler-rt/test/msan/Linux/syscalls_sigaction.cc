@@ -3,6 +3,8 @@
 // RUN: %clangxx_msan -DPRE3 -O0 %s -o %t && not %run %t 2>&1
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t 2>&1
 
+// XFAIL: target-is-mips64el                                                      
+
 #include <assert.h>
 #include <signal.h>
 #include <string.h>
