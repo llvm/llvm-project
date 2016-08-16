@@ -370,9 +370,15 @@ enum AtomicOrderingCodes {
 };
 
 /// Encoded SynchronizationScope values.
-enum AtomicSynchScopeCodes {
+enum AtomicSynchScopeCodes : unsigned {
+  /// Encoded value for SingleThread synchronization scope.
   SYNCHSCOPE_SINGLETHREAD = 0,
-  SYNCHSCOPE_CROSSTHREAD = 1
+
+  /// Encoded value for CrossThread synchronization scope.
+  SYNCHSCOPE_CROSSTHREAD = 1,
+
+  /// First encoded value for target specific synchronization scope.
+  SYNCHSCOPE_FIRSTTARGETSPECIFIC = 2
 };
 
 /// Markers and flags for call instruction.

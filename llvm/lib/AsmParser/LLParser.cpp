@@ -1868,8 +1868,10 @@ bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
 }
 
 /// ParseScopeAndOrdering
-///   if isAtomic: ::= 'singlethread'? AtomicOrdering
-///   else: ::=
+///   if isAtomic:
+///     ::= 'singlethread' or 'synchscope' '(' uint32 ')'? AtomicOrdering
+///   else
+///     ::=
 ///
 /// This sets Scope and Ordering to the parsed values.
 bool LLParser::ParseScopeAndOrdering(bool isAtomic, SynchronizationScope &Scope,
@@ -1877,11 +1879,41 @@ bool LLParser::ParseScopeAndOrdering(bool isAtomic, SynchronizationScope &Scope,
   if (!isAtomic)
     return false;
 
+  return ParseScope(Scope) || ParseOrdering(Ordering);
+}
+
+/// ParseScope
+///   ::= /* empty */
+///   ::= 'singlethread'
+///   ::= 'synchscope' '(' uint32 ')'
+///
+/// This sets Scope to the parsed value.
+bool LLParser::ParseScope(SynchronizationScope &Scope) {
+  if (EatIfPresent(lltok::kw_synchscope)) {
+    auto StartParen = Lex.getLoc();
+    if (!EatIfPresent(lltok::lparen))
+      return Error(StartParen, "expected '(' in synchscope");
+
+    unsigned ScopeU32 = 0;
+    auto ScopeU32At = Lex.getLoc();
+    if (ParseUInt32(ScopeU32))
+      return true;
+    if (ScopeU32 < SynchronizationScopeFirstTargetSpecific)
+      return Error(ScopeU32At, "invalid target specific synchronization scope");
+
+    auto EndParen = Lex.getLoc();
+    if (!EatIfPresent(lltok::rparen))
+      return Error(EndParen, "expected ')' in synchscope");
+
+    Scope = SynchronizationScope(ScopeU32);
+    return false;
+  }
+
   Scope = CrossThread;
   if (EatIfPresent(lltok::kw_singlethread))
     Scope = SingleThread;
 
-  return ParseOrdering(Ordering);
+  return false;
 }
 
 /// ParseOrdering

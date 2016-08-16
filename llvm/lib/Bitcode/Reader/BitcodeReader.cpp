@@ -860,6 +860,10 @@ static AtomicOrdering getDecodedOrdering(unsigned Val) {
 }
 
 static SynchronizationScope getDecodedSynchScope(unsigned Val) {
+  if (Val >= bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC)
+    return SynchronizationScope(SynchronizationScopeFirstTargetSpecific +
+      (Val - bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC));
+
   switch (Val) {
   case bitc::SYNCHSCOPE_SINGLETHREAD: return SingleThread;
   default: // Map unknown scopes to cross-thread.
