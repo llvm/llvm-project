@@ -353,4 +353,54 @@ bool DescribeAddressIfStack(uptr addr, uptr access_size) {
   return true;
 }
 
+// Global descriptions
+static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
+                                            const __asan_global &g) {
+  InternalScopedString str(4096);
+  Decorator d;
+  str.append("%s", d.Location());
+  if (addr < g.beg) {
+    str.append("%p is located %zd bytes to the left", (void *)addr,
+               g.beg - addr);
+  } else if (addr + access_size > g.beg + g.size) {
+    if (addr < g.beg + g.size) addr = g.beg + g.size;
+    str.append("%p is located %zd bytes to the right", (void *)addr,
+               addr - (g.beg + g.size));
+  } else {
+    // Can it happen?
+    str.append("%p is located %zd bytes inside", (void *)addr, addr - g.beg);
+  }
+  str.append(" of global variable '%s' defined in '",
+             MaybeDemangleGlobalName(g.name));
+  PrintGlobalLocation(&str, g);
+  str.append("' (0x%zx) of size %zu\n", g.beg, g.size);
+  str.append("%s", d.EndLocation());
+  PrintGlobalNameIfASCII(&str, g);
+  Printf("%s", str.data());
+}
+
+bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr) {
+  descr->addr = addr;
+  int globals_num = GetGlobalsForAddress(addr, descr->globals, descr->reg_sites,
+                                         ARRAY_SIZE(descr->globals));
+  descr->size = globals_num;
+  return globals_num != 0;
+}
+
+bool DescribeAddressIfGlobal(uptr addr, uptr access_size,
+                             const char *bug_type) {
+  GlobalAddressDescription descr;
+  if (!GetGlobalAddressInformation(addr, &descr)) return false;
+
+  for (int i = 0; i < descr.size; i++) {
+    DescribeAddressRelativeToGlobal(descr.addr, access_size, descr.globals[i]);
+    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
+        descr.reg_sites[i]) {
+      Printf("  registered at:\n");
+      StackDepotGet(descr.reg_sites[i]).Print();
+    }
+  }
+  return true;
+}
+
 }  // namespace __asan

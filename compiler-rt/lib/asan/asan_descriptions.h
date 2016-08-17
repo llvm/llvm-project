@@ -132,4 +132,16 @@ struct StackAddressDescription {
 bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr);
 bool DescribeAddressIfStack(uptr addr, uptr access_size);
 
+struct GlobalAddressDescription {
+  uptr addr;
+  // Assume address is close to at most four globals.
+  static const int kMaxGlobals = 4;
+  __asan_global globals[kMaxGlobals];
+  u32 reg_sites[kMaxGlobals];
+  u8 size;
+};
+
+bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr);
+bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
+
 }  // namespace __asan
