@@ -41,5 +41,14 @@ int main()
     assert(m.key_comp() == C(4));
     assert(m.get_allocator() == A());
     }
+    {
+    typedef test_compare<std::less<int> > C;
+    typedef explicit_allocator<std::pair<const int, double> > A;
+    std::map<int, double, C, A> m(C(4), A{});
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.key_comp() == C(4));
+    assert(m.get_allocator() == A{});
+    }
 #endif
 }

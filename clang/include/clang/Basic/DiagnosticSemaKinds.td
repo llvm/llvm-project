@@ -2661,8 +2661,20 @@ def warn_availability_swift_unavailable_deprecated_only : Warning<
 def note_protocol_method : Note<
   "protocol method is here">;
 
-def warn_available_using_star_case : Warning<
-  "using '*' case here, platform %0 is not accounted for">, InGroup<UnguardedAvailability>;
+def warn_unguarded_availability :
+  Warning<"%0 is only available on %1 %2 or newer">,
+  InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_availability : Warning<"%0 is only available conditionally">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def note_partial_availability_silence : Note<
+  "explicitly redeclare %0 to silence this warning">;
+def note_unguarded_available_silence : Note<
+  "enclose %0 in an @available check to silence this warning">;
+def warn_partial_message : Warning<"%0 is partial: %1">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_fwdclass_message : Warning<
+    "%0 may be partial because the receiver type is unknown">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
 
 // Thread Safety Attributes
 def warn_invalid_capability_name : Warning<
@@ -4349,15 +4361,6 @@ def err_not_found_by_two_phase_lookup : Error<"call to function %0 that is neith
 def note_not_found_by_two_phase_lookup : Note<"%0 should be declared prior to the "
     "call site%select{| or in %2| or in an associated namespace of one of its arguments}1">;
 def err_undeclared_use : Error<"use of undeclared %0">;
-def warn_partial_availability : Warning<"%0 is only available conditionally">,
-    InGroup<PartialAvailability>, DefaultIgnore;
-def note_partial_availability_silence : Note<
-  "explicitly redeclare %0 to silence this warning">;
-def warn_partial_message : Warning<"%0 is partial: %1">,
-    InGroup<PartialAvailability>, DefaultIgnore;
-def warn_partial_fwdclass_message : Warning<
-    "%0 may be partial because the receiver type is unknown">,
-    InGroup<PartialAvailability>, DefaultIgnore;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
 def warn_property_method_deprecated :
@@ -4808,6 +4811,8 @@ def note_protected_by_vla_type_alias : Note<
   "jump bypasses initialization of VLA type alias">;
 def note_protected_by_constexpr_if : Note<
   "jump enters controlled statement of constexpr if">;
+def note_protected_by_if_available : Note<
+  "jump enters controlled statement of if available">;
 def note_protected_by_vla : Note<
   "jump bypasses initialization of variable length array">;
 def note_protected_by_objc_try : Note<

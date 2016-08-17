@@ -1,4 +1,4 @@
-//===-- StreamExecutor.h - The StreamExecutor class -------------*- C++ -*-===//
+//===-- Executor.h - The Executor class -------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,22 +8,27 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// The StreamExecutor class which represents a single device of a specific
-/// platform.
+/// The Executor class which represents a single device of a specific platform.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef STREAMEXECUTOR_STREAMEXECUTOR_H
-#define STREAMEXECUTOR_STREAMEXECUTOR_H
+#ifndef STREAMEXECUTOR_EXECUTOR_H
+#define STREAMEXECUTOR_EXECUTOR_H
 
+#include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 
 class KernelInterface;
+class PlatformExecutor;
+class Stream;
 
-class StreamExecutor {
+class Executor {
 public:
+  explicit Executor(PlatformExecutor *PExecutor);
+  virtual ~Executor();
+
   /// Gets the kernel implementation for the underlying platform.
   virtual Expected<std::unique_ptr<KernelInterface>>
   getKernelImplementation(const MultiKernelLoaderSpec &Spec) {
@@ -31,9 +36,12 @@ public:
     return nullptr;
   }
 
-  // TODO(jhen): Add other methods.
+  Expected<std::unique_ptr<Stream>> createStream();
+
+private:
+  PlatformExecutor *PExecutor;
 };
 
 } // namespace streamexecutor
 
-#endif // STREAMEXECUTOR_STREAMEXECUTOR_H
+#endif // STREAMEXECUTOR_EXECUTOR_H

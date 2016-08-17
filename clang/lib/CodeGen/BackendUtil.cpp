@@ -42,6 +42,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -318,9 +319,9 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     // Respect always_inline.
     if (OptLevel == 0)
       // Do not insert lifetime intrinsics at -O0.
-      PMBuilder.Inliner = createAlwaysInlinerPass(false);
+      PMBuilder.Inliner = createAlwaysInlinerLegacyPass(false);
     else
-      PMBuilder.Inliner = createAlwaysInlinerPass();
+      PMBuilder.Inliner = createAlwaysInlinerLegacyPass();
     break;
   }
 
@@ -723,6 +724,20 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   }
 }
 
+namespace {
+// Wrapper prodiving a stream for the ThinLTO backend.
+class ThinLTOOutputWrapper : public lto::NativeObjectOutput {
+  std::unique_ptr<raw_pwrite_stream> OS;
+
+public:
+  ThinLTOOutputWrapper(std::unique_ptr<raw_pwrite_stream> OS)
+      : OS(std::move(OS)) {}
+  std::unique_ptr<raw_pwrite_stream> getStream() override {
+    return std::move(OS);
+  }
+};
+}
+
 static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
                               std::unique_ptr<raw_pwrite_stream> OS) {
   // If we are performing a ThinLTO importing compile, load the function index
@@ -739,8 +754,6 @@ static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
     return;
   }
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex = std::move(*IndexOrErr);
-
-  auto AddStream = [&](size_t Task) { return std::move(OS); };
 
   StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
@@ -766,10 +779,12 @@ static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
     ModuleMap[I.first()] = (*MBOrErr)->getMemBufferRef();
     OwnedImports.push_back(std::move(*MBOrErr));
   }
-
+  auto AddOutput = [&](size_t Task) {
+    return llvm::make_unique<ThinLTOOutputWrapper>(std::move(OS));
+  };
   lto::Config Conf;
   if (Error E = thinBackend(
-          Conf, 0, AddStream, *M, *CombinedIndex, ImportList,
+          Conf, 0, AddOutput, *M, *CombinedIndex, ImportList,
           ModuleToDefinedGVSummaries[M->getModuleIdentifier()], ModuleMap)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';

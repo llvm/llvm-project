@@ -66,5 +66,9 @@ int main()
     test0<std::vector<bool, min_allocator<bool>> >();
     test1<std::vector<bool, min_allocator<bool> > >(min_allocator<bool>());
     }
+    {
+    test0<std::vector<bool, explicit_allocator<bool>> >();
+    test1<std::vector<bool, explicit_allocator<bool> > >(explicit_allocator<bool>());
+    }
 #endif
 }

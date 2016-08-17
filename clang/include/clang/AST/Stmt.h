@@ -933,6 +933,8 @@ public:
   bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
   void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
 
+  bool isObjCAvailabilityCheck() const;
+
   SourceLocation getLocStart() const LLVM_READONLY { return IfLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {
     if (SubExprs[ELSE])

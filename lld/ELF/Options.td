@@ -262,7 +262,7 @@ def rpath_link_eq: J<"rpath-link=">;
 def sort_common: F<"sort-common">;
 def warn_execstack: F<"warn-execstack">;
 def warn_shared_textrel: F<"warn-shared-textrel">;
-def G: Separate<["-"], "G">;
+def G: JoinedOrSeparate<["-"], "G">;
 
 // Aliases for ignored options
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;

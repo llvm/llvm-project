@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // RUN: mkdir -p %T/foo/bar
 // RUN: cp %p/Inputs/fake_yaml_db.yaml %T/find_all_symbols_db.yaml
 // RUN: cd %T/foo

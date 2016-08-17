@@ -299,6 +299,22 @@ bool isAllowedConditionalCast(const ImplicitCastExpr *CastExpression,
 
 } // anonymous namespace
 
+ImplicitBoolCastCheck::ImplicitBoolCastCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowConditionalIntegerCasts(
+          Options.get("AllowConditionalIntegerCasts", false)),
+      AllowConditionalPointerCasts(
+          Options.get("AllowConditionalPointerCasts", false)) {}
+
+void ImplicitBoolCastCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowConditionalIntegerCasts",
+                AllowConditionalIntegerCasts);
+  Options.store(Opts, "AllowConditionalPointerCasts",
+                AllowConditionalPointerCasts);
+}
+
 void ImplicitBoolCastCheck::registerMatchers(MatchFinder *Finder) {
   // This check doesn't make much sense if we run it on language without
   // built-in bool support.

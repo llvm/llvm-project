@@ -1138,8 +1138,10 @@ Expr ScriptParser::readExpr1(Expr Lhs, int MinPrec) {
 }
 
 uint64_t static getConstant(StringRef S) {
-  if (S == "COMMONPAGESIZE" || S == "MAXPAGESIZE")
+  if (S == "COMMONPAGESIZE")
     return Target->PageSize;
+  if (S == "MAXPAGESIZE")
+    return Target->MaxPageSize;
   error("unknown constant: " + S);
   return 0;
 }

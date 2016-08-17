@@ -74,7 +74,8 @@
 
 // Verify that C++ include paths are passed for both host and device frontends.
 // RUN: %clang -### -no-canonical-prefixes -target x86_64-linux-gnu %s \
-// RUN: --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 2>&1 \
+// RUN: --stdlib=libstdc++ --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
+// RUN: --gcc-toolchain="" 2>&1 \
 // RUN: | FileCheck %s --check-prefix CHECK-CXXINCLUDE
 
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA/usr/local/cuda

@@ -873,7 +873,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     explicit map(const key_compare& __comp, const allocator_type& __a)
-        : __tree_(__vc(__comp), __a) {}
+        : __tree_(__vc(__comp), typename __base::allocator_type(__a)) {}
 
     template <class _InputIterator>
     _LIBCPP_INLINE_VISIBILITY
@@ -888,7 +888,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
         map(_InputIterator __f, _InputIterator __l,
             const key_compare& __comp, const allocator_type& __a)
-        : __tree_(__vc(__comp), __a)
+        : __tree_(__vc(__comp), typename __base::allocator_type(__a))
         {
             insert(__f, __l);
         }
@@ -955,7 +955,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     map(initializer_list<value_type> __il, const key_compare& __comp, const allocator_type& __a)
-        : __tree_(__vc(__comp), __a)
+        : __tree_(__vc(__comp), typename __base::allocator_type(__a))
         {
             insert(__il.begin(), __il.end());
         }
@@ -977,13 +977,13 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     explicit map(const allocator_type& __a)
-        : __tree_(__a)
+        : __tree_(typename __base::allocator_type(__a))
         {
         }
 
     _LIBCPP_INLINE_VISIBILITY
     map(const map& __m, const allocator_type& __a)
-        : __tree_(__m.__tree_.value_comp(), __a)
+        : __tree_(__m.__tree_.value_comp(), typename __base::allocator_type(__a))
         {
             insert(__m.begin(), __m.end());
         }
@@ -1034,7 +1034,7 @@ public:
     const mapped_type& at(const key_type& __k) const;
 
     _LIBCPP_INLINE_VISIBILITY
-    allocator_type get_allocator() const _NOEXCEPT {return __tree_.__alloc();}
+    allocator_type get_allocator() const _NOEXCEPT {return allocator_type(__tree_.__alloc());}
     _LIBCPP_INLINE_VISIBILITY
     key_compare    key_comp()      const {return __tree_.value_comp().key_comp();}
     _LIBCPP_INLINE_VISIBILITY
@@ -1367,7 +1367,7 @@ map<_Key, _Tp, _Compare, _Allocator>::__find_equal_key(__node_base_pointer& __pa
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
-    : __tree_(_VSTD::move(__m.__tree_), __a)
+    : __tree_(_VSTD::move(__m.__tree_), typename __base::allocator_type(__a))
 {
     if (__a != __m.get_allocator())
     {
@@ -1599,7 +1599,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     explicit multimap(const key_compare& __comp, const allocator_type& __a)
-        : __tree_(__vc(__comp), __a) {}
+        : __tree_(__vc(__comp), typename __base::allocator_type(__a)) {}
 
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
@@ -1614,7 +1614,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         multimap(_InputIterator __f, _InputIterator __l,
             const key_compare& __comp, const allocator_type& __a)
-        : __tree_(__vc(__comp), __a)
+        : __tree_(__vc(__comp), typename __base::allocator_type(__a))
         {
             insert(__f, __l);
         }
@@ -1682,7 +1682,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     multimap(initializer_list<value_type> __il, const key_compare& __comp, const allocator_type& __a)
-        : __tree_(__vc(__comp), __a)
+        : __tree_(__vc(__comp), typename __base::allocator_type(__a))
         {
             insert(__il.begin(), __il.end());
         }
@@ -1704,13 +1704,13 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     explicit multimap(const allocator_type& __a)
-        : __tree_(__a)
+        : __tree_(typename __base::allocator_type(__a))
         {
         }
 
     _LIBCPP_INLINE_VISIBILITY
     multimap(const multimap& __m, const allocator_type& __a)
-        : __tree_(__m.__tree_.value_comp(), __a)
+        : __tree_(__m.__tree_.value_comp(), typename __base::allocator_type(__a))
         {
             insert(__m.begin(), __m.end());
         }
@@ -1752,7 +1752,7 @@ public:
     size_type max_size() const _NOEXCEPT {return __tree_.max_size();}
 
     _LIBCPP_INLINE_VISIBILITY
-    allocator_type get_allocator() const _NOEXCEPT {return __tree_.__alloc();}
+    allocator_type get_allocator() const _NOEXCEPT {return allocator_type(__tree_.__alloc());}
     _LIBCPP_INLINE_VISIBILITY
     key_compare    key_comp() const {return __tree_.value_comp().key_comp();}
     _LIBCPP_INLINE_VISIBILITY
@@ -1923,7 +1923,7 @@ private:
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const allocator_type& __a)
-    : __tree_(_VSTD::move(__m.__tree_), __a)
+    : __tree_(_VSTD::move(__m.__tree_), typename __base::allocator_type(__a))
 {
     if (__a != __m.get_allocator())
     {

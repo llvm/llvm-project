@@ -62,6 +62,7 @@ public:
 
   unsigned TlsGdRelaxSkip = 1;
   unsigned PageSize = 4096;
+  unsigned MaxPageSize = 4096;
 
   // On freebsd x86_64 the first page cannot be mmaped.
   // On linux that is controled by vm.mmap_min_addr. At least on some x86_64

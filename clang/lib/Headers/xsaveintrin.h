@@ -28,8 +28,6 @@
 #ifndef __XSAVEINTRIN_H
 #define __XSAVEINTRIN_H
 
-#define _XCR_XFEATURE_ENABLED_MASK 0
-
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__,  __target__("xsave")))
 
@@ -43,16 +41,6 @@ _xrstor(void *__p, unsigned long long __m) {
   return __builtin_ia32_xrstor(__p, __m);
 }
 
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-_xgetbv(unsigned int __a) {
-  return  __builtin_ia32_xgetbv(__a);
-}
-
-static __inline__ void __DEFAULT_FN_ATTRS
-_xsetbv(unsigned int __a, unsigned long long __b) {
-  __builtin_ia32_xsetbv(__a, __b);
-}
-
 #ifdef __x86_64__
 static __inline__ void __DEFAULT_FN_ATTRS
 _xsave64(void *__p, unsigned long long __m) {
@@ -63,7 +51,6 @@ static __inline__ void __DEFAULT_FN_ATTRS
 _xrstor64(void *__p, unsigned long long __m) {
   return __builtin_ia32_xrstor64(__p, __m);
 }
-
 #endif
 
 #undef __DEFAULT_FN_ATTRS

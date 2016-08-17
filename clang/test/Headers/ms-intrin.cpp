@@ -50,6 +50,7 @@ void f() {
   int info[4];
   __cpuid(info, 0);
   __cpuidex(info, 0, 0);
+  _xgetbv(0);
   __halt();
   __readmsr(0);
 

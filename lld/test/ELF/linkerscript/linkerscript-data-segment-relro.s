@@ -31,7 +31,7 @@
 # CHECK-NEXT:      SHF_ALLOC
 # CHECK-NEXT:      SHF_WRITE
 # CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x10F0
+# CHECK-NEXT:    Address: 0x2000F0
 # CHECK-NEXT:    Offset: 0x10F0
 # CHECK-NEXT:    Size:
 # CHECK-NEXT:    Link:
@@ -47,7 +47,7 @@
 # CHECK-NEXT:      SHF_ALLOC
 # CHECK-NEXT:      SHF_WRITE
 # CHECK-NEXT:    ]
-# CHECK-NEXT:    Address: 0x2000
+# CHECK-NEXT:    Address: 0x201000
 # CHECK-NEXT:    Offset: 0x2000
 # CHECK-NEXT:    Size:
 # CHECK-NEXT:    Link:
