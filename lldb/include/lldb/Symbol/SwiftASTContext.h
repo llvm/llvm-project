@@ -51,7 +51,7 @@ namespace lldb_private {
     
 class SwiftASTContext : public TypeSystem {
 public:
-    typedef lldb_utility::Either<CompilerType, swift::ValueDecl*> TypeOrDecl;
+    typedef lldb_utility::Either<CompilerType, swift::Decl*> TypeOrDecl;
     
 private:
     struct EitherComparator
@@ -61,10 +61,10 @@ private:
                      const TypeOrDecl& r2)
         {
             auto r1_as1 = r1.GetAs<CompilerType>();
-            auto r1_as2 = r1.GetAs<swift::ValueDecl*>();
+            auto r1_as2 = r1.GetAs<swift::Decl*>();
             
             auto r2_as1 = r2.GetAs<CompilerType>();
-            auto r2_as2 = r2.GetAs<swift::ValueDecl*>();
+            auto r2_as2 = r2.GetAs<swift::Decl*>();
             
             if (r1_as1.hasValue() && r2_as1.hasValue())
                 return r1_as1.getValue() < r2_as1.getValue();

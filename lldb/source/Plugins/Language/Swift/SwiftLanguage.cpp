@@ -817,7 +817,7 @@ SwiftLanguage::GetTypeScavenger ()
                 if (IsValid())
                 {
                     auto as_type = m_result.GetAs<CompilerType>();
-                    auto as_decl = m_result.GetAs<swift::ValueDecl*>();
+                    auto as_decl = m_result.GetAs<swift::Decl*>();
                     
                     if (as_type.hasValue() && as_type.getValue())
                     {
@@ -831,7 +831,7 @@ SwiftLanguage::GetTypeScavenger ()
                     {
                         std::string buffer;
                         llvm::raw_string_ostream str_stream(buffer);
-                        swift::ValueDecl* decl = as_decl.getValue();
+                        swift::Decl* decl = as_decl.getValue();
                         decl->print(str_stream, SwiftASTContext::GetUserVisibleTypePrintingOptions(print_help_if_available));
                         str_stream.flush();
                         stream.Printf("%s", buffer.c_str());
