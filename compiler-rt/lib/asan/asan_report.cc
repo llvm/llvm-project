@@ -417,73 +417,6 @@ bool DescribeAddressIfStack(uptr addr, uptr access_size) {
   return true;
 }
 
-static void DescribeAccessToHeapChunk(AsanChunkView chunk, uptr addr,
-                                      uptr access_size) {
-  sptr offset;
-  Decorator d;
-  InternalScopedString str(4096);
-  str.append("%s", d.Location());
-  if (chunk.AddrIsAtLeft(addr, access_size, &offset)) {
-    str.append("%p is located %zd bytes to the left of", (void *)addr, offset);
-  } else if (chunk.AddrIsAtRight(addr, access_size, &offset)) {
-    if (offset < 0) {
-      addr -= offset;
-      offset = 0;
-    }
-    str.append("%p is located %zd bytes to the right of", (void *)addr, offset);
-  } else if (chunk.AddrIsInside(addr, access_size, &offset)) {
-    str.append("%p is located %zd bytes inside of", (void*)addr, offset);
-  } else {
-    str.append("%p is located somewhere around (this is AddressSanitizer bug!)",
-               (void *)addr);
-  }
-  str.append(" %zu-byte region [%p,%p)\n", chunk.UsedSize(),
-             (void *)(chunk.Beg()), (void *)(chunk.End()));
-  str.append("%s", d.EndLocation());
-  Printf("%s", str.data());
-}
-
-void DescribeHeapAddress(uptr addr, uptr access_size) {
-  AsanChunkView chunk = FindHeapChunkByAddress(addr);
-  if (!chunk.IsValid()) {
-    Printf("AddressSanitizer can not describe address in more detail "
-           "(wild memory access suspected).\n");
-    return;
-  }
-  DescribeAccessToHeapChunk(chunk, addr, access_size);
-  CHECK_NE(chunk.AllocTid(), kInvalidTid);
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *alloc_thread =
-      GetThreadContextByTidLocked(chunk.AllocTid());
-  StackTrace alloc_stack = chunk.GetAllocStack();
-  char tname[128];
-  Decorator d;
-  AsanThreadContext *free_thread = nullptr;
-  if (chunk.FreeTid() != kInvalidTid) {
-    free_thread = GetThreadContextByTidLocked(chunk.FreeTid());
-    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
-           free_thread->tid,
-           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-    StackTrace free_stack = chunk.GetFreeStack();
-    free_stack.Print();
-    Printf("%spreviously allocated by thread T%d%s here:%s\n",
-           d.Allocation(), alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-  } else {
-    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
-           alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-  }
-  alloc_stack.Print();
-  DescribeThread(GetCurrentThread());
-  if (free_thread)
-    DescribeThread(free_thread);
-  DescribeThread(alloc_thread);
-}
-
 static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
   // Check if this is shadow or shadow gap.
   if (DescribeAddressIfShadow(addr))
@@ -494,7 +427,7 @@ static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
   if (DescribeAddressIfStack(addr, access_size))
     return;
   // Assume it is a heap address.
-  DescribeHeapAddress(addr, access_size);
+  DescribeAddressIfHeap(addr, access_size);
 }
 
 // -------------------- Different kinds of reports ----------------- {{{1
@@ -685,7 +618,7 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ScarinessScore::PrintSimple(42, "double-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("double-free", &stack);
 }
 
@@ -708,7 +641,7 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
   ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("new-delete-type-mismatch", &stack);
   Report("HINT: if you don't care about these errors you may set "
          "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
@@ -728,7 +661,7 @@ void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
   ScarinessScore::PrintSimple(40, "bad-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("bad-free", &stack);
 }
 
@@ -750,7 +683,7 @@ void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
   ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("alloc-dealloc-mismatch", &stack);
   Report("HINT: if you don't care about these errors you may set "
          "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
@@ -765,7 +698,7 @@ void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
              "not owned: %p\n", addr);
   Printf("%s", d.EndWarning());
   stack->Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("bad-malloc_usable_size", stack);
 }
 
@@ -779,7 +712,7 @@ void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
              "not owned: %p\n", addr);
   Printf("%s", d.EndWarning());
   stack->Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
 }
 
@@ -903,7 +836,7 @@ void ReportMacMzReallocUnknown(uptr addr, uptr zone_ptr, const char *zone_name,
              addr);
   PrintZoneForPointer(addr, zone_ptr, zone_name);
   stack->Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
 }
 
 // -------------- SuppressErrorReport -------------- {{{1

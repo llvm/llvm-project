@@ -40,7 +40,6 @@ int GetGlobalsForAddress(uptr addr, __asan_global *globals, u32 *reg_sites,
 bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr);
 // The following functions prints address description depending
 // on the memory type (shadow/heap/stack/global).
-void DescribeHeapAddress(uptr addr, uptr access_size);
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars);
 bool DescribeAddressIfStack(uptr addr, uptr access_size);

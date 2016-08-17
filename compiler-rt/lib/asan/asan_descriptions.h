@@ -13,7 +13,7 @@
 // TODO(filcab): Most struct definitions should move to the interface headers.
 //===----------------------------------------------------------------------===//
 
-#include "asan_internal.h"
+#include "asan_allocator.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
@@ -93,5 +93,34 @@ struct ShadowAddressDescription {
 
 bool GetShadowAddressInformation(uptr addr, ShadowAddressDescription *descr);
 bool DescribeAddressIfShadow(uptr addr);
+
+enum AccessType {
+  kAccessTypeLeft,
+  kAccessTypeRight,
+  kAccessTypeInside,
+  kAccessTypeUnknown,  // This means we have an AddressSanitizer bug!
+};
+
+struct ChunkAccess {
+  uptr bad_addr;
+  sptr offset;
+  uptr chunk_begin;
+  uptr chunk_size;
+  u32 access_type : 2;
+  u32 alloc_type : 2;
+};
+
+struct HeapAddressDescription {
+  uptr addr;
+  uptr alloc_tid;
+  uptr free_tid;
+  u32 alloc_stack_id;
+  u32 free_stack_id;
+  ChunkAccess chunk_access;
+};
+
+bool GetHeapAddressInformation(uptr addr, uptr access_size,
+                               HeapAddressDescription *descr);
+bool DescribeAddressIfHeap(uptr addr, uptr access_size = 1);
 
 }  // namespace __asan
