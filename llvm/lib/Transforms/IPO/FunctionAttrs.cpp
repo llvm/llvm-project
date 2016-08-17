@@ -448,8 +448,8 @@ determinePointerReadAttrs(Argument *A,
       // to a operand bundle use, these cannot participate in the optimistic SCC
       // analysis.  Instead, we model the operand bundle uses as arguments in
       // call to a function external to the SCC.
-      if (!SCCNodes.count(&*std::next(F->arg_begin(), UseIndex)) ||
-          IsOperandBundleUse) {
+      if (IsOperandBundleUse ||
+          !SCCNodes.count(&*std::next(F->arg_begin(), UseIndex))) {
 
         // The accessors used on CallSite here do the right thing for calls and
         // invokes with operand bundles.
