@@ -1,0 +1,358 @@
+=========
+MemorySSA
+=========
+
+.. contents::
+   :local:
+
+Introduction
+============
+
+``MemorySSA`` is an analysis that allows us to cheaply reason about the
+interactions between various memory operations. Its goal is to replace
+``MemoryDependenceAnalysis`` for most (if not all) use-cases. This is because,
+unless you're very careful, use of ``MemoryDependenceAnalysis`` can easily
+result in quadratic-time algorithms in LLVM. Additionally, ``MemorySSA`` doesn't
+have as many arbitrary limits as ``MemoryDependenceAnalysis``, so you should get
+better results, too.
+
+At a high level, one of the goals of ``MemorySSA`` is to provide an SSA based
+form for memory, complete with def-use and use-def chains, which
+enables users to quickly find may-def and may-uses of memory operations.
+It can also be thought of as a way to cheaply give versions to the complete
+state of heap memory, and associate memory operations with those versions.
+
+This document goes over how ``MemorySSA`` is structured, and some basic
+intuition on how ``MemorySSA`` works.
+
+A paper on MemorySSA (with notes about how it's implemented in GCC) `can be
+found here <http://www.airs.com/dnovillo/Papers/mem-ssa.pdf>`_. Though, it's
+relatively out-of-date; the paper references multiple heap partitions, but GCC
+eventually swapped to just using one, like we now have in LLVM.  Like
+GCC's, LLVM's MemorySSA is intraprocedural.
+
+
+MemorySSA Structure
+===================
+
+MemorySSA is a virtual IR. After it's built, ``MemorySSA`` will contain a
+structure that maps ``Instruction`` s to ``MemoryAccess`` es, which are
+``MemorySSA``'s parallel to LLVM ``Instruction`` s.
+
+Each ``MemoryAccess`` can be one of three types:
+
+- ``MemoryPhi``
+- ``MemoryUse``
+- ``MemoryDef``
+
+``MemoryPhi`` s are ``PhiNode`` , but for memory operations. If at any
+point we have two (or more) ``MemoryDef`` s that could flow into a
+``BasicBlock``, the block's top ``MemoryAccess`` will be a
+``MemoryPhi``. As in LLVM IR, ``MemoryPhi`` s don't correspond to any
+concrete operation. As such, you can't look up a ``MemoryPhi`` with an
+``Instruction`` (though we do allow you to do so with a
+``BasicBlock``).
+
+Note also that in SSA, Phi nodes merge must-reach definitions (that
+is, definite new versions of variables).  In MemorySSA, PHI nodes merge
+may-reach definitions (that is, until disambiguated, the versions that
+reach a phi node may or may not clobber a given variable)
+
+``MemoryUse`` s are operations which use but don't modify memory. An example of
+a ``MemoryUse`` is a ``load``, or a ``readonly`` function call.
+
+``MemoryDef`` s are operations which may either modify memory, or which
+otherwise clobber memory in unquantifiable ways. Examples of ``MemoryDef`` s
+include ``store`` s, function calls, ``load`` s with ``acquire`` (or higher)
+ordering, volatile operations, memory fences, etc.
+
+Every function that exists has a special ``MemoryDef`` called ``liveOnEntry``.
+It dominates every ``MemoryAccess`` in the function that ``MemorySSA`` is being
+run on, and implies that we've hit the top of the function. It's the only
+``MemoryDef`` that maps to no ``Instruction`` in LLVM IR. Use of
+``liveOnEntry`` implies that the memory being used is either undefined or
+defined before the function begins.
+
+An example of all of this overlayed on LLVM IR (obtained by running ``opt
+-passes='print<memoryssa>' -disable-output`` on an ``.ll`` file) is below. When
+viewing this example, it may be helpful to view it in terms of clobbers. The
+operands of a given ``MemoryAccess`` are all (potential) clobbers of said
+MemoryAccess, and the value produced by a ``MemoryAccess`` can act as a clobber
+for other ``MemoryAccess`` es. Another useful way of looking at it is in
+terms of heap versions.  In that view, operands of of a given
+``MemoryAccess`` are the version of the heap before the operation, and
+if the access produces a value, the value is the new version of the heap
+after the operation.
+
+.. code-block:: llvm
+
+  define void @foo() {
+  entry:
+    %p1 = alloca i8
+    %p2 = alloca i8
+    %p3 = alloca i8
+    ; 1 = MemoryDef(liveOnEntry)
+    store i8 0, i8* %p3
+    br label %while.cond
+
+  while.cond:
+    ; 6 = MemoryPhi({%0,1},{if.end,4})
+    br i1 undef, label %if.then, label %if.else
+
+  if.then:
+    ; 2 = MemoryDef(6)
+    store i8 0, i8* %p1
+    br label %if.end
+
+  if.else:
+    ; 3 = MemoryDef(6)
+    store i8 1, i8* %p2
+    br label %if.end
+
+  if.end:
+    ; 5 = MemoryPhi({if.then,2},{if.then,3})
+    ; MemoryUse(5)
+    %1 = load i8, i8* %p1
+    ; 4 = MemoryDef(5)
+    store i8 2, i8* %p2
+    ; MemoryUse(1)
+    %2 = load i8, i8* %p3
+    br label %while.cond
+  }
+
+The ``MemorySSA`` IR is located comments that precede the instructions they map
+to (if such an instruction exists). For example, ``1 = MemoryDef(liveOnEntry)``
+is a ``MemoryAccess`` (specifically, a ``MemoryDef``), and it describes the LLVM
+instruction ``store i8 0, i8* %p3``. Other places in ``MemorySSA`` refer to this
+particular ``MemoryDef`` as ``1`` (much like how one can refer to ``load i8, i8*
+%p1`` in LLVM with ``%1``). Again, ``MemoryPhi`` s don't correspond to any LLVM
+Instruction, so the line directly below a ``MemoryPhi`` isn't special.
+
+Going from the top down:
+
+- ``6 = MemoryPhi({%0,1},{if.end,4})`` notes that, when entering ``while.cond``,
+  the reaching definition for it is either ``1`` or ``4``. This ``MemoryPhi`` is
+  referred to in the textual IR by the number ``6``.
+- ``2 = MemoryDef(6)`` notes that ``store i8 0, i8* %p1`` is a definition,
+  and its reaching definition before it is ``6``, or the ``MemoryPhi`` after
+  ``while.cond``.
+- ``3 = MemoryDef(6)`` notes that ``store i8 0, i8* %p2`` is a definition; its
+  reaching definition is also ``6``.
+- ``5 = MemoryPhi({if.then,2},{if.then,3})`` notes that the clobber before
+  this block could either be ``2`` or ``3``.
+- ``MemoryUse(5)`` notes that ``load i8, i8* %p1`` is a use of memory, and that
+  it's clobbered by ``5``.
+- ``4 = MemoryDef(5)`` notes that ``store i8 2, i8* %p2`` is a definition; it's
+  reaching definition is ``5``.
+- ``MemoryUse(1)`` notes that ``load i8, i8* %p3`` is just a user of memory,
+  and the last thing that could clobber this use is above ``while.cond`` (e.g.
+  the store to ``%p3``).  In heap versioning parlance, it really
+  only depends on the heap version 1, and is unaffected by the new
+  heap versions generated since then.
+
+As an aside, ``MemoryAccess`` is a ``Value`` mostly for convenience; it's not
+meant to interact with LLVM IR.
+
+Design of MemorySSA
+===================
+
+``MemorySSA`` is an analysis that can be built for any arbitrary function. When
+it's built, it does a pass over the function's IR in order to build up its
+mapping of ``MemoryAccess`` es. You can then query ``MemorySSA`` for things like
+the dominance relation between ``MemoryAccess`` es, and get the ``MemoryAccess``
+for any given ``Instruction`` .
+
+When ``MemorySSA`` is done building, it also hands you a ``MemorySSAWalker``
+that you can use (see below).
+
+
+The walker
+----------
+
+A structure that helps ``MemorySSA`` do its job is the ``MemorySSAWalker``, or
+the walker, for short. The goal of the walker is to provide answers to clobber
+queries beyond what's represented directly by ``MemoryAccess`` es. For example,
+given:
+
+.. code-block:: llvm
+
+  define void @foo() {
+    %a = alloca i8
+    %b = alloca i8
+
+    ; 1 = MemoryDef(liveOnEntry)
+    store i8 0, i8* %a
+    ; 2 = MemoryDef(1)
+    store i8 0, i8* %b
+  }
+
+The store to ``%a`` is clearly not a clobber for the store to ``%b``. It would
+be the walker's goal to figure this out, and return ``liveOnEntry`` when queried
+for the clobber of ``MemoryAccess`` ``2``.
+
+By default, ``MemorySSA`` provides a walker that can optimize ``MemoryDef`` s
+and ``MemoryUse`` s by consulting alias analysis. Walkers were built to be
+flexible, though, so it's entirely reasonable (and expected) to create more
+specialized walkers (e.g. one that queries ``GlobalsAA``).
+
+
+Locating clobbers yourself
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you choose to make your own walker, you can find the clobber for a
+``MemoryAccess`` by walking every ``MemoryDef`` that dominates said
+``MemoryAccess``. The structure of ``MemoryDef`` s makes this relatively simple;
+they ultimately form a linked list of every clobber that dominates the
+``MemoryAccess`` that you're trying to optimize. In other words, the
+``definingAccess`` of a ``MemoryDef`` is always the nearest dominating
+``MemoryDef`` or ``MemoryPhi`` of said ``MemoryDef``.
+
+
+Use optimization
+----------------
+
+``MemorySSA`` will optimize some ``MemoryAccess`` es at build-time.
+Specifically, we optimize the operand of every ``MemoryUse`` s to point to the
+actual clobber of said ``MemoryUse``. This can be seen in the above example; the
+second ``MemoryUse`` in ``if.end`` has an operand of ``1``, which is a
+``MemoryDef`` from the entry block.  This is done to make walking,
+value numbering, etc, faster and easier.
+It is not possible to optimize ``MemoryDef`` in the same way, as we
+restrict ``MemorySSA`` to one heap variable and, thus, one Phi node
+per block.
+
+
+Invalidation and updating
+-------------------------
+
+Because ``MemorySSA`` keeps track of LLVM IR, it needs to be updated whenever
+the IR is updated. "Update", in this case, includes the addition, deletion, and
+motion of IR instructions. The update API is being made on an as-needed basis.
+
+
+Phi placement
+^^^^^^^^^^^^^
+
+``MemorySSA`` only places ``MemoryPhi`` s where they're actually
+needed. That is, it is a pruned SSA form, like LLVM's SSA form.  For
+example, consider:
+
+.. code-block:: llvm
+
+  define void @foo() {
+  entry:
+    %p1 = alloca i8
+    %p2 = alloca i8
+    %p3 = alloca i8
+    ; 1 = MemoryDef(liveOnEntry)
+    store i8 0, i8* %p3
+    br label %while.cond
+
+  while.cond:
+    ; 3 = MemoryPhi({%0,1},{if.end,2})
+    br i1 undef, label %if.then, label %if.else
+
+  if.then:
+    br label %if.end
+
+  if.else:
+    br label %if.end
+
+  if.end:
+    ; MemoryUse(1)
+    %1 = load i8, i8* %p1
+    ; 2 = MemoryDef(3)
+    store i8 2, i8* %p2
+    ; MemoryUse(1)
+    %2 = load i8, i8* %p3
+    br label %while.cond
+  }
+
+Because we removed the stores from ``if.then`` and ``if.else``, a ``MemoryPhi``
+for ``if.end`` would be pointless, so we don't place one. So, if you need to
+place a ``MemoryDef`` in ``if.then`` or ``if.else``, you'll need to also create
+a ``MemoryPhi`` for ``if.end``.
+
+If it turns out that this is a large burden, we can just place ``MemoryPhi`` s
+everywhere. Because we have Walkers that are capable of optimizing above said
+phis, doing so shouldn't prohibit optimizations.
+
+
+Non-Goals
+---------
+
+``MemorySSA`` is meant to reason about the relation between memory
+operations, and enable quicker querying.
+It isn't meant to be the single source of truth for all potential memory-related
+optimizations. Specifically, care must be taken when trying to use ``MemorySSA``
+to reason about atomic or volatile operations, as in:
+
+.. code-block:: llvm
+
+  define i8 @foo(i8* %a) {
+  entry:
+    br i1 undef, label %if.then, label %if.end
+
+  if.then:
+    ; 1 = MemoryDef(liveOnEntry)
+    %0 = load volatile i8, i8* %a
+    br label %if.end
+
+  if.end:
+    %av = phi i8 [0, %entry], [%0, %if.then]
+    ret i8 %av
+  }
+
+Going solely by ``MemorySSA``'s analysis, hoisting the ``load`` to ``entry`` may
+seem legal. Because it's a volatile load, though, it's not.
+
+
+Design tradeoffs
+----------------
+
+Precision
+^^^^^^^^^
+``MemorySSA`` in LLVM deliberately trades off precision for speed.
+Let us think about memory variables as if they were disjoint partitions of the
+heap (that is, if you have one variable, as above, it represents the entire
+heap, and if you have multiple variables, each one represents some
+disjoint portion of the heap)
+
+First, because alias analysis results conflict with each other, and
+each result may be what an analysis wants (IE
+TBAA may say no-alias, and something else may say must-alias), it is
+not possible to partition the heap the way every optimization wants.
+Second, some alias analysis results are not transitive (IE A noalias B,
+and B noalias C, does not mean A noalias C), so it is not possible to
+come up with a precise partitioning in all cases without variables to
+represent every pair of possible aliases.  Thus, partitioning
+precisely may require introducing at least N^2 new virtual variables,
+phi nodes, etc.
+
+Each of these variables may be clobbered at multiple def sites.
+
+To give an example, if you were to split up struct fields into
+individual variables, all aliasing operations that may-def multiple struct
+fields, will may-def more than one of them.  This is pretty common (calls,
+copies, field stores, etc).
+
+Experience with SSA forms for memory in other compilers has shown that
+it is simply not possible to do this precisely, and in fact, doing it
+precisely is not worth it, because now all the optimizations have to
+walk tons and tons of virtual variables and phi nodes.
+
+So we partition.  At the point at which you partition, again,
+experience has shown us there is no point in partitioning to more than
+one variable.  It simply generates more IR, and optimizations still
+have to query something to disambiguate further anyway.
+
+As a result, LLVM partitions to one variable.
+
+Use Optimization
+^^^^^^^^^^^^^^^^
+
+Unlike other partitioned forms, LLVM's ``MemorySSA`` does make one
+useful guarantee - all loads are optimized to point at the thing that
+actually clobbers them. This gives some nice properties.  For example,
+for a given store, you can find all loads actually clobbered by that
+store by walking the immediate uses of the store.
