@@ -16,10 +16,12 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/relational/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/subgroup/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/vldst/*.cl
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ockl/inc)

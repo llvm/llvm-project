@@ -109,6 +109,28 @@ extern bool __llvm_umul_with_overflow_i64(ulong, ulong, __private ulong*);
 extern __attribute__((const)) int __llvm_ctlz_i32(int);
 extern __attribute__((const)) int __llvm_cttz_i32(int);
 
+// Fence intrinsics
+extern void __llvm_fence_acq_wi(void);
+extern void __llvm_fence_acq_sg(void);
+extern void __llvm_fence_acq_wg(void);
+extern void __llvm_fence_acq_dev(void);
+extern void __llvm_fence_acq_sys(void);
+extern void __llvm_fence_rel_wi(void);
+extern void __llvm_fence_rel_sg(void);
+extern void __llvm_fence_rel_wg(void);
+extern void __llvm_fence_rel_dev(void);
+extern void __llvm_fence_rel_sys(void);
+extern void __llvm_fence_ar_wi(void);
+extern void __llvm_fence_ar_sg(void);
+extern void __llvm_fence_ar_wg(void);
+extern void __llvm_fence_ar_dev(void);
+extern void __llvm_fence_ar_sys(void);
+extern void __llvm_fence_sc_wi(void);
+extern void __llvm_fence_sc_sg(void);
+extern void __llvm_fence_sc_wg(void);
+extern void __llvm_fence_sc_dev(void);
+extern void __llvm_fence_sc_sys(void);
+
 // AMDGPU intrinsics
 extern __attribute__((const)) bool __llvm_amdgcn_class_f16(half, int) __asm("llvm.amdgcn.class.f16");
 extern __attribute__((const)) bool __llvm_amdgcn_class_f32(float, int) __asm("llvm.amdgcn.class.f32");
