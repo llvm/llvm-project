@@ -39,6 +39,7 @@ private:
   typedef typename Traits::BlkT BlkT;
   typedef typename Traits::ValT ValT;
   typedef typename Traits::PhiT PhiT;
+  typedef typename Traits::PhiItT PhiItT;
 
   /// BBInfo - Per-basic block information used internally by SSAUpdaterImpl.
   /// The predecessors of each block are cached here since pred_iterator is
@@ -377,7 +378,7 @@ public:
   /// FindExistingPHI - Look through the PHI nodes in a block to see if any of
   /// them match what is needed.
   void FindExistingPHI(BlkT *BB, BlockListTy *BlockList) {
-    for (typename BlkT::iterator BBI = BB->begin(), BBE = BB->end();
+    for (PhiItT BBI = Traits::PhiItT_begin(BB), BBE = Traits::PhiItT_end(BB);
          BBI != BBE; ++BBI) {
       PhiT *SomePHI = Traits::InstrIsPHI(&*BBI);
       if (!SomePHI)

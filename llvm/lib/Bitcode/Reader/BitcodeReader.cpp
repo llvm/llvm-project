@@ -2308,6 +2308,23 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Tag >= 1u << 16 || Version != 0)
         return error("Invalid record");
 
+      // Deprecated internal hack to support serializing MDModule.
+      // This node has since been deleted.
+      // Upgrading this node is not officially supported.  This code
+      // may be removed in the future.
+      if (Tag == dwarf::DW_TAG_module) {
+        if (Record.size() != 6)
+          return error("Invalid record");
+
+        MetadataList.assignValue(
+            GET_OR_DISTINCT(DIModule,
+                            (Context, getMDOrNull(Record[4]),
+                             getMDString(Record[5]), nullptr,
+                             nullptr, nullptr)),
+            NextMetadataNo++);
+        break;
+      }
+
       auto *Header = getMDString(Record[3]);
       SmallVector<Metadata *, 8> DwarfOps;
       for (unsigned I = 4, E = Record.size(); I != E; ++I)

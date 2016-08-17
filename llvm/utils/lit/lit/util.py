@@ -237,10 +237,33 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
 
     return out, err, exitCode
 
+# A predicate to determine whether or not a specific config's target_triple is
+# referring to macOS. The reason that this is useful is that macOS has multiple
+# valid triples. This just centralizes the query into a convenient place.
+def isMacOSTriple(target):
+    arches = [
+        'x86_64',
+        'i386',
+        'x86_64h'
+    ]
+
+    names = [
+        'darwin',
+        'macosx'
+    ]
+
+    for a in arches:
+        for n in names:
+            triple = '%s-apple-%s' % (a,n)
+            if triple not in target:
+                continue
+            return True
+    return False
+
 def usePlatformSdkOnDarwin(config, lit_config):
     # On Darwin, support relocatable SDKs by providing Clang with a
     # default system root path.
-    if 'darwin' in config.target_triple:
+    if isMacOSTriple(config.target_triple):
         try:
             cmd = subprocess.Popen(['xcrun', '--show-sdk-path'],
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
