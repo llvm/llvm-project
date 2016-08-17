@@ -77,10 +77,10 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
 namespace {
 // Define the LTOOutput handling
 class LTOOutput : public lto::NativeObjectOutput {
-  StringRef Path;
+  std::string Path;
 
 public:
-  LTOOutput(StringRef Path) : Path(Path) {}
+  LTOOutput(std::string Path) : Path(std::move(Path)) {}
   std::unique_ptr<raw_pwrite_stream> getStream() override {
     std::error_code EC;
     auto S = llvm::make_unique<raw_fd_ostream>(Path, EC, sys::fs::F_None);
@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
 
   auto AddOutput = [&](size_t Task) {
     std::string Path = OutputFilename + "." + utostr(Task);
-    return llvm::make_unique<LTOOutput>(Path);
+    return llvm::make_unique<LTOOutput>(std::move(Path));
   };
 
   check(Lto.run(AddOutput), "LTO::run failed");
