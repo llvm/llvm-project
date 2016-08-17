@@ -3637,6 +3637,16 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
   // Emitting one decl is sufficient - debuggers can detect that this is an
   // overloaded name & provide lookup for all the overloads.
   const UsingShadowDecl &USD = **UD.shadow_begin();
+
+  // FIXME: Skip functions with undeduced auto return type for now since we
+  // don't currently have the plumbing for separate declarations & definitions
+  // of free functions and mismatched types (auto in the declaration, concrete
+  // return type in the definition)
+  if (const auto *FD = dyn_cast<FunctionDecl>(USD.getUnderlyingDecl()))
+    if (const auto *AT =
+            FD->getType()->getAs<FunctionProtoType>()->getContainedAutoType())
+      if (AT->getDeducedType().isNull())
+        return;
   if (llvm::DINode *Target =
           getDeclarationOrDefinition(USD.getUnderlyingDecl()))
     DBuilder.createImportedDeclaration(
