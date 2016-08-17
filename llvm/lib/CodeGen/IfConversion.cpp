@@ -441,9 +441,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
 /// BB has a fallthrough. Find its 'false' successor given its 'true' successor.
 static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
                                          MachineBasicBlock *TrueBB) {
-  for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
-         E = BB->succ_end(); SI != E; ++SI) {
-    MachineBasicBlock *SuccBB = *SI;
+  for (MachineBasicBlock *SuccBB : BB->successors()) {
     if (SuccBB != TrueBB)
       return SuccBB;
   }
@@ -726,8 +724,7 @@ void IfConverter::ScanInstructions(BBInfo &BBI,
   BBI.ExtraCost = 0;
   BBI.ExtraCost2 = 0;
   BBI.ClobbersPred = false;
-  for (; Begin != End; ++Begin) {
-    auto &MI = *Begin;
+  for (MachineInstr &MI : make_range(Begin, End)) {
     if (MI.isDebugValue())
       continue;
 
@@ -1042,8 +1039,8 @@ void IfConverter::AnalyzeBlock(
 /// Analyze all blocks and find entries for all if-conversion candidates.
 void IfConverter::AnalyzeBlocks(
     MachineFunction &MF, std::vector<std::unique_ptr<IfcvtToken>> &Tokens) {
-  for (auto &BB : MF)
-    AnalyzeBlock(&BB, Tokens);
+  for (MachineBasicBlock &MBB : MF)
+    AnalyzeBlock(&MBB, Tokens);
 
   // Sort to favor more complex ifcvt scheme.
   std::stable_sort(Tokens.begin(), Tokens.end(), IfcvtTokenCmp);
@@ -1069,7 +1066,7 @@ static bool canFallThroughTo(MachineBasicBlock *BB, MachineBasicBlock *ToBB) {
 /// Invalidate predecessor BB info so it would be re-analyzed to determine if it
 /// can be if-converted. If predecessor is already enqueued, dequeue it!
 void IfConverter::InvalidatePreds(MachineBasicBlock *BB) {
-  for (const auto &Predecessor : BB->predecessors()) {
+  for (const MachineBasicBlock *Predecessor : BB->predecessors()) {
     BBInfo &PBBI = BBAnalysis[Predecessor->getNumber()];
     if (PBBI.IsDone || PBBI.BB == BB)
       continue;
@@ -1105,7 +1102,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   // dead.
   SparseSet<unsigned> LiveBeforeMI;
   LiveBeforeMI.setUniverse(TRI->getNumRegs());
-  for (auto &Reg : Redefs)
+  for (unsigned Reg : Redefs)
     LiveBeforeMI.insert(Reg);
 
   SmallVector<std::pair<unsigned, const MachineOperand*>, 4> Clobbers;
@@ -1160,8 +1157,8 @@ static void RemoveKills(MachineBasicBlock::iterator I,
                         MachineBasicBlock::iterator E,
                         const LivePhysRegs &DontKill,
                         const MCRegisterInfo &MCRI) {
-  for ( ; I != E; ++I)
-    RemoveKills(*I, DontKill);
+  for (MachineInstr &MI : make_range(I, E))
+    RemoveKills(MI, DontKill);
 }
 
 /// If convert a simple (split, no rejoin) sub-CFG.
@@ -1281,9 +1278,7 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     if (ReverseBranchCondition(*CvtBBI)) {
       // BB has been changed, modify its predecessors (except for this
       // one) so they don't get ifcvt'ed based on bad intel.
-      for (MachineBasicBlock::pred_iterator PI = CvtBBI->BB->pred_begin(),
-             E = CvtBBI->BB->pred_end(); PI != E; ++PI) {
-        MachineBasicBlock *PBB = *PI;
+      for (MachineBasicBlock *PBB : CvtBBI->BB->predecessors()) {
         if (PBB == BBI.BB)
           continue;
         BBInfo &PBBI = BBAnalysis[PBB->getNumber()];
@@ -1481,15 +1476,13 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   // This is everything used+live in BB2 after the duplicated instructions. We
   // can compute this set by simulating liveness backwards from the end of BB2.
   DontKill.init(TRI);
-  for (MachineBasicBlock::reverse_iterator I = BBI2->BB->rbegin(),
-       E = MachineBasicBlock::reverse_iterator(DI2); I != E; ++I) {
-    DontKill.stepBackward(*I);
-  }
+  for (const MachineInstr &MI : make_range(BBI2->BB->rbegin(),
+                                  MachineBasicBlock::reverse_iterator(DI2)))
+    DontKill.stepBackward(MI);
 
-  for (MachineBasicBlock::const_iterator I = BBI1->BB->begin(), E = DI1; I != E;
-       ++I) {
+  for (const MachineInstr &MI : make_range(BBI1->BB->begin(), DI1)) {
     SmallVector<std::pair<unsigned, const MachineOperand*>, 4> IgnoredClobbers;
-    Redefs.stepForward(*I, IgnoredClobbers);
+    Redefs.stepForward(MI, IgnoredClobbers);
   }
   BBI.BB->splice(BBI.BB->end(), BBI1->BB, BBI1->BB->begin(), DI1);
   BBI2->BB->erase(BBI2->BB->begin(), DI2);
@@ -1543,12 +1536,11 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   SmallSet<unsigned, 4> RedefsByFalse;
   SmallSet<unsigned, 4> ExtUses;
   if (TII->isProfitableToUnpredicate(*BBI1->BB, *BBI2->BB)) {
-    for (MachineBasicBlock::iterator FI = BBI2->BB->begin(); FI != DI2; ++FI) {
-      if (FI->isDebugValue())
+    for (const MachineInstr &FI : make_range(BBI2->BB->begin(), DI2)) {
+      if (FI.isDebugValue())
         continue;
       SmallVector<unsigned, 4> Defs;
-      for (unsigned i = 0, e = FI->getNumOperands(); i != e; ++i) {
-        const MachineOperand &MO = FI->getOperand(i);
+      for (const MachineOperand &MO : FI.operands()) {
         if (!MO.isReg())
           continue;
         unsigned Reg = MO.getReg();
@@ -1565,8 +1557,7 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
         }
       }
 
-      for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
-        unsigned Reg = Defs[i];
+      for (unsigned Reg : Defs) {
         if (!ExtUses.count(Reg)) {
           for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
                SubRegs.isValid(); ++SubRegs)
@@ -1653,8 +1644,7 @@ static bool MaySpeculate(const MachineInstr &MI,
   if (!MI.isSafeToMove(nullptr, SawStore))
     return false;
 
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
+  for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
@@ -1675,7 +1665,7 @@ void IfConverter::PredicateBlock(BBInfo &BBI,
                                  SmallSet<unsigned, 4> *LaterRedefs) {
   bool AnyUnpred = false;
   bool MaySpec = LaterRedefs != nullptr;
-  for (MachineInstr &I : llvm::make_range(BBI.BB->begin(), E)) {
+  for (MachineInstr &I : make_range(BBI.BB->begin(), E)) {
     if (I.isDebugValue() || TII->isPredicated(I))
       continue;
     // It may be possible not to predicate an instruction if it's the 'true'
@@ -1717,7 +1707,7 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
                                         bool IgnoreBr) {
   MachineFunction &MF = *ToBBI.BB->getParent();
 
-  for (auto &I : *FromBBI.BB) {
+  for (MachineInstr &I : *FromBBI.BB) {
     // Do not copy the end of the block branches.
     if (IgnoreBr && I.isBranch())
       break;
@@ -1755,8 +1745,7 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
     MachineBasicBlock *NBB = getNextBlock(FromBBI.BB);
     MachineBasicBlock *FallThrough = FromBBI.HasFallThrough ? NBB : nullptr;
 
-    for (unsigned i = 0, e = Succs.size(); i != e; ++i) {
-      MachineBasicBlock *Succ = Succs[i];
+    for (MachineBasicBlock *Succ : Succs) {
       // Fallthrough edge can't be transferred.
       if (Succ == FallThrough)
         continue;
@@ -1814,8 +1803,7 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
                                  BranchProbability::getZero());
   }
 
-  for (unsigned i = 0, e = FromSuccs.size(); i != e; ++i) {
-    MachineBasicBlock *Succ = FromSuccs[i];
+  for (MachineBasicBlock *Succ : FromSuccs) {
     // Fallthrough edge can't be transferred.
     if (Succ == FallThrough)
       continue;
