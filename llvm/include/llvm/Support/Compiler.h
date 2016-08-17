@@ -233,7 +233,7 @@
 #endif
 
 /// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
-#if __has_cpp_attribute(fallthrough)
+#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
 #define LLVM_FALLTHROUGH [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #define LLVM_FALLTHROUGH [[clang::fallthrough]]
