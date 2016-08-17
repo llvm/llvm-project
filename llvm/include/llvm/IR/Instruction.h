@@ -94,6 +94,11 @@ public:
   /// the basic block that MovePos lives in, right before MovePos.
   void moveBefore(Instruction *MovePos);
 
+  /// Unlink this instruction and insert into BB before I.
+  ///
+  /// \pre I is a valid iterator into BB.
+  void moveBefore(BasicBlock &BB, SymbolTableList<Instruction>::iterator I);
+
   //===--------------------------------------------------------------------===//
   // Subclass classification.
   //===--------------------------------------------------------------------===//

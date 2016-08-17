@@ -99,7 +99,7 @@ def G_SUB : Instruction {
   let isCommutable = 0;
 }
 
-// Generic subtraction.
+// Generic multiplication.
 def G_MUL : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$src1, unknown:$src2);

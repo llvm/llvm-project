@@ -569,8 +569,8 @@ public:
     if (!Resolved) {
       switch ((unsigned)Fixup.getKind()) {
       case fixup_Hexagon_B22_PCREL:
-      // GetFixupCount assumes B22 won't relax
-      // Fallthrough
+        // GetFixupCount assumes B22 won't relax
+        LLVM_FALLTHROUGH;
       default:
         return false;
         break;

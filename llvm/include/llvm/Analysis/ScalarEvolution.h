@@ -803,13 +803,6 @@ namespace llvm {
     /// Cache for \c loopHasNoAbnormalExits.
     DenseMap<const Loop *, bool> LoopHasNoAbnormalExits;
 
-    /// Cache for \c loopHasNoSideEffects.
-    DenseMap<const Loop *, bool> LoopHasNoSideEffects;
-  
-    /// Returns true if \p L contains no instruction that can have side effects
-    /// (i.e. via throwing an exception, volatile or atomic access).
-    bool loopHasNoSideEffects(const Loop *L);
-
     /// Returns true if \p L contains no instruction that can abnormally exit
     /// the loop (i.e. via throwing an exception, by terminating the thread
     /// cleanly or by infinite looping in a called function).  Strictly

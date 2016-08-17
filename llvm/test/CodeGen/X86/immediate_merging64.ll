@@ -4,36 +4,20 @@
 ; Check that multiple instances of 64-bit constants encodable as
 ; 32-bit immediates are merged for code size savings.
 
-@g1 = common global i64 0, align 8
-@g2 = common global i64 0, align 8
-@g3 = common global i64 0, align 8
-@g4 = common global i64 0, align 8
-
 ; Immediates with multiple users should not be pulled into instructions when
 ; optimizing for code size.
-define void @imm_multiple_users(i64 %l1, i64 %l2, i64 %l3, i64 %l4) optsize {
+define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
 ; CHECK-LABEL: imm_multiple_users:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movq $-1, {{.*}}(%rip)
-; CHECK-NEXT:    cmpq $-1, %rdx
-; CHECK-NEXT:    cmovneq %rsi, %rdi
-; CHECK-NEXT:    movq %rdi, {{.*}}(%rip)
 ; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    # kill: %CL<def> %CL<kill> %RCX<kill>
-; CHECK-NEXT:    shlq %cl, %rax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq $0, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 ;
-  store i64 -1, i64* @g1, align 8
-  %cmp = icmp eq i64 %l3, -1
-  %sel = select i1 %cmp, i64 %l1, i64 %l2
-  store i64 %sel, i64* @g2, align 8
-  %and = and i64 %l4, 63
-  %shl = shl i64 -1, %and
-  store i64 %shl, i64* @g3, align 8
-  store i64 0, i64* @g4, align 8
-  ret void
+  store i64 -1, i64* %b, align 8
+  %cmp = icmp eq i64 %a, -1
+  ret i1 %cmp
 }
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
@@ -44,11 +28,11 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 define void @memset_zero(i8* noalias nocapture %D) optsize {
 ; CHECK-LABEL: memset_zero:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movq $0, 7(%rdi)
-; CHECK-NEXT:    movq $0, (%rdi)
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq %rax, 7(%rdi)
+; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
 ;
   tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i32 1, i1 false)
   ret void
 }
-

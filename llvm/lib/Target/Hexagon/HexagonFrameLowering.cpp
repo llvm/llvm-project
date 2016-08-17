@@ -99,20 +99,20 @@
 // cated (reserved) register, it needs to be kept live throughout the function
 // to be available as the base register for local object accesses.
 // Normally, an address of a stack objects is obtained by a pseudo-instruction
-// TFR_FI. To access local objects with the AP register present, a different
-// pseudo-instruction needs to be used: TFR_FIA. The TFR_FIA takes one extra
-// argument compared to TFR_FI: the first input register is the AP register.
+// PS_fi. To access local objects with the AP register present, a different
+// pseudo-instruction needs to be used: PS_fia. The PS_fia takes one extra
+// argument compared to PS_fi: the first input register is the AP register.
 // This keeps the register live between its definition and its uses.
 
-// The AP register is originally set up using pseudo-instruction ALIGNA:
-//   AP = ALIGNA A
+// The AP register is originally set up using pseudo-instruction PS_aligna:
+//   AP = PS_aligna A
 // where
 //   A  - required stack alignment
 // The alignment value must be the maximum of all alignments required by
 // any stack object.
 
-// The dynamic allocation uses a pseudo-instruction ALLOCA:
-//   Rd = ALLOCA Rs, A
+// The dynamic allocation uses a pseudo-instruction PS_alloca:
+//   Rd = PS_alloca Rs, A
 // where
 //   Rd - address of the allocated space
 //   Rs - minimum size (the actual allocated can be larger to accommodate
@@ -256,8 +256,8 @@ namespace {
         return true;
       unsigned Opc = MI->getOpcode();
       switch (Opc) {
-        case Hexagon::ALLOCA:
-        case Hexagon::ALIGNA:
+        case Hexagon::PS_alloca:
+        case Hexagon::PS_aligna:
           return true;
         default:
           break;
@@ -536,7 +536,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
   auto &AdjustRegs = FuncInfo->getAllocaAdjustInsts();
 
   for (auto MI : AdjustRegs) {
-    assert((MI->getOpcode() == Hexagon::ALLOCA) && "Expected alloca");
+    assert((MI->getOpcode() == Hexagon::PS_alloca) && "Expected alloca");
     expandAlloca(MI, HII, SP, MaxCF);
     MI->eraseFromParent();
   }
@@ -1819,12 +1819,12 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
         case Hexagon::LDriw_mod:
           Changed |= expandLoadInt(B, I, MRI, HII, NewRegs);
           break;
-        case Hexagon::STriq_pred_V6:
-        case Hexagon::STriq_pred_V6_128B:
+        case Hexagon::PS_vstorerq_ai:
+        case Hexagon::PS_vstorerq_ai_128B:
           Changed |= expandStoreVecPred(B, I, MRI, HII, NewRegs);
           break;
-        case Hexagon::LDriq_pred_V6:
-        case Hexagon::LDriq_pred_V6_128B:
+        case Hexagon::PS_vloadrq_ai:
+        case Hexagon::PS_vloadrq_ai_128B:
           Changed |= expandLoadVecPred(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::PS_vloadrw_ai:
@@ -2322,7 +2322,7 @@ const MachineInstr *HexagonFrameLowering::getAlignaInstr(
       const MachineFunction &MF) const {
   for (auto &B : MF)
     for (auto &I : B)
-      if (I.getOpcode() == Hexagon::ALIGNA)
+      if (I.getOpcode() == Hexagon::PS_aligna)
         return &I;
   return nullptr;
 }

@@ -51,6 +51,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Coroutines.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
@@ -259,7 +260,7 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   } else if (OptLevel > 1) {
     Builder.Inliner = createFunctionInliningPass(OptLevel, SizeLevel);
   } else {
-    Builder.Inliner = createAlwaysInlinerPass();
+    Builder.Inliner = createAlwaysInlinerLegacyPass();
   }
   Builder.DisableUnitAtATime = !UnitAtATime;
   Builder.DisableUnrollLoops = (DisableLoopUnrolling.getNumOccurrences() > 0) ?

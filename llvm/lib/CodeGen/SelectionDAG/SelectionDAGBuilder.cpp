@@ -3329,8 +3329,9 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         if (CI->isZero())
           continue;
         APInt Offs = ElementSize * CI->getValue().sextOrTrunc(PtrSize);
+        LLVMContext &Context = *DAG.getContext();
         SDValue OffsVal = VectorWidth ?
-          DAG.getConstant(Offs, dl, MVT::getVectorVT(PtrTy, VectorWidth)) :
+          DAG.getConstant(Offs, dl, EVT::getVectorVT(Context, PtrTy, VectorWidth)) :
           DAG.getConstant(Offs, dl, PtrTy);
 
         // In an inbouds GEP with an offset that is nonnegative even when
@@ -9242,3 +9243,4 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     lowerWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB);
   }
 }
+

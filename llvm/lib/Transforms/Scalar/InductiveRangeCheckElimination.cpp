@@ -275,7 +275,7 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
 
   case ICmpInst::ICMP_SLE:
     std::swap(LHS, RHS);
-  // fallthrough
+    LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_SGE:
     if (match(RHS, m_ConstantInt<0>())) {
       Index = LHS;
@@ -285,7 +285,7 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
 
   case ICmpInst::ICMP_SLT:
     std::swap(LHS, RHS);
-  // fallthrough
+    LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_SGT:
     if (match(RHS, m_ConstantInt<-1>())) {
       Index = LHS;
@@ -301,7 +301,7 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
 
   case ICmpInst::ICMP_ULT:
     std::swap(LHS, RHS);
-  // fallthrough
+    LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_UGT:
     if (IsNonNegativeAndNotLoopVarying(LHS)) {
       Index = RHS;
@@ -1042,11 +1042,11 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
 
   RewrittenRangeInfo RRI;
 
-  auto BBInsertLocation = std::next(Function::iterator(LS.Latch));
+  BasicBlock *BBInsertLocation = LS.Latch->getNextNode();
   RRI.ExitSelector = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".exit.selector",
-                                        &F, &*BBInsertLocation);
+                                        &F, BBInsertLocation);
   RRI.PseudoExit = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".pseudo.exit", &F,
-                                      &*BBInsertLocation);
+                                      BBInsertLocation);
 
   BranchInst *PreheaderJump = cast<BranchInst>(Preheader->getTerminator());
   bool Increasing = LS.IndVarIncreasing;

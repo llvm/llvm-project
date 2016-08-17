@@ -702,6 +702,12 @@ algorithm will have a lower number of may aliases).
 Memory Dependence Analysis
 ==========================
 
+.. note::
+
+  We are currently in the process of migrating things from
+  ``MemoryDependenceAnalysis`` to :doc:`MemorySSA`. Please try to use
+  that instead.
+
 If you're just looking to be a client of alias analysis information, consider
 using the Memory Dependence Analysis interface instead.  MemDep is a lazy,
 caching layer on top of alias analysis that is able to answer the question of

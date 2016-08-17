@@ -88,6 +88,9 @@ set(Tests
   SimpleHashTest
   SimpleTest
   SimpleThreadedTest
+  SingleMemcmpTest
+  SingleStrcmpTest
+  SingleStrncmpTest
   SpamyTest
   StrcmpTest
   StrncmpTest

@@ -9,7 +9,7 @@
 ;
 ; CHECK: for.cond1.for.inc17_crit_edge.us.loopexit5:       ; preds = %for.body3.us
 ; CHECK-NEXT: %add14.us.lcssa = phi float [ %add14.us, %for.body3.us ]
-; CHECK-NEXT: store float %add14.us.lcssa, float* %arrayidx.us, align 4, !alias.scope !7, !noalias !8
+; CHECK-NEXT: store float %add14.us.lcssa, float* %arrayidx.us, align 4, !alias.scope !0, !noalias !0
 ; CHECK-NEXT: br label %for.cond1.for.inc17_crit_edge.us
 ;
 define i32 @foo(float* nocapture %var2, float** nocapture readonly %var3, i32 %itr) #0 {

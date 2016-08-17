@@ -625,7 +625,7 @@ def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem,
                        Imm32, i32imm, imm32_su, i32i8imm, i32immSExt8_su,
                        1, OpSize32, 0>;
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem,
-                       Imm32S, i64i32imm, i64immSExt32, i64i8imm, i64immSExt8,
+                       Imm32S, i64i32imm, i64immSExt32_su, i64i8imm, i64immSExt8_su,
                        1, OpSizeFixed, 1>;
 
 /// ITy - This instruction base class takes the type info for the instruction.

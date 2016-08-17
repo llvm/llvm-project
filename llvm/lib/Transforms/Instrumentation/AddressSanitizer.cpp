@@ -2186,12 +2186,13 @@ void FunctionStackPoisoner::poisonStack() {
   poisonRedZones(L.ShadowBytes, IRB, ShadowBase, true);
 
   auto UnpoisonStack = [&](IRBuilder<> &IRB) {
+    // Do this always as poisonAlloca can be disabled with
+    // detect_stack_use_after_scope=0.
+    poisonRedZones(L.ShadowBytes, IRB, ShadowBase, false);
     if (HavePoisonedStaticAllocas) {
       // If we poisoned some allocas in llvm.lifetime analysis,
       // unpoison whole stack frame now.
       poisonAlloca(LocalStackBase, LocalStackSize, IRB, false);
-    } else {
-      poisonRedZones(L.ShadowBytes, IRB, ShadowBase, false);
     }
   };
 

@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -25,25 +26,51 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/InlinerPass.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "inline"
 
+PreservedAnalyses AlwaysInlinerPass::run(Module &M, ModuleAnalysisManager &) {
+  InlineFunctionInfo IFI;
+  SmallSetVector<CallSite, 16> Calls;
+  bool Changed = false;
+  for (Function &F : M)
+    if (!F.isDeclaration() && F.hasFnAttribute(Attribute::AlwaysInline) &&
+        isInlineViable(F)) {
+      Calls.clear();
+
+      for (User *U : F.users())
+        if (auto CS = CallSite(U))
+          if (CS.getCalledFunction() == &F)
+            Calls.insert(CS);
+
+      for (CallSite CS : Calls)
+        // FIXME: We really shouldn't be able to fail to inline at this point!
+        // We should do something to log or check the inline failures here.
+        Changed |= InlineFunction(CS, IFI);
+    }
+
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
 namespace {
 
-/// \brief Inliner pass which only handles "always inline" functions.
-class AlwaysInliner : public Inliner {
+/// Inliner pass which only handles "always inline" functions.
+///
+/// Unlike the \c AlwaysInlinerPass, this uses the more heavyweight \c Inliner
+/// base class to provide several facilities such as array alloca merging.
+class AlwaysInlinerLegacyPass : public Inliner {
 
 public:
-  AlwaysInliner() : Inliner(ID, /*InsertLifetime*/ true) {
-    initializeAlwaysInlinerPass(*PassRegistry::getPassRegistry());
+  AlwaysInlinerLegacyPass() : Inliner(ID, /*InsertLifetime*/ true) {
+    initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  AlwaysInliner(bool InsertLifetime) : Inliner(ID, InsertLifetime) {
-    initializeAlwaysInlinerPass(*PassRegistry::getPassRegistry());
+  AlwaysInlinerLegacyPass(bool InsertLifetime) : Inliner(ID, InsertLifetime) {
+    initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   /// Main run interface method.  We override here to avoid calling skipSCC().
@@ -60,20 +87,18 @@ public:
 };
 }
 
-char AlwaysInliner::ID = 0;
-INITIALIZE_PASS_BEGIN(AlwaysInliner, "always-inline",
+char AlwaysInlinerLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(AlwaysInlinerLegacyPass, "always-inline",
                       "Inliner for always_inline functions", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(AlwaysInliner, "always-inline",
+INITIALIZE_PASS_END(AlwaysInlinerLegacyPass, "always-inline",
                     "Inliner for always_inline functions", false, false)
 
-Pass *llvm::createAlwaysInlinerPass() { return new AlwaysInliner(); }
-
-Pass *llvm::createAlwaysInlinerPass(bool InsertLifetime) {
-  return new AlwaysInliner(InsertLifetime);
+Pass *llvm::createAlwaysInlinerLegacyPass(bool InsertLifetime) {
+  return new AlwaysInlinerLegacyPass(InsertLifetime);
 }
 
 /// \brief Get the inline cost for the always-inliner.
@@ -88,7 +113,7 @@ Pass *llvm::createAlwaysInlinerPass(bool InsertLifetime) {
 /// computed here, but as we only expect to do this for relatively few and
 /// small functions which have the explicit attribute to force inlining, it is
 /// likely not worth it in practice.
-InlineCost AlwaysInliner::getInlineCost(CallSite CS) {
+InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallSite CS) {
   Function *Callee = CS.getCalledFunction();
 
   // Only inline direct calls to functions with always-inline attributes

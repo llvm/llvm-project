@@ -2837,16 +2837,12 @@ define void @combine_scalar_load_with_blend_with_zero(double* %a0, <4 x float>* 
 ; SSE41-LABEL: combine_scalar_load_with_blend_with_zero:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    xorpd %xmm1, %xmm1
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE41-NEXT:    movapd %xmm1, (%rsi)
+; SSE41-NEXT:    movapd %xmm0, (%rsi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_scalar_load_with_blend_with_zero:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    vmovapd %xmm0, (%rsi)
 ; AVX-NEXT:    retq
   %1 = load double, double* %a0, align 8

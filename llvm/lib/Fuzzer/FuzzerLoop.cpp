@@ -56,7 +56,7 @@ static Fuzzer *F;
 // Only one CoverageController per process should be created.
 class CoverageController {
  public:
-  explicit CoverageController(const FuzzingOptions &Options) 
+  explicit CoverageController(const FuzzingOptions &Options)
     : Options(Options) {
     if (Options.PrintNewCovPcs) {
       PcBufferLen = 1 << 24;
@@ -70,7 +70,6 @@ class CoverageController {
   void Reset() {
     CHECK_EXTERNAL_FUNCTION(__sanitizer_reset_coverage);
     EF->__sanitizer_reset_coverage();
-    PcMapResetCurrent();
   }
 
   void ResetCounters() {
@@ -117,10 +116,16 @@ class CoverageController {
       }
     }
 
-    uint64_t NewPcMapBits = PcMapMergeInto(&C->PCMap);
-    if (NewPcMapBits > C->PcMapBits) {
+    size_t NewPCMapBits = PCMapMergeFromCurrent(C->PCMap);
+    if (NewPCMapBits > C->PCMapBits) {
       Res = true;
-      C->PcMapBits = NewPcMapBits;
+      C->PCMapBits = NewPCMapBits;
+    }
+
+    size_t NewVPMapBits = VPMapMergeFromCurrent(C->VPMap);
+    if (NewVPMapBits > C->VPMapBits) {
+      Res = true;
+      C->VPMapBits = NewVPMapBits;
     }
 
     if (EF->__sanitizer_get_coverage_pc_buffer_pos) {
@@ -306,8 +311,10 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
   Printf("#%zd\t%s", TotalNumberOfRuns, Where);
   if (MaxCoverage.BlockCoverage)
     Printf(" cov: %zd", MaxCoverage.BlockCoverage);
-  if (MaxCoverage.PcMapBits)
-    Printf(" path: %zd", MaxCoverage.PcMapBits);
+  if (MaxCoverage.PCMapBits)
+    Printf(" path: %zd", MaxCoverage.PCMapBits);
+  if (MaxCoverage.VPMapBits)
+    Printf(" vp: %zd", MaxCoverage.VPMapBits);
   if (auto TB = MaxCoverage.CounterBitmapBits)
     Printf(" bits: %zd", TB);
   if (MaxCoverage.CallerCalleeCoverage)
@@ -521,8 +528,9 @@ std::string Fuzzer::Coverage::DebugString() const {
       std::string("Coverage{") + "BlockCoverage=" +
       std::to_string(BlockCoverage) + " CallerCalleeCoverage=" +
       std::to_string(CallerCalleeCoverage) + " CounterBitmapBits=" +
-      std::to_string(CounterBitmapBits) + " PcMapBits=" +
-      std::to_string(PcMapBits) + "}";
+      std::to_string(CounterBitmapBits) + " PCMapBits=" +
+      std::to_string(PCMapBits) + " VPMapBits " +
+      std::to_string(VPMapBits) + "}";
   return Result;
 }
 

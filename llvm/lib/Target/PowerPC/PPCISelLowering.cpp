@@ -2362,20 +2362,10 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // If we're comparing for equality to zero, expose the fact that this is
   // implemented as a ctlz/srl pair on ppc, so that the dag combiner can
   // fold the new nodes.
+  if (SDValue V = lowerCmpEqZeroToCtlzSrl(Op, DAG))
+    return V;
+
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-    if (C->isNullValue() && CC == ISD::SETEQ) {
-      EVT VT = Op.getOperand(0).getValueType();
-      SDValue Zext = Op.getOperand(0);
-      if (VT.bitsLT(MVT::i32)) {
-        VT = MVT::i32;
-        Zext = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Op.getOperand(0));
-      }
-      unsigned Log2b = Log2_32(VT.getSizeInBits());
-      SDValue Clz = DAG.getNode(ISD::CTLZ, dl, VT, Zext);
-      SDValue Scc = DAG.getNode(ISD::SRL, dl, VT, Clz,
-                                DAG.getConstant(Log2b, dl, MVT::i32));
-      return DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Scc);
-    }
     // Leave comparisons against 0 and -1 alone for now, since they're usually
     // optimized.  FIXME: revisit this when we can custom lower all setcc
     // optimizations.
@@ -3758,7 +3748,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_Darwin(
         ArgOffset += PtrByteSize;
         break;
       }
-      // FALLTHROUGH
+      LLVM_FALLTHROUGH;
     case MVT::i64:  // PPC64
       if (GPR_idx != Num_GPR_Regs) {
         unsigned VReg = MF.addLiveIn(GPR[GPR_idx], &PPC::G8RCRegClass);
@@ -4059,8 +4049,15 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   if (CalleeCC != CallingConv::Fast && CalleeCC != CallingConv::C)
     return false;
 
-  // Functions containing by val parameters are not supported.
+  // Caller contains any byval parameter is not supported.
   if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+    return false;
+
+  // Callee contains any byval parameter is not supported, too.
+  // Note: This is a quick work around, because in some cases, e.g.
+  // caller's stack size > callee's stack size, we are still able to apply
+  // sibling call optimization. See: https://reviews.llvm.org/D23441#513574
+  if (any_of(Outs, [](const ISD::OutputArg& OA) { return OA.Flags.isByVal(); }))
     return false;
 
   // No TCO/SCO on indirect call because Caller have to restore its TOC

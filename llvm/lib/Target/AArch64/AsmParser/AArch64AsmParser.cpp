@@ -3455,7 +3455,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
     if (RI->isSubRegisterEq(Rn, Rt2))
       return Error(Loc[1], "unpredictable LDP instruction, writeback base "
                            "is also a destination");
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   }
   case AArch64::LDPDi:
   case AArch64::LDPQi:

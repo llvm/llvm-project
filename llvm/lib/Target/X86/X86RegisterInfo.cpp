@@ -151,13 +151,14 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       // If VLX isn't support we shouldn't inflate to these classes.
       if (!Subtarget.hasVLX())
         break;
-      // Fallthrough. The VLX check above passed, AVX512 check below will pass.
+      // The VLX check above passed, AVX512 check below will pass.
+      LLVM_FALLTHROUGH;
     case X86::VR128XRegClassID:
     case X86::VR256XRegClassID:
       // If AVX-512 isn't support we shouldn't inflate to these classes.
       if (!Subtarget.hasAVX512())
         break;
-      // Fallthrough.
+      LLVM_FALLTHROUGH;
     case X86::GR8RegClassID:
     case X86::GR16RegClassID:
     case X86::GR32RegClassID:

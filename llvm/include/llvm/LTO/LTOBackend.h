@@ -34,12 +34,12 @@ class Target;
 namespace lto {
 
 /// Runs a regular LTO backend.
-Error backend(Config &C, AddStreamFn AddStream,
+Error backend(Config &C, AddOutputFn AddStream,
               unsigned ParallelCodeGenParallelismLevel,
               std::unique_ptr<Module> M);
 
 /// Runs a ThinLTO backend.
-Error thinBackend(Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
+Error thinBackend(Config &C, unsigned Task, AddOutputFn AddStream, Module &M,
                   ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,

@@ -1,6 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
 
-; grep 'Spill' |sed 's%.*\(-[0-9]\+(\%rsp)\).*%\1%g' |sort |uniq -d |awk '{if (/rsp/); exit -1}'
 ; Check no spills to the same stack slot after hoisting.
 ; CHECK: mov{{.}} %{{.*}}, [[SPOFFSET1:-?[0-9]*]](%rsp)
 ; CHECK: mov{{.}} %{{.*}}, [[SPOFFSET2:-?[0-9]*]](%rsp)

@@ -2058,7 +2058,7 @@ void IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) return;
 
-  Instruction *InsertPt = &*ExitBlock->getFirstInsertionPt();
+  BasicBlock::iterator InsertPt = ExitBlock->getFirstInsertionPt();
   BasicBlock::iterator I(Preheader->getTerminator());
   while (I != Preheader->begin()) {
     --I;
@@ -2127,9 +2127,9 @@ void IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       Done = true;
     }
 
-    ToMove->moveBefore(InsertPt);
+    ToMove->moveBefore(*ExitBlock, InsertPt);
     if (Done) break;
-    InsertPt = ToMove;
+    InsertPt = ToMove->getIterator();
   }
 }
 

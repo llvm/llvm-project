@@ -1179,7 +1179,8 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
     changeFPCCToAArch64CC(CC, CondCode, CondCode2);
     break;
   case ISD::SETUO:
-    Invert = true; // Fallthrough
+    Invert = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETO:
     CondCode = AArch64CC::MI;
     CondCode2 = AArch64CC::GE;
@@ -6720,8 +6721,8 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
     case AArch64CC::LT:
       if (!NoNans)
         return SDValue();
-    // If we ignore NaNs then we can use to the MI implementation.
-    // Fallthrough.
+      // If we ignore NaNs then we can use to the MI implementation.
+      LLVM_FALLTHROUGH;
     case AArch64CC::MI:
       if (IsZero)
         return DAG.getNode(AArch64ISD::FCMLTz, dl, VT, LHS);

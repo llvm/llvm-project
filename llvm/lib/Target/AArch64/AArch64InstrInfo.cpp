@@ -375,7 +375,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     // if NZCV is used, do not fold.
     if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
       return 0;
-  // fall-through to ADDXri and ADDWri.
+    // fall-through to ADDXri and ADDWri.
+    LLVM_FALLTHROUGH;
   case AArch64::ADDXri:
   case AArch64::ADDWri:
     // add x, 1 -> csinc.
@@ -402,7 +403,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     // if NZCV is used, do not fold.
     if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
       return 0;
-  // fall-through to SUBXrr and SUBWrr.
+    // fall-through to SUBXrr and SUBWrr.
+    LLVM_FALLTHROUGH;
   case AArch64::SUBXrr:
   case AArch64::SUBWrr: {
     // neg x -> csneg, represented as sub dst, xzr, src.

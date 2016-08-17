@@ -2389,7 +2389,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // have the same legalization requires ments as global and private
     // loads.
     //
-    // Fall-through
+    LLVM_FALLTHROUGH;
   case AMDGPUAS::GLOBAL_ADDRESS:
   case AMDGPUAS::FLAT_ADDRESS:
     if (NumElements > 4)
