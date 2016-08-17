@@ -99,7 +99,8 @@ TYPED_TEST(RangeAdapterLValueTest, TrivialOperation) {
 template <typename T> struct RangeAdapterRValueTest : testing::Test {};
 
 typedef ::testing::Types<std::vector<int>, std::list<int>, ReverseOnlyVector,
-                         BidirectionalVector> RangeAdapterRValueTestTypes;
+                         BidirectionalVector,
+                         BidirectionalVectorConsts> RangeAdapterRValueTestTypes;
 TYPED_TEST_CASE(RangeAdapterRValueTest, RangeAdapterRValueTestTypes);
 
 TYPED_TEST(RangeAdapterRValueTest, TrivialOperation) {
