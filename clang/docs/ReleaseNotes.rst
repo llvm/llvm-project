@@ -107,6 +107,10 @@ the precompiled header flags are honored.  But if the precompiled header is
 included by an `#include <stdafx.h>` in each source file instead of by a
 `/FIstdafx.h` flag, these flag continue to be ignored.
 
+clang-cl has a new flag, `/imsvc <dir>`, for adding a directory to the system
+include search path (where warnings are disabled default) without having to
+set `%INCLUDE`.
+
 C Language Changes in Clang
 ---------------------------
 The -faltivec and -maltivec flags no longer silently include altivec.h on Power platforms.
