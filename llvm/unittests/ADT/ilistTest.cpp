@@ -64,6 +64,38 @@ TEST(ilistTest, SpliceOne) {
   EXPECT_EQ(3, List.back().Value);
 }
 
+TEST(ilistTest, SpliceSwap) {
+  ilist<Node> L;
+  Node N0(0);
+  Node N1(1);
+  L.insert(L.end(), &N0);
+  L.insert(L.end(), &N1);
+  EXPECT_EQ(0, L.front().Value);
+  EXPECT_EQ(1, L.back().Value);
+
+  L.splice(L.begin(), L, ++L.begin());
+  EXPECT_EQ(1, L.front().Value);
+  EXPECT_EQ(0, L.back().Value);
+
+  L.clearAndLeakNodesUnsafely();
+}
+
+TEST(ilistTest, SpliceSwapOtherWay) {
+  ilist<Node> L;
+  Node N0(0);
+  Node N1(1);
+  L.insert(L.end(), &N0);
+  L.insert(L.end(), &N1);
+  EXPECT_EQ(0, L.front().Value);
+  EXPECT_EQ(1, L.back().Value);
+
+  L.splice(L.end(), L, L.begin());
+  EXPECT_EQ(1, L.front().Value);
+  EXPECT_EQ(0, L.back().Value);
+
+  L.clearAndLeakNodesUnsafely();
+}
+
 TEST(ilistTest, UnsafeClear) {
   ilist<Node> List;
 
