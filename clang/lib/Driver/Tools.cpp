@@ -7465,11 +7465,14 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
 
 void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
+  unsigned ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
   if (Str == "x86_64h")
     T.setArchName(Str);
-  else if (Str == "armv6m" || Str == "armv7m" || Str == "armv7em") {
+  else if (ArchKind == llvm::ARM::AK_ARMV6M ||
+           ArchKind == llvm::ARM::AK_ARMV7M ||
+           ArchKind == llvm::ARM::AK_ARMV7EM) {
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }
