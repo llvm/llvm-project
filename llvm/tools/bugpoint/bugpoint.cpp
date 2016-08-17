@@ -27,6 +27,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Valgrind.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 //Enable this macro to debug bugpoint itself.
@@ -179,7 +180,7 @@ int main(int argc, char **argv) {
   if (OptLevelO1 || OptLevelO2 || OptLevelO3) {
     PassManagerBuilder Builder;
     if (OptLevelO1)
-      Builder.Inliner = createAlwaysInlinerPass();
+      Builder.Inliner = createAlwaysInlinerLegacyPass();
     else if (OptLevelOs || OptLevelO2)
       Builder.Inliner = createFunctionInliningPass(2, OptLevelOs ? 1 : 0);
     else
