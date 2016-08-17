@@ -74,7 +74,8 @@ static int skipArgs(const char *Flag, bool HaveCrashVFS) {
   StringRef FlagRef(Flag);
   if ((!HaveCrashVFS &&
        (FlagRef.startswith("-F") || FlagRef.startswith("-I"))) ||
-      FlagRef.startswith("-fmodules-cache-path="))
+      FlagRef.startswith("-fmodules-cache-path=") ||
+      FlagRef.startswith("-fapinotes-cache-path="))
     return 1;
 
   return 0;

@@ -3385,25 +3385,9 @@ static PointerDeclaratorKind classifyPointerDeclarator(Sema &S,
     if (auto recordType = type->getAs<RecordType>()) {
       RecordDecl *recordDecl = recordType->getDecl();
 
-      bool isCFError = false;
-      if (S.CFError) {
-        // If we already know about CFError, test it directly.
-        isCFError = (S.CFError == recordDecl);
-      } else {
-        // Check whether this is CFError, which we identify based on its bridge
-        // to NSError.
-        if (recordDecl->getTagKind() == TTK_Struct && numNormalPointers > 0) {
-          if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>()) {
-            if (bridgeAttr->getBridgedType() == S.getNSErrorIdent()) {
-              S.CFError = recordDecl;
-              isCFError = true;
-            }
-          }
-        }
-      }
-
       // If this is CFErrorRef*, report it as such.
-      if (isCFError && numNormalPointers == 2 && numTypeSpecifierPointers < 2) {
+      if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
+          S.isCFError(recordDecl)) {
         return PointerDeclaratorKind::CFErrorRefPointer;
       }
       break;
@@ -3425,6 +3409,26 @@ static PointerDeclaratorKind classifyPointerDeclarator(Sema &S,
   default:
     return PointerDeclaratorKind::MultiLevelPointer;
   }
+}
+
+bool Sema::isCFError(RecordDecl *recordDecl) {
+  // If we already know about CFError, test it directly.
+  if (CFError) {
+    return (CFError == recordDecl);
+  }
+
+  // Check whether this is CFError, which we identify based on being
+  // bridged to NSError.
+  if (recordDecl->getTagKind() == TTK_Struct) {
+    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>()) {
+      if (bridgeAttr->getBridgedType() == getNSErrorIdent()) {
+        CFError = recordDecl;
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 static FileID getNullabilityCompletenessCheckFileID(Sema &S,
@@ -5822,21 +5826,24 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
 bool Sema::checkNullabilityTypeSpecifier(QualType &type,
                                          NullabilityKind nullability,
                                          SourceLocation nullabilityLoc,
-                                         bool isContextSensitive) {
-  // We saw a nullability type specifier. If this is the first one for
-  // this file, note that.
-  FileID file = getNullabilityCompletenessCheckFileID(*this, nullabilityLoc);
-  if (!file.isInvalid()) {
-    FileNullability &fileNullability = NullabilityMap[file];
-    if (!fileNullability.SawTypeNullability) {
-      // If we have already seen a pointer declarator without a nullability
-      // annotation, complain about it.
-      if (fileNullability.PointerLoc.isValid()) {
-        Diag(fileNullability.PointerLoc, diag::warn_nullability_missing)
-          << static_cast<unsigned>(fileNullability.PointerKind);
-      }
+                                         bool isContextSensitive,
+                                         bool implicit) {
+  if (!implicit) {
+    // We saw a nullability type specifier. If this is the first one for
+    // this file, note that.
+    FileID file = getNullabilityCompletenessCheckFileID(*this, nullabilityLoc);
+    if (!file.isInvalid()) {
+      FileNullability &fileNullability = NullabilityMap[file];
+      if (!fileNullability.SawTypeNullability) {
+        // If we have already seen a pointer declarator without a nullability
+        // annotation, complain about it.
+        if (fileNullability.PointerLoc.isValid()) {
+          Diag(fileNullability.PointerLoc, diag::warn_nullability_missing)
+            << static_cast<unsigned>(fileNullability.PointerKind);
+        }
 
-      fileNullability.SawTypeNullability = true;
+        fileNullability.SawTypeNullability = true;
+      }
     }
   }
 
@@ -5847,6 +5854,9 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
     if (auto existingNullability = attributed->getImmediateNullability()) {
       // Duplicated nullability.
       if (nullability == *existingNullability) {
+        if (implicit)
+          break;
+
         Diag(nullabilityLoc, diag::warn_nullability_duplicate)
           << DiagNullabilityKind(nullability, isContextSensitive)
           << FixItHint::CreateRemoval(nullabilityLoc);
@@ -5869,7 +5879,7 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
   // have nullability specifiers on them, which means we cannot
   // provide a useful Fix-It.
   if (auto existingNullability = desugared->getNullability(Context)) {
-    if (nullability != *existingNullability) {
+    if (nullability != *existingNullability && !implicit) {
       Diag(nullabilityLoc, diag::err_nullability_conflicting)
         << DiagNullabilityKind(nullability, isContextSensitive)
         << DiagNullabilityKind(*existingNullability, false);
@@ -5893,8 +5903,10 @@ bool Sema::checkNullabilityTypeSpecifier(QualType &type,
 
   // If this definitely isn't a pointer type, reject the specifier.
   if (!desugared->canHaveNullability()) {
-    Diag(nullabilityLoc, diag::err_nullability_nonpointer)
-      << DiagNullabilityKind(nullability, isContextSensitive) << type;
+    if (!implicit) {
+      Diag(nullabilityLoc, diag::err_nullability_nonpointer)
+        << DiagNullabilityKind(nullability, isContextSensitive) << type;
+    }
     return true;
   }
   
@@ -6653,7 +6665,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
               type,
               mapNullabilityAttrKind(attr.getKind()),
               attr.getLoc(),
-              attr.isContextSensitiveKeywordAttribute())) {
+              attr.isContextSensitiveKeywordAttribute(),
+              /*implicit=*/false)) {
           attr.setInvalid();
         }
 

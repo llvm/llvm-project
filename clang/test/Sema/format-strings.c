@@ -652,3 +652,30 @@ void test_format_security_pos(char* string) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 #pragma GCC diagnostic warning "-Wformat-nonliteral"
+
+void test_os_log_format(char c, const char *pc, int i, int *pi, void *p, void *buf) {
+  __builtin_os_log_format(buf, "");
+  __builtin_os_log_format(buf, "%d"); // expected-warning {{more '%' conversions than data arguments}}
+  __builtin_os_log_format(buf, "%d", i);
+  __builtin_os_log_format(buf, "%P", p); // expected-warning {{using '%P' format specifier without precision}}
+  __builtin_os_log_format(buf, "%.10P", p);
+  __builtin_os_log_format(buf, "%.*P", p); // expected-warning {{field precision should have type 'int', but argument has type 'void *'}}
+  __builtin_os_log_format(buf, "%.*P", i, p);
+  __builtin_os_log_format(buf, "%.*P", i, i); // expected-warning {{format specifies type 'void *' but the argument has type 'int'}}
+  __builtin_os_log_format(buf, pc); // expected-error {{os_log() format argument is not a string constant}}
+
+  printf("%{private}s", pc); // expected-warning {{using 'private' format specifier annotation outside of os_log()/os_trace()}}
+  __builtin_os_log_format(buf, "%{private}s", pc);
+
+  // <rdar://problem/23835805>
+  __builtin_os_log_format_buffer_size("no-args");
+  __builtin_os_log_format(buf, "%s", "hi");
+
+  // <rdar://problem/24828090>
+  wchar_t wc = 'a';
+  __builtin_os_log_format(buf, "%C", wc);
+  printf("%C", wc);
+  wchar_t wcs[] = {'a', 0};
+  __builtin_os_log_format(buf, "%S", wcs);
+  printf("%S", wcs);
+}

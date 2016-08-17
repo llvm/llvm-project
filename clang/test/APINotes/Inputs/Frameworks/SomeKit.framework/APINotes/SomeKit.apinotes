@@ -1,0 +1,24 @@
+Name: SomeKit
+Classes:
+  - Name: A
+    Methods:         
+      - Selector:        "transform:"
+        MethodKind:      Instance
+        Availability:    none
+        AvailabilityMsg: "anything but this"
+      - Selector: "transform:integer:"
+        MethodKind:      Instance
+        NullabilityOfRet: N
+        Nullability:      [ N, S ]
+    Properties:
+      - Name: intValue
+        Availability: none
+        AvailabilityMsg: "wouldn't work anyway"
+  - Name: B
+    Availability: none
+    AvailabilityMsg: "just don't"
+  - Name: C
+    Methods:
+      - Selector: "initWithA:"
+        MethodKind: Instance
+        DesignatedInit: true

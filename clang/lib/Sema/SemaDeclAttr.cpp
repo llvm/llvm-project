@@ -1307,6 +1307,26 @@ static void handleReturnsNonNullAttr(Sema &S, Decl *D,
                                Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleNoEscapeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  ParmVarDecl *PD = dyn_cast<ParmVarDecl>(D);
+  if (!PD)
+    return;
+
+  // noescape only applies to pointer types.
+  QualType T = PD->getType();
+  if (!T->isAnyPointerType() && !T->isBlockPointerType() && 
+      !T->isReferenceType() && !T->isArrayType() && 
+      !T->isMemberPointerType()) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_noescape_non_pointer)
+      << T;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NoEscapeAttr(
+                                 Attr.getRange(), S.Context,
+                                 Attr.getAttributeSpellingListIndex()));
+}
+
 static void handleAssumeAlignedAttr(Sema &S, Decl *D,
                                     const AttributeList &Attr) {
   Expr *E = Attr.getArgAsExpr(0),
@@ -2153,6 +2173,15 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
           dyn_cast_or_null<StringLiteral>(Attr.getReplacementExpr()))
     Replacement = SE->getString();
 
+  if (II->getName() == "swift") {
+    if (Introduced.isValid() || Obsoleted.isValid() ||
+        (!IsUnavailable && !Deprecated.isValid())) {
+      S.Diag(Attr.getLoc(),
+             diag::warn_availability_swift_unavailable_deprecated_only);
+      return;
+    }
+  }
+
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND, Attr.getRange(), II,
                                                       false/*Implicit*/,
                                                       Introduced.Version,
@@ -2815,6 +2844,7 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
     .Case("kprintf", SupportedFormat) // OpenBSD.
     .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
     .Case("os_trace", SupportedFormat)
+    .Case("os_log", SupportedFormat)
 
     .Cases("gcc_diag", "gcc_cdiag", "gcc_cxxdiag", "gcc_tdiag", IgnoredFormat)
     .Default(InvalidFormat);
@@ -3671,6 +3701,27 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D, SourceRange Range,
                                           AttrSpellingListIndex);
 }
 
+SwiftNameAttr *Sema::mergeSwiftNameAttr(Decl *D, SourceRange Range,
+                                        StringRef Name, bool Override,
+                                        unsigned AttrSpellingListIndex) {
+  if (SwiftNameAttr *Inline = D->getAttr<SwiftNameAttr>()) {
+    if (Override) {
+      // FIXME: Warn about an incompatible override.
+      return nullptr;
+    }
+
+    if (Inline->getName() != Name && !Inline->isImplicit()) {
+      Diag(Inline->getLocation(), diag::warn_attribute_ignored) << Inline;
+      Diag(Range.getBegin(), diag::note_conflicting_attribute);
+    }
+
+    D->dropAttr<SwiftNameAttr>();
+  }
+
+  return ::new (Context) SwiftNameAttr(Range, Context, Name,
+                                       AttrSpellingListIndex);
+}
+
 static void handleAlwaysInlineAttr(Sema &S, Decl *D,
                                    const AttributeList &Attr) {
   if (checkAttrMutualExclusion<NotTailCalledAttr>(S, D, Attr.getRange(),
@@ -4411,6 +4462,40 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
                                         attr.getAttributeSpellingListIndex()));
 }
 
+static void handleNSErrorDomain(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (!isa<TagDecl>(D)) {
+    S.Diag(D->getLocStart(), diag::err_nserrordomain_not_tagdecl)
+        << S.getLangOpts().CPlusPlus;
+    return;
+  }
+  IdentifierLoc *identLoc =
+      Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
+  if (!identLoc || !identLoc->Ident) {
+    // Try to locate the argument directly
+    SourceLocation loc = Attr.getLoc();
+    if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
+      loc = Attr.getArgAsExpr(0)->getLocStart();
+
+    S.Diag(loc, diag::err_nserrordomain_requires_identifier);
+    return;
+  }
+
+  // Verify that the identifier is a valid decl in the C decl namespace
+  LookupResult lookupResult(S, DeclarationName(identLoc->Ident),
+                            SourceLocation(),
+                            Sema::LookupNameKind::LookupOrdinaryName);
+  if (!S.LookupName(lookupResult, S.TUScope) ||
+      !lookupResult.getAsSingle<VarDecl>()) {
+    S.Diag(identLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << identLoc->Ident;
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+                 NSErrorDomainAttr(Attr.getRange(), S.Context, identLoc->Ident,
+                                   Attr.getAttributeSpellingListIndex()));
+}
+
 static void handleCFAuditedTransferAttr(Sema &S, Decl *D,
                                         const AttributeList &Attr) {
   if (checkAttrMutualExclusion<CFUnknownTransferAttr>(S, D, Attr.getRange(),
@@ -4598,6 +4683,421 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context)
              ObjCPreciseLifetimeAttr(Attr.getRange(), S.Context,
                                      Attr.getAttributeSpellingListIndex()));
+}
+
+static Optional<unsigned>
+validateSwiftFunctionName(StringRef Name,
+                          unsigned &SwiftParamCount,
+                          bool &IsSingleParamInit) {
+  SwiftParamCount = 0;
+
+  // Check whether this will be mapped to a getter or setter of a
+  // property.
+  bool isGetter = false;
+  bool isSetter = false;
+  if (Name.startswith("getter:")) {
+    isGetter = true;
+    Name = Name.substr(7);
+  } else if (Name.startswith("setter:")) {
+    isSetter = true;
+    Name = Name.substr(7);
+  }
+
+  if (Name.back() != ')')
+    return diag::warn_attr_swift_name_function;
+
+  StringRef BaseName, Parameters;
+  std::tie(BaseName, Parameters) = Name.split('(');
+
+  // Split at the first '.', if it exists, which separates the context
+  // name from the base name.
+  StringRef ContextName;
+  bool IsMember = false;
+  std::tie(ContextName, BaseName) = BaseName.split('.');
+  if (BaseName.empty()) {
+    BaseName = ContextName;
+    ContextName = StringRef();
+  } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
+    return diag::warn_attr_swift_name_context_name_invalid_identifier;
+  } else {
+    IsMember = true;
+  }
+
+  if (!isValidIdentifier(BaseName) || BaseName == "_")
+    return diag::warn_attr_swift_name_basename_invalid_identifier;
+
+  bool IsSubscript = BaseName == "subscript";
+  // A subscript accessor must be a getter or setter.
+  if (IsSubscript && !isGetter && !isSetter)
+    return diag::warn_attr_swift_name_subscript_not_accessor;
+  
+  if (Parameters.empty())
+    return diag::warn_attr_swift_name_missing_parameters;
+  Parameters = Parameters.drop_back(); // ')'
+
+  if (Parameters.empty()) {
+    // Setters and subscripts must have at least one parameter.
+    if (IsSubscript)
+      return diag::warn_attr_swift_name_subscript_no_parameter;
+    if (isSetter)
+      return diag::warn_attr_swift_name_setter_parameters;
+    
+    return None;
+  }
+
+  if (Parameters.back() != ':')
+    return diag::warn_attr_swift_name_function;
+
+  Optional<unsigned> SelfLocation;
+  Optional<unsigned> NewValueLocation;
+  unsigned NewValueCount = 0;
+  StringRef NextParam;
+  do {
+    std::tie(NextParam, Parameters) = Parameters.split(':');
+
+    if (!isValidIdentifier(NextParam))
+      return diag::warn_attr_swift_name_parameter_invalid_identifier;
+
+    // "self" indicates the "self" argument for a member.
+    if (IsMember && NextParam == "self") {
+      // More than one "self"?
+      if (SelfLocation) return diag::warn_attr_swift_name_multiple_selfs;
+
+      // The "self" location is the current parameter.
+      SelfLocation = SwiftParamCount;
+    }
+    
+    // "newValue" indicates the "newValue" argument for a setter.
+    if (NextParam == "newValue") {
+      // There should only be one 'newValue', but it's only significant for
+      // subscript accessors, so don't error right away.
+      ++NewValueCount;
+      
+      NewValueLocation = SwiftParamCount;
+    }
+    ++SwiftParamCount;
+  } while (!Parameters.empty());
+
+  // Only instance subscripts are currently supported.
+  if (IsSubscript && !SelfLocation)
+    return diag::warn_attr_swift_name_static_subscript;
+
+  IsSingleParamInit =
+      (SwiftParamCount == 1 && BaseName == "init" && NextParam != "_");
+
+  // Check the number of parameters for a getter/setter.
+  if (isGetter || isSetter) {
+    // Setters have one parameter for the new value.
+    unsigned NumExpectedParams;
+    unsigned ParamDiag;
+    
+    if (isSetter) {
+      NumExpectedParams = 1;
+      ParamDiag = diag::warn_attr_swift_name_setter_parameters;
+    } else {
+      NumExpectedParams = 0;
+      ParamDiag = diag::warn_attr_swift_name_getter_parameters;
+    }
+
+    // Instance methods have one parameter for "self".
+    if (SelfLocation) ++NumExpectedParams;
+    
+    // Subscripts may have additional parameters beyond the expected params for
+    // the index.
+    if (IsSubscript) {
+      if (SwiftParamCount < NumExpectedParams)
+        return ParamDiag;
+      // A subscript setter must explicitly label its newValue parameter to
+      // distinguish it from index parameters.
+      if (isSetter) {
+        if (!NewValueLocation)
+          return diag::warn_attr_swift_name_subscript_setter_no_newValue;
+        // There can only be one.
+        if (NewValueCount > 1)
+          return diag::warn_attr_swift_name_subscript_setter_multiple_newValues;
+      } else {
+        // Subscript getters should have no 'newValue:' parameter.
+        if (NewValueLocation)
+          return diag::warn_attr_swift_name_subscript_getter_newValue;
+      }
+    } else {
+      // Property accessors must have exactly the number of expected params.
+      if (SwiftParamCount != NumExpectedParams)
+        return ParamDiag;
+    }
+  }
+  
+  return None;
+}
+
+/// Do a check to make sure \p Name looks like a legal swift_name
+/// attribute for the decl \p D. Raise a diagnostic if the name is invalid
+/// for the given declaration.
+///
+/// For a function, this will validate a compound Swift name,
+/// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
+/// and the function will output the number of parameter names, and whether this
+/// is a single-arg initializer.
+///
+/// For a type, enum constant, property, or variable declaration, this will
+/// validate either a simple identifier, or a qualified
+/// <code>context.identifier</code> name.
+///
+/// \returns true if the name is a valid swift name for \p D, false otherwise.
+bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
+                             SourceLocation ArgLoc,
+                             IdentifierInfo *AttrName) {
+  if (isa<ObjCMethodDecl>(D) || isa<FunctionDecl>(D)) {
+    ArrayRef<ParmVarDecl*> Params;
+    unsigned ParamCount;
+
+    if (const auto *Method = dyn_cast<ObjCMethodDecl>(D)) {
+      ParamCount = Method->getSelector().getNumArgs();
+      Params = Method->parameters().slice(0, ParamCount);
+    } else {
+      const auto *Function = cast<FunctionDecl>(D);
+      ParamCount = Function->getNumParams();
+      Params = Function->parameters();
+      
+      if (!Function->hasWrittenPrototype()) {
+        Diag(ArgLoc, diag::warn_attr_swift_name_function_no_prototype)
+          << AttrName;
+        return false;
+      }
+    }
+
+    unsigned SwiftParamCount;
+    bool IsSingleParamInit;
+    if (auto diagID = validateSwiftFunctionName(Name, SwiftParamCount,
+                                                IsSingleParamInit)) {
+      Diag(ArgLoc, *diagID) << AttrName;
+      return false;
+    }
+  
+    bool ParamsOK;
+    if (SwiftParamCount == ParamCount) {
+      ParamsOK = true;
+    } else if (SwiftParamCount > ParamCount) {
+      ParamsOK = IsSingleParamInit && ParamCount == 0;
+    } else {
+      // We have fewer Swift parameters than Objective-C parameters, but that
+      // might be because we've transformed some of them. Check for potential
+      // "out" parameters and err on the side of not warning.
+      unsigned MaybeOutParamCount =
+          std::count_if(Params.begin(), Params.end(),
+                        [](const ParmVarDecl *Param) -> bool {
+        QualType ParamTy = Param->getType();
+        if (ParamTy->isReferenceType() || ParamTy->isPointerType())
+          return !ParamTy->getPointeeType().isConstQualified();
+        return false;
+      });
+      ParamsOK = (SwiftParamCount + MaybeOutParamCount >= ParamCount);
+    }
+
+    if (!ParamsOK) {
+      Diag(ArgLoc, diag::warn_attr_swift_name_num_params)
+          << (SwiftParamCount > ParamCount) << AttrName
+          << ParamCount << SwiftParamCount;
+      return false;
+    }
+
+  } else if (isa<EnumConstantDecl>(D) || isa<ObjCProtocolDecl>(D) ||
+             isa<ObjCInterfaceDecl>(D) || isa<ObjCPropertyDecl>(D) ||
+             isa<VarDecl>(D) || isa<TypedefNameDecl>(D) || isa<TagDecl>(D) ||
+             isa<IndirectFieldDecl>(D) || isa<FieldDecl>(D)) {
+    StringRef ContextName, BaseName;
+    std::tie(ContextName, BaseName) = Name.split('.');
+    if (BaseName.empty()) {
+      BaseName = ContextName;
+      ContextName = StringRef();
+    } else if (!isValidIdentifier(ContextName)) {
+      Diag(ArgLoc, diag::warn_attr_swift_name_context_name_invalid_identifier)
+        << AttrName;
+      return false;
+    }
+
+    if (!isValidIdentifier(BaseName)) {
+      Diag(ArgLoc, diag::warn_attr_swift_name_basename_invalid_identifier)
+        << AttrName;
+      return false;
+    }
+
+  } else {
+    Diag(ArgLoc, diag::warn_attr_swift_name_decl_kind) << AttrName;
+    return false;
+  }
+  return true;
+}
+
+static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
+  StringRef Name;
+  SourceLocation ArgLoc;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
+    return;
+
+  if (!S.DiagnoseSwiftName(D, Name, ArgLoc, Attr.getName()))
+    return;
+
+  D->addAttr(::new (S.Context) SwiftNameAttr(Attr.getRange(), S.Context, Name,
+                                         Attr.getAttributeSpellingListIndex()));
+}
+
+static bool isErrorParameter(Sema &S, QualType paramType) {
+  if (auto ptr = paramType->getAs<PointerType>()) {
+    auto outerPointee = ptr->getPointeeType();
+
+    // NSError**.
+    if (auto objcPtr = outerPointee->getAs<ObjCObjectPointerType>()) {
+      if (auto iface = objcPtr->getInterfaceDecl())
+        if (iface->getIdentifier() == S.getNSErrorIdent())
+          return true;
+    }
+
+    // CFErrorRef*.
+    if (auto cPtr = outerPointee->getAs<PointerType>()) {
+      auto innerPointee = cPtr->getPointeeType();
+      if (auto recordType = innerPointee->getAs<RecordType>()) {
+        if (S.isCFError(recordType->getDecl()))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+static void handleSwiftError(Sema &S, Decl *D, const AttributeList &attr) {
+  SwiftErrorAttr::ConventionKind convention;
+  IdentifierLoc *conventionLoc = attr.getArgAsIdent(0);
+  StringRef conventionStr = conventionLoc->Ident->getName();
+  if (!SwiftErrorAttr::ConvertStrToConventionKind(conventionStr, convention)) {
+    S.Diag(attr.getLoc(), diag::warn_attribute_type_not_supported)
+      << attr.getName() << conventionLoc->Ident;
+    return;
+  }
+
+  auto requireErrorParameter = [&]() -> bool {
+    if (D->isInvalidDecl()) return true;
+
+    for (unsigned i = 0, e = getFunctionOrMethodNumParams(D); i != e; ++i) {
+      if (isErrorParameter(S, getFunctionOrMethodParamType(D, i)))
+        return true;
+    }
+
+    S.Diag(attr.getLoc(), diag::err_attr_swift_error_no_error_parameter)
+      << attr.getName() << isa<ObjCMethodDecl>(D);
+    return false;
+  };
+
+  auto requirePointerResult = [&] {
+    if (D->isInvalidDecl()) return true;
+
+    // C, ObjC, and block pointers are definitely okay.
+    // References are definitely not okay.
+    // nullptr_t is weird but acceptable.
+    QualType returnType = getFunctionOrMethodResultType(D);
+    if (returnType->hasPointerRepresentation() &&
+        !returnType->isReferenceType()) return true;
+
+    S.Diag(attr.getLoc(), diag::err_attr_swift_error_return_type)
+      << attr.getName() << conventionStr
+      << isa<ObjCMethodDecl>(D) << /*pointer*/ 1;
+    return false;
+  };
+
+  auto requireIntegerResult = [&] {
+    if (D->isInvalidDecl()) return true;
+
+    QualType returnType = getFunctionOrMethodResultType(D);
+    if (returnType->isIntegralType(S.Context)) return true;
+
+    S.Diag(attr.getLoc(), diag::err_attr_swift_error_return_type)
+      << attr.getName() << conventionStr
+      << isa<ObjCMethodDecl>(D) << /*integral*/ 0;
+    return false;
+  };
+
+  switch (convention) {
+  case SwiftErrorAttr::None:
+    // No additional validation required.
+    break;
+
+  case SwiftErrorAttr::NonNullError:
+    if (!requireErrorParameter()) return;
+    break;
+
+  case SwiftErrorAttr::NullResult:
+    if (!requireErrorParameter()) return;
+    if (!requirePointerResult()) return;
+    break;
+
+  case SwiftErrorAttr::NonZeroResult:
+  case SwiftErrorAttr::ZeroResult:
+    if (!requireErrorParameter()) return;
+    if (!requireIntegerResult()) return;
+    break;
+  }
+
+  D->addAttr(::new (S.Context)
+             SwiftErrorAttr(attr.getRange(), S.Context, convention,
+                            attr.getAttributeSpellingListIndex()));
+}
+
+static void handleSwiftBridgeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  // Make sure that there is a string literal as the annotation's single
+  // argument.
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
+    return;
+
+  // Don't duplicate annotations that are already set.
+  if (D->hasAttr<SwiftBridgeAttr>()) {
+    S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute) << Attr.getName();
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+             SwiftBridgeAttr(Attr.getRange(), S.Context, Str,
+                             Attr.getAttributeSpellingListIndex()));
+}
+
+static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  // Make sure that there is an identifier as the annotation's single
+  // argument.
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+      << Attr.getName() << 1;
+    Attr.setInvalid();
+    return;
+  }
+  if (!Attr.isArgIdent(0)) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
+      << Attr.getName() << AANT_ArgumentIdentifier;
+    Attr.setInvalid();
+    return;
+  }
+
+  IdentifierInfo *II = Attr.getArgAsIdent(0)->Ident;
+  SwiftNewtypeAttr::NewtypeKind Kind;
+  if (II->isStr("struct"))
+    Kind = SwiftNewtypeAttr::NK_Struct;
+  else if (II->isStr("enum"))
+    Kind = SwiftNewtypeAttr::NK_Enum;
+  else {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_type_not_supported)
+      << Attr.getName() << II;
+    Attr.setInvalid();
+    return;
+  }
+
+  if (!isa<TypedefNameDecl>(D)) {
+    S.Diag(Attr.getLoc(), diag::warn_swift_newtype_attribute_non_typedef);
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+             SwiftNewtypeAttr(Attr.getRange(), S.Context, Kind,
+                              Attr.getAttributeSpellingListIndex()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -5537,6 +6037,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_ReturnsNonNull:
     handleReturnsNonNullAttr(S, D, Attr);
     break;
+  case AttributeList::AT_NoEscape:
+    handleNoEscapeAttr(S, D, Attr);
+    break;
   case AttributeList::AT_AssumeAligned:
     handleAssumeAlignedAttr(S, D, Attr);
     break;
@@ -5601,6 +6104,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_ObjCBoxable:
     handleObjCBoxable(S, D, Attr);
     break;
+  case AttributeList::AT_NSErrorDomain:
+    handleNSErrorDomain(S, D, Attr);
+    break;
   case AttributeList::AT_CFAuditedTransfer:
     handleCFAuditedTransferAttr(S, D, Attr);
     break;
@@ -5650,6 +6156,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_ObjCRootClass:
     handleSimpleAttribute<ObjCRootClassAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_ObjCSubclassingRestricted:
+    handleSimpleAttribute<ObjCSubclassingRestrictedAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_ObjCCompleteDefinition:
+    handleSimpleAttribute<ObjCCompleteDefinitionAttr>(S, D, Attr);
     break;
   case AttributeList::AT_ObjCExplicitProtocolImpl:
     handleObjCSuppresProtocolAttr(S, D, Attr);
@@ -5913,6 +6425,21 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_RenderScriptKernel:
     handleSimpleAttribute<RenderScriptKernelAttr>(S, D, Attr);
     break;
+  // Swift attributes.
+  case AttributeList::AT_SwiftPrivate:
+    handleSimpleAttribute<SwiftPrivateAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftName:
+    handleSwiftName(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftError:
+    handleSwiftError(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftBridge:
+    handleSwiftBridgeAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftNewtype:
+    handleSwiftNewtypeAttr(S, D, Attr);
   // XRay attributes.
   case AttributeList::AT_XRayInstrument:
     handleSimpleAttribute<XRayInstrumentAttr>(S, D, Attr);
@@ -6129,6 +6656,9 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
   // Finally, apply any attributes on the decl itself.
   if (const AttributeList *Attrs = PD.getAttributes())
     ProcessDeclAttributeList(S, D, Attrs);
+
+  // Look for API notes that map to attributes.
+  ProcessAPINotes(D);
 }
 
 /// Is the given declaration allowed to use a forbidden type?

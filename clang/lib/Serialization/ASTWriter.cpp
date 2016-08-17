@@ -2462,6 +2462,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExplicit
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSystem
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExternC
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSwiftInferIAM...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferSubmodules...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExplicit...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExportWild...
@@ -2556,9 +2557,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     {
       RecordData::value_type Record[] = {
           SUBMODULE_DEFINITION, ID, ParentID, Mod->IsFramework, Mod->IsExplicit,
-          Mod->IsSystem, Mod->IsExternC, Mod->InferSubmodules,
-          Mod->InferExplicitSubmodules, Mod->InferExportWildcard,
-          Mod->ConfigMacrosExhaustive};
+          Mod->IsSystem, Mod->IsExternC, Mod->IsSwiftInferImportAsMember,
+          Mod->InferSubmodules, Mod->InferExplicitSubmodules,
+          Mod->InferExportWildcard, Mod->ConfigMacrosExhaustive};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 

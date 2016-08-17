@@ -1280,6 +1280,9 @@ BUILTIN(__builtin___get_unsafe_stack_ptr, "v*", "Fn")
 BUILTIN(__builtin_nontemporal_store, "v.", "t")
 BUILTIN(__builtin_nontemporal_load, "v.", "t")
 
+// Builtins for os_log/os_trace
+BUILTIN(__builtin_os_log_format_buffer_size, "zcC*.", "p:0:nut")
+BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 LANGBUILTIN(read_pipe, "i.", "tn", OCLC20_LANG)

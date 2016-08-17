@@ -88,6 +88,8 @@ def err_module_unavailable : Error<
   "module '%0' %select{is incompatible with|requires}1 feature '%2'">;
 def err_module_header_missing : Error<
   "%select{|umbrella }0header '%1' not found">;
+def err_module_shadowed : Error<
+  "import of shadowed module '%0'">;
 def err_module_lock_failure : Error<
   "could not acquire lock file for module '%0': %1">, DefaultFatal;
 def err_module_lock_timeout : Error<
@@ -215,6 +217,11 @@ def note_mt_message : Note<"[rewriter] %0">;
 // ARCMigrate
 def warn_arcmt_nsalloc_realloc : Warning<"[rewriter] call returns pointer to GC managed memory; it will become unmanaged in ARC">;
 def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to be used with an object with ownership other than __unsafe_unretained">;
+
+// API notes
+def err_apinotes_message : Error<"%0">;
+def warn_apinotes_message : Warning<"%0">;
+def note_apinotes_message : Note<"%0">;
 
 // OpenMP
 def err_omp_more_one_clause : Error<

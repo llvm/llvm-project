@@ -1,0 +1,146 @@
+---
+Name:            AppKit
+Availability:    available
+AvailabilityMsg: ''
+SwiftInferImportAsMember: true
+Classes:         
+  - Name:            NSCell
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       ''
+    SwiftBridge:     ''
+    NSErrorDomain:   ''
+    Methods:         
+      - Selector:        init
+        MethodKind:      Instance
+        NullabilityOfRet: U
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    true
+        SwiftName:       ''
+        DesignatedInit:  true
+      - Selector:        'initImageCell:'
+        MethodKind:      Instance
+        Nullability:     [ N ]
+        NullabilityOfRet: U
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+        DesignatedInit:  true
+      - Selector:        'initTextCell:'
+        MethodKind:      Instance
+        Nullability:     [ N ]
+        NullabilityOfRet: U
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+        DesignatedInit:  true
+      - Selector:        'initWithCoder:'
+        MethodKind:      Instance
+        Nullability:     [ N ]
+        NullabilityOfRet: U
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+        DesignatedInit:  true
+        Required:        true
+  - Name:            NSView
+    AuditedForNullability: true
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       ''
+    SwiftBridge:     View
+    NSErrorDomain:   ''
+    Methods:         
+      - Selector:        'addSubview:'
+        MethodKind:      Instance
+        Nullability:     [ N ]
+        NullabilityOfRet: N
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+      - Selector:        'addSubview:positioned:relativeTo:'
+        MethodKind:      Instance
+        Parameters:      
+          - Position:        0
+            NoEscape:        false
+          - Position:        1
+            NoEscape:        false
+          - Position:        2
+            NoEscape:        true
+        Nullability:     [ N, N, O ]
+        NullabilityOfRet: N
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+      - Selector:        'beginDraggingSessionWithItems:event:source:'
+        MethodKind:      Instance
+        Nullability:     [ U, U, N ]
+        NullabilityOfRet: N
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       'beginDragginSession(_:event:source:)'
+    Properties:      
+      - Name:            enclosingScrollView
+        Nullability:     O
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       enclosing
+      - Name:            makeBackingLayer
+        Nullability:     N
+        Availability:    available
+        AvailabilityMsg: ''
+        SwiftPrivate:    false
+        SwiftName:       ''
+Functions:       
+  - Name:            NSAvailableWindowDepths
+    NullabilityOfRet: N
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       'availableWindowDepths()'
+Globals:         
+  - Name:            NSCalibratedWhiteColorSpace
+    Nullability:     N
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       calibratedWhite
+Enumerators:     
+  - Name:            NSColorRed
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       Red
+Tags:            
+  - Name:            NSSomeEnum
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       SomeEnum
+    SwiftBridge:     ''
+    NSErrorDomain:   some_error_domain
+  - Name:            NSSomeStruct
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       SomeStruct
+    SwiftBridge:     ''
+    NSErrorDomain:   ''
+Typedefs:        
+  - Name:            NSTypedef
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftPrivate:    false
+    SwiftName:       Typedef
+    SwiftBridge:     ''
+    NSErrorDomain:   ''

@@ -1856,13 +1856,17 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
              ->HasIncompatibleModuleFile) {
       clang::Module::Requirement Requirement;
       clang::Module::UnresolvedHeaderDirective MissingHeader;
+      clang::Module *ShadowingModule = nullptr;
       Module *M = SuggestedModule.getModule();
       // Identify the cause.
       (void)M->isAvailable(getLangOpts(), getTargetInfo(), Requirement,
-                           MissingHeader);
+                           MissingHeader, ShadowingModule);
       if (MissingHeader.FileNameLoc.isValid()) {
         Diag(MissingHeader.FileNameLoc, diag::err_module_header_missing)
             << MissingHeader.IsUmbrella << MissingHeader.FileName;
+      } else if (ShadowingModule) {
+        Diag(M->DefinitionLoc, diag::err_module_shadowed) << M->Name;
+        Diag(ShadowingModule->DefinitionLoc, diag::note_previous_definition);
       } else {
         Diag(M->DefinitionLoc, diag::err_module_unavailable)
             << M->getFullModuleName() << Requirement.second << Requirement.first;

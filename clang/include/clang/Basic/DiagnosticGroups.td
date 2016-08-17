@@ -372,6 +372,9 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
+
+def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
+
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalPointerCompare : DiagGroup<"tautological-pointer-compare">;
 def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;

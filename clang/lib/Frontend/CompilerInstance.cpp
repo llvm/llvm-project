@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -538,6 +539,24 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // If we're building a module, notify the API notes manager.
+  StringRef currentModuleName = getLangOpts().CurrentModule;
+  if (!currentModuleName.empty()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+            currentModuleName,
+            getAPINotesOpts().ModuleSearchPaths);
+    // Check for any attributes we should add to the module
+    if (auto curReader = TheSema->APINotes.getCurrentModuleReader()) {
+      auto currentModule = getPreprocessor().getCurrentModule();
+      assert(currentModule && "how can we have a reader for it?");
+
+      // swift_infer_import_as_member
+      if (curReader->getModuleOptions().SwiftInferImportAsMember) {
+        currentModule->IsSwiftInferImportAsMember = true;
+      }
+    }
+  }
 }
 
 // Output Files
@@ -1627,8 +1646,13 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     // Check whether this module is available.
     clang::Module::Requirement Requirement;
     clang::Module::UnresolvedHeaderDirective MissingHeader;
+    clang::Module *ShadowingModule = nullptr;
     if (!Module->isAvailable(getLangOpts(), getTarget(), Requirement,
-                             MissingHeader)) {
+                             MissingHeader, ShadowingModule)) {
+
+      assert(!ShadowingModule &&
+             "lookup of module by name should never find shadowed module");
+
       if (MissingHeader.FileNameLoc.isValid()) {
         getDiagnostics().Report(MissingHeader.FileNameLoc,
                                 diag::err_module_header_missing)

@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H_
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H_
 
+#include "clang/APINotes/APINotesOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LangOptions.h"
@@ -106,6 +107,9 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   MigratorOptions MigratorOpts;
   
+  /// Options controlling API notes.
+  APINotesOptions APINotesOpts;
+
   /// Options controlling IRgen and the backend.
   CodeGenOptions CodeGenOpts;
 
@@ -176,6 +180,11 @@ public:
   MigratorOptions &getMigratorOpts() { return MigratorOpts; }
   const MigratorOptions &getMigratorOpts() const {
     return MigratorOpts;
+  }
+
+  APINotesOptions &getAPINotesOpts() { return APINotesOpts; }
+  const APINotesOptions &getAPINotesOpts() const {
+    return APINotesOpts;
   }
   
   CodeGenOptions &getCodeGenOpts() { return CodeGenOpts; }

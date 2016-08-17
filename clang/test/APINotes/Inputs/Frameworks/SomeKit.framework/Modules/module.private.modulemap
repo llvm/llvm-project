@@ -1,0 +1,8 @@
+module SomeKit.Private {
+  header "SomeKit_Private.h"
+  export *
+
+  explicit module NullAnnotation {
+    header "SomeKit_PrivateForNullAnnotation.h"
+  }
+}

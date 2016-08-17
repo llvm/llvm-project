@@ -5330,6 +5330,35 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
+  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes,
+                   false) ||
+      Args.hasArg(options::OPT_iapinotes_modules)) {
+    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
+      CmdArgs.push_back("-fapinotes");
+
+    SmallString<128> APINotesCachePath;
+    if (Arg *A = Args.getLastArg(options::OPT_fapinotes_cache_path)) {
+      APINotesCachePath = A->getValue();
+    }
+
+    if (C.isForDiagnostics()) {
+      // When generating crash reports, we want to emit the API notes along with
+      // the reproduction sources, so we ignore any provided API notes path.
+      APINotesCachePath = Output.getFilename();
+      llvm::sys::path::replace_extension(APINotesCachePath, ".cache");
+      llvm::sys::path::append(APINotesCachePath, "apinotes");
+    } else if (APINotesCachePath.empty()) {
+      // No API notes path was provided: use the default.
+      llvm::sys::path::system_temp_directory(/*erasedOnReboot=*/false,
+                                             APINotesCachePath);
+      llvm::sys::path::append(APINotesCachePath, "org.llvm.clang");
+      llvm::sys::path::append(APINotesCachePath, "APINotesCache");
+    }
+    const char Arg[] = "-fapinotes-cache-path=";
+    APINotesCachePath.insert(APINotesCachePath.begin(), Arg, Arg + strlen(Arg));
+    CmdArgs.push_back(Args.MakeArgString(APINotesCachePath));
+  }
+
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
                    getToolChain().IsBlocksDefault()) ||

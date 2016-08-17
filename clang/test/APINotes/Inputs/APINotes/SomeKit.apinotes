@@ -1,0 +1,40 @@
+Name: SomeKit
+Classes:
+  - Name: A
+    Methods:         
+      - Selector:        "transform:"
+        MethodKind:      Instance
+        Availability:    none
+        AvailabilityMsg: "anything but this"
+      - Selector: "transform:integer:"
+        MethodKind:      Instance
+        NullabilityOfRet: N
+        Nullability:      [ N, S ]
+      - Selector: "privateTransform:input:"
+        MethodKind:      Instance
+        NullabilityOfRet: N
+        Nullability:      [ N, S ]
+    Properties:
+      - Name: intValue
+        Availability: none
+        AvailabilityMsg: "wouldn't work anyway"
+      - Name: internalProperty
+        Nullability: N
+  - Name: B
+    Availability: none
+    AvailabilityMsg: "just don't"
+  - Name: C
+    Methods:
+      - Selector: "initWithA:"
+        MethodKind: Instance
+        DesignatedInit: true
+  - Name: ProcessInfo
+    Methods:
+      - Selector: "processInfo"
+        MethodKind: Class
+        FactoryAsInit: C
+
+Protocols:
+  - Name: InternalProtocol
+    Availability: none
+    AvailabilityMsg: "not for you"

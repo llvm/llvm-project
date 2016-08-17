@@ -80,7 +80,6 @@ void f8() {
 extern int x2 __attribute__((availability(macosx,introduced=10.2))); // expected-note {{previous attribute is here}}
 extern int x2 __attribute__((availability(macosx,introduced=10.5))); // expected-warning {{availability does not match previous declaration}}
 
-
 enum Original {
   OriginalDeprecated __attribute__((availability(macosx, deprecated=10.2))), // expected-note + {{'OriginalDeprecated' has been explicitly marked deprecated here}}
   OriginalUnavailable __attribute__((availability(macosx, unavailable))) // expected-note + {{'OriginalUnavailable' has been explicitly marked unavailable here}}

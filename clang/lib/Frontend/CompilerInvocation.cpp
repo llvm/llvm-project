@@ -1047,6 +1047,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
 static void ParseFileSystemArgs(FileSystemOptions &Opts, ArgList &Args) {
   Opts.WorkingDir = Args.getLastArgValue(OPT_working_directory);
+  Opts.APINotesCachePath = Args.getLastArgValue(OPT_fapinotes_cache_path);
 }
 
 /// Parse the argument to the -ftest-module-file-extension
@@ -1469,6 +1470,12 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
 
   for (const Arg *A : Args.filtered(OPT_ivfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
+}
+
+static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args) {
+  using namespace options;
+  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
+    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 static bool isOpenCL(LangStandard::Kind LangStd) {
@@ -1960,6 +1967,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // is enabled.
   Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
                             | Opts.NativeHalfArgsAndReturns;
+  Opts.APINotes = Args.hasArg(OPT_fapinotes);
   Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
 
   // __declspec is enabled by default for the PS4 by the driver, and also
@@ -2359,6 +2367,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags,
                               Res.getTargetOpts());
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args);
+  ParseAPINotesArgs(Res.getAPINotesOpts(), Args);
+
   if (DashX == IK_AST || DashX == IK_LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
     // PassManager in BackendUtil.cpp. They need to be initializd no matter
@@ -2377,6 +2387,13 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
+
+    // -fapinotes requires -fapinotes-cache-path=<directory>.
+    if (LangOpts.APINotes &&
+        Res.getFileSystemOpts().APINotesCachePath.empty()) {
+      Diags.Report(diag::err_no_apinotes_cache_path);
+      Success = false;
+    }
   }
 
   if (LangOpts.CUDA) {

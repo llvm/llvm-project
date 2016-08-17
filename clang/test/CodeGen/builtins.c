@@ -367,3 +367,62 @@ long long test_builtin_readcyclecounter() {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_readcyclecounter();
 }
+
+// Behavior of __builtin_os_log differs between platforms, so only test on X86
+#ifdef __x86_64__
+// CHECK-LABEL: define void @test_builtin_os_log
+// CHECK: (i8* [[BUF:%.*]], i32 [[I:%.*]], i8* [[DATA:%.*]])
+void test_builtin_os_log(void *buf, int i, const char *data) {
+  volatile int len;
+  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
+  // CHECK: store i32 [[I]], i32* [[I_ADDR:%.*]], align 4
+  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
+
+  // CHECK: store volatile i32 34
+  len = __builtin_os_log_format_buffer_size("%d %{public}s %{private}.16P", i, data, data);
+
+  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
+  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
+  // CHECK: store i8 3, i8* [[SUMMARY]]
+  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
+  // CHECK: store i8 4, i8* [[NUM_ARGS]]
+  //
+  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
+  // CHECK: store i8 0, i8* [[ARG1_DESC]]
+  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
+  // CHECK: store i8 4, i8* [[ARG1_SIZE]]
+  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
+  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
+  // CHECK: [[I2:%.*]] = load i32, i32* [[I_ADDR]]
+  // CHECK: store i32 [[I2]], i32* [[ARG1_INT]]
+
+  // CHECK: [[ARG2_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 8
+  // CHECK: store i8 34, i8* [[ARG2_DESC]]
+  // CHECK: [[ARG2_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 9
+  // CHECK: store i8 8, i8* [[ARG2_SIZE]]
+  // CHECK: [[ARG2:%.*]] = getelementptr i8, i8* [[BUF2]], i64 10
+  // CHECK: [[ARG2_PTR:%.*]] = bitcast i8* [[ARG2]] to i8**
+  // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA_ADDR]]
+  // CHECK: store i8* [[DATA2]], i8** [[ARG2_PTR]]
+
+  // CHECK: [[ARG3_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 18
+  // CHECK: store i8 17, i8* [[ARG3_DESC]]
+  // CHECK: [[ARG3_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 19
+  // CHECK: store i8 4, i8* [[ARG3_SIZE]]
+  // CHECK: [[ARG3:%.*]] = getelementptr i8, i8* [[BUF2]], i64 20
+  // CHECK: [[ARG3_INT:%.*]] = bitcast i8* [[ARG3]] to i32*
+  // CHECK: store i32 16, i32* [[ARG3_INT]]
+
+  // CHECK: [[ARG4_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 24
+  // CHECK: store i8 49, i8* [[ARG4_DESC]]
+  // CHECK: [[ARG4_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 25
+  // CHECK: store i8 8, i8* [[ARG4_SIZE]]
+  // CHECK: [[ARG4:%.*]] = getelementptr i8, i8* [[BUF2]], i64 26
+  // CHECK: [[ARG4_PTR:%.*]] = bitcast i8* [[ARG4]] to i8**
+  // CHECK: [[DATA3:%.*]] = load i8*, i8** [[DATA_ADDR]]
+  // CHECK: store i8* [[DATA3]], i8** [[ARG4_PTR]]
+
+  __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
+}
+
+#endif

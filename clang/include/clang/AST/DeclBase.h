@@ -600,7 +600,7 @@ public:
   /// the given declaration (e.g., preferring 'unavailable' to
   /// 'deprecated').
   ///
-  /// \param Message If non-NULL and the result is not \c
+  /// \param[out] Message If non-NULL and the result is not \c
   /// AR_Available, will be set to a (possibly empty) message
   /// describing why the declaration has not been introduced, is
   /// deprecated, or is unavailable.

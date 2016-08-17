@@ -980,6 +980,10 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
   ObjCInterfaceDecl *IDecl
     = ObjCInterfaceDecl::Create(Context, CurContext, AtInterfaceLoc, ClassName,
                                 typeParamList, PrevIDecl, ClassLoc);
+  if (AttrList)
+    ProcessDeclAttributeList(TUScope, IDecl, AttrList);
+  ProcessAPINotes(IDecl);
+
   if (PrevIDecl) {
     // Class already seen. Was it a definition?
     if (ObjCInterfaceDecl *Def = PrevIDecl->getDefinition()) {
@@ -990,8 +994,6 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
     }
   }
   
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   PushOnScopeChains(IDecl, TUScope);
 
   // Start the definition of this class. If we're in a redefinition case, there 
@@ -1168,6 +1170,7 @@ Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
   
   if (AttrList)
     ProcessDeclAttributeList(TUScope, PDecl, AttrList);
+  ProcessAPINotes(PDecl);
   
   // Merge attributes from previous declarations.
   if (PrevDecl)
@@ -1692,12 +1695,14 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
       = ObjCProtocolDecl::Create(Context, CurContext, Ident, 
                                  IdentPair.second, AtProtocolLoc,
                                  PrevDecl);
-        
+    ProcessAPINotes(PDecl);
+
     PushOnScopeChains(PDecl, TUScope);
     CheckObjCDeclScope(PDecl);
     
     if (attrList)
       ProcessDeclAttributeList(TUScope, PDecl, attrList);
+    ProcessAPINotes(PDecl);
     
     if (PrevDecl)
       mergeDeclAttributes(PDecl, PrevDecl);
@@ -3030,7 +3035,8 @@ Sema::ActOnForwardClassDeclaration(SourceLocation AtClassLoc,
                                   ClassName, TypeParams, PrevIDecl,
                                   IdentLocs[i]);
     IDecl->setAtEndRange(IdentLocs[i]);
-    
+    ProcessAPINotes(IDecl);
+
     PushOnScopeChains(IDecl, TUScope);
     CheckObjCDeclScope(IDecl);
     DeclsInGroup.push_back(IDecl);
@@ -3830,7 +3836,7 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
       if (IDecl->getSuperClass() == nullptr) {
         // This class has no superclass, so check that it has been marked with
         // __attribute((objc_root_class)).
-        if (!HasRootClassAttr) {
+        if (!HasRootClassAttr && !IDecl->hasAttr<ObjCCompleteDefinitionAttr>()) {
           SourceLocation DeclLoc(IDecl->getLocation());
           SourceLocation SuperClassLoc(getLocForEndOfToken(DeclLoc));
           Diag(DeclLoc, diag::warn_objc_root_class_missing)
@@ -3873,6 +3879,15 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
         ImplMethodsVsClassMethods(S, CatImplClass, Cat);
       }
     }
+  } else if (const ObjCInterfaceDecl *IntfDecl =
+             dyn_cast<ObjCInterfaceDecl>(ClassDecl)) {
+    if (const ObjCInterfaceDecl *Super = IntfDecl->getSuperClass()) {
+      if (!IntfDecl->hasAttr<ObjCSubclassingRestrictedAttr>() &&
+          Super->hasAttr<ObjCSubclassingRestrictedAttr>()) {
+        Diag(IntfDecl->getLocation(), diag::err_restricted_superclass_mismatch);
+        Diag(Super->getLocation(), diag::note_class_declared);
+      }
+    }
   }
   if (isInterfaceDeclKind) {
     // Reject invalid vardecls.
@@ -3905,12 +3920,10 @@ CvtQTToAstBitMask(ObjCDeclSpec::ObjCDeclQualifier PQTVal) {
   return (Decl::ObjCDeclQualifier) (unsigned) PQTVal;
 }
 
-/// \brief Check whether the declared result type of the given Objective-C
-/// method declaration is compatible with the method's class.
-///
-static Sema::ResultTypeCompatibilityKind 
-CheckRelatedResultTypeCompatibility(Sema &S, ObjCMethodDecl *Method,
-                                    ObjCInterfaceDecl *CurrentClass) {
+Sema::ResultTypeCompatibilityKind
+Sema::checkRelatedResultTypeCompatibility(
+    const ObjCMethodDecl *Method,
+    const ObjCInterfaceDecl *CurrentClass) {
   QualType ResultType = Method->getReturnType();
 
   // If an Objective-C method inherits its related result type, then its 
@@ -4366,6 +4379,7 @@ Decl *Sema::ActOnMethodDeclaration(
 
     // Apply the attributes to the parameter.
     ProcessDeclAttributeList(TUScope, Param, ArgInfo[i].ArgAttrs);
+    ProcessAPINotes(Param);
 
     if (Param->hasAttr<BlocksAttr>()) {
       Diag(Param->getLocation(), diag::err_block_on_nonlocal);
@@ -4396,6 +4410,7 @@ Decl *Sema::ActOnMethodDeclaration(
 
   if (AttrList)
     ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
+  ProcessAPINotes(ObjCMethod);
 
   // Add the method now.
   const ObjCMethodDecl *PrevMethod = nullptr;
@@ -4451,7 +4466,7 @@ Decl *Sema::ActOnMethodDeclaration(
   }
 
   ResultTypeCompatibilityKind RTC
-    = CheckRelatedResultTypeCompatibility(*this, ObjCMethod, CurrentClass);
+    = checkRelatedResultTypeCompatibility(ObjCMethod, CurrentClass);
 
   CheckObjCMethodOverrides(ObjCMethod, CurrentClass, RTC);
 
