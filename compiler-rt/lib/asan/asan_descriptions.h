@@ -122,4 +122,14 @@ bool GetHeapAddressInformation(uptr addr, uptr access_size,
                                HeapAddressDescription *descr);
 bool DescribeAddressIfHeap(uptr addr, uptr access_size = 1);
 
+struct StackAddressDescription {
+  uptr addr;
+  uptr tid;
+  uptr offset;
+  uptr frame_pc;
+  const char *frame_descr;
+};
+bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr);
+bool DescribeAddressIfStack(uptr addr, uptr access_size);
+
 }  // namespace __asan
