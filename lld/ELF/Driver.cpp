@@ -263,10 +263,8 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     printHelp(ArgsArr[0]);
     return;
   }
-  if (Args.hasArg(OPT_version)) {
+  if (Args.hasArg(OPT_version))
     outs() << getVersionString();
-    return;
-  }
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it

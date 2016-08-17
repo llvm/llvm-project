@@ -1185,7 +1185,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         size_type __n, const hasher& __hf, const key_equal& __eql,
         const allocator_type& __a)
-    : __table_(__hf, __eql, __a)
+    : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1197,7 +1197,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         const allocator_type& __a)
-    : __table_(__a)
+    : __table_(typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1234,7 +1234,7 @@ template <class _InputIterator>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         _InputIterator __first, _InputIterator __last, size_type __n,
         const hasher& __hf, const key_equal& __eql, const allocator_type& __a)
-    : __table_(__hf, __eql, __a)
+    : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1258,7 +1258,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         const unordered_map& __u, const allocator_type& __a)
-    : __table_(__u.__table_, __a)
+    : __table_(__u.__table_, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1285,7 +1285,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         unordered_map&& __u, const allocator_type& __a)
-    : __table_(_VSTD::move(__u.__table_), __a)
+    : __table_(_VSTD::move(__u.__table_), typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1335,7 +1335,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         initializer_list<value_type> __il, size_type __n, const hasher& __hf,
         const key_equal& __eql, const allocator_type& __a)
-    : __table_(__hf, __eql, __a)
+    : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1820,7 +1820,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         size_type __n, const hasher& __hf, const key_equal& __eql,
         const allocator_type& __a)
-    : __table_(__hf, __eql, __a)
+    : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1858,7 +1858,7 @@ template <class _InputIterator>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         _InputIterator __first, _InputIterator __last, size_type __n,
         const hasher& __hf, const key_equal& __eql, const allocator_type& __a)
-    : __table_(__hf, __eql, __a)
+    : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1871,7 +1871,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         const allocator_type& __a)
-    : __table_(__a)
+    : __table_(typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1893,7 +1893,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         const unordered_multimap& __u, const allocator_type& __a)
-    : __table_(__u.__table_, __a)
+    : __table_(__u.__table_, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1920,7 +1920,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         unordered_multimap&& __u, const allocator_type& __a)
-    : __table_(_VSTD::move(__u.__table_), __a)
+    : __table_(_VSTD::move(__u.__table_), typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1972,7 +1972,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         initializer_list<value_type> __il, size_type __n, const hasher& __hf,
         const key_equal& __eql, const allocator_type& __a)
-    : __table_(__hf, __eql, __a)
+    : __table_(__hf, __eql, typename __table::allocator_type(__a))
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);

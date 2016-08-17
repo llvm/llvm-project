@@ -1341,6 +1341,14 @@ namespace lldb_private {
             return nullptr;
         }
 
+        // This method will return the entry that contains the given address, or the
+        // entry following that address.  If you give it an address of 0 and the first
+        // entry starts at address 0x100, you will get the entry at 0x100.  
+        //
+        // For most uses, FindEntryThatContains is the correct one to use, this is a 
+        // less commonly needed behavior.  It was added for core file memory regions, 
+        // where we want to present a gap in the memory regions as a distinct region, 
+        // so we need to know the start address of the next memory section that exists.
         const Entry *
         FindEntryThatContainsOrFollows(B addr) const
         {
@@ -1349,11 +1357,15 @@ namespace lldb_private {
 #endif
             if (!m_entries.empty())
             {
+                typename Collection::const_iterator begin = m_entries.begin();
                 typename Collection::const_iterator end = m_entries.end();
                 typename Collection::const_iterator pos =
                     std::lower_bound(m_entries.begin(), end, addr, [](const Entry &lhs, B rhs_base) -> bool {
                         return lhs.GetRangeEnd() <= rhs_base;
                     });
+
+                while (pos != begin && pos[-1].Contains(addr))
+                    --pos;
 
                 if (pos != end)
                     return &(*pos);

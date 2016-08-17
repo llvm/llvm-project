@@ -760,7 +760,6 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
       diagnostics << pie->getSpelling()
                   << " can only used when linking main executables\n";
       return false;
-      break;
     }
   }
 

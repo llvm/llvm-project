@@ -261,7 +261,7 @@
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x24000
+# CHECK-NEXT:   Address: 0x4800000
 # CHECK-NEXT:   Offset:
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Link:
@@ -291,7 +291,7 @@
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x26000
+# CHECK-NEXT:   Address: 0x200000
 # CHECK-NEXT:   Offset:
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Link:

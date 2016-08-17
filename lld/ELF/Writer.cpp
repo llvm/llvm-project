@@ -963,9 +963,13 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     if (!needsPtLoad(Sec))
       continue;
 
-    // If flags changed then we want new load segment.
+    // Segments are contiguous memory regions that has the same attributes
+    // (e.g. executable or writable). There is one phdr for each segment.
+    // Therefore, we need to create a new phdr when the next section has
+    // different flags or is loaded at a discontiguous address using AT linker
+    // script command.
     uintX_t NewFlags = Sec->getPhdrFlags();
-    if (Flags != NewFlags) {
+    if (Script<ELFT>::X->getLma(Sec->getName()) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1128,7 +1132,11 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       H.p_align = Target->PageSize;
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
+
     H.p_paddr = H.p_vaddr;
+    if (H.p_type == PT_LOAD && First)
+      if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
+        H.p_paddr = LmaExpr(H.p_vaddr);
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.
