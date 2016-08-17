@@ -1721,7 +1721,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Expected immediate, but got non-immediate";
         return false;
       }
-      // Fall-through
+      LLVM_FALLTHROUGH;
     default:
       continue;
     }

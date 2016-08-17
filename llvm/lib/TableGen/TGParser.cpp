@@ -1286,6 +1286,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
           continue;
         }
         // Fallthrough to try convert this to a bit.
+        LLVM_FALLTHROUGH;
       }
       // All other values must be convertible to just a single bit.
       Init *Bit = Vals[i]->convertInitializerTo(BitRecTy::get());

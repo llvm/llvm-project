@@ -3748,7 +3748,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_Darwin(
         ArgOffset += PtrByteSize;
         break;
       }
-      // FALLTHROUGH
+      LLVM_FALLTHROUGH;
     case MVT::i64:  // PPC64
       if (GPR_idx != Num_GPR_Regs) {
         unsigned VReg = MF.addLiveIn(GPR[GPR_idx], &PPC::G8RCRegClass);

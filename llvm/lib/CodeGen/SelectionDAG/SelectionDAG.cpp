@@ -2481,7 +2481,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   default:
     if (Op.getOpcode() < ISD::BUILTIN_OP_END)
       break;
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:
@@ -3868,7 +3868,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return getConstant(0, DL, VT);
-      // fallthrough
+      LLVM_FALLTHROUGH;
     case ISD::ADD:
     case ISD::ADDC:
     case ISD::ADDE:

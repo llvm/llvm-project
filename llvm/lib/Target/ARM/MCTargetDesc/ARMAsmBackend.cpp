@@ -375,7 +375,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case ARM::fixup_arm_movt_hi16:
     if (!IsPCRel)
       Value >>= 16;
-  // Fallthrough
+    LLVM_FALLTHROUGH;
   case ARM::fixup_arm_movw_lo16: {
     unsigned Hi4 = (Value & 0xF000) >> 12;
     unsigned Lo12 = Value & 0x0FFF;
@@ -387,7 +387,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case ARM::fixup_t2_movt_hi16:
     if (!IsPCRel)
       Value >>= 16;
-  // Fallthrough
+    LLVM_FALLTHROUGH;
   case ARM::fixup_t2_movw_lo16: {
     unsigned Hi4 = (Value & 0xF000) >> 12;
     unsigned i = (Value & 0x800) >> 11;
@@ -403,7 +403,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case ARM::fixup_arm_ldst_pcrel_12:
     // ARM PC-relative values are offset by 8.
     Value -= 4;
-  // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case ARM::fixup_t2_ldst_pcrel_12: {
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value -= 4;

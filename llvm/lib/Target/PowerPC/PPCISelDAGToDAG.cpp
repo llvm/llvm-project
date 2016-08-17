@@ -3575,7 +3575,8 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                    Op.getOperand(0) == Op.getOperand(1))
             Op2Not = true;
         }
-        }  // fallthrough
+        LLVM_FALLTHROUGH;
+      }
       case PPC::BC:
       case PPC::BCn:
       case PPC::SELECT_I4:

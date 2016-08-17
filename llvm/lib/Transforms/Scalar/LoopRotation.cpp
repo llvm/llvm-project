@@ -501,7 +501,8 @@ static bool shouldSpeculateInstrs(BasicBlock::iterator Begin,
       // GEPs are cheap if all indices are constant.
       if (!cast<GEPOperator>(I)->hasAllConstantIndices())
         return false;
-    // fall-thru to increment case
+      // fall-thru to increment case
+      LLVM_FALLTHROUGH;
     case Instruction::Add:
     case Instruction::Sub:
     case Instruction::And:

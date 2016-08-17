@@ -1583,7 +1583,7 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
       lex();
       break;
     }
-  // fallthrough
+    LLVM_FALLTHROUGH;
   default:
     // FIXME: Parse the MCSymbol machine operand.
     return error("expected a machine operand");

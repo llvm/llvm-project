@@ -2289,7 +2289,7 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &ICI) {
   case Instruction::UDiv:
     if (Instruction *I = foldICmpUDivConstant(ICI, LHSI, RHSV))
       return I;
-    // fall-through
+    LLVM_FALLTHROUGH;
   case Instruction::SDiv:
     if (Instruction *I = foldICmpDivConstant(ICI, LHSI, RHSV))
       return I;
@@ -4165,7 +4165,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
       case Instruction::LShr:
         if (I.isSigned())
           break;
-        // fall-through
+        LLVM_FALLTHROUGH;
       case Instruction::SDiv:
       case Instruction::AShr:
         if (!BO0->isExact() || !BO1->isExact())

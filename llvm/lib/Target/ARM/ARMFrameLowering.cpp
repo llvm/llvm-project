@@ -356,7 +356,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         GPRCS2Size += 4;
         break;
       }
-      // fallthrough
+      LLVM_FALLTHROUGH;
     case ARM::R0:
     case ARM::R1:
     case ARM::R2:
@@ -559,7 +559,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R12:
         if (STI.splitFramePushPop())
           break;
-        // fallthrough
+        LLVM_FALLTHROUGH;
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -1558,7 +1558,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       switch (Reg) {
       case ARM::LR:
         LRSpilled = true;
-        // Fallthrough
+        LLVM_FALLTHROUGH;
       case ARM::R0: case ARM::R1:
       case ARM::R2: case ARM::R3:
       case ARM::R4: case ARM::R5:

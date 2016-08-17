@@ -5425,7 +5425,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return false;
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();

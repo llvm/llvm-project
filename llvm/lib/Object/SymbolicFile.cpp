@@ -36,7 +36,7 @@ Expected<std::unique_ptr<SymbolicFile>> SymbolicFile::createSymbolicFile(
   case sys::fs::file_magic::bitcode:
     if (Context)
       return errorOrToExpected(IRObjectFile::create(Object, *Context));
-  // Fallthrough
+    LLVM_FALLTHROUGH;
   case sys::fs::file_magic::unknown:
   case sys::fs::file_magic::archive:
   case sys::fs::file_magic::macho_universal_binary:

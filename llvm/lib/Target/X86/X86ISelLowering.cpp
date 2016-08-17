@@ -7567,7 +7567,7 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
   case MVT::v4i64:
   case MVT::v8i32:
     assert(Subtarget.hasAVX2() && "256-bit integer blends require AVX2!");
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case MVT::v2i64:
   case MVT::v4i32:
     // If we have AVX2 it is faster to use VPBLENDD when the shuffle fits into
@@ -7583,7 +7583,7 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
           VT, DAG.getNode(X86ISD::BLENDI, DL, BlendVT, V1, V2,
                           DAG.getConstant(BlendMask, DL, MVT::i8)));
     }
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case MVT::v8i16: {
     // For integer shuffles we need to expand the mask and cast the inputs to
     // v8i16s prior to blending.
@@ -7609,8 +7609,8 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
       return DAG.getNode(X86ISD::BLENDI, DL, MVT::v16i16, V1, V2,
                          DAG.getConstant(BlendMask, DL, MVT::i8));
     }
+    LLVM_FALLTHROUGH;
   }
-    // FALLTHROUGH
   case MVT::v16i8:
   case MVT::v32i8: {
     assert((VT.is128BitVector() || Subtarget.hasAVX2()) &&
@@ -15383,19 +15383,19 @@ static int translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   case ISD::SETOEQ:
   case ISD::SETEQ:  SSECC = 0; break;
   case ISD::SETOGT:
-  case ISD::SETGT:  Swap = true; // Fallthrough
+  case ISD::SETGT:  Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETLT:
   case ISD::SETOLT: SSECC = 1; break;
   case ISD::SETOGE:
-  case ISD::SETGE:  Swap = true; // Fallthrough
+  case ISD::SETGE:  Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETLE:
   case ISD::SETOLE: SSECC = 2; break;
   case ISD::SETUO:  SSECC = 3; break;
   case ISD::SETUNE:
   case ISD::SETNE:  SSECC = 4; break;
-  case ISD::SETULE: Swap = true; // Fallthrough
+  case ISD::SETULE: Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETUGE: SSECC = 5; break;
-  case ISD::SETULT: Swap = true; // Fallthrough
+  case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETUGT: SSECC = 6; break;
   case ISD::SETO:   SSECC = 7; break;
   case ISD::SETUEQ:
@@ -15501,12 +15501,12 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
   case ISD::SETNE:  SSECC = 4; break;
   case ISD::SETEQ:  Opc = X86ISD::PCMPEQM; break;
   case ISD::SETUGT: SSECC = 6; Unsigned = true; break;
-  case ISD::SETLT:  Swap = true; //fall-through
+  case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
   case ISD::SETGT:  Opc = X86ISD::PCMPGTM; break;
   case ISD::SETULT: SSECC = 1; Unsigned = true; break;
   case ISD::SETUGE: SSECC = 5; Unsigned = true; break; //NLT
   case ISD::SETGE:  Swap = true; SSECC = 2; break; // LE + swap
-  case ISD::SETULE: Unsigned = true; //fall-through
+  case ISD::SETULE: Unsigned = true; LLVM_FALLTHROUGH;
   case ISD::SETLE:  SSECC = 2; break;
   }
 
@@ -18267,7 +18267,8 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     case Intrinsic::x86_avx_vtestz_pd:
     case Intrinsic::x86_avx_vtestz_ps_256:
     case Intrinsic::x86_avx_vtestz_pd_256:
-      IsTestPacked = true; // Fallthrough
+      IsTestPacked = true;
+      LLVM_FALLTHROUGH;
     case Intrinsic::x86_sse41_ptestz:
     case Intrinsic::x86_avx_ptestz_256:
       // ZF = 1
@@ -18277,7 +18278,8 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     case Intrinsic::x86_avx_vtestc_pd:
     case Intrinsic::x86_avx_vtestc_ps_256:
     case Intrinsic::x86_avx_vtestc_pd_256:
-      IsTestPacked = true; // Fallthrough
+      IsTestPacked = true;
+      LLVM_FALLTHROUGH;
     case Intrinsic::x86_sse41_ptestc:
     case Intrinsic::x86_avx_ptestc_256:
       // CF = 1
@@ -18287,7 +18289,8 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     case Intrinsic::x86_avx_vtestnzc_pd:
     case Intrinsic::x86_avx_vtestnzc_ps_256:
     case Intrinsic::x86_avx_vtestnzc_pd_256:
-      IsTestPacked = true; // Fallthrough
+      IsTestPacked = true;
+      LLVM_FALLTHROUGH;
     case Intrinsic::x86_sse41_ptestnzc:
     case Intrinsic::x86_avx_ptestnzc_256:
       // ZF and CF = 0
@@ -24759,7 +24762,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // These nodes' second result is a boolean.
     if (Op.getResNo() == 0)
       break;
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case X86ISD::SETCC:
     KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
     break;
@@ -25946,7 +25949,7 @@ combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
 
           Chain.push_back(V);
 
-          // Fallthrough!
+          LLVM_FALLTHROUGH;
         case ISD::BITCAST:
           V = V.getOperand(0);
           continue;
@@ -27705,7 +27708,7 @@ static bool checkBoolTestAndOrSetCCCombine(SDValue Cond, X86::CondCode &CC0,
   case ISD::AND:
   case X86ISD::AND:
     isAnd = true;
-    // fallthru
+    LLVM_FALLTHROUGH;
   case ISD::OR:
   case X86ISD::OR:
     SetCC0 = Cond->getOperand(0);
@@ -31675,7 +31678,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   case ISD::OR:
   case ISD::XOR:
     Commute = true;
-    // fallthrough
+    LLVM_FALLTHROUGH;
   case ISD::SUB: {
     SDValue N0 = Op.getOperand(0);
     SDValue N1 = Op.getOperand(1);

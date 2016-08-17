@@ -1565,7 +1565,7 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
         !DIE->getAttributeValueAsUnsignedConstant(&U.getOrigUnit(),
                                                   dwarf::DW_AT_external, 0))
       return PointerIntPair<DeclContext *, 1>(nullptr);
-  // Fallthrough
+    LLVM_FALLTHROUGH;
   case dwarf::DW_TAG_member:
   case dwarf::DW_TAG_namespace:
   case dwarf::DW_TAG_structure_type:

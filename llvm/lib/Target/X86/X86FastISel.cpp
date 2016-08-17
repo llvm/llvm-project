@@ -182,18 +182,18 @@ getX86ConditionCode(CmpInst::Predicate Predicate) {
   default: break;
   // Floating-point Predicates
   case CmpInst::FCMP_UEQ: CC = X86::COND_E;       break;
-  case CmpInst::FCMP_OLT: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_OLT: NeedSwap = true;        LLVM_FALLTHROUGH;
   case CmpInst::FCMP_OGT: CC = X86::COND_A;       break;
-  case CmpInst::FCMP_OLE: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_OLE: NeedSwap = true;        LLVM_FALLTHROUGH;
   case CmpInst::FCMP_OGE: CC = X86::COND_AE;      break;
-  case CmpInst::FCMP_UGT: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_UGT: NeedSwap = true;        LLVM_FALLTHROUGH;
   case CmpInst::FCMP_ULT: CC = X86::COND_B;       break;
-  case CmpInst::FCMP_UGE: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_UGE: NeedSwap = true;        LLVM_FALLTHROUGH;
   case CmpInst::FCMP_ULE: CC = X86::COND_BE;      break;
   case CmpInst::FCMP_ONE: CC = X86::COND_NE;      break;
   case CmpInst::FCMP_UNO: CC = X86::COND_P;       break;
   case CmpInst::FCMP_ORD: CC = X86::COND_NP;      break;
-  case CmpInst::FCMP_OEQ: // fall-through
+  case CmpInst::FCMP_OEQ:                         LLVM_FALLTHROUGH;
   case CmpInst::FCMP_UNE: CC = X86::COND_INVALID; break;
 
   // Integer Predicates
@@ -229,15 +229,15 @@ getX86SSEConditionCode(CmpInst::Predicate Predicate) {
   switch (Predicate) {
   default: llvm_unreachable("Unexpected predicate");
   case CmpInst::FCMP_OEQ: CC = 0;          break;
-  case CmpInst::FCMP_OGT: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_OGT: NeedSwap = true; LLVM_FALLTHROUGH;
   case CmpInst::FCMP_OLT: CC = 1;          break;
-  case CmpInst::FCMP_OGE: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_OGE: NeedSwap = true; LLVM_FALLTHROUGH;
   case CmpInst::FCMP_OLE: CC = 2;          break;
   case CmpInst::FCMP_UNO: CC = 3;          break;
   case CmpInst::FCMP_UNE: CC = 4;          break;
-  case CmpInst::FCMP_ULE: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_ULE: NeedSwap = true; LLVM_FALLTHROUGH;
   case CmpInst::FCMP_UGE: CC = 5;          break;
-  case CmpInst::FCMP_ULT: NeedSwap = true; // fall-through
+  case CmpInst::FCMP_ULT: NeedSwap = true; LLVM_FALLTHROUGH;
   case CmpInst::FCMP_UGT: CC = 6;          break;
   case CmpInst::FCMP_ORD: CC = 7;          break;
   case CmpInst::FCMP_UEQ:
@@ -518,8 +518,8 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
             TII.get(X86::AND8ri), AndResult)
       .addReg(ValReg, getKillRegState(ValIsKill)).addImm(1);
     ValReg = AndResult;
+    LLVM_FALLTHROUGH; // handle i1 as i8.
   }
-  // FALLTHROUGH, handling i1 as i8.
   case MVT::i8:  Opc = X86::MOV8mr;  break;
   case MVT::i16: Opc = X86::MOV16mr; break;
   case MVT::i32:
@@ -659,7 +659,9 @@ bool X86FastISel::X86FastEmitStore(EVT VT, const Value *Val,
     bool Signed = true;
     switch (VT.getSimpleVT().SimpleTy) {
     default: break;
-    case MVT::i1:  Signed = false;     // FALLTHROUGH to handle as i8.
+    case MVT::i1:
+      Signed = false;
+      LLVM_FALLTHROUGH; // Handle as i8.
     case MVT::i8:  Opc = X86::MOV8mi;  break;
     case MVT::i16: Opc = X86::MOV16mi; break;
     case MVT::i32: Opc = X86::MOV32mi; break;
@@ -1601,7 +1603,8 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
       switch (Predicate) {
       default: break;
       case CmpInst::FCMP_OEQ:
-        std::swap(TrueMBB, FalseMBB); // fall-through
+        std::swap(TrueMBB, FalseMBB);
+        LLVM_FALLTHROUGH;
       case CmpInst::FCMP_UNE:
         NeedExtraBranch = true;
         Predicate = CmpInst::FCMP_ONE;

@@ -1656,7 +1656,7 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
       OS << "RELA";
       break;
     }
-  // Fallthrough.
+    LLVM_FALLTHROUGH;
   case DT_PLTGOT:
   case DT_HASH:
   case DT_STRTAB:
