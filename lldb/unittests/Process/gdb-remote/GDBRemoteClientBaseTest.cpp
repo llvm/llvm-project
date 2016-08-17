@@ -14,14 +14,12 @@
 #endif
 #include <future>
 
+#include "GDBRemoteTestUtils.h"
 #include "gtest/gtest.h"
 
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
-
-#include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -56,25 +54,6 @@ struct MockDelegate : public GDBRemoteClientBase::ContinueDelegate
     }
 };
 
-struct MockServer : public GDBRemoteCommunicationServer
-{
-    MockServer() : GDBRemoteCommunicationServer("mock-server", "mock-server.listener") { m_send_acks = false; }
-
-    PacketResult
-    SendPacket(llvm::StringRef payload)
-    {
-        return GDBRemoteCommunicationServer::SendPacketNoLock(payload.data(), payload.size());
-    }
-
-    PacketResult
-    GetPacket(StringExtractorGDBRemote &response)
-    {
-        const unsigned timeout_usec = 1000000; // 1s
-        const bool sync_on_timeout = false;
-        return WaitForPacketWithTimeoutMicroSecondsNoLock(response, timeout_usec, sync_on_timeout);
-    }
-};
-
 struct TestClient : public GDBRemoteClientBase
 {
     TestClient() : GDBRemoteClientBase("test.client", "test.client.listener") { m_send_acks = false; }
@@ -106,53 +85,14 @@ struct ContinueFixture
 
 ContinueFixture::ContinueFixture() : listener_sp(Listener::MakeListener("listener"))
 {
-    bool child_processes_inherit = false;
-    Error error;
-    TCPSocket listen_socket(child_processes_inherit, error);
-    EXPECT_FALSE(error.Fail());
-    error = listen_socket.Listen("127.0.0.1:0", 5);
-    EXPECT_FALSE(error.Fail());
-
-    Socket *accept_socket;
-    std::future<Error> accept_error = std::async(std::launch::async, [&] {
-        return listen_socket.Accept("127.0.0.1:0", child_processes_inherit, accept_socket);
-    });
-
-    char connect_remote_address[64];
-    snprintf(connect_remote_address, sizeof(connect_remote_address), "connect://localhost:%u",
-             listen_socket.GetLocalPortNumber());
-
-    std::unique_ptr<ConnectionFileDescriptor> conn_ap(new ConnectionFileDescriptor());
-    EXPECT_EQ(conn_ap->Connect(connect_remote_address, nullptr), lldb::eConnectionStatusSuccess);
-
-    client.SetConnection(conn_ap.release());
-    EXPECT_TRUE(accept_error.get().Success());
-    server.SetConnection(new ConnectionFileDescriptor(accept_socket));
-
+    Connect(client, server);
     listener_sp->StartListeningForEvents(&client, TestClient::eBroadcastBitRunPacketSent);
 }
 
 } // end anonymous namespace
 
-class GDBRemoteClientBaseTest : public testing::Test
+class GDBRemoteClientBaseTest : public GDBRemoteTest
 {
-public:
-    static void
-    SetUpTestCase()
-    {
-#if defined(_MSC_VER)
-        WSADATA data;
-        ::WSAStartup(MAKEWORD(2, 2), &data);
-#endif
-    }
-
-    static void
-    TearDownTestCase()
-    {
-#if defined(_MSC_VER)
-        ::WSACleanup();
-#endif
-    }
 };
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndWait)

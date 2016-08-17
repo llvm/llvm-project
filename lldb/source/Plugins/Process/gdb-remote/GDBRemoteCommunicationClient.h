@@ -497,8 +497,15 @@ public:
                       StringExtractorGDBRemote &response);
 
     bool
-    SaveRegisterState (lldb::tid_t tid, uint32_t &save_id);
-    
+    WriteRegister(lldb::tid_t tid, uint32_t reg_num, // eRegisterKindProcessPlugin register number
+                  llvm::StringRef data);
+
+    bool
+    WriteAllRegisters(lldb::tid_t tid, llvm::StringRef data);
+
+    bool
+    SaveRegisterState(lldb::tid_t tid, uint32_t &save_id);
+
     bool
     RestoreRegisterState (lldb::tid_t tid, uint32_t save_id);
 

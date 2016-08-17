@@ -673,6 +673,9 @@ uptr AsanChunkView::End() { return Beg() + UsedSize(); }
 uptr AsanChunkView::UsedSize() { return chunk_->UsedSize(); }
 uptr AsanChunkView::AllocTid() { return chunk_->alloc_tid; }
 uptr AsanChunkView::FreeTid() { return chunk_->free_tid; }
+AllocType AsanChunkView::GetAllocType() {
+  return (AllocType)chunk_->alloc_type;
+}
 
 static StackTrace GetStackTraceFromId(u32 id) {
   CHECK(id);

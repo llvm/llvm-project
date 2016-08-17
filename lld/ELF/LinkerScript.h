@@ -83,6 +83,7 @@ struct OutputSectionCommand : BaseCommand {
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
+  Expr LmaExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
@@ -147,6 +148,7 @@ public:
   bool ignoreInterpSection();
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
+  Expr getLma(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignAddresses();
   int compareSections(StringRef A, StringRef B);

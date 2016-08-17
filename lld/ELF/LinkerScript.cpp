@@ -504,6 +504,14 @@ ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
   return {};
 }
 
+template <class ELFT> Expr LinkerScript<ELFT>::getLma(StringRef Name) {
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
+      if (Cmd->LmaExpr && Cmd->Name == Name)
+        return Cmd->LmaExpr;
+  return {};
+}
+
 // Returns the index of the given section name in linker script
 // SECTIONS commands. Sections are laid out as the same order as they
 // were in the script. If a given name did not appear in the script,
@@ -613,6 +621,7 @@ private:
   SortKind readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
   SymbolAssignment *readProvideOrAssignment(StringRef Tok);
+  void readAt(OutputSectionCommand *Cmd);
   Expr readAlign();
   void readSort();
   Expr readAssert();
@@ -918,6 +927,12 @@ Expr ScriptParser::readAssert() {
   };
 }
 
+void ScriptParser::readAt(OutputSectionCommand *Cmd) {
+  expect("(");
+  Cmd->LmaExpr = readExpr();
+  expect(")");
+}
+
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
@@ -928,6 +943,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     Cmd->AddrExpr = readExpr();
 
   expect(":");
+
+  if (skip("AT"))
+    readAt(Cmd);
 
   if (skip("ALIGN"))
     Cmd->AlignExpr = readAlign();
