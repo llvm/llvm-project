@@ -4049,8 +4049,15 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   if (CalleeCC != CallingConv::Fast && CalleeCC != CallingConv::C)
     return false;
 
-  // Functions containing by val parameters are not supported.
+  // Caller contains any byval parameter is not supported.
   if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+    return false;
+
+  // Callee contains any byval parameter is not supported, too.
+  // Note: This is a quick work around, because in some cases, e.g.
+  // caller's stack size > callee's stack size, we are still able to apply
+  // sibling call optimization. See: https://reviews.llvm.org/D23441#513574
+  if (any_of(Outs, [](const ISD::OutputArg& OA) { return OA.Flags.isByVal(); }))
     return false;
 
   // No TCO/SCO on indirect call because Caller have to restore its TOC
