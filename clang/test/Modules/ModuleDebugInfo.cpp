@@ -49,6 +49,7 @@
 
 // This type is anchored by a function parameter.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
 
@@ -58,6 +59,7 @@
 // This type is anchored by an explicit template instantiation.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:             name: "Template<int, DebugCXX::traits<int> >"
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
 
@@ -66,11 +68,13 @@
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6traitsIiEE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "traits<float>"
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6traitsIfEE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:             name: "Template<long, DebugCXX::traits<long> >"
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIlNS_6traitsIlEEEE")
 
@@ -134,5 +138,11 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Member",
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN21FwdDeclTemplateMemberIiE6MemberE")
+
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "SpecializedBase",
+// CHECK-SAME:           baseType: ![[SPECIALIZEDBASE:.*]])
+// CHECK: ![[SPECIALIZEDBASE]] = !DICompositeType(tag: DW_TAG_class_type,
+// CHECK-SAME:                             name: "WithSpecializedBase<float>",
+// CHECK-SAME:                             flags: DIFlagFwdDecl,
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"
