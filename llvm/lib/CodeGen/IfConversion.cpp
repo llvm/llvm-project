@@ -85,7 +85,7 @@ namespace {
       ICDiamond        // BB is entry of a diamond sub-CFG.
     };
 
-    /// BBInfo - One per MachineBasicBlock, this is used to cache the result
+    /// One per MachineBasicBlock, this is used to cache the result
     /// if-conversion feasibility analysis. This includes results from
     /// TargetInstrInfo::analyzeBranch() (i.e. TBB, FBB, and Cond), and its
     /// classification, and common tail block of its successors (if it's a
@@ -134,7 +134,7 @@ namespace {
                  FalseBB(nullptr) {}
     };
 
-    /// IfcvtToken - Record information about pending if-conversions to attempt:
+    /// Record information about pending if-conversions to attempt:
     /// BBI             - Corresponding BBInfo.
     /// Kind            - Type of block. See IfcvtKind.
     /// NeedSubsumption - True if the to-be-predicated BB has already been
@@ -155,8 +155,8 @@ namespace {
         : BBI(b), Kind(k), NeedSubsumption(s), NumDups(d), NumDups2(d2) {}
     };
 
-    /// BBAnalysis - Results of if-conversion feasibility analysis indexed by
-    /// basic block number.
+    /// Results of if-conversion feasibility analysis indexed by basic block
+    /// number.
     std::vector<BBInfo> BBAnalysis;
     TargetSchedModel SchedModel;
 
@@ -245,12 +245,12 @@ namespace {
                                  Prediction);
     }
 
-    // blockAlwaysFallThrough - Block ends without a terminator.
+    /// Returns true if Block ends without a terminator.
     bool blockAlwaysFallThrough(BBInfo &BBI) const {
       return BBI.IsBrAnalyzable && BBI.TrueBB == nullptr;
     }
 
-    // IfcvtTokenCmp - Used to sort if-conversion candidates.
+    /// Used to sort if-conversion candidates.
     static bool IfcvtTokenCmp(const std::unique_ptr<IfcvtToken> &C1,
                               const std::unique_ptr<IfcvtToken> &C2) {
       int Incr1 = (C1->Kind == ICDiamond)
@@ -438,8 +438,7 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
   return MadeChange;
 }
 
-/// findFalseBlock - BB has a fallthrough. Find its 'false' successor given
-/// its 'true' successor.
+/// BB has a fallthrough. Find its 'false' successor given its 'true' successor.
 static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
                                          MachineBasicBlock *TrueBB) {
   for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
@@ -451,8 +450,8 @@ static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
   return nullptr;
 }
 
-/// ReverseBranchCondition - Reverse the condition of the end of the block
-/// branch. Swap block's 'true' and 'false' successors.
+/// Reverse the condition of the end of the block branch. Swap block's 'true'
+/// and 'false' successors.
 bool IfConverter::ReverseBranchCondition(BBInfo &BBI) const {
   DebugLoc dl;  // FIXME: this is nowhere
   if (!TII->ReverseBranchCondition(BBI.BrCond)) {
@@ -464,8 +463,8 @@ bool IfConverter::ReverseBranchCondition(BBInfo &BBI) const {
   return false;
 }
 
-/// getNextBlock - Returns the next block in the function blocks ordering. If
-/// it is the end, returns NULL.
+/// Returns the next block in the function blocks ordering. If it is the end,
+/// returns NULL.
 static inline MachineBasicBlock *getNextBlock(MachineBasicBlock *BB) {
   MachineFunction::iterator I = BB->getIterator();
   MachineFunction::iterator E = BB->getParent()->end();
@@ -474,10 +473,9 @@ static inline MachineBasicBlock *getNextBlock(MachineBasicBlock *BB) {
   return &*I;
 }
 
-/// ValidSimple - Returns true if the 'true' block (along with its
-/// predecessor) forms a valid simple shape for ifcvt. It also returns the
-/// number of instructions that the ifcvt would need to duplicate if performed
-/// in Dups.
+/// Returns true if the 'true' block (along with its predecessor) forms a valid
+/// simple shape for ifcvt. It also returns the number of instructions that the
+/// ifcvt would need to duplicate if performed in Dups.
 bool IfConverter::ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
                               BranchProbability Prediction) const {
   Dups = 0;
@@ -498,12 +496,11 @@ bool IfConverter::ValidSimple(BBInfo &TrueBBI, unsigned &Dups,
   return true;
 }
 
-/// ValidTriangle - Returns true if the 'true' and 'false' blocks (along
-/// with their common predecessor) forms a valid triangle shape for ifcvt.
-/// If 'FalseBranch' is true, it checks if 'true' block's false branch
-/// branches to the 'false' block rather than the other way around. It also
-/// returns the number of instructions that the ifcvt would need to duplicate
-/// if performed in 'Dups'.
+/// Returns true if the 'true' and 'false' blocks (along with their common
+/// predecessor) forms a valid triangle shape for ifcvt. If 'FalseBranch' is
+/// true, it checks if 'true' block's false branch branches to the 'false' block
+/// rather than the other way around. It also returns the number of instructions
+/// that the ifcvt would need to duplicate if performed in 'Dups'.
 bool IfConverter::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
                                 bool FalseBranch, unsigned &Dups,
                                 BranchProbability Prediction) const {
@@ -543,7 +540,7 @@ bool IfConverter::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
   return TExit && TExit == FalseBBI.BB;
 }
 
-/// Increment It until it points to a non-debug instruction or to End.
+/// Increment \p It until it points to a non-debug instruction or to \p End.
 /// @param It Iterator to increment
 /// @param End Iterator that points to end. Will be compared to It
 /// @returns true if It == End, false otherwise.
@@ -555,7 +552,7 @@ static inline bool skipDebugInstructionsForward(
   return It == End;
 }
 
-/// Decrement It until it points to a non-debug instruction or to Begin.
+/// Decrement \p It until it points to a non-debug instruction or to \p Begin.
 /// @param It Iterator to decrement.
 /// @param Begin Iterator that points to beginning. Will be compared to It
 /// @returns true if It == Begin, false otherwise.
@@ -811,8 +808,8 @@ void IfConverter::ScanInstructions(BBInfo &BBI,
   }
 }
 
-/// FeasibilityAnalysis - Determine if the block is a suitable candidate to be
-/// predicated by the specified predicate.
+/// Determine if the block is a suitable candidate to be predicated by the
+/// specified predicate.
 bool IfConverter::FeasibilityAnalysis(BBInfo &BBI,
                                       SmallVectorImpl<MachineOperand> &Pred,
                                       bool isTriangle, bool RevBranch) {
@@ -850,9 +847,8 @@ bool IfConverter::FeasibilityAnalysis(BBInfo &BBI,
   return true;
 }
 
-/// AnalyzeBlock - Analyze the structure of the sub-CFG starting from
-/// the specified block. Record its successors and whether it looks like an
-/// if-conversion candidate.
+/// Analyze the structure of the sub-CFG starting from the specified block.
+/// Record its successors and whether it looks like an if-conversion candidate.
 void IfConverter::AnalyzeBlock(
     MachineBasicBlock *MBB, std::vector<std::unique_ptr<IfcvtToken>> &Tokens) {
   struct BBState {
@@ -1043,8 +1039,7 @@ void IfConverter::AnalyzeBlock(
   }
 }
 
-/// AnalyzeBlocks - Analyze all blocks and find entries for all if-conversion
-/// candidates.
+/// Analyze all blocks and find entries for all if-conversion candidates.
 void IfConverter::AnalyzeBlocks(
     MachineFunction &MF, std::vector<std::unique_ptr<IfcvtToken>> &Tokens) {
   for (auto &BB : MF)
@@ -1054,9 +1049,8 @@ void IfConverter::AnalyzeBlocks(
   std::stable_sort(Tokens.begin(), Tokens.end(), IfcvtTokenCmp);
 }
 
-/// canFallThroughTo - Returns true either if ToBB is the next block after BB or
-/// that all the intervening blocks are empty (given BB can fall through to its
-/// next block).
+/// Returns true either if ToMBB is the next block after MBB or that all the
+/// intervening blocks are empty (given MBB can fall through to its next block).
 static bool canFallThroughTo(MachineBasicBlock *BB, MachineBasicBlock *ToBB) {
   MachineFunction::iterator PI = BB->getIterator();
   MachineFunction::iterator I = std::next(PI);
@@ -1072,9 +1066,8 @@ static bool canFallThroughTo(MachineBasicBlock *BB, MachineBasicBlock *ToBB) {
   return true;
 }
 
-/// InvalidatePreds - Invalidate predecessor BB info so it would be re-analyzed
-/// to determine if it can be if-converted. If predecessor is already enqueued,
-/// dequeue it!
+/// Invalidate predecessor BB info so it would be re-analyzed to determine if it
+/// can be if-converted. If predecessor is already enqueued, dequeue it!
 void IfConverter::InvalidatePreds(MachineBasicBlock *BB) {
   for (const auto &Predecessor : BB->predecessors()) {
     BBInfo &PBBI = BBAnalysis[Predecessor->getNumber()];
@@ -1085,8 +1078,7 @@ void IfConverter::InvalidatePreds(MachineBasicBlock *BB) {
   }
 }
 
-/// InsertUncondBranch - Inserts an unconditional branch from BB to ToBB.
-///
+/// Inserts an unconditional branch from \p MBB to \p ToMBB.
 static void InsertUncondBranch(MachineBasicBlock *BB, MachineBasicBlock *ToBB,
                                const TargetInstrInfo *TII) {
   DebugLoc dl;  // FIXME: this is nowhere
@@ -1094,8 +1086,7 @@ static void InsertUncondBranch(MachineBasicBlock *BB, MachineBasicBlock *ToBB,
   TII->InsertBranch(*BB, ToBB, nullptr, NoCond, dl);
 }
 
-/// RemoveExtraEdges - Remove true / false edges if either / both are no longer
-/// successors.
+/// Remove true / false edges if either / both are no longer successors.
 void IfConverter::RemoveExtraEdges(BBInfo &BBI) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
@@ -1153,9 +1144,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   }
 }
 
-/**
- * Remove kill flags from operands with a registers in the @p DontKill set.
- */
+/// Remove kill flags from operands with a registers in the \p DontKill set.
 static void RemoveKills(MachineInstr &MI, const LivePhysRegs &DontKill) {
   for (MIBundleOperands O(MI); O.isValid(); ++O) {
     if (!O->isReg() || !O->isKill())
@@ -1165,10 +1154,8 @@ static void RemoveKills(MachineInstr &MI, const LivePhysRegs &DontKill) {
   }
 }
 
-/**
- * Walks a range of machine instructions and removes kill flags for registers
- * in the @p DontKill set.
- */
+/// Walks a range of machine instructions and removes kill flags for registers
+/// in the \p DontKill set.
 static void RemoveKills(MachineBasicBlock::iterator I,
                         MachineBasicBlock::iterator E,
                         const LivePhysRegs &DontKill,
@@ -1177,8 +1164,7 @@ static void RemoveKills(MachineBasicBlock::iterator I,
     RemoveKills(*I, DontKill);
 }
 
-/// IfConvertSimple - If convert a simple (split, no rejoin) sub-CFG.
-///
+/// If convert a simple (split, no rejoin) sub-CFG.
 bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
   BBInfo &TrueBBI  = BBAnalysis[BBI.TrueBB->getNumber()];
   BBInfo &FalseBBI = BBAnalysis[BBI.FalseBB->getNumber()];
@@ -1263,8 +1249,7 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
   return true;
 }
 
-/// IfConvertTriangle - If convert a triangle sub-CFG.
-///
+/// If convert a triangle sub-CFG.
 bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
   BBInfo &TrueBBI = BBAnalysis[BBI.TrueBB->getNumber()];
   BBInfo &FalseBBI = BBAnalysis[BBI.FalseBB->getNumber()];
@@ -1409,8 +1394,7 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
   return true;
 }
 
-/// IfConvertDiamond - If convert a diamond sub-CFG.
-///
+/// If convert a diamond sub-CFG.
 bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
                                    unsigned NumDups1, unsigned NumDups2) {
   BBInfo &TrueBBI  = BBAnalysis[BBI.TrueBB->getNumber()];
@@ -1683,8 +1667,8 @@ static bool MaySpeculate(const MachineInstr &MI,
   return true;
 }
 
-/// PredicateBlock - Predicate instructions from the start of the block to the
-/// specified end with the specified condition.
+/// Predicate instructions from the start of the block to the specified end with
+/// the specified condition.
 void IfConverter::PredicateBlock(BBInfo &BBI,
                                  MachineBasicBlock::iterator E,
                                  SmallVectorImpl<MachineOperand> &Cond,
@@ -1726,8 +1710,8 @@ void IfConverter::PredicateBlock(BBInfo &BBI,
     ++NumUnpred;
 }
 
-/// CopyAndPredicateBlock - Copy and predicate instructions from source BB to
-/// the destination block. Skip end of block branches if IgnoreBr is true.
+/// Copy and predicate instructions from source BB to the destination block.
+/// Skip end of block branches if IgnoreBr is true.
 void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
                                         SmallVectorImpl<MachineOperand> &Cond,
                                         bool IgnoreBr) {
@@ -1789,11 +1773,10 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
   ++NumDupBBs;
 }
 
-/// MergeBlocks - Move all instructions from FromBB to the end of ToBB.
-/// This will leave FromBB as an empty block, so remove all of its
-/// successor edges except for the fall-through edge.  If AddEdges is true,
-/// i.e., when FromBBI's branch is being moved, add those successor edges to
-/// ToBBI.
+/// Move all instructions from FromBB to the end of ToBB.  This will leave
+/// FromBB as an empty block, so remove all of its successor edges except for
+/// the fall-through edge.  If AddEdges is true, i.e., when FromBBI's branch is
+/// being moved, add those successor edges to ToBBI.
 void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   assert(!FromBBI.BB->hasAddressTaken() &&
          "Removing a BB whose address is taken!");
