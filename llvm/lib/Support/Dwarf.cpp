@@ -147,6 +147,7 @@ const char *llvm::dwarf::AttributeString(unsigned Attribute) {
   case DW_AT_dwo_name:                   return "DW_AT_dwo_name";
   case DW_AT_reference:                  return "DW_AT_reference";
   case DW_AT_rvalue_reference:           return "DW_AT_rvalue_reference";
+  case DW_AT_noreturn:                   return "DW_AT_noreturn";
   case DW_AT_MIPS_loop_begin:            return "DW_AT_MIPS_loop_begin";
   case DW_AT_MIPS_tail_loop_begin:       return "DW_AT_MIPS_tail_loop_begin";
   case DW_AT_MIPS_epilog_begin:          return "DW_AT_MIPS_epilog_begin";
