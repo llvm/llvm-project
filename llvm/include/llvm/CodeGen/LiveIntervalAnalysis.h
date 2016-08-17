@@ -392,6 +392,13 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
       return RegUnitRanges[Unit];
     }
 
+    /// removeRegUnit - Remove computed live range for Unit. Subsequent uses
+    /// should rely on on-demand recomputation.
+    void removeRegUnit(unsigned Unit) {
+      delete RegUnitRanges[Unit];
+      RegUnitRanges[Unit] = nullptr;
+    }
+
     /// Remove value numbers and related live segments starting at position
     /// @p Pos that are part of any liverange of physical register @p Reg or one
     /// of its subregisters.
