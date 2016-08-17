@@ -9242,3 +9242,4 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     lowerWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB);
   }
 }
+
