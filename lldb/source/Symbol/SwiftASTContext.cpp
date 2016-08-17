@@ -1832,7 +1832,7 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             // If we're debugging a testsuite, then treat the main test bundle as the executable
             static ConstString s_XCTest("XCTest");
             
-            if (exe_module_sp->GetFileSpec().GetFilename() == s_XCTest)
+            if (exe_module_sp && exe_module_sp->GetFileSpec().GetFilename() == s_XCTest)
             {
                 ModuleSP unit_test_module = PlatformDarwin::GetUnitTestModule(target->GetImages());
                 
