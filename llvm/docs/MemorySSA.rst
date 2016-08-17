@@ -110,7 +110,7 @@ after the operation.
     br label %if.end
 
   if.end:
-    ; 5 = MemoryPhi({if.then,2},{if.then,3})
+    ; 5 = MemoryPhi({if.then,2},{if.else,3})
     ; MemoryUse(5)
     %1 = load i8, i8* %p1
     ; 4 = MemoryDef(5)
@@ -120,7 +120,7 @@ after the operation.
     br label %while.cond
   }
 
-The ``MemorySSA`` IR is located comments that precede the instructions they map
+The ``MemorySSA`` IR is shown in comments that precede the instructions they map
 to (if such an instruction exists). For example, ``1 = MemoryDef(liveOnEntry)``
 is a ``MemoryAccess`` (specifically, a ``MemoryDef``), and it describes the LLVM
 instruction ``store i8 0, i8* %p3``. Other places in ``MemorySSA`` refer to this
@@ -130,15 +130,15 @@ Instruction, so the line directly below a ``MemoryPhi`` isn't special.
 
 Going from the top down:
 
-- ``6 = MemoryPhi({%0,1},{if.end,4})`` notes that, when entering ``while.cond``,
-  the reaching definition for it is either ``1`` or ``4``. This ``MemoryPhi`` is
-  referred to in the textual IR by the number ``6``.
+- ``6 = MemoryPhi({entry,1},{if.end,4})`` notes that, when entering
+  ``while.cond``, the reaching definition for it is either ``1`` or ``4``. This
+  ``MemoryPhi`` is referred to in the textual IR by the number ``6``.
 - ``2 = MemoryDef(6)`` notes that ``store i8 0, i8* %p1`` is a definition,
   and its reaching definition before it is ``6``, or the ``MemoryPhi`` after
   ``while.cond``.
 - ``3 = MemoryDef(6)`` notes that ``store i8 0, i8* %p2`` is a definition; its
   reaching definition is also ``6``.
-- ``5 = MemoryPhi({if.then,2},{if.then,3})`` notes that the clobber before
+- ``5 = MemoryPhi({if.then,2},{if.else,3})`` notes that the clobber before
   this block could either be ``2`` or ``3``.
 - ``MemoryUse(5)`` notes that ``load i8, i8* %p1`` is a use of memory, and that
   it's clobbered by ``5``.
@@ -212,7 +212,7 @@ Use optimization
 ----------------
 
 ``MemorySSA`` will optimize some ``MemoryAccess`` es at build-time.
-Specifically, we optimize the operand of every ``MemoryUse`` s to point to the
+Specifically, we optimize the operand of every ``MemoryUse`` to point to the
 actual clobber of said ``MemoryUse``. This can be seen in the above example; the
 second ``MemoryUse`` in ``if.end`` has an operand of ``1``, which is a
 ``MemoryDef`` from the entry block.  This is done to make walking,
@@ -227,7 +227,8 @@ Invalidation and updating
 
 Because ``MemorySSA`` keeps track of LLVM IR, it needs to be updated whenever
 the IR is updated. "Update", in this case, includes the addition, deletion, and
-motion of IR instructions. The update API is being made on an as-needed basis.
+motion of ``Instructions``. The update API is being made on an as-needed basis.
+If you'd like examples, ``GVNHoist`` is a user of ``MemorySSA`` s update API.
 
 
 Phi placement
@@ -312,6 +313,7 @@ Design tradeoffs
 
 Precision
 ^^^^^^^^^
+
 ``MemorySSA`` in LLVM deliberately trades off precision for speed.
 Let us think about memory variables as if they were disjoint partitions of the
 heap (that is, if you have one variable, as above, it represents the entire
