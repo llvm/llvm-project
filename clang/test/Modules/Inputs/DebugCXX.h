@@ -105,3 +105,9 @@ template <> struct Specialized<int> {
 
 template <class T> struct FwdDeclTemplateMember { struct Member; };
 typedef FwdDeclTemplateMember<int>::Member TypedefFwdDeclTemplateMember;
+
+// Base class specialized on the class itself.
+template <typename Derived> class BaseTemplate {};
+template <typename T>
+class WithSpecializedBase : public BaseTemplate<WithSpecializedBase<T>> {};
+typedef WithSpecializedBase<float> SpecializedBase;

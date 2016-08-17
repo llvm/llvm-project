@@ -63,6 +63,10 @@ struct Specialized<int>::Member definedLocally2;
 template <class T> struct FwdDeclTemplateMember<T>::Member { T t; };
 TypedefFwdDeclTemplateMember tdfdtm;
 
+SpecializedBase definedLocally3;
+extern template class WithSpecializedBase<int>;
+WithSpecializedBase<int> definedLocally4;
+
 void foo() {
   anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
 }
@@ -103,6 +107,7 @@ void foo() {
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
 // CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >",
 // CHECK-SAME:             scope: ![[NS]],
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
 
@@ -112,10 +117,11 @@ void foo() {
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6traitsIfEE")
 
 
-// This type is anchored in the module by an explicit template instantiation.
+// This type is anchored in the module via a function argument,
+// but we don't know this (yet).
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>",
 // CHECK-SAME:             scope: ![[NS]],
-// CHECK-SAME:             flags: DIFlagFwdDecl,
+// CHECK-SAME:             elements:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
 
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_member",
@@ -133,6 +139,7 @@ void foo() {
 
 // This one isn't.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template1<void *>",
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTS9Template1IPvE")
 
@@ -142,6 +149,7 @@ void foo() {
 // CHECK-SAME:             identifier: "_ZTS9Template1IiE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdDeclTemplate<int>",
+// CHECK-SAME:             elements:
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTS15FwdDeclTemplateIiE")
 
@@ -160,6 +168,19 @@ void foo() {
 // CHECK-SAME:             elements:
 // CHECK-SAME:             identifier: "_ZTSN21FwdDeclTemplateMemberIiE6MemberE")
 
+// This type is defined locally and forward-declared in the module.
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "SpecializedBase",
+// CHECK-SAME:           baseType: ![[SPECIALIZEDBASE:.*]])
+// CHECK: ![[SPECIALIZEDBASE]] =
+// CHECK-SAME: !DICompositeType(tag: DW_TAG_class_type,
+// CHECK-SAME:                  name: "WithSpecializedBase<float>",
+// CHECK-SAME:                  elements:
+// CHECK-SAME:                  identifier: "_ZTS19WithSpecializedBaseIfE")
+
+// This type is explicitly specialized locally.
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "WithSpecializedBase<int>",
+// CHECK-SAME:             elements:
+// CHECK-SAME:             identifier: "_ZTS19WithSpecializedBaseIiE")
 
 // CHECK: !DIGlobalVariable(name: "anon_enum", {{.*}}, type: ![[ANON_ENUM:[0-9]+]]
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, scope: ![[NS]],
