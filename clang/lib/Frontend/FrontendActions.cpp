@@ -601,6 +601,13 @@ namespace {
   };
 }
 
+bool DumpModuleInfoAction::BeginInvocation(CompilerInstance &CI) {
+  // The Object file reader also supports raw ast files and there is no point in
+  // being strict about the module file format in -module-file-info mode.
+  CI.getHeaderSearchOpts().ModuleFormat = "obj";
+  return true;
+}
+
 void DumpModuleInfoAction::ExecuteAction() {
   // Set up the output file.
   std::unique_ptr<llvm::raw_fd_ostream> OutFile;
@@ -613,6 +620,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
+
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
   DumpModuleInfoListener Listener(Out);
   HeaderSearchOptions &HSOpts =
