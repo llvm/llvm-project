@@ -121,7 +121,7 @@ static void GetAccessToHeapChunkInformation(ChunkAccess *descr,
   }
   descr->chunk_begin = chunk.Beg();
   descr->chunk_size = chunk.UsedSize();
-  descr->alloc_type = chunk.AllocType();
+  descr->alloc_type = chunk.GetAllocType();
 }
 
 static void PrintHeapChunkAccess(uptr addr, const ChunkAccess &descr) {
