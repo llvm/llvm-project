@@ -42,6 +42,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -318,9 +319,9 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     // Respect always_inline.
     if (OptLevel == 0)
       // Do not insert lifetime intrinsics at -O0.
-      PMBuilder.Inliner = createAlwaysInlinerPass(false);
+      PMBuilder.Inliner = createAlwaysInlinerLegacyPass(false);
     else
-      PMBuilder.Inliner = createAlwaysInlinerPass();
+      PMBuilder.Inliner = createAlwaysInlinerLegacyPass();
     break;
   }
 
