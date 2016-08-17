@@ -31,6 +31,7 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Support/TargetParser.h"
 
 using namespace llvm;
 
@@ -117,10 +118,11 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
     if (isTargetDarwin()) {
       StringRef ArchName = TargetTriple.getArchName();
-      if (ArchName.endswith("v7s"))
+      unsigned ArchKind = llvm::ARM::parseArch(ArchName);
+      if (ArchKind == llvm::ARM::AK_ARMV7S)
         // Default to the Swift CPU when targeting armv7s/thumbv7s.
         CPUString = "swift";
-      else if (ArchName.endswith("v7k"))
+      else if (ArchKind == llvm::ARM::AK_ARMV7K)
         // Default to the Cortex-a7 CPU when targeting armv7k/thumbv7k.
         // ARMv7k does not use SjLj exception handling.
         CPUString = "cortex-a7";

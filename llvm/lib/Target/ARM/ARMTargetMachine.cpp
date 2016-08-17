@@ -23,6 +23,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
@@ -84,11 +85,13 @@ computeTargetABI(const Triple &TT, StringRef CPU,
   ARMBaseTargetMachine::ARMABI TargetABI =
       ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
 
+  unsigned ArchKind = llvm::ARM::parseCPUArch(CPU);
+  StringRef ArchName = llvm::ARM::getArchName(ArchKind);
   // FIXME: This is duplicated code from the front end and should be unified.
   if (TT.isOSBinFormatMachO()) {
     if (TT.getEnvironment() == llvm::Triple::EABI ||
         (TT.getOS() == llvm::Triple::UnknownOS && TT.isOSBinFormatMachO()) ||
-        CPU.startswith("cortex-m")) {
+        llvm::ARM::parseArchProfile(ArchName) == llvm::ARM::PK_M) {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
     } else if (TT.isWatchABI()) {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS16;
