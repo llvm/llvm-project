@@ -207,7 +207,7 @@ features have been completed since the previous release:
 Several miscellaneous improvements have been made:
 
 - Supported extensions are now part of the target representation to give correct
-  diagnostics  for unsupported target features during compilation. For example,
+  diagnostics for unsupported target features during compilation. For example,
   when compiling for a target that does not support the double precision
   floating point extension, Clang will give an error when encountering the
   ``cl_khr_fp64`` pragma. Several missing extensions were added covering up to
