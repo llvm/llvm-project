@@ -621,8 +621,6 @@ private:
   SortKind readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
   SymbolAssignment *readProvideOrAssignment(StringRef Tok);
-  void readAt(OutputSectionCommand *Cmd);
-  Expr readAlign();
   void readSort();
   Expr readAssert();
 
@@ -630,6 +628,7 @@ private:
   Expr readExpr1(Expr Lhs, int MinPrec);
   Expr readPrimary();
   Expr readTernary(Expr Cond);
+  Expr readParenExpr();
 
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -900,13 +899,6 @@ InputSectionDescription *ScriptParser::readInputSectionDescription() {
   return readInputSectionRules();
 }
 
-Expr ScriptParser::readAlign() {
-  expect("(");
-  Expr E = readExpr();
-  expect(")");
-  return E;
-}
-
 void ScriptParser::readSort() {
   expect("(");
   expect("CONSTRUCTORS");
@@ -927,12 +919,6 @@ Expr ScriptParser::readAssert() {
   };
 }
 
-void ScriptParser::readAt(OutputSectionCommand *Cmd) {
-  expect("(");
-  Cmd->LmaExpr = readExpr();
-  expect(")");
-}
-
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
@@ -945,10 +931,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect(":");
 
   if (skip("AT"))
-    readAt(Cmd);
-
+    Cmd->LmaExpr = readParenExpr();
   if (skip("ALIGN"))
-    Cmd->AlignExpr = readAlign();
+    Cmd->AlignExpr = readParenExpr();
 
   // Parse constraints.
   if (skip("ONLY_IF_RO"))
@@ -1165,22 +1150,17 @@ uint64_t static getConstant(StringRef S) {
 }
 
 Expr ScriptParser::readPrimary() {
-  StringRef Tok = next();
+  if (peek() == "(")
+    return readParenExpr();
 
-  if (Tok == "(") {
-    Expr E = readExpr();
-    expect(")");
-    return E;
-  }
+  StringRef Tok = next();
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   if (Tok == "ASSERT")
     return readAssert();
   if (Tok == "ALIGN") {
-    expect("(");
-    Expr E = readExpr();
-    expect(")");
+    Expr E = readParenExpr();
     return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
   }
   if (Tok == "CONSTANT") {
@@ -1248,6 +1228,13 @@ Expr ScriptParser::readTernary(Expr Cond) {
   expect(":");
   Expr R = readExpr();
   return [=](uint64_t Dot) { return Cond(Dot) ? L(Dot) : R(Dot); };
+}
+
+Expr ScriptParser::readParenExpr() {
+  expect("(");
+  Expr E = readExpr();
+  expect(")");
+  return E;
 }
 
 std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {

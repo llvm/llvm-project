@@ -71,7 +71,7 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegister)
     const lldb::tid_t tid = 0x47;
     const uint32_t reg_num = 4;
     std::future<bool> write_result =
-        std::async(std::launch::async, [&client] { return client.WriteRegister(tid, reg_num, "ABCD"); });
+        std::async(std::launch::async, [&] { return client.WriteRegister(tid, reg_num, "ABCD"); });
 
     Handle_QThreadSuffixSupported(server, true);
 
@@ -79,7 +79,7 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegister)
     ASSERT_TRUE(write_result.get());
 
     write_result = std::async(std::launch::async,
-                              [&client] { return client.WriteAllRegisters(tid, "404142434445464748494a4b4c4d4e4f"); });
+                              [&] { return client.WriteAllRegisters(tid, "404142434445464748494a4b4c4d4e4f"); });
 
     HandlePacket(server, "G404142434445464748494a4b4c4d4e4f;thread:0047;", "OK");
     ASSERT_TRUE(write_result.get());
@@ -96,7 +96,7 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix)
     const lldb::tid_t tid = 0x47;
     const uint32_t reg_num = 4;
     std::future<bool> write_result =
-        std::async(std::launch::async, [&client] { return client.WriteRegister(tid, reg_num, "ABCD"); });
+        std::async(std::launch::async, [&] { return client.WriteRegister(tid, reg_num, "ABCD"); });
 
     Handle_QThreadSuffixSupported(server, false);
     HandlePacket(server, "Hg47", "OK");
@@ -104,7 +104,7 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix)
     ASSERT_TRUE(write_result.get());
 
     write_result = std::async(std::launch::async,
-                              [&client] { return client.WriteAllRegisters(tid, "404142434445464748494a4b4c4d4e4f"); });
+                              [&] { return client.WriteAllRegisters(tid, "404142434445464748494a4b4c4d4e4f"); });
 
     HandlePacket(server, "G404142434445464748494a4b4c4d4e4f", "OK");
     ASSERT_TRUE(write_result.get());

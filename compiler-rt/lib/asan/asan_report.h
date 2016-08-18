@@ -37,12 +37,15 @@ struct AddressDescription {
 // them to "globals" array.
 int GetGlobalsForAddress(uptr addr, __asan_global *globals, u32 *reg_sites,
                          int max_globals);
-bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr);
+
+const char *MaybeDemangleGlobalName(const char *name);
+void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g);
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g);
+
 // The following functions prints address description depending
 // on the memory type (shadow/heap/stack/global).
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars);
-bool DescribeAddressIfStack(uptr addr, uptr access_size);
 
 // Different kinds of error reports.
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,

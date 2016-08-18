@@ -120,6 +120,7 @@ cl::opt<bool> OutputHeaders(
     cl::desc("Print the symbol being queried and all its relevant headers in\n"
              "JSON format to stdout:\n"
              "  {\n"
+             "    \"FilePath\": \"/path/to/foo.cc\",\n"
              "    \"QuerySymbolInfos\": [\n"
              "       {\"RawIdentifier\": \"foo\",\n"
              "        \"Range\": {\"Offset\": 0, \"Length\": 3}}\n"
@@ -135,6 +136,7 @@ cl::opt<std::string> InsertHeader(
              "The result is written to stdout. It is currently used for\n"
              "editor integration. Support YAML/JSON format:\n"
              "  -insert-header=\"{\n"
+             "     FilePath: \"/path/to/foo.cc\",\n"
              "     QuerySymbolInfos: [\n"
              "       {RawIdentifier: foo,\n"
              "        Range: {Offset: 0, Length: 3}}\n"
@@ -145,7 +147,7 @@ cl::opt<std::string> InsertHeader(
 
 cl::opt<std::string>
     Style("style",
-          cl::desc("Fallback style for reformatting after inserting new "
+          cl::desc("Fallback style for reformatting after inserting new\n"
                    "headers if there is no clang-format config file found."),
           cl::init("llvm"), cl::cat(IncludeFixerCategory));
 

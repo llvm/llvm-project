@@ -48,6 +48,8 @@ The ``-list-checks`` option lists all the enabled checks. When used without
 available checks or with any other value of ``-checks=`` to see which checks are
 enabled by this value.
 
+:: _checks-groups-table:
+
 There are currently the following groups of checks:
 
 ====================== =========================================================
@@ -338,29 +340,13 @@ style used in the project. For code reviews we mostly use `LLVM Phabricator`_.
 .. _LLVM Coding Standards: http://llvm.org/docs/CodingStandards.html
 .. _LLVM Phabricator: http://llvm.org/docs/Phabricator.html
 
-
-Next, you need to decide which module the check belongs to. If the check
-verifies conformance of the code to a certain coding style, it probably deserves
-a separate module and a directory in ``clang-tidy/``. There are already modules
-implementing checks related to:
-
-* `C++ Core Guidelines
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/cppcoreguidelines/>`_
-* `CERT Secure Coding Standards
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/cert/>`_
-* `Google Style Guide
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/>`_
-* `LLVM Style
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/llvm/>`_
-* `modernizing C/C++ code
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/modernize/>`_
-* potential `performance problems
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/performance/>`_
-* various `readability issues
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/readability/>`_
-* and `miscellaneous checks
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/misc/>`_
-  that we couldn't find a better category for.
+Next, you need to decide which module the check belongs to. Modules
+are located in subdirectories of
+``clang-tidy/ <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/>``_
+and contain checks targeting a certain aspect of code quality (performance,
+readability, etc.), certain coding style or standard (Google, LLVM, CERT, etc.)
+or a widely used API (e.g. MPI). Their names are same as user-facing check
+groups names described :ref:`above <checks-groups-table>`.
 
 After choosing the module, you need to create a class for your check:
 

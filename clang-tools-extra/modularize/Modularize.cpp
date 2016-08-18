@@ -571,7 +571,10 @@ public:
     return true;
   }
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) { return true; }
-  bool TraverseLambdaCapture(LambdaCapture C) { return true; }
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
+                             Expr *Init) {
+    return true;
+  }
 
   // Check 'extern "*" {}' block for #include directives.
   bool VisitLinkageSpecDecl(LinkageSpecDecl *D) {
@@ -756,7 +759,10 @@ public:
     return true;
   }
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) { return true; }
-  bool TraverseLambdaCapture(LambdaCapture C) { return true; }
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
+                             Expr *Init) {
+    return true;
+  }
 
   // Check 'extern "*" {}' block for #include directives.
   bool VisitLinkageSpecDecl(LinkageSpecDecl *D) {

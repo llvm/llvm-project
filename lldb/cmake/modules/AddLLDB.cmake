@@ -4,7 +4,7 @@ function(lldb_link_common_libs name targetkind)
   endif()
 
   if(${targetkind} MATCHES "SHARED")
-    set(LINK_KEYWORD ${cmake_2_8_12_PUBLIC})
+    set(LINK_KEYWORD PUBLIC)
   endif()
 
   if(${targetkind} MATCHES "SHARED" OR ${targetkind} MATCHES "EXE")
@@ -62,10 +62,10 @@ macro(add_lldb_library name)
 
     if (PARAM_SHARED)
       if (LLDB_LINKER_SUPPORTS_GROUPS)
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
+        target_link_libraries(${name} PUBLIC
                     -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
       else()
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${CLANG_USED_LIBS})
+        target_link_libraries(${name} PUBLIC ${CLANG_USED_LIBS})
       endif()
     endif()
     llvm_config(${name} ${LLVM_LINK_COMPONENTS} ${LLVM_PRIVATE_LINK_COMPONENTS})

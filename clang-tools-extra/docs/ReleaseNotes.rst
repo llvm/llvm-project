@@ -88,7 +88,7 @@ Improvements to clang-tidy
 Improvements to include-fixer
 -----------------------------
 
-The improvements are...
+- Emacs integration was added.
 
 Improvements to modularize
 --------------------------

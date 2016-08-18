@@ -71,7 +71,13 @@ void AsanLocateAddress(uptr addr, AddressDescription *descr) {
     descr->region_kind = ShadowNames[shadow_descr.kind];
     return;
   }
-  if (GetInfoForAddressIfGlobal(addr, descr)) {
+  GlobalAddressDescription global_descr;
+  if (GetGlobalAddressInformation(addr, &global_descr)) {
+    descr->region_kind = "global";
+    auto &g = global_descr.globals[0];
+    internal_strlcpy(descr->name, g.name, descr->name_size);
+    descr->region_address = g.beg;
+    descr->region_size = g.size;
     return;
   }
   asanThreadRegistry().Lock();

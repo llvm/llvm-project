@@ -268,16 +268,6 @@ string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" LLDB_VERSION
   ${PACKAGE_VERSION})
 message(STATUS "LLDB version: ${LLDB_VERSION}")
 
-if (CMAKE_VERSION VERSION_LESS 2.8.12)
-  set(cmake_2_8_12_INTERFACE)
-  set(cmake_2_8_12_PRIVATE)
-  set(cmake_2_8_12_PUBLIC)
-else ()
-  set(cmake_2_8_12_INTERFACE INTERFACE)
-  set(cmake_2_8_12_PRIVATE PRIVATE)
-  set(cmake_2_8_12_PUBLIC PUBLIC)
-endif ()
-
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include

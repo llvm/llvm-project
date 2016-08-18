@@ -116,8 +116,6 @@ static void PrintLegend(InternalScopedString *str) {
                   kAsanStackMidRedzoneMagic);
   PrintShadowByte(str, "  Stack right redzone:     ",
                   kAsanStackRightRedzoneMagic);
-  PrintShadowByte(str, "  Stack partial redzone:   ",
-                  kAsanStackPartialRedzoneMagic);
   PrintShadowByte(str, "  Stack after return:      ",
                   kAsanStackAfterReturnMagic);
   PrintShadowByte(str, "  Stack use after scope:   ",
@@ -187,144 +185,6 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
 
 // ---------------------- Address Descriptions ------------------- {{{1
 
-static bool IsASCII(unsigned char c) {
-  return /*0x00 <= c &&*/ c <= 0x7F;
-}
-
-static const char *MaybeDemangleGlobalName(const char *name) {
-  // We can spoil names of globals with C linkage, so use an heuristic
-  // approach to check if the name should be demangled.
-  bool should_demangle = false;
-  if (name[0] == '_' && name[1] == 'Z')
-    should_demangle = true;
-  else if (SANITIZER_WINDOWS && name[0] == '\01' && name[1] == '?')
-    should_demangle = true;
-
-  return should_demangle ? Symbolizer::GetOrInit()->Demangle(name) : name;
-}
-
-// Check if the global is a zero-terminated ASCII string. If so, print it.
-static void PrintGlobalNameIfASCII(InternalScopedString *str,
-                                   const __asan_global &g) {
-  for (uptr p = g.beg; p < g.beg + g.size - 1; p++) {
-    unsigned char c = *(unsigned char*)p;
-    if (c == '\0' || !IsASCII(c)) return;
-  }
-  if (*(char*)(g.beg + g.size - 1) != '\0') return;
-  str->append("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
-              (char *)g.beg);
-}
-
-static const char *GlobalFilename(const __asan_global &g) {
-  const char *res = g.module_name;
-  // Prefer the filename from source location, if is available.
-  if (g.location)
-    res = g.location->filename;
-  CHECK(res);
-  return res;
-}
-
-static void PrintGlobalLocation(InternalScopedString *str,
-                                const __asan_global &g) {
-  str->append("%s", GlobalFilename(g));
-  if (!g.location)
-    return;
-  if (g.location->line_no)
-    str->append(":%d", g.location->line_no);
-  if (g.location->column_no)
-    str->append(":%d", g.location->column_no);
-}
-
-static void DescribeAddressRelativeToGlobal(uptr addr, uptr size,
-                                            const __asan_global &g) {
-  InternalScopedString str(4096);
-  Decorator d;
-  str.append("%s", d.Location());
-  if (addr < g.beg) {
-    str.append("%p is located %zd bytes to the left", (void *)addr,
-               g.beg - addr);
-  } else if (addr + size > g.beg + g.size) {
-    if (addr < g.beg + g.size)
-      addr = g.beg + g.size;
-    str.append("%p is located %zd bytes to the right", (void *)addr,
-               addr - (g.beg + g.size));
-  } else {
-    // Can it happen?
-    str.append("%p is located %zd bytes inside", (void *)addr, addr - g.beg);
-  }
-  str.append(" of global variable '%s' defined in '",
-             MaybeDemangleGlobalName(g.name));
-  PrintGlobalLocation(&str, g);
-  str.append("' (0x%zx) of size %zu\n", g.beg, g.size);
-  str.append("%s", d.EndLocation());
-  PrintGlobalNameIfASCII(&str, g);
-  Printf("%s", str.data());
-}
-
-static bool DescribeAddressIfGlobal(uptr addr, uptr size,
-                                    const char *bug_type) {
-  // Assume address is close to at most four globals.
-  const int kMaxGlobalsInReport = 4;
-  __asan_global globals[kMaxGlobalsInReport];
-  u32 reg_sites[kMaxGlobalsInReport];
-  int globals_num =
-      GetGlobalsForAddress(addr, globals, reg_sites, ARRAY_SIZE(globals));
-  if (globals_num == 0)
-    return false;
-  for (int i = 0; i < globals_num; i++) {
-    DescribeAddressRelativeToGlobal(addr, size, globals[i]);
-    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
-        reg_sites[i]) {
-      Printf("  registered at:\n");
-      StackDepotGet(reg_sites[i]).Print();
-    }
-  }
-  return true;
-}
-
-static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
-                                          uptr access_size, uptr prev_var_end,
-                                          uptr next_var_beg) {
-  uptr var_end = var.beg + var.size;
-  uptr addr_end = addr + access_size;
-  const char *pos_descr = nullptr;
-  // If the variable [var.beg, var_end) is the nearest variable to the
-  // current memory access, indicate it in the log.
-  if (addr >= var.beg) {
-    if (addr_end <= var_end)
-      pos_descr = "is inside";  // May happen if this is a use-after-return.
-    else if (addr < var_end)
-      pos_descr = "partially overflows";
-    else if (addr_end <= next_var_beg &&
-             next_var_beg - addr_end >= addr - var_end)
-      pos_descr = "overflows";
-  } else {
-    if (addr_end > var.beg)
-      pos_descr = "partially underflows";
-    else if (addr >= prev_var_end &&
-             addr - prev_var_end >= var.beg - addr_end)
-      pos_descr = "underflows";
-  }
-  InternalScopedString str(1024);
-  str.append("    [%zd, %zd)", var.beg, var_end);
-  // Render variable name.
-  str.append(" '");
-  for (uptr i = 0; i < var.name_len; ++i) {
-    str.append("%c", var.name_pos[i]);
-  }
-  str.append("'");
-  if (pos_descr) {
-    Decorator d;
-    // FIXME: we may want to also print the size of the access here,
-    // but in case of accesses generated by memset it may be confusing.
-    str.append("%s <== Memory access at offset %zd %s this variable%s\n",
-               d.Location(), addr, pos_descr, d.EndLocation());
-  } else {
-    str.append("\n");
-  }
-  Printf("%s", str.data());
-}
-
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars) {
   CHECK(frame_descr);
@@ -349,71 +209,6 @@ bool ParseFrameDescription(const char *frame_descr,
     p += len;
   }
 
-  return true;
-}
-
-bool DescribeAddressIfStack(uptr addr, uptr access_size) {
-  AsanThread *t = FindThreadByStackAddress(addr);
-  if (!t) return false;
-
-  Decorator d;
-  char tname[128];
-  Printf("%s", d.Location());
-  Printf("Address %p is located in stack of thread T%d%s", addr, t->tid(),
-         ThreadNameWithParenthesis(t->tid(), tname, sizeof(tname)));
-
-  // Try to fetch precise stack frame for this access.
-  AsanThread::StackFrameAccess access;
-  if (!t->GetStackFrameAccessByAddr(addr, &access)) {
-    Printf("%s\n", d.EndLocation());
-    return true;
-  }
-  Printf(" at offset %zu in frame%s\n", access.offset, d.EndLocation());
-
-  // Now we print the frame where the alloca has happened.
-  // We print this frame as a stack trace with one element.
-  // The symbolizer may print more than one frame if inlining was involved.
-  // The frame numbers may be different than those in the stack trace printed
-  // previously. That's unfortunate, but I have no better solution,
-  // especially given that the alloca may be from entirely different place
-  // (e.g. use-after-scope, or different thread's stack).
-#if SANITIZER_PPC64V1
-  // On PowerPC64 ELFv1, the address of a function actually points to a
-  // three-doubleword data structure with the first field containing
-  // the address of the function's code.
-  access.frame_pc = *reinterpret_cast<uptr *>(access.frame_pc);
-#endif
-  access.frame_pc += 16;
-  Printf("%s", d.EndLocation());
-  StackTrace alloca_stack(&access.frame_pc, 1);
-  alloca_stack.Print();
-
-  InternalMmapVector<StackVarDescr> vars(16);
-  if (!ParseFrameDescription(access.frame_descr, &vars)) {
-    Printf("AddressSanitizer can't parse the stack frame "
-           "descriptor: |%s|\n", access.frame_descr);
-    // 'addr' is a stack address, so return true even if we can't parse frame
-    return true;
-  }
-  uptr n_objects = vars.size();
-  // Report the number of stack objects.
-  Printf("  This frame has %zu object(s):\n", n_objects);
-
-  // Report all objects in this frame.
-  for (uptr i = 0; i < n_objects; i++) {
-    uptr prev_var_end = i ? vars[i - 1].beg + vars[i - 1].size : 0;
-    uptr next_var_beg = i + 1 < n_objects ? vars[i + 1].beg : ~(0UL);
-    PrintAccessAndVarIntersection(vars[i], access.offset, access_size,
-                                  prev_var_end, next_var_beg);
-  }
-  Printf("HINT: this may be a false positive if your program uses "
-         "some custom stack unwind mechanism or swapcontext\n");
-  if (SANITIZER_WINDOWS)
-    Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
-  else
-    Printf("      (longjmp and C++ exceptions *are* supported)\n");
-
-  DescribeThread(t);
   return true;
 }
 
@@ -931,7 +726,6 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
         break;
       case kAsanStackMidRedzoneMagic:
       case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
         bug_descr = "stack-buffer-overflow";
         bug_type_score = 25;
         far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
