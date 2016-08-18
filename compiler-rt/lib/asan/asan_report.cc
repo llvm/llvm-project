@@ -66,56 +66,6 @@ void AppendToErrorMessageBuffer(const char *buffer) {
   error_message_buffer_pos += Min(remaining, length);
 }
 
-// ---------------------- Decorator ------------------------------ {{{1
-class Decorator: public __sanitizer::SanitizerCommonDecorator {
- public:
-  Decorator() : SanitizerCommonDecorator() { }
-  const char *Access()     { return Blue(); }
-  const char *EndAccess()  { return Default(); }
-  const char *Location()   { return Green(); }
-  const char *EndLocation() { return Default(); }
-  const char *Allocation()  { return Magenta(); }
-  const char *EndAllocation()  { return Default(); }
-
-  const char *ShadowByte(u8 byte) {
-    switch (byte) {
-      case kAsanHeapLeftRedzoneMagic:
-      case kAsanHeapRightRedzoneMagic:
-      case kAsanArrayCookieMagic:
-        return Red();
-      case kAsanHeapFreeMagic:
-        return Magenta();
-      case kAsanStackLeftRedzoneMagic:
-      case kAsanStackMidRedzoneMagic:
-      case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
-        return Red();
-      case kAsanStackAfterReturnMagic:
-        return Magenta();
-      case kAsanInitializationOrderMagic:
-        return Cyan();
-      case kAsanUserPoisonedMemoryMagic:
-      case kAsanContiguousContainerOOBMagic:
-      case kAsanAllocaLeftMagic:
-      case kAsanAllocaRightMagic:
-        return Blue();
-      case kAsanStackUseAfterScopeMagic:
-        return Magenta();
-      case kAsanGlobalRedzoneMagic:
-        return Red();
-      case kAsanInternalHeapMagic:
-        return Yellow();
-      case kAsanIntraObjectRedzone:
-        return Yellow();
-      default:
-        return Default();
-    }
-  }
-  const char *EndShadowByte() { return Default(); }
-  const char *MemoryByte() { return Magenta(); }
-  const char *EndMemoryByte() { return Default(); }
-};
-
 // ---------------------- Helper functions ----------------------- {{{1
 
 static void PrintMemoryByte(InternalScopedString *str, const char *before,
@@ -235,11 +185,6 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
   }
 }
 
-static void DescribeThread(AsanThread *t) {
-  if (t)
-    DescribeThread(t->context());
-}
-
 // ---------------------- Address Descriptions ------------------- {{{1
 
 static bool IsASCII(unsigned char c) {
@@ -335,26 +280,6 @@ static bool DescribeAddressIfGlobal(uptr addr, uptr size,
     }
   }
   return true;
-}
-
-// Return " (thread_name) " or an empty string if the name is empty.
-const char *ThreadNameWithParenthesis(AsanThreadContext *t, char buff[],
-                                      uptr buff_len) {
-  const char *name = t->name;
-  if (name[0] == '\0') return "";
-  buff[0] = 0;
-  internal_strncat(buff, " (", 3);
-  internal_strncat(buff, name, buff_len - 4);
-  internal_strncat(buff, ")", 2);
-  return buff;
-}
-
-const char *ThreadNameWithParenthesis(u32 tid, char buff[],
-                                      uptr buff_len) {
-  if (tid == kInvalidTid) return "";
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-  return ThreadNameWithParenthesis(t, buff, buff_len);
 }
 
 static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
@@ -570,38 +495,6 @@ static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
     return;
   // Assume it is a heap address.
   DescribeHeapAddress(addr, access_size);
-}
-
-// ------------------- Thread description -------------------- {{{1
-
-void DescribeThread(AsanThreadContext *context) {
-  CHECK(context);
-  asanThreadRegistry().CheckLocked();
-  // No need to announce the main thread.
-  if (context->tid == 0 || context->announced) {
-    return;
-  }
-  context->announced = true;
-  char tname[128];
-  InternalScopedString str(1024);
-  str.append("Thread T%d%s", context->tid,
-             ThreadNameWithParenthesis(context->tid, tname, sizeof(tname)));
-  if (context->parent_tid == kInvalidTid) {
-    str.append(" created by unknown thread\n");
-    Printf("%s", str.data());
-    return;
-  }
-  str.append(
-      " created by T%d%s here:\n", context->parent_tid,
-      ThreadNameWithParenthesis(context->parent_tid, tname, sizeof(tname)));
-  Printf("%s", str.data());
-  StackDepotGet(context->stack_id).Print();
-  // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history) {
-    AsanThreadContext *parent_context =
-        GetThreadContextByTidLocked(context->parent_tid);
-    DescribeThread(parent_context);
-  }
 }
 
 // -------------------- Different kinds of reports ----------------- {{{1

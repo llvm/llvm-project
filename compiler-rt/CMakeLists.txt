@@ -85,19 +85,6 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
-if(APPLE AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
-  # Mac OS X prior to 10.9 had problems with exporting symbols from
-  # libc++/libc++abi.
-  set(use_cxxabi_default OFF)
-elseif(MSVC)
-  set(use_cxxabi_default OFF)
-else()
-  set(use_cxxabi_default ON)
-endif()
-
-option(SANITIZER_CAN_USE_CXXABI "Sanitizers can use cxxabi" ${use_cxxabi_default})
-pythonize_bool(SANITIZER_CAN_USE_CXXABI)
-
 #================================
 # Setup Compiler Flags
 #================================
@@ -216,6 +203,17 @@ append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+if(APPLE AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
+  # Mac OS X prior to 10.9 had problems with exporting symbols from
+  # libc++/libc++abi.
+  set(SANITIZER_CAN_USE_CXXABI FALSE)
+elseif(MSVC)
+  set(SANITIZER_CAN_USE_CXXABI FALSE)
+else()
+  set(SANITIZER_CAN_USE_CXXABI TRUE)
+endif()
+pythonize_bool(SANITIZER_CAN_USE_CXXABI)
 
 add_subdirectory(include)
 

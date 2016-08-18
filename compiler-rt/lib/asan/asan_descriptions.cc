@@ -14,8 +14,58 @@
 
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
+
+// Return " (thread_name) " or an empty string if the name is empty.
+const char *ThreadNameWithParenthesis(AsanThreadContext *t, char buff[],
+                                      uptr buff_len) {
+  const char *name = t->name;
+  if (name[0] == '\0') return "";
+  buff[0] = 0;
+  internal_strncat(buff, " (", 3);
+  internal_strncat(buff, name, buff_len - 4);
+  internal_strncat(buff, ")", 2);
+  return buff;
+}
+
+const char *ThreadNameWithParenthesis(u32 tid, char buff[], uptr buff_len) {
+  if (tid == kInvalidTid) return "";
+  asanThreadRegistry().CheckLocked();
+  AsanThreadContext *t = GetThreadContextByTidLocked(tid);
+  return ThreadNameWithParenthesis(t, buff, buff_len);
+}
+
+void DescribeThread(AsanThreadContext *context) {
+  CHECK(context);
+  asanThreadRegistry().CheckLocked();
+  // No need to announce the main thread.
+  if (context->tid == 0 || context->announced) {
+    return;
+  }
+  context->announced = true;
+  char tname[128];
+  InternalScopedString str(1024);
+  str.append("Thread T%d%s", context->tid,
+             ThreadNameWithParenthesis(context->tid, tname, sizeof(tname)));
+  if (context->parent_tid == kInvalidTid) {
+    str.append(" created by unknown thread\n");
+    Printf("%s", str.data());
+    return;
+  }
+  str.append(
+      " created by T%d%s here:\n", context->parent_tid,
+      ThreadNameWithParenthesis(context->parent_tid, tname, sizeof(tname)));
+  Printf("%s", str.data());
+  StackDepotGet(context->stack_id).Print();
+  // Recursively described parent thread if needed.
+  if (flags()->print_full_thread_history) {
+    AsanThreadContext *parent_context =
+        GetThreadContextByTidLocked(context->parent_tid);
+    DescribeThread(parent_context);
+  }
+}
 
 // Shadow descriptions
 static bool GetShadowKind(uptr addr, ShadowKind *shadow_kind) {
