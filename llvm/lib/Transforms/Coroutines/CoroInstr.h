@@ -172,4 +172,72 @@ public:
   }
 };
 
+/// This represents the llvm.coro.save instruction.
+class LLVM_LIBRARY_VISIBILITY CoroSaveInst : public IntrinsicInst {
+public:
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_save;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.suspend instruction.
+class LLVM_LIBRARY_VISIBILITY CoroSuspendInst : public IntrinsicInst {
+  enum { SaveArg, FinalArg };
+
+public:
+  CoroSaveInst *getCoroSave() const {
+    Value *Arg = getArgOperand(SaveArg);
+    if (auto *SI = dyn_cast<CoroSaveInst>(Arg))
+      return SI;
+    assert(isa<ConstantTokenNone>(Arg));
+    return nullptr;
+  }
+  bool isFinal() const {
+    return cast<Constant>(getArgOperand(FinalArg))->isOneValue();
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_suspend;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.size instruction.
+class LLVM_LIBRARY_VISIBILITY CoroSizeInst : public IntrinsicInst {
+public:
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_size;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.end instruction.
+class LLVM_LIBRARY_VISIBILITY CoroEndInst : public IntrinsicInst {
+  enum { FrameArg, UnwindArg };
+
+public:
+  bool isFallthrough() const { return !isUnwind(); }
+  bool isUnwind() const {
+    return cast<Constant>(getArgOperand(UnwindArg))->isOneValue();
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_end;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 } // End namespace llvm.

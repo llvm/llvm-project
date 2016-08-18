@@ -1351,8 +1351,8 @@ bool ConstGeneration::isTfrConst(const MachineInstr &MI) {
     case Hexagon::A4_combineii:
     case Hexagon::A2_tfrsi:
     case Hexagon::A2_tfrpi:
-    case Hexagon::TFR_PdTrue:
-    case Hexagon::TFR_PdFalse:
+    case Hexagon::PS_true:
+    case Hexagon::PS_false:
     case Hexagon::CONST32:
     case Hexagon::CONST64:
       return true;
@@ -1397,9 +1397,9 @@ unsigned ConstGeneration::genTfrConst(const TargetRegisterClass *RC, int64_t C,
   if (RC == &Hexagon::PredRegsRegClass) {
     unsigned Opc;
     if (C == 0)
-      Opc = Hexagon::TFR_PdFalse;
+      Opc = Hexagon::PS_false;
     else if ((C & 0xFF) == 0xFF)
-      Opc = Hexagon::TFR_PdTrue;
+      Opc = Hexagon::PS_true;
     else
       return 0;
     BuildMI(B, At, DL, HII.get(Opc), Reg);
@@ -2173,7 +2173,7 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
     }
   } else if (V.is(0) || V.is(1)) {
     unsigned NewR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
-    unsigned NewOpc = V.is(0) ? Hexagon::TFR_PdFalse : Hexagon::TFR_PdTrue;
+    unsigned NewOpc = V.is(0) ? Hexagon::PS_false : Hexagon::PS_true;
     BuildMI(B, At, DL, HII.get(NewOpc), NewR);
     HBS::replaceReg(RD.Reg, NewR, MRI);
     return true;

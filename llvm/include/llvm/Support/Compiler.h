@@ -33,6 +33,10 @@
 # define __has_attribute(x) 0
 #endif
 
+#ifndef __has_cpp_attribute
+# define __has_cpp_attribute(x) 0
+#endif
+
 #ifndef __has_builtin
 # define __has_builtin(x) 0
 #endif
@@ -226,6 +230,15 @@
 #define LLVM_ATTRIBUTE_RETURNS_NOALIAS __declspec(restrict)
 #else
 #define LLVM_ATTRIBUTE_RETURNS_NOALIAS
+#endif
+
+/// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
+#if __has_cpp_attribute(fallthrough)
+#define LLVM_FALLTHROUGH [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#define LLVM_FALLTHROUGH [[clang::fallthrough]]
+#else
+#define LLVM_FALLTHROUGH
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress

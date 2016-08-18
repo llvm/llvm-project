@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -116,7 +117,9 @@ NestedTypeRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
 
 Expected<FieldListRecord>
 FieldListRecord::deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data) {
-  return FieldListRecord(Data);
+  auto FieldListData = Data;
+  Data = ArrayRef<uint8_t>();
+  return FieldListRecord(FieldListData);
 }
 
 Expected<ArrayRecord> ArrayRecord::deserialize(TypeRecordKind Kind,
@@ -448,7 +451,7 @@ bool PointerRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
   bool Success = true;
   Success &= remapIndex(IndexMap, ReferentType);
   if (isPointerToMember())
-    Success &= MemberInfo.remapTypeIndices(IndexMap);
+    Success &= MemberInfo->remapTypeIndices(IndexMap);
   return Success;
 }
 

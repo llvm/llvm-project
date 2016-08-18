@@ -2954,7 +2954,7 @@ HexagonTargetLowering::getPICJumpTableRelocBase(SDValue Table,
 MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
-  case Hexagon::ALLOCA: {
+  case Hexagon::PS_alloca: {
     MachineFunction *MF = BB->getParent();
     auto *FuncInfo = MF->getInfo<HexagonMachineFunctionInfo>();
     FuncInfo->addAllocaAdjustInst(&MI);

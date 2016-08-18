@@ -238,15 +238,13 @@ def: vcmp_vi1_pat<A2_vcmphgtu, setugt, V4I16, v4i1>;
 // scalar MPYI instructions.
 // This is expanded by ExpandPostRAPseudos.
 let isPseudo = 1 in
-def VMULW : PseudoM<(outs DoubleRegs:$Rd),
-      (ins DoubleRegs:$Rs, DoubleRegs:$Rt),
-      ".error \"Should never try to emit VMULW\"",
+def PS_vmulw : PseudoM<(outs DoubleRegs:$Rd),
+      (ins DoubleRegs:$Rs, DoubleRegs:$Rt), "",
       [(set V2I32:$Rd, (mul V2I32:$Rs, V2I32:$Rt))]>;
 
 let isPseudo = 1 in
-def VMULW_ACC : PseudoM<(outs DoubleRegs:$Rd),
-      (ins DoubleRegs:$Rx, DoubleRegs:$Rs, DoubleRegs:$Rt),
-      ".error \"Should never try to emit VMULW_ACC\"",
+def PS_vmulw_acc : PseudoM<(outs DoubleRegs:$Rd),
+      (ins DoubleRegs:$Rx, DoubleRegs:$Rs, DoubleRegs:$Rt), "",
       [(set V2I32:$Rd, (add V2I32:$Rx, (mul V2I32:$Rs, V2I32:$Rt)))],
       "$Rd = $Rx">;
 

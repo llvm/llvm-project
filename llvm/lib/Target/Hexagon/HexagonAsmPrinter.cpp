@@ -550,8 +550,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
     return;
   }
-  case Hexagon::HEXAGON_V6_vd0_pseudo:
-  case Hexagon::HEXAGON_V6_vd0_pseudo_128B: {
+  case Hexagon::V6_vd0:
+  case Hexagon::V6_vd0_128B: {
     MCInst TmpInst;
     assert (Inst.getOperand(0).isReg() &&
             "Expected register and none was found");

@@ -1087,16 +1087,16 @@ bool MachineBasicBlock::CorrectExtraCFGEdges(MachineBasicBlock *DestA,
 
   bool Changed = false;
 
-  MachineFunction::iterator FallThru = std::next(getIterator());
+  MachineBasicBlock *FallThru = getNextNode();
 
   if (!DestA && !DestB) {
     // Block falls through to successor.
-    DestA = &*FallThru;
-    DestB = &*FallThru;
+    DestA = FallThru;
+    DestB = FallThru;
   } else if (DestA && !DestB) {
     if (IsCond)
       // Block ends in conditional jump that falls through to successor.
-      DestB = &*FallThru;
+      DestB = FallThru;
   } else {
     assert(DestA && DestB && IsCond &&
            "CFG in a bad state. Cannot correct CFG edges");

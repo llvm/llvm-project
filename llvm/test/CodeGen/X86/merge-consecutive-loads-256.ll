@@ -222,7 +222,7 @@ define <4 x i64> @merge_4i64_i64_1zzu(i64* %ptr) nounwind uwtable noinline ssp {
   %val0 = load i64, i64* %ptr0
   %res0 = insertelement <4 x i64> undef, i64 %val0, i32 0
   %res1 = insertelement <4 x i64> %res0, i64 0, i32 1
-  %res2 = insertelement <4 x i64> %res1, i64 0, i32 1
+  %res2 = insertelement <4 x i64> %res1, i64 0, i32 2
   ret <4 x i64> %res2
 }
 

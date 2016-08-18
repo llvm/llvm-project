@@ -13,14 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "streamexecutor/Kernel.h"
-#include "streamexecutor/Interfaces.h"
-#include "streamexecutor/StreamExecutor.h"
+#include "streamexecutor/Executor.h"
+#include "streamexecutor/PlatformInterfaces.h"
 
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 namespace streamexecutor {
 
-KernelBase::KernelBase(StreamExecutor *ParentExecutor, const std::string &Name,
+KernelBase::KernelBase(Executor *ParentExecutor, const std::string &Name,
                        const std::string &DemangledName,
                        std::unique_ptr<KernelInterface> Implementation)
     : ParentExecutor(ParentExecutor), Name(Name), DemangledName(DemangledName),
@@ -28,7 +28,7 @@ KernelBase::KernelBase(StreamExecutor *ParentExecutor, const std::string &Name,
 
 KernelBase::~KernelBase() = default;
 
-Expected<KernelBase> KernelBase::create(StreamExecutor *ParentExecutor,
+Expected<KernelBase> KernelBase::create(Executor *ParentExecutor,
                                         const MultiKernelLoaderSpec &Spec) {
   auto MaybeImplementation = ParentExecutor->getKernelImplementation(Spec);
   if (!MaybeImplementation) {

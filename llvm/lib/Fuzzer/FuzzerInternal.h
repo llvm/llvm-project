@@ -28,7 +28,7 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
-#include "FuzzerTracePC.h"
+#include "FuzzerValueBitMap.h"
 
 // Platform detection.
 #ifdef __linux__
@@ -130,6 +130,13 @@ bool IsASCII(const uint8_t *Data, size_t Size);
 int NumberOfCpuCores();
 int GetPid();
 void SleepSeconds(int Seconds);
+
+// See FuzzerTracePC.cpp
+size_t PCMapMergeFromCurrent(ValueBitMap &M);
+
+// See FuzzerTraceState.cpp
+void EnableValueProfile();
+size_t VPMapMergeFromCurrent(ValueBitMap &M);
 
 class Random {
  public:
@@ -349,10 +356,12 @@ public:
     void Reset() {
       BlockCoverage = 0;
       CallerCalleeCoverage = 0;
-      PcMapBits = 0;
       CounterBitmapBits = 0;
       CounterBitmap.clear();
       PCMap.Reset();
+      PCMapBits = 0;
+      VPMap.Reset();
+      VPMapBits = 0;
       PcBufferPos = 0;
     }
 
@@ -364,9 +373,10 @@ public:
     // Precalculated number of bits in CounterBitmap.
     size_t CounterBitmapBits;
     std::vector<uint8_t> CounterBitmap;
-    // Precalculated number of bits in PCMap.
-    size_t PcMapBits;
-    PcCoverageMap PCMap;
+    ValueBitMap PCMap;
+    size_t PCMapBits;
+    ValueBitMap VPMap;
+    size_t VPMapBits;
   };
 
   Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);

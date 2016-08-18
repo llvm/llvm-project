@@ -136,18 +136,18 @@ public:
   };
 
   struct ImmOp {
-    bool IsFPImm;
-    ImmTy Type;
     int64_t Val;
+    ImmTy Type;
+    bool IsFPImm;
     Modifiers Mods;
   };
 
   struct RegOp {
-    unsigned RegNo;
-    Modifiers Mods;
     const MCRegisterInfo *TRI;
     const MCSubtargetInfo *STI;
+    unsigned RegNo;
     bool IsForcedVOP3;
+    Modifiers Mods;
   };
 
   union {

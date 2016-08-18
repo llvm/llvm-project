@@ -68,9 +68,14 @@ void ScopBuilder::buildPHIAccesses(PHINode *PHI, Region *NonAffineSubRegion,
     Value *Op = PHI->getIncomingValue(u);
     BasicBlock *OpBB = PHI->getIncomingBlock(u);
 
-    // Do not build scalar dependences inside a non-affine subregion.
-    if (NonAffineSubRegion && NonAffineSubRegion->contains(OpBB))
+    // Do not build PHI dependences inside a non-affine subregion, but make
+    // sure that the necessary scalar values are still made available.
+    if (NonAffineSubRegion && NonAffineSubRegion->contains(OpBB)) {
+      auto *OpInst = dyn_cast<Instruction>(Op);
+      if (!OpInst || !NonAffineSubRegion->contains(OpInst))
+        ensureValueRead(Op, OpBB);
       continue;
+    }
 
     OnlyNonAffineSubRegionOperands = false;
     ensurePHIWrite(PHI, OpBB, Op, IsExitBlock);

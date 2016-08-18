@@ -100,3 +100,31 @@ define i64 @f5(i64 %a, i64 %b) {
   if.end:
     ret i64 0
 }
+
+define i32 @f6(i32 %a) {
+; CHECK-LABEL: f6:
+; CHECK: beqzc ${{[0-9]+}}, $BB
+
+  %cmp = icmp eq i32 %a, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+  if.then:
+    ret i32 1
+
+  if.end:
+    ret i32 0
+}
+
+define i32 @f7(i32 %a) {
+; CHECK-LABEL: f7:
+; CHECK: bnezc ${{[0-9]+}}, $BB
+
+  %cmp = icmp eq i32 0, %a
+  br i1 %cmp, label %if.then, label %if.end
+
+  if.then:
+    ret i32 1
+
+  if.end:
+    ret i32 0
+}

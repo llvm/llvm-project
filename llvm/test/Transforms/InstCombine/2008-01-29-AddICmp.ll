@@ -67,3 +67,24 @@ define <2 x i1> @test3vec(<2 x i32> %a) {
   ret <2 x i1> %c
 }
 
+define i1 @test4(i32 %a) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 %a, -4
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add i32 %a, 2147483652
+  %c = icmp sge i32 %b, 4
+  ret i1 %c
+}
+
+define <2 x i1> @test4vec(<2 x i32> %a) {
+; CHECK-LABEL: @test4vec(
+; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> %a, <i32 -2147483644, i32 -2147483644>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[B]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = add <2 x i32> %a, <i32 2147483652, i32 2147483652>
+  %c = icmp sge <2 x i32> %b, <i32 4, i32 4>
+  ret <2 x i1> %c
+}
+

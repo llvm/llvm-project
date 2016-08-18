@@ -108,7 +108,11 @@ entry:
   ; CHECK: __asan_poison_stack_memory
 
   ret void
-  ; CHECK: __asan_unpoison_stack_memory
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
+  ; CHECK: store i32 0
+  ; CHECK-NEXT: __asan_unpoison_stack_memory
 }
 
 define void @zero_sized(i64 %a) #0 {
