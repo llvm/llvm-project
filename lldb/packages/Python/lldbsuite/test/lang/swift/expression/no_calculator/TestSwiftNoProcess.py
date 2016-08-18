@@ -31,6 +31,7 @@ class TestSwiftNoProcess(TestBase):
         self.main_source_spec = lldb.SBFileSpec (self.main_source)
 
     @decorators.swiftTest
+    @decorators.skipUnlessDarwin
     def test_swift_no_target (self):
         """Tests that we give a reasonable error if we try to run expressions with no target"""
         result = lldb.SBCommandReturnObject()
@@ -38,6 +39,7 @@ class TestSwiftNoProcess(TestBase):
         self.assertTrue(ret_val == lldb.eReturnStatusFailed, "Swift expression with no target should fail.")
 
     @decorators.swiftTest
+    @decorators.skipUnlessDarwin
     def test_swift_no_process(self):
         """Tests that we give a reasonable error if we try to run expressions with no process"""
         self.build()
