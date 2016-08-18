@@ -261,6 +261,14 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildTrunc(LLT Ty, unsigned Res, unsigned Op);
+
+  /// Build and insert either a G_ICMP
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildICmp(ArrayRef<LLT> Tys, CmpInst::Predicate Pred,
+                                unsigned Res, unsigned Op0, unsigned Op1);
 };
 
 } // End namespace llvm.

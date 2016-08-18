@@ -13,6 +13,12 @@
 /// dominance queries on the CFG, but is fully generic w.r.t. the underlying
 /// graph types.
 ///
+/// Unlike ADT/* graph algorithms, generic dominator tree has more reuiqrement
+/// on the graph's NodeRef. The NodeRef should be a pointer and, depending on
+/// the implementation, e.g. NodeRef->getParent() return the parent node.
+///
+/// FIXME: Maybe GenericDomTree needs a TreeTraits, instead of GraphTraits.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_GENERICDOMTREE_H
@@ -29,6 +35,23 @@
 #include <algorithm>
 
 namespace llvm {
+
+template <class NodeT> class DominatorTreeBase;
+
+namespace detail {
+
+template <typename GT> struct DominatorTreeBaseTraits {
+  static_assert(std::is_pointer<typename GT::NodeRef>::value,
+                "Currently NodeRef must be a pointer type.");
+  using type = DominatorTreeBase<
+      typename std::remove_pointer<typename GT::NodeRef>::type>;
+};
+
+} // End namespace detail
+
+template <typename GT>
+using DominatorTreeBaseByGraphTraits =
+    typename detail::DominatorTreeBaseTraits<GT>::type;
 
 /// \brief Base class that other, more interesting dominator analyses
 /// inherit from.
@@ -62,7 +85,6 @@ public:
   bool isPostDominator() const { return IsPostDominators; }
 };
 
-template <class NodeT> class DominatorTreeBase;
 struct PostDominatorTree;
 
 /// \brief Base class for the actual dominator tree node.
@@ -177,8 +199,7 @@ void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &o,
 
 // The calculate routine is provided in a separate header but referenced here.
 template <class FuncT, class N>
-void Calculate(DominatorTreeBase<typename GraphTraits<N>::NodeType> &DT,
-               FuncT &F);
+void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT, FuncT &F);
 
 /// \brief Core dominator tree base class.
 ///
@@ -251,14 +272,14 @@ protected:
   // NewBB is split and now it has one successor. Update dominator tree to
   // reflect this change.
   template <class N, class GraphT>
-  void Split(DominatorTreeBase<typename GraphT::NodeType> &DT,
-             typename GraphT::NodeType *NewBB) {
+  void Split(DominatorTreeBaseByGraphTraits<GraphT> &DT,
+             typename GraphT::NodeRef NewBB) {
     assert(std::distance(GraphT::child_begin(NewBB),
                          GraphT::child_end(NewBB)) == 1 &&
            "NewBB should have a single successor!");
-    typename GraphT::NodeType *NewBBSucc = *GraphT::child_begin(NewBB);
+    typename GraphT::NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    std::vector<typename GraphT::NodeType *> PredBlocks;
+    std::vector<typename GraphT::NodeRef> PredBlocks;
     typedef GraphTraits<Inverse<N>> InvTraits;
     for (typename InvTraits::ChildIteratorType
              PI = InvTraits::child_begin(NewBB),
@@ -273,7 +294,7 @@ protected:
              PI = InvTraits::child_begin(NewBBSucc),
              E = InvTraits::child_end(NewBBSucc);
          PI != E; ++PI) {
-      typename InvTraits::NodeType *ND = *PI;
+      typename InvTraits::NodeRef ND = *PI;
       if (ND != NewBB && !DT.dominates(NewBBSucc, ND) &&
           DT.isReachableFromEntry(ND)) {
         NewBBDominatesNewBBSucc = false;
@@ -627,18 +648,17 @@ public:
 
 protected:
   template <class GraphT>
-  friend typename GraphT::NodeType *
-  Eval(DominatorTreeBase<typename GraphT::NodeType> &DT,
-       typename GraphT::NodeType *V, unsigned LastLinked);
+  friend typename GraphT::NodeRef
+  Eval(DominatorTreeBaseByGraphTraits<GraphT> &DT, typename GraphT::NodeRef V,
+       unsigned LastLinked);
 
   template <class GraphT>
-  friend unsigned DFSPass(DominatorTreeBase<typename GraphT::NodeType> &DT,
-                          typename GraphT::NodeType *V, unsigned N);
+  friend unsigned DFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
+                          typename GraphT::NodeRef V, unsigned N);
 
   template <class FuncT, class N>
-  friend void
-  Calculate(DominatorTreeBase<typename GraphTraits<N>::NodeType> &DT, FuncT &F);
-
+  friend void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT,
+                        FuncT &F);
 
   DomTreeNodeBase<NodeT> *getNodeForBlock(NodeT *BB) {
     if (DomTreeNodeBase<NodeT> *Node = getNode(BB))

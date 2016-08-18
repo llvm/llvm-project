@@ -891,6 +891,12 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
     }
     break;
   }
+  case MachineOperand::MO_Predicate: {
+    auto Pred = static_cast<CmpInst::Predicate>(Op.getPredicate());
+    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
+       << CmpInst::getPredicateName(Pred) << ')';
+    break;
+  }
   }
 }
 

@@ -63,7 +63,8 @@ public:
     MO_Metadata,          ///< Metadata reference (for debug info)
     MO_MCSymbol,          ///< MCSymbol reference (for debug/eh info)
     MO_CFIIndex,          ///< MCCFIInstruction index.
-    MO_IntrinsicID,       ///< Intrinsic ID
+    MO_IntrinsicID,       ///< Intrinsic ID for ISel
+    MO_Predicate,         ///< Generic predicate for ISel
   };
 
 private:
@@ -164,6 +165,7 @@ private:
     MCSymbol *Sym;           // For MO_MCSymbol.
     unsigned CFIIndex;       // For MO_CFI.
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
+    unsigned Pred;           // For MO_Predicate
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -265,6 +267,7 @@ public:
   bool isMCSymbol() const { return OpKind == MO_MCSymbol; }
   bool isCFIIndex() const { return OpKind == MO_CFIIndex; }
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
+  bool isPredicate() const { return OpKind == MO_Predicate; }
   //===--------------------------------------------------------------------===//
   // Accessors for Register Operands
   //===--------------------------------------------------------------------===//
@@ -462,6 +465,11 @@ public:
   Intrinsic::ID getIntrinsicID() const {
     assert(isIntrinsicID() && "Wrong MachineOperand accessor");
     return Contents.IntrinsicID;
+  }
+
+  unsigned getPredicate() const {
+    assert(isPredicate() && "Wrong MachineOperand accessor");
+    return Contents.Pred;
   }
 
   /// Return the offset from the symbol in this operand. This always returns 0
@@ -746,6 +754,12 @@ public:
   static MachineOperand CreateIntrinsicID(Intrinsic::ID ID) {
     MachineOperand Op(MachineOperand::MO_IntrinsicID);
     Op.Contents.IntrinsicID = ID;
+    return Op;
+  }
+
+  static MachineOperand CreatePredicate(unsigned Pred) {
+    MachineOperand Op(MachineOperand::MO_Predicate);
+    Op.Contents.Pred = Pred;
     return Op;
   }
 

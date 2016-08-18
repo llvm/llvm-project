@@ -209,10 +209,19 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(const ItTy &I, FuncTy F) {
 }
 
 /// \brief Metafunction to determine if type T has a member called rbegin().
-template <typename T> struct has_rbegin {
-  template <typename U> static char(&f(const U &, decltype(&U::rbegin)))[1];
-  static char(&f(...))[2];
-  const static bool value = sizeof(f(std::declval<T>(), nullptr)) == 1;
+template <typename Ty>
+class has_rbegin {
+  typedef char yes[1];
+  typedef char no[2];
+
+  template <typename Inner>
+  static yes& test(Inner *I, decltype(I->rbegin()) * = nullptr);
+
+  template <typename>
+  static no& test(...);
+
+public:
+  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
 };
 
 // Returns an iterator_range over the given container which iterates in reverse.

@@ -360,7 +360,7 @@ void RAFast::usePhysReg(MachineOperand &MO) {
     break;
   case regReserved:
     PhysRegState[PhysReg] = regFree;
-    // Fall through
+    LLVM_FALLTHROUGH;
   case regFree:
     MO.setIsKill();
     return;
@@ -389,7 +389,7 @@ void RAFast::usePhysReg(MachineOperand &MO) {
       assert((TRI->isSuperRegister(PhysReg, Alias) ||
               TRI->isSuperRegister(Alias, PhysReg)) &&
              "Instruction is not using a subregister of a reserved register");
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case regFree:
       if (TRI->isSuperRegister(PhysReg, Alias)) {
         // Leave the superregister in the working set.
@@ -421,7 +421,7 @@ void RAFast::definePhysReg(MachineInstr &MI, unsigned PhysReg,
     break;
   default:
     spillVirtReg(MI, VirtReg);
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case regFree:
   case regReserved:
     PhysRegState[PhysReg] = NewState;
@@ -437,7 +437,7 @@ void RAFast::definePhysReg(MachineInstr &MI, unsigned PhysReg,
       break;
     default:
       spillVirtReg(MI, VirtReg);
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case regFree:
     case regReserved:
       PhysRegState[Alias] = regDisabled;

@@ -1630,6 +1630,10 @@ public:
     return -1;
   }
 
+  virtual bool isFoldableMemAccessOffset(Instruction *I, int64_t Offset) const {
+    return true;
+  }
+
   /// Return true if the specified immediate is legal icmp immediate, that is
   /// the target has icmp instructions which can compare a register against the
   /// immediate without having to materialize the immediate into a register.

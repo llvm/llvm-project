@@ -2,7 +2,6 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
 ; PR1949
-; FIXME: Vectors should fold the same way for all tests.
 
 define i1 @test1(i32 %a) {
 ; CHECK-LABEL: @test1(
@@ -16,8 +15,7 @@ define i1 @test1(i32 %a) {
 
 define <2 x i1> @test1vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test1vec(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> %a, <i32 4, i32 4>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[B]], <i32 4, i32 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> %a, <i32 -5, i32 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i32> %a, <i32 4, i32 4>
@@ -37,8 +35,7 @@ define i1 @test2(i32 %a) {
 
 define <2 x i1> @test2vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test2vec(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> %a, <i32 -4, i32 -4>
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[B]], <i32 -5, i32 -5>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> %a, <i32 4, i32 4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = sub <2 x i32> %a, <i32 4, i32 4>
@@ -58,8 +55,7 @@ define i1 @test3(i32 %a) {
 
 define <2 x i1> @test3vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> %a, <i32 4, i32 4>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[B]], <i32 -2147483644, i32 -2147483644>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> %a, <i32 2147483643, i32 2147483643>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i32> %a, <i32 4, i32 4>
@@ -79,8 +75,7 @@ define i1 @test4(i32 %a) {
 
 define <2 x i1> @test4vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test4vec(
-; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> %a, <i32 -2147483644, i32 -2147483644>
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[B]], <i32 3, i32 3>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %a, <i32 -4, i32 -4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i32> %a, <i32 2147483652, i32 2147483652>

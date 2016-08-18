@@ -107,6 +107,8 @@ a:
         eretnc                   # CHECK: eretnc           # encoding: [0x42,0x00,0x00,0x58]
         jialc   $5, 256          # CHECK: jialc $5, 256    # encoding: [0xf8,0x05,0x01,0x00]
         jic     $5, 256          # CHECK: jic $5, 256      # encoding: [0xd8,0x05,0x01,0x00]
+        l.s     $f2, 8($3)       # CHECK: lwc1 $f2, 8($3)  # encoding: [0xc4,0x62,0x00,0x08]
+        l.d     $f2, 8($3)       # CHECK: ldc1 $f2, 8($3)  # encoding: [0xd4,0x62,0x00,0x08]
         lsa     $2, $3, $4, 3    # CHECK: lsa  $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x85]
         lwpc    $2,268           # CHECK: lwpc $2, 268     # encoding: [0xec,0x48,0x00,0x43]
         lwupc   $2,268           # CHECK: lwupc $2, 268    # encoding: [0xec,0x50,0x00,0x43]
@@ -137,6 +139,8 @@ a:
                                  # CHECK-NEXT: .set  mips32r2
                                  # CHECK-NEXT: rdhwr $sp, $11
                                  # CHECK-NEXT: .set  pop      # encoding: [0x7c,0x1d,0x58,0x3b]
+        s.s    $f2, 8($3)        # CHECK: swc1 $f2, 8($3)     # encoding: [0xe4,0x62,0x00,0x08]
+        s.d    $f2, 8($3)        # CHECK: sdc1 $f2, 8($3)     # encoding: [0xf4,0x62,0x00,0x08]
         sel.d   $f0,$f1,$f2      # CHECK: sel.d $f0, $f1, $f2 # encoding: [0x46,0x22,0x08,0x10]
         sel.s   $f0,$f1,$f2      # CHECK: sel.s $f0, $f1, $f2 # encoding: [0x46,0x02,0x08,0x10]
         seleqz  $2,$3,$4         # CHECK: seleqz $2, $3, $4 # encoding: [0x00,0x64,0x10,0x35]

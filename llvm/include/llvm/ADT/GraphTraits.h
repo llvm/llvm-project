@@ -88,23 +88,7 @@ struct Inverse {
 
 // Provide a partial specialization of GraphTraits so that the inverse of an
 // inverse falls back to the original graph.
-template<class T>
-struct GraphTraits<Inverse<Inverse<T> > > {
-  typedef typename GraphTraits<T>::NodeType NodeType;
-  typedef typename GraphTraits<T>::ChildIteratorType ChildIteratorType;
-
-  static NodeType *getEntryNode(Inverse<Inverse<T> > *G) {
-    return GraphTraits<T>::getEntryNode(G->Graph.Graph);
-  }
-
-  static ChildIteratorType child_begin(NodeType* N) {
-    return GraphTraits<T>::child_begin(N);
-  }
-
-  static ChildIteratorType child_end(NodeType* N) {
-    return GraphTraits<T>::child_end(N);
-  }
-};
+template <class T> struct GraphTraits<Inverse<Inverse<T>>> : GraphTraits<T> {};
 
 } // End llvm namespace
 

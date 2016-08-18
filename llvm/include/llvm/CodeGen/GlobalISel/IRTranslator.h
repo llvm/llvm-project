@@ -132,6 +132,9 @@ private:
   /// Translate a phi instruction.
   bool translatePHI(const User &U);
 
+  /// Translate an integer compare instruction (or constant).
+  bool translateICmp(const User &U);
+
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
@@ -231,7 +234,6 @@ private:
   bool translateAddrSpaceCast(const User &U) { return false; }
   bool translateCleanupPad(const User &U) { return false; }
   bool translateCatchPad(const User &U) { return false; }
-  bool translateICmp(const User &U) { return false; }
   bool translateFCmp(const User &U) { return false; }
   bool translateSelect(const User &U) { return false; }
   bool translateUserOp1(const User &U) { return false; }

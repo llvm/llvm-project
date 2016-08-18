@@ -287,10 +287,10 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
   unsigned Tmp = 0;
   switch (VT) {
   default: break;
-  case MVT::iPTRAny: ++Tmp; // FALL THROUGH.
-  case MVT::vAny: ++Tmp; // FALL THROUGH.
-  case MVT::fAny: ++Tmp; // FALL THROUGH.
-  case MVT::iAny: ++Tmp; // FALL THROUGH.
+  case MVT::iPTRAny: ++Tmp; LLVM_FALLTHROUGH;
+  case MVT::vAny: ++Tmp;    LLVM_FALLTHROUGH;
+  case MVT::fAny: ++Tmp;    LLVM_FALLTHROUGH;
+  case MVT::iAny: ++Tmp;    LLVM_FALLTHROUGH;
   case MVT::Any: {
     // If this is an "any" valuetype, then the type is the type of the next
     // type in the list specified to getIntrinsic().

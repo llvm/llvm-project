@@ -64,9 +64,13 @@ template class llvm::DomTreeNodeBase<BasicBlock>;
 template class llvm::DominatorTreeBase<BasicBlock>;
 
 template void llvm::Calculate<Function, BasicBlock *>(
-    DominatorTreeBase<GraphTraits<BasicBlock *>::NodeType> &DT, Function &F);
+    DominatorTreeBase<
+        typename std::remove_pointer<GraphTraits<BasicBlock *>::NodeRef>::type>
+        &DT,
+    Function &F);
 template void llvm::Calculate<Function, Inverse<BasicBlock *>>(
-    DominatorTreeBase<GraphTraits<Inverse<BasicBlock *>>::NodeType> &DT,
+    DominatorTreeBase<typename std::remove_pointer<
+        GraphTraits<Inverse<BasicBlock *>>::NodeRef>::type> &DT,
     Function &F);
 
 // dominates - Return true if Def dominates a use in User. This performs

@@ -63,13 +63,17 @@ void PrintASCII(const Unit &U, const char *PrintAfter) {
   PrintASCII(U.data(), U.size(), PrintAfter);
 }
 
+std::string Sha1ToString(uint8_t Sha1[kSHA1NumBytes]) {
+  std::stringstream SS;
+  for (int i = 0; i < kSHA1NumBytes; i++)
+    SS << std::hex << std::setfill('0') << std::setw(2) << (unsigned)Sha1[i];
+  return SS.str();
+}
+
 std::string Hash(const Unit &U) {
   uint8_t Hash[kSHA1NumBytes];
   ComputeSHA1(U.data(), U.size(), Hash);
-  std::stringstream SS;
-  for (int i = 0; i < kSHA1NumBytes; i++)
-    SS << std::hex << std::setfill('0') << std::setw(2) << (unsigned)Hash[i];
-  return SS.str();
+  return Sha1ToString(Hash);
 }
 
 static void AlarmHandler(int, siginfo_t *, void *) {

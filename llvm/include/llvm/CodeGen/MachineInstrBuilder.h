@@ -210,6 +210,11 @@ public:
     return *this;
   }
 
+  const MachineInstrBuilder &addPredicate(CmpInst::Predicate Pred) const {
+    MI->addOperand(*MF, MachineOperand::CreatePredicate(Pred));
+    return *this;
+  }
+
   const MachineInstrBuilder &addSym(MCSymbol *Sym,
                                     unsigned char TargetFlags = 0) const {
     MI->addOperand(*MF, MachineOperand::CreateMCSymbol(Sym, TargetFlags));

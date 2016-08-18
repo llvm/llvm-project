@@ -658,6 +658,7 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
   case MachineOperand::MO_CFIIndex:
     return false;
   case MachineOperand::MO_IntrinsicID:
+  case MachineOperand::MO_Predicate:
     llvm_unreachable("should not exist post-isel");
   }
   llvm_unreachable("unhandled machine operand type");

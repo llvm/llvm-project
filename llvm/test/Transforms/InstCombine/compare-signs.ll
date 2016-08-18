@@ -67,14 +67,9 @@ define i1 @test4a(i32 %a) {
   ret i1 %c
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test4a_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test4a_vec(
-; CHECK-NEXT:    [[L:%.*]] = ashr <2 x i32> %a, <i32 31, i32 31>
-; CHECK-NEXT:    [[NA:%.*]] = sub <2 x i32> zeroinitializer, %a
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[NA]], <i32 31, i32 31>
-; CHECK-NEXT:    [[SIGNUM:%.*]] = or <2 x i32> [[L]], [[R]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[SIGNUM]], <i32 1, i32 1>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %a, <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %l = ashr <2 x i32> %a, <i32 31, i32 31>

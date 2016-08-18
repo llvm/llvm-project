@@ -2969,7 +2969,7 @@ bool X86FastISel::fastLowerArguments() {
     default: llvm_unreachable("Unexpected value type.");
     case MVT::i32: SrcReg = GPR32ArgRegs[GPRIdx++]; break;
     case MVT::i64: SrcReg = GPR64ArgRegs[GPRIdx++]; break;
-    case MVT::f32: // fall-through
+    case MVT::f32: LLVM_FALLTHROUGH;
     case MVT::f64: SrcReg = XMMArgRegs[FPRIdx++]; break;
     }
     unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, RC);
@@ -3508,7 +3508,7 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   unsigned Opc = 0;
   switch (VT.SimpleTy) {
   default: llvm_unreachable("Unexpected value type");
-  case MVT::i1:  VT = MVT::i8; // fall-through
+  case MVT::i1:  VT = MVT::i8;       LLVM_FALLTHROUGH;
   case MVT::i8:  Opc = X86::MOV8ri;  break;
   case MVT::i16: Opc = X86::MOV16ri; break;
   case MVT::i32: Opc = X86::MOV32ri; break;

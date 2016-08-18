@@ -630,7 +630,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case ARM::fixup_arm_pcrel_10:
     Value = Value - 4; // ARM fixups offset by an additional word and don't
                        // need to adjust for the half-word ordering.
-                       // Fall through.
+    LLVM_FALLTHROUGH;
   case ARM::fixup_t2_pcrel_10: {
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value = Value - 4;
@@ -657,7 +657,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case ARM::fixup_arm_pcrel_9:
     Value = Value - 4; // ARM fixups offset by an additional word and don't
                        // need to adjust for the half-word ordering.
-                       // Fall through.
+    LLVM_FALLTHROUGH;
   case ARM::fixup_t2_pcrel_9: {
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value = Value - 4;

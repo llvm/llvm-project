@@ -601,6 +601,25 @@ def : MipsInstAlias<"bc1f $offset", (BC1F FCC0, brtarget:$offset)>,
 def : MipsInstAlias<"bc1fl $offset", (BC1FL FCC0, brtarget:$offset)>,
       ISA_MIPS2_NOT_32R6_64R6, HARDFLOAT;
 
+def : MipsInstAlias
+        <"s.s $fd, $addr", (SWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
+      ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"s.d $fd, $addr", (SDC1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_32, ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"s.d $fd, $addr", (SDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_64, ISA_MIPS2, HARDFLOAT;
+
+def : MipsInstAlias
+        <"l.s $fd, $addr", (LWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
+      ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"l.d $fd, $addr", (LDC1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_32, ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"l.d $fd, $addr", (LDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_64, ISA_MIPS2, HARDFLOAT;
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//

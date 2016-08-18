@@ -362,7 +362,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       Result = Tmp1;
       break;
     }
-    // FALL THROUGH
+    LLVM_FALLTHROUGH;
   }
   case TargetLowering::Expand:
     Result = Expand(Op);

@@ -57,12 +57,14 @@ static cl::opt<unsigned> TailDupLimit("tail-dup-limit", cl::init(~0U),
 namespace llvm {
 
 void TailDuplicator::initMF(MachineFunction &MF, const MachineModuleInfo *MMIin,
-                            const MachineBranchProbabilityInfo *MBPIin) {
+                            const MachineBranchProbabilityInfo *MBPIin,
+                            unsigned TailDupSizeIn) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
   MMI = MMIin;
   MBPI = MBPIin;
+  TailDupSize = TailDupSizeIn;
 
   assert(MBPI != nullptr && "Machine Branch Probability Info required");
 
@@ -511,12 +513,14 @@ bool TailDuplicator::shouldTailDuplicate(const MachineFunction &MF,
   // duplicate only one, because one branch instruction can be eliminated to
   // compensate for the duplication.
   unsigned MaxDuplicateCount;
-  if (TailDuplicateSize.getNumOccurrences() == 0 &&
-      // FIXME: Use Function::optForSize().
-      MF.getFunction()->hasFnAttribute(Attribute::OptimizeForSize))
+  if (TailDupSize == 0 &&
+      TailDuplicateSize.getNumOccurrences() == 0 &&
+      MF.getFunction()->optForSize())
     MaxDuplicateCount = 1;
-  else
+  else if (TailDupSize == 0)
     MaxDuplicateCount = TailDuplicateSize;
+  else
+    MaxDuplicateCount = TailDupSize;
 
   // If the block to be duplicated ends in an unanalyzable fallthrough, don't
   // duplicate it.
@@ -669,7 +673,7 @@ bool TailDuplicator::duplicateSimpleBB(
                  << "From simple Succ: " << *TailBB);
 
     MachineBasicBlock *NewTarget = *TailBB->succ_begin();
-    MachineBasicBlock *NextBB = &*std::next(PredBB->getIterator());
+    MachineBasicBlock *NextBB = PredBB->getNextNode();
 
     // Make PredFBB explicit.
     if (PredCond.empty())

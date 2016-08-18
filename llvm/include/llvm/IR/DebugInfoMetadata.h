@@ -1419,6 +1419,13 @@ public:
     return getFlags() & FlagRValueReference;
   }
 
+  /// \brief Check if this is marked as noreturn.
+  ///
+  /// Return true if this subprogram is C++11 noreturn or C11 _Noreturn
+  unsigned isNoReturn() const {
+    return getFlags() & FlagNoReturn;
+  }
+
   DIScopeRef getScope() const { return DIScopeRef(getRawScope()); }
 
   StringRef getName() const { return getStringOperand(2); }

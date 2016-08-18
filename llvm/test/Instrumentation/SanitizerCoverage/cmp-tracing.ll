@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @foo(i32 %a, i32 %b) #0 {
 entry:
   %cmp = icmp slt i32 %a, %b
-; CHECK: call void @__sanitizer_cov_trace_cmp
+; CHECK: call void @__sanitizer_cov_trace_cmp4
 ; CHECK-NEXT: icmp slt i32 %a, %b
   %conv = zext i1 %cmp to i32
   ret i32 %conv

@@ -1147,8 +1147,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     // See if the operation should be performed at a smaller bit width.
     if (TLO.ShrinkDemandedOp(Op, BitWidth, NewMask, dl))
       return true;
+    LLVM_FALLTHROUGH;
   }
-  // FALL THROUGH
   default:
     // Just use computeKnownBits to compute output bits.
     TLO.DAG.computeKnownBits(Op, KnownZero, KnownOne, Depth);
@@ -2301,7 +2301,7 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       Ops.push_back(Op);
       return;
     }
-    // fall through
+    LLVM_FALLTHROUGH;
   case 'i':    // Simple Integer or Relocatable Constant
   case 'n':    // Simple Integer
   case 's': {  // Relocatable Constant

@@ -15028,7 +15028,7 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
       if (!Subtarget.hasBMI() || !isAndn || !isLegalAndnType)
         break;
     }
-    // FALL THROUGH
+    LLVM_FALLTHROUGH;
   case ISD::SUB:
   case ISD::OR:
   case ISD::XOR:
@@ -27635,7 +27635,7 @@ static SDValue checkBoolTestSetCCCombine(SDValue Cmp, X86::CondCode &CC) {
       break;
     assert(X86::CondCode(SetCC.getConstantOperandVal(0)) == X86::COND_B &&
            "Invalid use of SETCC_CARRY!");
-    // FALL THROUGH
+    LLVM_FALLTHROUGH;
   case X86ISD::SETCC:
     // Set the condition code or opposite one if necessary.
     CC = X86::CondCode(SetCC.getConstantOperandVal(0));
@@ -32229,7 +32229,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, &X86::VR64RegClass);
     case 'Y':   // SSE_REGS if SSE2 allowed
       if (!Subtarget.hasSSE2()) break;
-      // FALL THROUGH.
+      LLVM_FALLTHROUGH;
     case 'x':   // SSE_REGS if SSE1 allowed or AVX_REGS if AVX allowed
       if (!Subtarget.hasSSE1()) break;
 

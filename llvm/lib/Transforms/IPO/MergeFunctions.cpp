@@ -828,6 +828,7 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
   default:
     llvm_unreachable("Unknown type!");
     // Fall through in Release mode.
+    LLVM_FALLTHROUGH;
   case Type::IntegerTyID:
     return cmpNumbers(cast<IntegerType>(TyL)->getBitWidth(),
                       cast<IntegerType>(TyR)->getBitWidth());

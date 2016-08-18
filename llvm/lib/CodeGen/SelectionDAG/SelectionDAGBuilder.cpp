@@ -2482,7 +2482,7 @@ static bool isVectorReductionOp(const User *I) {
     if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(Inst))
       if (FPOp->getFastMathFlags().unsafeAlgebra())
         break;
-    // Fall through.
+    LLVM_FALLTHROUGH;
   default:
     return false;
   }
@@ -9243,4 +9243,3 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     lowerWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB);
   }
 }
-

@@ -1012,7 +1012,8 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::AddrSpaceCast: // Pointers could be different sizes.
-    // FALL THROUGH and handle them the same as zext/trunc.
+    // Fall through and handle them the same as zext/trunc.
+    LLVM_FALLTHROUGH;
   case Instruction::ZExt:
   case Instruction::Trunc: {
     Type *SrcTy = I->getOperand(0)->getType();
@@ -2559,7 +2560,7 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
     // x*x is always non-negative or a NaN.
     if (I->getOperand(0) == I->getOperand(1))
       return true;
-    // Fall through
+    LLVM_FALLTHROUGH;
   case Instruction::FAdd:
   case Instruction::FDiv:
   case Instruction::FRem:

@@ -100,6 +100,20 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U) {
   return true;
 }
 
+bool IRTranslator::translateICmp(const User &U) {
+  const CmpInst &CI = cast<CmpInst>(U);
+  unsigned Op0 = getOrCreateVReg(*CI.getOperand(0));
+  unsigned Op1 = getOrCreateVReg(*CI.getOperand(1));
+  unsigned Res = getOrCreateVReg(CI);
+  CmpInst::Predicate Pred = CI.getPredicate();
+
+  assert(isa<ICmpInst>(CI) && "only integer comparisons supported now");
+  assert(CmpInst::isIntPredicate(Pred) && "only int comparisons supported now");
+  MIRBuilder.buildICmp({LLT{*CI.getType()}, LLT{*CI.getOperand(0)->getType()}},
+                       Pred, Res, Op0, Op1);
+  return true;
+}
+
 bool IRTranslator::translateRet(const User &U) {
   const ReturnInst &RI = cast<ReturnInst>(U);
   const Value *Ret = RI.getReturnValue();

@@ -34,6 +34,7 @@ class TailDuplicator {
   const MachineModuleInfo *MMI;
   MachineRegisterInfo *MRI;
   bool PreRegAlloc;
+  unsigned TailDupSize;
 
   // A list of virtual registers for which to update SSA form.
   SmallVector<unsigned, 16> SSAUpdateVRs;
@@ -45,8 +46,11 @@ class TailDuplicator {
   DenseMap<unsigned, AvailableValsTy> SSAUpdateVals;
 
 public:
+  /// Prepare to run on a specific machine function.
+  /// @param TailDupSize - Maxmimum size of blocks to tail-duplicate.
   void initMF(MachineFunction &MF, const MachineModuleInfo *MMI,
-              const MachineBranchProbabilityInfo *MBPI);
+              const MachineBranchProbabilityInfo *MBPI,
+              unsigned TailDupSize = 0);
   bool tailDuplicateBlocks(MachineFunction &MF);
   static bool isSimpleBB(MachineBasicBlock *TailBB);
   bool shouldTailDuplicate(const MachineFunction &MF, bool IsSimple,
