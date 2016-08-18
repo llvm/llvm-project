@@ -1656,12 +1656,15 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
     return false;
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
     assert(CXXDecl->isCompleteDefinition() && "incomplete record definition");
-    if (CXXDecl->getTemplateSpecializationKind() != TSK_Undeclared)
-      // Make sure the instantiation is actually in a module.
-      if (CXXDecl->field_begin() != CXXDecl->field_end())
-        return CXXDecl->field_begin()->isFromASTFile();
+    auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
+    if (TemplateKind != TSK_Undeclared) {
+      // This is a template, check the origin of the first member.
+      if (CXXDecl->field_begin() == CXXDecl->field_end())
+        return TemplateKind == TSK_ExplicitInstantiationDeclaration;
+      if (!CXXDecl->field_begin()->isFromASTFile())
+        return false;
+    }
   }
-
   return true;
 }
 
@@ -2646,6 +2649,9 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
       llvm::DIScope *Mod = getParentModuleOrNull(RDecl);
       FDContext = getContextDescriptor(RDecl, Mod ? Mod : TheCU);
     }
+    // Check if it is a noreturn-marked function
+    if (FD->isNoReturn())
+      Flags |= llvm::DINode::FlagNoReturn;
     // Collect template parameters.
     TParamsArray = CollectFunctionTemplateParams(FD, Unit);
   }

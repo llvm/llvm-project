@@ -806,7 +806,7 @@ public:
     this->SizeType = TargetInfo::UnsignedInt;
     this->PtrDiffType = TargetInfo::SignedInt;
     this->IntPtrType = TargetInfo::SignedInt;
-    // RegParmMax is inherited from the underlying architecture
+    // RegParmMax is inherited from the underlying architecture.
     this->LongDoubleFormat = &llvm::APFloat::IEEEdouble;
     if (Triple.getArch() == llvm::Triple::arm) {
       // Handled in ARM's setABI().
@@ -2152,6 +2152,7 @@ public:
       Opts.cl_khr_int64_base_atomics = 1;
       Opts.cl_khr_int64_extended_atomics = 1;
       Opts.cl_khr_mipmap_image = 1;
+      Opts.cl_khr_subgroups = 1;
       Opts.cl_khr_3d_image_writes = 1;
       Opts.cl_amd_media_ops = 1;
       Opts.cl_amd_media_ops2 = 1;

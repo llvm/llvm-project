@@ -574,6 +574,31 @@ GDBRemoteCommunicationClient::GetVContSupported (char flavor)
     return false;
 }
 
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationClient::SendThreadSpecificPacketAndWaitForResponse(lldb::tid_t tid, StreamString &&payload,
+                                                                         StringExtractorGDBRemote &response,
+                                                                         bool send_async)
+{
+    Lock lock(*this, send_async);
+    if (!lock)
+    {
+        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for %s packet.", __FUNCTION__,
+                        payload.GetString().c_str());
+        return PacketResult::ErrorNoSequenceLock;
+    }
+
+    if (GetThreadSuffixSupported())
+        payload.Printf(";thread:%4.4" PRIx64 ";", tid);
+    else
+    {
+        if (!SetCurrentThread(tid))
+            return PacketResult::ErrorSendFailed;
+    }
+
+    return SendPacketAndWaitForResponseNoLock(payload.GetString(), response);
+}
+
 // Check if the target supports 'p' packet. It sends out a 'p'
 // packet and checks the response. A normal packet will tell us
 // that support is available.
@@ -584,18 +609,15 @@ GDBRemoteCommunicationClient::GetpPacketSupported (lldb::tid_t tid)
 {
     if (m_supports_p == eLazyBoolCalculate)
     {
-        StringExtractorGDBRemote response;
         m_supports_p = eLazyBoolNo;
-        char packet[256];
-        if (GetThreadSuffixSupported())
-            snprintf(packet, sizeof(packet), "p0;thread:%" PRIx64 ";", tid);
-        else
-            snprintf(packet, sizeof(packet), "p0");
-        
-        if (SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success)
+        StreamString payload;
+        payload.PutCString("p0");
+        StringExtractorGDBRemote response;
+        if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+                PacketResult::Success &&
+            response.IsNormalResponse())
         {
-            if (response.IsNormalResponse())
-                m_supports_p = eLazyBoolYes;
+            m_supports_p = eLazyBoolYes;
         }
     }
     return m_supports_p;
@@ -3473,108 +3495,42 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
 bool
 GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, StringExtractorGDBRemote &response)
 {
-    Lock lock(*this, false);
-    if (lock)
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-        
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[64];
-            int packet_len = 0;
-            if (thread_suffix_supported)
-                packet_len = ::snprintf (packet, sizeof(packet), "p%x;thread:%4.4" PRIx64 ";", reg, tid);
-            else
-                packet_len = ::snprintf (packet, sizeof(packet), "p%x", reg);
-            assert (packet_len < ((int)sizeof(packet) - 1));
-            return SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success;
-        }
-    }
-    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-    {
-        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for p packet.", __FUNCTION__);
-    }
-    return false;
-
+    StreamString payload;
+    payload.Printf("p%x", reg);
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+           PacketResult::Success;
 }
 
 
 bool
 GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractorGDBRemote &response)
 {
-    Lock lock(*this, false);
-    if (lock)
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[64];
-            int packet_len = 0;
-            // Get all registers in one packet
-            if (thread_suffix_supported)
-                packet_len = ::snprintf (packet, sizeof(packet), "g;thread:%4.4" PRIx64 ";", tid);
-            else
-                packet_len = ::snprintf (packet, sizeof(packet), "g");
-            assert (packet_len < ((int)sizeof(packet) - 1));
-            return SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success;
-        }
-    }
-    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-    {
-        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for g packet.", __FUNCTION__);
-    }
-    return false;
+    StreamString payload;
+    payload.PutChar('g');
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+           PacketResult::Success;
 }
 
 bool
 GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::StringRef data)
 {
-    Lock lock(*this, false);
-    if (!lock)
-    {
-        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for P packet.", __FUNCTION__);
-        return false;
-    }
-
-    const bool thread_suffix_supported = GetThreadSuffixSupported();
-    if (!thread_suffix_supported && !SetCurrentThread(tid))
-        return false;
-
-    StreamString packet;
-    packet.Printf("P%x=", reg_num);
-    packet.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
-    if (thread_suffix_supported)
-        packet.Printf(";thread:%4.4" PRIx64 ";", tid);
+    StreamString payload;
+    payload.Printf("P%x=", reg_num);
+    payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
-    return SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == PacketResult::Success &&
-           response.IsOKResponse();
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+           PacketResult::Success;
 }
 
 bool
 GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::StringRef data)
 {
-    Lock lock(*this, false);
-    if (!lock)
-    {
-        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for G packet.", __FUNCTION__);
-        return false;
-    }
-
-    const bool thread_suffix_supported = GetThreadSuffixSupported();
-    if (!thread_suffix_supported && !SetCurrentThread(tid))
-        return false;
-
-    StreamString packet;
-    packet.PutChar('G');
-    packet.Write(data.data(), data.size());
-    if (thread_suffix_supported)
-        packet.Printf(";thread:%4.4" PRIx64 ";", tid);
+    StreamString payload;
+    payload.PutChar('G');
+    payload.Write(data.data(), data.size());
     StringExtractorGDBRemote response;
-    return SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == PacketResult::Success &&
-           response.IsOKResponse();
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+           PacketResult::Success;
 }
 
 bool
@@ -3585,43 +3541,21 @@ GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save
         return false;
     
     m_supports_QSaveRegisterState = eLazyBoolYes;
-    Lock lock(*this, false);
-    if (lock)
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[256];
-            if (thread_suffix_supported)
-                ::snprintf (packet, sizeof(packet), "QSaveRegisterState;thread:%4.4" PRIx64 ";", tid);
-            else
-                ::snprintf(packet, sizeof(packet), "QSaveRegisterState");
-            
-            StringExtractorGDBRemote response;
+    StreamString payload;
+    payload.PutCString("QSaveRegisterState");
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success)
+        return false;
 
-            if (SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success)
-            {
-                if (response.IsUnsupportedResponse())
-                {
-                    // This packet isn't supported, don't try calling it again
-                    m_supports_QSaveRegisterState = eLazyBoolNo;
-                }
-                    
-                const uint32_t response_save_id = response.GetU32(0);
-                if (response_save_id != 0)
-                {
-                    save_id = response_save_id;
-                    return true;
-                }
-            }
-        }
-    }
-    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-    {
-        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for QSaveRegisterState packet.",
-                    __FUNCTION__);
-    }
-    return false;
+    if (response.IsUnsupportedResponse())
+        m_supports_QSaveRegisterState = eLazyBoolNo;
+
+    const uint32_t response_save_id = response.GetU32(0);
+    if (response_save_id == 0)
+        return false;
+
+    save_id = response_save_id;
+    return true;
 }
 
 bool
@@ -3633,40 +3567,17 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
 
-    Lock lock(*this, false);
-    if (lock)
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[256];
-            if (thread_suffix_supported)
-                ::snprintf (packet, sizeof(packet), "QRestoreRegisterState:%u;thread:%4.4" PRIx64 ";", save_id, tid);
-            else
-                ::snprintf (packet, sizeof(packet), "QRestoreRegisterState:%u" PRIx64 ";", save_id);
-            
-            StringExtractorGDBRemote response;
-            
-            if (SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success)
-            {
-                if (response.IsOKResponse())
-                {
-                    return true;
-                }
-                else if (response.IsUnsupportedResponse())
-                {
-                    // This packet isn't supported, don't try calling this packet or
-                    // QSaveRegisterState again...
-                    m_supports_QSaveRegisterState = eLazyBoolNo;
-                }
-            }
-        }
-    }
-    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-    {
-        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for QRestoreRegisterState packet.",
-                    __FUNCTION__);
-    }
+    StreamString payload;
+    payload.Printf("QRestoreRegisterState:%u", save_id);
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success)
+        return false;
+
+    if (response.IsOKResponse())
+        return true;
+
+    if (response.IsUnsupportedResponse())
+        m_supports_QSaveRegisterState = eLazyBoolNo;
     return false;
 }
 

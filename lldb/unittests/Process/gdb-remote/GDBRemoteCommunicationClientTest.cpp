@@ -54,6 +54,8 @@ HandlePacket(MockServer &server, llvm::StringRef expected, llvm::StringRef respo
     ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
 }
 
+const char all_registers[] = "404142434445464748494a4b4c4d4e4f";
+
 } // end anonymous namespace
 
 class GDBRemoteCommunicationClientTest : public GDBRemoteTest
@@ -78,10 +80,9 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegister)
     HandlePacket(server, "P4=41424344;thread:0047;", "OK");
     ASSERT_TRUE(write_result.get());
 
-    write_result = std::async(std::launch::async,
-                              [&] { return client.WriteAllRegisters(tid, "404142434445464748494a4b4c4d4e4f"); });
+    write_result = std::async(std::launch::async, [&] { return client.WriteAllRegisters(tid, all_registers); });
 
-    HandlePacket(server, "G404142434445464748494a4b4c4d4e4f;thread:0047;", "OK");
+    HandlePacket(server, std::string("G") + all_registers + ";thread:0047;", "OK");
     ASSERT_TRUE(write_result.get());
 }
 
@@ -103,9 +104,58 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix)
     HandlePacket(server, "P4=41424344", "OK");
     ASSERT_TRUE(write_result.get());
 
-    write_result = std::async(std::launch::async,
-                              [&] { return client.WriteAllRegisters(tid, "404142434445464748494a4b4c4d4e4f"); });
+    write_result = std::async(std::launch::async, [&] { return client.WriteAllRegisters(tid, all_registers); });
 
-    HandlePacket(server, "G404142434445464748494a4b4c4d4e4f", "OK");
+    HandlePacket(server, std::string("G") + all_registers, "OK");
     ASSERT_TRUE(write_result.get());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, ReadRegister)
+{
+    TestClient client;
+    MockServer server;
+    Connect(client, server);
+    if (HasFailure())
+        return;
+
+    const lldb::tid_t tid = 0x47;
+    const uint32_t reg_num = 4;
+    std::future<bool> async_result = std::async(std::launch::async, [&] { return client.GetpPacketSupported(tid); });
+    Handle_QThreadSuffixSupported(server, true);
+    HandlePacket(server, "p0;thread:0047;", "41424344");
+    ASSERT_TRUE(async_result.get());
+
+    StringExtractorGDBRemote response;
+    async_result = std::async(std::launch::async, [&] { return client.ReadRegister(tid, reg_num, response); });
+    HandlePacket(server, "p4;thread:0047;", "41424344");
+    ASSERT_TRUE(async_result.get());
+    ASSERT_EQ("41424344", response.GetStringRef());
+
+    async_result = std::async(std::launch::async, [&] { return client.ReadAllRegisters(tid, response); });
+    HandlePacket(server, "g;thread:0047;", all_registers);
+    ASSERT_TRUE(async_result.get());
+    ASSERT_EQ(all_registers, response.GetStringRef());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix)
+{
+    TestClient client;
+    MockServer server;
+    Connect(client, server);
+    if (HasFailure())
+        return;
+
+    const lldb::tid_t tid = 0x47;
+    uint32_t save_id;
+    std::future<bool> async_result =
+        std::async(std::launch::async, [&] { return client.SaveRegisterState(tid, save_id); });
+    Handle_QThreadSuffixSupported(server, false);
+    HandlePacket(server, "Hg47", "OK");
+    HandlePacket(server, "QSaveRegisterState", "1");
+    ASSERT_TRUE(async_result.get());
+    EXPECT_EQ(1u, save_id);
+
+    async_result = std::async(std::launch::async, [&] { return client.RestoreRegisterState(tid, save_id); });
+    HandlePacket(server, "QRestoreRegisterState:1", "OK");
+    ASSERT_TRUE(async_result.get());
 }

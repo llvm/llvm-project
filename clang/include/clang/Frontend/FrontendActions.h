@@ -138,6 +138,7 @@ class DumpModuleInfoAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
+  bool BeginInvocation(CompilerInstance &CI) override;
   void ExecuteAction() override;
 
 public:

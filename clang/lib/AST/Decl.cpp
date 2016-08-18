@@ -2657,9 +2657,14 @@ bool FunctionDecl::isGlobal() const {
 }
 
 bool FunctionDecl::isNoReturn() const {
-  return hasAttr<NoReturnAttr>() || hasAttr<CXX11NoReturnAttr>() ||
-         hasAttr<C11NoReturnAttr>() ||
-         getType()->getAs<FunctionType>()->getNoReturnAttr();
+  if (hasAttr<NoReturnAttr>() || hasAttr<CXX11NoReturnAttr>() ||
+      hasAttr<C11NoReturnAttr>())
+    return true;
+
+  if (auto *FnTy = getType()->getAs<FunctionType>())
+    return FnTy->getNoReturnAttr();
+
+  return false;
 }
 
 void

@@ -154,6 +154,23 @@ void strlen_liveness(const char *x) {
   clang_analyzer_eval(strlen(x) < 5); // expected-warning{{FALSE}}
 }
 
+
+size_t strlenWrapper(const char *str) {
+  return strlen(str);
+}
+
+extern void invalidate(char *s);
+
+void testStrlenCallee() {
+  char str[42];
+  invalidate(str);
+  size_t lenBefore = strlenWrapper(str);
+  invalidate(str);
+  size_t lenAfter = strlenWrapper(str);
+  clang_analyzer_eval(lenBefore == lenAfter); // expected-warning{{UNKNOWN}}
+}
+
+
 //===----------------------------------------------------------------------===
 // strnlen()
 //===----------------------------------------------------------------------===
