@@ -79,6 +79,10 @@ Non-comprehensive list of changes in this release
   faster than MemDep. Currently, GVNHoist (which is off by default) makes use of
   MemorySSA.
 
+* The minimum density for lowering switches with jump tables has been reduced
+  from 40% to 10% for functions which are not marked ``optsize`` (that is,
+  compiled with ``-Os``).
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
