@@ -19,8 +19,8 @@ What's new in ELF Support?
 Link-Time Optimization
 ----------------------
 
-Initial support for LTO has been added. It is compatible with `the
-LLVM gold plugin <http://llvm.org/docs/GoldPlugin.html>` in terms of
+Initial support for LTO has been added. It is compatible with
+`the LLVM gold plugin <http://llvm.org/docs/GoldPlugin.html>`_ in terms of
 command line flags and input file format so that LLD is usable as a
 drop-in replacement for GNU gold. LTO is implemented as a native
 feature unlike the GNU gold's plugin mechanism.
