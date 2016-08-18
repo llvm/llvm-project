@@ -2153,6 +2153,8 @@ public:
       Opts.cl_khr_int64_extended_atomics = 1;
       Opts.cl_khr_mipmap_image = 1;
       Opts.cl_khr_3d_image_writes = 1;
+      Opts.cl_amd_media_ops = 1;
+      Opts.cl_amd_media_ops2 = 1;
     }
   }
 

@@ -325,30 +325,27 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
   case Stmt::IfStmtClass: {
     IfStmt *IS = cast<IfStmt>(S);
-    if (!IS->isConstexpr())
+    if (!(IS->isConstexpr() || IS->isObjCAvailabilityCheck()))
       break;
+
+    unsigned Diag = IS->isConstexpr() ? diag::note_protected_by_constexpr_if
+                                      : diag::note_protected_by_if_available;
 
     if (VarDecl *Var = IS->getConditionVariable())
       BuildScopeInformation(Var, ParentScope);
 
     // Cannot jump into the middle of the condition.
     unsigned NewParentScope = Scopes.size();
-    Scopes.push_back(GotoScope(ParentScope,
-                               diag::note_protected_by_constexpr_if, 0,
-                               IS->getLocStart()));
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
     BuildScopeInformation(IS->getCond(), NewParentScope);
 
     // Jumps into either arm of an 'if constexpr' are not allowed.
     NewParentScope = Scopes.size();
-    Scopes.push_back(GotoScope(ParentScope,
-                               diag::note_protected_by_constexpr_if, 0,
-                               IS->getLocStart()));
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
     BuildScopeInformation(IS->getThen(), NewParentScope);
     if (Stmt *Else = IS->getElse()) {
       NewParentScope = Scopes.size();
-      Scopes.push_back(GotoScope(ParentScope,
-                                 diag::note_protected_by_constexpr_if, 0,
-                                 IS->getLocStart()));
+      Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
       BuildScopeInformation(Else, NewParentScope);
     }
     return;

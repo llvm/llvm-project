@@ -7,7 +7,7 @@
         <key>CFBundleInfoDictionaryVersion</key>
         <string>6.0</string>
         <key>CFBundleName</key>
-        <string>@TOOL_INFO_NAME</string>
+        <string>@TOOL_INFO_NAME@</string>
 	<key>CFBundleShortVersionString</key>
 	<string>@TOOL_INFO_VERSION@</string>
         <key>CFBundleVersion</key>

@@ -289,6 +289,10 @@ static __inline__
 void _WriteBarrier(void);
 unsigned __int32 xbegin(void);
 void _xend(void);
+static __inline__
+#define _XCR_XFEATURE_ENABLED_MASK 0
+unsigned __int64 __cdecl _xgetbv(unsigned int);
+void __cdecl _xsetbv(unsigned int, unsigned __int64);
 
 /* These additional intrinsics are turned on in x64/amd64/x86_64 mode. */
 #ifdef __x86_64__
@@ -903,6 +907,12 @@ static __inline__ void __DEFAULT_FN_ATTRS
 __cpuidex(int __info[4], int __level, int __ecx) {
   __asm__ ("cpuid" : "=a"(__info[0]), "=b" (__info[1]), "=c"(__info[2]), "=d"(__info[3])
                    : "a"(__level), "c"(__ecx));
+}
+static __inline__ unsigned __int64 __cdecl __DEFAULT_FN_ATTRS
+_xgetbv(unsigned int __xcr_no) {
+  unsigned int __eax, __edx;
+  __asm__ ("xgetbv" : "=a" (__eax), "=d" (__edx) : "c" (__xcr_no));
+  return ((unsigned __int64)__edx << 32) | __eax;
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __halt(void) {
