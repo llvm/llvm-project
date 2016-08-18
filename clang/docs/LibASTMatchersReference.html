@@ -2740,6 +2740,26 @@ memberExpr(isArrow())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasExternalFormalLinkage0')"><a name="hasExternalFormalLinkage0Anchor">hasExternalFormalLinkage</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="hasExternalFormalLinkage0"><pre>Matches a declaration that has external formal linkage.
+
+Example matches only z (matcher = varDecl(hasExternalFormalLinkage()))
+void f() {
+  int x;
+  static int y;
+}
+int z;
+
+Example matches f() because it has external formal linkage despite being
+unique to the translation unit as though it has internal likage
+(matcher = functionDecl(hasExternalFormalLinkage()))
+
+namespace {
+void f() {}
+}
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasName0')"><a name="hasName0Anchor">hasName</a></td><td>std::string  Name</td></tr>
 <tr><td colspan="4" class="doc" id="hasName0"><pre>Matches NamedDecl nodes that have the specified name.
 

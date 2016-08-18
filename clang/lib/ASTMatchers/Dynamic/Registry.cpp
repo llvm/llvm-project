@@ -226,6 +226,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasEitherOperand);
   REGISTER_MATCHER(hasElementType);
   REGISTER_MATCHER(hasElse);
+  REGISTER_MATCHER(hasExternalFormalLinkage);
   REGISTER_MATCHER(hasFalseExpression);
   REGISTER_MATCHER(hasGlobalStorage);
   REGISTER_MATCHER(hasImplicitDestinationType);

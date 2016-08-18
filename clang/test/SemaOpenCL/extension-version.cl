@@ -247,6 +247,9 @@
 #error "Missing cl_khr_subgroups define"
 #endif
 #else
+#ifdef cl_khr_subgroups
+#error "Incorrect cl_khr_subgroups define"
+#endif
 // expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroups' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_khr_subgroups: enable
