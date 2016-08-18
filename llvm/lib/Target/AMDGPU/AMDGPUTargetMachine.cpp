@@ -76,7 +76,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
-  initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIInsertWaitsPass(*PR);
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);

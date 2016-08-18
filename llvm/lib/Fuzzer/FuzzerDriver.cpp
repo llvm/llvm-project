@@ -339,6 +339,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.TruncateUnits = Flags.truncate_units;
   Options.PruneCorpus = Flags.prune_corpus;
 
+  if (Flags.use_value_profile)
+    EnableValueProfile();
+
   unsigned Seed = Flags.seed;
   // Initialize Seed.
   if (Seed == 0)

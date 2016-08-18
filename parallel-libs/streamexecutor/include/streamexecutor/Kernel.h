@@ -84,8 +84,8 @@
 
 namespace streamexecutor {
 
+class Executor;
 class KernelInterface;
-class StreamExecutor;
 
 /// The base class for device kernel functions.
 ///
@@ -100,13 +100,13 @@ public:
   KernelBase &operator=(KernelBase &&) = default;
   ~KernelBase();
 
-  /// Creates a kernel object from a StreamExecutor and a MultiKernelLoaderSpec.
+  /// Creates a kernel object from an Executor and a MultiKernelLoaderSpec.
   ///
-  /// The StreamExecutor knows which platform it belongs to and the
+  /// The Executor knows which platform it belongs to and the
   /// MultiKernelLoaderSpec knows how to find the kernel code for different
   /// platforms, so the combined information is enough to get the kernel code
   /// for the appropriate platform.
-  static Expected<KernelBase> create(StreamExecutor *ParentExecutor,
+  static Expected<KernelBase> create(Executor *ParentExecutor,
                                      const MultiKernelLoaderSpec &Spec);
 
   const std::string &getName() const { return Name; }
@@ -116,11 +116,11 @@ public:
   KernelInterface *getImplementation() { return Implementation.get(); }
 
 private:
-  KernelBase(StreamExecutor *ParentExecutor, const std::string &Name,
+  KernelBase(Executor *ParentExecutor, const std::string &Name,
              const std::string &DemangledName,
              std::unique_ptr<KernelInterface> Implementation);
 
-  StreamExecutor *ParentExecutor;
+  Executor *ParentExecutor;
   std::string Name;
   std::string DemangledName;
   std::unique_ptr<KernelInterface> Implementation;
@@ -136,7 +136,7 @@ public:
   TypedKernel &operator=(TypedKernel &&) = default;
 
   /// Parameters here have the same meaning as in KernelBase::create.
-  static Expected<TypedKernel> create(StreamExecutor *ParentExecutor,
+  static Expected<TypedKernel> create(Executor *ParentExecutor,
                                       const MultiKernelLoaderSpec &Spec) {
     auto MaybeBase = KernelBase::create(ParentExecutor, Spec);
     if (!MaybeBase) {

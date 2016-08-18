@@ -184,6 +184,20 @@ define <16 x i8> @combine_pshufb_psrldq(<16 x i8> %a0) {
   ret <16 x i8> %2
 }
 
+define <16 x i8> @combine_pshufb_as_palignr(<16 x i8> %a0) {
+; SSE-LABEL: combine_pshufb_as_palignr:
+; SSE:       # BB#0:
+; SSE-NEXT:    palignr {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_palignr:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
+; AVX-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 undef, i8 undef, i8 0>)
+  ret <16 x i8> %res0
+}
+
 define <16 x i8> @combine_pshufb_as_pslldq(<16 x i8> %a0) {
 ; SSE-LABEL: combine_pshufb_as_pslldq:
 ; SSE:       # BB#0:

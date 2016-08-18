@@ -14,10 +14,10 @@
 
 #include <cassert>
 
-#include "streamexecutor/Interfaces.h"
+#include "streamexecutor/Executor.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/KernelSpec.h"
-#include "streamexecutor/StreamExecutor.h"
+#include "streamexecutor/PlatformInterfaces.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -27,7 +27,7 @@ namespace {
 
 namespace se = ::streamexecutor;
 
-// A StreamExecutor that returns a dummy KernelInterface.
+// An Executor that returns a dummy KernelInterface.
 //
 // During construction it creates a unique_ptr to a dummy KernelInterface and it
 // also stores a separate copy of the raw pointer that is stored by that
@@ -39,10 +39,11 @@ namespace se = ::streamexecutor;
 // object. The raw pointer copy can then be used to identify the unique_ptr in
 // its new location (by comparing the raw pointer with unique_ptr::get), to
 // verify that the unique_ptr ended up where it was supposed to be.
-class MockStreamExecutor : public se::StreamExecutor {
+class MockExecutor : public se::Executor {
 public:
-  MockStreamExecutor()
-      : Unique(llvm::make_unique<se::KernelInterface>()), Raw(Unique.get()) {}
+  MockExecutor()
+      : se::Executor(nullptr), Unique(llvm::make_unique<se::KernelInterface>()),
+        Raw(Unique.get()) {}
 
   // Moves the unique pointer into the returned se::Expected instance.
   //
@@ -50,7 +51,7 @@ public:
   // out.
   se::Expected<std::unique_ptr<se::KernelInterface>>
   getKernelImplementation(const se::MultiKernelLoaderSpec &) override {
-    assert(Unique && "MockStreamExecutor getKernelImplementation should not be "
+    assert(Unique && "MockExecutor getKernelImplementation should not be "
                      "called more than once");
     return std::move(Unique);
   }
@@ -78,10 +79,10 @@ TYPED_TEST_CASE(GetImplementationTest, GetImplementationTypes);
 
 // Tests that the kernel create functions properly fetch the implementation
 // pointers for the kernel objects they construct from the passed-in
-// StreamExecutor objects.
+// Executor objects.
 TYPED_TEST(GetImplementationTest, SetImplementationDuringCreate) {
   se::MultiKernelLoaderSpec Spec;
-  MockStreamExecutor MockExecutor;
+  MockExecutor MockExecutor;
 
   auto MaybeKernel = TypeParam::create(&MockExecutor, Spec);
   EXPECT_TRUE(static_cast<bool>(MaybeKernel));

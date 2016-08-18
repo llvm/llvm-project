@@ -87,6 +87,7 @@ private:
 
   ScopedPrinter *W;
 
+  bool IsInFieldList = false;
   bool PrintRecordBytes = false;
 
   /// Name of the current type. Only valid before visitTypeEnd.

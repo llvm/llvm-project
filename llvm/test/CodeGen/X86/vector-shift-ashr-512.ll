@@ -107,6 +107,403 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: var_shift_v64i8:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm2
+; AVX512BW-NEXT:    vpextrb $1, %xmm2, %ecx
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %dl, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm4
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $2, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $2, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $3, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $3, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $4, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $4, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $5, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $5, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $6, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $6, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $7, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $7, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $8, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $8, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $9, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $9, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $10, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $10, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $11, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $11, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $12, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $12, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $13, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $13, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $14, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $14, %xmm3, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $15, %xmm2, %ecx
+; AVX512BW-NEXT:    vpextrb $15, %xmm3, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm4, %xmm2
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm3, %ecx
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
+; AVX512BW-NEXT:    vpextrb $1, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $0, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    movzbl %dl, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm5
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $2, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $2, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $3, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $3, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $4, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $4, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $5, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $5, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $6, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $6, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $7, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $7, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $8, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $8, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $9, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $9, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $10, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $10, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $11, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $11, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $12, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $12, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $13, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $13, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $14, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $14, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $15, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $15, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vextracti32x4 $1, %zmm1, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm3, %ecx
+; AVX512BW-NEXT:    vextracti32x4 $1, %zmm0, %xmm4
+; AVX512BW-NEXT:    vpextrb $1, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm5, %ymm2
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $0, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpextrb $2, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $2, %xmm4, %esi
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %sil
+; AVX512BW-NEXT:    movzbl %dl, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm5
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %sil, %eax
+; AVX512BW-NEXT:    vpextrb $3, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $3, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $4, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $4, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $5, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $5, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $6, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $6, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $7, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $7, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $8, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $8, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $9, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $9, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $10, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $10, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $11, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $11, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $12, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $12, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $13, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $13, %xmm4, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $14, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $14, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $15, %xmm3, %ecx
+; AVX512BW-NEXT:    vpextrb $15, %xmm4, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm3
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $1, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $1, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $0, %xmm0, %esi
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %sil
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    movzbl %sil, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm4
+; AVX512BW-NEXT:    vpextrb $2, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $2, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $3, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $3, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $4, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $4, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $5, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $5, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $6, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $6, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $7, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $7, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $8, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $9, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $10, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $10, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $11, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $11, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $12, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $13, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $14, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $14, %xmm0, %edx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $15, %xmm1, %ecx
+; AVX512BW-NEXT:    vpextrb $15, %xmm0, %eax
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm0
+; AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, %b
   ret <64 x i8> %shift
 }
@@ -203,6 +600,404 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: splatvar_shift_v64i8:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpbroadcastb %xmm1, %zmm1
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; AVX512BW-NEXT:    vpextrb $1, %xmm2, %eax
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %dl, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm4
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $2, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $2, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $3, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $3, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $4, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $4, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $5, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $5, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $6, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $6, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $7, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $7, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $8, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $8, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $9, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $9, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $10, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $10, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $11, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $11, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $12, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $12, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $13, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $13, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $14, %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $14, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $15, %xmm2, %edx
+; AVX512BW-NEXT:    vpextrb $15, %xmm3, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm4, %xmm2
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm3, %eax
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
+; AVX512BW-NEXT:    vpextrb $1, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $0, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    movzbl %dl, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm5
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $2, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $2, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $3, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $3, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $4, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $4, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $5, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $5, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $6, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $6, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $7, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $7, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $8, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $8, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $9, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $9, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $10, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $10, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $11, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $11, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $12, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $12, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $13, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $13, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $14, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $14, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $15, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $15, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vextracti32x4 $1, %zmm0, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm3, %eax
+; AVX512BW-NEXT:    vextracti32x4 $1, %zmm1, %xmm4
+; AVX512BW-NEXT:    vpextrb $1, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm5, %ymm2
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $0, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpextrb $2, %xmm3, %esi
+; AVX512BW-NEXT:    vpextrb $2, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %sil
+; AVX512BW-NEXT:    movzbl %dl, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm5
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %sil, %eax
+; AVX512BW-NEXT:    vpextrb $3, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $3, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $4, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $4, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $5, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $5, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $6, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $6, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $7, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $7, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $8, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $8, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $9, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $9, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $10, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $10, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $11, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $11, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $12, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $12, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrb $13, %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $13, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $14, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $14, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm5, %xmm5
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $15, %xmm3, %edx
+; AVX512BW-NEXT:    vpextrb $15, %xmm4, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm3
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $1, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $1, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpextrb $0, %xmm0, %esi
+; AVX512BW-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %sil
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    movzbl %sil, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm4
+; AVX512BW-NEXT:    vpextrb $2, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $2, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $3, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $3, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $4, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $4, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $5, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $5, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $6, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $6, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $7, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $7, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $8, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $9, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $10, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $10, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $11, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $11, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $12, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $13, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpextrb $14, %xmm0, %edx
+; AVX512BW-NEXT:    vpextrb $14, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %dl
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    movzbl %dl, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm4, %xmm4
+; AVX512BW-NEXT:    vpextrb $15, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrb $15, %xmm1, %ecx
+; AVX512BW-NEXT:    ## kill: %CL<def> %CL<kill> %ECX<kill>
+; AVX512BW-NEXT:    sarb %cl, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm0
+; AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
   %splat = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
   %shift = ashr <64 x i8> %a, %splat
   ret <64 x i8> %shift
@@ -307,6 +1102,256 @@ define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: constant_shift_v64i8:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
+; AVX512BW-NEXT:    vpextrb $0, %xmm1, %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm2
+; AVX512BW-NEXT:    vpextrb $1, %xmm1, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $2, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $3, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $4, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $5, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $6, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $7, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $8, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $9, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $10, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $11, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $12, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $13, %xmm1, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $14, %xmm1, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrb $15, %xmm1, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm1
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; AVX512BW-NEXT:    vpextrb $0, %xmm2, %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm2, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $2, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $3, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $4, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $5, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $6, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $7, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $9, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $10, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $11, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $12, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $13, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $14, %xmm2, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $15, %xmm2, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm2
+; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX512BW-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
+; AVX512BW-NEXT:    vpextrb $0, %xmm2, %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm2, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $2, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $3, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $4, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $5, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $6, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $7, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $9, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $10, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $11, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $12, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $13, %xmm2, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $14, %xmm2, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $15, %xmm2, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm2
+; AVX512BW-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm3
+; AVX512BW-NEXT:    vpextrb $1, %xmm0, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $1, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $2, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $2, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $3, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $3, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $4, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $4, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $5, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $6, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $7, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $7, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $9, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $6, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $10, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $5, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $11, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $4, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $12, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $3, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $13, %xmm0, %eax
+; AVX512BW-NEXT:    sarb $2, %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $14, %xmm0, %eax
+; AVX512BW-NEXT:    sarb %al
+; AVX512BW-NEXT:    movzbl %al, %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrb $15, %xmm0, %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm0
+; AVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>
   ret <64 x i8> %shift
 }

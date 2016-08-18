@@ -322,6 +322,11 @@ public:
     return false;
   }
 
+  /// \brief Return true if ctlz instruction is fast.
+  virtual bool isCtlzFast() const {
+    return false;
+  }
+
   /// Return true if it is safe to transform an integer-domain bitwise operation
   /// into the equivalent floating-point operation. This should be set to true
   /// if the target has IEEE-754-compliant fabs/fneg operations for the input
@@ -3052,6 +3057,12 @@ public:
   /// Lower TLS global address SDNode for target independent emulated TLS model.
   virtual SDValue LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
                                           SelectionDAG &DAG) const;
+
+  // seteq(x, 0) -> truncate(srl(ctlz(zext(x)), log2(#bits)))
+  // If we're comparing for equality to zero and isCtlzFast is true, expose the
+  // fact that this can be implemented as a ctlz/srl pair, so that the dag
+  // combiner can fold the new nodes.
+  SDValue lowerCmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) const;
 
 private:
   SDValue simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,

@@ -1078,10 +1078,6 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
                                 F->getBasicBlockList(),
                                 NewBlocks[0]->getIterator(), F->end());
 
-  // FIXME: We could register any cloned assumptions instead of clearing the
-  // whole function's cache.
-  AC->clear();
-
   // Now we create the new Loop object for the versioned loop.
   Loop *NewLoop = CloneLoop(L, L->getParentLoop(), VMap, LI, LPM);
 
@@ -1131,10 +1127,15 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   }
 
   // Rewrite the code to refer to itself.
-  for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i)
-    for (Instruction &I : *NewBlocks[i])
+  for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i) {
+    for (Instruction &I : *NewBlocks[i]) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
+    }
+  }
 
   // Rewrite the original preheader to select between versions of the loop.
   BranchInst *OldBR = cast<BranchInst>(loopPreheader->getTerminator());

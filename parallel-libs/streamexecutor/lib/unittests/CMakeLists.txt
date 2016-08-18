@@ -23,7 +23,19 @@ add_executable(
     PackedKernelArgumentArrayTest.cpp)
 target_link_libraries(
     packed_kernel_argument_array_test
+    streamexecutor
     ${llvm_libs}
     ${GTEST_BOTH_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT})
 add_test(PackedKernelArgumentArrayTest packed_kernel_argument_array_test)
+
+add_executable(
+    stream_test
+    StreamTest.cpp)
+target_link_libraries(
+    stream_test
+    streamexecutor
+    ${llvm_libs}
+    ${GTEST_BOTH_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
+add_test(StreamTest stream_test)

@@ -8,6 +8,7 @@
 ; CHECK:       FieldList (0x1000) {
 ; CHECK-NEXT:    TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:    Enumerator {
+; CHECK-NEXT:      TypeLeafKind: LF_ENUMERATE (0x1502)
 ; CHECK-NEXT:      AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:      EnumValue: 0
 ; CHECK-NEXT:      Name: BLAH

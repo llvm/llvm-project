@@ -346,7 +346,7 @@ private:
     unsigned Partition = Unknown;
 
     /// Special partition numbers.
-    enum {
+    enum : unsigned {
       /// A partition number has not yet been assigned to this global.
       Unknown = -1u,
 

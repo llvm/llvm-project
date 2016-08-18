@@ -492,12 +492,10 @@ def : InstAlias<"if ($src1) jumpr $src2",
 def : InstAlias<"if (!$src1) jumpr $src2",
       (J2_jumprf PredRegs:$src1, IntRegs:$src2), 0>;
 
-// V6_vassignp: Vector assign mapping.
-let hasNewValue = 1, opNewValue = 0, isAsmParserOnly = 1 in
-def HEXAGON_V6_vassignpair: CVI_VA_DV_Resource <
-  (outs VecDblRegs:$Vdd),
-  (ins VecDblRegs:$Vss),
-  "$Vdd = $Vss">;
+// maps Vdd = Vss to Vdd = V6_vassignp(Vss)
+def : InstAlias<"$Vdd = $Vss",
+      (V6_vassignp VecDblRegs:$Vdd, VecDblRegs:$Vss)>,
+      Requires<[HasV60T]>;
 
 // maps Vd = #0 to Vd = vxor(Vd, Vd)
 def : InstAlias<"$Vd = #0",

@@ -44,6 +44,8 @@ FUZZER_FLAG_INT(use_memcmp, 1,
                 "Use hints from intercepting memcmp, strcmp, etc")
 FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")
+FUZZER_FLAG_INT(use_value_profile, 0,
+                "Experimental. Use value profile to guide fuzzing.")
 FUZZER_FLAG_INT(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
                           " this number of jobs in separate worker processes"
                           " with stdout/stderr redirected to fuzz-JOB.log.")

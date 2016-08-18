@@ -1642,7 +1642,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   }
 
   // Translate a "$Vdd = $Vss" to "$Vdd = vcombine($Vs, $Vt)"
-  case Hexagon::HEXAGON_V6_vassignpair: {
+  case Hexagon::V6_vassignp: {
     MCOperand &MO = Inst.getOperand(1);
     unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
     std::string R1 = v + llvm::utostr(RegPairNum + 1);

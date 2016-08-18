@@ -24,6 +24,18 @@ if(STREAM_EXECUTOR_STANDALONE)
     include_directories(${LLVM_INCLUDE_DIRS})
     add_definitions(${LLVM_DEFINITIONS})
 
+    # Get the LLVM cxxflags by using llvm-config.
+    #
+    # This is necessary to get -fno-rtti if LLVM is compiled that way.
+    execute_process(
+        COMMAND
+        "${LLVM_BINARY_DIR}/bin/llvm-config"
+        --cxxflags
+        OUTPUT_VARIABLE
+        LLVM_CXXFLAGS
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_CXXFLAGS}")
+
     # Find the libraries that correspond to the LLVM components
     # that we wish to use
     llvm_map_components_to_libnames(llvm_libs support symbolize)

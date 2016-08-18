@@ -260,11 +260,11 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case CONST32:
     case CONST64:
       return rr0(eIMM(im(1), W0), Outputs);
-    case TFR_PdFalse:
+    case PS_false:
       return rr0(RegisterCell(W0).fill(0, W0, BT::BitValue::Zero), Outputs);
-    case TFR_PdTrue:
+    case PS_true:
       return rr0(RegisterCell(W0).fill(0, W0, BT::BitValue::One), Outputs);
-    case TFR_FI: {
+    case PS_fi: {
       int FI = op(1).getIndex();
       int Off = op(2).getImm();
       unsigned A = MFI.getObjectAlignment(FI) + std::abs(Off);

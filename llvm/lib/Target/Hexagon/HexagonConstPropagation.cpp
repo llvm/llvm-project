@@ -1994,11 +1994,11 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
       break;
     }
 
-    case Hexagon::TFR_PdTrue:
-    case Hexagon::TFR_PdFalse:
+    case Hexagon::PS_true:
+    case Hexagon::PS_false:
     {
       LatticeCell RC = Outputs.get(DefR.Reg);
-      bool NonZero = (Opc == Hexagon::TFR_PdTrue);
+      bool NonZero = (Opc == Hexagon::PS_true);
       uint32_t P = NonZero ? ConstantProperties::NonZero
                            : ConstantProperties::Zero;
       RC.add(P);
@@ -2328,8 +2328,8 @@ bool HexagonConstEvaluator::rewrite(MachineInstr &MI, const CellMap &Inputs) {
     case Hexagon::A2_tfrpi:
     case Hexagon::CONST32:
     case Hexagon::CONST64:
-    case Hexagon::TFR_PdTrue:
-    case Hexagon::TFR_PdFalse:
+    case Hexagon::PS_true:
+    case Hexagon::PS_false:
       return false;
   }
 
@@ -2874,8 +2874,8 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
       if (RC != PredRC)
         continue;
       const MCInstrDesc *NewD = (Ps & P::Zero) ?
-        &HII.get(Hexagon::TFR_PdFalse) :
-        &HII.get(Hexagon::TFR_PdTrue);
+        &HII.get(Hexagon::PS_false) :
+        &HII.get(Hexagon::PS_true);
       unsigned NewR = MRI->createVirtualRegister(PredRC);
       const MachineInstrBuilder &MIB = BuildMI(B, At, DL, *NewD, NewR);
       (void)MIB;

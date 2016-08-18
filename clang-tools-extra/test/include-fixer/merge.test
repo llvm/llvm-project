@@ -1,4 +1,3 @@
-# REQUIRES: shell
 # RUN: find-all-symbols -merge-dir=%S/Inputs/merge %t.merged
 # RUN: sed '/^#/d' %s > %t.golden
 # RUN: diff -u %t.golden %t.merged
