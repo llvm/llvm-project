@@ -5,9 +5,6 @@ LLD 3.9 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 3.9 release.
-
 Introduction
 ============
 
