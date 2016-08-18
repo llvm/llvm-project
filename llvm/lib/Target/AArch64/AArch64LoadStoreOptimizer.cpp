@@ -1258,8 +1258,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         if (MIIsUnscaled) {
           // If the unscaled offset isn't a multiple of the MemSize, we can't
           // pair the operations together: bail and keep looking.
-          if (MIOffset % MemSize)
+          if (MIOffset % MemSize) {
+            trackRegDefsUses(MI, ModifiedRegs, UsedRegs, TRI);
+            MemInsns.push_back(&MI);
             continue;
+          }
           MIOffset /= MemSize;
         } else {
           MIOffset *= MemSize;
