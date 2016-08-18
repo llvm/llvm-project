@@ -1419,7 +1419,11 @@ private:
 
     _LIBCPP_INLINE_VISIBILITY
     void __copy_assign_alloc(const __tree& __t, true_type)
-        {__node_alloc() = __t.__node_alloc();}
+        {
+        if (__node_alloc() != __t.__node_alloc())
+        	clear();
+        __node_alloc() = __t.__node_alloc();
+        }
     _LIBCPP_INLINE_VISIBILITY
     void __copy_assign_alloc(const __tree& __t, false_type) {}
 
