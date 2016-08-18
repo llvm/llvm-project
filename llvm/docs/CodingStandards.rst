@@ -309,8 +309,10 @@ useful to use C style (``/* */``) comments however:
 #. When writing a source file that is used by a tool that only accepts C style
    comments.
 
-To comment out a large block of code, use ``#if 0`` and ``#endif``. These nest
-properly and are better behaved in general than C style comments.
+Commenting out large blocks of code is discouraged, but if you really have to do
+this (for documentation purposes or as a suggestion for debug printing), use
+``#if 0`` and ``#endif``. These nest properly and are better behaved in general
+than C style comments.
 
 Doxygen Use in Documentation Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

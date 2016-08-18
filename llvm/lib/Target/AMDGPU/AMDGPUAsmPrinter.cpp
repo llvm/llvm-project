@@ -286,7 +286,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   if (STM.getGeneration() >= R600Subtarget::EVERGREEN) {
     // Evergreen / Northern Islands
     switch (MF.getFunction()->getCallingConv()) {
-    default: // Fall through
+    default: LLVM_FALLTHROUGH;
     case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
     case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
     case CallingConv::AMDGPU_PS: RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
@@ -295,9 +295,9 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   } else {
     // R600 / R700
     switch (MF.getFunction()->getCallingConv()) {
-    default: // Fall through
-    case CallingConv::AMDGPU_GS: // Fall through
-    case CallingConv::AMDGPU_CS: // Fall through
+    default: LLVM_FALLTHROUGH;
+    case CallingConv::AMDGPU_GS: LLVM_FALLTHROUGH;
+    case CallingConv::AMDGPU_CS: LLVM_FALLTHROUGH;
     case CallingConv::AMDGPU_VS: RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
     case CallingConv::AMDGPU_PS: RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
     }
@@ -574,7 +574,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {
   switch (CallConv) {
-  default: // Fall through
+  default: LLVM_FALLTHROUGH;
   case CallingConv::AMDGPU_CS: return R_00B848_COMPUTE_PGM_RSRC1;
   case CallingConv::AMDGPU_GS: return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
   case CallingConv::AMDGPU_PS: return R_00B028_SPI_SHADER_PGM_RSRC1_PS;

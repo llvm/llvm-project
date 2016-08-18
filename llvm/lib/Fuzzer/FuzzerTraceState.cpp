@@ -574,7 +574,9 @@ static void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
   VP.AddValue((PC & 4095) | (LastSameByte << 12));
 }
 
-static void AddValueForCmp(uintptr_t PC, uint64_t Arg1, uint64_t Arg2) {
+__attribute__((target("popcnt")))
+static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
+  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
   VP.AddValue((PC & 4095) | (__builtin_popcountl(Arg1 ^ Arg2) << 12));
 }
 
@@ -596,6 +598,21 @@ void __dfsw___sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1,
   uint64_t Type = (SizeAndType << 32) >> 32;
   TS->DFSanCmpCallback(PC, CmpSize, Type, Arg1, Arg2, L1, L2);
 }
+
+#define DFSAN_CMP_CALLBACK(N)                                                  \
+  void __dfsw___sanitizer_cov_trace_cmp##N(uint64_t Arg1, uint64_t Arg2,       \
+                                           dfsan_label L1, dfsan_label L2) {   \
+    if (RecordingTraces)                                                       \
+      TS->DFSanCmpCallback(                                                    \
+          reinterpret_cast<uintptr_t>(__builtin_return_address(0)), N,         \
+          fuzzer::ICMP_EQ, Arg1, Arg2, L1, L2);                                \
+  }
+
+DFSAN_CMP_CALLBACK(1)
+DFSAN_CMP_CALLBACK(2)
+DFSAN_CMP_CALLBACK(4)
+DFSAN_CMP_CALLBACK(8)
+#undef DFSAN_CMP_CALLBACK
 
 void __dfsw___sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases,
                                          dfsan_label L1, dfsan_label L2) {
@@ -709,6 +726,7 @@ void __sanitizer_weak_hook_memmem(void *called_pc, const void *s1, size_t len1,
 
 #endif  // LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS
 
+// TODO: this one will not be used with the newest clang. Remove it.
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1,
                                uint64_t Arg2) {
@@ -719,8 +737,36 @@ void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1,
     TS->TraceCmpCallback(PC, CmpSize, Type, Arg1, Arg2);
   }
   if (RecordingValueProfile)
-    fuzzer::AddValueForCmp(
-        reinterpret_cast<uintptr_t>(__builtin_return_address(0)), Arg1, Arg2);
+    fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+}
+
+// Adding if(RecordingTraces){...} slows down the VP callbacks.
+// Once we prove that VP is as strong as traces, delete this.
+#define MAYBE_RECORD_TRACE(N)                                                  \
+  if (RecordingTraces) {                                                       \
+    uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));   \
+    TS->TraceCmpCallback(PC, N, fuzzer::ICMP_EQ, Arg1, Arg2);                  \
+  }
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp8(uint64_t Arg1, int64_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+  MAYBE_RECORD_TRACE(8);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp4(uint32_t Arg1, int32_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+  MAYBE_RECORD_TRACE(4);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp2(uint16_t Arg1, int16_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+  MAYBE_RECORD_TRACE(2);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_cmp1(uint8_t Arg1, int8_t Arg2) {
+  fuzzer::AddValueForCmp(__builtin_return_address(0), Arg1, Arg2);
+  MAYBE_RECORD_TRACE(1);
 }
 
 __attribute__((visibility("default")))

@@ -311,6 +311,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
     if (Ctx->getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
+    LLVM_FALLTHROUGH;
   case Triple::ppc:
   case Triple::x86:
     PersonalityEncoding = PositionIndependent

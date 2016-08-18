@@ -67,7 +67,10 @@ static const char *const SanCovTraceEnterName =
 static const char *const SanCovTraceBBName =
     "__sanitizer_cov_trace_basic_block";
 static const char *const SanCovTracePCName = "__sanitizer_cov_trace_pc";
-static const char *const SanCovTraceCmpName = "__sanitizer_cov_trace_cmp";
+static const char *const SanCovTraceCmp1 = "__sanitizer_cov_trace_cmp1";
+static const char *const SanCovTraceCmp2 = "__sanitizer_cov_trace_cmp2";
+static const char *const SanCovTraceCmp4 = "__sanitizer_cov_trace_cmp4";
+static const char *const SanCovTraceCmp8 = "__sanitizer_cov_trace_cmp8";
 static const char *const SanCovTraceSwitchName = "__sanitizer_cov_trace_switch";
 static const char *const SanCovModuleCtorName = "sancov.module_ctor";
 static const uint64_t SanCtorAndDtorPriority = 2;
@@ -188,7 +191,7 @@ private:
   Function *SanCovWithCheckFunction;
   Function *SanCovIndirCallFunction, *SanCovTracePCIndir;
   Function *SanCovTraceEnter, *SanCovTraceBB, *SanCovTracePC;
-  Function *SanCovTraceCmpFunction;
+  Function *SanCovTraceCmpFunction[4];
   Function *SanCovTraceSwitchFunction;
   InlineAsm *EmptyAsm;
   Type *IntptrTy, *Int64Ty, *Int64PtrTy;
@@ -227,9 +230,18 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   SanCovIndirCallFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           SanCovIndirCallName, VoidTy, IntptrTy, IntptrTy, nullptr));
-  SanCovTraceCmpFunction =
+  SanCovTraceCmpFunction[0] =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceCmpName, VoidTy, Int64Ty, Int64Ty, Int64Ty, nullptr));
+          SanCovTraceCmp1, VoidTy, IRB.getInt8Ty(), IRB.getInt8Ty(), nullptr));
+  SanCovTraceCmpFunction[1] = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(SanCovTraceCmp2, VoidTy, IRB.getInt16Ty(),
+                            IRB.getInt16Ty(), nullptr));
+  SanCovTraceCmpFunction[2] = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(SanCovTraceCmp4, VoidTy, IRB.getInt32Ty(),
+                            IRB.getInt32Ty(), nullptr));
+  SanCovTraceCmpFunction[3] =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          SanCovTraceCmp8, VoidTy, Int64Ty, Int64Ty, nullptr));
   SanCovTraceSwitchFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           SanCovTraceSwitchName, VoidTy, Int64Ty, Int64PtrTy, nullptr));
@@ -497,12 +509,16 @@ void SanitizerCoverageModule::InjectTraceForCmp(
       if (!A0->getType()->isIntegerTy())
         continue;
       uint64_t TypeSize = DL->getTypeStoreSizeInBits(A0->getType());
+      int CallbackIdx = TypeSize == 8 ? 0 :
+                        TypeSize == 16 ? 1 :
+                        TypeSize == 32 ? 2 :
+                        TypeSize == 64 ? 3 : -1;
+      if (CallbackIdx < 0) continue;
       // __sanitizer_cov_trace_cmp((type_size << 32) | predicate, A0, A1);
+      auto Ty = Type::getIntNTy(*C, TypeSize);
       IRB.CreateCall(
-          SanCovTraceCmpFunction,
-          {ConstantInt::get(Int64Ty, (TypeSize << 32) | ICMP->getPredicate()),
-           IRB.CreateIntCast(A0, Int64Ty, true),
-           IRB.CreateIntCast(A1, Int64Ty, true)});
+          SanCovTraceCmpFunction[CallbackIdx],
+          {IRB.CreateIntCast(A0, Ty, true), IRB.CreateIntCast(A1, Ty, true)});
     }
   }
 }

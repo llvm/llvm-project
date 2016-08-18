@@ -222,7 +222,7 @@ tgtok::TokKind TGLexer::LexString() {
     case '\0':
       if (CurPtr == CurBuf.end())
         return ReturnError(StrStart, "End of file in string literal");
-      // FALL THROUGH
+      LLVM_FALLTHROUGH;
     default:
       return ReturnError(CurPtr, "invalid escape in string literal");
     }

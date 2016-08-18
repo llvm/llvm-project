@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cctype>
 
@@ -529,6 +530,28 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   // Indexing is OK but no scale factor can be applied.
   return AM.Scale == 0 || AM.Scale == 1;
+}
+
+bool SystemZTargetLowering::isFoldableMemAccessOffset(Instruction *I,
+                                                      int64_t Offset) const {
+  // This only applies to z13.
+  if (!Subtarget.hasVector())
+    return true;
+
+  // * Use LDE instead of LE/LEY to avoid partial register
+  //   dependencies (LDE only supports small offsets).
+  // * Utilize the vector registers to hold floating point
+  //   values (vector load / store instructions only support small
+  //   offsets).
+
+  assert (isa<LoadInst>(I) || isa<StoreInst>(I));
+  Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
+                       I->getOperand(0)->getType());
+  if (!isUInt<12>(Offset) &&
+      (MemAccessTy->isFloatingPointTy() || MemAccessTy->isVectorTy()))
+    return false;
+
+  return true;
 }
 
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {

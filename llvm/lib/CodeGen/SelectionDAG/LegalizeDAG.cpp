@@ -1123,12 +1123,12 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         ReplaceNode(Node, ResultVals.data());
         return;
       }
+      LLVM_FALLTHROUGH;
     }
-      // FALL THROUGH
     case TargetLowering::Expand:
       if (ExpandNode(Node))
         return;
-      // FALL THROUGH
+      LLVM_FALLTHROUGH;
     case TargetLowering::LibCall:
       ConvertNodeToLibcall(Node);
       return;

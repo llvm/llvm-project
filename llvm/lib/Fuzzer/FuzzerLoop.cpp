@@ -204,6 +204,8 @@ void Fuzzer::StaticDeathCallback() {
 
 void Fuzzer::DumpCurrentUnit(const char *Prefix) {
   if (!CurrentUnitData) return;  // Happens when running individual inputs.
+  MD.PrintMutationSequence();
+  Printf("; base unit: %s\n", Sha1ToString(BaseSha1).c_str());
   size_t UnitSize = CurrentUnitSize;
   if (UnitSize <= kMaxUnitSizeToPrint) {
     PrintHexArray(CurrentUnitData, UnitSize, "\n");
@@ -693,6 +695,7 @@ void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &U = ChooseUnitToMutate();
+  ComputeSHA1(U.data(), U.size(), BaseSha1);  // Remember where we started.
   assert(CurrentUnitData);
   size_t Size = U.size();
   assert(Size <= Options.MaxLen && "Oversized Unit");

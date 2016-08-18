@@ -572,6 +572,8 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
             toString(ObjOrErr.takeError()).c_str());
 
   InputFile &Obj = **ObjOrErr;
+  bool HasThinLTOSummary =
+      hasGlobalValueSummary(Obj.getMemoryBufferRef(), diagnosticHandler);
 
   unsigned SymNum = 0;
   std::vector<SymbolResolution> Resols(F.syms.size());
@@ -617,7 +619,8 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
         (IsExecutable || !Res.DefaultVisibility))
       R.FinalDefinitionInLinkageUnit = true;
 
-    if (ObjSym.getFlags() & object::BasicSymbolRef::SF_Common) {
+    if ((ObjSym.getFlags() & object::BasicSymbolRef::SF_Common) &&
+        !HasThinLTOSummary) {
       // We ignore gold's resolution for common symbols. A common symbol with
       // the correct size and alignment is added to the module by the pre-opt
       // module hook if any common symbol prevailed.
@@ -796,7 +799,8 @@ static std::unique_ptr<LTO> createLTO() {
     break;
 
   case options::OT_SAVE_TEMPS:
-    check(Conf.addSaveTemps(output_name, /* UseInputModulePath */ true));
+    check(Conf.addSaveTemps(output_name + ".",
+                            /* UseInputModulePath */ true));
     break;
   }
 

@@ -324,6 +324,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // on Linux.
     //
     // Fall through to disable all of them.
+    LLVM_FALLTHROUGH;
   default:
     TLI.setUnavailable(LibFunc::exp10);
     TLI.setUnavailable(LibFunc::exp10f);

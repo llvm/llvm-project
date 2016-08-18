@@ -1983,8 +1983,8 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakVH> &Users,
             MemIntrinsic *MI = cast<MemIntrinsic>(II);
             if (MI->isVolatile() || MI->getRawDest() != PI)
               return false;
+            LLVM_FALLTHROUGH;
           }
-          // fall through
           case Intrinsic::dbg_declare:
           case Intrinsic::dbg_value:
           case Intrinsic::invariant_start:

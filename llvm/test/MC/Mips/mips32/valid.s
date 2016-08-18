@@ -72,6 +72,8 @@ a:
                                        # CHECK:         #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j         1328                 # CHECK: j 1328  # encoding: [0x08,0x00,0x01,0x4c]
         jal       21100                # CHECK: jal 21100     # encoding: [0x0c,0x00,0x14,0x9b]
+        l.s       $f2, 8($3)           # CHECK: lwc1 $f2, 8($3) # encoding: [0xc4,0x62,0x00,0x08]
+        l.d       $f2, 8($3)           # CHECK: ldc1 $f2, 8($3) # encoding: [0xd4,0x62,0x00,0x08]
         lb        $24,-14515($10)
         lbu       $8,30195($v1)
         ldc1      $f11,16391($s0)
@@ -138,6 +140,8 @@ a:
         pref      1, 8($5)             # CHECK: pref 1, 8($5)          # encoding: [0xcc,0xa1,0x00,0x08]
         round.w.d $f6,$f4
         round.w.s $f27,$f28
+        s.s       $f2, 8($3)           # CHECK: swc1  $f2, 8($3)       # encoding: [0xe4,0x62,0x00,0x08]
+        s.d       $f2, 8($3)           # CHECK: sdc1  $f2, 8($3)       # encoding: [0xf4,0x62,0x00,0x08]
         sb        $s6,-19857($14)
         sc        $15,18904($s3)       # CHECK: sc $15, 18904($19)     # encoding: [0xe2,0x6f,0x49,0xd8]
         sdbbp                          # CHECK: sdbbp                  # encoding: [0x70,0x00,0x00,0x3f]

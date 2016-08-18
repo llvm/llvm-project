@@ -61,6 +61,7 @@ namespace llvm {
 template <>
 struct GraphTraits<BlockFrequencyInfo *> {
   typedef const BasicBlock NodeType;
+  typedef const BasicBlock *NodeRef;
   typedef succ_const_iterator ChildIteratorType;
   typedef Function::const_iterator nodes_iterator;
 

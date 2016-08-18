@@ -1032,6 +1032,19 @@ static bool getHidden(RelocationRef RelRef) {
   return false;
 }
 
+static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
+  assert(Obj->isELF());
+  if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(Obj))
+    return Elf32LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+  if (auto *Elf64LEObj = dyn_cast<ELF64LEObjectFile>(Obj))
+    return Elf64LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+  if (auto *Elf32BEObj = dyn_cast<ELF32BEObjectFile>(Obj))
+    return Elf32BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+  if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(Obj))
+    return Elf64BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+  llvm_unreachable("Unsupported binary format");
+}
+
 static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   const Target *TheTarget = getTarget(Obj);
 
@@ -1096,7 +1109,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
-  typedef std::vector<std::pair<uint64_t, StringRef>> SectionSymbolsTy;
+  typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
   for (const SymbolRef &Symbol : Obj->symbols()) {
     Expected<uint64_t> AddressOrErr = Symbol.getAddress();
@@ -1113,8 +1126,15 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     section_iterator SecI = *SectionOrErr;
     if (SecI == Obj->section_end())
       continue;
+    
+    // For AMDGPU we need to track symbol types
+    uint8_t SymbolType = ELF::STT_NOTYPE;
+    if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
+      SymbolType = getElfSymbolType(Obj, Symbol);
+    }
 
-    AllSymbols[*SecI].emplace_back(Address, *Name);
+    AllSymbols[*SecI].emplace_back(Address, *Name, SymbolType);
+
   }
 
   // Create a mapping from virtual address to section.
@@ -1146,7 +1166,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         Sec = SectionAddresses.end();
 
       if (Sec != SectionAddresses.end())
-        AllSymbols[Sec->second].emplace_back(VA, Name);
+        AllSymbols[Sec->second].emplace_back(VA, Name, ELF::STT_NOTYPE);
     }
   }
 
@@ -1170,8 +1190,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     std::vector<uint64_t> TextMappingSymsAddr;
     if (Obj->isELF() && Obj->getArch() == Triple::aarch64) {
       for (const auto &Symb : Symbols) {
-        uint64_t Address = Symb.first;
-        StringRef Name = Symb.second;
+        uint64_t Address = std::get<0>(Symb);
+        StringRef Name = std::get<1>(Symb);
         if (Name.startswith("$d"))
           DataMappingSymsAddr.push_back(Address - SectionAddr);
         if (Name.startswith("$x"))
@@ -1208,8 +1228,9 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     outs() << name << ':';
 
     // If the section has no symbol at the start, just insert a dummy one.
-    if (Symbols.empty() || Symbols[0].first != 0)
-      Symbols.insert(Symbols.begin(), std::make_pair(SectionAddr, name));
+    if (Symbols.empty() || std::get<0>(Symbols[0]) != 0) {
+      Symbols.insert(Symbols.begin(), std::make_tuple(SectionAddr, name, ELF::STT_NOTYPE));
+    }
 
     SmallString<40> Comments;
     raw_svector_ostream CommentStream(Comments);
@@ -1226,12 +1247,11 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     std::vector<RelocationRef>::const_iterator rel_end = Rels.end();
     // Disassemble symbol by symbol.
     for (unsigned si = 0, se = Symbols.size(); si != se; ++si) {
-
-      uint64_t Start = Symbols[si].first - SectionAddr;
+      uint64_t Start = std::get<0>(Symbols[si]) - SectionAddr;
       // The end is either the section end or the beginning of the next
       // symbol.
       uint64_t End =
-          (si == se - 1) ? SectSize : Symbols[si + 1].first - SectionAddr;
+          (si == se - 1) ? SectSize : std::get<0>(Symbols[si + 1]) - SectionAddr;
       // Don't try to disassemble beyond the end of section contents.
       if (End > SectSize)
         End = SectSize;
@@ -1242,16 +1262,23 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
         // make size 4 bytes folded
         End = Start + ((End - Start) & ~0x3ull);
-        Start += 256; // add sizeof(amd_kernel_code_t)
-        // cut trailing zeroes - up to 256 bytes (align)
-        const uint64_t EndAlign = 256;
-        const auto Limit = End - (std::min)(EndAlign, End - Start);
-        while (End > Limit &&
-          *reinterpret_cast<const support::ulittle32_t*>(&Bytes[End - 4]) == 0)
-          End -= 4;
+        if (std::get<2>(Symbols[si]) == ELF::STT_AMDGPU_HSA_KERNEL) {
+          // skip amd_kernel_code_t at the begining of kernel symbol (256 bytes)
+          Start += 256;
+        }
+        if (si == se - 1 ||
+            std::get<2>(Symbols[si + 1]) == ELF::STT_AMDGPU_HSA_KERNEL) {
+          // cut trailing zeroes at the end of kernel
+          // cut up to 256 bytes
+          const uint64_t EndAlign = 256;
+          const auto Limit = End - (std::min)(EndAlign, End - Start);
+          while (End > Limit &&
+            *reinterpret_cast<const support::ulittle32_t*>(&Bytes[End - 4]) == 0)
+            End -= 4;
+        }
       }
 
-      outs() << '\n' << Symbols[si].second << ":\n";
+      outs() << '\n' << std::get<1>(Symbols[si]) << ":\n";
 
 #ifndef NDEBUG
       raw_ostream &DebugOut = DebugFlag ? dbgs() : nulls();
@@ -1348,8 +1375,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
               auto TargetSym = std::upper_bound(
                   TargetSectionSymbols->begin(), TargetSectionSymbols->end(),
                   Target, [](uint64_t LHS,
-                              const std::pair<uint64_t, StringRef> &RHS) {
-                    return LHS < RHS.first;
+                             const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
+                    return LHS < std::get<0>(RHS);
                   });
               if (TargetSym != TargetSectionSymbols->begin()) {
                 --TargetSym;

@@ -53,6 +53,7 @@ namespace llvm {
 
 template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
   typedef const MachineBasicBlock NodeType;
+  typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_succ_iterator ChildIteratorType;
   typedef MachineFunction::const_iterator nodes_iterator;
 

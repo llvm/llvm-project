@@ -145,6 +145,10 @@ public:
     return getTLI()->getScalingFactorCost(DL, AM, Ty, AddrSpace);
   }
 
+  bool isFoldableMemAccessOffset(Instruction *I, int64_t Offset) {
+    return getTLI()->isFoldableMemAccessOffset(I, Offset);
+  }
+
   bool isTruncateFree(Type *Ty1, Type *Ty2) {
     return getTLI()->isTruncateFree(Ty1, Ty2);
   }

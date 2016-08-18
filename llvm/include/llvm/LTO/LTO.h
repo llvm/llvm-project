@@ -228,6 +228,10 @@ public:
   StringRef getSourceFileName() const {
     return Obj->getModule().getSourceFileName();
   }
+
+  MemoryBufferRef getMemoryBufferRef() const {
+    return Obj->getMemoryBufferRef();
+  }
 };
 
 /// A ThinBackend defines what happens after the thin-link phase during ThinLTO.

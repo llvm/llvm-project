@@ -7057,7 +7057,7 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
       // trunc(sext ty1 to ty2) to ty1.
       if (Instr->getType() == Ext->getOperand(0)->getType())
         continue;
-    // FALL THROUGH.
+      LLVM_FALLTHROUGH;
     default:
       return false;
     }

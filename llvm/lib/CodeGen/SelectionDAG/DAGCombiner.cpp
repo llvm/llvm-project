@@ -1579,7 +1579,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
           Changed = true;
           break;
         }
-        // Fall thru
+        LLVM_FALLTHROUGH;
 
       default:
         // Only add if it isn't already in the list.

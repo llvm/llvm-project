@@ -227,7 +227,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
           Offset = 0;
           return V;
         }
-      // FALL THROUGH.
+        LLVM_FALLTHROUGH;
       case Instruction::Add:
         V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
                                 SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);

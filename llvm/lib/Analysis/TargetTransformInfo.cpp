@@ -150,6 +150,11 @@ int TargetTransformInfo::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   return Cost;
 }
 
+bool TargetTransformInfo::isFoldableMemAccessOffset(Instruction *I,
+                                                    int64_t Offset) const {
+  return TTIImpl->isFoldableMemAccessOffset(I, Offset);
+}
+
 bool TargetTransformInfo::isTruncateFree(Type *Ty1, Type *Ty2) const {
   return TTIImpl->isTruncateFree(Ty1, Ty2);
 }

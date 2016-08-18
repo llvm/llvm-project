@@ -748,9 +748,9 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EMPTYSTRUCT:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
-  case IIT_STRUCT5: ++StructElts; // FALL THROUGH.
-  case IIT_STRUCT4: ++StructElts; // FALL THROUGH.
-  case IIT_STRUCT3: ++StructElts; // FALL THROUGH.
+  case IIT_STRUCT5: ++StructElts; LLVM_FALLTHROUGH;
+  case IIT_STRUCT4: ++StructElts; LLVM_FALLTHROUGH;
+  case IIT_STRUCT3: ++StructElts; LLVM_FALLTHROUGH;
   case IIT_STRUCT2: {
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct,StructElts));
 

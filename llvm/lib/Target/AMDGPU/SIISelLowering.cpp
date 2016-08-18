@@ -37,12 +37,6 @@
 
 using namespace llvm;
 
-// -amdgpu-fast-fdiv - Command line option to enable faster 2.5 ulp fdiv.
-static cl::opt<bool> EnableAMDGPUFastFDIV(
-  "amdgpu-fast-fdiv",
-  cl::desc("Enable faster 2.5 ulp fdiv"),
-  cl::init(false));
-
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {

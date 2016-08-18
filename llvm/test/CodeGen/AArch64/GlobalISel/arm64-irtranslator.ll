@@ -485,3 +485,15 @@ define void @test_i1_memops(i1* %addr) {
   store i1 %val, i1* %addr
   ret void
 }
+
+; CHECK-LABEL: name: int_comparison
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[TST:%[0-9]+]](1) = G_ICMP { s1, s32 } intpred(ne), [[LHS]], [[RHS]]
+; CHECK: G_STORE { s1, p0 } [[TST]], [[ADDR]]
+define void @int_comparison(i32 %a, i32 %b, i1* %addr) {
+  %res = icmp ne i32 %a, %b
+  store i1 %res, i1* %addr
+  ret void
+}
