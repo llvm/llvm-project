@@ -1427,9 +1427,6 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
   default:
     break;
   case AArch64::SUBXri:
-    // Negate the offset for a SUB instruction.
-    Offset *= -1;
-  // FALLTHROUGH
   case AArch64::ADDXri:
     // Make sure it's a vanilla immediate operand, not a relocation or
     // anything else we can't handle.
@@ -1447,6 +1444,9 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
 
     bool IsPairedInsn = isPairedLdSt(MemMI);
     int UpdateOffset = MI.getOperand(2).getImm();
+    if (MI.getOpcode() == AArch64::SUBXri)
+      UpdateOffset = -UpdateOffset;
+
     // For non-paired load/store instructions, the immediate must fit in a
     // signed 9-bit integer.
     if (!IsPairedInsn && (UpdateOffset > 255 || UpdateOffset < -256))
@@ -1461,13 +1461,13 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
         break;
 
       int ScaledOffset = UpdateOffset / Scale;
-      if (ScaledOffset > 64 || ScaledOffset < -64)
+      if (ScaledOffset > 63 || ScaledOffset < -64)
         break;
     }
 
     // If we have a non-zero Offset, we check that it matches the amount
     // we're adding to the register.
-    if (!Offset || Offset == MI.getOperand(2).getImm())
+    if (!Offset || Offset == UpdateOffset)
       return true;
     break;
   }
