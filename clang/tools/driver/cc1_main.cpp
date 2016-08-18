@@ -37,9 +37,14 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
-#if HAVE_SYS_RESOURCE_H
+
+#ifdef __has_include
+#if __has_include(<sys/resource.h>)
+#define HAVE_RLIMITS
 #include <sys/resource.h>
 #endif
+#endif
+
 using namespace clang;
 using namespace llvm::opt;
 
@@ -69,7 +74,7 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 }
 #endif
 
-#if HAVE_SYS_RESOURCE_H && HAVE_GETRLIMIT && HAVE_SETRLIMIT
+#ifdef HAVE_RLIMITS
 // The amount of stack we think is "sufficient". If less than this much is
 // available, we may be unable to reach our template instantiation depth
 // limit and other similar limits.
