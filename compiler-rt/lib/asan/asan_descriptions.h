@@ -12,6 +12,8 @@
 // ASan-private header for asan_descriptions.cc.
 // TODO(filcab): Most struct definitions should move to the interface headers.
 //===----------------------------------------------------------------------===//
+#ifndef ASAN_DESCRIPTIONS_H
+#define ASAN_DESCRIPTIONS_H
 
 #include "asan_allocator.h"
 #include "asan_thread.h"
@@ -145,3 +147,5 @@ bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr);
 bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
 
 }  // namespace __asan
+
+#endif  // ASAN_DESCRIPTIONS_H
