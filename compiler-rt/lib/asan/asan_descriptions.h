@@ -49,7 +49,6 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
       case kAsanStackLeftRedzoneMagic:
       case kAsanStackMidRedzoneMagic:
       case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
         return Red();
       case kAsanStackAfterReturnMagic:
         return Magenta();
@@ -122,5 +121,27 @@ struct HeapAddressDescription {
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
                                HeapAddressDescription *descr);
 bool DescribeAddressIfHeap(uptr addr, uptr access_size = 1);
+
+struct StackAddressDescription {
+  uptr addr;
+  uptr tid;
+  uptr offset;
+  uptr frame_pc;
+  const char *frame_descr;
+};
+bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr);
+bool DescribeAddressIfStack(uptr addr, uptr access_size);
+
+struct GlobalAddressDescription {
+  uptr addr;
+  // Assume address is close to at most four globals.
+  static const int kMaxGlobals = 4;
+  __asan_global globals[kMaxGlobals];
+  u32 reg_sites[kMaxGlobals];
+  u8 size;
+};
+
+bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr);
+bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
 
 }  // namespace __asan

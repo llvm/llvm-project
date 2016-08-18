@@ -261,6 +261,13 @@ INTERFACE_FUNCTION(__asan_memcpy);
 INTERFACE_FUNCTION(__asan_memset);
 INTERFACE_FUNCTION(__asan_memmove);
 
+INTERFACE_FUNCTION(__asan_set_shadow_00);
+INTERFACE_FUNCTION(__asan_set_shadow_f1);
+INTERFACE_FUNCTION(__asan_set_shadow_f2);
+INTERFACE_FUNCTION(__asan_set_shadow_f3);
+INTERFACE_FUNCTION(__asan_set_shadow_f5);
+INTERFACE_FUNCTION(__asan_set_shadow_f8);
+
 INTERFACE_FUNCTION(__asan_alloca_poison);
 INTERFACE_FUNCTION(__asan_allocas_unpoison);
 
@@ -316,6 +323,10 @@ INTERFACE_FUNCTION(__sanitizer_cov_module_init)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_basic_block)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_func_enter)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_cmp)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_cmp1)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_cmp2)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_cmp4)
+INTERFACE_FUNCTION(__sanitizer_cov_trace_cmp8)
 INTERFACE_FUNCTION(__sanitizer_cov_trace_switch)
 INTERFACE_FUNCTION(__sanitizer_cov_with_check)
 INTERFACE_FUNCTION(__sanitizer_get_allocated_size)
