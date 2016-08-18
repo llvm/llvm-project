@@ -6049,7 +6049,20 @@ SwiftASTContext::IsTypedefType (void* type)
 {
     if (!type)
         return false;
-    return GetSwiftType (type)->getKind() == swift::TypeKind::NameAlias;
+    swift::Type swift_type(GetSwiftType(type));
+    switch (swift_type->getKind())
+    {
+        case swift::TypeKind::NameAlias:
+            return true;
+        case swift::TypeKind::Substituted:
+            if (swift::SubstitutedType *substituted = (swift::SubstitutedType*)swift_type.getPointer())
+                return IsTypedefType(substituted->getReplacementType().getPointer());
+            break;
+        default:
+            break;
+    }
+    
+    return false;
 }
 
 bool
@@ -7098,15 +7111,26 @@ SwiftASTContext::GetTypedefedType (void* type)
     {
         swift::Type swift_type (::GetSwiftType(type));
         const swift::TypeKind type_kind = swift_type->getKind();
-        if (type_kind == swift::TypeKind::NameAlias)
+        switch (type_kind)
         {
-            swift::NameAliasType *name_alias_type = llvm::dyn_cast_or_null<swift::NameAliasType>(swift_type.getPointer());
-            if (name_alias_type)
-            {
-                return CompilerType (GetASTContext(), name_alias_type->getSinglyDesugaredType());
+            case swift::TypeKind::NameAlias: {
+                swift::NameAliasType *name_alias_type = llvm::dyn_cast_or_null<swift::NameAliasType>(swift_type.getPointer());
+                if (name_alias_type)
+                {
+                    return CompilerType (GetASTContext(), name_alias_type->getSinglyDesugaredType());
+                }
             }
+                break;
+            case swift::TypeKind::Substituted: {
+                if (swift::SubstitutedType *substituted = (swift::SubstitutedType*)swift_type.getPointer())
+                    return GetTypedefedType(substituted->getReplacementType().getPointer());
+            }
+                break;
+            default:
+                break;
         }
     }
+
     return CompilerType();
 }
 
