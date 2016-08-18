@@ -29,9 +29,10 @@ def breakpointMarker():
     return "Set breakpoint here."
 
 class CommandParser:
-    def __init__(self):
+    def __init__(self, test):
         self.breakpoint = None
         self.exprs_and_regexps = []
+        self.test = test
 
     def parse_input(self):
         file_handle = open(inputFile(), 'r')
@@ -60,6 +61,8 @@ class CommandParser:
     def handle_breakpoint(self, test, thread, breakpoint_id):
         if self.breakpoint.GetID() == breakpoint_id:
             frame = thread.GetSelectedFrame()
+            if test.TraceOn():
+              print('Stopped at: %s' % frame)
             options = lldb.SBExpressionOptions()
             options.SetLanguage(lldb.eLanguageTypeSwift)
             options.SetREPLMode(True)
@@ -70,6 +73,8 @@ class CommandParser:
                 desc_stream = lldb.SBStream()
                 ret.GetDescription(desc_stream)
                 desc = desc_stream.GetData()
+                if test.TraceOn():
+                  print("%s --> %s" % (expr_and_regexp['expr'], desc))
                 for regexp in expr_and_regexp['regexps']:
                     test.assertTrue(re.search(regexp, desc), "Output of REPL input\n" + expr_and_regexp['expr'] + "was\n" + desc + "which didn't match regexp " + regexp)
                 
@@ -142,7 +147,7 @@ class REPLTest(TestBase):
         exe = os.path.join(os.getcwd(), exe_name)
         target = self.dbg.CreateTarget(exe)
 
-        parser = CommandParser()
+        parser = CommandParser(self)
         parser.parse_input()
         parser.set_breakpoint(target)
 
