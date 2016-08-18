@@ -27,24 +27,6 @@ Contents
    clang-rename
 
 
-Doxygen Documentation
-=====================
-The Doxygen documentation describes the **internal** software that makes up the
-tools of clang-tools-extra, not the **external** use of these tools. The Doxygen
-documentation contains no instructions about how to use the tools, only the APIs
-that make up the software. For usage instructions, please see the user's guide
-or reference manual for each tool.
-
-* `Doxygen documentation`_
-
-.. _`Doxygen documentation`: doxygen/annotated.html
-
-..  note::
-    This documentation is generated directly from the source code with doxygen.
-    Since the tools of clang-tools-extra are constantly under active
-    development, what you're about to read is out of date!
-
-
 Indices and tables
 ==================
 
