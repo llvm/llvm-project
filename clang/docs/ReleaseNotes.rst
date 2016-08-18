@@ -87,7 +87,7 @@ included by an ``#include <stdafx.h>`` in each source file instead of by a
 
 clang-cl has a new flag, ``/imsvc <dir>``, for adding a directory to the system
 include search path (where warnings are disabled by default) without having to
-set ``%INCLUDE``.
+set ``%INCLUDE%``.
 
 C Language Changes in Clang
 ---------------------------
