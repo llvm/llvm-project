@@ -184,6 +184,11 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
   if (AvailabilityResult Result =
           S.ShouldDiagnoseAvailabilityOfDecl(D, ContextVersion, &Message)) {
 
+    if (Result == AR_NotYetIntroduced && S.getCurFunctionOrMethodDecl()) {
+      S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
+      return;
+    }
+
     const ObjCPropertyDecl *ObjCPDecl = nullptr;
     if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
       if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
@@ -15198,11 +15203,6 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
   VersionTuple Version;
   if (Spec != AvailSpecs.end())
     Version = Spec->getVersion();
-  else
-    // This is the '*' case in @available. We should diagnose this; the
-    // programmer should explicitly account for this case if they target this
-    // platform.
-    Diag(AtLoc, diag::warn_available_using_star_case) << RParen << Platform;
 
   return new (Context)
       ObjCAvailabilityCheckExpr(Version, AtLoc, RParen, Context.BoolTy);

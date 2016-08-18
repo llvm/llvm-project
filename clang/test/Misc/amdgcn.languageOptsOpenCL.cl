@@ -210,3 +210,14 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_terminate_context: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_terminate_context' - ignoring}}
+
+#ifndef cl_amd_media_ops
+#error "Missing cl_amd_media_ops define"
+#endif
+#pragma OPENCL EXTENSION cl_amd_media_ops: enable
+
+#ifndef cl_amd_media_ops2
+#error "Missing cl_amd_media_ops2 define"
+#endif
+#pragma OPENCL EXTENSION cl_amd_media_ops2: enable
+

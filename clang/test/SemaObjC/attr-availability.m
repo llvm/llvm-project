@@ -46,16 +46,16 @@ void f(A *a, B *b) {
   [b proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in macOS 10.2}}
 
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'partialMethod' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'partialMethod' to silence this warning}}
+  // expected-warning@+2 {{'partialMethod' is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'partialMethod' in an @available check to silence this warning}}
 #endif
   [a partialMethod];
   [b partialMethod];  // no warning
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'partial_proto_method' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'partial_proto_method' to silence this warning}}
+  // expected-warning@+2 {{'partial_proto_method' is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'partial_proto_method' in an @available check to silence this warning}}
 #endif
   [a partial_proto_method];
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'partial_proto_method' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'partial_proto_method' to silence this warning}}
+  // expected-warning@+2 {{'partial_proto_method' is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'partial_proto_method' in an @available check to silence this warning}}
 #endif
   [b partial_proto_method];
 }
@@ -163,14 +163,14 @@ void partialfun(PartialI* a) {
   [a partialMethod]; // no warning
   [a ipartialMethod1]; // no warning
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'ipartialMethod2' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'ipartialMethod2' to silence this warning}}
+  // expected-warning@+2 {{'ipartialMethod2' is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'ipartialMethod2' in an @available check to silence this warning}}
 #endif
   [a ipartialMethod2];
   [a ppartialMethod]; // no warning
   [PartialI partialMethod]; // no warning
   [PartialI ipartialMethod1]; // no warning
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'ipartialMethod2' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'ipartialMethod2' to silence this warning}}
+  // expected-warning@+2 {{'ipartialMethod2' is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'ipartialMethod2' in an @available check to silence this warning}}
 #endif
   [PartialI ipartialMethod2];
   [PartialI ppartialMethod]; // no warning
@@ -309,7 +309,7 @@ __attribute__((objc_root_class))
 @end
 
 @implementation LookupAvailabilityBase
--(void)method1 { fn_10_7(); } // expected-warning{{partial}} expected-note{{explicitly redeclare}}
+-(void)method1 { fn_10_7(); } // expected-warning{{only available on macOS 10.7}} expected-note{{@available}}
 @end
 
 __attribute__((availability(macosx, introduced=10.7)))
@@ -321,7 +321,7 @@ __attribute__((availability(macosx, introduced=10.7)))
 
 @implementation LookupAvailability
 -(void)method2 { fn_10_7(); }
--(void)method3 { fn_10_8(); } // expected-warning{{partial}} expected-note{{explicitly redeclare}}
+-(void)method3 { fn_10_8(); } // expected-warning{{only available on macOS 10.8}} expected-note{{@available}}
 -(void)method4 { fn_10_8(); }
 @end
 

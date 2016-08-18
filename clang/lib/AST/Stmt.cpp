@@ -794,6 +794,10 @@ void IfStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                    VarRange.getEnd());
 }
 
+bool IfStmt::isObjCAvailabilityCheck() const {
+  return isa<ObjCAvailabilityCheckExpr>(SubExprs[COND]);
+}
+
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
                  Expr *Inc, Stmt *Body, SourceLocation FL, SourceLocation LP,
                  SourceLocation RP)

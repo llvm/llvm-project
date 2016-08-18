@@ -1685,7 +1685,12 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (!CXXDecl)
     return false;
 
-  if (CXXDecl->hasDefinition() && CXXDecl->isDynamicClass())
+  // Only emit complete debug info for a dynamic class when its vtable is
+  // emitted.  However, Microsoft debuggers don't resolve type information
+  // across DLL boundaries, so skip this optimization if the class is marked
+  // dllimport.
+  if (CXXDecl->hasDefinition() && CXXDecl->isDynamicClass() &&
+      !CXXDecl->hasAttr<DLLImportAttr>())
     return true;
 
   TemplateSpecializationKind Spec = TSK_Undeclared;

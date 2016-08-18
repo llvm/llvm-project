@@ -571,11 +571,22 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(LLVM_BUILD_INSTRUMENTED)
     set(PGO_DEP generate-profdata)
     set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
-    set(COMPILER_OPTIONS
-      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-      -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER})
+    # Use the current tools for LTO instead of the instrumented ones
+    list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
+      CMAKE_CXX_COMPILER
+      CMAKE_C_COMPILER
+      CMAKE_ASM_COMPILER
+      CMAKE_AR
+      CMAKE_RANLIB
+      DARWIN_LTO_LIBRARY
+      DYLD_LIBRARY_PATH)
+
+    set(COMPILER_OPTIONS)
+    set(LTO_LIBRARY)
     set(RUNTIME_DEP) # Don't set runtime dependencies
+    set(LTO_DEP)     # Don't need to depend on LTO
+    set(LTO_AR)
+    set(LTO_RANLIB)
   endif()
 
   # Find all variables that start with BOOTSTRAP_ and populate a variable with
