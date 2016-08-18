@@ -1005,8 +1005,11 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
 
   // PT_GNU_STACK is a special section to tell the loader to make the
   // pages for the stack non-executable.
-  if (!Config->ZExecStack)
-    AddHdr(PT_GNU_STACK, PF_R | PF_W);
+  if (!Config->ZExecStack) {
+    Phdr &Hdr = *AddHdr(PT_GNU_STACK, PF_R | PF_W);
+    if (Config->ZStackSize != uint64_t(-1))
+      Hdr.H.p_memsz = Config->ZStackSize;
+  }
 
   if (Note.First)
     Ret.push_back(std::move(Note));

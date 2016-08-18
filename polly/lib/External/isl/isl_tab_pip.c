@@ -813,7 +813,8 @@ static void normalize_div(__isl_keep isl_vec *div)
 	isl_seq_scale_down(div->el + 2, div->el + 2, ctx->normalize_gcd, len);
 }
 
-/* Return a integer division for use in a parametric cut based on the given row.
+/* Return an integer division for use in a parametric cut based
+ * on the given row.
  * In particular, let the parametric constant of the row be
  *
  *		\sum_i a_i y_i
@@ -840,7 +841,7 @@ static struct isl_vec *get_row_parameter_div(struct isl_tab *tab, int row)
 	return div;
 }
 
-/* Return a integer division for use in transferring an integrality constraint
+/* Return an integer division for use in transferring an integrality constraint
  * to the context.
  * In particular, let the parametric constant of the row be
  *

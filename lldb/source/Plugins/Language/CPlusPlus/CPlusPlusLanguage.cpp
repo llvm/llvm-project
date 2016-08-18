@@ -220,6 +220,8 @@ CPlusPlusLanguage::MethodName::Parse()
                         context_start = full.rfind(' ', template_start);
                         if (context_start == llvm::StringRef::npos)
                             context_start = 0;
+                        else
+                            ++context_start;
 
                         context_end = full.rfind(':', template_start);
                         if (context_end == llvm::StringRef::npos || context_end < context_start)
@@ -240,7 +242,7 @@ CPlusPlusLanguage::MethodName::Parse()
                 else
                 {
                     if (context_start < context_end)
-                        m_context = full.substr(context_start, context_end - 1);
+                        m_context = full.substr(context_start, context_end - 1 - context_start);
                     const size_t basename_begin = context_end + 1;
                     m_basename = full.substr(basename_begin, basename_end - basename_begin);
                 }

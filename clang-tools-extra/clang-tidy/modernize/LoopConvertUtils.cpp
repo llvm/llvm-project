@@ -763,7 +763,8 @@ bool ForLoopIndexUseVisitor::VisitDeclRefExpr(DeclRefExpr *E) {
 ///   }
 /// \endcode
 bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
-                                                   const LambdaCapture *C) {
+                                                   const LambdaCapture *C,
+                                                   Expr *Init) {
   if (C->capturesVariable()) {
     const VarDecl *VDecl = C->getCapturedVar();
     if (areSameVariable(IndexVar, cast<ValueDecl>(VDecl))) {
@@ -776,7 +777,7 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                      C->getLocation()));
     }
   }
-  return VisitorBase::TraverseLambdaCapture(LE, C);
+  return VisitorBase::TraverseLambdaCapture(LE, C, Init);
 }
 
 /// \brief If we find that another variable is created just to refer to the loop

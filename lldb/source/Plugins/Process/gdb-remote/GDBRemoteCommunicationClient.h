@@ -633,6 +633,10 @@ protected:
     void
     OnRunPacketSent(bool first) override;
 
+    PacketResult
+    SendThreadSpecificPacketAndWaitForResponse(lldb::tid_t tid, StreamString &&payload,
+                                               StringExtractorGDBRemote &response, bool send_async);
+
 private:
     DISALLOW_COPY_AND_ASSIGN (GDBRemoteCommunicationClient);
 };

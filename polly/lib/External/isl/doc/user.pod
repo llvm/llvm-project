@@ -8151,7 +8151,8 @@ a band node with an anchored subtree.
 		__isl_take isl_schedule_node *node);
 
 Most nodes in a schedule tree only contain local information.
-In some cases, however, a node may also refer to outer band nodes.
+In some cases, however, a node may also refer to the schedule dimensions
+of its outer band nodes.
 This means that the position of the node within the tree should
 not be changed, or at least that no changes are performed to the
 outer band nodes.  The following function can be used to test

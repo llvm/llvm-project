@@ -467,8 +467,9 @@ static enum isl_lp_result isl_set_opt_aligned(__isl_keep isl_set *set, int max,
 			isl_int_clear(opt_i);
 			return res;
 		}
-		if (res == isl_lp_ok)
-			empty = 0;
+		if (res == isl_lp_empty)
+			continue;
+		empty = 0;
 		if (max ? isl_int_gt(opt_i, *opt) : isl_int_lt(opt_i, *opt))
 			isl_int_set(*opt, opt_i);
 	}
