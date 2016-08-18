@@ -34,10 +34,10 @@ Non-comprehensive list of changes in this release
   please see the documentation on :doc:`CMake`. For information about the CMake
   language there is also a :doc:`CMakePrimer` document available.
 
-* .. note about C API functions LLVMParseBitcode,
-   LLVMParseBitcodeInContext, LLVMGetBitcodeModuleInContext and
-   LLVMGetBitcodeModule having been removed. LLVMGetTargetMachineData has been
-   removed (use LLVMGetDataLayout instead).
+* C API functions LLVMParseBitcode,
+  LLVMParseBitcodeInContext, LLVMGetBitcodeModuleInContext and
+  LLVMGetBitcodeModule having been removed. LLVMGetTargetMachineData has been
+  removed (use LLVMGetDataLayout instead).
 
 * The C API function LLVMLinkModules has been removed.
 
@@ -57,11 +57,9 @@ Non-comprehensive list of changes in this release
   iterator to the next instruction instead of ``void``. Targets that previously
   did ``MBB.erase(I); return;`` now probably want ``return MBB.erase(I);``.
 
-* ``SelectionDAGISel::Select`` now returns ``void``. Out of tree targets will
+* ``SelectionDAGISel::Select`` now returns ``void``. Out-of-tree targets will
   need to be updated to replace the argument node and remove any dead nodes in
   cases where they currently return an ``SDNode *`` from this interface.
-
-* Raised the minimum required CMake version to 3.4.3.
 
 * Added the MemorySSA analysis, which hopes to replace MemoryDependenceAnalysis.
   It should provide higher-quality results than MemDep, and be algorithmically
@@ -72,41 +70,22 @@ Non-comprehensive list of changes in this release
   from 40% to 10% for functions which are not marked ``optsize`` (that is,
   compiled with ``-Os``).
 
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
-
-* ... next change ...
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
-
 GCC ABI Tag
 -----------
 
-Recently, many of the Linux distributions (ex. `Fedora <http://developerblog.redhat.com/2015/02/10/gcc-5-in-fedora/>`_,
+Recently, many of the Linux distributions (e.g. `Fedora <http://developerblog.redhat.com/2015/02/10/gcc-5-in-fedora/>`_,
 `Debian <https://wiki.debian.org/GCC5>`_, `Ubuntu <https://wiki.ubuntu.com/GCC5>`_)
 have moved on to use the new `GCC ABI <https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Attributes.html>`_
 to work around `C++11 incompatibilities in libstdc++ <https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html>`_.
 This caused `incompatibility problems <https://gcc.gnu.org/ml/gcc-patches/2015-04/msg00153.html>`_
-with other compilers (ex. Clang), which needed to be fixed, but due to the
+with other compilers (e.g. Clang), which needed to be fixed, but due to the
 experimental nature of GCC's own implementation, it took a long time for it to
 land in LLVM (`here <https://reviews.llvm.org/D18035>`_ and
 `here <https://reviews.llvm.org/D17567>`_), not in time for the 3.8 release.
 
-Those patches are now present in the 3.9.0 release and should be working on the
+Those patches are now present in the 3.9.0 release and should be working in the
 majority of cases, as they have been tested thoroughly. However, some bugs were
-`filled in GCC <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71712>`_ and have not
+`filed in GCC <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71712>`_ and have not
 yet been fixed, so there may be corner cases not covered by either GCC or Clang.
 Bug fixes to those problems should be reported in Bugzilla (either LLVM or GCC),
 and patches to LLVM's trunk are very likely to be back-ported to future 3.9.x
@@ -124,6 +103,10 @@ Changes to the LLVM IR
   ``llvm.masked.gather`` and ``llvm.masked.scatter`` were introduced to the
   LLVM IR to allow selective memory access for vector data types.
 
+* The new ``notail`` attribute prevents optimization passes from adding ``tail``
+  or ``musttail`` markers to a call. It is used to prevent tail call
+  optimization from being performed on the call.
+
 Changes to LLVM's IPO model
 ---------------------------
 
@@ -138,7 +121,7 @@ Support for ThinLTO
 -------------------
 
 LLVM now supports ThinLTO compilation, which can be invoked by compiling
-and linking with -flto=thin. The gold linker plugin, as well as linkers
+and linking with ``-flto=thin``. The gold linker plugin, as well as linkers
 that use the new ThinLTO API in libLTO (like ld64), will transparently
 execute the ThinLTO backends in parallel threads.
 For more information on ThinLTO and the LLVM implementation, see the
@@ -231,7 +214,7 @@ fixes:**
 Changes to the PowerPC Target
 -----------------------------
 
- Moved some optimizations from O3 to O2 (D18562)
+* Moved some optimizations from O3 to O2 (D18562)
 
 * Enable sibling call optimization on ppc64 ELFv1/ELFv2 abi
 
@@ -259,26 +242,12 @@ Changes to the AMDGPU Target
  * Mesa 11.0.x is no longer supported
 
 
-Changes to the OCaml bindings
------------------------------
-
- During this release ...
-
-Support for attribute 'notail' has been added
----------------------------------------------
-
-This marker prevents optimization passes from adding 'tail' or
-'musttail' markers to a call. It is used to prevent tail call
-optimization from being performed on the call.
-
 External Open Source Projects Using LLVM 3.9
 ============================================
 
 An exciting aspect of LLVM is that it is used as an enabling technology for
 a lot of other language and tools projects. This section lists some of the
 projects that have already been updated to work with LLVM 3.9.
-
-* A project
 
 LDC - the LLVM-based D compiler
 -------------------------------
