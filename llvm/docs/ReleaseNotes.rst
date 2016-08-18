@@ -80,8 +80,8 @@ to work around `C++11 incompatibilities in libstdc++ <https://gcc.gnu.org/online
 This caused `incompatibility problems <https://gcc.gnu.org/ml/gcc-patches/2015-04/msg00153.html>`_
 with other compilers (e.g. Clang), which needed to be fixed, but due to the
 experimental nature of GCC's own implementation, it took a long time for it to
-land in LLVM (`here <https://reviews.llvm.org/D18035>`_ and
-`here <https://reviews.llvm.org/D17567>`_), not in time for the 3.8 release.
+land in LLVM (`D18035 <https://reviews.llvm.org/D18035>`_ and
+`D17567 <https://reviews.llvm.org/D17567>`_), not in time for the 3.8 release.
 
 Those patches are now present in the 3.9.0 release and should be working in the
 majority of cases, as they have been tested thoroughly. However, some bugs were
