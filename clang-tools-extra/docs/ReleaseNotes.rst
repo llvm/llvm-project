@@ -43,16 +43,6 @@ Major New Features
 
 .. _include-fixer documentation: http://clang.llvm.org/extra/include-fixer.html
 
-Improvements to clang-query
----------------------------
-
-The improvements are...
-
-Improvements to clang-rename
-----------------------------
-
-The improvements are...
-
 Improvements to clang-tidy
 --------------------------
 
@@ -393,8 +383,3 @@ The 3.8 release didn't include release notes for :program:`clang-tidy`. In the
   2. Value-initialize every non-member instance of a record type needing
      initialization that lacks a user-provided default constructor, e.g.
      a POD.
-
-Improvements to modularize
---------------------------
-
-The improvements are...
