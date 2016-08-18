@@ -44,7 +44,6 @@ void DescribeHeapAddress(uptr addr, uptr access_size);
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars);
 bool DescribeAddressIfStack(uptr addr, uptr access_size);
-void DescribeThread(AsanThreadContext *context);
 
 // Different kinds of error reports.
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
