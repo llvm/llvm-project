@@ -2094,12 +2094,7 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
   const MemRegion *Region = nullptr;
   std::tie(AllocNode, Region) = getAllocationSite(N, Sym, C);
 
-  ProgramPoint P = AllocNode->getLocation();
-  const Stmt *AllocationStmt = nullptr;
-  if (Optional<CallExitEnd> Exit = P.getAs<CallExitEnd>())
-    AllocationStmt = Exit->getCalleeContext()->getCallSite();
-  else if (Optional<StmtPoint> SP = P.getAs<StmtPoint>())
-    AllocationStmt = SP->getStmt();
+  const Stmt *AllocationStmt = PathDiagnosticLocation::getStmt(AllocNode);
   if (AllocationStmt)
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
                                               C.getSourceManager(),
@@ -2626,22 +2621,7 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
   if (!RS)
     return nullptr;
 
-  const Stmt *S = nullptr;
-  const char *Msg = nullptr;
-  StackHintGeneratorForSymbol *StackHint = nullptr;
-
-  // Retrieve the associated statement.
-  ProgramPoint ProgLoc = N->getLocation();
-  if (Optional<StmtPoint> SP = ProgLoc.getAs<StmtPoint>()) {
-    S = SP->getStmt();
-  } else if (Optional<CallExitEnd> Exit = ProgLoc.getAs<CallExitEnd>()) {
-    S = Exit->getCalleeContext()->getCallSite();
-  } else if (Optional<BlockEdge> Edge = ProgLoc.getAs<BlockEdge>()) {
-    // If an assumption was made on a branch, it should be caught
-    // here by looking at the state transition.
-    S = Edge->getSrc()->getTerminator();
-  }
-
+  const Stmt *S = PathDiagnosticLocation::getStmt(N);
   if (!S)
     return nullptr;
 
@@ -2649,6 +2629,8 @@ MallocChecker::MallocBugVisitor::VisitNode(const ExplodedNode *N,
   // (__attribute__((cleanup))).
 
   // Find out if this is an interesting point and what is the kind.
+  const char *Msg = nullptr;
+  StackHintGeneratorForSymbol *StackHint = nullptr;
   if (Mode == Normal) {
     if (isAllocated(RS, RSPrev, S)) {
       Msg = "Memory is allocated";
