@@ -747,7 +747,8 @@ static std::unique_ptr<LTO> createLTO() {
     break;
 
   case options::OT_SAVE_TEMPS:
-    check(Conf.addSaveTemps(output_name, /* UseInputModulePath */ true));
+    check(Conf.addSaveTemps(output_name + ".",
+                            /* UseInputModulePath */ true));
     break;
   }
 

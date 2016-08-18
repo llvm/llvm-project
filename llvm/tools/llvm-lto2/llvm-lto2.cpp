@@ -149,7 +149,8 @@ int main(int argc, char **argv) {
   };
 
   if (SaveTemps)
-    check(Conf.addSaveTemps(OutputFilename), "Config::addSaveTemps failed");
+    check(Conf.addSaveTemps(OutputFilename + "."),
+          "Config::addSaveTemps failed");
 
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;
