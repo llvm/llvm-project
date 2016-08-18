@@ -38,5 +38,13 @@ int main()
     assert(m.begin() == m.end());
     assert(m.get_allocator() == A());
     }
+    {
+    typedef std::less<int> C;
+    typedef explicit_allocator<std::pair<const int, double> > A;
+    std::map<int, double, C, A> m(A{});
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.get_allocator() == A());
+    }
 #endif
 }
