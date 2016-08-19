@@ -163,6 +163,8 @@ Clang now has support for all OpenCL 2.0 features.  In particular, the following
 features have been completed since the previous release:
 
 - Pipe builtin functions (s6.13.16.2-4).
+- Dynamic parallelism support via the ``enqueue_kernel`` Clang builtin function,
+  as well as the kernel query functions from s6.13.17.6. 
 - Address space conversion functions ``to_{global/local/private}``.
 - ``nosvm`` attribute support.
 - Improved diagnostic and generation of Clang Blocks used in OpenCL kernel code.
