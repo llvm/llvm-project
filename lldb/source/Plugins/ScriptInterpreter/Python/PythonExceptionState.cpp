@@ -9,7 +9,9 @@
 
 #ifndef LLDB_DISABLE_PYTHON
 
+// LLDB Python header must be included first
 #include "lldb-python.h"
+
 #include "PythonExceptionState.h"
 
 #include "llvm/ADT/StringRef.h"
