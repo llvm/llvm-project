@@ -48,7 +48,8 @@ enum ModuleKind {
   MK_ExplicitModule, ///< File is an explicitly-loaded module.
   MK_PCH,            ///< File is a PCH file treated as such.
   MK_Preamble,       ///< File is a PCH file treated as the preamble.
-  MK_MainFile        ///< File is a PCH file treated as the actual main file.
+  MK_MainFile,       ///< File is a PCH file treated as the actual main file.
+  MK_PrebuiltModule  ///< File is from a prebuilt module path.
 };
 
 /// \brief The input file that has been loaded from this AST file, along with
@@ -447,7 +448,8 @@ public:
 
   /// \brief Is this a module file for a module (rather than a PCH or similar).
   bool isModule() const {
-    return Kind == MK_ImplicitModule || Kind == MK_ExplicitModule;
+    return Kind == MK_ImplicitModule || Kind == MK_ExplicitModule ||
+           Kind == MK_PrebuiltModule;
   }
 
   /// \brief Dump debugging output for this module.

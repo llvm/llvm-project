@@ -21,9 +21,10 @@ namespace tooling {
 
 static void expectFailure(StringRef JSONDatabase, StringRef Explanation) {
   std::string ErrorMessage;
-  EXPECT_EQ(nullptr, JSONCompilationDatabase::loadFromBuffer(JSONDatabase,
-                                                             ErrorMessage))
-    << "Expected an error because of: " << Explanation.str();
+  EXPECT_EQ(nullptr,
+            JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                                    JSONCommandLineSyntax::Gnu))
+      << "Expected an error because of: " << Explanation.str();
 }
 
 TEST(JSONCompilationDatabase, ErrsOnInvalidFormat) {
@@ -46,9 +47,11 @@ TEST(JSONCompilationDatabase, ErrsOnInvalidFormat) {
 }
 
 static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
-                                            std::string &ErrorMessage) {
+                                            std::string &ErrorMessage,
+                                            JSONCommandLineSyntax Syntax) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage));
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              Syntax));
   if (!Database) {
     ADD_FAILURE() << ErrorMessage;
     return std::vector<std::string>();
@@ -56,10 +59,12 @@ static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
   return Database->getAllFiles();
 }
 
-static std::vector<CompileCommand> getAllCompileCommands(StringRef JSONDatabase,
-                                                    std::string &ErrorMessage) {
+static std::vector<CompileCommand>
+getAllCompileCommands(JSONCommandLineSyntax Syntax, StringRef JSONDatabase,
+                      std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage));
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              Syntax));
   if (!Database) {
     ADD_FAILURE() << ErrorMessage;
     return std::vector<CompileCommand>();
@@ -70,7 +75,8 @@ static std::vector<CompileCommand> getAllCompileCommands(StringRef JSONDatabase,
 TEST(JSONCompilationDatabase, GetAllFiles) {
   std::string ErrorMessage;
   EXPECT_EQ(std::vector<std::string>(),
-            getAllFiles("[]", ErrorMessage)) << ErrorMessage;
+            getAllFiles("[]", ErrorMessage, JSONCommandLineSyntax::Gnu))
+      << ErrorMessage;
 
   std::vector<std::string> expected_files;
   SmallString<16> PathStorage;
@@ -78,20 +84,23 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(PathStorage.str());
   llvm::sys::path::native("//net/dir/file2", PathStorage);
   expected_files.push_back(PathStorage.str());
-  EXPECT_EQ(expected_files, getAllFiles(
-    "[{\"directory\":\"//net/dir\","
-      "\"command\":\"command\","
-      "\"file\":\"file1\"},"
-    " {\"directory\":\"//net/dir\","
-      "\"command\":\"command\","
-      "\"file\":\"file2\"}]",
-    ErrorMessage)) << ErrorMessage;
+  EXPECT_EQ(expected_files,
+            getAllFiles("[{\"directory\":\"//net/dir\","
+                        "\"command\":\"command\","
+                        "\"file\":\"file1\"},"
+                        " {\"directory\":\"//net/dir\","
+                        "\"command\":\"command\","
+                        "\"file\":\"file2\"}]",
+                        ErrorMessage, JSONCommandLineSyntax::Gnu))
+      << ErrorMessage;
 }
 
 TEST(JSONCompilationDatabase, GetAllCompileCommands) {
   std::string ErrorMessage;
-  EXPECT_EQ(0u,
-            getAllCompileCommands("[]", ErrorMessage).size()) << ErrorMessage;
+  EXPECT_EQ(
+      0u, getAllCompileCommands(JSONCommandLineSyntax::Gnu, "[]", ErrorMessage)
+              .size())
+      << ErrorMessage;
 
   StringRef Directory1("//net/dir1");
   StringRef FileName1("file1");
@@ -101,12 +110,16 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
   StringRef Command2("command2");
 
   std::vector<CompileCommand> Commands = getAllCompileCommands(
-      ("[{\"directory\":\"" + Directory1 + "\"," +
-             "\"command\":\"" + Command1 + "\","
-             "\"file\":\"" + FileName1 + "\"},"
-       " {\"directory\":\"" + Directory2 + "\"," +
-             "\"command\":\"" + Command2 + "\","
-             "\"file\":\"" + FileName2 + "\"}]").str(),
+      JSONCommandLineSyntax::Gnu,
+      ("[{\"directory\":\"" + Directory1 + "\"," + "\"command\":\"" + Command1 +
+       "\","
+       "\"file\":\"" +
+       FileName1 + "\"},"
+                   " {\"directory\":\"" +
+       Directory2 + "\"," + "\"command\":\"" + Command2 + "\","
+                                                          "\"file\":\"" +
+       FileName2 + "\"}]")
+          .str(),
       ErrorMessage);
   EXPECT_EQ(2U, Commands.size()) << ErrorMessage;
   EXPECT_EQ(Directory1, Commands[0].Directory) << ErrorMessage;
@@ -120,12 +133,16 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
 
   // Check that order is preserved.
   Commands = getAllCompileCommands(
-      ("[{\"directory\":\"" + Directory2 + "\"," +
-             "\"command\":\"" + Command2 + "\","
-             "\"file\":\"" + FileName2 + "\"},"
-       " {\"directory\":\"" + Directory1 + "\"," +
-             "\"command\":\"" + Command1 + "\","
-             "\"file\":\"" + FileName1 + "\"}]").str(),
+      JSONCommandLineSyntax::Gnu,
+      ("[{\"directory\":\"" + Directory2 + "\"," + "\"command\":\"" + Command2 +
+       "\","
+       "\"file\":\"" +
+       FileName2 + "\"},"
+                   " {\"directory\":\"" +
+       Directory1 + "\"," + "\"command\":\"" + Command1 + "\","
+                                                          "\"file\":\"" +
+       FileName1 + "\"}]")
+          .str(),
       ErrorMessage);
   EXPECT_EQ(2U, Commands.size()) << ErrorMessage;
   EXPECT_EQ(Directory2, Commands[0].Directory) << ErrorMessage;
@@ -142,7 +159,8 @@ static CompileCommand findCompileArgsInJsonDatabase(StringRef FileName,
                                                     StringRef JSONDatabase,
                                                     std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage));
+      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
   if (!Database)
     return CompileCommand();
   std::vector<CompileCommand> Commands = Database->getCompileCommands(FileName);

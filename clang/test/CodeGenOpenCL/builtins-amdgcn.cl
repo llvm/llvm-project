@@ -228,6 +228,13 @@ void test_uicmp_i64(global ulong* out, ulong a, ulong b)
   *out = __builtin_amdgcn_uicmpl(a, b, 30+5);
 }
 
+// CHECK-LABEL: @test_ds_swizzle
+// CHECK: call i32 @llvm.amdgcn.ds.swizzle(i32 %a, i32 32)
+void test_ds_swizzle(global int* out, int a)
+{
+  *out = __builtin_amdgcn_ds_swizzle(a, 32);
+}
+
 // CHECK-LABEL: @test_fcmp_f32
 // CHECK: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 5)
 void test_fcmp_f32(global ulong* out, float a, float b)

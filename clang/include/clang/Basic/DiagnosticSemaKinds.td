@@ -8553,6 +8553,11 @@ def note_related_result_type_explicit : Note<
 }
 
 let CategoryName = "Modules Issue" in {
+def err_module_interface_implementation_mismatch : Error<
+  "%select{'module'|'module partition'|'module implementation'}0 declaration "
+  "found while %select{not |not |}0building module interface">;
+def err_current_module_name_mismatch : Error<
+  "module name '%0' specified on command line does not match name of module">;
 def err_module_private_specialization : Error<
   "%select{template|partial|member}0 specialization cannot be "
   "declared __module_private__">;

@@ -1312,8 +1312,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     SrcMgr::CharacteristicKind
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     SourceLocation IncludeLoc = ReadSourceLocation(*F, Record[1]);
-    if (IncludeLoc.isInvalid() &&
-        (F->Kind == MK_ImplicitModule || F->Kind == MK_ExplicitModule)) {
+    if (IncludeLoc.isInvalid() && F->isModule()) {
       IncludeLoc = getImportLocation(F);
     }
 
@@ -1351,7 +1350,7 @@ std::pair<SourceLocation, StringRef> ASTReader::getModuleImportLoc(int ID) {
 
   // Find which module file this entry lands in.
   ModuleFile *M = GlobalSLocEntryMap.find(-ID)->second;
-  if (M->Kind != MK_ImplicitModule && M->Kind != MK_ExplicitModule)
+  if (!M->isModule())
     return std::make_pair(SourceLocation(), "");
 
   // FIXME: Can we map this down to a particular submodule? That would be
@@ -1861,7 +1860,7 @@ void ASTReader::resolvePendingMacro(IdentifierInfo *II,
 
   // Don't read the directive history for a module; we don't have anywhere
   // to put it.
-  if (M.Kind == MK_ImplicitModule || M.Kind == MK_ExplicitModule)
+  if (M.isModule())
     return;
 
   // Deserialize the macro directives history in reverse source-order.
@@ -2194,7 +2193,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // All user input files reside at the index range [0, NumUserInputs), and
       // system input files reside at [NumUserInputs, NumInputs). For explicitly
       // loaded module files, ignore missing inputs.
-      if (!DisableValidation && F.Kind != MK_ExplicitModule) {
+      if (!DisableValidation && F.Kind != MK_ExplicitModule &&
+          F.Kind != MK_PrebuiltModule) {
         bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
 
         // If we are reading a module, we will create a verification timestamp,
@@ -2225,7 +2225,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           bool IsSystem = I >= NumUserInputs;
           InputFileInfo FI = readInputFileInfo(F, I+1);
           Listener->visitInputFile(FI.Filename, IsSystem, FI.Overridden,
-                                   F.Kind == MK_ExplicitModule);
+                                   F.Kind == MK_ExplicitModule ||
+                                   F.Kind == MK_PrebuiltModule);
         }
       }
 
@@ -2255,7 +2256,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           //
           // FIXME: Allow this for files explicitly specified with -include-pch.
           bool AllowCompatibleConfigurationMismatch =
-              F.Kind == MK_ExplicitModule;
+              F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule;
           const HeaderSearchOptions &HSOpts =
               PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -2417,7 +2418,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (M && M->Directory) {
         // If we're implicitly loading a module, the base directory can't
         // change between the build and use.
-        if (F.Kind != MK_ExplicitModule) {
+        if (F.Kind != MK_ExplicitModule && F.Kind != MK_PrebuiltModule) {
           const DirectoryEntry *BuildDir =
               PP.getFileManager().getDirectory(Blob);
           if (!BuildDir || BuildDir != M->Directory) {
@@ -3141,7 +3142,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case IMPORTED_MODULES: {
-      if (F.Kind != MK_ImplicitModule && F.Kind != MK_ExplicitModule) {
+      if (!F.isModule()) {
         // If we aren't loading a module (which has its own exports), make
         // all of the imported modules visible.
         // FIXME: Deal with macros-only imports.
@@ -3225,7 +3226,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   unsigned Idx = 0;
   F.ModuleMapPath = ReadPath(F, Record, Idx);
 
-  if (F.Kind == MK_ExplicitModule) {
+  if (F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule) {
     // For an explicitly-loaded module, we don't care whether the original
     // module map file exists or matches.
     return Success;
@@ -3596,7 +3597,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
   }
 
   if (!Context.getLangOpts().CPlusPlus ||
-      (Type != MK_ImplicitModule && Type != MK_ExplicitModule)) {
+      (Type != MK_ImplicitModule && Type != MK_ExplicitModule &&
+       Type != MK_PrebuiltModule)) {
     // Mark all of the identifiers in the identifier table as being out of date,
     // so that various accessors know to check the loaded modules when the
     // identifier is used.
@@ -3713,6 +3715,7 @@ static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
     return 0; // PCH
   case MK_ImplicitModule:
   case MK_ExplicitModule:
+  case MK_PrebuiltModule:
     return 1; // module
   case MK_MainFile:
   case MK_Preamble:
@@ -3818,7 +3821,8 @@ ASTReader::ReadASTCore(StringRef FileName,
         //
         // FIXME: Should we also perform the converse check? Loading a module as
         // a PCH file sort of works, but it's a bit wonky.
-        if ((Type == MK_ImplicitModule || Type == MK_ExplicitModule) &&
+        if ((Type == MK_ImplicitModule || Type == MK_ExplicitModule ||
+             Type == MK_PrebuiltModule) &&
             F.ModuleName.empty()) {
           auto Result = (Type == MK_ImplicitModule) ? OutOfDate : Failure;
           if (Result != OutOfDate ||
@@ -8366,16 +8370,14 @@ void ASTReader::finishPendingActions() {
       for (unsigned IDIdx = 0, NumIDs = GlobalIDs.size(); IDIdx != NumIDs;
            ++IDIdx) {
         const PendingMacroInfo &Info = GlobalIDs[IDIdx];
-        if (Info.M->Kind != MK_ImplicitModule &&
-            Info.M->Kind != MK_ExplicitModule)
+        if (!Info.M->isModule())
           resolvePendingMacro(II, Info);
       }
       // Handle module imports.
       for (unsigned IDIdx = 0, NumIDs = GlobalIDs.size(); IDIdx != NumIDs;
            ++IDIdx) {
         const PendingMacroInfo &Info = GlobalIDs[IDIdx];
-        if (Info.M->Kind == MK_ImplicitModule ||
-            Info.M->Kind == MK_ExplicitModule)
+        if (Info.M->isModule())
           resolvePendingMacro(II, Info);
       }
     }

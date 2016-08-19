@@ -916,7 +916,7 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     if (PropRef && PropRef->isMessagingGetter()) {
       const Expr *GetterMessageSend =
           POE->getSemanticExpr(POE->getNumSemanticExprs() - 1);
-      assert(isa<ObjCMessageExpr>(GetterMessageSend));
+      assert(isa<ObjCMessageExpr>(GetterMessageSend->IgnoreParenCasts()));
       return peelOffOuterExpr(GetterMessageSend, N);
     }
   }

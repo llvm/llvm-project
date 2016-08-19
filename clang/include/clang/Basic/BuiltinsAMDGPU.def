@@ -76,6 +76,7 @@ BUILTIN(__builtin_amdgcn_sicmp, "LUiiiIi", "nc")
 BUILTIN(__builtin_amdgcn_sicmpl, "LUiLiLiIi", "nc")
 BUILTIN(__builtin_amdgcn_fcmp, "LUiddIi", "nc")
 BUILTIN(__builtin_amdgcn_fcmpf, "LUiffIi", "nc")
+BUILTIN(__builtin_amdgcn_ds_swizzle, "iiIi", "nc")
 
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.

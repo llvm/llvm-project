@@ -93,6 +93,9 @@ public:
   /// \brief The directory used for a user build.
   std::string ModuleUserBuildPath;
 
+  /// \brief The directories used to load prebuilt module files.
+  std::vector<std::string> PrebuiltModulePaths;
+
   /// The module/pch container format.
   std::string ModuleFormat;
 
@@ -200,6 +203,10 @@ public:
 
   void AddVFSOverlayFile(StringRef Name) {
     VFSOverlayFiles.push_back(Name);
+  }
+
+  void AddPrebuiltModulePath(StringRef Name) {
+    PrebuiltModulePaths.push_back(Name);
   }
 };
 
