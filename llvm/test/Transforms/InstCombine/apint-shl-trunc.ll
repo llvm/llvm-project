@@ -25,3 +25,16 @@ define i1 @test1(i799 %X, i799 %A) {
   ret i1 %D
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @test0vec(<2 x i39> %X, <2 x i39> %A) {
+; CHECK-LABEL: @test0vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i39> %X, %A
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i39> [[B]], <i39 1, i39 1>
+; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i39> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %B = lshr <2 x i39> %X, %A
+  %D = trunc <2 x i39> %B to <2 x i1>
+  ret <2 x i1> %D
+}
+

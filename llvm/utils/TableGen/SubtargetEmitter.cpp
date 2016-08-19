@@ -826,9 +826,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         HasVariants = true;
         break;
       }
-      IdxIter PIPos = std::find(TI->ProcIndices.begin(),
-                                TI->ProcIndices.end(), ProcModel.Index);
-      if (PIPos != TI->ProcIndices.end()) {
+      if (is_contained(TI->ProcIndices, ProcModel.Index)) {
         HasVariants = true;
         break;
       }
@@ -843,9 +841,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     // If ProcIndices contains 0, this class applies to all processors.
     assert(!SC.ProcIndices.empty() && "expect at least one procidx");
     if (SC.ProcIndices[0] != 0) {
-      IdxIter PIPos = std::find(SC.ProcIndices.begin(),
-                                SC.ProcIndices.end(), ProcModel.Index);
-      if (PIPos == SC.ProcIndices.end())
+      if (!is_contained(SC.ProcIndices, ProcModel.Index))
         continue;
     }
     IdxVec Writes = SC.Writes;

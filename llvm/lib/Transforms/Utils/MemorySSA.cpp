@@ -1614,9 +1614,8 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
   auto *Accesses = getOrCreateAccessList(BB);
   if (Point == Beginning) {
     // It goes after any phi nodes
-    auto AI = std::find_if(
-        Accesses->begin(), Accesses->end(),
-        [](const MemoryAccess &MA) { return !isa<MemoryPhi>(MA); });
+    auto AI = find_if(
+        *Accesses, [](const MemoryAccess &MA) { return !isa<MemoryPhi>(MA); });
 
     Accesses->insert(AI, NewAccess);
   } else {

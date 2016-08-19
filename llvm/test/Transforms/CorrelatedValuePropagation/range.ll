@@ -315,3 +315,150 @@ else:
 end:
   ret i32 2
 }
+
+define i1 @test14_slt(i32 %a) {
+; CHECK-LABEL: @test14_slt(
+; CHECK: then:
+; CHECK-NEXT: %result = or i1 false, false
+  %a.off = add i32 %a, -8
+  %cmp = icmp slt i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead.1 = icmp eq i32 %a, -2147483641
+  %dead.2 = icmp eq i32 %a, 16
+  %result = or i1 %dead.1, %dead.2
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_sle(i32 %a) {
+; CHECK-LABEL: @test14_sle(
+; CHECK: then:
+; CHECK-NEXT: %alive = icmp eq i32 %a, 16
+; CHECK-NEXT: %result = or i1 false, %alive
+  %a.off = add i32 %a, -8
+  %cmp = icmp sle i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, -2147483641
+  %alive = icmp eq i32 %a, 16
+  %result = or i1 %dead, %alive
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_sgt(i32 %a) {
+; CHECK-LABEL: @test14_sgt(
+; CHECK: then:
+; CHECK-NEXT: %result = or i1 false, false
+  %a.off = add i32 %a, -8
+  %cmp = icmp sgt i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead.1 = icmp eq i32 %a, -2147483640
+  %dead.2 = icmp eq i32 %a, 16
+  %result = or i1 %dead.1, %dead.2
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_sge(i32 %a) {
+; CHECK-LABEL: @test14_sge(
+; CHECK: then:
+; CHECK-NEXT: %alive = icmp eq i32 %a, 16
+; CHECK-NEXT: %result = or i1 false, %alive
+  %a.off = add i32 %a, -8
+  %cmp = icmp sge i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, -2147483640
+  %alive = icmp eq i32 %a, 16
+  %result = or i1 %dead, %alive
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_ule(i32 %a) {
+; CHECK-LABEL: @test14_ule(
+; CHECK: then:
+; CHECK-NEXT: %alive = icmp eq i32 %a, 16
+; CHECK-NEXT: %result = or i1 false, %alive
+  %a.off = add i32 %a, -8
+  %cmp = icmp ule i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, 7
+  %alive = icmp eq i32 %a, 16
+  %result = or i1 %dead, %alive
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_ugt(i32 %a) {
+; CHECK-LABEL: @test14_ugt(
+; CHECK: then:
+; CHECK-NEXT: %result = or i1 false, false
+  %a.off = add i32 %a, -8
+  %cmp = icmp ugt i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead.1 = icmp eq i32 %a, 8
+  %dead.2 = icmp eq i32 %a, 16
+  %result = or i1 %dead.1, %dead.2
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+define i1 @test14_uge(i32 %a) {
+; CHECK-LABEL: @test14_uge(
+; CHECK: then:
+; CHECK-NEXT: %alive = icmp eq i32 %a, 16
+; CHECK-NEXT: %result = or i1 false, %alive
+  %a.off = add i32 %a, -8
+  %cmp = icmp uge i32 %a.off, 8
+  br i1 %cmp, label %then, label %else
+
+then:
+  %dead = icmp eq i32 %a, 8
+  %alive = icmp eq i32 %a, 16
+  %result = or i1 %dead, %alive
+  ret i1 %result
+
+else:
+  ret i1 false
+}
+
+@limit = external global i32
+define i1 @test15(i32 %a) {
+; CHECK-LABEL: @test15(
+; CHECK: then:
+; CHECK-NEXT: ret i1 false
+  %limit = load i32, i32* @limit, !range !{i32 0, i32 256}
+  %cmp = icmp ult i32 %a, %limit
+  br i1 %cmp, label %then, label %else
+
+then:
+  %result = icmp eq i32 %a, 255
+  ret i1 %result
+
+else:
+  ret i1 false
+}

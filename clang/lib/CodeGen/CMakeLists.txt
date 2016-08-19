@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   InstCombine
   Instrumentation
+  LTO
   Linker
   MC
   ObjCARCOpts

@@ -405,8 +405,8 @@ def err_decomp_decl_non_public_base : Error<
 def err_decomp_decl_non_public_member : Error<
   "cannot decompose non-public member %0 of %1">;
 def err_decomp_decl_anon_union_member : Error<
-  "cannot decompose class type %1 because it has an anonymous "
-  "%select{struct|union} member">;
+  "cannot decompose class type %0 because it has an anonymous "
+  "%select{struct|union}1 member">;
 def err_decomp_decl_std_tuple_element_not_specialized : Error<
   "cannot decompose this type; 'std::tuple_element<%0>::type' "
   "does not name a type">;
@@ -2656,8 +2656,20 @@ def note_overridden_method : Note<
 def note_protocol_method : Note<
   "protocol method is here">;
 
-def warn_available_using_star_case : Warning<
-  "using '*' case here, platform %0 is not accounted for">, InGroup<UnguardedAvailability>;
+def warn_unguarded_availability :
+  Warning<"%0 is only available on %1 %2 or newer">,
+  InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_availability : Warning<"%0 is only available conditionally">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def note_partial_availability_silence : Note<
+  "explicitly redeclare %0 to silence this warning">;
+def note_unguarded_available_silence : Note<
+  "enclose %0 in an @available check to silence this warning">;
+def warn_partial_message : Warning<"%0 is partial: %1">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_fwdclass_message : Warning<
+    "%0 may be partial because the receiver type is unknown">,
+    InGroup<UnguardedAvailability>, DefaultIgnore;
 
 // Thread Safety Attributes
 def warn_invalid_capability_name : Warning<
@@ -4279,15 +4291,6 @@ def err_not_found_by_two_phase_lookup : Error<"call to function %0 that is neith
 def note_not_found_by_two_phase_lookup : Note<"%0 should be declared prior to the "
     "call site%select{| or in %2| or in an associated namespace of one of its arguments}1">;
 def err_undeclared_use : Error<"use of undeclared %0">;
-def warn_partial_availability : Warning<"%0 is only available conditionally">,
-    InGroup<PartialAvailability>, DefaultIgnore;
-def note_partial_availability_silence : Note<
-  "explicitly redeclare %0 to silence this warning">;
-def warn_partial_message : Warning<"%0 is partial: %1">,
-    InGroup<PartialAvailability>, DefaultIgnore;
-def warn_partial_fwdclass_message : Warning<
-    "%0 may be partial because the receiver type is unknown">,
-    InGroup<PartialAvailability>, DefaultIgnore;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
 def warn_property_method_deprecated :
@@ -4316,8 +4319,6 @@ def note_availability_specified_here : Note<
   "%select{unavailable|deleted|deprecated|partial}1 here">;
 def note_implicitly_deleted : Note<
   "explicitly defaulted function was implicitly deleted here">;
-def note_inherited_deleted_here : Note<
-  "deleted constructor was inherited here">;
 def warn_not_enough_argument : Warning<
   "not enough variable arguments in %0 declaration to fit a sentinel">,
   InGroup<Sentinel>;
@@ -4740,6 +4741,8 @@ def note_protected_by_vla_type_alias : Note<
   "jump bypasses initialization of VLA type alias">;
 def note_protected_by_constexpr_if : Note<
   "jump enters controlled statement of constexpr if">;
+def note_protected_by_if_available : Note<
+  "jump enters controlled statement of if available">;
 def note_protected_by_vla : Note<
   "jump bypasses initialization of variable length array">;
 def note_protected_by_objc_try : Note<
@@ -5489,6 +5492,9 @@ def warn_pointer_indirection_from_incompatible_type : Warning<
   "dereference of type %1 that was reinterpret_cast from type %0 has undefined "
   "behavior">,
   InGroup<UndefinedReinterpretCast>, DefaultIgnore;
+def warn_taking_address_of_packed_member : Warning<
+  "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
+  InGroup<DiagGroup<"address-of-packed-member">>;
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
@@ -7045,14 +7051,9 @@ def ext_ms_anonymous_record : ExtWarn<
   InGroup<MicrosoftAnonTag>;
 
 // C++ local classes
-def err_reference_to_local_var_in_enclosing_function : Error<
-  "reference to local variable %0 declared in enclosing function %1">;
-def err_reference_to_local_var_in_enclosing_block : Error<
-  "reference to local variable %0 declared in enclosing block literal">;
-def err_reference_to_local_var_in_enclosing_lambda : Error<
-  "reference to local variable %0 declared in enclosing lambda expression">;
-def err_reference_to_local_var_in_enclosing_context : Error<
-  "reference to local variable %0 declared in enclosing context">;
+def err_reference_to_local_in_enclosing_context : Error<
+  "reference to local %select{variable|binding}1 %0 declared in enclosing "
+  "%select{%3|block literal|lambda expression|context}2">;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local class %1">; 

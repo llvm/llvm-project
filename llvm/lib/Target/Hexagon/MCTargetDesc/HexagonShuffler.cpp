@@ -215,7 +215,7 @@ bool HexagonShuffler::check() {
       break;
     case HexagonII::TypeJR:
       ++jumpr;
-    // Fall-through.
+      LLVM_FALLTHROUGH;
     case HexagonII::TypeJ:
       ++jumps;
       break;

@@ -154,7 +154,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
         GPRCS2Size += 4;
         break;
       }
-      // fallthrough
+      LLVM_FALLTHROUGH;
     case ARM::R4:
     case ARM::R5:
     case ARM::R6:

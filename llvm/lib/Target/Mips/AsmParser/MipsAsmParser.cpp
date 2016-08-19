@@ -1606,7 +1606,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     case Mips::BBIT1:
     case Mips::BBIT132:
       assert(hasCnMips() && "instruction only valid for octeon cpus");
-      // Fall through
+      LLVM_FALLTHROUGH;
 
     case Mips::BEQ:
     case Mips::BNE:

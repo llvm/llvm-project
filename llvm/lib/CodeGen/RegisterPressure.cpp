@@ -769,10 +769,9 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
         if (!TrackLaneMasks) {
           addRegLanes(*LiveUses, RegisterMaskPair(Reg, NewMask));
         } else {
-          auto I = std::find_if(LiveUses->begin(), LiveUses->end(),
-                                [Reg](const RegisterMaskPair Other) {
-                                return Other.RegUnit == Reg;
-                                });
+          auto I = find_if(*LiveUses, [Reg](const RegisterMaskPair Other) {
+            return Other.RegUnit == Reg;
+          });
           bool IsRedef = I != LiveUses->end();
           if (IsRedef) {
             // ignore re-defs here...

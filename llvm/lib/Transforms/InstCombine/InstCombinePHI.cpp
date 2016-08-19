@@ -835,8 +835,8 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
         // needed piece.
         if (PHINode *OldInVal = dyn_cast<PHINode>(PN->getIncomingValue(i)))
           if (PHIsInspected.count(OldInVal)) {
-            unsigned RefPHIId = std::find(PHIsToSlice.begin(),PHIsToSlice.end(),
-                                          OldInVal)-PHIsToSlice.begin();
+            unsigned RefPHIId =
+                find(PHIsToSlice, OldInVal) - PHIsToSlice.begin();
             PHIUsers.push_back(PHIUsageRecord(RefPHIId, Offset,
                                               cast<Instruction>(Res)));
             ++UserE;

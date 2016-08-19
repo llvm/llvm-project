@@ -340,6 +340,31 @@ public:
     friend bool operator!=(min_allocator x, min_allocator y) {return !(x == y);}
 };
 
+template <class T>
+class explicit_allocator
+{
+public:
+    typedef T value_type;
+
+    explicit_allocator() TEST_NOEXCEPT {}
+
+    template <class U>
+    explicit explicit_allocator(explicit_allocator<U>) TEST_NOEXCEPT {}
+
+    T* allocate(std::size_t n)
+    {
+        return static_cast<T*>(::operator new(n*sizeof(T)));
+    }
+
+    void deallocate(T* p, std::size_t)
+    {
+        return ::operator delete(static_cast<void*>(p));
+    }
+
+    friend bool operator==(explicit_allocator, explicit_allocator) {return true;}
+    friend bool operator!=(explicit_allocator x, explicit_allocator y) {return !(x == y);}
+};
+
 #endif  // TEST_STD_VER >= 11
 
 #endif  // MIN_ALLOCATOR_H

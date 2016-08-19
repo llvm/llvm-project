@@ -481,8 +481,11 @@ let Defs = [EDX, EAX], Uses = [ECX] in
   def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, TB;
 
 let Uses = [EDX, EAX, ECX] in
-  def XSETBV : I<0x01, MRM_D1, (outs), (ins), "xsetbv", []>, TB;
-}
+  def XSETBV : I<0x01, MRM_D1, (outs), (ins), 
+                "xsetbv", 
+                [(int_x86_xsetbv ECX, EDX, EAX)]>, TB;
+
+} // HasXSAVE
 
 let Uses = [EDX, EAX] in {
 let Predicates = [HasXSAVE] in {

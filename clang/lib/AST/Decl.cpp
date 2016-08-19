@@ -2657,9 +2657,14 @@ bool FunctionDecl::isGlobal() const {
 }
 
 bool FunctionDecl::isNoReturn() const {
-  return hasAttr<NoReturnAttr>() || hasAttr<CXX11NoReturnAttr>() ||
-         hasAttr<C11NoReturnAttr>() ||
-         getType()->getAs<FunctionType>()->getNoReturnAttr();
+  if (hasAttr<NoReturnAttr>() || hasAttr<CXX11NoReturnAttr>() ||
+      hasAttr<C11NoReturnAttr>())
+    return true;
+
+  if (auto *FnTy = getType()->getAs<FunctionType>())
+    return FnTy->getNoReturnAttr();
+
+  return false;
 }
 
 void
@@ -3444,6 +3449,20 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
     break;
   }
   return 0;
+}
+
+void FunctionDecl::addDeferredDiag(PartialDiagnosticAt PD) {
+  getASTContext().getDeferredDiags()[this].push_back(std::move(PD));
+}
+
+std::vector<PartialDiagnosticAt> FunctionDecl::takeDeferredDiags() const {
+  auto &DD = getASTContext().getDeferredDiags();
+  auto It = DD.find(this);
+  if (It == DD.end())
+    return {};
+  auto Ret = std::move(It->second);
+  DD.erase(It);
+  return Ret;
 }
 
 //===----------------------------------------------------------------------===//

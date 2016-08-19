@@ -8383,6 +8383,8 @@ void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
 
   DiagnoseNullConversion(S, E, T, CC);
 
+  S.DiscardMisalignedMemberAddress(Target, E);
+
   if (!Source->isIntegerType() || !Target->isIntegerType())
     return;
 
@@ -9453,6 +9455,7 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
     CheckUnsequencedOperations(E);
   if (!IsConstexpr && !E->isValueDependent())
     CheckForIntOverflow(E);
+  DiagnoseMisalignedMembers();
 }
 
 void Sema::CheckBitFieldInitialization(SourceLocation InitLoc,
@@ -10998,3 +11001,67 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
         << ArgumentExpr->getSourceRange()
         << TypeTagExpr->getSourceRange();
 }
+
+void Sema::AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
+                                         CharUnits Alignment) {
+  MisalignedMembers.emplace_back(E, RD, MD, Alignment);
+}
+
+void Sema::DiagnoseMisalignedMembers() {
+  for (MisalignedMember &m : MisalignedMembers) {
+    Diag(m.E->getLocStart(), diag::warn_taking_address_of_packed_member)
+        << m.MD << m.RD << m.E->getSourceRange();
+  }
+  MisalignedMembers.clear();
+}
+
+void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
+  if (!T->isPointerType())
+    return;
+  if (isa<UnaryOperator>(E) &&
+      cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf) {
+    auto *Op = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
+    if (isa<MemberExpr>(Op)) {
+      auto MA = std::find(MisalignedMembers.begin(), MisalignedMembers.end(),
+                          MisalignedMember(Op));
+      if (MA != MisalignedMembers.end() &&
+          Context.getTypeAlignInChars(T->getPointeeType()) <= MA->Alignment)
+        MisalignedMembers.erase(MA);
+    }
+  }
+}
+
+void Sema::RefersToMemberWithReducedAlignment(
+    Expr *E,
+    std::function<void(Expr *, RecordDecl *, ValueDecl *, CharUnits)> Action) {
+  const auto *ME = dyn_cast<MemberExpr>(E);
+  while (ME && isa<FieldDecl>(ME->getMemberDecl())) {
+    QualType BaseType = ME->getBase()->getType();
+    if (ME->isArrow())
+      BaseType = BaseType->getPointeeType();
+    RecordDecl *RD = BaseType->getAs<RecordType>()->getDecl();
+
+    ValueDecl *MD = ME->getMemberDecl();
+    bool ByteAligned = Context.getTypeAlignInChars(MD->getType()).isOne();
+    if (ByteAligned) // Attribute packed does not have any effect.
+      break;
+
+    if (!ByteAligned &&
+        (RD->hasAttr<PackedAttr>() || (MD->hasAttr<PackedAttr>()))) {
+      CharUnits Alignment = std::min(Context.getTypeAlignInChars(MD->getType()),
+                                     Context.getTypeAlignInChars(BaseType));
+      // Notify that this expression designates a member with reduced alignment
+      Action(E, RD, MD, Alignment);
+      break;
+    }
+    ME = dyn_cast<MemberExpr>(ME->getBase());
+  }
+}
+
+void Sema::CheckAddressOfPackedMember(Expr *rhs) {
+  using namespace std::placeholders;
+  RefersToMemberWithReducedAlignment(
+      rhs, std::bind(&Sema::AddPotentialMisalignedMembers, std::ref(*this), _1,
+                     _2, _3, _4));
+}
+

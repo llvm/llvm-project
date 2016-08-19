@@ -1301,8 +1301,7 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
        Offset < BaseInsertOffset;
        Offset += TII->getInstSizeInBytes(*MI), MI = std::next(MI)) {
     assert(MI != UserMBB->end() && "Fell off end of block");
-    if (CPUIndex < NumCPUsers &&
-        CPUsers[CPUIndex].MI == static_cast<MachineInstr *>(MI)) {
+    if (CPUIndex < NumCPUsers && CPUsers[CPUIndex].MI == MI) {
       CPUser &U = CPUsers[CPUIndex];
       if (!isOffsetInRange(Offset, EndInsertOffset, U)) {
         // Shift intertion point by one unit of alignment so it is within reach.

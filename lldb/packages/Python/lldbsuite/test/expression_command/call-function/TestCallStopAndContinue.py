@@ -21,8 +21,7 @@ class ExprCommandCallStopContinueTestCase(TestBase):
         # Find the line number to break for main.c.
         self.line = line_number('main.cpp',
                                 '// Please test these expressions while stopped at this line:')
-        self.func_line = line_number ('main.cpp', 
-                                '{ 5, "five" }')
+        self.func_line = line_number ('main.cpp', '{5, "five"}')
 
     @expectedFlakeyDarwin("llvm.org/pr20274")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")

@@ -37,5 +37,13 @@ int main()
         assert(c.get_allocator() == A());
         assert(c.empty());
     }
+    {
+        typedef explicit_allocator<NotConstructible> A;
+        typedef A::value_type T;
+        typedef std::forward_list<T, A> C;
+        C c(A{});
+        assert(c.get_allocator() == A());
+        assert(c.empty());
+    }
 #endif
 }

@@ -1,5 +1,7 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t
 
+// XFAIL: target-is-mips64el
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdio.h>

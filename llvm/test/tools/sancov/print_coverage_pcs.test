@@ -2,6 +2,7 @@ REQUIRES: x86-registered-target
 RUN: sancov -print-coverage-pcs %p/Inputs/test-linux_x86_64 | FileCheck %s --check-prefix=LINUX
 RUN: llvm-objdump -d %p/Inputs/test-windows_x86_64 | FileCheck %s --check-prefix=DISAS_WIN
 RUN: sancov -print-coverage-pcs %p/Inputs/test-windows_x86_64 | FileCheck %s --check-prefix=WINDOWS
+RUN: sancov -print-coverage-pcs %p/Inputs/test-darwin_x86_64 | FileCheck %s --check-prefix=DARWIN
 
 LINUX: 0x4e132b
 LINUX: 0x4e1472
@@ -34,3 +35,26 @@ DISAS_WIN: 140001664: {{.*}}  callq   {{.*}} <__sanitizer_cov>
 WINDOWS: 0x140001668
 DISAS_WIN: 1400016f2: {{.*}}  callq   {{.*}} <__sanitizer_cov>
 WINDOWS: 0x1400016f6
+
+CHECK: 0x4e132b
+CHECK: 0x4e1472
+CHECK: 0x4e14c2
+CHECK: 0x4e1520
+CHECK: 0x4e1553
+CHECK: 0x4e1586
+CHECK: 0x4e1635
+CHECK: 0x4e1690
+CHECK: 0x4e178c
+
+DARWIN: 0x100001527
+DARWIN: 0x100001668
+DARWIN: 0x1000016b7
+DARWIN: 0x1000016dd
+DARWIN: 0x10000179d
+DARWIN: 0x1000017cc
+DARWIN: 0x10000189d
+DARWIN: 0x1000018e0
+DARWIN: 0x100001906
+DARWIN: 0x1000019dc
+DARWIN: 0x100001a28
+

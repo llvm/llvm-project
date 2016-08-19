@@ -65,7 +65,7 @@ public:
                                         std::string &response_string);
 
     bool
-    GetThreadSuffixSupported () override;
+    GetThreadSuffixSupported();
 
     // This packet is usually sent first and the boolean return value
     // indicates if the packet was send and any response was received
@@ -497,8 +497,15 @@ public:
                       StringExtractorGDBRemote &response);
 
     bool
-    SaveRegisterState (lldb::tid_t tid, uint32_t &save_id);
-    
+    WriteRegister(lldb::tid_t tid, uint32_t reg_num, // eRegisterKindProcessPlugin register number
+                  llvm::StringRef data);
+
+    bool
+    WriteAllRegisters(lldb::tid_t tid, llvm::StringRef data);
+
+    bool
+    SaveRegisterState(lldb::tid_t tid, uint32_t &save_id);
+
     bool
     RestoreRegisterState (lldb::tid_t tid, uint32_t save_id);
 

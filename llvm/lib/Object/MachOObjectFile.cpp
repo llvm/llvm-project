@@ -219,19 +219,19 @@ static void parseHeader(const MachOObjectFile *Obj, T &Header,
 // Parses LC_SEGMENT or LC_SEGMENT_64 load command, adds addresses of all
 // sections to \param Sections, and optionally sets
 // \param IsPageZeroSegment to true.
-template <typename SegmentCmd>
+template <typename Segment, typename Section>
 static Error parseSegmentLoadCommand(
     const MachOObjectFile *Obj, const MachOObjectFile::LoadCommandInfo &Load,
     SmallVectorImpl<const char *> &Sections, bool &IsPageZeroSegment,
-    uint32_t LoadCommandIndex, const char *CmdName) {
-  const unsigned SegmentLoadSize = sizeof(SegmentCmd);
+    uint32_t LoadCommandIndex, const char *CmdName, uint64_t SizeOfHeaders) {
+  const unsigned SegmentLoadSize = sizeof(Segment);
   if (Load.C.cmdsize < SegmentLoadSize)
     return malformedError("load command " + Twine(LoadCommandIndex) +
                           " " + CmdName + " cmdsize too small");
-  if (auto SegOrErr = getStructOrErr<SegmentCmd>(Obj, Load.Ptr)) {
-    SegmentCmd S = SegOrErr.get();
-    const unsigned SectionSize =
-      Obj->is64Bit() ? sizeof(MachO::section_64) : sizeof(MachO::section);
+  if (auto SegOrErr = getStructOrErr<Segment>(Obj, Load.Ptr)) {
+    Segment S = SegOrErr.get();
+    const unsigned SectionSize = sizeof(Section);
+    uint64_t FileSize = Obj->getData().size();
     if (S.nsects > std::numeric_limits<uint32_t>::max() / SectionSize ||
         S.nsects * SectionSize > Load.C.cmdsize - SegmentLoadSize)
       return malformedError("load command " + Twine(LoadCommandIndex) +
@@ -240,12 +240,88 @@ static Error parseSegmentLoadCommand(
     for (unsigned J = 0; J < S.nsects; ++J) {
       const char *Sec = getSectionPtr(Obj, Load, J);
       Sections.push_back(Sec);
+      Section s = getStruct<Section>(Obj, Sec);
+      if (Obj->getHeader().filetype != MachO::MH_DYLIB_STUB &&
+          Obj->getHeader().filetype != MachO::MH_DSYM &&
+          s.flags != MachO::S_ZEROFILL &&
+          s.flags != MachO::S_THREAD_LOCAL_ZEROFILL &&
+          s.offset > FileSize)
+        return malformedError("offset field of section " + Twine(J) + " in " +
+                              CmdName + " command " + Twine(LoadCommandIndex) +
+                              " extends past the end of the file");
+      if (Obj->getHeader().filetype != MachO::MH_DYLIB_STUB &&
+          Obj->getHeader().filetype != MachO::MH_DSYM &&
+          s.flags != MachO::S_ZEROFILL &&
+          s.flags != MachO::S_THREAD_LOCAL_ZEROFILL &&
+	  S.fileoff == 0 && s.offset < SizeOfHeaders && s.size != 0)
+        return malformedError("offset field of section " + Twine(J) + " in " +
+                              CmdName + " command " + Twine(LoadCommandIndex) +
+                              " not past the headers of the file");
+      uint64_t BigSize = s.offset;
+      BigSize += s.size;
+      if (Obj->getHeader().filetype != MachO::MH_DYLIB_STUB &&
+          Obj->getHeader().filetype != MachO::MH_DSYM &&
+          s.flags != MachO::S_ZEROFILL &&
+          s.flags != MachO::S_THREAD_LOCAL_ZEROFILL &&
+          BigSize > FileSize)
+        return malformedError("offset field plus size field of section " +
+                              Twine(J) + " in " + CmdName + " command " +
+                              Twine(LoadCommandIndex) +
+                              " extends past the end of the file");
+      if (Obj->getHeader().filetype != MachO::MH_DYLIB_STUB &&
+          Obj->getHeader().filetype != MachO::MH_DSYM &&
+          s.flags != MachO::S_ZEROFILL &&
+          s.flags != MachO::S_THREAD_LOCAL_ZEROFILL &&
+          s.size > S.filesize)
+        return malformedError("size field of section " +
+                              Twine(J) + " in " + CmdName + " command " +
+                              Twine(LoadCommandIndex) +
+                              " greater than the segment");
+      if (Obj->getHeader().filetype != MachO::MH_DYLIB_STUB &&
+          Obj->getHeader().filetype != MachO::MH_DSYM &&
+          s.size != 0 && s.addr < S.vmaddr)
+        return malformedError("addr field of section " +
+                              Twine(J) + " in " + CmdName + " command " +
+			      Twine(LoadCommandIndex) +
+			      " less than the segment's vmaddr");
+      BigSize = s.addr;
+      BigSize += s.size;
+      uint64_t BigEnd = S.vmaddr;
+      BigEnd += S.vmsize;
+      if (S.vmsize != 0 && s.size != 0 && BigSize > BigEnd)
+        return malformedError("addr field plus size of section " +
+                              Twine(J) + " in " + CmdName + " command " +
+			      Twine(LoadCommandIndex) + " greater than than "
+                              "the segment's vmaddr plus vmsize");
+      if (s.reloff > FileSize)
+        return malformedError("reloff field of section " +
+                              Twine(J) + " in " + CmdName + " command " +
+			      Twine(LoadCommandIndex) +
+                              " extends past the end of the file");
+      BigSize = s.nreloc;
+      BigSize *= sizeof(struct MachO::relocation_info);
+      BigSize += s.reloff;
+      if (BigSize > FileSize)
+        return malformedError("reloff field plus nreloc field times sizeof("
+                              "struct relocation_info) of section " +
+                              Twine(J) + " in " + CmdName + " command " +
+			      Twine(LoadCommandIndex) +
+                              " extends past the end of the file");
     }
-    uint64_t FileSize = Obj->getData().size();
     if (S.fileoff > FileSize)
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " fileoff field in " + CmdName + 
                             " extends past the end of the file");
+    uint64_t BigSize = S.fileoff;
+    BigSize += S.filesize;
+    if (BigSize > FileSize)
+      return malformedError("load command " + Twine(LoadCommandIndex) +
+                            " fileoff field plus filesize field in " +
+                            CmdName + " extends past the end of the file");
+    if (S.vmsize != 0 && S.filesize > S.vmsize)
+      return malformedError("load command " + Twine(LoadCommandIndex) +
+                            " fileoff field in " + CmdName +
+                            " greater than vmsize field");
     IsPageZeroSegment |= StringRef("__PAGEZERO").equals(S.segname);
   } else
     return SegOrErr.takeError();
@@ -273,18 +349,18 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       DyldInfoLoadCmd(nullptr), UuidLoadCmd(nullptr),
       HasPageZeroSegment(false) {
   ErrorAsOutParameter ErrAsOutParam(&Err);
-  uint64_t BigSize;
+  uint64_t SizeOfHeaders;
   if (is64Bit()) {
     parseHeader(this, Header64, Err);
-    BigSize = sizeof(MachO::mach_header_64);
+    SizeOfHeaders = sizeof(MachO::mach_header_64);
   } else {
     parseHeader(this, Header, Err);
-    BigSize = sizeof(MachO::mach_header);
+    SizeOfHeaders = sizeof(MachO::mach_header);
   }
   if (Err)
     return;
-  BigSize += getHeader().sizeofcmds;
-  if (getData().data() + BigSize > getData().end()) {
+  SizeOfHeaders += getHeader().sizeofcmds;
+  if (getData().data() + SizeOfHeaders > getData().end()) {
     Err = malformedError("load commands extend past the end of the file");
     return;
   }
@@ -366,13 +442,16 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       }
       UuidLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_SEGMENT_64) {
-      if ((Err = parseSegmentLoadCommand<MachO::segment_command_64>(
+      if ((Err = parseSegmentLoadCommand<MachO::segment_command_64,
+                                         MachO::section_64>(
                    this, Load, Sections, HasPageZeroSegment, I,
-                   "LC_SEGMENT_64")))
+                   "LC_SEGMENT_64", SizeOfHeaders)))
         return;
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
-      if ((Err = parseSegmentLoadCommand<MachO::segment_command>(
-                   this, Load, Sections, HasPageZeroSegment, I, "LC_SEGMENT")))
+      if ((Err = parseSegmentLoadCommand<MachO::segment_command,
+                                         MachO::section>(
+                   this, Load, Sections, HasPageZeroSegment, I,
+                   "LC_SEGMENT", SizeOfHeaders)))
         return;
     } else if (Load.C.cmd == MachO::LC_LOAD_DYLIB ||
                Load.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||

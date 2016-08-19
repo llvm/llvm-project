@@ -25,7 +25,8 @@ entry:
   ; CHECK-NEXT: DW_AT_location
   ; CHECK-NEXT: DW_AT_name {{.*}}"size"
   ; CHECK: .debug_loc contents:
-  ; CHECK: Location description: 70 00
+  ; Expecting the encoding for sp+12: DW_OP_breg31 0c
+  ; CHECK: Location description: 8f 0c
   ret void, !dbg !18
 }
 

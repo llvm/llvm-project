@@ -41,7 +41,8 @@
 ;         rdi+0
 ; CHECK: Beginning address offset: [[R1]]
 ; CHECK:    Ending address offset: [[R2:.*]]
-; CHECK:     Location description: 75 00
+; CHECK:     Location description: 77 04
+;         rsp+4
 ;
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

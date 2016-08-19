@@ -3,8 +3,6 @@
 // Test case for longjumping out of signal handler:
 // https://github.com/google/sanitizers/issues/482
 
-// Longjmp assembly has not been implemented for mips64 yet
-// XFAIL: target-is-mips64
 // This test fails on powerpc64 BE (VMA=44), a segmentation fault
 // error happens at the second assignment
 // "((volatile int *volatile)mem)[1] = 1".

@@ -78,10 +78,7 @@ static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
     while (MI != MBB->end()) {
       if (!MI->isPHI())
         break;
-      for (SmallSetVector<MachineBasicBlock *, 8>::iterator PI = Preds.begin(),
-                                                            PE = Preds.end();
-           PI != PE; ++PI) {
-        MachineBasicBlock *PredBB = *PI;
+      for (MachineBasicBlock *PredBB : Preds) {
         bool Found = false;
         for (unsigned i = 1, e = MI->getNumOperands(); i != e; i += 2) {
           MachineBasicBlock *PHIBB = MI->getOperand(i + 1).getMBB();
@@ -421,18 +418,14 @@ void TailDuplicator::updateSuccessorsPHIs(
     MachineBasicBlock *FromBB, bool isDead,
     SmallVectorImpl<MachineBasicBlock *> &TDBBs,
     SmallSetVector<MachineBasicBlock *, 8> &Succs) {
-  for (SmallSetVector<MachineBasicBlock *, 8>::iterator SI = Succs.begin(),
-                                                        SE = Succs.end();
-       SI != SE; ++SI) {
-    MachineBasicBlock *SuccBB = *SI;
-    for (MachineBasicBlock::iterator II = SuccBB->begin(), EE = SuccBB->end();
-         II != EE; ++II) {
-      if (!II->isPHI())
+  for (MachineBasicBlock *SuccBB : Succs) {
+    for (MachineInstr &MI : *SuccBB) {
+      if (!MI.isPHI())
         break;
-      MachineInstrBuilder MIB(*FromBB->getParent(), II);
+      MachineInstrBuilder MIB(*FromBB->getParent(), MI);
       unsigned Idx = 0;
-      for (unsigned i = 1, e = II->getNumOperands(); i != e; i += 2) {
-        MachineOperand &MO = II->getOperand(i + 1);
+      for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
+        MachineOperand &MO = MI.getOperand(i + 1);
         if (MO.getMBB() == FromBB) {
           Idx = i;
           break;
@@ -440,17 +433,17 @@ void TailDuplicator::updateSuccessorsPHIs(
       }
 
       assert(Idx != 0);
-      MachineOperand &MO0 = II->getOperand(Idx);
+      MachineOperand &MO0 = MI.getOperand(Idx);
       unsigned Reg = MO0.getReg();
       if (isDead) {
         // Folded into the previous BB.
         // There could be duplicate phi source entries. FIXME: Should sdisel
         // or earlier pass fixed this?
-        for (unsigned i = II->getNumOperands() - 2; i != Idx; i -= 2) {
-          MachineOperand &MO = II->getOperand(i + 1);
+        for (unsigned i = MI.getNumOperands() - 2; i != Idx; i -= 2) {
+          MachineOperand &MO = MI.getOperand(i + 1);
           if (MO.getMBB() == FromBB) {
-            II->RemoveOperand(i + 1);
-            II->RemoveOperand(i);
+            MI.RemoveOperand(i + 1);
+            MI.RemoveOperand(i);
           }
         }
       } else
@@ -474,8 +467,8 @@ void TailDuplicator::updateSuccessorsPHIs(
 
           unsigned SrcReg = LI->second[j].second;
           if (Idx != 0) {
-            II->getOperand(Idx).setReg(SrcReg);
-            II->getOperand(Idx + 1).setMBB(SrcBB);
+            MI.getOperand(Idx).setReg(SrcReg);
+            MI.getOperand(Idx + 1).setMBB(SrcBB);
             Idx = 0;
           } else {
             MIB.addReg(SrcReg).addMBB(SrcBB);
@@ -486,8 +479,8 @@ void TailDuplicator::updateSuccessorsPHIs(
         for (unsigned j = 0, ee = TDBBs.size(); j != ee; ++j) {
           MachineBasicBlock *SrcBB = TDBBs[j];
           if (Idx != 0) {
-            II->getOperand(Idx).setReg(Reg);
-            II->getOperand(Idx + 1).setMBB(SrcBB);
+            MI.getOperand(Idx).setReg(Reg);
+            MI.getOperand(Idx + 1).setMBB(SrcBB);
             Idx = 0;
           } else {
             MIB.addReg(Reg).addMBB(SrcBB);
@@ -495,8 +488,8 @@ void TailDuplicator::updateSuccessorsPHIs(
         }
       }
       if (Idx != 0) {
-        II->RemoveOperand(Idx + 1);
-        II->RemoveOperand(Idx);
+        MI.RemoveOperand(Idx + 1);
+        MI.RemoveOperand(Idx);
       }
     }
   }
@@ -659,11 +652,7 @@ bool TailDuplicator::duplicateSimpleBB(
   SmallVector<MachineBasicBlock *, 8> Preds(TailBB->pred_begin(),
                                             TailBB->pred_end());
   bool Changed = false;
-  for (SmallSetVector<MachineBasicBlock *, 8>::iterator PI = Preds.begin(),
-                                                        PE = Preds.end();
-       PI != PE; ++PI) {
-    MachineBasicBlock *PredBB = *PI;
-
+  for (MachineBasicBlock *PredBB : Preds) {
     if (PredBB->hasEHPadSuccessor())
       continue;
 
@@ -762,10 +751,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
   bool Changed = false;
   SmallSetVector<MachineBasicBlock *, 8> Preds(TailBB->pred_begin(),
                                                TailBB->pred_end());
-  for (SmallSetVector<MachineBasicBlock *, 8>::iterator PI = Preds.begin(),
-                                                        PE = Preds.end();
-       PI != PE; ++PI) {
-    MachineBasicBlock *PredBB = *PI;
+  for (MachineBasicBlock *PredBB : Preds) {
     assert(TailBB != PredBB &&
            "Single-block loop should have been rejected earlier!");
 
@@ -816,10 +802,8 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
     PredBB->removeSuccessor(PredBB->succ_begin());
     assert(PredBB->succ_empty() &&
            "TailDuplicate called on block with multiple successors!");
-    for (MachineBasicBlock::succ_iterator I = TailBB->succ_begin(),
-                                          E = TailBB->succ_end();
-         I != E; ++I)
-      PredBB->addSuccessor(*I, MBPI->getEdgeProbability(TailBB, I));
+    for (MachineBasicBlock *Succ : TailBB->successors())
+      PredBB->addSuccessor(Succ, MBPI->getEdgeProbability(TailBB, Succ));
 
     Changed = true;
     ++NumTailDups;
@@ -896,10 +880,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
   // What we do here is introduce a copy in 3 of the register defined by the
   // phi, just like when we are duplicating 2 into 3, but we don't copy any
   // real instructions or remove the 3 -> 2 edge from the phi in 2.
-  for (SmallSetVector<MachineBasicBlock *, 8>::iterator PI = Preds.begin(),
-                                                        PE = Preds.end();
-       PI != PE; ++PI) {
-    MachineBasicBlock *PredBB = *PI;
+  for (MachineBasicBlock *PredBB : Preds) {
     if (is_contained(TDBBs, PredBB))
       continue;
 

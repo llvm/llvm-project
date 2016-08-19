@@ -198,9 +198,11 @@ public:
   DefinedOrUnknownSVal getDerivedRegionValueSymbolVal(
       SymbolRef parentSymbol, const TypedValueRegion *region);
 
-  DefinedSVal getMetadataSymbolVal(
-      const void *symbolTag, const MemRegion *region,
-      const Expr *expr, QualType type, unsigned count);
+  DefinedSVal getMetadataSymbolVal(const void *symbolTag,
+                                   const MemRegion *region,
+                                   const Expr *expr, QualType type,
+                                   const LocationContext *LCtx,
+                                   unsigned count);
 
   DefinedSVal getFunctionPointer(const FunctionDecl *func);
   

@@ -1,11 +1,11 @@
 // These test checks that llvm-objdump will not crash with malformed Mach-O
 // files.  So the check line is not all that important but the bug fixes to
 // make sure llvm-objdump is robust is what matters.
-# RUN: llvm-objdump -macho -objc-meta-data \
-# RUN:   %p/Inputs/malformed-machos/mem-crup-0001.macho \
+# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN:   %p/Inputs/malformed-machos/mem-crup-0001.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0001 %s 
 
-# m0001: (method_t extends past the end of the section)
+# m0001: mem-crup-0001.macho': truncated or malformed object (addr field plus size of section 2 in LC_SEGMENT_64 command 0 greater than than the segment's vmaddr plus vmsize)
 
 # RUN: llvm-objdump -macho -objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0006.macho \
@@ -19,17 +19,17 @@
 
 # m0010: 00000000000010e0 0x10e8 _OBJC_CLASS_
 
-# RUN: llvm-objdump -macho -objc-meta-data \
-# RUN:   %p/Inputs/malformed-machos/mem-crup-0040.macho \
+# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN:   %p/Inputs/malformed-machos/mem-crup-0040.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0040 %s 
 
-# m0040: 00000000000010a0 0xf39 -[tiny_dylib init]
+# m0040: mem-crup-0040.macho': truncated or malformed object (offset field plus size field of section 2 in LC_SEGMENT_64 command 1 extends past the end of the file)
 
-# RUN: llvm-objdump -macho -objc-meta-data \
-# RUN:   %p/Inputs/malformed-machos/mem-crup-0080.macho \
+# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN:   %p/Inputs/malformed-machos/mem-crup-0080.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0080 %s 
 
-# m0080: data 0xf960000 (struct class_ro_t *)
+# m0080: mem-crup-0080.macho': truncated or malformed object (addr field plus size of section 2 in LC_SEGMENT_64 command 1 greater than than the segment's vmaddr plus vmsize)
 
 # RUN: llvm-objdump -macho -objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0261.macho

@@ -10,11 +10,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoroInternal.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -70,9 +73,10 @@ void llvm::addCoroutinePassesToExtensionPoints(PassManagerBuilder &Builder) {
 // Construct the lowerer base class and initialize its members.
 coro::LowererBase::LowererBase(Module &M)
     : TheModule(M), Context(M.getContext()),
-      ResumeFnType(FunctionType::get(Type::getVoidTy(Context),
-                                     Type::getInt8PtrTy(Context),
-                                     /*isVarArg=*/false)) {}
+      Int8Ptr(Type::getInt8PtrTy(Context)),
+      ResumeFnType(FunctionType::get(Type::getVoidTy(Context), Int8Ptr,
+                                     /*isVarArg=*/false)),
+      NullPtr(ConstantPointerNull::get(Int8Ptr)) {}
 
 // Creates a sequence of instructions to obtain a resume function address using
 // llvm.coro.subfn.addr. It generates the following sequence:
@@ -99,11 +103,11 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
-      "llvm.coro.alloc",   "llvm.coro.begin", "llvm.coro.destroy",
-      "llvm.coro.done",    "llvm.coro.end",   "llvm.coro.frame",
-      "llvm.coro.free",    "llvm.coro.param", "llvm.coro.promise",
-      "llvm.coro.resume",  "llvm.coro.save",  "llvm.coro.size",
-      "llvm.coro.suspend",
+      "llvm.coro.alloc",   "llvm.coro.begin",   "llvm.coro.destroy",
+      "llvm.coro.done",    "llvm.coro.end",     "llvm.coro.frame",
+      "llvm.coro.free",    "llvm.coro.id",      "llvm.coro.param",
+      "llvm.coro.promise", "llvm.coro.resume",  "llvm.coro.save",
+      "llvm.coro.size",    "llvm.coro.suspend",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }
@@ -123,20 +127,164 @@ bool coro::declaresIntrinsics(Module &M,
   return false;
 }
 
-// Find all llvm.coro.free instructions associated with the provided coro.begin
-// and replace them with the provided replacement value.
-void coro::replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement) {
-  SmallVector<CoroFreeInst *, 4> CoroFrees;
-  for (User *FramePtr: CB->users())
-    for (User *U : FramePtr->users())
-      if (auto *CF = dyn_cast<CoroFreeInst>(U))
-        CoroFrees.push_back(CF);
+// FIXME: This code is stolen from CallGraph::addToCallGraph(Function *F), which
+// happens to be private. It is better for this functionality exposed by the
+// CallGraph.
+static void buildCGN(CallGraph &CG, CallGraphNode *Node) {
+  Function *F = Node->getFunction();
 
-  if (CoroFrees.empty())
+  // Look for calls by this function.
+  for (Instruction &I : instructions(F))
+    if (CallSite CS = CallSite(cast<Value>(&I))) {
+      const Function *Callee = CS.getCalledFunction();
+      if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
+        // Indirect calls of intrinsics are not allowed so no need to check.
+        // We can be more precise here by using TargetArg returned by
+        // Intrinsic::isLeaf.
+        Node->addCalledFunction(CS, CG.getCallsExternalNode());
+      else if (!Callee->isIntrinsic())
+        Node->addCalledFunction(CS, CG.getOrInsertFunction(Callee));
+    }
+}
+
+// Rebuild CGN after we extracted parts of the code from ParentFunc into
+// NewFuncs. Builds CGNs for the NewFuncs and adds them to the current SCC.
+void coro::updateCallGraph(Function &ParentFunc, ArrayRef<Function *> NewFuncs,
+                           CallGraph &CG, CallGraphSCC &SCC) {
+  // Rebuild CGN from scratch for the ParentFunc
+  auto *ParentNode = CG[&ParentFunc];
+  ParentNode->removeAllCalledFunctions();
+  buildCGN(CG, ParentNode);
+
+  SmallVector<CallGraphNode *, 8> Nodes(SCC.begin(), SCC.end());
+
+  for (Function *F : NewFuncs) {
+    CallGraphNode *Callee = CG.getOrInsertFunction(F);
+    Nodes.push_back(Callee);
+    buildCGN(CG, Callee);
+  }
+
+  SCC.initialize(Nodes);
+}
+
+static void clear(coro::Shape &Shape) {
+  Shape.CoroBegin = nullptr;
+  Shape.CoroEnds.clear();
+  Shape.CoroSizes.clear();
+  Shape.CoroSuspends.clear();
+
+  Shape.FrameTy = nullptr;
+  Shape.FramePtr = nullptr;
+  Shape.AllocaSpillBlock = nullptr;
+  Shape.ResumeSwitch = nullptr;
+  Shape.HasFinalSuspend = false;
+}
+
+static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
+                                    CoroSuspendInst *SuspendInst) {
+  Module *M = SuspendInst->getModule();
+  auto *Fn = Intrinsic::getDeclaration(M, Intrinsic::coro_save);
+  auto *SaveInst =
+      cast<CoroSaveInst>(CallInst::Create(Fn, CoroBegin, "", SuspendInst));
+  assert(!SuspendInst->getCoroSave());
+  SuspendInst->setArgOperand(0, SaveInst);
+  return SaveInst;
+}
+
+// Collect "interesting" coroutine intrinsics.
+void coro::Shape::buildFrom(Function &F) {
+  clear(*this);
+  SmallVector<CoroFrameInst *, 8> CoroFrames;
+  for (Instruction &I : instructions(F)) {
+    if (auto II = dyn_cast<IntrinsicInst>(&I)) {
+      switch (II->getIntrinsicID()) {
+      default:
+        continue;
+      case Intrinsic::coro_size:
+        CoroSizes.push_back(cast<CoroSizeInst>(II));
+        break;
+      case Intrinsic::coro_frame:
+        CoroFrames.push_back(cast<CoroFrameInst>(II));
+        break;
+      case Intrinsic::coro_suspend:
+        CoroSuspends.push_back(cast<CoroSuspendInst>(II));
+        // Make sure that the final suspend is the first suspend point in the
+        // CoroSuspends vector.
+        if (CoroSuspends.back()->isFinal()) {
+          HasFinalSuspend = true;
+          if (CoroSuspends.size() > 1) {
+            if (CoroSuspends.front()->isFinal())
+              report_fatal_error(
+                  "Only one suspend point can be marked as final");
+            std::swap(CoroSuspends.front(), CoroSuspends.back());
+          }
+        }
+        break;
+      case Intrinsic::coro_begin: {
+        auto CB = cast<CoroBeginInst>(II);
+        if (CB->getId()->getInfo().isPreSplit()) {
+          if (CoroBegin)
+            report_fatal_error(
+                "coroutine should have exactly one defining @llvm.coro.begin");
+          CB->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
+          CB->addAttribute(AttributeSet::ReturnIndex, Attribute::NoAlias);
+          CB->removeAttribute(AttributeSet::FunctionIndex,
+                              Attribute::NoDuplicate);
+          CoroBegin = CB;
+        }
+        break;
+      }
+      case Intrinsic::coro_end:
+        CoroEnds.push_back(cast<CoroEndInst>(II));
+        if (CoroEnds.back()->isFallthrough()) {
+          // Make sure that the fallthrough coro.end is the first element in the
+          // CoroEnds vector.
+          if (CoroEnds.size() > 1) {
+            if (CoroEnds.front()->isFallthrough())
+              report_fatal_error(
+                  "Only one coro.end can be marked as fallthrough");
+            std::swap(CoroEnds.front(), CoroEnds.back());
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // If for some reason, we were not able to find coro.begin, bailout.
+  if (!CoroBegin) {
+    // Replace coro.frame which are supposed to be lowered to the result of
+    // coro.begin with undef.
+    auto *Undef = UndefValue::get(Type::getInt8PtrTy(F.getContext()));
+    for (CoroFrameInst *CF : CoroFrames) {
+      CF->replaceAllUsesWith(Undef);
+      CF->eraseFromParent();
+    }
+
+    // Replace all coro.suspend with undef and remove related coro.saves if
+    // present.
+    for (CoroSuspendInst *CS : CoroSuspends) {
+      CS->replaceAllUsesWith(UndefValue::get(CS->getType()));
+      CS->eraseFromParent();
+      if (auto *CoroSave = CS->getCoroSave())
+        CoroSave->eraseFromParent();
+    }
+
+    // Replace all coro.ends with unreachable instruction.
+    for (CoroEndInst *CE : CoroEnds)
+      changeToUnreachable(CE, /*UseLLVMTrap=*/false);
+
     return;
+  }
 
-  for (CoroFreeInst *CF : CoroFrees) {
-    CF->replaceAllUsesWith(Replacement);
+  // The coro.free intrinsic is always lowered to the result of coro.begin.
+  for (CoroFrameInst *CF : CoroFrames) {
+    CF->replaceAllUsesWith(CoroBegin);
     CF->eraseFromParent();
   }
+
+  // Canonicalize coro.suspend by inserting a coro.save if needed.
+  for (CoroSuspendInst *CS : CoroSuspends)
+    if (!CS->getCoroSave())
+      createCoroSave(CoroBegin, CoroSuspends.back());
 }

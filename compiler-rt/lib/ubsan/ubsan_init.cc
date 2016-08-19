@@ -39,6 +39,7 @@ static void CommonStandaloneInit() {
   InitializeFlags();
   CacheBinaryName();
   __sanitizer_set_report_path(common_flags()->log_path);
+  AndroidLogInit();
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
   CommonInit();
   ubsan_mode = UBSAN_MODE_STANDALONE;

@@ -133,6 +133,10 @@ def CastToStructChecker : Checker<"CastToStruct">,
   HelpText<"Check for cast from non-struct pointer to struct pointer">,
   DescFile<"CastToStructChecker.cpp">;
 
+def ConversionChecker : Checker<"Conversion">,
+  HelpText<"Loss of sign/precision in implicit conversions">,
+  DescFile<"ConversionChecker.cpp">;
+
 def IdenticalExprChecker : Checker<"IdenticalExpr">,
   HelpText<"Warn about unintended use of identical expressions in operators">,
   DescFile<"IdenticalExprChecker.cpp">;

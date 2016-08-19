@@ -29,6 +29,7 @@
 #define LLVM_SUPPORT_DEBUG_H
 
 namespace llvm {
+
 class raw_ostream;
 
 #ifndef NDEBUG
@@ -61,12 +62,12 @@ void setCurrentDebugType(const char *Type);
 /// is not specified, or is specified as "bitset".
 #define DEBUG_WITH_TYPE(TYPE, X)                                        \
   do { if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)) { X; } \
-  } while (0)
+  } while (false)
 
 #else
 #define isCurrentDebugType(X) (false)
 #define setCurrentDebugType(X)
-#define DEBUG_WITH_TYPE(TYPE, X) do { } while (0)
+#define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
 #endif
 
 /// EnableDebugBuffering - This defaults to false.  If true, the debug
@@ -91,6 +92,6 @@ raw_ostream &dbgs();
 //
 #define DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_DEBUG_H

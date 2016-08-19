@@ -1738,6 +1738,46 @@ void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
+MipsAbiFlagsOutputSection<ELFT>::MipsAbiFlagsOutputSection()
+    : OutputSectionBase<ELFT>(".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC) {
+  this->Header.sh_addralign = 8;
+  this->Header.sh_entsize = sizeof(Elf_Mips_ABIFlags);
+  this->Header.sh_size = sizeof(Elf_Mips_ABIFlags);
+  memset(&Flags, 0, sizeof(Flags));
+}
+
+template <class ELFT>
+void MipsAbiFlagsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  memcpy(Buf, &Flags, sizeof(Flags));
+}
+
+template <class ELFT>
+void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  // Check compatibility and merge fields from input .MIPS.abiflags
+  // to the output one.
+  auto *S = cast<MipsAbiFlagsInputSection<ELFT>>(C);
+  S->OutSec = this;
+  if (S->Flags->version != 0) {
+    error(getFilename(S->getFile()) + ": unexpected .MIPS.abiflags version " +
+          Twine(S->Flags->version));
+    return;
+  }
+  // LLD checks ISA compatibility in getMipsEFlags(). Here we just
+  // select the highest number of ISA/Rev/Ext.
+  Flags.isa_level = std::max(Flags.isa_level, S->Flags->isa_level);
+  Flags.isa_rev = std::max(Flags.isa_rev, S->Flags->isa_rev);
+  Flags.isa_ext = std::max(Flags.isa_ext, S->Flags->isa_ext);
+  Flags.gpr_size = std::max(Flags.gpr_size, S->Flags->gpr_size);
+  Flags.cpr1_size = std::max(Flags.cpr1_size, S->Flags->cpr1_size);
+  Flags.cpr2_size = std::max(Flags.cpr2_size, S->Flags->cpr2_size);
+  Flags.ases |= S->Flags->ases;
+  Flags.flags1 |= S->Flags->flags1;
+  Flags.flags2 |= S->Flags->flags2;
+  Flags.fp_abi = elf::getMipsFpAbiFlag(Flags.fp_abi, S->Flags->fp_abi,
+                                       getFilename(S->getFile()));
+}
+
+template <class ELFT>
 std::pair<OutputSectionBase<ELFT> *, bool>
 OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
                                    StringRef OutsecName) {
@@ -1761,6 +1801,9 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
     break;
   case InputSectionBase<ELFT>::MipsOptions:
     Sec = new MipsOptionsOutputSection<ELFT>();
+    break;
+  case InputSectionBase<ELFT>::MipsAbiFlags:
+    Sec = new MipsAbiFlagsOutputSection<ELFT>();
     break;
   case InputSectionBase<ELFT>::Layout:
     llvm_unreachable("Invalid section type");
@@ -1890,6 +1933,11 @@ template class MipsOptionsOutputSection<ELF32LE>;
 template class MipsOptionsOutputSection<ELF32BE>;
 template class MipsOptionsOutputSection<ELF64LE>;
 template class MipsOptionsOutputSection<ELF64BE>;
+
+template class MipsAbiFlagsOutputSection<ELF32LE>;
+template class MipsAbiFlagsOutputSection<ELF32BE>;
+template class MipsAbiFlagsOutputSection<ELF64LE>;
+template class MipsAbiFlagsOutputSection<ELF64BE>;
 
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;

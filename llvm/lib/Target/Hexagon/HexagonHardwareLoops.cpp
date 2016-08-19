@@ -277,10 +277,6 @@ namespace {
     /// cannot be adjusted to reflect the post-bump value.
     bool fixupInductionVariable(MachineLoop *L);
 
-    /// \brief Find the block that either is the loop preheader, or could
-    /// speculatively be used as the preheader.
-    MachineBasicBlock *findLoopPreheader(MachineLoop *L) const;
-
     /// \brief Given a loop, if it does not have a preheader, create one.
     /// Return the block that is the preheader.
     MachineBasicBlock *createPreheaderForLoop(MachineLoop *L);
@@ -377,28 +373,15 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-/// \brief Return the latch block if it's one of the exiting blocks. Otherwise,
-/// return the exiting block. Return 'null' when multiple exiting blocks are
-/// present.
-static MachineBasicBlock* getExitingBlock(MachineLoop *L) {
-  if (MachineBasicBlock *Latch = L->getLoopLatch()) {
-    if (L->isLoopExiting(Latch))
-      return Latch;
-    else
-      return L->getExitingBlock();
-  }
-  return nullptr;
-}
-
 bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
                                                  unsigned &Reg,
                                                  int64_t &IVBump,
                                                  MachineInstr *&IVOp
                                                  ) const {
   MachineBasicBlock *Header = L->getHeader();
-  MachineBasicBlock *Preheader = findLoopPreheader(L);
+  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
   MachineBasicBlock *Latch = L->getLoopLatch();
-  MachineBasicBlock *ExitingBlock = getExitingBlock(L);
+  MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
   if (!Header || !Preheader || !Latch || !ExitingBlock)
     return false;
 
@@ -566,7 +549,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   // Look for the cmp instruction to determine if we can get a useful trip
   // count.  The trip count can be either a register or an immediate.  The
   // location of the value depends upon the type (reg or imm).
-  MachineBasicBlock *ExitingBlock = getExitingBlock(L);
+  MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
   if (!ExitingBlock)
     return nullptr;
 
@@ -577,7 +560,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   if (!FoundIV)
     return nullptr;
 
-  MachineBasicBlock *Preheader = findLoopPreheader(L);
+  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
 
   MachineOperand *InitialValue = nullptr;
   MachineInstr *IV_Phi = MRI->getVRegDef(IVReg);
@@ -798,7 +781,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   if (!isPowerOf2_64(std::abs(IVBump)))
     return nullptr;
 
-  MachineBasicBlock *PH = findLoopPreheader(Loop);
+  MachineBasicBlock *PH = MLI->findLoopPreheader(Loop, SpecPreheader);
   assert (PH && "Should have a preheader by now");
   MachineBasicBlock::iterator InsertPos = PH->getFirstTerminator();
   DebugLoc DL;
@@ -1149,7 +1132,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   if (containsInvalidInstruction(L, IsInnerHWLoop))
     return false;
 
-  MachineBasicBlock *LastMBB = getExitingBlock(L);
+  MachineBasicBlock *LastMBB = L->findLoopControlBlock();
   // Don't generate hw loop if the loop has more than one exit.
   if (!LastMBB)
     return false;
@@ -1164,7 +1147,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
   // Ensure the loop has a preheader: the loop instruction will be
   // placed there.
-  MachineBasicBlock *Preheader = findLoopPreheader(L);
+  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
   if (!Preheader) {
     Preheader = createPreheaderForLoop(L);
     if (!Preheader)
@@ -1191,7 +1174,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
   // Determine the loop start.
   MachineBasicBlock *TopBlock = L->getTopBlock();
-  MachineBasicBlock *ExitingBlock = getExitingBlock(L);
+  MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
   MachineBasicBlock *LoopStart = 0;
   if (ExitingBlock !=  L->getLoopLatch()) {
     MachineBasicBlock *TB = 0, *FB = 0;
@@ -1580,7 +1563,7 @@ static bool isImmValidForOpcode(unsigned CmpOpc, int64_t Imm) {
 bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
   MachineBasicBlock *Header = L->getHeader();
   MachineBasicBlock *Latch = L->getLoopLatch();
-  MachineBasicBlock *ExitingBlock = getExitingBlock(L);
+  MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
 
   if (!(Header && Latch && ExitingBlock))
     return false;
@@ -1818,51 +1801,17 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
   return false;
 }
 
-/// Find a preaheader of the given loop.
-MachineBasicBlock *HexagonHardwareLoops::findLoopPreheader(MachineLoop *L)
-      const {
-  if (MachineBasicBlock *PB = L->getLoopPreheader())
-    return PB;
-  if (!SpecPreheader)
-    return nullptr;
-  MachineBasicBlock *HB = L->getHeader(), *LB = L->getLoopLatch();
-  if (HB->pred_size() != 2 || HB->hasAddressTaken())
-    return nullptr;
-  // Find the predecessor of the header that is not the latch block.
-  MachineBasicBlock *Preheader = nullptr;
-  for (MachineBasicBlock *P : HB->predecessors()) {
-    if (P == LB)
-      continue;
-    // Sanity.
-    if (Preheader)
-      return nullptr;
-    Preheader = P;
-  }
-
-  // Check if the preheader candidate is a successor of any other loop
-  // headers. We want to avoid having two loop setups in the same block.
-  for (MachineBasicBlock *S : Preheader->successors()) {
-    if (S == HB)
-      continue;
-    MachineLoop *T = MLI->getLoopFor(S);
-    if (T && T->getHeader() == S)
-      return nullptr;
-  }
-  return Preheader;
-}
-
-
 /// createPreheaderForLoop - Create a preheader for a given loop.
 MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
       MachineLoop *L) {
-  if (MachineBasicBlock *TmpPH = findLoopPreheader(L))
+  if (MachineBasicBlock *TmpPH = MLI->findLoopPreheader(L, SpecPreheader))
     return TmpPH;
   if (!HWCreatePreheader)
     return nullptr;
 
   MachineBasicBlock *Header = L->getHeader();
   MachineBasicBlock *Latch = L->getLoopLatch();
-  MachineBasicBlock *ExitingBlock = getExitingBlock(L);
+  MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
   MachineFunction *MF = Header->getParent();
   DebugLoc DL;
 

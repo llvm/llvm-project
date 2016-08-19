@@ -52,7 +52,7 @@ public:
   void HandleOneRename(ASTContext &Context, const std::string &NewName,
                        const std::string &PrevName,
                        const std::vector<std::string> &USRs) {
-    const auto &SourceMgr = Context.getSourceManager();
+    const SourceManager &SourceMgr = Context.getSourceManager();
     std::vector<SourceLocation> RenamingCandidates;
     std::vector<SourceLocation> NewCandidates;
 
@@ -61,7 +61,7 @@ public:
     RenamingCandidates.insert(RenamingCandidates.end(), NewCandidates.begin(),
                               NewCandidates.end());
 
-    auto PrevNameLen = PrevName.length();
+    unsigned PrevNameLen = PrevName.length();
     for (const auto &Loc : RenamingCandidates) {
       if (PrintLocations) {
         FullSourceLoc FullLoc(Loc, SourceMgr);
@@ -70,8 +70,8 @@ public:
                << FullLoc.getSpellingColumnNumber() << "\n";
       }
       // FIXME: better error handling.
-      auto Replace = tooling::Replacement(SourceMgr, Loc, PrevNameLen, NewName);
-      auto Err = FileToReplaces[Replace.getFilePath()].add(Replace);
+      tooling::Replacement Replace(SourceMgr, Loc, PrevNameLen, NewName);
+      llvm::Error Err = FileToReplaces[Replace.getFilePath()].add(Replace);
       if (Err)
         llvm::errs() << "Renaming failed in " << Replace.getFilePath() << "! "
                      << llvm::toString(std::move(Err)) << "\n";

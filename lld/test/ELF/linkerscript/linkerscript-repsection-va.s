@@ -7,9 +7,8 @@
 # CHECK:      Sections:
 # CHECK-NEXT: Idx Name          Size      Address          Type
 # CHECK-NEXT:   0               00000000 0000000000000000
-# CHECK-NEXT:   1 .foo          00000004 0000000000000158 DATA
-# CHECK-NEXT:   2 .foo          00000004 000000000000015c DATA
-# CHECK-NEXT:   3 .text         00000001 0000000000000160 TEXT DATA
+# CHECK-NEXT:   1 .foo          00000008 0000000000000120 DATA
+# CHECK-NEXT:   2 .text         00000001 0000000000000128 TEXT DATA
 
 .global _start
 _start:

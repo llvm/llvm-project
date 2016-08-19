@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // RUN: mkdir -p %T/compilation-database-test/include
 // RUN: mkdir -p %T/compilation-database-test/a
 // RUN: mkdir -p %T/compilation-database-test/b
@@ -8,7 +7,7 @@
 // RUN: echo 'int *BC = 0;' > %T/compilation-database-test/b/c.cpp
 // RUN: echo 'int *HP = 0;' > %T/compilation-database-test/include/header.h
 // RUN: echo '#include "header.h"' > %T/compilation-database-test/b/d.cpp
-// RUN: sed 's|test_dir|%T/compilation-database-test|g' %S/Inputs/compilation-database/template.json > %T/compile_commands.json
+// RUN: sed 's|test_dir|%/T/compilation-database-test|g' %S/Inputs/compilation-database/template.json > %T/compile_commands.json
 // RUN: clang-tidy --checks=-*,modernize-use-nullptr -p %T %T/compilation-database-test/b/not-exist -header-filter=.*
 // RUN: clang-tidy --checks=-*,modernize-use-nullptr -p %T %T/compilation-database-test/a/a.cpp %T/compilation-database-test/a/b.cpp %T/compilation-database-test/b/b.cpp %T/compilation-database-test/b/c.cpp %T/compilation-database-test/b/d.cpp -header-filter=.* -fix
 // RUN: FileCheck -input-file=%T/compilation-database-test/a/a.cpp %s -check-prefix=CHECK-FIX1

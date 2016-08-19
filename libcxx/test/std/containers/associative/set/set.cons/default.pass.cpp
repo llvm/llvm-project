@@ -32,6 +32,20 @@ int main()
     assert(m.begin() == m.end());
     }
     {
+    typedef explicit_allocator<int> A;
+        {
+        std::set<int, std::less<int>, A> m;
+        assert(m.empty());
+        assert(m.begin() == m.end());
+        }
+        {
+        A a;
+        std::set<int, std::less<int>, A> m(a);
+        assert(m.empty());
+        assert(m.begin() == m.end());
+        }
+    }
+    {
     std::set<int> m = {};
     assert(m.empty());
     assert(m.begin() == m.end());

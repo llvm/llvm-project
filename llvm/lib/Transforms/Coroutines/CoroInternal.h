@@ -17,6 +17,8 @@
 
 namespace llvm {
 
+class CallGraph;
+class CallGraphSCC;
 class PassRegistry;
 
 void initializeCoroEarlyPass(PassRegistry &);
@@ -42,17 +44,50 @@ void initializeCoroCleanupPass(PassRegistry &);
 namespace coro {
 
 bool declaresIntrinsics(Module &M, std::initializer_list<StringRef>);
+void replaceAllCoroAllocs(CoroBeginInst *CB, bool Replacement);
 void replaceAllCoroFrees(CoroBeginInst *CB, Value *Replacement);
+void updateCallGraph(Function &Caller, ArrayRef<Function *> Funcs,
+                     CallGraph &CG, CallGraphSCC &SCC);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
   Module &TheModule;
   LLVMContext &Context;
+  PointerType *const Int8Ptr;
   FunctionType *const ResumeFnType;
+  ConstantPointerNull *const NullPtr;
 
   LowererBase(Module &M);
   Value *makeSubFnCall(Value *Arg, int Index, Instruction *InsertPt);
 };
+
+// Holds structural Coroutine Intrinsics for a particular function and other
+// values used during CoroSplit pass.
+struct LLVM_LIBRARY_VISIBILITY Shape {
+  CoroBeginInst *CoroBegin;
+  SmallVector<CoroEndInst *, 4> CoroEnds;
+  SmallVector<CoroSizeInst *, 2> CoroSizes;
+  SmallVector<CoroSuspendInst *, 4> CoroSuspends;
+
+  // Field Indexes for known coroutine frame fields.
+  enum {
+    ResumeField = 0,
+    DestroyField = 1,
+    IndexField = 2,
+  };
+
+  StructType *FrameTy;
+  Instruction *FramePtr;
+  BasicBlock* AllocaSpillBlock;
+  SwitchInst* ResumeSwitch;
+  bool HasFinalSuspend;
+
+  Shape() = default;
+  explicit Shape(Function &F) { buildFrom(F); }
+  void buildFrom(Function &F);
+};
+
+void buildCoroutineFrame(Function& F, Shape& Shape);
 
 } // End namespace coro.
 } // End namespace llvm

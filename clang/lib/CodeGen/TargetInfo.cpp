@@ -2492,8 +2492,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
     uint64_t Size = getContext().getTypeSize(Ty);
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
-    // than four eightbytes, ..., it has class MEMORY.
-    if (Size > 256)
+    // than eight eightbytes, ..., it has class MEMORY.
+    if (Size > 512)
       return;
 
     // AMD64-ABI 3.2.3p2: Rule 1. If ..., or it contains unaligned
@@ -2512,7 +2512,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
     // The only case a 256-bit wide vector could be used is when the array
     // contains a single 256-bit element. Since Lo and Hi logic isn't extended
     // to work for sizes wider than 128, early check and fallback to memory.
-    if (Size > 128 && EltSize != 256)
+    //
+    if (Size > 128 &&
+        (Size != EltSize || Size > getNativeVectorSizeForAVXABI(AVXLevel)))
       return;
 
     for (uint64_t i=0, Offset=OffsetBase; i<ArraySize; ++i, Offset += EltSize) {
@@ -2533,8 +2535,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
     uint64_t Size = getContext().getTypeSize(Ty);
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
-    // than four eightbytes, ..., it has class MEMORY.
-    if (Size > 256)
+    // than eight eightbytes, ..., it has class MEMORY.
+    if (Size > 512)
       return;
 
     // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
@@ -2587,6 +2589,10 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
+      // Ignore padding bit-fields.
+      if (BitField && i->isUnnamedBitfield())
+        continue;
+
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
       // four eightbytes, or it contains unaligned fields, it has class MEMORY.
       //
@@ -2594,7 +2600,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       // contains a single 256-bit element. Since Lo and Hi logic isn't extended
       // to work for sizes wider than 128, early check and fallback to memory.
       //
-      if (Size > 128 && getContext().getTypeSize(i->getType()) != 256) {
+      if (Size > 128 && (Size != getContext().getTypeSize(i->getType()) ||
+                         Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
         postMerge(Size, Lo, Hi);
         return;
@@ -2618,10 +2625,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        // Ignore padding bit-fields.
-        if (i->isUnnamedBitfield())
-          continue;
-
+        assert(!i->isUnnamedBitfield());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue(getContext());
 
@@ -2749,7 +2753,7 @@ llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
 
   // We couldn't find the preferred IR vector type for 'Ty'.
   uint64_t Size = getContext().getTypeSize(Ty);
-  assert((Size == 128 || Size == 256) && "Invalid type found!");
+  assert((Size == 128 || Size == 256 || Size == 512) && "Invalid type found!");
 
   // Return a LLVM IR vector type based on the size of 'Ty'.
   return llvm::VectorType::get(llvm::Type::getDoubleTy(getVMContext()),

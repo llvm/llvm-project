@@ -131,6 +131,241 @@ GetASTMap()
     return *g_map_ptr;
 }
 
+static bool
+IsOperator(const char *name, clang::OverloadedOperatorKind &op_kind)
+{
+    if (name == nullptr || name[0] == '\0')
+        return false;
+
+#define OPERATOR_PREFIX "operator"
+#define OPERATOR_PREFIX_LENGTH (sizeof(OPERATOR_PREFIX) - 1)
+
+    const char *post_op_name = nullptr;
+
+    bool no_space = true;
+
+    if (::strncmp(name, OPERATOR_PREFIX, OPERATOR_PREFIX_LENGTH))
+        return false;
+
+    post_op_name = name + OPERATOR_PREFIX_LENGTH;
+
+    if (post_op_name[0] == ' ')
+    {
+        post_op_name++;
+        no_space = false;
+    }
+
+#undef OPERATOR_PREFIX
+#undef OPERATOR_PREFIX_LENGTH
+
+    // This is an operator, set the overloaded operator kind to invalid
+    // in case this is a conversion operator...
+    op_kind = clang::NUM_OVERLOADED_OPERATORS;
+
+    switch (post_op_name[0])
+    {
+        default:
+            if (no_space)
+                return false;
+            break;
+        case 'n':
+            if (no_space)
+                return false;
+            if (strcmp(post_op_name, "new") == 0)
+                op_kind = clang::OO_New;
+            else if (strcmp(post_op_name, "new[]") == 0)
+                op_kind = clang::OO_Array_New;
+            break;
+
+        case 'd':
+            if (no_space)
+                return false;
+            if (strcmp(post_op_name, "delete") == 0)
+                op_kind = clang::OO_Delete;
+            else if (strcmp(post_op_name, "delete[]") == 0)
+                op_kind = clang::OO_Array_Delete;
+            break;
+
+        case '+':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Plus;
+            else if (post_op_name[2] == '\0')
+            {
+                if (post_op_name[1] == '=')
+                    op_kind = clang::OO_PlusEqual;
+                else if (post_op_name[1] == '+')
+                    op_kind = clang::OO_PlusPlus;
+            }
+            break;
+
+        case '-':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Minus;
+            else if (post_op_name[2] == '\0')
+            {
+                switch (post_op_name[1])
+                {
+                    case '=':
+                        op_kind = clang::OO_MinusEqual;
+                        break;
+                    case '-':
+                        op_kind = clang::OO_MinusMinus;
+                        break;
+                    case '>':
+                        op_kind = clang::OO_Arrow;
+                        break;
+                }
+            }
+            else if (post_op_name[3] == '\0')
+            {
+                if (post_op_name[2] == '*')
+                    op_kind = clang::OO_ArrowStar;
+                break;
+            }
+            break;
+
+        case '*':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Star;
+            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
+                op_kind = clang::OO_StarEqual;
+            break;
+
+        case '/':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Slash;
+            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
+                op_kind = clang::OO_SlashEqual;
+            break;
+
+        case '%':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Percent;
+            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
+                op_kind = clang::OO_PercentEqual;
+            break;
+
+        case '^':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Caret;
+            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
+                op_kind = clang::OO_CaretEqual;
+            break;
+
+        case '&':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Amp;
+            else if (post_op_name[2] == '\0')
+            {
+                switch (post_op_name[1])
+                {
+                    case '=':
+                        op_kind = clang::OO_AmpEqual;
+                        break;
+                    case '&':
+                        op_kind = clang::OO_AmpAmp;
+                        break;
+                }
+            }
+            break;
+
+        case '|':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Pipe;
+            else if (post_op_name[2] == '\0')
+            {
+                switch (post_op_name[1])
+                {
+                    case '=':
+                        op_kind = clang::OO_PipeEqual;
+                        break;
+                    case '|':
+                        op_kind = clang::OO_PipePipe;
+                        break;
+                }
+            }
+            break;
+
+        case '~':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Tilde;
+            break;
+
+        case '!':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Exclaim;
+            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
+                op_kind = clang::OO_ExclaimEqual;
+            break;
+
+        case '=':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Equal;
+            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
+                op_kind = clang::OO_EqualEqual;
+            break;
+
+        case '<':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Less;
+            else if (post_op_name[2] == '\0')
+            {
+                switch (post_op_name[1])
+                {
+                    case '<':
+                        op_kind = clang::OO_LessLess;
+                        break;
+                    case '=':
+                        op_kind = clang::OO_LessEqual;
+                        break;
+                }
+            }
+            else if (post_op_name[3] == '\0')
+            {
+                if (post_op_name[2] == '=')
+                    op_kind = clang::OO_LessLessEqual;
+            }
+            break;
+
+        case '>':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Greater;
+            else if (post_op_name[2] == '\0')
+            {
+                switch (post_op_name[1])
+                {
+                    case '>':
+                        op_kind = clang::OO_GreaterGreater;
+                        break;
+                    case '=':
+                        op_kind = clang::OO_GreaterEqual;
+                        break;
+                }
+            }
+            else if (post_op_name[1] == '>' && post_op_name[2] == '=' && post_op_name[3] == '\0')
+            {
+                op_kind = clang::OO_GreaterGreaterEqual;
+            }
+            break;
+
+        case ',':
+            if (post_op_name[1] == '\0')
+                op_kind = clang::OO_Comma;
+            break;
+
+        case '(':
+            if (post_op_name[1] == ')' && post_op_name[2] == '\0')
+                op_kind = clang::OO_Call;
+            break;
+
+        case '[':
+            if (post_op_name[1] == ']' && post_op_name[2] == '\0')
+                op_kind = clang::OO_Subscript;
+            break;
+    }
+
+    return true;
+}
 
 clang::AccessSpecifier
 ClangASTContext::ConvertAccessTypeToAccessSpecifier (AccessType access)
@@ -171,6 +406,7 @@ ParseLangArgs (LangOptions &Opts, InputKind IK, const char* triple)
             case IK_None:
             case IK_AST:
             case IK_LLVM_IR:
+            case IK_RenderScript:
                 assert (!"Invalid input kind!");
             case IK_OpenCL:
                 LangStd = LangStandard::lang_opencl;
@@ -1524,23 +1760,26 @@ ClangASTContext::CreateClassTemplateSpecializationType (ClassTemplateSpecializat
 }
 
 static inline bool
-check_op_param (uint32_t op_kind, bool unary, bool binary, uint32_t num_params)
+check_op_param(bool is_method, clang::OverloadedOperatorKind op_kind, bool unary, bool binary, uint32_t num_params)
 {
     // Special-case call since it can take any number of operands
     if(op_kind == OO_Call)
         return true;
     
     // The parameter count doesn't include "this"
-    if (num_params == 0)
-        return unary;
+    if (is_method)
+        ++num_params;
     if (num_params == 1)
+        return unary;
+    if (num_params == 2)
         return binary;
     else 
     return false;
 }
 
 bool
-ClangASTContext::CheckOverloadedOperatorKindParameterCount (uint32_t op_kind, uint32_t num_params)
+ClangASTContext::CheckOverloadedOperatorKindParameterCount(bool is_method, clang::OverloadedOperatorKind op_kind,
+                                                           uint32_t num_params)
 {
     switch (op_kind)
     {
@@ -1553,8 +1792,10 @@ ClangASTContext::CheckOverloadedOperatorKindParameterCount (uint32_t op_kind, ui
     case OO_Array_Delete:
         return true;
     }
-    
-#define OVERLOADED_OPERATOR(Name,Spelling,Token,Unary,Binary,MemberOnly) case OO_##Name: return check_op_param (op_kind, Unary, Binary, num_params);
+
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)                                          \
+    case OO_##Name:                                                                                                    \
+        return check_op_param(is_method, op_kind, Unary, Binary, num_params);
     switch (op_kind)
     {
 #include "clang/Basic/OperatorKinds.def"
@@ -1965,6 +2206,35 @@ ClangASTContext::GetOpaqueCompilerType(clang::ASTContext *ast, lldb::BasicType b
 
 #pragma mark Function Types
 
+clang::DeclarationName
+ClangASTContext::GetDeclarationName(const char *name, const CompilerType &function_clang_type)
+{
+    if (!name || !name[0])
+        return clang::DeclarationName();
+
+    clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
+    if (!IsOperator(name, op_kind) || op_kind == clang::NUM_OVERLOADED_OPERATORS)
+        return DeclarationName(&getASTContext()->Idents.get(name)); // Not operator, but a regular function.
+
+    // Check the number of operator parameters. Sometimes we have
+    // seen bad DWARF that doesn't correctly describe operators and
+    // if we try to create a method and add it to the class, clang
+    // will assert and crash, so we need to make sure things are
+    // acceptable.
+    clang::QualType method_qual_type(ClangUtil::GetQualType(function_clang_type));
+    const clang::FunctionProtoType *function_type =
+        llvm::dyn_cast<clang::FunctionProtoType>(method_qual_type.getTypePtr());
+    if (function_type == nullptr)
+        return clang::DeclarationName();
+
+    const bool is_method = false;
+    const unsigned int num_params = function_type->getNumParams();
+    if (!ClangASTContext::CheckOverloadedOperatorKindParameterCount(is_method, op_kind, num_params))
+        return clang::DeclarationName();
+
+    return getASTContext()->DeclarationNames.getCXXOperatorName(op_kind);
+}
+
 FunctionDecl *
 ClangASTContext::CreateFunctionDeclaration (DeclContext *decl_ctx,
                                             const char *name,
@@ -1981,20 +2251,10 @@ ClangASTContext::CreateFunctionDeclaration (DeclContext *decl_ctx,
     const bool hasWrittenPrototype = true;
     const bool isConstexprSpecified = false;
 
-    if (name && name[0])
-    {
-        func_decl = FunctionDecl::Create(
-            *ast, decl_ctx, SourceLocation(), SourceLocation(), DeclarationName(&ast->Idents.get(name)),
-            ClangUtil::GetQualType(function_clang_type), nullptr, (clang::StorageClass)storage, is_inline,
-            hasWrittenPrototype, isConstexprSpecified);
-    }
-    else
-    {
-        func_decl =
-            FunctionDecl::Create(*ast, decl_ctx, SourceLocation(), SourceLocation(), DeclarationName(),
-                                 ClangUtil::GetQualType(function_clang_type), nullptr, (clang::StorageClass)storage,
-                                 is_inline, hasWrittenPrototype, isConstexprSpecified);
-    }
+    clang::DeclarationName declarationName = GetDeclarationName(name, function_clang_type);
+    func_decl = FunctionDecl::Create(*ast, decl_ctx, SourceLocation(), SourceLocation(), declarationName,
+                                     ClangUtil::GetQualType(function_clang_type), nullptr, (clang::StorageClass)storage,
+                                     is_inline, hasWrittenPrototype, isConstexprSpecified);
     if (func_decl)
         decl_ctx->addDecl (func_decl);
     
@@ -7382,222 +7642,6 @@ ClangASTContext::GetTypeForFormatters (void* type)
     return CompilerType();
 }
 
-static bool
-IsOperator (const char *name, clang::OverloadedOperatorKind &op_kind)
-{
-    if (name == nullptr || name[0] == '\0')
-        return false;
-    
-#define OPERATOR_PREFIX "operator"
-#define OPERATOR_PREFIX_LENGTH (sizeof (OPERATOR_PREFIX) - 1)
-    
-    const char *post_op_name = nullptr;
-    
-    bool no_space = true;
-    
-    if (::strncmp(name, OPERATOR_PREFIX, OPERATOR_PREFIX_LENGTH))
-        return false;
-    
-    post_op_name = name + OPERATOR_PREFIX_LENGTH;
-    
-    if (post_op_name[0] == ' ')
-    {
-        post_op_name++;
-        no_space = false;
-    }
-    
-#undef OPERATOR_PREFIX
-#undef OPERATOR_PREFIX_LENGTH
-    
-    // This is an operator, set the overloaded operator kind to invalid
-    // in case this is a conversion operator...
-    op_kind = clang::NUM_OVERLOADED_OPERATORS;
-    
-    switch (post_op_name[0])
-    {
-        default:
-            if (no_space)
-                return false;
-            break;
-        case 'n':
-            if (no_space)
-                return false;
-            if  (strcmp (post_op_name, "new") == 0)
-                op_kind = clang::OO_New;
-            else if (strcmp (post_op_name, "new[]") == 0)
-                op_kind = clang::OO_Array_New;
-            break;
-            
-        case 'd':
-            if (no_space)
-                return false;
-            if (strcmp (post_op_name, "delete") == 0)
-                op_kind = clang::OO_Delete;
-            else if (strcmp (post_op_name, "delete[]") == 0)
-                op_kind = clang::OO_Array_Delete;
-            break;
-            
-        case '+':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Plus;
-            else if (post_op_name[2] == '\0')
-            {
-                if (post_op_name[1] == '=')
-                    op_kind = clang::OO_PlusEqual;
-                else if (post_op_name[1] == '+')
-                    op_kind = clang::OO_PlusPlus;
-            }
-            break;
-            
-        case '-':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Minus;
-            else if (post_op_name[2] == '\0')
-            {
-                switch (post_op_name[1])
-                {
-                    case '=': op_kind = clang::OO_MinusEqual; break;
-                    case '-': op_kind = clang::OO_MinusMinus; break;
-                    case '>': op_kind = clang::OO_Arrow; break;
-                }
-            }
-            else if (post_op_name[3] == '\0')
-            {
-                if (post_op_name[2] == '*')
-                    op_kind = clang::OO_ArrowStar; break;
-            }
-            break;
-            
-        case '*':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Star;
-            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
-                op_kind = clang::OO_StarEqual;
-            break;
-            
-        case '/':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Slash;
-            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
-                op_kind = clang::OO_SlashEqual;
-            break;
-            
-        case '%':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Percent;
-            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
-                op_kind = clang::OO_PercentEqual;
-            break;
-            
-            
-        case '^':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Caret;
-            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
-                op_kind = clang::OO_CaretEqual;
-            break;
-            
-        case '&':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Amp;
-            else if (post_op_name[2] == '\0')
-            {
-                switch (post_op_name[1])
-                {
-                    case '=': op_kind = clang::OO_AmpEqual; break;
-                    case '&': op_kind = clang::OO_AmpAmp; break;
-                }
-            }
-            break;
-            
-        case '|':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Pipe;
-            else if (post_op_name[2] == '\0')
-            {
-                switch (post_op_name[1])
-                {
-                    case '=': op_kind = clang::OO_PipeEqual; break;
-                    case '|': op_kind = clang::OO_PipePipe; break;
-                }
-            }
-            break;
-            
-        case '~':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Tilde;
-            break;
-            
-        case '!':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Exclaim;
-            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
-                op_kind = clang::OO_ExclaimEqual;
-            break;
-            
-        case '=':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Equal;
-            else if (post_op_name[1] == '=' && post_op_name[2] == '\0')
-                op_kind = clang::OO_EqualEqual;
-            break;
-            
-        case '<':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Less;
-            else if (post_op_name[2] == '\0')
-            {
-                switch (post_op_name[1])
-                {
-                    case '<': op_kind = clang::OO_LessLess; break;
-                    case '=': op_kind = clang::OO_LessEqual; break;
-                }
-            }
-            else if (post_op_name[3] == '\0')
-            {
-                if (post_op_name[2] == '=')
-                    op_kind = clang::OO_LessLessEqual;
-            }
-            break;
-            
-        case '>':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Greater;
-            else if (post_op_name[2] == '\0')
-            {
-                switch (post_op_name[1])
-                {
-                    case '>': op_kind = clang::OO_GreaterGreater; break;
-                    case '=': op_kind = clang::OO_GreaterEqual; break;
-                }
-            }
-            else if (post_op_name[1] == '>' &&
-                     post_op_name[2] == '=' &&
-                     post_op_name[3] == '\0')
-            {
-                op_kind = clang::OO_GreaterGreaterEqual;
-            }
-            break;
-            
-        case ',':
-            if (post_op_name[1] == '\0')
-                op_kind = clang::OO_Comma;
-            break;
-            
-        case '(':
-            if (post_op_name[1] == ')' && post_op_name[2] == '\0')
-                op_kind = clang::OO_Call;
-            break;
-            
-        case '[':
-            if (post_op_name[1] == ']' && post_op_name[2] == '\0')
-                op_kind = clang::OO_Subscript;
-            break;
-    }
-    
-    return true;
-}
-
 clang::EnumDecl *
 ClangASTContext::GetAsEnumDecl (const CompilerType& type)
 {
@@ -7982,7 +8026,8 @@ ClangASTContext::AddMethodToCXXRecordType (lldb::opaque_compiler_type_t type, co
                 // if we try to create a method and add it to the class, clang
                 // will assert and crash, so we need to make sure things are
                 // acceptable.
-                if (!ClangASTContext::CheckOverloadedOperatorKindParameterCount (op_kind, num_params))
+                const bool is_method = true;
+                if (!ClangASTContext::CheckOverloadedOperatorKindParameterCount(is_method, op_kind, num_params))
                     return nullptr;
                 cxx_method_decl = clang::CXXMethodDecl::Create (*getASTContext(),
                                                                 cxx_record_decl,

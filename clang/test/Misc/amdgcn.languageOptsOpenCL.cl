@@ -199,14 +199,31 @@
 #pragma OPENCL EXTENSION cl_khr_srgb_image_writes: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_srgb_image_writes' - ignoring}}
 
+#if (__OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_subgroups
+#error "Missing cl_khr_subgroups define"
+#endif
+#else
 #ifdef cl_khr_subgroups
 #error "Incorrect cl_khr_subgroups define"
 #endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroups' - ignoring}}
+#endif
 #pragma OPENCL EXTENSION cl_khr_subgroups: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_subgroups' - ignoring}}
 
 #ifdef cl_khr_terminate_context
 #error "Incorrect cl_khr_terminate_context define"
 #endif
 #pragma OPENCL EXTENSION cl_khr_terminate_context: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_terminate_context' - ignoring}}
+
+#ifndef cl_amd_media_ops
+#error "Missing cl_amd_media_ops define"
+#endif
+#pragma OPENCL EXTENSION cl_amd_media_ops: enable
+
+#ifndef cl_amd_media_ops2
+#error "Missing cl_amd_media_ops2 define"
+#endif
+#pragma OPENCL EXTENSION cl_amd_media_ops2: enable
+

@@ -350,19 +350,19 @@ unsigned LTO::getMaxTasks() const {
   return RegularLTO.ParallelCodeGenParallelismLevel + ThinLTO.ModuleMap.size();
 }
 
-Error LTO::run(AddStreamFn AddStream) {
+Error LTO::run(AddOutputFn AddOutput) {
   // Invoke regular LTO if there was a regular LTO module to start with,
   // or if there are any hooks that the linker may have used to add
   // its own resolved symbols to the combined module.
   if (RegularLTO.HasModule || Conf.PreOptModuleHook ||
       Conf.PostInternalizeModuleHook || Conf.PostOptModuleHook ||
       Conf.PreCodeGenModuleHook)
-    if (auto E = runRegularLTO(AddStream))
+    if (auto E = runRegularLTO(AddOutput))
       return E;
-  return runThinLTO(AddStream);
+  return runThinLTO(AddOutput);
 }
 
-Error LTO::runRegularLTO(AddStreamFn AddStream) {
+Error LTO::runRegularLTO(AddOutputFn AddOutput) {
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
     return Error();
@@ -388,7 +388,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
     return Error();
 
-  return backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
+  return backend(Conf, AddOutput, RegularLTO.ParallelCodeGenParallelismLevel,
                  std::move(RegularLTO.CombinedModule));
 }
 
@@ -397,19 +397,19 @@ class lto::ThinBackendProc {
 protected:
   Config &Conf;
   ModuleSummaryIndex &CombinedIndex;
-  AddStreamFn AddStream;
+  AddOutputFn AddOutput;
   StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries;
 
 public:
   ThinBackendProc(Config &Conf, ModuleSummaryIndex &CombinedIndex,
-                  AddStreamFn AddStream,
+                  AddOutputFn AddOutput,
                   StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries)
-      : Conf(Conf), CombinedIndex(CombinedIndex), AddStream(AddStream),
+      : Conf(Conf), CombinedIndex(CombinedIndex), AddOutput(AddOutput),
         ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries) {}
 
   virtual ~ThinBackendProc() {}
   virtual Error start(unsigned Task, MemoryBufferRef MBRef,
-                      StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+                      const FunctionImporter::ImportMapTy &ImportList,
                       MapVector<StringRef, MemoryBufferRef> &ModuleMap) = 0;
   virtual Error wait() = 0;
 };
@@ -424,13 +424,13 @@ public:
   InProcessThinBackend(Config &Conf, ModuleSummaryIndex &CombinedIndex,
                        unsigned ThinLTOParallelismLevel,
                        StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-                       AddStreamFn AddStream)
-      : ThinBackendProc(Conf, CombinedIndex, AddStream,
+                       AddOutputFn AddOutput)
+      : ThinBackendProc(Conf, CombinedIndex, AddOutput,
                         ModuleToDefinedGVSummaries),
         BackendThreadPool(ThinLTOParallelismLevel) {}
 
   Error
-  runThinLTOBackendThread(AddStreamFn AddStream, unsigned Task,
+  runThinLTOBackendThread(AddOutputFn AddOutput, unsigned Task,
                           MemoryBufferRef MBRef,
                           ModuleSummaryIndex &CombinedIndex,
                           const FunctionImporter::ImportMapTy &ImportList,
@@ -442,12 +442,12 @@ public:
         parseBitcodeFile(MBRef, BackendContext);
     assert(MOrErr && "Unable to load module in thread?");
 
-    return thinBackend(Conf, Task, AddStream, **MOrErr, CombinedIndex,
+    return thinBackend(Conf, Task, AddOutput, **MOrErr, CombinedIndex,
                        ImportList, DefinedGlobals, ModuleMap);
   }
 
   Error start(unsigned Task, MemoryBufferRef MBRef,
-              StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+              const FunctionImporter::ImportMapTy &ImportList,
               MapVector<StringRef, MemoryBufferRef> &ModuleMap) override {
     StringRef ModulePath = MBRef.getBufferIdentifier();
     BackendThreadPool.async(
@@ -456,7 +456,7 @@ public:
             GVSummaryMapTy &DefinedGlobals,
             MapVector<StringRef, MemoryBufferRef> &ModuleMap) {
           Error E =
-              runThinLTOBackendThread(AddStream, Task, MBRef, CombinedIndex,
+              runThinLTOBackendThread(AddOutput, Task, MBRef, CombinedIndex,
                                       ImportList, DefinedGlobals, ModuleMap);
           if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
@@ -466,7 +466,7 @@ public:
               Err = std::move(E);
           }
         },
-        MBRef, std::ref(CombinedIndex), std::ref(ImportLists[ModulePath]),
+        MBRef, std::ref(CombinedIndex), std::ref(ImportList),
         std::ref(ModuleToDefinedGVSummaries[ModulePath]), std::ref(ModuleMap));
     return Error();
   }
@@ -483,10 +483,10 @@ public:
 ThinBackend lto::createInProcessThinBackend(unsigned ParallelismLevel) {
   return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
              StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-             AddStreamFn AddStream) {
+             AddOutputFn AddOutput) {
     return llvm::make_unique<InProcessThinBackend>(
         Conf, CombinedIndex, ParallelismLevel, ModuleToDefinedGVSummaries,
-        AddStream);
+        AddOutput);
   };
 }
 
@@ -500,10 +500,10 @@ class WriteIndexesThinBackend : public ThinBackendProc {
 public:
   WriteIndexesThinBackend(Config &Conf, ModuleSummaryIndex &CombinedIndex,
                           StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-                          AddStreamFn AddStream, std::string OldPrefix,
+                          AddOutputFn AddOutput, std::string OldPrefix,
                           std::string NewPrefix, bool ShouldEmitImportsFiles,
                           std::string LinkedObjectsFileName)
-      : ThinBackendProc(Conf, CombinedIndex, AddStream,
+      : ThinBackendProc(Conf, CombinedIndex, AddOutput,
                         ModuleToDefinedGVSummaries),
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         ShouldEmitImportsFiles(ShouldEmitImportsFiles),
@@ -530,7 +530,7 @@ public:
   }
 
   Error start(unsigned Task, MemoryBufferRef MBRef,
-              StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+              const FunctionImporter::ImportMapTy &ImportList,
               MapVector<StringRef, MemoryBufferRef> &ModuleMap) override {
     StringRef ModulePath = MBRef.getBufferIdentifier();
     std::string NewModulePath =
@@ -549,7 +549,7 @@ public:
 
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportLists, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::F_None);
@@ -558,8 +558,8 @@ public:
     WriteIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
     if (ShouldEmitImportsFiles)
-      return errorCodeToError(EmitImportsFiles(
-          ModulePath, NewModulePath + ".imports", ImportLists));
+      return errorCodeToError(
+          EmitImportsFiles(ModulePath, NewModulePath + ".imports", ImportList));
     return Error();
   }
 
@@ -572,14 +572,14 @@ ThinBackend lto::createWriteIndexesThinBackend(std::string OldPrefix,
                                                std::string LinkedObjectsFile) {
   return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
              StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-             AddStreamFn AddStream) {
+             AddOutputFn AddOutput) {
     return llvm::make_unique<WriteIndexesThinBackend>(
-        Conf, CombinedIndex, ModuleToDefinedGVSummaries, AddStream, OldPrefix,
+        Conf, CombinedIndex, ModuleToDefinedGVSummaries, AddOutput, OldPrefix,
         NewPrefix, ShouldEmitImportsFiles, LinkedObjectsFile);
   };
 }
 
-Error LTO::runThinLTO(AddStreamFn AddStream) {
+Error LTO::runThinLTO(AddOutputFn AddOutput) {
   if (ThinLTO.ModuleMap.empty())
     return Error();
 
@@ -622,7 +622,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream) {
       [](StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes) {});
 
   std::unique_ptr<ThinBackendProc> BackendProc = ThinLTO.Backend(
-      Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries, AddStream);
+      Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries, AddOutput);
 
   // Partition numbers for ThinLTO jobs start at 1 (see comments for
   // GlobalResolution in LTO.h). Task numbers, however, start at
@@ -633,7 +633,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream) {
   unsigned Partition = 1;
 
   for (auto &Mod : ThinLTO.ModuleMap) {
-    if (Error E = BackendProc->start(Task, Mod.second, ImportLists,
+    if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
                                      ThinLTO.ModuleMap))
       return E;
 

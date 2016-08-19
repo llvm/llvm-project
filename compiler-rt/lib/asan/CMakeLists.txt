@@ -4,6 +4,7 @@ set(ASAN_SOURCES
   asan_allocator.cc
   asan_activation.cc
   asan_debugging.cc
+  asan_descriptions.cc
   asan_fake_stack.cc
   asan_flags.cc
   asan_globals.cc

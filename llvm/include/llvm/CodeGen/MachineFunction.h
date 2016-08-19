@@ -49,23 +49,12 @@ struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
 template <>
+struct ilist_sentinel_traits<MachineBasicBlock>
+    : public ilist_half_embedded_sentinel_traits<MachineBasicBlock> {};
+
+template <>
 struct ilist_traits<MachineBasicBlock>
     : public ilist_default_traits<MachineBasicBlock> {
-  mutable ilist_half_node<MachineBasicBlock> Sentinel;
-public:
-  // FIXME: This downcast is UB. See llvm.org/PR26753.
-  LLVM_NO_SANITIZE("object-size")
-  MachineBasicBlock *createSentinel() const {
-    return static_cast<MachineBasicBlock*>(&Sentinel);
-  }
-  void destroySentinel(MachineBasicBlock *) const {}
-
-  MachineBasicBlock *provideInitialHead() const { return createSentinel(); }
-  MachineBasicBlock *ensureHead(MachineBasicBlock*) const {
-    return createSentinel();
-  }
-  static void noteHead(MachineBasicBlock*, MachineBasicBlock*) {}
-
   void addNodeToList(MachineBasicBlock* MBB);
   void removeNodeFromList(MachineBasicBlock* MBB);
   void deleteNode(MachineBasicBlock *MBB);

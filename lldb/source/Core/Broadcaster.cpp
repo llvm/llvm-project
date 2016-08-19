@@ -56,31 +56,25 @@ Broadcaster::CheckInWithManager ()
     }
 }
 
-void
-Broadcaster::BroadcasterImpl::ListenerIterator (std::function <bool (const lldb::ListenerSP &listener_sp, uint32_t &event_mask)> const &callback)
+llvm::SmallVector<std::pair<ListenerSP, uint32_t &>, 4>
+Broadcaster::BroadcasterImpl::GetListeners()
 {
-    // Private iterator that should be used by everyone except BroadcasterImpl::RemoveListener().
-    // We have weak pointers to our listeners which means that at any point the listener can
-    // expire which means we will need to take it out of our list. To take care of this, we
-    // iterate and check that the weak pointer can be made into a valid shared pointer before
-    // we call the callback. If the weak pointer has expired, we remove it from our list.
-    collection::iterator pos = m_listeners.begin();
-    while (pos != m_listeners.end())
+    llvm::SmallVector<std::pair<ListenerSP, uint32_t &>, 4> listeners;
+    listeners.reserve(m_listeners.size());
+
+    for (auto it = m_listeners.begin(); it != m_listeners.end();)
     {
-        lldb::ListenerSP curr_listener_sp(pos->first.lock());
-        if (curr_listener_sp)
+        lldb::ListenerSP curr_listener_sp(it->first.lock());
+        if (curr_listener_sp && it->second)
         {
-            if (callback(curr_listener_sp, pos->second))
-                ++pos;  // Keep iterating
-            else
-                return; // Done iterating
+            listeners.emplace_back(std::move(curr_listener_sp), it->second);
+            ++it;
         }
         else
-        {
-            // The listener has been expired. Remove this entry.
-            pos = m_listeners.erase(pos);
-        }
+            it = m_listeners.erase(it);
     }
+
+    return listeners;
 }
 
 void
@@ -91,11 +85,8 @@ Broadcaster::BroadcasterImpl::Clear()
     // Make sure the listener forgets about this broadcaster. We do
     // this in the broadcaster in case the broadcaster object initiates
     // the removal.
-
-    ListenerIterator([this](const lldb::ListenerSP &curr_listener_sp, uint32_t &curr_event_mask) -> bool {
-        curr_listener_sp->BroadcasterWillDestruct (&m_broadcaster);
-        return true; // Keep iterating
-    });
+    for(auto &pair : GetListeners())
+        pair.first->BroadcasterWillDestruct (&m_broadcaster);
     
     m_listeners.clear();
 }
@@ -154,16 +145,16 @@ Broadcaster::BroadcasterImpl::AddListener (const lldb::ListenerSP &listener_sp, 
 
     bool handled = false;
 
-    ListenerIterator([this, &listener_sp, &handled, event_mask](const lldb::ListenerSP &curr_listener_sp, uint32_t &curr_event_mask) -> bool {
-        if (curr_listener_sp == listener_sp)
+    for(auto &pair: GetListeners())
+    {
+        if (pair.first == listener_sp)
         {
             handled = true;
-            curr_event_mask |= event_mask;
+            pair.second |= event_mask;
             m_broadcaster.AddInitialEventsToListener (listener_sp, event_mask);
-            return false; // Stop iterating
+            break;
         }
-        return true; // Keep iterating
-    });
+    }
 
     if (!handled)
     {
@@ -187,55 +178,27 @@ Broadcaster::BroadcasterImpl::EventTypeHasListeners (uint32_t event_type)
     if (!m_hijacking_listeners.empty() && event_type & m_hijacking_masks.back())
         return true;
         
-    if (m_listeners.empty())
-        return false;
-
-    bool result = false;
-    ListenerIterator([this, event_type, &result](const lldb::ListenerSP &curr_listener_sp, uint32_t &curr_event_mask) -> bool {
-
-        if (curr_event_mask & event_type)
-        {
-            result = true;
-            return false; // Stop iterating
-        }
-        else
-        {
-            return true; // Keep iterating
-        }
-    });
-    return result;
+    for(auto &pair: GetListeners())
+    {
+        if (pair.second & event_type)
+            return true;
+    }
+    return false;
 }
 
 bool
 Broadcaster::BroadcasterImpl::RemoveListener (lldb_private::Listener *listener, uint32_t event_mask)
 {
-    if (listener)
+    if (!listener)
+        return false;
+
+    std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
+    for (auto &pair : GetListeners())
     {
-        std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
-        collection::iterator pos = m_listeners.begin();
-        // See if we already have this listener, and if so, update its mask
-        while (pos != m_listeners.end())
+        if (pair.first.get() == listener)
         {
-            lldb::ListenerSP curr_listener_sp(pos->first.lock());
-            if (curr_listener_sp)
-            {
-                if (curr_listener_sp.get() == listener)
-                {
-                    // Relinquish all event bits in "event_mask"
-                    pos->second &= ~event_mask;
-                    // If all bits have been relinquished then remove this listener
-                    if (pos->second == 0)
-                        m_listeners.erase (pos);
-                    return true;
-                }
-                ++pos;
-            }
-            else
-            {
-                // The listener has been destroyed since we couldn't turn the std::weak_ptr
-                // into a valid shared pointer, so we can remove it.
-                pos = m_listeners.erase (pos);
-            }
+            pair.second &= ~event_mask;
+            return true;
         }
     }
     return false;
@@ -302,16 +265,15 @@ Broadcaster::BroadcasterImpl::PrivateBroadcastEvent (EventSP &event_sp, bool uni
     }
     else
     {
+        for (auto &pair : GetListeners())
+        {
+            if (!(pair.second & event_type))
+                continue;
+            if (unique && pair.first->PeekAtNextEventForBroadcasterWithType (&m_broadcaster, event_type))
+                continue;
 
-        ListenerIterator([this, unique, event_type, &event_sp](const lldb::ListenerSP &curr_listener_sp, uint32_t &curr_event_mask) -> bool {
-
-            if (event_type & curr_event_mask)
-            {
-                if (!unique || curr_listener_sp->PeekAtNextEventForBroadcasterWithType (&m_broadcaster, event_type) == nullptr)
-                    curr_listener_sp->AddEvent (event_sp);
-            }
-            return true; // Keep iterating
-        });
+            pair.first->AddEvent (event_sp);
+        }
     }
 }
 

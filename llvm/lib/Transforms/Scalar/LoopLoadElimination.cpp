@@ -347,7 +347,7 @@ public:
     // Collect the pointers of the candidate loads.
     // FIXME: SmallSet does not work with std::inserter.
     std::set<Value *> CandLoadPtrs;
-    std::transform(Candidates.begin(), Candidates.end(),
+    transform(Candidates,
                    std::inserter(CandLoadPtrs, CandLoadPtrs.begin()),
                    std::mem_fn(&StoreToLoadForwardingCandidate::getLoadPtr));
 

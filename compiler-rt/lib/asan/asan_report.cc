@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_flags.h"
+#include "asan_descriptions.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
@@ -64,56 +65,6 @@ void AppendToErrorMessageBuffer(const char *buffer) {
   // FIXME: reallocate the buffer instead of truncating the message.
   error_message_buffer_pos += Min(remaining, length);
 }
-
-// ---------------------- Decorator ------------------------------ {{{1
-class Decorator: public __sanitizer::SanitizerCommonDecorator {
- public:
-  Decorator() : SanitizerCommonDecorator() { }
-  const char *Access()     { return Blue(); }
-  const char *EndAccess()  { return Default(); }
-  const char *Location()   { return Green(); }
-  const char *EndLocation() { return Default(); }
-  const char *Allocation()  { return Magenta(); }
-  const char *EndAllocation()  { return Default(); }
-
-  const char *ShadowByte(u8 byte) {
-    switch (byte) {
-      case kAsanHeapLeftRedzoneMagic:
-      case kAsanHeapRightRedzoneMagic:
-      case kAsanArrayCookieMagic:
-        return Red();
-      case kAsanHeapFreeMagic:
-        return Magenta();
-      case kAsanStackLeftRedzoneMagic:
-      case kAsanStackMidRedzoneMagic:
-      case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
-        return Red();
-      case kAsanStackAfterReturnMagic:
-        return Magenta();
-      case kAsanInitializationOrderMagic:
-        return Cyan();
-      case kAsanUserPoisonedMemoryMagic:
-      case kAsanContiguousContainerOOBMagic:
-      case kAsanAllocaLeftMagic:
-      case kAsanAllocaRightMagic:
-        return Blue();
-      case kAsanStackUseAfterScopeMagic:
-        return Magenta();
-      case kAsanGlobalRedzoneMagic:
-        return Red();
-      case kAsanInternalHeapMagic:
-        return Yellow();
-      case kAsanIntraObjectRedzone:
-        return Yellow();
-      default:
-        return Default();
-    }
-  }
-  const char *EndShadowByte() { return Default(); }
-  const char *MemoryByte() { return Magenta(); }
-  const char *EndMemoryByte() { return Default(); }
-};
 
 // ---------------------- Helper functions ----------------------- {{{1
 
@@ -234,190 +185,7 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
   }
 }
 
-static void DescribeThread(AsanThread *t) {
-  if (t)
-    DescribeThread(t->context());
-}
-
 // ---------------------- Address Descriptions ------------------- {{{1
-
-static bool IsASCII(unsigned char c) {
-  return /*0x00 <= c &&*/ c <= 0x7F;
-}
-
-static const char *MaybeDemangleGlobalName(const char *name) {
-  // We can spoil names of globals with C linkage, so use an heuristic
-  // approach to check if the name should be demangled.
-  bool should_demangle = false;
-  if (name[0] == '_' && name[1] == 'Z')
-    should_demangle = true;
-  else if (SANITIZER_WINDOWS && name[0] == '\01' && name[1] == '?')
-    should_demangle = true;
-
-  return should_demangle ? Symbolizer::GetOrInit()->Demangle(name) : name;
-}
-
-// Check if the global is a zero-terminated ASCII string. If so, print it.
-static void PrintGlobalNameIfASCII(InternalScopedString *str,
-                                   const __asan_global &g) {
-  for (uptr p = g.beg; p < g.beg + g.size - 1; p++) {
-    unsigned char c = *(unsigned char*)p;
-    if (c == '\0' || !IsASCII(c)) return;
-  }
-  if (*(char*)(g.beg + g.size - 1) != '\0') return;
-  str->append("  '%s' is ascii string '%s'\n", MaybeDemangleGlobalName(g.name),
-              (char *)g.beg);
-}
-
-static const char *GlobalFilename(const __asan_global &g) {
-  const char *res = g.module_name;
-  // Prefer the filename from source location, if is available.
-  if (g.location)
-    res = g.location->filename;
-  CHECK(res);
-  return res;
-}
-
-static void PrintGlobalLocation(InternalScopedString *str,
-                                const __asan_global &g) {
-  str->append("%s", GlobalFilename(g));
-  if (!g.location)
-    return;
-  if (g.location->line_no)
-    str->append(":%d", g.location->line_no);
-  if (g.location->column_no)
-    str->append(":%d", g.location->column_no);
-}
-
-static void DescribeAddressRelativeToGlobal(uptr addr, uptr size,
-                                            const __asan_global &g) {
-  InternalScopedString str(4096);
-  Decorator d;
-  str.append("%s", d.Location());
-  if (addr < g.beg) {
-    str.append("%p is located %zd bytes to the left", (void *)addr,
-               g.beg - addr);
-  } else if (addr + size > g.beg + g.size) {
-    if (addr < g.beg + g.size)
-      addr = g.beg + g.size;
-    str.append("%p is located %zd bytes to the right", (void *)addr,
-               addr - (g.beg + g.size));
-  } else {
-    // Can it happen?
-    str.append("%p is located %zd bytes inside", (void *)addr, addr - g.beg);
-  }
-  str.append(" of global variable '%s' defined in '",
-             MaybeDemangleGlobalName(g.name));
-  PrintGlobalLocation(&str, g);
-  str.append("' (0x%zx) of size %zu\n", g.beg, g.size);
-  str.append("%s", d.EndLocation());
-  PrintGlobalNameIfASCII(&str, g);
-  Printf("%s", str.data());
-}
-
-static bool DescribeAddressIfGlobal(uptr addr, uptr size,
-                                    const char *bug_type) {
-  // Assume address is close to at most four globals.
-  const int kMaxGlobalsInReport = 4;
-  __asan_global globals[kMaxGlobalsInReport];
-  u32 reg_sites[kMaxGlobalsInReport];
-  int globals_num =
-      GetGlobalsForAddress(addr, globals, reg_sites, ARRAY_SIZE(globals));
-  if (globals_num == 0)
-    return false;
-  for (int i = 0; i < globals_num; i++) {
-    DescribeAddressRelativeToGlobal(addr, size, globals[i]);
-    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
-        reg_sites[i]) {
-      Printf("  registered at:\n");
-      StackDepotGet(reg_sites[i]).Print();
-    }
-  }
-  return true;
-}
-
-bool DescribeAddressIfShadow(uptr addr, AddressDescription *descr, bool print) {
-  if (AddrIsInMem(addr))
-    return false;
-  const char *area_type = nullptr;
-  if (AddrIsInShadowGap(addr)) area_type = "shadow gap";
-  else if (AddrIsInHighShadow(addr)) area_type = "high shadow";
-  else if (AddrIsInLowShadow(addr)) area_type = "low shadow";
-  if (area_type != nullptr) {
-    if (print) {
-      Printf("Address %p is located in the %s area.\n", addr, area_type);
-    } else {
-      CHECK(descr);
-      descr->region_kind = area_type;
-    }
-    return true;
-  }
-  CHECK(0 && "Address is not in memory and not in shadow?");
-  return false;
-}
-
-// Return " (thread_name) " or an empty string if the name is empty.
-const char *ThreadNameWithParenthesis(AsanThreadContext *t, char buff[],
-                                      uptr buff_len) {
-  const char *name = t->name;
-  if (name[0] == '\0') return "";
-  buff[0] = 0;
-  internal_strncat(buff, " (", 3);
-  internal_strncat(buff, name, buff_len - 4);
-  internal_strncat(buff, ")", 2);
-  return buff;
-}
-
-const char *ThreadNameWithParenthesis(u32 tid, char buff[],
-                                      uptr buff_len) {
-  if (tid == kInvalidTid) return "";
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-  return ThreadNameWithParenthesis(t, buff, buff_len);
-}
-
-static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
-                                          uptr access_size, uptr prev_var_end,
-                                          uptr next_var_beg) {
-  uptr var_end = var.beg + var.size;
-  uptr addr_end = addr + access_size;
-  const char *pos_descr = nullptr;
-  // If the variable [var.beg, var_end) is the nearest variable to the
-  // current memory access, indicate it in the log.
-  if (addr >= var.beg) {
-    if (addr_end <= var_end)
-      pos_descr = "is inside";  // May happen if this is a use-after-return.
-    else if (addr < var_end)
-      pos_descr = "partially overflows";
-    else if (addr_end <= next_var_beg &&
-             next_var_beg - addr_end >= addr - var_end)
-      pos_descr = "overflows";
-  } else {
-    if (addr_end > var.beg)
-      pos_descr = "partially underflows";
-    else if (addr >= prev_var_end &&
-             addr - prev_var_end >= var.beg - addr_end)
-      pos_descr = "underflows";
-  }
-  InternalScopedString str(1024);
-  str.append("    [%zd, %zd)", var.beg, var_end);
-  // Render variable name.
-  str.append(" '");
-  for (uptr i = 0; i < var.name_len; ++i) {
-    str.append("%c", var.name_pos[i]);
-  }
-  str.append("'");
-  if (pos_descr) {
-    Decorator d;
-    // FIXME: we may want to also print the size of the access here,
-    // but in case of accesses generated by memset it may be confusing.
-    str.append("%s <== Memory access at offset %zd %s this variable%s\n",
-               d.Location(), addr, pos_descr, d.EndLocation());
-  } else {
-    str.append("\n");
-  }
-  Printf("%s", str.data());
-}
 
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars) {
@@ -446,138 +214,6 @@ bool ParseFrameDescription(const char *frame_descr,
   return true;
 }
 
-bool DescribeAddressIfStack(uptr addr, uptr access_size) {
-  AsanThread *t = FindThreadByStackAddress(addr);
-  if (!t) return false;
-
-  Decorator d;
-  char tname[128];
-  Printf("%s", d.Location());
-  Printf("Address %p is located in stack of thread T%d%s", addr, t->tid(),
-         ThreadNameWithParenthesis(t->tid(), tname, sizeof(tname)));
-
-  // Try to fetch precise stack frame for this access.
-  AsanThread::StackFrameAccess access;
-  if (!t->GetStackFrameAccessByAddr(addr, &access)) {
-    Printf("%s\n", d.EndLocation());
-    return true;
-  }
-  Printf(" at offset %zu in frame%s\n", access.offset, d.EndLocation());
-
-  // Now we print the frame where the alloca has happened.
-  // We print this frame as a stack trace with one element.
-  // The symbolizer may print more than one frame if inlining was involved.
-  // The frame numbers may be different than those in the stack trace printed
-  // previously. That's unfortunate, but I have no better solution,
-  // especially given that the alloca may be from entirely different place
-  // (e.g. use-after-scope, or different thread's stack).
-#if SANITIZER_PPC64V1
-  // On PowerPC64 ELFv1, the address of a function actually points to a
-  // three-doubleword data structure with the first field containing
-  // the address of the function's code.
-  access.frame_pc = *reinterpret_cast<uptr *>(access.frame_pc);
-#endif
-  access.frame_pc += 16;
-  Printf("%s", d.EndLocation());
-  StackTrace alloca_stack(&access.frame_pc, 1);
-  alloca_stack.Print();
-
-  InternalMmapVector<StackVarDescr> vars(16);
-  if (!ParseFrameDescription(access.frame_descr, &vars)) {
-    Printf("AddressSanitizer can't parse the stack frame "
-           "descriptor: |%s|\n", access.frame_descr);
-    // 'addr' is a stack address, so return true even if we can't parse frame
-    return true;
-  }
-  uptr n_objects = vars.size();
-  // Report the number of stack objects.
-  Printf("  This frame has %zu object(s):\n", n_objects);
-
-  // Report all objects in this frame.
-  for (uptr i = 0; i < n_objects; i++) {
-    uptr prev_var_end = i ? vars[i - 1].beg + vars[i - 1].size : 0;
-    uptr next_var_beg = i + 1 < n_objects ? vars[i + 1].beg : ~(0UL);
-    PrintAccessAndVarIntersection(vars[i], access.offset, access_size,
-                                  prev_var_end, next_var_beg);
-  }
-  Printf("HINT: this may be a false positive if your program uses "
-         "some custom stack unwind mechanism or swapcontext\n");
-  if (SANITIZER_WINDOWS)
-    Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
-  else
-    Printf("      (longjmp and C++ exceptions *are* supported)\n");
-
-  DescribeThread(t);
-  return true;
-}
-
-static void DescribeAccessToHeapChunk(AsanChunkView chunk, uptr addr,
-                                      uptr access_size) {
-  sptr offset;
-  Decorator d;
-  InternalScopedString str(4096);
-  str.append("%s", d.Location());
-  if (chunk.AddrIsAtLeft(addr, access_size, &offset)) {
-    str.append("%p is located %zd bytes to the left of", (void *)addr, offset);
-  } else if (chunk.AddrIsAtRight(addr, access_size, &offset)) {
-    if (offset < 0) {
-      addr -= offset;
-      offset = 0;
-    }
-    str.append("%p is located %zd bytes to the right of", (void *)addr, offset);
-  } else if (chunk.AddrIsInside(addr, access_size, &offset)) {
-    str.append("%p is located %zd bytes inside of", (void*)addr, offset);
-  } else {
-    str.append("%p is located somewhere around (this is AddressSanitizer bug!)",
-               (void *)addr);
-  }
-  str.append(" %zu-byte region [%p,%p)\n", chunk.UsedSize(),
-             (void *)(chunk.Beg()), (void *)(chunk.End()));
-  str.append("%s", d.EndLocation());
-  Printf("%s", str.data());
-}
-
-void DescribeHeapAddress(uptr addr, uptr access_size) {
-  AsanChunkView chunk = FindHeapChunkByAddress(addr);
-  if (!chunk.IsValid()) {
-    Printf("AddressSanitizer can not describe address in more detail "
-           "(wild memory access suspected).\n");
-    return;
-  }
-  DescribeAccessToHeapChunk(chunk, addr, access_size);
-  CHECK_NE(chunk.AllocTid(), kInvalidTid);
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *alloc_thread =
-      GetThreadContextByTidLocked(chunk.AllocTid());
-  StackTrace alloc_stack = chunk.GetAllocStack();
-  char tname[128];
-  Decorator d;
-  AsanThreadContext *free_thread = nullptr;
-  if (chunk.FreeTid() != kInvalidTid) {
-    free_thread = GetThreadContextByTidLocked(chunk.FreeTid());
-    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
-           free_thread->tid,
-           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-    StackTrace free_stack = chunk.GetFreeStack();
-    free_stack.Print();
-    Printf("%spreviously allocated by thread T%d%s here:%s\n",
-           d.Allocation(), alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-  } else {
-    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
-           alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-  }
-  alloc_stack.Print();
-  DescribeThread(GetCurrentThread());
-  if (free_thread)
-    DescribeThread(free_thread);
-  DescribeThread(alloc_thread);
-}
-
 static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
   // Check if this is shadow or shadow gap.
   if (DescribeAddressIfShadow(addr))
@@ -588,39 +224,7 @@ static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
   if (DescribeAddressIfStack(addr, access_size))
     return;
   // Assume it is a heap address.
-  DescribeHeapAddress(addr, access_size);
-}
-
-// ------------------- Thread description -------------------- {{{1
-
-void DescribeThread(AsanThreadContext *context) {
-  CHECK(context);
-  asanThreadRegistry().CheckLocked();
-  // No need to announce the main thread.
-  if (context->tid == 0 || context->announced) {
-    return;
-  }
-  context->announced = true;
-  char tname[128];
-  InternalScopedString str(1024);
-  str.append("Thread T%d%s", context->tid,
-             ThreadNameWithParenthesis(context->tid, tname, sizeof(tname)));
-  if (context->parent_tid == kInvalidTid) {
-    str.append(" created by unknown thread\n");
-    Printf("%s", str.data());
-    return;
-  }
-  str.append(
-      " created by T%d%s here:\n", context->parent_tid,
-      ThreadNameWithParenthesis(context->parent_tid, tname, sizeof(tname)));
-  Printf("%s", str.data());
-  StackDepotGet(context->stack_id).Print();
-  // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history) {
-    AsanThreadContext *parent_context =
-        GetThreadContextByTidLocked(context->parent_tid);
-    DescribeThread(parent_context);
-  }
+  DescribeAddressIfHeap(addr, access_size);
 }
 
 // -------------------- Different kinds of reports ----------------- {{{1
@@ -811,7 +415,7 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ScarinessScore::PrintSimple(42, "double-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("double-free", &stack);
 }
 
@@ -834,7 +438,7 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
   ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("new-delete-type-mismatch", &stack);
   Report("HINT: if you don't care about these errors you may set "
          "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
@@ -854,7 +458,7 @@ void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
   ScarinessScore::PrintSimple(40, "bad-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("bad-free", &stack);
 }
 
@@ -876,7 +480,7 @@ void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
   ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("alloc-dealloc-mismatch", &stack);
   Report("HINT: if you don't care about these errors you may set "
          "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
@@ -891,7 +495,7 @@ void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
              "not owned: %p\n", addr);
   Printf("%s", d.EndWarning());
   stack->Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("bad-malloc_usable_size", stack);
 }
 
@@ -905,7 +509,7 @@ void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
              "not owned: %p\n", addr);
   Printf("%s", d.EndWarning());
   stack->Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
   ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
 }
 
@@ -1029,7 +633,7 @@ void ReportMacMzReallocUnknown(uptr addr, uptr zone_ptr, const char *zone_name,
              addr);
   PrintZoneForPointer(addr, zone_ptr, zone_name);
   stack->Print();
-  DescribeHeapAddress(addr, 1);
+  DescribeAddressIfHeap(addr);
 }
 
 // -------------- SuppressErrorReport -------------- {{{1

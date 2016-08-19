@@ -80,7 +80,7 @@
 #CHECK:    Flags [
 #CHECK:      SHF_ALLOC
 #CHECK:    ]
-#CHECK:    Address: 0x4008
+#CHECK:    Address: 0x203008
 #CHECK:    Offset: 0x2008
 #CHECK:    Size: 8
 #CHECK:    Link: 0

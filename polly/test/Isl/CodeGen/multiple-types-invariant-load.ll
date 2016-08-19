@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-allow-differing-element-types -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-differing-element-types -polly-codegen -S \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; CHECK: %polly.access.cast.global.load = bitcast %struct.hoge* %global.load to i32*
 ; CHECK: %polly.access.global.load = getelementptr i32, i32* %polly.access.cast.global.load, i64 0

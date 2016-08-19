@@ -1,6 +1,8 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
 // RUN:     MSAN_OPTIONS=store_context_size=1 not %run %t 2>&1 | FileCheck %s
 
+// XFAIL: target-is-mips64el
+
 // Test that stack trace for the intermediate store is not empty.
 
 // CHECK: MemorySanitizer: use-of-uninitialized-value

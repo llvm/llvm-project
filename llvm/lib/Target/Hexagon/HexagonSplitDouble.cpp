@@ -337,6 +337,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
       if (V == 0 || V == -1)
         return 10;
       // Fall through into A2_combinew.
+      LLVM_FALLTHROUGH;
     }
     case Hexagon::A2_combinew:
       return 2;
@@ -510,7 +511,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
     }
     return true;
   };
-  UVect::iterator End = std::remove_if(DP.begin(), DP.end(), NoIndOp);
+  UVect::iterator End = remove_if(DP, NoIndOp);
   Rs.insert(DP.begin(), End);
   Rs.insert(CmpR1);
   Rs.insert(CmpR2);

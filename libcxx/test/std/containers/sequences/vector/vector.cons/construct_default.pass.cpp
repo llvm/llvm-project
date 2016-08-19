@@ -86,5 +86,17 @@ int main()
         std::vector<int, min_allocator<int> > v;
         assert(v.empty());
     }
+
+    {
+    test0<std::vector<int, explicit_allocator<int>> >();
+    test0<std::vector<NotConstructible, explicit_allocator<NotConstructible>> >();
+    test1<std::vector<int, explicit_allocator<int> > >(explicit_allocator<int>{});
+    test1<std::vector<NotConstructible, explicit_allocator<NotConstructible> > >
+        (explicit_allocator<NotConstructible>{});
+    }
+    {
+        std::vector<int, explicit_allocator<int> > v;
+        assert(v.empty());
+    }
 #endif
 }

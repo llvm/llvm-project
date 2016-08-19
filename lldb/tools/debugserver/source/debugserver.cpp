@@ -872,6 +872,7 @@ static struct option g_long_options[] =
     { "working-dir",        required_argument,  NULL,               'W' },  // The working directory that the inferior process should have (only if debugserver launches the process)
     { "platform",           required_argument,  NULL,               'p' },  // Put this executable into a remote platform mode
     { "unix-socket",        required_argument,  NULL,               'u' },  // If we need to handshake with our parent process, an option will be passed down that specifies a unix socket name to use
+    { "fd",                 required_argument,  NULL,            'FDSC' },  // A file descriptor was passed to this process when spawned that is already open and ready for communication
     { "named-pipe",         required_argument,  NULL,               'P' },
     { "reverse-connect",    no_argument,        NULL,               'R' },
     { "env",                required_argument,  NULL,               'e' },  // When debugserver launches the process, set a single environment entry as specified by the option value ("./debugserver -e FOO=1 -e BAR=2 localhost:1234 -- /bin/ls")
@@ -949,6 +950,7 @@ main (int argc, char *argv[])
     int ch;
     int long_option_index = 0;
     int debug = 0;
+    int communication_fd = -1;
     std::string compile_options;
     std::string waitfor_pid_name;           // Wait for a process that starts with this name
     std::string attach_pid_name;
@@ -1248,6 +1250,12 @@ main (int argc, char *argv[])
                         remote->Context().PushEnvironment(env_entry);
                 }
                 break;
+
+            case 'FDSC':
+                // File descriptor passed to this process during fork/exec and is already
+                // open and ready for communication.
+                communication_fd = atoi(optarg);
+                break;
         }
     }
 
@@ -1324,7 +1332,7 @@ main (int argc, char *argv[])
     char str[PATH_MAX];
     str[0] = '\0';
 
-    if (g_lockdown_opt == 0 && g_applist_opt == 0)
+    if (g_lockdown_opt == 0 && g_applist_opt == 0 && communication_fd == -1)
     {
         // Make sure we at least have port
         if (argc < 1)
@@ -1475,6 +1483,15 @@ main (int argc, char *argv[])
                     if (remote->Comm().OpenFile (str))
                         mode = eRNBRunLoopModeExit;
                 }
+                else if (communication_fd >= 0)
+                {
+                    // We were passed a file descriptor to use during fork/exec that is already open
+                    // in our process, so lets just use it!
+                    if (remote->Comm().useFD(communication_fd))
+                        mode = eRNBRunLoopModeExit;
+                    else
+                        remote->StartReadRemoteDataThread();
+                }
 
                 if (mode != eRNBRunLoopModeExit)
                 {
@@ -1600,6 +1617,16 @@ main (int argc, char *argv[])
                         if (remote->Comm().OpenFile (str))
                             mode = eRNBRunLoopModeExit;
                     }
+                    else if (communication_fd >= 0)
+                    {
+                        // We were passed a file descriptor to use during fork/exec that is already open
+                        // in our process, so lets just use it!
+                        if (remote->Comm().useFD(communication_fd))
+                            mode = eRNBRunLoopModeExit;
+                        else
+                            remote->StartReadRemoteDataThread();
+                    }
+
                     if (mode != eRNBRunLoopModeExit)
                         RNBLogSTDOUT ("Waiting for debugger instructions for process %d.\n", attach_pid);
                 }
@@ -1624,6 +1651,15 @@ main (int argc, char *argv[])
                         {
                             if (remote->Comm().OpenFile (str))
                                 mode = eRNBRunLoopModeExit;
+                        }
+                        else if (communication_fd >= 0)
+                        {
+                            // We were passed a file descriptor to use during fork/exec that is already open
+                            // in our process, so lets just use it!
+                            if (remote->Comm().useFD(communication_fd))
+                                mode = eRNBRunLoopModeExit;
+                            else
+                                remote->StartReadRemoteDataThread();
                         }
 
                         if (mode != eRNBRunLoopModeExit)
@@ -1656,6 +1692,15 @@ main (int argc, char *argv[])
                 {
                     if (remote->Comm().OpenFile (str))
                         mode = eRNBRunLoopModeExit;
+                }
+                else if (communication_fd >= 0)
+                {
+                    // We were passed a file descriptor to use during fork/exec that is already open
+                    // in our process, so lets just use it!
+                    if (remote->Comm().useFD(communication_fd))
+                        mode = eRNBRunLoopModeExit;
+                    else
+                        remote->StartReadRemoteDataThread();
                 }
 
                 if (mode != eRNBRunLoopModeExit)

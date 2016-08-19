@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -53,6 +54,29 @@ private:
 
   /// Compute summary for given variable with optional frequency information
   void computeVariableSummary(const GlobalVariable &V);
+};
+
+/// Analysis pass to provide the ModuleSummaryIndex object.
+class ModuleSummaryIndexAnalysis
+    : public AnalysisInfoMixin<ModuleSummaryIndexAnalysis> {
+  friend AnalysisInfoMixin<ModuleSummaryIndexAnalysis>;
+  static char PassID;
+
+  std::unique_ptr<ModuleSummaryIndexBuilder> IndexBuilder;
+
+public:
+  typedef const ModuleSummaryIndex &Result;
+
+  // FIXME: Remove these once MSVC can synthesize them.
+  ModuleSummaryIndexAnalysis() {}
+  ModuleSummaryIndexAnalysis(ModuleSummaryIndexAnalysis &&Arg)
+      : IndexBuilder(std::move(Arg.IndexBuilder)) {}
+  ModuleSummaryIndexAnalysis &operator=(ModuleSummaryIndexAnalysis &&RHS) {
+    IndexBuilder = std::move(RHS.IndexBuilder);
+    return *this;
+  }
+
+  const ModuleSummaryIndex &run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the ModuleSummaryIndex object.

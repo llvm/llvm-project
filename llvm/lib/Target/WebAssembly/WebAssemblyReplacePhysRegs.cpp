@@ -88,6 +88,8 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
         if (VReg == WebAssembly::NoRegister)
           VReg = MRI.createVirtualRegister(RC);
         MO.setReg(VReg);
+        if (MO.getParent()->isDebugValue())
+          MO.setIsDebug();
         Changed = true;
       }
     }

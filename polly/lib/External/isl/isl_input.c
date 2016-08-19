@@ -3112,12 +3112,15 @@ static int next_is_fresh_ident(__isl_keep isl_stream *s, struct vars *v)
  * If the tuple we are reading is named, we assume it's the domain.
  * Also, if inside the tuple, the first thing we find is a nested tuple
  * or a new identifier, we again assume it's the domain.
+ * Finally, if the tuple is empty, then it must be the domain
+ * since it does not contain an affine expression.
  * Otherwise, we assume we are reading an affine expression.
  */
 static __isl_give isl_set *read_aff_domain(__isl_keep isl_stream *s,
 	__isl_take isl_set *dom, struct vars *v)
 {
-	struct isl_token *tok;
+	struct isl_token *tok, *tok2;
+	int is_empty;
 
 	tok = isl_stream_next_token(s);
 	if (tok && (tok->type == ISL_TOKEN_IDENT || tok->is_keyword)) {
@@ -3128,7 +3131,11 @@ static __isl_give isl_set *read_aff_domain(__isl_keep isl_stream *s,
 		isl_stream_error(s, tok, "expecting '['");
 		goto error;
 	}
-	if (next_is_tuple(s) || next_is_fresh_ident(s, v)) {
+	tok2 = isl_stream_next_token(s);
+	is_empty = tok2 && tok2->type == ']';
+	if (tok2)
+		isl_stream_push_token(s, tok2);
+	if (is_empty || next_is_tuple(s) || next_is_fresh_ident(s, v)) {
 		isl_stream_push_token(s, tok);
 		dom = read_map_tuple(s, dom, isl_dim_set, v, 1, 0);
 	} else

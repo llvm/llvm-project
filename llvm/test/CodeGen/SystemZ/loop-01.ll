@@ -1,6 +1,8 @@
 ; Test loop tuning.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 \
+; RUN:  | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-Z13
 
 ; Test that strength reduction is applied to addresses with a scale factor,
 ; but that indexed addressing can still be used.
@@ -121,4 +123,119 @@ loop.next:
 
 exit:
   ret void
+}
+
+; Test that negative offsets are avoided for loads of floating point.
+%s.float = type { float, float, float }
+define void @f5(%s.float* nocapture %a,
+                %s.float* nocapture readonly %b,
+                i32 zeroext %S) {
+; CHECK-Z13-LABEL: f5:
+; CHECK-Z13-NOT: -{{[0-9]+}}(%r
+
+entry:
+  %cmp9 = icmp eq i32 %S, 0
+  br i1 %cmp9, label %for.cond.cleanup, label %for.body.preheader
+
+for.body.preheader:                 ; preds = %entry
+  br label %for.body
+
+for.cond.cleanup.loopexit:          ; preds = %for.body
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                   ; preds = %for.cond.cleanup.loopexit, %entry
+  ret void
+
+for.body:                           ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %a1 = getelementptr inbounds %s.float, %s.float* %b, i64 %indvars.iv, i32 0
+  %tmp = load float, float* %a1, align 4
+  %b4 = getelementptr inbounds %s.float, %s.float* %b, i64 %indvars.iv, i32 1
+  %tmp1 = load float, float* %b4, align 4
+  %add = fadd float %tmp, %tmp1
+  %c = getelementptr inbounds %s.float, %s.float* %b, i64 %indvars.iv, i32 2
+  %tmp2 = load float, float* %c, align 4
+  %add7 = fadd float %add, %tmp2
+  %a10 = getelementptr inbounds %s.float, %s.float* %a, i64 %indvars.iv, i32 0
+  store float %add7, float* %a10, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %S
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+}
+
+; Test that negative offsets are avoided for loads of double.
+%s.double = type { double, double, double }
+define void @f6(%s.double* nocapture %a,
+                %s.double* nocapture readonly %b,
+                i32 zeroext %S) {
+; CHECK-Z13-LABEL: f6:
+; CHECK-Z13-NOT: -{{[0-9]+}}(%r
+entry:
+  %cmp9 = icmp eq i32 %S, 0
+  br i1 %cmp9, label %for.cond.cleanup, label %for.body.preheader
+
+for.body.preheader:                  ; preds = %entry
+  br label %for.body
+
+for.cond.cleanup.loopexit:           ; preds = %for.body
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                    ; preds = %for.cond.cleanup.loopexit, %entry
+  ret void
+
+for.body:                            ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %a1 = getelementptr inbounds %s.double, %s.double* %b, i64 %indvars.iv, i32 0
+  %tmp = load double, double* %a1, align 4
+  %b4 = getelementptr inbounds %s.double, %s.double* %b, i64 %indvars.iv, i32 1
+  %tmp1 = load double, double* %b4, align 4
+  %add = fadd double %tmp, %tmp1
+  %c = getelementptr inbounds %s.double, %s.double* %b, i64 %indvars.iv, i32 2
+  %tmp2 = load double, double* %c, align 4
+  %add7 = fadd double %add, %tmp2
+  %a10 = getelementptr inbounds %s.double, %s.double* %a, i64 %indvars.iv, i32 0
+  store double %add7, double* %a10, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %S
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+}
+
+; Test that negative offsets are avoided for memory accesses of vector type.
+%s.vec = type { <4 x i32>, <4 x i32>, <4 x i32> }
+define void @f7(%s.vec* nocapture %a,
+                %s.vec* nocapture readonly %b,
+                i32 zeroext %S) {
+; CHECK-Z13-LABEL: f7:
+; CHECK-Z13-NOT: -{{[0-9]+}}(%r
+entry:
+  %cmp9 = icmp eq i32 %S, 0
+  br i1 %cmp9, label %for.cond.cleanup, label %for.body.preheader
+
+for.body.preheader:                 ; preds = %entry
+  br label %for.body
+
+for.cond.cleanup.loopexit:          ; preds = %for.body
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                   ; preds = %for.cond.cleanup.loopexit, %entry
+  ret void
+
+for.body:                           ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %a1 = getelementptr inbounds %s.vec, %s.vec* %b, i64 %indvars.iv, i32 0
+  %tmp = load <4 x i32>, <4 x i32>* %a1, align 4
+  %b4 = getelementptr inbounds %s.vec, %s.vec* %b, i64 %indvars.iv, i32 1
+  %tmp1 = load <4 x i32>, <4 x i32>* %b4, align 4
+  %add = add <4 x i32> %tmp1, %tmp
+  %c = getelementptr inbounds %s.vec, %s.vec* %b, i64 %indvars.iv, i32 2
+  %tmp2 = load <4 x i32>, <4 x i32>* %c, align 4
+  %add7 = add <4 x i32> %add, %tmp2
+  %a10 = getelementptr inbounds %s.vec, %s.vec* %a, i64 %indvars.iv, i32 0
+  store <4 x i32> %add7, <4 x i32>* %a10, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %S
+  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }

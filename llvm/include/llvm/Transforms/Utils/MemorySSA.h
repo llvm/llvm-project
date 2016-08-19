@@ -171,23 +171,8 @@ private:
 };
 
 template <>
-struct ilist_traits<MemoryAccess> : public ilist_default_traits<MemoryAccess> {
-  /// See details of the instruction class for why this trick works
-  // FIXME: This downcast is UB. See llvm.org/PR26753.
-  LLVM_NO_SANITIZE("object-size")
-  MemoryAccess *createSentinel() const {
-    return static_cast<MemoryAccess *>(&Sentinel);
-  }
-
-  static void destroySentinel(MemoryAccess *) {}
-
-  MemoryAccess *provideInitialHead() const { return createSentinel(); }
-  MemoryAccess *ensureHead(MemoryAccess *) const { return createSentinel(); }
-  static void noteHead(MemoryAccess *, MemoryAccess *) {}
-
-private:
-  mutable ilist_half_node<MemoryAccess> Sentinel;
-};
+struct ilist_sentinel_traits<MemoryAccess>
+    : public ilist_half_embedded_sentinel_traits<MemoryAccess> {};
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MemoryAccess &MA) {
   MA.print(OS);

@@ -15,7 +15,7 @@ builtin_check_c_compiler_flag(-mfloat-abi=soft      COMPILER_RT_HAS_FLOAT_ABI_SO
 builtin_check_c_compiler_flag(-mfloat-abi=hard      COMPILER_RT_HAS_FLOAT_ABI_HARD_FLAG)
 builtin_check_c_compiler_flag(-static               COMPILER_RT_HAS_STATIC_FLAG)
 
-builtin_check_c_compiler_source(COMPILER_RT_SUPPORTS_ATOMIC_KEYWORD
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
 int foo(int x, int y) {
  _Atomic int result = x * y;

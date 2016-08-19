@@ -46,10 +46,6 @@ public:
   /// @brief add atom to symbol table
   bool add(const AbsoluteAtom &);
 
-  /// @brief checks if name is in symbol table and if so atom is not
-  ///        UndefinedAtom
-  bool isDefined(StringRef sym);
-
   /// @brief returns atom in symbol table for specified name (or nullptr)
   const Atom *findByName(StringRef sym);
 

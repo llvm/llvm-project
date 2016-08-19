@@ -149,7 +149,8 @@ GDBRemoteCommunicationServerPlatform::LaunchGDBServer(const lldb_private::Args& 
                                            nullptr,
                                            debugserver_launch_info,
                                            port_ptr,
-                                           args);
+                                           &args,
+                                           -1);
 
     pid = debugserver_launch_info.GetProcessID();
     if (pid != LLDB_INVALID_PROCESS_ID)

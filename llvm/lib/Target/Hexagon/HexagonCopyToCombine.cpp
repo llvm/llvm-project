@@ -606,7 +606,7 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
     for (auto NewMI : DbgMItoMove) {
       // If iterator MI is pointing to DEBUG_VAL, make sure
       // MI now points to next relevant instruction.
-      if (NewMI == (MachineInstr*)MI)
+      if (NewMI == MI)
         ++MI;
       BB->splice(InsertPt, BB, NewMI);
     }

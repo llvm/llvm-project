@@ -265,7 +265,7 @@ bool InlineAsm::Verify(FunctionType *Ty, StringRef ConstStr) {
         break;
       }
       ++NumIndirect;
-      // FALLTHROUGH for Indirect Outputs.
+      LLVM_FALLTHROUGH; // We fall through for Indirect Outputs.
     case InlineAsm::isInput:
       if (NumClobbers) return false;               // inputs before clobbers.
       ++NumInputs;

@@ -36,8 +36,8 @@ bool isPositiveHalfWord(SDNode *N);
       AT_GOT,      // Index in GOT.
       AT_PCREL,    // Offset relative to PC.
 
-      CALLv3,      // A V3+ call instruction.
-      CALLv3nr,    // A V3+ call instruction that doesn't return.
+      CALL,        // Function call.
+      CALLnr,      // Function call that does not return.
       CALLR,
 
       RET_FLAG,    // Return with a flag operand.

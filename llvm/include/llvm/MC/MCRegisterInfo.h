@@ -271,6 +271,16 @@ public:
     NumSubRegIndices = NumIndices;
     SubRegIdxRanges = SubIdxRanges;
     RegEncodingTable = RET;
+
+    // Initialize DWARF register mapping variables
+    EHL2DwarfRegs = nullptr;
+    EHL2DwarfRegsSize = 0;
+    L2DwarfRegs = nullptr;
+    L2DwarfRegsSize = 0;
+    EHDwarf2LRegs = nullptr;
+    EHDwarf2LRegsSize = 0;
+    Dwarf2LRegs = nullptr;
+    Dwarf2LRegsSize = 0;
   }
 
   /// \brief Used to initialize LLVM register to Dwarf

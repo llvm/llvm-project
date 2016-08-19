@@ -42,8 +42,6 @@ public:
 
 private:
   bool mayAliasInScopes(const MDNode *Scopes, const MDNode *NoAlias) const;
-  void collectMDInDomain(const MDNode *List, const MDNode *Domain,
-                         SmallPtrSetImpl<const MDNode *> &Nodes) const;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

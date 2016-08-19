@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "BufferDerefCheck.h"
 #include "TypeMismatchCheck.h"
 
 namespace clang {
@@ -19,6 +20,7 @@ namespace mpi {
 class MPIModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<BufferDerefCheck>("mpi-buffer-deref");
     CheckFactories.registerCheck<TypeMismatchCheck>("mpi-type-mismatch");
   }
 };

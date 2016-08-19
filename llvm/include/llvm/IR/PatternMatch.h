@@ -294,10 +294,10 @@ template <typename Class> struct bind_ty {
 
 /// \brief Match a value, capturing it if we match.
 inline bind_ty<Value> m_Value(Value *&V) { return V; }
+inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
 /// \brief Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
-
 /// \brief Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 
@@ -682,7 +682,7 @@ template <typename SubPattern_t> struct Exact_match {
   Exact_match(const SubPattern_t &SP) : SubPattern(SP) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (PossiblyExactOperator *PEO = dyn_cast<PossiblyExactOperator>(V))
+    if (auto *PEO = dyn_cast<PossiblyExactOperator>(V))
       return PEO->isExact() && SubPattern.match(V);
     return false;
   }
@@ -706,7 +706,7 @@ struct CmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (Class *I = dyn_cast<Class>(V))
+    if (auto *I = dyn_cast<Class>(V))
       if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
         Predicate = I->getPredicate();
         return true;

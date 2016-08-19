@@ -156,6 +156,28 @@ define i1 @test_setcc2() {
 ; CHECK: ret
 }
 
+define i1 @test_setcc3() {
+; CHECK-LABEL: test_setcc3:
+
+  %lhs = load fp128, fp128* @lhs, align 16
+  %rhs = load fp128, fp128* @rhs, align 16
+; CHECK: ldr q0, [{{x[0-9]+}}, :lo12:lhs]
+; CHECK: ldr q1, [{{x[0-9]+}}, :lo12:rhs]
+
+  %val = fcmp ueq fp128 %lhs, %rhs
+; CHECK: bl __eqtf2
+; CHECK: cmp     w0, #0
+; CHECK: cset    w19, eq
+; CHECK: bl __unordtf2
+; CHECK: cmp     w0, #0
+; CHECK: cset    w8, ne
+; CHECK: orr     w0, w8, w19
+
+  ret i1 %val
+; CHECK: ret
+}
+
+
 define i32 @test_br_cc() {
 ; CHECK-LABEL: test_br_cc:
 

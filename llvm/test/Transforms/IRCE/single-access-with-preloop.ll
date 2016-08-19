@@ -1,4 +1,4 @@
-; RUN: opt -irce -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
 
 define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {
  entry:
@@ -61,7 +61,7 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
 ; CHECK: br i1 [[continue_preloop_cond]], label %loop.preloop, label %preloop.exit.selector
 
 ; CHECK: preloop.exit.selector:
-; CHECK: [[preloop_its_left:[^ ]+]] = icmp slt i32 %idx.next.preloop, %n
+; CHECK: [[preloop_its_left:[^ ]+]] = icmp slt i32 %idx.next.preloop.lcssa, %n
 ; CHECK: br i1 [[preloop_its_left]], label %preloop.pseudo.exit, label %exit.loopexit
 
 ; CHECK: in.bounds.postloop:

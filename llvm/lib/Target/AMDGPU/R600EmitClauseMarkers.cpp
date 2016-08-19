@@ -307,7 +307,7 @@ public:
                                                     BB != BB_E; ++BB) {
       MachineBasicBlock &MBB = *BB;
       MachineBasicBlock::iterator I = MBB.begin();
-      if (I->getOpcode() == AMDGPU::CF_ALU)
+      if (I != MBB.end() && I->getOpcode() == AMDGPU::CF_ALU)
         continue; // BB was already parsed
       for (MachineBasicBlock::iterator E = MBB.end(); I != E;) {
         if (isALU(*I))

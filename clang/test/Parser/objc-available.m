@@ -15,8 +15,6 @@ void f() {
 
   (void)@available(erik_os 10.10, hat_os 1.0, *); // expected-error 2 {{unrecognized platform name}}
 
-  (void)@available(ios 8, *); // expected-warning{{using '*' case here, platform macos is not accounted for}}
-
   (void)@available(); // expected-error{{expected a platform name here}}
   (void)@available(macos 10.10,); // expected-error{{expected a platform name here}}
   (void)@available(macos); // expected-error{{expected a version}}

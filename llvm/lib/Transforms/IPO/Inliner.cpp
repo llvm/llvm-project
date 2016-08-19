@@ -48,6 +48,17 @@ STATISTIC(NumMergedAllocas, "Number of allocas merged together");
 // if those would be more profitable and blocked inline steps.
 STATISTIC(NumCallerCallersAnalyzed, "Number of caller-callers analyzed");
 
+/// Flag to disable manual alloca merging.
+///
+/// Merging of allocas was originally done as a stack-size saving technique
+/// prior to LLVM's code generator having support for stack coloring based on
+/// lifetime markers. It is now in the process of being removed. To experiment
+/// with disabling it and relying fully on lifetime marker based stack
+/// coloring, you can pass this flag to LLVM.
+static cl::opt<bool>
+    DisableInlinedAllocaMerging("disable-inlined-alloca-merging",
+                                cl::init(false), cl::Hidden);
+
 namespace {
 enum class InlinerFunctionImportStatsOpts {
   No = 0,
@@ -84,55 +95,29 @@ void Inliner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 typedef DenseMap<ArrayType *, std::vector<AllocaInst *>> InlinedArrayAllocasTy;
 
-/// If it is possible to inline the specified call site,
-/// do so and update the CallGraph for this operation.
+/// Look at all of the allocas that we inlined through this call site.  If we
+/// have already inlined other allocas through other calls into this function,
+/// then we know that they have disjoint lifetimes and that we can merge them.
 ///
-/// This function also does some basic book-keeping to update the IR.  The
-/// InlinedArrayAllocas map keeps track of any allocas that are already
-/// available from other functions inlined into the caller.  If we are able to
-/// inline this call site we attempt to reuse already available allocas or add
-/// any new allocas to the set if not possible.
-static bool InlineCallIfPossible(
-    CallSite CS, InlineFunctionInfo &IFI,
-    InlinedArrayAllocasTy &InlinedArrayAllocas, int InlineHistory,
-    bool InsertLifetime, function_ref<AAResults &(Function &)> AARGetter,
-    ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
-  Function *Callee = CS.getCalledFunction();
-  Function *Caller = CS.getCaller();
-
-  AAResults &AAR = AARGetter(*Callee);
-
-  // Try to inline the function.  Get the list of static allocas that were
-  // inlined.
-  if (!InlineFunction(CS, IFI, &AAR, InsertLifetime))
-    return false;
-
-  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
-    ImportedFunctionsStats.recordInline(*Caller, *Callee);
-
-  AttributeFuncs::mergeAttributesForInlining(*Caller, *Callee);
-
-  // Look at all of the allocas that we inlined through this call site.  If we
-  // have already inlined other allocas through other calls into this function,
-  // then we know that they have disjoint lifetimes and that we can merge them.
-  //
-  // There are many heuristics possible for merging these allocas, and the
-  // different options have different tradeoffs.  One thing that we *really*
-  // don't want to hurt is SRoA: once inlining happens, often allocas are no
-  // longer address taken and so they can be promoted.
-  //
-  // Our "solution" for that is to only merge allocas whose outermost type is an
-  // array type.  These are usually not promoted because someone is using a
-  // variable index into them.  These are also often the most important ones to
-  // merge.
-  //
-  // A better solution would be to have real memory lifetime markers in the IR
-  // and not have the inliner do any merging of allocas at all.  This would
-  // allow the backend to do proper stack slot coloring of all allocas that
-  // *actually make it to the backend*, which is really what we want.
-  //
-  // Because we don't have this information, we do this simple and useful hack.
-  //
+/// There are many heuristics possible for merging these allocas, and the
+/// different options have different tradeoffs.  One thing that we *really*
+/// don't want to hurt is SRoA: once inlining happens, often allocas are no
+/// longer address taken and so they can be promoted.
+///
+/// Our "solution" for that is to only merge allocas whose outermost type is an
+/// array type.  These are usually not promoted because someone is using a
+/// variable index into them.  These are also often the most important ones to
+/// merge.
+///
+/// A better solution would be to have real memory lifetime markers in the IR
+/// and not have the inliner do any merging of allocas at all.  This would
+/// allow the backend to do proper stack slot coloring of all allocas that
+/// *actually make it to the backend*, which is really what we want.
+///
+/// Because we don't have this information, we do this simple and useful hack.
+static void mergeInlinedArrayAllocas(
+    Function *Caller, InlineFunctionInfo &IFI,
+    InlinedArrayAllocasTy &InlinedArrayAllocas, int InlineHistory) {
   SmallPtrSet<AllocaInst *, 16> UsedAllocas;
 
   // When processing our SCC, check to see if CS was inlined from some other
@@ -148,7 +133,7 @@ static bool InlineCallIfPossible(
   // keeping track of the inline history for each alloca in the
   // InlinedArrayAllocas but this isn't likely to be a significant win.
   if (InlineHistory != -1) // Only do merging for top-level call sites in SCC.
-    return true;
+    return;
 
   // Loop over all the allocas we have so far and see if they can be merged with
   // a previously inlined alloca.  If not, remember that we had it.
@@ -234,6 +219,38 @@ static bool InlineCallIfPossible(
     AllocasForType.push_back(AI);
     UsedAllocas.insert(AI);
   }
+}
+
+/// If it is possible to inline the specified call site,
+/// do so and update the CallGraph for this operation.
+///
+/// This function also does some basic book-keeping to update the IR.  The
+/// InlinedArrayAllocas map keeps track of any allocas that are already
+/// available from other functions inlined into the caller.  If we are able to
+/// inline this call site we attempt to reuse already available allocas or add
+/// any new allocas to the set if not possible.
+static bool InlineCallIfPossible(
+    CallSite CS, InlineFunctionInfo &IFI,
+    InlinedArrayAllocasTy &InlinedArrayAllocas, int InlineHistory,
+    bool InsertLifetime, function_ref<AAResults &(Function &)> &AARGetter,
+    ImportedFunctionsInliningStatistics &ImportedFunctionsStats) {
+  Function *Callee = CS.getCalledFunction();
+  Function *Caller = CS.getCaller();
+
+  AAResults &AAR = AARGetter(*Callee);
+
+  // Try to inline the function.  Get the list of static allocas that were
+  // inlined.
+  if (!InlineFunction(CS, IFI, &AAR, InsertLifetime))
+    return false;
+
+  if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
+    ImportedFunctionsStats.recordInline(*Caller, *Callee);
+
+  AttributeFuncs::mergeAttributesForInlining(*Caller, *Callee);
+
+  if (!DisableInlinedAllocaMerging)
+    mergeInlinedArrayAllocas(Caller, IFI, InlinedArrayAllocas, InlineHistory);
 
   return true;
 }

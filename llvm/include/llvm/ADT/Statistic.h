@@ -32,6 +32,7 @@
 #include <memory>
 
 namespace llvm {
+
 class raw_ostream;
 class raw_fd_ostream;
 
@@ -140,13 +141,14 @@ protected:
     TsanHappensAfter(this);
     return *this;
   }
+
   void RegisterStatistic();
 };
 
 // STATISTIC - A macro to make definition of statistics really simple.  This
 // automatically passes the DEBUG_TYPE of the file into the statistic.
 #define STATISTIC(VARNAME, DESC)                                               \
-  static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC, {0}, 0}
+  static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC, {0}, false}
 
 /// \brief Enable the collection and printing of statistics.
 void EnableStatistics();
@@ -166,6 +168,6 @@ void PrintStatistics(raw_ostream &OS);
 /// Print statistics in JSON format.
 void PrintStatisticsJSON(raw_ostream &OS);
 
-} // end llvm namespace
+} // end namespace llvm
 
 #endif // LLVM_ADT_STATISTIC_H

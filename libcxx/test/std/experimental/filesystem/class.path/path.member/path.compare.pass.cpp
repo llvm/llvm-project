@@ -73,6 +73,11 @@ const PathCompareTest CompareTestCases[] =
 #undef LONGC
 #undef LONGD
 
+static inline int normalize_ret(int ret)
+{
+  return ret < 0 ? -1 : (ret > 0 ? 1 : 0);
+}
+
 int main()
 {
   using namespace fs;
@@ -86,13 +91,12 @@ int main()
       DisableAllocationGuard g; // none of these operations should allocate
 
       // check runtime results
-      int ret1 = p1.compare(p2);
-      int ret2 = p1.compare(R);
-      int ret3 = p1.compare(TC.RHS);
-      int ret4 = p1.compare(RV);
+      int ret1 = normalize_ret(p1.compare(p2));
+      int ret2 = normalize_ret(p1.compare(R));
+      int ret3 = normalize_ret(p1.compare(TC.RHS));
+      int ret4 = normalize_ret(p1.compare(RV));
       assert(ret1 == ret2 && ret1 == ret3 && ret1 == ret4);
-      int normalized_ret = ret1 < 0 ? -1 : (ret1 > 0 ? 1 : 0);
-      assert(normalized_ret == E);
+      assert(ret1 == E);
 
       // check signatures
       ASSERT_NOEXCEPT(p1.compare(p2));

@@ -583,7 +583,8 @@ static void ioctl_common_pre(void *ctx, const ioctl_desc *desc, int d,
     return;
   if (request == IOCTL_SIOCGIFCONF) {
     struct __sanitizer_ifconf *ifc = (__sanitizer_ifconf *)arg;
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, &ifc->ifc_len, sizeof(ifc->ifc_len));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, (char*)&ifc->ifc_len,
+                                  sizeof(ifc->ifc_len));
   }
 }
 

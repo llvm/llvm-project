@@ -1539,7 +1539,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       continue;
     --MaxNumInstToLookAt;
 
-    // Could be calling an instruction that effects memory like free().
+    // Could be calling an instruction that affects memory like free().
     if (CurI.mayHaveSideEffects() && !isa<StoreInst>(CurI))
       return nullptr;
 
@@ -5499,7 +5499,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)
-    for (BasicBlock::iterator i = ++BasicBlock::iterator(I); &*i != Use; ++i)
+    for (BasicBlock::iterator
+             i = ++BasicBlock::iterator(I),
+             UI = BasicBlock::iterator(dyn_cast<Instruction>(Use));
+         i != UI; ++i)
       if (i == I->getParent()->end() || i->mayHaveSideEffects())
         return false;
 

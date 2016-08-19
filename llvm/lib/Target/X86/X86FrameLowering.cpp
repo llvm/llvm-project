@@ -156,8 +156,10 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
 
   const TargetRegisterClass &AvailableRegs = *TRI->getGPRsForTailCall(*MF);
 
-  unsigned Opc = MBBI->getOpcode();
-  switch (Opc) {
+  if (MBBI == MBB.end())
+    return 0;
+
+  switch (MBBI->getOpcode()) {
   default: return 0;
   case TargetOpcode::PATCHABLE_RET:
   case X86::RET:
@@ -1480,7 +1482,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-  unsigned RetOpcode = MBBI->getOpcode();
+  Optional<unsigned> RetOpcode;
+  if (MBBI != MBB.end())
+    RetOpcode = MBBI->getOpcode();
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
@@ -1493,7 +1497,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsWinCFI =
       IsWin64Prologue && MF.getFunction()->needsUnwindTableEntry();
-  bool IsFunclet = isFuncletReturnInstr(*MBBI);
+  bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
   MachineBasicBlock *TargetMBB = nullptr;
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -1502,7 +1506,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t NumBytes = 0;
 
-  if (MBBI->getOpcode() == X86::CATCHRET) {
+  if (RetOpcode && *RetOpcode == X86::CATCHRET) {
     // SEH shouldn't use catchret.
     assert(!isAsynchronousEHPersonality(
                classifyEHPersonality(MF.getFunction()->getPersonalityFn())) &&
@@ -1516,7 +1520,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
             MachineFramePtr)
         .setMIFlag(MachineInstr::FrameDestroy);
-  } else if (MBBI->getOpcode() == X86::CLEANUPRET) {
+  } else if (RetOpcode && *RetOpcode == X86::CLEANUPRET) {
     NumBytes = getWinEHFuncletFrameSize(MF);
     assert(hasFP(MF) && "EH funclets without FP not yet implemented");
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
@@ -1629,7 +1633,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   if (NeedsWinCFI)
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
 
-  if (!isTailCallOpcode(RetOpcode)) {
+  if (!RetOpcode || !isTailCallOpcode(*RetOpcode)) {
     // Add the return addr area delta back since we are not tail calling.
     int Offset = -1 * X86FI->getTCReturnAddrDelta();
     assert(Offset >= 0 && "TCDelta should never be positive");
@@ -1957,7 +1961,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   if (CSI.empty())
     return false;
 
-  if (isFuncletReturnInstr(*MI) && STI.isOSWindows()) {
+  if (MI != MBB.end() && isFuncletReturnInstr(*MI) && STI.isOSWindows()) {
     // Don't restore CSRs in 32-bit EH funclets. Matches
     // spillCalleeSavedRegisters.
     if (STI.is32Bit())

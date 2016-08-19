@@ -163,8 +163,8 @@ private:
   InitializedEntity() : ManglingNumber(0) {}
 
   /// \brief Create the initialization entity for a variable.
-  InitializedEntity(VarDecl *Var)
-    : Kind(EK_Variable), Parent(nullptr), Type(Var->getType()),
+  InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
+    : Kind(EK), Parent(nullptr), Type(Var->getType()),
       ManglingNumber(0), VariableOrMember(Var) { }
   
   /// \brief Create the initialization entity for the result of a
@@ -183,11 +183,6 @@ private:
     : Kind(EK_Member), Parent(Parent), Type(Member->getType()),
       ManglingNumber(0), VariableOrMember(Member) { }
   
-  /// \brief Create the initialization entity for a binding.
-  InitializedEntity(BindingDecl *Binding, QualType Type)
-    : Kind(EK_Binding), Parent(nullptr), Type(Type),
-      ManglingNumber(0), VariableOrMember(Binding) {}
-
   /// \brief Create the initialization entity for an array element.
   InitializedEntity(ASTContext &Context, unsigned Index, 
                     const InitializedEntity &Parent);
@@ -323,9 +318,8 @@ public:
   }
 
   /// \brief Create the initialization entity for a structured binding.
-  static InitializedEntity InitializeBinding(BindingDecl *Binding,
-                                             QualType Type) {
-    return InitializedEntity(Binding, Type);
+  static InitializedEntity InitializeBinding(VarDecl *Binding) {
+    return InitializedEntity(Binding, EK_Binding);
   }
 
   /// \brief Create the initialization entity for a lambda capture.

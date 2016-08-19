@@ -65,4 +65,75 @@ TEST(DenseSetCustomTest, FindAsTest) {
   EXPECT_TRUE(set.find_as("d") == set.end());
 }
 
+// Simple class that counts how many moves and copy happens when growing a map
+struct CountCopyAndMove {
+  static int Move;
+  static int Copy;
+  int Value;
+  CountCopyAndMove(int Value) : Value(Value) {}
+
+  CountCopyAndMove(const CountCopyAndMove &RHS) {
+    Value = RHS.Value;
+    Copy++;
+  }
+  CountCopyAndMove &operator=(const CountCopyAndMove &RHS) {
+    Value = RHS.Value;
+    Copy++;
+    return *this;
+  }
+  CountCopyAndMove(CountCopyAndMove &&RHS) {
+    Value = RHS.Value;
+    Move++;
+  }
+  CountCopyAndMove &operator=(const CountCopyAndMove &&RHS) {
+    Value = RHS.Value;
+    Move++;
+    return *this;
+  }
+};
+int CountCopyAndMove::Copy = 0;
+int CountCopyAndMove::Move = 0;
+} // anonymous namespace
+
+namespace llvm {
+// Specialization required to insert a CountCopyAndMove into a DenseSet.
+template <> struct DenseMapInfo<CountCopyAndMove> {
+  static inline CountCopyAndMove getEmptyKey() { return CountCopyAndMove(-1); };
+  static inline CountCopyAndMove getTombstoneKey() {
+    return CountCopyAndMove(-2);
+  };
+  static unsigned getHashValue(const CountCopyAndMove &Val) {
+    return Val.Value;
+  }
+  static bool isEqual(const CountCopyAndMove &LHS,
+                      const CountCopyAndMove &RHS) {
+    return LHS.Value == RHS.Value;
+  }
+};
+}
+
+namespace {
+// Make sure reserve actually gives us enough buckets to insert N items
+// without increasing allocation size.
+TEST(DenseSetCustomTest, ReserveTest) {
+  // Test a few different size, 48 is *not* a random choice: we need a value
+  // that is 2/3 of a power of two to stress the grow() condition, and the power
+  // of two has to be at least 64 because of minimum size allocation in the
+  // DenseMa. 66 is a value just above the 64 default init.
+  for (auto Size : {1, 2, 48, 66}) {
+    DenseSet<CountCopyAndMove> Set;
+    Set.reserve(Size);
+    unsigned MemorySize = Set.getMemorySize();
+    CountCopyAndMove::Copy = 0;
+    CountCopyAndMove::Move = 0;
+    for (int i = 0; i < Size; ++i)
+      Set.insert(CountCopyAndMove(i));
+    // Check that we didn't grow
+    EXPECT_EQ(MemorySize, Set.getMemorySize());
+    // Check that move was called the expected number of times
+    EXPECT_EQ(Size, CountCopyAndMove::Move);
+    // Check that no copy occured
+    EXPECT_EQ(0, CountCopyAndMove::Copy);
+  }
+}
 }

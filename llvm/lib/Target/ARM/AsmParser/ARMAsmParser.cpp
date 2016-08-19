@@ -5425,7 +5425,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return false;
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
@@ -6682,6 +6682,12 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     int Op = (Operands[2]->isImm()) ? 2 : 3;
     if (!static_cast<ARMOperand &>(*Operands[Op]).isSignedOffset<20, 1>())
       return Error(Operands[Op]->getStartLoc(), "branch target out of range");
+    break;
+  }
+  case ARM::tCBZ:
+  case ARM::tCBNZ: {
+    if (!static_cast<ARMOperand &>(*Operands[2]).isUnsignedOffset<6, 1>())
+      return Error(Operands[2]->getStartLoc(), "branch target out of range");
     break;
   }
   case ARM::MOVi16:

@@ -3526,6 +3526,57 @@ GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractor
     }
     return false;
 }
+
+bool
+GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::StringRef data)
+{
+    Lock lock(*this, false);
+    if (!lock)
+    {
+        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for P packet.", __FUNCTION__);
+        return false;
+    }
+
+    const bool thread_suffix_supported = GetThreadSuffixSupported();
+    if (!thread_suffix_supported && !SetCurrentThread(tid))
+        return false;
+
+    StreamString packet;
+    packet.Printf("P%x=", reg_num);
+    packet.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
+    if (thread_suffix_supported)
+        packet.Printf(";thread:%4.4" PRIx64 ";", tid);
+    StringExtractorGDBRemote response;
+    return SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == PacketResult::Success &&
+           response.IsOKResponse();
+}
+
+bool
+GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::StringRef data)
+{
+    Lock lock(*this, false);
+    if (!lock)
+    {
+        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for G packet.", __FUNCTION__);
+        return false;
+    }
+
+    const bool thread_suffix_supported = GetThreadSuffixSupported();
+    if (!thread_suffix_supported && !SetCurrentThread(tid))
+        return false;
+
+    StreamString packet;
+    packet.PutChar('G');
+    packet.Write(data.data(), data.size());
+    if (thread_suffix_supported)
+        packet.Printf(";thread:%4.4" PRIx64 ";", tid);
+    StringExtractorGDBRemote response;
+    return SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == PacketResult::Success &&
+           response.IsOKResponse();
+}
+
 bool
 GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save_id)
 {

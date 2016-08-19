@@ -239,8 +239,7 @@ bool EEVT::TypeSet::EnforceInteger(TreePattern &TP) {
   TypeSet InputSet(*this);
 
   // Filter out all the fp types.
-  TypeVec.erase(std::remove_if(TypeVec.begin(), TypeVec.end(),
-                               std::not1(std::ptr_fun(isInteger))),
+  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isInteger))),
                 TypeVec.end());
 
   if (TypeVec.empty()) {
@@ -265,8 +264,7 @@ bool EEVT::TypeSet::EnforceFloatingPoint(TreePattern &TP) {
   TypeSet InputSet(*this);
 
   // Filter out all the integer types.
-  TypeVec.erase(std::remove_if(TypeVec.begin(), TypeVec.end(),
-                               std::not1(std::ptr_fun(isFloatingPoint))),
+  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isFloatingPoint))),
                 TypeVec.end());
 
   if (TypeVec.empty()) {
@@ -292,8 +290,7 @@ bool EEVT::TypeSet::EnforceScalar(TreePattern &TP) {
   TypeSet InputSet(*this);
 
   // Filter out all the vector types.
-  TypeVec.erase(std::remove_if(TypeVec.begin(), TypeVec.end(),
-                               std::not1(std::ptr_fun(isScalar))),
+  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isScalar))),
                 TypeVec.end());
 
   if (TypeVec.empty()) {
@@ -317,8 +314,7 @@ bool EEVT::TypeSet::EnforceVector(TreePattern &TP) {
   bool MadeChange = false;
 
   // Filter out all the scalar types.
-  TypeVec.erase(std::remove_if(TypeVec.begin(), TypeVec.end(),
-                               std::not1(std::ptr_fun(isVector))),
+  TypeVec.erase(remove_if(TypeVec, std::not1(std::ptr_fun(isVector))),
                 TypeVec.end());
 
   if (TypeVec.empty()) {
@@ -395,16 +391,15 @@ bool EEVT::TypeSet::EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP) {
                 A.getSizeInBits() < B.getSizeInBits());
       });
 
-    auto I = std::remove_if(Other.TypeVec.begin(), Other.TypeVec.end(),
-      [Smallest](MVT OtherVT) {
-        // Don't compare vector and non-vector types.
-        if (OtherVT.isVector() != Smallest.isVector())
-          return false;
-        // The getSizeInBits() check here is only needed for vectors, but is
-        // a subset of the scalar check for scalars so no need to qualify.
-        return OtherVT.getScalarSizeInBits() <= Smallest.getScalarSizeInBits()||
-               OtherVT.getSizeInBits() < Smallest.getSizeInBits();
-      });
+    auto I = remove_if(Other.TypeVec, [Smallest](MVT OtherVT) {
+      // Don't compare vector and non-vector types.
+      if (OtherVT.isVector() != Smallest.isVector())
+        return false;
+      // The getSizeInBits() check here is only needed for vectors, but is
+      // a subset of the scalar check for scalars so no need to qualify.
+      return OtherVT.getScalarSizeInBits() <= Smallest.getScalarSizeInBits() ||
+             OtherVT.getSizeInBits() < Smallest.getSizeInBits();
+    });
     MadeChange |= I != Other.TypeVec.end(); // If we're about to remove types.
     Other.TypeVec.erase(I, Other.TypeVec.end());
 
@@ -428,14 +423,13 @@ bool EEVT::TypeSet::EnforceSmallerThan(EEVT::TypeSet &Other, TreePattern &TP) {
                (A.getScalarSizeInBits() == B.getScalarSizeInBits() &&
                 A.getSizeInBits() < B.getSizeInBits());
       });
-    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
-      [Largest](MVT OtherVT) {
-        // Don't compare vector and non-vector types.
-        if (OtherVT.isVector() != Largest.isVector())
-          return false;
-        return OtherVT.getScalarSizeInBits() >= Largest.getScalarSizeInBits() ||
-               OtherVT.getSizeInBits() > Largest.getSizeInBits();
-      });
+    auto I = remove_if(TypeVec, [Largest](MVT OtherVT) {
+      // Don't compare vector and non-vector types.
+      if (OtherVT.isVector() != Largest.isVector())
+        return false;
+      return OtherVT.getScalarSizeInBits() >= Largest.getScalarSizeInBits() ||
+             OtherVT.getSizeInBits() > Largest.getSizeInBits();
+    });
     MadeChange |= I != TypeVec.end(); // If we're about to remove types.
     TypeVec.erase(I, TypeVec.end());
 
@@ -460,10 +454,9 @@ bool EEVT::TypeSet::EnforceVectorEltTypeIs(MVT::SimpleValueType VT,
   TypeSet InputSet(*this);
 
   // Filter out all the types which don't have the right element type.
-  auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
-    [VT](MVT VVT) {
-      return VVT.getVectorElementType().SimpleTy != VT;
-    });
+  auto I = remove_if(TypeVec, [VT](MVT VVT) {
+    return VVT.getVectorElementType().SimpleTy != VT;
+  });
   MadeChange |= I != TypeVec.end();
   TypeVec.erase(I, TypeVec.end());
 
@@ -547,10 +540,9 @@ bool EEVT::TypeSet::EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VTOperand,
     // Only keep types that have less elements than VTOperand.
     TypeSet InputSet(VTOperand);
 
-    auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
-                            [NumElems](MVT VVT) {
-                              return VVT.getVectorNumElements() >= NumElems;
-                            });
+    auto I = remove_if(VTOperand.TypeVec, [NumElems](MVT VVT) {
+      return VVT.getVectorNumElements() >= NumElems;
+    });
     MadeChange |= I != VTOperand.TypeVec.end();
     VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
 
@@ -571,10 +563,9 @@ bool EEVT::TypeSet::EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VTOperand,
     // Only keep types that have more elements than 'this'.
     TypeSet InputSet(*this);
 
-    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
-                            [NumElems](MVT VVT) {
-                              return VVT.getVectorNumElements() <= NumElems;
-                            });
+    auto I = remove_if(TypeVec, [NumElems](MVT VVT) {
+      return VVT.getVectorNumElements() <= NumElems;
+    });
     MadeChange |= I != TypeVec.end();
     TypeVec.erase(I, TypeVec.end());
 
@@ -609,10 +600,9 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     // Only keep types that have same elements as 'this'.
     TypeSet InputSet(VTOperand);
 
-    auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
-                            [NumElems](MVT VVT) {
-                              return VVT.getVectorNumElements() != NumElems;
-                            });
+    auto I = remove_if(VTOperand.TypeVec, [NumElems](MVT VVT) {
+      return VVT.getVectorNumElements() != NumElems;
+    });
     MadeChange |= I != VTOperand.TypeVec.end();
     VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
 
@@ -629,10 +619,9 @@ bool EEVT::TypeSet::EnforceVectorSameNumElts(EEVT::TypeSet &VTOperand,
     // Only keep types that have same elements as VTOperand.
     TypeSet InputSet(*this);
 
-    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
-                            [NumElems](MVT VVT) {
-                              return VVT.getVectorNumElements() != NumElems;
-                            });
+    auto I = remove_if(TypeVec, [NumElems](MVT VVT) {
+      return VVT.getVectorNumElements() != NumElems;
+    });
     MadeChange |= I != TypeVec.end();
     TypeVec.erase(I, TypeVec.end());
 
@@ -663,10 +652,8 @@ bool EEVT::TypeSet::EnforceSameSize(EEVT::TypeSet &VTOperand,
     // Only keep types that have the same size as 'this'.
     TypeSet InputSet(VTOperand);
 
-    auto I = std::remove_if(VTOperand.TypeVec.begin(), VTOperand.TypeVec.end(),
-                            [&](MVT VT) {
-                              return VT.getSizeInBits() != Size;
-                            });
+    auto I = remove_if(VTOperand.TypeVec,
+                       [&](MVT VT) { return VT.getSizeInBits() != Size; });
     MadeChange |= I != VTOperand.TypeVec.end();
     VTOperand.TypeVec.erase(I, VTOperand.TypeVec.end());
 
@@ -683,10 +670,8 @@ bool EEVT::TypeSet::EnforceSameSize(EEVT::TypeSet &VTOperand,
     // Only keep types that have the same size as VTOperand.
     TypeSet InputSet(*this);
 
-    auto I = std::remove_if(TypeVec.begin(), TypeVec.end(),
-                            [&](MVT VT) {
-                              return VT.getSizeInBits() != Size;
-                            });
+    auto I =
+        remove_if(TypeVec, [&](MVT VT) { return VT.getSizeInBits() != Size; });
     MadeChange |= I != TypeVec.end();
     TypeVec.erase(I, TypeVec.end());
 

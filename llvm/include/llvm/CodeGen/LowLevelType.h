@@ -11,12 +11,13 @@
 /// selection.
 ///
 /// For a type attached to a MachineInstr, we only care about 2 details: total
-/// size and the number of vector lanes (if any). Accordingly, there are 3
+/// size and the number of vector lanes (if any). Accordingly, there are 4
 /// possible valid type-kinds:
 ///
 ///    * `unsized` for labels etc
 ///    * `sN` for scalars and aggregates
 ///    * `<N x sM>` for vectors, which must have at least 2 elements.
+///    * `pN` for pointers
 ///
 /// Other information required for correct selection is expected to be carried
 /// by the opcode, or non-type flags. For example the distinction between G_ADD
@@ -33,6 +34,7 @@
 
 namespace llvm {
 
+class DataLayout;
 class LLVMContext;
 class Type;
 class raw_ostream;
@@ -86,7 +88,7 @@ public:
   explicit LLT() : SizeOrAddrSpace(0), NumElements(0), Kind(Invalid) {}
 
   /// Construct a low-level type based on an LLVM type.
-  explicit LLT(const Type &Ty);
+  explicit LLT(Type &Ty, const DataLayout *DL = nullptr);
 
   bool isValid() const { return Kind != Invalid; }
 

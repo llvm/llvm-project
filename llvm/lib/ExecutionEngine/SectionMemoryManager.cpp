@@ -196,8 +196,8 @@ SectionMemoryManager::applyMemoryGroupPermissions(MemoryGroup &MemGroup,
 
   // Remove all blocks which are now empty
   MemGroup.FreeMem.erase(
-      std::remove_if(MemGroup.FreeMem.begin(), MemGroup.FreeMem.end(),
-                     [](FreeMemBlock &FreeMB) { return FreeMB.Free.size() == 0; }),
+      remove_if(MemGroup.FreeMem,
+                [](FreeMemBlock &FreeMB) { return FreeMB.Free.size() == 0; }),
       MemGroup.FreeMem.end());
 
   return std::error_code();

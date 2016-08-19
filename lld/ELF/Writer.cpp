@@ -105,7 +105,8 @@ template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
 
 template <class ELFT> static bool needsInterpSection() {
   return !Symtab<ELFT>::X->getSharedFiles().empty() &&
-         !Config->DynamicLinker.empty();
+         !Config->DynamicLinker.empty() &&
+         !Script<ELFT>::X->ignoreInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() {
@@ -521,6 +522,13 @@ static Symbol *addOptionalSynthetic(StringRef Name,
   return Symtab<ELFT>::X->addSynthetic(Name, Sec, Val);
 }
 
+template <class ELFT>
+static void addSynthetic(StringRef Name, OutputSectionBase<ELFT> *Sec,
+                                 typename ELFT::uint Val) {
+  SymbolBody *S = Symtab<ELFT>::X->find(Name);
+  if (!S || S->isUndefined() || S->isShared())
+    Symtab<ELFT>::X->addSynthetic(Name, Sec, Val);
+}
 // The beginning and the ending of .rel[a].plt section are marked
 // with __rel[a]_iplt_{start,end} symbols if it is a statically linked
 // executable. The runtime needs these symbols in order to resolve
@@ -856,9 +864,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End,
                     OutputSectionBase<ELFT> *OS) {
     if (OS) {
-      Symtab<ELFT>::X->addSynthetic(Start, OS, 0);
-      Symtab<ELFT>::X->addSynthetic(End, OS,
-                                    DefinedSynthetic<ELFT>::SectionEnd);
+      addSynthetic(Start, OS, 0);
+      addSynthetic(End, OS, DefinedSynthetic<ELFT>::SectionEnd);
     } else {
       addOptionalSynthetic(Start, (OutputSectionBase<ELFT> *)nullptr, 0);
       addOptionalSynthetic(End, (OutputSectionBase<ELFT> *)nullptr, 0);
@@ -956,9 +963,13 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     if (!needsPtLoad(Sec))
       continue;
 
-    // If flags changed then we want new load segment.
+    // Segments are contiguous memory regions that has the same attributes
+    // (e.g. executable or writable). There is one phdr for each segment.
+    // Therefore, we need to create a new phdr when the next section has
+    // different flags or is loaded at a discontiguous address using AT linker
+    // script command.
     uintX_t NewFlags = Sec->getPhdrFlags();
-    if (Flags != NewFlags) {
+    if (Script<ELFT>::X->getLma(Sec->getName()) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1121,7 +1132,11 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       H.p_align = Target->PageSize;
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
+
     H.p_paddr = H.p_vaddr;
+    if (H.p_type == PT_LOAD && First)
+      if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
+        H.p_paddr = LmaExpr(H.p_vaddr);
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.

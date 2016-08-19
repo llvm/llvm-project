@@ -541,16 +541,17 @@ private:
 
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
                            ICmpInst::Predicate Cond, Instruction &I);
-  Instruction *foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca, Value *Other);
+  Instruction *foldAllocaCmp(ICmpInst &ICI, const AllocaInst *Alloca,
+                             const Value *Other);
   Instruction *foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
                                             GlobalVariable *GV, CmpInst &ICI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
-  Instruction *foldICmpDivConst(ICmpInst &ICI, BinaryOperator *DivI,
-                                ConstantInt *DivRHS);
-  Instruction *foldICmpShrConst(ICmpInst &ICI, BinaryOperator *DivI,
-                                ConstantInt *DivRHS);
+  Instruction *foldICmpDivConstConst(ICmpInst &ICI, BinaryOperator *DivI,
+                                     ConstantInt *DivRHS);
+  Instruction *foldICmpShrConstConst(ICmpInst &ICI, BinaryOperator *DivI,
+                                     ConstantInt *DivRHS);
   Instruction *foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
                                    ConstantInt *CI1, ConstantInt *CI2);
   Instruction *foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,
@@ -558,8 +559,31 @@ private:
   Instruction *foldICmpAddOpConst(Instruction &ICI, Value *X, ConstantInt *CI,
                                   ICmpInst::Predicate Pred);
   Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);
-  Instruction *foldICmpWithConstant(ICmpInst &ICI, Instruction *LHS,
-                                    ConstantInt *RHS);
+  Instruction *foldICmpWithConstant(ICmpInst &ICI);
+
+  Instruction *foldICmpTruncConstant(ICmpInst &ICI, Instruction *LHSI,
+                                     const APInt *RHSV);
+  Instruction *foldICmpAndConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpXorConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpOrConstant(ICmpInst &ICI, Instruction *LHSI,
+                                  const APInt *RHSV);
+  Instruction *foldICmpMulConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpShlConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpShrConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpUDivConstant(ICmpInst &ICI, Instruction *LHSI,
+                                    const APInt *RHSV);
+  Instruction *foldICmpDivConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpSubConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+  Instruction *foldICmpAddConstant(ICmpInst &ICI, Instruction *LHSI,
+                                   const APInt *RHSV);
+
   Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI);
   Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI);
 

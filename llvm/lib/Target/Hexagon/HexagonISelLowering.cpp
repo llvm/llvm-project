@@ -891,7 +891,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return DAG.getNode(HexagonISD::TC_RETURN, dl, NodeTys, Ops);
   }
 
-  unsigned OpCode = DoesNotReturn ? HexagonISD::CALLv3nr : HexagonISD::CALLv3;
+  unsigned OpCode = DoesNotReturn ? HexagonISD::CALLnr : HexagonISD::CALL;
   Chain = DAG.getNode(OpCode, dl, NodeTys, Ops);
   Glue = Chain.getValue(1);
 
@@ -1414,11 +1414,18 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   bool IsPositionIndependent = isPositionIndependent();
   unsigned char TF = IsPositionIndependent ? HexagonII::MO_PCREL : 0;
 
+  unsigned Offset = 0;
   SDValue T;
   if (CPN->isMachineConstantPoolEntry())
-    T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, TF);
+    T = DAG.getTargetConstantPool(CPN->getMachineCPVal(), ValTy, Align, Offset,
+                                  TF);
   else
-    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, TF);
+    T = DAG.getTargetConstantPool(CPN->getConstVal(), ValTy, Align, Offset,
+                                  TF);
+
+  assert(cast<ConstantPoolSDNode>(T)->getTargetFlags() == TF &&
+         "Inconsistent target flag encountered");
+
   if (IsPositionIndependent)
     return DAG.getNode(HexagonISD::AT_PCREL, SDLoc(Op), ValTy, T);
   return DAG.getNode(HexagonISD::CP, SDLoc(Op), ValTy, T);
@@ -1567,10 +1574,10 @@ HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
   if (InFlag) {
     SDValue Ops[] = { Chain, TGA,
                       DAG.getRegister(Hexagon::R0, PtrVT), *InFlag };
-    Chain = DAG.getNode(HexagonISD::CALLv3, dl, NodeTys, Ops);
+    Chain = DAG.getNode(HexagonISD::CALL, dl, NodeTys, Ops);
   } else {
     SDValue Ops[]  = { Chain, TGA, DAG.getRegister(Hexagon::R0, PtrVT)};
-    Chain = DAG.getNode(HexagonISD::CALLv3, dl, NodeTys, Ops);
+    Chain = DAG.getNode(HexagonISD::CALL, dl, NodeTys, Ops);
   }
 
   // Inform MFI that function has calls.
@@ -2218,9 +2225,9 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::AT_GOT:        return "HexagonISD::AT_GOT";
   case HexagonISD::AT_PCREL:      return "HexagonISD::AT_PCREL";
   case HexagonISD::BARRIER:       return "HexagonISD::BARRIER";
+  case HexagonISD::CALL:          return "HexagonISD::CALL";
+  case HexagonISD::CALLnr:        return "HexagonISD::CALLnr";
   case HexagonISD::CALLR:         return "HexagonISD::CALLR";
-  case HexagonISD::CALLv3nr:      return "HexagonISD::CALLv3nr";
-  case HexagonISD::CALLv3:        return "HexagonISD::CALLv3";
   case HexagonISD::COMBINE:       return "HexagonISD::COMBINE";
   case HexagonISD::CONST32_GP:    return "HexagonISD::CONST32_GP";
   case HexagonISD::CONST32:       return "HexagonISD::CONST32";
@@ -2947,7 +2954,7 @@ HexagonTargetLowering::getPICJumpTableRelocBase(SDValue Table,
 MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
-  case Hexagon::ALLOCA: {
+  case Hexagon::PS_alloca: {
     MachineFunction *MF = BB->getParent();
     auto *FuncInfo = MF->getInfo<HexagonMachineFunctionInfo>();
     FuncInfo->addAllocaAdjustInst(&MI);

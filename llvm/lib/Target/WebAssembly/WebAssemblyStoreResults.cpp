@@ -90,7 +90,7 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
 
   SmallVector<SlotIndex, 4> Indices;
 
-  for (auto I = MRI.use_begin(FromReg), E = MRI.use_end(); I != E;) {
+  for (auto I = MRI.use_nodbg_begin(FromReg), E = MRI.use_nodbg_end(); I != E;) {
     MachineOperand &O = *I++;
     MachineInstr *Where = O.getParent();
 

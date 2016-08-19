@@ -16,7 +16,10 @@
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/StringSaver.h"
 #include <system_error>
 
 namespace clang {
@@ -113,6 +116,21 @@ class CommandLineArgumentParser {
 
 std::vector<std::string> unescapeCommandLine(
     StringRef EscapedCommandLine) {
+  llvm::Triple Triple(llvm::sys::getProcessTriple());
+  if (Triple.getOS() == llvm::Triple::OSType::Win32) {
+    // Assume Windows command line parsing on Win32 unless the triple explicitly
+    // tells us otherwise.
+    if (!Triple.hasEnvironment() ||
+        Triple.getEnvironment() == llvm::Triple::EnvironmentType::MSVC) {
+      llvm::BumpPtrAllocator Alloc;
+      llvm::StringSaver Saver(Alloc);
+      llvm::SmallVector<const char *, 64> T;
+      llvm::cl::TokenizeWindowsCommandLine(EscapedCommandLine, Saver, T);
+      std::vector<std::string> Result(T.begin(), T.end());
+      return Result;
+    }
+  }
+
   CommandLineArgumentParser parser(EscapedCommandLine);
   return parser.parse();
 }

@@ -5476,6 +5476,30 @@ AST_MATCHER_P(Stmt, forFunction, internal::Matcher<FunctionDecl>,
   return false;
 }
 
+/// \brief Matches a declaration that has external formal linkage.
+///
+/// Example matches only z (matcher = varDecl(hasExternalFormalLinkage()))
+/// \code
+/// void f() {
+///   int x;
+///   static int y;
+/// }
+/// int z;
+/// \endcode
+///
+/// Example matches f() because it has external formal linkage despite being
+/// unique to the translation unit as though it has internal likage
+/// (matcher = functionDecl(hasExternalFormalLinkage()))
+///
+/// \code
+/// namespace {
+/// void f() {}
+/// }
+/// \endcode
+AST_MATCHER(NamedDecl, hasExternalFormalLinkage) {
+  return Node.hasExternalFormalLinkage();
+}
+
 } // end namespace ast_matchers
 } // end namespace clang
 

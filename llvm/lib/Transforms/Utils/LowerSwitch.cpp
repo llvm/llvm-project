@@ -478,10 +478,10 @@ void LowerSwitch::processSwitchInst(SwitchInst *SI,
     // cases.
     assert(MaxPop > 0 && PopSucc);
     Default = PopSucc;
-    Cases.erase(std::remove_if(
-                    Cases.begin(), Cases.end(),
-                    [PopSucc](const CaseRange &R) { return R.BB == PopSucc; }),
-                Cases.end());
+    Cases.erase(
+        remove_if(Cases,
+                  [PopSucc](const CaseRange &R) { return R.BB == PopSucc; }),
+        Cases.end());
 
     // If there are no cases left, just branch.
     if (Cases.empty()) {

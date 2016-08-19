@@ -24,6 +24,8 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -615,12 +617,11 @@ protected:
         //------------------------------------------------------------------
         //
         //------------------------------------------------------------------
-        typedef std::list< std::pair<lldb::ListenerWP,uint32_t> > collection;
+        typedef llvm::SmallVector<std::pair<lldb::ListenerWP, uint32_t>, 4> collection;
         typedef std::map<uint32_t, std::string> event_names_map;
 
-        void
-        ListenerIterator (std::function <bool (const lldb::ListenerSP &listener_sp, uint32_t &event_mask)> const &callback);
-
+        llvm::SmallVector<std::pair<lldb::ListenerSP, uint32_t&>, 4>
+        GetListeners();
 
         Broadcaster &m_broadcaster;                     ///< The broadcsater that this implements
         event_names_map m_event_names;                  ///< Optionally define event names for readability and logging for each event bit

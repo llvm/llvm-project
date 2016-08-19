@@ -169,6 +169,8 @@ on a patch, but only people with Subversion write access can approve it.
 There is a web based code review tool that can optionally be used
 for code reviews. See :doc:`Phabricator`.
 
+.. _code owners:
+
 Code Owners
 -----------
 
@@ -497,6 +499,8 @@ list, development list, or LLVM bug tracker component. If someone sends you
 a patch privately, encourage them to submit it to the appropriate list first.
 
 
+.. _IR backwards compatibility:
+
 IR Backwards Compatibility
 --------------------------
 
@@ -552,6 +556,85 @@ C API Changes
 * Documentation: Any changes to the C API are required to be documented in the
   release notes so that it's clear to external users who do not follow the
   project how the C API is changing and evolving.
+
+New Targets
+-----------
+
+LLVM is very receptive to new targets, even experimental ones, but a number of
+problems can appear when adding new large portions of code, and back-ends are
+normally added in bulk. Revisions of large pieces of code is hard, especially
+when the reviewers don't know the full implications of the new back-end with
+details (which is usually the case), makes for a very error prone process.
+
+For these reasons, new targets are *always* added as *experimental* until
+they can be proven stable, and then moved to non-experimental. The difference
+between both classes is that experimental targets are not built by default
+(need to be added to -DLLVM_TARGETS_TO_BUILD at CMake time).
+
+So, the basic rules for a back-end to be upstreamed in **experimental** mode are:
+
+* Every target must have a :ref:`code owner<code owners>`. The `CODE_OWNERS.TXT`
+  file has to be updated as part of the first merge. The code owner makes sure
+  that changes to the target get reviewed and steers the overall effort.
+
+* There must be an active community behind the target. This community
+  will be the maintainers of the target by providing buildbots, fixing
+  bugs, answering the LLVM community's questions and making sure the new
+  target doesn't break any of the other targets, or generic code. This
+  behavior is expected to continue throughout the lifetime of the
+  target's code.
+
+* The code must be free of contentious issues, for example, large
+  changes in how the IR behaves or should be formed by the front-ends,
+  unless agreed by the majority of the community via refactoring of the
+  (:doc:`IR standard<LangRef>`) **before** the merge of the new target changes,
+  following the :ref:`IR backwards compatibility`.
+
+* The code conforms to all of the policies laid out in this developer policy
+  document, including license, patent, and coding standards.
+
+* The target should have either reasonable documentation on how it
+  works (ISA, ABI, etc.) or a publicly available simulator/hardware
+  (either free or cheap enough), so that developers can validate
+  assumptions, understand constraints and review code that can affect
+  the target. Preferably both.
+
+In addition, the rules for a back-end to be marked as **official** are:
+
+* The target must have addressed every other minimum requirement and
+  have been stable in tree for at least 3 months. This cool down
+  period is to make sure that the back-end and the target community can
+  endure continuous upstream development for the foreseeable future.
+
+* The target's code must have been completely adapted to this policy
+  as well as the :doc:`coding standards<CodingStandards>`. Any exceptions that
+  were made to move into experimental mode must have been fixed **before**
+  becoming official.
+
+* The test coverage needs to be broad and well written (small tests,
+  well documented). The build target ``check-all`` must pass with the
+  new target built, and where applicable, the ``test-suite`` must also
+  pass without errors, in at least one configuration (publicly
+  demonstrated, for example, via buildbots).
+
+* Public buildbots need to be created and actively maintained, unless
+  the target requires no additional buildbots (ex. ``check-all`` covers
+  all tests). The more relevant and public the new target's CI infrastructure
+  is, the more the LLVM community will embrace it.
+
+To **continue** as a supported and official target:
+
+* The maintainer(s) must continue following these rules throughout the lifetime
+  of the target. Continuous violations of aforementioned rules and policies
+  could lead to complete removal of the target from the code base.
+
+* Degradation in support, documentation or test coverage will make the target as
+  nuisance to other targets and be considered a candidate for deprecation and
+  ultimately removed.
+
+In essences, these rules are necessary for targets to gain and retain their
+status, but also markers to define bit-rot, and will be used to clean up the
+tree from unmaintained targets.
 
 .. _copyright-license-patents:
 

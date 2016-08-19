@@ -288,8 +288,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
 
   // Check the parent loop pointer.
   if (ParentLoop) {
-    assert(std::find(ParentLoop->begin(), ParentLoop->end(), this) !=
-           ParentLoop->end() &&
+    assert(is_contained(*ParentLoop, this) &&
            "Loop is not a subloop of its parent!");
   }
 #endif

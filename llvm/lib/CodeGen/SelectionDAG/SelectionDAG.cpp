@@ -1943,29 +1943,29 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       default: break;
       case ISD::SETEQ:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
-                        // fall through
+                        LLVM_FALLTHROUGH;
       case ISD::SETOEQ: return getConstant(R==APFloat::cmpEqual, dl, VT);
       case ISD::SETNE:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
-                        // fall through
+                        LLVM_FALLTHROUGH;
       case ISD::SETONE: return getConstant(R==APFloat::cmpGreaterThan ||
                                            R==APFloat::cmpLessThan, dl, VT);
       case ISD::SETLT:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
-                        // fall through
+                        LLVM_FALLTHROUGH;
       case ISD::SETOLT: return getConstant(R==APFloat::cmpLessThan, dl, VT);
       case ISD::SETGT:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
-                        // fall through
+                        LLVM_FALLTHROUGH;
       case ISD::SETOGT: return getConstant(R==APFloat::cmpGreaterThan, dl, VT);
       case ISD::SETLE:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
-                        // fall through
+                        LLVM_FALLTHROUGH;
       case ISD::SETOLE: return getConstant(R==APFloat::cmpLessThan ||
                                            R==APFloat::cmpEqual, dl, VT);
       case ISD::SETGE:  if (R==APFloat::cmpUnordered)
                           return getUNDEF(VT);
-                        // fall through
+                        LLVM_FALLTHROUGH;
       case ISD::SETOGE: return getConstant(R==APFloat::cmpGreaterThan ||
                                            R==APFloat::cmpEqual, dl, VT);
       case ISD::SETO:   return getConstant(R!=APFloat::cmpUnordered, dl, VT);
@@ -2350,8 +2350,8 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
         }
       }
     }
+    LLVM_FALLTHROUGH;
   }
-  // fall through
   case ISD::ADD:
   case ISD::ADDE: {
     // Output known-0 bits are known if clear or set in both the low clear bits
@@ -2481,7 +2481,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   default:
     if (Op.getOpcode() < ISD::BUILTIN_OP_END)
       break;
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:
@@ -3868,7 +3868,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return getConstant(0, DL, VT);
-      // fallthrough
+      LLVM_FALLTHROUGH;
     case ISD::ADD:
     case ISD::ADDC:
     case ISD::ADDE:

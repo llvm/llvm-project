@@ -114,12 +114,13 @@ void ComputeCrossModuleImportForModule(
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-    const StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+    const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
+/// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code
 EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
-                 const StringMap<FunctionImporter::ImportMapTy> &ImportLists);
+                 const FunctionImporter::ImportMapTy &ModuleImports);
 
 /// Resolve WeakForLinker values in \p TheModule based on the information
 /// recorded in the summaries during global summary-based analysis.

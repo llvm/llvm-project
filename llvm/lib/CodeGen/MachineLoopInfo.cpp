@@ -77,6 +77,51 @@ MachineBasicBlock *MachineLoop::getBottomBlock() {
   return BotMBB;
 }
 
+MachineBasicBlock *MachineLoop::findLoopControlBlock() {
+  if (MachineBasicBlock *Latch = getLoopLatch()) {
+    if (isLoopExiting(Latch))
+      return Latch;
+    else
+      return getExitingBlock();
+  }
+  return nullptr;
+}
+
+MachineBasicBlock *
+MachineLoopInfo::findLoopPreheader(MachineLoop *L,
+                                   bool SpeculativePreheader) const {
+  if (MachineBasicBlock *PB = L->getLoopPreheader())
+    return PB;
+
+  if (!SpeculativePreheader)
+    return nullptr;
+
+  MachineBasicBlock *HB = L->getHeader(), *LB = L->getLoopLatch();
+  if (HB->pred_size() != 2 || HB->hasAddressTaken())
+    return nullptr;
+  // Find the predecessor of the header that is not the latch block.
+  MachineBasicBlock *Preheader = nullptr;
+  for (MachineBasicBlock *P : HB->predecessors()) {
+    if (P == LB)
+      continue;
+    // Sanity.
+    if (Preheader)
+      return nullptr;
+    Preheader = P;
+  }
+
+  // Check if the preheader candidate is a successor of any other loop
+  // headers. We want to avoid having two loop setups in the same block.
+  for (MachineBasicBlock *S : Preheader->successors()) {
+    if (S == HB)
+      continue;
+    MachineLoop *T = getLoopFor(S);
+    if (T && T->getHeader() == S)
+      return nullptr;
+  }
+  return Preheader;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineLoop::dump() const {
   print(dbgs());

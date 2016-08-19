@@ -452,20 +452,19 @@ define i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 
 define i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32:
+; CHECK: mov {{[xw]}}8, w[[OLD:[0-9]+]]
    %old = atomicrmw xchg i32* @var32, i32 %offset release
 ; CHECK-NOT: dmb
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
 ; CHECK: .LBB{{[0-9]+}}_1:
-; ; CHECK: ldxr w[[OLD:[0-9]+]], [x[[ADDR]]]
+; ; CHECK: ldxr {{[xw]}}[[OLD]], [x[[ADDR]]]
   ; w0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: stlxr [[STATUS:w[0-9]+]], w0, [x[[ADDR]]]
+; CHECK-NEXT: stlxr [[STATUS:w[0-9]+]], w8, [x[[ADDR]]]
 ; CHECK-NEXT: cbnz [[STATUS]], .LBB{{[0-9]+}}_1
 ; CHECK-NOT: dmb
-
-; CHECK: mov {{[xw]}}0, {{[xw]}}[[OLD]]
    ret i32 %old
 }
 

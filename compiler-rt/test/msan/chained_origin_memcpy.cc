@@ -15,6 +15,7 @@
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z2 < %t.out
 
+// XFAIL: target-is-mips64el
 
 #include <stdio.h>
 #include <string.h>
@@ -47,15 +48,15 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
-// CHECK: {{#0 .* in main .*chained_origin_memcpy.cc:46}}
+// CHECK: {{#0 .* in main .*chained_origin_memcpy.cc:}}[[@LINE-4]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK: {{#1 .* in fn_h.*chained_origin_memcpy.cc:38}}
+// CHECK: {{#1 .* in fn_h.*chained_origin_memcpy.cc:}}[[@LINE-15]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK: {{#0 .* in fn_g.*chained_origin_memcpy.cc:28}}
-// CHECK: {{#1 .* in fn_f.*chained_origin_memcpy.cc:33}}
+// CHECK: {{#0 .* in fn_g.*chained_origin_memcpy.cc:}}[[@LINE-28]]
+// CHECK: {{#1 .* in fn_f.*chained_origin_memcpy.cc:}}[[@LINE-24]]
 
 // CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame of function 'main'
 // CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame of function 'main'
-// CHECK: {{#0 .* in main.*chained_origin_memcpy.cc:41}}
+// CHECK: {{#0 .* in main.*chained_origin_memcpy.cc:}}[[@LINE-20]]

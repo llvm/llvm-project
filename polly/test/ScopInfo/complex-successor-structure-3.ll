@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -analyze -polly-scops \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; Check that propagation of domains from A(X) to A(X+1) will keep the
 ; domains small and concise.

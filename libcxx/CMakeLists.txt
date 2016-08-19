@@ -301,9 +301,11 @@ remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================
-add_compile_flags_if_supported(-std=c++11)
-if (NOT MSVC AND NOT LIBCXX_SUPPORTS_STD_EQ_CXX11_FLAG)
-  message(FATAL_ERROR "C++11 is required but the compiler does not support -std=c++11")
+set(LIBCXX_STANDARD_VER c++11 CACHE INTERNAL "internal option to change build dialect")
+add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
+mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
+if (NOT MSVC AND NOT ${SUPPORTS_DIALECT_NAME})
+  message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
 endif()
 
 # On all systems the system c++ standard library headers need to be excluded.

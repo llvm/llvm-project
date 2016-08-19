@@ -417,3 +417,26 @@ template <int N> constexpr int callTemplated() { return templated<N>(); }
 constexpr int B = callTemplated<0>(); // expected-error{{initialized by a constant expression}} expected-error@-2{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-9{{candidate disabled}}
 static_assert(callTemplated<1>() == 1, "");
 }
+
+namespace variadic {
+void foo(int a, int b = 0, ...) __attribute__((enable_if(a && b, ""))); // expected-note 6{{disabled}}
+
+void testFoo() {
+  foo(1, 1);
+  foo(1, 1, 2);
+  foo(1, 1, 2, 3);
+
+  foo(1, 0); // expected-error{{no matching}}
+  foo(1, 0, 2); // expected-error{{no matching}}
+  foo(1, 0, 2, 3); // expected-error{{no matching}}
+
+  int m;
+  foo(1, 1);
+  foo(1, 1, m);
+  foo(1, 1, m, 3);
+
+  foo(1, 0); // expected-error{{no matching}}
+  foo(1, 0, m); // expected-error{{no matching}}
+  foo(1, 0, m, 3); // expected-error{{no matching}}
+}
+}

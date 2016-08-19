@@ -44,57 +44,17 @@ protected:
   int getUnusedFPRegister(MachineRegisterInfo &MRI);
 };
 
-class LLVM_LIBRARY_VISIBILITY ReplaceSDIV : public LEONMachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
 public:
   static char ID;
 
-  ReplaceSDIV();
-  ReplaceSDIV(TargetMachine &tm);
+  InsertNOPLoad(TargetMachine &tm);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "ReplaceSDIV: Erratum Fix LBR25:  do not emit SDIV, but emit SDIVCC "
-           "instead";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY FixCALL : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  FixCALL(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "FixCALL: Erratum Fix LBR26: restrict the size of the immediate "
-           "operand of the CALL instruction to 20 bits";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY IgnoreZeroFlag : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  IgnoreZeroFlag(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "IgnoreZeroFlag: Erratum Fix LBR28: do not rely on the zero bit "
-           "flag on a divide overflow for SDIVCC and UDIVCC";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY InsertNOPDoublePrecision
-    : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  InsertNOPDoublePrecision(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "InsertNOPDoublePrecision: Erratum Fix LBR30: insert a NOP before "
-           "the double precision floating point instruction";
+    return "InsertNOPLoad: Erratum Fix LBR35: insert a NOP instruction after "
+           "every single-cycle load instruction when the next instruction is "
+           "another load/store instruction";
   }
 };
 
@@ -124,20 +84,6 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY PreventRoundChange
-    : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  PreventRoundChange(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "PreventRoundChange: Erratum Fix LBR33: prevent any rounding mode "
-           "change request: use only the round-to-nearest rounding mode";
-  }
-};
-
 class LLVM_LIBRARY_VISIBILITY FixAllFDIVSQRT : public LEONMachineFunctionPass {
 public:
   static char ID;
@@ -150,50 +96,6 @@ public:
            "instructions with NOPs and floating-point store";
   }
 };
-
-class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  InsertNOPLoad(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "InsertNOPLoad: insert a NOP instruction after "
-           "every single-cycle load instruction when the next instruction is "
-           "another load/store instruction";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY FlushCacheLineSWAP
-    : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  FlushCacheLineSWAP(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "FlushCacheLineSWAP: Erratum Fix LBR36: flush cache line containing "
-           "the lock before performing any of the atomic instructions SWAP and "
-           "LDSTUB";
-  }
-};
-
-class LLVM_LIBRARY_VISIBILITY InsertNOPsLoadStore
-    : public LEONMachineFunctionPass {
-public:
-  static char ID;
-
-  InsertNOPsLoadStore(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const char *getPassName() const override {
-    return "InsertNOPsLoadStore: Erratum Fix LBR37: insert NOPs between "
-           "single-precision loads and the store, so the number of "
-           "instructions between is 4";
-  }
-};
-} // namespace lllvm
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPARC_LEON_PASSES_H

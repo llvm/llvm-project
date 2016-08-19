@@ -99,7 +99,7 @@ def G_SUB : Instruction {
   let isCommutable = 0;
 }
 
-// Generic subtraction.
+// Generic multiplication.
 def G_MUL : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$src1, unknown:$src2);
@@ -157,6 +157,13 @@ def G_LSHR : Instruction {
 def G_ASHR : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic bitwise or.
+def G_ICMP : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$tst, unknown:$src1, unknown:$src2);
   let hasSideEffects = 0;
 }
 

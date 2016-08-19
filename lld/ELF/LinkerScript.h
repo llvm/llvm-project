@@ -83,6 +83,7 @@ struct OutputSectionCommand : BaseCommand {
   StringRef Name;
   Expr AddrExpr;
   Expr AlignExpr;
+  Expr LmaExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
@@ -144,14 +145,16 @@ public:
   void createSections(OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
+  bool ignoreInterpSection();
 
   ArrayRef<uint8_t> getFiller(StringRef Name);
+  Expr getLma(StringRef Name);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignAddresses();
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
   uintX_t getOutputSectionSize(StringRef Name);
-  uintX_t getSizeOfHeaders();
+  uintX_t getHeaderSize();
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
@@ -161,10 +164,11 @@ private:
 
   void discard(OutputSectionCommand &Cmd);
 
+  std::vector<InputSectionBase<ELFT> *>
+  createInputSectionList(OutputSectionCommand &Cmd);
+
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
-
-  void filter();
 
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
