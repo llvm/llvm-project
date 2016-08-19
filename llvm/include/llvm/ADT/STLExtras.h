@@ -369,6 +369,11 @@ struct build_index_impl<0, I...> : index_sequence<I...> {};
 template <class... Ts>
 struct index_sequence_for : build_index_impl<sizeof...(Ts)> {};
 
+/// Utility type to build an inheritance chain that makes it easy to rank
+/// overload candidates.
+template <int N> struct rank : rank<N - 1> {};
+template <> struct rank<0> {};
+
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays
 //===----------------------------------------------------------------------===//
