@@ -29,6 +29,7 @@ null?</a></li>
   <li><a href="#dead_store">How do I tell the static analyzer that I don't care about a specific dead store?</a></li>
   <li><a href="#unused_ivar">How do I tell the static analyzer that I don't care about a specific unused instance variable in Objective C?</a></li>
   <li><a href="#unlocalized_string">How do I tell the static analyzer that I don't care about a specific unlocalized string?</a></li>
+  <li><a href="#dealloc_mrr">How do I tell the analyzer that my instance variable does not need to be released in -dealloc under Manual Retain/Release?</a></li>
   <li><a href="#use_assert">The analyzer assumes that a loop body is never entered.  How can I tell it that the loop body will be entered at least once?</a></li>
   <li><a href="#suppress_issue">How can I suppress a specific analyzer warning?</a></li>
   <li><a href="#exclude_code">How can I selectively exclude code the analyzer examines?</a></li>
@@ -104,6 +105,15 @@ NSString *s = NSLocalizedString(@"Hello &lt;Do Not Localize&gt;", @"For debug pu
 [testLabel setText:s];
 </pre>
 </p>
+
+<h4 id="dealloc_mrr" class="faq">Q: How do I tell the analyzer that my instance variable does not need to be released in -dealloc under Manual Retain/Release?</h4>
+
+<p>If your class only uses an instance variable for part of its lifetime, it may
+maintain an invariant guaranteeing that the instance variable is always released
+before -dealloc. In this case, you can silence a warning about a missing release
+by either adding <tt>assert(_ivar == nil)</tt> or an explicit release
+<tt>[_ivar release]</tt> (which will be a no-op when the variable is nil) in
+-dealloc. </p>
 
 <h4 id="use_assert" class="faq">Q: The analyzer assumes that a loop body is never entered.  How can I tell it that the loop body will be entered at least once?</h4>
 
