@@ -12,6 +12,8 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 
+#include <map>
+
 namespace clang {
 namespace tidy {
 namespace llvm {
@@ -37,7 +39,9 @@ private:
     bool IsAngled;         ///< true if this was an include with angle brackets
     bool IsMainModule;     ///< true if this was the first include in a file
   };
-  std::vector<IncludeDirective> IncludeDirectives;
+
+  typedef std::vector<IncludeDirective> FileIncludes;
+  std::map<clang::FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule;
 
   ClangTidyCheck &Check;
@@ -80,7 +84,9 @@ void IncludeOrderPPCallbacks::InclusionDirective(
     ID.IsMainModule = true;
     LookForMainModule = false;
   }
-  IncludeDirectives.push_back(std::move(ID));
+
+  // Bucket the include directives by the id of the file they were declared in.
+  IncludeDirectives[SM.getFileID(HashLoc)].push_back(std::move(ID));
 }
 
 void IncludeOrderPPCallbacks::EndOfMainFile() {
@@ -95,69 +101,73 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
   // FIXME: We should be more careful about sorting below comments as we don't
   // know if the comment refers to the next include or the whole block that
   // follows.
-  std::vector<unsigned> Blocks(1, 0);
-  for (unsigned I = 1, E = IncludeDirectives.size(); I != E; ++I)
-    if (SM.getExpansionLineNumber(IncludeDirectives[I].Loc) !=
-        SM.getExpansionLineNumber(IncludeDirectives[I - 1].Loc) + 1)
-      Blocks.push_back(I);
-  Blocks.push_back(IncludeDirectives.size()); // Sentinel value.
+  for (auto &Bucket : IncludeDirectives) {
+    auto &FileDirectives = Bucket.second;
+    std::vector<unsigned> Blocks(1, 0);
+    for (unsigned I = 1, E = FileDirectives.size(); I != E; ++I)
+      if (SM.getExpansionLineNumber(FileDirectives[I].Loc) !=
+          SM.getExpansionLineNumber(FileDirectives[I - 1].Loc) + 1)
+        Blocks.push_back(I);
+    Blocks.push_back(FileDirectives.size()); // Sentinel value.
 
-  // Get a vector of indices.
-  std::vector<unsigned> IncludeIndices;
-  for (unsigned I = 0, E = IncludeDirectives.size(); I != E; ++I)
-    IncludeIndices.push_back(I);
+    // Get a vector of indices.
+    std::vector<unsigned> IncludeIndices;
+    for (unsigned I = 0, E = FileDirectives.size(); I != E; ++I)
+      IncludeIndices.push_back(I);
 
-  // Sort the includes. We first sort by priority, then lexicographically.
-  for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI)
-    std::sort(IncludeIndices.begin() + Blocks[BI],
-              IncludeIndices.begin() + Blocks[BI + 1],
-              [this](unsigned LHSI, unsigned RHSI) {
-      IncludeDirective &LHS = IncludeDirectives[LHSI];
-      IncludeDirective &RHS = IncludeDirectives[RHSI];
+    // Sort the includes. We first sort by priority, then lexicographically.
+    for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI)
+      std::sort(IncludeIndices.begin() + Blocks[BI],
+                IncludeIndices.begin() + Blocks[BI + 1],
+                [&FileDirectives](unsigned LHSI, unsigned RHSI) {
+                  IncludeDirective &LHS = FileDirectives[LHSI];
+                  IncludeDirective &RHS = FileDirectives[RHSI];
 
-      int PriorityLHS =
-          getPriority(LHS.Filename, LHS.IsAngled, LHS.IsMainModule);
-      int PriorityRHS =
-          getPriority(RHS.Filename, RHS.IsAngled, RHS.IsMainModule);
+                  int PriorityLHS =
+                      getPriority(LHS.Filename, LHS.IsAngled, LHS.IsMainModule);
+                  int PriorityRHS =
+                      getPriority(RHS.Filename, RHS.IsAngled, RHS.IsMainModule);
 
-      return std::tie(PriorityLHS, LHS.Filename) <
-             std::tie(PriorityRHS, RHS.Filename);
-    });
+                  return std::tie(PriorityLHS, LHS.Filename) <
+                         std::tie(PriorityRHS, RHS.Filename);
+                });
 
-  // Emit a warning for each block and fixits for all changes within that block.
-  for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI) {
-    // Find the first include that's not in the right position.
-    unsigned I, E;
-    for (I = Blocks[BI], E = Blocks[BI + 1]; I != E; ++I)
-      if (IncludeIndices[I] != I)
-        break;
+    // Emit a warning for each block and fixits for all changes within that
+    // block.
+    for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI) {
+      // Find the first include that's not in the right position.
+      unsigned I, E;
+      for (I = Blocks[BI], E = Blocks[BI + 1]; I != E; ++I)
+        if (IncludeIndices[I] != I)
+          break;
 
-    if (I == E)
-      continue;
-
-    // Emit a warning.
-    auto D = Check.diag(IncludeDirectives[I].Loc,
-                        "#includes are not sorted properly");
-
-    // Emit fix-its for all following includes in this block.
-    for (; I != E; ++I) {
-      if (IncludeIndices[I] == I)
+      if (I == E)
         continue;
-      const IncludeDirective &CopyFrom = IncludeDirectives[IncludeIndices[I]];
 
-      SourceLocation FromLoc = CopyFrom.Range.getBegin();
-      const char *FromData = SM.getCharacterData(FromLoc);
-      unsigned FromLen = std::strcspn(FromData, "\n");
+      // Emit a warning.
+      auto D = Check.diag(FileDirectives[I].Loc,
+                          "#includes are not sorted properly");
 
-      StringRef FixedName(FromData, FromLen);
+      // Emit fix-its for all following includes in this block.
+      for (; I != E; ++I) {
+        if (IncludeIndices[I] == I)
+          continue;
+        const IncludeDirective &CopyFrom = FileDirectives[IncludeIndices[I]];
 
-      SourceLocation ToLoc = IncludeDirectives[I].Range.getBegin();
-      const char *ToData = SM.getCharacterData(ToLoc);
-      unsigned ToLen = std::strcspn(ToData, "\n");
-      auto ToRange =
-          CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
+        SourceLocation FromLoc = CopyFrom.Range.getBegin();
+        const char *FromData = SM.getCharacterData(FromLoc);
+        unsigned FromLen = std::strcspn(FromData, "\n");
 
-      D << FixItHint::CreateReplacement(ToRange, FixedName);
+        StringRef FixedName(FromData, FromLen);
+
+        SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
+        const char *ToData = SM.getCharacterData(ToLoc);
+        unsigned ToLen = std::strcspn(ToData, "\n");
+        auto ToRange =
+            CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
+
+        D << FixItHint::CreateReplacement(ToRange, FixedName);
+      }
     }
   }
 

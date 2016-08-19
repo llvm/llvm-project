@@ -36,8 +36,8 @@ bool isPositiveHalfWord(SDNode *N);
       AT_GOT,      // Index in GOT.
       AT_PCREL,    // Offset relative to PC.
 
-      CALLv3,      // A V3+ call instruction.
-      CALLv3nr,    // A V3+ call instruction that doesn't return.
+      CALL,        // Function call.
+      CALLnr,      // Function call that does not return.
       CALLR,
 
       RET_FLAG,    // Return with a flag operand.
@@ -114,6 +114,12 @@ bool isPositiveHalfWord(SDNode *N);
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
 
     bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
+
+    /// Return true if an FMA operation is faster than a pair of mul and add
+    /// instructions. fmuladd intrinsics will be expanded to FMAs when this
+    /// method returns true (and FMAs are legal), otherwise fmuladd is
+    /// expanded to mul + add.
+    bool isFMAFasterThanFMulAndFAdd(EVT) const override;
 
     // Should we expand the build vector with shuffles?
     bool shouldExpandBuildVectorWithShuffles(EVT VT,

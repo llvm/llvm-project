@@ -1,4 +1,4 @@
-; RUN: opt < %s -correlated-propagation -S | FileCheck %s
+; RUN: opt < %s -correlated-propagation -cvp-dont-process-adds=false -S | FileCheck %s
 
 ; CHECK-LABEL: @test0(
 define void @test0(i32 %a) {
@@ -192,4 +192,23 @@ bb:
 
 exit:
   ret void
+}
+
+@limit = external global i32
+; CHECK-LABEL: @test11(
+define i32 @test11(i32* %p, i32 %i) {
+  %limit = load i32, i32* %p, !range !{i32 0, i32 2147483647}
+  %within.1 = icmp ugt i32 %limit, %i
+  %i.plus.7 = add i32 %i, 7
+  %within.2 = icmp ugt i32 %limit, %i.plus.7
+  %within = and i1 %within.1, %within.2
+  br i1 %within, label %then, label %else
+
+then:
+; CHECK: %i.plus.6 = add nuw nsw i32 %i, 6
+  %i.plus.6 = add i32 %i, 6
+  ret i32 %i.plus.6
+
+else:
+  ret i32 0
 }

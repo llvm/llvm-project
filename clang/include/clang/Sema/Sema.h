@@ -1859,6 +1859,17 @@ public:
                               AttributeList *AttrList,
                               SourceLocation SemiLoc);
 
+  enum class ModuleDeclKind {
+    Module,         ///< 'module X;'
+    Partition,      ///< 'module partition X;'
+    Implementation, ///< 'module implementation X;'
+  };
+
+  /// The parser has processed a module-declaration that begins the definition
+  /// of a module interface or implementation.
+  DeclGroupPtrTy ActOnModuleDecl(SourceLocation ModuleLoc, ModuleDeclKind MDK,
+                                 ModuleIdPath Path);
+
   /// \brief The parser has processed a module import declaration.
   ///
   /// \param AtLoc The location of the '@' symbol, if any.
@@ -3638,6 +3649,9 @@ public:
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);
+
+  /// \brief Issue any -Wunguarded-availability warnings in \c FD
+  void DiagnoseUnguardedAvailabilityViolations(Decl *FD);
 
   //===--------------------------------------------------------------------===//
   // Expression Parsing Callbacks: SemaExpr.cpp.
@@ -5707,6 +5721,14 @@ public:
                                    const CXXScopeSpec *SS,
                                    TemplateTy &SuggestedTemplate,
                                    TemplateNameKind &SuggestedKind);
+
+  bool DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
+                                      NamedDecl *Instantiation,
+                                      bool InstantiatedFromMember,
+                                      const NamedDecl *Pattern,
+                                      const NamedDecl *PatternDef,
+                                      TemplateSpecializationKind TSK,
+                                      bool Complain = true);
 
   void DiagnoseTemplateParameterShadow(SourceLocation Loc, Decl *PrevDecl);
   TemplateDecl *AdjustDeclIfTemplate(Decl *&Decl);
@@ -9186,6 +9208,18 @@ public:
   void maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *FD,
                                    const LookupResult &Previous);
 
+  /// Check whether we're allowed to call Callee from the current context.
+  ///
+  /// If the call is never allowed in a semantically-correct program
+  /// (CFP_Never), emits an error and returns false.
+  ///
+  /// If the call is allowed in semantically-correct programs, but only if it's
+  /// never codegen'ed (CFP_WrongSide), creates a deferred diagnostic to be
+  /// emitted if and when the caller is codegen'ed, and returns true.
+  ///
+  /// Otherwise, returns true without emitting any diagnostics.
+  bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
+
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
   /// calling priority.
@@ -9570,6 +9604,10 @@ private:
   void CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
                                 const Expr * const *ExprArgs);
 
+  /// \brief Check if we are taking the address of a packed field
+  /// as this may be a problem if the pointer value is dereferenced.
+  void CheckAddressOfPackedMember(Expr *rhs);
+
   /// \brief The parser's current scope.
   ///
   /// The parser maintains this state here.
@@ -9664,6 +9702,51 @@ public:
   // Emitting members of dllexported classes is delayed until the class
   // (including field initializers) is fully parsed.
   SmallVector<CXXRecordDecl*, 4> DelayedDllExportClasses;
+
+private:
+  /// \brief Helper class that collects misaligned member designations and
+  /// their location info for delayed diagnostics.
+  struct MisalignedMember {
+    Expr *E;
+    RecordDecl *RD;
+    ValueDecl *MD;
+    CharUnits Alignment;
+
+    MisalignedMember() : E(), RD(), MD(), Alignment() {}
+    MisalignedMember(Expr *E, RecordDecl *RD, ValueDecl *MD,
+                     CharUnits Alignment)
+        : E(E), RD(RD), MD(MD), Alignment(Alignment) {}
+    explicit MisalignedMember(Expr *E)
+        : MisalignedMember(E, nullptr, nullptr, CharUnits()) {}
+
+    bool operator==(const MisalignedMember &m) { return this->E == m.E; }
+  };
+  /// \brief Small set of gathered accesses to potentially misaligned members
+  /// due to the packed attribute.
+  SmallVector<MisalignedMember, 4> MisalignedMembers;
+
+  /// \brief Adds an expression to the set of gathered misaligned members.
+  void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
+                                     CharUnits Alignment);
+
+public:
+  /// \brief Diagnoses the current set of gathered accesses. This typically
+  /// happens at full expression level. The set is cleared after emitting the
+  /// diagnostics.
+  void DiagnoseMisalignedMembers();
+
+  /// \brief This function checks if the expression is in the sef of potentially
+  /// misaligned members and it is converted to some pointer type T with lower
+  /// or equal alignment requirements.  If so it removes it. This is used when
+  /// we do not want to diagnose such misaligned access (e.g. in conversions to void*).
+  void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
+
+  /// \brief This function calls Action when it determines that E designates a
+  /// misaligned member due to the packed attribute. This is used to emit
+  /// local diagnostics like in reference binding.
+  void RefersToMemberWithReducedAlignment(
+      Expr *E,
+      std::function<void(Expr *, RecordDecl *, ValueDecl *, CharUnits)> Action);
 };
 
 /// \brief RAII object that enters a new expression evaluation context.

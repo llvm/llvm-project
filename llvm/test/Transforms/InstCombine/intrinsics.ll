@@ -380,6 +380,16 @@ define i32 @ctlz_undef(i32 %Value) nounwind {
 
 }
 
+define i32 @ctlz_make_undef(i32 %a) {
+  %or = or i32 %a, 8
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %or, i1 false)
+  ret i32 %ctlz
+; CHECK-LABEL: @ctlz_make_undef(
+; CHECK-NEXT: %or = or i32 %a, 8
+; CHECK-NEXT: %ctlz = tail call i32 @llvm.ctlz.i32(i32 %or, i1 true)
+; CHECK-NEXT: ret i32 %ctlz
+}
+
 define i32 @cttz_undef(i32 %Value) nounwind {
 ; CHECK-LABEL: @cttz_undef(
 ; CHECK-NEXT:    ret i32 undef
@@ -387,6 +397,16 @@ define i32 @cttz_undef(i32 %Value) nounwind {
   %cttz = call i32 @llvm.cttz.i32(i32 0, i1 true)
   ret i32 %cttz
 
+}
+
+define i32 @cttz_make_undef(i32 %a) {
+  %or = or i32 %a, 8
+  %cttz = tail call i32 @llvm.cttz.i32(i32 %or, i1 false)
+  ret i32 %cttz
+; CHECK-LABEL: @cttz_make_undef(
+; CHECK-NEXT: %or = or i32 %a, 8
+; CHECK-NEXT: %cttz = tail call i32 @llvm.cttz.i32(i32 %or, i1 true)
+; CHECK-NEXT: ret i32 %cttz
 }
 
 define i32 @ctlz_select(i32 %Value) nounwind {

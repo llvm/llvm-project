@@ -25,6 +25,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
+#pragma mark -
+#pragma mark Event
+
+//------------------------------------------------------------------
+// Event functions
+//------------------------------------------------------------------
+
 Event::Event (Broadcaster *broadcaster, uint32_t event_type, EventData *data) :
     m_broadcaster_wp(broadcaster->GetBroadcasterImpl()),
     m_type(event_type),
@@ -101,6 +108,13 @@ Event::DoOnRemoval ()
         m_data_sp->DoOnRemoval (this);
 }
 
+#pragma mark -
+#pragma mark EventData
+
+//------------------------------------------------------------------
+// EventData functions
+//------------------------------------------------------------------
+
 EventData::EventData() = default;
 
 EventData::~EventData() = default;
@@ -110,6 +124,14 @@ EventData::Dump (Stream *s) const
 {
     s->PutCString ("Generic Event Data");
 }
+
+#pragma mark -
+#pragma mark EventDataBytes
+
+//------------------------------------------------------------------
+// EventDataBytes functions
+//------------------------------------------------------------------
+
 
 EventDataBytes::EventDataBytes () :
     m_bytes()
@@ -224,3 +246,150 @@ EventDataBytes::SwapBytes (std::string &new_bytes)
 {
     m_bytes.swap (new_bytes);
 }
+
+#pragma mark -
+#pragma mark EventStructuredData
+
+//------------------------------------------------------------------
+// EventDataStructuredData definitions
+//------------------------------------------------------------------
+
+EventDataStructuredData::EventDataStructuredData() :
+    EventData(),
+    m_process_sp(),
+    m_object_sp(),
+    m_plugin_sp()
+{
+}
+
+EventDataStructuredData::EventDataStructuredData(const ProcessSP &process_sp,
+                                                 const StructuredData::ObjectSP
+                                                 &object_sp,
+                                                 const
+                                                 lldb::StructuredDataPluginSP
+                                                 &plugin_sp) :
+    EventData(),
+    m_process_sp(process_sp),
+    m_object_sp(object_sp),
+    m_plugin_sp(plugin_sp)
+{
+}
+
+EventDataStructuredData::~EventDataStructuredData()
+{
+}
+
+//------------------------------------------------------------------
+// EventDataStructuredData member functions
+//------------------------------------------------------------------
+
+const ConstString &
+EventDataStructuredData::GetFlavor() const
+{
+    return EventDataStructuredData::GetFlavorString();
+}
+
+void
+EventDataStructuredData::Dump(Stream *s) const
+{
+    if (!s)
+        return;
+
+    if (m_object_sp)
+        m_object_sp->Dump(*s);
+}
+
+const ProcessSP&
+EventDataStructuredData::GetProcess() const
+{
+    return m_process_sp;
+}
+
+const StructuredData::ObjectSP&
+EventDataStructuredData::GetObject() const
+{
+    return m_object_sp;
+}
+
+const lldb::StructuredDataPluginSP&
+EventDataStructuredData::GetStructuredDataPlugin() const
+{
+    return m_plugin_sp;
+}
+
+void
+EventDataStructuredData::SetProcess(const ProcessSP &process_sp)
+{
+    m_process_sp = process_sp;
+}
+
+void
+EventDataStructuredData::SetObject(const StructuredData::ObjectSP &object_sp)
+{
+    m_object_sp = object_sp;
+}
+
+void
+EventDataStructuredData::SetStructuredDataPlugin(const
+                                                 lldb::StructuredDataPluginSP
+                                                 &plugin_sp)
+{
+    m_plugin_sp = plugin_sp;
+}
+
+//------------------------------------------------------------------
+// EventDataStructuredData static functions
+//------------------------------------------------------------------
+
+const EventDataStructuredData*
+EventDataStructuredData::GetEventDataFromEvent(const Event *event_ptr)
+{
+    if (event_ptr == nullptr)
+        return nullptr;
+
+    const EventData *event_data = event_ptr->GetData();
+    if (!event_data || event_data->GetFlavor() !=
+        EventDataStructuredData::GetFlavorString())
+        return nullptr;
+
+    return static_cast<const EventDataStructuredData*>(event_data);
+}
+
+ProcessSP
+EventDataStructuredData::GetProcessFromEvent(const Event *event_ptr)
+{
+    auto event_data = EventDataStructuredData::GetEventDataFromEvent(event_ptr);
+    if (event_data)
+        return event_data->GetProcess();
+    else
+        return ProcessSP();
+}
+
+StructuredData::ObjectSP
+EventDataStructuredData::GetObjectFromEvent(const Event *event_ptr)
+{
+    auto event_data = EventDataStructuredData::GetEventDataFromEvent(event_ptr);
+    if (event_data)
+        return event_data->GetObject();
+    else
+        return StructuredData::ObjectSP();
+}
+
+lldb::StructuredDataPluginSP
+EventDataStructuredData::GetPluginFromEvent(const Event *event_ptr)
+{
+    auto event_data = EventDataStructuredData::GetEventDataFromEvent(event_ptr);
+    if (event_data)
+        return event_data->GetStructuredDataPlugin();
+    else
+        return StructuredDataPluginSP();
+}
+
+const ConstString &
+EventDataStructuredData::GetFlavorString ()
+{
+    static ConstString s_flavor("EventDataStructuredData");
+    return s_flavor;
+}
+
+

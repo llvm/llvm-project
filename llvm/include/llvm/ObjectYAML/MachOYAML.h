@@ -100,6 +100,8 @@ struct LinkEditData {
   MachOYAML::ExportEntry ExportTrie;
   std::vector<NListEntry> NameList;
   std::vector<StringRef> StringTable;
+
+  bool isEmpty() const;
 };
 
 struct Object {

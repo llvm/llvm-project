@@ -2056,6 +2056,7 @@ public:
 
 template <> struct GraphTraits<SDNode*> {
   typedef SDNode NodeType;
+  typedef SDNode *NodeRef;
   typedef SDNodeIterator ChildIteratorType;
   static inline NodeType *getEntryNode(SDNode *N) { return N; }
   static inline ChildIteratorType child_begin(NodeType *N) {

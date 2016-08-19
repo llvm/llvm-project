@@ -48,9 +48,8 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
   // Adjust the triple to match what the user requested.
   const Target *TheTarget = nullptr;
   if (!MArch.empty()) {
-    auto I = std::find_if(
-        TargetRegistry::targets().begin(), TargetRegistry::targets().end(),
-        [&](const Target &T) { return MArch == T.getName(); });
+    auto I = find_if(TargetRegistry::targets(),
+                     [&](const Target &T) { return MArch == T.getName(); });
 
     if (I == TargetRegistry::targets().end()) {
       if (ErrorStr)

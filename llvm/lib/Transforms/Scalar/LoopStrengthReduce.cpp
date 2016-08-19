@@ -884,7 +884,6 @@ public:
                    SmallPtrSetImpl<const SCEV *> &Regs,
                    const DenseSet<const SCEV *> &VisitedRegs,
                    const Loop *L,
-                   const SmallVectorImpl<int64_t> &Offsets,
                    ScalarEvolution &SE, DominatorTree &DT,
                    const LSRUse &LU,
                    SmallPtrSetImpl<const SCEV *> *LoserRegs = nullptr);
@@ -902,6 +901,143 @@ private:
                            const Loop *L,
                            ScalarEvolution &SE, DominatorTree &DT,
                            SmallPtrSetImpl<const SCEV *> *LoserRegs);
+};
+  
+/// An operand value in an instruction which is to be replaced with some
+/// equivalent, possibly strength-reduced, replacement.
+struct LSRFixup {
+  /// The instruction which will be updated.
+  Instruction *UserInst;
+
+  /// The operand of the instruction which will be replaced. The operand may be
+  /// used more than once; every instance will be replaced.
+  Value *OperandValToReplace;
+
+  /// If this user is to use the post-incremented value of an induction
+  /// variable, this variable is non-null and holds the loop associated with the
+  /// induction variable.
+  PostIncLoopSet PostIncLoops;
+
+  /// A constant offset to be added to the LSRUse expression.  This allows
+  /// multiple fixups to share the same LSRUse with different offsets, for
+  /// example in an unrolled loop.
+  int64_t Offset;
+
+  bool isUseFullyOutsideLoop(const Loop *L) const;
+
+  LSRFixup();
+
+  void print(raw_ostream &OS) const;
+  void dump() const;
+};
+
+
+/// A DenseMapInfo implementation for holding DenseMaps and DenseSets of sorted
+/// SmallVectors of const SCEV*.
+struct UniquifierDenseMapInfo {
+  static SmallVector<const SCEV *, 4> getEmptyKey() {
+    SmallVector<const SCEV *, 4>  V;
+    V.push_back(reinterpret_cast<const SCEV *>(-1));
+    return V;
+  }
+
+  static SmallVector<const SCEV *, 4> getTombstoneKey() {
+    SmallVector<const SCEV *, 4> V;
+    V.push_back(reinterpret_cast<const SCEV *>(-2));
+    return V;
+  }
+
+  static unsigned getHashValue(const SmallVector<const SCEV *, 4> &V) {
+    return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+  }
+
+  static bool isEqual(const SmallVector<const SCEV *, 4> &LHS,
+                      const SmallVector<const SCEV *, 4> &RHS) {
+    return LHS == RHS;
+  }
+};
+
+/// This class holds the state that LSR keeps for each use in IVUsers, as well
+/// as uses invented by LSR itself. It includes information about what kinds of
+/// things can be folded into the user, information about the user itself, and
+/// information about how the use may be satisfied.  TODO: Represent multiple
+/// users of the same expression in common?
+class LSRUse {
+  DenseSet<SmallVector<const SCEV *, 4>, UniquifierDenseMapInfo> Uniquifier;
+
+public:
+  /// An enum for a kind of use, indicating what types of scaled and immediate
+  /// operands it might support.
+  enum KindType {
+    Basic,   ///< A normal use, with no folding.
+    Special, ///< A special case of basic, allowing -1 scales.
+    Address, ///< An address use; folding according to TargetLowering
+    ICmpZero ///< An equality icmp with both operands folded into one.
+    // TODO: Add a generic icmp too?
+  };
+
+  typedef PointerIntPair<const SCEV *, 2, KindType> SCEVUseKindPair;
+
+  KindType Kind;
+  MemAccessTy AccessTy;
+
+  /// The list of operands which are to be replaced.
+  SmallVector<LSRFixup, 8> Fixups;
+
+  /// Keep track of the min and max offsets of the fixups.
+  int64_t MinOffset;
+  int64_t MaxOffset;
+
+  /// This records whether all of the fixups using this LSRUse are outside of
+  /// the loop, in which case some special-case heuristics may be used.
+  bool AllFixupsOutsideLoop;
+
+  /// RigidFormula is set to true to guarantee that this use will be associated
+  /// with a single formula--the one that initially matched. Some SCEV
+  /// expressions cannot be expanded. This allows LSR to consider the registers
+  /// used by those expressions without the need to expand them later after
+  /// changing the formula.
+  bool RigidFormula;
+
+  /// This records the widest use type for any fixup using this
+  /// LSRUse. FindUseWithSimilarFormula can't consider uses with different max
+  /// fixup widths to be equivalent, because the narrower one may be relying on
+  /// the implicit truncation to truncate away bogus bits.
+  Type *WidestFixupType;
+
+  /// A list of ways to build a value that can satisfy this user.  After the
+  /// list is populated, one of these is selected heuristically and used to
+  /// formulate a replacement for OperandValToReplace in UserInst.
+  SmallVector<Formula, 12> Formulae;
+
+  /// The set of register candidates used by all formulae in this LSRUse.
+  SmallPtrSet<const SCEV *, 4> Regs;
+
+  LSRUse(KindType K, MemAccessTy AT)
+      : Kind(K), AccessTy(AT), MinOffset(INT64_MAX), MaxOffset(INT64_MIN),
+        AllFixupsOutsideLoop(true), RigidFormula(false),
+        WidestFixupType(nullptr) {}
+
+  LSRFixup &getNewFixup() {
+    Fixups.push_back(LSRFixup());
+    return Fixups.back();
+  }
+
+  void pushFixup(LSRFixup &f) {
+    Fixups.push_back(f);
+    if (f.Offset > MaxOffset)
+      MaxOffset = f.Offset;
+    if (f.Offset < MinOffset)
+      MinOffset = f.Offset;
+  }
+  
+  bool HasFormulaWithSameRegs(const Formula &F) const;
+  bool InsertFormula(const Formula &F);
+  void DeleteFormula(Formula &F);
+  void RecomputeRegs(size_t LUIdx, RegUseTracker &Reguses);
+
+  void print(raw_ostream &OS) const;
+  void dump() const;
 };
 
 }
@@ -976,7 +1112,6 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
                        SmallPtrSetImpl<const SCEV *> &Regs,
                        const DenseSet<const SCEV *> &VisitedRegs,
                        const Loop *L,
-                       const SmallVectorImpl<int64_t> &Offsets,
                        ScalarEvolution &SE, DominatorTree &DT,
                        const LSRUse &LU,
                        SmallPtrSetImpl<const SCEV *> *LoserRegs) {
@@ -1014,13 +1149,20 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
   ScaleCost += getScalingFactorCost(TTI, LU, F);
 
   // Tally up the non-zero immediates.
-  for (int64_t O : Offsets) {
+  for (const LSRFixup &Fixup : LU.Fixups) {
+    int64_t O = Fixup.Offset;
     int64_t Offset = (uint64_t)O + F.BaseOffset;
     if (F.BaseGV)
       ImmCost += 64; // Handle symbolic values conservatively.
                      // TODO: This should probably be the pointer size.
     else if (Offset != 0)
       ImmCost += APInt(64, Offset, true).getMinSignedBits();
+
+    // Check with target if this offset with this instruction is
+    // specifically not supported.
+    if ((isa<LoadInst>(Fixup.UserInst) || isa<StoreInst>(Fixup.UserInst)) &&
+        !TTI.isFoldableMemAccessOffset(Fixup.UserInst, Offset))
+      NumBaseAdds++;
   }
   assert(isValid() && "invalid cost");
 }
@@ -1067,44 +1209,8 @@ void Cost::dump() const {
   print(errs()); errs() << '\n';
 }
 
-namespace {
-
-/// An operand value in an instruction which is to be replaced with some
-/// equivalent, possibly strength-reduced, replacement.
-struct LSRFixup {
-  /// The instruction which will be updated.
-  Instruction *UserInst;
-
-  /// The operand of the instruction which will be replaced. The operand may be
-  /// used more than once; every instance will be replaced.
-  Value *OperandValToReplace;
-
-  /// If this user is to use the post-incremented value of an induction
-  /// variable, this variable is non-null and holds the loop associated with the
-  /// induction variable.
-  PostIncLoopSet PostIncLoops;
-
-  /// The index of the LSRUse describing the expression which this fixup needs,
-  /// minus an offset (below).
-  size_t LUIdx;
-
-  /// A constant offset to be added to the LSRUse expression.  This allows
-  /// multiple fixups to share the same LSRUse with different offsets, for
-  /// example in an unrolled loop.
-  int64_t Offset;
-
-  bool isUseFullyOutsideLoop(const Loop *L) const;
-
-  LSRFixup();
-
-  void print(raw_ostream &OS) const;
-  void dump() const;
-};
-
-}
-
 LSRFixup::LSRFixup()
-  : UserInst(nullptr), OperandValToReplace(nullptr), LUIdx(~size_t(0)),
+  : UserInst(nullptr), OperandValToReplace(nullptr),
     Offset(0) {}
 
 /// Test whether this fixup always uses its value outside of the given loop.
@@ -1140,9 +1246,6 @@ void LSRFixup::print(raw_ostream &OS) const {
     PIL->getHeader()->printAsOperand(OS, /*PrintType=*/false);
   }
 
-  if (LUIdx != ~size_t(0))
-    OS << ", LUIdx=" << LUIdx;
-
   if (Offset != 0)
     OS << ", Offset=" << Offset;
 }
@@ -1150,102 +1253,6 @@ void LSRFixup::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD
 void LSRFixup::dump() const {
   print(errs()); errs() << '\n';
-}
-
-namespace {
-
-/// A DenseMapInfo implementation for holding DenseMaps and DenseSets of sorted
-/// SmallVectors of const SCEV*.
-struct UniquifierDenseMapInfo {
-  static SmallVector<const SCEV *, 4> getEmptyKey() {
-    SmallVector<const SCEV *, 4>  V;
-    V.push_back(reinterpret_cast<const SCEV *>(-1));
-    return V;
-  }
-
-  static SmallVector<const SCEV *, 4> getTombstoneKey() {
-    SmallVector<const SCEV *, 4> V;
-    V.push_back(reinterpret_cast<const SCEV *>(-2));
-    return V;
-  }
-
-  static unsigned getHashValue(const SmallVector<const SCEV *, 4> &V) {
-    return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
-  }
-
-  static bool isEqual(const SmallVector<const SCEV *, 4> &LHS,
-                      const SmallVector<const SCEV *, 4> &RHS) {
-    return LHS == RHS;
-  }
-};
-
-/// This class holds the state that LSR keeps for each use in IVUsers, as well
-/// as uses invented by LSR itself. It includes information about what kinds of
-/// things can be folded into the user, information about the user itself, and
-/// information about how the use may be satisfied.  TODO: Represent multiple
-/// users of the same expression in common?
-class LSRUse {
-  DenseSet<SmallVector<const SCEV *, 4>, UniquifierDenseMapInfo> Uniquifier;
-
-public:
-  /// An enum for a kind of use, indicating what types of scaled and immediate
-  /// operands it might support.
-  enum KindType {
-    Basic,   ///< A normal use, with no folding.
-    Special, ///< A special case of basic, allowing -1 scales.
-    Address, ///< An address use; folding according to TargetLowering
-    ICmpZero ///< An equality icmp with both operands folded into one.
-    // TODO: Add a generic icmp too?
-  };
-
-  typedef PointerIntPair<const SCEV *, 2, KindType> SCEVUseKindPair;
-
-  KindType Kind;
-  MemAccessTy AccessTy;
-
-  SmallVector<int64_t, 8> Offsets;
-  int64_t MinOffset;
-  int64_t MaxOffset;
-
-  /// This records whether all of the fixups using this LSRUse are outside of
-  /// the loop, in which case some special-case heuristics may be used.
-  bool AllFixupsOutsideLoop;
-
-  /// RigidFormula is set to true to guarantee that this use will be associated
-  /// with a single formula--the one that initially matched. Some SCEV
-  /// expressions cannot be expanded. This allows LSR to consider the registers
-  /// used by those expressions without the need to expand them later after
-  /// changing the formula.
-  bool RigidFormula;
-
-  /// This records the widest use type for any fixup using this
-  /// LSRUse. FindUseWithSimilarFormula can't consider uses with different max
-  /// fixup widths to be equivalent, because the narrower one may be relying on
-  /// the implicit truncation to truncate away bogus bits.
-  Type *WidestFixupType;
-
-  /// A list of ways to build a value that can satisfy this user.  After the
-  /// list is populated, one of these is selected heuristically and used to
-  /// formulate a replacement for OperandValToReplace in UserInst.
-  SmallVector<Formula, 12> Formulae;
-
-  /// The set of register candidates used by all formulae in this LSRUse.
-  SmallPtrSet<const SCEV *, 4> Regs;
-
-  LSRUse(KindType K, MemAccessTy AT)
-      : Kind(K), AccessTy(AT), MinOffset(INT64_MAX), MaxOffset(INT64_MIN),
-        AllFixupsOutsideLoop(true), RigidFormula(false),
-        WidestFixupType(nullptr) {}
-
-  bool HasFormulaWithSameRegs(const Formula &F) const;
-  bool InsertFormula(const Formula &F);
-  void DeleteFormula(Formula &F);
-  void RecomputeRegs(size_t LUIdx, RegUseTracker &Reguses);
-
-  void print(raw_ostream &OS) const;
-  void dump() const;
-};
-
 }
 
 /// Test whether this use as a formula which has the same registers as the given
@@ -1335,9 +1342,9 @@ void LSRUse::print(raw_ostream &OS) const {
 
   OS << ", Offsets={";
   bool NeedComma = false;
-  for (int64_t O : Offsets) {
+  for (const LSRFixup &Fixup : Fixups) {
     if (NeedComma) OS << ',';
-    OS << O;
+    OS << Fixup.Offset;
     NeedComma = true;
   }
   OS << '}';
@@ -1644,9 +1651,6 @@ class LSRInstance {
   /// Interesting use types, to facilitate truncation reuse.
   SmallSetVector<Type *, 4> Types;
 
-  /// The list of operands which are to be replaced.
-  SmallVector<LSRFixup, 16> Fixups;
-
   /// The list of interesting uses.
   SmallVector<LSRUse, 16> Uses;
 
@@ -1678,11 +1682,6 @@ class LSRInstance {
 
   void CollectInterestingTypesAndFactors();
   void CollectFixupsAndInitialFormulae();
-
-  LSRFixup &getNewFixup() {
-    Fixups.push_back(LSRFixup());
-    return Fixups.back();
-  }
 
   // Support for sharing of LSRUses between LSRFixups.
   typedef DenseMap<LSRUse::SCEVUseKindPair, size_t> UseMapTy;
@@ -1753,16 +1752,16 @@ class LSRInstance {
                                   const LSRUse &LU,
                                   SCEVExpander &Rewriter) const;
 
-  Value *Expand(const LSRFixup &LF,
+  Value *Expand(const LSRUse &LU, const LSRFixup &LF,
                 const Formula &F,
                 BasicBlock::iterator IP,
                 SCEVExpander &Rewriter,
                 SmallVectorImpl<WeakVH> &DeadInsts) const;
-  void RewriteForPHI(PHINode *PN, const LSRFixup &LF,
+  void RewriteForPHI(PHINode *PN, const LSRUse &LU, const LSRFixup &LF,
                      const Formula &F,
                      SCEVExpander &Rewriter,
                      SmallVectorImpl<WeakVH> &DeadInsts) const;
-  void Rewrite(const LSRFixup &LF,
+  void Rewrite(const LSRUse &LU, const LSRFixup &LF,
                const Formula &F,
                SCEVExpander &Rewriter,
                SmallVectorImpl<WeakVH> &DeadInsts) const;
@@ -2069,10 +2068,30 @@ void
 LSRInstance::OptimizeLoopTermCond() {
   SmallPtrSet<Instruction *, 4> PostIncs;
 
+  // We need a different set of heuristics for rotated and non-rotated loops.
+  // If a loop is rotated then the latch is also the backedge, so inserting
+  // post-inc expressions just before the latch is ideal. To reduce live ranges
+  // it also makes sense to rewrite terminating conditions to use post-inc
+  // expressions.
+  //
+  // If the loop is not rotated then the latch is not a backedge; the latch
+  // check is done in the loop head. Adding post-inc expressions before the
+  // latch will cause overlapping live-ranges of pre-inc and post-inc expressions
+  // in the loop body. In this case we do *not* want to use post-inc expressions
+  // in the latch check, and we want to insert post-inc expressions before
+  // the backedge.
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock*, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
+  if (llvm::all_of(ExitingBlocks, [&LatchBlock](const BasicBlock *BB) {
+        return LatchBlock != BB;
+      })) {
+    // The backedge doesn't exit the loop; treat this as a head-tested loop.
+    IVIncInsertPos = LatchBlock->getTerminator();
+    return;
+  }
 
+  // Otherwise treat this as a rotated loop.
   for (BasicBlock *ExitingBlock : ExitingBlocks) {
 
     // Get the terminating condition for the loop if possible.  If we
@@ -2242,8 +2261,6 @@ bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
   LU.MinOffset = NewMinOffset;
   LU.MaxOffset = NewMaxOffset;
   LU.AccessTy = NewAccessTy;
-  if (NewOffset != LU.Offsets.back())
-    LU.Offsets.push_back(NewOffset);
   return true;
 }
 
@@ -2279,11 +2296,6 @@ std::pair<size_t, int64_t> LSRInstance::getUse(const SCEV *&Expr,
   P.first->second = LUIdx;
   Uses.push_back(LSRUse(Kind, AccessTy));
   LSRUse &LU = Uses[LUIdx];
-
-  // We don't need to track redundant offsets, but we don't need to go out
-  // of our way here to avoid them.
-  if (LU.Offsets.empty() || Offset != LU.Offsets.back())
-    LU.Offsets.push_back(Offset);
 
   LU.MinOffset = Offset;
   LU.MaxOffset = Offset;
@@ -2799,8 +2811,7 @@ void LSRInstance::FinalizeChain(IVChain &Chain) {
 
   for (const IVInc &Inc : Chain) {
     DEBUG(dbgs() << "        Inc: " << Inc.UserInst << "\n");
-    auto UseI = std::find(Inc.UserInst->op_begin(), Inc.UserInst->op_end(),
-                          Inc.IVOperand);
+    auto UseI = find(Inc.UserInst->operands(), Inc.IVOperand);
     assert(UseI != Inc.UserInst->op_end() && "cannot find IV operand");
     IVIncSet.insert(UseI);
   }
@@ -2933,39 +2944,34 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
   for (const IVStrideUse &U : IU) {
     Instruction *UserInst = U.getUser();
     // Skip IV users that are part of profitable IV Chains.
-    User::op_iterator UseI = std::find(UserInst->op_begin(), UserInst->op_end(),
-                                       U.getOperandValToReplace());
+    User::op_iterator UseI =
+        find(UserInst->operands(), U.getOperandValToReplace());
     assert(UseI != UserInst->op_end() && "cannot find IV operand");
     if (IVIncSet.count(UseI))
       continue;
 
-    // Record the uses.
-    LSRFixup &LF = getNewFixup();
-    LF.UserInst = UserInst;
-    LF.OperandValToReplace = U.getOperandValToReplace();
-    LF.PostIncLoops = U.getPostIncLoops();
-
     LSRUse::KindType Kind = LSRUse::Basic;
     MemAccessTy AccessTy;
-    if (isAddressUse(LF.UserInst, LF.OperandValToReplace)) {
+    if (isAddressUse(UserInst, U.getOperandValToReplace())) {
       Kind = LSRUse::Address;
-      AccessTy = getAccessType(LF.UserInst);
+      AccessTy = getAccessType(UserInst);
     }
 
     const SCEV *S = IU.getExpr(U);
-
+    PostIncLoopSet TmpPostIncLoops = U.getPostIncLoops();
+    
     // Equality (== and !=) ICmps are special. We can rewrite (i == N) as
     // (N - i == 0), and this allows (N - i) to be the expression that we work
     // with rather than just N or i, so we can consider the register
     // requirements for both N and i at the same time. Limiting this code to
     // equality icmps is not a problem because all interesting loops use
     // equality icmps, thanks to IndVarSimplify.
-    if (ICmpInst *CI = dyn_cast<ICmpInst>(LF.UserInst))
+    if (ICmpInst *CI = dyn_cast<ICmpInst>(UserInst))
       if (CI->isEquality()) {
         // Swap the operands if needed to put the OperandValToReplace on the
         // left, for consistency.
         Value *NV = CI->getOperand(1);
-        if (NV == LF.OperandValToReplace) {
+        if (NV == U.getOperandValToReplace()) {
           CI->setOperand(1, CI->getOperand(0));
           CI->setOperand(0, NV);
           NV = CI->getOperand(1);
@@ -2978,7 +2984,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
           // S is normalized, so normalize N before folding it into S
           // to keep the result normalized.
           N = TransformForPostIncUse(Normalize, N, CI, nullptr,
-                                     LF.PostIncLoops, SE, DT);
+                                     TmpPostIncLoops, SE, DT);
           Kind = LSRUse::ICmpZero;
           S = SE.getMinusSCEV(N, S);
         }
@@ -2991,12 +2997,20 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
         Factors.insert(-1);
       }
 
-    // Set up the initial formula for this use.
+    // Get or create an LSRUse.
     std::pair<size_t, int64_t> P = getUse(S, Kind, AccessTy);
-    LF.LUIdx = P.first;
-    LF.Offset = P.second;
-    LSRUse &LU = Uses[LF.LUIdx];
+    size_t LUIdx = P.first;
+    int64_t Offset = P.second;
+    LSRUse &LU = Uses[LUIdx];
+
+    // Record the fixup.
+    LSRFixup &LF = LU.getNewFixup();
+    LF.UserInst = UserInst;
+    LF.OperandValToReplace = U.getOperandValToReplace();
+    LF.PostIncLoops = TmpPostIncLoops;
+    LF.Offset = Offset;
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
+
     if (!LU.WidestFixupType ||
         SE.getTypeSizeInBits(LU.WidestFixupType) <
         SE.getTypeSizeInBits(LF.OperandValToReplace->getType()))
@@ -3004,8 +3018,8 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
 
     // If this is the first use of this LSRUse, give it a formula.
     if (LU.Formulae.empty()) {
-      InsertInitialFormula(S, LU, LF.LUIdx);
-      CountRegisters(LU.Formulae.back(), LF.LUIdx);
+      InsertInitialFormula(S, LU, LUIdx);
+      CountRegisters(LU.Formulae.back(), LUIdx);
     }
   }
 
@@ -3131,20 +3145,21 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
             continue;
         }
 
-        LSRFixup &LF = getNewFixup();
-        LF.UserInst = const_cast<Instruction *>(UserInst);
-        LF.OperandValToReplace = U;
         std::pair<size_t, int64_t> P = getUse(
             S, LSRUse::Basic, MemAccessTy());
-        LF.LUIdx = P.first;
-        LF.Offset = P.second;
-        LSRUse &LU = Uses[LF.LUIdx];
+        size_t LUIdx = P.first;
+        int64_t Offset = P.second;
+        LSRUse &LU = Uses[LUIdx];
+        LSRFixup &LF = LU.getNewFixup();
+        LF.UserInst = const_cast<Instruction *>(UserInst);
+        LF.OperandValToReplace = U;
+        LF.Offset = Offset;
         LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
         if (!LU.WidestFixupType ||
             SE.getTypeSizeInBits(LU.WidestFixupType) <
             SE.getTypeSizeInBits(LF.OperandValToReplace->getType()))
           LU.WidestFixupType = LF.OperandValToReplace->getType();
-        InsertSupplementalFormula(US, LU, LF.LUIdx);
+        InsertSupplementalFormula(US, LU, LUIdx);
         CountRegisters(LU.Formulae.back(), Uses.size() - 1);
         break;
       }
@@ -3873,8 +3888,7 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
       // the corresponding bad register from the Regs set.
       Cost CostF;
       Regs.clear();
-      CostF.RateFormula(TTI, F, Regs, VisitedRegs, L, LU.Offsets, SE, DT, LU,
-                        &LoserRegs);
+      CostF.RateFormula(TTI, F, Regs, VisitedRegs, L, SE, DT, LU, &LoserRegs);
       if (CostF.isLoser()) {
         // During initial formula generation, undesirable formulae are generated
         // by uses within other loops that have some non-trivial address mode or
@@ -3907,8 +3921,7 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
 
         Cost CostBest;
         Regs.clear();
-        CostBest.RateFormula(TTI, Best, Regs, VisitedRegs, L, LU.Offsets, SE,
-                             DT, LU);
+        CostBest.RateFormula(TTI, Best, Regs, VisitedRegs, L, SE, DT, LU);
         if (CostF < CostBest)
           std::swap(F, Best);
         DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
@@ -4054,25 +4067,13 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
 
       LUThatHas->AllFixupsOutsideLoop &= LU.AllFixupsOutsideLoop;
 
-      // Update the relocs to reference the new use.
-      for (LSRFixup &Fixup : Fixups) {
-        if (Fixup.LUIdx == LUIdx) {
-          Fixup.LUIdx = LUThatHas - &Uses.front();
-          Fixup.Offset += F.BaseOffset;
-          // Add the new offset to LUThatHas' offset list.
-          if (LUThatHas->Offsets.back() != Fixup.Offset) {
-            LUThatHas->Offsets.push_back(Fixup.Offset);
-            if (Fixup.Offset > LUThatHas->MaxOffset)
-              LUThatHas->MaxOffset = Fixup.Offset;
-            if (Fixup.Offset < LUThatHas->MinOffset)
-              LUThatHas->MinOffset = Fixup.Offset;
-          }
-          DEBUG(dbgs() << "New fixup has offset " << Fixup.Offset << '\n');
-        }
-        if (Fixup.LUIdx == NumUses-1)
-          Fixup.LUIdx = LUIdx;
+      // Transfer the fixups of LU to LUThatHas.
+      for (LSRFixup &Fixup : LU.Fixups) {
+        Fixup.Offset += F.BaseOffset;
+        LUThatHas->pushFixup(Fixup);
+        DEBUG(dbgs() << "New fixup has offset " << Fixup.Offset << '\n');
       }
-
+      
       // Delete formulae from the new use which are no longer legal.
       bool Any = false;
       for (size_t i = 0, e = LUThatHas->Formulae.size(); i != e; ++i) {
@@ -4246,8 +4247,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // the current best, prune the search at that point.
     NewCost = CurCost;
     NewRegs = CurRegs;
-    NewCost.RateFormula(TTI, F, NewRegs, VisitedRegs, L, LU.Offsets, SE, DT,
-                        LU);
+    NewCost.RateFormula(TTI, F, NewRegs, VisitedRegs, L, SE, DT, LU);
     if (NewCost < SolutionCost) {
       Workspace.push_back(&F);
       if (Workspace.size() != Uses.size()) {
@@ -4430,12 +4430,12 @@ LSRInstance::AdjustInsertPositionForExpand(BasicBlock::iterator LowestIP,
 
 /// Emit instructions for the leading candidate expression for this LSRUse (this
 /// is called "expanding").
-Value *LSRInstance::Expand(const LSRFixup &LF,
+Value *LSRInstance::Expand(const LSRUse &LU,
+                           const LSRFixup &LF,
                            const Formula &F,
                            BasicBlock::iterator IP,
                            SCEVExpander &Rewriter,
                            SmallVectorImpl<WeakVH> &DeadInsts) const {
-  const LSRUse &LU = Uses[LF.LUIdx];
   if (LU.RigidFormula)
     return LF.OperandValToReplace;
 
@@ -4617,6 +4617,7 @@ Value *LSRInstance::Expand(const LSRFixup &LF,
 /// effectively happens in their predecessor blocks, so the expression may need
 /// to be expanded in multiple places.
 void LSRInstance::RewriteForPHI(PHINode *PN,
+                                const LSRUse &LU,
                                 const LSRFixup &LF,
                                 const Formula &F,
                                 SCEVExpander &Rewriter,
@@ -4670,7 +4671,7 @@ void LSRInstance::RewriteForPHI(PHINode *PN,
       if (!Pair.second)
         PN->setIncomingValue(i, Pair.first->second);
       else {
-        Value *FullV = Expand(LF, F, BB->getTerminator()->getIterator(),
+        Value *FullV = Expand(LU, LF, F, BB->getTerminator()->getIterator(),
                               Rewriter, DeadInsts);
 
         // If this is reuse-by-noop-cast, insert the noop cast.
@@ -4691,17 +4692,18 @@ void LSRInstance::RewriteForPHI(PHINode *PN,
 /// Emit instructions for the leading candidate expression for this LSRUse (this
 /// is called "expanding"), and update the UserInst to reference the newly
 /// expanded value.
-void LSRInstance::Rewrite(const LSRFixup &LF,
+void LSRInstance::Rewrite(const LSRUse &LU,
+                          const LSRFixup &LF,
                           const Formula &F,
                           SCEVExpander &Rewriter,
                           SmallVectorImpl<WeakVH> &DeadInsts) const {
   // First, find an insertion point that dominates UserInst. For PHI nodes,
   // find the nearest block which dominates all the relevant uses.
   if (PHINode *PN = dyn_cast<PHINode>(LF.UserInst)) {
-    RewriteForPHI(PN, LF, F, Rewriter, DeadInsts);
+    RewriteForPHI(PN, LU, LF, F, Rewriter, DeadInsts);
   } else {
     Value *FullV =
-        Expand(LF, F, LF.UserInst->getIterator(), Rewriter, DeadInsts);
+      Expand(LU, LF, F, LF.UserInst->getIterator(), Rewriter, DeadInsts);
 
     // If this is reuse-by-noop-cast, insert the noop cast.
     Type *OpTy = LF.OperandValToReplace->getType();
@@ -4717,7 +4719,7 @@ void LSRInstance::Rewrite(const LSRFixup &LF,
     // its new value may happen to be equal to LF.OperandValToReplace, in
     // which case doing replaceUsesOfWith leads to replacing both operands
     // with the same value. TODO: Reorganize this.
-    if (Uses[LF.LUIdx].Kind == LSRUse::ICmpZero)
+    if (LU.Kind == LSRUse::ICmpZero)
       LF.UserInst->setOperand(0, FullV);
     else
       LF.UserInst->replaceUsesOfWith(LF.OperandValToReplace, FullV);
@@ -4750,11 +4752,11 @@ void LSRInstance::ImplementSolution(
   }
 
   // Expand the new value definitions and update the users.
-  for (const LSRFixup &Fixup : Fixups) {
-    Rewrite(Fixup, *Solution[Fixup.LUIdx], Rewriter, DeadInsts);
-
-    Changed = true;
-  }
+  for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
+    for (const LSRFixup &Fixup : Uses[LUIdx].Fixups) {
+      Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], Rewriter, DeadInsts);
+      Changed = true;
+    }
 
   for (const IVChain &Chain : IVChainVec) {
     GenerateIVChain(Chain, Rewriter, DeadInsts);
@@ -4898,11 +4900,12 @@ void LSRInstance::print_factors_and_types(raw_ostream &OS) const {
 
 void LSRInstance::print_fixups(raw_ostream &OS) const {
   OS << "LSR is examining the following fixup sites:\n";
-  for (const LSRFixup &LF : Fixups) {
-    dbgs() << "  ";
-    LF.print(OS);
-    OS << '\n';
-  }
+  for (const LSRUse &LU : Uses)
+    for (const LSRFixup &LF : LU.Fixups) {
+      dbgs() << "  ";
+      LF.print(OS);
+      OS << '\n';
+    }
 }
 
 void LSRInstance::print_uses(raw_ostream &OS) const {

@@ -234,6 +234,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
+      .Case("floatpred", MIToken::kw_floatpred)
+      .Case("intpred", MIToken::kw_intpred)
       .Default(MIToken::Identifier);
 }
 

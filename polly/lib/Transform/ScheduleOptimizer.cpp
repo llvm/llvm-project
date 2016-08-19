@@ -618,6 +618,212 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
   return {Mc, Nc, Kc};
 }
 
+/// @brief Identify a memory access through the shape of its memory access
+///        relation.
+///
+/// Identify the unique memory access in @p Stmt, that has an access relation
+/// equal to @p ExpectedAccessRelation.
+///
+/// @param Stmt The SCoP statement that contains the memory accesses under
+///             consideration.
+/// @param ExpectedAccessRelation The access relation that identifies
+///                               the memory access.
+/// @return  The memory access of @p Stmt whose memory access relation is equal
+///          to @p ExpectedAccessRelation. nullptr in case there is no or more
+///          than one such access.
+MemoryAccess *
+identifyAccessByAccessRelation(ScopStmt *Stmt,
+                               __isl_take isl_map *ExpectedAccessRelation) {
+  if (isl_map_has_tuple_id(ExpectedAccessRelation, isl_dim_out))
+    ExpectedAccessRelation =
+        isl_map_reset_tuple_id(ExpectedAccessRelation, isl_dim_out);
+  MemoryAccess *IdentifiedAccess = nullptr;
+  for (auto *Access : *Stmt) {
+    auto *AccessRelation = Access->getAccessRelation();
+    AccessRelation = isl_map_reset_tuple_id(AccessRelation, isl_dim_out);
+    if (isl_map_is_equal(ExpectedAccessRelation, AccessRelation)) {
+      if (IdentifiedAccess) {
+        isl_map_free(AccessRelation);
+        isl_map_free(ExpectedAccessRelation);
+        return nullptr;
+      }
+      IdentifiedAccess = Access;
+    }
+    isl_map_free(AccessRelation);
+  }
+  isl_map_free(ExpectedAccessRelation);
+  return IdentifiedAccess;
+}
+
+/// @brief Create an access relation that is specific to the matrix
+///        multiplication pattern.
+///
+/// Create an access relation of the following form:
+/// Stmt[O0, O1, O2]->[OI, OJ],
+/// where I is @p I, J is @J
+///
+/// @param Stmt The SCoP statement for which to generate the access relation.
+/// @param I The index of the input dimension that is mapped to the first output
+///          dimension.
+/// @param J The index of the input dimension that is mapped to the second
+///          output dimension.
+/// @return The specified access relation.
+__isl_give isl_map *
+getMatMulPatternOriginalAccessRelation(ScopStmt *Stmt, unsigned I, unsigned J) {
+  auto *AccessRelSpace = isl_space_alloc(Stmt->getIslCtx(), 0, 3, 2);
+  auto *AccessRel = isl_map_universe(AccessRelSpace);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, I, isl_dim_out, 0);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, J, isl_dim_out, 1);
+  AccessRel = isl_map_set_tuple_id(AccessRel, isl_dim_in, Stmt->getDomainId());
+  return AccessRel;
+}
+
+/// @brief Identify the memory access that corresponds to the access
+///        to the second operand of the matrix multiplication.
+///
+/// Identify the memory access that corresponds to the access
+/// to the matrix B of the matrix multiplication C = A x B.
+///
+/// @param Stmt The SCoP statement that contains the memory accesses
+///             under consideration.
+/// @return The memory access of @p Stmt that corresponds to the access
+///         to the second operand of the matrix multiplication.
+MemoryAccess *identifyAccessA(ScopStmt *Stmt) {
+  auto *OriginalRel = getMatMulPatternOriginalAccessRelation(Stmt, 0, 2);
+  return identifyAccessByAccessRelation(Stmt, OriginalRel);
+}
+
+/// @brief Identify the memory access that corresponds to the access
+///        to the first operand of the matrix multiplication.
+///
+/// Identify the memory access that corresponds to the access
+/// to the matrix A of the matrix multiplication C = A x B.
+///
+/// @param Stmt The SCoP statement that contains the memory accesses
+///             under consideration.
+/// @return The memory access of @p Stmt that corresponds to the access
+///         to the first operand of the matrix multiplication.
+MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
+  auto *OriginalRel = getMatMulPatternOriginalAccessRelation(Stmt, 2, 1);
+  return identifyAccessByAccessRelation(Stmt, OriginalRel);
+}
+
+/// @brief Create an access relation that is specific to
+///        the matrix multiplication pattern.
+///
+/// Create an access relation of the following form:
+/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [0, O5 + K * OI, OJ],
+/// where K is @p Coeff, I is @p FirstDim, J is @p SecondDim.
+///
+/// It can be used, for example, to create relations that helps to consequently
+/// access elements of operands of a matrix multiplication after creation of
+/// the BLIS micro and macro kernels.
+///
+/// @see ScheduleTreeOptimizer::createMicroKernel
+/// @see ScheduleTreeOptimizer::createMacroKernel
+///
+/// Subsequently, the described access relation is applied to the range of
+/// @p MapOldIndVar, that is used to map original induction variables to
+/// the ones, which are produced by schedule transformations. It helps to
+/// define relations using a new space and, at the same time, keep them
+/// in the original one.
+///
+/// @param MapOldIndVar The relation, which maps original induction variables
+///                     to the ones, which are produced by schedule
+///                     transformations.
+/// @param Coeff The coefficient that is used to define the specified access
+///              relation.
+/// @param FirstDim, SecondDim The input dimensions that are used to define
+///        the specified access relation.
+/// @return The specified access relation.
+__isl_give isl_map *getMatMulAccRel(__isl_take isl_map *MapOldIndVar,
+                                    unsigned Coeff, unsigned FirstDim,
+                                    unsigned SecondDim) {
+  auto *Ctx = isl_map_get_ctx(MapOldIndVar);
+  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 3);
+  auto *AccessRel = isl_map_universe(isl_space_copy(AccessRelSpace));
+  auto *ConstrSpace = isl_local_space_from_space(AccessRelSpace);
+  auto *Constr = isl_constraint_alloc_equality(ConstrSpace);
+  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_out, 1, -1);
+  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_in, 5, 1);
+  Constr =
+      isl_constraint_set_coefficient_si(Constr, isl_dim_in, FirstDim, Coeff);
+  AccessRel = isl_map_add_constraint(AccessRel, Constr);
+  AccessRel = isl_map_fix_si(AccessRel, isl_dim_out, 0, 0);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 2);
+  return isl_map_apply_range(MapOldIndVar, AccessRel);
+}
+
+/// @brief Apply the packing transformation.
+///
+/// The packing transformation can be described as a data-layout
+/// transformation that requires to introduce a new array, copy data
+/// to the array, and change memory access locations of the compute kernel
+/// to reference the array.
+///
+/// @param Node The schedule node to be optimized.
+/// @param MapOldIndVar The relation, which maps original induction variables
+///                     to the ones, which are produced by schedule
+///                     transformations.
+/// @param MicroParams, MacroParams Parameters of the BLIS kernel
+///                                 to be taken into account.
+/// @return The optimized schedule node.
+static void optimizeDataLayoutMatrMulPattern(__isl_take isl_map *MapOldIndVar,
+                                             MicroKernelParamsTy MicroParams,
+                                             MacroKernelParamsTy MacroParams) {
+  auto InputDimsId = isl_map_get_tuple_id(MapOldIndVar, isl_dim_in);
+  auto *Stmt = static_cast<ScopStmt *>(isl_id_get_user(InputDimsId));
+  isl_id_free(InputDimsId);
+  MemoryAccess *MemAccessA = identifyAccessA(Stmt);
+  MemoryAccess *MemAccessB = identifyAccessB(Stmt);
+  if (!MemAccessA || !MemAccessB) {
+    isl_map_free(MapOldIndVar);
+    return;
+  }
+  auto *AccRel =
+      getMatMulAccRel(isl_map_copy(MapOldIndVar), MacroParams.Kc, 3, 6);
+  unsigned FirstDimSize = MacroParams.Mc * MacroParams.Kc / MicroParams.Mr;
+  unsigned SecondDimSize = MicroParams.Mr;
+  auto *SAI = Stmt->getParent()->createScopArrayInfo(
+      MemAccessA->getElementType(), "Packed_A", {FirstDimSize, SecondDimSize});
+  AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
+  MemAccessA->setNewAccessRelation(AccRel);
+  AccRel = getMatMulAccRel(MapOldIndVar, MacroParams.Kc, 4, 7);
+  FirstDimSize = MacroParams.Nc * MacroParams.Kc / MicroParams.Nr;
+  SecondDimSize = MicroParams.Nr;
+  SAI = Stmt->getParent()->createScopArrayInfo(
+      MemAccessB->getElementType(), "Packed_B", {FirstDimSize, SecondDimSize});
+  AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
+  MemAccessB->setNewAccessRelation(AccRel);
+}
+
+/// @brief Get a relation mapping induction variables produced by schedule
+///        transformations to the original ones.
+///
+/// @param Node The schedule node produced as the result of creation
+///        of the BLIS kernels.
+/// @param MicroKernelParams, MacroKernelParams Parameters of the BLIS kernel
+///                                             to be taken into account.
+/// @return  The relation mapping original induction variables to the ones
+///          produced by schedule transformation.
+/// @see ScheduleTreeOptimizer::createMicroKernel
+/// @see ScheduleTreeOptimizer::createMacroKernel
+/// @see getMacroKernelParams
+__isl_give isl_map *
+getInductionVariablesSubstitution(__isl_take isl_schedule_node *Node,
+                                  MicroKernelParamsTy MicroKernelParams,
+                                  MacroKernelParamsTy MacroKernelParams) {
+  auto *Child = isl_schedule_node_get_child(Node, 0);
+  auto *UnMapOldIndVar = isl_schedule_node_get_prefix_schedule_union_map(Child);
+  isl_schedule_node_free(Child);
+  auto *MapOldIndVar = isl_map_from_union_map(UnMapOldIndVar);
+  if (isl_map_dim(MapOldIndVar, isl_dim_out) > 9)
+    MapOldIndVar =
+        isl_map_project_out(MapOldIndVar, isl_dim_out, 0,
+                            isl_map_dim(MapOldIndVar, isl_dim_out) - 9);
+  return MapOldIndVar;
+}
+
 __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
     __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI) {
   assert(TTI && "The target transform info should be provided.");
@@ -625,6 +831,15 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
   auto MacroKernelParams = getMacroKernelParams(MicroKernelParams);
   Node = createMacroKernel(Node, MacroKernelParams);
   Node = createMicroKernel(Node, MicroKernelParams);
+  if (MacroKernelParams.Mc == 1 || MacroKernelParams.Nc == 1 ||
+      MacroKernelParams.Kc == 1)
+    return Node;
+  auto *MapOldIndVar = getInductionVariablesSubstitution(
+      Node, MicroKernelParams, MacroKernelParams);
+  if (!MapOldIndVar)
+    return Node;
+  optimizeDataLayoutMatrMulPattern(MapOldIndVar, MicroKernelParams,
+                                   MacroKernelParams);
   return Node;
 }
 

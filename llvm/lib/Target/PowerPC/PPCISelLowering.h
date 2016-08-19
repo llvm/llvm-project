@@ -492,6 +492,10 @@ namespace llvm {
       return true;
     }
 
+    bool isCtlzFast() const override {
+      return true;
+    }
+
     bool supportSplitCSR(MachineFunction *MF) const override {
       return
         MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&

@@ -255,7 +255,7 @@ static bool HasOneUse(unsigned Reg, MachineInstr *Def,
   const VNInfo *DefVNI = LI.getVNInfoAt(
       LIS.getInstructionIndex(*Def).getRegSlot());
   assert(DefVNI);
-  for (auto I : MRI.use_nodbg_operands(Reg)) {
+  for (auto &I : MRI.use_nodbg_operands(Reg)) {
     const auto &Result = LI.Query(LIS.getInstructionIndex(*I.getParent()));
     if (Result.valueIn() == DefVNI) {
       if (!Result.isKill())
@@ -360,7 +360,7 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
   const MachineInstr *OneUseInst = OneUse.getParent();
   VNInfo *OneUseVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*OneUseInst));
 
-  for (const MachineOperand &Use : MRI.use_operands(Reg)) {
+  for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
     if (&Use == &OneUse)
       continue;
 

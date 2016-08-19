@@ -107,8 +107,8 @@ protected:
                         uint32_t data_offset);
 
     bool
-    PrivateSetRegisterValue (uint32_t reg, StringExtractor &response);
-    
+    PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
+
     bool
     PrivateSetRegisterValue (uint32_t reg, uint64_t val);
 
@@ -143,9 +143,6 @@ protected:
             m_reg_valid[reg] = valid;
     }
 
-    void
-    SyncThreadState(Process *process);  // Assumes the sequence mutex has already been acquired.
-    
     GDBRemoteDynamicRegisterInfo &m_reg_info;
     std::vector<bool> m_reg_valid;
     DataExtractor m_reg_data;

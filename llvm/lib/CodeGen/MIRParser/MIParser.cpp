@@ -155,6 +155,7 @@ public:
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
   bool parseBlockAddressOperand(MachineOperand &Dest);
   bool parseIntrinsicOperand(MachineOperand &Dest);
+  bool parsePredicateOperand(MachineOperand &Dest);
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(MachineOperand &Dest,
@@ -1469,6 +1470,64 @@ bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parsePredicateOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_intpred) || Token.is(MIToken::kw_floatpred));
+  bool IsFloat = Token.is(MIToken::kw_floatpred);
+  lex();
+
+  if (expectAndConsume(MIToken::lparen))
+    return error("expected syntax intpred(whatever) or floatpred(whatever");
+
+  if (Token.isNot(MIToken::Identifier))
+    return error("whatever");
+
+  CmpInst::Predicate Pred;
+  if (IsFloat) {
+    Pred = StringSwitch<CmpInst::Predicate>(Token.stringValue())
+               .Case("false", CmpInst::FCMP_FALSE)
+               .Case("oeq", CmpInst::FCMP_OEQ)
+               .Case("ogt", CmpInst::FCMP_OGT)
+               .Case("oge", CmpInst::FCMP_OGE)
+               .Case("olt", CmpInst::FCMP_OLT)
+               .Case("ole", CmpInst::FCMP_OLE)
+               .Case("one", CmpInst::FCMP_ONE)
+               .Case("ord", CmpInst::FCMP_ORD)
+               .Case("uno", CmpInst::FCMP_UNO)
+               .Case("ueq", CmpInst::FCMP_UEQ)
+               .Case("ugt", CmpInst::FCMP_UGT)
+               .Case("uge", CmpInst::FCMP_UGE)
+               .Case("ult", CmpInst::FCMP_ULT)
+               .Case("ule", CmpInst::FCMP_ULE)
+               .Case("une", CmpInst::FCMP_UNE)
+               .Case("true", CmpInst::FCMP_TRUE)
+               .Default(CmpInst::BAD_FCMP_PREDICATE);
+    if (!CmpInst::isFPPredicate(Pred))
+      return error("invalid floating-point predicate");
+  } else {
+    Pred = StringSwitch<CmpInst::Predicate>(Token.stringValue())
+               .Case("eq", CmpInst::ICMP_EQ)
+               .Case("ne", CmpInst::ICMP_NE)
+               .Case("sgt", CmpInst::ICMP_SGT)
+               .Case("sge", CmpInst::ICMP_SGE)
+               .Case("slt", CmpInst::ICMP_SLT)
+               .Case("sle", CmpInst::ICMP_SLE)
+               .Case("ugt", CmpInst::ICMP_UGT)
+               .Case("uge", CmpInst::ICMP_UGE)
+               .Case("ult", CmpInst::ICMP_ULT)
+               .Case("ule", CmpInst::ICMP_ULE)
+               .Default(CmpInst::BAD_ICMP_PREDICATE);
+    if (!CmpInst::isIntPredicate(Pred))
+      return error("invalid integer predicate");
+  }
+
+  lex();
+  Dest = MachineOperand::CreatePredicate(Pred);
+  if (!expectAndConsume(MIToken::rparen))
+    return error("predicate should be terminated by ')'.");
+
+  return false;
+}
+
 bool MIParser::parseTargetIndexOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_target_index));
   lex();
@@ -1575,6 +1634,9 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseTargetIndexOperand(Dest);
   case MIToken::kw_liveout:
     return parseLiveoutRegisterMaskOperand(Dest);
+  case MIToken::kw_floatpred:
+  case MIToken::kw_intpred:
+    return parsePredicateOperand(Dest);
   case MIToken::Error:
     return true;
   case MIToken::Identifier:
@@ -1583,7 +1645,7 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
       lex();
       break;
     }
-  // fallthrough
+    LLVM_FALLTHROUGH;
   default:
     // FIXME: Parse the MCSymbol machine operand.
     return error("expected a machine operand");

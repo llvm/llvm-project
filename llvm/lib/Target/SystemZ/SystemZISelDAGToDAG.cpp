@@ -832,7 +832,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       RxSBG.Input = N.getOperand(0);
       return true;
     }
-    // Fall through.
+    LLVM_FALLTHROUGH;
 
   case ISD::SIGN_EXTEND: {
     // Check that the extension bits are don't-care (i.e. are masked out
@@ -1265,7 +1265,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     if (Node->getOperand(1).getOpcode() != ISD::Constant)
       if (tryRxSBG(Node, SystemZ::RNSBG))
         return;
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case ISD::ROTL:
   case ISD::SHL:
   case ISD::SRL:
@@ -1375,6 +1375,29 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
   }
 
   if (selectBDXAddr(Form, DispRange, Op, Base, Disp, Index)) {
+    const TargetRegisterClass *TRC =
+      Subtarget->getRegisterInfo()->getPointerRegClass(*MF);
+    SDLoc DL(Base);
+    SDValue RC = CurDAG->getTargetConstant(TRC->getID(), DL, MVT::i32);
+
+    // Make sure that the base address doesn't go into %r0.
+    // If it's a TargetFrameIndex or a fixed register, we shouldn't do anything.
+    if (Base.getOpcode() != ISD::TargetFrameIndex &&
+        Base.getOpcode() != ISD::Register) {
+      Base =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                       DL, Base.getValueType(),
+                                       Base, RC), 0);
+    }
+
+    // Make sure that the index register isn't assigned to %r0 either.
+    if (Index.getOpcode() != ISD::Register) {
+      Index =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                       DL, Index.getValueType(),
+                                       Index, RC), 0);
+    }
+
     OutOps.push_back(Base);
     OutOps.push_back(Disp);
     OutOps.push_back(Index);

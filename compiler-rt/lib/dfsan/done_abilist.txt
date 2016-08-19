@@ -266,6 +266,14 @@ fun:reflect.makeFuncStub=discard
 # Replaces __sanitizer_cov_trace_cmp with __dfsw___sanitizer_cov_trace_cmp
 fun:__sanitizer_cov_trace_cmp=custom
 fun:__sanitizer_cov_trace_cmp=uninstrumented
+fun:__sanitizer_cov_trace_cmp1=custom
+fun:__sanitizer_cov_trace_cmp1=uninstrumented
+fun:__sanitizer_cov_trace_cmp2=custom
+fun:__sanitizer_cov_trace_cmp2=uninstrumented
+fun:__sanitizer_cov_trace_cmp4=custom
+fun:__sanitizer_cov_trace_cmp4=uninstrumented
+fun:__sanitizer_cov_trace_cmp8=custom
+fun:__sanitizer_cov_trace_cmp8=uninstrumented
 # Similar for __sanitizer_cov_trace_switch
 fun:__sanitizer_cov_trace_switch=custom
 fun:__sanitizer_cov_trace_switch=uninstrumented

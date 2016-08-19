@@ -17,6 +17,7 @@
 #define LLVM_ADT_PRIORITYWORKLIST_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cassert>
@@ -147,7 +148,7 @@ public:
   /// write it:
   ///
   /// \code
-  ///   V.erase(std::remove_if(V.begin(), V.end(), P), V.end());
+  ///   V.erase(remove_if(V, P), V.end());
   /// \endcode
   ///
   /// However, PriorityWorklist doesn't expose non-const iterators, making any
@@ -156,8 +157,8 @@ public:
   /// \returns true if any element is removed.
   template <typename UnaryPredicate>
   bool erase_if(UnaryPredicate P) {
-    typename VectorT::iterator E = std::remove_if(
-        V.begin(), V.end(), TestAndEraseFromMap<UnaryPredicate>(P, M));
+    typename VectorT::iterator E =
+        remove_if(V, TestAndEraseFromMap<UnaryPredicate>(P, M));
     if (E == V.end())
       return false;
     for (auto I = V.begin(); I != E; ++I)

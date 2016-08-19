@@ -807,7 +807,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
       std::swap(LHS, RHS);
     break;
   case ISD::SETULE:
-    std::swap(LHS, RHS);        // FALLTHROUGH
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
   case ISD::SETUGE:
     // Turn lhs u>= rhs with lhs constant into rhs u< lhs+1, this allows us to
     // fold constant into instruction.
@@ -820,7 +821,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     TCC = MSP430CC::COND_HS;    // aka COND_C
     break;
   case ISD::SETUGT:
-    std::swap(LHS, RHS);        // FALLTHROUGH
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
   case ISD::SETULT:
     // Turn lhs u< rhs with lhs constant into rhs u>= lhs+1, this allows us to
     // fold constant into instruction.
@@ -833,7 +835,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     TCC = MSP430CC::COND_LO;    // aka COND_NC
     break;
   case ISD::SETLE:
-    std::swap(LHS, RHS);        // FALLTHROUGH
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
   case ISD::SETGE:
     // Turn lhs >= rhs with lhs constant into rhs < lhs+1, this allows us to
     // fold constant into instruction.
@@ -846,7 +849,8 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
     TCC = MSP430CC::COND_GE;
     break;
   case ISD::SETGT:
-    std::swap(LHS, RHS);        // FALLTHROUGH
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
   case ISD::SETLT:
     // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows us to
     // fold constant into instruction.

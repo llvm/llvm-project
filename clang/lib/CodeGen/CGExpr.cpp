@@ -2206,6 +2206,12 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   if (const auto *FD = dyn_cast<FunctionDecl>(ND))
     return EmitFunctionDeclLValue(*this, E, FD);
 
+  // FIXME: While we're emitting a binding from an enclosing scope, all other
+  // DeclRefExprs we see should be implicitly treated as if they also refer to
+  // an enclosing scope.
+  if (const auto *BD = dyn_cast<BindingDecl>(ND))
+    return EmitLValue(BD->getBinding());
+
   llvm_unreachable("Unhandled DeclRefExpr");
 }
 

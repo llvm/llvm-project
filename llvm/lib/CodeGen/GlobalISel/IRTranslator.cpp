@@ -45,7 +45,6 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     // we need to concat together to produce the value.
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
-    assert(!Val.getType()->isAggregateType() && "Not yet implemented");
     unsigned Size = DL->getTypeSizeInBits(Val.getType());
     unsigned VReg = MRI->createGenericVirtualRegister(Size);
     ValReg = VReg;
@@ -101,6 +100,20 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U) {
   return true;
 }
 
+bool IRTranslator::translateICmp(const User &U) {
+  const CmpInst &CI = cast<CmpInst>(U);
+  unsigned Op0 = getOrCreateVReg(*CI.getOperand(0));
+  unsigned Op1 = getOrCreateVReg(*CI.getOperand(1));
+  unsigned Res = getOrCreateVReg(CI);
+  CmpInst::Predicate Pred = CI.getPredicate();
+
+  assert(isa<ICmpInst>(CI) && "only integer comparisons supported now");
+  assert(CmpInst::isIntPredicate(Pred) && "only int comparisons supported now");
+  MIRBuilder.buildICmp({LLT{*CI.getType()}, LLT{*CI.getOperand(0)->getType()}},
+                       Pred, Res, Op0, Op1);
+  return true;
+}
+
 bool IRTranslator::translateRet(const User &U) {
   const ReturnInst &RI = cast<ReturnInst>(U);
   const Value *Ret = RI.getReturnValue();
@@ -139,13 +152,13 @@ bool IRTranslator::translateLoad(const User &U) {
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Res = getOrCreateVReg(LI);
   unsigned Addr = getOrCreateVReg(*LI.getPointerOperand());
-  LLT VTy{*LI.getType()}, PTy{*LI.getPointerOperand()->getType()};
+  LLT VTy{*LI.getType(), DL}, PTy{*LI.getPointerOperand()->getType()};
 
   MIRBuilder.buildLoad(
       VTy, PTy, Res, Addr,
-      *MF.getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
-                               MachineMemOperand::MOLoad,
-                               VTy.getSizeInBits() / 8, getMemOpAlignment(LI)));
+      *MF.getMachineMemOperand(
+          MachinePointerInfo(LI.getPointerOperand()), MachineMemOperand::MOLoad,
+          DL->getTypeStoreSize(LI.getType()), getMemOpAlignment(LI)));
   return true;
 }
 
@@ -156,14 +169,16 @@ bool IRTranslator::translateStore(const User &U) {
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Val = getOrCreateVReg(*SI.getValueOperand());
   unsigned Addr = getOrCreateVReg(*SI.getPointerOperand());
-  LLT VTy{*SI.getValueOperand()->getType()},
+  LLT VTy{*SI.getValueOperand()->getType(), DL},
       PTy{*SI.getPointerOperand()->getType()};
 
   MIRBuilder.buildStore(
       VTy, PTy, Val, Addr,
-      *MF.getMachineMemOperand(MachinePointerInfo(SI.getPointerOperand()),
-                               MachineMemOperand::MOStore,
-                               VTy.getSizeInBits() / 8, getMemOpAlignment(SI)));
+      *MF.getMachineMemOperand(
+          MachinePointerInfo(SI.getPointerOperand()),
+          MachineMemOperand::MOStore,
+          DL->getTypeStoreSize(SI.getValueOperand()->getType()),
+          getMemOpAlignment(SI)));
   return true;
 }
 

@@ -78,7 +78,7 @@ define i1 @test7(i32 %x) {
   ret i1 %b
 }
 
-define i1 @test8(i32 %x){
+define i1 @test8(i32 %x) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -87,7 +87,7 @@ define i1 @test8(i32 %x){
   ret i1 %b
 }
 
-define i1 @test9(i32 %x)  {
+define i1 @test9(i32 %x) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i32 %x, 1
 ; CHECK-NEXT:    ret i1 [[B]]
@@ -97,7 +97,7 @@ define i1 @test9(i32 %x)  {
   ret i1 %b
 }
 
-define i1 @test10(i32 %x){
+define i1 @test10(i32 %x) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 %x, -2147483648
 ; CHECK-NEXT:    ret i1 [[B]]
@@ -128,7 +128,7 @@ define i1 @test12(i1 %A) {
 }
 
 ; PR6481
-define i1 @test13(i8 %X) nounwind readnone {
+define i1 @test13(i8 %X) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -136,7 +136,7 @@ define i1 @test13(i8 %X) nounwind readnone {
   ret i1 %cmp
 }
 
-define i1 @test14(i8 %X) nounwind readnone {
+define i1 @test14(i8 %X) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -144,7 +144,7 @@ define i1 @test14(i8 %X) nounwind readnone {
   ret i1 %cmp
 }
 
-define i1 @test15() nounwind readnone {
+define i1 @test15() {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    ret i1 undef
 ;
@@ -152,7 +152,7 @@ define i1 @test15() nounwind readnone {
   ret i1 %cmp
 }
 
-define i1 @test16() nounwind readnone {
+define i1 @test16() {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    ret i1 undef
 ;
@@ -160,7 +160,7 @@ define i1 @test16() nounwind readnone {
   ret i1 %cmp
 }
 
-define i1 @test17(i32 %x) nounwind {
+define i1 @test17(i32 %x) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 %x, 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -171,7 +171,7 @@ define i1 @test17(i32 %x) nounwind {
   ret i1 %cmp
 }
 
-define i1 @test17a(i32 %x) nounwind {
+define i1 @test17a(i32 %x) {
 ; CHECK-LABEL: @test17a(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %x, 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -182,7 +182,7 @@ define i1 @test17a(i32 %x) nounwind {
   ret i1 %cmp
 }
 
-define i1 @test18(i32 %x) nounwind {
+define i1 @test18(i32 %x) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 %x, 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -229,7 +229,7 @@ define <2 x i1> @cmp_and_signbit_vec(<2 x i3> %x) {
   ret <2 x i1> %cmp
 }
 
-define i1 @test20(i32 %x) nounwind {
+define i1 @test20(i32 %x) {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 %x, 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -240,7 +240,7 @@ define i1 @test20(i32 %x) nounwind {
   ret i1 %cmp
 }
 
-define i1 @test20a(i32 %x) nounwind {
+define i1 @test20a(i32 %x) {
 ; CHECK-LABEL: @test20a(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 %x, 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -280,6 +280,18 @@ define i1 @test23(i32 %x) {
   %i3 = sdiv i32 %x, -1328634635
   %i4 = icmp eq i32 %i3, -1
   ret i1 %i4
+}
+
+; FIXME: Vectors should fold too.
+define <2 x i1> @test23vec(<2 x i32> %x) {
+; CHECK-LABEL: @test23vec(
+; CHECK-NEXT:    [[I3:%.*]] = sdiv <2 x i32> %x, <i32 -1328634635, i32 -1328634635>
+; CHECK-NEXT:    [[I4:%.*]] = icmp eq <2 x i32> [[I3]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i1> [[I4]]
+;
+  %i3 = sdiv <2 x i32> %x, <i32 -1328634635, i32 -1328634635>
+  %i4 = icmp eq <2 x i32> %i3, <i32 -1, i32 -1>
+  ret <2 x i1> %i4
 }
 
 @X = global [1000 x i32] zeroinitializer
@@ -476,6 +488,17 @@ define i1 @test39(i32 %X, i32 %Y) {
   ret i1 %B
 }
 
+define <2 x i1> @test39vec(<2 x i32> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @test39vec(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact <2 x i32> %X, %Y
+; CHECK-NEXT:    [[B:%.*]] = icmp eq <2 x i32> [[A]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %A = ashr exact <2 x i32> %X, %Y
+  %B = icmp eq <2 x i32> %A, zeroinitializer
+  ret <2 x i1> %B
+}
+
 define i1 @test40(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @test40(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 %X, 0
@@ -484,6 +507,17 @@ define i1 @test40(i32 %X, i32 %Y) {
   %A = lshr exact i32 %X, %Y
   %B = icmp ne i32 %A, 0
   ret i1 %B
+}
+
+define <2 x i1> @test40vec(<2 x i32> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @test40vec(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact <2 x i32> %X, %Y
+; CHECK-NEXT:    [[B:%.*]] = icmp ne <2 x i32> [[A]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %A = lshr exact <2 x i32> %X, %Y
+  %B = icmp ne <2 x i32> %A, zeroinitializer
+  ret <2 x i1> %B
 }
 
 ; PR9343 #3
@@ -608,7 +642,7 @@ define i1 @test51(i32 %X, i32 %Y) {
   ret i1 %C
 }
 
-define i1 @test52(i32 %x1) nounwind {
+define i1 @test52(i32 %x1) {
 ; CHECK-LABEL: @test52(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %x1, 16711935
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 4980863
@@ -625,7 +659,7 @@ define i1 @test52(i32 %x1) nounwind {
 }
 
 ; PR9838
-define i1 @test53(i32 %a, i32 %b) nounwind {
+define i1 @test53(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test53(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv exact i32 %a, 30
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 %b, 30
@@ -638,7 +672,7 @@ define i1 @test53(i32 %a, i32 %b) nounwind {
   ret i1 %z
 }
 
-define i1 @test54(i8 %a) nounwind {
+define i1 @test54(i8 %a) {
 ; CHECK-LABEL: @test54(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 %a, -64
 ; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[AND]], -128
@@ -730,13 +764,13 @@ define zeroext i1 @cmpabs2(i64 %val) {
   ret i1 %tobool
 }
 
-define void @test58() nounwind {
+define void @test58() {
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 36029346783166592) #1
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 36029346783166592)
 ; CHECK-NEXT:    ret void
 ;
   %cast = bitcast <1 x i64> <i64 36029346783166592> to i64
-  %call = call i32 @test58_d( i64 %cast) nounwind
+  %call = call i32 @test58_d( i64 %cast)
   ret void
 }
 declare i32 @test58_d(i64)
@@ -745,7 +779,7 @@ define i1 @test59(i8* %foo) {
 ; CHECK-LABEL: @test59(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, i8* %foo, i64 8
 ; CHECK-NEXT:    [[USE:%.*]] = ptrtoint i8* [[GEP1]] to i64
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]]) #1
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
 ; CHECK-NEXT:    ret i1 true
 ;
   %bit = bitcast i8* %foo to i32*
@@ -754,7 +788,7 @@ define i1 @test59(i8* %foo) {
   %cast1 = bitcast i32* %gep1 to i8*
   %cmp = icmp ult i8* %cast1, %gep2
   %use = ptrtoint i8* %cast1 to i64
-  %call = call i32 @test58_d(i64 %use) nounwind
+  %call = call i32 @test58_d(i64 %use)
   ret i1 %cmp
 }
 
@@ -763,7 +797,7 @@ define i1 @test59_as1(i8 addrspace(1)* %foo) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* %foo, i16 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8 addrspace(1)* [[GEP1]] to i16
 ; CHECK-NEXT:    [[USE:%.*]] = zext i16 [[TMP1]] to i64
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]]) #1
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
 ; CHECK-NEXT:    ret i1 true
 ;
   %bit = bitcast i8 addrspace(1)* %foo to i32 addrspace(1)*
@@ -772,7 +806,7 @@ define i1 @test59_as1(i8 addrspace(1)* %foo) {
   %cast1 = bitcast i32 addrspace(1)* %gep1 to i8 addrspace(1)*
   %cmp = icmp ult i8 addrspace(1)* %cast1, %gep2
   %use = ptrtoint i8 addrspace(1)* %cast1 to i64
-  %call = call i32 @test58_d(i64 %use) nounwind
+  %call = call i32 @test58_d(i64 %use)
   ret i1 %cmp
 }
 
@@ -908,7 +942,7 @@ define i1 @test62_as1(i8 addrspace(1)* %a) {
   ret i1 %cmp
 }
 
-define i1 @test63(i8 %a, i32 %b) nounwind {
+define i1 @test63(i8 %a, i32 %b) {
 ; CHECK-LABEL: @test63(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %b to i8
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], %a
@@ -920,7 +954,7 @@ define i1 @test63(i8 %a, i32 %b) nounwind {
   ret i1 %c
 }
 
-define i1 @test64(i8 %a, i32 %b) nounwind {
+define i1 @test64(i8 %a, i32 %b) {
 ; CHECK-LABEL: @test64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %b to i8
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], %a
@@ -952,7 +986,7 @@ define i1 @test66(i64 %A, i64 %B) {
   ret i1 %cmp
 }
 
-define i1 @test67(i32 %x) nounwind uwtable {
+define i1 @test67(i32 %x) {
 ; CHECK-LABEL: @test67(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 96
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
@@ -963,7 +997,19 @@ define i1 @test67(i32 %x) nounwind uwtable {
   ret i1 %cmp
 }
 
-define i1 @test68(i32 %x) nounwind uwtable {
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @test67vec(<2 x i32> %x) {
+; CHECK-LABEL: @test67vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %x, <i32 127, i32 127>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[AND]], <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %and = and <2 x i32> %x, <i32 127, i32 127>
+  %cmp = icmp sgt <2 x i32> %and, <i32 31, i32 31>
+  ret <2 x i1> %cmp
+}
+
+define i1 @test68(i32 %x) {
 ; CHECK-LABEL: @test68(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 127
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[AND]], 30
@@ -975,7 +1021,7 @@ define i1 @test68(i32 %x) nounwind uwtable {
 }
 
 ; PR14708
-define i1 @test69(i32 %c) nounwind uwtable {
+define i1 @test69(i32 %c) {
 ; CHECK-LABEL: @test69(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 %c, 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 97
@@ -1034,6 +1080,20 @@ define i1 @icmp_sext8trunc(i32 %x) {
   ret i1 %cmp
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_sext8trunc_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_sext8trunc_vec(
+; CHECK-NEXT:    [[SEXT1:%.*]] = shl <2 x i32> %x, <i32 24, i32 24>
+; CHECK-NEXT:    [[SEXT:%.*]] = ashr <2 x i32> [[SEXT:%.*]]1, <i32 24, i32 24>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[SEXT]], <i32 36, i32 36>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %trunc = trunc <2 x i32> %x to <2 x i8>
+  %sext = sext <2 x i8> %trunc to <2 x i32>
+  %cmp = icmp slt <2 x i32> %sext, <i32 36, i32 36>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl16(i32 %x) {
 ; CHECK-LABEL: @icmp_shl16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %x to i16
@@ -1043,6 +1103,18 @@ define i1 @icmp_shl16(i32 %x) {
   %shl = shl i32 %x, 16
   %cmp = icmp slt i32 %shl, 2359296
   ret i1 %cmp
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_shl16_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl16_vec(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> %x, <i32 16, i32 16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[SHL]], <i32 2359296, i32 2359296>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> %x, <i32 16, i32 16>
+  %cmp = icmp slt <2 x i32> %shl, <i32 2359296, i32 2359296>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl24(i32 %x) {
@@ -1088,6 +1160,18 @@ define i1 @icmp_shl_nsw_sge1(i32 %x) {
   ret i1 %cmp
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_shl_nsw_sge1_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl_nsw_sge1_vec(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> %x, <i32 21, i32 21>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SHL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl nsw <2 x i32> %x, <i32 21, i32 21>
+  %cmp = icmp sge <2 x i32> %shl, <i32 1, i32 1>
+  ret <2 x i1> %cmp
+}
+
 ; Checks for icmp (eq|ne) (shl x, C), 0
 define i1 @icmp_shl_nsw_eq(i32 %x) {
 ; CHECK-LABEL: @icmp_shl_nsw_eq(
@@ -1097,6 +1181,18 @@ define i1 @icmp_shl_nsw_eq(i32 %x) {
   %mul = shl nsw i32 %x, 5
   %cmp = icmp eq i32 %mul, 0
   ret i1 %cmp
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_shl_nsw_eq_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl_nsw_eq_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw <2 x i32> %x, <i32 5, i32 5>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = shl nsw <2 x i32> %x, <i32 5, i32 5>
+  %cmp = icmp eq <2 x i32> %mul, zeroinitializer
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_eq(i32 %x) {
@@ -1110,6 +1206,18 @@ define i1 @icmp_shl_eq(i32 %x) {
   ret i1 %cmp
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_shl_eq_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl_eq_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> %x, <i32 5, i32 5>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = shl <2 x i32> %x, <i32 5, i32 5>
+  %cmp = icmp eq <2 x i32> %mul, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl_nsw_ne(i32 %x) {
 ; CHECK-LABEL: @icmp_shl_nsw_ne(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 %x, 0
@@ -1118,6 +1226,18 @@ define i1 @icmp_shl_nsw_ne(i32 %x) {
   %mul = shl nsw i32 %x, 7
   %cmp = icmp ne i32 %mul, 0
   ret i1 %cmp
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_shl_nsw_ne_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl_nsw_ne_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw <2 x i32> %x, <i32 7, i32 7>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = shl nsw <2 x i32> %x, <i32 7, i32 7>
+  %cmp = icmp ne <2 x i32> %mul, zeroinitializer
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_ne(i32 %x) {
@@ -1129,6 +1249,18 @@ define i1 @icmp_shl_ne(i32 %x) {
   %mul = shl i32 %x, 7
   %cmp = icmp ne i32 %mul, 0
   ret i1 %cmp
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_shl_ne_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl_ne_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> %x, <i32 7, i32 7>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = shl <2 x i32> %x, <i32 7, i32 7>
+  %cmp = icmp ne <2 x i32> %mul, zeroinitializer
+  ret <2 x i1> %cmp
 }
 
 ; If the (mul x, C) preserved the sign and this is sign test,
@@ -1171,6 +1303,16 @@ define i1 @icmp_mul_nsw_neg1(i32 %x) {
   %mul = mul nsw i32 %x, -12
   %cmp = icmp sge i32 %mul, 1
   ret i1 %cmp
+}
+
+define <2 x i1> @icmp_mul_nsw_neg1_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_mul_nsw_neg1_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> %x, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %mul = mul nsw <2 x i32> %x, <i32 -12, i32 -12>
+  %cmp = icmp sge <2 x i32> %mul, <i32 1, i32 1>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_mul_nsw_0(i32 %x) {
@@ -1348,6 +1490,21 @@ define i1 @icmp_add_and_shr_ne_0(i32 %X) {
   ret i1 %tobool
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_add_and_shr_ne_0_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_add_and_shr_ne_0_vec(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> %X, <i32 4, i32 4>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SHR]], <i32 15, i32 15>
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne <2 x i32> [[AND]], <i32 14, i32 14>
+; CHECK-NEXT:    ret <2 x i1> [[TOBOOL]]
+;
+  %shr = lshr <2 x i32> %X, <i32 4, i32 4>
+  %and = and <2 x i32> %shr, <i32 15, i32 15>
+  %add = add <2 x i32> %and, <i32 -14, i32 -14>
+  %tobool = icmp ne <2 x i32> %add, zeroinitializer
+  ret <2 x i1> %tobool
+}
+
 ; PR16244
 define i1 @test71(i8* %x) {
 ; CHECK-LABEL: @test71(
@@ -1379,6 +1536,16 @@ define i1 @icmp_shl_1_V_ult_32(i32 %V) {
   ret i1 %cmp
 }
 
+define <2 x i1> @icmp_shl_1_V_ult_32_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_ult_32_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> %V, <i32 5, i32 5>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp ult <2 x i32> %shl, <i32 32, i32 32>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl_1_V_eq_32(i32 %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_eq_32(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 %V, 5
@@ -1387,6 +1554,16 @@ define i1 @icmp_shl_1_V_eq_32(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp eq i32 %shl, 32
   ret i1 %cmp
+}
+
+define <2 x i1> @icmp_shl_1_V_eq_32_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_eq_32_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %V, <i32 5, i32 5>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp eq <2 x i32> %shl, <i32 32, i32 32>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_1_V_ult_30(i32 %V) {
@@ -1399,6 +1576,16 @@ define i1 @icmp_shl_1_V_ult_30(i32 %V) {
   ret i1 %cmp
 }
 
+define <2 x i1> @icmp_shl_1_V_ult_30_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_ult_30_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> %V, <i32 5, i32 5>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp ult <2 x i32> %shl, <i32 30, i32 30>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl_1_V_ugt_30(i32 %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_ugt_30(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %V, 4
@@ -1407,6 +1594,16 @@ define i1 @icmp_shl_1_V_ugt_30(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp ugt i32 %shl, 30
   ret i1 %cmp
+}
+
+define <2 x i1> @icmp_shl_1_V_ugt_30_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_ugt_30_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %V, <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp ugt <2 x i32> %shl, <i32 30, i32 30>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_1_V_ule_30(i32 %V) {
@@ -1419,6 +1616,16 @@ define i1 @icmp_shl_1_V_ule_30(i32 %V) {
   ret i1 %cmp
 }
 
+define <2 x i1> @icmp_shl_1_V_ule_30_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_ule_30_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> %V, <i32 5, i32 5>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp ule <2 x i32> %shl, <i32 30, i32 30>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl_1_V_uge_30(i32 %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_uge_30(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %V, 4
@@ -1427,6 +1634,16 @@ define i1 @icmp_shl_1_V_uge_30(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp uge i32 %shl, 30
   ret i1 %cmp
+}
+
+define <2 x i1> @icmp_shl_1_V_uge_30_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_uge_30_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %V, <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp uge <2 x i32> %shl, <i32 30, i32 30>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_1_V_uge_2147483648(i32 %V) {
@@ -1439,6 +1656,16 @@ define i1 @icmp_shl_1_V_uge_2147483648(i32 %V) {
   ret i1 %cmp
 }
 
+define <2 x i1> @icmp_shl_1_V_uge_2147483648_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_uge_2147483648_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %V, <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp uge <2 x i32> %shl, <i32 2147483648, i32 2147483648>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl_1_V_ult_2147483648(i32 %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_ult_2147483648(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 %V, 31
@@ -1447,6 +1674,16 @@ define i1 @icmp_shl_1_V_ult_2147483648(i32 %V) {
   %shl = shl i32 1, %V
   %cmp = icmp ult i32 %shl, 2147483648
   ret i1 %cmp
+}
+
+define <2 x i1> @icmp_shl_1_V_ult_2147483648_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_ult_2147483648_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %V, <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp ult <2 x i32> %shl, <i32 2147483648, i32 2147483648>
+  ret <2 x i1> %cmp
 }
 
 define i1 @or_icmp_eq_B_0_icmp_ult_A_B(i64 %a, i64 %b) {
@@ -1472,15 +1709,15 @@ define i1 @icmp_add_ult_2(i32 %X) {
   ret i1 %cmp
 }
 
-define i1 @icmp_add_X_-14_ult_2(i32 %X) {
-; CHECK-LABEL: @icmp_add_X_-14_ult_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %X, -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 14
-; CHECK-NEXT:    ret i1 [[CMP]]
+define <2 x i1> @icmp_add_X_-14_ult_2_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_add_X_-14_ult_2_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> %X, <i32 -2, i32 -2>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 14, i32 14>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %add = add i32 %X, -14
-  %cmp = icmp ult i32 %add, 2
-  ret i1 %cmp
+  %add = add <2 x i32> %X, <i32 -14, i32 -14>
+  %cmp = icmp ult <2 x i32> %add, <i32 2, i32 2>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_sub_3_X_ult_2(i32 %X) {
@@ -1494,6 +1731,17 @@ define i1 @icmp_sub_3_X_ult_2(i32 %X) {
   ret i1 %cmp
 }
 
+define <2 x i1> @icmp_sub_3_X_ult_2_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_sub_3_X_ult_2_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> %X, <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %add = sub <2 x i32> <i32 3, i32 3>, %X
+  %cmp = icmp ult <2 x i32> %add, <i32 2, i32 2>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_add_X_-14_uge_2(i32 %X) {
 ; CHECK-LABEL: @icmp_add_X_-14_uge_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %X, -2
@@ -1503,6 +1751,17 @@ define i1 @icmp_add_X_-14_uge_2(i32 %X) {
   %add = add i32 %X, -14
   %cmp = icmp uge i32 %add, 2
   ret i1 %cmp
+}
+
+define <2 x i1> @icmp_add_X_-14_uge_2_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_add_X_-14_uge_2_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> %X, <i32 -2, i32 -2>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 14, i32 14>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %add = add <2 x i32> %X, <i32 -14, i32 -14>
+  %cmp = icmp uge <2 x i32> %add, <i32 2, i32 2>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_sub_3_X_uge_2(i32 %X) {
@@ -1516,6 +1775,17 @@ define i1 @icmp_sub_3_X_uge_2(i32 %X) {
   ret i1 %cmp
 }
 
+define <2 x i1> @icmp_sub_3_X_uge_2_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_sub_3_X_uge_2_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> %X, <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %add = sub <2 x i32> <i32 3, i32 3>, %X
+  %cmp = icmp uge <2 x i32> %add, <i32 2, i32 2>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_and_X_-16_eq-16(i32 %X) {
 ; CHECK-LABEL: @icmp_and_X_-16_eq-16(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %X, -17
@@ -1524,6 +1794,18 @@ define i1 @icmp_and_X_-16_eq-16(i32 %X) {
   %and = and i32 %X, -16
   %cmp = icmp eq i32 %and, -16
   ret i1 %cmp
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_and_X_-16_eq-16_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_and_X_-16_eq-16_vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %X, <i32 -16, i32 -16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], <i32 -16, i32 -16>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %and = and <2 x i32> %X, <i32 -16, i32 -16>
+  %cmp = icmp eq <2 x i32> %and, <i32 -16, i32 -16>
+  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_and_X_-16_ne-16(i32 %X) {
@@ -1536,6 +1818,42 @@ define i1 @icmp_and_X_-16_ne-16(i32 %X) {
   ret i1 %cmp
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_and_X_-16_ne-16_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_and_X_-16_ne-16_vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %X, <i32 -16, i32 -16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[AND]], <i32 -16, i32 -16>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %and = and <2 x i32> %X, <i32 -16, i32 -16>
+  %cmp = icmp ne <2 x i32> %and, <i32 -16, i32 -16>
+  ret <2 x i1> %cmp
+}
+
+define i1 @shrink_constant(i32 %X) {
+; CHECK-LABEL: @shrink_constant(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %X, -12
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[XOR]], 4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor = xor i32 %X, -9
+  %cmp = icmp ult i32 %xor, 4
+  ret i1 %cmp
+}
+
+; FIXME: This doesn't change because of a limitation in 'DemandedBitsLHSMask'.
+define <2 x i1> @shrink_constant_vec(<2 x i32> %X) {
+; CHECK-LABEL: @shrink_constant_vec(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> %X, <i32 -9, i32 -9>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[XOR]], <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %xor = xor <2 x i32> %X, <i32 -9, i32 -9>
+  %cmp = icmp ult <2 x i32> %xor, <i32 4, i32 4>
+  ret <2 x i1> %cmp
+}
+
+; This test requires 3 different transforms to get to the result.
 define i1 @icmp_sub_-1_X_ult_4(i32 %X) {
 ; CHECK-LABEL: @icmp_sub_-1_X_ult_4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %X, -5
@@ -1546,15 +1864,13 @@ define i1 @icmp_sub_-1_X_ult_4(i32 %X) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold too.
-define <2 x i1> @icmp_sub_neg1_X_ult_4_vec(<2 x i32> %X) {
-; CHECK-LABEL: @icmp_sub_neg1_X_ult_4_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i32> %X, <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[SUB]], <i32 4, i32 4>
+define <2 x i1> @icmp_xor_neg4_X_ult_4_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_xor_neg4_X_ult_4_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %X, <i32 -5, i32 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %sub = sub <2 x i32> <i32 -1, i32 -1>, %X
-  %cmp = icmp ult <2 x i32> %sub, <i32 4, i32 4>
+  %xor = xor <2 x i32> %X, <i32 -4, i32 -4>
+  %cmp = icmp ult <2 x i32> %xor, <i32 4, i32 4>
   ret <2 x i1> %cmp
 }
 
@@ -1568,15 +1884,13 @@ define i1 @icmp_sub_-1_X_uge_4(i32 %X) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold too.
-define <2 x i1> @icmp_sub_neg1_X_uge_4_vec(<2 x i32> %X) {
-; CHECK-LABEL: @icmp_sub_neg1_X_uge_4_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i32> %X, <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[SUB]], <i32 3, i32 3>
+define <2 x i1> @icmp_xor_neg4_X_uge_4_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_xor_neg4_X_uge_4_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> %X, <i32 -4, i32 -4>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %sub = sub <2 x i32> <i32 -1, i32 -1>, %X
-  %cmp = icmp uge <2 x i32> %sub, <i32 4, i32 4>
+  %xor = xor <2 x i32> %X, <i32 -4, i32 -4>
+  %cmp = icmp uge <2 x i32> %xor, <i32 4, i32 4>
   ret <2 x i1> %cmp
 }
 
@@ -1683,7 +1997,7 @@ end:
   ret i1 %res
 }
 
-define i1 @icmp_lshr_lshr_eq(i32 %a, i32 %b) nounwind {
+define i1 @icmp_lshr_lshr_eq(i32 %a, i32 %b) {
 ; CHECK-LABEL: @icmp_lshr_lshr_eq(
 ; CHECK-NEXT:    [[Z_UNSHIFTED:%.*]] = xor i32 %a, %b
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ult i32 [[Z:%.*]].unshifted, 1073741824
@@ -1695,7 +2009,7 @@ define i1 @icmp_lshr_lshr_eq(i32 %a, i32 %b) nounwind {
   ret i1 %z
 }
 
-define i1 @icmp_ashr_ashr_ne(i32 %a, i32 %b) nounwind {
+define i1 @icmp_ashr_ashr_ne(i32 %a, i32 %b) {
 ; CHECK-LABEL: @icmp_ashr_ashr_ne(
 ; CHECK-NEXT:    [[Z_UNSHIFTED:%.*]] = xor i32 %a, %b
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i32 [[Z:%.*]].unshifted, 255
@@ -1732,6 +2046,22 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
   ret i1 %ret
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_and_or_lshr_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @icmp_and_or_lshr_vec(
+; CHECK-NEXT:    [[SHF:%.*]] = lshr <2 x i32> %x, %y
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SHF]], %x
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[OR]], <i32 1, i32 1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %shf = lshr <2 x i32> %x, %y
+  %or = or <2 x i32> %shf, %x
+  %and = and <2 x i32> %or, <i32 1, i32 1>
+  %ret = icmp ne <2 x i32> %and, zeroinitializer
+  ret <2 x i1> %ret
+}
+
 define i1 @icmp_and_or_lshr_cst(i32 %x) {
 ; CHECK-LABEL: @icmp_and_or_lshr_cst(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 %x, 3
@@ -1743,6 +2073,22 @@ define i1 @icmp_and_or_lshr_cst(i32 %x) {
   %and = and i32 %or, 1
   %ret = icmp ne i32 %and, 0
   ret i1 %ret
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @icmp_and_or_lshr_cst_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_and_or_lshr_cst_vec(
+; CHECK-NEXT:    [[SHF:%.*]] = lshr <2 x i32> %x, <i32 1, i32 1>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SHF]], %x
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[OR]], <i32 1, i32 1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %shf = lshr <2 x i32> %x, <i32 1, i32 1>
+  %or = or <2 x i32> %shf, %x
+  %and = and <2 x i32> %or, <i32 1, i32 1>
+  %ret = icmp ne <2 x i32> %and, zeroinitializer
+  ret <2 x i1> %ret
 }
 
 define i1 @shl_ap1_zero_ap2_non_zero_2(i32 %a) {
@@ -2219,3 +2565,56 @@ define i1 @PR27792_2(i128 %a) {
   ret i1 %b
 }
 
+define i1 @ugtMaxSignedVal(i8 %a) {
+; CHECK-LABEL: @ugtMaxSignedVal(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 %a, 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ugt i8 %a, 127
+  ret i1 %cmp
+}
+
+define <2 x i1> @ugtMaxSignedValVec(<2 x i8> %a) {
+; CHECK-LABEL: @ugtMaxSignedValVec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> %a, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %cmp = icmp ugt <2 x i8> %a, <i8 127, i8 127>
+  ret <2 x i1> %cmp
+}
+
+define i1 @ugtKnownBits(i8 %a) {
+; CHECK-LABEL: @ugtKnownBits(
+; CHECK-NEXT:    [[B:%.*]] = and i8 %a, 17
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B]], 17
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %b = and i8 %a, 17
+  %cmp = icmp ugt i8 %b, 16
+  ret i1 %cmp
+}
+
+define <2 x i1> @ugtKnownBitsVec(<2 x i8> %a) {
+; CHECK-LABEL: @ugtKnownBitsVec(
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> %a, <i8 17, i8 17>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[B]], <i8 17, i8 17>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %b = and <2 x i8> %a, <i8 17, i8 17>
+  %cmp = icmp ugt <2 x i8> %b, <i8 16, i8 16>
+  ret <2 x i1> %cmp
+}
+
+define i1 @or_ptrtoint_mismatch(i8* %p, i32* %q) {
+; CHECK-LABEL: define i1 @or_ptrtoint_mismatch(i8* %p, i32* %q)
+; CHECK: [[pc:%.*]] = icmp eq i8* %p, null
+; CHECK: [[qc:%.*]] = icmp eq i32* %q, null
+; CHECK: [[b:%.*]] = and i1 [[pc]], [[qc]]
+; CHECK: ret i1 [[b]]
+
+  %pp = ptrtoint i8* %p to i64
+  %qq = ptrtoint i32* %q to i64
+  %o = or i64 %pp, %qq
+  %b = icmp eq i64 %o, 0
+  ret i1 %b
+}

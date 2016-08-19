@@ -179,6 +179,9 @@ CMICmnLLDBDebuggerHandleEvents::HandleEventSBProcess(const lldb::SBEvent &vEvent
         case lldb::SBProcess::eBroadcastBitProfileData:
             pEventType = "eBroadcastBitProfileData";
             break;
+        case lldb::SBProcess::eBroadcastBitStructuredData:
+            pEventType = "eBroadcastBitStructuredData";
+            break;
         case lldb::SBProcess::eBroadcastBitStateChanged:
             pEventType = "eBroadcastBitStateChanged";
             bOk = HandleProcessEventBroadcastBitStateChanged(vEvent);

@@ -70,7 +70,7 @@ public:
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;
   AVRCC::CondCodes getCondFromBranchOpc(unsigned Opc) const;
   AVRCC::CondCodes getOppositeCondition(AVRCC::CondCodes CC) const;
-  unsigned getInstSizeInBytes(const MachineInstr *MI) const override;
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,

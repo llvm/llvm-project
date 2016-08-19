@@ -9938,10 +9938,17 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
       VDecl->setInvalidDecl();
     }
   } else if (VDecl->isFileVarDecl()) {
+    // In C, extern is typically used to avoid tentative definitions when
+    // declaring variables in headers, but adding an intializer makes it a
+    // defintion. This is somewhat confusing, so GCC and Clang both warn on it.
+    // In C++, extern is often used to give implictly static const variables
+    // external linkage, so don't warn in that case. If selectany is present,
+    // this might be header code intended for C and C++ inclusion, so apply the
+    // C++ rules.
     if (VDecl->getStorageClass() == SC_Extern &&
-        (!getLangOpts().CPlusPlus ||
-         !(Context.getBaseElementType(VDecl->getType()).isConstQualified() ||
-           VDecl->isExternC())) &&
+        ((!getLangOpts().CPlusPlus && !VDecl->hasAttr<SelectAnyAttr>()) ||
+         !Context.getBaseElementType(VDecl->getType()).isConstQualified()) &&
+        !(getLangOpts().CPlusPlus && VDecl->isExternC()) &&
         !isTemplateInstantiation(VDecl->getTemplateSpecializationKind()))
       Diag(VDecl->getLocation(), diag::warn_extern_init);
 
@@ -11735,6 +11742,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   } else {
     return nullptr;
   }
+
+  if (Body && getCurFunction()->HasPotentialAvailabilityViolations)
+    DiagnoseUnguardedAvailabilityViolations(dcl);
 
   assert(!getCurFunction()->ObjCShouldCallSuper &&
          "This should only be set for ObjC methods, which should have been "
@@ -15168,7 +15178,57 @@ void Sema::diagnoseMisplacedModuleImport(Module *M, SourceLocation ImportLoc) {
   return checkModuleImportContext(*this, M, ImportLoc, CurContext);
 }
 
-DeclResult Sema::ActOnModuleImport(SourceLocation AtLoc,
+Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation ModuleLoc,
+                                           ModuleDeclKind MDK,
+                                           ModuleIdPath Path) {
+  // We should see 'module implementation' if and only if we are not compiling
+  // a module interface.
+  if (getLangOpts().CompilingModule ==
+      (MDK == ModuleDeclKind::Implementation)) {
+    Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
+      << (unsigned)MDK;
+    return nullptr;
+  }
+
+  // FIXME: Create a ModuleDecl and return it.
+  // FIXME: Teach the lexer to handle this declaration too.
+
+  switch (MDK) {
+  case ModuleDeclKind::Module:
+    // FIXME: Check we're not in a submodule.
+    // FIXME: Set CurrentModule and create a corresponding Module object.
+    return nullptr;
+
+  case ModuleDeclKind::Partition:
+    // FIXME: Check we are in a submodule of the named module.
+    return nullptr;
+
+  case ModuleDeclKind::Implementation:
+    DeclResult Import = ActOnModuleImport(ModuleLoc, ModuleLoc, Path);
+    if (Import.isInvalid())
+      return nullptr;
+    ImportDecl *ID = cast<ImportDecl>(Import.get());
+
+    // The current module is whatever we just loaded.
+    //
+    // FIXME: We should probably do this from the lexer rather than waiting
+    // until now, in case we look ahead across something where the current
+    // module matters (eg a #include).
+    auto Name = ID->getImportedModule()->getTopLevelModuleName();
+    if (!getLangOpts().CurrentModule.empty() &&
+        getLangOpts().CurrentModule != Name) {
+      Diag(Path.front().second, diag::err_current_module_name_mismatch)
+          << SourceRange(Path.front().second, Path.back().second)
+          << getLangOpts().CurrentModule;
+    }
+    const_cast<LangOptions&>(getLangOpts()).CurrentModule = Name;
+    return ConvertDeclToDeclGroup(ID);
+  }
+
+  llvm_unreachable("unexpected module decl kind");
+}
+
+DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ImportLoc,
                                    ModuleIdPath Path) {
   Module *Mod =
@@ -15184,7 +15244,10 @@ DeclResult Sema::ActOnModuleImport(SourceLocation AtLoc,
   // FIXME: we should support importing a submodule within a different submodule
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
-  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule)
+  // Import-from-implementation is valid in the Modules TS. FIXME: Should we
+  // warn on a redundant import of the current module?
+  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+      (getLangOpts().CompilingModule || !getLangOpts().ModulesTS))
     Diag(ImportLoc, getLangOpts().CompilingModule
                         ? diag::err_module_self_import
                         : diag::err_module_import_in_implementation)
@@ -15203,8 +15266,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation AtLoc,
   }
 
   TranslationUnitDecl *TU = getASTContext().getTranslationUnitDecl();
-  ImportDecl *Import = ImportDecl::Create(Context, TU,
-                                          AtLoc.isValid()? AtLoc : ImportLoc,
+  ImportDecl *Import = ImportDecl::Create(Context, TU, StartLoc,
                                           Mod, IdentifierLocs);
   if (!ModuleScopes.empty())
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);

@@ -400,6 +400,11 @@ else()
   set(OS_NAME "${CMAKE_SYSTEM_NAME}")
 endif()
 
+set(ALL_SANITIZERS asan;dfsan;msan;profile;tsan;safestack;cfi;esan;scudo)
+set(COMPILER_RT_SANITIZERS_TO_BUILD ${ALL_SANITIZERS} CACHE STRING
+    "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
+list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
+
 if (SANITIZER_COMMON_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD" OR
     (OS_NAME MATCHES "Windows" AND MSVC)))

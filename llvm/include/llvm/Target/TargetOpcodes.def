@@ -173,6 +173,18 @@ HANDLE_TARGET_OPCODE(G_SUB)
 // Generic multiply instruction.
 HANDLE_TARGET_OPCODE(G_MUL)
 
+// Generic signed division instruction.
+HANDLE_TARGET_OPCODE(G_SDIV)
+
+// Generic unsigned division instruction.
+HANDLE_TARGET_OPCODE(G_UDIV)
+
+// Generic signed remainder instruction.
+HANDLE_TARGET_OPCODE(G_SREM)
+
+// Generic unsigned remainder instruction.
+HANDLE_TARGET_OPCODE(G_UREM)
+
 /// Generic bitwise and instruction.
 HANDLE_TARGET_OPCODE(G_AND)
 
@@ -246,6 +258,24 @@ HANDLE_TARGET_OPCODE(G_LSHR)
 
 // Generic arithmetic right-shift
 HANDLE_TARGET_OPCODE(G_ASHR)
+
+/// Generic integer-base comparison, also applicable to vectors of integers.
+HANDLE_TARGET_OPCODE(G_ICMP)
+
+/// Generic FP addition.
+HANDLE_TARGET_OPCODE(G_FADD)
+
+/// Generic FP subtraction.
+HANDLE_TARGET_OPCODE(G_FSUB)
+
+/// Generic FP multiplication.
+HANDLE_TARGET_OPCODE(G_FMUL)
+
+/// Generic FP division.
+HANDLE_TARGET_OPCODE(G_FDIV)
+
+/// Generic FP remainder.
+HANDLE_TARGET_OPCODE(G_FREM)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)

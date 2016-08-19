@@ -681,15 +681,15 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   if (Out<ELFT>::PreinitArray) {
     Add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
-    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray->getSize()});
+    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
   }
   if (Out<ELFT>::InitArray) {
     Add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
-    Add({DT_INIT_ARRAYSZ, (uintX_t)Out<ELFT>::InitArray->getSize()});
+    Add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
   }
   if (Out<ELFT>::FiniArray) {
     Add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
-    Add({DT_FINI_ARRAYSZ, (uintX_t)Out<ELFT>::FiniArray->getSize()});
+    Add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
@@ -759,6 +759,9 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
     switch (E.Kind) {
     case Entry::SecAddr:
       P->d_un.d_ptr = E.OutSec->getVA();
+      break;
+    case Entry::SecSize:
+      P->d_un.d_val = E.OutSec->getSize();
       break;
     case Entry::SymAddr:
       P->d_un.d_ptr = E.Sym->template getVA<ELFT>();
@@ -1271,7 +1274,7 @@ template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
   if (OutputSec)
     return OutputSec->getVA() + OffsetInSec;
-  return InputSec->OutSec->getVA() + OffsetInSec;
+  return InputSec->OutSec->getVA() + InputSec->getOffset(OffsetInSec);
 }
 
 template <class ELFT>
@@ -1316,6 +1319,8 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
 
 static uint8_t getSymbolBinding(SymbolBody *Body) {
   Symbol *S = Body->symbol();
+  if (Config->Relocatable)
+    return S->Binding;
   uint8_t Visibility = S->Visibility;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
@@ -1738,6 +1743,46 @@ void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
+MipsAbiFlagsOutputSection<ELFT>::MipsAbiFlagsOutputSection()
+    : OutputSectionBase<ELFT>(".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC) {
+  this->Header.sh_addralign = 8;
+  this->Header.sh_entsize = sizeof(Elf_Mips_ABIFlags);
+  this->Header.sh_size = sizeof(Elf_Mips_ABIFlags);
+  memset(&Flags, 0, sizeof(Flags));
+}
+
+template <class ELFT>
+void MipsAbiFlagsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  memcpy(Buf, &Flags, sizeof(Flags));
+}
+
+template <class ELFT>
+void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  // Check compatibility and merge fields from input .MIPS.abiflags
+  // to the output one.
+  auto *S = cast<MipsAbiFlagsInputSection<ELFT>>(C);
+  S->OutSec = this;
+  if (S->Flags->version != 0) {
+    error(getFilename(S->getFile()) + ": unexpected .MIPS.abiflags version " +
+          Twine(S->Flags->version));
+    return;
+  }
+  // LLD checks ISA compatibility in getMipsEFlags(). Here we just
+  // select the highest number of ISA/Rev/Ext.
+  Flags.isa_level = std::max(Flags.isa_level, S->Flags->isa_level);
+  Flags.isa_rev = std::max(Flags.isa_rev, S->Flags->isa_rev);
+  Flags.isa_ext = std::max(Flags.isa_ext, S->Flags->isa_ext);
+  Flags.gpr_size = std::max(Flags.gpr_size, S->Flags->gpr_size);
+  Flags.cpr1_size = std::max(Flags.cpr1_size, S->Flags->cpr1_size);
+  Flags.cpr2_size = std::max(Flags.cpr2_size, S->Flags->cpr2_size);
+  Flags.ases |= S->Flags->ases;
+  Flags.flags1 |= S->Flags->flags1;
+  Flags.flags2 |= S->Flags->flags2;
+  Flags.fp_abi = elf::getMipsFpAbiFlag(Flags.fp_abi, S->Flags->fp_abi,
+                                       getFilename(S->getFile()));
+}
+
+template <class ELFT>
 std::pair<OutputSectionBase<ELFT> *, bool>
 OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
                                    StringRef OutsecName) {
@@ -1761,6 +1806,9 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
     break;
   case InputSectionBase<ELFT>::MipsOptions:
     Sec = new MipsOptionsOutputSection<ELFT>();
+    break;
+  case InputSectionBase<ELFT>::MipsAbiFlags:
+    Sec = new MipsAbiFlagsOutputSection<ELFT>();
     break;
   case InputSectionBase<ELFT>::Layout:
     llvm_unreachable("Invalid section type");
@@ -1890,6 +1938,11 @@ template class MipsOptionsOutputSection<ELF32LE>;
 template class MipsOptionsOutputSection<ELF32BE>;
 template class MipsOptionsOutputSection<ELF64LE>;
 template class MipsOptionsOutputSection<ELF64BE>;
+
+template class MipsAbiFlagsOutputSection<ELF32LE>;
+template class MipsAbiFlagsOutputSection<ELF32BE>;
+template class MipsAbiFlagsOutputSection<ELF64LE>;
+template class MipsAbiFlagsOutputSection<ELF64BE>;
 
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;

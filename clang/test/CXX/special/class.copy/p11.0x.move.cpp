@@ -4,6 +4,9 @@ struct Trivial {};
 struct NonTrivial {
   NonTrivial(NonTrivial&&); // expected-note{{copy constructor is implicitly deleted}}
 };
+struct DeletedCopy {
+  DeletedCopy(const DeletedCopy&) = delete;
+};
 
 // A defaulted move constructor for a class X is defined as deleted if X has:
 
@@ -21,6 +24,15 @@ struct DeletedNTVariant2 {
   DeletedNTVariant2(DeletedNTVariant2&&);
 };
 DeletedNTVariant2::DeletedNTVariant2(DeletedNTVariant2&&) = default; // expected-error{{would delete}}
+
+// Note, move constructor is not a candidate because it is deleted.
+template<typename T> struct DeletedNTVariant3 { // expected-note 2{{default}} expected-note 2{{copy}}
+  union {
+    T NT;
+  };
+};
+extern DeletedNTVariant3<NonTrivial> dntv3a(0); // expected-error {{no matching}}
+extern DeletedNTVariant3<DeletedCopy> dntv3a(0); // expected-error {{no matching}}
 
 // -- a non-static data member of class type M (or array thereof) that cannot be
 //    copied because overload resolution results in an ambiguity or a function

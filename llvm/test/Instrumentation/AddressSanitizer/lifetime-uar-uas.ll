@@ -28,9 +28,9 @@ entry:
   ; CHECK-UAS: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 1)
 
   ; Unpoison memory at function exit in UAS mode.
-  ; CHECK-UAS: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 64)
-  ; CHECK-UAS: ret void
-
+  ; CHECK-UAS: store i64 0
+  ; CHECK-UAS-NEXT: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 64)
+  ; CHECK-UAS: ret i32 0
   ret i32 0
 }
 

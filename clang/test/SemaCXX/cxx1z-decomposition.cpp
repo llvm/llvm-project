@@ -37,5 +37,14 @@ constexpr bool g(S &&s) {
 }
 static_assert(g({1, 2}));
 
+void enclosing() {
+  struct S { int a; };
+  auto [n] = S(); // expected-note 2{{'n' declared here}}
+
+  struct Q { int f() { return n; } }; // expected-error {{reference to local binding 'n' declared in enclosing function}}
+  // FIXME: This is probably supposed to be valid, but we do not have clear rules on how it's supposed to work.
+  (void) [&] { return n; }; // expected-error {{reference to local binding 'n' declared in enclosing function}}
+  (void) [n] {}; // expected-error {{'n' in capture list does not name a variable}}
+}
+
 // FIXME: by-value array copies
-// FIXME: code generation

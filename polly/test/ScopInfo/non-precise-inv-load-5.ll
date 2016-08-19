@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
 ;
 ; Verify we do not hoist I[c] without execution context because it
 ; is executed in a statement with an invalid domain and it depends

@@ -15,6 +15,7 @@
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "InstPrinter/AArch64InstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -116,6 +117,10 @@ static MCStreamer *createMachOStreamer(MCContext &Ctx, MCAsmBackend &TAB,
                              /*LabelSections*/ true);
 }
 
+static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
+  return new MCInstrAnalysis(Info);
+}
+
 // Force static initialization.
 extern "C" void LLVMInitializeAArch64TargetMC() {
   for (Target *T :
@@ -134,6 +139,9 @@ extern "C" void LLVMInitializeAArch64TargetMC() {
 
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createAArch64MCSubtargetInfo);
+
+    // Register the MC instruction analyzer.
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createAArch64InstrAnalysis);
 
     // Register the MC Code Emitter
     TargetRegistry::RegisterMCCodeEmitter(*T, createAArch64MCCodeEmitter);

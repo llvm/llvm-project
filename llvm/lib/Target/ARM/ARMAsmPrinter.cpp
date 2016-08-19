@@ -249,7 +249,7 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
           << "]";
         return false;
       }
-      // Fallthrough
+      LLVM_FALLTHROUGH;
     case 'c': // Don't print "#" before an immediate operand.
       if (!MI->getOperand(OpNum).isImm())
         return true;

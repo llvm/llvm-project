@@ -260,11 +260,11 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case CONST32:
     case CONST64:
       return rr0(eIMM(im(1), W0), Outputs);
-    case TFR_PdFalse:
+    case PS_false:
       return rr0(RegisterCell(W0).fill(0, W0, BT::BitValue::Zero), Outputs);
-    case TFR_PdTrue:
+    case PS_true:
       return rr0(RegisterCell(W0).fill(0, W0, BT::BitValue::One), Outputs);
-    case TFR_FI: {
+    case PS_fi: {
       int FI = op(1).getIndex();
       int Off = op(2).getImm();
       unsigned A = MFI.getObjectAlignment(FI) + std::abs(Off);
@@ -902,10 +902,12 @@ bool HexagonEvaluator::evaluate(const MachineInstr &BI,
   bool Negated = false;
   switch (Opc) {
     case Hexagon::J2_jumpf:
+    case Hexagon::J2_jumpfpt:
     case Hexagon::J2_jumpfnew:
     case Hexagon::J2_jumpfnewpt:
       Negated = true;
     case Hexagon::J2_jumpt:
+    case Hexagon::J2_jumptpt:
     case Hexagon::J2_jumptnew:
     case Hexagon::J2_jumptnewpt:
       // Simple branch:  if([!]Pn) jump ...

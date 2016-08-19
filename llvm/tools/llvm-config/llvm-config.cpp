@@ -599,7 +599,7 @@ int main(int argc, char **argv) {
         }
         errs()
             << "llvm-config: error: component libraries and shared library\n\n";
-      // fall through
+        LLVM_FALLTHROUGH;
       case LinkModeStatic:
         for (auto &Lib : MissingLibs)
           errs() << "llvm-config: error: missing: " << Lib << "\n";

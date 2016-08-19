@@ -151,6 +151,7 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::CS0);
   Reserved.set(Hexagon::CS1);
   Reserved.set(Hexagon::CS);
+  Reserved.set(Hexagon::USR);
   return Reserved;
 }
 
@@ -180,12 +181,12 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-    case Hexagon::TFR_FIA:
+    case Hexagon::PS_fia:
       MI.setDesc(HII.get(Hexagon::A2_addi));
       MI.getOperand(FIOp).ChangeToImmediate(RealOffset);
       MI.RemoveOperand(FIOp+1);
       return;
-    case Hexagon::TFR_FI:
+    case Hexagon::PS_fi:
       // Set up the instruction for updating below.
       MI.setDesc(HII.get(Hexagon::A2_addi));
       break;

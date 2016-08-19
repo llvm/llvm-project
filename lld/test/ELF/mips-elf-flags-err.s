@@ -10,10 +10,10 @@
 # Check that lld does not allow to link incompatible ISAs.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
-# RUN:         -mcpu=mips32 %S/Inputs/mips-dynamic.s -o %t1.o
+# RUN:         -mcpu=mips3 %S/Inputs/mips-dynamic.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
-# RUN:         -mcpu=mips32r6 %s -o %t2.o
-# RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 | FileCheck -check-prefix=R1R6 %s
+# RUN:         -mcpu=mips32 -mattr=+fp64 %s -o %t2.o
+# RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 | FileCheck -check-prefix=R3R32 %s
 
 # Check that lld does not allow to link incompatible ISAs.
 
@@ -23,6 +23,14 @@
 # RUN:         -mcpu=octeon %s -o %t2.o
 # RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 \
 # RUN:   | FileCheck -check-prefix=R6OCTEON %s
+
+# Check that lld does not allow to link incompatible floating point ABI.
+
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
+# RUN:         -mcpu=mips32 %S/Inputs/mips-dynamic.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
+# RUN:         -mcpu=mips32 -mattr=+fp64 %s -o %t2.o
+# RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 | FileCheck -check-prefix=FPABI %s
 
 # Check that lld take in account EF_MIPS_MACH_XXX ISA flags
 
@@ -63,8 +71,9 @@ __start:
 # R1R2-NEXT:   EF_MIPS_CPIC
 # R1R2-NEXT: ]
 
-# R1R6: target ISA 'mips32' is incompatible with 'mips32r6': {{.*}}mips-elf-flags-err.s.tmp2.o
+# R3R32: target ISA 'mips3' is incompatible with 'mips32': {{.*}}mips-elf-flags-err.s.tmp2.o
 # R6OCTEON: target ISA 'mips64r6' is incompatible with 'octeon': {{.*}}mips-elf-flags-err.s.tmp2.o
+# FPABI: target floating point ABI '-mdouble-float' is incompatible with '-mgp32 -mfp64': {{.*}}mips-elf-flags-err.s.tmp2.o
 
 # OCTEON:      Flags [
 # OCTEON-NEXT:   EF_MIPS_ARCH_64R2

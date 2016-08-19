@@ -1917,6 +1917,146 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
     return none_instance(interpreter);
 }
 
+#pragma mark -
+#pragma mark StructuredDataPlugin
+
+// -----------------------------------------------------------------------------
+// StructuredDataPlugin
+// -----------------------------------------------------------------------------
+
+struct StructuredDataPluginInstance
+{
+    StructuredDataPluginInstance() :
+        name(),
+        description(),
+        create_callback(nullptr),
+        debugger_init_callback(nullptr),
+        filter_callback(nullptr)
+    {
+    }
+
+    ConstString name;
+    std::string description;
+    StructuredDataPluginCreateInstance create_callback;
+    DebuggerInitializeCallback debugger_init_callback;
+    StructuredDataFilterLaunchInfo filter_callback;
+};
+
+typedef std::vector<StructuredDataPluginInstance> StructuredDataPluginInstances;
+
+static std::recursive_mutex &
+GetStructuredDataPluginMutex()
+{
+    static std::recursive_mutex g_instances_mutex;
+    return g_instances_mutex;
+}
+
+static StructuredDataPluginInstances &
+GetStructuredDataPluginInstances ()
+{
+    static StructuredDataPluginInstances g_instances;
+    return g_instances;
+}
+
+bool
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              StructuredDataPluginCreateInstance
+                              create_callback,
+                              DebuggerInitializeCallback debugger_init_callback,
+                              StructuredDataFilterLaunchInfo filter_callback)
+{
+    if (create_callback)
+    {
+        StructuredDataPluginInstance instance;
+        assert((bool)name);
+        instance.name = name;
+        if (description && description[0])
+            instance.description = description;
+        instance.create_callback = create_callback;
+        instance.debugger_init_callback = debugger_init_callback;
+        instance.filter_callback = filter_callback;
+        std::lock_guard<std::recursive_mutex> guard(
+            GetStructuredDataPluginMutex());
+        GetStructuredDataPluginInstances().push_back(instance);
+    }
+    return false;
+}
+
+bool
+PluginManager::UnregisterPlugin(StructuredDataPluginCreateInstance create_callback)
+{
+    if (create_callback)
+    {
+        std::lock_guard<std::recursive_mutex> guard(
+            GetStructuredDataPluginMutex());
+        StructuredDataPluginInstances &instances =
+            GetStructuredDataPluginInstances();
+
+        StructuredDataPluginInstances::iterator pos, end = instances.end();
+        for (pos = instances.begin(); pos != end; ++ pos)
+        {
+            if (pos->create_callback == create_callback)
+            {
+                instances.erase(pos);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+StructuredDataPluginCreateInstance
+PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(uint32_t idx)
+{
+    std::lock_guard<std::recursive_mutex> guard(GetStructuredDataPluginMutex());
+    StructuredDataPluginInstances &instances =
+        GetStructuredDataPluginInstances();
+    if (idx < instances.size())
+        return instances[idx].create_callback;
+    return nullptr;
+}
+
+StructuredDataPluginCreateInstance
+PluginManager::GetStructuredDataPluginCreateCallbackForPluginName(
+    const ConstString &name)
+{
+    if (name)
+    {
+        std::lock_guard<std::recursive_mutex> guard(
+            GetStructuredDataPluginMutex());
+        StructuredDataPluginInstances &instances =
+            GetStructuredDataPluginInstances();
+
+        StructuredDataPluginInstances::iterator pos, end = instances.end();
+        for (pos = instances.begin(); pos != end; ++ pos)
+        {
+            if (name == pos->name)
+                return pos->create_callback;
+        }
+    }
+    return nullptr;
+}
+
+StructuredDataFilterLaunchInfo
+PluginManager::GetStructuredDataFilterCallbackAtIndex(uint32_t idx,
+                                                      bool &iteration_complete)
+{
+    std::lock_guard<std::recursive_mutex> guard(GetStructuredDataPluginMutex());
+    StructuredDataPluginInstances &instances =
+        GetStructuredDataPluginInstances();
+    if (idx < instances.size())
+    {
+        iteration_complete = false;
+        return instances[idx].filter_callback;
+    }
+    else
+    {
+        iteration_complete = true;
+    }
+    return nullptr;
+}
+
 #pragma mark SymbolFile
 
 struct SymbolFileInstance
@@ -2772,6 +2912,17 @@ PluginManager::DebuggerInitialize (Debugger &debugger)
                 os.debugger_init_callback(debugger);
         }
     }
+
+    // Initialize the StructuredDataPlugin plugins
+    {
+        std::lock_guard<std::recursive_mutex>
+            guard(GetStructuredDataPluginMutex());
+        for (auto &plugin: GetStructuredDataPluginInstances())
+        {
+            if (plugin.debugger_init_callback)
+                plugin.debugger_init_callback(debugger);
+        }
+    }
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.
@@ -2905,6 +3056,7 @@ const char* kPlatformPluginName("platform");
 const char* kProcessPluginName("process");
 const char* kSymbolFilePluginName("symbol-file");
 const char* kJITLoaderPluginName("jit-loader");
+const char* kStructuredDataPluginName("structured-data");
 
 } // anonymous namespace
 
@@ -3048,4 +3200,25 @@ PluginManager::CreateSettingForOperatingSystemPlugin(Debugger &debugger,
         }
     }
     return false;
+}
+
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForStructuredDataPlugin(Debugger &debugger,
+                                                 const ConstString &setting_name)
+{
+    return GetSettingForPlugin(debugger, setting_name, ConstString(kStructuredDataPluginName));
+}
+
+bool
+PluginManager::CreateSettingForStructuredDataPlugin(Debugger &debugger,
+                                                   const lldb::OptionValuePropertiesSP &properties_sp,
+                                                   const ConstString &description,
+                                                   bool is_global_property)
+{
+    return CreateSettingForPlugin(debugger,
+                                  ConstString(kStructuredDataPluginName),
+                                  ConstString("Settings for structured data plug-ins"),
+                                  properties_sp,
+                                  description,
+                                  is_global_property);
 }

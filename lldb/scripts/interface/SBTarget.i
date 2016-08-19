@@ -178,7 +178,7 @@ public:
     ///     Some launch options specified by logical OR'ing 
     ///     lldb::LaunchFlags enumeration values together.
     ///
-    /// @param[in] stop_at_endtry
+    /// @param[in] stop_at_entry
     ///     If false do not stop the inferior at the entry point.
     ///
     /// @param[out]

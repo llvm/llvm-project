@@ -2068,10 +2068,10 @@ define <4 x i64> @shuf_zext_4i32_to_4i64_offset1(<4 x i32> %A) nounwind uwtable 
 ;
 ; AVX1-LABEL: shuf_zext_4i32_to_4i64_offset1:
 ; AVX1:       # BB#0: # %entry
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[3],zero,zero,zero
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2],xmm1[3]
+; AVX1-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuf_zext_4i32_to_4i64_offset1:

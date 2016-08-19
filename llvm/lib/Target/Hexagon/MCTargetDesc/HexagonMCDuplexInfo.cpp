@@ -262,25 +262,19 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::EH_RETURN_JMPR:
 
   case Hexagon::J2_jumpr:
-  case Hexagon::JMPret:
     // jumpr r31
     // Actual form JMPR %PC<imp-def>, %R31<imp-use>, %R0<imp-use,internal>.
     DstReg = MCI.getOperand(0).getReg();
-    if (Hexagon::R31 == DstReg) {
+    if (Hexagon::R31 == DstReg)
       return HexagonII::HSIG_L2;
-    }
     break;
 
   case Hexagon::J2_jumprt:
   case Hexagon::J2_jumprf:
   case Hexagon::J2_jumprtnew:
   case Hexagon::J2_jumprfnew:
-  case Hexagon::JMPrett:
-  case Hexagon::JMPretf:
-  case Hexagon::JMPrettnew:
-  case Hexagon::JMPretfnew:
-  case Hexagon::JMPrettnewpt:
-  case Hexagon::JMPretfnewpt:
+  case Hexagon::J2_jumprtnewpt:
+  case Hexagon::J2_jumprfnewpt:
     DstReg = MCI.getOperand(1).getReg();
     SrcReg = MCI.getOperand(0).getReg();
     // [if ([!]p0[.new])] jumpr r31
@@ -679,6 +673,7 @@ inline static void addOps(MCInst &subInstPtr, MCInst const &Inst,
     case Hexagon::D9:
     case Hexagon::D10:
     case Hexagon::D11:
+    case Hexagon::P0:
       subInstPtr.addOperand(Inst.getOperand(opNum));
       break;
     }
@@ -811,25 +806,20 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     break; //    none  SUBInst deallocframe
   case Hexagon::EH_RETURN_JMPR:
   case Hexagon::J2_jumpr:
-  case Hexagon::JMPret:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31);
     break; //    none  SUBInst jumpr r31
   case Hexagon::J2_jumprf:
-  case Hexagon::JMPretf:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_f);
     break; //    none  SUBInst if (!p0) jumpr r31
   case Hexagon::J2_jumprfnew:
-  case Hexagon::JMPretfnewpt:
-  case Hexagon::JMPretfnew:
+  case Hexagon::J2_jumprfnewpt:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_fnew);
     break; //    none  SUBInst if (!p0.new) jumpr:nt r31
   case Hexagon::J2_jumprt:
-  case Hexagon::JMPrett:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_t);
     break; //    none  SUBInst if (p0) jumpr r31
   case Hexagon::J2_jumprtnew:
-  case Hexagon::JMPrettnewpt:
-  case Hexagon::JMPrettnew:
+  case Hexagon::J2_jumprtnewpt:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_tnew);
     break; //    none  SUBInst if (p0.new) jumpr:nt r31
   case Hexagon::L2_loadrb_io:
@@ -954,18 +944,22 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
   case Hexagon::C2_cmovenewif:
     Result.setOpcode(Hexagon::V4_SA1_clrfnew);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (!p0.new) $Rd = #0
   case Hexagon::C2_cmovenewit:
     Result.setOpcode(Hexagon::V4_SA1_clrtnew);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (p0.new) $Rd = #0
   case Hexagon::C2_cmoveif:
     Result.setOpcode(Hexagon::V4_SA1_clrf);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (!p0) $Rd = #0
   case Hexagon::C2_cmoveit:
     Result.setOpcode(Hexagon::V4_SA1_clrt);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (p0) $Rd = #0
   case Hexagon::A2_tfrsi:
     Absolute = Inst.getOperand(1).getExpr()->evaluateAsAbsolute(Value);

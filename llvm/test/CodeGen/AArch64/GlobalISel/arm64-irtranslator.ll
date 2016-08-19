@@ -459,9 +459,140 @@ define i32 @test_ashr(i32 %arg1, i32 %arg2) {
   ret i32 %res
 }
 
+; CHECK-LABEL: name: test_sdiv
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_SDIV s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_sdiv(i32 %arg1, i32 %arg2) {
+  %res = sdiv i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_udiv
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_UDIV s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_udiv(i32 %arg1, i32 %arg2) {
+  %res = udiv i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_srem
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_SREM s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_srem(i32 %arg1, i32 %arg2) {
+  %res = srem i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_urem
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_UREM s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @test_urem(i32 %arg1, i32 %arg2) {
+  %res = urem i32 %arg1, %arg2
+  ret i32 %res
+}
+
 ; CHECK-LABEL: name: test_constant_null
 ; CHECK: [[NULL:%[0-9]+]](64) = G_CONSTANT p0 0
 ; CHECK: %x0 = COPY [[NULL]]
 define i8* @test_constant_null() {
   ret i8* null
+}
+
+; CHECK-LABEL: name: test_struct_memops
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](64) = G_LOAD { s64, p0 } [[ADDR]] :: (load 8 from  %ir.addr, align 4)
+; CHECK: G_STORE { s64, p0 } [[VAL]], [[ADDR]] :: (store 8 into  %ir.addr, align 4)
+define void @test_struct_memops({ i8, i32 }* %addr) {
+  %val = load { i8, i32 }, { i8, i32 }* %addr
+  store { i8, i32 } %val, { i8, i32 }* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_i1_memops
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](1) = G_LOAD { s1, p0 } [[ADDR]] :: (load 1 from  %ir.addr)
+; CHECK: G_STORE { s1, p0 } [[VAL]], [[ADDR]] :: (store 1 into  %ir.addr)
+define void @test_i1_memops(i1* %addr) {
+  %val = load i1, i1* %addr
+  store i1 %val, i1* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: int_comparison
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[TST:%[0-9]+]](1) = G_ICMP { s1, s32 } intpred(ne), [[LHS]], [[RHS]]
+; CHECK: G_STORE { s1, p0 } [[TST]], [[ADDR]]
+define void @int_comparison(i32 %a, i32 %b, i1* %addr) {
+  %res = icmp ne i32 %a, %b
+  store i1 %res, i1* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_fadd
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %s0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %s1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_FADD s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %s0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %s0
+define float @test_fadd(float %arg1, float %arg2) {
+  %res = fadd float %arg1, %arg2
+  ret float %res
+}
+
+; CHECK-LABEL: name: test_fsub
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %s0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %s1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_FSUB s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %s0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %s0
+define float @test_fsub(float %arg1, float %arg2) {
+  %res = fsub float %arg1, %arg2
+  ret float %res
+}
+
+; CHECK-LABEL: name: test_fmul
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %s0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %s1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_FMUL s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %s0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %s0
+define float @test_fmul(float %arg1, float %arg2) {
+  %res = fmul float %arg1, %arg2
+  ret float %res
+}
+
+; CHECK-LABEL: name: test_fdiv
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %s0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %s1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_FDIV s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %s0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %s0
+define float @test_fdiv(float %arg1, float %arg2) {
+  %res = fdiv float %arg1, %arg2
+  ret float %res
+}
+
+; CHECK-LABEL: name: test_frem
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %s0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %s1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_FREM s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %s0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %s0
+define float @test_frem(float %arg1, float %arg2) {
+  %res = frem float %arg1, %arg2
+  ret float %res
 }

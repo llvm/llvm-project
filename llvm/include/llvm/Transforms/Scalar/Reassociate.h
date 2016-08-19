@@ -65,7 +65,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:
-  void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
+  void BuildRankMap(Function &F);
   unsigned getRank(Value *V);
   void canonicalizeOperands(Instruction *I);
   void ReassociateExpression(BinaryOperator *I);

@@ -39,6 +39,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBMemoryRegionInfoList.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBStream.h"
@@ -1029,8 +1030,16 @@ SBProcess::GetRestartedReasonAtIndexFromEvent (const lldb::SBEvent &event, size_
 SBProcess
 SBProcess::GetProcessFromEvent (const SBEvent &event)
 {
-    SBProcess process(Process::ProcessEventData::GetProcessFromEvent (event.get()));
-    return process;
+    ProcessSP process_sp =
+        Process::ProcessEventData::GetProcessFromEvent (event.get());
+    if (!process_sp)
+    {
+        // StructuredData events also know the process they come from.
+        // Try that.
+        process_sp = EventDataStructuredData::GetProcessFromEvent(event.get());
+    }
+
+    return SBProcess(process_sp);
 }
 
 bool
@@ -1039,10 +1048,26 @@ SBProcess::GetInterruptedFromEvent (const SBEvent &event)
     return Process::ProcessEventData::GetInterruptedFromEvent(event.get());
 }
 
+lldb::SBStructuredData
+SBProcess::GetStructuredDataFromEvent (const lldb::SBEvent &event)
+{
+    return SBStructuredData(event.GetSP());
+}
+
 bool
 SBProcess::EventIsProcessEvent (const SBEvent &event)
 {
-    return event.GetBroadcasterClass() == SBProcess::GetBroadcasterClass();
+    return (event.GetBroadcasterClass() == SBProcess::GetBroadcasterClass()) &&
+        !EventIsStructuredDataEvent (event);
+}
+
+bool
+SBProcess::EventIsStructuredDataEvent (const lldb::SBEvent &event)
+{
+    EventSP event_sp = event.GetSP();
+    EventData *event_data = event_sp ? event_sp->GetData() : nullptr;
+    return event_data &&
+        (event_data->GetFlavor() == EventDataStructuredData::GetFlavorString());
 }
 
 SBBroadcaster

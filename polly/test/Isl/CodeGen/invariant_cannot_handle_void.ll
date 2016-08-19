@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s --check-prefix=SCOP
-; RUN: opt %loadPolly -S -polly-codegen %s | FileCheck %s
+; RUN: opt %loadPolly -analyze -polly-scops -polly-invariant-load-hoisting=true %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -S -polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; The offset of the %tmp1 load wrt. to %buff (62 bytes) is not divisible
 ; by the type size (i32 = 4 bytes), thus we will have to represent %buff

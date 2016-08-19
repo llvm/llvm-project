@@ -208,7 +208,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
     if (Asm.isThumbFunc(A))
       FixedValue &= 0xfffffffe;
     MovtBit = 1;
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case ARM::fixup_t2_movw_lo16:
     ThumbBit = 1;
     break;

@@ -5974,8 +5974,12 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
   SmallVector<Expr *, 16> ConvertedArgs;
   bool InitializationFailed = false;
 
+  // Ignore any variadic arguments. Converting them is pointless, since the
+  // user can't refer to them in the enable_if condition.
+  unsigned ArgSizeNoVarargs = std::min(Function->param_size(), Args.size());
+
   // Convert the arguments.
-  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
+  for (unsigned I = 0; I != ArgSizeNoVarargs; ++I) {
     ExprResult R;
     if (I == 0 && !MissingImplicitThis && isa<CXXMethodDecl>(Function) &&
         !cast<CXXMethodDecl>(Function)->isStatic() &&
@@ -12326,19 +12330,6 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   CXXMemberCallExpr *TheCall =
     new (Context) CXXMemberCallExpr(Context, MemExprE, Args,
                                     ResultType, VK, RParenLoc);
-
-  // (CUDA B.1): Check for invalid calls between targets.
-  if (getLangOpts().CUDA) {
-    if (const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext)) {
-      if (!IsAllowedCUDACall(Caller, Method)) {
-        Diag(MemExpr->getMemberLoc(), diag::err_ref_bad_target)
-            << IdentifyCUDATarget(Method) << Method->getIdentifier()
-            << IdentifyCUDATarget(Caller);
-        Diag(Method->getLocation(), diag::note_previous_decl) << Method;
-        return ExprError();
-      }
-    }
-  }
 
   // Check for a valid return type.
   if (CheckCallReturnType(Method->getReturnType(), MemExpr->getMemberLoc(),

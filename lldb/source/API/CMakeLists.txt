@@ -47,6 +47,7 @@ add_lldb_library(liblldb SHARED
   SBSourceManager.cpp
   SBStream.cpp
   SBStringList.cpp
+  SBStructuredData.cpp
   SBSymbol.cpp
   SBSymbolContext.cpp
   SBSymbolContextList.cpp
@@ -117,5 +118,5 @@ endif()
 if (LLDB_WRAP_PYTHON)
   add_dependencies(liblldb swig_wrapper)
 endif()
-target_link_libraries(liblldb ${cmake_2_8_12_PRIVATE} ${LLDB_SYSTEM_LIBS})
+target_link_libraries(liblldb PRIVATE ${LLDB_SYSTEM_LIBS})
 

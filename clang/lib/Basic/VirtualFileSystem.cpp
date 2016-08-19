@@ -1778,29 +1778,47 @@ VFSFromYamlDirIterImpl::VFSFromYamlDirIterImpl(
     RedirectingDirectoryEntry::iterator Begin,
     RedirectingDirectoryEntry::iterator End, std::error_code &EC)
     : Dir(_Path.str()), FS(FS), Current(Begin), End(End) {
-  if (Current != End) {
+  while (Current != End) {
     SmallString<128> PathStr(Dir);
     llvm::sys::path::append(PathStr, (*Current)->getName());
     llvm::ErrorOr<vfs::Status> S = FS.status(PathStr);
-    if (S)
+    if (S) {
       CurrentEntry = *S;
-    else
+      return;
+    }
+    // Skip entries which do not map to a reliable external content.
+    if (FS.ignoreNonExistentContents() &&
+        S.getError() == llvm::errc::no_such_file_or_directory) {
+      ++Current;
+      continue;
+    } else {
       EC = S.getError();
+      break;
+    }
   }
 }
 
 std::error_code VFSFromYamlDirIterImpl::increment() {
   assert(Current != End && "cannot iterate past end");
-  if (++Current != End) {
+  while (++Current != End) {
     SmallString<128> PathStr(Dir);
     llvm::sys::path::append(PathStr, (*Current)->getName());
     llvm::ErrorOr<vfs::Status> S = FS.status(PathStr);
-    if (!S)
-      return S.getError();
+    if (!S) {
+      // Skip entries which do not map to a reliable external content.
+      if (FS.ignoreNonExistentContents() &&
+          S.getError() == llvm::errc::no_such_file_or_directory) {
+        continue;
+      } else {
+        return S.getError();
+      }
+    }
     CurrentEntry = *S;
-  } else {
-    CurrentEntry = Status();
+    break;
   }
+
+  if (Current == End)
+    CurrentEntry = Status();
   return std::error_code();
 }
 

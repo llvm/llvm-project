@@ -1319,172 +1319,232 @@ HoistTerminator:
   return true;
 }
 
+// Return true if V0 and V1 are equivalent. This handles the obvious cases
+// where V0 == V1 and V0 and V1 are both identical instructions, but also
+// handles loads and stores with identical operands.
+//
+// Because determining if two memory instructions are equivalent
+// depends on control flow, the \c At0 and \c At1 parameters specify a
+// location for the query. This function is essentially answering the
+// query "If V0 were moved to At0, and V1 were moved to At1, are V0 and V1
+// equivalent?". In practice this means checking that moving V0 to At0
+// doesn't cross any other memory instructions.
+static bool areValuesTriviallySame(Value *V0, BasicBlock::const_iterator At0,
+                                   Value *V1, BasicBlock::const_iterator At1) {
+  if (V0 == V1)
+    return true;
+  
+  // Also check for instructions that are identical but not pointer-identical.
+  // This can include load instructions that haven't been CSE'd.
+  if (!isa<Instruction>(V0) || !isa<Instruction>(V1))
+    return false;
+  const auto *I0 = cast<Instruction>(V0);
+  const auto *I1 = cast<Instruction>(V1);
+  if (!I0->isIdenticalToWhenDefined(I1))
+    return false;
+
+  if (!I0->mayReadOrWriteMemory())
+    return true;
+
+  // Instructions that may read or write memory have extra restrictions. We
+  // must ensure we don't treat %a and %b as equivalent in code such as:
+  //
+  //  %a = load %x
+  //  store %x, 1
+  //  if (%c) {
+  //    %b = load %x
+  //    %d = add %b, 1
+  //  } else {
+  //    %d = add %a, 1
+  //  }
+
+  // Be conservative. We don't want to search the entire CFG between def
+  // and use; if the def isn't in the same block as the use just bail.
+  if (I0->getParent() != At0->getParent() ||
+      I1->getParent() != At1->getParent())
+    return false;
+
+  // Again, be super conservative. Ideally we'd be able to query AliasAnalysis
+  // but we currently don't have that available.
+  auto WritesMemory = [](const Instruction &I) {
+    return I.mayReadOrWriteMemory();
+  };
+  if (std::any_of(std::next(I0->getIterator()), At0, WritesMemory))
+    return false;
+  if (std::any_of(std::next(I1->getIterator()), At1, WritesMemory))
+    return false;
+  return true;
+}
+
+// Is it legal to replace the operand \c OpIdx of \c GEP with a PHI node?
+static bool canReplaceGEPOperandWithPHI(const Instruction *GEP,
+                                        unsigned OpIdx) {
+  if (OpIdx == 0)
+    return true;
+  gep_type_iterator It = std::next(gep_type_begin(GEP), OpIdx - 1);
+  return !It->isStructTy();
+}
+
+// All blocks in Blocks unconditionally jump to a common successor. Analyze
+// the last non-terminator instruction in each block and return true if it would
+// be possible to sink them into their successor, creating one common
+// instruction instead. Set NumPHIsRequired to the number of PHI nodes that
+// would need to be created during sinking.
+static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
+                                   unsigned &NumPHIsRequired) {
+  SmallVector<Instruction*,4> Insts;
+  for (auto *BB : Blocks) {
+    if (BB->getTerminator() == &BB->front())
+      // Block was empty.
+      return false;
+    Insts.push_back(BB->getTerminator()->getPrevNode());
+  }
+
+  // Prune out obviously bad instructions to move. Any non-store instruction
+  // must have exactly one use, and we check later that use is by a single,
+  // common PHI instruction in the successor.
+  for (auto *I : Insts) {
+    // These instructions may change or break semantics if moved.
+    if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
+        I->getType()->isTokenTy())
+      return false;
+    // Apart from loads and stores, we won't move anything that could
+    // change memory or have sideeffects.
+    if (!isa<StoreInst>(I) && !isa<LoadInst>(I) &&
+        (I->mayHaveSideEffects() || I->mayHaveSideEffects()))
+      return false;
+    // Everything must have only one use too, apart from stores which
+    // have no uses.
+    if (!isa<StoreInst>(I) && !I->hasOneUse())
+      return false;
+  }
+
+  const Instruction *I0 = Insts.front();
+  for (auto *I : Insts)
+    if (!I->isSameOperationAs(I0))
+      return false;
+
+  // If this isn't a store, check the only user is a single PHI.
+  if (!isa<StoreInst>(I0)) {
+    auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
+    if (!PNUse ||
+        !all_of(Insts, [&PNUse](const Instruction *I) {
+          return *I->user_begin() == PNUse;
+        }))
+      return false;
+  }
+
+  NumPHIsRequired = 0;
+  for (unsigned OI = 0, OE = I0->getNumOperands(); OI != OE; ++OI) {
+    if (I0->getOperand(OI)->getType()->isTokenTy())
+      // Don't touch any operand of token type.
+      return false;
+    auto SameAsI0 = [&I0, OI](const Instruction *I) {
+      return areValuesTriviallySame(I->getOperand(OI), I->getIterator(),
+                                    I0->getOperand(OI), I0->getIterator());
+    };
+    if (!all_of(Insts, SameAsI0)) {
+      if (isa<GetElementPtrInst>(I0) && !canReplaceGEPOperandWithPHI(I0, OI))
+        // We can't create a PHI from this GEP.
+        return false;
+      if (isa<ShuffleVectorInst>(I0) && OI == 2)
+        // We can't create a PHI for a shufflevector mask.
+        return false;
+      ++NumPHIsRequired;
+    }
+  }
+  return true;
+}
+
+// Assuming canSinkLastInstruction(Blocks) has returned true, sink the last
+// instruction of every block in Blocks to their common successor, commoning
+// into one instruction.
+static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
+  unsigned Dummy;
+  (void)Dummy;
+  assert(canSinkLastInstruction(Blocks, Dummy) &&
+         "Must analyze before transforming!");
+  auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
+
+  // canSinkLastInstruction returning true guarantees that every block has at
+  // least one non-terminator instruction.
+  SmallVector<Instruction*,4> Insts;
+  for (auto *BB : Blocks)
+    Insts.push_back(BB->getTerminator()->getPrevNode());
+
+  // We don't need to do any checking here; canSinkLastInstruction should have
+  // done it all for us.
+  Instruction *I0 = Insts.front();
+  SmallVector<Value*, 4> NewOperands;
+  for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O) {
+    // This check is different to that in canSinkLastInstruction. There, we
+    // cared about the global view once simplifycfg (and instcombine) have
+    // completed - it takes into account PHIs that become trivially
+    // simplifiable.  However here we need a more local view; if an operand
+    // differs we create a PHI and rely on instcombine to clean up the very
+    // small mess we may make.
+    bool NeedPHI = any_of(Insts, [&I0, O](const Instruction *I) {
+      return I->getOperand(O) != I0->getOperand(O);
+    });
+    if (!NeedPHI) {
+      NewOperands.push_back(I0->getOperand(O));
+      continue;
+    }
+
+    // Create a new PHI in the successor block and populate it.
+    auto *Op = I0->getOperand(O);
+    assert(!Op->getType()->isTokenTy() && "Can't PHI tokens!");
+    auto *PN = PHINode::Create(Op->getType(), Insts.size(),
+                               Op->getName() + ".sink", &BBEnd->front());
+    for (auto *I : Insts)
+      PN->addIncoming(I->getOperand(O), I->getParent());
+    NewOperands.push_back(PN);
+  }
+
+  // Arbitrarily use I0 as the new "common" instruction; remap its operands
+  // and move it to the start of the successor block.
+  for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O)
+    I0->getOperandUse(O).set(NewOperands[O]);
+  I0->moveBefore(&*BBEnd->getFirstInsertionPt());
+
+  if (!isa<StoreInst>(I0)) {
+    // canSinkLastInstruction checked that all instructions were used by
+    // one and only one PHI node. Find that now, RAUW it to our common
+    // instruction and nuke it.
+    assert(I0->hasOneUse());
+    auto *PN = cast<PHINode>(*I0->user_begin());
+    PN->replaceAllUsesWith(I0);
+    PN->eraseFromParent();
+  }
+
+  // Finally nuke all instructions apart from the common instruction.
+  for (auto *I : Insts)
+    if (I != I0)
+      I->eraseFromParent();
+}
+
 /// Given an unconditional branch that goes to BBEnd,
 /// check whether BBEnd has only two predecessors and the other predecessor
 /// ends with an unconditional branch. If it is true, sink any common code
 /// in the two predecessors to BBEnd.
 static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   assert(BI1->isUnconditional());
-  BasicBlock *BB1 = BI1->getParent();
   BasicBlock *BBEnd = BI1->getSuccessor(0);
 
-  // Check that BBEnd has two predecessors and the other predecessor ends with
-  // an unconditional branch.
-  pred_iterator PI = pred_begin(BBEnd), PE = pred_end(BBEnd);
-  BasicBlock *Pred0 = *PI++;
-  if (PI == PE) // Only one predecessor.
+  SmallVector<BasicBlock*,4> Blocks;
+  for (auto *BB : predecessors(BBEnd))
+    Blocks.push_back(BB);
+  if (Blocks.size() != 2 ||
+      !all_of(Blocks, [](const BasicBlock *BB) {
+        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+        return BI && BI->isUnconditional();
+      }))
     return false;
-  BasicBlock *Pred1 = *PI++;
-  if (PI != PE) // More than two predecessors.
-    return false;
-  BasicBlock *BB2 = (Pred0 == BB1) ? Pred1 : Pred0;
-  BranchInst *BI2 = dyn_cast<BranchInst>(BB2->getTerminator());
-  if (!BI2 || !BI2->isUnconditional())
-    return false;
-
-  // Gather the PHI nodes in BBEnd.
-  SmallDenseMap<std::pair<Value *, Value *>, PHINode *> JointValueMap;
-  Instruction *FirstNonPhiInBBEnd = nullptr;
-  for (BasicBlock::iterator I = BBEnd->begin(), E = BBEnd->end(); I != E; ++I) {
-    if (PHINode *PN = dyn_cast<PHINode>(I)) {
-      Value *BB1V = PN->getIncomingValueForBlock(BB1);
-      Value *BB2V = PN->getIncomingValueForBlock(BB2);
-      JointValueMap[std::make_pair(BB1V, BB2V)] = PN;
-    } else {
-      FirstNonPhiInBBEnd = &*I;
-      break;
-    }
-  }
-  if (!FirstNonPhiInBBEnd)
-    return false;
-
-  // This does very trivial matching, with limited scanning, to find identical
-  // instructions in the two blocks.  We scan backward for obviously identical
-  // instructions in an identical order.
-  BasicBlock::InstListType::reverse_iterator RI1 = BB1->getInstList().rbegin(),
-                                             RE1 = BB1->getInstList().rend(),
-                                             RI2 = BB2->getInstList().rbegin(),
-                                             RE2 = BB2->getInstList().rend();
-  // Skip debug info.
-  while (RI1 != RE1 && isa<DbgInfoIntrinsic>(&*RI1))
-    ++RI1;
-  if (RI1 == RE1)
-    return false;
-  while (RI2 != RE2 && isa<DbgInfoIntrinsic>(&*RI2))
-    ++RI2;
-  if (RI2 == RE2)
-    return false;
-  // Skip the unconditional branches.
-  ++RI1;
-  ++RI2;
 
   bool Changed = false;
-  while (RI1 != RE1 && RI2 != RE2) {
-    // Skip debug info.
-    while (RI1 != RE1 && isa<DbgInfoIntrinsic>(&*RI1))
-      ++RI1;
-    if (RI1 == RE1)
-      return Changed;
-    while (RI2 != RE2 && isa<DbgInfoIntrinsic>(&*RI2))
-      ++RI2;
-    if (RI2 == RE2)
-      return Changed;
-
-    Instruction *I1 = &*RI1, *I2 = &*RI2;
-    auto InstPair = std::make_pair(I1, I2);
-    // I1 and I2 should have a single use in the same PHI node, and they
-    // perform the same operation.
-    // Cannot move control-flow-involving, volatile loads, vaarg, etc.
-    if (isa<PHINode>(I1) || isa<PHINode>(I2) || isa<TerminatorInst>(I1) ||
-        isa<TerminatorInst>(I2) || I1->isEHPad() || I2->isEHPad() ||
-        isa<AllocaInst>(I1) || isa<AllocaInst>(I2) ||
-        I1->mayHaveSideEffects() || I2->mayHaveSideEffects() ||
-        I1->mayReadOrWriteMemory() || I2->mayReadOrWriteMemory() ||
-        !I1->hasOneUse() || !I2->hasOneUse() || !JointValueMap.count(InstPair))
-      return Changed;
-
-    // Check whether we should swap the operands of ICmpInst.
-    // TODO: Add support of communativity.
-    ICmpInst *ICmp1 = dyn_cast<ICmpInst>(I1), *ICmp2 = dyn_cast<ICmpInst>(I2);
-    bool SwapOpnds = false;
-    if (ICmp1 && ICmp2 && ICmp1->getOperand(0) != ICmp2->getOperand(0) &&
-        ICmp1->getOperand(1) != ICmp2->getOperand(1) &&
-        (ICmp1->getOperand(0) == ICmp2->getOperand(1) ||
-         ICmp1->getOperand(1) == ICmp2->getOperand(0))) {
-      ICmp2->swapOperands();
-      SwapOpnds = true;
-    }
-    if (!I1->isSameOperationAs(I2)) {
-      if (SwapOpnds)
-        ICmp2->swapOperands();
-      return Changed;
-    }
-
-    // The operands should be either the same or they need to be generated
-    // with a PHI node after sinking. We only handle the case where there is
-    // a single pair of different operands.
-    Value *DifferentOp1 = nullptr, *DifferentOp2 = nullptr;
-    unsigned Op1Idx = ~0U;
-    for (unsigned I = 0, E = I1->getNumOperands(); I != E; ++I) {
-      if (I1->getOperand(I) == I2->getOperand(I))
-        continue;
-      // Early exit if we have more-than one pair of different operands or if
-      // we need a PHI node to replace a constant.
-      if (Op1Idx != ~0U || isa<Constant>(I1->getOperand(I)) ||
-          isa<Constant>(I2->getOperand(I))) {
-        // If we can't sink the instructions, undo the swapping.
-        if (SwapOpnds)
-          ICmp2->swapOperands();
-        return Changed;
-      }
-      DifferentOp1 = I1->getOperand(I);
-      Op1Idx = I;
-      DifferentOp2 = I2->getOperand(I);
-    }
-
-    DEBUG(dbgs() << "SINK common instructions " << *I1 << "\n");
-    DEBUG(dbgs() << "                         " << *I2 << "\n");
-
-    // We insert the pair of different operands to JointValueMap and
-    // remove (I1, I2) from JointValueMap.
-    if (Op1Idx != ~0U) {
-      auto &NewPN = JointValueMap[std::make_pair(DifferentOp1, DifferentOp2)];
-      if (!NewPN) {
-        NewPN =
-            PHINode::Create(DifferentOp1->getType(), 2,
-                            DifferentOp1->getName() + ".sink", &BBEnd->front());
-        NewPN->addIncoming(DifferentOp1, BB1);
-        NewPN->addIncoming(DifferentOp2, BB2);
-        DEBUG(dbgs() << "Create PHI node " << *NewPN << "\n";);
-      }
-      // I1 should use NewPN instead of DifferentOp1.
-      I1->setOperand(Op1Idx, NewPN);
-    }
-    PHINode *OldPN = JointValueMap[InstPair];
-    JointValueMap.erase(InstPair);
-
-    // We need to update RE1 and RE2 if we are going to sink the first
-    // instruction in the basic block down.
-    bool UpdateRE1 = (I1 == &BB1->front()), UpdateRE2 = (I2 == &BB2->front());
-    // Sink the instruction.
-    BBEnd->getInstList().splice(FirstNonPhiInBBEnd->getIterator(),
-                                BB1->getInstList(), I1);
-    if (!OldPN->use_empty())
-      OldPN->replaceAllUsesWith(I1);
-    OldPN->eraseFromParent();
-
-    if (!I2->use_empty())
-      I2->replaceAllUsesWith(I1);
-    I1->intersectOptionalDataWith(I2);
-    // TODO: Use combineMetadata here to preserve what metadata we can
-    // (analogous to the hoisting case above).
-    I2->eraseFromParent();
-
-    if (UpdateRE1)
-      RE1 = BB1->getInstList().rend();
-    if (UpdateRE2)
-      RE2 = BB2->getInstList().rend();
-    FirstNonPhiInBBEnd = &*I1;
+  unsigned NumPHIsToInsert;
+  while (canSinkLastInstruction(Blocks, NumPHIsToInsert) && NumPHIsToInsert <= 1) {
+    sinkLastInstruction(Blocks);
     NumSinkCommons++;
     Changed = true;
   }
@@ -1539,7 +1599,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       continue;
     --MaxNumInstToLookAt;
 
-    // Could be calling an instruction that effects memory like free().
+    // Could be calling an instruction that affects memory like free().
     if (CurI.mayHaveSideEffects() && !isa<StoreInst>(CurI))
       return nullptr;
 
@@ -5499,7 +5559,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)
-    for (BasicBlock::iterator i = ++BasicBlock::iterator(I); &*i != Use; ++i)
+    for (BasicBlock::iterator
+             i = ++BasicBlock::iterator(I),
+             UI = BasicBlock::iterator(dyn_cast<Instruction>(Use));
+         i != UI; ++i)
       if (i == I->getParent()->end() || i->mayHaveSideEffects())
         return false;
 

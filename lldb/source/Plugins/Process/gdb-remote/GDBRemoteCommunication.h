@@ -126,12 +126,6 @@ public:
     }
 
     //------------------------------------------------------------------
-    // Client and server must implement these pure virtual functions
-    //------------------------------------------------------------------
-    virtual bool
-    GetThreadSuffixSupported () = 0;
-
-    //------------------------------------------------------------------
     // Set the global packet timeout.
     //
     // For clients, this is the timeout that gets used when sending
@@ -162,7 +156,8 @@ public:
                             Platform *platform, // If non nullptr, then check with the platform for the GDB server binary if it can't be located
                             ProcessLaunchInfo &launch_info,
                             uint16_t *port,
-                            const Args& inferior_args = Args());
+                            const Args *inferior_args,
+                            int pass_comm_fd); // Communication file descriptor to pass during fork/exec to avoid having to connect/accept
 
     void
     DumpHistory(Stream &strm);

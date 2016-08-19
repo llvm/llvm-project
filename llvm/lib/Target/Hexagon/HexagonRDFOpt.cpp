@@ -116,8 +116,8 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
       const MachineOperand &A = MI->getOperand(2);
       if (!A.isImm() || A.getImm() != 0)
         return false;
+      LLVM_FALLTHROUGH;
     }
-    // Fall through.
     case Hexagon::A2_tfr: {
       const MachineOperand &DstOp = MI->getOperand(0);
       const MachineOperand &SrcOp = MI->getOperand(1);

@@ -20,6 +20,7 @@
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Core/Broadcaster.h"
 
@@ -156,6 +157,80 @@ private:
     {
         m_predicate.SetValue(true, eBroadcastAlways);
     }
+};
+
+//----------------------------------------------------------------------
+/// This class handles one or more StructuredData::Dictionary entries
+/// that are raised for structured data events.
+//----------------------------------------------------------------------
+
+class EventDataStructuredData : public EventData
+{
+public:
+
+    //------------------------------------------------------------------
+    // Constructors
+    //------------------------------------------------------------------
+    EventDataStructuredData();
+
+    EventDataStructuredData(const lldb::ProcessSP &process_sp,
+                            const StructuredData::ObjectSP &object_sp,
+                            const lldb::StructuredDataPluginSP &plugin_sp);
+
+    ~EventDataStructuredData() override;
+
+    //------------------------------------------------------------------
+    // Member functions
+    //------------------------------------------------------------------
+    const ConstString &
+    GetFlavor() const override;
+
+    void
+    Dump(Stream *s) const override;
+
+    const lldb::ProcessSP&
+    GetProcess() const;
+
+    const StructuredData::ObjectSP&
+    GetObject() const;
+
+    const lldb::StructuredDataPluginSP&
+    GetStructuredDataPlugin() const;
+
+    void
+    SetProcess(const lldb::ProcessSP &process_sp);
+
+    void
+    SetObject(const StructuredData::ObjectSP &object_sp);
+
+    void
+    SetStructuredDataPlugin(const lldb::StructuredDataPluginSP &plugin_sp);
+
+    //------------------------------------------------------------------
+    // Static functions
+    //------------------------------------------------------------------
+    static const EventDataStructuredData*
+    GetEventDataFromEvent(const Event *event_ptr);
+
+    static lldb::ProcessSP
+    GetProcessFromEvent(const Event *event_ptr);
+
+    static StructuredData::ObjectSP
+    GetObjectFromEvent(const Event *event_ptr);
+
+    static lldb::StructuredDataPluginSP
+    GetPluginFromEvent(const Event *event_ptr);
+
+    static const ConstString &
+    GetFlavorString ();
+
+private:
+
+    lldb::ProcessSP               m_process_sp;
+    StructuredData::ObjectSP      m_object_sp;
+    lldb::StructuredDataPluginSP  m_plugin_sp;
+
+    DISALLOW_COPY_AND_ASSIGN(EventDataStructuredData);
 };
 
 //----------------------------------------------------------------------

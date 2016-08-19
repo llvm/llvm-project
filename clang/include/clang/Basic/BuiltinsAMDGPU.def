@@ -70,12 +70,15 @@ BUILTIN(__builtin_amdgcn_cubetc, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubema, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_s_memtime, "LUi", "n")
 BUILTIN(__builtin_amdgcn_s_sleep, "vIi", "n")
+BUILTIN(__builtin_amdgcn_s_incperflevel, "vIi", "n")
+BUILTIN(__builtin_amdgcn_s_decperflevel, "vIi", "n")
 BUILTIN(__builtin_amdgcn_uicmp, "LUiUiUiIi", "nc")
 BUILTIN(__builtin_amdgcn_uicmpl, "LUiLUiLUiIi", "nc")
 BUILTIN(__builtin_amdgcn_sicmp, "LUiiiIi", "nc")
 BUILTIN(__builtin_amdgcn_sicmpl, "LUiLiLiIi", "nc")
 BUILTIN(__builtin_amdgcn_fcmp, "LUiddIi", "nc")
 BUILTIN(__builtin_amdgcn_fcmpf, "LUiffIi", "nc")
+BUILTIN(__builtin_amdgcn_ds_swizzle, "iiIi", "nc")
 
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.

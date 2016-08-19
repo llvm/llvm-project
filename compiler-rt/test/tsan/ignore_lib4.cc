@@ -3,8 +3,6 @@
 // RUN: echo "called_from_lib:libignore_lib4.so" > %t.supp
 // RUN: %env_tsan_opts=suppressions='%t.supp' %run %t 2>&1 | FileCheck %s
 
-// Longjmp assembly has not been implemented for mips64 yet
-// XFAIL: target-is-mips64
 // powerpc64 big endian bots failed with "FileCheck error: '-' is empty" due
 // to a segmentation fault.
 // UNSUPPORTED: powerpc64-unknown-linux-gnu

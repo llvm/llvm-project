@@ -26,8 +26,8 @@ static const size_t TabStop = 8;
 
 namespace {
   struct LineNoCacheTy {
-    unsigned LastQueryBufferID;
     const char *LastQuery;
+    unsigned LastQueryBufferID;
     unsigned LineNoOfQuery;
   };
 }

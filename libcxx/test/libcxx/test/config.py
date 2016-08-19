@@ -617,6 +617,7 @@ class Configuration(object):
                 self.env['ASAN_OPTIONS'] = 'detect_odr_violation=0'
                 self.config.available_features.add('asan')
                 self.config.available_features.add('sanitizer-new-delete')
+                self.cxx.compile_flags += ['-O1']
             elif san == 'Memory' or san == 'MemoryWithOrigins':
                 self.cxx.flags += ['-fsanitize=memory']
                 if san == 'MemoryWithOrigins':
@@ -626,6 +627,7 @@ class Configuration(object):
                     self.env['MSAN_SYMBOLIZER_PATH'] = llvm_symbolizer
                 self.config.available_features.add('msan')
                 self.config.available_features.add('sanitizer-new-delete')
+                self.cxx.compile_flags += ['-O1']
             elif san == 'Undefined':
                 self.cxx.flags += ['-fsanitize=undefined',
                                    '-fno-sanitize=vptr,function,float-divide-by-zero',

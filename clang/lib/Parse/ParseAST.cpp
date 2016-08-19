@@ -147,7 +147,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   if (External)
     External->StartTranslationUnit(Consumer);
 
-  if (P.ParseTopLevelDecl(ADecl)) {
+  if (P.ParseFirstTopLevelDecl(ADecl)) {
     if (!External && !S.getLangOpts().CPlusPlus)
       P.Diag(diag::ext_empty_translation_unit);
   } else {

@@ -801,7 +801,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     default: llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Custom:
       isCustom = true;
-      // FALLTHROUGH
+      LLVM_FALLTHROUGH;
     case TargetLowering::Legal: {
       Value = SDValue(Node, 0);
       Chain = SDValue(Node, 1);
@@ -1123,12 +1123,12 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         ReplaceNode(Node, ResultVals.data());
         return;
       }
+      LLVM_FALLTHROUGH;
     }
-      // FALL THROUGH
     case TargetLowering::Expand:
       if (ExpandNode(Node))
         return;
-      // FALL THROUGH
+      LLVM_FALLTHROUGH;
     case TargetLowering::LibCall:
       ConvertNodeToLibcall(Node);
       return;
@@ -1598,6 +1598,7 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(EVT VT, SDValue &LHS,
           break;
         }
         // Fallthrough if we are unsigned integer.
+        LLVM_FALLTHROUGH;
     case ISD::SETLE:
     case ISD::SETGT:
     case ISD::SETGE:

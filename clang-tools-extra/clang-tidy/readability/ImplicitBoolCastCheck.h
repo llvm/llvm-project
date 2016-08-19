@@ -22,12 +22,9 @@ namespace readability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-cast.html
 class ImplicitBoolCastCheck : public ClangTidyCheck {
 public:
-  ImplicitBoolCastCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        AllowConditionalIntegerCasts(
-            Options.get("AllowConditionalIntegerCasts", 0) != 0),
-        AllowConditionalPointerCasts(
-            Options.get("AllowConditionalPointerCasts", 0) != 0) {}
+  ImplicitBoolCastCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 

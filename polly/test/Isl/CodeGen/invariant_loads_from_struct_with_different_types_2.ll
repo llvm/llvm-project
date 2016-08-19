@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen < %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true < %s
 ;
 ; Check we do not crash even though we pre-load values with different types
 ; from the same base pointer.

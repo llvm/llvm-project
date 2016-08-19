@@ -1195,18 +1195,21 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
   case DeclarationName::Identifier: {
     const IdentifierInfo *II = Name.getAsIdentifierInfo();
 
-    // We mangle decomposition declarations as the name of their first binding.
+    // We mangle decomposition declarations as the names of their bindings.
     if (auto *DD = dyn_cast<DecompositionDecl>(ND)) {
-      auto B = DD->bindings();
-      if (B.begin() == B.end()) {
-        // FIXME: This is ill-formed but we accept it as an extension.
-        DiagnosticsEngine &Diags = Context.getDiags();
-        unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-            "cannot mangle global empty decomposition decl");
-        Diags.Report(DD->getLocation(), DiagID);
-        break;
-      }
-      II = (*B.begin())->getIdentifier();
+      // FIXME: Non-standard mangling for decomposition declarations:
+      //
+      //  <unqualified-name> ::= DC <source-name>* E
+      //
+      // These can never be referenced across translation units, so we do
+      // not need a cross-vendor mangling for anything other than demanglers.
+      // Proposed on cxx-abi-dev on 2016-08-12
+      Out << "DC";
+      for (auto *BD : DD->bindings())
+        mangleSourceName(BD->getDeclName().getAsIdentifierInfo());
+      Out << 'E';
+      writeAbiTags(ND, AdditionalAbiTags);
+      break;
     }
 
     if (II) {

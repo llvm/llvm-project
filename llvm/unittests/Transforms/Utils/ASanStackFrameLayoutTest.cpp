@@ -21,6 +21,9 @@ ShadowBytesToString(ArrayRef<uint8_t> ShadowBytes) {
       case kAsanStackLeftRedzoneMagic:    os << "L"; break;
       case kAsanStackRightRedzoneMagic:   os << "R"; break;
       case kAsanStackMidRedzoneMagic:     os << "M"; break;
+      case kAsanStackUseAfterScopeMagic:
+        os << "S";
+        break;
       default:                            os << (unsigned)ShadowBytes[i];
     }
   }
@@ -42,27 +45,28 @@ TEST(ASanStackFrameLayout, Test) {
 #define VEC(a)                                                                 \
   SmallVector<ASanStackVariableDescription, 10>(a, a + sizeof(a) / sizeof(a[0]))
 
-#define VAR(name, size, alignment)                                             \
+#define VAR(name, size, lifetime, alignment)                                   \
   ASanStackVariableDescription name##size##_##alignment = {                    \
     #name #size "_" #alignment,                                                \
     size,                                                                      \
+    lifetime,                                                                  \
     alignment,                                                                 \
     0,                                                                         \
     0                                                                          \
   }
 
-  VAR(a, 1, 1);
-  VAR(p, 1, 32);
-  VAR(p, 1, 256);
-  VAR(a, 2, 1);
-  VAR(a, 3, 1);
-  VAR(a, 4, 1);
-  VAR(a, 7, 1);
-  VAR(a, 8, 1);
-  VAR(a, 9, 1);
-  VAR(a, 16, 1);
-  VAR(a, 41, 1);
-  VAR(a, 105, 1);
+  VAR(a, 1, 0, 1);
+  VAR(p, 1, 0, 32);
+  VAR(p, 1, 0, 256);
+  VAR(a, 2, 0, 1);
+  VAR(a, 3, 0, 1);
+  VAR(a, 4, 0, 1);
+  VAR(a, 7, 0, 1);
+  VAR(a, 8, 8, 1);
+  VAR(a, 9, 0, 1);
+  VAR(a, 16, 0, 1);
+  VAR(a, 41, 9, 1);
+  VAR(a, 105, 103, 1);
 
   TestLayout(VEC1(a1_1), 8, 16, "1 16 1 4 a1_1", "LL1R");
   TestLayout(VEC1(a1_1), 64, 64, "1 64 1 4 a1_1", "L1");
@@ -74,27 +78,25 @@ TEST(ASanStackFrameLayout, Test) {
   TestLayout(VEC1(a3_1), 8, 32, "1 32 3 4 a3_1", "LLLL3RRR");
   TestLayout(VEC1(a4_1), 8, 32, "1 32 4 4 a4_1", "LLLL4RRR");
   TestLayout(VEC1(a7_1), 8, 32, "1 32 7 4 a7_1", "LLLL7RRR");
-  TestLayout(VEC1(a8_1), 8, 32, "1 32 8 4 a8_1", "LLLL0RRR");
+  TestLayout(VEC1(a8_1), 8, 32, "1 32 8 4 a8_1", "LLLLSRRR");
   TestLayout(VEC1(a9_1), 8, 32, "1 32 9 4 a9_1", "LLLL01RR");
   TestLayout(VEC1(a16_1), 8, 32, "1 32 16 5 a16_1", "LLLL00RR");
   TestLayout(VEC1(p1_256), 8, 32, "1 256 1 6 p1_256",
              "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL1RRR");
-  TestLayout(VEC1(a41_1), 8, 32, "1 32 41 5 a41_1", "LLLL000001RRRRRR");
+  TestLayout(VEC1(a41_1), 8, 32, "1 32 41 5 a41_1", "LLLLSS0001RRRRRR");
   TestLayout(VEC1(a105_1), 8, 32, "1 32 105 6 a105_1",
-             "LLLL00000000000001RRRRRR");
+             "LLLLSSSSSSSSSSSSS1RRRRRR");
 
   {
     ASanStackVariableDescription t[] = {a1_1, p1_256};
-    TestLayout(VEC(t), 8, 32,
-               "2 256 1 6 p1_256 272 1 4 a1_1",
-               "LLLLLLLL" "LLLLLLLL" "LLLLLLLL" "LLLLLLLL" "1M1R");
+    TestLayout(VEC(t), 8, 32, "2 256 1 6 p1_256 272 1 4 a1_1",
+               "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL1M1R");
   }
 
   {
     ASanStackVariableDescription t[] = {a1_1, a16_1, a41_1};
-    TestLayout(VEC(t), 8, 32,
-               "3 32 1 4 a1_1 48 16 5 a16_1 80 41 5 a41_1",
-               "LLLL" "1M00" "MM00" "0001" "RRRR");
+    TestLayout(VEC(t), 8, 32, "3 32 1 4 a1_1 48 16 5 a16_1 80 41 5 a41_1",
+               "LLLL1M00MMSS0001RRRR");
   }
 #undef VEC1
 #undef VEC

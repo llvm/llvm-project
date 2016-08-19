@@ -1,6 +1,9 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-add_clang_executable(clang-include-fixer ClangIncludeFixer.cpp)
+add_clang_executable(clang-include-fixer
+  ClangIncludeFixer.cpp
+  )
+
 target_link_libraries(clang-include-fixer
   clangBasic
   clangFormat
@@ -11,3 +14,13 @@ target_link_libraries(clang-include-fixer
   clangToolingCore
   findAllSymbols
   )
+
+install(TARGETS clang-include-fixer
+  RUNTIME DESTINATION bin)
+
+install(PROGRAMS clang-include-fixer.el
+  DESTINATION share/clang
+  COMPONENT clang-include-fixer)
+install(PROGRAMS clang-include-fixer.py
+  DESTINATION share/clang
+  COMPONENT clang-include-fixer)

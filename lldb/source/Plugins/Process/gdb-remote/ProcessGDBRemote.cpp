@@ -15,6 +15,7 @@
 #ifndef LLDB_DISABLE_POSIX
 #include <netinet/in.h>
 #include <sys/mman.h>       // for mmap
+#include <sys/socket.h>
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -64,6 +65,7 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/SystemRuntime.h"
+#include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/PseudoTerminal.h"
 
 // Project includes
@@ -1173,7 +1175,7 @@ ProcessGDBRemote::DidLaunchOrAttach (ArchSpec& process_arch)
 {
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
     if (log)
-        log->Printf ("ProcessGDBRemote::DidLaunch()");
+        log->Printf ("ProcessGDBRemote::%s()", __FUNCTION__);
     if (GetID() != LLDB_INVALID_PROCESS_ID)
     {
         BuildDynamicRegisterInfo (false);
@@ -1269,6 +1271,13 @@ ProcessGDBRemote::DidLaunchOrAttach (ArchSpec& process_arch)
                 GetTarget().SetArchitecture (process_arch);
             }
         }
+
+        // Find out which StructuredDataPlugins are supported by the
+        // debug monitor.  These plugins transmit data over async $J packets.
+        auto supported_packets_array =
+            m_gdb_comm.GetSupportedStructuredDataPlugins();
+        if (supported_packets_array)
+            MapSupportedStructuredDataPlugins(*supported_packets_array);
     }
 }
 
@@ -1982,7 +1991,10 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
             {
                 StringExtractor reg_value_extractor;
                 reg_value_extractor.GetStringRef() = pair.second;
-                gdb_thread->PrivateSetRegisterValue (pair.first, reg_value_extractor);
+                DataBufferSP buffer_sp(new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+                reg_value_extractor.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+                gdb_thread->PrivateSetRegisterValue(
+                    pair.first, llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
             }
 
             thread_sp->SetName (thread_name.empty() ? NULL : thread_name.c_str());
@@ -3602,6 +3614,23 @@ ProcessGDBRemote::EstablishConnectionIfNeeded (const ProcessInfo &process_info)
     }
     return error;
 }
+#if defined (__APPLE__)
+#define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
+#endif
+
+#ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
+static bool SetCloexecFlag(int fd)
+{
+#if defined(FD_CLOEXEC) 
+    int flags = ::fcntl(fd, F_GETFD);
+    if (flags == -1)
+        return false;
+    return (::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == 0);
+#else
+    return false;
+#endif
+}
+#endif
 
 Error
 ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info)
@@ -3624,30 +3653,34 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
                                                           false);
         debugserver_launch_info.SetUserID(process_info.GetUserID());
 
-#if defined (__APPLE__) && (defined (__arm__) || defined (__arm64__) || defined (__aarch64__))
-        // On iOS, still do a local connection using a random port
-        const char *hostname = "127.0.0.1";
-        uint16_t port = get_random_port ();
-#else
-        // Set hostname being NULL to do the reverse connect where debugserver
-        // will bind to port zero and it will communicate back to us the port
-        // that we will connect to
-        const char *hostname = nullptr;
-        uint16_t port = 0;
-#endif
 
-        StreamString url_str;
-        const char* url = nullptr;
-        if (hostname != nullptr)
+        int communication_fd = -1;
+#ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
+        // Auto close the sockets we might open up unless everything goes OK. This
+        // helps us not leak file descriptors when things go wrong.
+        lldb_utility::CleanUp <int, int> our_socket(-1, -1, close);
+        lldb_utility::CleanUp <int, int> gdb_socket(-1, -1, close);
+
+        // Use a socketpair on Apple for now until other platforms can verify it
+        // works and is fast enough
         {
-            url_str.Printf("%s:%u", hostname, port);
-            url = url_str.GetData();
+            int sockets[2]; /* the pair of socket descriptors */
+            if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == -1)
+            {
+                error.SetErrorToErrno();
+                return error;
+            }
+
+            our_socket.set(sockets[0]);
+            gdb_socket.set(sockets[1]);
         }
 
-        error = m_gdb_comm.StartDebugserverProcess (url,
-                                                    GetTarget().GetPlatform().get(),
-                                                    debugserver_launch_info,
-                                                    &port);
+        // Don't let any child processes inherit our communication socket
+        SetCloexecFlag(our_socket.get());
+        communication_fd = gdb_socket.get();
+#endif
+
+        error = m_gdb_comm.StartDebugserverProcess(nullptr, GetTarget().GetPlatform().get(), debugserver_launch_info, nullptr, nullptr, communication_fd);
 
         if (error.Success ())
             m_debugserver_pid = debugserver_launch_info.GetProcessID();
@@ -3655,7 +3688,14 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
             m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
 
         if (m_debugserver_pid != LLDB_INVALID_PROCESS_ID)
+        {
+#ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
+            // Our process spawned correctly, we can now set our connection to use our
+            // end of the socket pair
+            m_gdb_comm.SetConnection(new ConnectionFileDescriptor(our_socket.release(), true));
+#endif
             StartAsyncThread ();
+        }
 
         if (error.Fail())
         {
@@ -3669,13 +3709,11 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
         if (m_gdb_comm.IsConnected())
         {
             // Finish the connection process by doing the handshake without connecting (send NULL URL)
-            ConnectToDebugserver (NULL);
+            ConnectToDebugserver(NULL);
         }
         else
         {
-            StreamString connect_url;
-            connect_url.Printf("connect://%s:%u", hostname, port);
-            error = ConnectToDebugserver (connect_url.GetString().c_str());
+            error.SetErrorString("connection failed");
         }
 
     }
@@ -4314,6 +4352,13 @@ ProcessGDBRemote::GetSharedCacheInfo ()
     return object_sp;
 }
 
+Error
+ProcessGDBRemote::ConfigureStructuredData(const ConstString &type_name,
+                                          const StructuredData::ObjectSP
+                                          &config_sp)
+{
+    return m_gdb_comm.ConfigureRemoteStructuredData(type_name, config_sp);
+}
 
 // Establish the largest memory read/write payloads we should use.
 // If the remote stub has a max packet size, stay under that size.
@@ -5205,6 +5250,13 @@ ProcessGDBRemote::HandleStopReply()
             SetID(pid);
     }
     BuildDynamicRegisterInfo(true);
+}
+
+bool
+ProcessGDBRemote::HandleAsyncStructuredData(const StructuredData::ObjectSP
+                                            &object_sp)
+{
+    return RouteAsyncStructuredData(object_sp);
 }
 
 class CommandObjectProcessGDBRemoteSpeedTest: public CommandObjectParsed

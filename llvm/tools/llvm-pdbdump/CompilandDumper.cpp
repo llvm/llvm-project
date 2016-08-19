@@ -76,6 +76,15 @@ void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
         if (LineStart != LineEnd)
           WithColor(Printer, StatementColor).get() << " - " << LineEnd;
 
+        uint32_t ColumnStart = Line->getColumnNumber();
+        uint32_t ColumnEnd = Line->getColumnNumberEnd();
+        if (ColumnStart != 0 || ColumnEnd != 0) {
+          Printer << ", Column: ";
+          WithColor(Printer, StatementColor).get() << ColumnStart;
+          if (ColumnEnd != ColumnStart)
+            WithColor(Printer, StatementColor).get() << " - " << ColumnEnd;
+        }
+
         Printer << ", Address: ";
         if (Line->getLength() > 0) {
           uint64_t AddrStart = Line->getVirtualAddress();

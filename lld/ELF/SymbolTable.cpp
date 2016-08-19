@@ -418,12 +418,12 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
                                         OutputSectionBase<ELFT> *Section,
-                                        uintX_t Value) {
+                                        uintX_t Value, uint8_t StOther) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) =
-      insert(N, STT_NOTYPE, STV_HIDDEN, /*CanOmitFromDynSym*/ false,
-             /*IsUsedInRegularObj*/ true, nullptr);
+  std::tie(S, WasInserted) = insert(N, STT_NOTYPE, /*Visibility*/ StOther & 0x3,
+                                    /*CanOmitFromDynSym*/ false,
+                                    /*IsUsedInRegularObj*/ true, nullptr);
   int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, STB_GLOBAL);
   if (Cmp > 0)
     replaceBody<DefinedSynthetic<ELFT>>(S, N, Value, Section);

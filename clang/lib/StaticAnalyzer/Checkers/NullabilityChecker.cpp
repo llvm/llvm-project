@@ -325,10 +325,7 @@ PathDiagnosticPiece *NullabilityChecker::NullabilityBugVisitor::VisitNode(
   // Retrieve the associated statement.
   const Stmt *S = TrackedNullab->getNullabilitySource();
   if (!S) {
-    ProgramPoint ProgLoc = N->getLocation();
-    if (Optional<StmtPoint> SP = ProgLoc.getAs<StmtPoint>()) {
-      S = SP->getStmt();
-    }
+    S = PathDiagnosticLocation::getStmt(N);
   }
 
   if (!S)

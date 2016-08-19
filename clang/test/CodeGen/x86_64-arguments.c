@@ -470,13 +470,14 @@ typedef struct {
 s512 x55;
 __m512 x56;
 
-// Even on AVX512, aggregates of size larger than four eightbytes have class
-// MEMORY (AVX512 draft 0.3 3.2.3p2 Rule 1).
+// On AVX512, aggregates which contain a __m512 type are classified as SSE/SSEUP
+// as per https://github.com/hjl-tools/x86-psABI/commit/30f9c9 3.2.3p2 Rule 1
 //
-// CHECK: declare void @f55(%struct.s512* byval align 64)
+// AVX512: declare void @f55(<16 x float>)
+// NO-AVX512: declare void @f55(%struct.s512* byval align 64)
 void f55(s512 x);
 
-// However, __m512 has type SSE/SSEUP on AVX512.
+// __m512 has type SSE/SSEUP on AVX512.
 //
 // AVX512: declare void @f56(<16 x float>)
 // NO-AVX512: declare void @f56(<16 x float>* byval align 64)
@@ -534,4 +535,13 @@ __m512 x64;
 void f64() {
   f64_helper(x64, x64, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
   f64_helper(x64, x64, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0i);
+}
+
+struct t65 {
+  __m256 m;
+  int : 0;
+};
+// SSE-LABEL: @f65(%struct.t65* byval align 32 %{{[^,)]+}})
+// AVX: @f65(<8 x float> %{{[^,)]+}})
+void f65(struct t65 a0) {
 }

@@ -942,6 +942,11 @@ private:
   /// Update the DAG and DAG builder with the relevant information after
   /// a new root node has been created which could be a tail call.
   void updateDAGForMaybeTailCall(SDValue MaybeTC);
+
+  /// Return the appropriate SDDbgValue based on N.
+  SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
+                          DIExpression *Expr, int64_t Offset, DebugLoc dl,
+                          unsigned DbgSDNodeOrder);
 };
 
 /// RegsForValue - This struct represents the registers (physical or virtual)

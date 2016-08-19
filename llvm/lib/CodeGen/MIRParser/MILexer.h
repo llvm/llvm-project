@@ -91,6 +91,8 @@ struct MIToken {
     kw_landing_pad,
     kw_liveins,
     kw_successors,
+    kw_floatpred,
+    kw_intpred,
 
     // Named metadata keywords
     md_tbaa,

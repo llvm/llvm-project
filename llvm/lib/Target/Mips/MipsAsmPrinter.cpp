@@ -98,6 +98,7 @@ bool MipsAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
 void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
                                               const MachineInstr *MI) {
   bool HasLinkReg = false;
+  bool InMicroMipsMode = Subtarget->inMicroMipsMode();
   MCInst TmpInst0;
 
   if (Subtarget->hasMips64r6()) {
@@ -106,8 +107,12 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
     HasLinkReg = true;
   } else if (Subtarget->hasMips32r6()) {
     // MIPS32r6 should use (JALR ZERO, $rs)
-    TmpInst0.setOpcode(Mips::JALR);
-    HasLinkReg = true;
+    if (InMicroMipsMode)
+      TmpInst0.setOpcode(Mips::JRC16_MMR6);
+    else {
+      TmpInst0.setOpcode(Mips::JALR);
+      HasLinkReg = true;
+    }
   } else if (Subtarget->inMicroMipsMode())
     // microMIPS should use (JR_MM $rs)
     TmpInst0.setOpcode(Mips::JR_MM);
@@ -185,7 +190,9 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     if (I->getOpcode() == Mips::PseudoReturn ||
         I->getOpcode() == Mips::PseudoReturn64 ||
         I->getOpcode() == Mips::PseudoIndirectBranch ||
-        I->getOpcode() == Mips::PseudoIndirectBranch64) {
+        I->getOpcode() == Mips::PseudoIndirectBranch64 ||
+        I->getOpcode() == Mips::TAILCALLREG ||
+        I->getOpcode() == Mips::TAILCALLREG64) {
       emitPseudoIndirectBranch(*OutStreamer, &*I);
       continue;
     }

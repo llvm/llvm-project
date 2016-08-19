@@ -1,4 +1,5 @@
 ; RUN: opt -name-anon-functions -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
+; RUN: opt -passes=name-anon-functions -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; Check for summary block/records.
 
 ; Check the value ids in the summary entries against the

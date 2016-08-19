@@ -2648,8 +2648,7 @@ void SwingSchedulerDAG::generateExistingPhis(
       // references another Phi, and the other Phi is scheduled in an
       // earlier stage. We can try to reuse an existing Phi up until the last
       // stage of the current Phi.
-      if (LoopDefIsPhi && VRMap[CurStageNum].count(LoopVal) &&
-          LoopValStage >= (int)(CurStageNum - LastStageNum)) {
+      if (LoopDefIsPhi && (int)PrologStage >= StageScheduled) {
         int LVNumStages = Schedule.getStagesForPhi(LoopVal);
         int StageDiff = (StageScheduled - LoopValStage);
         LVNumStages -= StageDiff;
@@ -3070,7 +3069,7 @@ bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
 }
 
 /// Update the memory operand with a new offset when the pipeliner
-/// generate a new copy of the instruction that refers to a
+/// generates a new copy of the instruction that refers to a
 /// different memory location.
 void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
                                           MachineInstr &OldMI, unsigned Num) {

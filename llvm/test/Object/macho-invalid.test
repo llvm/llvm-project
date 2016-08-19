@@ -112,3 +112,33 @@ INVALID-SEGMENT-FILEOFF-NM: macho-invalid-segment-fileoff truncated or malformed
 
 RUN: not llvm-size %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF-SIZE %s
 INVALID-SEGMENT-FILEOFF-SIZE: macho-invalid-segment-fileoff truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-segment-filesize 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILESIZE %s
+INVALID-SEGMENT-FILESIZE: macho-invalid-segment-filesize': truncated or malformed object (load command 0 fileoff field plus filesize field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-segment-vmsize 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-VMSIZE %s
+INVALID-SEGMENT-VMSIZE: macho-invalid-segment-vmsize': truncated or malformed object (load command 0 fileoff field in LC_SEGMENT greater than vmsize field)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-offset 2>&1 | FileCheck -check-prefix INVALID-SECTION-FILEOFF %s
+INVALID-SECTION-FILEOFF: macho-invalid-section-offset': truncated or malformed object (offset field of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-offset-in-headers 2>&1 | FileCheck -check-prefix INVALID-SECTION-FILEOFF-IN-HEADERS %s
+INVALID-SECTION-FILEOFF-IN-HEADERS: macho-invalid-section-offset-in-headers': truncated or malformed object (offset field of section 0 in LC_SEGMENT command 0 not past the headers of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-offset-size 2>&1 | FileCheck -check-prefix INVALID-SECTION-FILEOFF-SIZE %s
+INVALID-SECTION-FILEOFF-SIZE: macho-invalid-section-offset-size': truncated or malformed object (offset field plus size field of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-size-filesize 2>&1 | FileCheck -check-prefix INVALID-SECTION-SIZE-FILESIZE %s
+INVALID-SECTION-SIZE-FILESIZE: macho-invalid-section-size-filesize': truncated or malformed object (size field of section 0 in LC_SEGMENT command 0 greater than the segment)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-addr 2>&1 | FileCheck -check-prefix INVALID-SECTION-ADDR %s
+INVALID-SECTION-ADDR: macho-invalid-section-addr': truncated or malformed object (addr field of section 0 in LC_SEGMENT command 0 less than the segment's vmaddr)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-addr-size 2>&1 | FileCheck -check-prefix INVALID-SECTION-ADDR-SIZE %s
+INVALID-SECTION-ADDR-SIZE: macho-invalid-section-addr-size': truncated or malformed object (addr field plus size of section 0 in LC_SEGMENT command 0 greater than than the segment's vmaddr plus vmsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-reloff 2>&1 | FileCheck -check-prefix INVALID-SECTION-RELOFF %s
+INVALID-SECTION-RELOFF: macho-invalid-section-reloff': truncated or malformed object (reloff field of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-reloff-nrelocs 2>&1 | FileCheck -check-prefix INVALID-SECTION-RELOFF-NRELOCS %s
+INVALID-SECTION-RELOFF-NRELOCS: macho-invalid-section-reloff-nrelocs': truncated or malformed object (reloff field plus nreloc field times sizeof(struct relocation_info) of section 0 in LC_SEGMENT command 0 extends past the end of the file)

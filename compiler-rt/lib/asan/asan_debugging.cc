@@ -14,74 +14,85 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_allocator.h"
+#include "asan_descriptions.h"
 #include "asan_flags.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_thread.h"
 
-namespace __asan {
+namespace {
+using namespace __asan;
 
-void GetInfoForStackVar(uptr addr, AddressDescription *descr, AsanThread *t) {
-  descr->name[0] = 0;
-  descr->region_address = 0;
-  descr->region_size = 0;
-  descr->region_kind = "stack";
-
-  AsanThread::StackFrameAccess access;
-  if (!t->GetStackFrameAccessByAddr(addr, &access))
-    return;
+void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
+                         AddressDescription *descr) {
   InternalMmapVector<StackVarDescr> vars(16);
-  if (!ParseFrameDescription(access.frame_descr, &vars)) {
+  if (!ParseFrameDescription(frame_descr, &vars)) {
     return;
   }
 
   for (uptr i = 0; i < vars.size(); i++) {
-    if (access.offset <= vars[i].beg + vars[i].size) {
-      internal_strncat(descr->name, vars[i].name_pos,
-                       Min(descr->name_size, vars[i].name_len));
-      descr->region_address = addr - (access.offset - vars[i].beg);
+    if (offset <= vars[i].beg + vars[i].size) {
+      // We use name_len + 1 because strlcpy will guarantee a \0 at the end, so
+      // if we're limiting the copy due to name_len, we add 1 to ensure we copy
+      // the whole name and then terminate with '\0'.
+      internal_strlcpy(descr->name, vars[i].name_pos,
+                       Min(descr->name_size, vars[i].name_len + 1));
+      descr->region_address = addr - (offset - vars[i].beg);
       descr->region_size = vars[i].size;
       return;
     }
   }
 }
 
-void GetInfoForHeapAddress(uptr addr, AddressDescription *descr) {
-  AsanChunkView chunk = FindHeapChunkByAddress(addr);
+void AsanLocateAddress(uptr addr, AddressDescription *descr) {
+  ShadowAddressDescription shadow_descr;
+  if (GetShadowAddressInformation(addr, &shadow_descr)) {
+    descr->region_kind = ShadowNames[shadow_descr.kind];
+    return;
+  }
+  GlobalAddressDescription global_descr;
+  if (GetGlobalAddressInformation(addr, &global_descr)) {
+    descr->region_kind = "global";
+    auto &g = global_descr.globals[0];
+    internal_strlcpy(descr->name, g.name, descr->name_size);
+    descr->region_address = g.beg;
+    descr->region_size = g.size;
+    return;
+  }
+
+  StackAddressDescription stack_descr;
+  asanThreadRegistry().Lock();
+  if (GetStackAddressInformation(addr, &stack_descr)) {
+    asanThreadRegistry().Unlock();
+    descr->region_kind = "stack";
+    if (!stack_descr.frame_descr) {
+      descr->name[0] = 0;
+      descr->region_address = 0;
+      descr->region_size = 0;
+    } else {
+      FindInfoForStackVar(addr, stack_descr.frame_descr, stack_descr.offset,
+                          descr);
+    }
+    return;
+  }
+  asanThreadRegistry().Unlock();
 
   descr->name[0] = 0;
+  HeapAddressDescription heap_descr;
+  if (GetHeapAddressInformation(addr, 1, &heap_descr)) {
+    descr->region_address = heap_descr.chunk_access.chunk_begin;
+    descr->region_size = heap_descr.chunk_access.chunk_size;
+    descr->region_kind = "heap";
+    return;
+  }
+
   descr->region_address = 0;
   descr->region_size = 0;
-
-  if (!chunk.IsValid()) {
-    descr->region_kind = "heap-invalid";
-    return;
-  }
-
-  descr->region_address = chunk.Beg();
-  descr->region_size = chunk.UsedSize();
-  descr->region_kind = "heap";
+  descr->region_kind = "heap-invalid";
 }
 
-void AsanLocateAddress(uptr addr, AddressDescription *descr) {
-  if (DescribeAddressIfShadow(addr, descr, /* print */ false)) {
-    return;
-  }
-  if (GetInfoForAddressIfGlobal(addr, descr)) {
-    return;
-  }
-  asanThreadRegistry().Lock();
-  AsanThread *thread = FindThreadByStackAddress(addr);
-  asanThreadRegistry().Unlock();
-  if (thread) {
-    GetInfoForStackVar(addr, descr, thread);
-    return;
-  }
-  GetInfoForHeapAddress(addr, descr);
-}
-
-static uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
+uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
                          bool alloc_stack) {
   AsanChunkView chunk = FindHeapChunkByAddress(addr);
   if (!chunk.IsValid()) return 0;
@@ -108,9 +119,7 @@ static uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
   return 0;
 }
 
-} // namespace __asan
-
-using namespace __asan;
+}  // namespace
 
 SANITIZER_INTERFACE_ATTRIBUTE
 const char *__asan_locate_address(uptr addr, char *name, uptr name_size,

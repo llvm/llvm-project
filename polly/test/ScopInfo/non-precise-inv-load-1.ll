@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
 ;
 ; Verify we do hoist the invariant access to I with a execution context
 ; as the address computation might wrap in the original but not in our

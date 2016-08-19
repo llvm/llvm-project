@@ -256,6 +256,17 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
+static Optional<StringRef>
+getZOptionValue(opt::InputArgList &Args, StringRef Key) {
+  for (auto *Arg : Args.filtered(OPT_z)) {
+    StringRef Value = Arg->getValue();
+    size_t Pos = Value.find("=");
+    if (Pos != StringRef::npos && Key == Value.substr(0, Pos))
+      return Value.substr(Pos + 1);
+  }
+  return None;
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -263,10 +274,8 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     printHelp(ArgsArr[0]);
     return;
   }
-  if (Args.hasArg(OPT_version)) {
+  if (Args.hasArg(OPT_version))
     outs() << getVersionString();
-    return;
-  }
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -396,6 +405,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
+
+  if (Optional<StringRef> Value = getZOptionValue(Args, "stack-size"))
+    if (Value->getAsInteger(0, Config->ZStackSize))
+      error("invalid stack size: " + *Value);
 
   if (Config->Relocatable)
     Config->StripAll = false;

@@ -403,7 +403,8 @@ CMICmnLLDBDebugger::InitSBListener()
     bOk = bOk && RegisterForEvent(strDbgId, CMIUtilString(lldb::SBThread::GetBroadcasterClassName()), eventMask);
 
     eventMask = lldb::SBProcess::eBroadcastBitStateChanged | lldb::SBProcess::eBroadcastBitInterrupt |
-                lldb::SBProcess::eBroadcastBitSTDOUT | lldb::SBProcess::eBroadcastBitSTDERR | lldb::SBProcess::eBroadcastBitProfileData;
+                lldb::SBProcess::eBroadcastBitSTDOUT | lldb::SBProcess::eBroadcastBitSTDERR | lldb::SBProcess::eBroadcastBitProfileData |
+                lldb::SBProcess::eBroadcastBitStructuredData;
     bOk = bOk && RegisterForEvent(strDbgId, CMIUtilString(lldb::SBProcess::GetBroadcasterClassName()), eventMask);
 
     eventMask = lldb::SBCommandInterpreter::eBroadcastBitQuitCommandReceived | lldb::SBCommandInterpreter::eBroadcastBitThreadShouldExit |

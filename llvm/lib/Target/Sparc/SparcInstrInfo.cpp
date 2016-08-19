@@ -118,19 +118,19 @@ static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
   
   case SPCC::CPCC_A:   return SPCC::CPCC_N;
   case SPCC::CPCC_N:   return SPCC::CPCC_A;
-  case SPCC::CPCC_3:   // Fall through
-  case SPCC::CPCC_2:   // Fall through
-  case SPCC::CPCC_23:  // Fall through
-  case SPCC::CPCC_1:   // Fall through
-  case SPCC::CPCC_13:  // Fall through
-  case SPCC::CPCC_12:  // Fall through
-  case SPCC::CPCC_123: // Fall through
-  case SPCC::CPCC_0:   // Fall through
-  case SPCC::CPCC_03:  // Fall through
-  case SPCC::CPCC_02:  // Fall through
-  case SPCC::CPCC_023: // Fall through
-  case SPCC::CPCC_01:  // Fall through
-  case SPCC::CPCC_013: // Fall through
+  case SPCC::CPCC_3:   LLVM_FALLTHROUGH;
+  case SPCC::CPCC_2:   LLVM_FALLTHROUGH;
+  case SPCC::CPCC_23:  LLVM_FALLTHROUGH;
+  case SPCC::CPCC_1:   LLVM_FALLTHROUGH;
+  case SPCC::CPCC_13:  LLVM_FALLTHROUGH;
+  case SPCC::CPCC_12:  LLVM_FALLTHROUGH;
+  case SPCC::CPCC_123: LLVM_FALLTHROUGH;
+  case SPCC::CPCC_0:   LLVM_FALLTHROUGH;
+  case SPCC::CPCC_03:  LLVM_FALLTHROUGH;
+  case SPCC::CPCC_02:  LLVM_FALLTHROUGH;
+  case SPCC::CPCC_023: LLVM_FALLTHROUGH;
+  case SPCC::CPCC_01:  LLVM_FALLTHROUGH;
+  case SPCC::CPCC_013: LLVM_FALLTHROUGH;
   case SPCC::CPCC_012:
       // "Opposite" code is not meaningful, as we don't know
       // what the CoProc condition means here. The cond-code will

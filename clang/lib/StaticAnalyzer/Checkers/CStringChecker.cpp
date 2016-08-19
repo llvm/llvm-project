@@ -685,6 +685,7 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
   QualType sizeTy = svalBuilder.getContext().getSizeType();
   SVal strLength = svalBuilder.getMetadataSymbolVal(CStringChecker::getTag(),
                                                     MR, Ex, sizeTy,
+                                                    C.getLocationContext(),
                                                     C.blockCount());
 
   if (!hypothetical) {

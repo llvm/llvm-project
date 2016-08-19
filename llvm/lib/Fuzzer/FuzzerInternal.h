@@ -28,7 +28,7 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
-#include "FuzzerTracePC.h"
+#include "FuzzerValueBitMap.h"
 
 // Platform detection.
 #ifdef __linux__
@@ -120,6 +120,7 @@ size_t GetPeakRSSMb();
 static const int kSHA1NumBytes = 20;
 // Computes SHA1 hash of 'Len' bytes in 'Data', writes kSHA1NumBytes to 'Out'.
 void ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out);
+std::string Sha1ToString(uint8_t Sha1[kSHA1NumBytes]);
 
 // Changes U to contain only ASCII (isprint+isspace) characters.
 // Returns true iff U has been changed.
@@ -130,6 +131,13 @@ bool IsASCII(const uint8_t *Data, size_t Size);
 int NumberOfCpuCores();
 int GetPid();
 void SleepSeconds(int Seconds);
+
+// See FuzzerTracePC.cpp
+size_t PCMapMergeFromCurrent(ValueBitMap &M);
+
+// See FuzzerTraceState.cpp
+void EnableValueProfile();
+size_t VPMapMergeFromCurrent(ValueBitMap &M);
 
 class Random {
  public:
@@ -255,14 +263,18 @@ public:
   size_t Mutate_CustomCrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by shuffling bytes.
   size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by erasing a byte.
-  size_t Mutate_EraseByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by erasing bytes.
+  size_t Mutate_EraseBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by inserting a byte.
   size_t Mutate_InsertByte(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by inserting several repeated bytes.
+  size_t Mutate_InsertRepeatedBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by chanding one byte.
   size_t Mutate_ChangeByte(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by chanding one bit.
   size_t Mutate_ChangeBit(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by copying/inserting a part of data into a different place.
+  size_t Mutate_CopyPart(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// Mutates data by adding a word from the manual dictionary.
   size_t Mutate_AddWordFromManualDictionary(uint8_t *Data, size_t Size,
@@ -278,6 +290,8 @@ public:
 
   /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
   size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Change a 1-, 2-, 4-, or 8-byte integer in interesting ways.
+  size_t Mutate_ChangeBinaryInteger(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// CrossOver Data with some other element of the corpus.
   size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -315,6 +329,11 @@ private:
   size_t MutateImpl(uint8_t *Data, size_t Size, size_t MaxSize,
                     const std::vector<Mutator> &Mutators);
 
+  size_t InsertPartOf(const uint8_t *From, size_t FromSize, uint8_t *To,
+                      size_t ToSize, size_t MaxToSize);
+  size_t CopyPartOf(const uint8_t *From, size_t FromSize, uint8_t *To,
+                    size_t ToSize);
+
   Random &Rand;
   const FuzzingOptions Options;
 
@@ -347,10 +366,12 @@ public:
     void Reset() {
       BlockCoverage = 0;
       CallerCalleeCoverage = 0;
-      PcMapBits = 0;
       CounterBitmapBits = 0;
       CounterBitmap.clear();
       PCMap.Reset();
+      PCMapBits = 0;
+      VPMap.Reset();
+      VPMapBits = 0;
       PcBufferPos = 0;
     }
 
@@ -362,9 +383,10 @@ public:
     // Precalculated number of bits in CounterBitmap.
     size_t CounterBitmapBits;
     std::vector<uint8_t> CounterBitmap;
-    // Precalculated number of bits in PCMap.
-    size_t PcMapBits;
-    PcCoverageMap PCMap;
+    ValueBitMap PCMap;
+    size_t PCMapBits;
+    ValueBitMap VPMap;
+    size_t VPMapBits;
   };
 
   Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);
@@ -463,6 +485,7 @@ private:
   void LazyAllocateCurrentUnitData();
   uint8_t *CurrentUnitData = nullptr;
   std::atomic<size_t> CurrentUnitSize;
+  uint8_t BaseSha1[kSHA1NumBytes];  // Checksum of the base unit.
 
   size_t TotalNumberOfRuns = 0;
   size_t NumberOfNewUnitsAdded = 0;

@@ -69,8 +69,7 @@ template <typename NodeTy> class SymbolTableList;
 //
 template <typename ValueSubClass>
 class SymbolTableListTraits
-    : public ilist_nextprev_traits<ValueSubClass>,
-      public SymbolTableListSentinelTraits<ValueSubClass>,
+    : public SymbolTableListSentinelTraits<ValueSubClass>,
       public ilist_node_traits<ValueSubClass> {
   typedef SymbolTableList<ValueSubClass> ListTy;
   typedef

@@ -515,8 +515,18 @@ def S_TRAP : SOPP <0x00000012, (ins i16imm:$simm16), "s_trap $simm16">;
 def S_ICACHE_INV : SOPP <0x00000013, (ins), "s_icache_inv"> {
 	let simm16 = 0;
 }
-def S_INCPERFLEVEL : SOPP <0x00000014, (ins i16imm:$simm16), "s_incperflevel $simm16">;
-def S_DECPERFLEVEL : SOPP <0x00000015, (ins i16imm:$simm16), "s_decperflevel $simm16">;
+def S_INCPERFLEVEL : SOPP <0x00000014, (ins i32imm:$simm16), "s_incperflevel $simm16", 
+  [(int_amdgcn_s_incperflevel SIMM16bit:$simm16)]> {
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+def S_DECPERFLEVEL : SOPP <0x00000015, (ins i32imm:$simm16), "s_decperflevel $simm16",
+  [(int_amdgcn_s_decperflevel SIMM16bit:$simm16)]> {
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
 def S_TTRACEDATA : SOPP <0x00000016, (ins), "s_ttracedata"> {
   let simm16 = 0;
 }
@@ -1097,10 +1107,10 @@ defm V_CVT_FLR_I32_F32 : VOP1Inst <vop1<0xd>, "v_cvt_flr_i32_f32",
   VOP_I32_F32, cvt_flr_i32_f32>;
 defm V_CVT_OFF_F32_I4 : VOP1Inst  <vop1<0x0e>, "v_cvt_off_f32_i4", VOP_F32_I32>;
 defm V_CVT_F32_F64 : VOP1Inst <vop1<0xf>, "v_cvt_f32_f64",
-  VOP_F32_F64, fround
+  VOP_F32_F64, fpround
 >;
 defm V_CVT_F64_F32 : VOP1Inst <vop1<0x10>, "v_cvt_f64_f32",
-  VOP_F64_F32, fextend
+  VOP_F64_F32, fpextend
 >;
 defm V_CVT_F32_UBYTE0 : VOP1Inst <vop1<0x11>, "v_cvt_f32_ubyte0",
   VOP_F32_I32, AMDGPUcvt_f32_ubyte0
@@ -1722,7 +1732,7 @@ defm V_MSAD_U8 : VOP3Inst <vop3<0x171, 0x1e4>, "v_msad_u8",
   VOP_I32_I32_I32_I32, int_amdgcn_msad_u8>;
 
 defm V_MQSAD_PK_U16_U8 : VOP3Inst <vop3<0x173, 0x1e6>, "v_mqsad_pk_u16_u8",
-  VOP_I32_I32_I32_I32, int_amdgcn_mqsad_pk_u16_u8>;
+  VOP_I64_I64_I32_I64, int_amdgcn_mqsad_pk_u16_u8>;
 
 //def V_MQSAD_U8 : VOP3_U8 <0x00000173, "v_mqsad_u8", []>;
 

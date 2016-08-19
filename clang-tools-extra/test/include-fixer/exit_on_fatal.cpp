@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // RUN: sed -e 's#//.*$##' %s > %t.cpp
 // RUN: not clang-include-fixer -db=fixed -input='foo= "foo.h"' %t.cpp --
 // RUN: FileCheck %s -input-file=%t.cpp

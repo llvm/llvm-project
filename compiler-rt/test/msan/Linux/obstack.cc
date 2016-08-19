@@ -30,7 +30,7 @@ int main(void) {
       __msan_check_mem_is_initialized(p, sizeof(data) + 1);
     }
     // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
-    // CHECK: #0 0x{{.*}} in main{{.*}}obstack.cc:[[@LINE-30]]
+    // CHECK: #0 0x{{.*}} in main{{.*}}obstack.cc:[[@LINE-3]]
 #endif
   }
   obstack_free(&obs, 0);

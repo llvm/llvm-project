@@ -155,7 +155,7 @@ let Namespace = "Hexagon" in {
   def C8   : Rc<8,  "c8",       [], [USR]>, DwarfRegNum<[75]>;
   def PC   : Rc<9,  "pc">,                  DwarfRegNum<[76]>;
   def UGP  : Rc<10, "ugp",       ["c10"]>,  DwarfRegNum<[77]>;
-  def GP   : Rc<11, "gp">,                  DwarfRegNum<[78]>;
+  def GP   : Rc<11, "gp",        ["c11"]>,  DwarfRegNum<[78]>;
   def CS0  : Rc<12, "cs0",       ["c12"]>,  DwarfRegNum<[79]>;
   def CS1  : Rc<13, "cs1",       ["c13"]>,  DwarfRegNum<[80]>;
   def UPCL : Rc<14, "upcyclelo", ["c14"]>,  DwarfRegNum<[81]>;
@@ -166,6 +166,7 @@ let Namespace = "Hexagon" in {
   let SubRegIndices = [subreg_loreg, subreg_hireg], CoveredBySubRegs = 1 in {
     def C1_0   : Rcc<0,   "c1:0",  [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
     def C3_2   : Rcc<2,   "c3:2",  [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
+    def C5_4   : Rcc<4,   "c5:4",  [P3_0, C5]>,              DwarfRegNum<[71]>;
     def C7_6   : Rcc<6,   "c7:6",  [C6, C7],   ["m1:0"]>,    DwarfRegNum<[72]>;
     // Use C8 instead of USR as a subregister of C9_8.
     def C9_8   : Rcc<8,   "c9:8",  [C8, PC]>,                DwarfRegNum<[74]>;
@@ -256,9 +257,9 @@ def ModRegs : RegisterClass<"Hexagon", [i32], 32, (add M0, M1)>;
 
 let Size = 32, isAllocatable = 0 in
 def CtrRegs : RegisterClass<"Hexagon", [i32], 32,
-                           (add LC0, SA0, LC1, SA1,
-                                P3_0,
-                                 M0, M1, C6, C7, CS0, CS1, UPCL, UPCH,
+                            (add LC0, SA0, LC1, SA1,
+                                 P3_0, C5,
+                                 M0, M1, C6, C7, C8, CS0, CS1, UPCL, UPCH,
                                  USR, USR_OVF, UGP, GP, PC)>;
 
 let Size = 64, isAllocatable = 0 in

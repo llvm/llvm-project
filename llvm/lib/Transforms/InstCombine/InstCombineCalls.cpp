@@ -1133,7 +1133,10 @@ static Instruction *simplifyMaskedScatter(IntrinsicInst &II, InstCombiner &IC) {
   return nullptr;
 }
 
-static Value *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
+static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
+  assert((II.getIntrinsicID() == Intrinsic::cttz ||
+          II.getIntrinsicID() == Intrinsic::ctlz) &&
+         "Expected cttz or ctlz intrinsic");
   Value *Op0 = II.getArgOperand(0);
   // FIXME: Try to simplify vectors of integers.
   auto *IT = dyn_cast<IntegerType>(Op0->getType());
@@ -1156,8 +1159,20 @@ static Value *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
   // zero, this value is constant.
   // FIXME: This should be in InstSimplify because we're replacing an
   // instruction with a constant.
-  if ((Mask & KnownZero) == Mask)
-    return ConstantInt::get(IT, APInt(BitWidth, NumMaskBits));
+  if ((Mask & KnownZero) == Mask) {
+    auto *C = ConstantInt::get(IT, APInt(BitWidth, NumMaskBits));
+    return IC.replaceInstUsesWith(II, C);
+  }
+
+  // If the input to cttz/ctlz is known to be non-zero,
+  // then change the 'ZeroIsUndef' parameter to 'true'
+  // because we know the zero behavior can't affect the result.
+  if (KnownOne != 0 || isKnownNonZero(Op0, IC.getDataLayout())) {
+    if (!match(II.getArgOperand(1), m_One())) {
+      II.setOperand(1, IC.Builder->getTrue());
+      return &II;
+    }
+  }
 
   return nullptr;
 }
@@ -1457,8 +1472,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
-    if (Value *V = foldCttzCtlz(*II, *this))
-      return replaceInstUsesWith(*II, V);
+    if (auto *I = foldCttzCtlz(*II, *this))
+      return I;
     break;
 
   case Intrinsic::uadd_with_overflow:
@@ -1473,7 +1488,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       II->setArgOperand(1, LHS);
       return II;
     }
-    // fall through
+    LLVM_FALLTHROUGH;
 
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow: {

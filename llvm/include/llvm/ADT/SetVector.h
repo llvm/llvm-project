@@ -176,7 +176,7 @@ public:
   /// write it:
   ///
   /// \code
-  ///   V.erase(std::remove_if(V.begin(), V.end(), P), V.end());
+  ///   V.erase(remove_if(V, P), V.end());
   /// \endcode
   ///
   /// However, SetVector doesn't expose non-const iterators, making any
@@ -185,9 +185,8 @@ public:
   /// \returns true if any element is removed.
   template <typename UnaryPredicate>
   bool remove_if(UnaryPredicate P) {
-    typename vector_type::iterator I
-      = std::remove_if(vector_.begin(), vector_.end(),
-                       TestAndEraseFromSet<UnaryPredicate>(P, set_));
+    typename vector_type::iterator I =
+        llvm::remove_if(vector_, TestAndEraseFromSet<UnaryPredicate>(P, set_));
     if (I == vector_.end())
       return false;
     vector_.erase(I, vector_.end());

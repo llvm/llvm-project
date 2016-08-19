@@ -171,9 +171,9 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                            unsigned OpNo, unsigned AsmVariant,
-                                            const char *ExtraCode,
-                                            raw_ostream &O) {
+                                              unsigned OpNo, unsigned AsmVariant,
+                                              const char *ExtraCode,
+                                              raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
     return true; // Unknown modifier.
 
@@ -550,8 +550,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Rt.setReg(getHexagonRegisterPair(Rt.getReg(), RI));
     return;
   }
-  case Hexagon::HEXAGON_V6_vd0_pseudo:
-  case Hexagon::HEXAGON_V6_vd0_pseudo_128B: {
+  case Hexagon::V6_vd0:
+  case Hexagon::V6_vd0_128B: {
     MCInst TmpInst;
     assert (Inst.getOperand(0).isReg() &&
             "Expected register and none was found");

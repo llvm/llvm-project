@@ -205,6 +205,8 @@ const R600Subtarget *R600TargetLowering::getSubtarget() const {
 }
 
 static inline bool isEOP(MachineBasicBlock::iterator I) {
+  if (std::next(I) == I->getParent()->end())
+    return false;
   return std::next(I)->getOpcode() == AMDGPU::RETURN;
 }
 
@@ -326,7 +328,7 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::PRED_X),
                 AMDGPU::PREDICATE_BIT)
             .addOperand(MI.getOperand(1))
-            .addImm(OPCODE_IS_NOT_ZERO)
+            .addImm(AMDGPU::PRED_SETNE)
             .addImm(0); // Flags
     TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
@@ -340,7 +342,7 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::PRED_X),
                 AMDGPU::PREDICATE_BIT)
             .addOperand(MI.getOperand(1))
-            .addImm(OPCODE_IS_NOT_ZERO_INT)
+            .addImm(AMDGPU::PRED_SETNE_INT)
             .addImm(0); // Flags
     TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
@@ -584,9 +586,10 @@ void R600TargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(lowerFP_TO_UINT(N->getOperand(0), DAG));
       return;
     }
-    // Fall-through. Since we don't care about out of bounds values
-    // we can use FP_TO_SINT for uints too. The DAGLegalizer code for uint
-    // considers some extra cases which are not necessary here.
+    // Since we don't care about out of bounds values we can use FP_TO_SINT for
+    // uints too. The DAGLegalizer code for uint considers some extra cases
+    // which are not necessary here.
+    LLVM_FALLTHROUGH;
   case ISD::FP_TO_SINT: {
     if (N->getValueType(0) == MVT::i1) {
       Results.push_back(lowerFP_TO_SINT(N->getOperand(0), DAG));

@@ -22,7 +22,7 @@ set(CMAKE_MODULE_PATH
 # Find the LLVM sources and simulate LLVM CMake options.
 include(HandleOutOfTreeLLVM)
 
-if (LIBCXX_BUILT_STANDALONE)
+if (LIBCXX_STANDALONE_BUILD)
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
@@ -31,7 +31,7 @@ if (LIBCXX_BUILT_STANDALONE)
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 endif()
 
-if (LIBCXX_BUILT_STANDALONE AND NOT LLVM_FOUND)
+if (LIBCXX_STANDALONE_BUILD AND NOT LLVM_FOUND)
   message(WARNING "UNSUPPORTED LIBCXX CONFIGURATION DETECTED: "
                   "llvm-config not found and LLVM_PATH not defined.\n"
                   "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
@@ -81,7 +81,7 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (NOT LIBCXX_CXX_ABI)
-  if (NOT DEFINED LIBCXX_BUILT_STANDALONE AND
+  if (NOT DEFINED LIBCXX_STANDALONE_BUILD AND
       IS_DIRECTORY "${CMAKE_SOURCE_DIR}/projects/libcxxabi")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${CMAKE_SOURCE_DIR}/projects/libcxxabi/include")
@@ -301,9 +301,11 @@ remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================
-add_compile_flags_if_supported(-std=c++11)
-if (NOT MSVC AND NOT LIBCXX_SUPPORTS_STD_EQ_CXX11_FLAG)
-  message(FATAL_ERROR "C++11 is required but the compiler does not support -std=c++11")
+set(LIBCXX_STANDARD_VER c++11 CACHE INTERNAL "internal option to change build dialect")
+add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
+mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
+if (NOT MSVC AND NOT ${SUPPORTS_DIALECT_NAME})
+  message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
 endif()
 
 # On all systems the system c++ standard library headers need to be excluded.
@@ -365,9 +367,9 @@ define_if(MSVC -D_CRT_SECURE_NO_WARNINGS)
 
 # Sanitizer flags =============================================================
 
-# Configure for sanitizers. If LIBCXX_BUILT_STANDALONE then we have to do
+# Configure for sanitizers. If LIBCXX_STANDALONE_BUILD then we have to do
 # the flag translation ourselves. Othewise LLVM's CMakeList.txt will handle it.
-if (LIBCXX_BUILT_STANDALONE)
+if (LIBCXX_STANDALONE_BUILD)
   set(LLVM_USE_SANITIZER "" CACHE STRING
       "Define the sanitizer used to build the library and tests")
   # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.

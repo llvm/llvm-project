@@ -208,9 +208,9 @@ private:
   };
 
   struct BarrierOp {
-    unsigned Val; // Not the enum since not all values have names.
     const char *Data;
     unsigned Length;
+    unsigned Val; // Not the enum since not all values have names.
   };
 
   struct SysRegOp {
@@ -226,15 +226,15 @@ private:
   };
 
   struct PrefetchOp {
-    unsigned Val;
     const char *Data;
     unsigned Length;
+    unsigned Val;
   };
 
   struct PSBHintOp {
-    unsigned Val;
     const char *Data;
     unsigned Length;
+    unsigned Val;
   };
 
   struct ShiftExtendOp {
@@ -3455,7 +3455,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
     if (RI->isSubRegisterEq(Rn, Rt2))
       return Error(Loc[1], "unpredictable LDP instruction, writeback base "
                            "is also a destination");
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   }
   case AArch64::LDPDi:
   case AArch64::LDPQi:

@@ -56,8 +56,7 @@ def X86for     : SDNode<"X86ISD::FOR",       SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def X86fxor    : SDNode<"X86ISD::FXOR",      SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
-def X86fandn   : SDNode<"X86ISD::FANDN",     SDTFPBinOp,
-                        [SDNPCommutative, SDNPAssociative]>;
+def X86fandn   : SDNode<"X86ISD::FANDN",     SDTFPBinOp>;
 def X86frsqrt  : SDNode<"X86ISD::FRSQRT",    SDTFPUnaryOp>;
 def X86frcp    : SDNode<"X86ISD::FRCP",      SDTFPUnaryOp>;
 def X86frsqrt14s: SDNode<"X86ISD::FRSQRTS",  SDTFPBinOp>;
@@ -84,7 +83,7 @@ def X86psadbw  : SDNode<"X86ISD::PSADBW",
                  SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i64>,
                                       SDTCVecEltisVT<1, i8>,
                                       SDTCisSameSizeAs<0,1>,
-                                      SDTCisSameAs<1,2>]>>;
+                                      SDTCisSameAs<1,2>]>, [SDNPCommutative]>;
 def X86dbpsadbw : SDNode<"X86ISD::DBPSADBW",
                   SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i16>,
                                        SDTCVecEltisVT<1, i8>,
@@ -263,12 +262,12 @@ def SDTX86Testm : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                        SDTCisSameAs<2, 1>, SDTCVecEltisVT<0, i1>,
                                        SDTCisSameNumEltsAs<0, 1>]>;
 
-def X86addus   : SDNode<"X86ISD::ADDUS", SDTIntBinOp>;
+def X86addus   : SDNode<"X86ISD::ADDUS", SDTIntBinOp, [SDNPCommutative]>;
 def X86subus   : SDNode<"X86ISD::SUBUS", SDTIntBinOp>;
-def X86adds    : SDNode<"X86ISD::ADDS", SDTIntBinOp>;
+def X86adds    : SDNode<"X86ISD::ADDS", SDTIntBinOp, [SDNPCommutative]>;
 def X86subs    : SDNode<"X86ISD::SUBS", SDTIntBinOp>;
-def X86mulhrs  : SDNode<"X86ISD::MULHRS" , SDTIntBinOp>;
-def X86avg     : SDNode<"X86ISD::AVG" , SDTIntBinOp>;
+def X86mulhrs  : SDNode<"X86ISD::MULHRS", SDTIntBinOp, [SDNPCommutative]>;
+def X86avg     : SDNode<"X86ISD::AVG" , SDTIntBinOp, [SDNPCommutative]>;
 def X86ptest   : SDNode<"X86ISD::PTEST", SDTX86CmpPTest>;
 def X86testp   : SDNode<"X86ISD::TESTP", SDTX86CmpPTest>;
 def X86kortest : SDNode<"X86ISD::KORTEST", SDTX86CmpPTest>;
@@ -294,12 +293,14 @@ def X86pmuludq : SDNode<"X86ISD::PMULUDQ",
                         SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i64>,
                                              SDTCVecEltisVT<1, i32>,
                                              SDTCisSameSizeAs<0,1>,
-                                             SDTCisSameAs<1,2>]>>;
+                                             SDTCisSameAs<1,2>]>,
+                                             [SDNPCommutative]>;
 def X86pmuldq  : SDNode<"X86ISD::PMULDQ",
                         SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i64>,
                                              SDTCVecEltisVT<1, i32>,
                                              SDTCisSameSizeAs<0,1>,
-                                             SDTCisSameAs<1,2>]>>;
+                                             SDTCisSameAs<1,2>]>,
+                                             [SDNPCommutative]>;
 
 def X86extrqi : SDNode<"X86ISD::EXTRQI",
                   SDTypeProfile<1, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0,1>,
@@ -395,7 +396,7 @@ def X86Unpckl : SDNode<"X86ISD::UNPCKL", SDTShuff2Op>;
 def X86Unpckh : SDNode<"X86ISD::UNPCKH", SDTShuff2Op>;
 
 def X86vpmaddubsw  : SDNode<"X86ISD::VPMADDUBSW" , SDTPack>;
-def X86vpmaddwd    : SDNode<"X86ISD::VPMADDWD"   , SDTPack>;
+def X86vpmaddwd    : SDNode<"X86ISD::VPMADDWD"   , SDTPack, [SDNPCommutative]>;
 
 def X86VPermilpv  : SDNode<"X86ISD::VPERMILPV", SDTShuff2OpM>;
 def X86VPermilpi  : SDNode<"X86ISD::VPERMILPI", SDTShuff2OpI>;

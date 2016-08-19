@@ -19,7 +19,9 @@ bool AddrIsApp(void *p) {
          (addr >= 0x510000000000ULL && addr < 0x600000000000ULL) ||
          (addr >= 0x700000000000ULL && addr < 0x800000000000ULL);
 #elif defined(__mips64)
-  return addr >= 0x00e000000000ULL;
+  return (addr >= 0x0000000000ULL && addr <= 0x0200000000ULL) ||
+         (addr >= 0xa200000000ULL && addr <= 0xc000000000ULL) ||
+         addr >= 0xe200000000ULL;
 #elif defined(__powerpc64__)
   return addr < 0x000100000000ULL || addr >= 0x300000000000ULL;
 #elif defined(__aarch64__)

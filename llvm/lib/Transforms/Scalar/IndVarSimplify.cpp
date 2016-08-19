@@ -816,6 +816,14 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI, ScalarEvolution *SE,
   if (!Cast->getModule()->getDataLayout().isLegalInteger(Width))
     return;
 
+  // Check that `Cast` actually extends the induction variable (we rely on this
+  // later).  This takes care of cases where `Cast` is extending a truncation of
+  // the narrow induction variable, and thus can end up being narrower than the
+  // "narrow" induction variable.
+  uint64_t NarrowIVWidth = SE->getTypeSizeInBits(WI.NarrowIV->getType());
+  if (NarrowIVWidth >= Width)
+    return;
+
   // Cast is either an sext or zext up to this point.
   // We should not widen an indvar if arithmetics on the wider indvar are more
   // expensive than those on the narrower indvar. We check only the cost of ADD
@@ -2050,7 +2058,7 @@ void IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) return;
 
-  Instruction *InsertPt = &*ExitBlock->getFirstInsertionPt();
+  BasicBlock::iterator InsertPt = ExitBlock->getFirstInsertionPt();
   BasicBlock::iterator I(Preheader->getTerminator());
   while (I != Preheader->begin()) {
     --I;
@@ -2119,9 +2127,9 @@ void IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       Done = true;
     }
 
-    ToMove->moveBefore(InsertPt);
+    ToMove->moveBefore(*ExitBlock, InsertPt);
     if (Done) break;
-    InsertPt = ToMove;
+    InsertPt = ToMove->getIterator();
   }
 }
 

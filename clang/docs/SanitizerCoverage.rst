@@ -333,11 +333,11 @@ they will be called by the instrumented code.
 .. code-block:: c++
 
   // Called before a comparison instruction.
-  // SizeAndType is a packed value containing
-  //   - [63:32] the Size of the operands of comparison in bits
-  //   - [31:0] the Type of comparison (one of ICMP_EQ, ... ICMP_SLE)
   // Arg1 and Arg2 are arguments of the comparison.
-  void __sanitizer_cov_trace_cmp(uint64_t SizeAndType, uint64_t Arg1, uint64_t Arg2);
+  void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2);
+  void __sanitizer_cov_trace_cmp2(uint16_t Arg1, uint16_t Arg2);
+  void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2);
+  void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2);
 
   // Called before a switch statement.
   // Val is the switch operand.

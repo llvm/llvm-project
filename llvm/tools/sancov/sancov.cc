@@ -27,6 +27,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -322,7 +323,49 @@ static std::vector<AddrInfo> getAddrInfo(const std::string &ObjectFile,
 
 static bool isCoveragePointSymbol(StringRef Name) {
   return Name == "__sanitizer_cov" || Name == "__sanitizer_cov_with_check" ||
-         Name == "__sanitizer_cov_trace_func_enter";
+         Name == "__sanitizer_cov_trace_func_enter" ||
+         // Mac has '___' prefix
+         Name == "___sanitizer_cov" || Name == "___sanitizer_cov_with_check" ||
+         Name == "___sanitizer_cov_trace_func_enter";
+}
+
+// Locate __sanitizer_cov* function addresses inside the stubs table on MachO.
+static void findMachOIndirectCovFunctions(const object::MachOObjectFile &O,
+                                          std::set<uint64_t> *Result) {
+  MachO::dysymtab_command Dysymtab = O.getDysymtabLoadCommand();
+  MachO::symtab_command Symtab = O.getSymtabLoadCommand();
+
+  for (const auto &Load : O.load_commands()) {
+    if (Load.C.cmd == MachO::LC_SEGMENT_64) {
+      MachO::segment_command_64 Seg = O.getSegment64LoadCommand(Load);
+      for (unsigned J = 0; J < Seg.nsects; ++J) {
+        MachO::section_64 Sec = O.getSection64(Load, J);
+
+        uint32_t SectionType = Sec.flags & MachO::SECTION_TYPE;
+        if (SectionType == MachO::S_SYMBOL_STUBS) {
+          uint32_t Stride = Sec.reserved2;
+          uint32_t Cnt = Sec.size / Stride;
+          uint32_t N = Sec.reserved1;
+          for (uint32_t J = 0; J < Cnt && N + J < Dysymtab.nindirectsyms; J++) {
+            uint32_t IndirectSymbol =
+                O.getIndirectSymbolTableEntry(Dysymtab, N + J);
+            uint64_t Addr = Sec.addr + J * Stride;
+            if (IndirectSymbol < Symtab.nsyms) {
+              object::SymbolRef Symbol = *(O.getSymbolByIndex(IndirectSymbol));
+              Expected<StringRef> Name = Symbol.getName();
+              FailIfError(Name);
+              if (isCoveragePointSymbol(Name.get())) {
+                Result->insert(Addr);
+              }
+            }
+          }
+        }
+      }
+    }
+    if (Load.C.cmd == MachO::LC_SEGMENT) {
+      errs() << "ERROR: 32 bit MachO binaries not supported\n";
+    }
+  }
 }
 
 // Locate __sanitizer_cov* function addresses that are used for coverage
@@ -333,15 +376,16 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
 
   for (const object::SymbolRef &Symbol : O.symbols()) {
     Expected<uint64_t> AddressOrErr = Symbol.getAddress();
-    FailIfError(errorToErrorCode(AddressOrErr.takeError()));
+    FailIfError(AddressOrErr);
+    uint64_t Address = AddressOrErr.get();
 
     Expected<StringRef> NameOrErr = Symbol.getName();
-    FailIfError(errorToErrorCode(NameOrErr.takeError()));
+    FailIfError(NameOrErr);
     StringRef Name = NameOrErr.get();
 
-    if (isCoveragePointSymbol(Name)) {
-      if (!(Symbol.getFlags() & object::BasicSymbolRef::SF_Undefined))
-        Result.insert(AddressOrErr.get());
+    if (!(Symbol.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
+        isCoveragePointSymbol(Name)) {
+      Result.insert(Address);
     }
   }
 
@@ -359,6 +403,10 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
       if (isCoveragePointSymbol(Name))
         Result.insert(CO->getImageBase() + RVA);
     }
+  }
+
+  if (const auto *MO = dyn_cast<object::MachOObjectFile>(&O)) {
+    findMachOIndirectCovFunctions(*MO, &Result);
   }
 
   return Result;
@@ -446,7 +494,7 @@ visitObjectFiles(const object::Archive &A,
   Error Err;
   for (auto &C : A.children(Err)) {
     Expected<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
-    FailIfError(errorToErrorCode(ChildOrErr.takeError()));
+    FailIfError(ChildOrErr);
     if (auto *O = dyn_cast<object::ObjectFile>(&*ChildOrErr.get()))
       Fn(*O);
     else
@@ -461,7 +509,7 @@ visitObjectFiles(const std::string &FileName,
   Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
       object::createBinary(FileName);
   if (!BinaryOrErr)
-    FailIfError(errorToErrorCode(BinaryOrErr.takeError()));
+    FailIfError(BinaryOrErr);
 
   object::Binary &Binary = *BinaryOrErr.get().getBinary();
   if (object::Archive *A = dyn_cast<object::Archive>(&Binary))

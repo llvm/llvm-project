@@ -1314,7 +1314,34 @@ Platform::DebugProcess (ProcessLaunchInfo &launch_info,
     // group, since then we can handle ^C interrupts ourselves w/o having to worry
     // about the target getting them as well.
     launch_info.SetLaunchInSeparateProcessGroup(true);
-    
+
+    // Allow any StructuredData process-bound plugins to adjust the launch info
+    // if needed
+    size_t i = 0;
+    bool iteration_complete = false;
+    // Note iteration can't simply go until a nullptr callback is returned, as
+    // it is valid for a plugin to not supply a filter.
+    auto get_filter_func =
+        PluginManager::GetStructuredDataFilterCallbackAtIndex;
+    for (auto filter_callback = get_filter_func(i, iteration_complete);
+         !iteration_complete;
+         filter_callback = get_filter_func(++i, iteration_complete))
+    {
+        if (filter_callback)
+        {
+            // Give this ProcessLaunchInfo filter a chance to adjust the launch
+            // info.
+            error = (*filter_callback)(launch_info, target);
+            if (!error.Success())
+            {
+                if (log)
+                    log->Printf("Platform::%s() StructuredDataPlugin launch "
+                                "filter failed.", __FUNCTION__);
+                return process_sp;
+            }
+        }
+    }
+
     error = LaunchProcess (launch_info);
     if (error.Success())
     {

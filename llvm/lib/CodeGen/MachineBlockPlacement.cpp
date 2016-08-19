@@ -790,10 +790,10 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
   // worklist of already placed entries.
   // FIXME: If this shows up on profiles, it could be folded (at the cost of
   // some code complexity) into the loop below.
-  WorkList.erase(std::remove_if(WorkList.begin(), WorkList.end(),
-                                [&](MachineBasicBlock *BB) {
-                                  return BlockToChain.lookup(BB) == &Chain;
-                                }),
+  WorkList.erase(remove_if(WorkList,
+                           [&](MachineBasicBlock *BB) {
+                             return BlockToChain.lookup(BB) == &Chain;
+                           }),
                  WorkList.end());
 
   if (WorkList.empty())
@@ -966,6 +966,16 @@ void MachineBlockPlacement::buildChain(
 MachineBasicBlock *
 MachineBlockPlacement::findBestLoopTop(MachineLoop &L,
                                        const BlockFilterSet &LoopBlockSet) {
+  // Placing the latch block before the header may introduce an extra branch
+  // that skips this block the first time the loop is executed, which we want
+  // to avoid when optimising for size.
+  // FIXME: in theory there is a case that does not introduce a new branch,
+  // i.e. when the layout predecessor does not fallthrough to the loop header.
+  // In practice this never happens though: there always seems to be a preheader
+  // that can fallthrough and that is also placed before the header.
+  if (F->getFunction()->optForSize())
+    return L.getHeader();
+
   // Check that the header hasn't been fused with a preheader block due to
   // crazy branches. If it has, we need to start with the header at the top to
   // prevent pulling the preheader into the loop body.
@@ -1737,8 +1747,10 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                          BranchFoldPlacement;
   // No tail merging opportunities if the block number is less than four.
   if (MF.size() > 3 && EnableTailMerge) {
+    // Default to the standard tail-merge-size option.
+    unsigned TailMergeSize = 0;
     BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
-                    *MBPI);
+                    *MBPI, TailMergeSize);
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(),
                             getAnalysisIfAvailable<MachineModuleInfo>(), MLI,

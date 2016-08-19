@@ -42,12 +42,22 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
       setAction(BinOp, Ty, WidenScalar);
   }
 
+  for (auto BinOp : {G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV})
+    for (auto Ty : {s32, s64})
+      setAction(BinOp, Ty, Legal);
+
+  for (auto BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+    for (auto Ty : {s32, s64})
+      setAction(BinOp, Ty, Legal);
+
   for (auto MemOp : {G_LOAD, G_STORE})
     for (auto Ty : {s32, s64})
       setAction(MemOp, Ty, Legal);
 
 
   setAction(G_BR, LLT::unsized(), Legal);
+
+  setAction(G_FRAME_INDEX, LLT::pointer(0), Legal);
 
   computeTables();
 }

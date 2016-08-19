@@ -1587,8 +1587,8 @@ let isTerminator = 1, hasSideEffects = 0 in {
 
   defm J2_jumpr : JMPR_base<"JMPr">, PredNewRel;
 
-  let isReturn = 1, isCodeGenOnly = 1 in
-  defm JMPret : JMPR_base<"JMPret">, PredNewRel;
+  let isReturn = 1, isPseudo = 1, isCodeGenOnly = 1 in
+  defm PS_jmpret : JMPR_base<"JMPret">, PredNewRel;
 }
 
 let validSubTargets  = HasV60SubT in
@@ -1613,7 +1613,7 @@ defm J2_jump  : JMPpt_base<"JMP">;
 def: Pat<(br bb:$dst),
          (J2_jump brtarget:$dst)>;
 def: Pat<(retflag),
-         (JMPret (i32 R31))>;
+         (PS_jmpret (i32 R31))>;
 def: Pat<(brcond (i1 PredRegs:$src1), bb:$offset),
          (J2_jumpt PredRegs:$src1, bb:$offset)>;
 
@@ -4517,14 +4517,14 @@ def Y2_barrier : SYSInst<(outs), (ins),
 //
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1,
     isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0 in {
-  def TFR_FI  : ALU32_ri<(outs IntRegs:$Rd),
-                         (ins IntRegs:$fi, s32Imm:$off), "">;
-  def TFR_FIA : ALU32_ri<(outs IntRegs:$Rd),
-                         (ins IntRegs:$Rs, IntRegs:$fi, s32Imm:$off), "">;
+  def PS_fi  : ALU32_ri<(outs IntRegs:$Rd),
+                        (ins IntRegs:$fi, s32Imm:$off), "">;
+  def PS_fia : ALU32_ri<(outs IntRegs:$Rd),
+                        (ins IntRegs:$Rs, IntRegs:$fi, s32Imm:$off), "">;
 }
 
-def: Pat<(i32 (orisadd (i32 AddrFI:$Rs), s32ImmPred:$off)),
-         (i32 (TFR_FI (i32 AddrFI:$Rs), s32ImmPred:$off))>;
+def: Pat<(orisadd (i32 AddrFI:$Rs), s32ImmPred:$off),
+         (PS_fi (i32 AddrFI:$Rs), s32ImmPred:$off)>;
 
 //===----------------------------------------------------------------------===//
 // CRUSER - Type.
@@ -4778,13 +4778,13 @@ def: Pat<(HexagonCONST32 bbl:$label),           (A2_tfrsi s16Ext:$label)>;
 
 let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
     isCodeGenOnly = 1 in
-def TFR_PdTrue : SInst<(outs PredRegs:$dst), (ins), "",
-                 [(set (i1 PredRegs:$dst), 1)]>;
+def PS_true : SInst<(outs PredRegs:$dst), (ins), "",
+              [(set (i1 PredRegs:$dst), 1)]>;
 
 let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
     isCodeGenOnly = 1 in
-def TFR_PdFalse : SInst<(outs PredRegs:$dst), (ins), "",
-                  [(set (i1 PredRegs:$dst), 0)]>;
+def PS_false : SInst<(outs PredRegs:$dst), (ins), "",
+               [(set (i1 PredRegs:$dst), 0)]>;
 
 // Pseudo instructions.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
@@ -4821,20 +4821,20 @@ def J2_callr : JUMPR_MISC_CALLR<0, 1>;
 // Indirect tail-call.
 let isPseudo = 1, isCall = 1, isReturn = 1, isBarrier = 1, isPredicable = 0,
     isTerminator = 1, isCodeGenOnly = 1 in
-def TCRETURNr : T_JMPr;
+def PS_tailcall_r : T_JMPr;
 
 // Direct tail-calls.
 let isPseudo = 1, isCall = 1, isReturn = 1, isBarrier = 1, isPredicable = 0,
     isTerminator = 1, isCodeGenOnly = 1 in
-def TCRETURNi : JInst<(outs), (ins calltarget:$dst), "", []>;
+def PS_tailcall_i : JInst<(outs), (ins calltarget:$dst), "", []>;
 
 //Tail calls.
 def: Pat<(HexagonTCRet tglobaladdr:$dst),
-         (TCRETURNi tglobaladdr:$dst)>;
+         (PS_tailcall_i tglobaladdr:$dst)>;
 def: Pat<(HexagonTCRet texternalsym:$dst),
-         (TCRETURNi texternalsym:$dst)>;
-def: Pat<(HexagonTCRet (i32 IntRegs:$dst)),
-         (TCRETURNr IntRegs:$dst)>;
+         (PS_tailcall_i texternalsym:$dst)>;
+def: Pat<(HexagonTCRet I32:$dst),
+         (PS_tailcall_r I32:$dst)>;
 
 // Map from r0 = and(r1, 65535) to r0 = zxth(r1)
 def: Pat<(and (i32 IntRegs:$src1), 65535),
@@ -5073,13 +5073,13 @@ def HexagonALLOCA : SDNode<"HexagonISD::ALLOCA", SDTHexagonALLOCA,
 // in MachineFunctionInfo.
 let Defs = [R29], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 1,
     usesCustomInserter = 1 in
-def ALLOCA: ALU32Inst<(outs IntRegs:$Rd),
+def PS_alloca: ALU32Inst<(outs IntRegs:$Rd),
       (ins IntRegs:$Rs, u32Imm:$A), "",
       [(set (i32 IntRegs:$Rd),
             (HexagonALLOCA (i32 IntRegs:$Rs), (i32 imm:$A)))]>;
 
 let isCodeGenOnly = 1, isPseudo = 1, Uses = [R30], hasSideEffects = 0 in
-def ALIGNA : ALU32Inst<(outs IntRegs:$Rd), (ins u32Imm:$A), "", []>;
+def PS_aligna : ALU32Inst<(outs IntRegs:$Rd), (ins u32Imm:$A), "", []>;
 
 def HexagonJT:     SDNode<"HexagonISD::JT", SDTIntUnaryOp>;
 def HexagonCP:     SDNode<"HexagonISD::CP", SDTIntUnaryOp>;

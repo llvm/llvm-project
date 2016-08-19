@@ -39,6 +39,53 @@ AArch64InstructionSelector::AArch64InstructionSelector(
     : InstructionSelector(), TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI) {}
 
+/// Check whether \p I is a currently unsupported binary operation:
+/// - it has an unsized type
+/// - an operand is not a vreg
+/// - all operands are not in the same bank
+/// These are checks that should someday live in the verifier, but right now,
+/// these are mostly limitations of the aarch64 selector.
+static bool unsupportedBinOp(const MachineInstr &I,
+                             const AArch64RegisterBankInfo &RBI,
+                             const MachineRegisterInfo &MRI,
+                             const AArch64RegisterInfo &TRI) {
+  if (!I.getType().isSized()) {
+    DEBUG(dbgs() << "Generic binop should be sized\n");
+    return true;
+  }
+
+  const RegisterBank *PrevOpBank = nullptr;
+  for (auto &MO : I.operands()) {
+    // FIXME: Support non-register operands.
+    if (!MO.isReg()) {
+      DEBUG(dbgs() << "Generic inst non-reg operands are unsupported\n");
+      return true;
+    }
+
+    // FIXME: Can generic operations have physical registers operands? If
+    // so, this will need to be taught about that, and we'll need to get the
+    // bank out of the minimal class for the register.
+    // Either way, this needs to be documented (and possibly verified).
+    if (!TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
+      DEBUG(dbgs() << "Generic inst has physical register operand\n");
+      return true;
+    }
+
+    const RegisterBank *OpBank = RBI.getRegBank(MO.getReg(), MRI, TRI);
+    if (!OpBank) {
+      DEBUG(dbgs() << "Generic register has no bank or class\n");
+      return true;
+    }
+
+    if (PrevOpBank && OpBank != PrevOpBank) {
+      DEBUG(dbgs() << "Generic inst operands have different banks\n");
+      return true;
+    }
+    PrevOpBank = OpBank;
+  }
+  return false;
+}
+
 /// Select the AArch64 opcode for the basic binary operation \p GenericOpc
 /// (such as G_OR or G_ADD), appropriate for the register bank \p RegBankID
 /// and of size \p OpSize.
@@ -60,6 +107,16 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return AArch64::ADDWrr;
       case TargetOpcode::G_SUB:
         return AArch64::SUBWrr;
+      case TargetOpcode::G_SHL:
+        return AArch64::LSLVWr;
+      case TargetOpcode::G_LSHR:
+        return AArch64::LSRVWr;
+      case TargetOpcode::G_ASHR:
+        return AArch64::ASRVWr;
+      case TargetOpcode::G_SDIV:
+        return AArch64::SDIVWr;
+      case TargetOpcode::G_UDIV:
+        return AArch64::UDIVWr;
       default:
         return GenericOpc;
       }
@@ -75,6 +132,45 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return AArch64::ADDXrr;
       case TargetOpcode::G_SUB:
         return AArch64::SUBXrr;
+      case TargetOpcode::G_SHL:
+        return AArch64::LSLVXr;
+      case TargetOpcode::G_LSHR:
+        return AArch64::LSRVXr;
+      case TargetOpcode::G_ASHR:
+        return AArch64::ASRVXr;
+      case TargetOpcode::G_SDIV:
+        return AArch64::SDIVXr;
+      case TargetOpcode::G_UDIV:
+        return AArch64::UDIVXr;
+      default:
+        return GenericOpc;
+      }
+    }
+  case AArch64::FPRRegBankID:
+    switch (OpSize) {
+    case 32:
+      switch (GenericOpc) {
+      case TargetOpcode::G_FADD:
+        return AArch64::FADDSrr;
+      case TargetOpcode::G_FSUB:
+        return AArch64::FSUBSrr;
+      case TargetOpcode::G_FMUL:
+        return AArch64::FMULSrr;
+      case TargetOpcode::G_FDIV:
+        return AArch64::FDIVSrr;
+      default:
+        return GenericOpc;
+      }
+    case 64:
+      switch (GenericOpc) {
+      case TargetOpcode::G_FADD:
+        return AArch64::FADDDrr;
+      case TargetOpcode::G_FSUB:
+        return AArch64::FSUBDrr;
+      case TargetOpcode::G_FMUL:
+        return AArch64::FMULDrr;
+      case TargetOpcode::G_FDIV:
+        return AArch64::FDIVDrr;
       default:
         return GenericOpc;
       }
@@ -123,7 +219,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return false;
   }
 
-  LLT Ty = I.getType();
+  const LLT Ty = I.getType();
   assert(Ty.isValid() && "Generic instruction doesn't have a type");
 
   switch (I.getOpcode()) {
@@ -131,6 +227,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(AArch64::B));
     I.removeTypes();
     return true;
+  }
+
+  case TargetOpcode::G_FRAME_INDEX: {
+    // allocas and G_FRAME_INDEX are only supported in addrspace(0).
+    if (I.getType() != LLT::pointer(0)) {
+      DEBUG(dbgs() << "G_FRAME_INDEX pointer has type: " << I.getType()
+                   << ", expected: " << LLT::pointer(0) << '\n');
+      return false;
+    }
+
+    I.setDesc(TII.get(AArch64::ADDXri));
+    I.removeTypes();
+
+    // MOs for a #0 shifted immediate.
+    I.addOperand(MachineOperand::CreateImm(0));
+    I.addOperand(MachineOperand::CreateImm(0));
+
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
   case TargetOpcode::G_LOAD:
@@ -169,53 +283,63 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
-  case TargetOpcode::G_OR:
-  case TargetOpcode::G_XOR:
-  case TargetOpcode::G_AND:
-  case TargetOpcode::G_ADD:
-  case TargetOpcode::G_SUB: {
-    DEBUG(dbgs() << "AArch64: Selecting: binop\n");
+  case TargetOpcode::G_MUL: {
+    // Reject the various things we don't support yet.
+    if (unsupportedBinOp(I, RBI, MRI, TRI))
+      return false;
 
-    if (!Ty.isSized()) {
-      DEBUG(dbgs() << "Generic binop should be sized\n");
+    const unsigned DefReg = I.getOperand(0).getReg();
+    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+    if (RB.getID() != AArch64::GPRRegBankID) {
+      DEBUG(dbgs() << "G_MUL on bank: " << RB << ", expected: GPR\n");
       return false;
     }
 
-    // The size (in bits) of the operation, or 0 for the label type.
-    const unsigned OpSize = Ty.getSizeInBits();
-
-    // Reject the various things we don't support yet.
-    {
-      const RegisterBank *PrevOpBank = nullptr;
-      for (auto &MO : I.operands()) {
-        // FIXME: Support non-register operands.
-        if (!MO.isReg()) {
-          DEBUG(dbgs() << "Generic inst non-reg operands are unsupported\n");
-          return false;
-        }
-
-        // FIXME: Can generic operations have physical registers operands? If
-        // so, this will need to be taught about that, and we'll need to get the
-        // bank out of the minimal class for the register.
-        // Either way, this needs to be documented (and possibly verified).
-        if (!TargetRegisterInfo::isVirtualRegister(MO.getReg())) {
-          DEBUG(dbgs() << "Generic inst has physical register operand\n");
-          return false;
-        }
-
-        const RegisterBank *OpBank = RBI.getRegBank(MO.getReg(), MRI, TRI);
-        if (!OpBank) {
-          DEBUG(dbgs() << "Generic register has no bank or class\n");
-          return false;
-        }
-
-        if (PrevOpBank && OpBank != PrevOpBank) {
-          DEBUG(dbgs() << "Generic inst operands have different banks\n");
-          return false;
-        }
-        PrevOpBank = OpBank;
-      }
+    unsigned ZeroReg;
+    unsigned NewOpc;
+    if (Ty == LLT::scalar(32)) {
+      NewOpc = AArch64::MADDWrrr;
+      ZeroReg = AArch64::WZR;
+    } else if (Ty == LLT::scalar(64)) {
+      NewOpc = AArch64::MADDXrrr;
+      ZeroReg = AArch64::XZR;
+    } else {
+      DEBUG(dbgs() << "G_MUL has type: " << Ty << ", expected: "
+                   << LLT::scalar(32) << " or " << LLT::scalar(64) << '\n');
+      return false;
     }
+
+    I.setDesc(TII.get(NewOpc));
+    I.removeTypes();
+
+    I.addOperand(MachineOperand::CreateReg(ZeroReg, /*isDef=*/false));
+
+    // Now that we selected an opcode, we need to constrain the register
+    // operands to use appropriate classes.
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR:
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB: {
+    // Reject the various things we don't support yet.
+    if (unsupportedBinOp(I, RBI, MRI, TRI))
+      return false;
+
+    const unsigned OpSize = Ty.getSizeInBits();
 
     const unsigned DefReg = I.getOperand(0).getReg();
     const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);

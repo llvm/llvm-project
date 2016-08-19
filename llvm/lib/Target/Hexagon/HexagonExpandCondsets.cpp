@@ -398,8 +398,7 @@ void HexagonExpandCondsets::removeImpDefSegments(LiveRange &Range) {
     return S.start.isRegister() &&
            LocalImpDefs.count(LIS->getInstructionFromIndex(S.start));
   };
-  Range.segments.erase(std::remove_if(Range.begin(), Range.end(), StartImpDef),
-                       Range.end());
+  Range.segments.erase(remove_if(Range, StartImpDef), Range.end());
 }
 
 void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
@@ -1141,6 +1140,8 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
 
   LiveInterval &L1 = LIS->getInterval(R1.Reg);
   LiveInterval &L2 = LIS->getInterval(R2.Reg);
+  if (L2.empty())
+    return false;
   bool Overlap = L1.overlaps(L2);
 
   DEBUG(dbgs() << "compatible registers: ("

@@ -356,7 +356,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         GPRCS2Size += 4;
         break;
       }
-      // fallthrough
+      LLVM_FALLTHROUGH;
     case ARM::R0:
     case ARM::R1:
     case ARM::R2:
@@ -413,7 +413,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // .cfi_offset operations will reflect that.
   if (DPRGapSize) {
     assert(DPRGapSize == 4 && "unexpected alignment requirements for DPRs");
-    if (tryFoldSPUpdateIntoPushPop(STI, MF, &*LastPush, DPRGapSize))
+    if (LastPush != MBB.end() &&
+        tryFoldSPUpdateIntoPushPop(STI, MF, &*LastPush, DPRGapSize))
       DefCFAOffsetCandidates.addExtraBytes(LastPush, DPRGapSize);
     else {
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, -DPRGapSize,
@@ -558,7 +559,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R12:
         if (STI.splitFramePushPop())
           break;
-        // fallthrough
+        LLVM_FALLTHROUGH;
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -1557,7 +1558,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       switch (Reg) {
       case ARM::LR:
         LRSpilled = true;
-        // Fallthrough
+        LLVM_FALLTHROUGH;
       case ARM::R0: case ARM::R1:
       case ARM::R2: case ARM::R3:
       case ARM::R4: case ARM::R5:

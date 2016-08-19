@@ -35,6 +35,38 @@
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN2 %s
 # HIDDEN2: 0000000000000000         *ABS*    00000000 somesym
 
+# Hidden symbol assignment.
+# RUN: echo "SECTIONS { HIDDEN(newsym = 1);}" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN3 %s
+# HIDDEN3: 0000000000000001         *ABS*    00000000 .hidden newsym
+
+# The symbol is not referenced. Don't provide it.
+# RUN: echo "PROVIDE(newsym = 1);" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=PROVIDE4 %s
+# PROVIDE4-NOT: 0000000000000001         *ABS*    00000000 newsym
+
+# The symbol is not referenced. Don't provide it.
+# RUN: echo "PROVIDE_HIDDEN(newsym = 1);" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN4 %s
+# HIDDEN4-NOT: 0000000000000001         *ABS*    00000000 .hidden newsym
+
+# Provide existing symbol. The value should be 0, even though we
+# have value of 1 in PROVIDE()
+# RUN: echo "PROVIDE(somesym = 1);" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=PROVIDE5 %s
+# PROVIDE5: 0000000000000000         *ABS*    00000000 somesym
+
+# Provide existing symbol. The value should be 0, even though we
+# have value of 1 in PROVIDE_HIDDEN(). Visibility should not change
+# RUN: echo "PROVIDE_HIDDEN(somesym = 1);" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN5 %s
+# HIDDEN5: 0000000000000000         *ABS*    00000000 somesym
+
 .global _start
 _start:
  nop

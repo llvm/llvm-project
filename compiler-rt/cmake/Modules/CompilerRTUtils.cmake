@@ -76,6 +76,18 @@ macro(list_intersect output input1 input2)
   endforeach()
 endmacro()
 
+function(list_replace input_list old new)
+  set(replaced_list)
+  foreach(item ${${input_list}})
+    if(${item} STREQUAL ${old})
+      list(APPEND replaced_list ${new})
+    else()
+      list(APPEND replaced_list ${item})
+    endif()
+  endforeach()
+  set(${input_list} "${replaced_list}" PARENT_SCOPE)
+endfunction()
+
 # Takes ${ARGN} and puts only supported architectures in @out_var list.
 function(filter_available_targets out_var)
   set(archs ${${out_var}})

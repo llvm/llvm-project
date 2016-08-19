@@ -152,13 +152,11 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
   // CBZ/CBNZ. Conservatively mark as much as we can live.
   CompBr->clearRegisterKills(SmallestDef, TRI);
 
-  if (std::none_of(TargetRegs.begin(), TargetRegs.end(),
-                   [&](unsigned Reg) { return MBB->isLiveIn(Reg); }))
+  if (none_of(TargetRegs, [&](unsigned Reg) { return MBB->isLiveIn(Reg); }))
     MBB->addLiveIn(TargetReg);
 
   // Clear any kills of TargetReg between CompBr and the last removed COPY.
-  for (MachineInstr &MMI :
-       make_range(MBB->begin()->getIterator(), LastChange->getIterator()))
+  for (MachineInstr &MMI : make_range(MBB->begin(), LastChange))
     MMI.clearRegisterKills(SmallestDef, TRI);
 
   return true;

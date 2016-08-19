@@ -93,13 +93,19 @@ unsigned isl_set_dim(__isl_keep isl_set *set, enum isl_dim_type type)
 unsigned isl_basic_map_offset(struct isl_basic_map *bmap,
 					enum isl_dim_type type)
 {
-	isl_space *dim = bmap->dim;
+	isl_space *space;
+
+	if (!bmap)
+		return 0;
+
+	space = bmap->dim;
 	switch (type) {
 	case isl_dim_cst:	return 0;
 	case isl_dim_param:	return 1;
-	case isl_dim_in:	return 1 + dim->nparam;
-	case isl_dim_out:	return 1 + dim->nparam + dim->n_in;
-	case isl_dim_div:	return 1 + dim->nparam + dim->n_in + dim->n_out;
+	case isl_dim_in:	return 1 + space->nparam;
+	case isl_dim_out:	return 1 + space->nparam + space->n_in;
+	case isl_dim_div:	return 1 + space->nparam + space->n_in +
+								space->n_out;
 	default:		return 0;
 	}
 }

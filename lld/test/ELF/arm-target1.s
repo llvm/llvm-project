@@ -23,4 +23,4 @@
 // RELATIVE: SYMBOL TABLE:
 // RELATIVE: 00001004         .text           00000000 patatino
 
-// ABS: can't create dynamic relocation R_ARM_TARGET1 against readonly segment
+// ABS: can't create dynamic relocation R_ARM_TARGET1 against symbol patatino

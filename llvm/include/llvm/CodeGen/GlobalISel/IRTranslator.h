@@ -132,6 +132,9 @@ private:
   /// Translate a phi instruction.
   bool translatePHI(const User &U);
 
+  /// Translate an integer compare instruction (or constant).
+  bool translateICmp(const User &U);
+
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
@@ -168,6 +171,20 @@ private:
   bool translateXor(const User &U) {
     return translateBinaryOp(TargetOpcode::G_XOR, U);
   }
+
+  bool translateUDiv(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_UDIV, U);
+  }
+  bool translateSDiv(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_SDIV, U);
+  }
+  bool translateURem(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_UREM, U);
+  }
+  bool translateSRem(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_SREM, U);
+  }
+
   bool translateAlloca(const User &U) {
     return translateStaticAlloca(cast<AllocaInst>(U));
   }
@@ -200,6 +217,23 @@ private:
     return translateBinaryOp(TargetOpcode::G_ASHR, U);
   }
 
+  bool translateFAdd(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_FADD, U);
+  }
+  bool translateFSub(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_FSUB, U);
+  }
+  bool translateFMul(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_FMUL, U);
+  }
+  bool translateFDiv(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_FDIV, U);
+  }
+  bool translateFRem(const User &U) {
+    return translateBinaryOp(TargetOpcode::G_FREM, U);
+  }
+
+
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
   bool translateSwitch(const User &U) { return false; }
@@ -209,15 +243,6 @@ private:
   bool translateCleanupRet(const User &U) { return false; }
   bool translateCatchRet(const User &U) { return false; }
   bool translateCatchSwitch(const User &U) { return false; }
-  bool translateFAdd(const User &U) { return false; }
-  bool translateFSub(const User &U) { return false; }
-  bool translateFMul(const User &U) { return false; }
-  bool translateUDiv(const User &U) { return false; }
-  bool translateSDiv(const User &U) { return false; }
-  bool translateFDiv(const User &U) { return false; }
-  bool translateURem(const User &U) { return false; }
-  bool translateSRem(const User &U) { return false; }
-  bool translateFRem(const User &U) { return false; }
   bool translateGetElementPtr(const User &U) { return false; }
   bool translateFence(const User &U) { return false; }
   bool translateAtomicCmpXchg(const User &U) { return false; }
@@ -231,7 +256,6 @@ private:
   bool translateAddrSpaceCast(const User &U) { return false; }
   bool translateCleanupPad(const User &U) { return false; }
   bool translateCatchPad(const User &U) { return false; }
-  bool translateICmp(const User &U) { return false; }
   bool translateFCmp(const User &U) { return false; }
   bool translateSelect(const User &U) { return false; }
   bool translateUserOp1(const User &U) { return false; }

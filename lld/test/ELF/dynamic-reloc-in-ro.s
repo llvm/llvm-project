@@ -5,4 +5,4 @@
 foo:
 .quad foo
 
-// CHECK: can't create dynamic relocation R_X86_64_64 against readonly segment
+// CHECK: can't create dynamic relocation R_X86_64_64 against symbol

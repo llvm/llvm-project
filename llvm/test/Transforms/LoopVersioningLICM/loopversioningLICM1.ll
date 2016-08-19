@@ -12,11 +12,11 @@
 ; CHECK-NEXT: %j.113 = phi i32 [ %j.016, %for.body3.ph ], [ %inc, %for.body3 ]
 ; CHECK-NEXT: %idxprom = zext i32 %j.113 to i64
 ; CHECK-NEXT: %arrayidx = getelementptr inbounds i32, i32* %var1, i64 %idxprom
-; CHECK-NEXT: store i32 %add, i32* %arrayidx, align 4, !alias.scope !6, !noalias !6
+; CHECK-NEXT: store i32 %add, i32* %arrayidx, align 4, !alias.scope !2, !noalias !2
 ; CHECK-NEXT: %add8 = add nsw i32 %add86, %add
 ; CHECK-NEXT: %inc = add nuw i32 %j.113, 1
 ; CHECK-NEXT: %cmp2 = icmp ult i32 %inc, %itr
-; CHECK-NEXT: br i1 %cmp2, label %for.body3, label %for.inc11.loopexit.loopexit5, !llvm.loop !7
+; CHECK-NEXT: br i1 %cmp2, label %for.body3, label %for.inc11.loopexit.loopexit5, !llvm.loop !5
 define i32 @foo(i32* nocapture %var1, i32* nocapture readnone %var2, i32* nocapture %var3, i32 %itr) #0 {
 entry:
   %cmp14 = icmp eq i32 %itr, 0

@@ -34,6 +34,7 @@ set(ADTSources
   PriorityWorklistTest.cpp
   RangeAdapterTest.cpp
   SCCIteratorTest.cpp
+  STLExtrasTest.cpp
   ScopeExitTest.cpp
   SequenceTest.cpp
   SetVectorTest.cpp

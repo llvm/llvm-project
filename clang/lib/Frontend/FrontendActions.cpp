@@ -391,7 +391,8 @@ GenerateModuleAction::ComputeASTConsumerArguments(CompilerInstance &CI,
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     CI.getFrontendOpts().OutputFile =
         HS.getModuleFileName(CI.getLangOpts().CurrentModule,
-                             ModuleMapForUniquing->getName());
+                             ModuleMapForUniquing->getName(),
+                             /*UsePrebuiltPath=*/false);
   }
 
   // We use createOutputFile here because this is exposed via libclang, and we
@@ -596,6 +597,13 @@ namespace {
   };
 }
 
+bool DumpModuleInfoAction::BeginInvocation(CompilerInstance &CI) {
+  // The Object file reader also supports raw ast files and there is no point in
+  // being strict about the module file format in -module-file-info mode.
+  CI.getHeaderSearchOpts().ModuleFormat = "obj";
+  return true;
+}
+
 void DumpModuleInfoAction::ExecuteAction() {
   // Set up the output file.
   std::unique_ptr<llvm::raw_fd_ostream> OutFile;
@@ -608,13 +616,19 @@ void DumpModuleInfoAction::ExecuteAction() {
   llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
+  auto &FileMgr = getCompilerInstance().getFileManager();
+  auto Buffer = FileMgr.getBufferForFile(getCurrentFile());
+  StringRef Magic = (*Buffer)->getMemBufferRef().getBuffer();
+  bool IsRaw = (Magic.size() >= 4 && Magic[0] == 'C' && Magic[1] == 'P' &&
+                Magic[2] == 'C' && Magic[3] == 'H');
+  Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
+
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
   DumpModuleInfoListener Listener(Out);
   HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
   ASTReader::readASTFileControlBlock(
-      getCurrentFile(), getCompilerInstance().getFileManager(),
-      getCompilerInstance().getPCHContainerReader(),
+      getCurrentFile(), FileMgr, getCompilerInstance().getPCHContainerReader(),
       /*FindModuleFileExtensions=*/true, Listener,
       HSOpts.ModulesValidateDiagnosticOptions);
 }

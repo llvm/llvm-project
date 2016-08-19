@@ -15,6 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -345,6 +346,7 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 }
 
 void Vectorizer::reorder(Instruction *I) {
+  OrderedBasicBlock OBB(I->getParent());
   SmallPtrSet<Instruction *, 16> InstructionsToMove;
   SmallVector<Instruction *, 16> Worklist;
 
@@ -357,11 +359,14 @@ void Vectorizer::reorder(Instruction *I) {
       if (!IM || IM->getOpcode() == Instruction::PHI)
         continue;
 
-      if (!DT.dominates(IM, I)) {
+      // If IM is in another BB, no need to move it, because this pass only
+      // vectorizes instructions within one BB.
+      if (IM->getParent() != I->getParent())
+        continue;
+
+      if (!OBB.dominates(IM, I)) {
         InstructionsToMove.insert(IM);
         Worklist.push_back(IM);
-        assert(IM->getParent() == IW->getParent() &&
-               "Instructions to move should be in the same basic block");
       }
     }
   }
@@ -433,8 +438,8 @@ Vectorizer::splitOddVectorElts(ArrayRef<Instruction *> Chain,
 ArrayRef<Instruction *>
 Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   // These are in BB order, unlike Chain, which is in address order.
-  SmallVector<std::pair<Instruction *, unsigned>, 16> MemoryInstrs;
-  SmallVector<std::pair<Instruction *, unsigned>, 16> ChainInstrs;
+  SmallVector<Instruction *, 16> MemoryInstrs;
+  SmallVector<Instruction *, 16> ChainInstrs;
 
   bool IsLoadChain = isa<LoadInst>(Chain[0]);
   DEBUG({
@@ -448,14 +453,12 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
     }
   });
 
-  unsigned InstrIdx = 0;
   for (Instruction &I : make_range(getBoundaryInstrs(Chain))) {
-    ++InstrIdx;
     if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
       if (!is_contained(Chain, &I))
-        MemoryInstrs.push_back({&I, InstrIdx});
+        MemoryInstrs.push_back(&I);
       else
-        ChainInstrs.push_back({&I, InstrIdx});
+        ChainInstrs.push_back(&I);
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
       DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I << '\n');
       break;
@@ -466,16 +469,14 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
     }
   }
 
+  OrderedBasicBlock OBB(Chain[0]->getParent());
+
   // Loop until we find an instruction in ChainInstrs that we can't vectorize.
-  unsigned ChainInstrIdx, ChainInstrsLen;
-  for (ChainInstrIdx = 0, ChainInstrsLen = ChainInstrs.size();
-       ChainInstrIdx < ChainInstrsLen; ++ChainInstrIdx) {
-    Instruction *ChainInstr = ChainInstrs[ChainInstrIdx].first;
-    unsigned ChainInstrLoc = ChainInstrs[ChainInstrIdx].second;
+  unsigned ChainInstrIdx = 0;
+  for (unsigned E = ChainInstrs.size(); ChainInstrIdx < E; ++ChainInstrIdx) {
+    Instruction *ChainInstr = ChainInstrs[ChainInstrIdx];
     bool AliasFound = false;
-    for (auto EntryMem : MemoryInstrs) {
-      Instruction *MemInstr = EntryMem.first;
-      unsigned MemInstrLoc = EntryMem.second;
+    for (Instruction *MemInstr : MemoryInstrs) {
       if (isa<LoadInst>(MemInstr) && isa<LoadInst>(ChainInstr))
         continue;
 
@@ -484,12 +485,12 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
       // vectorize it (the vectorized load is inserted at the location of the
       // first load in the chain).
       if (isa<StoreInst>(MemInstr) && isa<LoadInst>(ChainInstr) &&
-          ChainInstrLoc < MemInstrLoc)
+          OBB.dominates(ChainInstr, MemInstr))
         continue;
 
       // Same case, but in reverse.
       if (isa<LoadInst>(MemInstr) && isa<StoreInst>(ChainInstr) &&
-          ChainInstrLoc > MemInstrLoc)
+          OBB.dominates(MemInstr, ChainInstr))
         continue;
 
       if (!AA.isNoAlias(MemoryLocation::get(MemInstr),
@@ -515,15 +516,11 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   // ChainInstrs[0, ChainInstrIdx).  This is the largest vectorizable prefix of
   // Chain.  (Recall that Chain is in address order, but ChainInstrs is in BB
   // order.)
-  auto VectorizableChainInstrs =
-      makeArrayRef(ChainInstrs.data(), ChainInstrIdx);
-  unsigned ChainIdx, ChainLen;
-  for (ChainIdx = 0, ChainLen = Chain.size(); ChainIdx < ChainLen; ++ChainIdx) {
-    Instruction *I = Chain[ChainIdx];
-    if (none_of(VectorizableChainInstrs,
-                [I](std::pair<Instruction *, unsigned> CI) {
-                  return I == CI.first;
-                }))
+  SmallPtrSet<Instruction *, 8> VectorizableChainInstrs(
+      ChainInstrs.begin(), ChainInstrs.begin() + ChainInstrIdx);
+  unsigned ChainIdx = 0;
+  for (unsigned ChainLen = Chain.size(); ChainIdx < ChainLen; ++ChainIdx) {
+    if (!VectorizableChainInstrs.count(Chain[ChainIdx]))
       break;
   }
   return Chain.slice(0, ChainIdx);

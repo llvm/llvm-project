@@ -491,7 +491,7 @@ SBDebugger::HandleProcessEvent (const SBProcess &process, const SBEvent &event, 
             if (err != nullptr)
                 ::fwrite (stdio_buffer, 1, len, err);
     }
-    
+
     if (event_type & Process::eBroadcastBitStateChanged)
     {
         StateType event_state = SBProcess::GetStateFromEvent (event);

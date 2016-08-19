@@ -4161,7 +4161,7 @@ AST_MATCHER(QualType, isInteger) {
 ///   void b(unsigned long);
 ///   void c(double);
 /// \endcode
-/// functionDecl(hasAnyParameter(hasType(isInteger())))
+/// functionDecl(hasAnyParameter(hasType(isUnsignedInteger())))
 /// matches "b(unsigned long)", but not "a(int)" and "c(double)".
 AST_MATCHER(QualType, isUnsignedInteger) {
     return Node->isUnsignedIntegerType();
@@ -4175,7 +4175,7 @@ AST_MATCHER(QualType, isUnsignedInteger) {
 ///   void b(unsigned long);
 ///   void c(double);
 /// \endcode
-/// functionDecl(hasAnyParameter(hasType(isInteger())))
+/// functionDecl(hasAnyParameter(hasType(isSignedInteger())))
 /// matches "a(int)", but not "b(unsigned long)" and "c(double)".
 AST_MATCHER(QualType, isSignedInteger) {
     return Node->isSignedIntegerType();
@@ -5474,6 +5474,30 @@ AST_MATCHER_P(Stmt, forFunction, internal::Matcher<FunctionDecl>,
     }
   }
   return false;
+}
+
+/// \brief Matches a declaration that has external formal linkage.
+///
+/// Example matches only z (matcher = varDecl(hasExternalFormalLinkage()))
+/// \code
+/// void f() {
+///   int x;
+///   static int y;
+/// }
+/// int z;
+/// \endcode
+///
+/// Example matches f() because it has external formal linkage despite being
+/// unique to the translation unit as though it has internal likage
+/// (matcher = functionDecl(hasExternalFormalLinkage()))
+///
+/// \code
+/// namespace {
+/// void f() {}
+/// }
+/// \endcode
+AST_MATCHER(NamedDecl, hasExternalFormalLinkage) {
+  return Node.hasExternalFormalLinkage();
 }
 
 } // end namespace ast_matchers

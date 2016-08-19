@@ -16,9 +16,7 @@
 ; Test that we only emit register-indirect locations for the array array.
 ; rdar://problem/14874886
 ;
-; FIXME: If we described this location as RSP-relative instead of RDI-relative
-; the live range would be larger.
-; CHECK:     ##DEBUG_VALUE: main:array <- [%RDI+0]
+; CHECK:     ##DEBUG_VALUE: main:array <- [%RSP+0]
 ; CHECK-NOT: ##DEBUG_VALUE: main:array <- %R{{.*}}
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

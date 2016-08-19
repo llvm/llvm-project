@@ -32,6 +32,25 @@ namespace NonPublicMembers {
   }
 }
 
+namespace AnonymousMember {
+  struct Struct {
+    struct { // expected-note {{declared here}}
+      int i;
+    };
+  };
+
+  struct Union {
+    union { // expected-note {{declared here}}
+      int i;
+    };
+  };
+
+  void test() {
+    auto [a1] = Struct(); // expected-error {{cannot decompose class type 'AnonymousMember::Struct' because it has an anonymous struct member}}
+    auto [a2] = Union(); // expected-error {{cannot decompose class type 'AnonymousMember::Union' because it has an anonymous union member}}
+  }
+}
+
 namespace MultipleClasses {
   struct B : A {
     int a;

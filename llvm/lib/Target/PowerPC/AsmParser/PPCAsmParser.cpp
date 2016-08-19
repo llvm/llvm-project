@@ -1571,7 +1571,8 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
         return false;
       }
     }
-  // Fall-through to process non-register-name identifiers as expression.
+    // Fall-through to process non-register-name identifiers as expression.
+    LLVM_FALLTHROUGH;
   // All other expressions
   case AsmToken::LParen:
   case AsmToken::Plus:
@@ -1644,7 +1645,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
         break;
       }
     }
-    // Fall-through..
+    LLVM_FALLTHROUGH;
 
     default:
       return Error(S, "invalid memory operand");

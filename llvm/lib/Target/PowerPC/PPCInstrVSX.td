@@ -634,7 +634,7 @@ let Uses = [RM] in {
   def XSRDPI : XX2Form<60, 73,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpi $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (frnd f64:$XB))]>;
+                      [(set f64:$XT, (fround f64:$XB))]>;
   def XSRDPIC : XX2Form<60, 107,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsrdpic $XT, $XB", IIC_VecFP,
@@ -655,7 +655,7 @@ let Uses = [RM] in {
   def XVRDPI : XX2Form<60, 201,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpi $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (frnd v2f64:$XB))]>;
+                      [(set v2f64:$XT, (fround v2f64:$XB))]>;
   def XVRDPIC : XX2Form<60, 235,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrdpic $XT, $XB", IIC_VecFP,
@@ -676,7 +676,7 @@ let Uses = [RM] in {
   def XVRSPI : XX2Form<60, 137,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspi $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (frnd v4f32:$XB))]>;
+                      [(set v4f32:$XT, (fround v4f32:$XB))]>;
   def XVRSPIC : XX2Form<60, 171,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvrspic $XT, $XB", IIC_VecFP,
@@ -1108,7 +1108,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 
   def : Pat<(f64 (extloadf32 xoaddr:$src)),
             (COPY_TO_REGCLASS (LXSSPX xoaddr:$src), VSFRC)>;
-  def : Pat<(f64 (fextend f32:$src)),
+  def : Pat<(f64 (fpextend f32:$src)),
             (COPY_TO_REGCLASS $src, VSFRC)>;
 
   def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLT)),

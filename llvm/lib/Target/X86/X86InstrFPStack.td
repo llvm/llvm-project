@@ -711,19 +711,19 @@ def : Pat<(X86fildflag addr:$src, i64), (ILD_Fp64m64 addr:$src)>;
 
 // FP extensions map onto simple pseudo-value conversions if they are to/from
 // the FP stack.
-def : Pat<(f64 (fextend RFP32:$src)), (COPY_TO_REGCLASS RFP32:$src, RFP64)>,
+def : Pat<(f64 (fpextend RFP32:$src)), (COPY_TO_REGCLASS RFP32:$src, RFP64)>,
           Requires<[FPStackf32]>;
-def : Pat<(f80 (fextend RFP32:$src)), (COPY_TO_REGCLASS RFP32:$src, RFP80)>,
+def : Pat<(f80 (fpextend RFP32:$src)), (COPY_TO_REGCLASS RFP32:$src, RFP80)>,
            Requires<[FPStackf32]>;
-def : Pat<(f80 (fextend RFP64:$src)), (COPY_TO_REGCLASS RFP64:$src, RFP80)>,
+def : Pat<(f80 (fpextend RFP64:$src)), (COPY_TO_REGCLASS RFP64:$src, RFP80)>,
            Requires<[FPStackf64]>;
 
 // FP truncations map onto simple pseudo-value conversions if they are to/from
 // the FP stack.  We have validated that only value-preserving truncations make
 // it through isel.
-def : Pat<(f32 (fround RFP64:$src)), (COPY_TO_REGCLASS RFP64:$src, RFP32)>,
+def : Pat<(f32 (fpround RFP64:$src)), (COPY_TO_REGCLASS RFP64:$src, RFP32)>,
           Requires<[FPStackf32]>;
-def : Pat<(f32 (fround RFP80:$src)), (COPY_TO_REGCLASS RFP80:$src, RFP32)>,
+def : Pat<(f32 (fpround RFP80:$src)), (COPY_TO_REGCLASS RFP80:$src, RFP32)>,
            Requires<[FPStackf32]>;
-def : Pat<(f64 (fround RFP80:$src)), (COPY_TO_REGCLASS RFP80:$src, RFP64)>,
+def : Pat<(f64 (fpround RFP80:$src)), (COPY_TO_REGCLASS RFP80:$src, RFP64)>,
            Requires<[FPStackf64]>;

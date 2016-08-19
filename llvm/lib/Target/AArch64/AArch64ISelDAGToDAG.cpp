@@ -1266,7 +1266,7 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
   SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
 
   if (Narrow)
-    std::transform(Regs.begin(), Regs.end(), Regs.begin(),
+    transform(Regs, Regs.begin(),
                    WidenVector(*CurDAG));
 
   SDValue RegSeq = createQTuple(Regs);
@@ -1305,7 +1305,7 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
   SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
 
   if (Narrow)
-    std::transform(Regs.begin(), Regs.end(), Regs.begin(),
+    transform(Regs, Regs.begin(),
                    WidenVector(*CurDAG));
 
   SDValue RegSeq = createQTuple(Regs);
@@ -1360,7 +1360,7 @@ void AArch64DAGToDAGISel::SelectStoreLane(SDNode *N, unsigned NumVecs,
   SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
 
   if (Narrow)
-    std::transform(Regs.begin(), Regs.end(), Regs.begin(),
+    transform(Regs, Regs.begin(),
                    WidenVector(*CurDAG));
 
   SDValue RegSeq = createQTuple(Regs);
@@ -1390,7 +1390,7 @@ void AArch64DAGToDAGISel::SelectPostStoreLane(SDNode *N, unsigned NumVecs,
   SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
 
   if (Narrow)
-    std::transform(Regs.begin(), Regs.end(), Regs.begin(),
+    transform(Regs, Regs.begin(),
                    WidenVector(*CurDAG));
 
   SDValue RegSeq = createQTuple(Regs);

@@ -81,12 +81,16 @@ set(Tests
   OneHugeAllocTest
   OutOfMemoryTest
   RepeatedMemcmp
+  RepeatedBytesTest
   SimpleCmpTest
   SimpleDictionaryTest
   SimpleFnAdapterTest
   SimpleHashTest
   SimpleTest
   SimpleThreadedTest
+  SingleMemcmpTest
+  SingleStrcmpTest
+  SingleStrncmpTest
   SpamyTest
   StrcmpTest
   StrncmpTest

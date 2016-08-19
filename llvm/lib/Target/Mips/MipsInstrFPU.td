@@ -601,6 +601,25 @@ def : MipsInstAlias<"bc1f $offset", (BC1F FCC0, brtarget:$offset)>,
 def : MipsInstAlias<"bc1fl $offset", (BC1FL FCC0, brtarget:$offset)>,
       ISA_MIPS2_NOT_32R6_64R6, HARDFLOAT;
 
+def : MipsInstAlias
+        <"s.s $fd, $addr", (SWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
+      ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"s.d $fd, $addr", (SDC1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_32, ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"s.d $fd, $addr", (SDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_64, ISA_MIPS2, HARDFLOAT;
+
+def : MipsInstAlias
+        <"l.s $fd, $addr", (LWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
+      ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"l.d $fd, $addr", (LDC1 AFGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_32, ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"l.d $fd, $addr", (LDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
+      FGR_64, ISA_MIPS2, HARDFLOAT;
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//
@@ -616,9 +635,9 @@ def : MipsPat<(f64 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;
 def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
               (TRUNC_W_D32 AFGR64Opnd:$src)>, FGR_32;
-def : MipsPat<(f32 (fround AFGR64Opnd:$src)),
+def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
               (CVT_S_D32 AFGR64Opnd:$src)>, FGR_32;
-def : MipsPat<(f64 (fextend FGR32Opnd:$src)),
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D32_S FGR32Opnd:$src)>, FGR_32;
 
 def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, FGR_64;
@@ -638,9 +657,9 @@ def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
               (TRUNC_L_D64 FGR64Opnd:$src)>, FGR_64;
 
-def : MipsPat<(f32 (fround FGR64Opnd:$src)),
+def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
               (CVT_S_D64 FGR64Opnd:$src)>, FGR_64;
-def : MipsPat<(f64 (fextend FGR32Opnd:$src)),
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D64_S FGR32Opnd:$src)>, FGR_64;
 
 // Patterns for loads/stores with a reg+imm operand.

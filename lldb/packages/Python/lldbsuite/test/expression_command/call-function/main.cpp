@@ -11,7 +11,7 @@ struct Five
 Five
 returnsFive()
 {
-    Five my_five = { 5, "five" };
+    Five my_five = {5, "five"};
     return my_five;
 }
 

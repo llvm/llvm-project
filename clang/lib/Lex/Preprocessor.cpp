@@ -618,6 +618,11 @@ static diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
       "Keyword not known to come from a newer Standard or proposed Standard");
 }
 
+void Preprocessor::updateOutOfDateIdentifier(IdentifierInfo &II) const {
+  assert(II.isOutOfDate() && "not out of date");
+  getExternalSource()->updateOutOfDateIdentifier(II);
+}
+
 /// HandleIdentifier - This callback is invoked when the lexer reads an
 /// identifier.  This callback looks up the identifier in the map and/or
 /// potentially macro expands it or turns it into a named token (like 'for').
@@ -642,7 +647,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     if (&II == Ident__VA_ARGS__)
       CurrentIsPoisoned = Ident__VA_ARGS__->isPoisoned();
 
-    ExternalSource->updateOutOfDateIdentifier(II);
+    updateOutOfDateIdentifier(II);
     Identifier.setKind(II.getTokenID());
 
     if (&II == Ident__VA_ARGS__)
@@ -707,9 +712,12 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // Note that we do not treat 'import' as a contextual
   // keyword when we're in a caching lexer, because caching lexers only get
   // used in contexts where import declarations are disallowed.
-  if (LastTokenWasAt && II.isModulesImport() && !InMacroArgs && 
-      !DisableMacroExpansion &&
-      (getLangOpts().Modules || getLangOpts().DebuggerSupport) && 
+  //
+  // Likewise if this is the C++ Modules TS import keyword.
+  if (((LastTokenWasAt && II.isModulesImport()) ||
+       Identifier.is(tok::kw_import)) &&
+      !InMacroArgs && !DisableMacroExpansion &&
+      (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
       CurLexerKind != CLK_CachingLexer) {
     ModuleImportLoc = Identifier.getLocation();
     ModuleImportPath.clear();
@@ -777,7 +785,8 @@ void Preprocessor::LexAfterModuleImport(Token &Result) {
   }
   
   // If we're expecting a '.' or a ';', and we got a '.', then wait until we
-  // see the next identifier.
+  // see the next identifier. (We can also see a '[[' that begins an
+  // attribute-specifier-seq here under the C++ Modules TS.)
   if (!ModuleImportExpectsIdentifier && Result.getKind() == tok::period) {
     ModuleImportExpectsIdentifier = true;
     CurLexerKind = CLK_LexAfterModuleImport;

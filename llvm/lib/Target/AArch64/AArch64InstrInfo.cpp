@@ -375,7 +375,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     // if NZCV is used, do not fold.
     if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
       return 0;
-  // fall-through to ADDXri and ADDWri.
+    // fall-through to ADDXri and ADDWri.
+    LLVM_FALLTHROUGH;
   case AArch64::ADDXri:
   case AArch64::ADDWri:
     // add x, 1 -> csinc.
@@ -402,7 +403,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     // if NZCV is used, do not fold.
     if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
       return 0;
-  // fall-through to SUBXrr and SUBWrr.
+    // fall-through to SUBXrr and SUBWrr.
+    LLVM_FALLTHROUGH;
   case AArch64::SUBXrr:
   case AArch64::SUBWrr: {
     // neg x -> csneg, represented as sub dst, xzr, src.
@@ -1603,36 +1605,8 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
 bool AArch64InstrInfo::getMemOpBaseRegImmOfs(
     MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset,
     const TargetRegisterInfo *TRI) const {
-  switch (LdSt.getOpcode()) {
-  default:
-    return false;
-  // Scaled instructions.
-  case AArch64::STRSui:
-  case AArch64::STRDui:
-  case AArch64::STRQui:
-  case AArch64::STRXui:
-  case AArch64::STRWui:
-  case AArch64::LDRSui:
-  case AArch64::LDRDui:
-  case AArch64::LDRQui:
-  case AArch64::LDRXui:
-  case AArch64::LDRWui:
-  case AArch64::LDRSWui:
-  // Unscaled instructions.
-  case AArch64::STURSi:
-  case AArch64::STURDi:
-  case AArch64::STURQi:
-  case AArch64::STURXi:
-  case AArch64::STURWi:
-  case AArch64::LDURSi:
-  case AArch64::LDURDi:
-  case AArch64::LDURQi:
-  case AArch64::LDURWi:
-  case AArch64::LDURXi:
-  case AArch64::LDURSWi:
-    unsigned Width;
-    return getMemOpBaseRegImmOfsWidth(LdSt, BaseReg, Offset, Width, TRI);
-  };
+  unsigned Width;
+  return getMemOpBaseRegImmOfsWidth(LdSt, BaseReg, Offset, Width, TRI);
 }
 
 bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
@@ -1829,6 +1803,9 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
                                            unsigned NumLoads) const {
   // Only cluster up to a single pair.
   if (NumLoads > 1)
+    return false;
+
+  if (!isPairableLdStInst(FirstLdSt) || !isPairableLdStInst(SecondLdSt))
     return false;
 
   // Can we pair these instructions based on their opcodes?

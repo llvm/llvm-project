@@ -44,6 +44,16 @@ void Lowerer::lowerResumeOrDestroy(CallSite CS,
   CS.setCallingConv(CallingConv::Fast);
 }
 
+// Prior to CoroSplit, calls to coro.begin needs to be marked as NoDuplicate,
+// as CoroSplit assumes there is exactly one coro.begin. After CoroSplit,
+// NoDuplicate attribute will be removed from coro.begin otherwise, it will
+// interfere with inlining.
+static void setCannotDuplicate(CoroIdInst *CoroId) {
+  for (User *U : CoroId->users())
+    if (auto *CB = dyn_cast<CoroBeginInst>(U))
+      CB->setCannotDuplicate();
+}
+
 bool Lowerer::lowerEarlyIntrinsics(Function &F) {
   bool Changed = false;
   for (auto IB = inst_begin(F), IE = inst_end(F); IB != IE;) {
@@ -52,12 +62,26 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       switch (CS.getIntrinsicID()) {
       default:
         continue;
-      case Intrinsic::coro_begin:
-        // Mark a function that comes out of the frontend that has a coro.begin
+      case Intrinsic::coro_suspend:
+        // Make sure that final suspend point is not duplicated as CoroSplit
+        // pass expects that there is at most one final suspend point.
+        if (cast<CoroSuspendInst>(&I)->isFinal())
+          CS.setCannotDuplicate();
+        break;
+      case Intrinsic::coro_end:
+        // Make sure that fallthrough coro.end is not duplicated as CoroSplit
+        // pass expects that there is at most one fallthrough coro.end.
+        if (cast<CoroEndInst>(&I)->isFallthrough())
+          CS.setCannotDuplicate();
+        break;
+      case Intrinsic::coro_id:
+        // Mark a function that comes out of the frontend that has a coro.id
         // with a coroutine attribute.
-        if (auto *CB = cast<CoroBeginInst>(&I)) {
-          if (CB->getInfo().isPreSplit())
+        if (auto *CII = cast<CoroIdInst>(&I)) {
+          if (CII->getInfo().isPreSplit()) {
             F.addFnAttr(CORO_PRESPLIT_ATTR, UNPREPARED_FOR_SPLIT);
+            setCannotDuplicate(CII);
+          }
         }
         break;
       case Intrinsic::coro_resume:
@@ -88,8 +112,9 @@ struct CoroEarly : public FunctionPass {
   // This pass has work to do only if we find intrinsics we are going to lower
   // in the module.
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(
-            M, {"llvm.coro.begin", "llvm.coro.resume", "llvm.coro.destroy"}))
+    if (coro::declaresIntrinsics(M, {"llvm.coro.begin", "llvm.coro.resume",
+                                     "llvm.coro.destroy", "llvm.coro.suspend",
+                                     "llvm.coro.end"}))
       L = llvm::make_unique<Lowerer>(M);
     return false;
   }

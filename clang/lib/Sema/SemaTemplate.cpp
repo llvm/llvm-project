@@ -456,6 +456,70 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
       TemplateArgs);
 }
 
+
+/// Determine whether we would be unable to instantiate this template (because
+/// it either has no definition, or is in the process of being instantiated).
+bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
+                                          NamedDecl *Instantiation,
+                                          bool InstantiatedFromMember,
+                                          const NamedDecl *Pattern,
+                                          const NamedDecl *PatternDef,
+                                          TemplateSpecializationKind TSK,
+                                          bool Complain /*= true*/) {
+  assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation));
+
+  if (PatternDef && (isa<FunctionDecl>(PatternDef)
+                     || !cast<TagDecl>(PatternDef)->isBeingDefined())) {
+    NamedDecl *SuggestedDef = nullptr;
+    if (!hasVisibleDefinition(const_cast<NamedDecl*>(PatternDef), &SuggestedDef,
+                              /*OnlyNeedComplete*/false)) {
+      // If we're allowed to diagnose this and recover, do so.
+      bool Recover = Complain && !isSFINAEContext();
+      if (Complain)
+        diagnoseMissingImport(PointOfInstantiation, SuggestedDef,
+                              Sema::MissingImportKind::Definition, Recover);
+      return !Recover;
+    }
+    return false;
+  }
+
+
+  QualType InstantiationTy;
+  if (TagDecl *TD = dyn_cast<TagDecl>(Instantiation))
+    InstantiationTy = Context.getTypeDeclType(TD);
+  else
+    InstantiationTy = cast<FunctionDecl>(Instantiation)->getType();
+  if (!Complain || (PatternDef && PatternDef->isInvalidDecl())) {
+    // Say nothing
+  } else if (PatternDef) {
+    Diag(PointOfInstantiation,
+         diag::err_template_instantiate_within_definition)
+      << (TSK != TSK_ImplicitInstantiation)
+      << InstantiationTy;
+    // Not much point in noting the template declaration here, since
+    // we're lexically inside it.
+    Instantiation->setInvalidDecl();
+  } else if (InstantiatedFromMember) {
+    Diag(PointOfInstantiation,
+         diag::err_implicit_instantiate_member_undefined)
+      << InstantiationTy;
+    Diag(Pattern->getLocation(), diag::note_member_declared_at);
+  } else {
+    Diag(PointOfInstantiation, diag::err_template_instantiate_undefined)
+      << (TSK != TSK_ImplicitInstantiation)
+      << InstantiationTy;
+    Diag(Pattern->getLocation(), diag::note_template_decl_here);
+  }
+
+  // In general, Instantiation isn't marked invalid to get more than one
+  // error for multiple undefined instantiations. But the code that does
+  // explicit declaration -> explicit definition conversion can't handle
+  // invalid declarations, so mark as invalid in that case.
+  if (TSK == TSK_ExplicitInstantiationDeclaration)
+    Instantiation->setInvalidDecl();
+  return true;
+}
+
 /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
 /// that the template parameter 'PrevDecl' is being shadowed by a new
 /// declaration at location Loc. Returns true to indicate that this is

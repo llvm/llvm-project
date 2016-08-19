@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cctype>
 
@@ -529,6 +530,28 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   // Indexing is OK but no scale factor can be applied.
   return AM.Scale == 0 || AM.Scale == 1;
+}
+
+bool SystemZTargetLowering::isFoldableMemAccessOffset(Instruction *I,
+                                                      int64_t Offset) const {
+  // This only applies to z13.
+  if (!Subtarget.hasVector())
+    return true;
+
+  // * Use LDE instead of LE/LEY to avoid partial register
+  //   dependencies (LDE only supports small offsets).
+  // * Utilize the vector registers to hold floating point
+  //   values (vector load / store instructions only support small
+  //   offsets).
+
+  assert (isa<LoadInst>(I) || isa<StoreInst>(I));
+  Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
+                       I->getOperand(0)->getType());
+  if (!isUInt<12>(Offset) &&
+      (MemAccessTy->isFloatingPointTy() || MemAccessTy->isVectorTy()))
+    return false;
+
+  return true;
 }
 
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {
@@ -4972,8 +4995,8 @@ SDValue SystemZTargetLowering::combineJOIN_DWORDS(
 
 SDValue SystemZTargetLowering::combineFP_ROUND(
     SDNode *N, DAGCombinerInfo &DCI) const {
-  // (fround (extract_vector_elt X 0))
-  // (fround (extract_vector_elt X 1)) ->
+  // (fpround (extract_vector_elt X 0))
+  // (fpround (extract_vector_elt X 1)) ->
   // (extract_vector_elt (VROUND X) 0)
   // (extract_vector_elt (VROUND X) 1)
   //
@@ -5070,17 +5093,23 @@ SDValue SystemZTargetLowering::combineSHIFTROT(
   // Shift/rotate instructions only use the last 6 bits of the second operand
   // register. If the second operand is the result of an AND with an immediate
   // value that has its last 6 bits set, we can safely remove the AND operation.
+  //
+  // If the AND operation doesn't have the last 6 bits set, we can't remove it
+  // entirely, but we can still truncate it to a 16-bit value with all other
+  // bits set. This will allow us to generate a NILL instead of a NILF for
+  // smaller code size.
   SDValue N1 = N->getOperand(1);
   if (N1.getOpcode() == ISD::AND) {
-    auto *AndMask = dyn_cast<ConstantSDNode>(N1.getOperand(1));
+    SDValue AndOp = N1->getOperand(0);
+    SDValue AndMaskOp = N1->getOperand(1);
+    auto *AndMask = dyn_cast<ConstantSDNode>(AndMaskOp);
 
     // The AND mask is constant
     if (AndMask) {
-      auto AmtVal = AndMask->getZExtValue();
+      uint64_t AmtVal = AndMask->getZExtValue();
 
       // Bottom 6 bits are set
       if ((AmtVal & 0x3f) == 0x3f) {
-        SDValue AndOp = N1->getOperand(0);
 
         // This is the only use, so remove the node
         if (N1.hasOneUse()) {
@@ -5095,6 +5124,31 @@ SDValue SystemZTargetLowering::combineSHIFTROT(
           SDValue Replace = DAG.getNode(N->getOpcode(), SDLoc(N),
                                         N->getValueType(0), N->getOperand(0),
                                         AndOp);
+          DCI.AddToWorklist(Replace.getNode());
+
+          return Replace;
+        }
+
+      // We can't remove the AND, but we can use NILL here instead of NILF if we
+      // truncate the mask to 16 bits and set the remaining bits
+      } else {
+        unsigned BitWidth = AndMask->getAPIntValue().getBitWidth();
+
+        // All bits for the operand's size except the lower 16
+        uint64_t UpperBits = ((1ull << (uint64_t)BitWidth) - 1ull) &
+                             0xffffffffffff0000ull;
+
+        if ((AmtVal & UpperBits) != UpperBits) {
+          auto NewMaskValue = (AmtVal & 0xffff) | UpperBits;
+
+          auto NewMask = DAG.getConstant(NewMaskValue,
+                                         SDLoc(AndMaskOp),
+                                         AndMaskOp.getValueType());
+          auto NewAnd = DAG.getNode(N1.getOpcode(), SDLoc(N1), N1.getValueType(),
+                                    AndOp, NewMask);
+          auto Replace = DAG.getNode(N->getOpcode(), SDLoc(N),
+                                     N->getValueType(0), N->getOperand(0),
+                                     NewAnd);
           DCI.AddToWorklist(Replace.getNode());
 
           return Replace;

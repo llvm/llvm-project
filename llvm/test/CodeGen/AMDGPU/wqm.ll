@@ -343,12 +343,13 @@ main_body:
 ; CHECK: s_and_b64 exec, exec, [[LIVE]]
 ; CHECK: image_store
 ; CHECK: s_wqm_b64 exec, exec
-; CHECK: v_mov_b32_e32 [[CTR:v[0-9]+]], -2
+; CHECK-DAG: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
+; CHECK-DAG: v_mov_b32_e32 [[SEVEN:v[0-9]+]], 0x40e00000
 ; CHECK: s_branch [[LOOPHDR:BB[0-9]+_[0-9]+]]
 
+; CHECK: v_add_f32_e32 [[CTR]], 2.0, [[CTR]]
 ; CHECK: [[LOOPHDR]]: ; %loop
-; CHECK: v_add_i32_e32 [[CTR]], vcc, 2, [[CTR]]
-; CHECK: v_cmp_lt_i32_e32 vcc, 7, [[CTR]]
+; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
 ; CHECK: s_cbranch_vccz
 ; CHECK: ; %break
 
@@ -359,15 +360,15 @@ entry:
   br label %loop
 
 loop:
-  %ctr.iv = phi i32 [ 0, %entry ], [ %ctr.next, %body ]
+  %ctr.iv = phi float [ 0.0, %entry ], [ %ctr.next, %body ]
   %c.iv = phi <4 x float> [ %in, %entry ], [ %c.next, %body ]
-  %cc = icmp sgt i32 %ctr.iv, 7
+  %cc = fcmp ogt float %ctr.iv, 7.0
   br i1 %cc, label %break, label %body
 
 body:
   %c.i = bitcast <4 x float> %c.iv to <4 x i32>
   %c.next = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %c.i, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
-  %ctr.next = add i32 %ctr.iv, 2
+  %ctr.next = fadd float %ctr.iv, 2.0
   br label %loop
 
 break:

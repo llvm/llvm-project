@@ -9,7 +9,7 @@
 // RUN: MSAN_OPTIONS=coverage=1:verbosity=1:coverage_dir=%T/coverage-levels not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2 --check-prefix=CHECK_WARN
 // RUN: %clangxx_msan -O1 -fsanitize-coverage=edge  %s -o %t
 // RUN: MSAN_OPTIONS=coverage=1:verbosity=1:coverage_dir=%T/coverage-levels not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK3 --check-prefix=CHECK_WARN
-//
+
 volatile int sink;
 int main(int argc, char **argv) {
   int var;

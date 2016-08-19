@@ -74,6 +74,22 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
   return T();
 }
 
+namespace {
+// Define the LTOOutput handling
+class LTOOutput : public lto::NativeObjectOutput {
+  std::string Path;
+
+public:
+  LTOOutput(std::string Path) : Path(std::move(Path)) {}
+  std::unique_ptr<raw_pwrite_stream> getStream() override {
+    std::error_code EC;
+    auto S = llvm::make_unique<raw_fd_ostream>(Path, EC, sys::fs::F_None);
+    check(EC, Path);
+    return std::move(S);
+  }
+};
+}
+
 int main(int argc, char **argv) {
   InitializeAllTargets();
   InitializeAllTargetMCs();
@@ -116,7 +132,8 @@ int main(int argc, char **argv) {
   };
 
   if (SaveTemps)
-    check(Conf.addSaveTemps(OutputFilename), "Config::addSaveTemps failed");
+    check(Conf.addSaveTemps(OutputFilename + "."),
+          "Config::addSaveTemps failed");
 
   LTO Lto(std::move(Conf));
 
@@ -156,13 +173,10 @@ int main(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  auto AddStream = [&](size_t Task) {
+  auto AddOutput = [&](size_t Task) {
     std::string Path = OutputFilename + "." + utostr(Task);
-    std::error_code EC;
-    auto S = llvm::make_unique<raw_fd_ostream>(Path, EC, sys::fs::F_None);
-    check(EC, Path);
-    return S;
+    return llvm::make_unique<LTOOutput>(std::move(Path));
   };
 
-  check(Lto.run(AddStream), "LTO::run failed");
+  check(Lto.run(AddOutput), "LTO::run failed");
 }

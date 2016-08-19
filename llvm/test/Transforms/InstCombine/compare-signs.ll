@@ -67,6 +67,19 @@ define i1 @test4a(i32 %a) {
   ret i1 %c
 }
 
+define <2 x i1> @test4a_vec(<2 x i32> %a) {
+; CHECK-LABEL: @test4a_vec(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %a, <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %l = ashr <2 x i32> %a, <i32 31, i32 31>
+  %na = sub <2 x i32> zeroinitializer, %a
+  %r = lshr <2 x i32> %na, <i32 31, i32 31>
+  %signum = or <2 x i32> %l, %r
+  %c = icmp slt <2 x i32> %signum, <i32 1, i32 1>
+  ret <2 x i1> %c
+}
+
 define i1 @test4b(i64 %a) {
 ; CHECK-LABEL: @test4b(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 %a, 1
@@ -94,15 +107,9 @@ define i1 @test4c(i64 %a) {
   ret i1 %c
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test4c_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @test4c_vec(
-; CHECK-NEXT:    [[L:%.*]] = ashr <2 x i64> %a, <i64 63, i64 63>
-; CHECK-NEXT:    [[NA:%.*]] = sub <2 x i64> zeroinitializer, %a
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i64> [[NA]], <i64 63, i64 63>
-; CHECK-NEXT:    [[SIGNUM:%.*]] = or <2 x i64> [[L]], [[R]]
-; CHECK-NEXT:    [[SIGNUM_TRUNC:%.*]] = trunc <2 x i64> [[SIGNUM]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[SIGNUM_TRUNC]], <i32 1, i32 1>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i64> %a, <i64 1, i64 1>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %l = ashr <2 x i64> %a, <i64 63, i64 63>

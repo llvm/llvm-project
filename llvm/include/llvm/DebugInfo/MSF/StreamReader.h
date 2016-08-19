@@ -95,6 +95,7 @@ public:
     return Error::success();
   }
 
+  bool empty() const { return bytesRemaining() == 0; }
   void setOffset(uint32_t Off) { Offset = Off; }
   uint32_t getOffset() const { return Offset; }
   uint32_t getLength() const { return Stream.getLength(); }

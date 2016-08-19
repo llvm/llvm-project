@@ -1413,7 +1413,7 @@ int X86TTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
     // immediates here as the normal path expects bit 31 to be sign extended.
     if (Idx == 1 && Imm.getBitWidth() == 64 && isUInt<32>(Imm.getZExtValue()))
       return TTI::TCC_Free;
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:

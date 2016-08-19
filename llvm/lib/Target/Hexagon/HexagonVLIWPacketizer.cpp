@@ -323,7 +323,6 @@ static bool doesModifyCalleeSavedReg(const MachineInstr &MI,
   return false;
 }
 
-// TODO: MI->isIndirectBranch() and IsRegisterJump(MI)
 // Returns true if an instruction can be promoted to .new predicate or
 // new-value store.
 bool HexagonPacketizerList::isNewifiable(const MachineInstr &MI,
@@ -333,7 +332,7 @@ bool HexagonPacketizerList::isNewifiable(const MachineInstr &MI,
   if (NewRC == &Hexagon::PredRegsRegClass)
     if (HII->isV60VectorInstruction(MI) && MI.mayStore())
       return false;
-  return HII->isCondInst(MI) || MI.isReturn() || HII->mayBeNewStore(MI);
+  return HII->isCondInst(MI) || HII->isJumpR(MI) || HII->mayBeNewStore(MI);
 }
 
 // Promote an instructiont to its .cur form.
@@ -798,10 +797,8 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
     return false;
 
   // predicate .new
-  // bug 5670: until that is fixed
-  // TODO: MI->isIndirectBranch() and IsRegisterJump(MI)
   if (RC == &Hexagon::PredRegsRegClass)
-    if (HII->isCondInst(MI) || MI.isReturn())
+    if (HII->isCondInst(MI) || HII->isJumpR(MI))
       return HII->predCanBeUsedAsDotNew(PI, DepReg);
 
   if (RC != &Hexagon::PredRegsRegClass && !HII->mayBeNewStore(MI))
@@ -1291,7 +1288,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       RC = HRI->getMinimalPhysRegClass(DepReg);
     }
 
-    if (I.isCall() || I.isReturn() || HII->isTailCall(I)) {
+    if (I.isCall() || HII->isJumpR(I) || HII->isTailCall(I)) {
       if (!isRegDependence(DepType))
         continue;
       if (!isCallDependent(I, DepType, SUJ->Succs[i].getReg()))

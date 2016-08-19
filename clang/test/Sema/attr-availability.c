@@ -30,7 +30,7 @@ void test_10095131() {
   ATSFontGetPostScriptName(100); // expected-error {{'ATSFontGetPostScriptName' is unavailable: obsoleted in macOS 9.0 - use ATSFontGetFullPostScriptName}}
 
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'PartiallyAvailable' to silence this warning}}
+  // expected-warning@+2 {{is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'PartiallyAvailable' in an @available check to silence this warning}}
 #endif
   PartiallyAvailable();
 }
