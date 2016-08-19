@@ -16,6 +16,14 @@ from the `LLVM releases web site <http://llvm.org/releases/>`_.
 What's new in ELF Support?
 ==========================
 
+LLD 3.9 is a major milestone for us. It is the first release that can
+link real-world large userland programs, including LLVM/Clang/LLD
+themselves. In fact, for example, it can now be used to produce most
+userland programs distributed as part of FreeBSD.
+
+Many contributors have joined to the project to develop new features,
+port it to new architectures and fix issues since the last release.
+
 Link-Time Optimization
 ----------------------
 
@@ -83,3 +91,12 @@ Changes to the MIPS Target
 
 * Added support for MIPS N64 ABI.
 * Added support for TLS relocations for both O32 and N64 MIPS ABIs.
+
+Building LLVM Toolchain with LLD
+--------------------------------
+
+A new CMake variable, ``LLVM_ENABLE_LLD``, has been added to use LLD
+to build the LLVM toolchain. If the varaible is true, ``-fuse-ld=lld``
+option will be added to linker flags so that ``ld.lld`` is used
+instead of default ``ld``.  Because ``-fuse-ld=lld`` is a new compiler
+driver option, you need Clang 3.8 or newer to use the feature.
