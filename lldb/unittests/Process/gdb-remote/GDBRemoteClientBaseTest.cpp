@@ -52,6 +52,15 @@ struct MockDelegate : public GDBRemoteClientBase::ContinueDelegate
     {
         ++stop_reply_called;
     }
+
+    bool
+    HandleAsyncStructuredData(const StructuredData::ObjectSP
+                              &object_sp)
+    {
+        // TODO work in a test here after I fix the gtest breakage.
+        return true;
+    }
+
 };
 
 struct TestClient : public GDBRemoteClientBase

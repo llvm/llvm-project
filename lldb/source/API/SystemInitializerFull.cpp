@@ -100,6 +100,7 @@
 #include "Plugins/Process/mach-core/ProcessMachCore.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
 #endif
+#include "Plugins/StructuredData/DarwinLog/StructuredDataDarwinLog.h"
 
 #if defined(__FreeBSD__)
 #include "Plugins/Process/FreeBSD/ProcessFreeBSD.h"
@@ -381,6 +382,11 @@ SystemInitializerFull::Initialize()
     PlatformRemoteAppleWatch::Initialize();
     DynamicLoaderDarwinKernel::Initialize();
 #endif
+
+    // This plugin is valid on any host that talks to a Darwin remote.
+    // It shouldn't be limited to __APPLE__.
+    StructuredDataDarwinLog::Initialize();
+
     //----------------------------------------------------------------------
     // Platform agnostic plugins
     //----------------------------------------------------------------------
@@ -513,6 +519,8 @@ SystemInitializerFull::Terminate()
 
     platform_gdb_server::PlatformRemoteGDBServer::Terminate();
     process_gdb_remote::ProcessGDBRemote::Terminate();
+    StructuredDataDarwinLog::Terminate();
+
     DynamicLoaderMacOSXDYLD::Terminate();
     DynamicLoaderMacOS::Terminate();
     DynamicLoaderPOSIXDYLD::Terminate();

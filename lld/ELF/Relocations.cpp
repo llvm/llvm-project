@@ -374,7 +374,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // Copy relocation against zero-sized symbol doesn't make sense.
   uintX_t SymSize = SS->template getSize<ELFT>();
   if (SymSize == 0)
-    fatal("cannot create a copy relocation for " + SS->getName());
+    fatal("cannot create a copy relocation for symbol " + SS->getName());
 
   uintX_t Alignment = getAlignment(SS);
   uintX_t Off = alignTo(Out<ELFT>::Bss->getSize(), Alignment);
@@ -401,6 +401,12 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 }
 
 template <class ELFT>
+static StringRef getLocalSymbolName(const elf::ObjectFile<ELFT> &File,
+                                    SymbolBody &Body) {
+  return File.getStringTable().data() + Body.getNameOffset();
+}
+
+template <class ELFT>
 static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
                           bool IsWrite, RelExpr Expr, uint32_t Type,
                           const uint8_t *Data) {
@@ -422,12 +428,14 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
+    StringRef Name = Body.isLocal() ? getLocalSymbolName(File, Body)
+                                    : Body.getName();
     error("can't create dynamic relocation " + getRelName(Type) +
-          " against readonly segment");
+          " against symbol " + Name);
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
-    error("cannot preempt symbol");
+    error("cannot preempt symbol " + Body.getName());
     return Expr;
   }
   if (Body.isObject()) {
@@ -461,7 +469,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     Body.NeedsCopyOrPltAddr = true;
     return toPlt(Expr);
   }
-  error("symbol is missing type");
+  error("symbol " + Body.getName() + " is missing type");
 
   return Expr;
 }

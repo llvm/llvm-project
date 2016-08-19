@@ -328,6 +328,65 @@ public:
                                     CommandInterpreter &interpreter);
 
     //------------------------------------------------------------------
+    // StructuredDataPlugin
+    //------------------------------------------------------------------
+
+    //------------------------------------------------------------------
+    /// Register a StructuredDataPlugin class along with optional
+    /// callbacks for debugger initialization and Process launch info
+    /// filtering and manipulation.
+    ///
+    /// @param[in] name
+    ///    The name of the plugin.
+    ///
+    /// @param[in] description
+    ///    A description string for the plugin.
+    ///
+    /// @param[in] create_callback
+    ///    The callback that will be invoked to create an instance of
+    ///    the callback.  This may not be nullptr.
+    ///
+    /// @param[in] debugger_init_callback
+    ///    An optional callback that will be made when a Debugger
+    ///    instance is initialized.
+    ///
+    /// @param[in] filter_callback
+    ///    An optional callback that will be invoked before LLDB
+    ///    launches a process for debugging.  The callback must
+    ///    do the following:
+    ///    1. Only do something if the plugin's behavior is enabled.
+    ///    2. Only make changes for processes that are relevant to the
+    ///       plugin.  The callback gets a pointer to the Target, which
+    ///       can be inspected as needed.  The ProcessLaunchInfo is
+    ///       provided in read-write mode, and may be modified by the
+    ///       plugin if, for instance, additional environment variables
+    ///       are needed to support the feature when enabled.
+    ///
+    /// @return
+    ///    Returns true upon success; otherwise, false.
+    //------------------------------------------------------------------
+    static bool
+    RegisterPlugin(const ConstString &name,
+                   const char *description,
+                   StructuredDataPluginCreateInstance create_callback,
+                   DebuggerInitializeCallback debugger_init_callback = nullptr,
+                   StructuredDataFilterLaunchInfo filter_callback
+                   = nullptr);
+
+    static bool
+    UnregisterPlugin(StructuredDataPluginCreateInstance create_callback);
+
+    static StructuredDataPluginCreateInstance
+    GetStructuredDataPluginCreateCallbackAtIndex(uint32_t idx);
+
+    static StructuredDataPluginCreateInstance
+    GetStructuredDataPluginCreateCallbackForPluginName(const ConstString &name);
+
+    static StructuredDataFilterLaunchInfo
+    GetStructuredDataFilterCallbackAtIndex(uint32_t idx,
+                                           bool &iteration_complete);
+
+    //------------------------------------------------------------------
     // SymbolFile
     //------------------------------------------------------------------
     static bool
@@ -531,6 +590,16 @@ public:
     static bool CreateSettingForOperatingSystemPlugin(Debugger &debugger,
                                                       const lldb::OptionValuePropertiesSP &properties_sp,
                                                       const ConstString &description, bool is_global_property);
+
+    static lldb::OptionValuePropertiesSP
+    GetSettingForStructuredDataPlugin(Debugger &debugger,
+                                      const ConstString &setting_name);
+
+    static bool
+    CreateSettingForStructuredDataPlugin(Debugger &debugger,
+                                         const lldb::OptionValuePropertiesSP &properties_sp,
+                                         const ConstString &description,
+                                         bool is_global_property);
 };
 
 } // namespace lldb_private

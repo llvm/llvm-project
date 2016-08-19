@@ -54,6 +54,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -797,6 +798,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp, const UnixSig
     SetEventName(eBroadcastBitSTDOUT, "stdout-available");
     SetEventName(eBroadcastBitSTDERR, "stderr-available");
     SetEventName(eBroadcastBitProfileData, "profile-data-available");
+    SetEventName(eBroadcastBitStructuredData, "structured-data-available");
 
     m_private_state_control_broadcaster.SetEventName(eBroadcastInternalStateControlStop, "control-stop");
     m_private_state_control_broadcaster.SetEventName(eBroadcastInternalStateControlPause, "control-pause");
@@ -804,7 +806,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp, const UnixSig
 
     m_listener_sp->StartListeningForEvents(this, eBroadcastBitStateChanged | eBroadcastBitInterrupt |
                                                      eBroadcastBitSTDOUT | eBroadcastBitSTDERR |
-                                                     eBroadcastBitProfileData);
+                                                     eBroadcastBitProfileData |
+                                                     eBroadcastBitStructuredData);
 
     m_private_state_listener_sp->StartListeningForEvents(&m_private_state_broadcaster,
                                                          eBroadcastBitStateChanged | eBroadcastBitInterrupt);
@@ -4795,6 +4798,25 @@ Process::BroadcastAsyncProfileData(const std::string &one_profile_data)
     BroadcastEventIfUnique (eBroadcastBitProfileData, new ProcessEventData (shared_from_this(), GetState()));
 }
 
+void
+Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
+                                 const StructuredDataPluginSP &plugin_sp)
+{
+    BroadcastEvent(eBroadcastBitStructuredData,
+                   new EventDataStructuredData(shared_from_this(),
+                                               object_sp, plugin_sp));
+}
+
+StructuredDataPluginSP
+Process::GetStructuredDataPlugin(const ConstString &type_name) const
+{
+    auto find_it = m_structured_data_plugin_map.find(type_name);
+    if (find_it != m_structured_data_plugin_map.end())
+        return find_it->second;
+    else
+        return StructuredDataPluginSP();
+}
+
 size_t
 Process::GetAsyncProfileData (char *buf, size_t buf_size, Error &error)
 {
@@ -6381,6 +6403,13 @@ Process::ModulesDidLoad (ModuleList &module_list)
     // loading shared libraries might cause a new one to try and load
     if (!m_os_ap)
         LoadOperatingSystemPlugin(false);
+
+    // Give structured-data plugins a chance to see the modified modules.
+    for (auto pair : m_structured_data_plugin_map)
+    {
+        if (pair.second)
+            pair.second->ModulesDidLoad(*this, module_list);
+    }
 }
 
 void
@@ -6598,5 +6627,129 @@ Process::GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>& region_list)
     } while (range_end != LLDB_INVALID_ADDRESS);
 
     return error;
+}
 
+Error
+Process::ConfigureStructuredData(const ConstString &type_name,
+                                 const StructuredData::ObjectSP &config_sp)
+{
+    // If you get this, the Process-derived class needs to implement a method
+    // to enable an already-reported asynchronous structured data feature.
+    // See ProcessGDBRemote for an example implementation over gdb-remote.
+    return Error("unimplemented");
+}
+
+void
+Process::MapSupportedStructuredDataPlugins(const StructuredData::Array
+                                           &supported_type_names)
+{
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+    // Bail out early if there are no type names to map.
+    if (supported_type_names.GetSize() == 0)
+    {
+        if (log)
+            log->Printf("Process::%s(): no structured data types supported",
+                        __FUNCTION__);
+        return;
+    }
+
+    // Convert StructuredData type names to ConstString instances.
+    std::set<ConstString> const_type_names;
+
+    if (log)
+        log->Printf("Process::%s(): the process supports the following async "
+                    "structured data types:", __FUNCTION__);
+
+    supported_type_names.ForEach([&const_type_names, &log]
+                                 (StructuredData::Object *object) {
+        if (!object)
+        {
+            // Invalid - shouldn't be null objects in the array.
+            return false;
+        }
+
+        auto type_name = object->GetAsString();
+        if (!type_name)
+        {
+            // Invalid format - all type names should be strings.
+            return false;
+        }
+
+        const_type_names.insert(ConstString(type_name->GetValue()));
+        if (log)
+            log->Printf("- %s", type_name->GetValue().c_str());
+        return true;
+    });
+
+    // For each StructuredDataPlugin, if the plugin handles any of the
+    // types in the supported_type_names, map that type name to that plugin.
+    uint32_t plugin_index = 0;
+    for (auto create_instance =
+         PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(plugin_index);
+         create_instance && !const_type_names.empty();
+         ++plugin_index)
+    {
+        // Create the plugin.
+        StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
+        if (!plugin_sp)
+        {
+            // This plugin doesn't think it can work with the process.
+            // Move on to the next.
+            continue;
+        }
+
+        // For any of the remaining type names, map any that this plugin
+        // supports.
+        std::vector<ConstString> names_to_remove;
+        for (auto &type_name : const_type_names)
+        {
+            if (plugin_sp->SupportsStructuredDataType(type_name))
+            {
+                m_structured_data_plugin_map.insert(std::make_pair(type_name,
+                                                                   plugin_sp));
+                names_to_remove.push_back(type_name);
+                if (log)
+                    log->Printf("Process::%s(): using plugin %s for type name "
+                                "%s", __FUNCTION__,
+                                plugin_sp->GetPluginName().GetCString(),
+                                type_name.GetCString());
+            }
+        }
+
+        // Remove the type names that were consumed by this plugin.
+        for (auto &type_name : names_to_remove)
+            const_type_names.erase(type_name);
+    }
+}
+
+bool
+Process::RouteAsyncStructuredData(const StructuredData::ObjectSP object_sp)
+{
+    // Nothing to do if there's no data.
+    if (!object_sp)
+        return false;
+
+    // The contract is this must be a dictionary, so we can look up the
+    // routing key via the top-level 'type' string value within the dictionary.
+    StructuredData::Dictionary *dictionary = object_sp->GetAsDictionary();
+    if (!dictionary)
+        return false;
+
+    // Grab the async structured type name (i.e. the feature/plugin name).
+    ConstString type_name;
+    if (!dictionary->GetValueForKeyAsString("type", type_name))
+        return false;
+
+    // Check if there's a plugin registered for this type name.
+    auto find_it = m_structured_data_plugin_map.find(type_name);
+    if (find_it == m_structured_data_plugin_map.end())
+    {
+        // We don't have a mapping for this structured data type.
+        return false;
+    }
+
+    // Route the structured data to the plugin.
+    find_it->second->HandleArrivalOfStructuredData(*this, type_name, object_sp);
+    return true;
 }

@@ -30,6 +30,8 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Target/Target.h"
 
 // Project includes
@@ -114,7 +116,10 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_gdb_server_name(),
       m_gdb_server_version(UINT32_MAX),
       m_default_packet_timeout(0),
-      m_max_packet_size(0)
+      m_max_packet_size(0),
+      m_qSupported_response(),
+      m_supported_async_json_packets_is_valid(false),
+      m_supported_async_json_packets_sp()
 {
 }
 
@@ -378,6 +383,9 @@ GDBRemoteCommunicationClient::ResetDiscoverableSettings (bool did_exec)
         m_gdb_server_version = UINT32_MAX;
         m_default_packet_timeout = 0;
         m_max_packet_size = 0;
+        m_qSupported_response.clear();
+        m_supported_async_json_packets_is_valid = false;
+        m_supported_async_json_packets_sp.reset();
     }
 
     // These flags should be reset when we first connect to a GDB server
@@ -413,6 +421,12 @@ GDBRemoteCommunicationClient::GetRemoteQSupported ()
                                      /*send_async=*/false) == PacketResult::Success)
     {
         const char *response_cstr = response.GetStringRef().c_str();
+
+        // Hang on to the qSupported packet, so that platforms can do custom
+        // configuration of the transport before attaching/launching the
+        // process.
+        m_qSupported_response = response_cstr;
+
         if (::strstr (response_cstr, "qXfer:auxv:read+"))
             m_supports_qXfer_auxv_read = eLazyBoolYes;
         if (::strstr (response_cstr, "qXfer:libraries-svr4:read+"))
@@ -2998,22 +3012,10 @@ GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thr
 lldb::addr_t
 GDBRemoteCommunicationClient::GetShlibInfoAddr()
 {
-    Lock lock(*this, false);
-    if (lock)
-    {
-        StringExtractorGDBRemote response;
-        if (SendPacketAndWaitForResponse("qShlibInfoAddr", ::strlen ("qShlibInfoAddr"), response, false) == PacketResult::Success)
-        {
-            if (response.IsNormalResponse())
-                return response.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
-        }
-    }
-    else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-    {
-        log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for qShlibInfoAddr packet.",
-                    __FUNCTION__);
-    }
-    return LLDB_INVALID_ADDRESS;
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse("qShlibInfoAddr", response, false) != PacketResult::Success || !response.IsNormalResponse())
+        return LLDB_INVALID_ADDRESS;
+    return response.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
 }
 
 lldb_private::Error
@@ -3582,9 +3584,22 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
 }
 
 bool
-GDBRemoteCommunicationClient::GetModuleInfo (const FileSpec& module_file_spec,
-                                             const lldb_private::ArchSpec& arch_spec,
-                                             ModuleSpec &module_spec)
+GDBRemoteCommunicationClient::SyncThreadState(lldb::tid_t tid)
+{
+    if (!GetSyncThreadStateSupported())
+        return false;
+
+    StreamString packet;
+    StringExtractorGDBRemote response;
+    packet.Printf("QSyncThreadState:%4.4" PRIx64 ";", tid);
+    return SendPacketAndWaitForResponse(packet.GetString(), response, false) ==
+               GDBRemoteCommunication::PacketResult::Success &&
+           response.IsOKResponse();
+}
+
+bool
+GDBRemoteCommunicationClient::GetModuleInfo(const FileSpec &module_file_spec, const lldb_private::ArchSpec &arch_spec,
+                                            ModuleSpec &module_spec)
 {
     if (!m_supports_qModuleInfo)
         return false;
@@ -3903,6 +3918,126 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex.", __FUNCTION__);
         }
     }
+}
+
+StructuredData::Array*
+GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins()
+{
+    if (!m_supported_async_json_packets_is_valid)
+    {
+        // Query the server for the array of supported asynchronous JSON
+        // packets.
+        m_supported_async_json_packets_is_valid = true;
+
+        Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
+            GDBR_LOG_PROCESS));
+
+        // Poll it now.
+        StringExtractorGDBRemote response;
+        const bool send_async = false;
+        if (SendPacketAndWaitForResponse("qStructuredDataPlugins", response,
+                                         send_async) == PacketResult::Success)
+        {
+            m_supported_async_json_packets_sp = StructuredData::ParseJSON(
+                response.GetStringRef());
+            if (m_supported_async_json_packets_sp &&
+                !m_supported_async_json_packets_sp->GetAsArray())
+            {
+                // We were returned something other than a JSON array.  This
+                // is invalid.  Clear it out.
+                if (log)
+                    log->Printf("GDBRemoteCommunicationClient::%s(): "
+                                "QSupportedAsyncJSONPackets returned invalid "
+                                "result: %s", __FUNCTION__,
+                                response.GetStringRef().c_str());
+                m_supported_async_json_packets_sp.reset();
+            }
+        }
+        else
+        {
+            if (log)
+                log->Printf("GDBRemoteCommunicationClient::%s(): "
+                            "QSupportedAsyncJSONPackets unsupported",
+                            __FUNCTION__);
+        }
+
+        if (log && m_supported_async_json_packets_is_valid)
+        {
+            StreamString  stream;
+            m_supported_async_json_packets_sp->Dump(stream);
+            log->Printf("GDBRemoteCommunicationClient::%s(): supported async "
+                        "JSON packets: %s", __FUNCTION__,
+                        stream.GetString().c_str());
+        }
+    }
+
+    return m_supported_async_json_packets_sp
+        ? m_supported_async_json_packets_sp->GetAsArray()
+        : nullptr;
+}
+
+Error
+GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
+    const ConstString &type_name,
+    const StructuredData::ObjectSP &config_sp)
+{
+    Error error;
+
+    if (type_name.GetLength() == 0)
+    {
+        error.SetErrorString("invalid type_name argument");
+        return error;
+    }
+
+    // Build command: Configure{type_name}: serialized config
+    // data.
+    StreamGDBRemote stream;
+    stream.PutCString("QConfigure");
+    stream.PutCString(type_name.AsCString());
+    stream.PutChar(':');
+    if (config_sp)
+    {
+        // Gather the plain-text version of the configuration data.
+        StreamString unescaped_stream;
+        config_sp->Dump(unescaped_stream);
+        unescaped_stream.Flush();
+
+        // Add it to the stream in escaped fashion.
+        stream.PutEscapedBytes(unescaped_stream.GetData(),
+                               unescaped_stream.GetSize());
+    }
+    stream.Flush();
+
+    // Send the packet.
+    const bool send_async = false;
+    StringExtractorGDBRemote response;
+    auto result = SendPacketAndWaitForResponse(stream.GetString().c_str(),
+                                               response, send_async);
+    if (result == PacketResult::Success)
+    {
+        // We failed if the config result comes back other than OK.
+        if (strcmp(response.GetStringRef().c_str(), "OK") == 0)
+        {
+            // Okay!
+            error.Clear();
+        }
+        else
+        {
+            error.SetErrorStringWithFormat("configuring StructuredData feature "
+                                           "%s failed with error %s",
+                                           type_name.AsCString(),
+                                           response.GetStringRef().c_str());
+        }
+    }
+    else
+    {
+        // Can we get more data here on the failure?
+        error.SetErrorStringWithFormat("configuring StructuredData feature %s "
+                                       "failed when sending packet: "
+                                       "PacketResult=%d", type_name.AsCString(),
+                                       result);
+    }
+    return error;
 }
 
 void

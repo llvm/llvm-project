@@ -3,14 +3,10 @@
 misc-dangling-handle
 ====================
 
-Detect dangling references in value handlers like
+Detect dangling references in value handles like
 ``std::experimental::string_view``.
-These dangling references can come from constructing handles from temporary
+These dangling references can be a result of constructing handles from temporary
 values, where the temporary is destroyed soon after the handle is created.
-
-By default only ``std::experimental::basic_string_view`` is considered.
-This list can be modified by passing a `;` separated list of class names using
-the HandleClasses option.
 
 Examples:
 
@@ -32,3 +28,11 @@ Examples:
     char Array[10]{};
     return Array;
   }
+
+Options
+-------
+
+.. option:: HandleClasses
+
+   A semicolon-separated list of class names that should be treated as handles.
+   By default only ``std::experimental::basic_string_view`` is considered.

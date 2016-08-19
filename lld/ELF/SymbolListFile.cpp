@@ -79,16 +79,11 @@ private:
 };
 } // end anonymous namespace
 
-size_t elf::defineSymbolVersion(StringRef VerStr) {
+void VersionScriptParser::parseVersion(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
   size_t VersionId = Config->VersionDefinitions.size() + 2;
   Config->VersionDefinitions.push_back({VerStr, VersionId});
-  return VersionId;
-}
-
-void VersionScriptParser::parseVersion(StringRef VerStr) {
-  defineSymbolVersion(VerStr);
 
   if (skip("global:") || peek() != "local:")
     parseGlobal(VerStr);

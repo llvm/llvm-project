@@ -159,3 +159,18 @@ TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix)
     HandlePacket(server, "QRestoreRegisterState:1", "OK");
     ASSERT_TRUE(async_result.get());
 }
+
+TEST_F(GDBRemoteCommunicationClientTest, SyncThreadState)
+{
+    TestClient client;
+    MockServer server;
+    Connect(client, server);
+    if (HasFailure())
+        return;
+
+    const lldb::tid_t tid = 0x47;
+    std::future<bool> async_result = std::async(std::launch::async, [&] { return client.SyncThreadState(tid); });
+    HandlePacket(server, "qSyncThreadStateSupported", "OK");
+    HandlePacket(server, "QSyncThreadState:0047;", "OK");
+    ASSERT_TRUE(async_result.get());
+}

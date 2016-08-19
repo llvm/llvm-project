@@ -804,6 +804,10 @@ _Unwind_VRS_Set(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                            *(unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#else
+    case _UVRSC_WMMXC:
+    case _UVRSC_WMMXD:
+      break;
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register class");
@@ -854,6 +858,10 @@ _Unwind_VRS_Get_Internal(_Unwind_Context *context,
                            (unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#else
+    case _UVRSC_WMMXC:
+    case _UVRSC_WMMXD:
+      break;
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register class");

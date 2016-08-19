@@ -646,11 +646,25 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
   }
 }
 
+void BlockGenerator::invalidateScalarEvolution(Scop &S) {
+  for (auto &Stmt : S)
+    if (Stmt.isBlockStmt())
+      for (auto &Inst : *Stmt.getBasicBlock())
+        SE.forgetValue(&Inst);
+    else if (Stmt.isRegionStmt())
+      for (auto *BB : Stmt.getRegion()->blocks())
+        for (auto &Inst : *BB)
+          SE.forgetValue(&Inst);
+    else
+      llvm_unreachable("Unexpected statement type found");
+}
+
 void BlockGenerator::finalizeSCoP(Scop &S) {
   findOutsideUsers(S);
   createScalarInitialization(S);
   createExitPHINodeMerges(S);
   createScalarFinalization(S);
+  invalidateScalarEvolution(S);
 }
 
 VectorBlockGenerator::VectorBlockGenerator(BlockGenerator &BlockGen,

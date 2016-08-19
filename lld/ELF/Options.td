@@ -262,6 +262,8 @@ def rpath_link_eq: J<"rpath-link=">;
 def sort_common: F<"sort-common">;
 def warn_execstack: F<"warn-execstack">;
 def warn_shared_textrel: F<"warn-shared-textrel">;
+def EB : F<"EB">;
+def EL : F<"EL">;
 def G: JoinedOrSeparate<["-"], "G">;
 
 // Aliases for ignored options

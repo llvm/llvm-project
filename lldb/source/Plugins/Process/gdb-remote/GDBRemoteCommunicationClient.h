@@ -509,6 +509,9 @@ public:
     bool
     RestoreRegisterState (lldb::tid_t tid, uint32_t save_id);
 
+    bool
+    SyncThreadState(lldb::tid_t tid);
+
     const char *
     GetGDBServerProgramName();
     
@@ -543,6 +546,53 @@ public:
 
     void
     ServeSymbolLookups(lldb_private::Process *process);
+
+    //------------------------------------------------------------------
+    /// Return the feature set supported by the gdb-remote server.
+    ///
+    /// This method returns the remote side's response to the qSupported
+    /// packet.  The response is the complete string payload returned
+    /// to the client.
+    ///
+    /// @return
+    ///     The string returned by the server to the qSupported query.
+    //------------------------------------------------------------------
+    const std::string&
+    GetServerSupportedFeatures() const
+    {
+        return m_qSupported_response;
+    }
+
+    //------------------------------------------------------------------
+    /// Return the array of async JSON packet types supported by the remote.
+    ///
+    /// This method returns the remote side's array of supported JSON
+    /// packet types as a list of type names.  Each of the results are
+    /// expected to have an Enable{type_name} command to enable and configure
+    /// the related feature.  Each type_name for an enabled feature will
+    /// possibly send async-style packets that contain a payload of a
+    /// binhex-encoded JSON dictionary.  The dictionary will have a
+    /// string field named 'type', that contains the type_name of the
+    /// supported packet type.
+    ///
+    /// There is a Plugin category called structured-data plugins.
+    /// A plugin indicates whether it knows how to handle a type_name.
+    /// If so, it can be used to process the async JSON packet.
+    ///
+    /// @return
+    ///     The string returned by the server to the qSupported query.
+    //------------------------------------------------------------------
+    lldb_private::StructuredData::Array*
+    GetSupportedStructuredDataPlugins();
+
+    //------------------------------------------------------------------
+    /// Configure a StructuredData feature on the remote end.
+    ///
+    /// @see \b Process::ConfigureStructuredData(...) for details.
+    //------------------------------------------------------------------
+    Error
+    ConfigureRemoteStructuredData(const ConstString &type_name,
+                                  const StructuredData::ObjectSP &config_sp);
 
 protected:
     LazyBool m_supports_not_sending_acks;
@@ -614,6 +664,10 @@ protected:
     uint32_t m_gdb_server_version; // from reply to qGDBServerVersion, zero if qGDBServerVersion is not supported
     uint32_t m_default_packet_timeout;
     uint64_t m_max_packet_size;  // as returned by qSupported
+    std::string m_qSupported_response; // the complete response to qSupported
+
+    bool m_supported_async_json_packets_is_valid;
+    lldb_private::StructuredData::ObjectSP m_supported_async_json_packets_sp;
 
     bool
     GetCurrentProcessInfo (bool allow_lazy_pid = true);
