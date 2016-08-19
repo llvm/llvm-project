@@ -37,9 +37,16 @@ class ConstantRange;
 class DataLayout;
 class LLVMContext;
 
-enum SynchronizationScope {
+/// Prededined synchronization scopes.
+enum SynchronizationScope : unsigned {
+  /// Synchronized with respect to signal handlers executing in the same thread.
   SingleThread = 0,
-  CrossThread = 1
+
+  /// Synchronized with respect to all concurrently executing threads.
+  CrossThread = 1,
+
+  /// First target specific synchronization scope.
+  SynchronizationScopeFirstTargetSpecific = 2
 };
 
 //===----------------------------------------------------------------------===//
@@ -219,30 +226,30 @@ public:
 
   void setAlignment(unsigned Align);
 
-  /// Returns the ordering effect of this fence.
+  /// Returns the ordering constraint of this load instruction.
   AtomicOrdering getOrdering() const {
     return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
   }
 
-  /// Set the ordering constraint on this load. May not be Release or
-  /// AcquireRelease.
+  /// Sets the ordering constraint on this load instruction. May not be Release
+  /// or AcquireRelease.
   void setOrdering(AtomicOrdering Ordering) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 7)) |
                                ((unsigned)Ordering << 7));
   }
 
+  /// Returns the synchronization scope of this load instruction.
   SynchronizationScope getSynchScope() const {
-    return SynchronizationScope((getSubclassDataFromInstruction() >> 6) & 1);
+    return SynchScope;
   }
 
-  /// Specify whether this load is ordered with respect to all
-  /// concurrently executing threads, or only with respect to signal handlers
-  /// executing in the same thread.
-  void setSynchScope(SynchronizationScope xthread) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~(1 << 6)) |
-                               (xthread << 6));
+  /// Sets the synchronization scope on this load instruction.
+  void setSynchScope(SynchronizationScope SynchScope) {
+    this->SynchScope = SynchScope;
   }
 
+  /// Sets the ordering constraint and synchronization scope on this load
+  /// instruction.
   void setAtomic(AtomicOrdering Ordering,
                  SynchronizationScope SynchScope = CrossThread) {
     setOrdering(Ordering);
@@ -279,6 +286,11 @@ private:
   void setInstructionSubclassData(unsigned short D) {
     Instruction::setInstructionSubclassData(D);
   }
+
+  /// The synchronization scope of this load instruction. Not quite enough room
+  /// in SubClassData for everything, so synchronization scope gets its own
+  /// field.
+  SynchronizationScope SynchScope;
 };
 
 //===----------------------------------------------------------------------===//
@@ -337,30 +349,30 @@ public:
 
   void setAlignment(unsigned Align);
 
-  /// Returns the ordering effect of this store.
+  /// Returns the ordering constraint of this store instruction.
   AtomicOrdering getOrdering() const {
     return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
   }
 
-  /// Set the ordering constraint on this store.  May not be Acquire or
-  /// AcquireRelease.
+  /// Sets the ordering constraint on this store instruction. May not be Acquire
+  /// or AcquireRelease.
   void setOrdering(AtomicOrdering Ordering) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 7)) |
                                ((unsigned)Ordering << 7));
   }
 
+  /// Returns the synchronization scope of this store instruction.
   SynchronizationScope getSynchScope() const {
-    return SynchronizationScope((getSubclassDataFromInstruction() >> 6) & 1);
+    return SynchScope;
   }
 
-  /// Specify whether this store instruction is ordered with respect to all
-  /// concurrently executing threads, or only with respect to signal handlers
-  /// executing in the same thread.
-  void setSynchScope(SynchronizationScope xthread) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~(1 << 6)) |
-                               (xthread << 6));
+  /// Sets the synchronization scope on this store instruction.
+  void setSynchScope(SynchronizationScope SynchScope) {
+    this->SynchScope = SynchScope;
   }
 
+  /// Sets the ordering constraint and synchronization scope on this store
+  /// instruction.
   void setAtomic(AtomicOrdering Ordering,
                  SynchronizationScope SynchScope = CrossThread) {
     setOrdering(Ordering);
@@ -400,6 +412,11 @@ private:
   void setInstructionSubclassData(unsigned short D) {
     Instruction::setInstructionSubclassData(D);
   }
+
+  /// The synchronization scope of this store instruction. Not quite enough room
+  /// in SubClassData for everything, so synchronization scope gets its own
+  /// field.
+  SynchronizationScope SynchScope;
 };
 
 template <>
@@ -437,28 +454,26 @@ public:
             SynchronizationScope SynchScope,
             BasicBlock *InsertAtEnd);
 
-  /// Returns the ordering effect of this fence.
+  /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
     return AtomicOrdering(getSubclassDataFromInstruction() >> 1);
   }
 
-  /// Set the ordering constraint on this fence.  May only be Acquire, Release,
-  /// AcquireRelease, or SequentiallyConsistent.
+  /// Sets the ordering constraint on this fence instruction. May only be
+  /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
   void setOrdering(AtomicOrdering Ordering) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & 1) |
                                ((unsigned)Ordering << 1));
   }
 
+  /// Returns the synchronization scope of this fence instruction.
   SynchronizationScope getSynchScope() const {
-    return SynchronizationScope(getSubclassDataFromInstruction() & 1);
+    return SynchScope;
   }
 
-  /// Specify whether this fence orders other operations with respect to all
-  /// concurrently executing threads, or only with respect to signal handlers
-  /// executing in the same thread.
-  void setSynchScope(SynchronizationScope xthread) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~1) |
-                               xthread);
+  /// Sets the synchronization scope on this fence instruction.
+  void setSynchScope(SynchronizationScope SynchScope) {
+    this->SynchScope = SynchScope;
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -475,6 +490,11 @@ private:
   void setInstructionSubclassData(unsigned short D) {
     Instruction::setInstructionSubclassData(D);
   }
+
+  /// The synchronization scope of this fence instruction. Not quite enough room
+  /// in SubClassData for everything, so synchronization scope gets its own
+  /// field.
+  SynchronizationScope SynchScope;
 };
 
 //===----------------------------------------------------------------------===//
@@ -539,7 +559,14 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// Set the ordering constraint on this cmpxchg.
+  /// Returns the ordering constraint of this cmpxchg instruction when store
+  /// occurs.
+  AtomicOrdering getSuccessOrdering() const {
+    return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
+  }
+
+  /// Sets the ordering constraint on this cmpxchg instruction when store
+  /// occurs.
   void setSuccessOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "CmpXchg instructions can only be atomic.");
@@ -547,6 +574,14 @@ public:
                                ((unsigned)Ordering << 2));
   }
 
+  /// Returns the ordering constraint of this cmpxchg instruction when store
+  /// does not occur.
+  AtomicOrdering getFailureOrdering() const {
+    return AtomicOrdering((getSubclassDataFromInstruction() >> 5) & 7);
+  }
+
+  /// Sets the ordering constraint on this cmpxchg instruction when store
+  /// does not occur.
   void setFailureOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "CmpXchg instructions can only be atomic.");
@@ -554,28 +589,14 @@ public:
                                ((unsigned)Ordering << 5));
   }
 
-  /// Specify whether this cmpxchg is atomic and orders other operations with
-  /// respect to all concurrently executing threads, or only with respect to
-  /// signal handlers executing in the same thread.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~2) |
-                               (SynchScope << 1));
-  }
-
-  /// Returns the ordering constraint on this cmpxchg.
-  AtomicOrdering getSuccessOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
-  }
-
-  /// Returns the ordering constraint on this cmpxchg.
-  AtomicOrdering getFailureOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 5) & 7);
-  }
-
-  /// Returns whether this cmpxchg is atomic between threads or only within a
-  /// single thread.
+  /// Returns the synchronization scope of this cmpxchg instruction.
   SynchronizationScope getSynchScope() const {
-    return SynchronizationScope((getSubclassDataFromInstruction() & 2) >> 1);
+    return SynchScope;
+  }
+
+  /// Sets the synchronization scope on this cmpxchg instruction.
+  void setSynchScope(SynchronizationScope SynchScope) {
+    this->SynchScope = SynchScope;
   }
 
   Value *getPointerOperand() { return getOperand(0); }
@@ -630,6 +651,11 @@ private:
   void setInstructionSubclassData(unsigned short D) {
     Instruction::setInstructionSubclassData(D);
   }
+
+  /// The synchronization scope of this cmpxchg instruction. Not quite enough
+  /// room in SubClassData for everything, so synchronization scope gets its own
+  /// field.
+  SynchronizationScope SynchScope;
 };
 
 template <>
@@ -726,7 +752,12 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// Set the ordering constraint on this RMW.
+  /// Returns the ordering constraint of this RMW instruction.
+  AtomicOrdering getOrdering() const {
+    return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
+  }
+
+  /// Sets the ordering constraint on this RMW instruction.
   void setOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "atomicrmw instructions can only be atomic.");
@@ -734,24 +765,15 @@ public:
                                ((unsigned)Ordering << 2));
   }
 
-  /// Specify whether this RMW orders other operations with respect to all
-  /// concurrently executing threads, or only with respect to signal handlers
-  /// executing in the same thread.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    setInstructionSubclassData((getSubclassDataFromInstruction() & ~2) |
-                               (SynchScope << 1));
-  }
-
-  /// Returns the ordering constraint on this RMW.
-  AtomicOrdering getOrdering() const {
-    return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
-  }
-
-  /// Returns whether this RMW is atomic between threads or only within a
-  /// single thread.
+  /// Returns the synchronization scope of this RMW instruction.
   SynchronizationScope getSynchScope() const {
-    return SynchronizationScope((getSubclassDataFromInstruction() & 2) >> 1);
+    return SynchScope;
   }
+
+  /// Sets the synchronization scope on this RMW instruction.
+  void setSynchScope(SynchronizationScope SynchScope) {
+    this->SynchScope = SynchScope;
+   }
 
   Value *getPointerOperand() { return getOperand(0); }
   const Value *getPointerOperand() const { return getOperand(0); }
@@ -781,6 +803,11 @@ private:
   void setInstructionSubclassData(unsigned short D) {
     Instruction::setInstructionSubclassData(D);
   }
+
+  /// The synchronization scope of this RMW instruction. Not quite enough room
+  /// in SubClassData for everything, so synchronization scope gets its own
+  /// field.
+  SynchronizationScope SynchScope;
 };
 
 template <>

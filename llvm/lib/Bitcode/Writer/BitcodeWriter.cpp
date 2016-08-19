@@ -590,11 +590,15 @@ static unsigned getEncodedOrdering(AtomicOrdering Ordering) {
 }
 
 static unsigned getEncodedSynchScope(SynchronizationScope SynchScope) {
+  if (SynchScope >= SynchronizationScopeFirstTargetSpecific)
+    return unsigned(bitc::SYNCHSCOPE_FIRSTTARGETSPECIFIC +
+      (SynchScope - SynchronizationScopeFirstTargetSpecific));
+
   switch (SynchScope) {
   case SingleThread: return bitc::SYNCHSCOPE_SINGLETHREAD;
+  default: // Map unknown scopes to cross-thread.
   case CrossThread: return bitc::SYNCHSCOPE_CROSSTHREAD;
   }
-  llvm_unreachable("Invalid synch scope");
 }
 
 void ModuleBitcodeWriter::writeStringRecord(unsigned Code, StringRef Str,

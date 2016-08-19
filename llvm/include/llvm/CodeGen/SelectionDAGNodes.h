@@ -1017,6 +1017,11 @@ protected:
   /// Memory reference information.
   MachineMemOperand *MMO;
 
+  /// The synchronization scope of this atomic operation. Not quite enough room
+  /// in SubclassData for everything, so synchronization scope gets its own
+  /// field.
+  SynchronizationScope SynchScope;
+
 public:
   MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTs,
             EVT MemoryVT, MachineMemOperand *MMO);
@@ -1045,11 +1050,14 @@ public:
   bool isNonTemporal() const { return (SubclassData >> 6) & 1; }
   bool isInvariant() const { return (SubclassData >> 7) & 1; }
 
+  /// Returns the ordering of this atomic operation.
   AtomicOrdering getOrdering() const {
     return AtomicOrdering((SubclassData >> 8) & 15);
   }
+
+  /// Returns the synchronization scope of this atomic operation.
   SynchronizationScope getSynchScope() const {
-    return SynchronizationScope((SubclassData >> 12) & 1);
+    return SynchScope;
   }
 
   // Returns the offset from the location of the access.
@@ -1123,8 +1131,9 @@ public:
 
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
-  /// For cmpxchg instructions, the ordering requirements when a store does not
-  /// occur.
+  /// For cmpxchg operations, the ordering requirements when a store does not
+  /// occur. Not quite enough room in SubclassData for everything, so failure
+  /// gets its own field.
   AtomicOrdering FailureOrdering;
 
   void InitAtomic(AtomicOrdering SuccessOrdering,
@@ -1137,11 +1146,9 @@ class AtomicSDNode : public MemSDNode {
     assert((AtomicOrdering)((unsigned)FailureOrdering & 15) ==
                FailureOrdering &&
            "Ordering may not require more than 4 bits!");
-    assert((SynchScope & 1) == SynchScope &&
-           "SynchScope may not require more than 1 bit!");
     SubclassData |= (unsigned)SuccessOrdering << 8;
-    SubclassData |= SynchScope << 12;
     this->FailureOrdering = FailureOrdering;
+    this->SynchScope = SynchScope;
     assert(getSuccessOrdering() == SuccessOrdering &&
            "Ordering encoding error!");
     assert(getFailureOrdering() == FailureOrdering &&
@@ -1161,12 +1168,14 @@ public:
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getVal() const { return getOperand(2); }
 
+  /// For cmpxchg operations, returns the ordering requirements when store
+  /// occurs.
   AtomicOrdering getSuccessOrdering() const {
     return getOrdering();
   }
 
-  // Not quite enough room in SubclassData for everything, so failure gets its
-  // own field.
+  /// For cmpxchg operations, returns the ordering requirements when store does
+  /// not occur.
   AtomicOrdering getFailureOrdering() const {
     return FailureOrdering;
   }

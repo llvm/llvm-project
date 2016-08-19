@@ -2118,8 +2118,12 @@ void AssemblyWriter::writeAtomic(AtomicOrdering Ordering,
   if (Ordering == AtomicOrdering::NotAtomic)
     return;
 
+  if (SynchScope >= SynchronizationScopeFirstTargetSpecific)
+    Out << " synchscope(" << unsigned(SynchScope) << ')';
+
   switch (SynchScope) {
   case SingleThread: Out << " singlethread"; break;
+  default: // Map unknown scopes to cross-thread.
   case CrossThread: break;
   }
 
@@ -2132,8 +2136,12 @@ void AssemblyWriter::writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
   assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
          FailureOrdering != AtomicOrdering::NotAtomic);
 
+  if (SynchScope >= SynchronizationScopeFirstTargetSpecific)
+    Out << " synchscope(" << unsigned(SynchScope) << ')';
+
   switch (SynchScope) {
   case SingleThread: Out << " singlethread"; break;
+  default: // Map unknown scopes to cross-thread.
   case CrossThread: break;
   }
 

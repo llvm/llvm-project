@@ -3179,7 +3179,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   // The only fence that needs an instruction is a sequentially-consistent
   // cross-thread fence.
   if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
-      FenceScope == CrossThread) {
+      FenceScope != SingleThread) {
     return SDValue(DAG.getMachineNode(SystemZ::Serialize, DL, MVT::Other,
                                       Op.getOperand(0)),
                    0);

@@ -366,9 +366,9 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
 
 static bool isAtomic(Instruction *I) {
   if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->isAtomic() && LI->getSynchScope() == CrossThread;
+    return LI->isAtomic() && LI->getSynchScope() != SingleThread;
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->isAtomic() && SI->getSynchScope() == CrossThread;
+    return SI->isAtomic() && SI->getSynchScope() != SingleThread;
   if (isa<AtomicRMWInst>(I))
     return true;
   if (isa<AtomicCmpXchgInst>(I))
