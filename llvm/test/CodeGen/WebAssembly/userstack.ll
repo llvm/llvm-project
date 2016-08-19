@@ -14,12 +14,12 @@ define void @alloca32() noredzone {
  ; CHECK: i32.const $push[[L1:.+]]=, 0{{$}}
  ; CHECK-NEXT: i32.load $push[[L2:.+]]=, __stack_pointer($pop[[L1]])
  ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 16
- ; CHECK-NEXT: i32.sub $push[[L8:.+]]=, $pop[[L2]], $pop[[L3]]
- ; CHECK-NEXT: i32.store $push[[L10:.+]]=, __stack_pointer($pop[[L4]]), $pop[[L8]]{{$}}
- ; CHECK-NEXT: tee_local $push[[L9:.+]]=, $[[SP:.+]]=, $pop[[L10]]{{$}}
+ ; CHECK-NEXT: i32.sub $push[[L9:.+]]=, $pop[[L2]], $pop[[L3]]
+ ; CHECK-NEXT: tee_local $push[[L8:.+]]=, $[[SP:.+]]=, $pop[[L9]]{{$}}
+ ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L4]]), $pop[[L8]]{{$}}
  %retval = alloca i32
  ; CHECK: i32.const $push[[L0:.+]]=, 0
- ; CHECK: i32.store {{.*}}=, 12($pop[[L9]]), $pop[[L0]]
+ ; CHECK: i32.store $drop=, 12($[[SP]]), $pop[[L0]]
  store i32 0, i32* %retval
  ; CHECK: i32.const $push[[L6:.+]]=, 0
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 16
@@ -51,43 +51,45 @@ define void @alloca3264() {
 ; CHECK-LABEL: allocarray:
 ; CHECK: .local i32{{$}}
 define void @allocarray() {
- ; CHECK: i32.const $push[[L7:.+]]=, 0{{$}}
- ; CHECK: i32.const $push[[L4:.+]]=, 0{{$}}
- ; CHECK-NEXT: i32.load $push[[L5:.+]]=, __stack_pointer($pop[[L4]])
- ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 144{{$}}
- ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L5]], $pop[[L6]]
- ; CHECK-NEXT: i32.store ${{.+}}=, __stack_pointer($pop[[L7]]), $pop[[L11]]
+ ; CHECK: i32.const $push[[L6:.+]]=, 0{{$}}
+ ; CHECK: i32.const $push[[L3:.+]]=, 0{{$}}
+ ; CHECK-NEXT: i32.load $push[[L4:.+]]=, __stack_pointer($pop[[L3]])
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 144{{$}}
+ ; CHECK-NEXT: i32.sub $push[[L12:.+]]=, $pop[[L4]], $pop[[L5]]
+ ; CHECK-NEXT: tee_local $push[[L11:.+]]=, $0=, $pop[[L12]]
+ ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L6]]), $pop[[L11]]
  %r = alloca [33 x i32]
 
  ; CHECK:      i32.const $push{{.+}}=, 24
  ; CHECK-NEXT: i32.add $push[[L3:.+]]=, $[[SP]], $pop{{.+}}
  ; CHECK-NEXT: i32.const $push[[L1:.+]]=, 1{{$}}
- ; CHECK-NEXT: i32.store $push[[L0:.+]]=, 0($pop[[L3]]), $pop[[L1]]{{$}}
- ; CHECK-NEXT: i32.store $drop=, 12(${{.+}}), $pop[[L0]]{{$}}
+ ; CHECK-NEXT: i32.store $drop=, 0($pop[[L3]]), $pop[[L1]]{{$}}
+ ; CHECK-NEXT: i32.const $push[[L10:.+]]=, 1{{$}}
+ ; CHECK-NEXT: i32.store $drop=, 12(${{.+}}), $pop[[L10]]{{$}}
  %p = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
  %p2 = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
 
- ; CHECK: i32.const $push[[L10:.+]]=, 0{{$}}
- ; CHECK-NEXT: i32.const $push[[L8:.+]]=, 144
- ; CHECK-NEXT: i32.add $push[[L19:.+]]=, $[[SP]], $pop[[L8]]
- ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L10]]), $pop[[L9]]
+ ; CHECK: i32.const $push[[L9:.+]]=, 0{{$}}
+ ; CHECK-NEXT: i32.const $push[[L7:.+]]=, 144
+ ; CHECK-NEXT: i32.add $push[[L8:.+]]=, $[[SP]], $pop[[L7]]
+ ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L9]]), $pop[[L8]]
  ret void
 }
 
 ; CHECK-LABEL: non_mem_use
 define void @non_mem_use(i8** %addr) {
- ; CHECK: i32.const $push[[L1:.+]]=, 48
- ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, {{.+}}, $pop[[L1]]
- ; CHECK-NEXT: i32.store $[[SP:.+]]=, {{.+}}, $pop[[L11]]
+ ; CHECK: i32.const $push[[L2:.+]]=, 48
+ ; CHECK-NEXT: i32.sub $push[[L12:.+]]=, {{.+}}, $pop[[L2]]
+ ; CHECK-NEXT: tee_local $push[[L11:.+]]=, $[[SP:.+]]=, $pop[[L12]]
+ ; CHECK-NEXT: i32.store $drop=, {{.+}}, $pop[[L11]]
  %buf = alloca [27 x i8], align 16
  %r = alloca i64
  %r2 = alloca i64
  ; %r is at SP+8
- ; CHECK: tee_local $push[[L12:.+]]=, $[[SP:.+]]=, $pop{{.+}}
  ; CHECK: i32.const $push[[OFF:.+]]=, 8
- ; CHECK-NEXT: i32.add $push[[ARG1:.+]]=, $pop[[L12]], $pop[[OFF]]
+ ; CHECK-NEXT: i32.add $push[[ARG1:.+]]=, $[[SP]], $pop[[OFF]]
  ; CHECK-NEXT: call ext_func@FUNCTION, $pop[[ARG1]]
  call void @ext_func(i64* %r)
  ; %r2 is at SP+0, no add needed
@@ -97,7 +99,7 @@ define void @non_mem_use(i8** %addr) {
  ; %buf is at SP+16
  ; CHECK: i32.const $push[[OFF:.+]]=, 16
  ; CHECK-NEXT: i32.add $push[[VAL:.+]]=, $[[SP]], $pop[[OFF]]
- ; CHECK-NEXT: i32.store {{.*}}=, 0($0), $pop[[VAL]]
+ ; CHECK-NEXT: i32.store $drop=, 0($0), $pop[[VAL]]
  %gep = getelementptr inbounds [27 x i8], [27 x i8]* %buf, i32 0, i32 0
  store i8* %gep, i8** %addr
  ret void
@@ -106,15 +108,16 @@ define void @non_mem_use(i8** %addr) {
 ; CHECK-LABEL: allocarray_inbounds:
 ; CHECK: .local i32{{$}}
 define void @allocarray_inbounds() {
- ; CHECK: i32.const $push[[L6:.+]]=, 0{{$}}
- ; CHECK: i32.const $push[[L3:.+]]=, 0{{$}}
- ; CHECK-NEXT: i32.load $push[[L4:.+]]=, __stack_pointer($pop[[L3]])
- ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 32{{$}}
- ; CHECK-NEXT: i32.sub $push[[L10:.+]]=, $pop[[L4]], $pop[[L5]]
- ; CHECK-NEXT: i32.store ${{.+}}=, __stack_pointer($pop[[L6]]), $pop[[L10]]{{$}}
+ ; CHECK: i32.const $push[[L5:.+]]=, 0{{$}}
+ ; CHECK: i32.const $push[[L2:.+]]=, 0{{$}}
+ ; CHECK-NEXT: i32.load $push[[L3:.+]]=, __stack_pointer($pop[[L2]])
+ ; CHECK-NEXT: i32.const $push[[L4:.+]]=, 32{{$}}
+ ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L3]], $pop[[L4]]
+ ; CHECK-NEXT: tee_local $push[[L10:.+]]=, $[[SP:.+]]=, $pop[[L11]]
+ ; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L5]]), $pop[[L10]]{{$}}
  %r = alloca [5 x i32]
  ; CHECK: i32.const $push[[L3:.+]]=, 1
- ; CHECK-DAG: i32.store $push{{.*}}=, 24(${{.+}}), $pop[[L3]]
+ ; CHECK-DAG: i32.store $drop=, 24(${{.+}}), $pop[[L3]]
  %p = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
  ; This store should have both the GEP and the FI folded into it.
@@ -170,14 +173,13 @@ define void @dynamic_alloca_redzone(i32 %alloc) {
 ; CHECK-LABEL: dynamic_static_alloca:
 define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; Decrement SP in the prolog by the static amount and writeback to memory.
- ; CHECK: i32.const $push[[L7:.+]]=, 0{{$}}
+ ; CHECK: i32.const $push[[L11:.+]]=, 0{{$}}
  ; CHECK: i32.const $push[[L8:.+]]=, 0{{$}}
- ; CHECK: i32.const $push[[L9:.+]]=, 0{{$}}
- ; CHECK-NEXT: i32.load $push[[L10:.+]]=, __stack_pointer($pop[[L9]])
- ; CHECK-NEXT: i32.const $push[[L11:.+]]=, 16
- ; CHECK-NEXT: i32.sub $push[[L20:.+]]=, $pop[[L10]], $pop[[L11]]
+ ; CHECK-NEXT: i32.load $push[[L9:.+]]=, __stack_pointer($pop[[L8]])
+ ; CHECK-NEXT: i32.const $push[[L10:.+]]=, 16
+ ; CHECK-NEXT: i32.sub $push[[L20:.+]]=, $pop[[L9]], $pop[[L10]]
  ; CHECK-NEXT: tee_local $push[[L19:.+]]=, $[[FP:.+]]=, $pop[[L20]]
- ; CHECK:      i32.store $push[[L0:.+]]=, __stack_pointer($pop{{.+}}), $pop{{.+}}
+ ; CHECK:      i32.store $drop=, __stack_pointer($pop{{.+}}), $pop{{.+}}
  ; Decrement SP in the body by the dynamic amount.
  ; CHECK: i32.sub
  ; Writeback to memory.

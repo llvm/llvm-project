@@ -24,9 +24,15 @@
 #ifndef LLVM_LIB_TARGET_X86_X86INSTRBUILDER_H
 #define LLVM_LIB_TARGET_X86_X86INSTRBUILDER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include <cassert>
 
 namespace llvm {
 
@@ -57,12 +63,11 @@ struct X86AddressMode {
     Base.Reg = 0;
   }
 
-
   void getFullAddress(SmallVectorImpl<MachineOperand> &MO) {
     assert(Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8);
 
     if (BaseType == X86AddressMode::RegBase)
-      MO.push_back(MachineOperand::CreateReg(Base.Reg, false, false,
+      MO.push_back(MachineOperand::CreateReg(Base.Reg, false, false, false,
                                              false, false, false, 0, false));
     else {
       assert(BaseType == X86AddressMode::FrameIndexBase);
@@ -70,16 +75,16 @@ struct X86AddressMode {
     }
 
     MO.push_back(MachineOperand::CreateImm(Scale));
-    MO.push_back(MachineOperand::CreateReg(IndexReg, false, false,
-                                           false, false, false, 0, false));
+    MO.push_back(MachineOperand::CreateReg(IndexReg, false, false, false, false,
+                                           false, false, 0, false));
 
     if (GV)
       MO.push_back(MachineOperand::CreateGA(GV, Disp, GVOpFlags));
     else
       MO.push_back(MachineOperand::CreateImm(Disp));
 
-    MO.push_back(MachineOperand::CreateReg(0, false, false,
-                                           false, false, false, 0, false));
+    MO.push_back(MachineOperand::CreateReg(0, false, false, false, false, false,
+                                           false, 0, false));
   }
 };
 
@@ -206,6 +211,6 @@ addConstantPoolReference(const MachineInstrBuilder &MIB, unsigned CPI,
     .addConstantPoolIndex(CPI, 0, OpFlags).addReg(0);
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_X86_X86INSTRBUILDER_H

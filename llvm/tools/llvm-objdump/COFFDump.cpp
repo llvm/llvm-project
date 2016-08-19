@@ -17,6 +17,7 @@
 
 #include "llvm-objdump.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
@@ -615,6 +616,29 @@ void llvm::printCOFFFileHeader(const object::ObjectFile *Obj) {
   printLoadConfiguration(file);
   printImportTables(file);
   printExportTable(file);
+}
+
+void llvm::printCOFFSymbolTable(const object::COFFImportFile *i) {
+  unsigned Index = 0;
+  bool IsCode = i->getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
+
+  for (const object::BasicSymbolRef &Sym : i->symbols()) {
+    std::string Name;
+    raw_string_ostream NS(Name);
+
+    Sym.printName(NS);
+    NS.flush();
+
+    outs() << "[" << format("%2d", Index) << "]"
+           << "(sec " << format("%2d", 0) << ")"
+           << "(fl 0x00)" // Flag bits, which COFF doesn't have.
+           << "(ty " << format("%3x", (IsCode && Index) ? 32 : 0) << ")"
+           << "(scl " << format("%3x", 0) << ") "
+           << "(nx " << 0 << ") "
+           << "0x" << format("%08x", 0) << " " << Name << '\n';
+
+    ++Index;
+  }
 }
 
 void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {

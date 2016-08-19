@@ -1,4 +1,4 @@
-// WebAssemblyLowerEmscriptenExceptions.cpp - Lower exceptions for Emscripten //
+//=== WebAssemblyLowerEmscriptenEHSjLj.cpp - Lower exceptions for Emscripten =//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,9 +23,9 @@
 ///
 /// This pass does following things:
 ///
-/// 1) Create three global variables: __THREW__, threwValue, and tempRet0.
+/// 1) Create three global variables: __THREW__, __threwValue, and tempRet0.
 ///    tempRet0 will be set within __cxa_find_matching_catch() function in
-///    JS library, and __THREW__ and threwValue will be set in invoke wrappers
+///    JS library, and __THREW__ and __threwValue will be set in invoke wrappers
 ///    in JS glue code. For what invoke wrappers are, refer to 3).
 ///
 /// 2) Create setThrew and setTempRet0 functions.
@@ -38,7 +38,7 @@
 ///    function setThrew(threw, value) {
 ///      if (__THREW__ == 0) {
 ///        __THREW__ = threw;
-///        threwValue = value;
+///        __threwValue = value;
 ///      }
 ///    }
 ///
@@ -107,22 +107,49 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "wasm-lower-em-exceptions"
+#define DEBUG_TYPE "wasm-lower-em-ehsjlj"
 
 static cl::list<std::string>
-    Whitelist("emscripten-cxx-exceptions-whitelist",
-              cl::desc("The list of function names in which Emscripten-style "
-                       "exception handling is enabled (see emscripten "
-                       "EMSCRIPTEN_CATCHING_WHITELIST options)"),
-              cl::CommaSeparated);
+    EHWhitelist("emscripten-cxx-exceptions-whitelist",
+                cl::desc("The list of function names in which Emscripten-style "
+                         "exception handling is enabled (see emscripten "
+                         "EMSCRIPTEN_CATCHING_WHITELIST options)"),
+                cl::CommaSeparated);
 
 namespace {
-class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
+class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
+  static const char *ThrewGVName;
+  static const char *ThrewValueGVName;
+  static const char *TempRet0GVName;
+  static const char *ResumeFName;
+  static const char *EHTypeIDFName;
+  static const char *SetThrewFName;
+  static const char *SetTempRet0FName;
+  static const char *FindMatchingCatchPrefix;
+  static const char *InvokePrefix;
+
+  bool DoEH;   // Enable exception handling
+  bool DoSjLj; // Enable setjmp/longjmp handling
+
+  GlobalVariable *ThrewGV;
+  GlobalVariable *ThrewValueGV;
+  GlobalVariable *TempRet0GV;
+  Function *ResumeF;
+  Function *EHTypeIDF;
+  // __cxa_find_matching_catch_N functions.
+  // Indexed by the number of clauses in an original landingpad instruction.
+  DenseMap<int, Function *> FindMatchingCatches;
+  // Map of <function signature string, invoke_ wrappers>
+  StringMap<Function *> InvokeWrappers;
+  // Set of whitelisted function names for exception handling
+  std::set<std::string> EHWhitelistSet;
+
   const char *getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
   }
 
-  bool runOnFunction(Function &F);
+  bool runEHOnFunction(Function &F);
+  bool runSjLjOnFunction(Function &F);
   // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
   // This is because a landingpad instruction contains two more arguments,
   // a personality function and a cleanup bit, and __cxa_find_matching_catch_N
@@ -131,39 +158,41 @@ class WebAssemblyLowerEmscriptenExceptions final : public ModulePass {
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
   Function *getInvokeWrapper(Module &M, InvokeInst *II);
-  bool areAllExceptionsAllowed() const { return WhitelistSet.empty(); }
-
-  GlobalVariable *ThrewGV;      // __THREW__
-  GlobalVariable *ThrewValueGV; // threwValue
-  GlobalVariable *TempRet0GV;   // tempRet0
-  Function *ResumeF;            // __resumeException
-  Function *EHTypeIdF;          // llvm_eh_typeid_for
-  // __cxa_find_matching_catch_N functions.
-  // Indexed by the number of clauses in an original landingpad instruction.
-  DenseMap<int, Function *> FindMatchingCatches;
-  // Map of <function signature string, invoke_ wrappers>
-  StringMap<Function *> InvokeWrappers;
-  // Set of whitelisted function names
-  std::set<std::string> WhitelistSet;
+  bool areAllExceptionsAllowed() const { return EHWhitelistSet.empty(); }
 
 public:
   static char ID;
 
-  WebAssemblyLowerEmscriptenExceptions()
-      : ModulePass(ID), ThrewGV(nullptr), ThrewValueGV(nullptr),
-        TempRet0GV(nullptr) {
-    WhitelistSet.insert(Whitelist.begin(), Whitelist.end());
+  WebAssemblyLowerEmscriptenEHSjLj(bool DoEH = true, bool DoSjLj = true)
+      : ModulePass(ID), DoEH(DoEH), DoSjLj(DoSjLj), ThrewGV(nullptr),
+        ThrewValueGV(nullptr), TempRet0GV(nullptr), ResumeF(nullptr),
+        EHTypeIDF(nullptr) {
+    EHWhitelistSet.insert(EHWhitelist.begin(), EHWhitelist.end());
   }
   bool runOnModule(Module &M) override;
 };
 } // End anonymous namespace
 
-char WebAssemblyLowerEmscriptenExceptions::ID = 0;
-INITIALIZE_PASS(WebAssemblyLowerEmscriptenExceptions, DEBUG_TYPE,
-                "WebAssembly Lower Emscripten Exceptions", false, false)
+const char *WebAssemblyLowerEmscriptenEHSjLj::ThrewGVName = "__THREW__";
+const char *WebAssemblyLowerEmscriptenEHSjLj::ThrewValueGVName = "__threwValue";
+const char *WebAssemblyLowerEmscriptenEHSjLj::TempRet0GVName = "__tempRet0";
+const char *WebAssemblyLowerEmscriptenEHSjLj::ResumeFName = "__resumeException";
+const char *WebAssemblyLowerEmscriptenEHSjLj::EHTypeIDFName =
+    "llvm_eh_typeid_for";
+const char *WebAssemblyLowerEmscriptenEHSjLj::SetThrewFName = "setThrew";
+const char *WebAssemblyLowerEmscriptenEHSjLj::SetTempRet0FName = "setTempRet0";
+const char *WebAssemblyLowerEmscriptenEHSjLj::FindMatchingCatchPrefix =
+    "__cxa_find_matching_catch_";
+const char *WebAssemblyLowerEmscriptenEHSjLj::InvokePrefix = "__invoke_";
 
-ModulePass *llvm::createWebAssemblyLowerEmscriptenExceptions() {
-  return new WebAssemblyLowerEmscriptenExceptions();
+char WebAssemblyLowerEmscriptenEHSjLj::ID = 0;
+INITIALIZE_PASS(WebAssemblyLowerEmscriptenEHSjLj, DEBUG_TYPE,
+                "WebAssembly Lower Emscripten Exceptions / Setjmp / Longjmp",
+                false, false)
+
+ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLj(bool DoEH,
+                                                         bool DoSjLj) {
+  return new WebAssemblyLowerEmscriptenEHSjLj(DoEH, DoSjLj);
 }
 
 static bool canThrow(const Value *V) {
@@ -212,23 +241,23 @@ static std::string getSignature(FunctionType *FTy) {
   return Sig;
 }
 
-Function *WebAssemblyLowerEmscriptenExceptions::getFindMatchingCatch(
-    Module &M, unsigned NumClauses) {
+Function *
+WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
+                                                       unsigned NumClauses) {
   if (FindMatchingCatches.count(NumClauses))
     return FindMatchingCatches[NumClauses];
   PointerType *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
   SmallVector<Type *, 16> Args(NumClauses, Int8PtrTy);
   FunctionType *FTy = FunctionType::get(Int8PtrTy, Args, false);
-  Function *F = Function::Create(
-      FTy, GlobalValue::ExternalLinkage,
-      "__cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
+  Function *F =
+      Function::Create(FTy, GlobalValue::ExternalLinkage,
+                       FindMatchingCatchPrefix + Twine(NumClauses + 2), &M);
   FindMatchingCatches[NumClauses] = F;
   return F;
 }
 
-Function *
-WebAssemblyLowerEmscriptenExceptions::getInvokeWrapper(Module &M,
-                                                       InvokeInst *II) {
+Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(Module &M,
+                                                             InvokeInst *II) {
   SmallVector<Type *, 16> ArgTys;
   Value *Callee = II->getCalledValue();
   FunctionType *CalleeFTy;
@@ -251,58 +280,77 @@ WebAssemblyLowerEmscriptenExceptions::getInvokeWrapper(Module &M,
   FunctionType *FTy = FunctionType::get(CalleeFTy->getReturnType(), ArgTys,
                                         CalleeFTy->isVarArg());
   Function *F = Function::Create(FTy, GlobalValue::ExternalLinkage,
-                                 "__invoke_" + Sig, &M);
+                                 InvokePrefix + Sig, &M);
   InvokeWrappers[Sig] = F;
   return F;
 }
 
-bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
+bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   LLVMContext &C = M.getContext();
-  IRBuilder<> Builder(C);
-  IntegerType *Int1Ty = Builder.getInt1Ty();
-  PointerType *Int8PtrTy = Builder.getInt8PtrTy();
-  IntegerType *Int32Ty = Builder.getInt32Ty();
-  Type *VoidTy = Builder.getVoidTy();
+  IRBuilder<> IRB(C);
+  IntegerType *Int1Ty = IRB.getInt1Ty();
+  PointerType *Int8PtrTy = IRB.getInt8PtrTy();
+  IntegerType *Int32Ty = IRB.getInt32Ty();
+  Type *VoidTy = IRB.getVoidTy();
 
-  // Create global variables __THREW__, threwValue, and tempRet0
-  ThrewGV = new GlobalVariable(M, Int1Ty, false, GlobalValue::ExternalLinkage,
-                               Builder.getFalse(),
-                               createGlobalValueName(M, "__THREW__"));
+  // Create global variables __THREW__, threwValue, and tempRet0, which are
+  // used in common for both exception handling and setjmp/longjmp handling
+  ThrewGV =
+      new GlobalVariable(M, Int1Ty, false, GlobalValue::ExternalLinkage,
+                         IRB.getFalse(), createGlobalValueName(M, ThrewGVName));
   ThrewValueGV = new GlobalVariable(
-      M, Int32Ty, false, GlobalValue::ExternalLinkage, Builder.getInt32(0),
-      createGlobalValueName(M, "threwValue"));
-  TempRet0GV = new GlobalVariable(
-      M, Int32Ty, false, GlobalValue::ExternalLinkage, Builder.getInt32(0),
-      createGlobalValueName(M, "tempRet0"));
-
-  // Register __resumeException function
-  FunctionType *ResumeFTy = FunctionType::get(VoidTy, Int8PtrTy, false);
-  ResumeF = Function::Create(ResumeFTy, GlobalValue::ExternalLinkage,
-                             "__resumeException", &M);
-
-  // Register llvm_eh_typeid_for function
-  FunctionType *EHTypeIdTy = FunctionType::get(Int32Ty, Int8PtrTy, false);
-  EHTypeIdF = Function::Create(EHTypeIdTy, GlobalValue::ExternalLinkage,
-                               "llvm_eh_typeid_for", &M);
+      M, Int32Ty, false, GlobalValue::ExternalLinkage, IRB.getInt32(0),
+      createGlobalValueName(M, ThrewValueGVName));
+  TempRet0GV = new GlobalVariable(M, Int32Ty, false,
+                                  GlobalValue::ExternalLinkage, IRB.getInt32(0),
+                                  createGlobalValueName(M, TempRet0GVName));
 
   bool Changed = false;
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    Changed |= runOnFunction(F);
+
+  // Exception handling
+  if (DoEH) {
+    // Register __resumeException function
+    FunctionType *ResumeFTy = FunctionType::get(VoidTy, Int8PtrTy, false);
+    ResumeF = Function::Create(ResumeFTy, GlobalValue::ExternalLinkage,
+                               ResumeFName, &M);
+
+    // Register llvm_eh_typeid_for function
+    FunctionType *EHTypeIDTy = FunctionType::get(Int32Ty, Int8PtrTy, false);
+    EHTypeIDF = Function::Create(EHTypeIDTy, GlobalValue::ExternalLinkage,
+                                 EHTypeIDFName, &M);
+
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      Changed |= runEHOnFunction(F);
+    }
+  }
+
+  // TODO: Run CFGSimplify like the emscripten JSBackend?
+
+  // Setjmp/longjmp handling
+  if (DoSjLj) {
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      Changed |= runSjLjOnFunction(F);
+    }
   }
 
   if (!Changed)
     return false;
 
-  assert(!M.getNamedGlobal("setThrew") && "setThrew already exists");
-  assert(!M.getNamedGlobal("setTempRet0") && "setTempRet0 already exists");
+  // If we have made any changes while doing exception handling or
+  // setjmp/longjmp handling, we have to create these functions for JavaScript
+  // to call.
+  assert(!M.getNamedGlobal(SetThrewFName) && "setThrew already exists");
+  assert(!M.getNamedGlobal(SetTempRet0FName) && "setTempRet0 already exists");
 
   // Create setThrew function
   SmallVector<Type *, 2> Params = {Int1Ty, Int32Ty};
   FunctionType *FTy = FunctionType::get(VoidTy, Params, false);
   Function *F =
-      Function::Create(FTy, GlobalValue::ExternalLinkage, "setThrew", &M);
+      Function::Create(FTy, GlobalValue::ExternalLinkage, SetThrewFName, &M);
   Argument *Arg1 = &*(F->arg_begin());
   Argument *Arg2 = &*(++F->arg_begin());
   Arg1->setName("threw");
@@ -311,41 +359,41 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnModule(Module &M) {
   BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", F);
   BasicBlock *EndBB = BasicBlock::Create(C, "if.end", F);
 
-  Builder.SetInsertPoint(EntryBB);
-  Value *Threw = Builder.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
-  Value *Cmp = Builder.CreateICmpEQ(Threw, Builder.getFalse(), "cmp");
-  Builder.CreateCondBr(Cmp, ThenBB, EndBB);
+  IRB.SetInsertPoint(EntryBB);
+  Value *Threw = IRB.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
+  Value *Cmp = IRB.CreateICmpEQ(Threw, IRB.getFalse(), "cmp");
+  IRB.CreateCondBr(Cmp, ThenBB, EndBB);
 
-  Builder.SetInsertPoint(ThenBB);
-  Builder.CreateStore(Arg1, ThrewGV);
-  Builder.CreateStore(Arg2, ThrewValueGV);
-  Builder.CreateBr(EndBB);
+  IRB.SetInsertPoint(ThenBB);
+  IRB.CreateStore(Arg1, ThrewGV);
+  IRB.CreateStore(Arg2, ThrewValueGV);
+  IRB.CreateBr(EndBB);
 
-  Builder.SetInsertPoint(EndBB);
-  Builder.CreateRetVoid();
+  IRB.SetInsertPoint(EndBB);
+  IRB.CreateRetVoid();
 
   // Create setTempRet0 function
   Params = {Int32Ty};
   FTy = FunctionType::get(VoidTy, Params, false);
-  F = Function::Create(FTy, GlobalValue::ExternalLinkage, "setTempRet0", &M);
+  F = Function::Create(FTy, GlobalValue::ExternalLinkage, SetTempRet0FName, &M);
   F->arg_begin()->setName("value");
   EntryBB = BasicBlock::Create(C, "entry", F);
-  Builder.SetInsertPoint(EntryBB);
-  Builder.CreateStore(&*F->arg_begin(), TempRet0GV);
-  Builder.CreateRetVoid();
+  IRB.SetInsertPoint(EntryBB);
+  IRB.CreateStore(&*F->arg_begin(), TempRet0GV);
+  IRB.CreateRetVoid();
 
   return true;
 }
 
-bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
+bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> Builder(C);
+  IRBuilder<> IRB(C);
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
   bool AllowExceptions =
-      areAllExceptionsAllowed() || WhitelistSet.count(F.getName());
+      areAllExceptionsAllowed() || EHWhitelistSet.count(F.getName());
 
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());
@@ -353,7 +401,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       continue;
     Changed = true;
     LandingPads.insert(II->getLandingPadInst());
-    Builder.SetInsertPoint(II);
+    IRB.SetInsertPoint(II);
 
     bool NeedInvoke = AllowExceptions && canThrow(II->getCalledValue());
     if (NeedInvoke) {
@@ -371,7 +419,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
 
       // Pre-invoke
       // __THREW__ = 0;
-      Builder.CreateStore(Builder.getFalse(), ThrewGV);
+      IRB.CreateStore(IRB.getFalse(), ThrewGV);
 
       // Invoke function wrapper in JavaScript
       SmallVector<Value *, 16> CallArgs;
@@ -379,7 +427,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       // within the invoke wrapper later
       CallArgs.push_back(II->getCalledValue());
       CallArgs.append(II->arg_begin(), II->arg_end());
-      CallInst *NewCall = Builder.CreateCall(getInvokeWrapper(M, II), CallArgs);
+      CallInst *NewCall = IRB.CreateCall(getInvokeWrapper(M, II), CallArgs);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setDebugLoc(II->getDebugLoc());
@@ -413,17 +461,17 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
 
       // Post-invoke
       // %__THREW__.val = __THREW__; __THREW__ = 0;
-      Value *Threw = Builder.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
-      Builder.CreateStore(Builder.getFalse(), ThrewGV);
+      Value *Threw = IRB.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
+      IRB.CreateStore(IRB.getFalse(), ThrewGV);
 
       // Insert a branch based on __THREW__ variable
-      Builder.CreateCondBr(Threw, II->getUnwindDest(), II->getNormalDest());
+      IRB.CreateCondBr(Threw, II->getUnwindDest(), II->getNormalDest());
 
     } else {
       // This can't throw, and we don't need this invoke, just replace it with a
       // call+branch
       SmallVector<Value *, 16> CallArgs(II->arg_begin(), II->arg_end());
-      CallInst *NewCall = Builder.CreateCall(II->getCalledValue(), CallArgs);
+      CallInst *NewCall = IRB.CreateCall(II->getCalledValue(), CallArgs);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setDebugLoc(II->getDebugLoc());
@@ -431,7 +479,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       II->replaceAllUsesWith(NewCall);
       ToErase.push_back(II);
 
-      Builder.CreateBr(II->getNormalDest());
+      IRB.CreateBr(II->getNormalDest());
 
       // Remove any PHI node entries from the exception destination
       II->getUnwindDest()->removePredecessor(&BB);
@@ -448,15 +496,15 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
 
       // Split the input into legal values
       Value *Input = RI->getValue();
-      Builder.SetInsertPoint(RI);
-      Value *Low = Builder.CreateExtractValue(Input, 0, "low");
+      IRB.SetInsertPoint(RI);
+      Value *Low = IRB.CreateExtractValue(Input, 0, "low");
 
       // Create a call to __resumeException function
       Value *Args[] = {Low};
-      Builder.CreateCall(ResumeF, Args);
+      IRB.CreateCall(ResumeF, Args);
 
       // Add a terminator to the block
-      Builder.CreateUnreachable();
+      IRB.CreateUnreachable();
       ToErase.push_back(RI);
     }
   }
@@ -473,9 +521,9 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       if (Callee->getIntrinsicID() != Intrinsic::eh_typeid_for)
         continue;
 
-      Builder.SetInsertPoint(CI);
+      IRB.SetInsertPoint(CI);
       CallInst *NewCI =
-          Builder.CreateCall(EHTypeIdF, CI->getArgOperand(0), "typeid");
+          IRB.CreateCall(EHTypeIDF, CI->getArgOperand(0), "typeid");
       CI->replaceAllUsesWith(NewCI);
       ToErase.push_back(CI);
     }
@@ -491,7 +539,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
   // Handle all the landingpad for this function together, as multiple invokes
   // may share a single lp
   for (LandingPadInst *LPI : LandingPads) {
-    Builder.SetInsertPoint(LPI);
+    IRB.SetInsertPoint(LPI);
     SmallVector<Value *, 16> FMCArgs;
     for (unsigned i = 0, e = LPI->getNumClauses(); i < e; ++i) {
       Constant *Clause = LPI->getClause(i);
@@ -501,8 +549,7 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
       if (LPI->isFilter(i)) {
         ArrayType *ATy = cast<ArrayType>(Clause->getType());
         for (unsigned j = 0, e = ATy->getNumElements(); j < e; ++j) {
-          Value *EV =
-              Builder.CreateExtractValue(Clause, makeArrayRef(j), "filter");
+          Value *EV = IRB.CreateExtractValue(Clause, makeArrayRef(j), "filter");
           FMCArgs.push_back(EV);
         }
       } else
@@ -511,12 +558,11 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
 
     // Create a call to __cxa_find_matching_catch_N function
     Function *FMCF = getFindMatchingCatch(M, FMCArgs.size());
-    CallInst *FMCI = Builder.CreateCall(FMCF, FMCArgs, "fmc");
+    CallInst *FMCI = IRB.CreateCall(FMCF, FMCArgs, "fmc");
     Value *Undef = UndefValue::get(LPI->getType());
-    Value *Pair0 = Builder.CreateInsertValue(Undef, FMCI, 0, "pair0");
-    Value *TempRet0 =
-        Builder.CreateLoad(TempRet0GV, TempRet0GV->getName() + "val");
-    Value *Pair1 = Builder.CreateInsertValue(Pair0, TempRet0, 1, "pair1");
+    Value *Pair0 = IRB.CreateInsertValue(Undef, FMCI, 0, "pair0");
+    Value *TempRet0 = IRB.CreateLoad(TempRet0GV, TempRet0GV->getName() + "val");
+    Value *Pair1 = IRB.CreateInsertValue(Pair0, TempRet0, 1, "pair1");
 
     LPI->replaceAllUsesWith(Pair1);
     ToErase.push_back(LPI);
@@ -527,4 +573,9 @@ bool WebAssemblyLowerEmscriptenExceptions::runOnFunction(Function &F) {
     I->eraseFromParent();
 
   return Changed;
+}
+
+bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
+  // TODO
+  return false;
 }

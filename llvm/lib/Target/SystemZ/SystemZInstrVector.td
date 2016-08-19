@@ -798,7 +798,7 @@ multiclass VectorRounding<Instruction insn, TypedReg tr> {
   def : FPConversion<insn, ffloor,     tr, tr, 4, 7>;
   def : FPConversion<insn, fceil,      tr, tr, 4, 6>;
   def : FPConversion<insn, ftrunc,     tr, tr, 4, 5>;
-  def : FPConversion<insn, frnd,       tr, tr, 4, 1>;
+  def : FPConversion<insn, fround,     tr, tr, 4, 1>;
 }
 
 let Predicates = [FeatureVector] in {
@@ -840,13 +840,13 @@ let Predicates = [FeatureVector] in {
 
   // Load lengthened.
   def VLDEB : UnaryVRRa<"vldeb", 0xE7C4, z_vextend, v128db, v128eb, 2, 0>;
-  def WLDEB : UnaryVRRa<"wldeb", 0xE7C4, fextend, v64db, v32eb, 2, 8>;
+  def WLDEB : UnaryVRRa<"wldeb", 0xE7C4, fpextend, v64db, v32eb, 2, 8>;
 
   // Load rounded,
   def VLEDB : TernaryVRRa<"vledb", 0xE7C5, null_frag, v128eb, v128db, 3, 0>;
   def WLEDB : TernaryVRRa<"wledb", 0xE7C5, null_frag, v32eb, v64db, 3, 8>;
   def : Pat<(v4f32 (z_vround (v2f64 VR128:$src))), (VLEDB VR128:$src, 0, 0)>;
-  def : FPConversion<WLEDB, fround, v32eb, v64db, 0, 0>;
+  def : FPConversion<WLEDB, fpround, v32eb, v64db, 0, 0>;
 
   // Multiply.
   def VFMDB : BinaryVRRc<"vfmdb", 0xE7E7, fmul, v128db, v128db, 3, 0>;

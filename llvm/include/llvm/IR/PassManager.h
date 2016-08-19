@@ -171,7 +171,7 @@ private:
 };
 
 // Forward declare the analysis manager template.
-template <typename IRUnitT> class AnalysisManager;
+template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
 /// A CRTP mix-in to automatically provide informational APIs needed for
 /// passes.
@@ -222,8 +222,11 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
 /// that analysis manager to each pass it runs, as well as calling the analysis
 /// manager's invalidation routine with the PreservedAnalyses of each pass it
 /// runs.
-template <typename IRUnitT>
-class PassManager : public PassInfoMixin<PassManager<IRUnitT>> {
+template <typename IRUnitT,
+          typename AnalysisManagerT = AnalysisManager<IRUnitT>,
+          typename... ExtraArgTs>
+class PassManager : public PassInfoMixin<
+                        PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
 public:
   /// \brief Construct a pass manager.
   ///
@@ -241,7 +244,8 @@ public:
   }
 
   /// \brief Run all of the passes in this manager over the IR.
-  PreservedAnalyses run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) {
+  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
+                        ExtraArgTs... ExtraArgs) {
     PreservedAnalyses PA = PreservedAnalyses::all();
 
     if (DebugLogging)
@@ -252,7 +256,7 @@ public:
         dbgs() << "Running pass: " << Passes[Idx]->name() << " on "
                << IR.getName() << "\n";
 
-      PreservedAnalyses PassPA = Passes[Idx]->run(IR, AM);
+      PreservedAnalyses PassPA = Passes[Idx]->run(IR, AM, ExtraArgs...);
 
       // Update the analysis manager as each pass runs and potentially
       // invalidates analyses. We also update the preserved set of analyses
@@ -278,12 +282,15 @@ public:
   }
 
   template <typename PassT> void addPass(PassT Pass) {
-    typedef detail::PassModel<IRUnitT, PassT> PassModelT;
+    typedef detail::PassModel<IRUnitT, PassT, PreservedAnalyses,
+                              AnalysisManagerT, ExtraArgTs...>
+        PassModelT;
     Passes.emplace_back(new PassModelT(std::move(Pass)));
   }
 
 private:
-  typedef detail::PassConcept<IRUnitT> PassConceptT;
+  typedef detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>
+      PassConceptT;
 
   PassManager(const PassManager &) = delete;
   PassManager &operator=(const PassManager &) = delete;
@@ -302,62 +309,67 @@ extern template class PassManager<Function>;
 /// \brief Convenience typedef for a pass manager over functions.
 typedef PassManager<Function> FunctionPassManager;
 
-namespace detail {
-
-/// \brief A CRTP base used to implement analysis managers.
+/// \brief A generic analysis pass manager with lazy running and caching of
+/// results.
 ///
-/// This class template serves as the boiler plate of an analysis manager. Any
-/// analysis manager can be implemented on top of this base class. Any
-/// implementation will be required to provide specific hooks:
-///
-/// - getResultImpl
-/// - getCachedResultImpl
-/// - invalidateImpl
-///
-/// The details of the call pattern are within.
-///
-/// Note that there is also a generic analysis manager template which implements
-/// the above required functions along with common datastructures used for
-/// managing analyses. This base class is factored so that if you need to
-/// customize the handling of a specific IR unit, you can do so without
-/// replicating *all* of the boilerplate.
-template <typename DerivedT, typename IRUnitT> class AnalysisManagerBase {
-  DerivedT *derived_this() { return static_cast<DerivedT *>(this); }
-  const DerivedT *derived_this() const {
-    return static_cast<const DerivedT *>(this);
-  }
-
-  AnalysisManagerBase(const AnalysisManagerBase &) = delete;
-  AnalysisManagerBase &operator=(const AnalysisManagerBase &) = delete;
-
-protected:
+/// This analysis manager can be used for any IR unit where the address of the
+/// IR unit sufficies as its identity. It manages the cache for a unit of IR via
+/// the address of each unit of IR cached.
+template <typename IRUnitT, typename... ExtraArgTs>
+class AnalysisManager {
   typedef detail::AnalysisResultConcept<IRUnitT> ResultConceptT;
-  typedef detail::AnalysisPassConcept<IRUnitT> PassConceptT;
+  typedef detail::AnalysisPassConcept<IRUnitT, ExtraArgTs...> PassConceptT;
 
-  // FIXME: Provide template aliases for the models when we're using C++11 in
-  // a mode supporting them.
+public:
+  // Most public APIs are inherited from the CRTP base class.
+
+  /// \brief Construct an empty analysis manager.
+  ///
+  /// A flag can be passed to indicate that the manager should perform debug
+  /// logging.
+  AnalysisManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
 
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
-  AnalysisManagerBase() {}
-  AnalysisManagerBase(AnalysisManagerBase &&Arg)
-      : AnalysisPasses(std::move(Arg.AnalysisPasses)) {}
-  AnalysisManagerBase &operator=(AnalysisManagerBase &&RHS) {
+  AnalysisManager(AnalysisManager &&Arg)
+      : AnalysisPasses(std::move(Arg.AnalysisPasses)),
+        AnalysisResults(std::move(Arg.AnalysisResults)),
+        DebugLogging(std::move(Arg.DebugLogging)) {}
+  AnalysisManager &operator=(AnalysisManager &&RHS) {
     AnalysisPasses = std::move(RHS.AnalysisPasses);
+    AnalysisResults = std::move(RHS.AnalysisResults);
+    DebugLogging = std::move(RHS.DebugLogging);
     return *this;
   }
 
-public:
+  /// \brief Returns true if the analysis manager has an empty results cache.
+  bool empty() const {
+    assert(AnalysisResults.empty() == AnalysisResultLists.empty() &&
+           "The storage and index of analysis results disagree on how many "
+           "there are!");
+    return AnalysisResults.empty();
+  }
+
+  /// \brief Clear the analysis result cache.
+  ///
+  /// This routine allows cleaning up when the set of IR units itself has
+  /// potentially changed, and thus we can't even look up a a result and
+  /// invalidate it directly. Notably, this does *not* call invalidate functions
+  /// as there is nothing to be done for them.
+  void clear() {
+    AnalysisResults.clear();
+    AnalysisResultLists.clear();
+  }
+
   /// \brief Get the result of an analysis pass for this module.
   ///
   /// If there is not a valid cached result in the manager already, this will
   /// re-run the analysis to produce a valid result.
-  template <typename PassT> typename PassT::Result &getResult(IRUnitT &IR) {
+  template <typename PassT>
+  typename PassT::Result &getResult(IRUnitT &IR, ExtraArgTs... ExtraArgs) {
     assert(AnalysisPasses.count(PassT::ID()) &&
            "This analysis pass was not registered prior to being queried");
-
-    ResultConceptT &ResultConcept =
-        derived_this()->getResultImpl(PassT::ID(), IR);
+    ResultConceptT &ResultConcept = getResultImpl(PassT::ID(), IR, ExtraArgs...);
     typedef detail::AnalysisResultModel<IRUnitT, PassT, typename PassT::Result>
         ResultModelT;
     return static_cast<ResultModelT &>(ResultConcept).Result;
@@ -373,8 +385,7 @@ public:
     assert(AnalysisPasses.count(PassT::ID()) &&
            "This analysis pass was not registered prior to being queried");
 
-    ResultConceptT *ResultConcept =
-        derived_this()->getCachedResultImpl(PassT::ID(), IR);
+    ResultConceptT *ResultConcept = getCachedResultImpl(PassT::ID(), IR);
     if (!ResultConcept)
       return nullptr;
 
@@ -403,7 +414,7 @@ public:
   /// away.
   template <typename PassBuilderT> bool registerPass(PassBuilderT PassBuilder) {
     typedef decltype(PassBuilder()) PassT;
-    typedef detail::AnalysisPassModel<IRUnitT, PassT> PassModelT;
+    typedef detail::AnalysisPassModel<IRUnitT, PassT, ExtraArgTs...> PassModelT;
 
     auto &PassPtr = AnalysisPasses[PassT::ID()];
     if (PassPtr)
@@ -421,7 +432,7 @@ public:
   template <typename PassT> void invalidate(IRUnitT &IR) {
     assert(AnalysisPasses.count(PassT::ID()) &&
            "This analysis pass was not registered prior to being invalidated");
-    derived_this()->invalidateImpl(PassT::ID(), IR);
+    invalidateImpl(PassT::ID(), IR);
   }
 
   /// \brief Invalidate analyses cached for an IR unit.
@@ -432,145 +443,6 @@ public:
   /// analyis pass which has been successfully invalidated and thus can be
   /// preserved going forward. The updated set is returned.
   PreservedAnalyses invalidate(IRUnitT &IR, PreservedAnalyses PA) {
-    return derived_this()->invalidateImpl(IR, std::move(PA));
-  }
-
-protected:
-  /// \brief Lookup a registered analysis pass.
-  PassConceptT &lookupPass(void *PassID) {
-    typename AnalysisPassMapT::iterator PI = AnalysisPasses.find(PassID);
-    assert(PI != AnalysisPasses.end() &&
-           "Analysis passes must be registered prior to being queried!");
-    return *PI->second;
-  }
-
-  /// \brief Lookup a registered analysis pass.
-  const PassConceptT &lookupPass(void *PassID) const {
-    typename AnalysisPassMapT::const_iterator PI = AnalysisPasses.find(PassID);
-    assert(PI != AnalysisPasses.end() &&
-           "Analysis passes must be registered prior to being queried!");
-    return *PI->second;
-  }
-
-private:
-  /// \brief Map type from module analysis pass ID to pass concept pointer.
-  typedef DenseMap<void *, std::unique_ptr<PassConceptT>> AnalysisPassMapT;
-
-  /// \brief Collection of module analysis passes, indexed by ID.
-  AnalysisPassMapT AnalysisPasses;
-};
-
-} // End namespace detail
-
-/// \brief A generic analysis pass manager with lazy running and caching of
-/// results.
-///
-/// This analysis manager can be used for any IR unit where the address of the
-/// IR unit sufficies as its identity. It manages the cache for a unit of IR via
-/// the address of each unit of IR cached.
-template <typename IRUnitT>
-class AnalysisManager
-    : public detail::AnalysisManagerBase<AnalysisManager<IRUnitT>, IRUnitT> {
-  friend class detail::AnalysisManagerBase<AnalysisManager<IRUnitT>, IRUnitT>;
-  typedef detail::AnalysisManagerBase<AnalysisManager<IRUnitT>, IRUnitT> BaseT;
-  typedef typename BaseT::ResultConceptT ResultConceptT;
-  typedef typename BaseT::PassConceptT PassConceptT;
-
-public:
-  // Most public APIs are inherited from the CRTP base class.
-
-  /// \brief Construct an empty analysis manager.
-  ///
-  /// A flag can be passed to indicate that the manager should perform debug
-  /// logging.
-  AnalysisManager(bool DebugLogging = false) : DebugLogging(DebugLogging) {}
-
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  AnalysisManager(AnalysisManager &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))),
-        AnalysisResults(std::move(Arg.AnalysisResults)),
-        DebugLogging(std::move(Arg.DebugLogging)) {}
-  AnalysisManager &operator=(AnalysisManager &&RHS) {
-    BaseT::operator=(std::move(static_cast<BaseT &>(RHS)));
-    AnalysisResults = std::move(RHS.AnalysisResults);
-    DebugLogging = std::move(RHS.DebugLogging);
-    return *this;
-  }
-
-  /// \brief Returns true if the analysis manager has an empty results cache.
-  bool empty() const {
-    assert(AnalysisResults.empty() == AnalysisResultLists.empty() &&
-           "The storage and index of analysis results disagree on how many "
-           "there are!");
-    return AnalysisResults.empty();
-  }
-
-  /// \brief Clear the analysis result cache.
-  ///
-  /// This routine allows cleaning up when the set of IR units itself has
-  /// potentially changed, and thus we can't even look up a a result and
-  /// invalidate it directly. Notably, this does *not* call invalidate functions
-  /// as there is nothing to be done for them.
-  void clear() {
-    AnalysisResults.clear();
-    AnalysisResultLists.clear();
-  }
-
-private:
-  AnalysisManager(const AnalysisManager &) = delete;
-  AnalysisManager &operator=(const AnalysisManager &) = delete;
-
-  /// \brief Get an analysis result, running the pass if necessary.
-  ResultConceptT &getResultImpl(void *PassID, IRUnitT &IR) {
-    typename AnalysisResultMapT::iterator RI;
-    bool Inserted;
-    std::tie(RI, Inserted) = AnalysisResults.insert(std::make_pair(
-        std::make_pair(PassID, &IR), typename AnalysisResultListT::iterator()));
-
-    // If we don't have a cached result for this function, look up the pass and
-    // run it to produce a result, which we then add to the cache.
-    if (Inserted) {
-      auto &P = this->lookupPass(PassID);
-      if (DebugLogging)
-        dbgs() << "Running analysis: " << P.name() << "\n";
-      AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
-      ResultList.emplace_back(PassID, P.run(IR, *this));
-
-      // P.run may have inserted elements into AnalysisResults and invalidated
-      // RI.
-      RI = AnalysisResults.find(std::make_pair(PassID, &IR));
-      assert(RI != AnalysisResults.end() && "we just inserted it!");
-
-      RI->second = std::prev(ResultList.end());
-    }
-
-    return *RI->second->second;
-  }
-
-  /// \brief Get a cached analysis result or return null.
-  ResultConceptT *getCachedResultImpl(void *PassID, IRUnitT &IR) const {
-    typename AnalysisResultMapT::const_iterator RI =
-        AnalysisResults.find(std::make_pair(PassID, &IR));
-    return RI == AnalysisResults.end() ? nullptr : &*RI->second->second;
-  }
-
-  /// \brief Invalidate a function pass result.
-  void invalidateImpl(void *PassID, IRUnitT &IR) {
-    typename AnalysisResultMapT::iterator RI =
-        AnalysisResults.find(std::make_pair(PassID, &IR));
-    if (RI == AnalysisResults.end())
-      return;
-
-    if (DebugLogging)
-      dbgs() << "Invalidating analysis: " << this->lookupPass(PassID).name()
-             << "\n";
-    AnalysisResultLists[&IR].erase(RI->second);
-    AnalysisResults.erase(RI);
-  }
-
-  /// \brief Invalidate the results for a function..
-  PreservedAnalyses invalidateImpl(IRUnitT &IR, PreservedAnalyses PA) {
     // Short circuit for a common case of all analyses being preserved.
     if (PA.areAllPreserved())
       return PA;
@@ -615,6 +487,81 @@ private:
 
     return PA;
   }
+
+private:
+  AnalysisManager(const AnalysisManager &) = delete;
+  AnalysisManager &operator=(const AnalysisManager &) = delete;
+
+  /// \brief Lookup a registered analysis pass.
+  PassConceptT &lookupPass(void *PassID) {
+    typename AnalysisPassMapT::iterator PI = AnalysisPasses.find(PassID);
+    assert(PI != AnalysisPasses.end() &&
+           "Analysis passes must be registered prior to being queried!");
+    return *PI->second;
+  }
+
+  /// \brief Lookup a registered analysis pass.
+  const PassConceptT &lookupPass(void *PassID) const {
+    typename AnalysisPassMapT::const_iterator PI = AnalysisPasses.find(PassID);
+    assert(PI != AnalysisPasses.end() &&
+           "Analysis passes must be registered prior to being queried!");
+    return *PI->second;
+  }
+
+  /// \brief Get an analysis result, running the pass if necessary.
+  ResultConceptT &getResultImpl(void *PassID, IRUnitT &IR,
+                                ExtraArgTs... ExtraArgs) {
+    typename AnalysisResultMapT::iterator RI;
+    bool Inserted;
+    std::tie(RI, Inserted) = AnalysisResults.insert(std::make_pair(
+        std::make_pair(PassID, &IR), typename AnalysisResultListT::iterator()));
+
+    // If we don't have a cached result for this function, look up the pass and
+    // run it to produce a result, which we then add to the cache.
+    if (Inserted) {
+      auto &P = this->lookupPass(PassID);
+      if (DebugLogging)
+        dbgs() << "Running analysis: " << P.name() << "\n";
+      AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
+      ResultList.emplace_back(PassID, P.run(IR, *this, ExtraArgs...));
+
+      // P.run may have inserted elements into AnalysisResults and invalidated
+      // RI.
+      RI = AnalysisResults.find(std::make_pair(PassID, &IR));
+      assert(RI != AnalysisResults.end() && "we just inserted it!");
+
+      RI->second = std::prev(ResultList.end());
+    }
+
+    return *RI->second->second;
+  }
+
+  /// \brief Get a cached analysis result or return null.
+  ResultConceptT *getCachedResultImpl(void *PassID, IRUnitT &IR) const {
+    typename AnalysisResultMapT::const_iterator RI =
+        AnalysisResults.find(std::make_pair(PassID, &IR));
+    return RI == AnalysisResults.end() ? nullptr : &*RI->second->second;
+  }
+
+  /// \brief Invalidate a function pass result.
+  void invalidateImpl(void *PassID, IRUnitT &IR) {
+    typename AnalysisResultMapT::iterator RI =
+        AnalysisResults.find(std::make_pair(PassID, &IR));
+    if (RI == AnalysisResults.end())
+      return;
+
+    if (DebugLogging)
+      dbgs() << "Invalidating analysis: " << this->lookupPass(PassID).name()
+             << "\n";
+    AnalysisResultLists[&IR].erase(RI->second);
+    AnalysisResults.erase(RI);
+  }
+
+  /// \brief Map type from module analysis pass ID to pass concept pointer.
+  typedef DenseMap<void *, std::unique_ptr<PassConceptT>> AnalysisPassMapT;
+
+  /// \brief Collection of module analysis passes, indexed by ID.
+  AnalysisPassMapT AnalysisPasses;
 
   /// \brief List of function analysis pass IDs and associated concept pointers.
   ///
@@ -668,7 +615,7 @@ typedef AnalysisManager<Function> FunctionAnalysisManager;
 /// Note that the proxy's result is a move-only object and represents ownership
 /// of the validity of the analyses in the \c FunctionAnalysisManager it
 /// provides.
-template <typename AnalysisManagerT, typename IRUnitT>
+template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 class InnerAnalysisManagerProxy
     : public AnalysisInfoMixin<
           InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>> {
@@ -750,7 +697,10 @@ public:
   /// In debug builds, it will also assert that the analysis manager is empty
   /// as no queries should arrive at the function analysis manager prior to
   /// this analysis being requested.
-  Result run(IRUnitT &IR, AnalysisManager<IRUnitT> &) { return Result(*AM); }
+  Result run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &,
+             ExtraArgTs...) {
+    return Result(*AM);
+  }
 
 private:
   friend AnalysisInfoMixin<
@@ -760,8 +710,9 @@ private:
   AnalysisManagerT *AM;
 };
 
-template <typename AnalysisManagerT, typename IRUnitT>
-char InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT>::PassID;
+template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
+char
+    InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::PassID;
 
 extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
                                                 Module>;
@@ -781,7 +732,7 @@ typedef InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>
 /// This proxy *doesn't* manage the invalidation in any way. That is handled by
 /// the recursive return path of each layer of the pass manager and the
 /// returned PreservedAnalysis set.
-template <typename AnalysisManagerT, typename IRUnitT>
+template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 class OuterAnalysisManagerProxy
     : public AnalysisInfoMixin<
           OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT>> {
@@ -802,7 +753,7 @@ public:
     const AnalysisManagerT &getManager() const { return *AM; }
 
     /// \brief Handle invalidation by ignoring it, this pass is immutable.
-    bool invalidate(IRUnitT &) { return false; }
+    bool invalidate(IRUnitT &, const PreservedAnalyses &) { return false; }
 
   private:
     const AnalysisManagerT *AM;
@@ -823,7 +774,10 @@ public:
   /// \brief Run the analysis pass and create our proxy result object.
   /// Nothing to see here, it just forwards the \c AM reference into the
   /// result.
-  Result run(IRUnitT &, AnalysisManager<IRUnitT> &) { return Result(*AM); }
+  Result run(IRUnitT &, AnalysisManager<IRUnitT, ExtraArgTs...> &,
+             ExtraArgTs...) {
+    return Result(*AM);
+  }
 
 private:
   friend AnalysisInfoMixin<
@@ -833,8 +787,9 @@ private:
   const AnalysisManagerT *AM;
 };
 
-template <typename AnalysisManagerT, typename IRUnitT>
-char OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT>::PassID;
+template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
+char
+    OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::PassID;
 
 extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 Function>;
@@ -935,15 +890,30 @@ createModuleToFunctionPassAdaptor(FunctionPassT Pass) {
 ///
 /// This is a no-op pass which simply forces a specific analysis pass's result
 /// to be available when it is run.
-template <typename AnalysisT>
-struct RequireAnalysisPass : PassInfoMixin<RequireAnalysisPass<AnalysisT>> {
+template <typename AnalysisT, typename IRUnitT,
+          typename AnalysisManagerT = AnalysisManager<IRUnitT>,
+          typename... ExtraArgTs>
+struct RequireAnalysisPass;
+
+/// A specialization of the RequireAnalysisPass for generic IR unit analysis
+/// managers and pass managers that have no extra arguments.
+///
+/// If there are extra arguments at the pass's run level there may also be
+/// extra arguments to the analysis manager's \c getResult routine. We can't
+/// guess how to effectively map the arguments from one to the other, and so
+/// only the specialization with no extra arguments is provided generically.
+/// Specific patterns of run-method extra arguments and analysis manager extra
+/// arguments will have to be defined as appropriate for those patterns.
+template <typename AnalysisT, typename IRUnitT>
+struct RequireAnalysisPass<AnalysisT, IRUnitT, AnalysisManager<IRUnitT>>
+    : PassInfoMixin<
+          RequireAnalysisPass<AnalysisT, IRUnitT, AnalysisManager<IRUnitT>>> {
   /// \brief Run this pass over some unit of IR.
   ///
   /// This pass can be run over any unit of IR and use any analysis manager
   /// provided they satisfy the basic API requirements. When this pass is
   /// created, these methods can be instantiated to satisfy whatever the
   /// context requires.
-  template <typename IRUnitT>
   PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> &AM) {
     (void)AM.template getResult<AnalysisT>(Arg);
 
@@ -965,8 +935,8 @@ struct InvalidateAnalysisPass
   /// provided they satisfy the basic API requirements. When this pass is
   /// created, these methods can be instantiated to satisfy whatever the
   /// context requires.
-  template <typename IRUnitT>
-  PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> &AM) {
+  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
+  PreservedAnalyses run(IRUnitT &Arg, AnalysisManagerT &AM, ExtraArgTs &&...) {
     // We have to directly invalidate the analysis result as we can't
     // enumerate all other analyses and use the preserved set to control it.
     AM.template invalidate<AnalysisT>(Arg);
@@ -981,8 +951,8 @@ struct InvalidateAnalysisPass
 /// analysis passes to be re-run to produce fresh results if any are needed.
 struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
   /// \brief Run this pass over some unit of IR.
-  template <typename IRUnitT>
-  PreservedAnalyses run(IRUnitT &, AnalysisManager<IRUnitT> &) {
+  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
+  PreservedAnalyses run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {
     return PreservedAnalyses::none();
   }
 };

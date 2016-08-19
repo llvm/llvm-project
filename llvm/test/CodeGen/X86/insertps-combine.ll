@@ -93,6 +93,42 @@ define <4 x float> @shuffle_v4f32_0z6z(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinit4
 }
 
+define <4 x float> @shuffle_v4f32_z06z(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: shuffle_v4f32_z06z:
+; SSE:       # BB#0:
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[2,3]
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_v4f32_z06z:
+; AVX:       # BB#0:
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[2,3]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; AVX-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 undef, i32 0, i32 6, i32 undef>
+  %shuffle1 = shufflevector <4 x float> %shuffle, <4 x float> <float 0.000000e+00, float undef, float undef, float 0.000000e+00>, <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+  ret <4 x float> %shuffle1
+}
+
+define <4 x float> @shuffle_v4f32_05zz(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: shuffle_v4f32_05zz:
+; SSE:       # BB#0:
+; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_v4f32_05zz:
+; AVX:       # BB#0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  %shuffle1 = shufflevector <4 x float> %shuffle, <4 x float> <float undef, float undef, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x float> %shuffle1
+}
+
 define <4 x float> @insertps_undef_input0(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: insertps_undef_input0:
 ; SSE:       # BB#0:

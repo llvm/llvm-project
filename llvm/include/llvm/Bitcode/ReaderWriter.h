@@ -110,7 +110,7 @@ namespace llvm {
   /// index for a distributed backend, provide the \p ModuleToSummariesForIndex
   /// map.
   void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
-                        std::map<std::string, GVSummaryMapTy>
+                        const std::map<std::string, GVSummaryMapTy>
                             *ModuleToSummariesForIndex = nullptr);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes

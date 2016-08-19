@@ -89,11 +89,11 @@ ARM_ARCH("armv8-a", AK_ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
 ARM_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a",
          ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS))
+          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC))
 ARM_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a",
          ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC))
+          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS))
 ARM_ARCH("armv8-m.base", AK_ARMV8MBaseline, "8-M.Baseline", "v8m.base",
           ARMBuildAttrs::CPUArch::v8_M_Base, FK_NONE, ARM::AEK_HWDIV)
 ARM_ARCH("armv8-m.main", AK_ARMV8MMainline, "8-M.Mainline", "v8m.main",

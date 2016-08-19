@@ -208,9 +208,8 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(const ItTy &I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(I, F);
 }
 
-/// \brief Metafunction to determine if type T has a member called rbegin().
-template <typename Ty>
-class has_rbegin {
+/// Helper to determine if type T has a member called rbegin().
+template <typename Ty> class has_rbegin_impl {
   typedef char yes[1];
   typedef char no[2];
 
@@ -222,6 +221,11 @@ class has_rbegin {
 
 public:
   static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
+};
+
+/// Metafunction to determine if T& or T has a member called rbegin().
+template <typename Ty>
+struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
 };
 
 // Returns an iterator_range over the given container which iterates in reverse.
@@ -377,6 +381,11 @@ struct build_index_impl<0, I...> : index_sequence<I...> {};
 /// \brief Creates a compile-time integer sequence for a parameter pack.
 template <class... Ts>
 struct index_sequence_for : build_index_impl<sizeof...(Ts)> {};
+
+/// Utility type to build an inheritance chain that makes it easy to rank
+/// overload candidates.
+template <int N> struct rank : rank<N - 1> {};
+template <> struct rank<0> {};
 
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays

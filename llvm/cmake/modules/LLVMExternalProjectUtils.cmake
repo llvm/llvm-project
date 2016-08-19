@@ -120,7 +120,7 @@ function(llvm_ExternalProject_Add name source_dir)
   endif()
 
   ExternalProject_Add(${name}
-    DEPENDS ${ARG_DEPENDS}
+    DEPENDS ${ARG_DEPENDS} llvm-config
     ${name}-clobber
     PREFIX ${CMAKE_BINARY_DIR}/projects/${name}
     SOURCE_DIR ${source_dir}

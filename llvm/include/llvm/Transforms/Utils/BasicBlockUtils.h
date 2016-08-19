@@ -17,8 +17,11 @@
 
 // FIXME: Move to this file: BasicBlock::removePredecessor, BB::splitBasicBlock
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/InstrTypes.h"
+#include <cassert>
 
 namespace llvm {
 
@@ -29,7 +32,6 @@ class Instruction;
 class MDNode;
 class ReturnInst;
 class TargetLibraryInfo;
-class TerminatorInst;
 
 /// Delete the specified block, which must have no predecessors.
 void DeleteDeadBlock(BasicBlock *BB);
@@ -154,7 +156,7 @@ SplitCriticalEdge(BasicBlock *Src, BasicBlock *Dst,
                       CriticalEdgeSplittingOptions()) {
   TerminatorInst *TI = Src->getTerminator();
   unsigned i = 0;
-  while (1) {
+  while (true) {
     assert(i != TI->getNumSuccessors() && "Edge doesn't exist!");
     if (TI->getSuccessor(i) == Dst)
       return SplitCriticalEdge(TI, i, Options);
@@ -282,6 +284,7 @@ void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// instructions in them.
 Value *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                       BasicBlock *&IfFalse);
-} // End llvm namespace
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

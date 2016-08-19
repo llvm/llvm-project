@@ -154,7 +154,7 @@ let SimpleBDXStore = 1 in {
 // Convert floating-point values to narrower representations, rounding
 // according to the current mode.  The destination of LEXBR and LDXBR
 // is a 128-bit value, but only the first register of the pair is used.
-def LEDBR : UnaryRRE<"ledb", 0xB344, fround,    FP32,  FP64>;
+def LEDBR : UnaryRRE<"ledb", 0xB344, fpround,    FP32,  FP64>;
 def LEXBR : UnaryRRE<"lexb", 0xB346, null_frag, FP128, FP128>;
 def LDXBR : UnaryRRE<"ldxb", 0xB345, null_frag, FP128, FP128>;
 
@@ -165,15 +165,15 @@ def LEXBRA : UnaryRRF4<"lexbra", 0xB346, FP128, FP128>,
 def LDXBRA : UnaryRRF4<"ldxbra", 0xB345, FP128, FP128>,
              Requires<[FeatureFPExtension]>;
 
-def : Pat<(f32 (fround FP128:$src)),
+def : Pat<(f32 (fpround FP128:$src)),
           (EXTRACT_SUBREG (LEXBR FP128:$src), subreg_hr32)>;
-def : Pat<(f64 (fround FP128:$src)),
+def : Pat<(f64 (fpround FP128:$src)),
           (EXTRACT_SUBREG (LDXBR FP128:$src), subreg_h64)>;
 
 // Extend register floating-point values to wider representations.
-def LDEBR : UnaryRRE<"ldeb", 0xB304, fextend, FP64,  FP32>;
-def LXEBR : UnaryRRE<"lxeb", 0xB306, fextend, FP128, FP32>;
-def LXDBR : UnaryRRE<"lxdb", 0xB305, fextend, FP128, FP64>;
+def LDEBR : UnaryRRE<"ldeb", 0xB304, fpextend, FP64,  FP32>;
+def LXEBR : UnaryRRE<"lxeb", 0xB306, fpextend, FP128, FP32>;
+def LXDBR : UnaryRRE<"lxdb", 0xB305, fpextend, FP128, FP64>;
 
 // Extend memory floating-point values to wider representations.
 def LDEB : UnaryRXE<"ldeb", 0xED04, extloadf32, FP64,  4>;
@@ -347,9 +347,9 @@ let Predicates = [FeatureFPExtension] in {
 
   // Same idea for round, where mode 1 is round towards nearest with
   // ties away from zero.
-  def : Pat<(frnd FP32:$src),  (FIEBRA 1, FP32:$src,  4)>;
-  def : Pat<(frnd FP64:$src),  (FIDBRA 1, FP64:$src,  4)>;
-  def : Pat<(frnd FP128:$src), (FIXBRA 1, FP128:$src, 4)>;
+  def : Pat<(fround FP32:$src),  (FIEBRA 1, FP32:$src,  4)>;
+  def : Pat<(fround FP64:$src),  (FIDBRA 1, FP64:$src,  4)>;
+  def : Pat<(fround FP128:$src), (FIXBRA 1, FP128:$src, 4)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -388,26 +388,26 @@ def MDB  : BinaryRXE<"mdb",  0xED1C, fmul, FP64, load, 8>;
 
 // f64 multiplication of two FP32 registers.
 def MDEBR : BinaryRRE<"mdeb", 0xB30C, null_frag, FP64, FP32>;
-def : Pat<(fmul (f64 (fextend FP32:$src1)), (f64 (fextend FP32:$src2))),
+def : Pat<(fmul (f64 (fpextend FP32:$src1)), (f64 (fpextend FP32:$src2))),
           (MDEBR (INSERT_SUBREG (f64 (IMPLICIT_DEF)),
                                 FP32:$src1, subreg_r32), FP32:$src2)>;
 
 // f64 multiplication of an FP32 register and an f32 memory.
 def MDEB : BinaryRXE<"mdeb", 0xED0C, null_frag, FP64, load, 4>;
-def : Pat<(fmul (f64 (fextend FP32:$src1)),
+def : Pat<(fmul (f64 (fpextend FP32:$src1)),
                 (f64 (extloadf32 bdxaddr12only:$addr))),
           (MDEB (INSERT_SUBREG (f64 (IMPLICIT_DEF)), FP32:$src1, subreg_r32),
                 bdxaddr12only:$addr)>;
 
 // f128 multiplication of two FP64 registers.
 def MXDBR : BinaryRRE<"mxdb", 0xB307, null_frag, FP128, FP64>;
-def : Pat<(fmul (f128 (fextend FP64:$src1)), (f128 (fextend FP64:$src2))),
+def : Pat<(fmul (f128 (fpextend FP64:$src1)), (f128 (fpextend FP64:$src2))),
           (MXDBR (INSERT_SUBREG (f128 (IMPLICIT_DEF)),
                                 FP64:$src1, subreg_h64), FP64:$src2)>;
 
 // f128 multiplication of an FP64 register and an f64 memory.
 def MXDB : BinaryRXE<"mxdb", 0xED07, null_frag, FP128, load, 8>;
-def : Pat<(fmul (f128 (fextend FP64:$src1)),
+def : Pat<(fmul (f128 (fpextend FP64:$src1)),
                 (f128 (extloadf64 bdxaddr12only:$addr))),
           (MXDB (INSERT_SUBREG (f128 (IMPLICIT_DEF)), FP64:$src1, subreg_h64),
                 bdxaddr12only:$addr)>;

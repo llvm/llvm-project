@@ -356,7 +356,7 @@ define i1 @test31(i64 %A) {
   ret i1 %D
 }
 
-; FIXME: Vectors should fold too...or not? 
+; FIXME: Vectors should fold too...or not?
 ; Does this depend on the whether the source/dest types of the trunc are legal in the data layout?
 define <2 x i1> @test31vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test31vec(
@@ -414,12 +414,11 @@ define i1 @test36(i32 %a) {
   ret i1 %d
 }
 
-; FIXME: Vectors should fold too.
+; FIXME: The trunc is removed, but the icmp+lshr fold is missing.
 define <2 x i1> @test36vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test36vec(
 ; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i32> %a, <i32 31, i32 31>
-; CHECK-NEXT:    [[C:%.*]] = trunc <2 x i32> [[B]] to <2 x i8>
-; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i8> [[C]], zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[B]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %b = lshr <2 x i32> %a, <i32 31, i32 31>

@@ -26,8 +26,8 @@ define <4 x i32> @psignd_3(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @test1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[B_LOBIT:%.*]] = ashr <4 x i32> %b, <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[B_LOBIT_NOT:%.*]] = xor <4 x i32> [[B_LOBIT]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, %a
+; CHECK-NEXT:    [[B_LOBIT_NOT:%.*]] = xor <4 x i32> [[B_LOBIT]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> [[B_LOBIT]], %a
 ; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[B_LOBIT_NOT]], [[SUB]]
 ; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]

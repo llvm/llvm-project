@@ -48,6 +48,10 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # The subdirectories need to treat this as standalone builds
     set(${canon_name}_STANDALONE_BUILD On)
 
+    # Setting a variable to let sub-projects detect which other projects
+    # will be included under here.
+    set(HAVE_${canon_name} On)
+
     add_subdirectory(${projName})
   endforeach()
 
@@ -73,6 +77,12 @@ else() # if this is included from LLVM's CMake
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
     list(APPEND prefixes ${canon_name})
+
+    string(FIND ${projName} "lib" LIB_IDX)
+    if(LIB_IDX EQUAL 0)
+      string(SUBSTRING ${projName} 3 -1 projName)
+    endif()
+    list(APPEND runtime_names ${projName})
   endforeach()
 
   if(runtimes)
@@ -81,10 +91,11 @@ else() # if this is included from LLVM's CMake
     # together in a single CMake invocaiton.
     llvm_ExternalProject_Add(runtimes
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${deps} llvm-config
+                             DEPENDS ${deps}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                              PASSTHROUGH_PREFIXES ${prefixes}
+                             EXTRA_TARGETS ${runtime_names}
                              USE_TOOLCHAIN)
   endif()
 endif()

@@ -84,6 +84,11 @@ private:
 
   Error visitKnownRecordImpl(FieldListRecord &Record) {
     // Don't do anything, this will get written in the call to visitTypeEnd().
+    TypeDeserializer Deserializer(*this);
+    CVTypeVisitor Visitor(Deserializer);
+
+    if (auto EC = Visitor.visitFieldListMemberStream(Record.Data))
+      return EC;
     return Error::success();
   }
 
@@ -102,6 +107,7 @@ private:
 
   TypeTableBuilder &DestStream;
 
+  bool IsInFieldList{false};
   size_t BeginIndexMapSize = 0;
 
   /// Map from source type index to destination type index. Indexed by source
@@ -112,7 +118,10 @@ private:
 } // end anonymous namespace
 
 Error TypeStreamMerger::visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) {
-  if (Rec.Type != TypeLeafKind::LF_FIELDLIST)
+  if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
+    assert(!IsInFieldList);
+    IsInFieldList = true;
+  } else
     BeginIndexMapSize = IndexMap.size();
   return Error::success();
 }
@@ -121,7 +130,8 @@ Error TypeStreamMerger::visitTypeEnd(const CVRecord<TypeLeafKind> &Rec) {
   if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
     IndexMap.push_back(DestStream.writeFieldList(FieldBuilder));
     FieldBuilder.reset();
-  } else {
+    IsInFieldList = false;
+  } else if (!IsInFieldList) {
     assert(IndexMap.size() == BeginIndexMapSize + 1);
   }
   return Error::success();

@@ -242,9 +242,9 @@ let isCodeGenOnly = 1 in {
   def BLEZ64 : CBranchZero<"blez", brtarget, setle, GPR64Opnd>, BGEZ_FM<6, 0>;
   def BLTZ64 : CBranchZero<"bltz", brtarget, setlt, GPR64Opnd>, BGEZ_FM<1, 0>;
   def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
-  def TAILCALLREG64 : TailCallReg<GPR64Opnd, JR64>, GPR_64, ISA_MIPS1_NOT_32R6_64R6;
 }
 
+def TAILCALLREG64 : TailCallReg<GPR64Opnd>;
 
 def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
 def PseudoIndirectBranch64 : PseudoIndirectBranchBase<GPR64Opnd>;

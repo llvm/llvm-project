@@ -14395,7 +14395,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(X86ISD::VTRUNC, DL, VT, In);
   }
 
-  // Truncate with PACKSS if we are trucating a vector comparison result.
+  // Truncate with PACKSS if we are truncating a vector comparison result.
   // TODO: We should be able to support other operations as long as we
   // we are saturating+packing zero/all bits only.
   auto IsPackableComparison = [](SDValue V) {

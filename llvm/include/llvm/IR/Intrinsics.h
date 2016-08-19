@@ -45,7 +45,10 @@ namespace Intrinsic {
   };
 
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
-  std::string getName(ID id, ArrayRef<Type*> Tys = None);
+  StringRef getName(ID id);
+
+  /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
+  std::string getName(ID id, ArrayRef<Type*> Tys);
 
   /// Return the function type for an intrinsic.
   FunctionType *getType(LLVMContext &Context, ID id,

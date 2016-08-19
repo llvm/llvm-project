@@ -8,18 +8,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "PdbYaml.h"
+#include "CodeViewYaml.h"
 
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 
 using namespace llvm;
-using namespace llvm::msf;
-using namespace llvm::yaml;
 using namespace llvm::pdb;
 using namespace llvm::pdb::yaml;
+using namespace llvm::yaml;
+
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
 
 namespace llvm {
 namespace yaml {
+
 template <> struct ScalarTraits<llvm::pdb::PDB_UniqueId> {
   static void output(const llvm::pdb::PDB_UniqueId &S, void *,
                      llvm::raw_ostream &OS) {
@@ -102,6 +113,16 @@ template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_ImplVer> {
     io.enumCase(Value, "VC140", llvm::pdb::PdbRaw_ImplVer::PdbImplVC140);
   }
 };
+
+template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_TpiVer> {
+  static void enumeration(IO &io, llvm::pdb::PdbRaw_TpiVer &Value) {
+    io.enumCase(Value, "VC40", llvm::pdb::PdbRaw_TpiVer::PdbTpiV40);
+    io.enumCase(Value, "VC41", llvm::pdb::PdbRaw_TpiVer::PdbTpiV41);
+    io.enumCase(Value, "VC50", llvm::pdb::PdbRaw_TpiVer::PdbTpiV50);
+    io.enumCase(Value, "VC70", llvm::pdb::PdbRaw_TpiVer::PdbTpiV70);
+    io.enumCase(Value, "VC80", llvm::pdb::PdbRaw_TpiVer::PdbTpiV80);
+  }
+};
 }
 }
 
@@ -111,6 +132,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("StreamMap", Obj.StreamMap);
   IO.mapOptional("PdbStream", Obj.PdbStream);
   IO.mapOptional("DbiStream", Obj.DbiStream);
+  IO.mapOptional("TpiStream", Obj.TpiStream);
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
@@ -157,6 +179,12 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapOptional("Modules", Obj.ModInfos);
 }
 
+void MappingTraits<PdbTpiStream>::mapping(IO &IO,
+                                          pdb::yaml::PdbTpiStream &Obj) {
+  IO.mapRequired("Version", Obj.Version);
+  IO.mapRequired("Records", Obj.Records);
+}
+
 void MappingTraits<NamedStreamMapping>::mapping(IO &IO,
                                                 NamedStreamMapping &Obj) {
   IO.mapRequired("Name", Obj.StreamName);
@@ -167,4 +195,20 @@ void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
   IO.mapRequired("Module", Obj.Mod);
   IO.mapRequired("ObjFile", Obj.Obj);
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
+}
+
+void MappingTraits<PdbTpiRecord>::mapping(IO &IO,
+                                          pdb::yaml::PdbTpiRecord &Obj) {
+  if (IO.outputting()) {
+    // If we're going from Pdb To Yaml, deserialize the Pdb record
+    codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
+    codeview::TypeDeserializer Deserializer(Callbacks);
+
+    codeview::CVTypeVisitor Visitor(Deserializer);
+    consumeError(Visitor.visitTypeRecord(Obj.Record));
+  } else {
+    codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
+    codeview::CVTypeVisitor Visitor(Callbacks);
+    consumeError(Visitor.visitTypeRecord(Obj.Record));
+  }
 }

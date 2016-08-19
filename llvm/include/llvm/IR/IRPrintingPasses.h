@@ -30,7 +30,7 @@ class Module;
 class ModulePass;
 class PreservedAnalyses;
 class raw_ostream;
-template <typename IRUnitT> class AnalysisManager;
+template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
 /// \brief Create and return a pass that writes the module to the specified
 /// \c raw_ostream.
