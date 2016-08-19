@@ -9,7 +9,7 @@
 #include "ockl.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-// #pragma OPENCL EXTENSION cl_khr_mipmap_image : enable
+#pragma OPENCL EXTENSION cl_khr_mipmap_image : enable
 
 static __constant int channel_order_map[32] = {
   CLK_A,
@@ -54,65 +54,34 @@ static __constant int channel_data_type_map[32] = {
 };
 
 
-#if defined NO_ASTYPE_WORAROUND
-#define lower_sampler(S) __builtin_astype(S, SSHARP)
+#define LOWER_sampler(S) __builtin_astype(S, SSHARP)
 
-#define lower_ro_1D(I) __builtin_astype(I, TSHARP)
-#define lower_ro_1Da(I) __builtin_astype(I, TSHARP)
-#define lower_ro_1Db(I) __builtin_astype(I, TSHARP)
-#define lower_ro_2D(I) __builtin_astype(I, TSHARP)
-#define lower_ro_2Da(I) __builtin_astype(I, TSHARP)
-#define lower_ro_2Dd(I) __builtin_astype(I, TSHARP)
-#define lower_ro_2Dad(I) __builtin_astype(I, TSHARP)
-#define lower_ro_3D(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_1D(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_1Da(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_1Db(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_2D(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_2Da(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_2Dd(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_2Dad(I) __builtin_astype(I, TSHARP)
+#define LOWER_ro_3D(I) __builtin_astype(I, TSHARP)
 
-#define lower_wo_1D(I) __builtin_astype(I, TSHARP)
-#define lower_wo_1Da(I) __builtin_astype(I, TSHARP)
-#define lower_wo_1Db(I) __builtin_astype(I, TSHARP)
-#define lower_wo_2D(I) __builtin_astype(I, TSHARP)
-#define lower_wo_2Da(I) __builtin_astype(I, TSHARP)
-#define lower_wo_2Dd(I) __builtin_astype(I, TSHARP)
-#define lower_wo_2Dad(I) __builtin_astype(I, TSHARP)
-#define lower_wo_3D(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_1D(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_1Da(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_1Db(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_2D(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_2Da(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_2Dd(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_2Dad(I) __builtin_astype(I, TSHARP)
+#define LOWER_wo_3D(I) __builtin_astype(I, TSHARP)
 
-#define lower_rw_1D(I) __builtin_astype(I, TSHARP)
-#define lower_rw_1Da(I) __builtin_astype(I, TSHARP)
-#define lower_rw_1Db(I) __builtin_astype(I, TSHARP)
-#define lower_rw_2D(I) __builtin_astype(I, TSHARP)
-#define lower_rw_2Da(I) __builtin_astype(I, TSHARP)
-#define lower_rw_2Dd(I) __builtin_astype(I, TSHARP)
-#define lower_rw_2Dad(I) __builtin_astype(I, TSHARP)
-#define lower_rw_3D(I) __builtin_astype(I, TSHARP)
-#else
-extern __attribute__((const)) SSHARP __lower_sampler(sampler_t s);
-
-extern __attribute__((const)) TSHARP __lower_ro_1D(read_only image1d_t i);
-extern __attribute__((const)) TSHARP __lower_ro_1Da(read_only image1d_array_t i);
-extern __attribute__((const)) TSHARP __lower_ro_1Db(read_only image1d_buffer_t i);
-extern __attribute__((const)) TSHARP __lower_ro_2D(read_only image2d_t i);
-extern __attribute__((const)) TSHARP __lower_ro_2Da(read_only image2d_array_t i);
-extern __attribute__((const)) TSHARP __lower_ro_2Dd(read_only image2d_depth_t i);
-extern __attribute__((const)) TSHARP __lower_ro_2Dad(read_only image2d_array_depth_t i);
-extern __attribute__((const)) TSHARP __lower_ro_3D(read_only image3d_t i);
-
-extern __attribute__((const)) TSHARP __lower_wo_1D(write_only image1d_t i);
-extern __attribute__((const)) TSHARP __lower_wo_1Da(write_only image1d_array_t i);
-extern __attribute__((const)) TSHARP __lower_wo_1Db(write_only image1d_buffer_t i);
-extern __attribute__((const)) TSHARP __lower_wo_2D(write_only image2d_t i);
-extern __attribute__((const)) TSHARP __lower_wo_2Da(write_only image2d_array_t i);
-extern __attribute__((const)) TSHARP __lower_wo_2Dd(write_only image2d_depth_t i);
-extern __attribute__((const)) TSHARP __lower_wo_2Dad(write_only image2d_array_depth_t i);
-extern __attribute__((const)) TSHARP __lower_wo_3D(write_only image3d_t i);
-
-extern __attribute__((const)) TSHARP __lower_rw_1D(read_write image1d_t i);
-extern __attribute__((const)) TSHARP __lower_rw_1Da(read_write image1d_array_t i);
-extern __attribute__((const)) TSHARP __lower_rw_1Db(read_write image1d_buffer_t i);
-extern __attribute__((const)) TSHARP __lower_rw_2D(read_write image2d_t i);
-extern __attribute__((const)) TSHARP __lower_rw_2Da(read_write image2d_array_t i);
-extern __attribute__((const)) TSHARP __lower_rw_2Dd(read_write image2d_depth_t i);
-extern __attribute__((const)) TSHARP __lower_rw_2Dad(read_write image2d_array_depth_t i);
-extern __attribute__((const)) TSHARP __lower_rw_3D(read_write image3d_t i);
-#endif
+#define LOWER_rw_1D(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_1Da(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_1Db(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_2D(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_2Da(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_2Dd(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_2Dad(I) __builtin_astype(I, TSHARP)
+#define LOWER_rw_3D(I) __builtin_astype(I, TSHARP)
 
 #define _C(X,Y) X ## Y
 #define C(X,Y) _C(X,Y)
@@ -273,21 +242,21 @@ extern __attribute__((const)) TSHARP __lower_rw_3D(read_write image3d_t i);
 RATTR IT##_##PT##_pty \
 C(read_image,PT##_fsuf)(read_only IT##_ity i, sampler_t s, IT##_##CT##_cty c) \
 { \
-    return PT##_rcast(C(PFX,C(sample,C(PT##_ksuf,IT)))(__lower_ro##IT(i), __lower_sampler(s), IT##_##CT##_carg)); \
+    return PT##_rcast(C(PFX,C(sample,C(PT##_ksuf,IT)))(LOWER_ro##IT(i), LOWER_sampler(s), IT##_##CT##_carg)); \
 }
 
 #define SGENL(IT,PT,CT) \
 RATTR IT##_##PT##_pty \
 C(read_image,PT##_fsuf)(read_only IT##_ity i, sampler_t s, IT##_##CT##_cty c, float l) \
 { \
-    return PT##_rcast(C(PFX,C(sample,C(PT##_ksuf,C(_lod,IT))))(__lower_ro##IT(i), __lower_sampler(s), IT##_##CT##_carg, l)); \
+    return PT##_rcast(C(PFX,C(sample,C(PT##_ksuf,C(_lod,IT))))(LOWER_ro##IT(i), LOWER_sampler(s), IT##_##CT##_carg, l)); \
 }
 
 #define SGENG(IT,PT,CT) \
 RATTR IT##_##PT##_pty \
 C(read_image,PT##_fsuf)(read_only IT##_ity i, sampler_t s, IT##_##CT##_cty c, IT##_gpars) \
 { \
-    return PT##_rcast(C(PFX,C(sample,C(PT##_ksuf,C(_grad,IT))))(__lower_ro##IT(i), __lower_sampler(s), IT##_##CT##_carg, dx, dy)); \
+    return PT##_rcast(C(PFX,C(sample,C(PT##_ksuf,C(_grad,IT))))(LOWER_ro##IT(i), LOWER_sampler(s), IT##_##CT##_carg, dx, dy)); \
 }
 
 #define SGENX(IT,PT,CT) \
@@ -299,39 +268,39 @@ C(read_image,PT##_fsuf)(read_only IT##_ity i, sampler_t s, IT##_##CT##_cty c, IT
 RATTR IT##_##PT##_pty \
 C(read_image,PT##_fsuf)(read_only IT##_ity i, IT##_##CT##_cty c) \
 { \
-    return PT##_rcast(C(PFX,C(load,C(PT##_ksuf,IT)))(__lower_ro##IT(i), c)); \
+    return PT##_rcast(C(PFX,C(load,C(PT##_ksuf,IT)))(LOWER_ro##IT(i), c)); \
 } \
  \
 RATTR IT##_##PT##_pty \
 C(read_image,PT##_fsuf)(read_write IT##_ity i, IT##_##CT##_cty c) \
 { \
-    return PT##_rcast(C(PFX,C(load,C(PT##_ksuf,IT)))(__lower_rw##IT(i), c)); \
+    return PT##_rcast(C(PFX,C(load,C(PT##_ksuf,IT)))(LOWER_rw##IT(i), c)); \
 }
 
 #define WGEN(IT,PT,CT) \
 WATTR void \
 C(write_image,PT##_fsuf)(write_only IT##_ity i, IT##_##CT##_cty c, IT##_##PT##_pty p) \
 { \
-    C(PFX,C(store,C(PT##_ksuf,IT)))(__lower_wo##IT(i), c, IT##_##PT##_parg); \
+    C(PFX,C(store,C(PT##_ksuf,IT)))(LOWER_wo##IT(i), c, IT##_##PT##_parg); \
 } \
  \
 WATTR void \
 C(write_image,PT##_fsuf)(read_write IT##_ity i, IT##_##CT##_cty c, IT##_##PT##_pty p) \
 { \
-    C(PFX,C(store,C(PT##_ksuf,IT)))(__lower_rw##IT(i), c, IT##_##PT##_parg); \
+    C(PFX,C(store,C(PT##_ksuf,IT)))(LOWER_rw##IT(i), c, IT##_##PT##_parg); \
 }
 
 #define WGENL(IT,PT,CT) \
 WATTR void \
 C(write_image,PT##_fsuf)(write_only IT##_ity i, IT##_##CT##_cty c, int l, IT##_##PT##_pty p) \
 { \
-    C(PFX,C(store,C(PT##_ksuf,C(_lod,IT))))(__lower_wo##IT(i), c, l, IT##_##PT##_parg); \
+    C(PFX,C(store,C(PT##_ksuf,C(_lod,IT))))(LOWER_wo##IT(i), c, l, IT##_##PT##_parg); \
 } \
  \
 WATTR void \
 C(write_image,PT##_fsuf)(read_write IT##_ity i, IT##_##CT##_cty c, int l, IT##_##PT##_pty p) \
 { \
-    C(PFX,C(store,C(PT##_ksuf,C(_lod,IT))))(__lower_rw##IT(i), c, l, IT##_##PT##_parg); \
+    C(PFX,C(store,C(PT##_ksuf,C(_lod,IT))))(LOWER_rw##IT(i), c, l, IT##_##PT##_parg); \
 }
 
 #define WGENX(IT,PT,CT) \
@@ -492,7 +461,7 @@ GD2GEN(_2Dad)
 #define GGENQT(Q,N,T) \
 GATTR int \
 get_image_##N(Q##_qual T##_ity i) { \
-    return C(PFX,C(N,T))(__lower_##Q##T(i)); \
+    return C(PFX,C(N,T))(LOWER_##Q##T(i)); \
 }
 
 #define GGENT(N,T) \
@@ -521,7 +490,7 @@ GGENX(num_mip_levels)
 GATTR int \
 get_image_depth(Q##_qual image3d_t i) \
 { \
-    return C(PFX,depth_3D)(__lower_##Q##_3D(i)); \
+    return C(PFX,depth_3D)(LOWER_##Q##_3D(i)); \
 }
 
 GNZGEN(ro)
@@ -533,7 +502,7 @@ GNZGEN(rw)
 GATTR size_t \
 get_image_array_size(Q##_qual T##_ity i) \
 { \
-    return C(PFX,C(array_size,T))(__lower_##Q##T(i)); \
+    return C(PFX,C(array_size,T))(LOWER_##Q##T(i)); \
 }
 
 #define GASGEN(T) \
@@ -548,7 +517,7 @@ GASGEN(_2Dad)
 #define GCOGENQ(Q,T) \
 GATTR int \
 get_image_channel_order(Q##_qual T##_ity i) { \
-    return channel_order_map[C(PFX,C(channel_order,T))(__lower_##Q##T(i))]; \
+    return channel_order_map[C(PFX,C(channel_order,T))(LOWER_##Q##T(i))]; \
 }
 
 #define GCOGEN(T) \
@@ -568,7 +537,7 @@ GCOGEN(_3D)
 #define GDTGENQ(Q,T) \
 GATTR int \
 get_image_channel_data_type(Q##_qual T##_ity i) { \
-    return channel_data_type_map[C(PFX,C(channel_data_type,T))(__lower_##Q##T(i))]; \
+    return channel_data_type_map[C(PFX,C(channel_data_type,T))(LOWER_##Q##T(i))]; \
 }
 
 #define GDTGEN(T) \
@@ -588,7 +557,7 @@ GDTGEN(_3D)
 #define GNYGENQ(Q,T) \
 GATTR int \
 get_image_height(Q##_qual T##_ity i) { \
-    return C(PFX,C(height,T))(__lower_##Q##T(i)); \
+    return C(PFX,C(height,T))(LOWER_##Q##T(i)); \
 }
 
 #define GNYGEN(T) \
