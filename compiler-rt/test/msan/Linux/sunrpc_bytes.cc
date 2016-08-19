@@ -3,8 +3,6 @@
 // RUN: %clangxx_msan -g -O0 -DUNINIT=1 %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <string.h>
 #include <rpc/xdr.h>

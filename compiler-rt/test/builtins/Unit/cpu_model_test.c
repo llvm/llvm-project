@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: x86-target-arch
+
 int main (void) {
   if(__builtin_cpu_supports("avx2"))
     return 4;

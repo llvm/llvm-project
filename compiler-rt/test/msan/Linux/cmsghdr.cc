@@ -10,8 +10,6 @@
 
 // UNSUPPORTED: android
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
