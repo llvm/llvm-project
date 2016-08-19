@@ -30,6 +30,8 @@ null?</a></li>
   <li><a href="#unused_ivar">How do I tell the static analyzer that I don't care about a specific unused instance variable in Objective C?</a></li>
   <li><a href="#unlocalized_string">How do I tell the static analyzer that I don't care about a specific unlocalized string?</a></li>
   <li><a href="#dealloc_mrr">How do I tell the analyzer that my instance variable does not need to be released in -dealloc under Manual Retain/Release?</a></li>
+  <li><a href="#decide_nullability">How do I decide whether a method's return type should be _Nullable or _Nonnull?</a></li>
+  <li><a href="#nullability_intentional_violation">How do I tell the analyzer that I am intentionally violating nullability?</a></li>
   <li><a href="#use_assert">The analyzer assumes that a loop body is never entered.  How can I tell it that the loop body will be entered at least once?</a></li>
   <li><a href="#suppress_issue">How can I suppress a specific analyzer warning?</a></li>
   <li><a href="#exclude_code">How can I selectively exclude code the analyzer examines?</a></li>
@@ -114,6 +116,58 @@ before -dealloc. In this case, you can silence a warning about a missing release
 by either adding <tt>assert(_ivar == nil)</tt> or an explicit release
 <tt>[_ivar release]</tt> (which will be a no-op when the variable is nil) in
 -dealloc. </p>
+
+<h4 id="decide_nullability" class="faq">Q: How do I decide whether a method's return type should be _Nullable or _Nonnull?</h4>
+
+<p> Depending on the implementation of the method, this puts you in one of five situations:
+<ol>
+<li>You actually never return nil.</li>
+<li>You do return nil sometimes, and callers are supposed to handle that. This
+includes cases where your method is documented to return nil given certain
+inputs.</li>
+<li>You return nil based on some external condition (such as an out-of-memory
+error), but the client can't do anything about it either.</li>
+<li>You return nil only when the caller passes input documented to be invalid.
+That means it's the client's fault.</li>
+<li>You return nil in some totally undocumented case.</li>
+</ol>
+</p>
+
+<p>In (1) you should annotate the method as returning a <tt>_Nonnull</tt>
+object.</p>
+<p>In (2) the method should be marked <tt>_Nullable.</tt></p>
+<p>In (3) you should probably annotate the method <tt>_Nonnull</tt>. Why?
+Because no callers will actually check for nil, given that they can't do
+anything about the situation and don't know what went wrong. At this point
+things have gone so poorly that there's basically no way to recover.</p>
+<p>The least happy case is (4) because the resulting program will almost
+certainly either crash or just silently do the wrong thing.
+If this is a new method or you control the callers, you can use
+<tt>NSParameterAssert()</tt> (or the equivalent) to check the precondition and
+remove the nil return. But if you don't control the callers and they rely on
+this behavior, you should return mark the method <tt>_Nonnull</tt> and return
+nil <a href="#nullability_intentional_violation">cast to _Nonnull</a> anyway.
+(Note that (4) doesn't apply in cases where the caller can't know they passed
+bad parameters. For example,
+<tt>+[NSData dataWithContentsOfFile:options:error:]</tt> will fail if the file
+doesn't exist, but there's no way to check for that in advance. This means
+you're really in (2).)</p>
+<p>If you're in (5), document it, then figure out if you're now in (2), (3), or
+(4). :-)</p>
+
+<h4 id="nullability_intentional_violation" class="faq">Q: How do I tell the analyzer that I am intentionally violating nullability?</h4>
+
+<p>In some cases, it may make sense for methods to intentionally violate
+nullability. For example, your method may &mdash; for reasons of backward
+compatibility &mdash; chose to return nil and log an error message in a method
+with a non-null return type when the client violated a documented precondition
+rather than check the precondition with <tt>NSAssert()</tt>. In these cases, you
+can suppress the analyzer warning with a cast:
+<pre class="code_example">
+    return (id _Nonnull)nil;
+</pre>
+Note that this cast does not affect code generation.
+</p>
 
 <h4 id="use_assert" class="faq">Q: The analyzer assumes that a loop body is never entered.  How can I tell it that the loop body will be entered at least once?</h4>
 
