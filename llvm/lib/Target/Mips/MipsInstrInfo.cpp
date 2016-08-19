@@ -282,7 +282,7 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR:
     case Mips::PseudoReturn:
     case Mips::PseudoIndirectBranch:
-    case Mips::TAILCALLREG_MM:
+    case Mips::TAILCALLREG:
       canUseShortMicroMipsCTI = true;
       break;
     }
@@ -363,8 +363,7 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR:
     case Mips::PseudoReturn:
     case Mips::PseudoIndirectBranch:
-    case Mips::TAILCALLREG_MM:
-    case Mips::TAILCALLREG_R6:
+    case Mips::TAILCALLREG:
       if (canUseShortMicroMipsCTI)
         return Mips::JRC16_MM;
       return Mips::JIC;
@@ -373,7 +372,7 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::JR64:
     case Mips::PseudoReturn64:
     case Mips::PseudoIndirectBranch64:
-    case Mips::TAILCALLREG64_R6:
+    case Mips::TAILCALLREG64:
       return Mips::JIC64;
     case Mips::JALR64Pseudo:
       return Mips::JIALC64;

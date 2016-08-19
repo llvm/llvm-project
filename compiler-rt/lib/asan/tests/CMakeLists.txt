@@ -193,6 +193,7 @@ set(ASAN_INST_TEST_SOURCES
   asan_asm_test.cc
   asan_globals_test.cc
   asan_interface_test.cc
+  asan_internal_interface_test.cc
   asan_test.cc
   asan_oob_test.cc
   asan_mem_test.cc

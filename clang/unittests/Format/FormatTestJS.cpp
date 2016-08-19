@@ -1218,6 +1218,7 @@ TEST_F(FormatTestJS, CastSyntax) {
                "  1,  //\n"
                "  2\n"
                "];");
+  verifyFormat("var x = [{x: 1} as type];");
 }
 
 TEST_F(FormatTestJS, TypeArguments) {

@@ -15,8 +15,6 @@
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-HEAP < %t.out
 
-// XFAIL: target-is-mips64el
-
 #include <stdio.h>
 
 volatile int x, y;

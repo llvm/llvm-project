@@ -22,6 +22,10 @@ namespace llvm {
 
 MachOYAML::LoadCommand::~LoadCommand() {}
 
+bool MachOYAML::LinkEditData::isEmpty() const {
+  return 0 == RebaseOpcodes.size() + BindOpcodes.size() + WeakBindOpcodes.size() + LazyBindOpcodes.size() + ExportTrie.Children.size() + NameList.size() + StringTable.size();
+}
+
 namespace yaml {
 
 void ScalarTraits<char_16>::output(const char_16 &Val, void *,
@@ -95,7 +99,8 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   IO.mapTag("!mach-o", true);
   IO.mapRequired("FileHeader", Object.Header);
   IO.mapOptional("LoadCommands", Object.LoadCommands);
-  IO.mapOptional("LinkEditData", Object.LinkEdit);
+  if(!Object.LinkEdit.isEmpty() || !IO.outputting())
+    IO.mapOptional("LinkEditData", Object.LinkEdit);
 
   if (IO.getContext() == &Object)
     IO.setContext(nullptr);

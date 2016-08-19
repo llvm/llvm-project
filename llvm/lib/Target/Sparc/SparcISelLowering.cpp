@@ -1508,7 +1508,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     //    AddPromotedToType(ISD::STORE, MVT::i64, MVT::v2i32);
   }
 
-  // Turn FP extload into load/fextend
+  // Turn FP extload into load/fpextend
   for (MVT VT : MVT::fp_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f64, Expand);

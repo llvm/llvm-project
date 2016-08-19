@@ -1170,8 +1170,48 @@ Args::LongestCommonPrefix (std::string &common_prefix)
     }
 }
 
+void
+Args::AddOrReplaceEnvironmentVariable(const char *env_var_name,
+                                      const char *new_value)
+{
+    if (!env_var_name || !new_value)
+        return;
+
+    // Build the new entry.
+    StreamString stream;
+    stream << env_var_name;
+    stream << '=';
+    stream << new_value;
+    stream.Flush();
+
+    // Find the environment variable if present and replace it.
+    for (size_t i = 0; i < GetArgumentCount(); ++i)
+    {
+        // Get the env var value.
+        const char *arg_value = GetArgumentAtIndex(i);
+        if (!arg_value)
+            continue;
+
+        // Find the name of the env var: before the first =.
+        auto equal_p = strchr(arg_value, '=');
+        if (!equal_p)
+            continue;
+
+        // Check if the name matches the given env_var_name.
+        if (strncmp(env_var_name, arg_value, equal_p - arg_value) == 0)
+        {
+            ReplaceArgumentAtIndex(i, stream.GetString().c_str());
+            return;
+        }
+    }
+
+    // We didn't find it.  Append it instead.
+    AppendArgument(stream.GetString().c_str());
+}
+
 bool
-Args::ContainsEnvironmentVariable(const char *env_var_name) const
+Args::ContainsEnvironmentVariable(const char *env_var_name,
+                                  size_t *argument_index) const
 {
     // Validate args.
     if (!env_var_name)
@@ -1193,6 +1233,8 @@ Args::ContainsEnvironmentVariable(const char *env_var_name) const
                         equal_p - argument_value) == 0)
             {
                 // We matched.
+                if (argument_index)
+                    *argument_index = i;
                 return true;
             }
         }
@@ -1202,6 +1244,8 @@ Args::ContainsEnvironmentVariable(const char *env_var_name) const
             if (strcmp(argument_value, env_var_name) == 0)
             {
                 // We matched.
+                if (argument_index)
+                    *argument_index = i;
                 return true;
             }
         }

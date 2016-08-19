@@ -165,10 +165,6 @@ def BLTZC64 : BLTZC_ENC, BLTZC64_DESC, ISA_MIPS64R6, GPR_64;
 def BGEZC64 : BGEZC_ENC, BGEZC64_DESC, ISA_MIPS64R6, GPR_64;
 }
 
-def TAILCALL64_R6 : TailCall<J>, ISA_MIPS64R6;
-def TAILCALLREG64_R6 : TailCallReg<GPR64Opnd, JR64>, GPR_64,
-                       ISA_MIPS64R6;
-
 //===----------------------------------------------------------------------===//
 //
 // Instruction Aliases

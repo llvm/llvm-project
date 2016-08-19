@@ -1305,11 +1305,9 @@ define i1 @icmp_mul_nsw_neg1(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_mul_nsw_neg1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_mul_nsw_neg1_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i32> %x, <i32 -12, i32 -12>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> %x, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = mul nsw <2 x i32> %x, <i32 -12, i32 -12>
@@ -1848,6 +1846,30 @@ define <2 x i1> @icmp_and_X_-16_ne-16_vec(<2 x i32> %X) {
   ret <2 x i1> %cmp
 }
 
+define i1 @shrink_constant(i32 %X) {
+; CHECK-LABEL: @shrink_constant(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %X, -12
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[XOR]], 4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor = xor i32 %X, -9
+  %cmp = icmp ult i32 %xor, 4
+  ret i1 %cmp
+}
+
+; FIXME: This doesn't change because of a limitation in 'DemandedBitsLHSMask'.
+define <2 x i1> @shrink_constant_vec(<2 x i32> %X) {
+; CHECK-LABEL: @shrink_constant_vec(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> %X, <i32 -9, i32 -9>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[XOR]], <i32 4, i32 4>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %xor = xor <2 x i32> %X, <i32 -9, i32 -9>
+  %cmp = icmp ult <2 x i32> %xor, <i32 4, i32 4>
+  ret <2 x i1> %cmp
+}
+
+; This test requires 3 different transforms to get to the result.
 define i1 @icmp_sub_-1_X_ult_4(i32 %X) {
 ; CHECK-LABEL: @icmp_sub_-1_X_ult_4(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %X, -5
@@ -1858,15 +1880,13 @@ define i1 @icmp_sub_-1_X_ult_4(i32 %X) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold too.
-define <2 x i1> @icmp_sub_neg1_X_ult_4_vec(<2 x i32> %X) {
-; CHECK-LABEL: @icmp_sub_neg1_X_ult_4_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i32> %X, <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[SUB]], <i32 4, i32 4>
+define <2 x i1> @icmp_xor_neg4_X_ult_4_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_xor_neg4_X_ult_4_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> %X, <i32 -5, i32 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %sub = sub <2 x i32> <i32 -1, i32 -1>, %X
-  %cmp = icmp ult <2 x i32> %sub, <i32 4, i32 4>
+  %xor = xor <2 x i32> %X, <i32 -4, i32 -4>
+  %cmp = icmp ult <2 x i32> %xor, <i32 4, i32 4>
   ret <2 x i1> %cmp
 }
 
@@ -1880,15 +1900,13 @@ define i1 @icmp_sub_-1_X_uge_4(i32 %X) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold too.
-define <2 x i1> @icmp_sub_neg1_X_uge_4_vec(<2 x i32> %X) {
-; CHECK-LABEL: @icmp_sub_neg1_X_uge_4_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i32> %X, <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[SUB]], <i32 3, i32 3>
+define <2 x i1> @icmp_xor_neg4_X_uge_4_vec(<2 x i32> %X) {
+; CHECK-LABEL: @icmp_xor_neg4_X_uge_4_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> %X, <i32 -4, i32 -4>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %sub = sub <2 x i32> <i32 -1, i32 -1>, %X
-  %cmp = icmp uge <2 x i32> %sub, <i32 4, i32 4>
+  %xor = xor <2 x i32> %X, <i32 -4, i32 -4>
+  %cmp = icmp uge <2 x i32> %xor, <i32 4, i32 4>
   ret <2 x i1> %cmp
 }
 

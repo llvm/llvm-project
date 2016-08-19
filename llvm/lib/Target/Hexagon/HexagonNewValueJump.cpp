@@ -449,7 +449,9 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
       DEBUG(dbgs() << "Instr: "; MI.dump(); dbgs() << "\n");
 
       if (!foundJump && (MI.getOpcode() == Hexagon::J2_jumpt ||
+                         MI.getOpcode() == Hexagon::J2_jumptpt ||
                          MI.getOpcode() == Hexagon::J2_jumpf ||
+                         MI.getOpcode() == Hexagon::J2_jumpfpt ||
                          MI.getOpcode() == Hexagon::J2_jumptnewpt ||
                          MI.getOpcode() == Hexagon::J2_jumptnew ||
                          MI.getOpcode() == Hexagon::J2_jumpfnewpt ||

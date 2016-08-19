@@ -71,6 +71,7 @@ class LLDB_API SBSection;
 class LLDB_API SBSourceManager;
 class LLDB_API SBStream;
 class LLDB_API SBStringList;
+class LLDB_API SBStructuredData;
 class LLDB_API SBSymbol;
 class LLDB_API SBSymbolContext;
 class LLDB_API SBSymbolContextList;

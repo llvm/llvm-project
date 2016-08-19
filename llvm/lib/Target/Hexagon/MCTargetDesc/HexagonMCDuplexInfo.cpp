@@ -262,25 +262,19 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::EH_RETURN_JMPR:
 
   case Hexagon::J2_jumpr:
-  case Hexagon::PS_jmpret:
     // jumpr r31
     // Actual form JMPR %PC<imp-def>, %R31<imp-use>, %R0<imp-use,internal>.
     DstReg = MCI.getOperand(0).getReg();
-    if (Hexagon::R31 == DstReg) {
+    if (Hexagon::R31 == DstReg)
       return HexagonII::HSIG_L2;
-    }
     break;
 
   case Hexagon::J2_jumprt:
   case Hexagon::J2_jumprf:
   case Hexagon::J2_jumprtnew:
   case Hexagon::J2_jumprfnew:
-  case Hexagon::PS_jmprett:
-  case Hexagon::PS_jmpretf:
-  case Hexagon::PS_jmprettnew:
-  case Hexagon::PS_jmpretfnew:
-  case Hexagon::PS_jmprettnewpt:
-  case Hexagon::PS_jmpretfnewpt:
+  case Hexagon::J2_jumprtnewpt:
+  case Hexagon::J2_jumprfnewpt:
     DstReg = MCI.getOperand(1).getReg();
     SrcReg = MCI.getOperand(0).getReg();
     // [if ([!]p0[.new])] jumpr r31
@@ -811,25 +805,20 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     break; //    none  SUBInst deallocframe
   case Hexagon::EH_RETURN_JMPR:
   case Hexagon::J2_jumpr:
-  case Hexagon::PS_jmpret:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31);
     break; //    none  SUBInst jumpr r31
   case Hexagon::J2_jumprf:
-  case Hexagon::PS_jmpretf:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_f);
     break; //    none  SUBInst if (!p0) jumpr r31
   case Hexagon::J2_jumprfnew:
-  case Hexagon::PS_jmpretfnewpt:
-  case Hexagon::PS_jmpretfnew:
+  case Hexagon::J2_jumprfnewpt:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_fnew);
     break; //    none  SUBInst if (!p0.new) jumpr:nt r31
   case Hexagon::J2_jumprt:
-  case Hexagon::PS_jmprett:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_t);
     break; //    none  SUBInst if (p0) jumpr r31
   case Hexagon::J2_jumprtnew:
-  case Hexagon::PS_jmprettnewpt:
-  case Hexagon::PS_jmprettnew:
+  case Hexagon::J2_jumprtnewpt:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_tnew);
     break; //    none  SUBInst if (p0.new) jumpr:nt r31
   case Hexagon::L2_loadrb_io:

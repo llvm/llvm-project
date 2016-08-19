@@ -10,10 +10,11 @@
 #ifndef LLVM_MC_MCINSTPRINTER_H
 #define LLVM_MC_MCINSTPRINTER_H
 
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Format.h"
+#include <cstdint>
 
 namespace llvm {
+
 template <typename T> class ArrayRef;
 class MCInst;
 class raw_ostream;
@@ -27,11 +28,13 @@ class StringRef;
 void dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS);
 
 namespace HexStyle {
+
 enum Style {
   C,  ///< 0xff
   Asm ///< 0ffh
 };
-}
+
+} // end namespace HexStyle
 
 /// \brief This is an instance of a target assembly language printer that
 /// converts an MCInst to valid target assembly syntax.
@@ -60,8 +63,8 @@ protected:
 public:
   MCInstPrinter(const MCAsmInfo &mai, const MCInstrInfo &mii,
                 const MCRegisterInfo &mri)
-      : CommentStream(nullptr), MAI(mai), MII(mii), MRI(mri), UseMarkup(0),
-        PrintImmHex(0), PrintHexStyle(HexStyle::C) {}
+      : CommentStream(nullptr), MAI(mai), MII(mii), MRI(mri), UseMarkup(false),
+        PrintImmHex(false), PrintHexStyle(HexStyle::C) {}
 
   virtual ~MCInstPrinter();
 
@@ -103,6 +106,6 @@ public:
   format_object<uint64_t> formatHex(uint64_t Value) const;
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCINSTPRINTER_H

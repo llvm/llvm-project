@@ -12,20 +12,25 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
 using namespace dwarf;
-
 
 /// \brief Abstract frame entry defining the common interface concrete
 /// entries implement.
@@ -94,7 +99,6 @@ protected:
     Instructions.back().Ops.push_back(Operand2);
   }
 };
-
 
 // See DWARF standard v3, section 7.23
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
@@ -194,6 +198,7 @@ void FrameEntry::parseInstructions(DataExtractor Data, uint32_t *Offset,
 }
 
 namespace {
+
 /// \brief DWARF Common Information Entry (CIE)
 class CIE : public FrameEntry {
 public:
@@ -220,9 +225,11 @@ public:
   StringRef getAugmentationString() const { return Augmentation; }
   uint64_t getCodeAlignmentFactor() const { return CodeAlignmentFactor; }
   int64_t getDataAlignmentFactor() const { return DataAlignmentFactor; }
+
   uint32_t getFDEPointerEncoding() const {
     return FDEPointerEncoding;
   }
+
   uint32_t getLSDAPointerEncoding() const {
     return LSDAPointerEncoding;
   }
@@ -273,7 +280,6 @@ private:
   uint32_t FDEPointerEncoding;
   uint32_t LSDAPointerEncoding;
 };
-
 
 /// \brief DWARF Frame Description Entry (FDE)
 class FDE : public FrameEntry {
@@ -336,7 +342,7 @@ static ArrayRef<OperandType[2]> getOperandTypes() {
   do {                                          \
     OpTypes[OP][0] = OPTYPE0;                   \
     OpTypes[OP][1] = OPTYPE1;                   \
-  } while (0)
+  } while (false)
 #define DECLARE_OP1(OP, OPTYPE0) DECLARE_OP2(OP, OPTYPE0, OT_None)
 #define DECLARE_OP0(OP) DECLARE_OP1(OP, OT_None)
 
@@ -373,6 +379,7 @@ static ArrayRef<OperandType[2]> getOperandTypes() {
 #undef DECLARE_OP0
 #undef DECLARE_OP1
 #undef DECLARE_OP2
+
   return ArrayRef<OperandType[2]>(&OpTypes[0], DW_CFA_restore+1);
 }
 
@@ -668,7 +675,6 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
   }
 }
 
-
 void DWARFDebugFrame::dump(raw_ostream &OS) const {
   OS << "\n";
   for (const auto &Entry : Entries) {
@@ -677,4 +683,3 @@ void DWARFDebugFrame::dump(raw_ostream &OS) const {
     OS << "\n";
   }
 }
-

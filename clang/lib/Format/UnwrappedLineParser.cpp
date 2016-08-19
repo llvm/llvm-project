@@ -364,7 +364,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // We exclude + and - as they can be ObjC visibility modifiers.
           ProbablyBracedList =
               (Style.Language == FormatStyle::LK_JavaScript &&
-               NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in)) ||
+               NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
+                                Keywords.kw_as)) ||
               NextTok->isOneOf(tok::comma, tok::period, tok::colon,
                                tok::r_paren, tok::r_square, tok::l_brace,
                                tok::l_square, tok::l_paren, tok::ellipsis) ||

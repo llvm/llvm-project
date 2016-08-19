@@ -88,8 +88,7 @@ static bool GetShadowKind(uptr addr, ShadowKind *shadow_kind) {
 bool DescribeAddressIfShadow(uptr addr) {
   ShadowAddressDescription descr;
   if (!GetShadowAddressInformation(addr, &descr)) return false;
-  Printf("Address %p is located in the %s area.\n", addr,
-         ShadowNames[descr.kind]);
+  descr.Print();
   return true;
 }
 
@@ -188,38 +187,7 @@ bool DescribeAddressIfHeap(uptr addr, uptr access_size) {
         "(wild memory access suspected).\n");
     return false;
   }
-  PrintHeapChunkAccess(addr, descr.chunk_access);
-
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *alloc_thread =
-      GetThreadContextByTidLocked(descr.alloc_tid);
-  StackTrace alloc_stack = GetStackTraceFromId(descr.alloc_stack_id);
-
-  char tname[128];
-  Decorator d;
-  AsanThreadContext *free_thread = nullptr;
-  if (descr.free_tid != kInvalidTid) {
-    free_thread = GetThreadContextByTidLocked(descr.free_tid);
-    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
-           free_thread->tid,
-           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-    StackTrace free_stack = GetStackTraceFromId(descr.free_stack_id);
-    free_stack.Print();
-    Printf("%spreviously allocated by thread T%d%s here:%s\n", d.Allocation(),
-           alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-  } else {
-    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
-           alloc_thread->tid,
-           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
-           d.EndAllocation());
-  }
-  alloc_stack.Print();
-  DescribeThread(GetCurrentThread());
-  if (free_thread) DescribeThread(free_thread);
-  DescribeThread(alloc_thread);
+  descr.Print();
   return true;
 }
 
@@ -297,59 +265,7 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
 bool DescribeAddressIfStack(uptr addr, uptr access_size) {
   StackAddressDescription descr;
   if (!GetStackAddressInformation(addr, &descr)) return false;
-
-  Decorator d;
-  char tname[128];
-  Printf("%s", d.Location());
-  Printf("Address %p is located in stack of thread T%d%s", addr, descr.tid,
-         ThreadNameWithParenthesis(descr.tid, tname, sizeof(tname)));
-
-  if (!descr.frame_descr) {
-    Printf("%s\n", d.EndLocation());
-    return true;
-  }
-  Printf(" at offset %zu in frame%s\n", descr.offset, d.EndLocation());
-
-  // Now we print the frame where the alloca has happened.
-  // We print this frame as a stack trace with one element.
-  // The symbolizer may print more than one frame if inlining was involved.
-  // The frame numbers may be different than those in the stack trace printed
-  // previously. That's unfortunate, but I have no better solution,
-  // especially given that the alloca may be from entirely different place
-  // (e.g. use-after-scope, or different thread's stack).
-  Printf("%s", d.EndLocation());
-  StackTrace alloca_stack(&descr.frame_pc, 1);
-  alloca_stack.Print();
-
-  InternalMmapVector<StackVarDescr> vars(16);
-  if (!ParseFrameDescription(descr.frame_descr, &vars)) {
-    Printf(
-        "AddressSanitizer can't parse the stack frame "
-        "descriptor: |%s|\n",
-        descr.frame_descr);
-    // 'addr' is a stack address, so return true even if we can't parse frame
-    return true;
-  }
-  uptr n_objects = vars.size();
-  // Report the number of stack objects.
-  Printf("  This frame has %zu object(s):\n", n_objects);
-
-  // Report all objects in this frame.
-  for (uptr i = 0; i < n_objects; i++) {
-    uptr prev_var_end = i ? vars[i - 1].beg + vars[i - 1].size : 0;
-    uptr next_var_beg = i + 1 < n_objects ? vars[i + 1].beg : ~(0UL);
-    PrintAccessAndVarIntersection(vars[i], descr.offset, access_size,
-                                  prev_var_end, next_var_beg);
-  }
-  Printf(
-      "HINT: this may be a false positive if your program uses "
-      "some custom stack unwind mechanism or swapcontext\n");
-  if (SANITIZER_WINDOWS)
-    Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
-  else
-    Printf("      (longjmp and C++ exceptions *are* supported)\n");
-
-  DescribeThread(GetThreadContextByTidLocked(descr.tid));
+  descr.Print(access_size);
   return true;
 }
 
@@ -392,15 +308,143 @@ bool DescribeAddressIfGlobal(uptr addr, uptr access_size,
   GlobalAddressDescription descr;
   if (!GetGlobalAddressInformation(addr, &descr)) return false;
 
-  for (int i = 0; i < descr.size; i++) {
-    DescribeAddressRelativeToGlobal(descr.addr, access_size, descr.globals[i]);
-    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
-        descr.reg_sites[i]) {
-      Printf("  registered at:\n");
-      StackDepotGet(descr.reg_sites[i]).Print();
-    }
-  }
+  descr.Print(access_size, bug_type);
   return true;
 }
 
+void ShadowAddressDescription::Print() {
+  Printf("Address %p is located in the %s area.\n", addr, ShadowNames[kind]);
+}
+
+void GlobalAddressDescription::Print(uptr access_size, const char *bug_type) {
+  for (int i = 0; i < size; i++) {
+    DescribeAddressRelativeToGlobal(addr, access_size, globals[i]);
+    if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
+        reg_sites[i]) {
+      Printf("  registered at:\n");
+      StackDepotGet(reg_sites[i]).Print();
+    }
+  }
+}
+
+void StackAddressDescription::Print(uptr access_size) {
+  Decorator d;
+  char tname[128];
+  Printf("%s", d.Location());
+  Printf("Address %p is located in stack of thread T%d%s", addr, tid,
+         ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+
+  if (!frame_descr) {
+    Printf("%s\n", d.EndLocation());
+    return;
+  }
+  Printf(" at offset %zu in frame%s\n", offset, d.EndLocation());
+
+  // Now we print the frame where the alloca has happened.
+  // We print this frame as a stack trace with one element.
+  // The symbolizer may print more than one frame if inlining was involved.
+  // The frame numbers may be different than those in the stack trace printed
+  // previously. That's unfortunate, but I have no better solution,
+  // especially given that the alloca may be from entirely different place
+  // (e.g. use-after-scope, or different thread's stack).
+  Printf("%s", d.EndLocation());
+  StackTrace alloca_stack(&frame_pc, 1);
+  alloca_stack.Print();
+
+  InternalMmapVector<StackVarDescr> vars(16);
+  if (!ParseFrameDescription(frame_descr, &vars)) {
+    Printf(
+        "AddressSanitizer can't parse the stack frame "
+        "descriptor: |%s|\n",
+        frame_descr);
+    // 'addr' is a stack address, so return true even if we can't parse frame
+    return;
+  }
+  uptr n_objects = vars.size();
+  // Report the number of stack objects.
+  Printf("  This frame has %zu object(s):\n", n_objects);
+
+  // Report all objects in this frame.
+  for (uptr i = 0; i < n_objects; i++) {
+    uptr prev_var_end = i ? vars[i - 1].beg + vars[i - 1].size : 0;
+    uptr next_var_beg = i + 1 < n_objects ? vars[i + 1].beg : ~(0UL);
+    PrintAccessAndVarIntersection(vars[i], offset, access_size, prev_var_end,
+                                  next_var_beg);
+  }
+  Printf(
+      "HINT: this may be a false positive if your program uses "
+      "some custom stack unwind mechanism or swapcontext\n");
+  if (SANITIZER_WINDOWS)
+    Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
+  else
+    Printf("      (longjmp and C++ exceptions *are* supported)\n");
+
+  DescribeThread(GetThreadContextByTidLocked(tid));
+}
+
+void HeapAddressDescription::Print() {
+  PrintHeapChunkAccess(addr, chunk_access);
+
+  asanThreadRegistry().CheckLocked();
+  AsanThreadContext *alloc_thread = GetThreadContextByTidLocked(alloc_tid);
+  StackTrace alloc_stack = GetStackTraceFromId(alloc_stack_id);
+
+  char tname[128];
+  Decorator d;
+  AsanThreadContext *free_thread = nullptr;
+  if (free_tid != kInvalidTid) {
+    free_thread = GetThreadContextByTidLocked(free_tid);
+    Printf("%sfreed by thread T%d%s here:%s\n", d.Allocation(),
+           free_thread->tid,
+           ThreadNameWithParenthesis(free_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+    StackTrace free_stack = GetStackTraceFromId(free_stack_id);
+    free_stack.Print();
+    Printf("%spreviously allocated by thread T%d%s here:%s\n", d.Allocation(),
+           alloc_thread->tid,
+           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+  } else {
+    Printf("%sallocated by thread T%d%s here:%s\n", d.Allocation(),
+           alloc_thread->tid,
+           ThreadNameWithParenthesis(alloc_thread, tname, sizeof(tname)),
+           d.EndAllocation());
+  }
+  alloc_stack.Print();
+  DescribeThread(GetCurrentThread());
+  if (free_thread) DescribeThread(free_thread);
+  DescribeThread(alloc_thread);
+}
+
+void PrintAddressDescription(uptr addr, uptr access_size,
+                             const char *bug_type) {
+  ShadowAddressDescription shadow_descr;
+  if (GetShadowAddressInformation(addr, &shadow_descr)) {
+    shadow_descr.Print();
+    return;
+  }
+
+  GlobalAddressDescription global_descr;
+  if (GetGlobalAddressInformation(addr, &global_descr)) {
+    global_descr.Print(access_size, bug_type);
+    return;
+  }
+
+  StackAddressDescription stack_descr;
+  if (GetStackAddressInformation(addr, &stack_descr)) {
+    stack_descr.Print(access_size);
+    return;
+  }
+
+  HeapAddressDescription heap_descr;
+  if (GetHeapAddressInformation(addr, access_size, &heap_descr)) {
+    heap_descr.Print();
+    return;
+  }
+
+  // We exhausted our possibilities. Bail out.
+  Printf(
+      "AddressSanitizer can not describe address in more detail "
+      "(wild memory access suspected).\n");
+}
 }  // namespace __asan

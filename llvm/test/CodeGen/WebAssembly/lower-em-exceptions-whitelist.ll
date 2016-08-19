@@ -1,4 +1,4 @@
-; RUN: opt < %s -wasm-lower-em-exceptions -emscripten-cxx-exceptions-whitelist=do_catch -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -emscripten-cxx-exceptions-whitelist=do_catch -S | FileCheck %s
 
 define void @dont_catch() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @dont_catch(

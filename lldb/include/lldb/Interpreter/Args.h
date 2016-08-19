@@ -451,6 +451,17 @@ public:
     LongestCommonPrefix (std::string &common_prefix);
 
     //------------------------------------------------------------------
+    /// Add or replace an environment variable with the given value.
+    ///
+    /// This command adds the environment variable if it is not already
+    /// present using the given value.  If the environment variable is
+    /// already in the list, it replaces the first such occurrence
+    /// with the new value.
+    //------------------------------------------------------------------
+    void
+    AddOrReplaceEnvironmentVariable(const char *env_var_name,
+                                    const char *new_value);
+
     /// Return whether a given environment variable exists.
     ///
     /// This command treats Args like a list of environment variables,
@@ -460,12 +471,18 @@ public:
     /// @param[in] env_var_name
     ///     Specifies the name of the environment variable to check.
     ///
+    /// @param[out] argument_index
+    ///     If non-null, then when the environment variable is found,
+    ///     the index of the argument position will be returned in
+    ///     the size_t pointed to by this argument.
+    ///
     /// @return
     ///     true if the specified env var name exists in the list in
     ///     either of the above-mentioned formats; otherwise, false.
     //------------------------------------------------------------------
     bool
-    ContainsEnvironmentVariable(const char *env_var_name) const;
+    ContainsEnvironmentVariable(const char *env_var_name,
+                                size_t *argument_index = nullptr) const;
 
 protected:
     //------------------------------------------------------------------

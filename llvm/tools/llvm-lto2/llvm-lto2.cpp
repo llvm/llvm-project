@@ -132,7 +132,8 @@ int main(int argc, char **argv) {
   };
 
   if (SaveTemps)
-    check(Conf.addSaveTemps(OutputFilename), "Config::addSaveTemps failed");
+    check(Conf.addSaveTemps(OutputFilename + "."),
+          "Config::addSaveTemps failed");
 
   LTO Lto(std::move(Conf));
 

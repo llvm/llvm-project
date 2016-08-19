@@ -24,6 +24,7 @@ namespace clang {
 
 class Stmt;
 class Decl;
+class VarDecl;
 class ASTContext;
 class CompoundStmt;
 
@@ -222,7 +223,43 @@ public:
   ///               that were identified to be clones of each other.
   /// \param MinGroupComplexity Only return clones which have at least this
   ///                           complexity value.
-  void findClones(std::vector<CloneGroup> &Result, unsigned MinGroupComplexity);
+  /// \param CheckPatterns Returns only clone groups in which the referenced
+  ///                      variables follow the same pattern.
+  void findClones(std::vector<CloneGroup> &Result, unsigned MinGroupComplexity,
+                  bool CheckPatterns = true);
+
+  /// \brief Describes two clones that reference their variables in a different
+  ///        pattern which could indicate a programming error.
+  struct SuspiciousClonePair {
+    /// \brief Utility class holding the relevant information about a single
+    ///        clone in this pair.
+    struct SuspiciousCloneInfo {
+      /// The variable which referencing in this clone was against the pattern.
+      const VarDecl *Variable;
+      /// Where the variable was referenced.
+      SourceRange VarRange;
+      /// The variable that should have been referenced to follow the pattern.
+      /// If Suggestion is a nullptr then it's not possible to fix the pattern
+      /// by referencing a different variable in this clone.
+      const VarDecl *Suggestion;
+      SuspiciousCloneInfo(const VarDecl *Variable, SourceRange Range,
+                          const VarDecl *Suggestion)
+          : Variable(Variable), VarRange(Range), Suggestion(Suggestion) {}
+      SuspiciousCloneInfo() {}
+    };
+    /// The first clone in the pair which always has a suggested variable.
+    SuspiciousCloneInfo FirstCloneInfo;
+    /// This other clone in the pair which can have a suggested variable.
+    SuspiciousCloneInfo SecondCloneInfo;
+  };
+
+  /// \brief Searches the provided statements for pairs of clones that don't
+  ///        follow the same pattern when referencing variables.
+  /// \param Result Output parameter that will contain the clone pairs.
+  /// \param MinGroupComplexity Only clone pairs in which the clones have at
+  ///                           least this complexity value.
+  void findSuspiciousClones(std::vector<SuspiciousClonePair> &Result,
+                            unsigned MinGroupComplexity);
 
 private:
   /// Stores all found clone groups including invalid groups with only a single

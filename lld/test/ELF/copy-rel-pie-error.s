@@ -3,8 +3,8 @@
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: not ld.lld %t.o %t2.so -o %t.exe -pie 2>&1 | FileCheck %s
 
-// CHECK: can't create dynamic relocation R_X86_64_64 against readonly segment
-// CHECK: can't create dynamic relocation R_X86_64_64 against readonly segment
+// CHECK: can't create dynamic relocation R_X86_64_64 against symbol bar
+// CHECK: can't create dynamic relocation R_X86_64_64 against symbol foo
 
 .global _start
 _start:

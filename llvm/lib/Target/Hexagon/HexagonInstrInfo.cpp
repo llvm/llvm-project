@@ -1292,7 +1292,26 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MI.setDesc(get(Hexagon::J2_jump));
       return true;
     case Hexagon::PS_tailcall_r:
+    case Hexagon::PS_jmpret:
       MI.setDesc(get(Hexagon::J2_jumpr));
+      return true;
+    case Hexagon::PS_jmprett:
+      MI.setDesc(get(Hexagon::J2_jumprt));
+      return true;
+    case Hexagon::PS_jmpretf:
+      MI.setDesc(get(Hexagon::J2_jumprf));
+      return true;
+    case Hexagon::PS_jmprettnewpt:
+      MI.setDesc(get(Hexagon::J2_jumprtnewpt));
+      return true;
+    case Hexagon::PS_jmpretfnewpt:
+      MI.setDesc(get(Hexagon::J2_jumprfnewpt));
+      return true;
+    case Hexagon::PS_jmprettnew:
+      MI.setDesc(get(Hexagon::J2_jumprtnew));
+      return true;
+    case Hexagon::PS_jmpretfnew:
+      MI.setDesc(get(Hexagon::J2_jumprfnew));
       return true;
   }
 

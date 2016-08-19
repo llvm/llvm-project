@@ -9,7 +9,7 @@ _start:
 
 
 call bar
-// CHECK: cannot preempt symbol
+// CHECK: cannot preempt symbol bar
 
 call zed
-// CHECK: symbol is missing type
+// CHECK: symbol zed is missing type

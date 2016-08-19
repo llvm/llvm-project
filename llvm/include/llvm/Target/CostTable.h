@@ -16,6 +16,7 @@
 #define LLVM_TARGET_COSTTABLE_H_
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineValueType.h"
 
 namespace llvm {

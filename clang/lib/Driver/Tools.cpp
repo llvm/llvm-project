@@ -5405,6 +5405,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Path));
   }
 
+  if (HaveModules) {
+    // -fprebuilt-module-path specifies where to load the prebuilt module files.
+    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path))
+      CmdArgs.push_back(Args.MakeArgString(
+          std::string("-fprebuilt-module-path=") + A->getValue()));
+  }
+      
   // -fmodule-name specifies the module that is currently being built (or
   // used for header checking by -fmodule-maps).
   Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);

@@ -50,7 +50,7 @@ clang-rename renames every occurrence of a symbol found at <offset> in\n\
 Otherwise, the results are written to stdout.\n";
 
 const char RenameAllUsage[] = "A tool to rename symbols in C/C++ code.\n\
-clang-rename renames every occurrence of a symbol named <old-name>.\n";
+clang-rename performs renaming given pairs {offset | old-name} -> new-name.\n";
 
 static int renameAtMain(int argc, const char *argv[]);
 static int renameAllMain(int argc, const char *argv[]);

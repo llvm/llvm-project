@@ -55,7 +55,7 @@ defm V_MQSAD_U16_U8 : VOP3Inst <vop3<0x172>, "v_mqsad_u16_u8",
 >;
 
 defm V_QSAD_PK_U16_U8 : VOP3Inst <vop3<0x172, 0x1e5>, "v_qsad_pk_u16_u8",
-  VOP_I32_I32_I32_I32, int_amdgcn_qsad_pk_u16_u8>;
+  VOP_I64_I64_I32_I64, int_amdgcn_qsad_pk_u16_u8>;
 
 defm V_MQSAD_U32_U8 : VOP3Inst <vop3<0x174, 0x1e7>, "v_mqsad_u32_u8",
   VOP_I32_I32_I32_I32, int_amdgcn_mqsad_u32_u8>;

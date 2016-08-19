@@ -25,7 +25,7 @@ struct ValueBitMap {
   void Reset() { memset(Map, 0, sizeof(Map)); }
 
   // Computed a hash function of Value and sets the corresponding bit.
-  void AddValue(uintptr_t Value) {
+  inline void AddValue(uintptr_t Value) {
     uintptr_t Idx = Value < kMapSizeInBits ? Value : Value % kMapSizeInBits;
     uintptr_t WordIdx = Idx / kBitsInWord;
     uintptr_t BitIdx = Idx % kBitsInWord;
@@ -34,6 +34,7 @@ struct ValueBitMap {
 
   // Merges 'Other' into 'this', clears 'Other',
   // returns the number of set bits in 'this'.
+  __attribute__((target("popcnt")))
   size_t MergeFrom(ValueBitMap &Other) {
     uintptr_t Res = 0;
     for (size_t i = 0; i < kMapSizeInWords; i++) {

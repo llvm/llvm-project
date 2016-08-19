@@ -562,23 +562,23 @@ New Targets
 
 LLVM is very receptive to new targets, even experimental ones, but a number of
 problems can appear when adding new large portions of code, and back-ends are
-normally added in bulk. Revisions of large pieces of code is hard, especially
-when the reviewers don't know the full implications of the new back-end with
-details (which is usually the case), makes for a very error prone process.
+normally added in bulk.  We have found that landing large pieces of new code 
+and then trying to fix emergent problems in-tree is problematic for a variety 
+of reasons.
 
 For these reasons, new targets are *always* added as *experimental* until
-they can be proven stable, and then moved to non-experimental. The difference
+they can be proven stable, and later moved to non-experimental. The difference
 between both classes is that experimental targets are not built by default
 (need to be added to -DLLVM_TARGETS_TO_BUILD at CMake time).
 
-So, the basic rules for a back-end to be upstreamed in **experimental** mode are:
+The basic rules for a back-end to be upstreamed in **experimental** mode are:
 
 * Every target must have a :ref:`code owner<code owners>`. The `CODE_OWNERS.TXT`
   file has to be updated as part of the first merge. The code owner makes sure
   that changes to the target get reviewed and steers the overall effort.
 
 * There must be an active community behind the target. This community
-  will be the maintainers of the target by providing buildbots, fixing
+  will help maintain the target by providing buildbots, fixing
   bugs, answering the LLVM community's questions and making sure the new
   target doesn't break any of the other targets, or generic code. This
   behavior is expected to continue throughout the lifetime of the
@@ -595,11 +595,11 @@ So, the basic rules for a back-end to be upstreamed in **experimental** mode are
 
 * The target should have either reasonable documentation on how it
   works (ISA, ABI, etc.) or a publicly available simulator/hardware
-  (either free or cheap enough), so that developers can validate
-  assumptions, understand constraints and review code that can affect
-  the target. Preferably both.
+  (either free or cheap enough) - preferably both.  This allows
+  developers to validate assumptions, understand constraints and review code 
+  that can affect the target. 
 
-In addition, the rules for a back-end to be marked as **official** are:
+In addition, the rules for a back-end to be promoted to **official** are:
 
 * The target must have addressed every other minimum requirement and
   have been stable in tree for at least 3 months. This cool down

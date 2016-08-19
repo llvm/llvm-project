@@ -577,12 +577,10 @@ ParameterSetTy getParamsInAffineExpr(const Region *R, Loop *Scope,
 
 std::pair<const SCEVConstant *, const SCEV *>
 extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
-
-  auto *LeftOver = SE.getConstant(S->getType(), 1);
   auto *ConstPart = cast<SCEVConstant>(SE.getConstant(S->getType(), 1));
 
   if (auto *Constant = dyn_cast<SCEVConstant>(S))
-    return std::make_pair(Constant, LeftOver);
+    return std::make_pair(Constant, SE.getConstant(S->getType(), 1));
 
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
   if (AddRec) {
@@ -627,12 +625,13 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   if (!Mul)
     return std::make_pair(ConstPart, S);
 
+  SmallVector<const SCEV *, 4> LeftOvers;
   for (auto *Op : Mul->operands())
     if (isa<SCEVConstant>(Op))
       ConstPart = cast<SCEVConstant>(SE.getMulExpr(ConstPart, Op));
     else
-      LeftOver = SE.getMulExpr(LeftOver, Op);
+      LeftOvers.push_back(Op);
 
-  return std::make_pair(ConstPart, LeftOver);
+  return std::make_pair(ConstPart, SE.getMulExpr(LeftOvers));
 }
 } // namespace polly

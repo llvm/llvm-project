@@ -107,6 +107,38 @@ def G_MUL : Instruction {
   let isCommutable = 1;
 }
 
+// Generic signed division.
+def G_SDIV : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic unsigned division.
+def G_UDIV : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic signed remainder.
+def G_SREM : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic unsigned remainder.
+def G_UREM : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 // Generic addition consuming and producing a carry flag.
 def G_ADDE : Instruction {
   let OutOperandList = (outs unknown:$dst, unknown:$carry_out);
@@ -164,6 +196,48 @@ def G_ASHR : Instruction {
 def G_ICMP : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$tst, unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+}
+
+//------------------------------------------------------------------------------
+// Floating Point Binary ops.
+//------------------------------------------------------------------------------
+
+// Generic FP addition.
+def G_FADD : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Generic FP subtraction.
+def G_FSUB : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic FP multiplication.
+def G_FMUL : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Generic FP division.
+def G_FDIV : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic FP remainder.
+def G_FREM : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
   let hasSideEffects = 0;
 }
 

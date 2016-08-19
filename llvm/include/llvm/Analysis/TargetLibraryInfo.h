@@ -271,8 +271,9 @@ public:
   /// Handle invalidation from the pass manager.
   ///
   /// If we try to invalidate this info, just return false. It cannot become
-  /// invalid even if the module changes.
+  /// invalid even if the module or function changes.
   bool invalidate(Module &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.

@@ -760,7 +760,8 @@ public:
         eBroadcastBitInterrupt      = (1 << 1),
         eBroadcastBitSTDOUT         = (1 << 2),
         eBroadcastBitSTDERR         = (1 << 3),
-        eBroadcastBitProfileData    = (1 << 4)
+        eBroadcastBitProfileData    = (1 << 4),
+        eBroadcastBitStructuredData = (1 << 5),
     };
 
     enum
@@ -3254,6 +3255,71 @@ public:
     AdvanceAddressToNextBranchInstruction (Address default_stop_addr, 
                                            AddressRange range_bounds);
 
+    //------------------------------------------------------------------
+    /// Configure asynchronous structured data feature.
+    ///
+    /// Each Process type that supports using an asynchronous StructuredData
+    /// feature should implement this to enable/disable/configure the feature.
+    /// The default implementation here will always return an error indiciating
+    /// the feature is unsupported.
+    ///
+    /// StructuredDataPlugin implementations will call this to configure
+    /// a feature that has been reported as being supported.
+    ///
+    /// @param[in] type_name
+    ///     The StructuredData type name as previously discovered by
+    ///     the Process-derived instance.
+    ///
+    /// @param[in] config
+    ///     Configuration data for the feature being enabled.  This config
+    ///     data, which may be null, will be passed along to the feature
+    ///     to process.  The feature will dictate whether this is a dictionary,
+    ///     an array or some other object.  If the feature needs to be
+    ///     set up properly before it can be enabled, then the config should
+    ///     also take an enable/disable flag.
+    ///
+    /// @return
+    ///     Returns the result of attempting to configure the feature.
+    //------------------------------------------------------------------
+    virtual Error
+    ConfigureStructuredData(const ConstString &type_name,
+                            const StructuredData::ObjectSP &config_sp);
+
+    //------------------------------------------------------------------
+    /// Broadcasts the given structured data object from the given
+    /// plugin.
+    ///
+    /// StructuredDataPlugin instances can use this to optionally
+    /// broadcast any of their data if they want to make it available
+    /// for clients.  The data will come in on the structured data
+    /// event bit (eBroadcastBitStructuredData).
+    ///
+    /// @param[in] object_sp
+    ///     The structured data object to broadcast.
+    ///
+    /// @param[in] plugin_sp
+    ///     The plugin that will be reported in the event's plugin
+    ///     parameter.
+    //------------------------------------------------------------------
+    void
+    BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
+                            const lldb::StructuredDataPluginSP &plugin_sp);
+
+    //------------------------------------------------------------------
+    /// Returns the StructuredDataPlugin associated with a given type
+    /// name, if there is one.
+    ///
+    /// There will only be a plugin for a given StructuredDataType if the
+    /// debugged process monitor claims that the feature is supported.
+    /// This is one way to tell whether a feature is available.
+    ///
+    /// @return
+    ///     The plugin if one is available for the specified feature;
+    ///     otherwise, returns an empty shared pointer.
+    //------------------------------------------------------------------
+    lldb::StructuredDataPluginSP
+    GetStructuredDataPlugin(const ConstString &type_name) const;
+
 protected:
     void
     SetState (lldb::EventSP &event_sp);
@@ -3392,6 +3458,57 @@ protected:
     }
 
     //------------------------------------------------------------------
+    /// Loads any plugins associated with asynchronous structured data
+    /// and maps the relevant supported type name to the plugin.
+    ///
+    /// Processes can receive asynchronous structured data from the
+    /// process monitor.  This method will load and map any structured
+    /// data plugins that support the given set of supported type names.
+    /// Later, if any of these features are enabled, the process monitor
+    /// is free to generate asynchronous structured data.  The data must
+    /// come in as a single \b StructuredData::Dictionary.  That dictionary
+    /// must have a string field named 'type', with a value that equals
+    /// the relevant type name string (one of the values in
+    /// \b supported_type_names).
+    ///
+    /// @param[in] supported_type_names
+    ///     An array of zero or more type names.  Each must be unique.
+    ///     For each entry in the list, a StructuredDataPlugin will be
+    ///     searched for that supports the structured data type name.
+    //------------------------------------------------------------------
+    void
+    MapSupportedStructuredDataPlugins(const StructuredData::Array
+                                           &supported_type_names);
+
+    //------------------------------------------------------------------
+    /// Route the incoming structured data dictionary to the right plugin.
+    ///
+    /// The incoming structured data must be a dictionary, and it must
+    /// have a key named 'type' that stores a string value.  The string
+    /// value must be the name of the structured data feature that
+    /// knows how to handle it.
+    ///
+    /// @param[in] object_sp
+    ///     When non-null and pointing to a dictionary, the 'type'
+    ///     key's string value is used to look up the plugin that
+    ///     was registered for that structured data type.  It then
+    ///     calls the following method on the StructuredDataPlugin
+    ///     instance:
+    ///
+    ///     virtual void
+    ///     HandleArrivalOfStructuredData(Process &process,
+    ///                                   const ConstString &type_name,
+    ///                                   const StructuredData::ObjectSP
+    ///                                   &object_sp)
+    ///
+    /// @return
+    ///     True if the structured data was routed to a plugin; otherwise,
+    ///     false.
+    //------------------------------------------------------------------
+    bool
+    RouteAsyncStructuredData(const StructuredData::ObjectSP object_sp);
+
+    //------------------------------------------------------------------
     // Type definitions
     //------------------------------------------------------------------
     typedef std::map<lldb::LanguageType, lldb::LanguageRuntimeSP> LanguageRuntimeCollection;
@@ -3408,6 +3525,9 @@ protected:
         {
         }
     };
+
+    using StructuredDataPluginMap = std::map<ConstString,
+                                             lldb::StructuredDataPluginSP>;
     
     //------------------------------------------------------------------
     // Member variables
@@ -3477,7 +3597,9 @@ protected:
     bool m_can_interpret_function_calls; // Some targets, e.g the OSX kernel, don't support the ability to modify the stack.
     WarningsCollection          m_warnings_issued;  // A set of object pointers which have already had warnings printed
     std::mutex                  m_run_thread_plan_lock;
-    
+    StructuredDataPluginMap     m_structured_data_plugin_map;
+
+
     enum {
         eCanJITDontKnow= 0,
         eCanJITYes,
@@ -3562,7 +3684,7 @@ protected:
     
     void
     BroadcastAsyncProfileData(const std::string &one_profile_data);
-    
+
     static void
     STDIOReadThreadBytesReceived (void *baton, const void *src, size_t src_len);
     

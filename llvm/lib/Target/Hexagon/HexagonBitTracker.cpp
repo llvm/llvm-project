@@ -902,10 +902,12 @@ bool HexagonEvaluator::evaluate(const MachineInstr &BI,
   bool Negated = false;
   switch (Opc) {
     case Hexagon::J2_jumpf:
+    case Hexagon::J2_jumpfpt:
     case Hexagon::J2_jumpfnew:
     case Hexagon::J2_jumpfnewpt:
       Negated = true;
     case Hexagon::J2_jumpt:
+    case Hexagon::J2_jumptpt:
     case Hexagon::J2_jumptnew:
     case Hexagon::J2_jumptnewpt:
       // Simple branch:  if([!]Pn) jump ...

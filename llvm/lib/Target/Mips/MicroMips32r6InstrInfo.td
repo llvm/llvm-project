@@ -1772,3 +1772,5 @@ let AddedComplexity = 41 in {
   def : LoadRegImmPat<LDC1_D64_MMR6, f64, load>, FGR_64, ISA_MICROMIPS32R6;
   def : StoreRegImmPat<SDC1_D64_MMR6, f64>, FGR_64, ISA_MICROMIPS32R6;
 }
+
+def TAILCALL_MMR6 : TailCall<BC_MMR6, brtarget26_mm>, ISA_MICROMIPS32R6;

@@ -1175,7 +1175,7 @@ ProcessGDBRemote::DidLaunchOrAttach (ArchSpec& process_arch)
 {
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
     if (log)
-        log->Printf ("ProcessGDBRemote::DidLaunch()");
+        log->Printf ("ProcessGDBRemote::%s()", __FUNCTION__);
     if (GetID() != LLDB_INVALID_PROCESS_ID)
     {
         BuildDynamicRegisterInfo (false);
@@ -1271,6 +1271,13 @@ ProcessGDBRemote::DidLaunchOrAttach (ArchSpec& process_arch)
                 GetTarget().SetArchitecture (process_arch);
             }
         }
+
+        // Find out which StructuredDataPlugins are supported by the
+        // debug monitor.  These plugins transmit data over async $J packets.
+        auto supported_packets_array =
+            m_gdb_comm.GetSupportedStructuredDataPlugins();
+        if (supported_packets_array)
+            MapSupportedStructuredDataPlugins(*supported_packets_array);
     }
 }
 
@@ -1984,7 +1991,10 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
             {
                 StringExtractor reg_value_extractor;
                 reg_value_extractor.GetStringRef() = pair.second;
-                gdb_thread->PrivateSetRegisterValue (pair.first, reg_value_extractor);
+                DataBufferSP buffer_sp(new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+                reg_value_extractor.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+                gdb_thread->PrivateSetRegisterValue(
+                    pair.first, llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
             }
 
             thread_sp->SetName (thread_name.empty() ? NULL : thread_name.c_str());
@@ -4342,6 +4352,13 @@ ProcessGDBRemote::GetSharedCacheInfo ()
     return object_sp;
 }
 
+Error
+ProcessGDBRemote::ConfigureStructuredData(const ConstString &type_name,
+                                          const StructuredData::ObjectSP
+                                          &config_sp)
+{
+    return m_gdb_comm.ConfigureRemoteStructuredData(type_name, config_sp);
+}
 
 // Establish the largest memory read/write payloads we should use.
 // If the remote stub has a max packet size, stay under that size.
@@ -5233,6 +5250,13 @@ ProcessGDBRemote::HandleStopReply()
             SetID(pid);
     }
     BuildDynamicRegisterInfo(true);
+}
+
+bool
+ProcessGDBRemote::HandleAsyncStructuredData(const StructuredData::ObjectSP
+                                            &object_sp)
+{
+    return RouteAsyncStructuredData(object_sp);
 }
 
 class CommandObjectProcessGDBRemoteSpeedTest: public CommandObjectParsed

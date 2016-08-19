@@ -12,6 +12,8 @@
 // ASan-private header for asan_descriptions.cc.
 // TODO(filcab): Most struct definitions should move to the interface headers.
 //===----------------------------------------------------------------------===//
+#ifndef ASAN_DESCRIPTIONS_H
+#define ASAN_DESCRIPTIONS_H
 
 #include "asan_allocator.h"
 #include "asan_thread.h"
@@ -49,7 +51,6 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
       case kAsanStackLeftRedzoneMagic:
       case kAsanStackMidRedzoneMagic:
       case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
         return Red();
       case kAsanStackAfterReturnMagic:
         return Magenta();
@@ -89,6 +90,8 @@ struct ShadowAddressDescription {
   uptr addr;
   ShadowKind kind;
   u8 shadow_byte;
+
+  void Print();
 };
 
 bool GetShadowAddressInformation(uptr addr, ShadowAddressDescription *descr);
@@ -117,6 +120,8 @@ struct HeapAddressDescription {
   u32 alloc_stack_id;
   u32 free_stack_id;
   ChunkAccess chunk_access;
+
+  void Print();
 };
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
@@ -129,7 +134,10 @@ struct StackAddressDescription {
   uptr offset;
   uptr frame_pc;
   const char *frame_descr;
+
+  void Print(uptr access_size = 1);
 };
+
 bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr);
 bool DescribeAddressIfStack(uptr addr, uptr access_size);
 
@@ -140,9 +148,24 @@ struct GlobalAddressDescription {
   __asan_global globals[kMaxGlobals];
   u32 reg_sites[kMaxGlobals];
   u8 size;
+
+  void Print(uptr access_size = 1, const char *bug_type = "");
 };
 
 bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr);
 bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
 
+// General function to describe an address. Will try to describe the address as
+// a shadow, global (variable), stack, or heap address.
+// bug_type is optional and is used for checking if we're reporting an
+// initialization-order-fiasco
+// The proper access_size should be passed for stack, global, and heap
+// addresses. Defaults to 1.
+// Each of the *AddressDescription functions has its own Print() member, which
+// may take access_size and bug_type parameters if needed.
+void PrintAddressDescription(uptr addr, uptr access_size = 1,
+                             const char *bug_type = "");
+
 }  // namespace __asan
+
+#endif  // ASAN_DESCRIPTIONS_H

@@ -284,7 +284,8 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
       if (IsNew)
         OutputSections->push_back(OutSec);
       for (InputSectionBase<ELFT> *Sec : V)
-        OutSec->addSection(Sec);
+        if (!Sec->OutSec)
+          OutSec->addSection(Sec);
     }
   }
 
@@ -655,6 +656,8 @@ void ScriptParser::run() {
     StringRef Tok = next();
     if (Handler Fn = Cmd.lookup(Tok))
       (this->*Fn)();
+    else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok))
+      Opt.Commands.emplace_back(Cmd);
     else
       setError("unknown directive: " + Tok);
   }

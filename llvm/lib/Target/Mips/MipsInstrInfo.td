@@ -1370,14 +1370,12 @@ let isCall=1, hasDelaySlot=1, isCTI=1, Defs = [RA] in {
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT] in {
-  class TailCall<Instruction JumpInst> :
+  class TailCall<Instruction JumpInst, DAGOperand Opnd> :
     PseudoSE<(outs), (ins calltarget:$target), [], II_J>,
-    PseudoInstExpansion<(JumpInst jmptarget:$target)>;
+    PseudoInstExpansion<(JumpInst Opnd:$target)>;
 
-  class TailCallReg<RegisterOperand RO, Instruction JRInst,
-                    RegisterOperand ResRO = RO> :
-    PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>,
-    PseudoInstExpansion<(JRInst ResRO:$rs)>;
+  class TailCallReg<RegisterOperand RO> :
+    MipsPseudo<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>;
 }
 
 class BAL_BR_Pseudo<Instruction RealInst> :
@@ -1919,10 +1917,11 @@ def BLTZALL : MMRel, BGEZAL_FT<"bltzall", brtarget, GPR32Opnd, 0>,
               BGEZAL_FM<0x12>, ISA_MIPS2_NOT_32R6_64R6;
 def BAL_BR : BAL_BR_Pseudo<BGEZAL>;
 
-let AdditionalPredicates = [NotInMicroMips] in {
-def TAILCALL : TailCall<J>, ISA_MIPS1_NOT_32R6_64R6;
-def TAILCALLREG : TailCallReg<GPR32Opnd, JR>, ISA_MIPS1_NOT_32R6_64R6, GPR_32;
+let Predicates = [NotInMicroMips] in { 
+  def TAILCALL : TailCall<J, jmptarget>;
 }
+
+def TAILCALLREG : TailCallReg<GPR32Opnd>;
 
 // Indirect branches are matched as PseudoIndirectBranch/PseudoIndirectBranch64
 // then are expanded to JR, JR64, JALR, or JALR64 depending on the ISA.

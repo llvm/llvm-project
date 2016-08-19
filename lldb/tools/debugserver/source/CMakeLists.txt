@@ -1,5 +1,6 @@
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
+include_directories(MacOSX/DarwinLog)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   include_directories(MacOSX)
@@ -42,6 +43,11 @@ add_library(lldbDebugserverCommon
   DNBLog.cpp
   DNBRegisterInfo.cpp
   DNBThreadResumeActions.cpp
+  JSON.cpp
+  # JSON reader depends on the following LLDB-common files
+  ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
+  ${LLDB_SOURCE_DIR}/source/Utility/StringExtractor.cpp
+  # end JSON reader dependencies
   libdebugserver.cpp
   PseudoTerminal.cpp
   PThreadEvent.cpp

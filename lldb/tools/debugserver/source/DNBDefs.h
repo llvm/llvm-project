@@ -142,6 +142,7 @@ enum
 #define LOG_WATCHPOINTS         (1u << 11)
 #define LOG_STEP                (1u << 12)
 #define LOG_TASK                (1u << 13)
+#define LOG_DARWIN_LOG          (1u << 14)
 #define LOG_LO_USER             (1u << 16)
 #define LOG_HI_USER             (1u << 31)
 #define LOG_ALL                 0xFFFFFFFFu

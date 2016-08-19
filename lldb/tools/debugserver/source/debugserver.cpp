@@ -34,6 +34,7 @@ extern "C" int proc_set_wakemon_params(pid_t, int, int); // <libproc_internal.h>
 #include "DNB.h"
 #include "DNBLog.h"
 #include "DNBTimer.h"
+#include "OsLogger.h"
 #include "PseudoTerminal.h"
 #include "RNBContext.h"
 #include "RNBServices.h"
@@ -524,6 +525,9 @@ RNBRunLoopInferiorExecuting (RNBRemote *remote)
             // Clear some bits if we are not running so we don't send any async packets
             event_mask &= ~RNBContext::event_proc_stdio_available;
             event_mask &= ~RNBContext::event_proc_profile_data;
+            // When we enable async structured data packets over another logical channel,
+            // this can be relaxed.
+            event_mask &= ~RNBContext::event_darwin_log_data_available;
         }
 
         // We want to make sure we consume all process state changes and have
@@ -546,6 +550,11 @@ RNBRunLoopInferiorExecuting (RNBRemote *remote)
             if (set_events & RNBContext::event_proc_profile_data)
             {
                 remote->SendAsyncProfileData();
+            }
+
+            if (set_events & RNBContext::event_darwin_log_data_available)
+            {
+                remote->SendAsyncDarwinLogData();
             }
 
             if (set_events & RNBContext::event_read_packet_available)
@@ -1307,7 +1316,20 @@ main (int argc, char *argv[])
     else
     {
         // Enable DNB logging
-        DNBLogSetLogCallback(ASLLogCallback, NULL);
+
+        // if os_log() support is available, log through that.
+        auto log_callback = OsLogger::GetLogFunction();
+        if (log_callback)
+        {
+            DNBLogSetLogCallback(log_callback, nullptr);
+            DNBLog("debugserver will use os_log for internal logging.");
+        }
+        else
+        {
+            // Fall back to ASL support.
+            DNBLogSetLogCallback(ASLLogCallback, NULL);
+            DNBLog("debugserver will use ASL for internal logging.");
+        }
         DNBLogSetLogMask (log_flags);
 
     }

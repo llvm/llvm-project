@@ -219,7 +219,7 @@ TEST(FuzzerMutate, InsertRepeatedBytes1) {
   TestInsertRepeatedBytes(&MutationDispatcher::Mutate_InsertRepeatedBytes, 10000);
 }
 TEST(FuzzerMutate, InsertRepeatedBytes2) {
-  TestInsertRepeatedBytes(&MutationDispatcher::Mutate, 200000);
+  TestInsertRepeatedBytes(&MutationDispatcher::Mutate, 300000);
 }
 
 void TestChangeByte(Mutator M, int NumIter) {
@@ -473,6 +473,42 @@ TEST(FuzzerMutate, ChangeASCIIInteger1) {
 
 TEST(FuzzerMutate, ChangeASCIIInteger2) {
   TestChangeASCIIInteger(&MutationDispatcher::Mutate, 1 << 15);
+}
+
+void TestChangeBinaryInteger(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
+  Random Rand(0);
+  MutationDispatcher MD(Rand, {});
+
+  uint8_t CH0[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x79};
+  uint8_t CH1[8] = {0x00, 0x11, 0x22, 0x31, 0x44, 0x55, 0x66, 0x77};
+  uint8_t CH2[8] = {0xff, 0x10, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+  uint8_t CH3[8] = {0x00, 0x11, 0x2a, 0x33, 0x44, 0x55, 0x66, 0x77};
+  uint8_t CH4[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x4f, 0x66, 0x77};
+  uint8_t CH5[8] = {0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88};
+
+  int FoundMask = 0;
+  for (int i = 0; i < NumIter; i++) {
+    uint8_t T[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+    size_t NewSize = (MD.*M)(T, 8, 8);
+    /**/ if (NewSize == 8 && !memcmp(CH0, T, 8)) FoundMask |= 1 << 0;
+    else if (NewSize == 8 && !memcmp(CH1, T, 8)) FoundMask |= 1 << 1;
+    else if (NewSize == 8 && !memcmp(CH2, T, 8)) FoundMask |= 1 << 2;
+    else if (NewSize == 8 && !memcmp(CH3, T, 8)) FoundMask |= 1 << 3;
+    else if (NewSize == 8 && !memcmp(CH4, T, 8)) FoundMask |= 1 << 4;
+    else if (NewSize == 8 && !memcmp(CH5, T, 8)) FoundMask |= 1 << 5;
+  }
+  EXPECT_EQ(FoundMask, 63);
+}
+
+TEST(FuzzerMutate, ChangeBinaryInteger1) {
+  TestChangeBinaryInteger(&MutationDispatcher::Mutate_ChangeBinaryInteger,
+                         1 << 12);
+}
+
+TEST(FuzzerMutate, ChangeBinaryInteger2) {
+  TestChangeBinaryInteger(&MutationDispatcher::Mutate, 1 << 15);
 }
 
 

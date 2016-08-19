@@ -120,6 +120,7 @@ size_t GetPeakRSSMb();
 static const int kSHA1NumBytes = 20;
 // Computes SHA1 hash of 'Len' bytes in 'Data', writes kSHA1NumBytes to 'Out'.
 void ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out);
+std::string Sha1ToString(uint8_t Sha1[kSHA1NumBytes]);
 
 // Changes U to contain only ASCII (isprint+isspace) characters.
 // Returns true iff U has been changed.
@@ -289,6 +290,8 @@ public:
 
   /// Tries to find an ASCII integer in Data, changes it to another ASCII int.
   size_t Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Change a 1-, 2-, 4-, or 8-byte integer in interesting ways.
+  size_t Mutate_ChangeBinaryInteger(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// CrossOver Data with some other element of the corpus.
   size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -482,6 +485,7 @@ private:
   void LazyAllocateCurrentUnitData();
   uint8_t *CurrentUnitData = nullptr;
   std::atomic<size_t> CurrentUnitSize;
+  uint8_t BaseSha1[kSHA1NumBytes];  // Checksum of the base unit.
 
   size_t TotalNumberOfRuns = 0;
   size_t NumberOfNewUnitsAdded = 0;

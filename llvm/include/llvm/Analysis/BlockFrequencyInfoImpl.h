@@ -1251,7 +1251,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       : DefaultDOTGraphTraits(isSimple) {}
 
   typedef GraphTraits<BlockFrequencyInfoT *> GTraits;
-  typedef typename GTraits::NodeType NodeType;
+  typedef typename GTraits::NodeRef NodeRef;
   typedef typename GTraits::ChildIteratorType EdgeIter;
   typedef typename GTraits::nodes_iterator NodeIter;
 
@@ -1260,8 +1260,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     return G->getFunction()->getName();
   }
 
-  std::string getNodeAttributes(const NodeType *Node,
-                                const BlockFrequencyInfoT *Graph,
+  std::string getNodeAttributes(NodeRef Node, const BlockFrequencyInfoT *Graph,
                                 unsigned HotPercentThreshold = 0) {
     std::string Result;
     if (!HotPercentThreshold)
@@ -1272,9 +1271,9 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       for (NodeIter I = GTraits::nodes_begin(Graph),
                     E = GTraits::nodes_end(Graph);
            I != E; ++I) {
-        NodeType &N = *I;
+        NodeRef N = &*I;
         MaxFrequency =
-            std::max(MaxFrequency, Graph->getBlockFreq(&N).getFrequency());
+            std::max(MaxFrequency, Graph->getBlockFreq(N).getFrequency());
       }
     }
     BlockFrequency Freq = Graph->getBlockFreq(Node);
@@ -1291,8 +1290,8 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     return Result;
   }
 
-  std::string getNodeLabel(const NodeType *Node,
-                           const BlockFrequencyInfoT *Graph, GVDAGType GType) {
+  std::string getNodeLabel(NodeRef Node, const BlockFrequencyInfoT *Graph,
+                           GVDAGType GType) {
     std::string Result;
     raw_string_ostream OS(Result);
 
@@ -1319,7 +1318,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     return Result;
   }
 
-  std::string getEdgeAttributes(const NodeType *Node, EdgeIter EI,
+  std::string getEdgeAttributes(NodeRef Node, EdgeIter EI,
                                 const BlockFrequencyInfoT *BFI,
                                 const BranchProbabilityInfoT *BPI,
                                 unsigned HotPercentThreshold = 0) {

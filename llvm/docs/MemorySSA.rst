@@ -36,8 +36,8 @@ MemorySSA Structure
 ===================
 
 MemorySSA is a virtual IR. After it's built, ``MemorySSA`` will contain a
-structure that maps ``Instruction`` s to ``MemoryAccess`` es, which are
-``MemorySSA``'s parallel to LLVM ``Instruction`` s.
+structure that maps ``Instruction``\ s to ``MemoryAccess``\ es, which are
+``MemorySSA``'s parallel to LLVM ``Instruction``\ s.
 
 Each ``MemoryAccess`` can be one of three types:
 
@@ -45,25 +45,25 @@ Each ``MemoryAccess`` can be one of three types:
 - ``MemoryUse``
 - ``MemoryDef``
 
-``MemoryPhi`` s are ``PhiNode`` , but for memory operations. If at any
-point we have two (or more) ``MemoryDef`` s that could flow into a
+``MemoryPhi``\ s are ``PhiNode``\ s, but for memory operations. If at any
+point we have two (or more) ``MemoryDef``\ s that could flow into a
 ``BasicBlock``, the block's top ``MemoryAccess`` will be a
-``MemoryPhi``. As in LLVM IR, ``MemoryPhi`` s don't correspond to any
-concrete operation. As such, you can't look up a ``MemoryPhi`` with an
-``Instruction`` (though we do allow you to do so with a
-``BasicBlock``).
+``MemoryPhi``. As in LLVM IR, ``MemoryPhi``\ s don't correspond to any
+concrete operation. As such, ``BasicBlock``\ s are mapped to ``MemoryPhi``\ s
+inside ``MemorySSA``, whereas ``Instruction``\ s are mapped to ``MemoryUse``\ s
+and ``MemoryDef``\ s.
 
-Note also that in SSA, Phi nodes merge must-reach definitions (that
-is, definite new versions of variables).  In MemorySSA, PHI nodes merge
-may-reach definitions (that is, until disambiguated, the versions that
-reach a phi node may or may not clobber a given variable)
+Note also that in SSA, Phi nodes merge must-reach definitions (that is,
+definitions that *must* be new versions of variables). In MemorySSA, PHI nodes
+merge may-reach definitions (that is, until disambiguated, the versions that
+reach a phi node may or may not clobber a given variable).
 
-``MemoryUse`` s are operations which use but don't modify memory. An example of
+``MemoryUse``\ s are operations which use but don't modify memory. An example of
 a ``MemoryUse`` is a ``load``, or a ``readonly`` function call.
 
-``MemoryDef`` s are operations which may either modify memory, or which
-otherwise clobber memory in unquantifiable ways. Examples of ``MemoryDef`` s
-include ``store`` s, function calls, ``load`` s with ``acquire`` (or higher)
+``MemoryDef``\ s are operations which may either modify memory, or which
+introduce some kind of ordering constraints. Examples of ``MemoryDef``\ s
+include ``store``\ s, function calls, ``load``\ s with ``acquire`` (or higher)
 ordering, volatile operations, memory fences, etc.
 
 Every function that exists has a special ``MemoryDef`` called ``liveOnEntry``.
@@ -73,12 +73,12 @@ run on, and implies that we've hit the top of the function. It's the only
 ``liveOnEntry`` implies that the memory being used is either undefined or
 defined before the function begins.
 
-An example of all of this overlayed on LLVM IR (obtained by running ``opt
+An example of all of this overlaid on LLVM IR (obtained by running ``opt
 -passes='print<memoryssa>' -disable-output`` on an ``.ll`` file) is below. When
 viewing this example, it may be helpful to view it in terms of clobbers. The
 operands of a given ``MemoryAccess`` are all (potential) clobbers of said
 MemoryAccess, and the value produced by a ``MemoryAccess`` can act as a clobber
-for other ``MemoryAccess`` es. Another useful way of looking at it is in
+for other ``MemoryAccess``\ es. Another useful way of looking at it is in
 terms of heap versions.  In that view, operands of of a given
 ``MemoryAccess`` are the version of the heap before the operation, and
 if the access produces a value, the value is the new version of the heap
@@ -125,7 +125,7 @@ to (if such an instruction exists). For example, ``1 = MemoryDef(liveOnEntry)``
 is a ``MemoryAccess`` (specifically, a ``MemoryDef``), and it describes the LLVM
 instruction ``store i8 0, i8* %p3``. Other places in ``MemorySSA`` refer to this
 particular ``MemoryDef`` as ``1`` (much like how one can refer to ``load i8, i8*
-%p1`` in LLVM with ``%1``). Again, ``MemoryPhi`` s don't correspond to any LLVM
+%p1`` in LLVM with ``%1``). Again, ``MemoryPhi``\ s don't correspond to any LLVM
 Instruction, so the line directly below a ``MemoryPhi`` isn't special.
 
 Going from the top down:
@@ -135,7 +135,9 @@ Going from the top down:
   ``MemoryPhi`` is referred to in the textual IR by the number ``6``.
 - ``2 = MemoryDef(6)`` notes that ``store i8 0, i8* %p1`` is a definition,
   and its reaching definition before it is ``6``, or the ``MemoryPhi`` after
-  ``while.cond``.
+  ``while.cond``. (See the `Build-time use optimization`_ and `Precision`_
+  sections below for why this ``MemoryDef`` isn't linked to a seperate,
+  disambiguated ``MemoryPhi``.)
 - ``3 = MemoryDef(6)`` notes that ``store i8 0, i8* %p2`` is a definition; its
   reaching definition is also ``6``.
 - ``5 = MemoryPhi({if.then,2},{if.else,3})`` notes that the clobber before
@@ -146,9 +148,9 @@ Going from the top down:
   reaching definition is ``5``.
 - ``MemoryUse(1)`` notes that ``load i8, i8* %p3`` is just a user of memory,
   and the last thing that could clobber this use is above ``while.cond`` (e.g.
-  the store to ``%p3``).  In heap versioning parlance, it really
-  only depends on the heap version 1, and is unaffected by the new
-  heap versions generated since then.
+  the store to ``%p3``). In heap versioning parlance, it really only depends on
+  the heap version 1, and is unaffected by the new heap versions generated since
+  then.
 
 As an aside, ``MemoryAccess`` is a ``Value`` mostly for convenience; it's not
 meant to interact with LLVM IR.
@@ -158,9 +160,9 @@ Design of MemorySSA
 
 ``MemorySSA`` is an analysis that can be built for any arbitrary function. When
 it's built, it does a pass over the function's IR in order to build up its
-mapping of ``MemoryAccess`` es. You can then query ``MemorySSA`` for things like
-the dominance relation between ``MemoryAccess`` es, and get the ``MemoryAccess``
-for any given ``Instruction`` .
+mapping of ``MemoryAccess``\ es. You can then query ``MemorySSA`` for things
+like the dominance relation between ``MemoryAccess``\ es, and get the
+``MemoryAccess`` for any given ``Instruction`` .
 
 When ``MemorySSA`` is done building, it also hands you a ``MemorySSAWalker``
 that you can use (see below).
@@ -171,7 +173,7 @@ The walker
 
 A structure that helps ``MemorySSA`` do its job is the ``MemorySSAWalker``, or
 the walker, for short. The goal of the walker is to provide answers to clobber
-queries beyond what's represented directly by ``MemoryAccess`` es. For example,
+queries beyond what's represented directly by ``MemoryAccess``\ es. For example,
 given:
 
 .. code-block:: llvm
@@ -190,10 +192,11 @@ The store to ``%a`` is clearly not a clobber for the store to ``%b``. It would
 be the walker's goal to figure this out, and return ``liveOnEntry`` when queried
 for the clobber of ``MemoryAccess`` ``2``.
 
-By default, ``MemorySSA`` provides a walker that can optimize ``MemoryDef`` s
-and ``MemoryUse`` s by consulting alias analysis. Walkers were built to be
-flexible, though, so it's entirely reasonable (and expected) to create more
-specialized walkers (e.g. one that queries ``GlobalsAA``).
+By default, ``MemorySSA`` provides a walker that can optimize ``MemoryDef``\ s
+and ``MemoryUse``\ s by consulting whatever alias analysis stack you happen to
+be using. Walkers were built to be flexible, though, so it's entirely reasonable
+(and expected) to create more specialized walkers (e.g. one that specifically
+queries ``GlobalsAA``, one that always stops at ``MemoryPhi`` nodes, etc).
 
 
 Locating clobbers yourself
@@ -201,22 +204,23 @@ Locating clobbers yourself
 
 If you choose to make your own walker, you can find the clobber for a
 ``MemoryAccess`` by walking every ``MemoryDef`` that dominates said
-``MemoryAccess``. The structure of ``MemoryDef`` s makes this relatively simple;
+``MemoryAccess``. The structure of ``MemoryDef``\ s makes this relatively simple;
 they ultimately form a linked list of every clobber that dominates the
 ``MemoryAccess`` that you're trying to optimize. In other words, the
 ``definingAccess`` of a ``MemoryDef`` is always the nearest dominating
 ``MemoryDef`` or ``MemoryPhi`` of said ``MemoryDef``.
 
 
-Use optimization
-----------------
+Build-time use optimization
+---------------------------
 
-``MemorySSA`` will optimize some ``MemoryAccess`` es at build-time.
+``MemorySSA`` will optimize some ``MemoryAccess``\ es at build-time.
 Specifically, we optimize the operand of every ``MemoryUse`` to point to the
 actual clobber of said ``MemoryUse``. This can be seen in the above example; the
 second ``MemoryUse`` in ``if.end`` has an operand of ``1``, which is a
 ``MemoryDef`` from the entry block.  This is done to make walking,
 value numbering, etc, faster and easier.
+
 It is not possible to optimize ``MemoryDef`` in the same way, as we
 restrict ``MemorySSA`` to one heap variable and, thus, one Phi node
 per block.
@@ -228,13 +232,13 @@ Invalidation and updating
 Because ``MemorySSA`` keeps track of LLVM IR, it needs to be updated whenever
 the IR is updated. "Update", in this case, includes the addition, deletion, and
 motion of ``Instructions``. The update API is being made on an as-needed basis.
-If you'd like examples, ``GVNHoist`` is a user of ``MemorySSA`` s update API.
+If you'd like examples, ``GVNHoist`` is a user of ``MemorySSA``\ s update API.
 
 
 Phi placement
 ^^^^^^^^^^^^^
 
-``MemorySSA`` only places ``MemoryPhi`` s where they're actually
+``MemorySSA`` only places ``MemoryPhi``\ s where they're actually
 needed. That is, it is a pruned SSA form, like LLVM's SSA form.  For
 example, consider:
 
@@ -274,7 +278,7 @@ for ``if.end`` would be pointless, so we don't place one. So, if you need to
 place a ``MemoryDef`` in ``if.then`` or ``if.else``, you'll need to also create
 a ``MemoryPhi`` for ``if.end``.
 
-If it turns out that this is a large burden, we can just place ``MemoryPhi`` s
+If it turns out that this is a large burden, we can just place ``MemoryPhi``\ s
 everywhere. Because we have Walkers that are capable of optimizing above said
 phis, doing so shouldn't prohibit optimizations.
 

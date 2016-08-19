@@ -15,8 +15,6 @@
 // RUN: MSAN_OPTIONS=allocator_may_return_null=0 not %run %t realloc-after-malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mrCRASH
 // RUN: MSAN_OPTIONS=allocator_may_return_null=1     %run %t realloc-after-malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mrNULL
 
-// XFAIL: target-is-mips64el
-
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>

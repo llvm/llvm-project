@@ -1316,6 +1316,8 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
 
 static uint8_t getSymbolBinding(SymbolBody *Body) {
   Symbol *S = Body->symbol();
+  if (Config->Relocatable)
+    return S->Binding;
   uint8_t Visibility = S->Visibility;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;

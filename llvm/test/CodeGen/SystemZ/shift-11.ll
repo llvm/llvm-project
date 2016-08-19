@@ -61,3 +61,25 @@ define i64 @f6(i64 %a, i64 %sh) {
   %shift = shl i64 %a, %and
   ret i64 %shift
 }
+
+; Test shift with negative 32-bit value.
+define i32 @f8(i32 %a, i32 %sh, i32 %test) {
+; CHECK-LABEL: f8:
+; CHECK: nill %r3, 65529
+; CHECK: sll %r2, 0(%r3)
+  %and = and i32 %sh, -7
+  %shift = shl i32 %a, %and
+
+  ret i32 %shift
+}
+
+; Test shift with negative 64-bit value.
+define i64 @f9(i64 %a, i64 %sh, i64 %test) {
+; CHECK-LABEL: f9:
+; CHECK: nill %r3, 65529
+; CHECK: sllg %r2, %r2, 0(%r3)
+  %and = and i64 %sh, -7
+  %shift = shl i64 %a, %and
+
+  ret i64 %shift
+}

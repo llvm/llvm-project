@@ -1587,7 +1587,7 @@ let isTerminator = 1, hasSideEffects = 0 in {
 
   defm J2_jumpr : JMPR_base<"JMPr">, PredNewRel;
 
-  let isReturn = 1, isCodeGenOnly = 1 in
+  let isReturn = 1, isPseudo = 1, isCodeGenOnly = 1 in
   defm PS_jmpret : JMPR_base<"JMPret">, PredNewRel;
 }
 

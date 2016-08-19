@@ -89,10 +89,10 @@ def F64_CONVERT_U_I64 : I<(outs F64:$dst), (ins I64:$src),
                           "f64.convert_u/i64\t$dst, $src">;
 
 def F64_PROMOTE_F32 : I<(outs F64:$dst), (ins F32:$src),
-                        [(set F64:$dst, (fextend F32:$src))],
+                        [(set F64:$dst, (fpextend F32:$src))],
                         "f64.promote/f32\t$dst, $src">;
 def F32_DEMOTE_F64 : I<(outs F32:$dst), (ins F64:$src),
-                       [(set F32:$dst, (fround F64:$src))],
+                       [(set F32:$dst, (fpround F64:$src))],
                        "f32.demote/f64\t$dst, $src">;
 
 def I32_REINTERPRET_F32 : I<(outs I32:$dst), (ins F32:$src),

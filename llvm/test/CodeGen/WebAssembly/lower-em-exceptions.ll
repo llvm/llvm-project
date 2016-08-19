@@ -1,10 +1,10 @@
-; RUN: opt < %s -wasm-lower-em-exceptions -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s
 
 @_ZTIi = external constant i8*
 @_ZTIc = external constant i8*
 ; CHECK: @[[__THREW__:__THREW__.*]] = global i1 false
-; CHECK: @[[THREWVALUE:threwValue.*]] = global i32 0
-; CHECK: @[[TEMPRET0:tempRet0.*]] = global i32 0
+; CHECK: @[[THREWVALUE:__threwValue.*]] = global i32 0
+; CHECK: @[[TEMPRET0:__tempRet0.*]] = global i32 0
 
 ; Test invoke instruction with clauses (try-catch block)
 define void @clause() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -170,12 +170,12 @@ declare void @__cxa_call_unexpected(i8*)
 ; setThrew function creation
 ; CHECK-LABEL: define void @setThrew(i1 %threw, i32 %value) {
 ; CHECK: entry:
-; CHECK-NEXT: %__THREW__.val = load i1, i1* @__THREW__
-; CHECK-NEXT: %cmp = icmp eq i1 %__THREW__.val, false
+; CHECK-NEXT: %[[__THREW__]].val = load i1, i1* @[[__THREW__]]
+; CHECK-NEXT: %cmp = icmp eq i1 %[[__THREW__]].val, false
 ; CHECK-NEXT: br i1 %cmp, label %if.then, label %if.end
 ; CHECK: if.then:
-; CHECK-NEXT: store i1 %threw, i1* @__THREW__
-; CHECK-NEXT: store i32 %value, i32* @threwValue
+; CHECK-NEXT: store i1 %threw, i1* @[[__THREW__]]
+; CHECK-NEXT: store i32 %value, i32* @[[THREWVALUE]]
 ; CHECK-NEXT: br label %if.end
 ; CHECK: if.end:
 ; CHECK-NEXT: ret void
@@ -184,6 +184,6 @@ declare void @__cxa_call_unexpected(i8*)
 ; setTempRet0 function creation
 ; CHECK-LABEL: define void @setTempRet0(i32 %value) {
 ; CHECK: entry:
-; CHECK-NEXT: store i32 %value, i32* @tempRet0
+; CHECK-NEXT: store i32 %value, i32* @[[TEMPRET0]]
 ; CHECK-NEXT: ret void
 ; CHECK: }

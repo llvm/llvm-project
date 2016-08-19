@@ -281,6 +281,10 @@ cl::opt<bool> DbiModuleSourceFileInfo(
         "Dump DBI Module Source File Information (implies -dbi-module-info"),
     cl::sub(PdbToYamlSubcommand), cl::init(false));
 
+cl::opt<bool> TpiStream("tpi-stream",
+                        cl::desc("Dump the TPI Stream (Stream 3)"),
+                        cl::sub(PdbToYamlSubcommand), cl::init(false));
+
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
                                     cl::sub(PdbToYamlSubcommand));
@@ -537,8 +541,7 @@ int main(int argc_, const char *argv_[]) {
 
   cl::ParseCommandLineOptions(argv.size(), argv.data(), "LLVM PDB Dumper\n");
 
-  // These options are shared by two subcommands.
-  if ((opts::PdbToYamlSubcommand || opts::RawSubcommand) && opts::raw::RawAll) {
+  if (opts::RawSubcommand && opts::raw::RawAll) {
     opts::raw::DumpHeaders = true;
     opts::raw::DumpModules = true;
     opts::raw::DumpModuleFiles = true;

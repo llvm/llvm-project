@@ -1,8 +1,6 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
 // REQUIRES: stable-runtime
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <malloc.h>
 

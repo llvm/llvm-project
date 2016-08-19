@@ -377,8 +377,8 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
     SmallVector<char, 128> OutputBuffer;
     {
       raw_svector_ostream OS(OutputBuffer);
-      ModuleSummaryIndexBuilder IndexBuilder(&TheModule);
-      WriteBitcodeToFile(&TheModule, OS, true, &IndexBuilder.getIndex());
+      auto Index = buildModuleSummaryIndex(TheModule);
+      WriteBitcodeToFile(&TheModule, OS, true, &Index);
     }
     return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
   }

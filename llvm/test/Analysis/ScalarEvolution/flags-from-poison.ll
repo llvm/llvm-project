@@ -688,3 +688,52 @@ outer.be:
 exit:
   ret void
 }
+
+
+; PR28932: Don't assert on non-SCEV-able value %2.
+%struct.anon = type { i8* }
+@a = common global %struct.anon* null, align 8
+@b = common global i32 0, align 4
+declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
+declare void @llvm.trap()
+define i32 @pr28932() {
+entry:
+  %.pre = load %struct.anon*, %struct.anon** @a, align 8
+  %.pre7 = load i32, i32* @b, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %cont6, %entry
+  %0 = phi i32 [ %3, %cont6 ], [ %.pre7, %entry ]
+  %1 = phi %struct.anon* [ %.ph, %cont6 ], [ %.pre, %entry ]
+  %tobool = icmp eq %struct.anon* %1, null
+  %2 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %0, i32 1)
+  %3 = extractvalue { i32, i1 } %2, 0
+  %4 = extractvalue { i32, i1 } %2, 1
+  %idxprom = sext i32 %3 to i64
+  %5 = getelementptr inbounds %struct.anon, %struct.anon* %1, i64 0, i32 0
+  %6 = load i8*, i8** %5, align 8
+  %7 = getelementptr inbounds i8, i8* %6, i64 %idxprom
+  %8 = load i8, i8* %7, align 1
+  br i1 %tobool, label %if.else, label %if.then
+
+if.then:                                          ; preds = %for.cond
+  br i1 %4, label %trap, label %cont6
+
+trap:                                             ; preds = %if.else, %if.then
+  tail call void @llvm.trap()
+  unreachable
+
+if.else:                                          ; preds = %for.cond
+  br i1 %4, label %trap, label %cont1
+
+cont1:                                            ; preds = %if.else
+  %conv5 = sext i8 %8 to i64
+  %9 = inttoptr i64 %conv5 to %struct.anon*
+  store %struct.anon* %9, %struct.anon** @a, align 8
+  br label %cont6
+
+cont6:                                            ; preds = %cont1, %if.then
+  %.ph = phi %struct.anon* [ %9, %cont1 ], [ %1, %if.then ]
+  store i32 %3, i32* @b, align 4
+  br label %for.cond
+}

@@ -278,6 +278,9 @@ public:
   ///
   void Initialize();
 
+  /// Parse the first top-level declaration in a translation unit.
+  bool ParseFirstTopLevelDecl(DeclGroupPtrTy &Result);
+
   /// ParseTopLevelDecl - Parse one top-level declaration. Returns true if
   /// the EOF was encountered.
   bool ParseTopLevelDecl(DeclGroupPtrTy &Result);
@@ -2116,7 +2119,8 @@ private:
   // Forbid C++11 attributes that appear on certain syntactic 
   // locations which standard permits but we don't supported yet, 
   // for example, attributes appertain to decl specifiers.
-  void ProhibitCXX11Attributes(ParsedAttributesWithRange &attrs);
+  void ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
+                               unsigned DiagID);
 
   /// \brief Skip C++11 attributes and return the end location of the last one.
   /// \returns SourceLocation() if there are no attributes.
@@ -2655,6 +2659,7 @@ private:
 
   //===--------------------------------------------------------------------===//
   // Modules
+  DeclGroupPtrTy ParseModuleDecl();
   DeclGroupPtrTy ParseModuleImport(SourceLocation AtLoc);
   bool parseMisplacedModuleImport();
   bool tryParseMisplacedModuleImport() {
@@ -2664,6 +2669,11 @@ private:
       return parseMisplacedModuleImport();
     return false;
   }
+
+  bool ParseModuleName(
+      SourceLocation UseLoc,
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
+      bool IsImport);
 
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]

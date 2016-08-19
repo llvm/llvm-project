@@ -12,3 +12,9 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-NEXT:  retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
 }
+; CHECK:       .p2align 4, 0x90
+; CHECK-NEXT:  .quad .Lxray_synthetic_0
+; CHECK-NEXT:  .section xray_instr_map,{{.*}}
+; CHECK-LABEL: Lxray_synthetic_0:
+; CHECK:       .quad .Lxray_sled_0
+; CHECK:       .quad .Lxray_sled_1

@@ -130,8 +130,7 @@ protected:
     lldb_private::LazyBool m_associated_with_libdispatch_queue;
 
     bool
-    PrivateSetRegisterValue (uint32_t reg, 
-                             StringExtractor &response);
+    PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
 
     bool
     PrivateSetRegisterValue (uint32_t reg, 

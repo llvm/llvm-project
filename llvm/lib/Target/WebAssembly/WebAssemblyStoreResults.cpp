@@ -139,15 +139,6 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
   return Changed;
 }
 
-static bool optimizeStore(MachineBasicBlock &MBB, MachineInstr &MI,
-                          const MachineRegisterInfo &MRI,
-                          MachineDominatorTree &MDT,
-                          LiveIntervals &LIS) {
-  unsigned ToReg = MI.getOperand(0).getReg();
-  unsigned FromReg = MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
-  return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
-}
-
 static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
                          const MachineRegisterInfo &MRI,
                          MachineDominatorTree &MDT,
@@ -201,17 +192,6 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB)
       switch (MI.getOpcode()) {
       default:
-        break;
-      case WebAssembly::STORE8_I32:
-      case WebAssembly::STORE16_I32:
-      case WebAssembly::STORE8_I64:
-      case WebAssembly::STORE16_I64:
-      case WebAssembly::STORE32_I64:
-      case WebAssembly::STORE_F32:
-      case WebAssembly::STORE_F64:
-      case WebAssembly::STORE_I32:
-      case WebAssembly::STORE_I64:
-        Changed |= optimizeStore(MBB, MI, MRI, MDT, LIS);
         break;
       case WebAssembly::CALL_I32:
       case WebAssembly::CALL_I64:

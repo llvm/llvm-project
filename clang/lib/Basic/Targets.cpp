@@ -806,7 +806,7 @@ public:
     this->SizeType = TargetInfo::UnsignedInt;
     this->PtrDiffType = TargetInfo::SignedInt;
     this->IntPtrType = TargetInfo::SignedInt;
-    // RegParmMax is inherited from the underlying architecture
+    // RegParmMax is inherited from the underlying architecture.
     this->LongDoubleFormat = &llvm::APFloat::IEEEdouble;
     if (Triple.getArch() == llvm::Triple::arm) {
       // Handled in ARM's setABI().
@@ -2002,6 +2002,10 @@ public:
       case 5:
         return 32;
     }
+  }
+
+  uint64_t getMaxPointerWidth() const override {
+    return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
 
   const char * getClobbers() const override {

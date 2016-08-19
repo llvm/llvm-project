@@ -15,7 +15,7 @@
 
 # RUN: echo foobar > %t1
 # RUN: not ld.lld %t1 no-such-file 2>&1 | FileCheck -check-prefix=ERR1 %s
-# ERR1: unknown directive: foobar
+# ERR1: unexpected EOF
 # ERR1: cannot open no-such-file:
 
 # RUN: echo "foo \"bar" > %t2

@@ -74,7 +74,7 @@ static StringRef HexagonGetArchVariant() {
   return "";
 }
 
-StringRef HEXAGON_MC::selectHexagonCPU(const Triple &TT, StringRef CPU) {
+StringRef Hexagon_MC::selectHexagonCPU(const Triple &TT, StringRef CPU) {
   StringRef ArchV = HexagonGetArchVariant();
   if (!ArchV.empty() && !CPU.empty()) {
     if (ArchV != CPU)
@@ -103,7 +103,7 @@ static MCRegisterInfo *createHexagonMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *
 createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  CPU = HEXAGON_MC::selectHexagonCPU(TT, CPU);
+  CPU = Hexagon_MC::selectHexagonCPU(TT, CPU);
   return createHexagonMCSubtargetInfoImpl(TT, CPU, FS);
 }
 

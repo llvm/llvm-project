@@ -33,11 +33,9 @@ define i1 @test3(i8 %x) {
   ret i1 %tmp
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test3vec(<2 x i8> %x) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[X:%.*]] = xor <2 x i8> %x, <i8 -128, i8 -128>
-; CHECK-NEXT:    [[TMP:%.*]] = icmp ugt <2 x i8> [[X]], <i8 14, i8 14>
+; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt <2 x i8> %x, <i8 -114, i8 -114>
 ; CHECK-NEXT:    ret <2 x i1> [[TMP]]
 ;
   %X = xor <2 x i8> %x, <i8 128, i8 128>
@@ -77,11 +75,9 @@ define i1 @test6(i8 %x) {
   ret i1 %tmp
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test6vec(<2 x i8> %x) {
 ; CHECK-LABEL: @test6vec(
-; CHECK-NEXT:    [[X:%.*]] = xor <2 x i8> %x, <i8 127, i8 127>
-; CHECK-NEXT:    [[TMP:%.*]] = icmp ugt <2 x i8> [[X]], <i8 14, i8 14>
+; CHECK-NEXT:    [[TMP:%.*]] = icmp slt <2 x i8> %x, <i8 113, i8 113>
 ; CHECK-NEXT:    ret <2 x i1> [[TMP]]
 ;
   %X = xor <2 x i8> %x, <i8 127, i8 127>

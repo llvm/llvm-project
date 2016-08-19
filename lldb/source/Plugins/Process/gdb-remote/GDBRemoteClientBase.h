@@ -31,6 +31,16 @@ public:
         HandleAsyncMisc(llvm::StringRef data) = 0;
         virtual void
         HandleStopReply() = 0;
+
+        //
+        /// Processes async structured data.
+        ///
+        /// @return
+        ///    true if the data was handled; otherwise, false.
+        //
+        virtual bool
+        HandleAsyncStructuredData(const StructuredData::ObjectSP
+                                  &object_sp) = 0;
     };
 
     GDBRemoteClientBase(const char *comm_name, const char *listener_name);

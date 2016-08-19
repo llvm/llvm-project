@@ -818,7 +818,9 @@ public:
 
             const lldb::addr_t load_addr = process_address + m_offset;
 
-            size_t byte_size = m_type.GetByteSize(nullptr);
+            ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
+
+            size_t byte_size = m_type.GetByteSize(exe_scope);
             size_t bit_align = m_type.GetTypeBitAlign();
             size_t byte_align = (bit_align + 7) / 8;
 

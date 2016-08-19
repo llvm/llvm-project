@@ -32,6 +32,7 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
           {&MutationDispatcher::Mutate_ChangeBit, "ChangeBit"},
           {&MutationDispatcher::Mutate_ShuffleBytes, "ShuffleBytes"},
           {&MutationDispatcher::Mutate_ChangeASCIIInteger, "ChangeASCIIInt"},
+          {&MutationDispatcher::Mutate_ChangeBinaryInteger, "ChangeBinInt"},
           {&MutationDispatcher::Mutate_CopyPart, "CopyPart"},
           {&MutationDispatcher::Mutate_CrossOver, "CrossOver"},
           {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
@@ -128,7 +129,8 @@ size_t MutationDispatcher::Mutate_InsertRepeatedBytes(uint8_t *Data,
   size_t Idx = Rand(Size + 1);
   // Insert new values at Data[Idx].
   memmove(Data + Idx + N, Data + Idx, Size - Idx);
-  uint8_t Byte = RandCh(Rand);
+  // Give preference to 0x00 and 0xff.
+  uint8_t Byte = Rand.RandBool() ? Rand(256) : (Rand.RandBool() ? 0 : 255);
   for (size_t i = 0; i < N; i++)
     Data[Idx + i] = Byte;
   return Size + N;
@@ -269,6 +271,42 @@ size_t MutationDispatcher::Mutate_ChangeASCIIInteger(uint8_t *Data, size_t Size,
   return Size;
 }
 
+uint8_t  Bswap(uint8_t x)  { return x; }
+uint16_t Bswap(uint16_t x) { return __builtin_bswap16(x); }
+uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
+uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
+
+template<class T>
+size_t ChangeBinaryInteger(uint8_t *Data, size_t Size, Random &Rand) {
+  if (Size < sizeof(T)) return 0;
+  size_t Off = Rand(Size - sizeof(T) + 1);
+  assert(Off + sizeof(T) <= Size);
+  T Val;
+  memcpy(&Val, Data + Off, sizeof(Val));
+  T Add = Rand(21);
+  Add -= 10;
+  if (Rand.RandBool())
+    Val = Bswap(T(Bswap(Val) + Add));  // Add assuming different endiannes.
+  else
+    Val = Val + Add;                   // Add assuming current endiannes.
+  if (Add == 0 || Rand.RandBool())     // Maybe negate.
+    Val = -Val;
+  memcpy(Data + Off, &Val, sizeof(Val));
+  return Size;
+}
+
+size_t MutationDispatcher::Mutate_ChangeBinaryInteger(uint8_t *Data,
+                                                      size_t Size,
+                                                      size_t MaxSize) {
+  switch (Rand(4)) {
+    case 3: return ChangeBinaryInteger<uint64_t>(Data, Size, Rand);
+    case 2: return ChangeBinaryInteger<uint32_t>(Data, Size, Rand);
+    case 1: return ChangeBinaryInteger<uint16_t>(Data, Size, Rand);
+    case 0: return ChangeBinaryInteger<uint8_t>(Data, Size, Rand);
+    default: assert(0);
+  }
+}
+
 size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
                                             size_t MaxSize) {
   if (!Corpus || Corpus->size() < 2 || Size == 0) return 0;
@@ -286,7 +324,7 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
       NewSize = InsertPartOf(O.data(), O.size(), U.data(), U.size(), MaxSize);
       if (NewSize)
         break;
-      LLVM_FALLTHROUGH;
+      // LLVM_FALLTHROUGH;
     case 2:
       NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
       break;

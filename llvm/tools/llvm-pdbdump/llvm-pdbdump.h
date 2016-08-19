@@ -65,6 +65,7 @@ extern llvm::cl::opt<bool> PdbStream;
 extern llvm::cl::opt<bool> DbiStream;
 extern llvm::cl::opt<bool> DbiModuleInfo;
 extern llvm::cl::opt<bool> DbiModuleSourceFileInfo;
+extern llvm::cl::opt<bool> TpiStream;
 extern llvm::cl::list<std::string> InputFilename;
 }
 }

@@ -151,6 +151,7 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::CS0);
   Reserved.set(Hexagon::CS1);
   Reserved.set(Hexagon::CS);
+  Reserved.set(Hexagon::USR);
   return Reserved;
 }
 

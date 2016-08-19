@@ -7,6 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		23043C9D1D35DBEC00FC25CA /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA51D2DB54300E98261 /* JSON.cpp */; };
+		23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA81D2DB96A00E98261 /* StringConvert.cpp */; };
+		2307CCCB1D4A5D630016ABC0 /* LogFilterExactMatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */; };
+		233B4EA71D2DB54300E98261 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA51D2DB54300E98261 /* JSON.cpp */; };
+		233B4EA91D2DB96A00E98261 /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA81D2DB96A00E98261 /* StringConvert.cpp */; };
+		23562ED21D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */; };
+		23562ED31D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */; };
+		23562ED61D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */; };
+		23562ED71D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */; };
+		23562ED91D342B0000AB2BD4 /* LogMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED81D342B0000AB2BD4 /* LogMessage.cpp */; };
+		23562EDA1D342B0000AB2BD4 /* LogMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED81D342B0000AB2BD4 /* LogMessage.cpp */; };
+		237821B01D4917D20028B7A1 /* LogFilterExactMatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */; };
+		23AC04C61D2F41A00072351D /* LogFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C41D2F41A00072351D /* LogFilter.cpp */; };
+		23AC04C71D2F41A00072351D /* LogFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C41D2F41A00072351D /* LogFilter.cpp */; };
+		23AC04CA1D2F42250072351D /* LogFilterChain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C81D2F42250072351D /* LogFilterChain.cpp */; };
+		23AC04CB1D2F42250072351D /* LogFilterChain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C81D2F42250072351D /* LogFilterChain.cpp */; };
+		23AC04CF1D2F58AF0072351D /* LogFilterRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */; };
+		23AC04D01D2F58AF0072351D /* LogFilterRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */; };
+		23AE72E41D25DECF00945BCE /* DarwinLogCollector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */; };
+		23AE72E51D25DEE100945BCE /* DarwinLogCollector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */; };
+		23D1B0291D497E8B00FF831B /* OsLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D1B0271D497E8B00FF831B /* OsLogger.cpp */; };
+		23D1B02A1D497E8B00FF831B /* OsLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D1B0271D497E8B00FF831B /* OsLogger.cpp */; };
 		264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 264D5D571293835600ED4C01 /* DNBArch.cpp */; };
 		2660D9CE1192280900958FBD /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9CC1192280900958FBD /* StringExtractor.cpp */; };
 		266B5ED11460A68200E43F0A /* DNBArchImplARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */; };
@@ -82,6 +104,33 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2307CCCC1D4A5DAE0016ABC0 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		233B4EA51D2DB54300E98261 /* JSON.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
+		233B4EA61D2DB54300E98261 /* JSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSON.h; sourceTree = "<group>"; };
+		233B4EA81D2DB96A00E98261 /* StringConvert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringConvert.cpp; path = ../../../source/Host/common/StringConvert.cpp; sourceTree = "<group>"; };
+		23562ECF1D34110D00AB2BD4 /* DarwinLogTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarwinLogTypes.h; sourceTree = "<group>"; };
+		23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogMessageOsLog.cpp; sourceTree = "<group>"; };
+		23562ED11D3424DF00AB2BD4 /* LogMessageOsLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogMessageOsLog.h; sourceTree = "<group>"; };
+		23562ED41D3426DD00AB2BD4 /* ActivityStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ActivityStore.h; sourceTree = "<group>"; };
+		23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActivityStore.cpp; sourceTree = "<group>"; };
+		23562ED81D342B0000AB2BD4 /* LogMessage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogMessage.cpp; sourceTree = "<group>"; };
+		237821AD1D4917D20028B7A1 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilterExactMatch.cpp; sourceTree = "<group>"; };
+		237821AF1D4917D20028B7A1 /* LogFilterExactMatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilterExactMatch.h; sourceTree = "<group>"; };
+		23AC04C41D2F41A00072351D /* LogFilter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilter.cpp; sourceTree = "<group>"; };
+		23AC04C51D2F41A00072351D /* LogFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilter.h; sourceTree = "<group>"; };
+		23AC04C81D2F42250072351D /* LogFilterChain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilterChain.cpp; sourceTree = "<group>"; };
+		23AC04C91D2F42250072351D /* LogFilterChain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilterChain.h; sourceTree = "<group>"; };
+		23AC04CC1D2F42F10072351D /* DarwinLogInterfaces.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarwinLogInterfaces.h; sourceTree = "<group>"; };
+		23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilterRegex.cpp; sourceTree = "<group>"; };
+		23AC04CE1D2F58AF0072351D /* LogFilterRegex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilterRegex.h; sourceTree = "<group>"; };
+		23AC04D11D2F60130072351D /* LogMessage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogMessage.h; sourceTree = "<group>"; };
+		23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DarwinLogCollector.cpp; sourceTree = "<group>"; };
+		23AE72E31D25DECF00945BCE /* DarwinLogCollector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DarwinLogCollector.h; sourceTree = "<group>"; };
+		23AE72E61D25DEFB00945BCE /* ActivityStreamSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ActivityStreamSPI.h; sourceTree = "<group>"; };
+		23CF6F5E1D28A3760088ADC9 /* DarwinLogEvent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarwinLogEvent.h; sourceTree = "<group>"; };
+		23D1B0271D497E8B00FF831B /* OsLogger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OsLogger.cpp; sourceTree = "<group>"; };
+		23D1B0281D497E8B00FF831B /* OsLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OsLogger.h; sourceTree = "<group>"; };
 		260828DE0CBAF7F400F95054 /* DNBRuntimeAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBRuntimeAction.h; sourceTree = "<group>"; };
 		260E7331114BFFE600D1DFB3 /* DNBThreadResumeActions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNBThreadResumeActions.cpp; sourceTree = "<group>"; };
 		260E7332114BFFE600D1DFB3 /* DNBThreadResumeActions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBThreadResumeActions.h; sourceTree = "<group>"; };
@@ -217,6 +266,34 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		23AC04C31D2F3E9A0072351D /* DarwinLog */ = {
+			isa = PBXGroup;
+			children = (
+				237821AD1D4917D20028B7A1 /* CMakeLists.txt */,
+				23562ED41D3426DD00AB2BD4 /* ActivityStore.h */,
+				23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */,
+				23AE72E61D25DEFB00945BCE /* ActivityStreamSPI.h */,
+				23AE72E31D25DECF00945BCE /* DarwinLogCollector.h */,
+				23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */,
+				23CF6F5E1D28A3760088ADC9 /* DarwinLogEvent.h */,
+				23AC04CC1D2F42F10072351D /* DarwinLogInterfaces.h */,
+				23562ECF1D34110D00AB2BD4 /* DarwinLogTypes.h */,
+				23AC04C51D2F41A00072351D /* LogFilter.h */,
+				23AC04C41D2F41A00072351D /* LogFilter.cpp */,
+				23AC04C91D2F42250072351D /* LogFilterChain.h */,
+				23AC04C81D2F42250072351D /* LogFilterChain.cpp */,
+				237821AF1D4917D20028B7A1 /* LogFilterExactMatch.h */,
+				237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */,
+				23AC04CE1D2F58AF0072351D /* LogFilterRegex.h */,
+				23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */,
+				23AC04D11D2F60130072351D /* LogMessage.h */,
+				23562ED81D342B0000AB2BD4 /* LogMessage.cpp */,
+				23562ED11D3424DF00AB2BD4 /* LogMessageOsLog.h */,
+				23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */,
+			);
+			path = DarwinLog;
+			sourceTree = "<group>";
+		};
 		266B5ECE1460A68200E43F0A /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
@@ -273,6 +350,8 @@
 				26C637E20C71334A0024798E /* DNBRegisterInfo.cpp */,
 				260E7332114BFFE600D1DFB3 /* DNBThreadResumeActions.h */,
 				260E7331114BFFE600D1DFB3 /* DNBThreadResumeActions.cpp */,
+				233B4EA61D2DB54300E98261 /* JSON.h */,
+				233B4EA51D2DB54300E98261 /* JSON.cpp */,
 				264F679A1B2F9EB200140093 /* JSONGenerator.h */,
 				AF67AC000D34604D0022D128 /* PseudoTerminal.h */,
 				AF67ABFF0D34604D0022D128 /* PseudoTerminal.cpp */,
@@ -281,6 +360,7 @@
 				26C637FE0C71334A0024798E /* PThreadEvent.cpp */,
 				26C638000C71334A0024798E /* PThreadMutex.h */,
 				2672DBEE0EEF446700E92059 /* PThreadMutex.cpp */,
+				233B4EA81D2DB96A00E98261 /* StringConvert.cpp */,
 				26C638020C71334A0024798E /* SysSignal.h */,
 				26C638010C71334A0024798E /* SysSignal.cpp */,
 				26C638060C71334A0024798E /* TTYState.h */,
@@ -315,13 +395,13 @@
 		26C637E60C71334A0024798E /* MacOSX */ = {
 			isa = PBXGroup;
 			children = (
-				AF0934BA18E12B92005A11FD /* Genealogy.h */,
-				AF0934BB18E12B92005A11FD /* GenealogySPI.h */,
+				23AC04C31D2F3E9A0072351D /* DarwinLog */,
 				2695DD920D3EBFF6007E4CA2 /* CFBundle.h */,
 				2695DD910D3EBFF6007E4CA2 /* CFBundle.cpp */,
 				2695DD9A0D3EC160007E4CA2 /* CFString.h */,
 				2695DD9B0D3EC160007E4CA2 /* CFString.cpp */,
 				26C637E70C71334A0024798E /* CFUtils.h */,
+				2307CCCC1D4A5DAE0016ABC0 /* CMakeLists.txt */,
 				2675D41C0CCEB6CF000F49AF /* arm */,
 				266B5ECE1460A68200E43F0A /* arm64 */,
 				26C637E90C71334A0024798E /* i386 */,
@@ -331,6 +411,8 @@
 				4971AE7113D10F4F00649E37 /* HasAVX.s */,
 				26C637E80C71334A0024798E /* dbgnub-mig.defs */,
 				AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */,
+				AF0934BA18E12B92005A11FD /* Genealogy.h */,
+				AF0934BB18E12B92005A11FD /* GenealogySPI.h */,
 				26C637EF0C71334A0024798E /* MachException.h */,
 				26C637EE0C71334A0024798E /* MachException.cpp */,
 				26C637F10C71334A0024798E /* MachProcess.h */,
@@ -345,6 +427,8 @@
 				26C637F80C71334A0024798E /* MachVMRegion.cpp */,
 				26B67DE00EE9BC30006C8BC0 /* MachTask.h */,
 				26B67DE10EE9BC30006C8BC0 /* MachTask.mm */,
+				23D1B0281D497E8B00FF831B /* OsLogger.h */,
+				23D1B0271D497E8B00FF831B /* OsLogger.cpp */,
 				9457ECF61419864100DFE7D8 /* stack_logging.h */,
 			);
 			path = MacOSX;
@@ -490,35 +574,47 @@
 				26CE05A9115C36250022F371 /* debugserver.cpp in Sources */,
 				26CE05AA115C36260022F371 /* RNBContext.cpp in Sources */,
 				26CE05AB115C36270022F371 /* RNBServices.cpp in Sources */,
+				23D1B0291D497E8B00FF831B /* OsLogger.cpp in Sources */,
 				26CE05AC115C36280022F371 /* RNBSocket.cpp in Sources */,
 				26CE05AD115C36280022F371 /* RNBRemote.cpp in Sources */,
 				26CE05AE115C36320022F371 /* dbgnub-mig.defs in Sources */,
 				26CE05B0115C36340022F371 /* MachException.cpp in Sources */,
 				26CE05B1115C36350022F371 /* MachProcess.mm in Sources */,
 				26CE05B2115C36360022F371 /* MachThread.cpp in Sources */,
+				233B4EA71D2DB54300E98261 /* JSON.cpp in Sources */,
 				26CE05B3115C36370022F371 /* MachThreadList.cpp in Sources */,
 				26CE05B4115C36380022F371 /* MachVMMemory.cpp in Sources */,
 				26CE05B5115C36380022F371 /* MachVMRegion.cpp in Sources */,
 				26CE05B6115C36390022F371 /* MachTask.mm in Sources */,
 				26CE05B7115C363B0022F371 /* DNB.cpp in Sources */,
 				AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */,
+				23AC04CF1D2F58AF0072351D /* LogFilterRegex.cpp in Sources */,
+				233B4EA91D2DB96A00E98261 /* StringConvert.cpp in Sources */,
+				23562ED21D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */,
 				26CE05B8115C363C0022F371 /* DNBBreakpoint.cpp in Sources */,
 				26CE05B9115C363D0022F371 /* DNBDataRef.cpp in Sources */,
+				23AC04CA1D2F42250072351D /* LogFilterChain.cpp in Sources */,
+				23562ED61D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */,
 				26CE05BA115C363E0022F371 /* DNBLog.cpp in Sources */,
+				23AC04C61D2F41A00072351D /* LogFilter.cpp in Sources */,
 				26CE05BB115C363F0022F371 /* DNBRegisterInfo.cpp in Sources */,
 				26CE05BC115C36420022F371 /* PThreadEvent.cpp in Sources */,
 				26CE05BD115C36430022F371 /* PThreadMutex.cpp in Sources */,
 				26CE05BE115C36440022F371 /* SysSignal.cpp in Sources */,
+				23AE72E41D25DECF00945BCE /* DarwinLogCollector.cpp in Sources */,
 				26CE05BF115C364D0022F371 /* DNBArchImplX86_64.cpp in Sources */,
 				26CE05C0115C364F0022F371 /* DNBArchImplI386.cpp in Sources */,
 				26CE05C1115C36510022F371 /* DNBArchImpl.cpp in Sources */,
 				26CE05C2115C36550022F371 /* DNBArchImpl.cpp in Sources */,
-				26CE05C3115C36580022F371 /* CFString.cpp in Sources */,
 				26CE05C5115C36590022F371 /* CFBundle.cpp in Sources */,
+				26CE05C3115C36580022F371 /* CFString.cpp in Sources */,
+				26CE05C4115C36590022F371 /* CFData.cpp in Sources */,
+				23562ED91D342B0000AB2BD4 /* LogMessage.cpp in Sources */,
 				26CE05F1115C387C0022F371 /* PseudoTerminal.cpp in Sources */,
 				2660D9CE1192280900958FBD /* StringExtractor.cpp in Sources */,
 				264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */,
 				4971AE7213D10F4F00649E37 /* HasAVX.s in Sources */,
+				237821B01D4917D20028B7A1 /* LogFilterExactMatch.cpp in Sources */,
 				266B5ED11460A68200E43F0A /* DNBArchImplARM64.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -530,37 +626,49 @@
 				456F67461AD46CE9002850C2 /* DNBError.cpp in Sources */,
 				456F67471AD46CE9002850C2 /* DNBThreadResumeActions.cpp in Sources */,
 				456F67481AD46CE9002850C2 /* debugserver.cpp in Sources */,
+				23043C9D1D35DBEC00FC25CA /* JSON.cpp in Sources */,
 				456F67491AD46CE9002850C2 /* RNBContext.cpp in Sources */,
+				23D1B02A1D497E8B00FF831B /* OsLogger.cpp in Sources */,
 				456F674A1AD46CE9002850C2 /* RNBServices.cpp in Sources */,
 				456F674B1AD46CE9002850C2 /* RNBSocket.cpp in Sources */,
 				456F674C1AD46CE9002850C2 /* RNBRemote.cpp in Sources */,
 				456F674D1AD46CE9002850C2 /* dbgnub-mig.defs in Sources */,
 				456F674E1AD46CE9002850C2 /* MachException.cpp in Sources */,
 				456F674F1AD46CE9002850C2 /* MachProcess.mm in Sources */,
+				2307CCCB1D4A5D630016ABC0 /* LogFilterExactMatch.cpp in Sources */,
 				456F67501AD46CE9002850C2 /* MachThread.cpp in Sources */,
 				456F67511AD46CE9002850C2 /* MachThreadList.cpp in Sources */,
 				456F67521AD46CE9002850C2 /* MachVMMemory.cpp in Sources */,
 				456F67531AD46CE9002850C2 /* MachVMRegion.cpp in Sources */,
+				23562ED71D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */,
 				456F67541AD46CE9002850C2 /* MachTask.mm in Sources */,
 				456F67551AD46CE9002850C2 /* DNB.cpp in Sources */,
 				456F67561AD46CE9002850C2 /* Genealogy.cpp in Sources */,
 				456F67571AD46CE9002850C2 /* DNBBreakpoint.cpp in Sources */,
 				456F67581AD46CE9002850C2 /* DNBDataRef.cpp in Sources */,
 				456F67591AD46CE9002850C2 /* DNBLog.cpp in Sources */,
+				23562ED31D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */,
 				456F675A1AD46CE9002850C2 /* DNBRegisterInfo.cpp in Sources */,
 				456F675B1AD46CE9002850C2 /* PThreadEvent.cpp in Sources */,
 				456F675C1AD46CE9002850C2 /* PThreadMutex.cpp in Sources */,
 				456F675D1AD46CE9002850C2 /* SysSignal.cpp in Sources */,
+				23AE72E51D25DEE100945BCE /* DarwinLogCollector.cpp in Sources */,
 				456F675E1AD46CE9002850C2 /* DNBArchImplX86_64.cpp in Sources */,
+				23562EDA1D342B0000AB2BD4 /* LogMessage.cpp in Sources */,
 				456F675F1AD46CE9002850C2 /* DNBArchImplI386.cpp in Sources */,
 				456F67601AD46CE9002850C2 /* DNBArchImpl.cpp in Sources */,
+				23AC04C71D2F41A00072351D /* LogFilter.cpp in Sources */,
+				23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */,
 				456F67611AD46CE9002850C2 /* DNBArchImpl.cpp in Sources */,
 				456F67621AD46CE9002850C2 /* CFString.cpp in Sources */,
+				456F67631AD46CE9002850C2 /* CFData.cpp in Sources */,
+				23AC04CB1D2F42250072351D /* LogFilterChain.cpp in Sources */,
 				456F67641AD46CE9002850C2 /* CFBundle.cpp in Sources */,
 				456F67651AD46CE9002850C2 /* PseudoTerminal.cpp in Sources */,
 				456F67661AD46CE9002850C2 /* StringExtractor.cpp in Sources */,
 				456F67671AD46CE9002850C2 /* DNBArch.cpp in Sources */,
 				456F67681AD46CE9002850C2 /* HasAVX.s in Sources */,
+				23AC04D01D2F58AF0072351D /* LogFilterRegex.cpp in Sources */,
 				456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -600,6 +708,8 @@
 				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 0;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -642,6 +752,8 @@
 				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 0;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -682,6 +794,8 @@
 				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "";
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 1;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -743,6 +857,7 @@
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"-Wparentheses",
@@ -752,6 +867,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -843,6 +959,7 @@
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
@@ -852,6 +969,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -942,6 +1060,7 @@
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
@@ -951,6 +1070,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1050,6 +1170,7 @@
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1119,6 +1240,7 @@
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1184,11 +1306,13 @@
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1255,12 +1379,15 @@
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
@@ -1312,6 +1439,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 0;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
@@ -1374,6 +1503,7 @@
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
@@ -1383,6 +1513,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -1451,6 +1582,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 0;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
@@ -1512,6 +1645,7 @@
 					"$(LLDB_ENERGY_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
@@ -1521,6 +1655,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -1595,11 +1730,13 @@
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
 					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -1669,6 +1806,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 0;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
@@ -1721,6 +1860,7 @@
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
@@ -1730,6 +1870,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1798,6 +1939,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
+				LLDB_USE_OS_LOG = 0;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
@@ -1851,6 +1994,7 @@
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
@@ -1860,6 +2004,7 @@
 					"-DOS_OBJECT_USE_OBJC=0",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_OS_LOG_CFLAGS)",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
