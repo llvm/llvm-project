@@ -85,12 +85,15 @@ template <class TraitsT, class NodeT> struct HasGetNext {
   template <size_t N> struct SFINAE {};
 
   template <class U>
-  static Yes &hasGetNext(
-      SFINAE<sizeof(static_cast<NodeT *>(make<U>().getNext(&make<NodeT>())))>
-          * = 0);
-  template <class U> static No &hasGetNext(...);
+  static Yes &test(U *I, decltype(I->getNext(&make<NodeT>())) * = 0);
+  template <class> static No &test(...);
 
-  static const bool value = sizeof(hasGetNext<TraitsT>(nullptr)) == sizeof(Yes);
+public:
+  static const bool value = sizeof(test<TraitsT>(nullptr)) == sizeof(Yes);
+};
+
+template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
+  static const bool value = HasGetNext<TraitsT, NodeT>::value;
 };
 
 } // end namespace ilist_detail
@@ -378,12 +381,11 @@ template<typename NodeTy> struct simplify_type<const ilist_iterator<NodeTy> > {
 ///
 template <typename NodeTy, typename Traits = ilist_traits<NodeTy>>
 class iplist : public Traits, ilist_node_access {
-#if !defined(_MSC_VER)
-  // FIXME: This fails in MSVC, but it's worth keeping around to help
-  // non-Windows users root out bugs in their ilist_traits.
-  static_assert(!ilist_detail::HasGetNext<Traits, NodeTy>::value,
-                "ilist next and prev links are not customizable!");
-#endif
+  // TODO: Drop this assertion and the transitive type traits anytime after
+  // v4.0 is branched (i.e,. keep them for one release to help out-of-tree code
+  // update).
+  static_assert(!ilist_detail::HasObsoleteCustomization<Traits, NodeTy>::value,
+                "ilist customization points have changed!");
 
   mutable NodeTy *Head;
 
