@@ -10,7 +10,7 @@ This repository contains the following libraries:
 | ocml | Open Compute Math library ([documentation](doc/OCML.md)) | irif |
 | ockl | Open Compute Kernel library. | irif |
 | opencl | OpenCL built-in library | ocml, ockl |
-| hc | Heterogeneous COmpute built-in library | ocml, ockl |
+| hc | Heterogeneous Compute built-in library | ocml, ockl |
 
 All libraries are compiled to LLVM Bitcode which can be linked. Note that libraries use specific AMDGPU intrinsics.
 
