@@ -234,7 +234,7 @@ LTO::LTO(Config Conf, ThinBackend Backend,
          unsigned ParallelCodeGenParallelismLevel)
     : Conf(std::move(Conf)),
       RegularLTO(ParallelCodeGenParallelismLevel, this->Conf),
-      ThinLTO(Backend) {}
+      ThinLTO(std::move(Backend)) {}
 
 // Add the given symbol to the GlobalResolutions map, and resolve its partition.
 void LTO::addSymbolToGlobalRes(IRObjectFile *Obj,
