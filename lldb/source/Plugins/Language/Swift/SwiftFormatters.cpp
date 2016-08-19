@@ -657,13 +657,6 @@ lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider (ValueOb
             }
             break;
         }
-        case 6: // Bool
-        {
-            bool payload = 0;
-            memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
-            stream.PutCString(payload ? "true" : "false");
-            return true;
-        }
         default:
             break;
     }

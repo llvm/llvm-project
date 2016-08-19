@@ -64,10 +64,10 @@ class TestSwiftBridgedArray(TestBase):
 
         self.expect(
             "frame variable -d run -- swarr",
-            substrs=['123456', '234567', '345678', '1.25', 'false'])
+            substrs=['123456', '234567', '345678', '1.25'])
         self.expect(
             "expression -d run -- swarr",
-            substrs=['123456', '234567', '345678', '1.25', 'false'])
+            substrs=['123456', '234567', '345678', '1.25'])
 
 if __name__ == '__main__':
     import atexit
