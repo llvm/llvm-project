@@ -334,28 +334,6 @@ GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info,
                         reg_info->byte_size));
 }
 
-void
-GDBRemoteRegisterContext::SyncThreadState(Process *process)
-{
-    // NB.  We assume our caller has locked the sequence mutex.
-    
-    GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *) process)->GetGDBRemote());
-    if (!gdb_comm.GetSyncThreadStateSupported())
-        return;
-
-    StreamString packet;
-    StringExtractorGDBRemote response;
-    packet.Printf ("QSyncThreadState:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-    if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                              packet.GetString().size(),
-                                              response,
-                                              false) == GDBRemoteCommunication::PacketResult::Success)
-    {
-        if (response.IsOKResponse())
-            InvalidateAllRegisters();
-    }
-}
-
 bool
 GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, DataExtractor &data, uint32_t data_offset)
 {
@@ -562,7 +540,8 @@ GDBRemoteRegisterContext::ReadAllRegisterValues (lldb::DataBufferSP &data_sp)
     GDBRemoteClientBase::Lock lock(gdb_comm, false);
     if (lock)
     {
-        SyncThreadState(process);
+        if (gdb_comm.SyncThreadState(m_thread.GetProtocolID()))
+            InvalidateAllRegisters();
 
         if (use_g_packet && gdb_comm.ReadAllRegisters(m_thread.GetProtocolID(), response))
         {

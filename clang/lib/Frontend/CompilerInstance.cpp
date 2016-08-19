@@ -1455,7 +1455,25 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   } else {
     // Search for a module with the given name.
     Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
-    if (!Module) {
+    HeaderSearchOptions &HSOpts =
+        PP->getHeaderSearchInfo().getHeaderSearchOpts();
+
+    std::string ModuleFileName;
+    bool LoadFromPrebuiltModulePath = false;
+    // We try to load the module from the prebuilt module paths. If not
+    // successful, we then try to find it in the module cache.
+    if (!HSOpts.PrebuiltModulePaths.empty()) {
+      // Load the module from the prebuilt module path.
+      ModuleFileName = PP->getHeaderSearchInfo().getModuleFileName(
+          ModuleName, "", /*UsePrebuiltPath*/ true);
+      if (!ModuleFileName.empty())
+        LoadFromPrebuiltModulePath = true;
+    }
+    if (!LoadFromPrebuiltModulePath && Module) {
+      // Load the module from the module cache.
+      ModuleFileName = PP->getHeaderSearchInfo().getModuleFileName(Module);
+    } else if (!LoadFromPrebuiltModulePath) {
+      // We can't find a module, error out here.
       getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
       << ModuleName
       << SourceRange(ImportLoc, ModuleNameLoc);
@@ -1463,10 +1481,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       return ModuleLoadResult();
     }
 
-    std::string ModuleFileName =
-        PP->getHeaderSearchInfo().getModuleFileName(Module);
     if (ModuleFileName.empty()) {
-      if (Module->HasIncompatibleModuleFile) {
+      if (Module && Module->HasIncompatibleModuleFile) {
         // We tried and failed to load a module file for this module. Fall
         // back to textual inclusion for its headers.
         return ModuleLoadResult(nullptr, /*missingExpected*/true);
@@ -1487,16 +1503,46 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       Timer.init("Loading " + ModuleFileName, *FrontendTimerGroup);
     llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
 
-    // Try to load the module file.
-    unsigned ARRFlags = ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing;
+    // Try to load the module file. If we are trying to load from the prebuilt
+    // module path, we don't have the module map files and don't know how to
+    // rebuild modules.
+    unsigned ARRFlags = LoadFromPrebuiltModulePath ?
+                        ASTReader::ARR_ConfigurationMismatch :
+                        ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing;
     switch (ModuleManager->ReadAST(ModuleFileName,
+                                   LoadFromPrebuiltModulePath ?
+                                   serialization::MK_PrebuiltModule :
                                    serialization::MK_ImplicitModule,
-                                   ImportLoc, ARRFlags)) {
-    case ASTReader::Success:
+                                   ImportLoc,
+                                   ARRFlags)) {
+    case ASTReader::Success: {
+      if (LoadFromPrebuiltModulePath && !Module) {
+        Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
+        if (!Module || !Module->getASTFile() ||
+            FileMgr->getFile(ModuleFileName) != Module->getASTFile()) {
+          // Error out if Module does not refer to the file in the prebuilt
+          // module path.
+          getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
+              << ModuleName;
+          ModuleBuildFailed = true;
+          KnownModules[Path[0].first] = nullptr;
+          return ModuleLoadResult();
+        }
+      }
       break;
+    }
 
     case ASTReader::OutOfDate:
     case ASTReader::Missing: {
+      if (LoadFromPrebuiltModulePath) {
+        // We can't rebuild the module without a module map. Since ReadAST
+        // already produces diagnostics for these two cases, we simply
+        // error out here.
+        ModuleBuildFailed = true;
+        KnownModules[Path[0].first] = nullptr;
+        return ModuleLoadResult();
+      }
+
       // The module file is missing or out-of-date. Build it.
       assert(Module && "missing module file");
       // Check whether there is a cycle in the module graph.
@@ -1547,8 +1593,13 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       break;
     }
 
-    case ASTReader::VersionMismatch:
     case ASTReader::ConfigurationMismatch:
+      if (LoadFromPrebuiltModulePath)
+        getDiagnostics().Report(SourceLocation(),
+                                diag::warn_module_config_mismatch)
+            << ModuleFileName;
+      // Fall through to error out.
+    case ASTReader::VersionMismatch:
     case ASTReader::HadErrors:
       ModuleLoader::HadFatalFailure = true;
       // FIXME: The ASTReader will already have complained, but can we shoehorn

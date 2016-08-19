@@ -73,6 +73,7 @@ protected:
     friend class SBHostOS;
     friend class SBPlatform;
     friend class SBProcess;
+    friend class SBStructuredData;
     friend class SBThread;
     friend class SBTarget;
     friend class SBValue;

@@ -26,14 +26,18 @@
 #include <sched.h>
 #endif
 
+#include "DarwinLogCollector.h"
+#include "DarwinLogEvent.h"
 #include "DNB.h"
 #include "DNBDataRef.h"
 #include "DNBLog.h"
 #include "DNBThreadResumeActions.h"
 #include "JSONGenerator.h"
+#include "OsLogger.h"
 #include "RNBContext.h"
 #include "RNBServices.h"
 #include "RNBSocket.h"
+#include "JSON.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "MacOSX/Genealogy.h"
 #include "JSONGenerator.h"
@@ -50,6 +54,15 @@
 #include <sstream>
 #include <unordered_set>
 #include <TargetConditionals.h> // for endianness predefines
+
+//----------------------------------------------------------------------
+// constants
+//----------------------------------------------------------------------
+
+static const std::string OS_LOG_EVENTS_KEY_NAME("events");
+static const std::string JSON_ASYNC_TYPE_KEY_NAME("type");
+static const DarwinLogEventVector::size_type
+                                          DARWIN_LOG_MAX_EVENTS_PER_PACKET = 10;
 
 //----------------------------------------------------------------------
 // std::iostream formatting macros
@@ -77,6 +90,12 @@
 #define INDENT_WITH_TABS(iword_idx)     std::setfill('\t') << std::setw((iword_idx)) << ""
 // Class to handle communications via gdb remote protocol.
 
+//----------------------------------------------------------------------
+// Prototypes
+//----------------------------------------------------------------------
+
+static std::string
+binary_encode_string (const std::string &s);
 
 //----------------------------------------------------------------------
 // Decode a single hex character and return the hex value as a number or
@@ -314,8 +333,9 @@ RNBRemote::CreatePacketTable  ()
     t.push_back (Packet (set_detach_on_error,           &RNBRemote::HandlePacket_QSetDetachOnError, NULL, "QSetDetachOnError:", "Set whether debugserver will detach (1) or kill (0) from the process it is controlling if it loses connection to lldb."));
     t.push_back (Packet (speed_test,                    &RNBRemote::HandlePacket_qSpeedTest, NULL, "qSpeedTest:", "Test the maximum speed at which packet can be sent/received."));
     t.push_back (Packet (query_transfer,                &RNBRemote::HandlePacket_qXfer, NULL, "qXfer:", "Support the qXfer packet."));
+    t.push_back (Packet (query_supported_async_json_packets, &RNBRemote::HandlePacket_qStructuredDataPlugins, NULL, "qStructuredDataPlugins", "Query for the structured data plugins supported by the remote."));
+    t.push_back (Packet (configure_darwin_log,          &RNBRemote::HandlePacket_QConfigureDarwinLog, NULL, "QConfigureDarwinLog:", "Configure the DarwinLog structured data plugin support."));
 }
-
 
 void
 RNBRemote::FlushSTDIO ()
@@ -364,6 +384,86 @@ RNBRemote::SendAsyncProfileData ()
     }
 }
 
+void
+RNBRemote::SendAsyncDarwinLogData ()
+{
+    DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): enter",
+                     __FUNCTION__);
+
+    if (!m_ctx.HasValidProcessID())
+    {
+        DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): ignoring due to"
+                         "invalid process id", __FUNCTION__);
+        return;
+    }
+
+    nub_process_t pid = m_ctx.ProcessID();
+    DarwinLogEventVector::size_type entry_count = 0;
+
+    // NOTE: the current looping structure here does nothing
+    // to guarantee that we can send off async packets faster
+    // than we generate them.  It will keep sending as long
+    // as there's data to send.
+    do
+    {
+        DarwinLogEventVector events =
+            DNBProcessGetAvailableDarwinLogEvents(pid);
+        entry_count = events.size();
+
+        DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): outer loop enter",
+                         __FUNCTION__);
+
+        for (DarwinLogEventVector::size_type base_entry = 0;
+             base_entry < entry_count;
+             base_entry += DARWIN_LOG_MAX_EVENTS_PER_PACKET)
+        {
+            DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): inner loop enter",
+                             __FUNCTION__);
+
+            // We limit the total number of entries we pack
+            // into a single JSON async packet just so it
+            // doesn't get too large.
+            JSONGenerator::Dictionary async_dictionary;
+
+            // Specify the type of the JSON async data we're sending.
+            async_dictionary.AddStringItem(
+                JSON_ASYNC_TYPE_KEY_NAME, "DarwinLog");
+
+            // Create an array entry in the dictionary to hold all
+            // the events going in this packet.
+            JSONGenerator::ArraySP events_array(new JSONGenerator::Array());
+            async_dictionary.AddItem(OS_LOG_EVENTS_KEY_NAME, events_array);
+
+            // We bundle up to DARWIN_LOG_MAX_EVENTS_PER_PACKET events in
+            // a single packet.
+            const auto inner_loop_bound =
+                std::min(base_entry + DARWIN_LOG_MAX_EVENTS_PER_PACKET,
+                         entry_count);
+            for (DarwinLogEventVector::size_type i = base_entry;
+                 i < inner_loop_bound; ++i)
+            {
+                DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): adding "
+                                 "entry index %lu to the JSON packet",
+                                 __FUNCTION__, i);
+                events_array->AddItem(events[i]);
+            }
+
+            // Send off the packet.
+            DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): sending JSON "
+                             "packet, %lu entries remain", __FUNCTION__,
+                             entry_count - inner_loop_bound);
+            SendAsyncJSONPacket(async_dictionary);
+        }
+
+        DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): outer loop exit",
+                         __FUNCTION__);
+
+    } while (entry_count > 0);
+
+    DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): exit",
+                     __PRETTY_FUNCTION__);
+}
+
 rnb_err_t
 RNBRemote::SendHexEncodedBytePacket (const char *header, const void *buf, size_t buf_len, const char *footer)
 {
@@ -410,6 +510,19 @@ RNBRemote::SendAsyncProfileDataPacket (char *buf, nub_size_t buf_size)
     std::string packet("A");
     packet.append(buf, buf_size);
     return SendPacket(packet);
+}
+
+rnb_err_t
+RNBRemote::SendAsyncJSONPacket(const JSONGenerator::Dictionary &dictionary)
+{
+    std::ostringstream stream;
+    // We're choosing something that is easy to spot if we somehow get one
+    // of these coming out at the wrong time (i.e. when the remote side
+    // is not waiting for a process control completion response).
+    stream << "JSON-async:";
+    dictionary.Dump(stream);
+    const std::string payload = binary_encode_string(stream.str());
+    return SendPacket(payload);
 }
 
 // Given a std::string packet contents to send, possibly encode/compress it.
@@ -1099,12 +1212,11 @@ decode_binary_data (const char *str, size_t len)
 
     while (len--)
     {
-        unsigned char c = *str;
+        unsigned char c = *str++;
         if (c == 0x7d && len > 0)
         {
             len--;
-            str++;
-            c = *str ^ 0x20;
+            c = *str++ ^ 0x20;
         }
         bytes.push_back (c);
     }
@@ -1114,7 +1226,7 @@ decode_binary_data (const char *str, size_t len)
 // Quote any meta characters in a std::string as per the binary
 // packet convention in the gdb-remote protocol.
 
-std::string
+static std::string
 binary_encode_string (const std::string &s)
 {
     std::string output;
@@ -2037,6 +2149,11 @@ set_logging (const char *p)
                     p += sizeof ("LOG_RNB_DEFAULT") - 1;
                     bitmask |= LOG_RNB_DEFAULT;
                 }
+                else if (strncmp (p, "LOG_DARWIN_LOG", sizeof ("LOG_DARWIN_LOG") - 1) == 0)
+                {
+                    p += sizeof ("LOG_DARWIN_LOG") - 1;
+                    bitmask |= LOG_DARWIN_LOG;
+                }
                 else if (strncmp (p, "LOG_RNB_NONE", sizeof ("LOG_RNB_NONE") - 1) == 0)
                 {
                     p += sizeof ("LOG_RNB_NONE") - 1;
@@ -2068,14 +2185,26 @@ set_logging (const char *p)
             // Did we get a properly formatted logging bitmask?
             if (p && *p == ';')
             {
-                // Enable DNB logging
-                DNBLogSetLogCallback(ASLLogCallback, NULL);
+                // Enable DNB logging.
+                // Use the existing log callback if one was already configured.
+                if (!DNBLogGetLogCallback())
+                {
+                    // Use the os_log()-based logger if available; otherwise,
+                    // fallback to ASL.
+                    auto log_callback = OsLogger::GetLogFunction();
+                    if (log_callback)
+                        DNBLogSetLogCallback(log_callback, nullptr);
+                    else
+                        DNBLogSetLogCallback(ASLLogCallback, nullptr);
+                }
+
+                // Update logging to use the configured log channel bitmask.
                 DNBLogSetLogMask (bitmask);
                 p++;
             }
         }
         // We're not going to support logging to a file for now.  All logging
-        // goes through ASL.
+        // goes through ASL or the previously arranged log callback.
 #if 0
         else if (strncmp (p, "mode=", sizeof ("mode=") - 1) == 0)
         {
@@ -2303,6 +2432,99 @@ RNBRemote::HandlePacket_QSetDetachOnError (const char *p)
     
     m_ctx.SetDetachOnError(should_detach);
     return SendPacket ("OK");
+}
+
+rnb_err_t
+RNBRemote::HandlePacket_qStructuredDataPlugins(const char *p)
+{
+    // We'll return a JSON array of supported packet types.
+    // The type is significant.  For each of the supported
+    // packet types that have been enabled, there will be a
+    // 'J' async packet sent to the client with payload data.
+    // This payload data will be a JSON dictionary, and the
+    // top level dictionary will contain a string field with
+    // its value set to the relevant packet type from this list.
+    JSONGenerator::Array supported_json_packets;
+
+    // Check for DarwinLog (libtrace os_log/activity support).
+    if (DarwinLogCollector::IsSupported())
+        supported_json_packets.AddItem(JSONGenerator::StringSP(
+            new JSONGenerator::String("DarwinLog")));
+
+    // Send back the array.
+    std::ostringstream stream;
+    supported_json_packets.Dump(stream);
+    return SendPacket(stream.str());
+}
+
+rnb_err_t
+RNBRemote::HandlePacket_QConfigureDarwinLog(const char *p)
+{
+    if (!DarwinLogCollector::IsSupported())
+    {
+        // We should never have been given this request.
+        return SendPacket ("E89");
+    }
+
+    // Ensure we have a process.  We expect a separate configure request for
+    // each process launched/attached.
+    const nub_process_t pid = m_ctx.ProcessID();
+    if (pid == INVALID_NUB_PROCESS)
+        return SendPacket ("E94");
+
+    // Get the configuration dictionary.
+    p += strlen("QConfigureDarwinLog:");
+
+    // The configuration dictionary is binary encoded.
+    std::vector<uint8_t> unescaped_config_data = decode_binary_data(p, -1);
+    std::string unescaped_config_string((const char*)&unescaped_config_data[0],
+                                        unescaped_config_data.size());
+    DNBLogThreadedIf(LOG_DARWIN_LOG, "DarwinLog: received config data: \"%s\"",
+                     unescaped_config_string.c_str());
+    auto configuration_sp =
+        JSONParser(unescaped_config_string.c_str()).ParseJSONValue();
+    if (!configuration_sp)
+    {
+        // Malformed request - we require configuration data
+        // indicating whether we're enabling or disabling.
+        return SendPacket("E90");
+    }
+
+    if (!JSONObject::classof(configuration_sp.get()))
+    {
+        // Configuration data is not of the right type.
+        return SendPacket("E91");
+    }
+    JSONObject &config_dict = *static_cast<JSONObject*>(configuration_sp.get());
+
+    // Check if we're enabling or disabling.
+    auto enabled_sp = config_dict.GetObject("enabled");
+    if (!enabled_sp)
+    {
+        // Missing required "enabled" field.
+        return SendPacket("E92");
+    }
+    if (!JSONTrue::classof(enabled_sp.get()) &&
+        !JSONFalse::classof(enabled_sp.get()))
+    {
+        // Should be a boolean type, but wasn't.
+        return SendPacket("E93");
+    }
+    const bool enabling = JSONTrue::classof(enabled_sp.get());
+
+    // TODO - handle other configuration parameters here.
+
+    // Shut down any active activity stream for the process.
+    DarwinLogCollector::CancelStreamForProcess(pid);
+
+    if (enabling)
+    {
+        // Look up the procecess.
+        if (!DarwinLogCollector::StartCollectingForProcess(pid, config_dict))
+            return SendPacket("E95");
+    }
+
+    return SendPacket("OK");
 }
 
 rnb_err_t
@@ -5510,26 +5732,33 @@ RNBRemote::HandlePacket_jThreadExtendedInfo (const char *p)
                     if (need_vouchers_comma_sep)
                         json << ",";
                     need_vouchers_comma_sep = true;
-                    json << "\"process_infos\":[";
                     bool printed_one_process_info = false;
                     for (auto iter = process_info_indexes.begin(); iter != process_info_indexes.end(); ++iter)
                     {
                         if (printed_one_process_info)
                             json << ",";
-                        else
-                            printed_one_process_info = true;
                         Genealogy::ProcessExecutableInfoSP image_info_sp;
                         uint32_t idx = *iter;
                         image_info_sp = DNBGetGenealogyImageInfo (pid, idx);
-                        json << "{";
-                        char uuid_buf[37];
-                        uuid_unparse_upper (image_info_sp->image_uuid, uuid_buf);
-                        json <<   "\"process_info_index\":" << idx << ",";
-                        json <<  "\"image_path\":\"" << json_string_quote_metachars (image_info_sp->image_path) << "\",";
-                        json <<  "\"image_uuid\":\"" << uuid_buf <<"\"";
-                        json << "}";
+                        if (image_info_sp)
+                        {
+                            if (!printed_one_process_info)
+                            {
+                                json << "\"process_infos\":[";
+                                printed_one_process_info = true;
+                            }
+
+                            json << "{";
+                            char uuid_buf[37];
+                            uuid_unparse_upper (image_info_sp->image_uuid, uuid_buf);
+                            json <<   "\"process_info_index\":" << idx << ",";
+                            json <<  "\"image_path\":\"" << json_string_quote_metachars (image_info_sp->image_path) << "\",";
+                            json <<  "\"image_uuid\":\"" << uuid_buf <<"\"";
+                            json << "}";
+                        }
                     }
-                    json << "]";
+                    if (printed_one_process_info)
+                        json << "]";
                 }
             }
             else

@@ -537,6 +537,20 @@ void Parser::LateTemplateParserCleanupCallback(void *P) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(((Parser *)P)->TemplateIds);
 }
 
+bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
+  // C++ Modules TS: module-declaration must be the first declaration in the
+  // file. (There can be no preceding preprocessor directives, but we expect
+  // the lexer to check that.)
+  if (Tok.is(tok::kw_module)) {
+    Result = ParseModuleDecl();
+    return false;
+  }
+  // FIXME: If we're parsing a module interface and we don't have a module
+  // declaration here, diagnose.
+
+  return ParseTopLevelDecl(Result);
+}
+
 /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
 /// action tells us to.  This returns true if the EOF was encountered.
 bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
@@ -551,6 +565,10 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result) {
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:
     HandlePragmaUnused();
+    return false;
+
+  case tok::kw_import:
+    Result = ParseModuleImport(SourceLocation());
     return false;
 
   case tok::annot_module_include:
@@ -1996,38 +2014,73 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   Braces.consumeClose();
 }
 
-Parser::DeclGroupPtrTy Parser::ParseModuleImport(SourceLocation AtLoc) {
-  assert(Tok.isObjCAtKeyword(tok::objc_import) && 
-         "Improper start to module import");
-  SourceLocation ImportLoc = ConsumeToken();
-  
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  
-  // Parse the module path.
-  do {
-    if (!Tok.is(tok::identifier)) {
-      if (Tok.is(tok::code_completion)) {
-        Actions.CodeCompleteModuleImport(ImportLoc, Path);
-        cutOffParsing();
-        return nullptr;
-      }
-      
-      Diag(Tok, diag::err_module_expected_ident);
+/// Parse a C++ Modules TS module declaration, which appears at the beginning
+/// of a module interface, module partition, or module implementation file.
+///
+///   module-declaration:   [Modules TS + P0273R0]
+///     'module' module-kind[opt] module-name attribute-specifier-seq[opt] ';'
+///   module-kind:
+///     'implementation'
+///     'partition'
+///
+/// Note that the module-kind values are context-sensitive keywords.
+Parser::DeclGroupPtrTy Parser::ParseModuleDecl() {
+  assert(Tok.is(tok::kw_module) && getLangOpts().ModulesTS &&
+         "should not be parsing a module declaration");
+  SourceLocation ModuleLoc = ConsumeToken();
+
+  // Check for a module-kind.
+  Sema::ModuleDeclKind MDK = Sema::ModuleDeclKind::Module;
+  if (Tok.is(tok::identifier) && NextToken().is(tok::identifier)) {
+    if (Tok.getIdentifierInfo()->isStr("implementation"))
+      MDK = Sema::ModuleDeclKind::Implementation;
+    else if (Tok.getIdentifierInfo()->isStr("partition"))
+      MDK = Sema::ModuleDeclKind::Partition;
+    else {
+      Diag(Tok, diag::err_unexpected_module_kind) << Tok.getIdentifierInfo();
       SkipUntil(tok::semi);
       return nullptr;
     }
-    
-    // Record this part of the module path.
-    Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
     ConsumeToken();
-    
-    if (Tok.is(tok::period)) {
-      ConsumeToken();
-      continue;
-    }
-    
-    break;
-  } while (true);
+  }
+
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  if (ParseModuleName(ModuleLoc, Path, /*IsImport*/false))
+    return nullptr;
+
+  ParsedAttributesWithRange Attrs(AttrFactory);
+  MaybeParseCXX11Attributes(Attrs);
+  // We don't support any module attributes yet.
+  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr);
+
+  ExpectAndConsumeSemi(diag::err_module_expected_semi);
+
+  return Actions.ActOnModuleDecl(ModuleLoc, MDK, Path);
+}
+
+/// Parse a module import declaration. This is essentially the same for
+/// Objective-C and the C++ Modules TS, except for the leading '@' (in ObjC)
+/// and the trailing optional attributes (in C++).
+/// 
+/// [ObjC]  @import declaration:
+///           '@' 'import' module-name ';'
+/// [ModTS] module-import-declaration:
+///           'import' module-name attribute-specifier-seq[opt] ';'
+Parser::DeclGroupPtrTy Parser::ParseModuleImport(SourceLocation AtLoc) {
+  assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
+                            : Tok.isObjCAtKeyword(tok::objc_import)) &&
+         "Improper start to module import");
+  SourceLocation ImportLoc = ConsumeToken();
+  SourceLocation StartLoc = AtLoc.isInvalid() ? ImportLoc : AtLoc;
+  
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  if (ParseModuleName(ImportLoc, Path, /*IsImport*/true))
+    return nullptr;
+
+  ParsedAttributesWithRange Attrs(AttrFactory);
+  MaybeParseCXX11Attributes(Attrs);
+  // We don't support any module import attributes yet.
+  ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr);
 
   if (PP.hadModuleLoaderFatalFailure()) {
     // With a fatal failure in the module loader, we abort parsing.
@@ -2035,12 +2088,48 @@ Parser::DeclGroupPtrTy Parser::ParseModuleImport(SourceLocation AtLoc) {
     return nullptr;
   }
 
-  DeclResult Import = Actions.ActOnModuleImport(AtLoc, ImportLoc, Path);
+  DeclResult Import = Actions.ActOnModuleImport(StartLoc, ImportLoc, Path);
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;
 
   return Actions.ConvertDeclToDeclGroup(Import.get());
+}
+
+/// Parse a C++ Modules TS / Objective-C module name (both forms use the same
+/// grammar).
+///
+///         module-name:
+///           module-name-qualifier[opt] identifier
+///         module-name-qualifier:
+///           module-name-qualifier[opt] identifier '.'
+bool Parser::ParseModuleName(
+    SourceLocation UseLoc,
+    SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
+    bool IsImport) {
+  // Parse the module path.
+  while (true) {
+    if (!Tok.is(tok::identifier)) {
+      if (Tok.is(tok::code_completion)) {
+        Actions.CodeCompleteModuleImport(UseLoc, Path);
+        cutOffParsing();
+        return true;
+      }
+      
+      Diag(Tok, diag::err_module_expected_ident) << IsImport;
+      SkipUntil(tok::semi);
+      return true;
+    }
+    
+    // Record this part of the module path.
+    Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
+    ConsumeToken();
+
+    if (Tok.isNot(tok::period))
+      return false;
+
+    ConsumeToken();
+  }
 }
 
 /// \brief Try recover parser when module annotation appears where it must not

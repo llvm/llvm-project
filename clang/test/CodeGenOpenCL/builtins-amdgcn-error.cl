@@ -48,3 +48,7 @@ void test_fcmp_f64(global ulong* out, double a, double b, uint c)
   *out = __builtin_amdgcn_fcmp(a, b, c); // expected-error {{argument to '__builtin_amdgcn_fcmp' must be a constant integer}}
 }
 
+void test_ds_swizzle(global int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_ds_swizzle(a, b); // expected-error {{argument to '__builtin_amdgcn_ds_swizzle' must be a constant integer}}
+}

@@ -1,3 +1,5 @@
+include(AddLLVM) # for add_lit_testsuite
+
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)

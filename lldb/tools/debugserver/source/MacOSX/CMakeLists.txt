@@ -3,6 +3,7 @@
 add_subdirectory(i386)
 #add_subdirectory(ppc)
 add_subdirectory(x86_64)
+add_subdirectory(DarwinLog)
 
 include_directories(..)
 
@@ -32,6 +33,7 @@ set(DEBUGSERVER_USED_LIBS
   lldbUtility
   lldbDebugserverMacOSX_I386
   lldbDebugserverMacOSX_X86_64
+  lldbDebugserverMacOSX_DarwinLog
   )
 
 add_lldb_executable(debugserver
@@ -46,6 +48,7 @@ add_lldb_executable(debugserver
   MachThreadList.cpp
   MachVMMemory.cpp
   MachVMRegion.cpp
+  OsLogger.cpp
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE}
   )

@@ -546,6 +546,18 @@ protected:
   /// @param BB The basic block code for which code has been generated.
   /// @param BBMap A local map from old to new instructions.
   void removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap);
+
+  /// @brief Invalidate the scalar evolution expressions for a scop.
+  ///
+  /// This function invalidates the scalar evolution results for all
+  /// instructions that are part of a given scop. This is necessary to ensure
+  /// that later scops do not obtain scalar evolution expressions that reference
+  /// values that earlier dominated the later scop, but have been moved in the
+  /// conditional part of an earlier scop and consequently do not any more
+  /// dominate the later scop.
+  ///
+  /// @param S The scop to invalidate.
+  void invalidateScalarEvolution(Scop &S);
 };
 
 /// @brief Generate a new vector basic block for a polyhedral statement.

@@ -2004,6 +2004,10 @@ public:
     }
   }
 
+  uint64_t getMaxPointerWidth() const override {
+    return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
+  }
+
   const char * getClobbers() const override {
     return "";
   }

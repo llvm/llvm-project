@@ -48,7 +48,7 @@ The ``-list-checks`` option lists all the enabled checks. When used without
 available checks or with any other value of ``-checks=`` to see which checks are
 enabled by this value.
 
-:: _checks-groups-table:
+.. _checks-groups-table:
 
 There are currently the following groups of checks:
 
@@ -341,8 +341,8 @@ style used in the project. For code reviews we mostly use `LLVM Phabricator`_.
 .. _LLVM Phabricator: http://llvm.org/docs/Phabricator.html
 
 Next, you need to decide which module the check belongs to. Modules
-are located in subdirectories of
-``clang-tidy/ <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/>``_
+are located in subdirectories of `clang-tidy/
+<http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/>`_
 and contain checks targeting a certain aspect of code quality (performance,
 readability, etc.), certain coding style or standard (Google, LLVM, CERT, etc.)
 or a widely used API (e.g. MPI). Their names are same as user-facing check

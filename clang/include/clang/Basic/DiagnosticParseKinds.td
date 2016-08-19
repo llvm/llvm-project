@@ -1022,7 +1022,13 @@ def warn_pragma_unroll_cuda_value_in_parens : Warning<
 
 let CategoryName = "Modules Issue" in {
 def err_module_expected_ident : Error<
-  "expected a module name after module import">;
+  "expected a module name after module%select{| import}0">;
+def err_unexpected_module_kind : Error<
+  "unexpected module kind %0; expected 'implementation' or 'partition'">;
+def err_attribute_not_module_attr : Error<
+  "%0 attribute cannot be applied to a module">;
+def err_attribute_not_import_attr : Error<
+  "%0 attribute cannot be applied to a module import">;
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
 def err_missing_before_module_end : Error<"expected %0 at end of module">;

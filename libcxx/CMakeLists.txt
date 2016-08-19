@@ -22,7 +22,7 @@ set(CMAKE_MODULE_PATH
 # Find the LLVM sources and simulate LLVM CMake options.
 include(HandleOutOfTreeLLVM)
 
-if (LIBCXX_BUILT_STANDALONE)
+if (LIBCXX_STANDALONE_BUILD)
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
@@ -31,7 +31,7 @@ if (LIBCXX_BUILT_STANDALONE)
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 endif()
 
-if (LIBCXX_BUILT_STANDALONE AND NOT LLVM_FOUND)
+if (LIBCXX_STANDALONE_BUILD AND NOT LLVM_FOUND)
   message(WARNING "UNSUPPORTED LIBCXX CONFIGURATION DETECTED: "
                   "llvm-config not found and LLVM_PATH not defined.\n"
                   "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
@@ -81,7 +81,7 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (NOT LIBCXX_CXX_ABI)
-  if (NOT DEFINED LIBCXX_BUILT_STANDALONE AND
+  if (NOT DEFINED LIBCXX_STANDALONE_BUILD AND
       IS_DIRECTORY "${CMAKE_SOURCE_DIR}/projects/libcxxabi")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${CMAKE_SOURCE_DIR}/projects/libcxxabi/include")
@@ -367,9 +367,9 @@ define_if(MSVC -D_CRT_SECURE_NO_WARNINGS)
 
 # Sanitizer flags =============================================================
 
-# Configure for sanitizers. If LIBCXX_BUILT_STANDALONE then we have to do
+# Configure for sanitizers. If LIBCXX_STANDALONE_BUILD then we have to do
 # the flag translation ourselves. Othewise LLVM's CMakeList.txt will handle it.
-if (LIBCXX_BUILT_STANDALONE)
+if (LIBCXX_STANDALONE_BUILD)
   set(LLVM_USE_SANITIZER "" CACHE STRING
       "Define the sanitizer used to build the library and tests")
   # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.

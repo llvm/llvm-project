@@ -10,16 +10,17 @@ types, insufficiently dereferenced buffers can be passed, like for example as
 double pointers or multidimensional arrays, without a compiler warning emitted.
 
 Examples:
-.. code:: c++
 
-  // A double pointer is passed to the MPI function.
-  char *buf;
-  MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+.. code-block:: c++
 
-  // A multidimensional array is passed to the MPI function.
-  short buf[1][1];
-  MPI_Send(buf, 1, MPI_SHORT, 0, 0, MPI_COMM_WORLD);
+   // A double pointer is passed to the MPI function.
+   char *buf;
+   MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 
-  // A pointer to an array is passed to the MPI function.
-  short *buf[1];
-  MPI_Send(buf, 1, MPI_SHORT, 0, 0, MPI_COMM_WORLD);
+   // A multidimensional array is passed to the MPI function.
+   short buf[1][1];
+   MPI_Send(buf, 1, MPI_SHORT, 0, 0, MPI_COMM_WORLD);
+
+   // A pointer to an array is passed to the MPI function.
+   short *buf[1];
+   MPI_Send(buf, 1, MPI_SHORT, 0, 0, MPI_COMM_WORLD);
