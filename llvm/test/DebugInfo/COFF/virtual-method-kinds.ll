@@ -20,12 +20,14 @@
 ; $ clang t.cpp -S -emit-llvm -g -gcodeview -o t.ll
 
 ; CHECK:      OneMethod {
+; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: Virtual (0x1)
 ; CHECK-NEXT:   Type: void C::() ({{.*}})
 ; CHECK-NEXT:   Name: f
 ; CHECK-NEXT: }
 ; CHECK-NEXT: OneMethod {
+; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: Virtual (0x1)
 ; CHECK-NEXT:   Type: void C::() ({{.*}})
@@ -33,12 +35,14 @@
 ; CHECK-NEXT: }
 
 ; CHECK:      OneMethod {
+; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: PureVirtual (0x5)
 ; CHECK-NEXT:   Type: void B::() ({{.*}})
 ; CHECK-NEXT:   Name: f
 ; CHECK-NEXT: }
 ; CHECK-NEXT: OneMethod {
+; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: Virtual (0x1)
 ; CHECK-NEXT:   Type: void B::() ({{.*}})
@@ -46,6 +50,7 @@
 ; CHECK-NEXT: }
 
 ; CHECK:      OneMethod {
+; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: IntroducingVirtual (0x4)
 ; CHECK-NEXT:   Type: void A::() ({{.*}})
@@ -53,6 +58,7 @@
 ; CHECK-NEXT:   Name: f
 ; CHECK-NEXT: }
 ; CHECK-NEXT: OneMethod {
+; CHECK-NEXT:   TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:   AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:   MethodKind: PureIntroducingVirtual (0x6)
 ; CHECK-NEXT:   Type: void A::() ({{.*}})

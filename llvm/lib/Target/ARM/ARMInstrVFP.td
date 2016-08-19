@@ -624,7 +624,7 @@ def VCMPZH  : AHuI<0b11101, 0b11, 0b0101, 0b01, 0,
 def VCVTDS  : ASuI<0b11101, 0b11, 0b0111, 0b11, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),
                    IIC_fpCVTDS, "vcvt", ".f64.f32\t$Dd, $Sm",
-                   [(set DPR:$Dd, (fextend SPR:$Sm))]> {
+                   [(set DPR:$Dd, (fpextend SPR:$Sm))]> {
   // Instruction operands.
   bits<5> Dd;
   bits<5> Sm;
@@ -641,7 +641,7 @@ def VCVTDS  : ASuI<0b11101, 0b11, 0b0111, 0b11, 0,
 // Special case encoding: bits 11-8 is 0b1011.
 def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
                     IIC_fpCVTSD, "vcvt", ".f32.f64\t$Sd, $Dm",
-                    [(set SPR:$Sd, (fround DPR:$Dm))]> {
+                    [(set SPR:$Sd, (fpround DPR:$Dm))]> {
   // Instruction operands.
   bits<5> Sd;
   bits<5> Dm;
@@ -838,7 +838,7 @@ multiclass vcvt_inst<string opc, bits<2> rm,
   }
 }
 
-defm VCVTA : vcvt_inst<"a", 0b00, frnd>;
+defm VCVTA : vcvt_inst<"a", 0b00, fround>;
 defm VCVTN : vcvt_inst<"n", 0b01>;
 defm VCVTP : vcvt_inst<"p", 0b10, fceil>;
 defm VCVTM : vcvt_inst<"m", 0b11, ffloor>;
@@ -938,7 +938,7 @@ multiclass vrint_inst_anpm<string opc, bits<2> rm,
         Requires<[HasFPARMv8,HasDPVFP]>;
 }
 
-defm VRINTA : vrint_inst_anpm<"a", 0b00, frnd>;
+defm VRINTA : vrint_inst_anpm<"a", 0b00, fround>;
 defm VRINTN : vrint_inst_anpm<"n", 0b01>;
 defm VRINTP : vrint_inst_anpm<"p", 0b10, fceil>;
 defm VRINTM : vrint_inst_anpm<"m", 0b11, ffloor>;

@@ -1,0 +1,22 @@
+RUN: llvm-readobj -coff-exports %p/Inputs/library.lib | FileCheck %s
+
+CHECK: File: library.dll
+CHECK: Format: COFF-import-file
+CHECK: Type: const
+CHECK: Symbol: __imp__constant
+
+CHECK: File: library.dll
+CHECK: Format: COFF-import-file
+CHECK: Type: data
+CHECK: Symbol: __imp__data
+
+CHECK: File: library.dll
+CHECK: Format: COFF-import-file
+CHECK: Type: code
+CHECK: Symbol: __imp__function
+
+CHECK: File: library.dll
+CHECK: Format: COFF-import-file
+CHECK: Type: code
+CHECK: Symbol: __imp__ordinal
+

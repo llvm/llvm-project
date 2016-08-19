@@ -2613,16 +2613,16 @@ def : Pat<(ctpop Int64Regs:$a), (CVT_u64_u32 (POPCr64 Int64Regs:$a), CvtNONE)>;
 def : Pat<(ctpop Int16Regs:$a),
           (CVT_u16_u32 (POPCr32 (CVT_u32_u16 Int16Regs:$a, CvtNONE)), CvtNONE)>;
 
-// fround f64 -> f32
-def : Pat<(f32 (fround Float64Regs:$a)),
+// fpround f64 -> f32
+def : Pat<(f32 (fpround Float64Regs:$a)),
           (CVT_f32_f64 Float64Regs:$a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fround Float64Regs:$a)),
+def : Pat<(f32 (fpround Float64Regs:$a)),
           (CVT_f32_f64 Float64Regs:$a, CvtRN)>;
 
-// fextend f32 -> f64
-def : Pat<(f64 (fextend Float32Regs:$a)),
+// fpextend f32 -> f64
+def : Pat<(f64 (fpextend Float32Regs:$a)),
           (CVT_f64_f32 Float32Regs:$a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f64 (fextend Float32Regs:$a)),
+def : Pat<(f64 (fpextend Float32Regs:$a)),
           (CVT_f64_f32 Float32Regs:$a, CvtNONE)>;
 
 def retflag : SDNode<"NVPTXISD::RET_FLAG", SDTNone,

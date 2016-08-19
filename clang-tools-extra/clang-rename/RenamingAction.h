@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H
 
 #include "clang/Tooling/Refactoring.h"
 
@@ -44,4 +44,4 @@ private:
 }
 }
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H

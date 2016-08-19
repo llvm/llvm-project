@@ -635,9 +635,9 @@ def : MipsPat<(f64 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;
 def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
               (TRUNC_W_D32 AFGR64Opnd:$src)>, FGR_32;
-def : MipsPat<(f32 (fround AFGR64Opnd:$src)),
+def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
               (CVT_S_D32 AFGR64Opnd:$src)>, FGR_32;
-def : MipsPat<(f64 (fextend FGR32Opnd:$src)),
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D32_S FGR32Opnd:$src)>, FGR_32;
 
 def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, FGR_64;
@@ -657,9 +657,9 @@ def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
               (TRUNC_L_D64 FGR64Opnd:$src)>, FGR_64;
 
-def : MipsPat<(f32 (fround FGR64Opnd:$src)),
+def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
               (CVT_S_D64 FGR64Opnd:$src)>, FGR_64;
-def : MipsPat<(f64 (fextend FGR32Opnd:$src)),
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D64_S FGR32Opnd:$src)>, FGR_64;
 
 // Patterns for loads/stores with a reg+imm operand.

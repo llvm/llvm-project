@@ -398,7 +398,8 @@ define void @aggregate_load_store({i32,i32,i32,i32}* %p, {i32,i32,i32,i32}* %q) 
 
 ; CHECK-LABEL: aggregate_return:
 ; CHECK: i64.const   $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK: i64.store   $push[[L1:[0-9]+]]=, 8($0):p2align=2, $pop[[L0]]{{$}}
+; CHECK: i64.store   $drop=, 8($0):p2align=2, $pop[[L0]]{{$}}
+; CHECK: i64.const   $push[[L1:[0-9]+]]=, 0{{$}}
 ; CHECK: i64.store   $drop=, 0($0):p2align=2, $pop[[L1]]{{$}}
 define {i32,i32,i32,i32} @aggregate_return() {
   ret {i32,i32,i32,i32} zeroinitializer
@@ -409,8 +410,10 @@ define {i32,i32,i32,i32} @aggregate_return() {
 
 ; CHECK-LABEL: aggregate_return_without_merge:
 ; CHECK: i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK: i32.store8  $push[[L1:[0-9]+]]=, 14($0), $pop[[L0]]{{$}}
-; CHECK: i32.store16 $push[[L2:[0-9]+]]=, 12($0), $pop[[L1]]{{$}}
+; CHECK: i32.store8  $drop=, 14($0), $pop[[L0]]{{$}}
+; CHECK: i32.const   $push[[L1:[0-9]+]]=, 0{{$}}
+; CHECK: i32.store16 $drop=, 12($0), $pop[[L1]]{{$}}
+; CHECK: i32.const   $push[[L2:[0-9]+]]=, 0{{$}}
 ; CHECK: i32.store   $drop=, 8($0), $pop[[L2]]{{$}}
 ; CHECK: i64.const   $push[[L3:[0-9]+]]=, 0{{$}}
 ; CHECK: i64.store   $drop=, 0($0), $pop[[L3]]{{$}}

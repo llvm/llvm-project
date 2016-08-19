@@ -113,6 +113,10 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return AArch64::LSRVWr;
       case TargetOpcode::G_ASHR:
         return AArch64::ASRVWr;
+      case TargetOpcode::G_SDIV:
+        return AArch64::SDIVWr;
+      case TargetOpcode::G_UDIV:
+        return AArch64::UDIVWr;
       default:
         return GenericOpc;
       }
@@ -134,6 +138,39 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return AArch64::LSRVXr;
       case TargetOpcode::G_ASHR:
         return AArch64::ASRVXr;
+      case TargetOpcode::G_SDIV:
+        return AArch64::SDIVXr;
+      case TargetOpcode::G_UDIV:
+        return AArch64::UDIVXr;
+      default:
+        return GenericOpc;
+      }
+    }
+  case AArch64::FPRRegBankID:
+    switch (OpSize) {
+    case 32:
+      switch (GenericOpc) {
+      case TargetOpcode::G_FADD:
+        return AArch64::FADDSrr;
+      case TargetOpcode::G_FSUB:
+        return AArch64::FSUBSrr;
+      case TargetOpcode::G_FMUL:
+        return AArch64::FMULSrr;
+      case TargetOpcode::G_FDIV:
+        return AArch64::FDIVSrr;
+      default:
+        return GenericOpc;
+      }
+    case 64:
+      switch (GenericOpc) {
+      case TargetOpcode::G_FADD:
+        return AArch64::FADDDrr;
+      case TargetOpcode::G_FSUB:
+        return AArch64::FSUBDrr;
+      case TargetOpcode::G_FMUL:
+        return AArch64::FMULDrr;
+      case TargetOpcode::G_FDIV:
+        return AArch64::FDIVDrr;
       default:
         return GenericOpc;
       }
@@ -283,12 +320,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_UDIV:
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB: {
     // Reject the various things we don't support yet.

@@ -848,8 +848,6 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def SDC2_R6 : SDC2_R6_ENC, SDC2_R6_DESC, ISA_MIPS32R6;
   def SWC2_R6 : SWC2_R6_ENC, SWC2_R6_DESC, ISA_MIPS32R6;
 }
-def TAILCALL_R6 : TailCall<J>, ISA_MIPS32R6;
-def TAILCALLREG_R6 : TailCallReg<GPR32Opnd, JR>, GPR_32, ISA_MIPS32R6;
 
 //===----------------------------------------------------------------------===//
 //

@@ -24,6 +24,7 @@ class AllocaInst;
 static const int kAsanStackLeftRedzoneMagic = 0xf1;
 static const int kAsanStackMidRedzoneMagic = 0xf2;
 static const int kAsanStackRightRedzoneMagic = 0xf3;
+static const int kAsanStackUseAfterReturnMagic = 0xf5;
 static const int kAsanStackUseAfterScopeMagic = 0xf8;
 
 // Input/output data struct for ComputeASanStackFrameLayout.

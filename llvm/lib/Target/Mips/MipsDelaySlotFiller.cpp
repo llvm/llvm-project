@@ -560,7 +560,7 @@ static int getEquivalentCallShort(int Opcode) {
     return Mips::JALRS16_MM;
   case Mips::TAILCALL_MM:
     llvm_unreachable("Attempting to shorten the TAILCALL_MM pseudo!");
-  case Mips::TAILCALLREG_MM:
+  case Mips::TAILCALLREG:
     return Mips::JR16_MM;
   default:
     llvm_unreachable("Unexpected call instruction for microMIPS.");

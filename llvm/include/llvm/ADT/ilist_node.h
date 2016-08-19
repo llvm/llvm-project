@@ -15,8 +15,6 @@
 #ifndef LLVM_ADT_ILIST_NODE_H
 #define LLVM_ADT_ILIST_NODE_H
 
-#include <llvm/ADT/PointerIntPair.h>
-
 namespace llvm {
 
 template<typename NodeTy>
@@ -24,81 +22,46 @@ struct ilist_traits;
 template <typename NodeTy> struct ilist_embedded_sentinel_traits;
 template <typename NodeTy> struct ilist_half_embedded_sentinel_traits;
 
-/// Base class for ilist nodes.
-struct ilist_node_base {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
-
-  void setPrev(ilist_node_base *Prev) { PrevAndSentinel.setPointer(Prev); }
-  ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
-
-  bool isKnownSentinel() const { return PrevAndSentinel.getInt(); }
-  void initializeSentinel() { PrevAndSentinel.setInt(true); }
-#else
-  ilist_node_base *Prev = nullptr;
-
-  void setPrev(ilist_node_base *Prev) { this->Prev = Prev; }
-  ilist_node_base *getPrev() const { return Prev; }
-
-  bool isKnownSentinel() const { return false; }
-  void initializeSentinel() {}
-#endif
-
-  ilist_node_base *Next = nullptr;
+/// ilist_half_node - Base class that provides prev services for sentinels.
+///
+template<typename NodeTy>
+class ilist_half_node {
+  friend struct ilist_traits<NodeTy>;
+  friend struct ilist_half_embedded_sentinel_traits<NodeTy>;
+  NodeTy *Prev;
+protected:
+  NodeTy *getPrev() { return Prev; }
+  const NodeTy *getPrev() const { return Prev; }
+  void setPrev(NodeTy *P) { Prev = P; }
+  ilist_half_node() : Prev(nullptr) {}
 };
 
 struct ilist_node_access;
 template <typename NodeTy> class ilist_iterator;
-template <typename NodeTy> class ilist_sentinel;
 
-/// Templated wrapper class.
-template <typename NodeTy> class ilist_node : ilist_node_base {
+/// Base class that provides next/prev services for ilist nodes.
+template<typename NodeTy>
+class ilist_node : private ilist_half_node<NodeTy> {
   friend struct ilist_node_access;
   friend struct ilist_traits<NodeTy>;
   friend struct ilist_half_embedded_sentinel_traits<NodeTy>;
   friend struct ilist_embedded_sentinel_traits<NodeTy>;
-  friend class ilist_iterator<NodeTy>;
-  friend class ilist_sentinel<NodeTy>;
-
+  NodeTy *Next;
+  NodeTy *getNext() { return Next; }
+  const NodeTy *getNext() const { return Next; }
+  void setNext(NodeTy *N) { Next = N; }
 protected:
-  ilist_node() = default;
-
-private:
-  ilist_node *getPrev() {
-    return static_cast<ilist_node *>(ilist_node_base::getPrev());
-  }
-  ilist_node *getNext() { return static_cast<ilist_node *>(Next); }
-
-  const ilist_node *getPrev() const {
-    return static_cast<ilist_node *>(ilist_node_base::getPrev());
-  }
-  const ilist_node *getNext() const { return static_cast<ilist_node *>(Next); }
-
-  void setPrev(ilist_node *N) { ilist_node_base::setPrev(N); }
-  void setNext(ilist_node *N) { Next = N; }
+  ilist_node() : Next(nullptr) {}
 
 public:
-  ilist_iterator<NodeTy> getIterator() { return ilist_iterator<NodeTy>(*this); }
+  ilist_iterator<NodeTy> getIterator() {
+    // FIXME: Stop downcasting to create the iterator (potential UB).
+    return ilist_iterator<NodeTy>(static_cast<NodeTy *>(this));
+  }
   ilist_iterator<const NodeTy> getIterator() const {
-    return ilist_iterator<const NodeTy>(*this);
+    // FIXME: Stop downcasting to create the iterator (potential UB).
+    return ilist_iterator<const NodeTy>(static_cast<const NodeTy *>(this));
   }
-
-  using ilist_node_base::isKnownSentinel;
-};
-
-template <typename NodeTy> class ilist_sentinel : public ilist_node<NodeTy> {
-public:
-  ilist_sentinel() {
-    ilist_node_base::initializeSentinel();
-    reset();
-  }
-
-  void reset() {
-    this->setPrev(this);
-    this->setNext(this);
-  }
-
-  bool empty() const { return this == this->getPrev(); }
 };
 
 /// An ilist node that can access its parent list.

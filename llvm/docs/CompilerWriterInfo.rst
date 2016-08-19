@@ -18,9 +18,9 @@ AArch64 & ARM
 
 * `ARMv8-A Architecture Reference Manual <http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0487a.h/index.html>`_ (authentication required, free sign-up). This document covers both AArch64 and ARM instructions
 
-* `ARMv7-M Architecture Reference Manual` <http://infocenter.arm.com/help/topic/com.arm.doc.ddi0403e.b/index.html>`_ (authentication required, free sign-up). This covers the Thumb2-only microcontrollers
+* `ARMv7-M Architecture Reference Manual <http://infocenter.arm.com/help/topic/com.arm.doc.ddi0403e.b/index.html>`_ (authentication required, free sign-up). This covers the Thumb2-only microcontrollers
 
-* `ARMv6-M Architecture Reference Manual` <http://infocenter.arm.com/help/topic/com.arm.doc.ddi0419c/index.html>_ (authentication required, free sign-up). This covers the Thumb1-only microcontrollers
+* `ARMv6-M Architecture Reference Manual <http://infocenter.arm.com/help/topic/com.arm.doc.ddi0419c/index.html>`_ (authentication required, free sign-up). This covers the Thumb1-only microcontrollers
 
 * `ARM C Language Extensions <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053c/IHI0053C_acle_2_0.pdf>`_
 
@@ -30,6 +30,12 @@ Itanium (ia64)
 --------------
 
 * `Itanium documentation <http://developer.intel.com/design/itanium2/documentation.htm>`_
+
+Lanai
+-----
+
+* `Lanai Instruction Set Architecture <http://g.co/lanai/isa>`_
+
 
 MIPS
 ----

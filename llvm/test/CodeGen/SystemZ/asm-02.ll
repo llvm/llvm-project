@@ -74,8 +74,8 @@ define void @f6(i64 %base, i64 %index) {
 ; Check that LAY is used if there is an index but the displacement is too large
 define void @f7(i64 %base, i64 %index) {
 ; CHECK-LABEL: f7:
-; CHECK: lay %r0, 4096(%r3,%r2)
-; CHECK: blah 0(%r0)
+; CHECK: lay %r1, 4096(%r3,%r2)
+; CHECK: blah 0(%r1)
 ; CHECK: br %r14
   %add = add i64 %base, 4096
   %addi = add i64 %add, %index

@@ -151,11 +151,10 @@ public:
     OS << " Operand: " << getCheckUse()->getOperandNo() << "\n";
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD
   void dump() {
     print(dbgs());
   }
-#endif
 
   Use *getCheckUse() const { return CheckUse; }
 

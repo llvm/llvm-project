@@ -564,10 +564,10 @@ class F2_RD_RS_CONVERT<string mnemonic, bits<3> MajOp, bits<3> MinOp,
 
 // Convert single precision to double precision and vice-versa.
 def F2_conv_sf2df : F2_RDD_RS_CONVERT <"convert_sf2df", 0b000,
-                                       fextend, F64, F32>;
+                                       fpextend, F64, F32>;
 
 def F2_conv_df2sf : F2_RD_RSS_CONVERT <"convert_df2sf", 0b000,
-                                       fround, F32, F64>;
+                                       fpround, F32, F64>;
 
 // Convert Integer to Floating Point.
 def F2_conv_d2sf : F2_RD_RSS_CONVERT <"convert_d2sf", 0b010,

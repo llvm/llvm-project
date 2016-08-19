@@ -176,7 +176,7 @@ This option overrides the value read from a
 
 static cl::opt<std::string> ExportFixes("export-fixes", cl::desc(R"(
 YAML file to store suggested fixes in. The
-stored fixes can be applied to the input sorce
+stored fixes can be applied to the input source
 code with clang-apply-replacements.
 )"),
                                         cl::value_desc("filename"),

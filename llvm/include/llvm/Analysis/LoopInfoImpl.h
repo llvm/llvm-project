@@ -137,7 +137,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPredecessor() const {
   for (typename InvBlockTraits::ChildIteratorType PI =
          InvBlockTraits::child_begin(Header),
          PE = InvBlockTraits::child_end(Header); PI != PE; ++PI) {
-    typename InvBlockTraits::NodeType *N = *PI;
+    typename InvBlockTraits::NodeRef N = *PI;
     if (!contains(N)) {     // If the block is not in the loop...
       if (Out && Out != N)
         return nullptr;     // Multiple predecessors outside the loop
@@ -162,7 +162,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopLatch() const {
     InvBlockTraits::child_end(Header);
   BlockT *Latch = nullptr;
   for (; PI != PE; ++PI) {
-    typename InvBlockTraits::NodeType *N = *PI;
+    typename InvBlockTraits::NodeRef N = *PI;
     if (contains(N)) {
       if (Latch) return nullptr;
       Latch = N;
