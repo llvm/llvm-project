@@ -63,8 +63,8 @@ static void findRefEdges(const User *CurUser, DenseSet<const Value *> &RefEdges,
   }
 }
 
-void ModuleSummaryIndexBuilder::computeFunctionSummary(
-    const Function &F, BlockFrequencyInfo *BFI) {
+static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
+                                   const Function &F, BlockFrequencyInfo *BFI) {
   // Summary not currently supported for anonymous functions, they must
   // be renamed.
   if (!F.hasName())
@@ -91,7 +91,7 @@ void ModuleSummaryIndexBuilder::computeFunctionSummary(
           if (CalledFunction->hasName() && !CalledFunction->isIntrinsic()) {
             auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
             auto *CalleeId =
-                M->getValueSymbolTable().lookup(CalledFunction->getName());
+                M.getValueSymbolTable().lookup(CalledFunction->getName());
             CallGraphEdges[CalleeId] +=
                 (ScaledCount ? ScaledCount.getValue() : 0);
           }
@@ -120,11 +120,11 @@ void ModuleSummaryIndexBuilder::computeFunctionSummary(
   FuncSummary->addCallGraphEdges(CallGraphEdges);
   FuncSummary->addCallGraphEdges(IndirectCallEdges);
   FuncSummary->addRefEdges(RefEdges);
-  Index->addGlobalValueSummary(F.getName(), std::move(FuncSummary));
+  Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
 }
 
-void ModuleSummaryIndexBuilder::computeVariableSummary(
-    const GlobalVariable &V) {
+static void computeVariableSummary(ModuleSummaryIndex &Index,
+                                   const GlobalVariable &V) {
   DenseSet<const Value *> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   findRefEdges(&V, RefEdges, Visited);
@@ -132,29 +132,29 @@ void ModuleSummaryIndexBuilder::computeVariableSummary(
   std::unique_ptr<GlobalVarSummary> GVarSummary =
       llvm::make_unique<GlobalVarSummary>(Flags);
   GVarSummary->addRefEdges(RefEdges);
-  Index->addGlobalValueSummary(V.getName(), std::move(GVarSummary));
+  Index.addGlobalValueSummary(V.getName(), std::move(GVarSummary));
 }
 
-ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
-    const Module *M,
-    std::function<BlockFrequencyInfo *(const Function &F)> Ftor)
-    : Index(llvm::make_unique<ModuleSummaryIndex>()), M(M) {
+ModuleSummaryIndex llvm::buildModuleSummaryIndex(
+    const Module &M,
+    std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback) {
+  ModuleSummaryIndex Index;
   // Check if the module can be promoted, otherwise just disable importing from
   // it by not emitting any summary.
   // FIXME: we could still import *into* it most of the time.
-  if (!moduleCanBeRenamedForThinLTO(*M))
-    return;
+  if (!moduleCanBeRenamedForThinLTO(M))
+    return Index;
 
   // Compute summaries for all functions defined in module, and save in the
   // index.
-  for (auto &F : *M) {
+  for (auto &F : M) {
     if (F.isDeclaration())
       continue;
 
     BlockFrequencyInfo *BFI = nullptr;
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
-    if (Ftor)
-      BFI = Ftor(F);
+    if (GetBFICallback)
+      BFI = GetBFICallback(F);
     else if (F.getEntryCount().hasValue()) {
       LoopInfo LI{DominatorTree(const_cast<Function &>(F))};
       BranchProbabilityInfo BPI{F, LI};
@@ -162,29 +162,27 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
       BFI = BFIPtr.get();
     }
 
-    computeFunctionSummary(F, BFI);
+    computeFunctionSummary(Index, M, F, BFI);
   }
 
   // Compute summaries for all variables defined in module, and save in the
   // index.
-  for (const GlobalVariable &G : M->globals()) {
+  for (const GlobalVariable &G : M.globals()) {
     if (G.isDeclaration())
       continue;
-    computeVariableSummary(G);
+    computeVariableSummary(Index, G);
   }
+  return Index;
 }
 
 char ModuleSummaryIndexAnalysis::PassID;
 
-const ModuleSummaryIndex &
+ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  IndexBuilder = llvm::make_unique<ModuleSummaryIndexBuilder>(
-      &M, [&FAM](const Function &F) {
-        return &(
-            FAM.getResult<BlockFrequencyAnalysis>(*const_cast<Function *>(&F)));
-      });
-  return IndexBuilder->getIndex();
+  return buildModuleSummaryIndex(M, [&FAM](const Function &F) {
+    return &FAM.getResult<BlockFrequencyAnalysis>(*const_cast<Function *>(&F));
+  });
 }
 
 char ModuleSummaryIndexWrapperPass::ID = 0;
@@ -204,17 +202,16 @@ ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
 }
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
-  IndexBuilder = llvm::make_unique<ModuleSummaryIndexBuilder>(
-      &M, [this](const Function &F) {
-        return &(this->getAnalysis<BlockFrequencyInfoWrapperPass>(
-                         *const_cast<Function *>(&F))
-                     .getBFI());
-      });
+  Index = buildModuleSummaryIndex(M, [this](const Function &F) {
+    return &(this->getAnalysis<BlockFrequencyInfoWrapperPass>(
+                     *const_cast<Function *>(&F))
+                 .getBFI());
+  });
   return false;
 }
 
 bool ModuleSummaryIndexWrapperPass::doFinalization(Module &M) {
-  IndexBuilder.reset();
+  Index.reset();
   return false;
 }
 

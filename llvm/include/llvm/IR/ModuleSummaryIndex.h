@@ -363,11 +363,14 @@ private:
 
 public:
   ModuleSummaryIndex() = default;
-
-  // Disable the copy constructor and assignment operators, so
-  // no unexpected copying/moving occurs.
-  ModuleSummaryIndex(const ModuleSummaryIndex &) = delete;
-  void operator=(const ModuleSummaryIndex &) = delete;
+  ModuleSummaryIndex(ModuleSummaryIndex &&Arg)
+      : GlobalValueMap(std::move(Arg.GlobalValueMap)),
+        ModulePathStringTable(std::move(Arg.ModulePathStringTable)) {}
+  ModuleSummaryIndex &operator=(ModuleSummaryIndex &&RHS) {
+    GlobalValueMap = std::move(RHS.GlobalValueMap);
+    ModulePathStringTable = std::move(RHS.ModulePathStringTable);
+    return *this;
+  }
 
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
