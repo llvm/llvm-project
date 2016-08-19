@@ -2,8 +2,6 @@
 // RUN: %clangxx_msan -std=c++11 -O0 %s -o %t && %run %t
 // RUN: %clangxx_msan -std=c++11 -fsanitize-memory-track-origins -O0 %s -o %t && %run %t
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <pthread.h>
 #include <stdint.h>

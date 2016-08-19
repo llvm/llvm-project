@@ -1,7 +1,5 @@
 // RUN: %clangxx_msan -std=c++11 -O0 %s -o %t && %run %t
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <unistd.h>
 #include <sys/mman.h>

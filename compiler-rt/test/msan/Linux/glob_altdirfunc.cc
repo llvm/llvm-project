@@ -2,8 +2,6 @@
 // RUN: %clangxx_msan -O0 -D_FILE_OFFSET_BITS=64 %s -o %t && %run %t %p 2>&1 | FileCheck %s
 // RUN: %clangxx_msan -O3 %s -o %t && %run %t %p 2>&1 | FileCheck %s
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <glob.h>
 #include <stdio.h>

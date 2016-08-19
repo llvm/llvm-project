@@ -1,8 +1,6 @@
 // RUN: %clangxx_msan -O0 -g %s -o %t && %run %t
 // RUN: %clangxx_msan -O3 -g %s -o %t && %run %t
 
-// XFAIL: target-is-mips64el
-
 #include <assert.h>
 #include <fcntl.h>
 #include <sound/asound.h>

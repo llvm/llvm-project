@@ -7,8 +7,6 @@
 // RUN: %clangxx_msan -DMSANCB_SET %s -o %t && %run %t 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCB
 
-// XFAIL: target-is-mips64el
-
 #include <sanitizer/msan_interface.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -10,8 +10,6 @@
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
 
-// XFAIL: target-is-mips64el
-
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>

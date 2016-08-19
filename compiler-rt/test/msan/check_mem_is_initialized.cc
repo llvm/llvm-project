@@ -16,8 +16,6 @@
 // RUN: %clangxx_msan -fsanitize-memory-track-origins -O3 %s -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out && FileCheck %s --check-prefix=CHECK-ORIGINS < %t.out
 
-// XFAIL: target-is-mips64el
-
 #include <sanitizer/msan_interface.h>
 #include <stdlib.h>
 

@@ -62,8 +62,6 @@
 // RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
-// XFAIL: target-is-mips64el
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
