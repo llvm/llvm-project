@@ -840,7 +840,7 @@ bool AMDGPUCFGStructurizer::run() {
     } //while, "one iteration" over the function.
 
     MachineBasicBlock *EntryMBB =
-        &*GraphTraits<MachineFunction *>::nodes_begin(FuncRep);
+        *GraphTraits<MachineFunction *>::nodes_begin(FuncRep);
     if (EntryMBB->succ_size() == 0) {
       Finish = true;
       DEBUG(
@@ -863,7 +863,7 @@ bool AMDGPUCFGStructurizer::run() {
   } while (!Finish && MakeProgress);
 
   // Misc wrap up to maintain the consistency of the Function representation.
-  wrapup(&*GraphTraits<MachineFunction *>::nodes_begin(FuncRep));
+  wrapup(*GraphTraits<MachineFunction *>::nodes_begin(FuncRep));
 
   // Detach retired Block, release memory.
   for (MBBInfoMap::iterator It = BlockInfoMap.begin(), E = BlockInfoMap.end();
@@ -907,9 +907,9 @@ void AMDGPUCFGStructurizer::orderBlocks(MachineFunction *MF) {
 
   //walk through all the block in func to check for unreachable
   typedef GraphTraits<MachineFunction *> GTM;
-  MachineFunction::iterator It = GTM::nodes_begin(MF), E = GTM::nodes_end(MF);
+  auto It = GTM::nodes_begin(MF), E = GTM::nodes_end(MF);
   for (; It != E; ++It) {
-    MachineBasicBlock *MBB = &(*It);
+    MachineBasicBlock *MBB = *It;
     SccNum = getSCCNum(MBB);
     if (SccNum == INVALIDSCCNUM)
       dbgs() << "unreachable block BB" << MBB->getNumber() << "\n";

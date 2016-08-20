@@ -108,9 +108,10 @@ entry:
   ; CHECK: __asan_poison_stack_memory
 
   ret void
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
   ; CHECK: store i32 0
-  ; CHECK: store i64 0
-  ; CHECK: store i64 0
   ; CHECK-NEXT: __asan_unpoison_stack_memory
 }
 

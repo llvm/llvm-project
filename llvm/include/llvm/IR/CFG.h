@@ -229,9 +229,13 @@ template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
   static NodeType *getEntryNode(Function *F) { return &F->getEntryBlock(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef Function::iterator nodes_iterator;
-  static nodes_iterator nodes_begin(Function *F) { return F->begin(); }
-  static nodes_iterator nodes_end  (Function *F) { return F->end(); }
+  typedef pointer_iterator<Function::iterator> nodes_iterator;
+  static nodes_iterator nodes_begin(Function *F) {
+    return nodes_iterator(F->begin());
+  }
+  static nodes_iterator nodes_end(Function *F) {
+    return nodes_iterator(F->end());
+  }
   static size_t         size       (Function *F) { return F->size(); }
 };
 template <> struct GraphTraits<const Function*> :
@@ -239,9 +243,13 @@ template <> struct GraphTraits<const Function*> :
   static NodeType *getEntryNode(const Function *F) {return &F->getEntryBlock();}
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef Function::const_iterator nodes_iterator;
-  static nodes_iterator nodes_begin(const Function *F) { return F->begin(); }
-  static nodes_iterator nodes_end  (const Function *F) { return F->end(); }
+  typedef pointer_iterator<Function::const_iterator> nodes_iterator;
+  static nodes_iterator nodes_begin(const Function *F) {
+    return nodes_iterator(F->begin());
+  }
+  static nodes_iterator nodes_end(const Function *F) {
+    return nodes_iterator(F->end());
+  }
   static size_t         size       (const Function *F) { return F->size(); }
 };
 

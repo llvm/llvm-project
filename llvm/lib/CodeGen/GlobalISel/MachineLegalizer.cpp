@@ -119,8 +119,9 @@ LLT MachineLegalizer::findLegalType(unsigned Opcode, LLT Ty,
                          [&](LLT Ty) -> LLT { return Ty.halfScalarSize(); });
   }
   case WidenScalar: {
-    return findLegalType(Opcode, Ty,
-                         [&](LLT Ty) -> LLT { return Ty.doubleScalarSize(); });
+    return findLegalType(Opcode, Ty, [&](LLT Ty) -> LLT {
+      return Ty.getSizeInBits() < 8 ? LLT::scalar(8) : Ty.doubleScalarSize();
+    });
   }
   case FewerElements: {
     return findLegalType(Opcode, Ty,

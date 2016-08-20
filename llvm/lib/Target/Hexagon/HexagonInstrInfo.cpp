@@ -1292,7 +1292,26 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MI.setDesc(get(Hexagon::J2_jump));
       return true;
     case Hexagon::PS_tailcall_r:
+    case Hexagon::PS_jmpret:
       MI.setDesc(get(Hexagon::J2_jumpr));
+      return true;
+    case Hexagon::PS_jmprett:
+      MI.setDesc(get(Hexagon::J2_jumprt));
+      return true;
+    case Hexagon::PS_jmpretf:
+      MI.setDesc(get(Hexagon::J2_jumprf));
+      return true;
+    case Hexagon::PS_jmprettnewpt:
+      MI.setDesc(get(Hexagon::J2_jumprtnewpt));
+      return true;
+    case Hexagon::PS_jmpretfnewpt:
+      MI.setDesc(get(Hexagon::J2_jumprfnewpt));
+      return true;
+    case Hexagon::PS_jmprettnew:
+      MI.setDesc(get(Hexagon::J2_jumprtnew));
+      return true;
+    case Hexagon::PS_jmpretfnew:
+      MI.setDesc(get(Hexagon::J2_jumprfnew));
       return true;
   }
 
@@ -2114,6 +2133,7 @@ bool HexagonInstrInfo::isIndirectCall(const MachineInstr &MI) const {
   case Hexagon::J2_callr :
   case Hexagon::J2_callrf :
   case Hexagon::J2_callrt :
+  case Hexagon::PS_call_nr :
     return true;
   }
   return false;
@@ -3362,6 +3382,7 @@ HexagonII::CompoundGroup HexagonInstrInfo::getCompoundCandidateGroup(
   // Do not test for jump range here.
   case Hexagon::J2_jump:
   case Hexagon::RESTORE_DEALLOC_RET_JMP_V4:
+  case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC:
     return HexagonII::HCG_C;
     break;
   }
@@ -3690,6 +3711,7 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   // dealloc_return is not documented in Hexagon Manual, but marked
   // with A_SUBINSN attribute in iset_v4classic.py.
   case Hexagon::RESTORE_DEALLOC_RET_JMP_V4:
+  case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC:
   case Hexagon::L4_return:
   case Hexagon::L2_deallocframe:
     return HexagonII::HSIG_L2;
@@ -3714,7 +3736,7 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
         (Hexagon::P0 == SrcReg)) &&
         (Hexagon::IntRegsRegClass.contains(DstReg) && (Hexagon::R31 == DstReg)))
       return HexagonII::HSIG_L2;
-     break;
+    break;
   case Hexagon::L4_return_t :
   case Hexagon::L4_return_f :
   case Hexagon::L4_return_tnew_pnt :
@@ -4082,8 +4104,8 @@ bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
     return false;
   assert(Cond.size() == 2);
   if (isNewValueJump(Cond[0].getImm()) || Cond[1].isMBB()) {
-     DEBUG(dbgs() << "No predregs for new-value jumps/endloop");
-     return false;
+    DEBUG(dbgs() << "No predregs for new-value jumps/endloop");
+    return false;
   }
   PredReg = Cond[1].getReg();
   PredRegPos = 1;

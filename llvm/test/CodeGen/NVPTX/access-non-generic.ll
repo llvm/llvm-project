@@ -1,6 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix PTX
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix PTX
-; RUN: llc < %s  -march=nvptx64 -mcpu=sm_20 -nvptx-use-infer-addrspace | FileCheck %s --check-prefix PTX
+; RUN: llc < %s  -march=nvptx64 -mcpu=sm_20 -nvptx-use-infer-addrspace=true | FileCheck %s --check-prefix PTX
+; RUN: llc < %s  -march=nvptx64 -mcpu=sm_20 -nvptx-use-infer-addrspace=false | FileCheck %s --check-prefix PTX
 ; RUN: opt < %s -S -nvptx-favor-non-generic -dce | FileCheck %s --check-prefix IR
 ; RUN: opt < %s -S -nvptx-infer-addrspace | FileCheck %s --check-prefix IR --check-prefix IR-WITH-LOOP
 

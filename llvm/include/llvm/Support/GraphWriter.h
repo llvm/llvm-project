@@ -145,20 +145,12 @@ public:
     // Loop over the graph, printing it out...
     for (node_iterator I = GTraits::nodes_begin(G), E = GTraits::nodes_end(G);
          I != E; ++I)
-      if (!isNodeHidden(&*I))
-        writeNode(&*I);
-  }
-
-  bool isNodeHidden(NodeRef const *Node) {
-    return isNodeHidden(*Node);
+      if (!isNodeHidden(*I))
+        writeNode(*I);
   }
 
   bool isNodeHidden(NodeRef Node) {
     return DTraits.isNodeHidden(Node);
-  }
-
-  void writeNode(NodeRef const *Node) {
-    writeNode(*Node);
   }
 
   void writeNode(NodeRef Node) {

@@ -157,8 +157,10 @@ def: T_cmp32_rr_pat<A4_rcmpeq,  CmpInReg<seteq>, i32>;
 def: T_cmp32_rr_pat<A4_rcmpneq, CmpInReg<setne>, i32>;
 
 def: T_cmp32_rr_pat<C4_cmpneq,  setne,  i1>;
+def: T_cmp32_rr_pat<C4_cmplte,  setle,  i1>;
 def: T_cmp32_rr_pat<C4_cmplteu, setule, i1>;
 
+def: T_cmp32_rr_pat<C4_cmplte,  RevCmp<setge>,  i1>;
 def: T_cmp32_rr_pat<C4_cmplteu, RevCmp<setuge>, i1>;
 
 class T_CMP_rrbh<string mnemonic, bits<3> MinOp, bit IsComm>
@@ -2679,13 +2681,11 @@ def A4_vcmpwgtui : T_vcmpImm <"vcmpw.gtu", 0b10, 0b10, u7Imm>;
 // Rx=or(#u8,asl(Rx,#U5))   Rx=or(#u8,lsr(Rx,#U5))
 let isExtendable = 1, opExtendable = 1, isExtentSigned = 0, opExtentBits = 8,
     hasNewValue = 1, opNewValue = 0 in
-class T_S4_ShiftOperate<string MnOp, string MnSh, SDNode Op, SDNode Sh,
-                        bit asl_lsr, bits<2> MajOp, InstrItinClass Itin>
+class T_S4_ShiftOperate<string MnOp, string MnSh, bit asl_lsr,
+                        bits<2> MajOp, InstrItinClass Itin>
   : MInst_acc<(outs IntRegs:$Rd), (ins u8Ext:$u8, IntRegs:$Rx, u5Imm:$U5),
       "$Rd = "#MnOp#"(#$u8, "#MnSh#"($Rx, #$U5))",
-      [(set (i32 IntRegs:$Rd),
-            (Op (Sh I32:$Rx, u5ImmPred:$U5), u32ImmPred:$u8))],
-      "$Rd = $Rx", Itin> {
+      [], "$Rd = $Rx", Itin> {
 
   bits<5> Rd;
   bits<8> u8;
@@ -2704,21 +2704,38 @@ class T_S4_ShiftOperate<string MnOp, string MnSh, SDNode Op, SDNode Sh,
   let Inst{2-1} = MajOp;
 }
 
-multiclass T_ShiftOperate<string mnemonic, SDNode Op, bits<2> MajOp,
-                          InstrItinClass Itin> {
-  def _asl_ri : T_S4_ShiftOperate<mnemonic, "asl", Op, shl, 0, MajOp, Itin>;
-  def _lsr_ri : T_S4_ShiftOperate<mnemonic, "lsr", Op, srl, 1, MajOp, Itin>;
+multiclass T_ShiftOperate<string mnemonic, bits<2> MajOp, InstrItinClass Itin> {
+  def _asl_ri : T_S4_ShiftOperate<mnemonic, "asl", 0, MajOp, Itin>;
+  def _lsr_ri : T_S4_ShiftOperate<mnemonic, "lsr", 1, MajOp, Itin>;
 }
+
+defm S4_addi : T_ShiftOperate<"add", 0b10, ALU64_tc_2_SLOT23>;
+defm S4_andi : T_ShiftOperate<"and", 0b00, ALU64_tc_2_SLOT23>;
+defm S4_ori  : T_ShiftOperate<"or",  0b01, ALU64_tc_1_SLOT23>;
+defm S4_subi : T_ShiftOperate<"sub", 0b11, ALU64_tc_1_SLOT23>;
+
+class T_Shift_CommOp_pat<InstHexagon MI, SDNode Op, SDNode ShOp>
+  : Pat<(Op (ShOp IntRegs:$Rx, u5ImmPred:$U5), u32ImmPred:$u8),
+        (MI u32ImmPred:$u8, IntRegs:$Rx, u5ImmPred:$U5)>;
 
 let AddedComplexity = 200 in {
-  defm S4_addi : T_ShiftOperate<"add", add, 0b10, ALU64_tc_2_SLOT23>;
-  defm S4_andi : T_ShiftOperate<"and", and, 0b00, ALU64_tc_2_SLOT23>;
+  def : T_Shift_CommOp_pat <S4_addi_asl_ri, add, shl>;
+  def : T_Shift_CommOp_pat <S4_addi_lsr_ri, add, srl>;
+  def : T_Shift_CommOp_pat <S4_andi_asl_ri, and, shl>;
+  def : T_Shift_CommOp_pat <S4_andi_lsr_ri, and, srl>;
 }
 
-let AddedComplexity = 30 in
-defm S4_ori  : T_ShiftOperate<"or",  or,  0b01, ALU64_tc_1_SLOT23>;
+let AddedComplexity = 30 in {
+  def : T_Shift_CommOp_pat <S4_ori_asl_ri,  or,  shl>;
+  def : T_Shift_CommOp_pat <S4_ori_lsr_ri,  or,  srl>;
+}
 
-defm S4_subi : T_ShiftOperate<"sub", sub, 0b11, ALU64_tc_1_SLOT23>;
+class T_Shift_Op_pat<InstHexagon MI, SDNode Op, SDNode ShOp>
+  : Pat<(Op u32ImmPred:$u8, (ShOp IntRegs:$Rx, u5ImmPred:$U5)),
+        (MI u32ImmPred:$u8, IntRegs:$Rx, u5ImmPred:$U5)>;
+
+def : T_Shift_Op_pat <S4_subi_asl_ri, sub, shl>;
+def : T_Shift_Op_pat <S4_subi_lsr_ri, sub, srl>;
 
 let AddedComplexity = 200 in {
   def: Pat<(add addrga:$addr, (shl I32:$src2, u5ImmPred:$src3)),

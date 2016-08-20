@@ -55,7 +55,7 @@ template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
   typedef const MachineBasicBlock NodeType;
   typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_succ_iterator ChildIteratorType;
-  typedef MachineFunction::const_iterator nodes_iterator;
+  typedef pointer_iterator<MachineFunction::const_iterator> nodes_iterator;
 
   static inline const NodeType *
   getEntryNode(const MachineBlockFrequencyInfo *G) {
@@ -71,11 +71,11 @@ template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
   }
 
   static nodes_iterator nodes_begin(const MachineBlockFrequencyInfo *G) {
-    return G->getFunction()->begin();
+    return nodes_iterator(G->getFunction()->begin());
   }
 
   static nodes_iterator nodes_end(const MachineBlockFrequencyInfo *G) {
-    return G->getFunction()->end();
+    return nodes_iterator(G->getFunction()->end());
   }
 };
 

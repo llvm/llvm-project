@@ -67,6 +67,8 @@ public:
   unsigned getNumberOfRegisters(bool vector) const;
 
   /// @}
+
+  int getUserCost(const User *U);
 };
 
 } // end namespace llvm
