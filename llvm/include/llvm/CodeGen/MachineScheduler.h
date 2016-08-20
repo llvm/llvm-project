@@ -874,18 +874,6 @@ protected:
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
 class GenericScheduler : public GenericSchedulerBase {
-  ScheduleDAGMILive *DAG;
-
-  // State of the top and bottom scheduled instruction boundaries.
-  SchedBoundary Top;
-  SchedBoundary Bot;
-
-  /// Candidate last picked from Top boundary.
-  SchedCandidate TopCand;
-  /// Candidate last picked from Bot boundary.
-  SchedCandidate BotCand;
-
-  MachineSchedPolicy RegionPolicy;
 public:
   GenericScheduler(const MachineSchedContext *C):
     GenericSchedulerBase(C), DAG(nullptr), Top(SchedBoundary::TopQID, "TopQ"),
@@ -924,6 +912,20 @@ public:
   void registerRoots() override;
 
 protected:
+  ScheduleDAGMILive *DAG;
+
+  MachineSchedPolicy RegionPolicy;
+
+  // State of the top and bottom scheduled instruction boundaries.
+  SchedBoundary Top;
+  SchedBoundary Bot;
+
+  /// Candidate last picked from Top boundary.
+  SchedCandidate TopCand;
+  /// Candidate last picked from Bot boundary.
+  SchedCandidate BotCand;
+
+
   void checkAcyclicLatency();
 
   void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
@@ -994,6 +996,22 @@ protected:
 
   void pickNodeFromQueue(SchedCandidate &Cand);
 };
+
+std::unique_ptr<ScheduleDAGMutation>
+createLoadClusterDAGMutation(const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI);
+
+std::unique_ptr<ScheduleDAGMutation>
+createStoreClusterDAGMutation(const TargetInstrInfo *TII,
+                              const TargetRegisterInfo *TRI);
+
+std::unique_ptr<ScheduleDAGMutation>
+createMacroFusionDAGMutation(const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI);
+
+std::unique_ptr<ScheduleDAGMutation>
+createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
+                               const TargetRegisterInfo *TRI);
 
 } // namespace llvm
 

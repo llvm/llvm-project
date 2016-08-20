@@ -34,7 +34,8 @@ struct GraphTraits {
   //
   // typedef NodeType          - Type of Node in the graph
   // typedef NodeRef           - NodeType *
-  // typedef ChildIteratorType - Type used to iterate over children in graph
+  // typedef ChildIteratorType - Type used to iterate over children in graph,
+  //                             dereference to a NodeRef
 
   // static NodeRef getEntryNode(const GraphType &)
   //    Return the entry node of the graph
@@ -45,7 +46,7 @@ struct GraphTraits {
   //    node list for the specified node.
   //
 
-  // typedef  ...iterator nodes_iterator;
+  // typedef  ...iterator nodes_iterator; - dereference to a NodeRef
   // static nodes_iterator nodes_begin(GraphType *G)
   // static nodes_iterator nodes_end  (GraphType *G)
   //    nodes_iterator/begin/end - Allow iteration over all nodes in the graph

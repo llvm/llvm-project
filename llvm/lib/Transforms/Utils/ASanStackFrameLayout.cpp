@@ -81,26 +81,19 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
     assert(Layout->FrameAlignment >= Alignment);
     assert((Offset % Alignment) == 0);
     assert(Size > 0);
-    assert(Vars[i].LifetimeSize <= Size);
     StackDescription << " " << Offset << " " << Size << " " << strlen(Name)
                      << " " << Name;
     size_t NextAlignment = IsLast ? Granularity
                    : std::max(Granularity, Vars[i + 1].Alignment);
     size_t SizeWithRedzone = VarAndRedzoneSize(Vars[i].Size, NextAlignment);
-    size_t LifetimeShadowSize =
-        (Vars[i].LifetimeSize + Granularity - 1) / Granularity;
-    SB.insert(SB.end(), LifetimeShadowSize, kAsanStackUseAfterScopeMagic);
-    if (Size / Granularity >= LifetimeShadowSize) {
-      SB.insert(SB.end(), Size / Granularity - LifetimeShadowSize, 0);
-      if (Size % Granularity)
-        SB.insert(SB.end(), Size % Granularity);
-    }
+    SB.insert(SB.end(), Size / Granularity, 0);
+    if (Size % Granularity)
+      SB.insert(SB.end(), Size % Granularity);
     SB.insert(SB.end(), (SizeWithRedzone - Size) / Granularity,
         IsLast ? kAsanStackRightRedzoneMagic
         : kAsanStackMidRedzoneMagic);
     Vars[i].Offset = Offset;
     Offset += SizeWithRedzone;
-    assert(Offset == SB.size() * Granularity);
   }
   if (Offset % MinHeaderSize) {
     size_t ExtraRedzone = MinHeaderSize - (Offset % MinHeaderSize);

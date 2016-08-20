@@ -378,8 +378,8 @@ TEST_F(PassManagerTest, CustomizedPassManagerArgs) {
   // Add an instance of the customized pass that just accumulates the input
   // after it is round-tripped through the analysis.
   int Result = 0;
-  PM.addPass(CustomizedPass::CustomizedPass(
-      [](CustomizedAnalysis::Result &R, int &O) { O += R.I; }));
+  PM.addPass(
+      CustomizedPass([](CustomizedAnalysis::Result &R, int &O) { O += R.I; }));
 
   // Run this over every function with the input of 42.
   for (Function &F : *M)

@@ -171,9 +171,9 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                            unsigned OpNo, unsigned AsmVariant,
-                                            const char *ExtraCode,
-                                            raw_ostream &O) {
+                                              unsigned OpNo, unsigned AsmVariant,
+                                              const char *ExtraCode,
+                                              raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
     return true; // Unknown modifier.
 

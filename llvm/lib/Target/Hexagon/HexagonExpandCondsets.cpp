@@ -1140,6 +1140,8 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
 
   LiveInterval &L1 = LIS->getInterval(R1.Reg);
   LiveInterval &L2 = LIS->getInterval(R2.Reg);
+  if (L2.empty())
+    return false;
   bool Overlap = L1.overlaps(L2);
 
   DEBUG(dbgs() << "compatible registers: ("

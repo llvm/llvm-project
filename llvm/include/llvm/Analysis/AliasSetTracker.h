@@ -115,15 +115,21 @@ class AliasSet : public ilist_node<AliasSet> {
     }
   };
 
-  PointerRec *PtrList, **PtrListEnd;  // Doubly linked list of nodes.
-  AliasSet *Forward;             // Forwarding pointer.
+  // Doubly linked list of nodes.
+  PointerRec *PtrList, **PtrListEnd;
+  // Forwarding pointer.
+  AliasSet *Forward;
 
   /// All instructions without a specific address in this alias set.
   std::vector<AssertingVH<Instruction> > UnknownInsts;
 
   /// Number of nodes pointing to this AliasSet plus the number of AliasSets
   /// forwarding to it.
-  unsigned RefCount : 28;
+  unsigned RefCount : 27;
+
+  // Signifies that this set should be considered to alias any pointer.
+  // Use when the tracker holding this set is saturated.
+  unsigned AliasAny : 1;
 
   /// The kinds of access this alias set models.
   ///
@@ -153,7 +159,10 @@ class AliasSet : public ilist_node<AliasSet> {
   /// True if this alias set contains volatile loads or stores.
   unsigned Volatile : 1;
 
+  unsigned SetSize;
+
   void addRef() { ++RefCount; }
+
   void dropRef(AliasSetTracker &AST) {
     assert(RefCount >= 1 && "Invalid reference count detected!");
     if (--RefCount == 0)
@@ -188,6 +197,10 @@ public:
   iterator begin() const { return iterator(PtrList); }
   iterator end()   const { return iterator(); }
   bool empty() const { return PtrList == nullptr; }
+
+  // Unfortunately, ilist::size() is linear, so we have to add code to keep
+  // track of the list's exact size.
+  unsigned size() { return SetSize; }
 
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -230,9 +243,9 @@ private:
   // to serve as a sentinel.
   friend struct ilist_sentinel_traits<AliasSet>;
   AliasSet()
-    : PtrList(nullptr), PtrListEnd(&PtrList), Forward(nullptr), RefCount(0),
-      Access(NoAccess), Alias(SetMustAlias), Volatile(false) {
-  }
+      : PtrList(nullptr), PtrListEnd(&PtrList), Forward(nullptr), RefCount(0),
+        AliasAny(false), Access(NoAccess), Alias(SetMustAlias),
+        Volatile(false), SetSize(0) {}
 
   AliasSet(const AliasSet &AS) = delete;
   void operator=(const AliasSet &AS) = delete;
@@ -317,7 +330,8 @@ class AliasSetTracker {
 public:
   /// Create an empty collection of AliasSets, and use the specified alias
   /// analysis object to disambiguate load and store addresses.
-  explicit AliasSetTracker(AliasAnalysis &aa) : AA(aa) {}
+  explicit AliasSetTracker(AliasAnalysis &aa)
+      : AA(aa), TotalMayAliasSetSize(0), AliasAnyAS(nullptr) {}
   ~AliasSetTracker() { clear(); }
 
   /// These methods are used to add different types of instructions to the alias
@@ -395,6 +409,14 @@ public:
 
 private:
   friend class AliasSet;
+
+  // The total number of pointers contained in all "may" alias sets.
+  unsigned TotalMayAliasSetSize;
+
+  // A non-null value signifies this AST is saturated. A saturated AST lumps
+  // all pointers into a single "May" set.
+  AliasSet *AliasAnyAS;
+
   void removeAliasSet(AliasSet *AS);
 
   /// Just like operator[] on the map, except that it creates an entry for the
@@ -407,15 +429,13 @@ private:
   }
 
   AliasSet &addPointer(Value *P, uint64_t Size, const AAMDNodes &AAInfo,
-                       AliasSet::AccessLattice E,
-                       bool &NewSet) {
-    NewSet = false;
-    AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo, &NewSet);
-    AS.Access |= E;
-    return AS;
-  }
+                       AliasSet::AccessLattice E, bool &NewSet);
   AliasSet *mergeAliasSetsForPointer(const Value *Ptr, uint64_t Size,
                                      const AAMDNodes &AAInfo);
+
+  /// Merge all alias sets into a single set that is considered to alias any
+  /// pointer.
+  AliasSet &mergeAllAliasSets();
 
   AliasSet *findAliasSetForUnknownInst(Instruction *Inst);
 };

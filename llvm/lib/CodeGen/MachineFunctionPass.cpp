@@ -49,7 +49,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     errs() << "MachineFunctionProperties required by " << getPassName()
            << " pass are not met by function " << F.getName() << ".\n"
            << "Required properties: ";
-    RequiredProperties.print(errs(), /*OnlySet=*/true);
+    RequiredProperties.print(errs());
     errs() << "\nCurrent properties: ";
     MFProps.print(errs());
     errs() << "\n";

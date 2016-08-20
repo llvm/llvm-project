@@ -93,8 +93,8 @@ def V4_SS2_storebi0: SUBInst <
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedNew = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 def V4_SA1_clrtnew: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (p0.new) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if ($Pu.new) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -336,7 +336,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 def V4_SA1_setin1: SUBInst <
   (outs IntRegs:$Rd),
   (ins ),
-  "$Rd = #-1"> {
+  "$Rd = #{-1}"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -409,8 +409,8 @@ def V4_SA1_sxtb: SUBInst <
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 def V4_SA1_clrf: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (!p0) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if (!$Pu) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -547,8 +547,8 @@ def V4_SL2_jumpr31_fnew: SUBInst <
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 def V4_SA1_clrt: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (p0) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if ($Pu) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;
@@ -571,7 +571,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 def V4_SA1_dec: SUBInst <
   (outs IntRegs:$Rd),
   (ins IntRegs:$Rs),
-  "$Rd = add($Rs,#-1)"> {
+  "$Rd = add($Rs,#{-1})"> {
     bits<4> Rd;
     bits<4> Rs;
 
@@ -609,8 +609,8 @@ def V4_SL2_jumpr31_t: SUBInst <
 let Uses = [P0], isCodeGenOnly = 1, isPredicated = 1, isPredicatedFalse = 1, isPredicatedNew = 1, hasSideEffects = 0, hasNewValue = 1, opNewValue = 0 in
 def V4_SA1_clrfnew: SUBInst <
   (outs IntRegs:$Rd),
-  (ins ),
-  "if (!p0.new) $Rd = #0"> {
+  (ins PredRegs:$Pu),
+  "if (!$Pu.new) $Rd = #0"> {
     bits<4> Rd;
 
     let Inst{12-9} = 0b1101;

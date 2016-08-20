@@ -674,11 +674,9 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   // Traverse the dominator tree in the depth-first order. This order makes sure
   // all bases of a candidate are in Candidates when we process it.
-  for (auto node = GraphTraits<DominatorTree *>::nodes_begin(DT);
-       node != GraphTraits<DominatorTree *>::nodes_end(DT); ++node) {
-    for (auto &I : *node->getBlock())
+  for (const auto Node : depth_first(DT))
+    for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
-  }
 
   // Rewrite candidates in the reverse depth-first order. This order makes sure
   // a candidate being rewritten is not a basis for any other candidate.

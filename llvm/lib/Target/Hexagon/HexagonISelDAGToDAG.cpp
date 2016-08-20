@@ -1005,8 +1005,8 @@ void HexagonDAGToDAGISel::SelectBitOp(SDNode *N) {
     if (N->getOperand(1).getOpcode() == ISD::Constant)
       Val = cast<ConstantSDNode>((N)->getOperand(1))->getSExtValue();
     else {
-     SelectCode(N);
-     return;
+      SelectCode(N);
+      return;
     }
   }
 

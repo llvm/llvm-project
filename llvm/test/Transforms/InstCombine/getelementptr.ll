@@ -175,10 +175,10 @@ define i1 @test13(i64 %X, %S* %P) {
 ; CHECK:    %C = icmp eq i64 %X, -1
 }
 
+; This is a test of icmp + shl nuw in disguise - 4611... is 0x3fff...
 define <2 x i1> @test13_vector(<2 x i64> %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test13_vector(
-; CHECK-NEXT:    [[A_IDX:%.*]] = shl nuw <2 x i64> %X, <i64 2, i64 2>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], <i64 -4, i64 -4>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> %X, <i64 4611686018427387903, i64 4611686018427387903>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 1>, <2 x i64> %X
@@ -197,10 +197,10 @@ define i1 @test13_as1(i16 %X, %S addrspace(1)* %P) {
   ret i1 %C
 }
 
+; This is a test of icmp + shl nuw in disguise - 16383 is 0x3fff.
 define <2 x i1> @test13_vector_as1(<2 x i16> %X, <2 x %S addrspace(1)*> %P) {
 ; CHECK-LABEL: @test13_vector_as1(
-; CHECK-NEXT:    [[A_IDX:%.*]] = shl nuw <2 x i16> %X, <i16 2, i16 2>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i16> [[A_IDX]], <i16 -4, i16 -4>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i16> %X, <i16 16383, i16 16383>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S addrspace(1)*> %P, <2 x i16> <i16 0, i16 0>, <2 x i32> <i32 1, i32 1>, <2 x i16> %X

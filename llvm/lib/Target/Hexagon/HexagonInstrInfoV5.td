@@ -97,8 +97,70 @@ def S5_popcountp : ALU64_rr<(outs IntRegs:$Rd), (ins DoubleRegs:$Rss),
     let Inst{20-16} = Rss;
   }
 
-defm: Loadx_pat<load, f32, s30_2ImmPred, L2_loadri_io>;
-defm: Loadx_pat<load, f64, s29_3ImmPred, L2_loadrd_io>;
+let AddedComplexity = 20 in {
+  defm: Loadx_pat<load, f32, s30_2ImmPred, L2_loadri_io>;
+  defm: Loadx_pat<load, f64, s29_3ImmPred, L2_loadrd_io>;
+}
+
+let AddedComplexity = 60 in {
+  defm : T_LoadAbsReg_Pat <load, L4_loadri_ur, f32>;
+  defm : T_LoadAbsReg_Pat <load, L4_loadrd_ur, f64>;
+}
+
+let AddedComplexity = 40 in {
+  def: Loadxs_pat<load, f32, L4_loadri_rr>;
+  def: Loadxs_pat<load, f64, L4_loadrd_rr>;
+}
+
+let AddedComplexity = 20 in {
+  def: Loadxs_simple_pat<load, f32, L4_loadri_rr>;
+  def: Loadxs_simple_pat<load, f64, L4_loadrd_rr>;
+}
+
+let AddedComplexity  = 80 in {
+  def: Loada_pat<load, f32, u32ImmPred, L4_loadri_abs>;
+  def: Loada_pat<load, f32, addrga, L4_loadri_abs>;
+  def: Loada_pat<load, f64, addrga, L4_loadrd_abs>;
+}
+
+let AddedComplexity = 100 in {
+  def: LoadGP_pats <load, L2_loadrigp, f32>;
+  def: LoadGP_pats <load, L2_loadrdgp, f64>;
+}
+
+let AddedComplexity = 20 in {
+  defm: Storex_pat<store, F32, s30_2ImmPred, S2_storeri_io>;
+  defm: Storex_pat<store, F64, s29_3ImmPred, S2_storerd_io>;
+}
+
+// Simple patterns should be tried with the least priority.
+def: Storex_simple_pat<store, F32, S2_storeri_io>;
+def: Storex_simple_pat<store, F64, S2_storerd_io>;
+
+let AddedComplexity = 60 in {
+  defm : T_StoreAbsReg_Pats <S4_storeri_ur, IntRegs, f32, store>;
+  defm : T_StoreAbsReg_Pats <S4_storerd_ur, DoubleRegs, f64, store>;
+}
+
+let AddedComplexity = 40 in {
+  def: Storexs_pat<store, F32, S4_storeri_rr>;
+  def: Storexs_pat<store, F64, S4_storerd_rr>;
+}
+
+let AddedComplexity = 20 in {
+  def: Store_rr_pat<store, F32, S4_storeri_rr>;
+  def: Store_rr_pat<store, F64, S4_storerd_rr>;
+}
+
+let AddedComplexity = 80 in {
+  def: Storea_pat<store, F32, addrga, S2_storeriabs>;
+  def: Storea_pat<store, F64, addrga, S2_storerdabs>;
+}
+
+let AddedComplexity = 100 in {
+  def: Storea_pat<store, F32, addrgp, S2_storerigp>;
+  def: Storea_pat<store, F64, addrgp, S2_storerdgp>;
+}
 
 defm: Storex_pat<store, F32, s30_2ImmPred, S2_storeri_io>;
 defm: Storex_pat<store, F64, s29_3ImmPred, S2_storerd_io>;
@@ -148,6 +210,11 @@ let Itinerary = M_tc_3x_SLOT23 in {
   def F2_sfmin : T_MInstFloat < "sfmin", 0b100, 0b001>;
 }
 
+let Predicates = [HasV5T] in {
+  def: Pat<(f32 (fminnum F32:$Rs, F32:$Rt)), (F2_sfmin F32:$Rs, F32:$Rt)>;
+  def: Pat<(f32 (fmaxnum F32:$Rs, F32:$Rt)), (F2_sfmax F32:$Rs, F32:$Rt)>;
+}
+
 let AddedComplexity = 100, Predicates = [HasV5T] in {
   class SfSel12<PatFrag Cmp, InstHexagon MI>
     : Pat<(select (i1 (Cmp F32:$Rs, F32:$Rt)), F32:$Rs, F32:$Rt),
@@ -166,12 +233,14 @@ let AddedComplexity = 100, Predicates = [HasV5T] in {
   def: SfSel21<setoge, F2_sfmin>;
 }
 
+let Itinerary = M_tc_3or4x_SLOT23 in {
 def F2_sffixupn : T_MInstFloat < "sffixupn", 0b110, 0b000>;
 def F2_sffixupd : T_MInstFloat < "sffixupd", 0b110, 0b001>;
+}
 
 // F2_sfrecipa: Reciprocal approximation for division.
-let isPredicateLate = 1, isFP = 1,
-hasSideEffects = 0, hasNewValue = 1 in
+let Uses = [USR], isPredicateLate = 1, isFP = 1,
+    hasSideEffects = 0, hasNewValue = 1, Itinerary = M_tc_3or4x_SLOT23 in
 def F2_sfrecipa: MInst <
   (outs IntRegs:$Rd, PredRegs:$Pe),
   (ins IntRegs:$Rs, IntRegs:$Rt),
@@ -193,7 +262,7 @@ def F2_sfrecipa: MInst <
   }
 
 // F2_dfcmpeq: Floating point compare for equal.
-let isCompare = 1, isFP = 1 in
+let Uses = [USR], isCompare = 1, isFP = 1 in
 class T_fcmp <string mnemonic, RegisterClass RC, bits<3> MinOp,
               list<dag> pattern = [] >
   : ALU64Inst <(outs PredRegs:$dst), (ins RC:$src1, RC:$src2),
@@ -484,7 +553,7 @@ let Predicates = [HasV5T] in {
 }
 
 // F2 convert template classes:
-let isFP = 1 in
+let Uses = [USR], isFP = 1 in
 class F2_RDD_RSS_CONVERT<string mnemonic, bits<3> MinOp,
                          SDNode Op, PatLeaf RCOut, PatLeaf RCIn,
                          string chop ="">
@@ -503,7 +572,7 @@ class F2_RDD_RSS_CONVERT<string mnemonic, bits<3> MinOp,
      let Inst{4-0} = Rdd;
   }
 
-let isFP = 1 in
+let Uses = [USR], isFP = 1 in
 class F2_RDD_RS_CONVERT<string mnemonic, bits<3> MinOp,
                         SDNode Op, PatLeaf RCOut, PatLeaf RCIn,
                         string chop ="">
@@ -522,7 +591,7 @@ class F2_RDD_RS_CONVERT<string mnemonic, bits<3> MinOp,
      let Inst{4-0} = Rdd;
   }
 
-let isFP = 1, hasNewValue = 1 in
+let Uses = [USR], isFP = 1, hasNewValue = 1 in
 class F2_RD_RSS_CONVERT<string mnemonic, bits<3> MinOp,
                         SDNode Op, PatLeaf RCOut, PatLeaf RCIn,
                         string chop ="">
@@ -542,7 +611,7 @@ class F2_RD_RSS_CONVERT<string mnemonic, bits<3> MinOp,
      let Inst{4-0} = Rd;
   }
 
-let isFP = 1, hasNewValue = 1 in
+let Uses = [USR], isFP = 1, hasNewValue = 1 in
 class F2_RD_RS_CONVERT<string mnemonic, bits<3> MajOp, bits<3> MinOp,
                         SDNode Op, PatLeaf RCOut, PatLeaf RCIn,
                         string chop ="">
@@ -626,7 +695,7 @@ let AddedComplexity = 20, Predicates = [HasV5T, IEEERndNearV5T] in {
 }
 
 // Fix up radicand.
-let isFP = 1, hasNewValue = 1 in
+let Uses = [USR], isFP = 1, hasNewValue = 1 in
 def F2_sffixupr: SInst<(outs IntRegs:$Rd), (ins IntRegs:$Rs),
   "$Rd = sffixupr($Rs)",
   [], "" , S_2op_tc_3or4x_SLOT23>, Requires<[HasV5T]> {
@@ -650,12 +719,12 @@ let Predicates = [HasV5T] in {
 }
 
 // F2_sffma: Floating-point fused multiply add.
-let isFP = 1, hasNewValue = 1 in
+let Uses = [USR], isFP = 1, hasNewValue = 1 in
 class T_sfmpy_acc <bit isSub, bit isLib>
   : MInst<(outs IntRegs:$Rx),
           (ins IntRegs:$dst2, IntRegs:$Rs, IntRegs:$Rt),
   "$Rx "#!if(isSub, "-=","+=")#" sfmpy($Rs, $Rt)"#!if(isLib, ":lib",""),
-  [], "$dst2 = $Rx" , M_tc_3_SLOT23 > ,
+  [], "$dst2 = $Rx" , M_tc_3or4x_SLOT23 > ,
   Requires<[HasV5T]> {
     bits<5> Rx;
     bits<5> Rs;
@@ -681,13 +750,19 @@ def F2_sffms_lib: T_sfmpy_acc <1, 1>;
 def : Pat <(fma F32:$src2, F32:$src3, F32:$src1),
            (F2_sffma F32:$src1, F32:$src2, F32:$src3)>;
 
+def : Pat <(fma (fneg F32:$src2), F32:$src3, F32:$src1),
+           (F2_sffms F32:$src1, F32:$src2, F32:$src3)>;
+
+def : Pat <(fma F32:$src2, (fneg F32:$src3), F32:$src1),
+           (F2_sffms F32:$src1, F32:$src2, F32:$src3)>;
+
 // Floating-point fused multiply add w/ additional scaling (2**pu).
-let isFP = 1, hasNewValue = 1 in
+let Uses = [USR], isFP = 1, hasNewValue = 1 in
 def F2_sffma_sc: MInst <
   (outs IntRegs:$Rx),
   (ins IntRegs:$dst2, IntRegs:$Rs, IntRegs:$Rt, PredRegs:$Pu),
   "$Rx += sfmpy($Rs, $Rt, $Pu):scale" ,
-  [], "$dst2 = $Rx" , M_tc_3_SLOT23 > ,
+  [], "$dst2 = $Rx" , M_tc_3or4x_SLOT23 > ,
   Requires<[HasV5T]> {
     bits<5> Rx;
     bits<5> Rs;
@@ -834,10 +909,10 @@ let Defs = [USR_OVF], Itinerary = S_3op_tc_3x_SLOT23 in {
 }
 
 // Classify floating-point value
-let isFP = 1 in
+let Uses = [USR], isFP = 1 in
 def F2_sfclass : T_TEST_BIT_IMM<"sfclass", 0b111>;
 
-let isFP = 1 in
+let Uses = [USR], isFP = 1 in
 def F2_dfclass: ALU64Inst<(outs PredRegs:$Pd), (ins DoubleRegs:$Rss, u5Imm:$u5),
   "$Pd = dfclass($Rss, #$u5)",
   [], "" , ALU64_tc_2early_SLOT23 > , Requires<[HasV5T]> {
@@ -858,7 +933,7 @@ def F2_dfclass: ALU64Inst<(outs PredRegs:$Pd), (ins DoubleRegs:$Rss, u5Imm:$u5),
 class T_fimm <string mnemonic, RegisterClass RC, bits<4> RegType, bit isNeg>
   : ALU64Inst<(outs RC:$dst), (ins u10Imm:$src),
   "$dst = "#mnemonic#"(#$src)"#!if(isNeg, ":neg", ":pos"),
-  [], "", ALU64_tc_3x_SLOT23>, Requires<[HasV5T]> {
+  [], "", ALU64_tc_2_SLOT23>, Requires<[HasV5T]> {
     bits<5> dst;
     bits<10> src;
 

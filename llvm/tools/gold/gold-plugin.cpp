@@ -818,10 +818,19 @@ static ld_plugin_status allSymbolsReadHook() {
   if (unsigned NumOpts = options::extra.size())
     cl::ParseCommandLineOptions(NumOpts, &options::extra[0]);
 
+  // Map to own RAII objects that manage the file opening and releasing
+  // interfaces with gold. This is needed only for ThinLTO mode, since
+  // unlike regular LTO, where addModule will result in the opened file
+  // being merged into a new combined module, we need to keep these files open
+  // through Lto->run().
+  DenseMap<void *, std::unique_ptr<PluginInputFile>> HandleToInputFile;
+
   std::unique_ptr<LTO> Lto = createLTO();
 
   for (claimed_file &F : Modules) {
-    PluginInputFile InputFile(F.handle);
+    if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
+      HandleToInputFile.insert(std::make_pair(
+          F.leader_handle, llvm::make_unique<PluginInputFile>(F.handle)));
     const void *View = getSymbolsAndView(F);
     if (!View)
       continue;

@@ -1416,12 +1416,12 @@ private:
 };
 
 template <> struct GraphTraits<SelectionDAG*> : public GraphTraits<SDNode*> {
-  typedef SelectionDAG::allnodes_iterator nodes_iterator;
+  typedef pointer_iterator<SelectionDAG::allnodes_iterator> nodes_iterator;
   static nodes_iterator nodes_begin(SelectionDAG *G) {
-    return G->allnodes_begin();
+    return nodes_iterator(G->allnodes_begin());
   }
   static nodes_iterator nodes_end(SelectionDAG *G) {
-    return G->allnodes_end();
+    return nodes_iterator(G->allnodes_end());
   }
 };
 

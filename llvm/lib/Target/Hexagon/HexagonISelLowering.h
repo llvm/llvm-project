@@ -115,6 +115,12 @@ bool isPositiveHalfWord(SDNode *N);
 
     bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
 
+    /// Return true if an FMA operation is faster than a pair of mul and add
+    /// instructions. fmuladd intrinsics will be expanded to FMAs when this
+    /// method returns true (and FMAs are legal), otherwise fmuladd is
+    /// expanded to mul + add.
+    bool isFMAFasterThanFMulAndFAdd(EVT) const override;
+
     // Should we expand the build vector with shuffles?
     bool shouldExpandBuildVectorWithShuffles(EVT VT,
         unsigned DefinedValues) const override;
@@ -176,9 +182,6 @@ bool isPositiveHalfWord(SDNode *N);
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
     bool mayBeEmittedAsTailCall(CallInst *CI) const override;
-    MachineBasicBlock *
-    EmitInstrWithCustomInserter(MachineInstr &MI,
-                                MachineBasicBlock *BB) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.

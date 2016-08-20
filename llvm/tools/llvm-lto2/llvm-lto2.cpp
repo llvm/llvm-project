@@ -33,6 +33,15 @@ static cl::opt<std::string> OutputFilename("o", cl::Required,
 
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
+static cl::opt<bool>
+    ThinLTODistributedIndexes("thinlto-distributed-indexes", cl::init(false),
+                              cl::desc("Write out individual index and "
+                                       "import files for the "
+                                       "distributed backend case"));
+
+static cl::opt<int> Threads("-thinlto-threads",
+                            cl::init(thread::hardware_concurrency()));
+
 static cl::list<std::string> SymbolResolutions(
     "r",
     cl::desc("Specify a symbol resolution: filename,symbolname,resolution\n"
@@ -135,7 +144,12 @@ int main(int argc, char **argv) {
     check(Conf.addSaveTemps(OutputFilename + "."),
           "Config::addSaveTemps failed");
 
-  LTO Lto(std::move(Conf));
+  ThinBackend Backend;
+  if (ThinLTODistributedIndexes)
+    Backend = createWriteIndexesThinBackend("", "", true, "");
+  else
+    Backend = createInProcessThinBackend(Threads);
+  LTO Lto(std::move(Conf), std::move(Backend));
 
   bool HasErrors = false;
   for (std::string F : InputFilenames) {

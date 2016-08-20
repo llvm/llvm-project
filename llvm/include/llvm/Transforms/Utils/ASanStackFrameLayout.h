@@ -24,20 +24,16 @@ class AllocaInst;
 static const int kAsanStackLeftRedzoneMagic = 0xf1;
 static const int kAsanStackMidRedzoneMagic = 0xf2;
 static const int kAsanStackRightRedzoneMagic = 0xf3;
-static const int kAsanStackUseAfterReturnMagic = 0xf5;
-static const int kAsanStackUseAfterScopeMagic = 0xf8;
 
 // Input/output data struct for ComputeASanStackFrameLayout.
 struct ASanStackVariableDescription {
-  const char *Name;    // Name of the variable that will be displayed by asan
-                       // if a stack-related bug is reported.
-  uint64_t Size;       // Size of the variable in bytes.
-  size_t LifetimeSize; // Size in bytes to use for lifetime analysis check.
-                       // Will be rounded up to Granularity.
-  size_t Alignment;    // Alignment of the variable (power of 2).
-  AllocaInst *AI;      // The actual AllocaInst.
-  size_t Offset;       // Offset from the beginning of the frame;
-                       // set by ComputeASanStackFrameLayout.
+  const char *Name;  // Name of the variable that will be displayed by asan
+                     // if a stack-related bug is reported.
+  uint64_t Size;     // Size of the variable in bytes.
+  size_t Alignment;  // Alignment of the variable (power of 2).
+  AllocaInst *AI;    // The actual AllocaInst.
+  size_t Offset;     // Offset from the beginning of the frame;
+                     // set by ComputeASanStackFrameLayout.
 };
 
 // Output data struct for ComputeASanStackFrameLayout.

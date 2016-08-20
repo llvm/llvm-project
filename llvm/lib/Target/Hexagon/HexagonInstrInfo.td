@@ -1587,7 +1587,7 @@ let isTerminator = 1, hasSideEffects = 0 in {
 
   defm J2_jumpr : JMPR_base<"JMPr">, PredNewRel;
 
-  let isReturn = 1, isCodeGenOnly = 1 in
+  let isReturn = 1, isPseudo = 1, isCodeGenOnly = 1 in
   defm PS_jmpret : JMPR_base<"JMPret">, PredNewRel;
 }
 
@@ -5071,8 +5071,7 @@ def HexagonALLOCA : SDNode<"HexagonISD::ALLOCA", SDTHexagonALLOCA,
 
 // The reason for the custom inserter is to record all ALLOCA instructions
 // in MachineFunctionInfo.
-let Defs = [R29], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 1,
-    usesCustomInserter = 1 in
+let Defs = [R29], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 1 in
 def PS_alloca: ALU32Inst<(outs IntRegs:$Rd),
       (ins IntRegs:$Rs, u32Imm:$A), "",
       [(set (i32 IntRegs:$Rd),

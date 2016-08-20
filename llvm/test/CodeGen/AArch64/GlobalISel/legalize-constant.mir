@@ -1,0 +1,62 @@
+# RUN: llc -O0 -run-pass=legalize-mir -global-isel %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+  define void @test_constant() {
+  entry:
+    ret void
+  }
+  define void @test_fconstant() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_constant
+isSSA:           true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_constant
+    ; CHECK: [[TMP:%[0-9]+]](32) = G_CONSTANT s32 0
+    ; CHECK: %0(1) = G_TRUNC s1 [[TMP]]
+    ; CHECK: [[TMP:%[0-9]+]](32) = G_CONSTANT s32 42
+    ; CHECK: %1(8) = G_TRUNC s8 [[TMP]]
+    ; CHECK: [[TMP:%[0-9]+]](32) = G_CONSTANT s32 65535
+    ; CHECK: %2(16) = G_TRUNC s16 [[TMP]]
+    ; CHECK: %3(32) = G_CONSTANT s32 -1
+    ; CHECK: %4(64) = G_CONSTANT s64 1
+
+    %0(1) = G_CONSTANT s1 0
+    %1(8) = G_CONSTANT s8 42
+    %2(16) = G_CONSTANT s16 65535
+    %3(32) = G_CONSTANT s32 -1
+    %4(64) = G_CONSTANT s64 1
+...
+
+---
+name:            test_fconstant
+isSSA:           true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_fconstant
+    ; CHECK: %0(32) = G_FCONSTANT s32  float 1.000000e+00
+    ; CHECK: %1(64) = G_FCONSTANT s64  double 2.000000e+00
+    ; CHECK: [[TMP:%[0-9]+]](32) = G_FCONSTANT s32 half 0xH0000
+    ; CHECK; %2(16) = G_FPTRUNC s16 [[TMP]]
+
+    %0(32) = G_FCONSTANT s32 float 1.0
+    %1(64) = G_FCONSTANT s64 double 2.0
+    %2(16) = G_FCONSTANT s16 half 0.0
+...

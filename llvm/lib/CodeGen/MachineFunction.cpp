@@ -54,42 +54,27 @@ static cl::opt<unsigned>
 
 void MachineFunctionInitializer::anchor() {}
 
-void MachineFunctionProperties::print(raw_ostream &ROS, bool OnlySet) const {
-  // Leave this function even in NDEBUG as an out-of-line anchor.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  bool NeedsComma = false;
-  for (BitVector::size_type i = 0; i < Properties.size(); ++i) {
-    bool HasProperty = Properties[i];
-    if (OnlySet && !HasProperty)
-      continue;
-    if (NeedsComma)
-      ROS << ", ";
-    else
-      NeedsComma = true;
-    switch(static_cast<Property>(i)) {
-      case Property::IsSSA:
-        ROS << (HasProperty ? "SSA" : "Post SSA");
-        break;
-      case Property::TracksLiveness:
-        ROS << (HasProperty ? "" : "not ") << "tracking liveness";
-        break;
-      case Property::AllVRegsAllocated:
-        ROS << (HasProperty ? "AllVRegsAllocated" : "HasVRegs");
-        break;
-      case Property::Legalized:
-        ROS << (HasProperty ? "" : "not ") << "legalized";
-        break;
-      case Property::RegBankSelected:
-        ROS << (HasProperty ? "" : "not ") << "RegBank-selected";
-        break;
-      case Property::Selected:
-        ROS << (HasProperty ? "" : "not ") << "selected";
-        break;
-      default:
-        break;
-    }
+static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
+  typedef MachineFunctionProperties::Property P;
+  switch(Prop) {
+  case P::AllVRegsAllocated: return "AllVRegsAllocated";
+  case P::IsSSA: return "IsSSA";
+  case P::Legalized: return "Legalized";
+  case P::RegBankSelected: return "RegBankSelected";
+  case P::Selected: return "Selected";
+  case P::TracksLiveness: return "TracksLiveness";
   }
-#endif
+  llvm_unreachable("Invalid machine function property");
+}
+
+void MachineFunctionProperties::print(raw_ostream &OS) const {
+  const char *Separator = "";
+  for (BitVector::size_type I = 0; I < Properties.size(); ++I) {
+    if (!Properties[I])
+      continue;
+    OS << Separator << getPropertyName(static_cast<Property>(I));
+    Separator = ", ";
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,9 +405,7 @@ StringRef MachineFunction::getName() const {
 
 void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
   OS << "# Machine code for function " << getName() << ": ";
-  OS << "Properties: <";
   getProperties().print(OS);
-  OS << ">\n";
 
   // Print Frame Information
   FrameInfo->print(*this, OS);

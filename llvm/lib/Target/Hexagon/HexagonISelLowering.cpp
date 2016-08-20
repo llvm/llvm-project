@@ -2040,6 +2040,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::f64, Expand);
     setOperationAction(ISD::FMUL, MVT::f64, Expand);
 
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+
     setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
     setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
     setOperationAction(ISD::FP_TO_UINT, MVT::i16, Promote);
@@ -2285,6 +2288,10 @@ bool HexagonTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isSimple() || !VT2.isSimple())
     return false;
   return (VT1.getSimpleVT() == MVT::i64) && (VT2.getSimpleVT() == MVT::i32);
+}
+
+bool HexagonTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+  return isOperationLegalOrCustom(ISD::FMA, VT);
 }
 
 // Should we expand the build vector with shuffles?
@@ -2951,20 +2958,6 @@ HexagonTargetLowering::getPICJumpTableRelocBase(SDValue Table,
   return DAG.getNode(HexagonISD::AT_PCREL, SDLoc(Table), VT, T);
 }
 
-MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
-    MachineInstr &MI, MachineBasicBlock *BB) const {
-  switch (MI.getOpcode()) {
-  case Hexagon::PS_alloca: {
-    MachineFunction *MF = BB->getParent();
-    auto *FuncInfo = MF->getInfo<HexagonMachineFunctionInfo>();
-    FuncInfo->addAllocaAdjustInst(&MI);
-    return BB;
-  }
-  default:
-    llvm_unreachable("Unexpected instr type to insert");
-  } // switch
-}
-
 //===----------------------------------------------------------------------===//
 // Inline Assembly Support
 //===----------------------------------------------------------------------===//
@@ -2983,7 +2976,7 @@ HexagonTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-std::pair<unsigned, const TargetRegisterClass *>
+std::pair<unsigned, const TargetRegisterClass*>
 HexagonTargetLowering::getRegForInlineAsmConstraint(
     const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
   bool UseHVX = Subtarget.useHVXOps(), UseHVXDbl = Subtarget.useHVXDblOps();
@@ -2991,53 +2984,53 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':   // R0-R31
-       switch (VT.SimpleTy) {
-       default:
-         llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
-       case MVT::i32:
-       case MVT::i16:
-       case MVT::i8:
-       case MVT::f32:
-         return std::make_pair(0U, &Hexagon::IntRegsRegClass);
-       case MVT::i64:
-       case MVT::f64:
-         return std::make_pair(0U, &Hexagon::DoubleRegsRegClass);
+      switch (VT.SimpleTy) {
+      default:
+        llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
+      case MVT::i1:
+      case MVT::i8:
+      case MVT::i16:
+      case MVT::i32:
+      case MVT::f32:
+        return std::make_pair(0U, &Hexagon::IntRegsRegClass);
+      case MVT::i64:
+      case MVT::f64:
+        return std::make_pair(0U, &Hexagon::DoubleRegsRegClass);
       }
     case 'q': // q0-q3
-       switch (VT.SimpleTy) {
-       default:
-         llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
-       case MVT::v1024i1:
-       case MVT::v512i1:
-       case MVT::v32i16:
-       case MVT::v16i32:
-       case MVT::v64i8:
-       case MVT::v8i64:
-         return std::make_pair(0U, &Hexagon::VecPredRegsRegClass);
-    }
+      switch (VT.SimpleTy) {
+      default:
+        llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
+      case MVT::v1024i1:
+      case MVT::v512i1:
+      case MVT::v32i16:
+      case MVT::v16i32:
+      case MVT::v64i8:
+      case MVT::v8i64:
+        return std::make_pair(0U, &Hexagon::VecPredRegsRegClass);
+      }
     case 'v': // V0-V31
-       switch (VT.SimpleTy) {
-       default:
-         llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
-       case MVT::v16i32:
-       case MVT::v32i16:
-       case MVT::v64i8:
-       case MVT::v8i64:
-         return std::make_pair(0U, &Hexagon::VectorRegsRegClass);
-       case MVT::v32i32:
-       case MVT::v64i16:
-       case MVT::v16i64:
-       case MVT::v128i8:
-         if (Subtarget.hasV60TOps() && UseHVX && UseHVXDbl)
-           return std::make_pair(0U, &Hexagon::VectorRegs128BRegClass);
-         else
-           return std::make_pair(0U, &Hexagon::VecDblRegsRegClass);
-       case MVT::v256i8:
-       case MVT::v128i16:
-       case MVT::v64i32:
-       case MVT::v32i64:
-         return std::make_pair(0U, &Hexagon::VecDblRegs128BRegClass);
-       }
+      switch (VT.SimpleTy) {
+      default:
+        llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
+      case MVT::v16i32:
+      case MVT::v32i16:
+      case MVT::v64i8:
+      case MVT::v8i64:
+        return std::make_pair(0U, &Hexagon::VectorRegsRegClass);
+      case MVT::v32i32:
+      case MVT::v64i16:
+      case MVT::v16i64:
+      case MVT::v128i8:
+        if (Subtarget.hasV60TOps() && UseHVX && UseHVXDbl)
+          return std::make_pair(0U, &Hexagon::VectorRegs128BRegClass);
+        return std::make_pair(0U, &Hexagon::VecDblRegsRegClass);
+      case MVT::v256i8:
+      case MVT::v128i16:
+      case MVT::v64i32:
+      case MVT::v32i64:
+        return std::make_pair(0U, &Hexagon::VecDblRegs128BRegClass);
+      }
 
     default:
       llvm_unreachable("Unknown asm register class");
@@ -3136,9 +3129,15 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
     return false;
   }
 
-  // Do not optimize if the calling conventions do not match.
-  if (!CCMatch)
-    return false;
+  // Do not optimize if the calling conventions do not match and the conventions
+  // used are not C or Fast.
+  if (!CCMatch) {
+    bool R = (CallerCC == CallingConv::C || CallerCC == CallingConv::Fast);
+    bool E = (CalleeCC == CallingConv::C || CalleeCC == CallingConv::Fast);
+    // If R & E, then ok.
+    if (!R || !E)
+      return false;
+  }
 
   // Do not tail call optimize vararg calls.
   if (isVarArg)

@@ -1392,6 +1392,22 @@ public:
 };
 } // anonymous
 
+namespace llvm {
+
+std::unique_ptr<ScheduleDAGMutation>
+createLoadClusterDAGMutation(const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI) {
+  return make_unique<LoadClusterMutation>(TII, TRI);
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+createStoreClusterDAGMutation(const TargetInstrInfo *TII,
+                              const TargetRegisterInfo *TRI) {
+  return make_unique<StoreClusterMutation>(TII, TRI);
+}
+
+} // namespace llvm
+
 void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
@@ -1493,6 +1509,16 @@ public:
 };
 } // anonymous
 
+namespace llvm {
+
+std::unique_ptr<ScheduleDAGMutation>
+createMacroFusionDAGMutation(const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI) {
+  return make_unique<MacroFusion>(*TII, *TRI);
+}
+
+} // namespace llvm
+
 /// Returns true if \p MI reads a register written by \p Other.
 static bool HasDataDep(const TargetRegisterInfo &TRI, const MachineInstr &MI,
                        const MachineInstr &Other) {
@@ -1568,6 +1594,16 @@ protected:
   void constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG);
 };
 } // anonymous
+
+namespace llvm {
+
+std::unique_ptr<ScheduleDAGMutation>
+createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
+                             const TargetRegisterInfo *TRI) {
+  return make_unique<CopyConstrain>(TII, TRI);
+}
+
+} // namespace llvm
 
 /// constrainLocalCopy handles two possibilities:
 /// 1) Local src:
@@ -3109,15 +3145,15 @@ static ScheduleDAGInstrs *createGenericSchedLive(MachineSchedContext *C) {
   // FIXME: extend the mutation API to allow earlier mutations to instantiate
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
-  DAG->addMutation(make_unique<CopyConstrain>(DAG->TII, DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   if (EnableMemOpCluster) {
     if (DAG->TII->enableClusterLoads())
-      DAG->addMutation(make_unique<LoadClusterMutation>(DAG->TII, DAG->TRI));
+      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
     if (DAG->TII->enableClusterStores())
-      DAG->addMutation(make_unique<StoreClusterMutation>(DAG->TII, DAG->TRI));
+      DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   }
   if (EnableMacroFusion)
-    DAG->addMutation(make_unique<MacroFusion>(*DAG->TII, *DAG->TRI));
+    DAG->addMutation(createMacroFusionDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
 }
 

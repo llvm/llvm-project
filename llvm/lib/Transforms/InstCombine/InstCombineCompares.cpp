@@ -1893,9 +1893,10 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, Instruction *Or,
   if (match(Or, m_Or(m_PtrToInt(m_Value(P)), m_PtrToInt(m_Value(Q))))) {
     // Simplify icmp eq (or (ptrtoint P), (ptrtoint Q)), 0
     // -> and (icmp eq P, null), (icmp eq Q, null).
-    Constant *NullVal = ConstantInt::getNullValue(P->getType());
-    Value *CmpP = Builder->CreateICmp(Pred, P, NullVal);
-    Value *CmpQ = Builder->CreateICmp(Pred, Q, NullVal);
+    Value *CmpP =
+        Builder->CreateICmp(Pred, P, ConstantInt::getNullValue(P->getType()));
+    Value *CmpQ =
+        Builder->CreateICmp(Pred, Q, ConstantInt::getNullValue(Q->getType()));
     auto LogicOpc = Pred == ICmpInst::Predicate::ICMP_EQ ? Instruction::And
                                                          : Instruction::Or;
     return BinaryOperator::Create(LogicOpc, CmpP, CmpQ);
@@ -1986,77 +1987,62 @@ static Instruction *foldICmpShlOne(ICmpInst &Cmp, Instruction *Shl,
   return nullptr;
 }
 
-Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &ICI, Instruction *LHSI,
-                                               const APInt *RHSV) {
-  // FIXME: This check restricts all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(ICI.getOperand(1));
-  if (!RHS)
+/// Fold icmp (shl X, Y), C.
+Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp, Instruction *Shl,
+                                               const APInt *C) {
+  const APInt *ShiftAmt;
+  if (!match(Shl->getOperand(1), m_APInt(ShiftAmt)))
+    return foldICmpShlOne(Cmp, Shl, C);
+
+  // Check that the shift amount is in range. If not, don't perform undefined
+  // shifts. When the shift is visited it will be simplified.
+  unsigned TypeBits = C->getBitWidth();
+  if (ShiftAmt->uge(TypeBits))
     return nullptr;
 
-  ConstantInt *ShAmt = dyn_cast<ConstantInt>(LHSI->getOperand(1));
-  if (!ShAmt)
-    return foldICmpShlOne(ICI, LHSI, RHSV);
-
-  // Check that the shift amount is in range.  If not, don't perform
-  // undefined shifts.  When the shift is visited it will be
-  // simplified.
-  unsigned TypeBits = RHSV->getBitWidth();
-  if (ShAmt->uge(TypeBits))
-    return nullptr;
-
-  if (ICI.isEquality()) {
-    // If we are comparing against bits always shifted out, the
-    // comparison cannot succeed.
-    Constant *Comp =
-        ConstantExpr::getShl(ConstantExpr::getLShr(RHS, ShAmt), ShAmt);
-    if (Comp != RHS) { // Comparing against a bit that we know is zero.
-      bool IsICMP_NE = ICI.getPredicate() == ICmpInst::ICMP_NE;
-      Constant *Cst = Builder->getInt1(IsICMP_NE);
-      return replaceInstUsesWith(ICI, Cst);
-    }
-
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *X = Shl->getOperand(0);
+  if (Cmp.isEquality()) {
     // If the shift is NUW, then it is just shifting out zeros, no need for an
     // AND.
-    if (cast<BinaryOperator>(LHSI)->hasNoUnsignedWrap())
-      return new ICmpInst(ICI.getPredicate(), LHSI->getOperand(0),
-                          ConstantExpr::getLShr(RHS, ShAmt));
+    Constant *LShrC = ConstantInt::get(Shl->getType(), C->lshr(*ShiftAmt));
+    if (cast<BinaryOperator>(Shl)->hasNoUnsignedWrap())
+      return new ICmpInst(Pred, X, LShrC);
 
     // If the shift is NSW and we compare to 0, then it is just shifting out
     // sign bits, no need for an AND either.
-    if (cast<BinaryOperator>(LHSI)->hasNoSignedWrap() && *RHSV == 0)
-      return new ICmpInst(ICI.getPredicate(), LHSI->getOperand(0),
-                          ConstantExpr::getLShr(RHS, ShAmt));
+    if (cast<BinaryOperator>(Shl)->hasNoSignedWrap() && *C == 0)
+      return new ICmpInst(Pred, X, LShrC);
 
-    if (LHSI->hasOneUse()) {
+    if (Shl->hasOneUse()) {
       // Otherwise strength reduce the shift into an and.
-      uint32_t ShAmtVal = (uint32_t)ShAmt->getLimitedValue(TypeBits);
-      Constant *Mask =
-          Builder->getInt(APInt::getLowBitsSet(TypeBits, TypeBits - ShAmtVal));
+      Constant *Mask = ConstantInt::get(Shl->getType(),
+          APInt::getLowBitsSet(TypeBits, TypeBits - ShiftAmt->getZExtValue()));
 
-      Value *And = Builder->CreateAnd(LHSI->getOperand(0), Mask,
-                                      LHSI->getName() + ".mask");
-      return new ICmpInst(ICI.getPredicate(), And,
-                          ConstantExpr::getLShr(RHS, ShAmt));
+      Value *And = Builder->CreateAnd(X, Mask, Shl->getName() + ".mask");
+      return new ICmpInst(Pred, And, LShrC);
     }
   }
 
+  // FIXME: This check restricts all folds under here to scalar types.
+  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
+  if (!RHS)
+    return nullptr;
+
   // If this is a signed comparison to 0 and the shift is sign preserving,
-  // use the shift LHS operand instead.
-  ICmpInst::Predicate pred = ICI.getPredicate();
-  if (isSignTest(pred, *RHSV) && cast<BinaryOperator>(LHSI)->hasNoSignedWrap())
-    return new ICmpInst(pred, LHSI->getOperand(0),
-                        Constant::getNullValue(RHS->getType()));
+  // use the shift LHS operand instead; isSignTest may change 'Pred', so only
+  // do that if we're sure to not continue on in this function.
+  if (cast<BinaryOperator>(Shl)->hasNoSignedWrap() && isSignTest(Pred, *C))
+    return new ICmpInst(Pred, X, Constant::getNullValue(RHS->getType()));
 
   // Otherwise, if this is a comparison of the sign bit, simplify to and/test.
   bool TrueIfSigned = false;
-  if (LHSI->hasOneUse() &&
-      isSignBitCheck(ICI.getPredicate(), RHS, TrueIfSigned)) {
+  if (Shl->hasOneUse() && isSignBitCheck(Pred, RHS, TrueIfSigned)) {
     // (X << 31) <s 0  --> (X&1) != 0
     Constant *Mask = ConstantInt::get(
-        LHSI->getOperand(0)->getType(),
-        APInt::getOneBitSet(TypeBits, TypeBits - ShAmt->getZExtValue() - 1));
-    Value *And = Builder->CreateAnd(LHSI->getOperand(0), Mask,
-                                    LHSI->getName() + ".mask");
+        X->getType(),
+        APInt::getOneBitSet(TypeBits, TypeBits - ShiftAmt->getZExtValue() - 1));
+    Value *And = Builder->CreateAnd(X, Mask, Shl->getName() + ".mask");
     return new ICmpInst(TrueIfSigned ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ,
                         And, Constant::getNullValue(And->getType()));
   }
@@ -2067,13 +2053,12 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &ICI, Instruction *LHSI,
   // This enables to get rid of the shift in favor of a trunc which can be
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant, which will be target friendly.
-  unsigned Amt = ShAmt->getLimitedValue(TypeBits - 1);
-  if (LHSI->hasOneUse() && Amt != 0 && RHSV->countTrailingZeros() >= Amt) {
-    Type *NTy = IntegerType::get(ICI.getContext(), TypeBits - Amt);
+  unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
+  if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt) {
+    Type *NTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
     Constant *NCI = ConstantExpr::getTrunc(
         ConstantExpr::getAShr(RHS, ConstantInt::get(RHS->getType(), Amt)), NTy);
-    return new ICmpInst(ICI.getPredicate(),
-                        Builder->CreateTrunc(LHSI->getOperand(0), NTy), NCI);
+    return new ICmpInst(Pred, Builder->CreateTrunc(X, NTy), NCI);
   }
 
   return nullptr;
@@ -3622,25 +3607,30 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
                            Constant::getAllOnesValue(Op0->getType()));
       }
       break;
-    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_UGT: {
       if (Op0Min.ugt(Op1Max))          // A >u B -> true if min(A) > max(B)
         return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+
       if (Op0Max.ule(Op1Min))          // A >u B -> false if max(A) <= max(B)
         return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
 
       if (Op1Max == Op0Min)            // A >u B -> A != B if min(A) == max(B)
         return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
-        if (Op1Min == Op0Max-1)        // A >u C -> A == C+1 if max(a)-1 == C
+
+      const APInt *CmpC;
+      if (match(Op1, m_APInt(CmpC))) {
+        // A >u C -> A == C+1 if max(a)-1 == C
+        if (*CmpC == Op0Max - 1)
           return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              Builder->getInt(CI->getValue()+1));
+                              ConstantInt::get(Op1->getType(), *CmpC + 1));
 
         // (x >u 2147483647) -> (x <s 0)  -> true if sign bit set
-        if (CI->isMaxValue(true))
+        if (CmpC->isMaxSignedValue())
           return new ICmpInst(ICmpInst::ICMP_SLT, Op0,
                               Constant::getNullValue(Op0->getType()));
       }
       break;
+    }
     case ICmpInst::ICMP_SLT:
       if (Op0Max.slt(Op1Min))          // A <s B -> true if max(A) < min(C)
         return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));

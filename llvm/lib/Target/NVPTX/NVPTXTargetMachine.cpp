@@ -51,7 +51,7 @@
 using namespace llvm;
 
 static cl::opt<bool> UseInferAddressSpaces(
-    "nvptx-use-infer-addrspace", cl::init(false), cl::Hidden,
+    "nvptx-use-infer-addrspace", cl::init(true), cl::Hidden,
     cl::desc("Optimize address spaces using NVPTXInferAddressSpaces instead of "
              "NVPTXFavorNonGenericAddrSpaces"));
 

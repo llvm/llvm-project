@@ -100,6 +100,11 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(LLT Ty, unsigned Res,
   return buildInstr(TargetOpcode::G_CONSTANT, Ty).addDef(Res).addImm(Val);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildFConstant(LLT Ty, unsigned Res,
+                                                    const ConstantFP &Val) {
+  return buildInstr(TargetOpcode::G_FCONSTANT, Ty).addDef(Res).addFPImm(&Val);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBrCond(LLT Ty, unsigned Tst,
                                                   MachineBasicBlock &Dest) {
   return buildInstr(TargetOpcode::G_BRCOND, Ty).addUse(Tst).addMBB(&Dest);
@@ -124,11 +129,11 @@ MachineInstrBuilder MachineIRBuilder::buildStore(LLT VTy, LLT PTy,
       .addMemOperand(&MMO);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildAdde(LLT Ty, unsigned Res,
-                                                unsigned CarryOut, unsigned Op0,
-                                                unsigned Op1,
-                                                unsigned CarryIn) {
-  return buildInstr(TargetOpcode::G_ADDE, Ty)
+MachineInstrBuilder MachineIRBuilder::buildUAdde(LLT Ty, unsigned Res,
+                                                 unsigned CarryOut,
+                                                 unsigned Op0, unsigned Op1,
+                                                 unsigned CarryIn) {
+  return buildInstr(TargetOpcode::G_UADDE, Ty)
       .addDef(Res)
       .addDef(CarryOut)
       .addUse(Op0)
@@ -141,28 +146,49 @@ MachineInstrBuilder MachineIRBuilder::buildAnyExtend(LLT Ty, unsigned Res,
   return buildInstr(TargetOpcode::G_ANYEXTEND, Ty).addDef(Res).addUse(Op);
 }
 
-MachineInstrBuilder
-MachineIRBuilder::buildExtract(LLT Ty, ArrayRef<unsigned> Results, unsigned Src,
-                               ArrayRef<unsigned> Indexes) {
-  assert(Results.size() == Indexes.size() && "inconsistent number of regs");
+MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<LLT> ResTys,
+                                                   ArrayRef<unsigned> Results,
+                                                   ArrayRef<uint64_t> Indices,
+                                                   LLT SrcTy, unsigned Src) {
+  assert(ResTys.size() == Results.size() && Results.size() == Indices.size() &&
+         "inconsistent number of regs");
+  assert(!Results.empty() && "invalid trivial extract");
 
-  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_EXTRACT, Ty);
+  auto MIB = BuildMI(getMF(), DL, getTII().get(TargetOpcode::G_EXTRACT));
+  for (unsigned i = 0; i < ResTys.size(); ++i)
+    MIB->setType(LLT::scalar(ResTys[i].getSizeInBits()), i);
+  MIB->setType(LLT::scalar(SrcTy.getSizeInBits()), ResTys.size());
+
   for (auto Res : Results)
     MIB.addDef(Res);
 
   MIB.addUse(Src);
 
-  for (auto Idx : Indexes)
+  for (auto Idx : Indices)
     MIB.addImm(Idx);
+
+  getMBB().insert(getInsertPt(), MIB);
+
   return MIB;
 }
 
-MachineInstrBuilder MachineIRBuilder::buildSequence(LLT Ty, unsigned Res,
-                                              ArrayRef<unsigned> Ops) {
-  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_SEQUENCE, Ty);
+MachineInstrBuilder
+MachineIRBuilder::buildSequence(LLT ResTy, unsigned Res,
+                                ArrayRef<LLT> OpTys,
+                                ArrayRef<unsigned> Ops,
+                                ArrayRef<unsigned> Indices) {
+  assert(OpTys.size() == Ops.size() && Ops.size() == Indices.size() &&
+         "incompatible args");
+  assert(!Ops.empty() && "invalid trivial sequence");
+
+  MachineInstrBuilder MIB =
+      buildInstr(TargetOpcode::G_SEQUENCE, LLT::scalar(ResTy.getSizeInBits()));
   MIB.addDef(Res);
-  for (auto Op : Ops)
-    MIB.addUse(Op);
+  for (unsigned i = 0; i < Ops.size(); ++i) {
+    MIB.addUse(Ops[i]);
+    MIB.addImm(Indices[i]);
+    MIB->setType(LLT::scalar(OpTys[i].getSizeInBits()), MIB->getNumTypes());
+  }
   return MIB;
 }
 
@@ -185,6 +211,11 @@ MachineInstrBuilder MachineIRBuilder::buildTrunc(LLT Ty, unsigned Res,
   return buildInstr(TargetOpcode::G_TRUNC, Ty).addDef(Res).addUse(Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildFPTrunc(LLT Ty, unsigned Res,
+                                           unsigned Op) {
+  return buildInstr(TargetOpcode::G_FPTRUNC, Ty).addDef(Res).addUse(Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildICmp(ArrayRef<LLT> Tys,
                                                 CmpInst::Predicate Pred,
                                                 unsigned Res, unsigned Op0,
@@ -192,6 +223,27 @@ MachineInstrBuilder MachineIRBuilder::buildICmp(ArrayRef<LLT> Tys,
   return buildInstr(TargetOpcode::G_ICMP, Tys)
       .addDef(Res)
       .addPredicate(Pred)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildFCmp(ArrayRef<LLT> Tys,
+                                                CmpInst::Predicate Pred,
+                                                unsigned Res, unsigned Op0,
+                                                unsigned Op1) {
+  return buildInstr(TargetOpcode::G_FCMP, Tys)
+      .addDef(Res)
+      .addPredicate(Pred)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSelect(LLT Ty, unsigned Res,
+                                                  unsigned Tst,
+                                                  unsigned Op0, unsigned Op1) {
+  return buildInstr(TargetOpcode::G_SELECT, {Ty, LLT::scalar(1)})
+      .addDef(Res)
+      .addUse(Tst)
       .addUse(Op0)
       .addUse(Op1);
 }
