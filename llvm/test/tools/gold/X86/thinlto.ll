@@ -35,6 +35,16 @@
 ; RUN: llvm-bcanalyzer -dump %t4.index.bc | FileCheck %s --check-prefix=COMBINED
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
+; Check with --no-map-whole-files
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN:    --plugin-opt=save-temps \
+; RUN:    --plugin-opt=thinlto \
+; RUN:    --plugin-opt=jobs=1 \
+; RUN:    --no-map-whole-files \
+; RUN:    -shared %t.o %t2.o -o %t4
+; RUN: llvm-bcanalyzer -dump %t4.index.bc | FileCheck %s --check-prefix=COMBINED
+; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
+
 ; Next force multi-threaded mode
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=save-temps \
