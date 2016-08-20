@@ -286,6 +286,24 @@ void test_s_sleep()
   __builtin_amdgcn_s_sleep(15);
 }
 
+// CHECK-LABEL: @test_s_incperflevel
+// CHECK: call void @llvm.amdgcn.s.incperflevel(i32 1)
+// CHECK: call void @llvm.amdgcn.s.incperflevel(i32 15)
+void test_s_incperflevel()
+{
+  __builtin_amdgcn_s_incperflevel(1);
+  __builtin_amdgcn_s_incperflevel(15);
+}
+
+// CHECK-LABEL: @test_s_decperflevel
+// CHECK: call void @llvm.amdgcn.s.decperflevel(i32 1)
+// CHECK: call void @llvm.amdgcn.s.decperflevel(i32 15)
+void test_s_decperflevel()
+{
+  __builtin_amdgcn_s_decperflevel(1);
+  __builtin_amdgcn_s_decperflevel(15);
+}
+
 // CHECK-LABEL: @test_cubeid(
 // CHECK: call float @llvm.amdgcn.cubeid(float %a, float %b, float %c)
 void test_cubeid(global float* out, float a, float b, float c) {

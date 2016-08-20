@@ -18,6 +18,16 @@ void test_s_sleep(int x)
   __builtin_amdgcn_s_sleep(x); // expected-error {{argument to '__builtin_amdgcn_s_sleep' must be a constant integer}}
 }
 
+void test_s_incperflevel(int x)
+{
+  __builtin_amdgcn_s_incperflevel(x); // expected-error {{argument to '__builtin_amdgcn_s_incperflevel' must be a constant integer}}
+}
+
+void test_s_decperflevel(int x)
+{
+  __builtin_amdgcn_s_decperflevel(x); // expected-error {{argument to '__builtin_amdgcn_s_decperflevel' must be a constant integer}}
+}
+
 void test_sicmp_i32(global ulong* out, int a, int b, uint c)
 {
   *out = __builtin_amdgcn_sicmp(a, b, c); // expected-error {{argument to '__builtin_amdgcn_sicmp' must be a constant integer}}

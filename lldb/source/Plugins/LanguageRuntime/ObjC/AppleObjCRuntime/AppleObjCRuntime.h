@@ -114,6 +114,10 @@ public:
     uint32_t
     GetFoundationVersion();
     
+    virtual void
+    GetValuesForGlobalCFBooleans(lldb::addr_t& cf_true,
+                                 lldb::addr_t& cf_false);
+    
 protected:
     // Call CreateInstance instead.
     AppleObjCRuntime(Process *process);

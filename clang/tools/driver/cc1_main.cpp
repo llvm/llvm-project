@@ -25,7 +25,6 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Config/config.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"

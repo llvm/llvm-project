@@ -181,14 +181,15 @@ template <> struct GraphTraits< ::clang::DomTreeNode* > {
     return N->end();
   }
 
-  typedef df_iterator< ::clang::DomTreeNode* > nodes_iterator;
+  typedef llvm::pointer_iterator<df_iterator<::clang::DomTreeNode *>>
+      nodes_iterator;
 
   static nodes_iterator nodes_begin(::clang::DomTreeNode *N) {
-    return df_begin(getEntryNode(N));
+    return nodes_iterator(df_begin(getEntryNode(N)));
   }
 
   static nodes_iterator nodes_end(::clang::DomTreeNode *N) {
-    return df_end(getEntryNode(N));
+    return nodes_iterator(df_end(getEntryNode(N)));
   }
 };
 
@@ -199,11 +200,11 @@ template <> struct GraphTraits< ::clang::DominatorTree* >
   }
 
   static nodes_iterator nodes_begin(::clang::DominatorTree *N) {
-    return df_begin(getEntryNode(N));
+    return nodes_iterator(df_begin(getEntryNode(N)));
   }
 
   static nodes_iterator nodes_end(::clang::DominatorTree *N) {
-    return df_end(getEntryNode(N));
+    return nodes_iterator(df_end(getEntryNode(N)));
   }
 };
 } // end namespace llvm
