@@ -108,29 +108,6 @@ class BreakpointConditionsTestCase(TestBase):
             startstr = '(int) val = 1')
 
         self.runCmd("process kill")
-        self.runCmd("breakpoint disable")
-
-        self.runCmd("breakpoint set -p Loop")
-        arch = self.getArchitecture()
-        if arch in ['x86_64', 'i386']:
-            self.runCmd("breakpoint modify -c ($eax&&i)")
-        elif arch in ['aarch64']:
-            self.runCmd("breakpoint modify -c ($x0&&i)")
-        elif arch in ['arm']:
-            self.runCmd("breakpoint modify -c ($r0&&i)")
-        elif re.match("mips",arch):
-            self.runCmd("breakpoint modify -c ($r2&&i)")
-        elif arch in ['s390x']:
-            self.runCmd("breakpoint modify -c ($r2&&i)")
-        self.runCmd("run")
-
-        self.expect("process status", PROCESS_STOPPED,
-            patterns = ['Process .* stopped'])
-
-        self.runCmd("continue")
-
-        self.expect("process status", PROCESS_EXITED,
-            patterns = ['Process .* exited'])
 
     def breakpoint_conditions_python(self):
         """Use Python APIs to set breakpoint conditions."""

@@ -1991,7 +1991,10 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
             {
                 StringExtractor reg_value_extractor;
                 reg_value_extractor.GetStringRef() = pair.second;
-                gdb_thread->PrivateSetRegisterValue (pair.first, reg_value_extractor);
+                DataBufferSP buffer_sp(new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+                reg_value_extractor.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+                gdb_thread->PrivateSetRegisterValue(
+                    pair.first, llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
             }
 
             thread_sp->SetName (thread_name.empty() ? NULL : thread_name.c_str());

@@ -114,6 +114,10 @@ public:
         return m_tagged_pointer_vendor_ap.get();
     }
     
+    void
+    GetValuesForGlobalCFBooleans(lldb::addr_t& cf_true,
+                                 lldb::addr_t& cf_false) override;
+    
     // none of these are valid ISAs - we use them to infer the type
     // of tagged pointers - if we have something meaningful to say
     // we report an actual type - otherwise, we just say tagged
@@ -356,6 +360,9 @@ private:
     lldb::addr_t
     GetSharedCacheReadOnlyAddress();
     
+    bool
+    GetCFBooleanValuesIfNeeded ();
+    
     friend class ClassDescriptorV2;
 
     std::unique_ptr<UtilityFunction>        m_get_class_info_code;
@@ -375,6 +382,8 @@ private:
     std::unique_ptr<TaggedPointerVendor>    m_tagged_pointer_vendor_ap;
     EncodingToTypeSP                        m_encoding_to_type_sp;
     bool                                    m_noclasses_warning_emitted;
+    llvm::Optional<std::pair<lldb::addr_t,
+                             lldb::addr_t>>  m_CFBoolean_values;
 };
     
 } // namespace lldb_private

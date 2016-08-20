@@ -10,6 +10,8 @@
 #ifndef liblldb_GDBRemoteCommunicationClient_h_
 #define liblldb_GDBRemoteCommunicationClient_h_
 
+#include "GDBRemoteClientBase.h"
+
 // C Includes
 // C++ Includes
 #include <chrono>
@@ -23,8 +25,6 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Target/Process.h"
-
-#include "GDBRemoteClientBase.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -485,23 +485,20 @@ public:
 
     bool
     CalculateMD5 (const FileSpec& file_spec, uint64_t &high, uint64_t &low);
-    
 
-    bool
+    lldb::DataBufferSP
     ReadRegister(lldb::tid_t tid,
-                 uint32_t reg_num,   // Must be the eRegisterKindProcessPlugin register number, to be sent to the remote
-                 StringExtractorGDBRemote &response);
+                 uint32_t reg_num); // Must be the eRegisterKindProcessPlugin register number
 
-    bool
-    ReadAllRegisters (lldb::tid_t tid,
-                      StringExtractorGDBRemote &response);
+    lldb::DataBufferSP
+    ReadAllRegisters(lldb::tid_t tid);
 
     bool
     WriteRegister(lldb::tid_t tid, uint32_t reg_num, // eRegisterKindProcessPlugin register number
-                  llvm::StringRef data);
+                  llvm::ArrayRef<uint8_t> data);
 
     bool
-    WriteAllRegisters(lldb::tid_t tid, llvm::StringRef data);
+    WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data);
 
     bool
     SaveRegisterState(lldb::tid_t tid, uint32_t &save_id);

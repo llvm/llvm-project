@@ -22,28 +22,44 @@
 
 // SYMBOL:      Relocations [
 // SYMBOL-NEXT:   Section ({{.*}}) .rela.dyn {
-// SYMBOL-NEXT:     0x3000 R_X86_64_RELATIVE - 0x3020
-// SYMBOL-NEXT:     0x3008 R_X86_64_RELATIVE - 0x3021
-// SYMBOL-NEXT:     0x3010 R_X86_64_RELATIVE - 0x3010
-// SYMBOL-NEXT:     0x3018 R_X86_64_RELATIVE - 0x3011
+// SYMBOL-NEXT:     0x3010 R_X86_64_64 __stop_zed1 0x0
+// SYMBOL-NEXT:     0x3018 R_X86_64_64 __stop_zed1 0x1
+// SYMBOL-NEXT:     0x3000 R_X86_64_64 __stop_zed2 0x0
+// SYMBOL-NEXT:     0x3008 R_X86_64_64 __stop_zed2 0x1
 // SYMBOL-NEXT:   }
 // SYMBOL-NEXT: ]
 
 // SYMBOL: Symbol {
 // SYMBOL:   Name: __start_bar
 // SYMBOL:   Value: 0x1012
+// SYMBOL:   STV_HIDDEN
 // SYMBOL:   Section: bar
 // SYMBOL: }
 // SYMBOL-NOT:   Section: __stop_bar
 // SYMBOL: Symbol {
 // SYMBOL:   Name: __start_foo
 // SYMBOL:   Value: 0x100F
+// SYMBOL:   STV_HIDDEN
 // SYMBOL:   Section: foo
 // SYMBOL: }
 // SYMBOL: Symbol {
 // SYMBOL:   Name: __stop_foo
 // SYMBOL:   Value: 0x1012
+// STMBOL:   STV_HIDDEN
 // SYMBOL:   Section: foo
+// SYMBOL: }
+
+// SYMBOL: Symbol {
+// SYMBOL:   Name: __stop_zed1
+// SYMBOL:   Value: 0x3010
+// STMBOL:   Other: 0
+// SYMBOL:   Section: zed1
+// SYMBOL: }
+// SYMBOL: Symbol {
+// SYMBOL:   Name: __stop_zed2
+// SYMBOL:   Value: 0x3020
+// STMBOL:   Other: 0
+// SYMBOL:   Section: zed2
 // SYMBOL: }
 
 .hidden __start_foo

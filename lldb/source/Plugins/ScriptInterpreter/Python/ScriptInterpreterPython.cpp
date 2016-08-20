@@ -13,7 +13,9 @@
 
 #else
 
+// LLDB Python header must be included first
 #include "lldb-python.h"
+
 #include "ScriptInterpreterPython.h"
 #include "PythonDataObjects.h"
 #include "PythonExceptionState.h"

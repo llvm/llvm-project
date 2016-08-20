@@ -6,21 +6,23 @@
         .data
         .quad __start_foo
         .section foo,"aw"
-// By default the symbol is hidden.
-// CHECK:      R_X86_64_RELATIVE - 0x[[ADDR1:.*]]
 
         .hidden __start_bar
         .quad __start_bar
         .section bar,"a"
-// References do not affect the visibility.
-// CHECK:      R_X86_64_RELATIVE - 0x[[ADDR2:.*]]
+
+// Test that we are able to hide the symbol.
+// CHECK:      R_X86_64_RELATIVE - 0x[[ADDR:.*]]
+
+// By default the symbol is visible and we need a dynamic reloc.
+// CHECK:  R_X86_64_64 __start_foo 0x0
 
 // CHECK:      Name: __start_bar
-// CHECK-NEXT: Value: 0x[[ADDR2]]
+// CHECK-NEXT: Value: 0x[[ADDR]]
 // CHECK-NEXT: Size:
 // CHECK-NEXT: Binding: Local
 
 // CHECK:      Name: __start_foo
-// CHECK-NEXT: Value: 0x[[ADDR1]]
+// CHECK-NEXT: Value:
 // CHECK-NEXT: Size:
-// CHECK-NEXT: Binding: Local
+// CHECK-NEXT: Binding: Global
