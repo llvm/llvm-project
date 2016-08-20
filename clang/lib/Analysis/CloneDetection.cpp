@@ -315,8 +315,26 @@ public:
   //--- Calls --------------------------------------------------------------//
   DEF_ADD_DATA(CallExpr, {
     // Function pointers don't have a callee and we just skip hashing it.
-    if (S->getDirectCallee())
-      addData(S->getDirectCallee()->getQualifiedNameAsString());
+    if (const FunctionDecl *D = S->getDirectCallee()) {
+      // If the function is a template instantiation, we also need to handle
+      // the template arguments as they are no included in the qualified name.
+      if (D->isTemplateInstantiation()) {
+        auto Args = D->getTemplateSpecializationArgs();
+        std::string ArgString;
+
+        // Print all template arguments into ArgString
+        llvm::raw_string_ostream OS(ArgString);
+        for (unsigned i = 0; i < Args->size(); ++i) {
+          Args->get(i).print(Context.getLangOpts(), OS);
+          // Add a padding character so that 'foo<X, XX>()' != 'foo<XX, X>()'.
+          OS << '\n';
+        }
+        OS.flush();
+
+        addData(ArgString);
+      }
+      addData(D->getQualifiedNameAsString());
+    }
   })
 
   //--- Exceptions ---------------------------------------------------------//
