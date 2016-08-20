@@ -17,5 +17,5 @@ z_dim:
   %z.ext = zext i32 %z to i64
   ret i64 %z.ext
 default:
-  unreachable
+  ret i64 1
 }
