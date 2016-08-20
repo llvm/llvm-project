@@ -212,19 +212,6 @@ bool ParseFrameDescription(const char *frame_descr,
   return true;
 }
 
-static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
-  // Check if this is shadow or shadow gap.
-  if (DescribeAddressIfShadow(addr))
-    return;
-  CHECK(AddrIsInMem(addr));
-  if (DescribeAddressIfGlobal(addr, access_size, bug_type))
-    return;
-  if (DescribeAddressIfStack(addr, access_size))
-    return;
-  // Assume it is a heap address.
-  DescribeAddressIfHeap(addr, access_size);
-}
-
 // -------------------- Different kinds of reports ----------------- {{{1
 
 // Use ScopedInErrorReport to run common actions just before and
@@ -526,8 +513,8 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
   Printf("%s", d.EndWarning());
   ScarinessScore::PrintSimple(10, bug_type);
   stack->Print();
-  DescribeAddress((uptr)offset1, length1, bug_type);
-  DescribeAddress((uptr)offset2, length2, bug_type);
+  PrintAddressDescription((uptr)offset1, length1, bug_type);
+  PrintAddressDescription((uptr)offset2, length2, bug_type);
   ReportErrorSummary(bug_type, stack);
 }
 
@@ -541,7 +528,7 @@ void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
   Printf("%s", d.EndWarning());
   ScarinessScore::PrintSimple(10, bug_type);
   stack->Print();
-  DescribeAddress(offset, size, bug_type);
+  PrintAddressDescription(offset, size, bug_type);
   ReportErrorSummary(bug_type, stack);
 }
 
@@ -603,8 +590,8 @@ ReportInvalidPointerPair(uptr pc, uptr bp, uptr sp, uptr a1, uptr a2) {
   Printf("%s", d.EndWarning());
   GET_STACK_TRACE_FATAL(pc, bp);
   stack.Print();
-  DescribeAddress(a1, 1, bug_type);
-  DescribeAddress(a2, 1, bug_type);
+  PrintAddressDescription(a1, 1, bug_type);
+  PrintAddressDescription(a2, 1, bug_type);
   ReportErrorSummary(bug_type, &stack);
 }
 
@@ -792,7 +779,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   GET_STACK_TRACE_FATAL(pc, bp);
   stack.Print();
 
-  DescribeAddress(addr, access_size, bug_descr);
+  PrintAddressDescription(addr, access_size, bug_descr);
   if (shadow_val == kAsanContiguousContainerOOBMagic)
     PrintContainerOverflowHint();
   ReportErrorSummary(bug_descr, &stack);
@@ -819,7 +806,7 @@ void NOINLINE __asan_set_error_report_callback(void (*callback)(const char*)) {
 void __asan_describe_address(uptr addr) {
   // Thread registry must be locked while we're describing an address.
   asanThreadRegistry().Lock();
-  DescribeAddress(addr, 1, "");
+  PrintAddressDescription(addr, 1, "");
   asanThreadRegistry().Unlock();
 }
 

@@ -6,6 +6,8 @@
 // RUN: not %run %t 0xf5 2>&1 | FileCheck %s -check-prefix=XF5
 // RUN: not %run %t 0xf8 2>&1 | FileCheck %s -check-prefix=XF8
 
+// XFAIL: win32
+
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
 #include <stddef.h>

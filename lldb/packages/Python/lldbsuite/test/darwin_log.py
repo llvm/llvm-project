@@ -7,7 +7,6 @@ from __future__ import print_function
 
 import json
 import os
-import pexpect
 import platform
 import re
 import sys
@@ -59,6 +58,7 @@ class DarwinLogTestBase(lldbtest.TestBase):
     def run_lldb_to_breakpoint(self, exe, source_file, line,
                                enable_command=None, settings_commands=None):
 
+        import pexpect
         # Set self.child_prompt, which is "(lldb) ".
         prompt = self.child_prompt
 

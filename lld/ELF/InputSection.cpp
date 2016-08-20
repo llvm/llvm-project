@@ -351,7 +351,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const Relocation<ELFT> &Rel : Relocations) {
-    uintX_t Offset = Rel.Offset;
+    uintX_t Offset = getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
     uintX_t A = Rel.Addend;

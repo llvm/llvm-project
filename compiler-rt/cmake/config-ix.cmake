@@ -174,6 +174,14 @@ if(APPLE)
   find_darwin_sdk_dir(DARWIN_tvossim_SYSROOT appletvsimulator)
   find_darwin_sdk_dir(DARWIN_tvos_SYSROOT appletvos)
 
+  if(NOT DARWIN_osx_SYSROOT)
+    if(EXISTS /usr/include)
+      set(DARWIN_osx_SYSROOT /)
+    else()
+      message(ERROR "Could not detect OS X Sysroot. Either install Xcode or the Apple Command Line Tools")
+    endif()
+  endif()
+
   if(COMPILER_RT_ENABLE_IOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS ios)
     set(DARWIN_ios_MIN_VER_FLAG -miphoneos-version-min)
@@ -399,6 +407,11 @@ if(ANDROID)
 else()
   set(OS_NAME "${CMAKE_SYSTEM_NAME}")
 endif()
+
+set(ALL_SANITIZERS asan;dfsan;msan;profile;tsan;safestack;cfi;esan;scudo)
+set(COMPILER_RT_SANITIZERS_TO_BUILD ${ALL_SANITIZERS} CACHE STRING
+    "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
+list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
 
 if (SANITIZER_COMMON_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD" OR

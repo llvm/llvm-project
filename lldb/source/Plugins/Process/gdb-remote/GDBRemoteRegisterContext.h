@@ -107,8 +107,8 @@ protected:
                         uint32_t data_offset);
 
     bool
-    PrivateSetRegisterValue (uint32_t reg, StringExtractor &response);
-    
+    PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
+
     bool
     PrivateSetRegisterValue (uint32_t reg, uint64_t val);
 

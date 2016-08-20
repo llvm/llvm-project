@@ -51,8 +51,8 @@ static void addRegular(SymbolAssignment *Cmd) {
 }
 
 template <class ELFT> static void addSynthetic(SymbolAssignment *Cmd) {
-  Symbol *Sym = Symtab<ELFT>::X->addSynthetic(Cmd->Name, nullptr, 0);
-  Sym->Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+  Symbol *Sym = Symtab<ELFT>::X->addSynthetic(
+      Cmd->Name, nullptr, 0, Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
   Cmd->Sym = Sym->body();
 }
 
@@ -283,9 +283,14 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
       std::tie(OutSec, IsNew) = Factory.create(Head, Cmd->Name);
       if (IsNew)
         OutputSections->push_back(OutSec);
-      for (InputSectionBase<ELFT> *Sec : V)
+
+      uint32_t Subalign = Cmd->SubalignExpr ? Cmd->SubalignExpr(0) : 0;
+      for (InputSectionBase<ELFT> *Sec : V) {
+        if (Subalign)
+          Sec->Alignment = Subalign;
         if (!Sec->OutSec)
           OutSec->addSection(Sec);
+      }
     }
   }
 
@@ -937,6 +942,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     Cmd->LmaExpr = readParenExpr();
   if (skip("ALIGN"))
     Cmd->AlignExpr = readParenExpr();
+  if (skip("SUBALIGN"))
+    Cmd->SubalignExpr = readParenExpr();
 
   // Parse constraints.
   if (skip("ONLY_IF_RO"))

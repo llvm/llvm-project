@@ -585,9 +585,9 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
       uint64_t Val;
       const SymbolBody *Sym;
     };
-    enum KindT { SecAddr, SymAddr, PlainInt } Kind;
-    Entry(int32_t Tag, OutputSectionBase<ELFT> *OutSec)
-        : Tag(Tag), OutSec(OutSec), Kind(SecAddr) {}
+    enum KindT { SecAddr, SecSize, SymAddr, PlainInt } Kind;
+    Entry(int32_t Tag, OutputSectionBase<ELFT> *OutSec, KindT Kind = SecAddr)
+        : Tag(Tag), OutSec(OutSec), Kind(Kind) {}
     Entry(int32_t Tag, uint64_t Val) : Tag(Tag), Val(Val), Kind(PlainInt) {}
     Entry(int32_t Tag, const SymbolBody *Sym)
         : Tag(Tag), Sym(Sym), Kind(SymAddr) {}

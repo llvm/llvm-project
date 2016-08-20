@@ -24,6 +24,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamGDBRemote.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/TimeValue.h"
@@ -3494,45 +3495,58 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
     return m_avoid_g_packets == eLazyBoolYes;
 }
 
-bool
-GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, StringExtractorGDBRemote &response)
+DataBufferSP
+GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg)
 {
     StreamString payload;
     payload.Printf("p%x", reg);
-    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
-           PacketResult::Success;
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success ||
+        !response.IsNormalResponse())
+        return nullptr;
+
+    DataBufferSP buffer_sp(new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+    response.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+    return buffer_sp;
 }
 
-
-bool
-GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractorGDBRemote &response)
+DataBufferSP
+GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid)
 {
     StreamString payload;
     payload.PutChar('g');
-    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
-           PacketResult::Success;
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success ||
+        !response.IsNormalResponse())
+        return nullptr;
+
+    DataBufferSP buffer_sp(new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+    response.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+    return buffer_sp;
 }
 
 bool
-GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::StringRef data)
+GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::ArrayRef<uint8_t> data)
 {
     StreamString payload;
     payload.Printf("P%x=", reg_num);
     payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
     return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
-           PacketResult::Success;
+               PacketResult::Success &&
+           response.IsOKResponse();
 }
 
 bool
-GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::StringRef data)
+GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data)
 {
     StreamString payload;
     payload.PutChar('G');
-    payload.Write(data.data(), data.size());
+    payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
     return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
-           PacketResult::Success;
+               PacketResult::Success &&
+           response.IsOKResponse();
 }
 
 bool

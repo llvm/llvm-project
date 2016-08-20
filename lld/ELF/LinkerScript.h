@@ -81,6 +81,7 @@ struct OutputSectionCommand : BaseCommand {
   Expr AddrExpr;
   Expr AlignExpr;
   Expr LmaExpr;
+  Expr SubalignExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;

@@ -566,7 +566,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         continue;
       Offset = PieceI->OutputOff + RI.r_offset - PieceI->InputOff;
     } else {
-      Offset = C.getOffset(RI.r_offset);
+      Offset = RI.r_offset;
     }
 
     // This relocation does not require got entry, but it is relative to got and
