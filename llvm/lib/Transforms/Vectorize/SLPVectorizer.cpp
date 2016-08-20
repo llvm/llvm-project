@@ -2153,61 +2153,11 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
 }
 
 void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL) {
-
-  // Get the basic block this bundle is in. All instructions in the bundle
-  // should be in this block.
-  auto *Front = cast<Instruction>(VL.front());
-  auto *BB = Front->getParent();
-  assert(all_of(make_range(VL.begin(), VL.end()), [&](Value *V) -> bool {
-    return cast<Instruction>(V)->getParent() == BB;
-  }));
-
-  // The last instruction in the bundle in program order.
-  Instruction *LastInst = nullptr;
-
-  // Find the last instruction. The common case should be that BB has been
-  // scheduled, and the last instruction is VL.back(). So we start with
-  // VL.back() and iterate over schedule data until we reach the end of the
-  // bundle. The end of the bundle is marked by null ScheduleData.
-  if (BlocksSchedules.count(BB)) {
-    auto *Bundle = BlocksSchedules[BB]->getScheduleData(VL.back());
-    if (Bundle && Bundle->isPartOfBundle())
-      for (; Bundle; Bundle = Bundle->NextInBundle)
-        LastInst = Bundle->Inst;
-  }
-
-  // LastInst can still be null at this point if there's either not an entry
-  // for BB in BlocksSchedules or there's no ScheduleData available for
-  // VL.back(). This can be the case if buildTree_rec aborts for various
-  // reasons (e.g., the maximum recursion depth is reached, the maximum region
-  // size is reached, etc.). ScheduleData is initialized in the scheduling
-  // "dry-run".
-  //
-  // If this happens, we can still find the last instruction by brute force. We
-  // iterate forwards from Front (inclusive) until we either see all
-  // instructions in the bundle or reach the end of the block. If Front is the
-  // last instruction in program order, LastInst will be set to Front, and we
-  // will visit all the remaining instructions in the block.
-  //
-  // One of the reasons we exit early from buildTree_rec is to place an upper
-  // bound on compile-time. Thus, taking an additional compile-time hit here is
-  // not ideal. However, this should be exceedingly rare since it requires that
-  // we both exit early from buildTree_rec and that the bundle be out-of-order
-  // (causing us to iterate all the way to the end of the block).
-  if (!LastInst) {
-    SmallPtrSet<Value *, 16> Bundle(VL.begin(), VL.end());
-    for (auto &I : make_range(BasicBlock::iterator(Front), BB->end())) {
-      if (Bundle.erase(&I))
-        LastInst = &I;
-      if (Bundle.empty())
-        break;
-    }
-  }
-
-  // Set the insertion point after the last instruction in the bundle. Set the
-  // debug location to Front.
-  Builder.SetInsertPoint(BB, next(BasicBlock::iterator(LastInst)));
-  Builder.SetCurrentDebugLocation(Front->getDebugLoc());
+  Instruction *VL0 = cast<Instruction>(VL[0]);
+  BasicBlock::iterator NextInst(VL0);
+  ++NextInst;
+  Builder.SetInsertPoint(VL0->getParent(), NextInst);
+  Builder.SetCurrentDebugLocation(VL0->getDebugLoc());
 }
 
 Value *BoUpSLP::Gather(ArrayRef<Value *> VL, VectorType *Ty) {
@@ -2285,9 +2235,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
   if (E->NeedToGather) {
     setInsertPointAfterBundle(E->Scalars);
-    auto *V = Gather(E->Scalars, VecTy);
-    E->VectorizedValue = V;
-    return V;
+    return Gather(E->Scalars, VecTy);
   }
 
   unsigned Opcode = getSameOpcode(E->Scalars);
@@ -2334,10 +2282,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         E->VectorizedValue = V;
         return V;
       }
-      setInsertPointAfterBundle(E->Scalars);
-      auto *V = Gather(E->Scalars, VecTy);
-      E->VectorizedValue = V;
-      return V;
+      return Gather(E->Scalars, VecTy);
     }
     case Instruction::ExtractValue: {
       if (canReuseExtract(E->Scalars, Instruction::ExtractValue)) {
@@ -2349,10 +2294,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         E->VectorizedValue = V;
         return propagateMetadata(V, E->Scalars);
       }
-      setInsertPointAfterBundle(E->Scalars);
-      auto *V = Gather(E->Scalars, VecTy);
-      E->VectorizedValue = V;
-      return V;
+      return Gather(E->Scalars, VecTy);
     }
     case Instruction::ZExt:
     case Instruction::SExt:

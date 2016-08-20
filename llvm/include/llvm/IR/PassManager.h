@@ -211,6 +211,31 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   static void *ID() { return (void *)&DerivedT::PassID; }
 };
 
+/// A class template to provide analysis sets for IR units.
+///
+/// Analyses operate on units of IR. It is useful to be able to talk about
+/// preservation of all analyses for a given unit of IR as a set. This class
+/// template can be used with the \c PreservedAnalyses API for that purpose and
+/// the \c AnalysisManager will automatically check and use this set to skip
+/// invalidation events.
+///
+/// Note that you must provide an explicit instantiation declaration and
+/// definition for this template in order to get the correct behavior on
+/// Windows. Otherwise, the address of SetID will not be stable.
+template <typename IRUnitT>
+class AllAnalysesOn {
+public:
+  static void *ID() { return (void *)&SetID; }
+
+private:
+  static char SetID;
+};
+
+template <typename IRUnitT> char AllAnalysesOn<IRUnitT>::SetID;
+
+extern template class AllAnalysesOn<Module>;
+extern template class AllAnalysesOn<Function>;
+
 /// \brief Manages a sequence of passes over units of IR.
 ///
 /// A pass manager contains a sequence of passes to run over units of IR. It is
@@ -274,6 +299,12 @@ public:
       // in the new pass manager so it is currently omitted.
       //IR.getContext().yield();
     }
+
+    // Invaliadtion was handled after each pass in the above loop for the
+    // current unit of IR. Therefore, the remaining analysis results in the
+    // AnalysisManager are preserved. We mark this with a set so that we don't
+    // need to inspect each one individually.
+    PA.preserve<AllAnalysesOn<IRUnitT>>();
 
     if (DebugLogging)
       dbgs() << "Finished " << getTypeName<IRUnitT>() << " pass manager run.\n";
@@ -443,8 +474,8 @@ public:
   /// analyis pass which has been successfully invalidated and thus can be
   /// preserved going forward. The updated set is returned.
   PreservedAnalyses invalidate(IRUnitT &IR, PreservedAnalyses PA) {
-    // Short circuit for a common case of all analyses being preserved.
-    if (PA.areAllPreserved())
+    // Short circuit for common cases of all analyses being preserved.
+    if (PA.areAllPreserved() || PA.preserved<AllAnalysesOn<IRUnitT>>())
       return PA;
 
     if (DebugLogging)
