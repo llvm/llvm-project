@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -27,9 +26,6 @@ namespace codeview {
 using llvm::support::little32_t;
 using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
-
-typedef CVRecord<TypeLeafKind> CVType;
-typedef msf::VarStreamArray<CVType> CVTypeArray;
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.
 struct MemberAttributes {
@@ -94,19 +90,18 @@ public:
     return Representation;
   }
 
-  TypeIndex ContainingType;
-  PointerToMemberRepresentation Representation;
-
 private:
   struct Layout {
     TypeIndex ClassType;
     ulittle16_t Representation; // PointerToMemberRepresentation
   };
+
+  TypeIndex ContainingType;
+  PointerToMemberRepresentation Representation;
 };
 
 class TypeRecord {
 protected:
-  TypeRecord() {}
   explicit TypeRecord(TypeRecordKind Kind) : Kind(Kind) {}
 
 public:
@@ -134,14 +129,14 @@ public:
   TypeIndex getModifiedType() const { return ModifiedType; }
   ModifierOptions getModifiers() const { return Modifiers; }
 
-  TypeIndex ModifiedType;
-  ModifierOptions Modifiers;
-
 private:
   struct Layout {
     TypeIndex ModifiedType;
     ulittle16_t Modifiers; // ModifierOptions
   };
+
+  TypeIndex ModifiedType;
+  ModifierOptions Modifiers;
 };
 
 // LF_PROCEDURE
@@ -170,12 +165,6 @@ public:
   uint16_t getParameterCount() const { return ParameterCount; }
   TypeIndex getArgumentList() const { return ArgumentList; }
 
-  TypeIndex ReturnType;
-  CallingConvention CallConv;
-  FunctionOptions Options;
-  uint16_t ParameterCount;
-  TypeIndex ArgumentList;
-
 private:
   struct Layout {
     TypeIndex ReturnType;
@@ -184,6 +173,12 @@ private:
     ulittle16_t NumParameters;
     TypeIndex ArgListType;
   };
+
+  TypeIndex ReturnType;
+  CallingConvention CallConv;
+  FunctionOptions Options;
+  uint16_t ParameterCount;
+  TypeIndex ArgumentList;
 };
 
 // LF_MFUNCTION
@@ -217,15 +212,6 @@ public:
   TypeIndex getArgumentList() const { return ArgumentList; }
   int32_t getThisPointerAdjustment() const { return ThisPointerAdjustment; }
 
-  TypeIndex ReturnType;
-  TypeIndex ClassType;
-  TypeIndex ThisType;
-  CallingConvention CallConv;
-  FunctionOptions Options;
-  uint16_t ParameterCount;
-  TypeIndex ArgumentList;
-  int32_t ThisPointerAdjustment;
-
 private:
   struct Layout {
     TypeIndex ReturnType;
@@ -237,6 +223,15 @@ private:
     TypeIndex ArgListType;
     little32_t ThisAdjustment;
   };
+
+  TypeIndex ReturnType;
+  TypeIndex ClassType;
+  TypeIndex ThisType;
+  CallingConvention CallConv;
+  FunctionOptions Options;
+  uint16_t ParameterCount;
+  TypeIndex ArgumentList;
+  int32_t ThisPointerAdjustment;
 };
 
 // LF_MFUNC_ID
@@ -257,9 +252,6 @@ public:
   TypeIndex getClassType() const { return ClassType; }
   TypeIndex getFunctionType() const { return FunctionType; }
   StringRef getName() const { return Name; }
-  TypeIndex ClassType;
-  TypeIndex FunctionType;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -267,6 +259,9 @@ private:
     TypeIndex FunctionType;
     // Name: The null-terminated name follows.
   };
+  TypeIndex ClassType;
+  TypeIndex FunctionType;
+  StringRef Name;
 };
 
 // LF_ARGLIST, LF_SUBSTR_LIST
@@ -288,13 +283,13 @@ public:
 
   static uint32_t getLayoutSize() { return 2 + sizeof(Layout); }
 
-  std::vector<TypeIndex> StringIndices;
-
 private:
   struct Layout {
     ulittle32_t NumArgs; // Number of arguments
                          // ArgTypes[]: Type indicies of arguments
   };
+
+  std::vector<TypeIndex> StringIndices;
 };
 
 // LF_POINTER
@@ -313,8 +308,8 @@ public:
 
   PointerRecord(TypeIndex ReferentType, PointerKind Kind, PointerMode Mode,
                 PointerOptions Options, uint8_t Size)
-      : TypeRecord(TypeRecordKind::Pointer), ReferentType(ReferentType),
-        PtrKind(Kind), Mode(Mode), Options(Options), Size(Size) {}
+      : PointerRecord(ReferentType, Kind, Mode, Options, Size,
+                      MemberPointerInfo()) {}
 
   PointerRecord(TypeIndex ReferentType, PointerKind Kind, PointerMode Mode,
                 PointerOptions Options, uint8_t Size,
@@ -335,7 +330,7 @@ public:
   PointerMode getMode() const { return Mode; }
   PointerOptions getOptions() const { return Options; }
   uint8_t getSize() const { return Size; }
-  MemberPointerInfo getMemberInfo() const { return *MemberInfo; }
+  MemberPointerInfo getMemberInfo() const { return MemberInfo; }
 
   bool isPointerToMember() const {
     return Mode == PointerMode::PointerToDataMember ||
@@ -353,13 +348,6 @@ public:
   bool isUnaligned() const {
     return !!(uint32_t(Options) & uint32_t(PointerOptions::Unaligned));
   }
-
-  TypeIndex ReferentType;
-  PointerKind PtrKind;
-  PointerMode Mode;
-  PointerOptions Options;
-  uint8_t Size;
-  Optional<MemberPointerInfo> MemberInfo;
 
 private:
   struct Layout {
@@ -391,6 +379,13 @@ private:
       return isPointerToMemberFunction() || isPointerToDataMember();
     }
   };
+
+  TypeIndex ReferentType;
+  PointerKind PtrKind;
+  PointerMode Mode;
+  PointerOptions Options;
+  uint8_t Size;
+  MemberPointerInfo MemberInfo;
 };
 
 // LF_NESTTYPE
@@ -410,23 +405,23 @@ public:
   TypeIndex getNestedType() const { return Type; }
   StringRef getName() const { return Name; }
 
-  TypeIndex Type;
-  StringRef Name;
-
 private:
   struct Layout {
     ulittle16_t Pad0; // Should be zero
     TypeIndex Type;   // Type index of nested type
                       // Name: Null-terminated string
   };
+
+  TypeIndex Type;
+  StringRef Name;
 };
 
 // LF_FIELDLIST
 class FieldListRecord : public TypeRecord {
 public:
   explicit FieldListRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
-  explicit FieldListRecord(ArrayRef<uint8_t> Data)
-      : TypeRecord(TypeRecordKind::FieldList), Data(Data) {}
+  FieldListRecord(ArrayRef<uint8_t> ListData)
+      : TypeRecord(TypeRecordKind::FieldList), ListData(ListData) {}
 
   /// Rewrite member type indices with IndexMap. Returns false if a type index
   /// is not in the map.
@@ -435,7 +430,10 @@ public:
   static Expected<FieldListRecord> deserialize(TypeRecordKind Kind,
                                                ArrayRef<uint8_t> &Data);
 
-  ArrayRef<uint8_t> Data;
+  ArrayRef<uint8_t> getFieldListData() const { return ListData; }
+
+private:
+  ArrayRef<uint8_t> ListData;
 };
 
 // LF_ARRAY
@@ -459,11 +457,6 @@ public:
   uint64_t getSize() const { return Size; }
   llvm::StringRef getName() const { return Name; }
 
-  TypeIndex ElementType;
-  TypeIndex IndexType;
-  uint64_t Size;
-  llvm::StringRef Name;
-
 private:
   struct Layout {
     TypeIndex ElementType;
@@ -471,6 +464,11 @@ private:
     // SizeOf: LF_NUMERIC encoded size in bytes. Not element count!
     // Name: The null-terminated name follows.
   };
+
+  TypeIndex ElementType;
+  TypeIndex IndexType;
+  uint64_t Size;
+  llvm::StringRef Name;
 };
 
 class TagRecord : public TypeRecord {
@@ -497,6 +495,7 @@ public:
   StringRef getName() const { return Name; }
   StringRef getUniqueName() const { return UniqueName; }
 
+private:
   uint16_t MemberCount;
   ClassOptions Options;
   TypeIndex FieldList;
@@ -529,12 +528,6 @@ public:
   TypeIndex getVTableShape() const { return VTableShape; }
   uint64_t getSize() const { return Size; }
 
-  HfaKind Hfa;
-  WindowsRTClassKind WinRTKind;
-  TypeIndex DerivationList;
-  TypeIndex VTableShape;
-  uint64_t Size;
-
 private:
   struct Layout {
     ulittle16_t MemberCount; // Number of members in FieldList.
@@ -550,6 +543,12 @@ private:
       return Properties & uint16_t(ClassOptions::HasUniqueName);
     }
   };
+
+  HfaKind Hfa;
+  WindowsRTClassKind WinRTKind;
+  TypeIndex DerivationList;
+  TypeIndex VTableShape;
+  uint64_t Size;
 };
 
 // LF_UNION
@@ -568,9 +567,6 @@ struct UnionRecord : public TagRecord {
   HfaKind getHfa() const { return Hfa; }
   uint64_t getSize() const { return Size; }
 
-  HfaKind Hfa;
-  uint64_t Size;
-
 private:
   struct Layout {
     ulittle16_t MemberCount; // Number of members in FieldList.
@@ -584,6 +580,9 @@ private:
       return Properties & uint16_t(ClassOptions::HasUniqueName);
     }
   };
+
+  HfaKind Hfa;
+  uint64_t Size;
 };
 
 // LF_ENUM
@@ -603,7 +602,6 @@ public:
                                           ArrayRef<uint8_t> &Data);
 
   TypeIndex getUnderlyingType() const { return UnderlyingType; }
-  TypeIndex UnderlyingType;
 
 private:
   struct Layout {
@@ -618,6 +616,7 @@ private:
     }
   };
 
+  TypeIndex UnderlyingType;
 };
 
 // LF_BITFIELD
@@ -638,9 +637,6 @@ public:
   TypeIndex getType() const { return Type; }
   uint8_t getBitOffset() const { return BitOffset; }
   uint8_t getBitSize() const { return BitSize; }
-  TypeIndex Type;
-  uint8_t BitSize;
-  uint8_t BitOffset;
 
 private:
   struct Layout {
@@ -649,6 +645,9 @@ private:
     uint8_t BitOffset;
   };
 
+  TypeIndex Type;
+  uint8_t BitSize;
+  uint8_t BitOffset;
 };
 
 // LF_VTSHAPE
@@ -673,8 +672,6 @@ public:
     return Slots;
   }
   uint32_t getEntryCount() const { return getSlots().size(); }
-  ArrayRef<VFTableSlotKind> SlotsRef;
-  std::vector<VFTableSlotKind> Slots;
 
 private:
   struct Layout {
@@ -685,6 +682,9 @@ private:
     // Descriptors[]: 4-bit virtual method descriptors of type CV_VTS_desc_e.
   };
 
+private:
+  ArrayRef<VFTableSlotKind> SlotsRef;
+  std::vector<VFTableSlotKind> Slots;
 };
 
 // LF_TYPESERVER2
@@ -707,9 +707,6 @@ public:
   uint32_t getAge() const { return Age; }
 
   StringRef getName() const { return Name; }
-  StringRef Guid;
-  uint32_t Age;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -717,6 +714,10 @@ private:
     ulittle32_t Age;
     // Name: Name of the PDB as a null-terminated string
   };
+
+  StringRef Guid;
+  uint32_t Age;
+  StringRef Name;
 };
 
 // LF_STRING_ID
@@ -736,14 +737,15 @@ public:
   TypeIndex getId() const { return Id; }
 
   StringRef getString() const { return String; }
-  TypeIndex Id;
-  StringRef String;
 
 private:
   struct Layout {
     TypeIndex id;
     // Name: Name of the PDB as a null-terminated string
   };
+
+  TypeIndex Id;
+  StringRef String;
 };
 
 // LF_FUNC_ID
@@ -766,9 +768,6 @@ public:
   TypeIndex getFunctionType() const { return FunctionType; }
 
   StringRef getName() const { return Name; }
-  TypeIndex ParentScope;
-  TypeIndex FunctionType;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -777,6 +776,9 @@ private:
     // Name: The null-terminated name follows.
   };
 
+  TypeIndex ParentScope;
+  TypeIndex FunctionType;
+  StringRef Name;
 };
 
 // LF_UDT_SRC_LINE
@@ -797,9 +799,6 @@ public:
   TypeIndex getUDT() const { return UDT; }
   TypeIndex getSourceFile() const { return SourceFile; }
   uint32_t getLineNumber() const { return LineNumber; }
-  TypeIndex UDT;
-  TypeIndex SourceFile;
-  uint32_t LineNumber;
 
 private:
   struct Layout {
@@ -808,6 +807,9 @@ private:
     ulittle32_t LineNumber;
   };
 
+  TypeIndex UDT;
+  TypeIndex SourceFile;
+  uint32_t LineNumber;
 };
 
 // LF_UDT_MOD_SRC_LINE
@@ -834,10 +836,6 @@ public:
   TypeIndex getSourceFile() const { return SourceFile; }
   uint32_t getLineNumber() const { return LineNumber; }
   uint16_t getModule() const { return Module; }
-  TypeIndex UDT;
-  TypeIndex SourceFile;
-  uint32_t LineNumber;
-  uint16_t Module;
 
 private:
   struct Layout {
@@ -847,6 +845,10 @@ private:
     ulittle16_t Module; // Module that contributes this UDT definition
   };
 
+  TypeIndex UDT;
+  TypeIndex SourceFile;
+  uint32_t LineNumber;
+  uint16_t Module;
 };
 
 // LF_BUILDINFO
@@ -865,13 +867,13 @@ public:
                                                ArrayRef<uint8_t> &Data);
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
-  SmallVector<TypeIndex, 4> ArgIndices;
 
 private:
   struct Layout {
     ulittle16_t NumArgs; // Number of arguments
                          // ArgTypes[]: Type indicies of arguments
   };
+  SmallVector<TypeIndex, 4> ArgIndices;
 };
 
 // LF_VFTABLE
@@ -907,12 +909,6 @@ public:
       return MethodNamesRef;
     return MethodNames;
   }
-  TypeIndex CompleteClass;
-  TypeIndex OverriddenVFTable;
-  ulittle32_t VFPtrOffset;
-  StringRef Name;
-  ArrayRef<StringRef> MethodNamesRef;
-  std::vector<StringRef> MethodNames;
 
 private:
   struct Layout {
@@ -924,12 +920,17 @@ private:
     // names.
   };
 
+  TypeIndex CompleteClass;
+  TypeIndex OverriddenVFTable;
+  ulittle32_t VFPtrOffset;
+  StringRef Name;
+  ArrayRef<StringRef> MethodNamesRef;
+  std::vector<StringRef> MethodNames;
 };
 
 // LF_ONEMETHOD
 class OneMethodRecord : public TypeRecord {
 public:
-  OneMethodRecord() : TypeRecord(TypeRecordKind::OneMethod) {}
   explicit OneMethodRecord(TypeRecordKind Kind) : TypeRecord(Kind) {}
   OneMethodRecord(TypeIndex Type, MethodKind Kind, MethodOptions Options,
                   MemberAccess Access, int32_t VFTableOffset, StringRef Name)
@@ -955,12 +956,6 @@ public:
     return Kind == MethodKind::IntroducingVirtual ||
            Kind == MethodKind::PureIntroducingVirtual;
   }
-  TypeIndex Type;
-  MethodKind Kind;
-  MethodOptions Options;
-  MemberAccess Access;
-  int32_t VFTableOffset;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -971,6 +966,12 @@ private:
     // Name: Null-terminated string
   };
 
+  TypeIndex Type;
+  MethodKind Kind;
+  MethodOptions Options;
+  MemberAccess Access;
+  int32_t VFTableOffset;
+  StringRef Name;
 };
 
 // LF_METHODLIST
@@ -988,7 +989,6 @@ public:
   deserialize(TypeRecordKind Kind, ArrayRef<uint8_t> &Data);
 
   ArrayRef<OneMethodRecord> getMethods() const { return Methods; }
-  std::vector<OneMethodRecord> Methods;
 
 private:
   struct Layout {
@@ -1000,6 +1000,7 @@ private:
     //   VFTableOffset: int32_t offset in vftable
   };
 
+  std::vector<OneMethodRecord> Methods;
 };
 
 /// For method overload sets.  LF_METHOD
@@ -1021,9 +1022,6 @@ public:
   uint16_t getNumOverloads() const { return NumOverloads; }
   TypeIndex getMethodList() const { return MethodList; }
   StringRef getName() const { return Name; }
-  uint16_t NumOverloads;
-  TypeIndex MethodList;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -1032,6 +1030,9 @@ private:
                              // Name: Null-terminated string
   };
 
+  uint16_t NumOverloads;
+  TypeIndex MethodList;
+  StringRef Name;
 };
 
 // LF_MEMBER
@@ -1054,10 +1055,6 @@ public:
   TypeIndex getType() const { return Type; }
   uint64_t getFieldOffset() const { return FieldOffset; }
   StringRef getName() const { return Name; }
-  MemberAccess Access;
-  TypeIndex Type;
-  uint64_t FieldOffset;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -1067,6 +1064,10 @@ private:
     // Name: Null-terminated string
   };
 
+  MemberAccess Access;
+  TypeIndex Type;
+  uint64_t FieldOffset;
+  StringRef Name;
 };
 
 // LF_STMEMBER
@@ -1087,9 +1088,6 @@ public:
   MemberAccess getAccess() const { return Access; }
   TypeIndex getType() const { return Type; }
   StringRef getName() const { return Name; }
-  MemberAccess Access;
-  TypeIndex Type;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -1098,6 +1096,9 @@ private:
     // Name: Null-terminated string
   };
 
+  MemberAccess Access;
+  TypeIndex Type;
+  StringRef Name;
 };
 
 // LF_ENUMERATE
@@ -1118,9 +1119,6 @@ public:
   MemberAccess getAccess() const { return Access; }
   APSInt getValue() const { return Value; }
   StringRef getName() const { return Name; }
-  MemberAccess Access;
-  APSInt Value;
-  StringRef Name;
 
 private:
   struct Layout {
@@ -1129,6 +1127,9 @@ private:
                             // Name: Null-terminated string
   };
 
+  MemberAccess Access;
+  APSInt Value;
+  StringRef Name;
 };
 
 // LF_VFUNCTAB
@@ -1146,13 +1147,13 @@ public:
                                            ArrayRef<uint8_t> &Data);
 
   TypeIndex getType() const { return Type; }
-  TypeIndex Type;
 
 private:
   struct Layout {
     ulittle16_t Pad0;
     TypeIndex Type; // Type of vfptr
   };
+  TypeIndex Type;
 };
 
 // LF_BCLASS, LF_BINTERFACE
@@ -1173,9 +1174,6 @@ public:
   MemberAccess getAccess() const { return Access; }
   TypeIndex getBaseType() const { return Type; }
   uint64_t getBaseOffset() const { return Offset; }
-  MemberAccess Access;
-  TypeIndex Type;
-  uint64_t Offset;
 
 private:
   struct Layout {
@@ -1183,6 +1181,9 @@ private:
     TypeIndex BaseType;     // Base class type
     // BaseOffset: LF_NUMERIC encoded byte offset of base from derived.
   };
+  MemberAccess Access;
+  TypeIndex Type;
+  uint64_t Offset;
 };
 
 // LF_VBCLASS, LF_IVBCLASS
@@ -1207,11 +1208,6 @@ public:
   TypeIndex getVBPtrType() const { return VBPtrType; }
   uint64_t getVBPtrOffset() const { return VBPtrOffset; }
   uint64_t getVTableIndex() const { return VTableIndex; }
-  MemberAccess Access;
-  TypeIndex BaseType;
-  TypeIndex VBPtrType;
-  uint64_t VBPtrOffset;
-  uint64_t VTableIndex;
 
 private:
   struct Layout {
@@ -1221,6 +1217,11 @@ private:
     // VBPtrOffset: Offset of vbptr from vfptr encoded as LF_NUMERIC.
     // VBTableIndex: Index of vbase within vbtable encoded as LF_NUMERIC.
   };
+  MemberAccess Access;
+  TypeIndex BaseType;
+  TypeIndex VBPtrType;
+  uint64_t VBPtrOffset;
+  uint64_t VTableIndex;
 };
 
 /// LF_INDEX - Used to chain two large LF_FIELDLIST or LF_METHODLIST records
@@ -1238,15 +1239,17 @@ public:
 
   static Expected<ListContinuationRecord> deserialize(TypeRecordKind Kind,
                                                       ArrayRef<uint8_t> &Data);
-  TypeIndex ContinuationIndex;
 
 private:
   struct Layout {
     ulittle16_t Pad0;
     TypeIndex ContinuationIndex;
   };
+  TypeIndex ContinuationIndex;
 };
 
+typedef CVRecord<TypeLeafKind> CVType;
+typedef msf::VarStreamArray<CVType> CVTypeArray;
 }
 }
 

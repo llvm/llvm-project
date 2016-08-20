@@ -111,31 +111,26 @@
 ; EMPTY-NEXT:       FieldList (0x1002) {
 ; EMPTY-NEXT:         TypeLeafKind: LF_FIELDLIST (0x1203)
 ; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
 ; EMPTY-NEXT:           EnumValue: 1
 ; EMPTY-NEXT:           Name: apartment
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
 ; EMPTY-NEXT:           EnumValue: 2
 ; EMPTY-NEXT:           Name: single
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
 ; EMPTY-NEXT:           EnumValue: 3
 ; EMPTY-NEXT:           Name: free
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
 ; EMPTY-NEXT:           EnumValue: 4
 ; EMPTY-NEXT:           Name: neutral
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
 ; EMPTY-NEXT:           EnumValue: 5
 ; EMPTY-NEXT:           Name: both

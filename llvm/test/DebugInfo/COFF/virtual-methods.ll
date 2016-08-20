@@ -64,7 +64,6 @@
 
 ; CHECK:      FieldList ({{.*}}) {
 ; CHECK:        OneMethod {
-; CHECK-NEXT:     TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:     AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:     MethodKind: Virtual (0x1)
 ; CHECK-NEXT:     Type: int C::() ([[C_g]])
@@ -88,7 +87,6 @@
 
 ; CHECK:      FieldList ({{.*}}) {
 ; CHECK:        OneMethod {
-; CHECK-NEXT:     TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK-NEXT:     AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:     MethodKind: Virtual (0x1)
 ; CHECK-NEXT:     Type: int D::() ([[D_g]])
