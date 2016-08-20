@@ -16,13 +16,11 @@
 ; CHECK:        FieldList ({{.*}}) {
 ; CHECK-NEXT:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:     BaseClass {
-; CHECK-NEXT:       TypeLeafKind: LF_BCLASS (0x1400)
 ; CHECK-NEXT:       AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:       BaseType: B ({{.*}})
 ; CHECK-NEXT:       BaseOffset: 0x8
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     BaseClass {
-; CHECK-NEXT:       TypeLeafKind: LF_BCLASS (0x1400)
 ; CHECK-NEXT:       AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:       BaseType: C ({{.*}})
 ; CHECK-NEXT:       BaseOffset: 0x18
@@ -33,7 +31,6 @@
 ; CHECK:        FieldList ({{.*}}) {
 ; CHECK-NEXT:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:     VirtualBaseClass {
-; CHECK-NEXT:       TypeLeafKind: LF_VBCLASS (0x1401)
 ; CHECK-NEXT:       AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:       BaseType: A ({{.*}})
 ; CHECK-NEXT:       VBPtrType: const int* ({{.*}})
@@ -46,7 +43,6 @@
 ; CHECK:        FieldList ({{.*}}) {
 ; CHECK-NEXT:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:     VirtualBaseClass {
-; CHECK-NEXT:       TypeLeafKind: LF_VBCLASS (0x1401)
 ; CHECK-NEXT:       AccessSpecifier: Public (0x3)
 ; CHECK-NEXT:       BaseType: A ({{.*}})
 ; CHECK-NEXT:       VBPtrType: const int* ({{.*}})

@@ -28,8 +28,6 @@ public:
   /// Visits the type records in Data. Sets the error flag on parse failures.
   Error visitTypeStream(const CVTypeArray &Types);
 
-  Error visitFieldListMemberStream(ArrayRef<uint8_t> FieldList);
-
 private:
   /// The interface to the class that gets notified of each visitation.
   TypeVisitorCallbacks &Callbacks;

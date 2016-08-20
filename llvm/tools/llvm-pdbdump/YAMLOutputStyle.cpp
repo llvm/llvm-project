@@ -16,7 +16,6 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
-#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -44,9 +43,6 @@ Error YAMLOutputStyle::dump() {
     return EC;
 
   if (auto EC = dumpDbiStream())
-    return EC;
-
-  if (auto EC = dumpTpiStream())
     return EC;
 
   flush();
@@ -151,30 +147,6 @@ Error YAMLOutputStyle::dumpDbiStream() {
       Obj.DbiStream->ModInfos.push_back(DMI);
     }
   }
-  return Error::success();
-}
-
-Error YAMLOutputStyle::dumpTpiStream() {
-  if (!opts::pdb2yaml::TpiStream)
-    return Error::success();
-
-  auto TpiS = File.getPDBTpiStream();
-  if (!TpiS)
-    return TpiS.takeError();
-
-  auto &TS = TpiS.get();
-  Obj.TpiStream.emplace();
-  Obj.TpiStream->Version = TS.getTpiVersion();
-  for (auto &Record : TS.types(nullptr)) {
-    yaml::PdbTpiRecord R;
-    // It's not necessary to set R.RecordData here.  That only exists as a
-    // way to have the `PdbTpiRecord` structure own the memory that `R.Record`
-    // references.  In the case of reading an existing PDB though, that memory
-    // is owned by the backing stream.
-    R.Record = Record;
-    Obj.TpiStream->Records.push_back(R);
-  }
-
   return Error::success();
 }
 
