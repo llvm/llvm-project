@@ -89,8 +89,12 @@ if(COMPILER_RT_STANDALONE_BUILD)
   # introduce a rule to run to run all of them.
   get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
   get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  add_lit_target(check-all
+  add_lit_target(check-compiler-rt
     "Running all regression tests"
     ${LLVM_LIT_TESTSUITES}
     DEPENDS ${LLVM_LIT_DEPENDS})
+  if(NOT TARGET check-all)
+    add_custom_target(check-all)
+  endif()
+  add_dependencies(check-all check-compiler-rt)
 endif()

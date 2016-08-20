@@ -8,6 +8,7 @@ check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Top level target used to build all compiler-rt libraries.
 add_custom_target(compiler-rt ALL)
+add_custom_target(install-compiler-rt)
 set_target_properties(compiler-rt PROPERTIES FOLDER "Compiler-RT Misc")
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
