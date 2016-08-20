@@ -19,6 +19,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -279,47 +280,35 @@ namespace {
 /// This class defines what a code clone is: If it collects for two statements
 /// the same data, then those two statements are considered to be clones of each
 /// other.
-class StmtDataCollector : public ConstStmtVisitor<StmtDataCollector> {
+///
+/// All collected data is forwarded to the given data consumer of the type T.
+/// The data consumer class needs to provide a member method with the signature:
+///   update(StringRef Str)
+template <typename T>
+class StmtDataCollector : public ConstStmtVisitor<StmtDataCollector<T>> {
 
   ASTContext &Context;
-  std::vector<CloneDetector::DataPiece> &CollectedData;
+  /// \brief The data sink to which all data is forwarded.
+  T &DataConsumer;
 
 public:
   /// \brief Collects data of the given Stmt.
   /// \param S The given statement.
   /// \param Context The ASTContext of S.
-  /// \param D The given data vector to which all collected data is appended.
-  StmtDataCollector(const Stmt *S, ASTContext &Context,
-                    std::vector<CloneDetector::DataPiece> &D)
-      : Context(Context), CollectedData(D) {
-    Visit(S);
+  /// \param D The data sink to which all data is forwarded.
+  StmtDataCollector(const Stmt *S, ASTContext &Context, T &DataConsumer)
+      : Context(Context), DataConsumer(DataConsumer) {
+    this->Visit(S);
   }
 
   // Below are utility methods for appending different data to the vector.
 
   void addData(CloneDetector::DataPiece Integer) {
-    CollectedData.push_back(Integer);
+    DataConsumer.update(
+        StringRef(reinterpret_cast<char *>(&Integer), sizeof(Integer)));
   }
 
-  // FIXME: The functions below add long strings to the data vector which are
-  // probably not good for performance. Replace the strings with pointer values
-  // or a some other unique integer.
-
-  void addData(llvm::StringRef Str) {
-    if (Str.empty())
-      return;
-
-    const size_t OldSize = CollectedData.size();
-
-    const size_t PieceSize = sizeof(CloneDetector::DataPiece);
-    // Calculate how many vector units we need to accomodate all string bytes.
-    size_t RoundedUpPieceNumber = (Str.size() + PieceSize - 1) / PieceSize;
-    // Allocate space for the string in the data vector.
-    CollectedData.resize(CollectedData.size() + RoundedUpPieceNumber);
-
-    // Copy the string to the allocated space at the end of the vector.
-    std::memcpy(CollectedData.data() + OldSize, Str.data(), Str.size());
-  }
+  void addData(llvm::StringRef Str) { DataConsumer.update(Str); }
 
   void addData(const QualType &QT) { addData(QT.getAsString()); }
 
@@ -484,8 +473,10 @@ class CloneSignatureGenerator {
     // Create an empty signature that will be filled in this method.
     CloneDetector::CloneSignature Signature;
 
-    // Collect all relevant data from S and put it into the empty signature.
-    StmtDataCollector(S, Context, Signature.Data);
+    llvm::MD5 Hash;
+
+    // Collect all relevant data from S and hash it.
+    StmtDataCollector<llvm::MD5>(S, Context, Hash);
 
     // Look up what macros expanded into the current statement.
     std::string StartMacroStack = getMacroStack(S->getLocStart(), Context);
@@ -523,7 +514,9 @@ class CloneSignatureGenerator {
       auto ChildSignature = generateSignatures(Child, StartMacroStack);
 
       // Add the collected data to the signature of the current statement.
-      Signature.add(ChildSignature);
+      Signature.Complexity += ChildSignature.Complexity;
+      Hash.update(StringRef(reinterpret_cast<char *>(&ChildSignature.Hash),
+                            sizeof(ChildSignature.Hash)));
 
       // If the current statement is a CompoundStatement, we need to store the
       // signature for the generation of the sub-sequences.
@@ -535,6 +528,14 @@ class CloneSignatureGenerator {
     // clone groups from the sub-sequences inside the children.
     if (CS)
       handleSubSequences(CS, ChildSignatures);
+
+    // Create the final hash code for the current signature.
+    llvm::MD5::MD5Result HashResult;
+    Hash.final(HashResult);
+
+    // Copy as much of the generated hash code to the signature's hash code.
+    std::memcpy(&Signature.Hash, &HashResult,
+                std::min(sizeof(Signature.Hash), sizeof(HashResult)));
 
     // Save the signature for the current statement in the CloneDetector object.
     CD.add(StmtSequence(S, Context), Signature);
@@ -564,10 +565,23 @@ class CloneSignatureGenerator {
         // Create an empty signature and add the signatures of all selected
         // child statements to it.
         CloneDetector::CloneSignature SubSignature;
+        llvm::MD5 SubHash;
 
         for (unsigned i = Pos; i < Pos + Length; ++i) {
-          SubSignature.add(ChildSignatures[i]);
+          SubSignature.Complexity += ChildSignatures[i].Complexity;
+          size_t ChildHash = ChildSignatures[i].Hash;
+
+          SubHash.update(StringRef(reinterpret_cast<char *>(&ChildHash),
+                                sizeof(ChildHash)));
         }
+
+        // Create the final hash code for the current signature.
+        llvm::MD5::MD5Result HashResult;
+        SubHash.final(HashResult);
+
+        // Copy as much of the generated hash code to the signature's hash code.
+        std::memcpy(&SubSignature.Hash, &HashResult,
+                    std::min(sizeof(SubSignature.Hash), sizeof(HashResult)));
 
         // Save the signature together with the information about what children
         // sequence we selected.
@@ -594,25 +608,7 @@ void CloneDetector::analyzeCodeBody(const Decl *D) {
 
 void CloneDetector::add(const StmtSequence &S,
                         const CloneSignature &Signature) {
-  // StringMap only works with StringRefs, so we create one for our data vector.
-  auto &Data = Signature.Data;
-  StringRef DataRef = StringRef(reinterpret_cast<const char *>(Data.data()),
-                                Data.size() * sizeof(unsigned));
-
-  // Search with the help of the signature if we already have encountered a
-  // clone of the given StmtSequence.
-  auto I = CloneGroupIndexes.find(DataRef);
-  if (I == CloneGroupIndexes.end()) {
-    // We haven't found an existing clone group, so we create a new clone group
-    // for this StmtSequence and store the index of it in our search map.
-    CloneGroupIndexes[DataRef] = CloneGroups.size();
-    CloneGroups.emplace_back(S, Signature.Complexity);
-    return;
-  }
-
-  // We have found an existing clone group and can expand it with the given
-  // StmtSequence.
-  CloneGroups[I->getValue()].Sequences.push_back(S);
+  Sequences.push_back(std::make_pair(Signature, S));
 }
 
 namespace {
@@ -645,14 +641,66 @@ bool containsGroup(CloneDetector::CloneGroup &Group,
 }
 } // end anonymous namespace
 
+namespace {
+/// \brief Wrapper around FoldingSetNodeID that it can be used as the template
+///        argument of the StmtDataCollector.
+class FoldingSetNodeIDWrapper {
+
+  llvm::FoldingSetNodeID &FS;
+
+public:
+  FoldingSetNodeIDWrapper(llvm::FoldingSetNodeID &FS) : FS(FS) {}
+
+  void update(StringRef Str) { FS.AddString(Str); }
+};
+} // end anonymous namespace
+
+/// \brief Writes the relevant data from all statements and child statements
+///        in the given StmtSequence into the given FoldingSetNodeID.
+static void CollectStmtSequenceData(const StmtSequence &Sequence,
+                                    FoldingSetNodeIDWrapper &OutputData) {
+  for (const Stmt *S : Sequence) {
+    StmtDataCollector<FoldingSetNodeIDWrapper>(S, Sequence.getASTContext(),
+                                               OutputData);
+
+    for (const Stmt *Child : S->children()) {
+      if (!Child)
+        continue;
+
+      CollectStmtSequenceData(StmtSequence(Child, Sequence.getASTContext()),
+                              OutputData);
+    }
+  }
+}
+
+/// \brief Returns true if both sequences are clones of each other.
+static bool areSequencesClones(const StmtSequence &LHS,
+                               const StmtSequence &RHS) {
+  // We collect the data from all statements in the sequence as we did before
+  // when generating a hash value for each sequence. But this time we don't
+  // hash the collected data and compare the whole data set instead. This
+  // prevents any false-positives due to hash code collisions.
+  llvm::FoldingSetNodeID DataLHS, DataRHS;
+  FoldingSetNodeIDWrapper LHSWrapper(DataLHS);
+  FoldingSetNodeIDWrapper RHSWrapper(DataRHS);
+
+  CollectStmtSequenceData(LHS, LHSWrapper);
+  CollectStmtSequenceData(RHS, RHSWrapper);
+
+  return DataLHS == DataRHS;
+}
+
 /// \brief Finds all actual clone groups in a single group of presumed clones.
-/// \param Result Output parameter to which all found groups are added. Every
-///               clone in a group that was added this way follows the same
-///               variable pattern as the other clones in its group.
-/// \param Group A group of clones. The clones are allowed to have a different
-///              variable pattern.
+/// \param Result Output parameter to which all found groups are added.
+/// \param Group A group of presumed clones. The clones are allowed to have a
+///              different variable pattern and may not be actual clones of each
+///              other.
+/// \param CheckVariablePatterns If true, every clone in a group that was added
+///              to the output follows the same variable pattern as the other
+///              clones in its group.
 static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
-                              const CloneDetector::CloneGroup &Group) {
+                              const CloneDetector::CloneGroup &Group,
+                              bool CheckVariablePattern) {
   // We remove the Sequences one by one, so a list is more appropriate.
   std::list<StmtSequence> UnassignedSequences(Group.Sequences.begin(),
                                               Group.Sequences.end());
@@ -664,7 +712,7 @@ static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
     StmtSequence Prototype = UnassignedSequences.front();
     UnassignedSequences.pop_front();
 
-    CloneDetector::CloneGroup FilteredGroup(Prototype, Group.Complexity);
+    CloneDetector::CloneGroup FilteredGroup(Prototype, Group.Signature);
 
     // Analyze the variable pattern of the prototype. Every other StmtSequence
     // needs to have the same pattern to get into the new clone group.
@@ -674,12 +722,27 @@ static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
     // and assign them to our new clone group.
     auto I = UnassignedSequences.begin(), E = UnassignedSequences.end();
     while (I != E) {
+      // If the sequence doesn't fit to the prototype, we have encountered
+      // an unintended hash code collision and we skip it.
+      if (!areSequencesClones(Prototype, *I)) {
+        ++I;
+        continue;
+      }
 
-      if (VariablePattern(*I).countPatternDifferences(PrototypeFeatures) == 0) {
+      // If we weren't asked to check for a matching variable pattern in clone
+      // groups we can add the sequence now to the new clone group.
+      // If we were asked to check for matching variable pattern, we first have
+      // to check that there are no differences between the two patterns and
+      // only proceed if they match.
+      if (!CheckVariablePattern ||
+          VariablePattern(*I).countPatternDifferences(PrototypeFeatures) == 0) {
         FilteredGroup.Sequences.push_back(*I);
         I = UnassignedSequences.erase(I);
         continue;
       }
+
+      // We didn't found a matching variable pattern, so we continue with the
+      // next sequence.
       ++I;
     }
 
@@ -694,14 +757,76 @@ static void createCloneGroups(std::vector<CloneDetector::CloneGroup> &Result,
 void CloneDetector::findClones(std::vector<CloneGroup> &Result,
                                unsigned MinGroupComplexity,
                                bool CheckPatterns) {
+  // A shortcut (and necessary for the for-loop later in this function).
+  if (Sequences.empty())
+    return;
+
+  // We need to search for groups of StmtSequences with the same hash code to
+  // create our initial clone groups. By sorting all known StmtSequences by
+  // their hash value we make sure that StmtSequences with the same hash code
+  // are grouped together in the Sequences vector.
+  // Note: We stable sort here because the StmtSequences are added in the order
+  // in which they appear in the source file. We want to preserve that order
+  // because we also want to report them in that order in the CloneChecker.
+  std::stable_sort(Sequences.begin(), Sequences.end(),
+                   [](std::pair<CloneSignature, StmtSequence> LHS,
+                      std::pair<CloneSignature, StmtSequence> RHS) {
+                     return LHS.first.Hash < RHS.first.Hash;
+                   });
+
+  std::vector<CloneGroup> CloneGroups;
+
+  // Check for each CloneSignature if its successor has the same hash value.
+  // We don't check the last CloneSignature as it has no successor.
+  // Note: The 'size - 1' in the condition is safe because we check for an empty
+  // Sequences vector at the beginning of this function.
+  for (unsigned i = 0; i < Sequences.size() - 1; ++i) {
+    const auto Current = Sequences[i];
+    const auto Next = Sequences[i + 1];
+
+    if (Current.first.Hash != Next.first.Hash)
+      continue;
+
+    // It's likely that we just found an sequence of CloneSignatures that
+    // represent a CloneGroup, so we create a new group and start checking and
+    // adding the CloneSignatures in this sequence.
+    CloneGroup Group;
+    Group.Signature = Current.first;
+
+    for (; i < Sequences.size(); ++i) {
+      const auto &Signature = Sequences[i];
+
+      // A different hash value means we have reached the end of the sequence.
+      if (Current.first.Hash != Signature.first.Hash) {
+        // The current Signature could be the start of a new CloneGroup. So we
+        // decrement i so that we visit it again in the outer loop.
+        // Note: i can never be 0 at this point because we are just comparing
+        // the hash of the Current CloneSignature with itself in the 'if' above.
+        assert(i != 0);
+        --i;
+        break;
+      }
+
+      // Skip CloneSignatures that won't pass the complexity requirement.
+      if (Signature.first.Complexity < MinGroupComplexity)
+        continue;
+
+      Group.Sequences.push_back(Signature.second);
+    }
+
+    // There is a chance that we haven't found more than two fitting
+    // CloneSignature because not enough CloneSignatures passed the complexity
+    // requirement. As a CloneGroup with less than two members makes no sense,
+    // we ignore this CloneGroup and won't add it to the result.
+    if (!Group.isValid())
+      continue;
+
+    CloneGroups.push_back(Group);
+  }
+
   // Add every valid clone group that fulfills the complexity requirement.
   for (const CloneGroup &Group : CloneGroups) {
-    if (Group.isValid() && Group.Complexity >= MinGroupComplexity) {
-      if (CheckPatterns)
-        createCloneGroups(Result, Group);
-      else
-        Result.push_back(Group);
-    }
+    createCloneGroups(Result, Group, CheckPatterns);
   }
 
   std::vector<unsigned> IndexesToRemove;

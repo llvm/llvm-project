@@ -16,6 +16,7 @@
 #define LLVM_CLANG_AST_CLONEDETECTION_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 
 #include <vector>
@@ -163,11 +164,20 @@ public:
   /// Holds the data about a StmtSequence that is needed during the search for
   /// code clones.
   struct CloneSignature {
-    /// \brief Holds all relevant data of a StmtSequence.
+    /// \brief The hash code of the StmtSequence.
     ///
-    /// If this variable is equal for two different StmtSequences, then they can
-    /// be considered clones of each other.
-    std::vector<DataPiece> Data;
+    /// The initial clone groups that are formed during the search for clones
+    /// consist only of Sequences that share the same hash code. This makes this
+    /// value the central part of this heuristic that is needed to find clones
+    /// in a performant way. For this to work, the type of this variable
+    /// always needs to be small and fast to compare.
+    ///
+    /// Also, StmtSequences that are clones of each others have to share
+    /// the same hash code. StmtSequences that are not clones of each other
+    /// shouldn't share the same hash code, but if they do, it will only
+    /// degrade the performance of the hash search but doesn't influence
+    /// the correctness of the result.
+    size_t Hash;
 
     /// \brief The complexity of the StmtSequence.
     ///
@@ -186,14 +196,8 @@ public:
     /// \brief Creates an empty CloneSignature without any data.
     CloneSignature() : Complexity(1) {}
 
-    CloneSignature(const std::vector<unsigned> &Data, unsigned Complexity)
-        : Data(Data), Complexity(Complexity) {}
-
-    /// \brief Adds the data from the given CloneSignature to this one.
-    void add(const CloneSignature &Other) {
-      Data.insert(Data.end(), Other.Data.begin(), Other.Data.end());
-      Complexity += Other.Complexity;
-    }
+    CloneSignature(llvm::hash_code Hash, unsigned Complexity)
+        : Hash(Hash), Complexity(Complexity) {}
   };
 
   /// Holds group of StmtSequences that are clones of each other and the
@@ -201,10 +205,12 @@ public:
   /// StmtSequences have in common.
   struct CloneGroup {
     std::vector<StmtSequence> Sequences;
-    unsigned Complexity;
+    CloneSignature Signature;
 
-    CloneGroup(const StmtSequence &Seq, unsigned Complexity)
-        : Complexity(Complexity) {
+    CloneGroup() {}
+
+    CloneGroup(const StmtSequence &Seq, CloneSignature Signature)
+        : Signature(Signature) {
       Sequences.push_back(Seq);
     }
 
@@ -269,11 +275,8 @@ public:
                             unsigned MinGroupComplexity);
 
 private:
-  /// Stores all found clone groups including invalid groups with only a single
-  /// statement.
-  std::vector<CloneGroup> CloneGroups;
-  /// Maps search data to its related index in the \p CloneGroups vector.
-  llvm::StringMap<std::size_t> CloneGroupIndexes;
+  /// Stores all encountered StmtSequences alongside their CloneSignature.
+  std::vector<std::pair<CloneSignature, StmtSequence>> Sequences;
 };
 
 } // end namespace clang
