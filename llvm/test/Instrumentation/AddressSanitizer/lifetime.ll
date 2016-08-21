@@ -1,6 +1,6 @@
 ; Test handling of llvm.lifetime intrinsics.
 ; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-allocas=0 -S | FileCheck %s --check-prefix=CHECK-NO-DYNAMIC
+; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-dynamic-allocas=0 -S | FileCheck %s --check-prefix=CHECK-NO-DYNAMIC
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -108,10 +108,9 @@ entry:
   ; CHECK: __asan_poison_stack_memory
 
   ret void
-  ; CHECK: store i64 0
-  ; CHECK: store i64 0
-  ; CHECK: store i64 0
   ; CHECK: store i32 0
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
   ; CHECK-NEXT: __asan_unpoison_stack_memory
 }
 
