@@ -15,7 +15,7 @@
 #ifndef LLVM_ADT_ILIST_NODE_H
 #define LLVM_ADT_ILIST_NODE_H
 
-#include <llvm/ADT/PointerIntPair.h>
+#include "llvm/ADT/PointerIntPair.h"
 
 namespace llvm {
 

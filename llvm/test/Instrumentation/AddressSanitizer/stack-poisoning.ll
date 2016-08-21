@@ -16,11 +16,12 @@ entry:
 ; CHECK-UAR: label
 ; CHECK-UAR: call i64 @__asan_stack_malloc_4
 ; CHECK-UAR: label
+; Poison red zones.
 ; CHECK-UAR: store i64 -1007680412564983311
 ; CHECK-UAR: store i64 72057598113936114
-; CHECK-UAR: store i64 4076008178
-; CHECK-UAR: store i64 -868082074072645632
-; CHECK-UAR: store i32 -202116109
+; CHECK-UAR: store i32 -218959118
+; CHECK-UAR: store i64 -868082074056920316
+; CHECK-UAR: store i16 -3085
 ; CHECK-UAR: call void @Foo
 ; CHECK-UAR: call void @Foo
 ; CHECK-UAR: call void @Foo
@@ -43,15 +44,16 @@ entry:
   ; CHECK-UAR: store i64 -723401728380766731
   ; CHECK-UAR: store i64 -723401728380766731
   ; CHECK-UAR: store i64 -723401728380766731
+  ; CHECK-UAR-NOT: store i64
   ; CHECK-UAR: store i8 0
   ; CHECK-UAR-NOT: store
   ; CHECK-UAR: label
 ; Else Block: no UAR frame. Only unpoison the redzones.
   ; CHECK-UAR: store i64 0
   ; CHECK-UAR: store i64 0
-  ; CHECK-UAR: store i64 0
-  ; CHECK-UAR: store i64 0
   ; CHECK-UAR: store i32 0
+  ; CHECK-UAR: store i64 0
+  ; CHECK-UAR: store i16 0
   ; CHECK-UAR-NOT: store
   ; CHECK-UAR: label
 ; Done, no more stores.

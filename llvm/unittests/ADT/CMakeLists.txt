@@ -22,6 +22,7 @@ set(ADTSources
   IntEqClassesTest.cpp
   IntervalMapTest.cpp
   IntrusiveRefCntPtrTest.cpp
+  IteratorTest.cpp
   MakeUniqueTest.cpp
   MapVectorTest.cpp
   OptionalTest.cpp

@@ -776,11 +776,11 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
 
     // Increment past our save areas.
-    if (AFI->getDPRCalleeSavedAreaSize()) {
+    if (MBBI != MBB.end() && AFI->getDPRCalleeSavedAreaSize()) {
       MBBI++;
       // Since vpop register list cannot have gaps, there may be multiple vpop
       // instructions in the epilogue.
-      while (MBBI->getOpcode() == ARM::VLDMDIA_UPD)
+      while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::VLDMDIA_UPD)
         MBBI++;
     }
     if (AFI->getDPRCalleeSavedGapSize()) {
