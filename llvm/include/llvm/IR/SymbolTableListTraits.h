@@ -34,10 +34,6 @@ template <typename NodeTy> class ilist_iterator;
 template <typename NodeTy, typename Traits> class iplist;
 template <typename Ty> struct ilist_traits;
 
-template <typename NodeTy>
-struct SymbolTableListSentinelTraits
-    : public ilist_embedded_sentinel_traits<NodeTy> {};
-
 /// Template metafunction to get the parent type for a symbol table list.
 ///
 /// Implementations create a typedef called \c type so that we only need a
@@ -68,9 +64,7 @@ template <typename NodeTy> class SymbolTableList;
 // ItemParentClass - The type of object that owns the list, e.g. BasicBlock.
 //
 template <typename ValueSubClass>
-class SymbolTableListTraits
-    : public SymbolTableListSentinelTraits<ValueSubClass>,
-      public ilist_node_traits<ValueSubClass> {
+class SymbolTableListTraits : public ilist_node_traits<ValueSubClass> {
   typedef SymbolTableList<ValueSubClass> ListTy;
   typedef
       typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;

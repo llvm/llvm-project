@@ -235,10 +235,6 @@ void ilist_node_traits<MCFragment>::deleteNode(MCFragment *V) {
   V->destroy();
 }
 
-MCFragment::MCFragment() : Kind(FragmentType(~0)), HasInstructions(false),
-                           AlignToBundleEnd(false), BundlePadding(0) {
-}
-
 MCFragment::~MCFragment() { }
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,

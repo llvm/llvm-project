@@ -91,10 +91,6 @@ private:
   void deleted() override;
 };
 
-template <>
-struct ilist_sentinel_traits<IVStrideUse>
-    : public ilist_embedded_sentinel_traits<IVStrideUse> {};
-
 class IVUsers {
   friend class IVStrideUse;
   Loop *L;

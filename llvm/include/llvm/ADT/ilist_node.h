@@ -21,8 +21,6 @@ namespace llvm {
 
 template<typename NodeTy>
 struct ilist_traits;
-template <typename NodeTy> struct ilist_embedded_sentinel_traits;
-template <typename NodeTy> struct ilist_half_embedded_sentinel_traits;
 
 /// Base class for ilist nodes.
 struct ilist_node_base {
@@ -55,8 +53,6 @@ template <typename NodeTy> class ilist_sentinel;
 template <typename NodeTy> class ilist_node : ilist_node_base {
   friend struct ilist_node_access;
   friend struct ilist_traits<NodeTy>;
-  friend struct ilist_half_embedded_sentinel_traits<NodeTy>;
-  friend struct ilist_embedded_sentinel_traits<NodeTy>;
   friend class ilist_iterator<NodeTy>;
   friend class ilist_sentinel<NodeTy>;
 

@@ -39,10 +39,6 @@ class MachineBranchProbabilityInfo;
 typedef unsigned LaneBitmask;
 
 template <>
-struct ilist_sentinel_traits<MachineInstr>
-    : public ilist_half_embedded_sentinel_traits<MachineInstr> {};
-
-template <>
 struct ilist_traits<MachineInstr> : public ilist_default_traits<MachineInstr> {
 private:
   // this is only set by the MachineBasicBlock owning the LiveList

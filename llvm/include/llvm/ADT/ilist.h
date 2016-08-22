@@ -119,12 +119,6 @@ template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
 
 template <typename NodeTy> struct ilist_traits;
 
-// TODO: Delete uses from subprojects, then delete these.
-template <typename NodeTy> struct ilist_sentinel_traits {};
-template <typename NodeTy> struct ilist_embedded_sentinel_traits {};
-template <typename NodeTy> struct ilist_half_embedded_sentinel_traits {};
-template <typename NodeTy> struct ilist_full_embedded_sentinel_traits {};
-
 /// ilist_node_traits - A fragment for template traits for intrusive list
 /// that provides default node related operations.
 ///

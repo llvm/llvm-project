@@ -49,10 +49,6 @@ struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
 template <>
-struct ilist_sentinel_traits<MachineBasicBlock>
-    : public ilist_half_embedded_sentinel_traits<MachineBasicBlock> {};
-
-template <>
 struct ilist_traits<MachineBasicBlock>
     : public ilist_default_traits<MachineBasicBlock> {
   void addNodeToList(MachineBasicBlock* MBB);

@@ -81,10 +81,6 @@ template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTLis
   }
 };
 
-template <>
-struct ilist_sentinel_traits<SDNode>
-    : public ilist_half_embedded_sentinel_traits<SDNode> {};
-
 template <> struct ilist_traits<SDNode> : public ilist_default_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
