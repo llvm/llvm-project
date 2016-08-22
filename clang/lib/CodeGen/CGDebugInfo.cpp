@@ -1650,8 +1650,10 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
 
 /// Does a type definition exist in an imported clang module?
 static bool isDefinedInClangModule(const RecordDecl *RD) {
+  // Only definitions that where imported from an AST file come from a module.
   if (!RD || !RD->isFromASTFile())
     return false;
+  // Anonymous entities cannot be addressed. Treat them as not from module.
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
