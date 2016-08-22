@@ -195,7 +195,6 @@ extern __attribute__((const)) bool OCKL_MANGLE_I32(wfsame)(int e);
 DECL_CONST_OCKL_BINARY_U32(bfm)
 extern __attribute__((const)) int OCKL_MANGLE_I32(bfe)(int, uint, uint);
 DECL_CONST_OCKL_TERNARY_U32(bfe)
-DECL_CONST_OCKL_TERNARY_I32(bitalign)
 DECL_CONST_OCKL_TERNARY_U32(bitalign)
 DECL_CONST_OCKL_TERNARY_U32(bytealign)
 DECL_CONST_OCKL_TERNARY_U32(lerp)
@@ -211,10 +210,15 @@ DECL_CONST_OCKL_TERNARY_U32(min3)
 extern __attribute__((const)) ulong OCKL_MANGLE_U64(mqsad)(ulong, uint, ulong);
 extern __attribute__((const)) uint OCKL_MANGLE_U32(pack)(float4);
 extern __attribute__((const)) ulong OCKL_MANGLE_U64(qsad)(ulong, uint, ulong);
+DECL_CONST_OCKL_TERNARY_U32(msad)
 DECL_CONST_OCKL_TERNARY_U32(sad)
 DECL_CONST_OCKL_TERNARY_U32(sadd)
 DECL_CONST_OCKL_TERNARY_U32(sadhi)
 DECL_CONST_OCKL_TERNARY_U32(sadw)
+extern __attribute__((const)) float OCKL_MANGLE_F32(unpack0)(uint);
+extern __attribute__((const)) float OCKL_MANGLE_F32(unpack1)(uint);
+extern __attribute__((const)) float OCKL_MANGLE_F32(unpack2)(uint);
+extern __attribute__((const)) float OCKL_MANGLE_F32(unpack3)(uint);
 
 
 #define SSHARP __constant uint *
