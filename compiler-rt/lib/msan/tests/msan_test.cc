@@ -2825,6 +2825,12 @@ TEST(MemorySanitizer, LongStruct) {
   EXPECT_POISONED(s2.a8);
 }
 
+#ifdef __GLIBC__
+#define MSAN_TEST_PRLIMIT __GLIBC_PREREQ(2, 13)
+#else
+#define MSAN_TEST_PRLIMIT 1
+#endif
+
 TEST(MemorySanitizer, getrlimit) {
   struct rlimit limit;
   __msan_poison(&limit, sizeof(limit));
@@ -2833,6 +2839,7 @@ TEST(MemorySanitizer, getrlimit) {
   EXPECT_NOT_POISONED(limit.rlim_cur);
   EXPECT_NOT_POISONED(limit.rlim_max);
 
+#if MSAN_TEST_PRLIMIT
   struct rlimit limit2;
   __msan_poison(&limit2, sizeof(limit2));
   result = prlimit(getpid(), RLIMIT_DATA, &limit, &limit2);
@@ -2848,6 +2855,7 @@ TEST(MemorySanitizer, getrlimit) {
 
   result = prlimit(getpid(), RLIMIT_DATA, &limit, nullptr);
   ASSERT_EQ(result, 0);
+#endif
 }
 
 TEST(MemorySanitizer, getrusage) {
