@@ -3144,7 +3144,7 @@ Scop::~Scop() {
   ScopArrayInfoSet.clear();
   ScopArrayInfoMap.clear();
   ScopArrayNameMap.clear();
-  AccFuncMap.clear();
+  AccessFunctions.clear();
 }
 
 void Scop::updateAccessDimensionality() {

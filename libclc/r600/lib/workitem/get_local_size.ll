@@ -14,5 +14,5 @@ z_dim:
   %z = call i32 @llvm.r600.read.local.size.z()
   ret i32 %z
 default:
-  unreachable
+  ret i32 1
 }

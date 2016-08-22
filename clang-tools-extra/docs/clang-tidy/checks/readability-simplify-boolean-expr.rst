@@ -3,7 +3,6 @@
 readability-simplify-boolean-expr
 =================================
 
-
 Looks for boolean expressions involving boolean constants and simplifies
 them to use the appropriate boolean expression directly.
 
@@ -73,9 +72,15 @@ Examples:
      ``struct X``, the conditional return ``if (x) return true; return false;``
      becomes ``return static_cast<bool>(x);``
 
-When a conditional boolean return or assignment appears at the end of a
-chain of ``if``, ``else if`` statements, the conditional statement is left
-unchanged unless the option ``ChainedConditionalReturn`` or
-``ChainedConditionalAssignment``, respectively, is specified as non-zero.
-The default value for both options is zero.
+Options
+-------
 
+.. option:: ChainedConditionalReturn
+
+   If non-zero, conditional boolean return statements at the end of an
+   ``if/else if`` chain will be transformed. Default is `0`.
+
+.. option:: ChainedConditionalAssignment
+
+   If non-zero, conditional boolean assignments at the end of an ``if/else
+   if`` chain will be transformed. Default is `0`.
