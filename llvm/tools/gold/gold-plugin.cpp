@@ -89,13 +89,6 @@ struct ResolutionInfo {
   bool DefaultVisibility = true;
 };
 
-struct CommonResolution {
-  bool Prevailing = false;
-  bool VisibleToRegularObj = false;
-  uint64_t Size = 0;
-  unsigned Align = 0;
-};
-
 }
 
 static ld_plugin_add_symbols add_symbols = nullptr;
@@ -109,7 +102,6 @@ static std::string output_name = "";
 static std::list<claimed_file> Modules;
 static DenseMap<int, void *> FDToLeaderHandle;
 static StringMap<ResolutionInfo> ResInfo;
-static std::map<std::string, CommonResolution> Commons;
 static std::vector<std::string> Cleanup;
 static llvm::TargetOptions TargetOpts;
 static size_t MaxTasks;
@@ -572,12 +564,10 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
             toString(ObjOrErr.takeError()).c_str());
 
   InputFile &Obj = **ObjOrErr;
-  bool HasThinLTOSummary =
-      hasGlobalValueSummary(Obj.getMemoryBufferRef(), diagnosticHandler);
 
   unsigned SymNum = 0;
   std::vector<SymbolResolution> Resols(F.syms.size());
-  for (auto &ObjSym : Obj.symbols()) {
+  for (LLVM_ATTRIBUTE_UNUSED auto &ObjSym : Obj.symbols()) {
     ld_plugin_symbol &Sym = F.syms[SymNum];
     SymbolResolution &R = Resols[SymNum];
     ++SymNum;
@@ -619,21 +609,6 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
         (IsExecutable || !Res.DefaultVisibility))
       R.FinalDefinitionInLinkageUnit = true;
 
-    if ((ObjSym.getFlags() & object::BasicSymbolRef::SF_Common) &&
-        !HasThinLTOSummary) {
-      // We ignore gold's resolution for common symbols. A common symbol with
-      // the correct size and alignment is added to the module by the pre-opt
-      // module hook if any common symbol prevailed.
-      CommonResolution &CommonRes = Commons[ObjSym.getIRName()];
-      if (R.Prevailing) {
-        CommonRes.Prevailing = true;
-        CommonRes.VisibleToRegularObj = R.VisibleToRegularObj;
-      }
-      CommonRes.Size = std::max(CommonRes.Size, ObjSym.getCommonSize());
-      CommonRes.Align = std::max(CommonRes.Align, ObjSym.getCommonAlignment());
-      R.Prevailing = false;
-    }
-
     freeSymName(Sym);
   }
 
@@ -665,32 +640,6 @@ static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
     NewFilename = InFilename;
     if (TaskID >= 0)
       NewFilename += utostr(TaskID);
-  }
-}
-
-/// Add all required common symbols to M, which is expected to be the first
-/// combined module.
-static void addCommons(Module &M) {
-  for (auto &I : Commons) {
-    if (!I.second.Prevailing)
-      continue;
-    ArrayType *Ty =
-        ArrayType::get(Type::getInt8Ty(M.getContext()), I.second.Size);
-    GlobalVariable *OldGV = M.getNamedGlobal(I.first);
-    auto *GV = new GlobalVariable(M, Ty, false, GlobalValue::CommonLinkage,
-                                  ConstantAggregateZero::get(Ty), "");
-    GV->setAlignment(I.second.Align);
-    if (OldGV) {
-      OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
-      GV->takeName(OldGV);
-      OldGV->eraseFromParent();
-    } else {
-      GV->setName(I.first);
-    }
-    // We may only internalize commons if there is a single LTO task because
-    // other native object files may require the common.
-    if (MaxTasks == 1 && !I.second.VisibleToRegularObj)
-      GV->setLinkage(GlobalValue::InternalLinkage);
   }
 }
 
@@ -772,12 +721,6 @@ static std::unique_ptr<LTO> createLTO() {
   Conf.DefaultTriple = sys::getDefaultTargetTriple();
 
   Conf.DiagHandler = diagnosticHandler;
-
-  Conf.PreOptModuleHook = [](size_t Task, Module &M) {
-    if (Task == 0)
-      addCommons(M);
-    return true;
-  };
 
   switch (options::TheOutputType) {
   case options::OT_NORMAL:

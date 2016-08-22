@@ -292,6 +292,14 @@ Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
         break;
       }
     }
+    // Common resolution: collect the maximum size/alignment.
+    // FIXME: right now we ignore the prevailing information, it is not clear
+    // what is the "right" behavior here.
+    if (Sym.getFlags() & object::BasicSymbolRef::SF_Common) {
+      auto &CommonRes = RegularLTO.Commons[Sym.getIRName()];
+      CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
+      CommonRes.Align = std::max(CommonRes.Align, Sym.getCommonAlignment());
+    }
 
     // FIXME: use proposed local attribute for FinalDefinitionInLinkageUnit.
   }
@@ -361,6 +369,31 @@ Error LTO::run(AddOutputFn AddOutput) {
 }
 
 Error LTO::runRegularLTO(AddOutputFn AddOutput) {
+  // Make sure commons have the right size/alignment: we kept the largest from
+  // all the prevailing when adding the inputs, and we apply it here.
+  for (auto &I : RegularLTO.Commons) {
+    ArrayType *Ty =
+        ArrayType::get(Type::getInt8Ty(RegularLTO.Ctx), I.second.Size);
+    GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
+    if (OldGV && OldGV->getType()->getElementType() == Ty) {
+      // Don't create a new global if the type is already correct, just make
+      // sure the alignment is correct.
+      OldGV->setAlignment(I.second.Align);
+      continue;
+    }
+    auto *GV = new GlobalVariable(*RegularLTO.CombinedModule, Ty, false,
+                                  GlobalValue::CommonLinkage,
+                                  ConstantAggregateZero::get(Ty), "");
+    GV->setAlignment(I.second.Align);
+    if (OldGV) {
+      OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
+      GV->takeName(OldGV);
+      OldGV->eraseFromParent();
+    } else {
+      GV->setName(I.first);
+    }
+  }
+
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
     return Error();

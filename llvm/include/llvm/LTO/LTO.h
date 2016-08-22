@@ -306,6 +306,11 @@ private:
 
   struct RegularLTOState {
     RegularLTOState(unsigned ParallelCodeGenParallelismLevel, Config &Conf);
+    struct CommonResolution {
+      uint64_t Size = 0;
+      unsigned Align = 0;
+    };
+    std::map<std::string, CommonResolution> Commons;
 
     unsigned ParallelCodeGenParallelismLevel;
     LTOLLVMContext Ctx;
