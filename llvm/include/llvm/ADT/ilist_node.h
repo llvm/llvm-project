@@ -23,18 +23,22 @@ template<typename NodeTy>
 struct ilist_traits;
 
 /// Base class for ilist nodes.
-struct ilist_node_base {
+class ilist_node_base {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
   PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
+#else
+  ilist_node_base *Prev = nullptr;
+#endif
+  ilist_node_base *Next = nullptr;
 
+public:
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
   void setPrev(ilist_node_base *Prev) { PrevAndSentinel.setPointer(Prev); }
   ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
 
   bool isKnownSentinel() const { return PrevAndSentinel.getInt(); }
   void initializeSentinel() { PrevAndSentinel.setInt(true); }
 #else
-  ilist_node_base *Prev = nullptr;
-
   void setPrev(ilist_node_base *Prev) { this->Prev = Prev; }
   ilist_node_base *getPrev() const { return Prev; }
 
@@ -42,7 +46,8 @@ struct ilist_node_base {
   void initializeSentinel() {}
 #endif
 
-  ilist_node_base *Next = nullptr;
+  void setNext(ilist_node_base *Next) { this->Next = Next; }
+  ilist_node_base *getNext() const { return Next; }
 };
 
 struct ilist_node_access;
@@ -51,6 +56,7 @@ template <typename NodeTy> class ilist_sentinel;
 
 /// Templated wrapper class.
 template <typename NodeTy> class ilist_node : ilist_node_base {
+  friend class ilist_base;
   friend struct ilist_node_access;
   friend struct ilist_traits<NodeTy>;
   friend class ilist_iterator<NodeTy>;
@@ -63,15 +69,19 @@ private:
   ilist_node *getPrev() {
     return static_cast<ilist_node *>(ilist_node_base::getPrev());
   }
-  ilist_node *getNext() { return static_cast<ilist_node *>(Next); }
+  ilist_node *getNext() {
+    return static_cast<ilist_node *>(ilist_node_base::getNext());
+  }
 
   const ilist_node *getPrev() const {
     return static_cast<ilist_node *>(ilist_node_base::getPrev());
   }
-  const ilist_node *getNext() const { return static_cast<ilist_node *>(Next); }
+  const ilist_node *getNext() const {
+    return static_cast<ilist_node *>(ilist_node_base::getNext());
+  }
 
   void setPrev(ilist_node *N) { ilist_node_base::setPrev(N); }
-  void setNext(ilist_node *N) { Next = N; }
+  void setNext(ilist_node *N) { ilist_node_base::setNext(N); }
 
 public:
   ilist_iterator<NodeTy> getIterator() { return ilist_iterator<NodeTy>(*this); }
