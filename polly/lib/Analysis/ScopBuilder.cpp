@@ -481,7 +481,6 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
   if (!Stmt)
     return nullptr;
 
-  AccFuncSetType &AccList = scop->getOrCreateAccessFunctions(BB);
   Value *BaseAddr = BaseAddress;
   std::string BaseName = getIslCompatibleName("MemRef_", BaseAddr, "");
 
@@ -509,10 +508,13 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
   if (!isKnownMustAccess && AccType == MemoryAccess::MUST_WRITE)
     AccType = MemoryAccess::MAY_WRITE;
 
-  AccList.emplace_back(Stmt, Inst, AccType, BaseAddress, ElementType, Affine,
+  auto *Access =
+      new MemoryAccess(Stmt, Inst, AccType, BaseAddress, ElementType, Affine,
                        Subscripts, Sizes, AccessValue, Kind, BaseName);
-  Stmt->addAccess(&AccList.back());
-  return &AccList.back();
+
+  scop->addAccessFunction(Access);
+  Stmt->addAccess(Access);
+  return Access;
 }
 
 void ScopBuilder::addArrayAccess(

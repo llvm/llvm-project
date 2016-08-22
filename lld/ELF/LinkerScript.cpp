@@ -430,11 +430,13 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
   Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
 }
 
+// Creates program headers as instructed by PHDRS linker script command.
 template <class ELFT>
 std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
-  ArrayRef<OutputSectionBase<ELFT> *> Sections = *OutputSections;
   std::vector<PhdrEntry<ELFT>> Ret;
 
+  // Process PHDRS and FILEHDR keywords because they are not
+  // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     Ret.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
     PhdrEntry<ELFT> &Phdr = Ret.back();
@@ -443,30 +445,12 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
       Phdr.add(Out<ELFT>::ElfHeader);
     if (Cmd.HasPhdrs)
       Phdr.add(Out<ELFT>::ProgramHeaders);
-
-    switch (Cmd.Type) {
-    case PT_INTERP:
-      if (Out<ELFT>::Interp)
-        Phdr.add(Out<ELFT>::Interp);
-      break;
-    case PT_DYNAMIC:
-      if (Out<ELFT>::DynSymTab) {
-        Phdr.H.p_flags = Out<ELFT>::Dynamic->getPhdrFlags();
-        Phdr.add(Out<ELFT>::Dynamic);
-      }
-      break;
-    case PT_GNU_EH_FRAME:
-      if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
-        Phdr.H.p_flags = Out<ELFT>::EhFrameHdr->getPhdrFlags();
-        Phdr.add(Out<ELFT>::EhFrameHdr);
-      }
-      break;
-    }
   }
 
+  // Add output sections to program headers.
   PhdrEntry<ELFT> *Load = nullptr;
   uintX_t Flags = PF_R;
-  for (OutputSectionBase<ELFT> *Sec : Sections) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections) {
     if (!(Sec->getFlags() & SHF_ALLOC))
       break;
 

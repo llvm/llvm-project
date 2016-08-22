@@ -524,11 +524,12 @@ static Symbol *addOptionalSynthetic(StringRef Name,
 
 template <class ELFT>
 static void addSynthetic(StringRef Name, OutputSectionBase<ELFT> *Sec,
-                                 typename ELFT::uint Val) {
+                         typename ELFT::uint Val) {
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S || S->isUndefined() || S->isShared())
     Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, STV_HIDDEN);
 }
+
 // The beginning and the ending of .rel[a].plt section are marked
 // with __rel[a]_iplt_{start,end} symbols if it is a statically linked
 // executable. The runtime needs these symbols in order to resolve
