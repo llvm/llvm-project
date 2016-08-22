@@ -1,5 +1,5 @@
 ; RUN: opt < %s -slp-vectorizer -S | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt < %s -slp-recursion-max-depth=0 -slp-vectorizer -S | FileCheck %s --check-prefix=GATHER
+; RUN: opt < %s -slp-schedule-budget=0 -slp-min-tree-size=0 -slp-threshold=-30 -slp-vectorizer -S | FileCheck %s --check-prefix=GATHER
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

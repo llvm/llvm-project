@@ -86,6 +86,10 @@ static cl::opt<unsigned> RecursionMaxDepth(
     "slp-recursion-max-depth", cl::init(12), cl::Hidden,
     cl::desc("Limit the recursion depth when building a vectorizable tree"));
 
+static cl::opt<unsigned> MinTreeSize(
+    "slp-min-tree-size", cl::init(3), cl::Hidden,
+    cl::desc("Only vectorize small trees if they are fully vectorizable"));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -1843,7 +1847,7 @@ int BoUpSLP::getTreeCost() {
         VectorizableTree.size() << ".\n");
 
   // We only vectorize tiny trees if it is fully vectorizable.
-  if (VectorizableTree.size() < 3 && !isFullyVectorizableTinyTree()) {
+  if (VectorizableTree.size() < MinTreeSize && !isFullyVectorizableTinyTree()) {
     if (VectorizableTree.empty()) {
       assert(!ExternalUses.size() && "We should not have any external users");
     }
