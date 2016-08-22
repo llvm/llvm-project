@@ -85,12 +85,12 @@ let ExeDomain = SSEPackedDouble in {
 
 multiclass xop3op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   ValueType vt128> {
-  def rr : IXOP<opc, MRMSrcReg, (outs VR128:$dst),
+  def rr : IXOP<opc, MRMSrcReg4VOp3, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
            [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2))))]>,
-           XOP_4VOp3, Sched<[WriteVarVecShift]>;
+           XOP, Sched<[WriteVarVecShift]>;
   def rm : IXOP<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, i128mem:$src2),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
@@ -98,13 +98,13 @@ multiclass xop3op<bits<8> opc, string OpcodeStr, SDNode OpNode,
               (vt128 (OpNode (vt128 VR128:$src1),
                              (vt128 (bitconvert (loadv2i64 addr:$src2))))))]>,
            XOP_4V, VEX_W, Sched<[WriteVarVecShift, ReadAfterLd]>;
-  def mr : IXOP<opc, MRMSrcMem, (outs VR128:$dst),
+  def mr : IXOP<opc, MRMSrcMem4VOp3, (outs VR128:$dst),
            (ins i128mem:$src1, VR128:$src2),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
            [(set VR128:$dst,
               (vt128 (OpNode (vt128 (bitconvert (loadv2i64 addr:$src1))),
                              (vt128 VR128:$src2))))]>,
-             XOP_4VOp3, Sched<[WriteVarVecShift, ReadAfterLd]>;
+             XOP, Sched<[WriteVarVecShift, ReadAfterLd]>;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -146,19 +146,19 @@ let ExeDomain = SSEPackedInt in {
 // Instruction where second source can be memory, but third must be register
 multiclass xop4opm2<bits<8> opc, string OpcodeStr, Intrinsic Int> {
   let isCommutable = 1 in
-  def rr : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+  def rr : IXOPi8Reg<opc, MRMSrcReg, (outs VR128:$dst),
            (ins VR128:$src1, VR128:$src2, VR128:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
-              (Int VR128:$src1, VR128:$src2, VR128:$src3))]>, XOP_4V, VEX_I8IMM;
-  def rm : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+              (Int VR128:$src1, VR128:$src2, VR128:$src3))]>, XOP_4V;
+  def rm : IXOPi8Reg<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, i128mem:$src2, VR128:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
               (Int VR128:$src1, (bitconvert (loadv2i64 addr:$src2)),
-              VR128:$src3))]>, XOP_4V, VEX_I8IMM;
+              VR128:$src3))]>, XOP_4V;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -224,37 +224,37 @@ let ExeDomain = SSEPackedInt in { // SSE integer instructions
 
 multiclass xop4op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   ValueType vt128> {
-  def rrr : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+  def rrr : IXOPi8Reg<opc, MRMSrcReg, (outs VR128:$dst),
             (ins VR128:$src1, VR128:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                              (vt128 VR128:$src3))))]>,
-            XOP_4V, VEX_I8IMM;
-  def rrm : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+            XOP_4V;
+  def rrm : IXOPi8Reg<opc, MRMSrcMemOp4, (outs VR128:$dst),
             (ins VR128:$src1, VR128:$src2, i128mem:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set VR128:$dst,
               (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                              (vt128 (bitconvert (loadv2i64 addr:$src3))))))]>,
-            XOP_4V, VEX_I8IMM, VEX_W, MemOp4;
-  def rmr : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+            XOP_4V, VEX_W;
+  def rmr : IXOPi8Reg<opc, MRMSrcMem, (outs VR128:$dst),
             (ins VR128:$src1, i128mem:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set VR128:$dst,
               (v16i8 (OpNode (vt128 VR128:$src1), (vt128 (bitconvert (loadv2i64 addr:$src2))),
                              (vt128 VR128:$src3))))]>,
-            XOP_4V, VEX_I8IMM;
+            XOP_4V;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rrr_REV : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+  def rrr_REV : IXOPi8Reg<opc, MRMSrcRegOp4, (outs VR128:$dst),
                 (ins VR128:$src1, VR128:$src2, VR128:$src3),
                 !strconcat(OpcodeStr,
                 "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                []>, XOP_4V, VEX_I8IMM, VEX_W, MemOp4;
+                []>, XOP_4V, VEX_W;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -265,66 +265,66 @@ let ExeDomain = SSEPackedInt in {
 multiclass xop4op_int<bits<8> opc, string OpcodeStr,
                       Intrinsic Int128, Intrinsic Int256> {
   // 128-bit Instruction
-  def rrr : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+  def rrr : IXOPi8Reg<opc, MRMSrcReg, (outs VR128:$dst),
             (ins VR128:$src1, VR128:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set VR128:$dst, (Int128 VR128:$src1, VR128:$src2, VR128:$src3))]>,
-            XOP_4V, VEX_I8IMM;
-  def rrm : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+            XOP_4V;
+  def rrm : IXOPi8Reg<opc, MRMSrcMemOp4, (outs VR128:$dst),
             (ins VR128:$src1, VR128:$src2, i128mem:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set VR128:$dst,
               (Int128 VR128:$src1, VR128:$src2,
                (bitconvert (loadv2i64 addr:$src3))))]>,
-            XOP_4V, VEX_I8IMM, VEX_W, MemOp4;
-  def rmr : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
+            XOP_4V, VEX_W;
+  def rmr : IXOPi8Reg<opc, MRMSrcMem, (outs VR128:$dst),
             (ins VR128:$src1, i128mem:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
             [(set VR128:$dst,
               (Int128 VR128:$src1, (bitconvert (loadv2i64 addr:$src2)),
                VR128:$src3))]>,
-            XOP_4V, VEX_I8IMM;
+            XOP_4V;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rrr_REV : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+  def rrr_REV : IXOPi8Reg<opc, MRMSrcRegOp4, (outs VR128:$dst),
             (ins VR128:$src1, VR128:$src2, VR128:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-            []>, XOP_4V, VEX_I8IMM, VEX_W, MemOp4;
+            []>, XOP_4V, VEX_W;
 
   // 256-bit Instruction
-  def rrrY : IXOPi8<opc, MRMSrcReg, (outs VR256:$dst),
+  def rrrY : IXOPi8Reg<opc, MRMSrcReg, (outs VR256:$dst),
              (ins VR256:$src1, VR256:$src2, VR256:$src3),
              !strconcat(OpcodeStr,
              "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
              [(set VR256:$dst, (Int256 VR256:$src1, VR256:$src2, VR256:$src3))]>,
-             XOP_4V, VEX_I8IMM, VEX_L;
-  def rrmY : IXOPi8<opc, MRMSrcMem, (outs VR256:$dst),
+             XOP_4V, VEX_L;
+  def rrmY : IXOPi8Reg<opc, MRMSrcMemOp4, (outs VR256:$dst),
              (ins VR256:$src1, VR256:$src2, i256mem:$src3),
              !strconcat(OpcodeStr,
              "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
              [(set VR256:$dst,
                (Int256 VR256:$src1, VR256:$src2,
                (bitconvert (loadv4i64 addr:$src3))))]>,
-             XOP_4V, VEX_I8IMM, VEX_W, MemOp4, VEX_L;
-  def rmrY : IXOPi8<opc, MRMSrcMem, (outs VR256:$dst),
+             XOP_4V, VEX_W, VEX_L;
+  def rmrY : IXOPi8Reg<opc, MRMSrcMem, (outs VR256:$dst),
              (ins VR256:$src1, f256mem:$src2, VR256:$src3),
              !strconcat(OpcodeStr,
              "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
              [(set VR256:$dst,
                (Int256 VR256:$src1, (bitconvert (loadv4i64 addr:$src2)),
                 VR256:$src3))]>,
-             XOP_4V, VEX_I8IMM, VEX_L;
+             XOP_4V, VEX_L;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rrrY_REV : IXOPi8<opc, MRMSrcReg, (outs VR256:$dst),
+  def rrrY_REV : IXOPi8Reg<opc, MRMSrcRegOp4, (outs VR256:$dst),
             (ins VR256:$src1, VR256:$src2, VR256:$src3),
             !strconcat(OpcodeStr,
             "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-            []>, XOP_4V, VEX_I8IMM, VEX_W, MemOp4, VEX_L;
+            []>, XOP_4V, VEX_W, VEX_L;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -353,7 +353,7 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
         [(set VR128:$dst,
            (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                           (id128 VR128:$src3), (i8 imm:$src4))))]>;
-  def rm : IXOP5<opc, MRMSrcMem, (outs VR128:$dst),
+  def rm : IXOP5<opc, MRMSrcMemOp4, (outs VR128:$dst),
         (ins VR128:$src1, VR128:$src2, i128mem:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
@@ -361,7 +361,7 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
            (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
                           (id128 (bitconvert (loadv2i64 addr:$src3))),
                           (i8 imm:$src4))))]>,
-        VEX_W, MemOp4;
+        VEX_W;
   def mr : IXOP5<opc, MRMSrcMem, (outs VR128:$dst),
         (ins VR128:$src1, f128mem:$src2, VR128:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
@@ -372,11 +372,11 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           (id128 VR128:$src3), (i8 imm:$src4))))]>;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rr_REV : IXOP5<opc, MRMSrcReg, (outs VR128:$dst),
+  def rr_REV : IXOP5<opc, MRMSrcRegOp4, (outs VR128:$dst),
         (ins VR128:$src1, VR128:$src2, VR128:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        []>, VEX_W, MemOp4;
+        []>, VEX_W;
 
   def rrY : IXOP5<opc, MRMSrcReg, (outs VR256:$dst),
         (ins VR256:$src1, VR256:$src2, VR256:$src3, u8imm:$src4),
@@ -385,14 +385,14 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
         [(set VR256:$dst,
            (vt256 (OpNode (vt256 VR256:$src1), (vt256 VR256:$src2),
                           (id256 VR256:$src3), (i8 imm:$src4))))]>, VEX_L;
-  def rmY : IXOP5<opc, MRMSrcMem, (outs VR256:$dst),
+  def rmY : IXOP5<opc, MRMSrcMemOp4, (outs VR256:$dst),
         (ins VR256:$src1, VR256:$src2, i256mem:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR256:$dst,
            (vt256 (OpNode (vt256 VR256:$src1), (vt256 VR256:$src2),
                           (id256 (bitconvert (loadv4i64 addr:$src3))),
-                          (i8 imm:$src4))))]>, VEX_W, MemOp4, VEX_L;
+                          (i8 imm:$src4))))]>, VEX_W, VEX_L;
   def mrY : IXOP5<opc, MRMSrcMem, (outs VR256:$dst),
         (ins VR256:$src1, f256mem:$src2, VR256:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
@@ -403,11 +403,11 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           (id256 VR256:$src3), (i8 imm:$src4))))]>, VEX_L;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rrY_REV : IXOP5<opc, MRMSrcReg, (outs VR256:$dst),
+  def rrY_REV : IXOP5<opc, MRMSrcRegOp4, (outs VR256:$dst),
         (ins VR256:$src1, VR256:$src2, VR256:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        []>, VEX_W, MemOp4, VEX_L;
+        []>, VEX_W, VEX_L;
 }
 
 let ExeDomain = SSEPackedDouble in

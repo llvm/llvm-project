@@ -55,14 +55,10 @@ private:
   bool HasREX_WPrefix;
   /// The hasVEX_4V field from the record
   bool HasVEX_4V;
-  /// The hasVEX_4VOp3 field from the record
-  bool HasVEX_4VOp3;
   /// The hasVEX_WPrefix field from the record
   bool HasVEX_WPrefix;
   /// Inferred from the operands; indicates whether the L bit in the VEX prefix is set
   bool HasVEX_LPrefix;
-  /// The hasMemOp4Prefix field from the record
-  bool HasMemOp4Prefix;
   /// The ignoreVEX_L field from the record
   bool IgnoresVEX_L;
   /// The hasEVEX_L2Prefix field from the record

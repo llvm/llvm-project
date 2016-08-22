@@ -52,6 +52,9 @@ struct Config {
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 
+  /// Disable entirely the optimizer, including importing for ThinLTO
+  bool CodeGenOnly = false;
+
   /// Setting this field will replace target triples in input files with this
   /// triple.
   std::string OverrideTriple;

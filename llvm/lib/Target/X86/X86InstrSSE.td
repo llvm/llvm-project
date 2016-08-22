@@ -7060,22 +7060,22 @@ multiclass SS41I_quaternary_int_avx<bits<8> opc, string OpcodeStr,
                                     RegisterClass RC, X86MemOperand x86memop,
                                     PatFrag mem_frag, Intrinsic IntId,
                                     X86FoldableSchedWrite Sched> {
-  def rr : Ii8<opc, MRMSrcReg, (outs RC:$dst),
+  def rr : Ii8Reg<opc, MRMSrcReg, (outs RC:$dst),
                   (ins RC:$src1, RC:$src2, RC:$src3),
                   !strconcat(OpcodeStr,
                     "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                   [(set RC:$dst, (IntId RC:$src1, RC:$src2, RC:$src3))],
-                  NoItinerary, SSEPackedInt>, TAPD, VEX_4V, VEX_I8IMM,
+                  NoItinerary, SSEPackedInt>, TAPD, VEX_4V,
                 Sched<[Sched]>;
 
-  def rm : Ii8<opc, MRMSrcMem, (outs RC:$dst),
+  def rm : Ii8Reg<opc, MRMSrcMem, (outs RC:$dst),
                   (ins RC:$src1, x86memop:$src2, RC:$src3),
                   !strconcat(OpcodeStr,
                     "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                   [(set RC:$dst,
                         (IntId RC:$src1, (bitconvert (mem_frag addr:$src2)),
                                RC:$src3))],
-                  NoItinerary, SSEPackedInt>, TAPD, VEX_4V, VEX_I8IMM,
+                  NoItinerary, SSEPackedInt>, TAPD, VEX_4V,
                 Sched<[Sched.Folded, ReadAfterLd]>;
 }
 
@@ -8696,16 +8696,16 @@ let Predicates = [HasAVX2, NoVLX] in {
 // VGATHER - GATHER Operations
 multiclass avx2_gather<bits<8> opc, string OpcodeStr, RegisterClass RC256,
                        X86MemOperand memop128, X86MemOperand memop256> {
-  def rm  : AVX28I<opc, MRMSrcMem, (outs VR128:$dst, VR128:$mask_wb),
+  def rm  : AVX28I<opc, MRMSrcMem4VOp3, (outs VR128:$dst, VR128:$mask_wb),
             (ins VR128:$src1, memop128:$src2, VR128:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
-            []>, VEX_4VOp3;
-  def Yrm : AVX28I<opc, MRMSrcMem, (outs RC256:$dst, RC256:$mask_wb),
+            []>, VEX;
+  def Yrm : AVX28I<opc, MRMSrcMem4VOp3, (outs RC256:$dst, RC256:$mask_wb),
             (ins RC256:$src1, memop256:$src2, RC256:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
-            []>, VEX_4VOp3, VEX_L;
+            []>, VEX, VEX_L;
 }
 
 let mayLoad = 1, hasSideEffects = 0, Constraints
