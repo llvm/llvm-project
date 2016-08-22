@@ -2218,11 +2218,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     int CondCode = CD->getSExtValue();
 
     if (CondCode < ICmpInst::Predicate::FIRST_ICMP_PREDICATE ||
-	       CondCode >= ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+        CondCode >= ICmpInst::Predicate::BAD_ICMP_PREDICATE)
       return DAG.getUNDEF(VT);
 
-    ICmpInst::Predicate IcInput =
-	   static_cast<ICmpInst::Predicate>(CondCode);
+    ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
     ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
     return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), DAG.getCondCode(CCOpcode));
@@ -2232,11 +2231,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     int CondCode = CD->getSExtValue();
 
     if (CondCode <= FCmpInst::Predicate::FCMP_FALSE ||
-	       CondCode >= FCmpInst::Predicate::FCMP_TRUE)
+        CondCode >= FCmpInst::Predicate::FCMP_TRUE)
       return DAG.getUNDEF(VT);
 
-    FCmpInst::Predicate IcInput =
-	   static_cast<FCmpInst::Predicate>(CondCode);
+    FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);
     ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
     return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), DAG.getCondCode(CCOpcode));

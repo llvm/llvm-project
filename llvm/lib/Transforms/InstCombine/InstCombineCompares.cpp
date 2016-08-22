@@ -126,26 +126,26 @@ static bool isBranchOnSignBitCheck(ICmpInst &I, bool isSignBit) {
 /// Given an exploded icmp instruction, return true if the comparison only
 /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if the
 /// result of the comparison is true when the input value is signed.
-static bool isSignBitCheck(ICmpInst::Predicate Pred, ConstantInt *RHS,
+static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                            bool &TrueIfSigned) {
   switch (Pred) {
   case ICmpInst::ICMP_SLT:   // True if LHS s< 0
     TrueIfSigned = true;
-    return RHS->isZero();
+    return RHS == 0;
   case ICmpInst::ICMP_SLE:   // True if LHS s<= RHS and RHS == -1
     TrueIfSigned = true;
-    return RHS->isAllOnesValue();
+    return RHS.isAllOnesValue();
   case ICmpInst::ICMP_SGT:   // True if LHS s> -1
     TrueIfSigned = false;
-    return RHS->isAllOnesValue();
+    return RHS.isAllOnesValue();
   case ICmpInst::ICMP_UGT:
     // True if LHS u> RHS and RHS == high-bit-mask - 1
     TrueIfSigned = true;
-    return RHS->isMaxValue(true);
+    return RHS.isMaxSignedValue();
   case ICmpInst::ICMP_UGE:
     // True if LHS u>= RHS and RHS == high-bit-mask (2^7, 2^15, 2^31, etc)
     TrueIfSigned = true;
-    return RHS->getValue().isSignBit();
+    return RHS.isSignBit();
   default:
     return false;
   }
@@ -2024,21 +2024,16 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp, Instruction *Shl,
     }
   }
 
-  // FIXME: This check restricts all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!RHS)
-    return nullptr;
-
   // If this is a signed comparison to 0 and the shift is sign preserving,
   // use the shift LHS operand instead; isSignTest may change 'Pred', so only
   // do that if we're sure to not continue on in this function.
   if (cast<BinaryOperator>(Shl)->hasNoSignedWrap() && isSignTest(Pred, *C))
-    return new ICmpInst(Pred, X, Constant::getNullValue(RHS->getType()));
+    return new ICmpInst(Pred, X, Constant::getNullValue(X->getType()));
 
   // Otherwise, if this is a comparison of the sign bit, simplify to and/test.
   bool TrueIfSigned = false;
-  if (Shl->hasOneUse() && isSignBitCheck(Pred, RHS, TrueIfSigned)) {
-    // (X << 31) <s 0  --> (X&1) != 0
+  if (Shl->hasOneUse() && isSignBitCheck(Pred, *C, TrueIfSigned)) {
+    // (X << 31) <s 0  --> (X & 1) != 0
     Constant *Mask = ConstantInt::get(
         X->getType(),
         APInt::getOneBitSet(TypeBits, TypeBits - ShiftAmt->getZExtValue() - 1));
@@ -2047,18 +2042,20 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp, Instruction *Shl,
                         And, Constant::getNullValue(And->getType()));
   }
 
-  // Transform (icmp pred iM (shl iM %v, N), CI)
-  // -> (icmp pred i(M-N) (trunc %v iM to i(M-N)), (trunc (CI>>N))
-  // Transform the shl to a trunc if (trunc (CI>>N)) has no loss and M-N.
-  // This enables to get rid of the shift in favor of a trunc which can be
+  // Transform (icmp pred iM (shl iM %v, N), C)
+  // -> (icmp pred i(M-N) (trunc %v iM to i(M-N)), (trunc (C>>N))
+  // Transform the shl to a trunc if (trunc (C>>N)) has no loss and M-N.
+  // This enables us to get rid of the shift in favor of a trunc which can be
   // free on the target. It has the additional benefit of comparing to a
   // smaller constant, which will be target friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
   if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt) {
-    Type *NTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
-    Constant *NCI = ConstantExpr::getTrunc(
-        ConstantExpr::getAShr(RHS, ConstantInt::get(RHS->getType(), Amt)), NTy);
-    return new ICmpInst(Pred, Builder->CreateTrunc(X, NTy), NCI);
+    Type *TruncTy = IntegerType::get(Cmp.getContext(), TypeBits - Amt);
+    if (X->getType()->isVectorTy())
+      TruncTy = VectorType::get(TruncTy, X->getType()->getVectorNumElements());
+    Constant *NewC =
+        ConstantInt::get(TruncTy, C->ashr(*ShiftAmt).trunc(TypeBits - Amt));
+    return new ICmpInst(Pred, Builder->CreateTrunc(X, TruncTy), NewC);
   }
 
   return nullptr;
@@ -3416,7 +3413,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // If this comparison is a normal comparison, it demands all
     // bits, if it is a sign bit comparison, it only demands the sign bit.
     bool UnusedBit;
-    isSignBit = isSignBitCheck(I.getPredicate(), CI, UnusedBit);
+    isSignBit = isSignBitCheck(I.getPredicate(), CI->getValue(), UnusedBit);
 
     // Canonicalize icmp instructions based on dominating conditions.
     BasicBlock *Parent = I.getParent();

@@ -224,8 +224,9 @@ Error lto::backend(Config &C, AddOutputFn AddOutput,
   std::unique_ptr<TargetMachine> TM =
       createTargetMachine(C, M->getTargetTriple(), *TOrErr);
 
-  if (!opt(C, TM.get(), 0, *M, /*IsThinLto=*/false))
-    return Error();
+  if (!C.CodeGenOnly)
+    if (!opt(C, TM.get(), 0, *M, /*IsThinLto=*/false))
+      return Error();
 
   if (ParallelCodeGenParallelismLevel == 1)
     codegen(C, TM.get(), AddOutput, 0, *M);
@@ -246,6 +247,11 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
 
   std::unique_ptr<TargetMachine> TM =
       createTargetMachine(Conf, Mod.getTargetTriple(), *TOrErr);
+
+  if (Conf.CodeGenOnly) {
+    codegen(Conf, TM.get(), AddOutput, Task, Mod);
+    return Error();
+  }
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return Error();

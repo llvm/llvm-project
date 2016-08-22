@@ -2011,8 +2011,8 @@ void FunctionStackPoisoner::poisonStackFrameInline(
 
     Value *Ptr = IRB.CreateAdd(ShadowBase, ConstantInt::get(IntptrTy, i));
     Value *Poison = IRB.getIntN(StoreSizeInBytes * 8, Val);
-    IRB.CreateStore(Poison,
-                    IRB.CreateIntToPtr(Ptr, Poison->getType()->getPointerTo()));
+    IRB.CreateAlignedStore(
+        Poison, IRB.CreateIntToPtr(Ptr, Poison->getType()->getPointerTo()), 1);
 
     i += StoreSizeInBytes;
   }
