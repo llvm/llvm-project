@@ -47,7 +47,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
     ModuleHookFn LinkerHook = Hook;
-    Hook = [=](unsigned Task, Module &M) {
+    Hook = [=](unsigned Task, const Module &M) {
       // If the linker's hook returned false, we need to pass that result
       // through.
       if (LinkerHook && !LinkerHook(Task, M))
