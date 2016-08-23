@@ -13,7 +13,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:64:64-
 target triple = "thumbv7-apple-ios"
 
 ; Function Attrs: nounwind
-define arm_aapcscc void @_Z1hiiiif(i32, i32, i32, i32, float %x) #0 !dbg !4 {
+define arm_aapcscc void @_Z1hiiiif(i32, i32, i32, i32, float %x) #0 "no-frame-pointer-elim"="true" !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !12, metadata !DIExpression()), !dbg !18
   tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !13, metadata !DIExpression()), !dbg !18

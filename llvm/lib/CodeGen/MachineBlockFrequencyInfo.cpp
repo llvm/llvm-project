@@ -52,23 +52,19 @@ extern cl::opt<unsigned> ViewHotFreqPercent;
 namespace llvm {
 
 template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
-  typedef const MachineBasicBlock NodeType;
   typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_succ_iterator ChildIteratorType;
   typedef pointer_iterator<MachineFunction::const_iterator> nodes_iterator;
 
-  static inline const NodeType *
-  getEntryNode(const MachineBlockFrequencyInfo *G) {
+  static inline NodeRef getEntryNode(const MachineBlockFrequencyInfo *G) {
     return &G->getFunction()->front();
   }
 
-  static ChildIteratorType child_begin(const NodeType *N) {
+  static ChildIteratorType child_begin(const NodeRef N) {
     return N->succ_begin();
   }
 
-  static ChildIteratorType child_end(const NodeType *N) {
-    return N->succ_end();
-  }
+  static ChildIteratorType child_end(const NodeRef N) { return N->succ_end(); }
 
   static nodes_iterator nodes_begin(const MachineBlockFrequencyInfo *G) {
     return nodes_iterator(G->getFunction()->begin());

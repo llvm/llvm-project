@@ -12,7 +12,8 @@
 ; The imports file for Input/emit_imports.ll is empty as it does not import anything.
 ; RUN: cat %t2.bc.imports | count 0
 
-; RUN: rm -f %t*.thinlto.bc %t*.bc.imports
+; RUN: rm -f %t1.thinlto.bc %t1.bc.imports
+; RUN: rm -f %t2.thinlto.bc %t2.bc.imports
 ; RUN: llvm-lto2 %t1.bc %t2.bc -o %t.o \
 ; RUN:     -thinlto-distributed-indexes \
 ; RUN:     -r=%t1.bc,g, \

@@ -99,10 +99,10 @@ define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]

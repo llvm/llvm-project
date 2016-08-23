@@ -34,10 +34,6 @@ class FunctionType;
 class LLVMContext;
 class DISubprogram;
 
-template <>
-struct SymbolTableListSentinelTraits<Argument>
-    : public ilist_half_embedded_sentinel_traits<Argument> {};
-
 class Function : public GlobalObject, public ilist_node<Function> {
 public:
   typedef SymbolTableList<Argument> ArgumentListType;

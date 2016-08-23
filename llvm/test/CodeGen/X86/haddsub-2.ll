@@ -907,9 +907,9 @@ define <4 x i32> @not_a_hsub_1(<4 x i32> %A, <4 x i32> %B) {
 define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: not_a_hsub_2:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    shufpd {{.*#+}} xmm2 = xmm2[1,0]
-; SSE-NEXT:    movapd %xmm0, %xmm3
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
 ; SSE-NEXT:    subss %xmm3, %xmm2
 ; SSE-NEXT:    movshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
@@ -917,7 +917,7 @@ define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    movaps %xmm1, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
 ; SSE-NEXT:    movaps %xmm1, %xmm4
-; SSE-NEXT:    shufpd {{.*#+}} xmm4 = xmm4[1,0]
+; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-NEXT:    subss %xmm4, %xmm3
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; SSE-NEXT:    movshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
@@ -964,11 +964,11 @@ define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 define <2 x double> @not_a_hsub_3(<2 x double> %A, <2 x double> %B) {
 ; SSE-LABEL: not_a_hsub_3:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movapd %xmm1, %xmm2
-; SSE-NEXT:    shufpd {{.*#+}} xmm2 = xmm2[1,0]
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    subsd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    shufpd {{.*#+}} xmm2 = xmm2[1,0]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    subsd %xmm0, %xmm2
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE-NEXT:    movapd %xmm2, %xmm0

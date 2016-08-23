@@ -58,8 +58,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/MC/MCAsmInfo.h"
 
 using namespace llvm;
 
@@ -67,45 +65,40 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<unsigned> SkipThresholdFlag(
-  "amdgpu-skip-threshold",
-  cl::desc("Number of instructions before jumping over divergent control flow"),
-  cl::init(12), cl::Hidden);
-
 class SILowerControlFlow : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
-  unsigned SkipThreshold;
+  LiveIntervals *LIS;
 
-  bool shouldSkip(MachineBasicBlock *From, MachineBasicBlock *To);
+  void emitIf(MachineInstr &MI);
+  void emitElse(MachineInstr &MI);
+  void emitBreak(MachineInstr &MI);
+  void emitIfBreak(MachineInstr &MI);
+  void emitElseBreak(MachineInstr &MI);
+  void emitLoop(MachineInstr &MI);
+  void emitEndCf(MachineInstr &MI);
 
-  MachineInstr *Skip(MachineInstr &From, MachineOperand &To);
-  bool skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB);
-
-  void If(MachineInstr &MI);
-  void Else(MachineInstr &MI);
-  void Break(MachineInstr &MI);
-  void IfBreak(MachineInstr &MI);
-  void ElseBreak(MachineInstr &MI);
-  void Loop(MachineInstr &MI);
-  void EndCf(MachineInstr &MI);
-
-  void Kill(MachineInstr &MI);
-  void Branch(MachineInstr &MI);
-
-  MachineBasicBlock *insertSkipBlock(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator I) const;
 public:
   static char ID;
 
   SILowerControlFlow() :
-    MachineFunctionPass(ID), TRI(nullptr), TII(nullptr), SkipThreshold(0) { }
+    MachineFunctionPass(ID),
+    TRI(nullptr),
+    TII(nullptr),
+    LIS(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
     return "SI Lower control flow pseudo instructions";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<LiveIntervals>();
+    AU.addPreserved<SlotIndexes>();
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
@@ -114,403 +107,236 @@ public:
 char SILowerControlFlow::ID = 0;
 
 INITIALIZE_PASS(SILowerControlFlow, DEBUG_TYPE,
-                "SI lower control flow", false, false)
+               "SI lower control flow", false, false)
 
-char &llvm::SILowerControlFlowPassID = SILowerControlFlow::ID;
+char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
-
-FunctionPass *llvm::createSILowerControlFlowPass() {
-  return new SILowerControlFlow();
-}
-
-static bool opcodeEmitsNoInsts(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::IMPLICIT_DEF:
-  case TargetOpcode::KILL:
-  case TargetOpcode::BUNDLE:
-  case TargetOpcode::CFI_INSTRUCTION:
-  case TargetOpcode::EH_LABEL:
-  case TargetOpcode::GC_LABEL:
-  case TargetOpcode::DBG_VALUE:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool SILowerControlFlow::shouldSkip(MachineBasicBlock *From,
-                                    MachineBasicBlock *To) {
-  if (From->succ_empty())
-    return false;
-
-  unsigned NumInstr = 0;
-  MachineFunction *MF = From->getParent();
-
-  for (MachineFunction::iterator MBBI(From), ToI(To), End = MF->end();
-       MBBI != End && MBBI != ToI; ++MBBI) {
-    MachineBasicBlock &MBB = *MBBI;
-
-    for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
-         NumInstr < SkipThreshold && I != E; ++I) {
-      if (opcodeEmitsNoInsts(I->getOpcode()))
-        continue;
-
-      // When a uniform loop is inside non-uniform control flow, the branch
-      // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
-      // when EXEC = 0. We should skip the loop lest it becomes infinite.
-      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ ||
-          I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
-        return true;
-
-      if (I->isInlineAsm()) {
-        const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
-        const char *AsmStr = I->getOperand(0).getSymbolName();
-
-        // inlineasm length estimate is number of bytes assuming the longest
-        // instruction.
-        uint64_t MaxAsmSize = TII->getInlineAsmLength(AsmStr, *MAI);
-        NumInstr += MaxAsmSize / MAI->getMaxInstLength();
-      } else {
-        ++NumInstr;
-      }
-
-      if (NumInstr >= SkipThreshold)
-        return true;
-    }
-  }
-
-  return false;
-}
-
-MachineInstr *SILowerControlFlow::Skip(MachineInstr &From, MachineOperand &To) {
-  if (!shouldSkip(*From.getParent()->succ_begin(), To.getMBB()))
-    return nullptr;
-
-  const DebugLoc &DL = From.getDebugLoc();
-  MachineInstr *Skip =
-    BuildMI(*From.getParent(), &From, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
-    .addOperand(To);
-  return Skip;
-}
-
-bool SILowerControlFlow::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
+void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  MachineFunction *MF = MBB.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock::iterator I(&MI);
 
-  if (MF->getFunction()->getCallingConv() != CallingConv::AMDGPU_PS ||
-      !shouldSkip(&MBB, &MBB.getParent()->back()))
-    return false;
+  MachineOperand &SaveExec = MI.getOperand(0);
+  MachineOperand &Cond = MI.getOperand(1);
+  assert(SaveExec.getSubReg() == AMDGPU::NoSubRegister &&
+         Cond.getSubReg() == AMDGPU::NoSubRegister);
 
-  MachineBasicBlock *SkipBB = insertSkipBlock(MBB, MI.getIterator());
-  MBB.addSuccessor(SkipBB);
+  unsigned SaveExecReg = SaveExec.getReg();
 
+  MachineInstr *AndSaveExec =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_SAVEEXEC_B64), SaveExecReg)
+    .addOperand(Cond);
+
+  MachineInstr *Xor =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_XOR_B64), SaveExecReg)
+    .addReg(AMDGPU::EXEC)
+    .addReg(SaveExecReg);
+
+  // Insert a pseudo terminator to help keep the verifier happy. This will also
+  // be used later when inserting skips.
+  MachineInstr *NewBr =
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+    .addOperand(MI.getOperand(2))
+    .addReg(SaveExecReg, getKillRegState(SaveExec.isKill()));
+
+  if (!LIS) {
+    MI.eraseFromParent();
+    return;
+  }
+
+
+  LIS->ReplaceMachineInstrInMaps(MI, *AndSaveExec);
+  LIS->InsertMachineInstrInMaps(*Xor);
+  LIS->InsertMachineInstrInMaps(*NewBr);
+
+  MI.eraseFromParent();
+
+  // FIXME: Is there a better way of adjusting the liveness? It shouldn't be
+  // hard to add another def here but I'm not sure how to correctly update the
+  // valno.
+  LIS->removeInterval(SaveExecReg);
+  LIS->createAndComputeVirtRegInterval(SaveExecReg);
+}
+
+void SILowerControlFlow::emitElse(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  // If the exec mask is non-zero, skip the next two instructions
-  BuildMI(&MBB, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
-    .addMBB(&NextBB);
+  unsigned DstReg = MI.getOperand(0).getReg();
+  assert(MI.getOperand(0).getSubReg() == AMDGPU::NoSubRegister);
 
-  MachineBasicBlock::iterator Insert = SkipBB->begin();
+  bool ExecModified = MI.getOperand(3).getImm() != 0;
+  MachineBasicBlock::iterator Start = MBB.begin();
 
-  // Exec mask is zero: Export to NULL target...
-  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::EXP))
-    .addImm(0)
-    .addImm(0x09) // V_008DFC_SQ_EXP_NULL
-    .addImm(0)
-    .addImm(1)
-    .addImm(1)
-    .addReg(AMDGPU::VGPR0, RegState::Undef)
-    .addReg(AMDGPU::VGPR0, RegState::Undef)
-    .addReg(AMDGPU::VGPR0, RegState::Undef)
-    .addReg(AMDGPU::VGPR0, RegState::Undef);
+  // This must be inserted before phis and any spill code inserted before the
+  // else.
+  MachineInstr *OrSaveExec =
+    BuildMI(MBB, Start, DL, TII->get(AMDGPU::S_OR_SAVEEXEC_B64), DstReg)
+    .addOperand(MI.getOperand(1)); // Saved EXEC
+  MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
-  // ... and terminate wavefront.
-  BuildMI(*SkipBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM));
+  MachineBasicBlock::iterator ElsePt(MI);
 
-  return true;
-}
+  if (ExecModified) {
+    MachineInstr *And =
+      BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_AND_B64), DstReg)
+      .addReg(AMDGPU::EXEC)
+      .addReg(DstReg);
 
-void SILowerControlFlow::If(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  unsigned Reg = MI.getOperand(0).getReg();
-  unsigned Vcc = MI.getOperand(1).getReg();
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_SAVEEXEC_B64), Reg)
-          .addReg(Vcc);
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_XOR_B64), Reg)
-          .addReg(AMDGPU::EXEC)
-          .addReg(Reg);
-
-  MachineInstr *SkipInst = Skip(MI, MI.getOperand(2));
-
-  // Insert before the new branch instruction.
-  MachineInstr *InsPt = SkipInst ? SkipInst : &MI;
-
-  // Insert a pseudo terminator to help keep the verifier happy.
-  BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addOperand(MI.getOperand(2))
-    .addReg(Reg);
-
-  MI.eraseFromParent();
-}
-
-void SILowerControlFlow::Else(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  unsigned Dst = MI.getOperand(0).getReg();
-  unsigned Src = MI.getOperand(1).getReg();
-
-  BuildMI(MBB, MBB.getFirstNonPHI(), DL,
-          TII->get(AMDGPU::S_OR_SAVEEXEC_B64), Dst)
-          .addReg(Src); // Saved EXEC
-
-  if (MI.getOperand(3).getImm() != 0) {
-    // Adjust the saved exec to account for the modifications during the flow
-    // block that contains the ELSE. This can happen when WQM mode is switched
-    // off.
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_B64), Dst)
-            .addReg(AMDGPU::EXEC)
-            .addReg(Dst);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*And);
   }
 
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
-          .addReg(AMDGPU::EXEC)
-          .addReg(Dst);
+  MachineInstr *Xor =
+    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
+    .addReg(AMDGPU::EXEC)
+    .addReg(DstReg);
 
-  MachineInstr *SkipInst = Skip(MI, MI.getOperand(2));
-
-  // Insert before the new branch instruction.
-  MachineInstr *InsPt = SkipInst ? SkipInst : &MI;
-
+  MachineBasicBlock::iterator Term = MBB.getFirstTerminator();
   // Insert a pseudo terminator to help keep the verifier happy.
-  BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addOperand(MI.getOperand(2))
-    .addReg(Dst);
+  MachineInstr *Branch =
+    BuildMI(MBB, Term, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+    .addMBB(DestBB)
+    .addReg(DstReg);
 
+  if (!LIS) {
+    MI.eraseFromParent();
+    return;
+  }
+
+  LIS->RemoveMachineInstrFromMaps(MI);
   MI.eraseFromParent();
+
+  LIS->InsertMachineInstrInMaps(*OrSaveExec);
+
+  LIS->InsertMachineInstrInMaps(*Xor);
+  LIS->InsertMachineInstrInMaps(*Branch);
+
+  // src reg is tied to dst reg.
+  LIS->removeInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(DstReg);
+
+  // Let this be recomputed.
+  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
 }
 
-void SILowerControlFlow::Break(MachineInstr &MI) {
+void SILowerControlFlow::emitBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-
+  const DebugLoc &DL = MI.getDebugLoc();
   unsigned Dst = MI.getOperand(0).getReg();
-  unsigned Src = MI.getOperand(1).getReg();
 
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-          .addReg(AMDGPU::EXEC)
-          .addReg(Src);
-
-  MI.eraseFromParent();
-}
-
-void SILowerControlFlow::IfBreak(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-
-  unsigned Dst = MI.getOperand(0).getReg();
-  unsigned Vcc = MI.getOperand(1).getReg();
-  unsigned Src = MI.getOperand(2).getReg();
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-          .addReg(Vcc)
-          .addReg(Src);
-
-  MI.eraseFromParent();
-}
-
-void SILowerControlFlow::ElseBreak(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-
-  unsigned Dst = MI.getOperand(0).getReg();
-  unsigned Saved = MI.getOperand(1).getReg();
-  unsigned Src = MI.getOperand(2).getReg();
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-          .addReg(Saved)
-          .addReg(Src);
-
-  MI.eraseFromParent();
-}
-
-void SILowerControlFlow::Loop(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  unsigned Src = MI.getOperand(0).getReg();
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64), AMDGPU::EXEC)
-          .addReg(AMDGPU::EXEC)
-          .addReg(Src);
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
+  MachineInstr *Or =
+    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
+    .addReg(AMDGPU::EXEC)
     .addOperand(MI.getOperand(1));
 
+  if (LIS)
+    LIS->ReplaceMachineInstrInMaps(MI, *Or);
   MI.eraseFromParent();
 }
 
-void SILowerControlFlow::EndCf(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  unsigned Reg = MI.getOperand(0).getReg();
-
-  BuildMI(MBB, MBB.getFirstNonPHI(), DL,
-          TII->get(AMDGPU::S_OR_B64), AMDGPU::EXEC)
-          .addReg(AMDGPU::EXEC)
-          .addReg(Reg);
-
-  MI.eraseFromParent();
+void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
+  MI.setDesc(TII->get(AMDGPU::S_OR_B64));
 }
 
-void SILowerControlFlow::Branch(MachineInstr &MI) {
-  MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
-  if (MBB == MI.getParent()->getNextNode())
-    MI.eraseFromParent();
-
-  // If these aren't equal, this is probably an infinite loop.
+void SILowerControlFlow::emitElseBreak(MachineInstr &MI) {
+  MI.setDesc(TII->get(AMDGPU::S_OR_B64));
 }
 
-void SILowerControlFlow::Kill(MachineInstr &MI) {
+void SILowerControlFlow::emitLoop(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-  const MachineOperand &Op = MI.getOperand(0);
+  const DebugLoc &DL = MI.getDebugLoc();
 
-#ifndef NDEBUG
-  CallingConv::ID CallConv = MBB.getParent()->getFunction()->getCallingConv();
-  // Kill is only allowed in pixel / geometry shaders.
-  assert(CallConv == CallingConv::AMDGPU_PS ||
-         CallConv == CallingConv::AMDGPU_GS);
-#endif
+  MachineInstr *AndN2 =
+    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64), AMDGPU::EXEC)
+    .addReg(AMDGPU::EXEC)
+    .addOperand(MI.getOperand(0));
 
-  // Clear this thread from the exec mask if the operand is negative
-  if ((Op.isImm())) {
-    // Constant operand: Set exec mask to 0 or do nothing
-    if (Op.getImm() & 0x80000000) {
-      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_MOV_B64), AMDGPU::EXEC)
-              .addImm(0);
-    }
-  } else {
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CMPX_LE_F32_e32))
-           .addImm(0)
-           .addOperand(Op);
+  MachineInstr *Branch =
+    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
+    .addOperand(MI.getOperand(1));
+
+  if (LIS) {
+    LIS->ReplaceMachineInstrInMaps(MI, *AndN2);
+    LIS->InsertMachineInstrInMaps(*Branch);
   }
 
   MI.eraseFromParent();
 }
 
-MachineBasicBlock *SILowerControlFlow::insertSkipBlock(
-  MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const {
-  MachineFunction *MF = MBB.getParent();
+void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
 
-  MachineBasicBlock *SkipBB = MF->CreateMachineBasicBlock();
-  MachineFunction::iterator MBBI(MBB);
-  ++MBBI;
+  MachineBasicBlock::iterator InsPt = MBB.begin();
+  MachineInstr *NewMI =
+    BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::S_OR_B64), AMDGPU::EXEC)
+    .addReg(AMDGPU::EXEC)
+    .addOperand(MI.getOperand(0));
 
-  MF->insert(MBBI, SkipBB);
+  if (LIS)
+    LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
 
-  return SkipBB;
+  MI.eraseFromParent();
+
+  if (LIS)
+    LIS->handleMove(*NewMI);
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  SkipThreshold = SkipThresholdFlag;
 
-  bool HaveKill = false;
-  unsigned Depth = 0;
+  // This doesn't actually need LiveIntervals, but we can preserve them.
+  LIS = getAnalysisIfAvailable<LiveIntervals>();
 
   MachineFunction::iterator NextBB;
-
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
        BI != BE; BI = NextBB) {
     NextBB = std::next(BI);
     MachineBasicBlock &MBB = *BI;
 
-    MachineBasicBlock *EmptyMBBAtEnd = nullptr;
     MachineBasicBlock::iterator I, Next;
 
     for (I = MBB.begin(); I != MBB.end(); I = Next) {
       Next = std::next(I);
-
       MachineInstr &MI = *I;
 
       switch (MI.getOpcode()) {
-        default: break;
-        case AMDGPU::SI_IF:
-          ++Depth;
-          If(MI);
-          break;
+      case AMDGPU::SI_IF:
+        emitIf(MI);
+        break;
 
-        case AMDGPU::SI_ELSE:
-          Else(MI);
-          break;
+      case AMDGPU::SI_ELSE:
+        emitElse(MI);
+        break;
 
-        case AMDGPU::SI_BREAK:
-          Break(MI);
-          break;
+      case AMDGPU::SI_BREAK:
+        emitBreak(MI);
+        break;
 
-        case AMDGPU::SI_IF_BREAK:
-          IfBreak(MI);
-          break;
+      case AMDGPU::SI_IF_BREAK:
+        emitIfBreak(MI);
+        break;
 
-        case AMDGPU::SI_ELSE_BREAK:
-          ElseBreak(MI);
-          break;
+      case AMDGPU::SI_ELSE_BREAK:
+        emitElseBreak(MI);
+        break;
 
-        case AMDGPU::SI_LOOP:
-          ++Depth;
-          Loop(MI);
-          break;
+      case AMDGPU::SI_LOOP:
+        emitLoop(MI);
+        break;
 
-        case AMDGPU::SI_END_CF:
-          if (--Depth == 0 && HaveKill) {
-            HaveKill = false;
-            // TODO: Insert skip if exec is 0?
-          }
+      case AMDGPU::SI_END_CF:
+        emitEndCf(MI);
+        break;
 
-          EndCf(MI);
-          break;
-
-        case AMDGPU::SI_KILL_TERMINATOR:
-          if (Depth == 0) {
-            if (skipIfDead(MI, *NextBB)) {
-              NextBB = std::next(BI);
-              BE = MF.end();
-            }
-          } else
-            HaveKill = true;
-          Kill(MI);
-          break;
-
-        case AMDGPU::S_BRANCH:
-          Branch(MI);
-          break;
-
-        case AMDGPU::SI_RETURN: {
-          assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
-
-          // Graphics shaders returning non-void shouldn't contain S_ENDPGM,
-          // because external bytecode will be appended at the end.
-          if (BI != --MF.end() || I != MBB.getFirstTerminator()) {
-            // SI_RETURN is not the last instruction. Add an empty block at
-            // the end and jump there.
-            if (!EmptyMBBAtEnd) {
-              EmptyMBBAtEnd = MF.CreateMachineBasicBlock();
-              MF.insert(MF.end(), EmptyMBBAtEnd);
-            }
-
-            MBB.addSuccessor(EmptyMBBAtEnd);
-            BuildMI(*BI, I, MI.getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
-                    .addMBB(EmptyMBBAtEnd);
-            I->eraseFromParent();
-          }
-          break;
-        }
+      default:
+        break;
       }
     }
   }
+
   return true;
 }

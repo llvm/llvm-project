@@ -36,7 +36,6 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -1290,8 +1289,7 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     }
   }
   // Our raison d'etre! Eliminate sign and zero extension.
-  if ((isa<SExtInst>(DU.NarrowUse) && (IsSigned || DU.NeverNegative)) ||
-      (isa<ZExtInst>(DU.NarrowUse) && (!IsSigned || DU.NeverNegative))) {
+  if (IsSigned ? isa<SExtInst>(DU.NarrowUse) : isa<ZExtInst>(DU.NarrowUse)) {
     Value *NewDef = DU.WideDef;
     if (DU.NarrowUse->getType() != WideType) {
       unsigned CastWidth = SE->getTypeSizeInBits(DU.NarrowUse->getType());
@@ -1380,12 +1378,9 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
 ///
 void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
   const SCEV *NarrowSCEV = SE->getSCEV(NarrowDef);
-  // isKnownPredicate is enough for most cases but still need isKnownNonNegative 
-  // here to work around conservatism in ScalarEvolution about no-wrap flags. 
   bool NeverNegative =
       SE->isKnownPredicate(ICmpInst::ICMP_SGE, NarrowSCEV,
-                           SE->getConstant(NarrowSCEV->getType(), 0)) ||
-      isKnownNonNegative(NarrowDef, NarrowDef->getModule()->getDataLayout());
+                           SE->getConstant(NarrowSCEV->getType(), 0));
   for (User *U : NarrowDef->users()) {
     Instruction *NarrowUser = cast<Instruction>(U);
 

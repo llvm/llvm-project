@@ -33,6 +33,10 @@ enum MCFixupKind {
   FK_GPRel_2,    ///< A two-byte gp relative fixup.
   FK_GPRel_4,    ///< A four-byte gp relative fixup.
   FK_GPRel_8,    ///< A eight-byte gp relative fixup.
+  FK_DTPRel_4,   ///< A four-byte dtp relative fixup.
+  FK_DTPRel_8,   ///< A eight-byte dtp relative fixup.
+  FK_TPRel_4,    ///< A four-byte tp relative fixup.
+  FK_TPRel_8,    ///< A eight-byte tp relative fixup.
   FK_SecRel_1,   ///< A one-byte section relative fixup.
   FK_SecRel_2,   ///< A two-byte section relative fixup.
   FK_SecRel_4,   ///< A four-byte section relative fixup.

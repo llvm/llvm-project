@@ -155,24 +155,19 @@ public:
 // iterable by generic graph iterators.
 
 template <class Node, class ChildIterator> struct DomTreeGraphTraitsBase {
-  typedef Node NodeType;
   typedef Node *NodeRef;
   typedef ChildIterator ChildIteratorType;
-  typedef df_iterator<Node *, SmallPtrSet<NodeType *, 8>> nodes_iterator;
+  typedef df_iterator<Node *, SmallPtrSet<NodeRef, 8>> nodes_iterator;
 
-  static NodeType *getEntryNode(NodeType *N) { return N; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 
-  static nodes_iterator nodes_begin(NodeType *N) {
+  static nodes_iterator nodes_begin(NodeRef N) {
     return df_begin(getEntryNode(N));
   }
 
-  static nodes_iterator nodes_end(NodeType *N) {
-    return df_end(getEntryNode(N));
-  }
+  static nodes_iterator nodes_end(NodeRef N) { return df_end(getEntryNode(N)); }
 };
 
 template <>
@@ -186,9 +181,7 @@ struct GraphTraits<const DomTreeNode *>
 
 template <> struct GraphTraits<DominatorTree*>
   : public GraphTraits<DomTreeNode*> {
-  static NodeType *getEntryNode(DominatorTree *DT) {
-    return DT->getRootNode();
-  }
+  static NodeRef getEntryNode(DominatorTree *DT) { return DT->getRootNode(); }
 
   static nodes_iterator nodes_begin(DominatorTree *N) {
     return df_begin(getEntryNode(N));

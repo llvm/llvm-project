@@ -63,6 +63,54 @@ local_label:
         bltzc $0, local_label # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand ($zero) for instruction
         beqzc $0, local_label # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand ($zero) for instruction
         bnezc $0, local_label # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand ($zero) for instruction
+        bgec  $2, $4, -131076    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgec  $2, $4, -131071    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgec  $2, $4, 131072     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgec  $2, $4, 131071     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bltc  $2, $4, -131076    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bltc  $2, $4, -131071    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bltc  $2, $4, 131072     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bltc  $2, $4, 131071     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgeuc  $2, $4, -131076   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgeuc  $2, $4, -131071   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgeuc  $2, $4, 131072    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgeuc  $2, $4, 131071    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bltuc  $2, $4, -131076   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bltuc  $2, $4, -131071   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bltuc  $2, $4, 131072    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bltuc  $2, $4, 131071    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        beqc  $2, $4, -131076    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        beqc  $2, $4, -131071    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        beqc  $2, $4, 131072     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        beqc  $2, $4, 131071     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bnec  $2, $4, -131076    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bnec  $2, $4, -131071    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bnec  $2, $4, 131072     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bnec  $2, $4, 131071     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        blezc $2, -131076        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        blezc $2, -131071        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        blezc $2, 131072         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        blezc $2, 131071         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgezc $2, -131076        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgezc $2, -131071        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgezc $2, 131072         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgezc $2, 131071         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgtzc $2, -131076        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgtzc $2, -131071        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bgtzc $2, 131072         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bgtzc $2, 131071         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bltzc $2, -131076        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bltzc $2, -131071        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bltzc $2, 131072         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bltzc $2, 131071         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        beqzc $2, -4194308       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        beqzc $2, -4194303       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        beqzc $2, 4194304        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        beqzc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bnezc $2, -4194308       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bnezc $2, -4194303       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+        bnezc $2, 4194304        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+        bnezc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         jalr.hb $31          # CHECK: :[[@LINE]]:9: error: source and destination must be different

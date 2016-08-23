@@ -50,30 +50,19 @@ struct ilist_node_access {
     return N;
   }
 
-  template <typename T> static ilist_node<T> *getPrev(ilist_node<T> *N) {
-    return N->getPrev();
+  template <typename T> static ilist_node<T> *getPrev(ilist_node<T> &N) {
+    return N.getPrev();
   }
-  template <typename T> static ilist_node<T> *getNext(ilist_node<T> *N) {
-    return N->getNext();
+  template <typename T> static ilist_node<T> *getNext(ilist_node<T> &N) {
+    return N.getNext();
   }
-  template <typename T> static const ilist_node<T> *getPrev(const ilist_node<T> *N) {
-    return N->getPrev();
+  template <typename T>
+  static const ilist_node<T> *getPrev(const ilist_node<T> &N) {
+    return N.getPrev();
   }
-  template <typename T> static const ilist_node<T> *getNext(const ilist_node<T> *N) {
-    return N->getNext();
-  }
-
-  template <typename T> static void setPrev(ilist_node<T> *N, ilist_node<T> *Prev) {
-    N->setPrev(Prev);
-  }
-  template <typename T> static void setNext(ilist_node<T> *N, ilist_node<T> *Next) {
-    N->setNext(Next);
-  }
-  template <typename T> static void setPrev(ilist_node<T> *N, std::nullptr_t) {
-    N->setPrev(nullptr);
-  }
-  template <typename T> static void setNext(ilist_node<T> *N, std::nullptr_t) {
-    N->setNext(nullptr);
+  template <typename T>
+  static const ilist_node<T> *getNext(const ilist_node<T> &N) {
+    return N.getNext();
   }
 };
 
@@ -118,12 +107,6 @@ template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
 } // end namespace ilist_detail
 
 template <typename NodeTy> struct ilist_traits;
-
-// TODO: Delete uses from subprojects, then delete these.
-template <typename NodeTy> struct ilist_sentinel_traits {};
-template <typename NodeTy> struct ilist_embedded_sentinel_traits {};
-template <typename NodeTy> struct ilist_half_embedded_sentinel_traits {};
-template <typename NodeTy> struct ilist_full_embedded_sentinel_traits {};
 
 /// ilist_node_traits - A fragment for template traits for intrusive list
 /// that provides default node related operations.
@@ -234,12 +217,12 @@ public:
 
   // Increment and decrement operators...
   ilist_iterator &operator--() {
-    NodePtr = ilist_node_access::getPrev(NodePtr);
+    NodePtr = ilist_node_access::getPrev(*NodePtr);
     assert(NodePtr && "--'d off the beginning of an ilist!");
     return *this;
   }
   ilist_iterator &operator++() {
-    NodePtr = ilist_node_access::getNext(NodePtr);
+    NodePtr = ilist_node_access::getNext(*NodePtr);
     return *this;
   }
   ilist_iterator operator--(int) {
@@ -277,6 +260,64 @@ template<typename NodeTy> struct simplify_type<const ilist_iterator<NodeTy> > {
   }
 };
 
+/// Implementations of list algorithms using ilist_node_base.
+class ilist_base {
+public:
+  static void insertBeforeImpl(ilist_node_base &Next, ilist_node_base &N) {
+    ilist_node_base &Prev = *Next.getPrev();
+    N.setNext(&Next);
+    N.setPrev(&Prev);
+    Prev.setNext(&N);
+    Next.setPrev(&N);
+  }
+
+  static void removeImpl(ilist_node_base &N) {
+    ilist_node_base *Prev = N.getPrev();
+    ilist_node_base *Next = N.getNext();
+    Next->setPrev(Prev);
+    Prev->setNext(Next);
+
+    // Not strictly necessary, but helps catch a class of bugs.
+    N.setPrev(nullptr);
+    N.setNext(nullptr);
+  }
+
+  static void transferBeforeImpl(ilist_node_base &Next, ilist_node_base &First,
+                                 ilist_node_base &Last) {
+    assert(&Next != &Last && "Should be checked by callers");
+    assert(&First != &Last && "Should be checked by callers");
+    // Position cannot be contained in the range to be transferred.
+    assert(&Next != &First &&
+           // Check for the most common mistake.
+           "Insertion point can't be one of the transferred nodes");
+
+    ilist_node_base &Final = *Last.getPrev();
+
+    // Detach from old list/position.
+    First.getPrev()->setNext(&Last);
+    Last.setPrev(First.getPrev());
+
+    // Splice [First, Final] into its new list/position.
+    ilist_node_base &Prev = *Next.getPrev();
+    Final.setNext(&Next);
+    First.setPrev(&Prev);
+    Prev.setNext(&First);
+    Next.setPrev(&Final);
+  }
+
+  template <class T>
+  static void insertBefore(ilist_node<T> &Next, ilist_node<T> &N) {
+    insertBeforeImpl(Next, N);
+  }
+
+  template <class T> static void remove(ilist_node<T> &N) { removeImpl(N); }
+
+  template <class T>
+  static void transferBefore(ilist_node<T> &Next, ilist_node<T> &First,
+                             ilist_node<T> &Last) {
+    transferBeforeImpl(Next, First, Last);
+  }
+};
 
 //===----------------------------------------------------------------------===//
 //
@@ -286,7 +327,7 @@ template<typename NodeTy> struct simplify_type<const ilist_iterator<NodeTy> > {
 /// ilist_sentinel, which holds pointers to the first and last nodes in the
 /// list.
 template <typename NodeTy, typename Traits = ilist_traits<NodeTy>>
-class iplist : public Traits, ilist_node_access {
+class iplist : public Traits, ilist_base, ilist_node_access {
   // TODO: Drop this assertion and the transitive type traits anytime after
   // v4.0 is branched (i.e,. keep them for one release to help out-of-tree code
   // update).
@@ -362,13 +403,7 @@ public:
   }
 
   iterator insert(iterator where, NodeTy *New) {
-    node_type *NewN = this->getNodePtr(New);
-    node_type *Next = where.getNodePtr();
-    node_type *Prev = this->getPrev(Next);
-    this->setNext(NewN, Next);
-    this->setPrev(NewN, Prev);
-    this->setNext(Prev, NewN);
-    this->setPrev(Next, NewN);
+    ilist_base::insertBefore(*where.getNodePtr(), *this->getNodePtr(New));
 
     this->addNodeToList(New);  // Notify traits that we added a node...
     return iterator(New);
@@ -387,24 +422,9 @@ public:
 
   NodeTy *remove(iterator &IT) {
     assert(IT != end() && "Cannot remove end of list!");
-    NodeTy *Node = &*IT;
-    node_type *Base = this->getNodePtr(Node);
-    node_type *Next = this->getNext(Base);
-    node_type *Prev = this->getPrev(Base);
-
-    this->setNext(Prev, Next);
-    this->setPrev(Next, Prev);
-    IT = iterator(*Next);
+    NodeTy *Node = &*IT++;
+    ilist_base::remove(*this->getNodePtr(Node));
     this->removeNodeFromList(Node);  // Notify traits that we removed a node...
-
-    // Set the next/prev pointers of the current node to null.  This isn't
-    // strictly required, but this catches errors where a node is removed from
-    // an ilist (and potentially deleted) with iterators still pointing at it.
-    // After those iterators are incremented or decremented, they become
-    // default-constructed iterators, and will assert on increment, decrement,
-    // and dereference instead of "usually working".
-    this->setNext(Base, nullptr);
-    this->setPrev(Base, nullptr);
     return Node;
   }
 
@@ -437,32 +457,11 @@ private:
   // [first, last) into position.
   //
   void transfer(iterator position, iplist &L2, iterator first, iterator last) {
-    assert(first != last && "Should be checked by callers");
-    // Position cannot be contained in the range to be transferred.
-    assert(position != first &&
-           // Check for the most common mistake.
-           "Insertion point can't be one of the transferred nodes");
-
     if (position == last)
       return;
 
-    // Get raw hooks to the first and final nodes being transferred.
-    node_type *First = first.getNodePtr();
-    node_type *Final = (--last).getNodePtr();
-
-    // Detach from old list/position.
-    node_type *Prev = this->getPrev(First);
-    node_type *Next = this->getNext(Final);
-    this->setNext(Prev, Next);
-    this->setPrev(Next, Prev);
-
-    // Splice [First, Final] into its new list/position.
-    Next = position.getNodePtr();
-    Prev = this->getPrev(Next);
-    this->setNext(Final, Next);
-    this->setPrev(First, Prev);
-    this->setNext(Prev, First);
-    this->setPrev(Next, Final);
+    ilist_base::transferBefore(*position.getNodePtr(), *first.getNodePtr(),
+                               *last.getNodePtr());
 
     // Callback.  Note that the nodes have moved from before-last to
     // before-position.

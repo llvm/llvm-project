@@ -229,3 +229,27 @@ define <32 x i8> @test_broadcast_16i8_32i8_reuse(<16 x i8> *%p0, <16 x i8> *%p1)
  store <16 x i8> %1, <16 x i8>* %p1
  ret <32 x i8> %2
 }
+
+define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
+; X32-LABEL: PR29088:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovaps (%ecx), %xmm0
+; X32-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vmovaps %ymm1, (%eax)
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: PR29088:
+; X64:       ## BB#0:
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vmovaps %ymm1, (%rsi)
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %ld = load <4 x i32>, <4 x i32>* %p0
+  store <8 x float> zeroinitializer, <8 x float>* %p1
+  %shuf = shufflevector <4 x i32> %ld, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <8 x i32> %shuf
+}

@@ -167,7 +167,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: daddiu $2, $3, %higher(foo) # encoding: [A,A,0x62,0x64]
                                            // FIXUP: # fixup A - offset: 0, value: %higher(foo), kind: fixup_Mips_HIGHER
 
-// DATA-NEXT:  0080: 64620000 24620000 24620000 24620000
+// DATA-NEXT:  0080: 64620000 24620000 24620000 00000000
         daddiu $2, $3, %highest(foo)       // RELOC: R_MIPS_HIGHEST foo
                                            // ENCBE: daddiu $2, $3, %highest(foo) # encoding: [0x64,0x62,A,A]
                                            // ENCLE: daddiu $2, $3, %highest(foo) # encoding: [A,A,0x62,0x64]
@@ -179,7 +179,6 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %call_hi(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %call_hi(foo), kind: fixup_Mips_CALL_HI16
 
-// DATA-NEXT:  0090: 24620000 24620000 24620000 24620000
         addiu $2, $3, %call_lo(foo)        // RELOC: R_MIPS_CALL_LO16 foo
                                            // ENCBE: addiu $2, $3, %call_lo(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %call_lo(foo) # encoding: [A,A,0x62,0x24]
@@ -193,9 +192,11 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
 //      jalr $25                           // ?????: R_MIPS_JALR foo
 
                                            // ?????: R_MIPS_TLS_DTPMOD32 foo
-//      .dtprelword foo                    // FIXME: R_MIPS_TLS_DTPREL32 foo
+        .dtprelword foo                    // RELOC: R_MIPS_TLS_DTPREL32 foo
+
+// DATA-NEXT:  0090: 00000000 00000000 24620000 24620000
                                            // ?????: R_MIPS_TLS_DTPMOD64 foo
-//      .dtpreldword foo                   // FIXME: R_MIPS_TLS_DTPREL64 foo
+        .dtpreldword foo                   // RELOC: R_MIPS_TLS_DTPREL64 foo
         addiu $2, $3, %tlsgd(foo)          // RELOC: R_MIPS_TLS_GD foo
                                            // ENCBE: addiu $2, $3, %tlsgd(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %tlsgd(foo) # encoding: [A,A,0x62,0x24]
@@ -206,6 +207,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %tlsldm(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %tlsldm(foo), kind: fixup_Mips_TLSLDM
 
+// DATA-NEXT:  00A0: 24620000 24620000 24620000 00000000
         addiu $2, $3, %dtprel_hi(foo)      // RELOC: R_MIPS_TLS_DTPREL_HI16 foo
                                            // ENCBE: addiu $2, $3, %dtprel_hi(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %dtprel_hi(foo) # encoding: [A,A,0x62,0x24]
@@ -221,8 +223,10 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %gottprel(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %gottprel(foo), kind: fixup_Mips_GOTTPREL
 
-//      .tprelword foo                     // FIXME: R_MIPS_TLS_TPREL32 foo
-//      .tpreldword foo                    // FIXME: R_MIPS_TLS_TPREL64 foo
+        .tprelword foo                     // RELOC: R_MIPS_TLS_TPREL32 foo
+
+// DATA-NEXT:  00B0: 00000000 00000000 24620000 24620000
+        .tpreldword foo                    // RELOC: R_MIPS_TLS_TPREL64 foo
         addiu $2, $3, %tprel_hi(foo)       // RELOC: R_MIPS_TLS_TPREL_HI16 foo
                                            // ENCBE: addiu $2, $3, %tprel_hi(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %tprel_hi(foo) # encoding: [A,A,0x62,0x24]
@@ -233,6 +237,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %tprel_lo(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %tprel_lo(foo), kind: fixup_Mips_TPREL_LO
 
+// DATA-NEXT:  00C0: D85FFFFF CBFFFFFF EC580000 EC480000
                                            // ?????: R_MIPS_GLOB_DAT foo
         .set mips32r6
         beqzc $2, foo                      // RELOC: R_MIPS_PC21_S2 foo
@@ -257,6 +262,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: lwpc $2, foo # encoding: [A,A,0b01001AAA,0xec]
                                            // FIXUP: # fixup A - offset: 0, value: foo, kind: fixup_MIPS_PC19_S2
 
+// DATA-NEXT:  00D0: 24620000 24620000 00000000
         addiu $2, $3, %pcrel_hi(foo)       // RELOC: R_MIPS_PCHI16 foo
                                            // ENCBE: addiu $2, $3, %pcrel_hi(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %pcrel_hi(foo) # encoding: [A,A,0x62,0x24]

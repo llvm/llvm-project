@@ -2,6 +2,10 @@
 ; RUN:     -pass-remarks=loop-data-prefetch -S -max-prefetch-iters-ahead=100 \
 ; RUN:     -pass-remarks-with-hotness \
 ; RUN:     < %s 2>&1 | FileCheck %s
+; RUN: opt -mcpu=cyclone -mtriple=arm64-apple-ios -passes=loop-data-prefetch \
+; RUN:     -pass-remarks=loop-data-prefetch -S -max-prefetch-iters-ahead=100 \
+; RUN:     -pass-remarks-with-hotness \
+; RUN:     < %s 2>&1 | FileCheck %s
 
 ; ModuleID = '/tmp/s.c'
 source_filename = "/tmp/s.c"

@@ -4201,7 +4201,7 @@ bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
   return true;
 }
 
-/// Val is either less than zero (undef) or equal to the specified value.
+/// Val is the undef sentinel value or equal to the specified value.
 static bool isUndefOrEqual(int Val, int CmpVal) {
   return ((Val == SM_SentinelUndef) || (Val == CmpVal));
 }
@@ -4212,10 +4212,10 @@ static bool isUndefOrZero(int Val) {
 }
 
 /// Return true if every element in Mask, beginning
-/// from position Pos and ending in Pos+Size is undef.
+/// from position Pos and ending in Pos+Size is the undef sentinel value.
 static bool isUndefInRange(ArrayRef<int> Mask, unsigned Pos, unsigned Size) {
   for (unsigned i = Pos, e = Pos + Size; i != e; ++i)
-    if (0 <= Mask[i])
+    if (Mask[i] != SM_SentinelUndef)
       return false;
   return true;
 }
@@ -9004,8 +9004,11 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                          DAG.getConstant(SHUFPDMask, DL, MVT::i8));
     }
 
-    return DAG.getNode(X86ISD::SHUFP, DL, MVT::v2f64, V1, V1,
-                       DAG.getConstant(SHUFPDMask, DL, MVT::i8));
+    return DAG.getNode(
+        X86ISD::SHUFP, DL, MVT::v2f64,
+        Mask[0] == SM_SentinelUndef ? DAG.getUNDEF(MVT::v2f64) : V1,
+        Mask[1] == SM_SentinelUndef ? DAG.getUNDEF(MVT::v2f64) : V1,
+        DAG.getConstant(SHUFPDMask, DL, MVT::i8));
   }
   assert(Mask[0] >= 0 && Mask[0] < 2 && "Non-canonicalized blend!");
   assert(Mask[1] >= 2 && "Non-canonicalized blend!");
@@ -12972,10 +12975,12 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
       }
       // If lower/upper loads are the same and the only users of the load, then
       // lower to a VBROADCASTF128/VBROADCASTI128/etc.
-      if (SubVec2 == SubVec &&
-          isa<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2)) &&
-          areOnlyUsersOf(SubVec2.getNode(), {Op, Vec})) {
-        return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
+      if (auto *Ld = dyn_cast<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2))) {
+        if (SubVec2 == SubVec && ISD::isNormalLoad(Ld) &&
+            areOnlyUsersOf(SubVec2.getNode(), {Op, Vec}) &&
+            !Ld->hasAnyUseOfValue(1)) {
+          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
+        }
       }
     }
   }

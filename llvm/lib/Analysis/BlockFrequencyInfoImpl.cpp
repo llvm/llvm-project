@@ -628,15 +628,12 @@ namespace llvm {
 template <> struct GraphTraits<IrreducibleGraph> {
   typedef bfi_detail::IrreducibleGraph GraphT;
 
-  typedef const GraphT::IrrNode NodeType;
   typedef const GraphT::IrrNode *NodeRef;
   typedef GraphT::IrrNode::iterator ChildIteratorType;
 
-  static const NodeType *getEntryNode(const GraphT &G) {
-    return G.StartIrr;
-  }
-  static ChildIteratorType child_begin(NodeType *N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeType *N) { return N->succ_end(); }
+  static NodeRef getEntryNode(const GraphT &G) { return G.StartIrr; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 } // end namespace llvm
 

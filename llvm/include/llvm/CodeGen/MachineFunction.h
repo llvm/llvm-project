@@ -49,10 +49,6 @@ struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
 template <>
-struct ilist_sentinel_traits<MachineBasicBlock>
-    : public ilist_half_embedded_sentinel_traits<MachineBasicBlock> {};
-
-template <>
 struct ilist_traits<MachineBasicBlock>
     : public ilist_default_traits<MachineBasicBlock> {
   void addNodeToList(MachineBasicBlock* MBB);
@@ -618,9 +614,7 @@ public:
 //
 template <> struct GraphTraits<MachineFunction*> :
   public GraphTraits<MachineBasicBlock*> {
-  static NodeType *getEntryNode(MachineFunction *F) {
-    return &F->front();
-  }
+  static NodeRef getEntryNode(MachineFunction *F) { return &F->front(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
   typedef pointer_iterator<MachineFunction::iterator> nodes_iterator;
@@ -634,9 +628,7 @@ template <> struct GraphTraits<MachineFunction*> :
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
-  static NodeType *getEntryNode(const MachineFunction *F) {
-    return &F->front();
-  }
+  static NodeRef getEntryNode(const MachineFunction *F) { return &F->front(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
   typedef pointer_iterator<MachineFunction::const_iterator> nodes_iterator;
@@ -659,13 +651,13 @@ template <> struct GraphTraits<const MachineFunction*> :
 //
 template <> struct GraphTraits<Inverse<MachineFunction*> > :
   public GraphTraits<Inverse<MachineBasicBlock*> > {
-  static NodeType *getEntryNode(Inverse<MachineFunction*> G) {
+  static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*> > :
   public GraphTraits<Inverse<const MachineBasicBlock*> > {
-  static NodeType *getEntryNode(Inverse<const MachineFunction *> G) {
+  static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
   }
 };

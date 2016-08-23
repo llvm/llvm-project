@@ -69,10 +69,6 @@ namespace llvm {
   };
 
   template <>
-  struct ilist_sentinel_traits<IndexListEntry>
-      : public ilist_half_embedded_sentinel_traits<IndexListEntry> {};
-
-  template <>
   struct ilist_traits<IndexListEntry>
       : public ilist_default_traits<IndexListEntry> {
     void deleteNode(IndexListEntry *N) {}

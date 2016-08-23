@@ -1,4 +1,4 @@
-//===- llvm/unittest/ADT/APInt.cpp - APInt unit tests ---------------------===//
+//===- unittests/ADT/ilistTest.cpp - ilist unit tests ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

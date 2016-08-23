@@ -292,6 +292,10 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseDataDirective(unsigned Size, SMLoc L);
   bool parseDirectiveGpWord();
   bool parseDirectiveGpDWord();
+  bool parseDirectiveDtpRelWord();
+  bool parseDirectiveDtpRelDWord();
+  bool parseDirectiveTpRelWord();
+  bool parseDirectiveTpRelDWord();
   bool parseDirectiveModule();
   bool parseDirectiveModuleFP();
   bool parseFpABIValue(MipsABIFlagsSection::FpABIKind &FpABI,
@@ -1650,6 +1654,45 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         return Error(IDLoc, "branch target out of range");
       if (OffsetToAlignment(Offset.getImm(),
                             1LL << (inMicroMipsMode() ? 1 : 2)))
+        return Error(IDLoc, "branch to misaligned address");
+      break;
+    case Mips::BGEC:    case Mips::BGEC_MMR6:
+    case Mips::BLTC:    case Mips::BLTC_MMR6:
+    case Mips::BGEUC:   case Mips::BGEUC_MMR6:
+    case Mips::BLTUC:   case Mips::BLTUC_MMR6:
+    case Mips::BEQC:    case Mips::BEQC_MMR6:
+    case Mips::BNEC:    case Mips::BNEC_MMR6:
+      assert(MCID.getNumOperands() == 3 && "unexpected number of operands");
+      Offset = Inst.getOperand(2);
+      if (!Offset.isImm())
+        break; // We'll deal with this situation later on when applying fixups.
+      if (!isIntN(18, Offset.getImm()))
+        return Error(IDLoc, "branch target out of range");
+      if (OffsetToAlignment(Offset.getImm(), 1LL << 2))
+        return Error(IDLoc, "branch to misaligned address");
+      break;
+    case Mips::BLEZC:   case Mips::BLEZC_MMR6:
+    case Mips::BGEZC:   case Mips::BGEZC_MMR6:
+    case Mips::BGTZC:   case Mips::BGTZC_MMR6:
+    case Mips::BLTZC:   case Mips::BLTZC_MMR6:
+      assert(MCID.getNumOperands() == 2 && "unexpected number of operands");
+      Offset = Inst.getOperand(1);
+      if (!Offset.isImm())
+        break; // We'll deal with this situation later on when applying fixups.
+      if (!isIntN(18, Offset.getImm()))
+        return Error(IDLoc, "branch target out of range");
+      if (OffsetToAlignment(Offset.getImm(), 1LL << 2))
+        return Error(IDLoc, "branch to misaligned address");
+      break;
+    case Mips::BEQZC:   case Mips::BEQZC_MMR6:
+    case Mips::BNEZC:   case Mips::BNEZC_MMR6:
+      assert(MCID.getNumOperands() == 2 && "unexpected number of operands");
+      Offset = Inst.getOperand(1);
+      if (!Offset.isImm())
+        break; // We'll deal with this situation later on when applying fixups.
+      if (!isIntN(23, Offset.getImm()))
+        return Error(IDLoc, "branch target out of range");
+      if (OffsetToAlignment(Offset.getImm(), 1LL << 2))
         return Error(IDLoc, "branch to misaligned address");
       break;
     case Mips::BEQZ16_MM:
@@ -3808,12 +3851,12 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   // The compact branches that branch iff the signed addition of two registers
   // would overflow must have rs >= rt. That can be handled like beqc/bnec with
   // operand swapping. They do not have restriction of using the zero register.
-  case Mips::BLEZC:
-  case Mips::BGEZC:
-  case Mips::BGTZC:
-  case Mips::BLTZC:
-  case Mips::BEQZC:
-  case Mips::BNEZC:
+  case Mips::BLEZC:   case Mips::BLEZC_MMR6:
+  case Mips::BGEZC:   case Mips::BGEZC_MMR6:
+  case Mips::BGTZC:   case Mips::BGTZC_MMR6:
+  case Mips::BLTZC:   case Mips::BLTZC_MMR6:
+  case Mips::BEQZC:   case Mips::BEQZC_MMR6:
+  case Mips::BNEZC:   case Mips::BNEZC_MMR6:
   case Mips::BLEZC64:
   case Mips::BGEZC64:
   case Mips::BGTZC64:
@@ -3824,12 +3867,12 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
         Inst.getOperand(0).getReg() == Mips::ZERO_64)
       return Match_RequiresNoZeroRegister;
     return Match_Success;
-  case Mips::BGEC:
-  case Mips::BLTC:
-  case Mips::BGEUC:
-  case Mips::BLTUC:
-  case Mips::BEQC:
-  case Mips::BNEC:
+  case Mips::BGEC:    case Mips::BGEC_MMR6:
+  case Mips::BLTC:    case Mips::BLTC_MMR6:
+  case Mips::BGEUC:   case Mips::BGEUC_MMR6:
+  case Mips::BLTUC:   case Mips::BLTUC_MMR6:
+  case Mips::BEQC:    case Mips::BEQC_MMR6:
+  case Mips::BNEC:    case Mips::BNEC_MMR6:
   case Mips::BGEC64:
   case Mips::BLTC64:
   case Mips::BGEUC64:
@@ -5710,7 +5753,79 @@ bool MipsAsmParser::parseDirectiveGpDWord() {
   getParser().getStreamer().EmitGPRel64Value(Value);
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(), 
+    return Error(getLexer().getLoc(),
+                "unexpected token, expected end of statement");
+  Parser.Lex(); // Eat EndOfStatement token.
+  return false;
+}
+
+/// parseDirectiveDtpRelWord
+///  ::= .dtprelword tls_sym
+bool MipsAsmParser::parseDirectiveDtpRelWord() {
+  MCAsmParser &Parser = getParser();
+  const MCExpr *Value;
+  // EmitDTPRel32Value requires an expression, so we are using base class
+  // method to evaluate the expression.
+  if (getParser().parseExpression(Value))
+    return true;
+  getParser().getStreamer().EmitDTPRel32Value(Value);
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return Error(getLexer().getLoc(),
+                "unexpected token, expected end of statement");
+  Parser.Lex(); // Eat EndOfStatement token.
+  return false;
+}
+
+/// parseDirectiveDtpRelDWord
+///  ::= .dtpreldword tls_sym
+bool MipsAsmParser::parseDirectiveDtpRelDWord() {
+  MCAsmParser &Parser = getParser();
+  const MCExpr *Value;
+  // EmitDTPRel64Value requires an expression, so we are using base class
+  // method to evaluate the expression.
+  if (getParser().parseExpression(Value))
+    return true;
+  getParser().getStreamer().EmitDTPRel64Value(Value);
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return Error(getLexer().getLoc(),
+                "unexpected token, expected end of statement");
+  Parser.Lex(); // Eat EndOfStatement token.
+  return false;
+}
+
+/// parseDirectiveTpRelWord
+///  ::= .tprelword tls_sym
+bool MipsAsmParser::parseDirectiveTpRelWord() {
+  MCAsmParser &Parser = getParser();
+  const MCExpr *Value;
+  // EmitTPRel32Value requires an expression, so we are using base class
+  // method to evaluate the expression.
+  if (getParser().parseExpression(Value))
+    return true;
+  getParser().getStreamer().EmitTPRel32Value(Value);
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return Error(getLexer().getLoc(),
+                "unexpected token, expected end of statement");
+  Parser.Lex(); // Eat EndOfStatement token.
+  return false;
+}
+
+/// parseDirectiveTpRelDWord
+///  ::= .tpreldword tls_sym
+bool MipsAsmParser::parseDirectiveTpRelDWord() {
+  MCAsmParser &Parser = getParser();
+  const MCExpr *Value;
+  // EmitTPRel64Value requires an expression, so we are using base class
+  // method to evaluate the expression.
+  if (getParser().parseExpression(Value))
+    return true;
+  getParser().getStreamer().EmitTPRel64Value(Value);
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return Error(getLexer().getLoc(),
                 "unexpected token, expected end of statement");
   Parser.Lex(); // Eat EndOfStatement token.
   return false;
@@ -6262,6 +6377,26 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".gpdword") {
     parseDirectiveGpDWord();
+    return false;
+  }
+
+  if (IDVal == ".dtprelword") {
+    parseDirectiveDtpRelWord();
+    return false;
+  }
+
+  if (IDVal == ".dtpreldword") {
+    parseDirectiveDtpRelDWord();
+    return false;
+  }
+
+  if (IDVal == ".tprelword") {
+    parseDirectiveTpRelWord();
+    return false;
+  }
+
+  if (IDVal == ".tpreldword") {
+    parseDirectiveTpRelDWord();
     return false;
   }
 

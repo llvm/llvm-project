@@ -199,17 +199,15 @@ static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
 // cases reduce critical path (by exposing more ILP).
 class GVNHoist {
 public:
-  GVNHoist(DominatorTree *Dt, AliasAnalysis *Aa, MemoryDependenceResults *Md,
-           bool OptForMinSize)
-      : DT(Dt), AA(Aa), MD(Md), OptForMinSize(OptForMinSize),
+  GVNHoist(DominatorTree *DT, AliasAnalysis *AA, MemoryDependenceResults *MD,
+           MemorySSA *MSSA, bool OptForMinSize)
+      : DT(DT), AA(AA), MD(MD), MSSA(MSSA), OptForMinSize(OptForMinSize),
         HoistingGeps(OptForMinSize), HoistedCtr(0) {}
   bool run(Function &F) {
     VN.setDomTree(DT);
     VN.setAliasAnalysis(AA);
     VN.setMemDep(MD);
     bool Res = false;
-    MemorySSA M(F, AA, DT);
-    MSSA = &M;
     // Perform DFS Numbering of instructions.
     unsigned BBI = 0;
     for (const BasicBlock *BB : depth_first(&F.getEntryBlock())) {
@@ -246,11 +244,11 @@ private:
   DominatorTree *DT;
   AliasAnalysis *AA;
   MemoryDependenceResults *MD;
+  MemorySSA *MSSA;
   const bool OptForMinSize;
   const bool HoistingGeps;
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
-  MemorySSA *MSSA;
   int HoistedCtr;
 
   enum InsKind { Unknown, Scalar, Load, Store };
@@ -932,8 +930,9 @@ public:
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
     auto &MD = getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
+    auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
 
-    GVNHoist G(&DT, &AA, &MD, F.optForMinSize());
+    GVNHoist G(&DT, &AA, &MD, &MSSA, F.optForMinSize());
     return G.run(F);
   }
 
@@ -941,7 +940,9 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
   }
 };
 } // namespace
@@ -951,13 +952,14 @@ PreservedAnalyses GVNHoistPass::run(Function &F,
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemoryDependenceResults &MD = AM.getResult<MemoryDependenceAnalysis>(F);
-
-  GVNHoist G(&DT, &AA, &MD, F.optForMinSize());
+  MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  GVNHoist G(&DT, &AA, &MD, &MSSA, F.optForMinSize());
   if (!G.run(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<MemorySSAAnalysis>();
   return PA;
 }
 
@@ -965,6 +967,7 @@ char GVNHoistLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GVNHoistLegacyPass, "gvn-hoist",
                       "Early GVN Hoisting of Expressions", false, false)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(GVNHoistLegacyPass, "gvn-hoist",
