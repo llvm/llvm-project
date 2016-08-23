@@ -32,10 +32,33 @@ namespace lto {
 
 /// Abstract class representing a single Task output to be implemented by the
 /// client of the LTO API.
+///
+/// The general scheme the API is called is the following:
+///
+/// void process(NativeObjectOutput &Output) {
+///   /* check if caching is supported */
+///   if (Output.isCachingEnabled()) {
+///     auto Key = ComputeKeyForEntry(...); // "expensive" call
+///     if (Output.tryLoadFromCache())
+///        return; // Cache hit
+///   }
+///
+///   auto OS = Output.getStream();
+///
+///   OS << ....;
+/// }
+///
 class NativeObjectOutput {
 public:
   // Return an allocated stream for the output, or null in case of failure.
   virtual std::unique_ptr<raw_pwrite_stream> getStream() = 0;
+
+  // Try loading from a possible cache first, return true on cache hit.
+  virtual bool tryLoadFromCache(StringRef Key) { return false; }
+
+  // Returns true if a cache is available
+  virtual bool isCachingEnabled() const { return false; }
+
   virtual ~NativeObjectOutput() = default;
 };
 
