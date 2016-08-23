@@ -5095,21 +5095,21 @@ SDValue SystemZTargetLowering::combineSHIFTROT(
   // value that has its last 6 bits set, we can safely remove the AND operation.
   //
   // If the AND operation doesn't have the last 6 bits set, we can't remove it
-  // entirely, but we can still truncate it to a 16-bit value with all other
-  // bits set. This will allow us to generate a NILL instead of a NILF for
-  // smaller code size.
+  // entirely, but we can still truncate it to a 16-bit value. This prevents
+  // us from ending up with a NILL with a signed operand, which will cause the
+  // instruction printer to abort.
   SDValue N1 = N->getOperand(1);
   if (N1.getOpcode() == ISD::AND) {
-    SDValue AndOp = N1->getOperand(0);
     SDValue AndMaskOp = N1->getOperand(1);
     auto *AndMask = dyn_cast<ConstantSDNode>(AndMaskOp);
 
     // The AND mask is constant
     if (AndMask) {
-      uint64_t AmtVal = AndMask->getZExtValue();
-
+      auto AmtVal = AndMask->getZExtValue();
+      
       // Bottom 6 bits are set
       if ((AmtVal & 0x3f) == 0x3f) {
+        SDValue AndOp = N1->getOperand(0);
 
         // This is the only use, so remove the node
         if (N1.hasOneUse()) {
@@ -5129,30 +5129,25 @@ SDValue SystemZTargetLowering::combineSHIFTROT(
           return Replace;
         }
 
-      // We can't remove the AND, but we can use NILL here instead of NILF if we
-      // truncate the mask to 16 bits and set the remaining bits
-      } else {
-        unsigned BitWidth = AndMask->getAPIntValue().getBitWidth();
+      // We can't remove the AND, but we can use NILL here (normally we would
+      // use NILF). Only keep the last 16 bits of the mask. The actual
+      // transformation will be handled by .td definitions.
+      } else if (AmtVal >> 16 != 0) {
+        SDValue AndOp = N1->getOperand(0);
 
-        // All bits for the operand's size except the lower 16
-        uint64_t UpperBits = ((1ull << (uint64_t)BitWidth) - 1ull) &
-                             0xffffffffffff0000ull;
+        auto NewMask = DAG.getConstant(AndMask->getZExtValue() & 0x0000ffff,
+                                       SDLoc(AndMaskOp),
+                                       AndMaskOp.getValueType());
 
-        if ((AmtVal & UpperBits) != UpperBits) {
-          auto NewMaskValue = (AmtVal & 0xffff) | UpperBits;
+        auto NewAnd = DAG.getNode(N1.getOpcode(), SDLoc(N1), N1.getValueType(),
+                                  AndOp, NewMask);
 
-          auto NewMask = DAG.getConstant(NewMaskValue,
-                                         SDLoc(AndMaskOp),
-                                         AndMaskOp.getValueType());
-          auto NewAnd = DAG.getNode(N1.getOpcode(), SDLoc(N1), N1.getValueType(),
-                                    AndOp, NewMask);
-          auto Replace = DAG.getNode(N->getOpcode(), SDLoc(N),
-                                     N->getValueType(0), N->getOperand(0),
-                                     NewAnd);
-          DCI.AddToWorklist(Replace.getNode());
+        SDValue Replace = DAG.getNode(N->getOpcode(), SDLoc(N),
+                                      N->getValueType(0), N->getOperand(0),
+                                      NewAnd);
+        DCI.AddToWorklist(Replace.getNode());
 
-          return Replace;
-        }
+        return Replace;
       }
     }
   }

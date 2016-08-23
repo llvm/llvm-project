@@ -975,6 +975,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         NewRC = CommonRC;
         DstIdx = 0;
         DefMO.setSubReg(0);
+        DefMO.setIsUndef(false); // Only subregs can have def+undef.
       }
     }
   }

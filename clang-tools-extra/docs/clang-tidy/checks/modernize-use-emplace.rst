@@ -22,9 +22,9 @@ Before:
     std::vector<MyClass> v;
     v.push_back(MyClass(21, 37));
 
-    std::vector<std::pair<int,int>> w;
+    std::vector<std::pair<int, int>> w;
 
-    w.push_back(std::pair<int,int>(21, 37));
+    w.push_back(std::pair<int, int>(21, 37));
     w.push_back(std::make_pair(21L, 37L));
 
 After:
@@ -34,7 +34,7 @@ After:
     std::vector<MyClass> v;
     v.emplace_back(21, 37);
 
-    std::vector<std::pair<int,int>> w;
+    std::vector<std::pair<int, int>> w;
     w.emplace_back(21, 37);
     // This will be fixed to w.push_back(21, 37); in next version
     w.emplace_back(std::make_pair(21L, 37L);
@@ -80,9 +80,11 @@ other classes use the :option:`SmartPointers` option.
 
 
 Check also fires if any argument of constructor call would be:
-- bitfield (bitfields can't bind to rvalue/universal reference)
-- ``new`` expression (to avoid leak)
-or if the argument would be converted via derived-to-base cast.
+
+  - bitfield (bitfields can't bind to rvalue/universal reference)
+
+  - ``new`` expression (to avoid leak) or if the argument would be converted via
+    derived-to-base cast.
 
 This check requires C++11 of higher to run.
 

@@ -277,6 +277,30 @@ define <8 x float> @combine_permps_as_permpd(<8 x float> %a) {
   ret <8 x float> %1
 }
 
+define <4 x double> @combine_pshufb_as_vzmovl_64(<4 x double> %a0) {
+; CHECK-LABEL: combine_pshufb_as_vzmovl_64:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; CHECK-NEXT:    retq
+  %1 = bitcast <4 x double> %a0 to <32 x i8>
+  %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %3 = bitcast <32 x i8> %2 to <4 x double>
+  ret <4 x double> %3
+}
+
+define <8 x float> @combine_pshufb_as_vzmovl_32(<8 x float> %a0) {
+; CHECK-LABEL: combine_pshufb_as_vzmovl_32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
+; CHECK-NEXT:    retq
+  %1 = bitcast <8 x float> %a0 to <32 x i8>
+  %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %3 = bitcast <32 x i8> %2 to <8 x float>
+  ret <8 x float> %3
+}
+
 define <32 x i8> @combine_pshufb_as_pslldq(<32 x i8> %a0) {
 ; CHECK-LABEL: combine_pshufb_as_pslldq:
 ; CHECK:       # BB#0:

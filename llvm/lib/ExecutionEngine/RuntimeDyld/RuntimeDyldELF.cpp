@@ -480,9 +480,6 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
     *TargetPtr |= Value & 0xFFF;
     *TargetPtr |= ((Value >> 12) & 0xF) << 16;
     break;
-  case ELF::R_ARM_REL32:
-    *TargetPtr += Value - FinalAddress;
-    break;
     // Write 24 bit relative value to the branch instruction.
   case ELF::R_ARM_PC24: // Fall through.
   case ELF::R_ARM_CALL: // Fall through.
@@ -1368,19 +1365,6 @@ RuntimeDyldELF::processRelocationRef(
                           RelType, 0);
         Section.advanceStubOffset(getMaxStubSize());
       }
-    } else if (RelType == ELF::R_ARM_GOT_PREL) {
-      uint32_t GOTOffset = allocateGOTEntries(SectionID, 1);
-
-      RelocationEntry GOTRE(SectionID, Offset, ELF::R_ARM_REL32, GOTOffset);
-      addRelocationForSection(GOTRE, GOTSectionID);
-
-      // Fill in the value of the symbol we're targeting into the GOT
-      RelocationEntry RE = computeGOTOffsetRE(SectionID, GOTOffset,
-                                              Value.Offset, ELF::R_ARM_ABS32);
-      if (Value.SymbolName)
-        addRelocationForSymbol(RE, Value.SymbolName);
-      else
-        addRelocationForSection(RE, Value.SectionID);
     } else {
       uint32_t *Placeholder =
         reinterpret_cast<uint32_t*>(computePlaceholderAddress(SectionID, Offset));

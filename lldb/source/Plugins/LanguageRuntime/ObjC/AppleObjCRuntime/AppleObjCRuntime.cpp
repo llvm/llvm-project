@@ -350,6 +350,13 @@ AppleObjCRuntime::GetFoundationVersion ()
         return m_Foundation_major.getValue();
 }
 
+void
+AppleObjCRuntime::GetValuesForGlobalCFBooleans(lldb::addr_t& cf_true,
+                                               lldb::addr_t& cf_false)
+{
+    cf_true = cf_false = LLDB_INVALID_ADDRESS;
+}
+
 bool
 AppleObjCRuntime::IsModuleObjCLibrary (const ModuleSP &module_sp)
 {

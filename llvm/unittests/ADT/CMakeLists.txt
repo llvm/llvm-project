@@ -13,15 +13,20 @@ set(ADTSources
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp
   DenseSetTest.cpp
+  DepthFirstIteratorTest.cpp
   FoldingSet.cpp
   FunctionRefTest.cpp
   HashingTest.cpp
-  ilistTest.cpp
+  ilistTestTemp.cpp
+  IListBaseTest.cpp
+  IListNodeBaseTest.cpp
+  IListSentinelTest.cpp
   ImmutableMapTest.cpp
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp
   IntervalMapTest.cpp
   IntrusiveRefCntPtrTest.cpp
+  IteratorTest.cpp
   MakeUniqueTest.cpp
   MapVectorTest.cpp
   OptionalTest.cpp

@@ -490,8 +490,7 @@ define i1 @test39(i32 %X, i32 %Y) {
 
 define <2 x i1> @test39vec(<2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @test39vec(
-; CHECK-NEXT:    [[A:%.*]] = ashr exact <2 x i32> %X, %Y
-; CHECK-NEXT:    [[B:%.*]] = icmp eq <2 x i32> [[A]], zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = icmp eq <2 x i32> %X, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[B]]
 ;
   %A = ashr exact <2 x i32> %X, %Y
@@ -511,8 +510,7 @@ define i1 @test40(i32 %X, i32 %Y) {
 
 define <2 x i1> @test40vec(<2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @test40vec(
-; CHECK-NEXT:    [[A:%.*]] = lshr exact <2 x i32> %X, %Y
-; CHECK-NEXT:    [[B:%.*]] = icmp ne <2 x i32> [[A]], zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = icmp ne <2 x i32> %X, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[B]]
 ;
   %A = lshr exact <2 x i32> %X, %Y
@@ -1105,11 +1103,10 @@ define i1 @icmp_shl16(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_shl16_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl16_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> %x, <i32 16, i32 16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[SHL]], <i32 2359296, i32 2359296>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i16> [[TMP1]], <i16 36, i16 36>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> %x, <i32 16, i32 16>
@@ -1160,11 +1157,9 @@ define i1 @icmp_shl_nsw_sge1(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_shl_nsw_sge1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl_nsw_sge1_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> %x, <i32 21, i32 21>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> %x, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl nsw <2 x i32> %x, <i32 21, i32 21>
@@ -1183,11 +1178,9 @@ define i1 @icmp_shl_nsw_eq(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_shl_nsw_eq_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl_nsw_eq_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw <2 x i32> %x, <i32 5, i32 5>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %x, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = shl nsw <2 x i32> %x, <i32 5, i32 5>
@@ -1206,11 +1199,10 @@ define i1 @icmp_shl_eq(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_shl_eq_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl_eq_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> %x, <i32 5, i32 5>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    [[MUL_MASK:%.*]] = and <2 x i32> %x, <i32 134217727, i32 134217727>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[MUL_MASK]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = shl <2 x i32> %x, <i32 5, i32 5>
@@ -1228,11 +1220,9 @@ define i1 @icmp_shl_nsw_ne(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_shl_nsw_ne_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl_nsw_ne_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw <2 x i32> %x, <i32 7, i32 7>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %x, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = shl nsw <2 x i32> %x, <i32 7, i32 7>
@@ -1251,15 +1241,24 @@ define i1 @icmp_shl_ne(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @icmp_shl_ne_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_shl_ne_vec(
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> %x, <i32 7, i32 7>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[MUL]], zeroinitializer
+; CHECK-NEXT:    [[MUL_MASK:%.*]] = and <2 x i32> %x, <i32 33554431, i32 33554431>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[MUL_MASK]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %mul = shl <2 x i32> %x, <i32 7, i32 7>
   %cmp = icmp ne <2 x i32> %mul, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_shl_nuw_ne_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_shl_nuw_ne_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %x, <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl nuw <2 x i32> %x, <i32 7, i32 7>
+  %cmp = icmp ne <2 x i32> %shl, <i32 256, i32 256>
   ret <2 x i1> %cmp
 }
 

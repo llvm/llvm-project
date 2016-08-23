@@ -145,16 +145,20 @@ the following conditions are satisfied:
 
 Known Limitations
 -----------------
+
 * If the initializer is an explicit conversion constructor, the check will not
   replace the type specifier even though it would be safe to do so.
 
 * User-defined iterators are not handled at this time.
 
-RemoveStars option
-------------------
-If the option is set to non-zero (default is `0`), the check will remove stars
-from the non-typedef pointer types when replacing type names with ``auto``.
-Otherwise, the check will leave stars. For example:
+Options
+-------
+
+.. option:: RemoveStars
+
+   If the option is set to non-zero (default is `0`), the check will remove
+   stars from the non-typedef pointer types when replacing type names with
+   ``auto``. Otherwise, the check will leave stars. For example:
 
 .. code-block:: c++
 

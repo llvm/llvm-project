@@ -17,6 +17,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 #include <iostream>
 

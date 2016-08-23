@@ -33,7 +33,7 @@ define float @test2(<4 x float>* %F, float* %f) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps (%eax), %xmm0
 ; X32-NEXT:    addps %xmm0, %xmm0
-; X32-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X32-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X32-NEXT:    movss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -43,7 +43,7 @@ define float @test2(<4 x float>* %F, float* %f) nounwind {
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    addps %xmm0, %xmm0
-; X64-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    retq
 entry:
   %tmp = load <4 x float>, <4 x float>* %F
@@ -78,7 +78,7 @@ define double @test4(double %A) nounwind {
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    calll foo
-; X32-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X32-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X32-NEXT:    addsd {{[0-9]+}}(%esp), %xmm0
 ; X32-NEXT:    movsd %xmm0, (%esp)
 ; X32-NEXT:    fldl (%esp)
@@ -90,7 +90,7 @@ define double @test4(double %A) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; X64-NEXT:    callq foo
-; X64-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    addsd (%rsp), %xmm0 # 8-byte Folded Reload
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq

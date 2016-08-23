@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-througput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-cache-level-associativity=8,8 -polly-target-cache-level-sizes=32768,262144 -polly-codegen -S < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-througput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-cache-level-associativity=8,8 -polly-target-cache-level-sizes=32768,262144 -polly-optimized-scops < %s 2>&1 | FileCheck %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)
@@ -9,31 +9,14 @@
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
 ;
-; CHECK:define internal void @kernel_gemm(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %arg4, [1056 x double]* %arg5, [1024 x double]* %arg6, [1056 x double]* %arg7) #0 {
-; CHECK:bb:
-; CHECK:  %arg3.s2a = alloca double
-; CHECK:  %arg4.s2a = alloca double
-; CHECK:  %Packed_A = alloca [1024 x [4 x double]]
-; CHECK:  %Packed_B = alloca [3072 x [8 x double]]
-; CHECK:  br label %polly.split_new_and_old
+; CHECK:        double Packed_A[*][ { [] -> [(1024)] } ][ { [] -> [(4)] } ]; // Element size 8
+; CHECK:        double Packed_B[*][ { [] -> [(3072)] } ][ { [] -> [(8)] } ]; // Element size 8
 ;
-; CHECK:polly.stmt.bb14398:                               ; preds = %polly.stmt.bb14379
-; CHECK:  %arg3.s2a.reload399 = load double, double* %arg3.s2a
-; CHECK:  %polly.access.cast.Packed_A400 = bitcast [1024 x [4 x double]]* %Packed_A to double*
-; CHECK:  %243 = mul nsw i64 256, %polly.indvar95
-; CHECK:  %244 = add nsw i64 %243, %polly.indvar107
-; CHECK:  %polly.access.add.Packed_A401 = add nsw i64 0, %244
-; CHECK:  %polly.access.mul.Packed_A402 = mul nsw i64 %polly.access.add.Packed_A401, 4
-; CHECK:  %polly.access.add.Packed_A403 = add nsw i64 %polly.access.mul.Packed_A402, 2
-; CHECK:  %polly.access.Packed_A404 = getelementptr double, double* %polly.access.cast.Packed_A400, i64 %polly.access.add.Packed_A403
-; CHECK:  %tmp17_p_scalar_405 = load double, double* %polly.access.Packed_A404, align 8
-; CHECK:  %p_tmp18406 = fmul double %tmp17_p_scalar_405, %arg3.s2a.reload399
-; CHECK:  %polly.access.cast.Packed_B407 = bitcast [3072 x [8 x double]]* %Packed_B to double*
-; CHECK  %245 = mul nsw i64 256, %polly.indvar101
-; CHECK  %246 = add nsw i64 %245, %polly.indvar107
-; CHECK  %polly.access.add.Packed_B408 = add nsw i64 0, %246
-; CHECK  %polly.access.mul.Packed_B409 = mul nsw i64 %polly.access.add.Packed_B408, 8
-; CHECK  %polly.access.add.Packed_B410 = add nsw i64 %polly.access.mul.Packed_B409, 0
+; CHECK:                { Stmt_bb14[i0, i1, i2] -> MemRef_arg6[i0, i2] };
+; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_A[0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 4*floor((-i0 + o2)/4) = -i0 + o2 and 0 <= o2 <= 3 and -3 + i0 - 16*floor((i0)/16) <= 4*floor((o1)/256) <= i0 - 16*floor((i0)/16) };
+;
+; CHECK:                { Stmt_bb14[i0, i1, i2] -> MemRef_arg7[i2, i1] };
+; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_B[0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 8*floor((-i1 + o2)/8) = -i1 + o2 and 0 <= o2 <= 7 and -7 + i1 - 96*floor((i1)/96) <= 8*floor((o1)/256) <= i1 - 96*floor((i1)/96) };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

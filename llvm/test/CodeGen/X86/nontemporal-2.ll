@@ -563,7 +563,7 @@ define void @test_extract_f64(<2 x double> %arg, double* %dst) {
 ;
 ; SSE4A-LABEL: test_extract_f64:
 ; SSE4A:       # BB#0:
-; SSE4A-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; SSE4A-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE4A-NEXT:    movntsd %xmm0, (%rdi)
 ; SSE4A-NEXT:    retq
 ;

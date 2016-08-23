@@ -6,7 +6,7 @@ target triple = "thumbv7-apple-ios"
 
 %struct.tag_s = type { i32, i32, i32 }
 
-define void @foo(%struct.tag_s* nocapture %this, %struct.tag_s* %c, i64 %x, i64 %y, %struct.tag_s* nocapture %ptr1, %struct.tag_s* nocapture %ptr2) nounwind ssp !dbg !1 {
+define void @foo(%struct.tag_s* nocapture %this, %struct.tag_s* %c, i64 %x, i64 %y, %struct.tag_s* nocapture %ptr1, %struct.tag_s* nocapture %ptr2) nounwind ssp "no-frame-pointer-elim"="true" !dbg !1 {
   tail call void @llvm.dbg.value(metadata %struct.tag_s* %this, i64 0, metadata !5, metadata !DIExpression()), !dbg !20
   tail call void @llvm.dbg.value(metadata %struct.tag_s* %c, i64 0, metadata !13, metadata !DIExpression()), !dbg !21
   tail call void @llvm.dbg.value(metadata i64 %x, i64 0, metadata !14, metadata !DIExpression()), !dbg !22

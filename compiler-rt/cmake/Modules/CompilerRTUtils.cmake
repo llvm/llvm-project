@@ -49,7 +49,7 @@ macro(append_string_if condition value)
 endmacro()
 
 macro(append_rtti_flag polarity list)
-  if(polarity)
+  if(${polarity})
     append_list_if(COMPILER_RT_HAS_FRTTI_FLAG -frtti ${list})
     append_list_if(COMPILER_RT_HAS_GR_FLAG /GR ${list})
   else()

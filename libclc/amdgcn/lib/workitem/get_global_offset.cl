@@ -1,6 +1,6 @@
 #include <clc/clc.h>
 
-_CLC_DEF uint get_global_offset(uint dim)
+_CLC_DEF size_t get_global_offset(uint dim)
 {
 	__attribute__((address_space(2))) uint * ptr =
 		(__attribute__((address_space(2))) uint *)

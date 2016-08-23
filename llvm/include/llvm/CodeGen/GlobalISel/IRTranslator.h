@@ -117,6 +117,8 @@ private:
   /// Translate an LLVM store instruction into generic IR.
   bool translateStore(const User &U);
 
+  bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID);
+
   /// Translate call instruction.
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U);
@@ -132,8 +134,19 @@ private:
   /// Translate a phi instruction.
   bool translatePHI(const User &U);
 
+  /// Translate a comparison (icmp or fcmp) instruction or constant.
+  bool translateCompare(const User &U);
+
   /// Translate an integer compare instruction (or constant).
-  bool translateICmp(const User &U);
+  bool translateICmp(const User &U) {
+    return translateCompare(U);
+  }
+
+  /// Translate a floating-point compare instruction (or constant).
+  bool translateFCmp(const User &U) {
+    return translateCompare(U);
+  }
+
 
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
@@ -146,6 +159,12 @@ private:
   /// Translate branch (br) instruction.
   /// \pre \p U is a branch instruction.
   bool translateBr(const User &U);
+
+  bool translateExtractValue(const User &U);
+
+  bool translateInsertValue(const User &U);
+
+  bool translateSelect(const User &U);
 
   /// Translate return (ret) instruction.
   /// The target needs to implement CallLowering::lowerReturn for
@@ -197,6 +216,25 @@ private:
   bool translateTrunc(const User &U) {
     return translateCast(TargetOpcode::G_TRUNC, U);
   }
+  bool translateFPTrunc(const User &U) {
+    return translateCast(TargetOpcode::G_FPTRUNC, U);
+  }
+  bool translateFPExt(const User &U) {
+    return translateCast(TargetOpcode::G_FPEXT, U);
+  }
+  bool translateFPToUI(const User &U) {
+    return translateCast(TargetOpcode::G_FPTOUI, U);
+  }
+  bool translateFPToSI(const User &U) {
+    return translateCast(TargetOpcode::G_FPTOSI, U);
+  }
+  bool translateUIToFP(const User &U) {
+    return translateCast(TargetOpcode::G_UITOFP, U);
+  }
+  bool translateSIToFP(const User &U) {
+    return translateCast(TargetOpcode::G_SITOFP, U);
+  }
+
   bool translateUnreachable(const User &U) { return true; }
 
   bool translateSExt(const User &U) {
@@ -247,25 +285,15 @@ private:
   bool translateFence(const User &U) { return false; }
   bool translateAtomicCmpXchg(const User &U) { return false; }
   bool translateAtomicRMW(const User &U) { return false; }
-  bool translateFPToUI(const User &U) { return false; }
-  bool translateFPToSI(const User &U) { return false; }
-  bool translateUIToFP(const User &U) { return false; }
-  bool translateSIToFP(const User &U) { return false; }
-  bool translateFPTrunc(const User &U) { return false; }
-  bool translateFPExt(const User &U) { return false; }
   bool translateAddrSpaceCast(const User &U) { return false; }
   bool translateCleanupPad(const User &U) { return false; }
   bool translateCatchPad(const User &U) { return false; }
-  bool translateFCmp(const User &U) { return false; }
-  bool translateSelect(const User &U) { return false; }
   bool translateUserOp1(const User &U) { return false; }
   bool translateUserOp2(const User &U) { return false; }
   bool translateVAArg(const User &U) { return false; }
   bool translateExtractElement(const User &U) { return false; }
   bool translateInsertElement(const User &U) { return false; }
   bool translateShuffleVector(const User &U) { return false; }
-  bool translateExtractValue(const User &U) { return false; }
-  bool translateInsertValue(const User &U) { return false; }
   bool translateLandingPad(const User &U) { return false; }
 
   /// @}

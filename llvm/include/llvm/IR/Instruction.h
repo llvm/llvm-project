@@ -29,10 +29,6 @@ class MDNode;
 class BasicBlock;
 struct AAMDNodes;
 
-template <>
-struct SymbolTableListSentinelTraits<Instruction>
-    : public ilist_half_embedded_sentinel_traits<Instruction> {};
-
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock> {
   void operator=(const Instruction &) = delete;
@@ -201,6 +197,16 @@ public:
   /// or replaces metadata if already present, or removes it if Node is null.
   void setMetadata(unsigned KindID, MDNode *Node);
   void setMetadata(StringRef Kind, MDNode *Node);
+
+  /// Copy metadata from \p SrcInst to this instruction. \p WL, if not empty,
+  /// specifies the list of meta data that needs to be copied. If \p WL is
+  /// empty, all meta data will be copied.
+  void copyMetadata(const Instruction &SrcInst, ArrayRef<unsigned> WL = {});
+
+  /// If the instruction has "branch_weights" MD_prof metadata and the MDNode
+  /// has three operands (including name string), swap the order of the
+  /// metadata.
+  void swapProfMetadata();
 
   /// Drop all unknown metadata except for debug locations.
   /// @{

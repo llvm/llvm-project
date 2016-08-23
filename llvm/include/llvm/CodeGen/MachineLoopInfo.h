@@ -162,31 +162,21 @@ public:
 
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const MachineLoop*> {
-  typedef const MachineLoop NodeType;
   typedef const MachineLoop *NodeRef;
   typedef MachineLoopInfo::iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(const MachineLoop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->end();
-  }
+  static NodeRef getEntryNode(const MachineLoop *L) { return L; }
+  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <> struct GraphTraits<MachineLoop*> {
-  typedef MachineLoop NodeType;
   typedef MachineLoop *NodeRef;
   typedef MachineLoopInfo::iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(MachineLoop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->end();
-  }
+  static NodeRef getEntryNode(MachineLoop *L) { return L; }
+  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 } // End llvm namespace

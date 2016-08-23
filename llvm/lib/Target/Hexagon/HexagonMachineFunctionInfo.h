@@ -29,7 +29,6 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
   unsigned SRetReturnReg;
   unsigned StackAlignBaseVReg;    // Aligned-stack base register (virtual)
   unsigned StackAlignBasePhysReg; //                             (physical)
-  std::vector<MachineInstr*> AllocaAdjustInsts;
   int VarArgsFrameIndex;
   bool HasClobberLR;
   bool HasEHReturn;
@@ -46,13 +45,6 @@ public:
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
-
-  void addAllocaAdjustInst(MachineInstr* MI) {
-    AllocaAdjustInsts.push_back(MI);
-  }
-  const std::vector<MachineInstr*>& getAllocaAdjustInsts() {
-    return AllocaAdjustInsts;
-  }
 
   void setVarArgsFrameIndex(int v) { VarArgsFrameIndex = v; }
   int getVarArgsFrameIndex() { return VarArgsFrameIndex; }

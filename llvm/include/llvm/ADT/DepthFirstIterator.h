@@ -107,7 +107,11 @@ private:
       if (!Opt)
         Opt.emplace(GT::child_begin(Node));
 
-      for (NodeRef Next : make_range(*Opt, GT::child_end(Node))) {
+      // Notice that we directly mutate *Opt here, so that
+      // VisitStack.back().second actually gets updated as the iterator
+      // increases.
+      while (*Opt != GT::child_end(Node)) {
+        NodeRef Next = *(*Opt)++;
         // Has our next sibling been visited?
         if (this->Visited.insert(Next).second) {
           // No, do it now.

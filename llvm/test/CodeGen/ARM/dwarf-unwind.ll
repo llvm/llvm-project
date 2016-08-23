@@ -71,10 +71,12 @@ define void @test_nodpr_noalign(i8 %l, i8 %r) {
 
 define void @test_frame_pointer_offset() minsize "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_frame_pointer_offset:
-; CHECK: push.w {r3, r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK: .cfi_def_cfa_offset 40
-; CHECK: add r7, sp, #16
-; CHECK: .cfi_def_cfa r7, 24
+; CHECK: push {r4, r5, r6, r7, lr}
+; CHECK: .cfi_def_cfa_offset 20
+; CHECK: add r7, sp, #12
+; CHECK: .cfi_def_cfa r7, 8
+; CHECK-NOT: .cfi_def_cfa_offset
+; CHECK: push.w {r7, r8, r9, r10, r11}
 ; CHECK-NOT: .cfi_def_cfa_offset
   call void asm sideeffect "", "~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{d8}"()
   call void @bar()

@@ -87,9 +87,6 @@
 // Finally, it fixes the undef in %y' so that
 //   %y' = phi float addrspace(3)* [ %input, %y2' ]
 //
-// TODO: This pass is experimental and not enabled by default. Users can turn it
-// on by setting the -nvptx-use-infer-addrspace flag of llc. We plan to replace
-// NVPTXNonFavorGenericAddrSpaces with this pass shortly.
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "nvptx-infer-addrspace"

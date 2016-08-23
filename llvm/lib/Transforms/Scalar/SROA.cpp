@@ -4037,9 +4037,6 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
           Size = std::min(Size, AbsEnd - Start);
         }
         PieceExpr = DIB.createBitPieceExpression(Start, Size);
-      } else {
-        assert(Pieces.size() == 1 &&
-               "partition is as large as original alloca");
       }
 
       // Remove any existing dbg.declare intrinsic describing the same alloca.

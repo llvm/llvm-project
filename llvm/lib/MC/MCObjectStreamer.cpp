@@ -445,6 +445,46 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
   insert(new MCOrgFragment(*Offset, Value));
 }
 
+// Associate DTPRel32 fixup with data and resize data area
+void MCObjectStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_DTPRel_4));
+  DF->getContents().resize(DF->getContents().size() + 4, 0);
+}
+
+// Associate DTPRel64 fixup with data and resize data area
+void MCObjectStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_DTPRel_8));
+  DF->getContents().resize(DF->getContents().size() + 8, 0);
+}
+
+// Associate TPRel32 fixup with data and resize data area
+void MCObjectStreamer::EmitTPRel32Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_TPRel_4));
+  DF->getContents().resize(DF->getContents().size() + 4, 0);
+}
+
+// Associate TPRel64 fixup with data and resize data area
+void MCObjectStreamer::EmitTPRel64Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_TPRel_8));
+  DF->getContents().resize(DF->getContents().size() + 8, 0);
+}
+
 // Associate GPRel32 fixup with data and resize data area
 void MCObjectStreamer::EmitGPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
@@ -455,7 +495,7 @@ void MCObjectStreamer::EmitGPRel32Value(const MCExpr *Value) {
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
-// Associate GPRel32 fixup with data and resize data area
+// Associate GPRel64 fixup with data and resize data area
 void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());

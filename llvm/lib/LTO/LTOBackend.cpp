@@ -47,7 +47,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
     ModuleHookFn LinkerHook = Hook;
-    Hook = [=](unsigned Task, Module &M) {
+    Hook = [=](unsigned Task, const Module &M) {
       // If the linker's hook returned false, we need to pass that result
       // through.
       if (LinkerHook && !LinkerHook(Task, M))
@@ -224,8 +224,9 @@ Error lto::backend(Config &C, AddOutputFn AddOutput,
   std::unique_ptr<TargetMachine> TM =
       createTargetMachine(C, M->getTargetTriple(), *TOrErr);
 
-  if (!opt(C, TM.get(), 0, *M, /*IsThinLto=*/false))
-    return Error();
+  if (!C.CodeGenOnly)
+    if (!opt(C, TM.get(), 0, *M, /*IsThinLto=*/false))
+      return Error();
 
   if (ParallelCodeGenParallelismLevel == 1)
     codegen(C, TM.get(), AddOutput, 0, *M);
@@ -246,6 +247,11 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
 
   std::unique_ptr<TargetMachine> TM =
       createTargetMachine(Conf, Mod.getTargetTriple(), *TOrErr);
+
+  if (Conf.CodeGenOnly) {
+    codegen(Conf, TM.get(), AddOutput, Task, Mod);
+    return Error();
+  }
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return Error();

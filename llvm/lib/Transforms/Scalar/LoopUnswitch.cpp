@@ -742,42 +742,6 @@ static Loop *CloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
   return &New;
 }
 
-static void copyMetadata(Instruction *DstInst, const Instruction *SrcInst,
-                         bool Swapped) {
-  if (!SrcInst || !SrcInst->hasMetadata())
-    return;
-
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  SrcInst->getAllMetadata(MDs);
-  for (auto &MD : MDs) {
-    switch (MD.first) {
-    default:
-      break;
-    case LLVMContext::MD_prof:
-      if (Swapped && MD.second->getNumOperands() == 3 &&
-          isa<MDString>(MD.second->getOperand(0))) {
-        MDString *MDName = cast<MDString>(MD.second->getOperand(0));
-        if (MDName->getString() == "branch_weights") {
-          auto *ValT = cast_or_null<ConstantAsMetadata>(
-                           MD.second->getOperand(1))->getValue();
-          auto *ValF = cast_or_null<ConstantAsMetadata>(
-                           MD.second->getOperand(2))->getValue();
-          assert(ValT && ValF && "Invalid Operands of branch_weights");
-          auto NewMD =
-              MDBuilder(DstInst->getParent()->getContext())
-                  .createBranchWeights(cast<ConstantInt>(ValF)->getZExtValue(),
-                                       cast<ConstantInt>(ValT)->getZExtValue());
-          MD.second = NewMD;
-        }
-      }
-      LLVM_FALLTHROUGH;
-    case LLVMContext::MD_make_implicit:
-    case LLVMContext::MD_dbg:
-      DstInst->setMetadata(MD.first, MD.second);
-    }
-  }
-}
-
 /// Emit a conditional branch on two values if LIC == Val, branch to TrueDst,
 /// otherwise branch to FalseDest. Insert the code immediately before InsertPt.
 void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
@@ -800,7 +764,14 @@ void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
 
   // Insert the new branch.
   BranchInst *BI = BranchInst::Create(TrueDest, FalseDest, BranchVal, InsertPt);
-  copyMetadata(BI, TI, Swapped);
+  if (TI) {
+    // FIXME: check why white list is needed here:
+    ArrayRef<unsigned> WL = {LLVMContext::MD_dbg, LLVMContext::MD_prof,
+                             LLVMContext::MD_make_implicit};
+    BI->copyMetadata(*TI, WL);
+    if (Swapped)
+      BI->swapProfMetadata();
+  }
 
   // If either edge is critical, split it. This helps preserve LoopSimplify
   // form for enclosing loops.

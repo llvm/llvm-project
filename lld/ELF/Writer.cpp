@@ -524,11 +524,12 @@ static Symbol *addOptionalSynthetic(StringRef Name,
 
 template <class ELFT>
 static void addSynthetic(StringRef Name, OutputSectionBase<ELFT> *Sec,
-                                 typename ELFT::uint Val) {
+                         typename ELFT::uint Val) {
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S || S->isUndefined() || S->isShared())
     Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, STV_HIDDEN);
 }
+
 // The beginning and the ending of .rel[a].plt section are marked
 // with __rel[a]_iplt_{start,end} symbols if it is a statically linked
 // executable. The runtime needs these symbols in order to resolve
@@ -596,6 +597,8 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // If linker script do layout we do not need to create any standart symbols.
   if (ScriptConfig->HasContents)
     return;
+
+  ElfSym<ELFT>::EhdrStart = Symtab<ELFT>::X->addIgnored("__ehdr_start");
 
   auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
                        DefinedRegular<ELFT> *&Sym2) {
@@ -1179,6 +1182,10 @@ static uint16_t getELFType() {
 // to each section. This function fixes some predefined absolute
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
+  // __ehdr_start is the location of program headers.
+  if (ElfSym<ELFT>::EhdrStart)
+    ElfSym<ELFT>::EhdrStart->Value = Out<ELFT>::ProgramHeaders->getVA();
+
   auto Set = [](DefinedRegular<ELFT> *S1, DefinedRegular<ELFT> *S2, uintX_t V) {
     if (S1)
       S1->Value = V;

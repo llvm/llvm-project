@@ -270,6 +270,14 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case Mips::fixup_Mips_64:
   case FK_Data_8:
     return ELF::R_MIPS_64;
+  case FK_DTPRel_4:
+    return ELF::R_MIPS_TLS_DTPREL32;
+  case FK_DTPRel_8:
+    return ELF::R_MIPS_TLS_DTPREL64;
+  case FK_TPRel_4:
+    return ELF::R_MIPS_TLS_TPREL32;
+  case FK_TPRel_8:
+    return ELF::R_MIPS_TLS_TPREL64;
   case FK_GPRel_4:
     if (isN64()) {
       unsigned Type = (unsigned)ELF::R_MIPS_NONE;

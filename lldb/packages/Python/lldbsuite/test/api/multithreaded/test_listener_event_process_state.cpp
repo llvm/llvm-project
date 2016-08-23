@@ -31,6 +31,11 @@ void listener_func() {
         throw Exception("event is not valid in listener thread");
         // send process description
         SBProcess process = SBProcess::GetProcessFromEvent(event);
+        if (!process.IsValid())
+            throw Exception("process is not valid");
+        if (SBProcess::GetStateFromEvent(event) != lldb::eStateStopped || SBProcess::GetRestartedFromEvent(event))
+            continue; // Only interested in "stopped" events.
+
         SBStream description;
 
         for (int i = 0; i < process.GetNumThreads(); ++i) {

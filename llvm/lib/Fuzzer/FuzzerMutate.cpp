@@ -305,6 +305,7 @@ size_t MutationDispatcher::Mutate_ChangeBinaryInteger(uint8_t *Data,
     case 0: return ChangeBinaryInteger<uint8_t>(Data, Size, Rand);
     default: assert(0);
   }
+  return 0;
 }
 
 size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
@@ -315,7 +316,7 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
   if (O.empty()) return 0;
   MutateInPlaceHere.resize(MaxSize);
   auto &U = MutateInPlaceHere;
-  size_t NewSize;
+  size_t NewSize = 0;
   switch(Rand(3)) {
     case 0:
       NewSize = CrossOver(Data, Size, O.data(), O.size(), U.data(), U.size());

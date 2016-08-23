@@ -182,9 +182,6 @@ bool isPositiveHalfWord(SDNode *N);
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
     bool mayBeEmittedAsTailCall(CallInst *CI) const override;
-    MachineBasicBlock *
-    EmitInstrWithCustomInserter(MachineInstr &MI,
-                                MachineBasicBlock *BB) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.

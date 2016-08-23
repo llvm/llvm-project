@@ -679,25 +679,24 @@ namespace llvm {
   };
 
   template <> struct GraphTraits<SUnit*> {
-    typedef SUnit NodeType;
     typedef SUnit *NodeRef;
     typedef SUnitIterator ChildIteratorType;
-    static inline NodeType *getEntryNode(SUnit *N) { return N; }
-    static inline ChildIteratorType child_begin(NodeType *N) {
+    static inline NodeRef getEntryNode(SUnit *N) { return N; }
+    static inline ChildIteratorType child_begin(NodeRef N) {
       return SUnitIterator::begin(N);
     }
-    static inline ChildIteratorType child_end(NodeType *N) {
+    static inline ChildIteratorType child_end(NodeRef N) {
       return SUnitIterator::end(N);
     }
   };
 
   template <> struct GraphTraits<ScheduleDAG*> : public GraphTraits<SUnit*> {
-    typedef std::vector<SUnit>::iterator nodes_iterator;
+    typedef pointer_iterator<std::vector<SUnit>::iterator> nodes_iterator;
     static nodes_iterator nodes_begin(ScheduleDAG *G) {
-      return G->SUnits.begin();
+      return nodes_iterator(G->SUnits.begin());
     }
     static nodes_iterator nodes_end(ScheduleDAG *G) {
-      return G->SUnits.end();
+      return nodes_iterator(G->SUnits.end());
     }
   };
 

@@ -185,4 +185,28 @@ TEST(FilterIteratorTest, InputIterator) {
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
 }
 
+TEST(PointerIterator, Basic) {
+  int A[] = {1, 2, 3, 4};
+  pointer_iterator<int *> Begin(std::begin(A)), End(std::end(A));
+  EXPECT_EQ(A, *Begin);
+  ++Begin;
+  EXPECT_EQ(A + 1, *Begin);
+  ++Begin;
+  EXPECT_EQ(A + 2, *Begin);
+  ++Begin;
+  EXPECT_EQ(A + 3, *Begin);
+  ++Begin;
+  EXPECT_EQ(Begin, End);
+}
+
+TEST(PointerIterator, Const) {
+  int A[] = {1, 2, 3, 4};
+  const pointer_iterator<int *> Begin(std::begin(A));
+  EXPECT_EQ(A, *Begin);
+  EXPECT_EQ(A + 1, std::next(*Begin, 1));
+  EXPECT_EQ(A + 2, std::next(*Begin, 2));
+  EXPECT_EQ(A + 3, std::next(*Begin, 3));
+  EXPECT_EQ(A + 4, std::next(*Begin, 4));
+}
+
 } // anonymous namespace

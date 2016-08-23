@@ -1,6 +1,6 @@
 #include <clc/clc.h>
 
-_CLC_DEF uint get_group_id(uint dim)
+_CLC_DEF size_t get_group_id(uint dim)
 {
 	switch(dim) {
 	case 0: return __builtin_amdgcn_workgroup_id_x();

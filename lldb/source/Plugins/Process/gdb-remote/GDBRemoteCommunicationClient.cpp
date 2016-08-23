@@ -3975,7 +3975,7 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins()
                             __FUNCTION__);
         }
 
-        if (log && m_supported_async_json_packets_is_valid)
+        if (log && m_supported_async_json_packets_sp)
         {
             StreamString  stream;
             m_supported_async_json_packets_sp->Dump(stream);

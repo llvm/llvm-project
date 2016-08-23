@@ -67,6 +67,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFixSGPRCopies.cpp
   SIFoldOperands.cpp
   SIFrameLowering.cpp
+  SIInsertSkips.cpp
   SIInsertWaits.cpp
   SIInstrInfo.cpp
   SIISelLowering.cpp

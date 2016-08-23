@@ -85,6 +85,12 @@ Improvements to clang-tidy
   Warns about the performance overhead arising from concatenating strings using
   the ``operator+``, instead of ``operator+=``.
 
+- New `readability-non-const-parameter
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-non-const-parameter.html>`_ check
+
+  Flags function parameters of a pointer type that could be changed to point to
+  a constant type instead.
+
 Improvements to include-fixer
 -----------------------------
 

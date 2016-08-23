@@ -26,12 +26,19 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+static cl::opt<unsigned>
+    SaturationThreshold("alias-set-saturation-threshold", cl::Hidden,
+                        cl::init(250),
+                        cl::desc("The maximum number of pointers may-alias "
+                                 "sets may contain before degradation"));
+
 /// mergeSetIn - Merge the specified alias set into this alias set.
 ///
 void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST) {
   assert(!AS.Forward && "Alias set is already forwarding!");
   assert(!Forward && "This set is a forwarding set!!");
 
+  bool WasMustAlias = (Alias == SetMustAlias);
   // Update the alias and access types of this set...
   Access |= AS.Access;
   Alias  |= AS.Alias;
@@ -52,6 +59,13 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST) {
       Alias = SetMayAlias;
   }
 
+  if (Alias == SetMayAlias) {
+    if (WasMustAlias)
+      AST.TotalMayAliasSetSize += size();
+    if (AS.Alias == SetMustAlias)
+      AST.TotalMayAliasSetSize += AS.size();
+  }
+
   bool ASHadUnknownInsts = !AS.UnknownInsts.empty();
   if (UnknownInsts.empty()) {            // Merge call sites...
     if (ASHadUnknownInsts) {
@@ -63,11 +77,13 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST) {
     AS.UnknownInsts.clear();
   }
 
-  AS.Forward = this;  // Forward across AS now...
-  addRef();           // AS is now pointing to us...
+  AS.Forward = this; // Forward across AS now...
+  addRef();          // AS is now pointing to us...
 
   // Merge the list of constituent pointers...
   if (AS.PtrList) {
+    SetSize += AS.size();
+    AS.SetSize = 0;
     *PtrListEnd = AS.PtrList;
     AS.PtrList->setPrevInList(PtrListEnd);
     PtrListEnd = AS.PtrListEnd;
@@ -85,7 +101,12 @@ void AliasSetTracker::removeAliasSet(AliasSet *AS) {
     Fwd->dropRef(*this);
     AS->Forward = nullptr;
   }
+
+  if (AS->Alias == AliasSet::SetMayAlias)
+    TotalMayAliasSetSize -= AS->size();
+
   AliasSets.erase(AS);
+
 }
 
 void AliasSet::removeFromTracker(AliasSetTracker &AST) {
@@ -105,10 +126,13 @@ void AliasSet::addPointer(AliasSetTracker &AST, PointerRec &Entry,
       AliasResult Result =
           AA.alias(MemoryLocation(P->getValue(), P->getSize(), P->getAAInfo()),
                    MemoryLocation(Entry.getValue(), Size, AAInfo));
-      if (Result != MustAlias)
+      if (Result != MustAlias) {
         Alias = SetMayAlias;
-      else                  // First entry of must alias must have maximum size!
+        AST.TotalMayAliasSetSize += size();
+      } else {
+        // First entry of must alias must have maximum size!        
         P->updateSizeAndAAInfo(Size, AAInfo);
+      }
       assert(Result != NoAlias && "Cannot be part of must set!");
     }
 
@@ -116,11 +140,16 @@ void AliasSet::addPointer(AliasSetTracker &AST, PointerRec &Entry,
   Entry.updateSizeAndAAInfo(Size, AAInfo);
 
   // Add it to the end of the list...
+  ++SetSize;
   assert(*PtrListEnd == nullptr && "End of list is not null?");
   *PtrListEnd = &Entry;
   PtrListEnd = Entry.setPrevInList(PtrListEnd);
   assert(*PtrListEnd == nullptr && "End of list is not null?");
-  addRef();               // Entry points to alias set.
+  // Entry points to alias set.
+  addRef();
+
+  if (Alias == SetMayAlias)
+    AST.TotalMayAliasSetSize++;
 }
 
 void AliasSet::addUnknownInst(Instruction *I, AliasAnalysis &AA) {
@@ -145,6 +174,9 @@ void AliasSet::addUnknownInst(Instruction *I, AliasAnalysis &AA) {
 bool AliasSet::aliasesPointer(const Value *Ptr, uint64_t Size,
                               const AAMDNodes &AAInfo,
                               AliasAnalysis &AA) const {
+  if (AliasAny)
+    return true;
+
   if (Alias == SetMustAlias) {
     assert(UnknownInsts.empty() && "Illegal must alias set!");
 
@@ -177,6 +209,10 @@ bool AliasSet::aliasesPointer(const Value *Ptr, uint64_t Size,
 
 bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
                                   AliasAnalysis &AA) const {
+
+  if (AliasAny)
+    return true;
+
   if (!Inst->mayReadOrWriteMemory())
     return false;
 
@@ -250,15 +286,28 @@ AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
   return FoundSet;
 }
 
-
-
-
 /// getAliasSetForPointer - Return the alias set that the specified pointer
 /// lives in.
 AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer, uint64_t Size,
                                                  const AAMDNodes &AAInfo,
                                                  bool *New) {
   AliasSet::PointerRec &Entry = getEntryFor(Pointer);
+
+  if (AliasAnyAS) {
+    // At this point, the AST is saturated, so we only have one active alias
+    // set. That means we already know which alias set we want to return, and
+    // just need to add the pointer to that set to keep the data structure
+    // consistent.
+    // This, of course, means that we will never need a merge here.
+    if (Entry.hasAliasSet()) {
+      Entry.updateSizeAndAAInfo(Size, AAInfo);
+      assert(Entry.getAliasSet(*this) == AliasAnyAS &&
+             "Entry in saturated AST must belong to only alias set");
+    } else {
+      AliasAnyAS->addPointer(*this, Entry, Size, AAInfo);
+    }
+    return *AliasAnyAS;
+  }
 
   // Check to see if the pointer is already known.
   if (Entry.hasAliasSet()) {
@@ -446,6 +495,11 @@ void AliasSetTracker::deleteValue(Value *PtrVal) {
 
   // Unlink and delete from the list of values.
   PtrValEnt->eraseFromList();
+
+  if (AS->Alias == AliasSet::SetMayAlias) {
+    AS->SetSize--;
+    TotalMayAliasSetSize--;
+  }
   
   // Stop using the alias set.
   AS->dropRef(*this);
@@ -477,7 +531,60 @@ void AliasSetTracker::copyValue(Value *From, Value *To) {
                  true);
 }
 
+AliasSet &AliasSetTracker::mergeAllAliasSets() {
+  assert(!AliasAnyAS && (TotalMayAliasSetSize > SaturationThreshold) &&
+         "Full merge should happen once, when the saturation threshold is "
+         "reached");
 
+  // Collect all alias sets, so that we can drop references with impunity
+  // without worrying about iterator invalidation.
+  std::vector<AliasSet *> ASVector;
+  ASVector.reserve(SaturationThreshold);
+  for (iterator I = begin(), E = end(); I != E; I++)
+    ASVector.push_back(&*I);
+
+  // Copy all instructions and pointers into a new set, and forward all other
+  // sets to it.
+  AliasSets.push_back(new AliasSet());
+  AliasAnyAS = &AliasSets.back();
+  AliasAnyAS->Alias = AliasSet::SetMayAlias;
+  AliasAnyAS->Access = AliasSet::ModRefAccess;
+  AliasAnyAS->AliasAny = true;
+
+  for (auto Cur : ASVector) {
+    
+    // If Cur was already forwarding, just forward to the new AS instead.
+    AliasSet *FwdTo = Cur->Forward;
+    if (FwdTo) {
+      Cur->Forward = AliasAnyAS;
+      AliasAnyAS->addRef();      
+      FwdTo->dropRef(*this);
+      continue;
+    }
+
+    // Otherwise, perform the actual merge.
+    AliasAnyAS->mergeSetIn(*Cur, *this);
+  }
+
+  return *AliasAnyAS;
+}
+
+AliasSet &AliasSetTracker::addPointer(Value *P, uint64_t Size,
+                                      const AAMDNodes &AAInfo,
+                                      AliasSet::AccessLattice E, bool &NewSet) {
+
+  NewSet = false;
+  AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo, &NewSet);
+  AS.Access |= E;
+
+  if (!AliasAnyAS && (TotalMayAliasSetSize > SaturationThreshold)) {
+    // The AST is now saturated. From here on, we conservatively consider all
+    // pointers to alias each-other.
+    return mergeAllAliasSets();
+  }
+
+  return AS;
+}
 
 //===----------------------------------------------------------------------===//
 //               AliasSet/AliasSetTracker Printing Support
@@ -572,7 +679,7 @@ namespace {
     bool runOnFunction(Function &F) override {
       auto &AAWP = getAnalysis<AAResultsWrapperPass>();
       Tracker = new AliasSetTracker(AAWP.getAAResults());
-
+      errs() << "Alias sets for function '" << F.getName() << "':\n";
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
         Tracker->add(&*I);
       Tracker->print(errs());

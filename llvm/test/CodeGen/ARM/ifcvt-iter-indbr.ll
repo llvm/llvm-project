@@ -16,11 +16,12 @@ declare i8* @bar(i32, i8*, i8*)
 ; CHECK-NEXT:  moveq pc
 ; CHECK-NEXT: LBB{{[0-9_]+}}:
 ; CHECK-NEXT:  cmp {{.*}}, #42
-; CHECK-NEXT:  itt ne
-; CHECK-NEXT:  strne.w
-; CHECK-NEXT:  movne pc
+; CHECK-NEXT:  beq [[CALL_FOO_1234:LBB[0-9_]+]]
+; CHECK-NEXT:  ldr {{.*}}[sp
+; CHECK-NEXT:  str
+; CHECK-NEXT:  mov pc
 ; CHECK-NEXT: Ltmp
-; CHECK-NEXT: LBB0_2:
+; CHECK-NEXT: [[CALL_FOO_1234]]:
 ; CHECK-NEXT:  movw r0, #1234
 ; CHECK-NEXT:  b [[FOOCALL:LBB[0-9_]+]]
 ; CHECK-NEXT: Ltmp
@@ -30,11 +31,11 @@ declare i8* @bar(i32, i8*, i8*)
 ; CHECK-NEXT:  bl _foo
 ;
 ; CHECK-PROB: BB#0:
-; CHECK-PROB: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}50.00%) BB#2({{[0-9a-fx/= ]+}}25.00%) BB#4({{[0-9a-fx/= ]+}}25.00%)
-; CHECK-PROB: BB#1:
-; CHECK-PROB: Successors according to CFG: BB#2({{[0-9a-fx/= ]+}}75.00%) BB#4({{[0-9a-fx/= ]+}}25.00%)
+; CHECK-PROB: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}50.00%) BB#3({{[0-9a-fx/= ]+}}25.00%) BB#5({{[0-9a-fx/= ]+}}25.00%)
+; CHECK-PROB: BB#2:
+; CHECK-PROB: Successors according to CFG: BB#3({{[0-9a-fx/= ]+}}50.00%) BB#5({{[0-9a-fx/= ]+}}50.00%)
 
-define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) {
+define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) "no-frame-pointer-elim"="true" {
 entry:
   %dst1 = call i8* @bar(i32 1, i8* blockaddress(@test, %bb1), i8* blockaddress(@test, %bb2))
   %dst2 = call i8* @bar(i32 2, i8* blockaddress(@test, %bb1), i8* blockaddress(@test, %bb2))

@@ -32,6 +32,15 @@ def brtargetr6 : Operand<OtherVT> {
   let ParserMatchClass = MipsJumpTargetAsmOperand;
 }
 
+def brtarget_lsl2_mm : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTargetOpValueLsl2MMR6";
+  let OperandType = "OPERAND_PCREL";
+  // Instructions that use this operand have their decoder method
+  // set with DecodeDisambiguates
+  let DecoderMethod = "";
+  let ParserMatchClass = MipsJumpTargetAsmOperand;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Encodings
@@ -56,16 +65,28 @@ class BITSWAP_MMR6_ENC : POOL32A_BITSWAP_FM_MMR6<0b101100>;
 class BRK_MMR6_ENC : BREAK_MMR6_ENC<"break">;
 class BEQZC_MMR6_ENC : CMP_BRANCH_OFF21_FM_MMR6<"beqzc", 0b100000>;
 class BNEZC_MMR6_ENC : CMP_BRANCH_OFF21_FM_MMR6<"bnezc", 0b101000>;
-class BGEC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bgec", 0b111001>;
+class BGEC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bgec", 0b111101>,
+                      DecodeDisambiguates<"POP75GroupBranchMMR6">;
 class BGEUC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bgeuc", 0b110000>,
                        DecodeDisambiguates<"BlezGroupBranchMMR6">;
-class BLTC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bltc", 0b110001>;
+class BLTC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bltc", 0b110101>,
+                      DecodeDisambiguates<"POP65GroupBranchMMR6">;
 class BLTUC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bltuc", 0b111000>,
                        DecodeDisambiguates<"BgtzGroupBranchMMR6">;
 class BEQC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"beqc", 0b011101>;
 class BNEC_MMR6_ENC : CMP_BRANCH_2R_OFF16_FM_MMR6<"bnec", 0b011111>;
-class BEQZALC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"beqzalc", 0b011101>;
-class BNEZALC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"bnezalc", 0b011111>;
+class BLTZC_MMR6_ENC : CMP_BRANCH_1R_BOTH_OFF16_FM_MMR6<"bltzc", 0b110101>,
+                       DecodeDisambiguates<"POP65GroupBranchMMR6">;
+class BLEZC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"blezc", 0b111101>,
+                       DecodeDisambiguates<"POP75GroupBranchMMR6">;
+class BGEZC_MMR6_ENC : CMP_BRANCH_1R_BOTH_OFF16_FM_MMR6<"bgezc", 0b111101>,
+                       DecodeDisambiguates<"POP75GroupBranchMMR6">;
+class BGTZC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"bgtzc", 0b110101>,
+                       DecodeDisambiguates<"POP65GroupBranchMMR6">;
+class BEQZALC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"beqzalc", 0b011101>,
+                         DecodeDisambiguates<"POP35GroupBranchMMR6">;
+class BNEZALC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"bnezalc", 0b011111>,
+                         DecodeDisambiguates<"POP37GroupBranchMMR6">;
 class BGTZALC_MMR6_ENC : CMP_BRANCH_1R_RT_OFF16_FM_MMR6<"bgtzalc", 0b111000>,
                          MMDecodeDisambiguatedBy<"BgtzGroupBranchMMR6">;
 class BLTZALC_MMR6_ENC : CMP_BRANCH_1R_BOTH_OFF16_FM_MMR6<"bltzalc", 0b111000>,
@@ -230,66 +251,6 @@ class SDC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"sdc2", 0b1010>;
 class LWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"lwc2", 0b0000>;
 class SWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"swc2", 0b1000>;
 
-class CMP_CBR_RT_Z_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
-                                  RegisterOperand GPROpnd>
-    : BRANCH_DESC_BASE {
-  dag InOperandList = (ins GPROpnd:$rt, opnd:$offset);
-  dag OutOperandList = (outs);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $offset");
-  list<Register> Defs = [AT];
-}
-
-class BEQZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"beqzalc", brtarget_mm,
-                                                      GPR32Opnd> {
-  list<Register> Defs = [RA];
-}
-
-class BGEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgezalc", brtarget_mm,
-                                                      GPR32Opnd> {
-  list<Register> Defs = [RA];
-}
-
-class BGTZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgtzalc", brtarget_mm,
-                                                      GPR32Opnd> {
-  list<Register> Defs = [RA];
-}
-
-class BLEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"blezalc", brtarget_mm,
-                                                      GPR32Opnd> {
-  list<Register> Defs = [RA];
-}
-
-class BLTZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bltzalc", brtarget_mm,
-                                                      GPR32Opnd> {
-  list<Register> Defs = [RA];
-}
-
-class BNEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bnezalc", brtarget_mm,
-                                                      GPR32Opnd> {
-  list<Register> Defs = [RA];
-}
-
-class CMP_CBR_2R_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
-                                RegisterOperand GPROpnd> : BRANCH_DESC_BASE {
-  dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt, opnd:$offset);
-  dag OutOperandList = (outs);
-  string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $offset");
-  list<Register> Defs = [AT];
-}
-
-class BGEC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bgec", brtarget_mm,
-                                                 GPR32Opnd>;
-class BGEUC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bgeuc", brtarget_mm,
-                                                 GPR32Opnd>;
-class BLTC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bltc", brtarget_mm,
-                                                 GPR32Opnd>;
-class BLTUC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bltuc", brtarget_mm,
-                                                 GPR32Opnd>;
-class BEQC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"beqc", brtarget_mm,
-                                                 GPR32Opnd>;
-class BNEC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bnec", brtarget_mm,
-                                                 GPR32Opnd>;
-
 /// Floating Point Instructions
 class FADD_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"add.s", 0, 0b00110000>;
 class FADD_D_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"add.d", 1, 0b00110000>;
@@ -332,6 +293,75 @@ class CVT_S_L_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.s.l", 2, 0b1101101>;
 // Instruction Descriptions
 //
 //===----------------------------------------------------------------------===//
+
+class CMP_CBR_RT_Z_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
+                                  RegisterOperand GPROpnd>
+    : BRANCH_DESC_BASE {
+  dag InOperandList = (ins GPROpnd:$rt, opnd:$offset);
+  dag OutOperandList = (outs);
+  string AsmString = !strconcat(instr_asm, "\t$rt, $offset");
+  list<Register> Defs = [AT];
+}
+
+class BEQZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"beqzalc", brtarget_mm,
+                                                      GPR32Opnd> {
+  list<Register> Defs = [RA];
+}
+
+class BGEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgezalc", brtarget_mm,
+                                                      GPR32Opnd> {
+  list<Register> Defs = [RA];
+}
+
+class BGTZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgtzalc", brtarget_mm,
+                                                      GPR32Opnd> {
+  list<Register> Defs = [RA];
+}
+
+class BLEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"blezalc", brtarget_mm,
+                                                      GPR32Opnd> {
+  list<Register> Defs = [RA];
+}
+
+class BLTZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bltzalc", brtarget_mm,
+                                                      GPR32Opnd> {
+  list<Register> Defs = [RA];
+}
+
+class BNEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bnezalc", brtarget_mm,
+                                                      GPR32Opnd> {
+  list<Register> Defs = [RA];
+}
+
+class BLTZC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bltzc", brtarget_lsl2_mm,
+                                                    GPR32Opnd>;
+class BLEZC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"blezc", brtarget_lsl2_mm,
+                                                    GPR32Opnd>;
+class BGEZC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgezc", brtarget_lsl2_mm,
+                                                    GPR32Opnd>;
+class BGTZC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgtzc", brtarget_lsl2_mm,
+                                                    GPR32Opnd>;
+
+class CMP_CBR_2R_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
+                                RegisterOperand GPROpnd> : BRANCH_DESC_BASE {
+  dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt, opnd:$offset);
+  dag OutOperandList = (outs);
+  string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $offset");
+  list<Register> Defs = [AT];
+}
+
+class BGEC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bgec", brtarget_lsl2_mm,
+                                                 GPR32Opnd>;
+class BGEUC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bgeuc", brtarget_lsl2_mm,
+                                                 GPR32Opnd>;
+class BLTC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bltc", brtarget_lsl2_mm,
+                                                 GPR32Opnd>;
+class BLTUC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bltuc", brtarget_lsl2_mm,
+                                                 GPR32Opnd>;
+class BEQC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"beqc", brtarget_lsl2_mm,
+                                                 GPR32Opnd>;
+class BNEC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bnec", brtarget_lsl2_mm,
+                                                 GPR32Opnd>;
 
 class ADD_MMR6_DESC : ArithLogicR<"add", GPR32Opnd>;
 class ADDIU_MMR6_DESC : ArithLogicI<"addiu", simm16, GPR32Opnd, II_ADDIU, immSExt16, add>;
@@ -1661,6 +1691,10 @@ def BEQC_MMR6 : R6MMR6Rel, BEQC_MMR6_ENC, BEQC_MMR6_DESC, ISA_MICROMIPS32R6,
                 DecodeDisambiguates<"POP35GroupBranchMMR6">;
 def BNEC_MMR6 : R6MMR6Rel, BNEC_MMR6_ENC, BNEC_MMR6_DESC, ISA_MICROMIPS32R6,
                 DecodeDisambiguates<"POP37GroupBranchMMR6">;
+def BLTZC_MMR6 : R6MMR6Rel, BLTZC_MMR6_ENC, BLTZC_MMR6_DESC, ISA_MICROMIPS32R6;
+def BLEZC_MMR6 : R6MMR6Rel, BLEZC_MMR6_ENC, BLEZC_MMR6_DESC, ISA_MICROMIPS32R6;
+def BGEZC_MMR6 : R6MMR6Rel, BGEZC_MMR6_ENC, BGEZC_MMR6_DESC, ISA_MICROMIPS32R6;
+def BGTZC_MMR6 : R6MMR6Rel, BGTZC_MMR6_ENC, BGTZC_MMR6_DESC, ISA_MICROMIPS32R6;
 def BGEZALC_MMR6 : R6MMR6Rel, BGEZALC_MMR6_ENC, BGEZALC_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def BGTZALC_MMR6 : R6MMR6Rel, BGTZALC_MMR6_ENC, BGTZALC_MMR6_DESC,

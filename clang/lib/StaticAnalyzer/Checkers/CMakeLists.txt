@@ -81,6 +81,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UnreachableCodeChecker.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
+  ValistChecker.cpp
   VirtualCallChecker.cpp
 
   DEPENDS

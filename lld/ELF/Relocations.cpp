@@ -401,9 +401,13 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 }
 
 template <class ELFT>
-static StringRef getLocalSymbolName(const elf::ObjectFile<ELFT> &File,
-                                    SymbolBody &Body) {
-  return File.getStringTable().data() + Body.getNameOffset();
+static StringRef getSymbolName(const elf::ObjectFile<ELFT> &File,
+                               SymbolBody &Body) {
+  if (Body.isLocal() && Body.getNameOffset())
+    return File.getStringTable().data() + Body.getNameOffset();
+  if (!Body.isLocal())
+    return Body.getName();
+  return "";
 }
 
 template <class ELFT>
@@ -428,10 +432,9 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    StringRef Name = Body.isLocal() ? getLocalSymbolName(File, Body)
-                                    : Body.getName();
+    StringRef Name = getSymbolName(File, Body);
     error("can't create dynamic relocation " + getRelName(Type) +
-          " against symbol " + Name);
+          " against " + (Name.empty() ? "readonly segment" : "symbol " + Name));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {

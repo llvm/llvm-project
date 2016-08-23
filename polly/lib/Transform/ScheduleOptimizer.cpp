@@ -197,6 +197,13 @@ static cl::opt<bool>
                 cl::desc("Perform optimizations based on pattern matching"),
                 cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> OptimizedScops(
+    "polly-optimized-scops",
+    cl::desc("Polly - Dump polyhedral description of Scops optimized with "
+             "the isl scheduling optimizer and the set of post-scheduling "
+             "transformations is applied on the schedule tree"),
+    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 /// @brief Create an isl_union_set, which describes the isolate option based
 ///        on IsoalteDomain.
 ///
@@ -1096,6 +1103,9 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
 
   S.setScheduleTree(NewSchedule);
   S.markAsOptimized();
+
+  if (OptimizedScops)
+    S.dump();
 
   isl_union_map_free(NewScheduleMap);
   return false;

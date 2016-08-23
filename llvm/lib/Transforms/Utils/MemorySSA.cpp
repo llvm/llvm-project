@@ -490,9 +490,6 @@ class ClobberWalker {
     // First. Also note that First and Last are inclusive.
     MemoryAccess *First;
     MemoryAccess *Last;
-    // N.B. Blocker is currently basically unused. The goal is to use it to make
-    // cache invalidation better, but we're not there yet.
-    MemoryAccess *Blocker;
     Optional<ListIndex> Previous;
 
     DefPath(const MemoryLocation &Loc, MemoryAccess *First, MemoryAccess *Last,
@@ -834,8 +831,7 @@ class ClobberWalker {
 
       // FIXME: This is broken, because the Blocker may be reported to be
       // liveOnEntry, and we'll happily wait for that to disappear (read: never)
-      // For the moment, this is fine, since we do basically nothing with
-      // blocker info.
+      // For the moment, this is fine, since we do nothing with blocker info.
       if (Optional<TerminatedPath> Blocker = getBlockingAccess(
               Target, PausedSearches, NewPaused, TerminatedPaths)) {
         // Cache our work on the blocking node, since we know that's correct.
@@ -850,7 +846,6 @@ class ClobberWalker {
 
         DefPath &CurNode = *Iter;
         assert(CurNode.Last == Current);
-        CurNode.Blocker = Blocker->Clobber;
 
         // Two things:
         // A. We can't reliably cache all of NewPaused back. Consider a case
@@ -1123,21 +1118,13 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
   if (It != PerBlockAccesses.end()) {
     AccessList *Accesses = It->second.get();
     for (MemoryAccess &L : *Accesses) {
-      switch (L.getValueID()) {
-      case Value::MemoryUseVal:
-        cast<MemoryUse>(&L)->setDefiningAccess(IncomingVal);
-        break;
-      case Value::MemoryDefVal:
-        // We can't legally optimize defs, because we only allow single
-        // memory phis/uses on operations, and if we optimize these, we can
-        // end up with multiple reaching defs. Uses do not have this
-        // problem, since they do not produce a value
-        cast<MemoryDef>(&L)->setDefiningAccess(IncomingVal);
+      if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(&L)) {
+        if (MUD->getDefiningAccess() == nullptr)
+          MUD->setDefiningAccess(IncomingVal);
+        if (isa<MemoryDef>(&L))
+          IncomingVal = &L;
+      } else {
         IncomingVal = &L;
-        break;
-      case Value::MemoryPhiVal:
-        IncomingVal = &L;
-        break;
       }
     }
   }
@@ -1467,6 +1454,27 @@ void MemorySSA::OptimizeUses::optimizeUses() {
                         LocStackInfo);
 }
 
+void MemorySSA::placePHINodes(
+    const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks,
+    const SmallPtrSetImpl<BasicBlock *> &LiveInBlocks) {
+  // Determine where our MemoryPhi's should go
+  ForwardIDFCalculator IDFs(*DT);
+  IDFs.setDefiningBlocks(DefiningBlocks);
+  IDFs.setLiveInBlocks(LiveInBlocks);
+  SmallVector<BasicBlock *, 32> IDFBlocks;
+  IDFs.calculate(IDFBlocks);
+
+  // Now place MemoryPhi nodes.
+  for (auto &BB : IDFBlocks) {
+    // Insert phi node
+    AccessList *Accesses = getOrCreateAccessList(BB);
+    MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
+    ValueToMemoryAccess[BB] = Phi;
+    // Phi's always are placed at the front of the block.
+    Accesses->push_front(Phi);
+  }
+}
+
 void MemorySSA::buildMemorySSA() {
   // We create an access to represent "live on entry", for things like
   // arguments or users of globals, where the memory they use is defined before
@@ -1536,23 +1544,7 @@ void MemorySSA::buildMemorySSA() {
     // live into it to.
     LiveInBlockWorklist.append(pred_begin(BB), pred_end(BB));
   }
-
-  // Determine where our MemoryPhi's should go
-  ForwardIDFCalculator IDFs(*DT);
-  IDFs.setDefiningBlocks(DefiningBlocks);
-  IDFs.setLiveInBlocks(LiveInBlocks);
-  SmallVector<BasicBlock *, 32> IDFBlocks;
-  IDFs.calculate(IDFBlocks);
-
-  // Now place MemoryPhi nodes.
-  for (auto &BB : IDFBlocks) {
-    // Insert phi node
-    AccessList *Accesses = getOrCreateAccessList(BB);
-    MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
-    ValueToMemoryAccess[BB] = Phi;
-    // Phi's always are placed at the front of the block.
-    Accesses->push_front(Phi);
-  }
+  placePHINodes(DefiningBlocks, LiveInBlocks);
 
   // Now do regular SSA renaming on the MemoryDef/MemoryUse. Visited will get
   // filled in with all blocks.

@@ -3233,13 +3233,13 @@ define void @test_mm_storeh_sd(double *%a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_storeh_sd:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X32-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X32-NEXT:    movsd %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_storeh_sd:
 ; X64:       # BB#0:
-; X64-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    movsd %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %ext = extractelement <2 x double> %a1, i32 1

@@ -49,10 +49,6 @@ struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
 template <>
-struct ilist_sentinel_traits<MachineBasicBlock>
-    : public ilist_half_embedded_sentinel_traits<MachineBasicBlock> {};
-
-template <>
 struct ilist_traits<MachineBasicBlock>
     : public ilist_default_traits<MachineBasicBlock> {
   void addNodeToList(MachineBasicBlock* MBB);
@@ -84,7 +80,6 @@ struct MachineFunctionInfo {
 /// require that a property be set.
 class MachineFunctionProperties {
   // TODO: Add MachineVerifier checks for AllVRegsAllocated
-  // TODO: Add a way to print the properties and make more useful error messages
   // Possible TODO: Allow targets to extend this (perhaps by allowing the
   // constructor to specify the size of the bit vector)
   // Possible TODO: Allow requiring the negative (e.g. VRegsAllocated could be
@@ -127,7 +122,7 @@ public:
     Legalized,
     RegBankSelected,
     Selected,
-    LastProperty,
+    LastProperty = Selected,
   };
 
   bool hasProperty(Property P) const {
@@ -155,13 +150,12 @@ public:
     return !V.Properties.test(Properties);
   }
 
-  // Print the MachineFunctionProperties in human-readable form. If OnlySet is
-  // true, only print the properties that are set.
-  void print(raw_ostream &ROS, bool OnlySet=false) const;
+  /// Print the MachineFunctionProperties in human-readable form.
+  void print(raw_ostream &OS) const;
 
 private:
   BitVector Properties =
-      BitVector(static_cast<unsigned>(Property::LastProperty));
+      BitVector(static_cast<unsigned>(Property::LastProperty)+1);
 };
 
 class MachineFunction {
@@ -620,29 +614,29 @@ public:
 //
 template <> struct GraphTraits<MachineFunction*> :
   public GraphTraits<MachineBasicBlock*> {
-  static NodeType *getEntryNode(MachineFunction *F) {
-    return &F->front();
-  }
+  static NodeRef getEntryNode(MachineFunction *F) { return &F->front(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef MachineFunction::iterator nodes_iterator;
-  static nodes_iterator nodes_begin(MachineFunction *F) { return F->begin(); }
-  static nodes_iterator nodes_end  (MachineFunction *F) { return F->end(); }
+  typedef pointer_iterator<MachineFunction::iterator> nodes_iterator;
+  static nodes_iterator nodes_begin(MachineFunction *F) {
+    return nodes_iterator(F->begin());
+  }
+  static nodes_iterator nodes_end(MachineFunction *F) {
+    return nodes_iterator(F->end());
+  }
   static unsigned       size       (MachineFunction *F) { return F->size(); }
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
-  static NodeType *getEntryNode(const MachineFunction *F) {
-    return &F->front();
-  }
+  static NodeRef getEntryNode(const MachineFunction *F) { return &F->front(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef MachineFunction::const_iterator nodes_iterator;
+  typedef pointer_iterator<MachineFunction::const_iterator> nodes_iterator;
   static nodes_iterator nodes_begin(const MachineFunction *F) {
-    return F->begin();
+    return nodes_iterator(F->begin());
   }
   static nodes_iterator nodes_end  (const MachineFunction *F) {
-    return F->end();
+    return nodes_iterator(F->end());
   }
   static unsigned       size       (const MachineFunction *F)  {
     return F->size();
@@ -657,13 +651,13 @@ template <> struct GraphTraits<const MachineFunction*> :
 //
 template <> struct GraphTraits<Inverse<MachineFunction*> > :
   public GraphTraits<Inverse<MachineBasicBlock*> > {
-  static NodeType *getEntryNode(Inverse<MachineFunction*> G) {
+  static NodeRef getEntryNode(Inverse<MachineFunction *> G) {
     return &G.Graph->front();
   }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*> > :
   public GraphTraits<Inverse<const MachineBasicBlock*> > {
-  static NodeType *getEntryNode(Inverse<const MachineFunction *> G) {
+  static NodeRef getEntryNode(Inverse<const MachineFunction *> G) {
     return &G.Graph->front();
   }
 };

@@ -188,4 +188,3 @@ class SizeClassMap {
 
 typedef SizeClassMap<17, 128, 16> DefaultSizeClassMap;
 typedef SizeClassMap<17, 64,  14> CompactSizeClassMap;
-template<class SizeClassAllocator> struct SizeClassAllocatorLocalCache;
