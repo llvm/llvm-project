@@ -131,6 +131,37 @@ extern void __llvm_fence_sc_wg(void);
 extern void __llvm_fence_sc_dev(void);
 extern void __llvm_fence_sc_sys(void);
 
+// Atomics
+extern uint __llvm_ld_atomic_a1_x_dev_i32(__global uint *);
+
+extern uint __llvm_atomic_add_a1_x_dev_i32(__global uint *, uint);
+extern ulong __llvm_atomic_add_a1_x_dev_i64(__global ulong *, ulong);
+extern uint __llvm_atomic_add_a3_x_wg_i32(__local uint *, uint);
+extern ulong __llvm_atomic_add_a3_x_wg_i64(__local ulong *, ulong);
+
+extern uint __llvm_atomic_max_a1_x_dev_i32(__global uint *, uint);
+extern uint __llvm_atomic_umax_a1_x_dev_i32(__global uint *, uint);
+extern ulong __llvm_atomic_max_a1_x_dev_i64(__global ulong *, ulong);
+extern ulong __llvm_atomic_umax_a1_x_dev_i64(__global ulong *, ulong);
+extern uint __llvm_atomic_max_a3_x_wg_i32(__local uint *, uint);
+extern uint __llvm_atomic_umax_a3_x_wg_i32(__local uint *, uint);
+extern ulong __llvm_atomic_max_a3_x_wg_i64(__local ulong *, ulong);
+extern ulong __llvm_atomic_umax_a3_x_wg_i64(__local ulong *, ulong);
+
+extern uint __llvm_atomic_min_a1_x_dev_i32(__global uint *, uint);
+extern uint __llvm_atomic_umin_a1_x_dev_i32(__global uint *, uint);
+extern ulong __llvm_atomic_min_a1_x_dev_i64(__global ulong *, ulong);
+extern ulong __llvm_atomic_umin_a1_x_dev_i64(__global ulong *, ulong);
+extern uint __llvm_atomic_min_a3_x_wg_i32(__local uint *, uint);
+extern uint __llvm_atomic_umin_a3_x_wg_i32(__local uint *, uint);
+extern ulong __llvm_atomic_min_a3_x_wg_i64(__local ulong *, ulong);
+extern ulong __llvm_atomic_umin_a3_x_wg_i64(__local ulong *, ulong);
+
+extern uint __llvm_cmpxchg_a1_x_x_dev_i32(__global uint *, uint, uint);
+extern ulong __llvm_cmpxchg_a1_x_x_dev_i64(__global ulong *, ulong, ulong);
+extern uint __llvm_cmpxchg_a3_x_x_wg_i32(__local uint *, uint, uint);
+extern ulong __llvm_cmpxchg_a3_x_x_wg_i64(__local ulong *, ulong, ulong);
+
 // AMDGPU intrinsics
 extern __attribute__((const)) bool __llvm_amdgcn_class_f16(half, int) __asm("llvm.amdgcn.class.f16");
 extern __attribute__((const)) bool __llvm_amdgcn_class_f32(float, int) __asm("llvm.amdgcn.class.f32");
