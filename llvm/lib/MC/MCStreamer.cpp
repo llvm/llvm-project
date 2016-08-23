@@ -127,6 +127,22 @@ void MCStreamer::EmitSymbolValue(const MCSymbol *Sym, unsigned Size,
     EmitCOFFSecRel32(Sym);
 }
 
+void MCStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+  report_fatal_error("unsupported directive in streamer");
+}
+
+void MCStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+  report_fatal_error("unsupported directive in streamer");
+}
+
+void MCStreamer::EmitTPRel64Value(const MCExpr *Value) {
+  report_fatal_error("unsupported directive in streamer");
+}
+
+void MCStreamer::EmitTPRel32Value(const MCExpr *Value) {
+  report_fatal_error("unsupported directive in streamer");
+}
+
 void MCStreamer::EmitGPRel64Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }

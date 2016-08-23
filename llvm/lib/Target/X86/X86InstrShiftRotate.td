@@ -873,19 +873,19 @@ let hasSideEffects = 0 in {
 
 multiclass bmi_shift<string asm, RegisterClass RC, X86MemOperand x86memop> {
 let hasSideEffects = 0 in {
-  def rr : I<0xF7, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
+  def rr : I<0xF7, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-             VEX_4VOp3, Sched<[WriteShift]>;
+             VEX, Sched<[WriteShift]>;
   let mayLoad = 1 in
-  def rm : I<0xF7, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
+  def rm : I<0xF7, MRMSrcMem4VOp3,
+             (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-             VEX_4VOp3,
-             Sched<[WriteShiftLd,
-                    // x86memop:$src1
-                    ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                    ReadDefault,
-                    // RC:$src1
-                    ReadAfterLd]>;
+             VEX, Sched<[WriteShiftLd,
+                         // x86memop:$src1
+                         ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                         ReadDefault,
+                         // RC:$src1
+                         ReadAfterLd]>;
 }
 }
 

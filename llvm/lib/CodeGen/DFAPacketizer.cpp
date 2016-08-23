@@ -31,8 +31,13 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+static cl::opt<unsigned> InstrLimit("dfa-instr-limit", cl::Hidden,
+  cl::init(0), cl::desc("If present, stops packetizing after N instructions"));
+static unsigned InstrCount = 0;
 
 // --------------------------------------------------------------------
 // Definitions shared between DFAPacketizer.cpp and DFAPacketizerEmitter.cpp
@@ -218,6 +223,13 @@ VLIWPacketizerList::~VLIWPacketizerList() {
 // End the current packet, bundle packet instructions and reset DFA state.
 void VLIWPacketizerList::endPacket(MachineBasicBlock *MBB,
                                    MachineBasicBlock::iterator MI) {
+  DEBUG({
+    if (!CurrentPacketMIs.empty()) {
+      dbgs() << "Finalizing packet:\n";
+      for (MachineInstr *MI : CurrentPacketMIs)
+        dbgs() << " * " << *MI;
+    }
+  });
   if (CurrentPacketMIs.size() > 1) {
     MachineInstr &MIFirst = *CurrentPacketMIs.front();
     finalizeBundle(*MBB, MIFirst.getIterator(), MI.getInstrIterator());
@@ -249,8 +261,17 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
   for (SUnit &SU : VLIWScheduler->SUnits)
     MIToSUnit[SU.getInstr()] = &SU;
 
+  bool LimitPresent = InstrLimit.getPosition();
+
   // The main packetizer loop.
   for (; BeginItr != EndItr; ++BeginItr) {
+    if (LimitPresent) {
+      if (InstrCount >= InstrLimit) {
+        EndItr = BeginItr;
+        break;
+      }
+      InstrCount++;
+    }
     MachineInstr &MI = *BeginItr;
     initPacketizerState();
 

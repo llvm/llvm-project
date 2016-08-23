@@ -341,7 +341,7 @@ public:
   /// up response files, removing temporary files, etc.
   int ExecuteCompilation(Compilation &C,
      SmallVectorImpl< std::pair<int, const Command *> > &FailingCommands);
-  
+
   /// generateCompilationDiagnostics - Generate diagnostics information 
   /// including preprocessed source file(s).
   /// 

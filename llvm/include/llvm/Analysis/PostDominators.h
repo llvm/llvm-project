@@ -89,7 +89,7 @@ FunctionPass* createPostDomTree();
 
 template <> struct GraphTraits<PostDominatorTree*>
   : public GraphTraits<DomTreeNode*> {
-  static NodeType *getEntryNode(PostDominatorTree *DT) {
+  static NodeRef getEntryNode(PostDominatorTree *DT) {
     return DT->getRootNode();
   }
 

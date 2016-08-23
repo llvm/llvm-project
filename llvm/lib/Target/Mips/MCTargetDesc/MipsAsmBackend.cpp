@@ -59,6 +59,10 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case Mips::fixup_MIPS_PCLO16:
     Value &= 0xffff;
     break;
+  case FK_DTPRel_4:
+  case FK_DTPRel_8:
+  case FK_TPRel_4:
+  case FK_TPRel_8:
   case FK_GPRel_4:
   case FK_Data_4:
   case FK_Data_8:

@@ -9557,27 +9557,27 @@ _mm512_set_ps (float __A, float __B, float __C, float __D,
                 (e4),(e3),(e2),(e1),(e0))
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
-_mm512_abs_ps(__m512 A)
+_mm512_abs_ps(__m512 __A)
 {
-  return (__m512)_mm512_and_epi32(_mm512_set1_epi32(0x7FFFFFFF),(__m512i)A) ;
+  return (__m512)_mm512_and_epi32(_mm512_set1_epi32(0x7FFFFFFF),(__m512i)__A) ;
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
-_mm512_mask_abs_ps(__m512 W, __mmask16 K, __m512 A)
+_mm512_mask_abs_ps(__m512 __W, __mmask16 __K, __m512 __A)
 {
-  return (__m512)_mm512_mask_and_epi32((__m512i)W, K, _mm512_set1_epi32(0x7FFFFFFF),(__m512i)A) ;
+  return (__m512)_mm512_mask_and_epi32((__m512i)__W, __K, _mm512_set1_epi32(0x7FFFFFFF),(__m512i)__A) ;
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
-_mm512_abs_pd(__m512d A)
+_mm512_abs_pd(__m512d __A)
 {
-  return (__m512d)_mm512_and_epi64(_mm512_set1_epi64(0x7FFFFFFFFFFFFFFF),(__v8di)A) ;
+  return (__m512d)_mm512_and_epi64(_mm512_set1_epi64(0x7FFFFFFFFFFFFFFF),(__v8di)__A) ;
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
-_mm512_mask_abs_pd(__m512d W, __mmask8 K, __m512d A)
+_mm512_mask_abs_pd(__m512d __W, __mmask8 __K, __m512d __A)
 {
-  return (__m512d)_mm512_mask_and_epi64((__v8di)W, K, _mm512_set1_epi64(0x7FFFFFFFFFFFFFFF),(__v8di)A);
+  return (__m512d)_mm512_mask_and_epi64((__v8di)__W, __K, _mm512_set1_epi64(0x7FFFFFFFFFFFFFFF),(__v8di)__A);
 }
 
 #undef __DEFAULT_FN_ATTRS

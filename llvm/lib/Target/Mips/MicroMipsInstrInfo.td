@@ -675,13 +675,15 @@ class WaitMM<string opstr> :
   InstSE<(outs), (ins uimm10:$code_), !strconcat(opstr, "\t$code_"), [],
          NoItinerary, FrmOther, opstr>;
 
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
+let DecoderNamespace = "MicroMips", Predicates = [InMicroMips, NotMips32r6,
+                                                  NotMips64r6] in {
   /// Compact Branch Instructions
   def BEQZC_MM : CompactBranchMM<"beqzc", brtarget_mm, seteq, GPR32Opnd>,
                  COMPACT_BRANCH_FM_MM<0x7>;
   def BNEZC_MM : CompactBranchMM<"bnezc", brtarget_mm, setne, GPR32Opnd>,
                  COMPACT_BRANCH_FM_MM<0x5>;
-
+}
+let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   /// Arithmetic Instructions (ALU Immediate)
   def ADDiu_MM : MMRel, ArithLogicI<"addiu", simm16, GPR32Opnd>,
                  ADDI_FM_MM<0xc>;

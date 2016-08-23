@@ -80,6 +80,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertWaitsPass(*PR);
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
+  initializeSIInsertSkipsPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
 }
 
@@ -532,13 +533,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 #endif
 
 void GCNPassConfig::addPreRegAlloc() {
-  // This needs to be run directly before register allocation because
-  // earlier passes might recompute live intervals.
-  // TODO: handle CodeGenOpt::None; fast RA ignores spill weights set by the pass
-  if (getOptLevel() > CodeGenOpt::None) {
-    insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);
-  }
-
   if (getOptLevel() > CodeGenOpt::None) {
     // Don't do this with no optimizations since it throws away debug info by
     // merging nonadjacent loads.
@@ -556,10 +550,22 @@ void GCNPassConfig::addPreRegAlloc() {
 }
 
 void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
+  // FIXME: We have to disable the verifier here because of PHIElimination +
+  // TwoAddressInstructions disabling it.
+  insertPass(&TwoAddressInstructionPassID, &SILowerControlFlowID, false);
+
   TargetPassConfig::addFastRegAlloc(RegAllocPass);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
+  // This needs to be run directly before register allocation because earlier
+  // passes might recompute live intervals.
+  insertPass(&MachineSchedulerID, &SIFixControlFlowLiveIntervalsID);
+
+  // TODO: It might be better to run this right after phi elimination, but for
+  // now that would require not running the verifier.
+  insertPass(&RenameIndependentSubregsID, &SILowerControlFlowID);
+
   TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
 }
 
@@ -579,7 +585,7 @@ void GCNPassConfig::addPreEmitPass() {
 
   addPass(createSIInsertWaitsPass());
   addPass(createSIShrinkInstructionsPass());
-  addPass(createSILowerControlFlowPass());
+  addPass(&SIInsertSkipsPassID);
   addPass(createSIDebuggerInsertNopsPass());
 }
 

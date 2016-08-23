@@ -213,19 +213,14 @@
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL: Running analysis: NoOpFunctionAnalysis
 ; CHECK-INVALIDATE-ALL: Running pass: InvalidateAllAnalysesPass
-; CHECK-INVALIDATE-ALL: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL: Invalidating analysis: NoOpFunctionAnalysis
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL: Running analysis: NoOpFunctionAnalysis
 ; CHECK-INVALIDATE-ALL: Finished llvm::Function pass manager run
-; CHECK-INVALIDATE-ALL: Invalidating all non-preserved analyses
-; CHECK-INVALIDATE-ALL-NOT: Running analysis: NoOpFunctionAnalysis
-; CHECK-INVALIDATE-ALL: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL: Running analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Finished llvm::Module pass manager run
-; CHECK-INVALIDATE-ALL: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-NOT: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-NOT: Running analysis: NoOpModuleAnalysis
@@ -247,26 +242,20 @@
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG: Running analysis: NoOpFunctionAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: InvalidateAllAnalysesPass
-; CHECK-INVALIDATE-ALL-CG: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-CG: Invalidating analysis: NoOpFunctionAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG: Running analysis: NoOpFunctionAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Finished llvm::Function pass manager run
-; CHECK-INVALIDATE-ALL-CG: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpFunctionAnalysis
-; CHECK-INVALIDATE-ALL-CG: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-CG: Invalidating analysis: NoOpCGSCCAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG: Running analysis: NoOpCGSCCAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Finished llvm::LazyCallGraph::SCC pass manager run
-; CHECK-INVALIDATE-ALL-CG: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-CG-NOT: Invalidating analysis: NoOpCGSCCAnalysis
-; CHECK-INVALIDATE-ALL-CG: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-CG: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG: Running analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Finished llvm::Module pass manager run
-; CHECK-INVALIDATE-ALL-CG: Invalidating all non-preserved analyses
 ; CHECK-INVALIDATE-ALL-CG-NOT: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpModuleAnalysis

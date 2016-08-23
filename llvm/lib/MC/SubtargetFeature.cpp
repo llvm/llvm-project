@@ -282,13 +282,11 @@ void SubtargetFeatures::print(raw_ostream &OS) const {
   OS << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump feature info.
 ///
 LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
   print(dbgs());
 }
-#endif
 
 /// Adds the default features for the specified target triple.
 ///

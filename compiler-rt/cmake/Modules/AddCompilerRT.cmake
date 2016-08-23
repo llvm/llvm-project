@@ -164,6 +164,7 @@ function(add_compiler_rt_runtime name type)
                                 -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
       set_target_properties(install-${LIB_PARENT_TARGET} PROPERTIES
                             FOLDER "Compiler-RT Misc")
+      add_dependencies(install-compiler-rt install-${LIB_PARENT_TARGET})
     endif()
   endif()
 

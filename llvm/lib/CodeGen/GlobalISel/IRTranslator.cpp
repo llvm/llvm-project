@@ -100,17 +100,24 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U) {
   return true;
 }
 
-bool IRTranslator::translateICmp(const User &U) {
-  const CmpInst &CI = cast<CmpInst>(U);
-  unsigned Op0 = getOrCreateVReg(*CI.getOperand(0));
-  unsigned Op1 = getOrCreateVReg(*CI.getOperand(1));
-  unsigned Res = getOrCreateVReg(CI);
-  CmpInst::Predicate Pred = CI.getPredicate();
+bool IRTranslator::translateCompare(const User &U) {
+  const CmpInst *CI = dyn_cast<CmpInst>(&U);
+  unsigned Op0 = getOrCreateVReg(*U.getOperand(0));
+  unsigned Op1 = getOrCreateVReg(*U.getOperand(1));
+  unsigned Res = getOrCreateVReg(U);
+  CmpInst::Predicate Pred =
+      CI ? CI->getPredicate() : static_cast<CmpInst::Predicate>(
+                                    cast<ConstantExpr>(U).getPredicate());
 
-  assert(isa<ICmpInst>(CI) && "only integer comparisons supported now");
-  assert(CmpInst::isIntPredicate(Pred) && "only int comparisons supported now");
-  MIRBuilder.buildICmp({LLT{*CI.getType()}, LLT{*CI.getOperand(0)->getType()}},
-                       Pred, Res, Op0, Op1);
+  if (CmpInst::isIntPredicate(Pred))
+    MIRBuilder.buildICmp(
+        {LLT{*U.getType()}, LLT{*U.getOperand(0)->getType()}}, Pred, Res, Op0,
+        Op1);
+  else
+    MIRBuilder.buildFCmp(
+        {LLT{*U.getType()}, LLT{*U.getOperand(0)->getType()}}, Pred, Res, Op0,
+        Op1);
+
   return true;
 }
 
@@ -182,6 +189,67 @@ bool IRTranslator::translateStore(const User &U) {
   return true;
 }
 
+bool IRTranslator::translateExtractValue(const User &U) {
+  const Value *Src = U.getOperand(0);
+  Type *Int32Ty = Type::getInt32Ty(U.getContext());
+  SmallVector<Value *, 1> Indices;
+
+  // getIndexedOffsetInType is designed for GEPs, so the first index is the
+  // usual array element rather than looking into the actual aggregate.
+  Indices.push_back(ConstantInt::get(Int32Ty, 0));
+
+  if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(&U)) {
+    for (auto Idx : EVI->indices())
+      Indices.push_back(ConstantInt::get(Int32Ty, Idx));
+  } else {
+    for (unsigned i = 1; i < U.getNumOperands(); ++i)
+      Indices.push_back(U.getOperand(i));
+  }
+
+  uint64_t Offset = 8 * DL->getIndexedOffsetInType(Src->getType(), Indices);
+
+  unsigned Res = getOrCreateVReg(U);
+  MIRBuilder.buildExtract(LLT{*U.getType(), DL}, Res, Offset,
+                          LLT{*Src->getType(), DL}, getOrCreateVReg(*Src));
+
+  return true;
+}
+
+bool IRTranslator::translateInsertValue(const User &U) {
+  const Value *Src = U.getOperand(0);
+  Type *Int32Ty = Type::getInt32Ty(U.getContext());
+  SmallVector<Value *, 1> Indices;
+
+  // getIndexedOffsetInType is designed for GEPs, so the first index is the
+  // usual array element rather than looking into the actual aggregate.
+  Indices.push_back(ConstantInt::get(Int32Ty, 0));
+
+  if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(&U)) {
+    for (auto Idx : IVI->indices())
+      Indices.push_back(ConstantInt::get(Int32Ty, Idx));
+  } else {
+    for (unsigned i = 2; i < U.getNumOperands(); ++i)
+      Indices.push_back(U.getOperand(i));
+  }
+
+  uint64_t Offset = 8 * DL->getIndexedOffsetInType(Src->getType(), Indices);
+
+  unsigned Res = getOrCreateVReg(U);
+  const Value &Inserted = *U.getOperand(1);
+  MIRBuilder.buildInsert(LLT{*U.getType(), DL}, Res, getOrCreateVReg(*Src),
+                         LLT{*Inserted.getType(), DL},
+                         getOrCreateVReg(Inserted), Offset);
+
+  return true;
+}
+
+bool IRTranslator::translateSelect(const User &U) {
+  MIRBuilder.buildSelect(
+      LLT{*U.getType()}, getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
+      getOrCreateVReg(*U.getOperand(1)), getOrCreateVReg(*U.getOperand(2)));
+  return true;
+}
+
 bool IRTranslator::translateBitCast(const User &U) {
   if (LLT{*U.getOperand(0)->getType()} == LLT{*U.getType()}) {
     unsigned &Reg = ValToVReg[&U];
@@ -201,6 +269,41 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U) {
       .buildInstr(Opcode, {LLT{*U.getType()}, LLT{*U.getOperand(0)->getType()}})
       .addDef(Res)
       .addUse(Op);
+  return true;
+}
+
+bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
+                                           Intrinsic::ID ID) {
+  unsigned Op = 0;
+  switch (ID) {
+  default: return false;
+  case Intrinsic::uadd_with_overflow: Op = TargetOpcode::G_UADDE; break;
+  case Intrinsic::sadd_with_overflow: Op = TargetOpcode::G_SADDO; break;
+  case Intrinsic::usub_with_overflow: Op = TargetOpcode::G_USUBE; break;
+  case Intrinsic::ssub_with_overflow: Op = TargetOpcode::G_SSUBO; break;
+  case Intrinsic::umul_with_overflow: Op = TargetOpcode::G_UMULO; break;
+  case Intrinsic::smul_with_overflow: Op = TargetOpcode::G_SMULO; break;
+  }
+
+  LLT Ty{*CI.getOperand(0)->getType()};
+  LLT s1 = LLT::scalar(1);
+  unsigned Width = Ty.getSizeInBits();
+  unsigned Res = MRI->createGenericVirtualRegister(Width);
+  unsigned Overflow = MRI->createGenericVirtualRegister(1);
+  auto MIB = MIRBuilder.buildInstr(Op, {Ty, s1})
+                 .addDef(Res)
+                 .addDef(Overflow)
+                 .addUse(getOrCreateVReg(*CI.getOperand(0)))
+                 .addUse(getOrCreateVReg(*CI.getOperand(1)));
+
+  if (Op == TargetOpcode::G_UADDE || Op == TargetOpcode::G_USUBE) {
+    unsigned Zero = MRI->createGenericVirtualRegister(1);
+    EntryBuilder.buildConstant(s1, Zero, 0);
+    MIB.addUse(Zero);
+  }
+
+  MIRBuilder.buildSequence(LLT{*CI.getType(), DL}, getOrCreateVReg(CI), Ty, Res,
+                           0, s1, Overflow, Width);
   return true;
 }
 
@@ -226,6 +329,9 @@ bool IRTranslator::translateCall(const User &U) {
     ID = static_cast<Intrinsic::ID>(TII->getIntrinsicID(F));
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
+
+  if (translateKnownIntrinsic(CI, ID))
+    return true;
 
   // Need types (starting with return) & args.
   SmallVector<LLT, 4> Tys;
@@ -309,6 +415,8 @@ bool IRTranslator::translate(const Instruction &Inst) {
 bool IRTranslator::translate(const Constant &C, unsigned Reg) {
   if (auto CI = dyn_cast<ConstantInt>(&C))
     EntryBuilder.buildConstant(LLT{*CI->getType()}, Reg, CI->getZExtValue());
+  else if (auto CF = dyn_cast<ConstantFP>(&C))
+    EntryBuilder.buildFConstant(LLT{*CF->getType()}, Reg, *CF);
   else if (isa<UndefValue>(C))
     EntryBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Reg);
   else if (isa<ConstantPointerNull>(C))

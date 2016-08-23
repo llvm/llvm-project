@@ -286,25 +286,29 @@ void Writer::createSections() {
 }
 
 void Writer::createMiscChunks() {
+  OutputSection *RData = createSection(".rdata");
+
   // Create thunks for locally-dllimported symbols.
   if (!Symtab->LocalImportChunks.empty()) {
-    OutputSection *Sec = createSection(".rdata");
     for (Chunk *C : Symtab->LocalImportChunks)
-      Sec->addChunk(C);
+      RData->addChunk(C);
   }
 
   // Create SEH table. x86-only.
   if (Config->Machine != I386)
     return;
+
   std::set<Defined *> Handlers;
+
   for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers)
       Handlers.insert(cast<Defined>(B->repl()));
   }
+
   SEHTable.reset(new SEHTableChunk(Handlers));
-  createSection(".rdata")->addChunk(SEHTable.get());
+  RData->addChunk(SEHTable.get());
 }
 
 // Create .idata section for the DLL-imported symbol table.

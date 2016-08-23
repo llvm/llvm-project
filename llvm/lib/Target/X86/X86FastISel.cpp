@@ -1654,6 +1654,7 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
       if (TestOpc) {
         unsigned OpReg = getRegForValue(TI->getOperand(0));
         if (OpReg == 0) return false;
+
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(TestOpc))
           .addReg(OpReg).addImm(1);
 
@@ -1691,8 +1692,15 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
   unsigned OpReg = getRegForValue(BI->getCondition());
   if (OpReg == 0) return false;
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
-    .addReg(OpReg).addImm(1);
+  // In case OpReg is a K register, kortest against itself.
+  if (MRI.getRegClass(OpReg) == &X86::VK1RegClass)
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::KORTESTWrr))
+        .addReg(OpReg)
+        .addReg(OpReg);
+  else
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
+        .addReg(OpReg)
+        .addImm(1);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::JNE_1))
     .addMBB(TrueMBB);
   finishCondBranch(BI->getParent(), TrueMBB, FalseMBB);
@@ -2026,8 +2034,16 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
       return false;
     bool CondIsKill = hasTrivialKill(Cond);
 
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
-      .addReg(CondReg, getKillRegState(CondIsKill)).addImm(1);
+    // In case OpReg is a K register, kortest against itself.
+    if (MRI.getRegClass(CondReg) == &X86::VK1RegClass)
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(X86::KORTESTWrr))
+          .addReg(CondReg, getKillRegState(CondIsKill))
+          .addReg(CondReg);
+    else
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
+          .addReg(CondReg, getKillRegState(CondIsKill))
+          .addImm(1);
   }
 
   const Value *LHS = I->getOperand(1);
@@ -2198,8 +2214,17 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
     if (CondReg == 0)
       return false;
     bool CondIsKill = hasTrivialKill(Cond);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
-      .addReg(CondReg, getKillRegState(CondIsKill)).addImm(1);
+
+    // In case OpReg is a K register, kortest against itself.
+    if (MRI.getRegClass(CondReg) == &X86::VK1RegClass)
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(X86::KORTESTWrr))
+          .addReg(CondReg, getKillRegState(CondIsKill))
+          .addReg(CondReg);
+    else
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
+          .addReg(CondReg, getKillRegState(CondIsKill))
+          .addImm(1);
   }
 
   const Value *LHS = I->getOperand(1);

@@ -450,57 +450,43 @@ public:
 
 namespace llvm {
   template<> struct GraphTraits<clang::ento::ExplodedNode*> {
-    typedef clang::ento::ExplodedNode NodeType;
     typedef clang::ento::ExplodedNode *NodeRef;
-    typedef NodeType::succ_iterator  ChildIteratorType;
-    typedef llvm::df_iterator<NodeType*>      nodes_iterator;
+    typedef clang::ento::ExplodedNode::succ_iterator ChildIteratorType;
+    typedef llvm::df_iterator<NodeRef> nodes_iterator;
 
-    static inline NodeType* getEntryNode(NodeType* N) {
-      return N;
-    }
+    static inline NodeRef getEntryNode(NodeRef N) { return N; }
 
-    static inline ChildIteratorType child_begin(NodeType* N) {
+    static inline ChildIteratorType child_begin(NodeRef N) {
       return N->succ_begin();
     }
 
-    static inline ChildIteratorType child_end(NodeType* N) {
+    static inline ChildIteratorType child_end(NodeRef N) {
       return N->succ_end();
     }
 
-    static inline nodes_iterator nodes_begin(NodeType* N) {
-      return df_begin(N);
-    }
+    static inline nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
 
-    static inline nodes_iterator nodes_end(NodeType* N) {
-      return df_end(N);
-    }
+    static inline nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
   };
 
   template<> struct GraphTraits<const clang::ento::ExplodedNode*> {
-    typedef const clang::ento::ExplodedNode NodeType;
     typedef const clang::ento::ExplodedNode *NodeRef;
-    typedef NodeType::const_succ_iterator   ChildIteratorType;
-    typedef llvm::df_iterator<NodeType*>       nodes_iterator;
+    typedef clang::ento::ExplodedNode::const_succ_iterator ChildIteratorType;
+    typedef llvm::df_iterator<NodeRef> nodes_iterator;
 
-    static inline NodeType* getEntryNode(NodeType* N) {
-      return N;
-    }
+    static inline NodeRef getEntryNode(NodeRef N) { return N; }
 
-    static inline ChildIteratorType child_begin(NodeType* N) {
+    static inline ChildIteratorType child_begin(NodeRef N) {
       return N->succ_begin();
     }
 
-    static inline ChildIteratorType child_end(NodeType* N) {
+    static inline ChildIteratorType child_end(NodeRef N) {
       return N->succ_end();
     }
 
-    static inline nodes_iterator nodes_begin(NodeType* N) {
-      return df_begin(N);
-    }
+    static inline nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
 
-    static inline nodes_iterator nodes_end(NodeType* N) {
-      return df_end(N);
-    }
+    static inline nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
   };
 
 } // end llvm namespace

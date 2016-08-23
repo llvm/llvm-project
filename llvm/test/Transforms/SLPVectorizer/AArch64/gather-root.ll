@@ -1,5 +1,5 @@
 ; RUN: opt < %s -slp-vectorizer -S | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt < %s -slp-recursion-max-depth=0 -slp-vectorizer -S | FileCheck %s --check-prefix=GATHER
+; RUN: opt < %s -slp-schedule-budget=0 -slp-min-tree-size=0 -slp-threshold=-30 -slp-vectorizer -S | FileCheck %s --check-prefix=GATHER
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -8,7 +8,6 @@ target triple = "aarch64--linux-gnu"
 
 ; DEFAULT-LABEL: @PR28330(
 ; DEFAULT: %tmp17 = phi i32 [ %tmp34, %for.body ], [ 0, %entry ]
-; DEFAULT: %tmp18 = phi i32 [ %tmp35, %for.body ], [ %n, %entry ]
 ; DEFAULT: %[[S0:.+]] = select <8 x i1> %1, <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
 ; DEFAULT: %[[R0:.+]] = shufflevector <8 x i32> %[[S0]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; DEFAULT: %[[R1:.+]] = add <8 x i32> %[[S0]], %[[R0]]
@@ -21,7 +20,6 @@ target triple = "aarch64--linux-gnu"
 ;
 ; GATHER-LABEL: @PR28330(
 ; GATHER: %tmp17 = phi i32 [ %tmp34, %for.body ], [ 0, %entry ]
-; GATHER: %tmp18 = phi i32 [ %tmp35, %for.body ], [ %n, %entry ]
 ; GATHER: %tmp19 = select i1 %tmp1, i32 -720, i32 -80
 ; GATHER: %tmp21 = select i1 %tmp3, i32 -720, i32 -80
 ; GATHER: %tmp23 = select i1 %tmp5, i32 -720, i32 -80
@@ -69,7 +67,6 @@ entry:
 
 for.body:
   %tmp17 = phi i32 [ %tmp34, %for.body ], [ 0, %entry ]
-  %tmp18 = phi i32 [ %tmp35, %for.body ], [ %n, %entry ]
   %tmp19 = select i1 %tmp1, i32 -720, i32 -80
   %tmp20 = add i32 %tmp17, %tmp19
   %tmp21 = select i1 %tmp3, i32 -720, i32 -80
@@ -86,10 +83,5 @@ for.body:
   %tmp32 = add i32 %tmp30, %tmp31
   %tmp33 = select i1 %tmp15, i32 -720, i32 -80
   %tmp34 = add i32 %tmp32, %tmp33
-  %tmp35 = add nsw i32 %tmp18, -1
-  %tmp36 = icmp eq i32 %tmp35, 0
-  br i1 %tmp36, label %for.end, label %for.body
-
-for.end:
-  ret void
+  br label %for.body
 }

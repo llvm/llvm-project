@@ -52,6 +52,9 @@ struct Config {
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 
+  /// Disable entirely the optimizer, including importing for ThinLTO
+  bool CodeGenOnly = false;
+
   /// Setting this field will replace target triples in input files with this
   /// triple.
   std::string OverrideTriple;
@@ -84,8 +87,8 @@ struct Config {
 
   /// A module hook may be used by a linker to perform actions during the LTO
   /// pipeline. For example, a linker may use this function to implement
-  /// -save-temps, or to add its own resolved symbols to the module. If this
-  /// function returns false, any further processing for that task is aborted.
+  /// -save-temps. If this function returns false, any further processing for
+  /// that task is aborted.
   ///
   /// Module hooks must be thread safe with respect to the linker's internal
   /// data structures. A module hook will never be called concurrently from
@@ -93,7 +96,7 @@ struct Config {
   ///
   /// Note that in out-of-process backend scenarios, none of the hooks will be
   /// called for ThinLTO tasks.
-  typedef std::function<bool(unsigned Task, Module &)> ModuleHookFn;
+  typedef std::function<bool(unsigned Task, const Module &)> ModuleHookFn;
 
   /// This module hook is called after linking (regular LTO) or loading
   /// (ThinLTO) the module, before modifying it.

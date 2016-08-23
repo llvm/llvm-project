@@ -883,7 +883,7 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
   case MachineOperand::MO_IntrinsicID: {
     Intrinsic::ID ID = Op.getIntrinsicID();
     if (ID < Intrinsic::num_intrinsics)
-      OS << "intrinsic(@" << Intrinsic::getName(ID) << ')';
+      OS << "intrinsic(@" << Intrinsic::getName(ID, None) << ')';
     else {
       const MachineFunction &MF = *Op.getParent()->getParent()->getParent();
       const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();

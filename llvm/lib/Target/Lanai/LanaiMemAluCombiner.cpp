@@ -339,6 +339,9 @@ MbbIterator LanaiMemAluCombiner::findClosestSuitableAluInstr(
   while (First != Last) {
     Decrement ? --First : ++First;
 
+    if (First == Last)
+      break;
+
     // Skip over debug instructions
     if (First->isDebugValue())
       continue;

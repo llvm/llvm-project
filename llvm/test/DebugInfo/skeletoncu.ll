@@ -1,6 +1,5 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
-; XFAIL: hexagon
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_AT_GNU_dwo_id {{.*}}abcd
 ; CHECK: DW_AT_GNU_dwo_name {{.*}}"my.dwo"

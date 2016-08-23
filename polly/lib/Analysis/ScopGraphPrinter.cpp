@@ -36,7 +36,7 @@ static cl::opt<bool> ViewAll("polly-view-all",
 namespace llvm {
 template <>
 struct GraphTraits<ScopDetection *> : public GraphTraits<RegionInfo *> {
-  static NodeType *getEntryNode(ScopDetection *SD) {
+  static NodeRef getEntryNode(ScopDetection *SD) {
     return GraphTraits<RegionInfo *>::getEntryNode(SD->getRI());
   }
   static nodes_iterator nodes_begin(ScopDetection *SD) {

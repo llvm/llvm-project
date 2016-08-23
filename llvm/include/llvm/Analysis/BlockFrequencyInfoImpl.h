@@ -1271,7 +1271,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       for (NodeIter I = GTraits::nodes_begin(Graph),
                     E = GTraits::nodes_end(Graph);
            I != E; ++I) {
-        NodeRef N = &*I;
+        NodeRef N = *I;
         MaxFrequency =
             std::max(MaxFrequency, Graph->getBlockFreq(N).getFrequency());
       }

@@ -68,10 +68,6 @@ struct TrieEdge : public llvm::ilist_node<TrieEdge> {
 namespace llvm {
   using lld::mach_o::normalized::TrieEdge;
   template <>
-  struct ilist_sentinel_traits<TrieEdge>
-      : public ilist_half_embedded_sentinel_traits<TrieEdge> {};
-
-  template <>
   struct ilist_traits<TrieEdge> : public ilist_default_traits<TrieEdge> {
     void deleteNode(TrieEdge *N) {}
 

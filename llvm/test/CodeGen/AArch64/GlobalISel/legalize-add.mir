@@ -28,17 +28,17 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_scalar_add_big
-    ; CHECK-DAG: [[LHS_LO:%.*]](64), [[LHS_HI:%.*]](64) = G_EXTRACT s64 %0, 0, 64
-    ; CHECK-DAG: [[RHS_LO:%.*]](64), [[RHS_HI:%.*]](64) = G_EXTRACT s64 %1, 0, 64
+    ; CHECK-DAG: [[LHS_LO:%.*]](64), [[LHS_HI:%.*]](64) = G_EXTRACT { s64, s64, s128 } %0, 0, 64
+    ; CHECK-DAG: [[RHS_LO:%.*]](64), [[RHS_HI:%.*]](64) = G_EXTRACT { s64, s64, s128 } %1, 0, 64
     ; CHECK-DAG: [[CARRY0:%.*]](1) = G_CONSTANT s1 0
-    ; CHECK: [[RES_LO:%.*]](64), [[CARRY:%.*]](1) = G_ADDE s64 [[LHS_LO]], [[RHS_LO]], [[CARRY0]]
-    ; CHECK: [[RES_HI:%.*]](64), {{%.*}}(1) = G_ADDE s64 [[LHS_HI]], [[RHS_HI]], [[CARRY]]
-    ; CHECK: %2(128) = G_SEQUENCE s128 [[RES_LO]], [[RES_HI]]
+    ; CHECK: [[RES_LO:%.*]](64), [[CARRY:%.*]](1) = G_UADDE s64 [[LHS_LO]], [[RHS_LO]], [[CARRY0]]
+    ; CHECK: [[RES_HI:%.*]](64), {{%.*}}(1) = G_UADDE s64 [[LHS_HI]], [[RHS_HI]], [[CARRY]]
+    ; CHECK: %2(128) = G_SEQUENCE { s128, s64, s64 } [[RES_LO]], 0, [[RES_HI]], 64
 
-    %0(128) = G_SEQUENCE s128 %x0, %x1
-    %1(128) = G_SEQUENCE s128 %x2, %x3
+    %0(128) = G_SEQUENCE { s128, s64, s64 } %x0, 0, %x1, 64
+    %1(128) = G_SEQUENCE { s128, s64, s64 } %x2, 0, %x3, 64
     %2(128) = G_ADD s128 %0, %1
-    %x0, %x1 = G_EXTRACT s64 %2, 0, 64
+    %x0, %x1 = G_EXTRACT { s64, s64, s128 } %2, 0, 64
 ...
 
 ---
@@ -74,14 +74,14 @@ body: |
   bb.0.entry:
     liveins: %q0, %q1, %q2, %q3
     ; CHECK-LABEL: name: test_vector_add
-    ; CHECK-DAG: [[LHS_LO:%.*]](128), [[LHS_HI:%.*]](128) = G_EXTRACT <2 x s64> %0, 0, 128
-    ; CHECK-DAG: [[RHS_LO:%.*]](128), [[RHS_HI:%.*]](128) = G_EXTRACT <2 x s64> %1, 0, 128
+    ; CHECK-DAG: [[LHS_LO:%.*]](128), [[LHS_HI:%.*]](128) = G_EXTRACT { s128, s128, s256 } %0, 0, 128
+    ; CHECK-DAG: [[RHS_LO:%.*]](128), [[RHS_HI:%.*]](128) = G_EXTRACT { s128, s128, s256 } %1, 0, 128
     ; CHECK: [[RES_LO:%.*]](128) = G_ADD <2 x s64> [[LHS_LO]], [[RHS_LO]]
     ; CHECK: [[RES_HI:%.*]](128) = G_ADD <2 x s64> [[LHS_HI]], [[RHS_HI]]
-    ; CHECK: %2(256) = G_SEQUENCE <4 x s64> [[RES_LO]], [[RES_HI]]
+    ; CHECK: %2(256) = G_SEQUENCE { s256, s128, s128 } [[RES_LO]], 0, [[RES_HI]], 128
 
-    %0(256) = G_SEQUENCE <4 x s64> %q0, %q1
-    %1(256) = G_SEQUENCE <4 x s64> %q2, %q3
+    %0(256) = G_SEQUENCE { s256, s128, s128 } %q0, 0, %q1, 128
+    %1(256) = G_SEQUENCE { s256, s128, s128 } %q2, 0, %q3, 128
     %2(256) = G_ADD <4 x s64> %0, %1
-    %q0, %q1 = G_EXTRACT <2 x s64> %2, 0, 128
+    %q0, %q1 = G_EXTRACT { s128, s128, s256 } %2, 0, 128
 ...

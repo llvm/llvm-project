@@ -1,4 +1,4 @@
-//===- llvm/unittest/ADT/APInt.cpp - APInt unit tests ---------------------===//
+//===- unittests/ADT/ilistTest.cpp - ilist unit tests ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -128,4 +128,102 @@ TEST(ilistTest, UnsafeClear) {
   EXPECT_EQ(6, List.back().Value);
 }
 
+struct Empty {};
+TEST(ilistTest, HasObsoleteCustomizationTrait) {
+  // Negative test for HasObsoleteCustomization.
+  static_assert(!ilist_detail::HasObsoleteCustomization<Empty, Node>::value,
+                "Empty has no customizations");
 }
+
+struct GetNext {
+  Node *getNext(Node *);
+};
+TEST(ilistTest, HasGetNextTrait) {
+  static_assert(ilist_detail::HasGetNext<GetNext, Node>::value,
+                "GetNext has a getNext(Node*)");
+  static_assert(ilist_detail::HasObsoleteCustomization<GetNext, Node>::value,
+                "Empty should be obsolete because of getNext()");
+
+  // Negative test for HasGetNext.
+  static_assert(!ilist_detail::HasGetNext<Empty, Node>::value,
+                "Empty does not have a getNext(Node*)");
+}
+
+struct CreateSentinel {
+  Node *createSentinel();
+};
+TEST(ilistTest, HasCreateSentinelTrait) {
+  static_assert(ilist_detail::HasCreateSentinel<CreateSentinel>::value,
+                "CreateSentinel has a getNext(Node*)");
+  static_assert(
+      ilist_detail::HasObsoleteCustomization<CreateSentinel, Node>::value,
+      "Empty should be obsolete because of createSentinel()");
+
+  // Negative test for HasCreateSentinel.
+  static_assert(!ilist_detail::HasCreateSentinel<Empty>::value,
+                "Empty does not have a createSentinel()");
+}
+
+struct NodeWithCallback : ilist_node<NodeWithCallback> {
+  int Value = 0;
+  bool IsInList = false;
+
+  NodeWithCallback() = default;
+  NodeWithCallback(int Value) : Value(Value) {}
+  NodeWithCallback(const NodeWithCallback &) = delete;
+};
+
+} // end namespace
+
+namespace llvm {
+template <>
+struct ilist_traits<NodeWithCallback>
+    : public ilist_node_traits<NodeWithCallback> {
+  void addNodeToList(NodeWithCallback *N) { N->IsInList = true; }
+  void removeNodeFromList(NodeWithCallback *N) { N->IsInList = false; }
+};
+} // end namespace llvm
+
+namespace {
+
+TEST(ilistTest, addNodeToList) {
+  ilist<NodeWithCallback> L;
+  NodeWithCallback N(7);
+  ASSERT_FALSE(N.IsInList);
+
+  L.insert(L.begin(), &N);
+  ASSERT_EQ(1u, L.size());
+  ASSERT_EQ(&N, &*L.begin());
+  ASSERT_TRUE(N.IsInList);
+
+  L.remove(&N);
+  ASSERT_EQ(0u, L.size());
+  ASSERT_FALSE(N.IsInList);
+}
+
+struct PrivateNode : private ilist_node<PrivateNode> {
+  friend struct llvm::ilist_node_access;
+
+  int Value = 0;
+
+  PrivateNode() = default;
+  PrivateNode(int Value) : Value(Value) {}
+  PrivateNode(const PrivateNode &) = delete;
+};
+
+TEST(ilistTest, privateNode) {
+  // Instantiate various APIs to be sure they're callable when ilist_node is
+  // inherited privately.
+  ilist<NodeWithCallback> L;
+  NodeWithCallback N(7);
+  L.insert(L.begin(), &N);
+  ++L.begin();
+  (void)*L.begin();
+  (void)(L.begin() == L.end());
+
+  ilist<NodeWithCallback> L2;
+  L2.splice(L2.end(), L);
+  L2.remove(&N);
+}
+
+} // end namespace

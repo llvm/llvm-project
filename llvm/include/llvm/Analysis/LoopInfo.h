@@ -761,31 +761,21 @@ public:
 
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop*> {
-  typedef const Loop NodeType;
   typedef const Loop *NodeRef;
   typedef LoopInfo::iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(const Loop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->end();
-  }
+  static NodeRef getEntryNode(const Loop *L) { return L; }
+  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <> struct GraphTraits<Loop*> {
-  typedef Loop NodeType;
   typedef Loop *NodeRef;
   typedef LoopInfo::iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(Loop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->end();
-  }
+  static NodeRef getEntryNode(Loop *L) { return L; }
+  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 /// \brief Analysis pass that exposes the \c LoopInfo for a function.

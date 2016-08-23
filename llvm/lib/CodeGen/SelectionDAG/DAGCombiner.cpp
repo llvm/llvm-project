@@ -1324,7 +1324,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       continue;
 
     assert(N->getOpcode() != ISD::DELETED_NODE &&
-           RV.getNode()->getOpcode() != ISD::DELETED_NODE &&
+           RV.getOpcode() != ISD::DELETED_NODE &&
            "Node was deleted but visit returned new node!");
 
     DEBUG(dbgs() << " ... into: ";
@@ -10733,7 +10733,7 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
        LSIt != LSItEnd; ++LSIt) {
     SDValue SliceInst = LSIt->loadSlice();
     CombineTo(LSIt->Inst, SliceInst, true);
-    if (SliceInst.getNode()->getOpcode() != ISD::LOAD)
+    if (SliceInst.getOpcode() != ISD::LOAD)
       SliceInst = SliceInst.getOperand(0);
     assert(SliceInst->getOpcode() == ISD::LOAD &&
            "It takes more than a zext to get to the loaded slice!!");

@@ -141,21 +141,6 @@ private:
   Addend _addend;
 };
 
-} // end namespace lld
-
-// ilist will lazily create a sentinal (so end() can return a node past the end
-// of the list).  This trait embeds the sentinel in the ilist to avoid the lazy
-// logic.
-namespace llvm {
-
-template <>
-struct ilist_sentinel_traits<lld::SimpleReference>
-    : public ilist_full_embedded_sentinel_traits<lld::SimpleReference> {};
-
-} // end namespace llvm
-
-namespace lld {
-
 class SimpleDefinedAtom : public DefinedAtom {
 public:
   explicit SimpleDefinedAtom(const File &f)

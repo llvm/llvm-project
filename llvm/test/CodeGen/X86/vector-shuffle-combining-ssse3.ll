@@ -88,6 +88,59 @@ define <4 x float> @combine_pshufb_as_movss(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %4
 }
 
+define <2 x double> @combine_pshufb_as_vzmovl_64(<2 x double> %a0) {
+; SSE-LABEL: combine_pshufb_as_vzmovl_64:
+; SSE:       # BB#0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_as_vzmovl_64:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    retq
+  %1 = bitcast <2 x double> %a0 to <16 x i8>
+  %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %1, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %3 = bitcast <16 x i8> %2 to <2 x double>
+  ret <2 x double> %3
+}
+
+define <4 x float> @combine_pshufb_as_vzmovl_32(<4 x float> %a0) {
+; SSSE3-LABEL: combine_pshufb_as_vzmovl_32:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSSE3-NEXT:    movaps %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_pshufb_as_vzmovl_32:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: combine_pshufb_as_vzmovl_32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pshufb_as_vzmovl_32:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_pshufb_as_vzmovl_32:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512F-NEXT:    retq
+  %1 = bitcast <4 x float> %a0 to <16 x i8>
+  %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %1, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %3 = bitcast <16 x i8> %2 to <4 x float>
+  ret <4 x float> %3
+}
+
 define <4 x float> @combine_pshufb_movddup(<4 x float> %a0) {
 ; SSE-LABEL: combine_pshufb_movddup:
 ; SSE:       # BB#0:

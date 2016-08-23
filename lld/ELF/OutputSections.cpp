@@ -681,15 +681,15 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   if (Out<ELFT>::PreinitArray) {
     Add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
-    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray->getSize()});
+    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
   }
   if (Out<ELFT>::InitArray) {
     Add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
-    Add({DT_INIT_ARRAYSZ, (uintX_t)Out<ELFT>::InitArray->getSize()});
+    Add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
   }
   if (Out<ELFT>::FiniArray) {
     Add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
-    Add({DT_FINI_ARRAYSZ, (uintX_t)Out<ELFT>::FiniArray->getSize()});
+    Add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
@@ -759,6 +759,9 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
     switch (E.Kind) {
     case Entry::SecAddr:
       P->d_un.d_ptr = E.OutSec->getVA();
+      break;
+    case Entry::SecSize:
+      P->d_un.d_val = E.OutSec->getSize();
       break;
     case Entry::SymAddr:
       P->d_un.d_ptr = E.Sym->template getVA<ELFT>();
@@ -1271,7 +1274,7 @@ template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
   if (OutputSec)
     return OutputSec->getVA() + OffsetInSec;
-  return InputSec->OutSec->getVA() + OffsetInSec;
+  return InputSec->OutSec->getVA() + InputSec->getOffset(OffsetInSec);
 }
 
 template <class ELFT>

@@ -7,7 +7,7 @@
 
 ; Check that no scheduling dependencies are created between the paired loads and the store during post-RA MI scheduling.
 ;
-; CHECK-LABEL: # Machine code for function foo: Properties: <Post SSA
+; CHECK-LABEL: # Machine code for function foo:
 ; CHECK: SU(2):   %W{{[0-9]+}}<def>, %W{{[0-9]+}}<def> = LDPWi
 ; CHECK: Successors:
 ; CHECK-NOT: ch SU(4)

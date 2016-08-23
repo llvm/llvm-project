@@ -673,6 +673,7 @@ inline static void addOps(MCInst &subInstPtr, MCInst const &Inst,
     case Hexagon::D9:
     case Hexagon::D10:
     case Hexagon::D11:
+    case Hexagon::P0:
       subInstPtr.addOperand(Inst.getOperand(opNum));
       break;
     }
@@ -943,18 +944,22 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
   case Hexagon::C2_cmovenewif:
     Result.setOpcode(Hexagon::V4_SA1_clrfnew);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (!p0.new) $Rd = #0
   case Hexagon::C2_cmovenewit:
     Result.setOpcode(Hexagon::V4_SA1_clrtnew);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (p0.new) $Rd = #0
   case Hexagon::C2_cmoveif:
     Result.setOpcode(Hexagon::V4_SA1_clrf);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (!p0) $Rd = #0
   case Hexagon::C2_cmoveit:
     Result.setOpcode(Hexagon::V4_SA1_clrt);
     addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
     break; //  2 SUBInst if (p0) $Rd = #0
   case Hexagon::A2_tfrsi:
     Absolute = Inst.getOperand(1).getExpr()->evaluateAsAbsolute(Value);

@@ -1376,13 +1376,38 @@ static bool areValuesTriviallySame(Value *V0, BasicBlock::const_iterator At0,
   return true;
 }
 
-// Is it legal to replace the operand \c OpIdx of \c GEP with a PHI node?
-static bool canReplaceGEPOperandWithPHI(const Instruction *GEP,
-                                        unsigned OpIdx) {
-  if (OpIdx == 0)
+// Is it legal to place a variable in operand \c OpIdx of \c I?
+// FIXME: This should be promoted to Instruction.
+static bool canReplaceOperandWithVariable(const Instruction *I,
+                                          unsigned OpIdx) {
+  // Early exit.
+  if (!isa<Constant>(I->getOperand(OpIdx)))
     return true;
-  gep_type_iterator It = std::next(gep_type_begin(GEP), OpIdx - 1);
-  return !It->isStructTy();
+
+  switch (I->getOpcode()) {
+  default:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+    // FIXME: many arithmetic intrinsics have no issue taking a
+    // variable, however it's hard to distingish these from
+    // specials such as @llvm.frameaddress that require a constant.
+    return !isa<IntrinsicInst>(I);
+  case Instruction::ShuffleVector:
+    // Shufflevector masks are constant.
+    return OpIdx != 2;
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+    // All operands apart from the first are constant.
+    return OpIdx == 0;
+  case Instruction::Alloca:
+    return false;
+  case Instruction::GetElementPtr:
+    if (OpIdx == 0)
+      return true;
+    gep_type_iterator It = std::next(gep_type_begin(I), OpIdx - 1);
+    return !It->isStructTy();
+  }
 }
 
 // All blocks in Blocks unconditionally jump to a common successor. Analyze
@@ -1444,11 +1469,12 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
                                     I0->getOperand(OI), I0->getIterator());
     };
     if (!all_of(Insts, SameAsI0)) {
-      if (isa<GetElementPtrInst>(I0) && !canReplaceGEPOperandWithPHI(I0, OI))
+      if (!canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
-      if (isa<ShuffleVectorInst>(I0) && OI == 2)
-        // We can't create a PHI for a shufflevector mask.
+      if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OI != 0)
+        // Don't create indirect calls!
+        // FIXME: if the call was *already* indirect, we should do this.
         return false;
       ++NumPHIsRequired;
     }

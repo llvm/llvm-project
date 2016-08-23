@@ -25,11 +25,13 @@ end:
 }
 
 ; CHECK-LABEL: {{^}}else_execfix_leave_wqm:
+; CHECK: ; BB#0:
+; CHECK-NEXT: s_mov_b64 [[INIT_EXEC:s\[[0-9]+:[0-9]+\]]], exec
 ; CHECK: ; %Flow
 ; CHECK-NEXT: s_or_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]],
-; CHECK-NEXT: s_and_b64 exec, exec,
-; CHECK-NEXT: s_and_b64 [[DST]], exec, [[DST]]
-; CHECK-NEXT: s_xor_b64 exec, exec, [[DST]]
+; CHECK-NEXT: s_and_b64 exec, exec, [[INIT_EXEC]]
+; CHECK-NEXT: s_and_b64 [[AND_INIT:s\[[0-9]+:[0-9]+\]]], exec, [[DST]]
+; CHECK-NEXT: s_xor_b64 exec, exec, [[AND_INIT]]
 ; CHECK-NEXT: ; mask branch
 define amdgpu_ps void @else_execfix_leave_wqm(i32 %z, float %v) {
 main_body:

@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// Test that only forward declarations are emitted for types dfined in modules.
+// Test that only forward declarations are emitted for types defined in modules.
 
 // Modules:
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -debug-info-kind=standalone \

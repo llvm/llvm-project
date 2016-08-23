@@ -596,3 +596,234 @@ define float @test_frem(float %arg1, float %arg2) {
   %res = frem float %arg1, %arg2
   ret float %res
 }
+
+; CHECK-LABEL: name: test_sadd_overflow
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[VAL:%[0-9]+]](32), [[OVERFLOW:%[0-9]+]](1) = G_SADDO { s32, s1 } [[LHS]], [[RHS]]
+; CHECK: [[RES:%[0-9]+]](64) = G_SEQUENCE { s64, s32, s1 } [[VAL]], 0, [[OVERFLOW]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]], [[ADDR]]
+declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
+define void @test_sadd_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
+  %res = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %lhs, i32 %rhs)
+  store { i32, i1 } %res, { i32, i1 }* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_uadd_overflow
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[ZERO:%[0-9]+]](1) = G_CONSTANT s1 0
+; CHECK: [[VAL:%[0-9]+]](32), [[OVERFLOW:%[0-9]+]](1) = G_UADDE { s32, s1 } [[LHS]], [[RHS]], [[ZERO]]
+; CHECK: [[RES:%[0-9]+]](64) = G_SEQUENCE { s64, s32, s1 } [[VAL]], 0, [[OVERFLOW]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]], [[ADDR]]
+declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
+define void @test_uadd_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
+  %res = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %lhs, i32 %rhs)
+  store { i32, i1 } %res, { i32, i1 }* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_ssub_overflow
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[SUBR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[VAL:%[0-9]+]](32), [[OVERFLOW:%[0-9]+]](1) = G_SSUBO { s32, s1 } [[LHS]], [[RHS]]
+; CHECK: [[RES:%[0-9]+]](64) = G_SEQUENCE { s64, s32, s1 } [[VAL]], 0, [[OVERFLOW]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]], [[SUBR]]
+declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
+define void @test_ssub_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %subr) {
+  %res = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %lhs, i32 %rhs)
+  store { i32, i1 } %res, { i32, i1 }* %subr
+  ret void
+}
+
+; CHECK-LABEL: name: test_usub_overflow
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[SUBR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[ZERO:%[0-9]+]](1) = G_CONSTANT s1 0
+; CHECK: [[VAL:%[0-9]+]](32), [[OVERFLOW:%[0-9]+]](1) = G_USUBE { s32, s1 } [[LHS]], [[RHS]], [[ZERO]]
+; CHECK: [[RES:%[0-9]+]](64) = G_SEQUENCE { s64, s32, s1 } [[VAL]], 0, [[OVERFLOW]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]], [[SUBR]]
+declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
+define void @test_usub_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %subr) {
+  %res = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %lhs, i32 %rhs)
+  store { i32, i1 } %res, { i32, i1 }* %subr
+  ret void
+}
+
+; CHECK-LABEL: name: test_smul_overflow
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[VAL:%[0-9]+]](32), [[OVERFLOW:%[0-9]+]](1) = G_SMULO { s32, s1 } [[LHS]], [[RHS]]
+; CHECK: [[RES:%[0-9]+]](64) = G_SEQUENCE { s64, s32, s1 } [[VAL]], 0, [[OVERFLOW]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]], [[ADDR]]
+declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)
+define void @test_smul_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
+  %res = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %lhs, i32 %rhs)
+  store { i32, i1 } %res, { i32, i1 }* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_umul_overflow
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w0
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[VAL:%[0-9]+]](32), [[OVERFLOW:%[0-9]+]](1) = G_UMULO { s32, s1 } [[LHS]], [[RHS]]
+; CHECK: [[RES:%[0-9]+]](64) = G_SEQUENCE { s64, s32, s1 } [[VAL]], 0, [[OVERFLOW]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]], [[ADDR]]
+declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
+define void @test_umul_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
+  %res = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %lhs, i32 %rhs)
+  store { i32, i1 } %res, { i32, i1 }* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_extractvalue
+; CHECK: [[STRUCT:%[0-9]+]](128) = G_LOAD { s128, p0 }
+; CHECK: [[RES:%[0-9]+]](32) = G_EXTRACT { s32, s128 } [[STRUCT]], 64
+; CHECK: %w0 = COPY [[RES]]
+%struct.nested = type {i8, { i8, i32 }, i32}
+define i32 @test_extractvalue(%struct.nested* %addr) {
+  %struct = load %struct.nested, %struct.nested* %addr
+  %res = extractvalue %struct.nested %struct, 1, 1
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_extractvalue_agg
+; CHECK: [[STRUCT:%[0-9]+]](128) = G_LOAD { s128, p0 }
+; CHECK: [[RES:%[0-9]+]](64) = G_EXTRACT { s64, s128 } [[STRUCT]], 32
+; CHECK: G_STORE { s64, p0 } [[RES]]
+define void @test_extractvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
+  %struct = load %struct.nested, %struct.nested* %addr
+  %res = extractvalue %struct.nested %struct, 1
+  store {i8, i32} %res, {i8, i32}* %addr2
+  ret void
+}
+
+; CHECK-LABEL: name: test_insertvalue
+; CHECK: [[VAL:%[0-9]+]](32) = COPY %w1
+; CHECK: [[STRUCT:%[0-9]+]](128) = G_LOAD { s128, p0 }
+; CHECK: [[NEWSTRUCT:%[0-9]+]](128) = G_INSERT { s128, s32 } [[STRUCT]], [[VAL]], 64
+; CHECK: G_STORE { s128, p0 } [[NEWSTRUCT]],
+define void @test_insertvalue(%struct.nested* %addr, i32 %val) {
+  %struct = load %struct.nested, %struct.nested* %addr
+  %newstruct = insertvalue %struct.nested %struct, i32 %val, 1, 1
+  store %struct.nested %newstruct, %struct.nested* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_insertvalue_agg
+; CHECK: [[SMALLSTRUCT:%[0-9]+]](64) = G_LOAD { s64, p0 }
+; CHECK: [[STRUCT:%[0-9]+]](128) = G_LOAD { s128, p0 }
+; CHECK: [[RES:%[0-9]+]](128) = G_INSERT { s128, s64 } [[STRUCT]], [[SMALLSTRUCT]], 32
+; CHECK: G_STORE { s128, p0 } [[RES]]
+define void @test_insertvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
+  %smallstruct = load {i8, i32}, {i8, i32}* %addr2
+  %struct = load %struct.nested, %struct.nested* %addr
+  %res = insertvalue %struct.nested %struct, {i8, i32} %smallstruct, 1
+  store %struct.nested %res, %struct.nested* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_select
+; CHECK: [[TST:%[0-9]+]](1) = COPY %w0
+; CHECK: [[LHS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[RHS:%[0-9]+]](32) = COPY %w2
+; CHECK: [[RES:%[0-9]+]](32) = G_SELECT { s32, s1 } [[TST]], [[LHS]], [[RHS]]
+; CHECK: %w0 = COPY [[RES]]
+define i32 @test_select(i1 %tst, i32 %lhs, i32 %rhs) {
+  %res = select i1 %tst, i32 %lhs, i32 %rhs
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_fptosi
+; CHECK: [[FPADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[FP:%[0-9]+]](32) = G_LOAD { s32, p0 } [[FPADDR]]
+; CHECK: [[RES:%[0-9]+]](64) = G_FPTOSI { s64, s32 } [[FP]]
+; CHECK: %x0 = COPY [[RES]]
+define i64 @test_fptosi(float* %fp.addr) {
+  %fp = load float, float* %fp.addr
+  %res = fptosi float %fp to i64
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: test_fptoui
+; CHECK: [[FPADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[FP:%[0-9]+]](32) = G_LOAD { s32, p0 } [[FPADDR]]
+; CHECK: [[RES:%[0-9]+]](64) = G_FPTOUI { s64, s32 } [[FP]]
+; CHECK: %x0 = COPY [[RES]]
+define i64 @test_fptoui(float* %fp.addr) {
+  %fp = load float, float* %fp.addr
+  %res = fptoui float %fp to i64
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: test_sitofp
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[IN:%[0-9]+]](32) = COPY %w1
+; CHECK: [[FP:%[0-9]+]](64) = G_SITOFP { s64, s32 } [[IN]]
+; CHECK: G_STORE { s64, p0 } [[FP]], [[ADDR]]
+define void @test_sitofp(double* %addr, i32 %in) {
+  %fp = sitofp i32 %in to double
+  store double %fp, double* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_uitofp
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[IN:%[0-9]+]](32) = COPY %w1
+; CHECK: [[FP:%[0-9]+]](64) = G_UITOFP { s64, s32 } [[IN]]
+; CHECK: G_STORE { s64, p0 } [[FP]], [[ADDR]]
+define void @test_uitofp(double* %addr, i32 %in) {
+  %fp = uitofp i32 %in to double
+  store double %fp, double* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: test_fpext
+; CHECK: [[IN:%[0-9]+]](32) = COPY %s0
+; CHECK: [[RES:%[0-9]+]](64) = G_FPEXT { s64, s32 } [[IN]]
+; CHECK: %d0 = COPY [[RES]]
+define double @test_fpext(float %in) {
+  %res = fpext float %in to double
+  ret double %res
+}
+
+; CHECK-LABEL: name: test_fptrunc
+; CHECK: [[IN:%[0-9]+]](64) = COPY %d0
+; CHECK: [[RES:%[0-9]+]](32) = G_FPTRUNC { s32, s64 } [[IN]]
+; CHECK: %s0 = COPY [[RES]]
+define float @test_fptrunc(double %in) {
+  %res = fptrunc double %in to float
+  ret float %res
+}
+
+; CHECK-LABEL: name: test_constant_float
+; CHECK: [[ADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[TMP:%[0-9]+]](32) = G_FCONSTANT s32 float 1.500000e+00
+; CHECK: G_STORE { s32, p0 } [[TMP]], [[ADDR]]
+define void @test_constant_float(float* %addr) {
+  store float 1.5, float* %addr
+  ret void
+}
+
+; CHECK-LABEL: name: float_comparison
+; CHECK: [[LHSADDR:%[0-9]+]](64) = COPY %x0
+; CHECK: [[RHSADDR:%[0-9]+]](64) = COPY %x1
+; CHECK: [[BOOLADDR:%[0-9]+]](64) = COPY %x2
+; CHECK: [[LHS:%[0-9]+]](32) = G_LOAD { s32, p0 } [[LHSADDR]]
+; CHECK: [[RHS:%[0-9]+]](32) = G_LOAD { s32, p0 } [[RHSADDR]]
+; CHECK: [[TST:%[0-9]+]](1) = G_FCMP { s1, s32 } floatpred(oge), [[LHS]], [[RHS]]
+; CHECK: G_STORE { s1, p0 } [[TST]], [[BOOLADDR]]
+define void @float_comparison(float* %a.addr, float* %b.addr, i1* %bool.addr) {
+  %a = load float, float* %a.addr
+  %b = load float, float* %b.addr
+  %res = fcmp oge float %a, %b
+  store i1 %res, i1* %bool.addr
+  ret void
+}

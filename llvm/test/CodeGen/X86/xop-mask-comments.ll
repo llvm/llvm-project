@@ -98,14 +98,14 @@ define <16 x i8> @vpperm_shuffle_general(<16 x i8> %a0, <16 x i8> %a1) {
 define <2 x double> @vpermil2pd_21(<2 x double> %a0, <2 x double> %a1) {
 ; X32-LABEL: vpermil2pd_21:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermil2pd {{.*#+}} xmm0 = xmm1[1],xmm0[1]
+; X32-NEXT:    vpermil2pd {{.*#+}} xmm0 = zero,xmm0[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpermil2pd_21:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermil2pd {{.*#+}} xmm0 = xmm1[1],xmm0[1]
+; X64-NEXT:    vpermil2pd {{.*#+}} xmm0 = zero,xmm0[0]
 ; X64-NEXT:    retq
-  %1 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> <i64 6, i64 2>, i8 0)
+  %1 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> <i64 10, i64 1>, i8 2)
   ret <2 x double> %1
 }
 

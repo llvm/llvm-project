@@ -30,10 +30,6 @@ class LLVMContext;
 class BlockAddress;
 class Function;
 
-template <>
-struct SymbolTableListSentinelTraits<BasicBlock>
-    : public ilist_half_embedded_sentinel_traits<BasicBlock> {};
-
 /// \brief LLVM Basic Block Representation
 ///
 /// This represents a single basic block in LLVM. A basic block is simply a

@@ -953,20 +953,20 @@ inline LazyCallGraph::Node &LazyCallGraph::Edge::getNode(LazyCallGraph &G) {
 
 // Provide GraphTraits specializations for call graphs.
 template <> struct GraphTraits<LazyCallGraph::Node *> {
-  typedef LazyCallGraph::Node NodeType;
+  typedef LazyCallGraph::Node *NodeRef;
   typedef LazyCallGraph::edge_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(NodeType *N) { return N; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
-  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 template <> struct GraphTraits<LazyCallGraph *> {
-  typedef LazyCallGraph::Node NodeType;
+  typedef LazyCallGraph::Node *NodeRef;
   typedef LazyCallGraph::edge_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(NodeType *N) { return N; }
-  static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
-  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 /// An analysis pass which computes the call graph for a module.

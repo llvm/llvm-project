@@ -7,13 +7,15 @@ function(find_darwin_sdk_dir var sdk_name)
   # Let's first try the internal SDK, otherwise use the public SDK.
   execute_process(
     COMMAND xcodebuild -version -sdk ${sdk_name}.internal Path
+    RESULT_VARIABLE result_process
     OUTPUT_VARIABLE var_internal
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_FILE /dev/null
   )
-  if("" STREQUAL "${var_internal}")
+  if((NOT result_process EQUAL 0) OR "" STREQUAL "${var_internal}")
     execute_process(
       COMMAND xcodebuild -version -sdk ${sdk_name} Path
+      RESULT_VARIABLE result_process
       OUTPUT_VARIABLE var_internal
       OUTPUT_STRIP_TRAILING_WHITESPACE
       ERROR_FILE /dev/null
@@ -21,7 +23,9 @@ function(find_darwin_sdk_dir var sdk_name)
   else()
     set(${var}_INTERNAL ${var_internal} PARENT_SCOPE)
   endif()
-  set(${var} ${var_internal} PARENT_SCOPE)
+  if(result_process EQUAL 0)
+    set(${var} ${var_internal} PARENT_SCOPE)
+  endif()
 endfunction()
 
 # There isn't a clear mapping of what architectures are supported with a given

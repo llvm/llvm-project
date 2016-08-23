@@ -282,3 +282,31 @@ if.end:
 ; CHECK-LABEL: test11
 ; CHECK: shufflevector
 ; CHECK: shufflevector
+
+; We can't common an intrinsic!
+define i32 @test12(i1 zeroext %flag, i32 %w, i32 %x, i32 %y) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %dummy = add i32 %w, 5
+  %sv1 = call i32 @llvm.ctlz.i32(i32 %x)
+  br label %if.end
+
+if.else:
+  %dummy1 = add i32 %w, 6
+  %sv2 = call i32 @llvm.cttz.i32(i32 %x)
+  br label %if.end
+
+if.end:
+  %p = phi i32 [ %sv1, %if.then ], [ %sv2, %if.else ]
+  ret i32 1
+}
+
+declare i32 @llvm.ctlz.i32(i32 %x) readnone
+declare i32 @llvm.cttz.i32(i32 %x) readnone
+
+; CHECK-LABEL: test12
+; CHECK: call i32 @llvm.ctlz
+; CHECK: call i32 @llvm.cttz
+

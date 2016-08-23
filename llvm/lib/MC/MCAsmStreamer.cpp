@@ -180,6 +180,11 @@ public:
 
   void EmitSLEB128Value(const MCExpr *Value) override;
 
+  void EmitDTPRel32Value(const MCExpr *Value) override;
+  void EmitDTPRel64Value(const MCExpr *Value) override;
+  void EmitTPRel32Value(const MCExpr *Value) override;
+  void EmitTPRel64Value(const MCExpr *Value) override;
+
   void EmitGPRel64Value(const MCExpr *Value) override;
 
   void EmitGPRel32Value(const MCExpr *Value) override;
@@ -852,6 +857,34 @@ void MCAsmStreamer::EmitSLEB128Value(const MCExpr *Value) {
     return;
   }
   OS << ".sleb128 ";
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitDTPRel64Value(const MCExpr *Value) {
+  assert(MAI->getDTPRel64Directive() != nullptr);
+  OS << MAI->getDTPRel64Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitDTPRel32Value(const MCExpr *Value) {
+  assert(MAI->getDTPRel32Directive() != nullptr);
+  OS << MAI->getDTPRel32Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitTPRel64Value(const MCExpr *Value) {
+  assert(MAI->getTPRel64Directive() != nullptr);
+  OS << MAI->getTPRel64Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitTPRel32Value(const MCExpr *Value) {
+  assert(MAI->getTPRel32Directive() != nullptr);
+  OS << MAI->getTPRel32Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }

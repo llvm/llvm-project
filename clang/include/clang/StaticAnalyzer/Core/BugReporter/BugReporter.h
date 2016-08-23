@@ -311,18 +311,6 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID& hash) const;
 };
 
-} // end ento namespace
-} // end clang namespace
-
-namespace llvm {
-template <>
-struct ilist_sentinel_traits<clang::ento::BugReport>
-    : public ilist_half_embedded_sentinel_traits<clang::ento::BugReport> {};
-}
-
-namespace clang {
-namespace ento {
-
 //===----------------------------------------------------------------------===//
 // BugTypes (collections of related reports).
 //===----------------------------------------------------------------------===//

@@ -91,8 +91,7 @@ enum AssumptionSign { AS_ASSUMPTION, AS_RESTRICTION };
 /// through the loop.
 typedef std::map<const Loop *, const SCEV *> LoopBoundMapType;
 
-typedef std::deque<MemoryAccess> AccFuncSetType;
-typedef std::map<const BasicBlock *, AccFuncSetType> AccFuncMapType;
+typedef std::vector<std::unique_ptr<MemoryAccess>> AccFuncVector;
 
 /// @brief A class to store information about arrays in the SCoP.
 ///
@@ -1348,10 +1347,10 @@ private:
   /// The underlying Region.
   Region &R;
 
-  // Access function of statements (currently BasicBlocks) .
+  // Access functions of the SCoP.
   //
   // This owns all the MemoryAccess objects of the Scop created in this pass.
-  AccFuncMapType AccFuncMap;
+  AccFuncVector AccessFunctions;
 
   /// Flag to indicate that the scheduler actually optimized the SCoP.
   bool IsOptimized;
@@ -1532,9 +1531,10 @@ private:
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
        ScopDetection::DetectionContext &DC);
 
-  /// @brief Get or create the access function set in a BasicBlock
-  AccFuncSetType &getOrCreateAccessFunctions(const BasicBlock *BB) {
-    return AccFuncMap[BB];
+  /// @brief Add the access function to all MemoryAccess objects of the Scop
+  ///        created in this pass.
+  void addAccessFunction(MemoryAccess *Access) {
+    AccessFunctions.emplace_back(Access);
   }
   //@}
 
@@ -1843,17 +1843,6 @@ private:
 
 public:
   ~Scop();
-
-  /// @brief Get all access functions in a BasicBlock
-  ///
-  /// @param  BB The BasicBlock that containing the access functions.
-  ///
-  /// @return All access functions in BB
-  ///
-  AccFuncSetType *getAccessFunctions(const BasicBlock *BB) {
-    AccFuncMapType::iterator at = AccFuncMap.find(BB);
-    return at != AccFuncMap.end() ? &(at->second) : 0;
-  }
 
   ScalarEvolution *getSE() const;
 

@@ -395,7 +395,8 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process, const ModuleSP &objc_mo
       m_non_pointer_isa_cache_ap(NonPointerISACache::CreateInstance(*this, objc_module_sp)),
       m_tagged_pointer_vendor_ap(TaggedPointerVendorV2::CreateInstance(*this, objc_module_sp)),
       m_encoding_to_type_sp(),
-      m_noclasses_warning_emitted(false)
+      m_noclasses_warning_emitted(false),
+      m_CFBoolean_values()
 {
     static const ConstString g_gdb_object_getClass("gdb_object_getClass");
     m_has_object_getClass =
@@ -2576,4 +2577,45 @@ AppleObjCRuntimeV2::GetPointerISA (ObjCISA isa)
         m_non_pointer_isa_cache_ap->EvaluateNonPointerISA(isa, ret);
     
     return ret;
+}
+
+bool
+AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded ()
+{
+    if (m_CFBoolean_values)
+        return true;
+    
+    static ConstString g_kCFBooleanFalse("kCFBooleanFalse");
+    static ConstString g_kCFBooleanTrue("kCFBooleanTrue");
+    
+    std::function<lldb::addr_t(ConstString)> get_symbol = [this] (ConstString sym) -> lldb::addr_t {
+        SymbolContextList sc_list;
+        if (GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(g_kCFBooleanFalse, lldb::eSymbolTypeData, sc_list) == 1)
+        {
+            SymbolContext sc;
+            sc_list.GetContextAtIndex(0, sc);
+            if (sc.symbol)
+                return sc.symbol->GetLoadAddress(&GetProcess()->GetTarget());
+        }
+        
+        return LLDB_INVALID_ADDRESS;
+    };
+    
+    lldb::addr_t false_addr = get_symbol(g_kCFBooleanFalse);
+    lldb::addr_t true_addr = get_symbol(g_kCFBooleanTrue);
+    
+    return (m_CFBoolean_values = {false_addr,true_addr}).operator bool();
+}
+
+void
+AppleObjCRuntimeV2::GetValuesForGlobalCFBooleans(lldb::addr_t& cf_true,
+                                                 lldb::addr_t& cf_false)
+{
+    if (GetCFBooleanValuesIfNeeded())
+    {
+        cf_true = m_CFBoolean_values->second;
+        cf_false = m_CFBoolean_values->first;
+    }
+    else
+        this->AppleObjCRuntime::GetValuesForGlobalCFBooleans(cf_true, cf_false);
 }

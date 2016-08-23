@@ -167,43 +167,37 @@ private:
 ///
 namespace llvm {
 template <> struct GraphTraits< ::clang::DomTreeNode* > {
-  typedef ::clang::DomTreeNode NodeType;
   typedef ::clang::DomTreeNode *NodeRef;
-  typedef NodeType::iterator  ChildIteratorType;
+  typedef ::clang::DomTreeNode::iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(NodeType *N) {
-    return N;
-  }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return N->end();
-  }
+  static NodeRef getEntryNode(NodeRef N) { return N; }
+  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 
-  typedef df_iterator< ::clang::DomTreeNode* > nodes_iterator;
+  typedef llvm::pointer_iterator<df_iterator<::clang::DomTreeNode *>>
+      nodes_iterator;
 
   static nodes_iterator nodes_begin(::clang::DomTreeNode *N) {
-    return df_begin(getEntryNode(N));
+    return nodes_iterator(df_begin(getEntryNode(N)));
   }
 
   static nodes_iterator nodes_end(::clang::DomTreeNode *N) {
-    return df_end(getEntryNode(N));
+    return nodes_iterator(df_end(getEntryNode(N)));
   }
 };
 
 template <> struct GraphTraits< ::clang::DominatorTree* >
   : public GraphTraits< ::clang::DomTreeNode* > {
-  static NodeType *getEntryNode(::clang::DominatorTree *DT) {
+  static NodeRef getEntryNode(::clang::DominatorTree *DT) {
     return DT->getRootNode();
   }
 
   static nodes_iterator nodes_begin(::clang::DominatorTree *N) {
-    return df_begin(getEntryNode(N));
+    return nodes_iterator(df_begin(getEntryNode(N)));
   }
 
   static nodes_iterator nodes_end(::clang::DominatorTree *N) {
-    return df_end(getEntryNode(N));
+    return nodes_iterator(df_end(getEntryNode(N)));
   }
 };
 } // end namespace llvm

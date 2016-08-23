@@ -433,16 +433,15 @@ bool ModuleManager::lookupModuleFile(StringRef FileName,
 namespace llvm {
   template<>
   struct GraphTraits<ModuleManager> {
-    typedef ModuleFile NodeType;
     typedef ModuleFile *NodeRef;
     typedef llvm::SetVector<ModuleFile *>::const_iterator ChildIteratorType;
     typedef ModuleManager::ModuleConstIterator nodes_iterator;
-    
-    static ChildIteratorType child_begin(NodeType *Node) {
+
+    static ChildIteratorType child_begin(NodeRef Node) {
       return Node->Imports.begin();
     }
 
-    static ChildIteratorType child_end(NodeType *Node) {
+    static ChildIteratorType child_end(NodeRef Node) {
       return Node->Imports.end();
     }
     
