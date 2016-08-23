@@ -130,15 +130,18 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeCFGSimplifyPassPass(R);
 }
 
+void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
+  const std::vector<const char *> &undefs = Mod->getAsmUndefinedRefs();
+  for (int i = 0, e = undefs.size(); i != e; ++i)
+    AsmUndefinedRefs[undefs[i]] = 1;
+}
+
 bool LTOCodeGenerator::addModule(LTOModule *Mod) {
   assert(&Mod->getModule().getContext() == &Context &&
          "Expected module in same context");
 
   bool ret = TheLinker->linkInModule(Mod->takeModule());
-
-  const std::vector<const char *> &undefs = Mod->getAsmUndefinedRefs();
-  for (int i = 0, e = undefs.size(); i != e; ++i)
-    AsmUndefinedRefs[undefs[i]] = 1;
+  setAsmUndefinedRefs(Mod);
 
   // We've just changed the input, so let's make sure we verify it.
   HasVerifiedInput = false;
@@ -154,10 +157,7 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
 
   MergedModule = Mod->takeModule();
   TheLinker = make_unique<Linker>(*MergedModule);
-
-  const std::vector<const char*> &Undefs = Mod->getAsmUndefinedRefs();
-  for (int I = 0, E = Undefs.size(); I != E; ++I)
-    AsmUndefinedRefs[Undefs[I]] = 1;
+  setAsmUndefinedRefs(&*Mod);
 
   // We've just changed the input, so let's make sure we verify it.
   HasVerifiedInput = false;
