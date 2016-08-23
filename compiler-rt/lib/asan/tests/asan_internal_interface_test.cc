@@ -13,7 +13,7 @@
 #include "asan_interface_internal.h"
 #include "asan_test_utils.h"
 
-TEST(AddressSanitizerInterface, SetShadow) {
+TEST(AddressSanitizerInternalInterface, SetShadow) {
   std::vector<char> buffer(17, 0xff);
 
   __asan_set_shadow_00((uptr)buffer.data(), buffer.size());
