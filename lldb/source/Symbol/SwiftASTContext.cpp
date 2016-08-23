@@ -282,6 +282,8 @@ GetEnumInfoCache (const swift::ASTContext *a)
 CachedMemberInfo *
 SwiftASTContext::GetCachedMemberInfo (void* type)
 {
+    VALID_OR_RETURN(nullptr);
+
     if (type)
     {
         //printf("CompilerType::GetCachedMemberInfo () for %s...", GetTypeName().c_str());
