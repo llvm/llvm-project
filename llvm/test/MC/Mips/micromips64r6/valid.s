@@ -326,5 +326,9 @@ a:
         cfc2 $3, $4              # CHECK: cfc2 $3, $4             # encoding: [0x00,0x64,0xcd,0x3c]
         ctc1 $5, $6              # CHECK: ctc1 $5, $6             # encoding: [0x54,0xa6,0x18,0x3b]
         ctc2 $7, $8              # CHECK: ctc2 $7, $8             # encoding: [0x00,0xe8,0xdd,0x3c]
+        bltzc $6, 128            # CHECK: bltzc $6, 128           # encoding: [0xd4,0xc6,0x00,0x20]
+        blezc $2, 256            # CHECK: blezc $2, 256           # encoding: [0xf4,0x40,0x00,0x40]
+        bgezc $16, 512           # CHECK: bgezc $16, 512          # encoding: [0xf6,0x10,0x00,0x80]
+        bgtzc $12, 1024          # CHECK: bgtzc $12, 1024         # encoding: [0xd5,0x80,0x01,0x00]
 
 1:

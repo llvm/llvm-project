@@ -460,6 +460,16 @@ DecodePOP37GroupBranchMMR6(MCInst &MI, InsnType insn, uint64_t Address,
 
 template <typename InsnType>
 static DecodeStatus
+DecodePOP65GroupBranchMMR6(MCInst &MI, InsnType insn, uint64_t Address,
+                           const void *Decoder);
+
+template <typename InsnType>
+static DecodeStatus
+DecodePOP75GroupBranchMMR6(MCInst &MI, InsnType insn, uint64_t Address,
+                           const void *Decoder);
+
+template <typename InsnType>
+static DecodeStatus
 DecodeBlezlGroupBranch(MCInst &MI, InsnType insn, uint64_t Address,
                        const void *Decoder);
 
@@ -630,7 +640,7 @@ static DecodeStatus DecodePOP35GroupBranchMMR6(MCInst &MI, InsnType insn,
                                                const void *Decoder) {
   InsnType Rt = fieldFromInstruction(insn, 21, 5);
   InsnType Rs = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2;
+  int64_t Imm = 0;
 
   if (Rs >= Rt) {
     MI.setOpcode(Mips::BOVC_MMR6);
@@ -638,16 +648,19 @@ static DecodeStatus DecodePOP35GroupBranchMMR6(MCInst &MI, InsnType insn,
                                        Rt)));
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rs)));
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
   } else if (Rs != 0 && Rs < Rt) {
     MI.setOpcode(Mips::BEQC_MMR6);
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rs)));
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rt)));
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   } else {
     MI.setOpcode(Mips::BEQZALC_MMR6);
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rt)));
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
   }
 
   MI.addOperand(MCOperand::createImm(Imm));
@@ -700,7 +713,7 @@ static DecodeStatus DecodePOP37GroupBranchMMR6(MCInst &MI, InsnType insn,
                                                const void *Decoder) {
   InsnType Rt = fieldFromInstruction(insn, 21, 5);
   InsnType Rs = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2;
+  int64_t Imm = 0;
 
   if (Rs >= Rt) {
     MI.setOpcode(Mips::BNVC_MMR6);
@@ -708,17 +721,98 @@ static DecodeStatus DecodePOP37GroupBranchMMR6(MCInst &MI, InsnType insn,
                                        Rt)));
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rs)));
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
   } else if (Rs != 0 && Rs < Rt) {
     MI.setOpcode(Mips::BNEC_MMR6);
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rs)));
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rt)));
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   } else {
     MI.setOpcode(Mips::BNEZALC_MMR6);
     MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                        Rt)));
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
   }
+
+  MI.addOperand(MCOperand::createImm(Imm));
+
+  return MCDisassembler::Success;
+}
+
+template <typename InsnType>
+static DecodeStatus DecodePOP65GroupBranchMMR6(MCInst &MI, InsnType insn,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  // We have:
+  //    0b110101 ttttt sssss iiiiiiiiiiiiiiii
+  //      Invalid if rt == 0
+  //      BGTZC_MMR6   if rs == 0  && rt != 0
+  //      BLTZC_MMR6   if rs == rt && rt != 0
+  //      BLTC_MMR6    if rs != rt && rs != 0  && rt != 0
+
+  InsnType Rt = fieldFromInstruction(insn, 21, 5);
+  InsnType Rs = fieldFromInstruction(insn, 16, 5);
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
+  bool HasRs = false;
+
+  if (Rt == 0)
+    return MCDisassembler::Fail;
+  else if (Rs == 0)
+    MI.setOpcode(Mips::BGTZC_MMR6);
+  else if (Rs == Rt)
+    MI.setOpcode(Mips::BLTZC_MMR6);
+  else {
+    MI.setOpcode(Mips::BLTC_MMR6);
+    HasRs = true;
+  }
+
+  if (HasRs)
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                              Rs)));
+
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                     Rt)));
+
+  MI.addOperand(MCOperand::createImm(Imm));
+
+  return MCDisassembler::Success;
+}
+
+template <typename InsnType>
+static DecodeStatus DecodePOP75GroupBranchMMR6(MCInst &MI, InsnType insn,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  // We have:
+  //    0b111101 ttttt sssss iiiiiiiiiiiiiiii
+  //      Invalid if rt == 0
+  //      BLEZC_MMR6   if rs == 0  && rt != 0
+  //      BGEZC_MMR6   if rs == rt && rt != 0
+  //      BGEC_MMR6    if rs != rt && rs != 0  && rt != 0
+
+  InsnType Rt = fieldFromInstruction(insn, 21, 5);
+  InsnType Rs = fieldFromInstruction(insn, 16, 5);
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
+  bool HasRs = false;
+
+  if (Rt == 0)
+    return MCDisassembler::Fail;
+  else if (Rs == 0)
+    MI.setOpcode(Mips::BLEZC_MMR6);
+  else if (Rs == Rt)
+    MI.setOpcode(Mips::BGEZC_MMR6);
+  else {
+    HasRs = true;
+    MI.setOpcode(Mips::BGEC_MMR6);
+  }
+
+  if (HasRs)
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rs)));
+
+  MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                     Rt)));
 
   MI.addOperand(MCOperand::createImm(Imm));
 
@@ -2008,7 +2102,7 @@ static DecodeStatus DecodeBranchTarget21MM(MCInst &Inst,
                                            unsigned Offset,
                                            uint64_t Address,
                                            const void *Decoder) {
-  int32_t BranchOffset = SignExtend32<21>(Offset) << 1;
+  int32_t BranchOffset = SignExtend32<21>(Offset) * 4 + 4;
 
   Inst.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
@@ -2046,7 +2140,7 @@ static DecodeStatus DecodeBranchTargetMM(MCInst &Inst,
                                          unsigned Offset,
                                          uint64_t Address,
                                          const void *Decoder) {
-  int32_t BranchOffset = SignExtend32<16>(Offset) * 2;
+  int32_t BranchOffset = SignExtend32<16>(Offset) * 2 + 4;
   Inst.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
 }
@@ -2285,7 +2379,7 @@ static DecodeStatus DecodeBgtzGroupBranchMMR6(MCInst &MI, InsnType insn,
 
   InsnType Rt = fieldFromInstruction(insn, 21, 5);
   InsnType Rs = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2;
+  InsnType Imm = 0;
   bool HasRs = false;
   bool HasRt = false;
 
@@ -2294,15 +2388,18 @@ static DecodeStatus DecodeBgtzGroupBranchMMR6(MCInst &MI, InsnType insn,
   else if (Rs == 0) {
     MI.setOpcode(Mips::BGTZALC_MMR6);
     HasRt = true;
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
   }
   else if (Rs == Rt) {
     MI.setOpcode(Mips::BLTZALC_MMR6);
     HasRs = true;
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
   }
   else {
     MI.setOpcode(Mips::BLTUC_MMR6);
     HasRs = true;
     HasRt = true;
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   }
 
   if (HasRs)
@@ -2324,25 +2421,30 @@ static DecodeStatus DecodeBlezGroupBranchMMR6(MCInst &MI, InsnType insn,
   const void *Decoder) {
   // We have:
   //    0b000110 ttttt sssss iiiiiiiiiiiiiiii
-  //      Invalid        if rs == 0
+  //      Invalid        if rt == 0
   //      BLEZALC_MMR6   if rs == 0  && rt != 0
   //      BGEZALC_MMR6   if rs == rt && rt != 0
   //      BGEUC_MMR6     if rs != rt && rs != 0  && rt != 0
 
   InsnType Rt = fieldFromInstruction(insn, 21, 5);
   InsnType Rs = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2;
+  InsnType Imm = 0;
   bool HasRs = false;
 
   if (Rt == 0)
     return MCDisassembler::Fail;
-  else if (Rs == 0)
+  else if (Rs == 0) {
     MI.setOpcode(Mips::BLEZALC_MMR6);
-  else if (Rs == Rt)
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
+  }
+  else if (Rs == Rt) {
     MI.setOpcode(Mips::BGEZALC_MMR6);
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2 + 4;
+  }
   else {
     HasRs = true;
     MI.setOpcode(Mips::BGEUC_MMR6);
+    Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   }
 
   if (HasRs)

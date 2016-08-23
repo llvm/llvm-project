@@ -9,7 +9,7 @@
 
 @str = internal constant [12 x i8] c"Hello World\00"
 
-define i32 @main() {
+define i32 @main() "no-frame-pointer-elim"="true" {
 	%tmp = call i32 @puts( i8* getelementptr ([12 x i8], [12 x i8]* @str, i32 0, i64 0) )		; <i32> [#uses=0]
 	ret i32 0
 }
@@ -17,7 +17,10 @@ define i32 @main() {
 declare i32 @puts(i8*)
 
 ; CHECK-LABEL: main
-; CHECK: mov
+; CHECK-NOT: mov
+; CHECK: mov r11, sp
+; CHECK-NOT: mov
+; CHECK: mov r0, #0
 ; CHECK-NOT: mov
 
 ; CHECK-FP-ELIM-LABEL: main

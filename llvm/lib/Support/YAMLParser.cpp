@@ -149,10 +149,6 @@ struct Token : ilist_node<Token> {
 }
 
 namespace llvm {
-template <>
-struct ilist_sentinel_traits<Token>
-    : public ilist_full_embedded_sentinel_traits<Token> {};
-
 template<>
 struct ilist_node_traits<Token> {
   Token *createNode(const Token &V) {

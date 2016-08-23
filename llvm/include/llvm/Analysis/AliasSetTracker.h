@@ -239,9 +239,7 @@ public:
   };
 
 private:
-  // Can only be created by AliasSetTracker. Also, ilist creates one
-  // to serve as a sentinel.
-  friend struct ilist_sentinel_traits<AliasSet>;
+  // Can only be created by AliasSetTracker.
   AliasSet()
       : PtrList(nullptr), PtrListEnd(&PtrList), Forward(nullptr), RefCount(0),
         AliasAny(false), Access(NoAccess), Alias(SetMustAlias),

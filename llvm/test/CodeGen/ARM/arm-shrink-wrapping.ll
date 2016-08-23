@@ -59,7 +59,7 @@
 ; DISABLE-NEXT: pop {r7, pc}
 ;
 ; ENABLE-NEXT: bx lr
-define i32 @foo(i32 %a, i32 %b) {
+define i32 @foo(i32 %a, i32 %b) "no-frame-pointer-elim"="true" {
   %tmp = alloca i32, align 4
   %tmp2 = icmp slt i32 %a, %b
   br i1 %tmp2, label %true, label %false
@@ -124,7 +124,7 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE-NEXT: pop {r4, r7, pc}
 ;
 ; ENABLE-NEXT: bx lr
-define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
+define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -178,7 +178,7 @@ declare i32 @something(...)
 ; CHECK: @ %for.exit
 ; CHECK: nop
 ; CHECK: pop {r4
-define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
+define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "no-frame-pointer-elim"="true" {
 entry:
   br label %for.preheader
 
@@ -248,7 +248,7 @@ for.end:                                          ; preds = %for.body
 ; DISABLE-NEXT: pop {r4, r7, pc}
 ;
 ; ENABLE-NEXT: bx lr
-define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
+define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -327,7 +327,7 @@ declare void @somethingElse(...)
 ; DISABLE-NEXT: pop {r4, r7, pc}
 ;
 ; ENABLE-NEXT: bx lr
-define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" #0 {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -405,7 +405,7 @@ entry:
 ; DISABLE-NEXT: pop {r4, r7, pc}
 ;
 ; ENABLE-NEXT: bx lr
-define i32 @inlineAsm(i32 %cond, i32 %N) {
+define i32 @inlineAsm(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -474,7 +474,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; ARM-DISABLE-NEXT: mov sp, r7
 ; THUMB-DISABLE-NEXT: add sp, #12
 ; DISABLE-NEXT: pop {r7, pc}
-define i32 @callVariadicFunc(i32 %cond, i32 %N) {
+define i32 @callVariadicFunc(i32 %cond, i32 %N) "no-frame-pointer-elim"="true" {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -521,7 +521,7 @@ declare i32 @someVariadicFunc(i32, ...)
 ;
 ; CHECK: bl{{x?}} _abort
 ; ENABLE-NOT: pop
-define i32 @noreturn(i8 signext %bad_thing) {
+define i32 @noreturn(i8 signext %bad_thing) "no-frame-pointer-elim"="true" {
 entry:
   %tobool = icmp eq i8 %bad_thing, 0
   br i1 %tobool, label %if.end, label %if.abort
@@ -548,7 +548,7 @@ attributes #0 = { noreturn nounwind }
 ; The only condition for this test is the compilation finishes correctly.
 ; CHECK-LABEL: infiniteloop
 ; CHECK: pop
-define void @infiniteloop() {
+define void @infiniteloop() "no-frame-pointer-elim"="true" {
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -570,7 +570,7 @@ if.end:
 ; Another infinite loop test this time with a body bigger than just one block.
 ; CHECK-LABEL: infiniteloop2
 ; CHECK: pop
-define void @infiniteloop2() {
+define void @infiniteloop2() "no-frame-pointer-elim"="true" {
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -600,7 +600,7 @@ if.end:
 ; Another infinite loop test this time with two nested infinite loop.
 ; CHECK-LABEL: infiniteloop3
 ; CHECK: bx lr
-define void @infiniteloop3() {
+define void @infiniteloop3() "no-frame-pointer-elim"="true" {
 entry:
   br i1 undef, label %loop2a, label %body
 
@@ -657,7 +657,7 @@ declare double @llvm.pow.f64(double, double)
 ; DISABLE: pop
 ;
 ; CHECK: bl
-define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) {
+define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) "no-frame-pointer-elim"="true" {
 bb:
   br i1 %or.cond, label %bb3, label %bb13
 

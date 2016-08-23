@@ -49,18 +49,13 @@ ARMBaseRegisterInfo::ARMBaseRegisterInfo()
     : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC), BasePtr(ARM::R6) {}
 
 static unsigned getFramePointerReg(const ARMSubtarget &STI) {
-  if (STI.isTargetMachO())
-    return ARM::R7;
-  else if (STI.isTargetWindows())
-    return ARM::R11;
-  else // ARM EABI
-    return STI.isThumb() ? ARM::R7 : ARM::R11;
+  return STI.useR7AsFramePointer() ? ARM::R7 : ARM::R11;
 }
 
 const MCPhysReg*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
-  bool UseSplitPush = STI.splitFramePushPop();
+  bool UseSplitPush = STI.splitFramePushPop(*MF);
   const MCPhysReg *RegList =
       STI.isTargetDarwin()
           ? CSR_iOS_SaveList

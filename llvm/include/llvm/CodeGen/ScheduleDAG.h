@@ -679,14 +679,13 @@ namespace llvm {
   };
 
   template <> struct GraphTraits<SUnit*> {
-    typedef SUnit NodeType;
     typedef SUnit *NodeRef;
     typedef SUnitIterator ChildIteratorType;
-    static inline NodeType *getEntryNode(SUnit *N) { return N; }
-    static inline ChildIteratorType child_begin(NodeType *N) {
+    static inline NodeRef getEntryNode(SUnit *N) { return N; }
+    static inline ChildIteratorType child_begin(NodeRef N) {
       return SUnitIterator::begin(N);
     }
-    static inline ChildIteratorType child_end(NodeType *N) {
+    static inline ChildIteratorType child_end(NodeRef N) {
       return SUnitIterator::end(N);
     }
   };

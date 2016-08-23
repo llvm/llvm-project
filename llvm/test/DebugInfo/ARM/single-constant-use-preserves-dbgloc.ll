@@ -9,8 +9,9 @@
 ;     return -1;
 ; }
 
+; CHECK: mvnlt
 ; CHECK: .loc 1 6 7
-; CHECK: mvn
+; CHECK: strlt
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"

@@ -154,32 +154,26 @@ struct isPodLike<TerminatorInst::SuccIterator<T, U>> {
 // graph of basic blocks...
 
 template <> struct GraphTraits<BasicBlock*> {
-  typedef BasicBlock NodeType;
   typedef BasicBlock *NodeRef;
   typedef succ_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(BasicBlock *BB) { return BB; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
+  static NodeRef getEntryNode(BasicBlock *BB) { return BB; }
+  static inline ChildIteratorType child_begin(NodeRef N) {
     return succ_begin(N);
   }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return succ_end(N);
-  }
+  static inline ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 };
 
 template <> struct GraphTraits<const BasicBlock*> {
-  typedef const BasicBlock NodeType;
   typedef const BasicBlock *NodeRef;
   typedef succ_const_iterator ChildIteratorType;
 
-  static NodeType *getEntryNode(const BasicBlock *BB) { return BB; }
+  static NodeRef getEntryNode(const BasicBlock *BB) { return BB; }
 
-  static inline ChildIteratorType child_begin(NodeType *N) {
+  static inline ChildIteratorType child_begin(NodeRef N) {
     return succ_begin(N);
   }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return succ_end(N);
-  }
+  static inline ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -188,31 +182,23 @@ template <> struct GraphTraits<const BasicBlock*> {
 // instead of the successor edges.
 //
 template <> struct GraphTraits<Inverse<BasicBlock*> > {
-  typedef BasicBlock NodeType;
   typedef BasicBlock *NodeRef;
   typedef pred_iterator ChildIteratorType;
-  static NodeType *getEntryNode(Inverse<BasicBlock *> G) { return G.Graph; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
+  static NodeRef getEntryNode(Inverse<BasicBlock *> G) { return G.Graph; }
+  static inline ChildIteratorType child_begin(NodeRef N) {
     return pred_begin(N);
   }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return pred_end(N);
-  }
+  static inline ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
 template <> struct GraphTraits<Inverse<const BasicBlock*> > {
-  typedef const BasicBlock NodeType;
   typedef const BasicBlock *NodeRef;
   typedef const_pred_iterator ChildIteratorType;
-  static NodeType *getEntryNode(Inverse<const BasicBlock*> G) {
-    return G.Graph;
-  }
-  static inline ChildIteratorType child_begin(NodeType *N) {
+  static NodeRef getEntryNode(Inverse<const BasicBlock *> G) { return G.Graph; }
+  static inline ChildIteratorType child_begin(NodeRef N) {
     return pred_begin(N);
   }
-  static inline ChildIteratorType child_end(NodeType *N) {
-    return pred_end(N);
-  }
+  static inline ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
 
@@ -226,7 +212,7 @@ template <> struct GraphTraits<Inverse<const BasicBlock*> > {
 // except that the root node is implicitly the first node of the function.
 //
 template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
-  static NodeType *getEntryNode(Function *F) { return &F->getEntryBlock(); }
+  static NodeRef getEntryNode(Function *F) { return &F->getEntryBlock(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
   typedef pointer_iterator<Function::iterator> nodes_iterator;
@@ -240,7 +226,7 @@ template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
 };
 template <> struct GraphTraits<const Function*> :
   public GraphTraits<const BasicBlock*> {
-  static NodeType *getEntryNode(const Function *F) {return &F->getEntryBlock();}
+  static NodeRef getEntryNode(const Function *F) { return &F->getEntryBlock(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
   typedef pointer_iterator<Function::const_iterator> nodes_iterator;
@@ -261,13 +247,13 @@ template <> struct GraphTraits<const Function*> :
 //
 template <> struct GraphTraits<Inverse<Function*> > :
   public GraphTraits<Inverse<BasicBlock*> > {
-  static NodeType *getEntryNode(Inverse<Function*> G) {
+  static NodeRef getEntryNode(Inverse<Function *> G) {
     return &G.Graph->getEntryBlock();
   }
 };
 template <> struct GraphTraits<Inverse<const Function*> > :
   public GraphTraits<Inverse<const BasicBlock*> > {
-  static NodeType *getEntryNode(Inverse<const Function *> G) {
+  static NodeRef getEntryNode(Inverse<const Function *> G) {
     return &G.Graph->getEntryBlock();
   }
 };

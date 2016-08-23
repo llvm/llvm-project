@@ -3,7 +3,7 @@
 
 @"\01LC" = external constant [36 x i8], align 1		; <[36 x i8]*> [#uses=1]
 
-define i32 @t(i32, ...) nounwind {
+define i32 @t(i32, ...) nounwind "no-frame-pointer-elim"="true" {
 entry:
 ; CHECK-LABEL: t:
 ; CHECK: add r7, sp, #12

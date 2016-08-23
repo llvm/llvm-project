@@ -409,50 +409,48 @@ public:
 // Provide graph traits for tranversing call graphs using standard graph
 // traversals.
 template <> struct GraphTraits<CallGraphNode *> {
-  typedef CallGraphNode NodeType;
   typedef CallGraphNode *NodeRef;
 
   typedef CallGraphNode::CallRecord CGNPairTy;
 
-  static NodeType *getEntryNode(CallGraphNode *CGN) { return CGN; }
+  static NodeRef getEntryNode(CallGraphNode *CGN) { return CGN; }
 
   static CallGraphNode *CGNGetValue(CGNPairTy P) { return P.second; }
 
-  typedef mapped_iterator<NodeType::iterator, decltype(&CGNGetValue)>
+  typedef mapped_iterator<CallGraphNode::iterator, decltype(&CGNGetValue)>
       ChildIteratorType;
 
-  static inline ChildIteratorType child_begin(NodeType *N) {
+  static inline ChildIteratorType child_begin(NodeRef N) {
     return ChildIteratorType(N->begin(), &CGNGetValue);
   }
-  static inline ChildIteratorType child_end(NodeType *N) {
+  static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType(N->end(), &CGNGetValue);
   }
 };
 
 template <> struct GraphTraits<const CallGraphNode *> {
-  typedef const CallGraphNode NodeType;
   typedef const CallGraphNode *NodeRef;
 
   typedef CallGraphNode::CallRecord CGNPairTy;
 
-  static NodeType *getEntryNode(const CallGraphNode *CGN) { return CGN; }
+  static NodeRef getEntryNode(const CallGraphNode *CGN) { return CGN; }
 
   static const CallGraphNode *CGNGetValue(CGNPairTy P) { return P.second; }
 
-  typedef mapped_iterator<NodeType::const_iterator, decltype(&CGNGetValue)>
+  typedef mapped_iterator<CallGraphNode::const_iterator, decltype(&CGNGetValue)>
       ChildIteratorType;
 
-  static inline ChildIteratorType child_begin(NodeType *N) {
+  static inline ChildIteratorType child_begin(NodeRef N) {
     return ChildIteratorType(N->begin(), &CGNGetValue);
   }
-  static inline ChildIteratorType child_end(NodeType *N) {
+  static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType(N->end(), &CGNGetValue);
   }
 };
 
 template <>
 struct GraphTraits<CallGraph *> : public GraphTraits<CallGraphNode *> {
-  static NodeType *getEntryNode(CallGraph *CGN) {
+  static NodeRef getEntryNode(CallGraph *CGN) {
     return CGN->getExternalCallingNode(); // Start at the external node!
   }
   typedef std::pair<const Function *const, std::unique_ptr<CallGraphNode>>
@@ -475,7 +473,7 @@ struct GraphTraits<CallGraph *> : public GraphTraits<CallGraphNode *> {
 template <>
 struct GraphTraits<const CallGraph *> : public GraphTraits<
                                             const CallGraphNode *> {
-  static NodeType *getEntryNode(const CallGraph *CGN) {
+  static NodeRef getEntryNode(const CallGraph *CGN) {
     return CGN->getExternalCallingNode(); // Start at the external node!
   }
   typedef std::pair<const Function *const, std::unique_ptr<CallGraphNode>>

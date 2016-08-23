@@ -560,11 +560,15 @@ public:
     return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;
   }
 
+  bool useR7AsFramePointer() const {
+    return isTargetDarwin() || (!isTargetWindows() && isThumb());
+  }
   /// Returns true if the frame setup is split into two separate pushes (first
   /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
   /// to lr.
-  bool splitFramePushPop() const {
-    return isTargetMachO();
+  bool splitFramePushPop(const MachineFunction &MF) const {
+    return useR7AsFramePointer() &&
+           MF.getTarget().Options.DisableFramePointerElim(MF);
   }
 
   bool useStride4VFPs(const MachineFunction &MF) const;

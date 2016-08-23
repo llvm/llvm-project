@@ -1807,6 +1807,7 @@ def SI_MASK_BRANCH : PseudoInstSI <
   let isTerminator = 1;
   let isBarrier = 0;
   let SALU = 1;
+  let Uses = [EXEC];
 }
 
 let Uses = [EXEC], Defs = [EXEC, SCC] in {

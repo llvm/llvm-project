@@ -1,16 +1,22 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -aarch64-bcc-offset-bits=3 < %s | FileCheck %s
 
 ; CHECK-LABEL: invert_bcc:
-; CHECK:       fcmp s0, s1
-; CHECK-NEXT:  b.ne [[BB1:LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT:  b.vs [[BB2:LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT:  b [[BB2]]
+; CHECK:      fcmp s0, s1
+; CHECK-NEXT: b.eq [[JUMP_BB1:LBB[0-9]+_[0-9]+]]
+; CHECK-NEXT: b [[JUMP_BB2:LBB[0-9]+_[0-9]+]]
 
-; CHECK: [[BB1]]:
+; CHECK-NEXT: [[JUMP_BB1]]:
+; CHECK-NEXT: b [[BB1:LBB[0-9]+_[0-9]+]]
+
+; CHECK-NEXT: [[JUMP_BB2]]:
+; CHECK-NEXT: b.vc [[BB2:LBB[0-9]+_[0-9]+]]
+; CHECK-NEXT: b [[BB1]]
+
+; CHECK: [[BB2]]: ; %bb2
 ; CHECK: mov w{{[0-9]+}}, #9
 ; CHECK: ret
 
-; CHECK: [[BB2]]:
+; CHECK: [[BB1]]: ; %bb1
 ; CHECK: mov w{{[0-9]+}}, #42
 ; CHECK: ret
 

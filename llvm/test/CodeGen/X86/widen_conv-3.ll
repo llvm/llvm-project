@@ -74,7 +74,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm1
-; X86-SSE2-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
+; X86-SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; X86-SSE2-NEXT:    movss %xmm1, 8(%eax)
 ; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X86-SSE2-NEXT:    movss %xmm0, 4(%eax)
@@ -123,7 +123,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE2-NEXT:    psrad $24, %xmm0
 ; X64-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE2-NEXT:    movlps %xmm0, (%rdi)
-; X64-SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-SSE2-NEXT:    movss %xmm0, 8(%rdi)
 ; X64-SSE2-NEXT:    retq
 ;

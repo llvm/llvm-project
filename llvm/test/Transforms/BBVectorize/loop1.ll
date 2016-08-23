@@ -83,7 +83,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK-UNRL: %add12 = fadd <2 x double> %add7, %mul11
 ; CHECK-UNRL: %4 = bitcast double* %arrayidx14 to <2 x double>*
 ; CHECK-UNRL: store <2 x double> %add12, <2 x double>* %4, align 8
-; CHECK-UNRL: %indvars.iv.next.1 = add nuw nsw i64 %indvars.iv, 2
+; CHECK-UNRL: %indvars.iv.next.1 = add nsw i64 %indvars.iv, 2
 ; CHECK-UNRL: %lftr.wideiv.1 = trunc i64 %indvars.iv.next.1 to i32
 ; CHECK-UNRL: %exitcond.1 = icmp eq i32 %lftr.wideiv.1, 10
 ; CHECK-UNRL: br i1 %exitcond.1, label %for.end, label %for.body
