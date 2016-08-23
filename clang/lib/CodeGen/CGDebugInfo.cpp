@@ -1650,12 +1650,15 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
 
 /// Does a type definition exist in an imported clang module?
 static bool isDefinedInClangModule(const RecordDecl *RD) {
+  // Only definitions that where imported from an AST file come from a module.
   if (!RD || !RD->isFromASTFile())
     return false;
+  // Anonymous entities cannot be addressed. Treat them as not from module.
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-    assert(CXXDecl->isCompleteDefinition() && "incomplete record definition");
+    if (!CXXDecl->isCompleteDefinition())
+      return false;
     auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
     if (TemplateKind != TSK_Undeclared) {
       // This is a template, check the origin of the first member.
@@ -2122,6 +2125,11 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     int64_t Count = -1; // Count == -1 is an unbounded array.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
       Count = CAT->getSize().getZExtValue();
+    else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
+      llvm::APSInt V;
+      if (VAT->getSizeExpr()->EvaluateAsInt(V, CGM.getContext()))
+        Count = V.getExtValue();
+    }
 
     // FIXME: Verify this is right for VLAs.
     Subscripts.push_back(DBuilder.getOrCreateSubrange(0, Count));

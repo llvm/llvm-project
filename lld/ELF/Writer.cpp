@@ -598,6 +598,8 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (ScriptConfig->HasContents)
     return;
 
+  ElfSym<ELFT>::EhdrStart = Symtab<ELFT>::X->addIgnored("__ehdr_start");
+
   auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
                        DefinedRegular<ELFT> *&Sym2) {
     Sym1 = Symtab<ELFT>::X->addIgnored(S, STV_DEFAULT);
@@ -1180,6 +1182,10 @@ static uint16_t getELFType() {
 // to each section. This function fixes some predefined absolute
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
+  // __ehdr_start is the location of program headers.
+  if (ElfSym<ELFT>::EhdrStart)
+    ElfSym<ELFT>::EhdrStart->Value = Out<ELFT>::ProgramHeaders->getVA();
+
   auto Set = [](DefinedRegular<ELFT> *S1, DefinedRegular<ELFT> *S2, uintX_t V) {
     if (S1)
       S1->Value = V;
