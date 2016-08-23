@@ -469,7 +469,7 @@ public:
                           const FunctionImporter::ImportMapTy &ImportList,
                           const GVSummaryMapTy &DefinedGlobals,
                           MapVector<StringRef, MemoryBufferRef> &ModuleMap) {
-    LLVMContext BackendContext;
+    LTOLLVMContext BackendContext(Conf);
 
     ErrorOr<std::unique_ptr<Module>> MOrErr =
         parseBitcodeFile(MBRef, BackendContext);
