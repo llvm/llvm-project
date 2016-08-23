@@ -2230,7 +2230,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
         /*IsHostDependence=*/BuildForOffloadDevice,
         [&](Action *DepA, const ToolChain *DepTC, const char *DepBoundArch) {
           OffloadDependencesInputInfo.push_back(BuildJobsForAction(
-              C, DepA, DepTC, DepBoundArch, AtTopLevel,
+              C, DepA, DepTC, DepBoundArch, /* AtTopLevel */ false,
               /*MultipleArchs=*/!!DepBoundArch, LinkingOutput, CachedResults,
               /*BuildForOffloadDevice=*/DepA->getOffloadingDeviceKind() !=
                   Action::OFK_None));
