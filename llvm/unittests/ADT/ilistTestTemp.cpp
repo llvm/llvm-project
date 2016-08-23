@@ -1,4 +1,4 @@
-//===- unittests/ADT/ilistTest.cpp - ilist unit tests ---------------------===//
+//===- unittests/ADT/ilistTestTemp.cpp - ilist unit tests -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// FIXME: Rename this file to IListTest.cpp once incremental checkouts on bots
+// have found this file.
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/STLExtras.h"
