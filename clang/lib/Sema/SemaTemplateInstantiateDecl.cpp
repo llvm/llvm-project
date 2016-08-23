@@ -3562,9 +3562,11 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   assert(PatternDecl && "instantiating a non-template");
 
   const FunctionDecl *PatternDef = PatternDecl->getDefinition();
-  Stmt *Pattern = PatternDef->getBody(PatternDef);
-  if (PatternDef)
+  Stmt *Pattern = nullptr;
+  if (PatternDef) {
+    Pattern = PatternDef->getBody(PatternDef);
     PatternDecl = PatternDef;
+  }
 
   // FIXME: We need to track the instantiation stack in order to know which
   // definitions should be visible within this instantiation.
