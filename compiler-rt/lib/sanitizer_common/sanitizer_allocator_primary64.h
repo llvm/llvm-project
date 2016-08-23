@@ -14,6 +14,8 @@
 #error This file must be included inside sanitizer_allocator.h
 #endif
 
+template<class SizeClassAllocator> struct SizeClassAllocator64LocalCache;
+
 // SizeClassAllocator64 -- allocator for 64-bit address space.
 //
 // Space: a portion of address space of kSpaceSize bytes starting at SpaceBeg.
@@ -95,7 +97,7 @@ class SizeClassAllocator64 {
 
   typedef SizeClassAllocator64<kSpaceBeg, kSpaceSize, kMetadataSize,
       SizeClassMap, MapUnmapCallback> ThisT;
-  typedef SizeClassAllocatorLocalCache<ThisT> AllocatorCache;
+  typedef SizeClassAllocator64LocalCache<ThisT> AllocatorCache;
 
   void Init() {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();

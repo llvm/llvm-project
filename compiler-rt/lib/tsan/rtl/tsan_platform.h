@@ -74,22 +74,27 @@ ff00 0000 00 - ff80 0000 00: -
 ff80 0000 00 - ffff ffff ff: modules and main thread stack
 */
 struct Mapping {
-  static const uptr kMetaShadowBeg = 0x3000000000ull;
-  static const uptr kMetaShadowEnd = 0x4000000000ull;
-  static const uptr kTraceMemBeg   = 0x6000000000ull;
-  static const uptr kTraceMemEnd   = 0x6200000000ull;
-  static const uptr kShadowBeg     = 0x1400000000ull;
-  static const uptr kShadowEnd     = 0x2400000000ull;
+  static const uptr kMetaShadowBeg = 0x4000000000ull;
+  static const uptr kMetaShadowEnd = 0x5000000000ull;
+  static const uptr kTraceMemBeg   = 0xb000000000ull;
+  static const uptr kTraceMemEnd   = 0xb200000000ull;
+  static const uptr kShadowBeg     = 0x2400000000ull;
+  static const uptr kShadowEnd     = 0x4000000000ull;
   static const uptr kHeapMemBeg    = 0xfe00000000ull;
   static const uptr kHeapMemEnd    = 0xff00000000ull;
   static const uptr kLoAppMemBeg   = 0x0100000000ull;
   static const uptr kLoAppMemEnd   = 0x0200000000ull;
+  static const uptr kMidAppMemBeg  = 0xaa00000000ull;
+  static const uptr kMidAppMemEnd  = 0xab00000000ull;
+  static const uptr kMidShadowOff  = 0xa800000000ull;
   static const uptr kHiAppMemBeg   = 0xff80000000ull;
   static const uptr kHiAppMemEnd   = 0xffffffffffull;
-  static const uptr kAppMemMsk     = 0xfc00000000ull;
-  static const uptr kAppMemXor     = 0x0400000000ull;
+  static const uptr kAppMemMsk     = 0xf800000000ull;
+  static const uptr kAppMemXor     = 0x0800000000ull;
   static const uptr kVdsoBeg       = 0xfffff00000ull;
 };
+
+#define TSAN_MID_APP_RANGE 1
 #elif defined(__aarch64__)
 // AArch64 supports multiple VMA which leads to multiple address transformation
 // functions.  To support these multiple VMAS transformations and mappings TSAN

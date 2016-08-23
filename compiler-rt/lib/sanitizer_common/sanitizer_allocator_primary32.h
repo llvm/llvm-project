@@ -14,6 +14,8 @@
 #error This file must be included inside sanitizer_allocator.h
 #endif
 
+template<class SizeClassAllocator> struct SizeClassAllocator32LocalCache;
+
 // SizeClassAllocator32 -- allocator for 32-bit address space.
 // This allocator can theoretically be used on 64-bit arch, but there it is less
 // efficient than SizeClassAllocator64.
@@ -88,7 +90,7 @@ class SizeClassAllocator32 {
 
   typedef SizeClassAllocator32<kSpaceBeg, kSpaceSize, kMetadataSize,
       SizeClassMap, kRegionSizeLog, ByteMap, MapUnmapCallback> ThisT;
-  typedef SizeClassAllocatorLocalCache<ThisT> AllocatorCache;
+  typedef SizeClassAllocator32LocalCache<ThisT> AllocatorCache;
 
   void Init() {
     possible_regions.TestOnlyInit();
