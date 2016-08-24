@@ -710,6 +710,9 @@ void GetAllocatorOptions(AllocatorOptions *options) {
 AsanChunkView FindHeapChunkByAddress(uptr addr) {
   return instance.FindHeapChunkByAddress(addr);
 }
+AsanChunkView FindHeapChunkByAllocBeg(uptr addr) {
+  return AsanChunkView(instance.GetAsanChunk(reinterpret_cast<void*>(addr)));
+}
 
 void AsanThreadLocalMallocStorage::CommitBack() {
   instance.CommitBack(this);
