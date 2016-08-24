@@ -256,8 +256,8 @@ extern ulong __llvm_amdgcn_read_exec(void);
 extern uint __llvm_amdgcn_read_exec_lo(void);
 extern uint __llvm_amdgcn_read_exec_hi(void);
 
-extern uint __llvm_amdgcn_readfirstlane(uint);
-extern uint __llvm_amdgcn_readlane(uint, uint);
+extern uint __llvm_amdgcn_readfirstlane(uint) __asm("llvm.amdgcn.readfirstlane");
+extern uint __llvm_amdgcn_readlane(uint, uint) __asm("llvm.amdgcn.readlane");
 
 extern __attribute__((const)) uint __llvm_amdgcn_lerp(uint, uint, uint) __asm("llvm.amdgcn.lerp");
 extern __attribute__((const)) ulong __llvm_amdgcn_mqsad_pk_u16_u8(ulong, uint, ulong) __asm("llvm.amdgcn.mqsad.pk.u16.u8");
