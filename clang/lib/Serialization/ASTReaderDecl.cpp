@@ -3797,6 +3797,23 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
       break;
     }
 
+    case UPD_CXX_INSTANTIATED_DEFAULT_MEMBER_INITIALIZER: {
+      auto FD = cast<FieldDecl>(D);
+      auto DefaultInit = Reader.ReadExpr(F);
+
+      // Only apply the update if the field still has an uninstantiated
+      // default member initializer.
+      if (FD->hasInClassInitializer() && !FD->getInClassInitializer()) {
+        if (DefaultInit)
+          FD->setInClassInitializer(DefaultInit);
+        else
+          // Instantiation failed. We can get here if we serialized an AST for
+          // an invalid program.
+          FD->removeInClassInitializer();
+      }
+      break;
+    }
+
     case UPD_CXX_ADDED_FUNCTION_DEFINITION: {
       FunctionDecl *FD = cast<FunctionDecl>(D);
       if (Reader.PendingBodies[FD]) {
