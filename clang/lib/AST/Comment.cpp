@@ -226,12 +226,15 @@ void DeclInfo::fill() {
   case Decl::Namespace:
     Kind = NamespaceKind;
     break;
+  case Decl::TypeAlias:
   case Decl::Typedef: {
     Kind = TypedefKind;
-    // If this is a typedef to something we consider a function, extract
+    // If this is a typedef / using to something we consider a function, extract
     // arguments and return type.
-    const TypedefDecl *TD = cast<TypedefDecl>(CommentDecl);
-    const TypeSourceInfo *TSI = TD->getTypeSourceInfo();
+    const TypeSourceInfo *TSI =
+        K == Decl::Typedef
+            ? cast<TypedefDecl>(CommentDecl)->getTypeSourceInfo()
+            : cast<TypeAliasDecl>(CommentDecl)->getTypeSourceInfo();
     if (!TSI)
       break;
     TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
@@ -302,9 +305,6 @@ void DeclInfo::fill() {
     }
     break;
   }
-  case Decl::TypeAlias:
-    Kind = TypedefKind;
-    break;
   case Decl::TypeAliasTemplate: {
     const TypeAliasTemplateDecl *TAT = cast<TypeAliasTemplateDecl>(CommentDecl);
     Kind = TypedefKind;
