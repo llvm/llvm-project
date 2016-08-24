@@ -422,3 +422,13 @@ module MacroFabs1 {
 module DiagOutOfDate {
   header "DiagOutOfDate.h"
 }
+
+module DebugNestedA {
+  header "DebugNestedA.h"
+  export *
+}
+
+module DebugNestedB {
+  header "DebugNestedB.h"
+  export *
+}

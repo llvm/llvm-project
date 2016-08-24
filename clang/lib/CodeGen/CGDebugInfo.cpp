@@ -1655,7 +1655,8 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-    assert(CXXDecl->isCompleteDefinition() && "incomplete record definition");
+    if (!CXXDecl->isCompleteDefinition())
+      return false;
     auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
     if (TemplateKind != TSK_Undeclared) {
       // This is a template, check the origin of the first member.
