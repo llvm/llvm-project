@@ -3232,8 +3232,20 @@ static bool areOptimizationsEnabled(const ArgList &Args) {
   return false;
 }
 
-static bool shouldUseFramePointerForTarget(const ArgList &Args,
-                                           const llvm::Triple &Triple) {
+static bool mustUseFramePointerForTarget(const llvm::Triple &Triple) {
+  switch (Triple.getArch()){
+  default:
+    return false;
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+    // ARM Darwin targets require a frame pointer to be always present to aid
+    // offline debugging via backtraces.
+    return Triple.isOSDarwin();
+  }
+}
+
+static bool useFramePointerForTargetByDefault(const ArgList &Args,
+                                              const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   case llvm::Triple::xcore:
   case llvm::Triple::wasm32:
@@ -3285,25 +3297,29 @@ static bool shouldUseFramePointer(const ArgList &Args,
                                   const llvm::Triple &Triple) {
   if (Arg *A = Args.getLastArg(options::OPT_fno_omit_frame_pointer,
                                options::OPT_fomit_frame_pointer))
-    return A->getOption().matches(options::OPT_fno_omit_frame_pointer);
+    return A->getOption().matches(options::OPT_fno_omit_frame_pointer) ||
+           mustUseFramePointerForTarget(Triple);
+
   if (Args.hasArg(options::OPT_pg))
     return true;
 
-  return shouldUseFramePointerForTarget(Args, Triple);
+  return useFramePointerForTargetByDefault(Args, Triple);
 }
 
 static bool shouldUseLeafFramePointer(const ArgList &Args,
                                       const llvm::Triple &Triple) {
   if (Arg *A = Args.getLastArg(options::OPT_mno_omit_leaf_frame_pointer,
                                options::OPT_momit_leaf_frame_pointer))
-    return A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer);
+    return A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer) ||
+           mustUseFramePointerForTarget(Triple);
+
   if (Args.hasArg(options::OPT_pg))
     return true;
 
   if (Triple.isPS4CPU())
     return false;
 
-  return shouldUseFramePointerForTarget(Args, Triple);
+  return useFramePointerForTargetByDefault(Args, Triple);
 }
 
 /// Add a CC1 option to specify the debug compilation directory.
@@ -5830,7 +5846,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -finput_charset=UTF-8 is default. Reject others
   if (Arg *inputCharset = Args.getLastArg(options::OPT_finput_charset_EQ)) {
     StringRef value = inputCharset->getValue();
-    if (value != "UTF-8")
+    if (value.lower() != "utf-8")
       D.Diag(diag::err_drv_invalid_value) << inputCharset->getAsString(Args)
                                           << value;
   }

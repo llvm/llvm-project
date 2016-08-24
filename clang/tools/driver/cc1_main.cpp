@@ -15,6 +15,7 @@
 
 #include "llvm/Option/Arg.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -37,11 +38,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 
-#ifdef __has_include
-#if __has_include(<sys/resource.h>)
-#define HAVE_RLIMITS
+#ifdef CLANG_HAVE_RLIMITS
 #include <sys/resource.h>
-#endif
 #endif
 
 using namespace clang;
@@ -73,7 +71,7 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 }
 #endif
 
-#ifdef HAVE_RLIMITS
+#ifdef CLANG_HAVE_RLIMITS
 // The amount of stack we think is "sufficient". If less than this much is
 // available, we may be unable to reach our template instantiation depth
 // limit and other similar limits.

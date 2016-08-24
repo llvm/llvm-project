@@ -46,7 +46,8 @@ ThreadPlanStepOut::ThreadPlanStepOut
     Vote run_vote,
     uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
-    bool continue_to_next_branch
+    bool continue_to_next_branch,
+    bool gather_return_value
 ) :
     ThreadPlan (ThreadPlan::eKindStepOut, "Step out", thread, stop_vote, run_vote),
     ThreadPlanShouldStopHere (this),
@@ -54,7 +55,8 @@ ThreadPlanStepOut::ThreadPlanStepOut
     m_return_bp_id (LLDB_INVALID_BREAK_ID),
     m_return_addr (LLDB_INVALID_ADDRESS),
     m_stop_others (stop_others),
-    m_immediate_step_from_function(nullptr)
+    m_immediate_step_from_function(nullptr),
+    m_calculate_return_value(gather_return_value)
 {
     SetFlagsToDefault();
     SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
@@ -536,6 +538,9 @@ void
 ThreadPlanStepOut::CalculateReturnValue ()
 {
     if (m_return_valobj_sp)
+        return;
+        
+    if (!m_calculate_return_value)
         return;
         
     if (m_immediate_step_from_function != nullptr)

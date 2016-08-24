@@ -11280,9 +11280,8 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
     SkipBody->ShouldSkip = true;
     if (auto *TD = Definition->getDescribedFunctionTemplate())
       makeMergedDefinitionVisible(TD, FD->getLocation());
-    else
-      makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition),
-                                  FD->getLocation());
+    makeMergedDefinitionVisible(const_cast<FunctionDecl*>(Definition),
+                                FD->getLocation());
     return;
   }
 

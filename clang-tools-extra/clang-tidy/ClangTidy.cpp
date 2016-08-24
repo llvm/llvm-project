@@ -426,10 +426,14 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
   ArgumentsAdjuster PerFileExtraArgumentsInserter =
       [&Context](const CommandLineArguments &Args, StringRef Filename) {
         ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
-        CommandLineArguments AdjustedArgs;
-        if (Opts.ExtraArgsBefore)
-          AdjustedArgs = *Opts.ExtraArgsBefore;
-        AdjustedArgs.insert(AdjustedArgs.begin(), Args.begin(), Args.end());
+        CommandLineArguments AdjustedArgs = Args;
+        if (Opts.ExtraArgsBefore) {
+          auto I = AdjustedArgs.begin();
+          if (I != AdjustedArgs.end() && !StringRef(*I).startswith("-"))
+            ++I; // Skip compiler binary name, if it is there.
+          AdjustedArgs.insert(I, Opts.ExtraArgsBefore->begin(),
+                              Opts.ExtraArgsBefore->end());
+        }
         if (Opts.ExtraArgs)
           AdjustedArgs.insert(AdjustedArgs.end(), Opts.ExtraArgs->begin(),
                               Opts.ExtraArgs->end());

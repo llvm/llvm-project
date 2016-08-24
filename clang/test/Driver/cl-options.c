@@ -171,6 +171,10 @@
 // RUN: %clang_cl /EP /showIncludes -### -- %s 2>&1 | FileCheck -check-prefix=showIncludes_E %s
 // showIncludes_E: warning: argument unused during compilation: '--show-includes'
 
+// /source-charset: should warn on everything except UTF-8.
+// RUN: %clang_cl /source-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=source-charset-utf-16 %s
+// source-charset-utf-16: invalid value 'utf-16'
+
 // RUN: %clang_cl /Umymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // RUN: %clang_cl /U mymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // U: "-U" "mymacro"
@@ -288,6 +292,7 @@
 // RUN:    /RTC1 \
 // RUN:    /sdl \
 // RUN:    /sdl- \
+// RUN:    /source-charset:utf-8 \
 // RUN:    /vmg \
 // RUN:    /volatile:iso \
 // RUN:    /w12345 \
@@ -432,10 +437,10 @@
 // BreproDefault: "-mincremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
-// Brepro: "-mincremental-linker-compatible"
+// Brepro-NOT: "-mincremental-linker-compatible"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
-// Brepro_-NOT: "-mincremental-linker-compatible"
+// Brepro_: "-mincremental-linker-compatible"
 
 // This test was super sneaky: "/Z7" means "line-tables", but "-gdwarf" occurs
 // later on the command line, so it should win. Interestingly the cc1 arguments
