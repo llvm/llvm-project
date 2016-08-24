@@ -574,10 +574,14 @@ static void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
   VP.AddValue((PC & 4095) | (LastSameByte << 12));
 }
 
-__attribute__((target("popcnt")))
+ATTRIBUTE_TARGET_POPCNT
 static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
+  if (Arg1 == Arg2)
+    return;
   uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
-  VP.AddValue((PC & 4095) | (__builtin_popcountl(Arg1 ^ Arg2) << 12));
+  uint64_t ArgDistance = __builtin_popcountl(Arg1 ^ Arg2) - 1; // [0,63]
+  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
+  VP.AddValue(Idx);
 }
 
 }  // namespace fuzzer

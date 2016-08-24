@@ -19,5 +19,5 @@
 type = Library
 name = LanaiAsmParser
 parent = Lanai
-required_libraries = MC MCParser Support LanaiMCTargetDesc LanaiInfo
+required_libraries = MC MCParser Support LanaiDesc LanaiInfo
 add_to_library_groups = Lanai

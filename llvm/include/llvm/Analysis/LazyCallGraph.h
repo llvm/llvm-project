@@ -149,6 +149,9 @@ public:
     /// around but clear them.
     operator bool() const;
 
+    /// Returnss the \c Kind of the edge.
+    Kind getKind() const;
+
     /// Test whether the edge represents a direct call to a function.
     ///
     /// This requires that the edge is not null.
@@ -247,6 +250,11 @@ public:
       return Edges[EdgeIndexMap.find(&F)->second];
     }
     const Edge &operator[](Node &N) const { return (*this)[N.getFunction()]; }
+
+    const Edge *lookup(Function &F) const {
+      auto EI = EdgeIndexMap.find(&F);
+      return EI != EdgeIndexMap.end() ? &Edges[EI->second] : nullptr;
+    }
 
     call_edge_iterator call_begin() const {
       return call_edge_iterator(Edges.begin(), Edges.end());
@@ -576,10 +584,14 @@ public:
     /// the SCC of TargetN (previously the SCC of both). This preserves
     /// postorder as the TargetN can reach all of the other nodes by definition
     /// of previously being in a single SCC formed by the cycle from SourceN to
-    /// TargetN. The newly added nodes are added *immediately* and contiguously
-    /// prior to the TargetN SCC and so they may be iterated starting from
-    /// there.
-    void switchInternalEdgeToRef(Node &SourceN, Node &TargetN);
+    /// TargetN.
+    ///
+    /// The newly added SCCs are added *immediately* and contiguously
+    /// prior to the TargetN SCC and return the range covering the new SCCs in
+    /// the RefSCC's postorder sequence. You can directly iterate the returned
+    /// range to observe all of the new SCCs in postorder.
+    iterator_range<iterator> switchInternalEdgeToRef(Node &SourceN,
+                                                     Node &TargetN);
 
     /// Make an existing outgoing ref edge into a call edge.
     ///
@@ -830,6 +842,33 @@ public:
 
   ///@}
 
+  ///@{
+  /// \name Static helpers for code doing updates to the call graph.
+  ///
+  /// These helpers are used to implement parts of the call graph but are also
+  /// useful to code doing updates or otherwise wanting to walk the IR in the
+  /// same patterns as when we build the call graph.
+
+  template <typename CallbackT>
+  static void visitReferences(SmallVectorImpl<Constant *> &Worklist,
+                              SmallPtrSetImpl<Constant *> &Visited,
+                              CallbackT Callback) {
+    while (!Worklist.empty()) {
+      Constant *C = Worklist.pop_back_val();
+
+      if (Function *F = dyn_cast<Function>(C)) {
+        Callback(*F);
+        continue;
+      }
+
+      for (Value *Op : C->operand_values())
+        if (Visited.insert(cast<Constant>(Op)).second)
+          Worklist.push_back(cast<Constant>(Op));
+    }
+
+    ///@}
+  }
+
 private:
   typedef SmallVectorImpl<Node *>::reverse_iterator node_stack_iterator;
   typedef iterator_range<node_stack_iterator> node_stack_range;
@@ -917,9 +956,14 @@ inline LazyCallGraph::Edge::operator bool() const {
   return !Value.getPointer().isNull();
 }
 
+inline LazyCallGraph::Edge::Kind LazyCallGraph::Edge::getKind() const {
+  assert(*this && "Queried a null edge!");
+  return Value.getInt();
+}
+
 inline bool LazyCallGraph::Edge::isCall() const {
   assert(*this && "Queried a null edge!");
-  return Value.getInt() == Call;
+  return getKind() == Call;
 }
 
 inline Function &LazyCallGraph::Edge::getFunction() const {

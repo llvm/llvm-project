@@ -60,8 +60,8 @@
 ; RUN:    --plugin-opt=jobs=2 \
 ; RUN:    --plugin-opt=obj-path=%t5.o \
 ; RUN:    -shared %t.o %t2.o -o %t4
+; RUN: llvm-nm %t5.o0 | FileCheck %s --check-prefix=NM2
 ; RUN: llvm-nm %t5.o1 | FileCheck %s --check-prefix=NM2
-; RUN: llvm-nm %t5.o2 | FileCheck %s --check-prefix=NM2
 
 ; NM: T f
 ; NM2: T {{f|g}}

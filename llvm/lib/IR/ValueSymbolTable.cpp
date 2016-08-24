@@ -15,8 +15,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "valuesymtab"
@@ -35,7 +40,7 @@ ValueSymbolTable::~ValueSymbolTable() {
 ValueName *ValueSymbolTable::makeUniqueName(Value *V,
                                             SmallString<256> &UniqueName) {
   unsigned BaseSize = UniqueName.size();
-  while (1) {
+  while (true) {
     // Trim any suffix off and append the next number.
     UniqueName.resize(BaseSize);
     raw_svector_ostream S(UniqueName);
@@ -93,7 +98,6 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
   SmallString<256> UniqueName(Name.begin(), Name.end());
   return makeUniqueName(V, UniqueName);
 }
-
 
 // dump - print out the symbol table
 //

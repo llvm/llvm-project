@@ -1336,94 +1336,6 @@ Instruction *InstCombiner::foldICmpDivConstConst(ICmpInst &ICI,
   }
 }
 
-/// Handle "icmp(([al]shr X, cst1), cst2)".
-Instruction *InstCombiner::foldICmpShrConstConst(ICmpInst &ICI,
-                                                 BinaryOperator *Shr,
-                                                 ConstantInt *ShAmt) {
-  const APInt &CmpRHSV = cast<ConstantInt>(ICI.getOperand(1))->getValue();
-
-  // Check that the shift amount is in range.  If not, don't perform
-  // undefined shifts.  When the shift is visited it will be
-  // simplified.
-  uint32_t TypeBits = CmpRHSV.getBitWidth();
-  uint32_t ShAmtVal = (uint32_t)ShAmt->getLimitedValue(TypeBits);
-  if (ShAmtVal >= TypeBits || ShAmtVal == 0)
-    return nullptr;
-
-  if (!ICI.isEquality()) {
-    // If we have an unsigned comparison and an ashr, we can't simplify this.
-    // Similarly for signed comparisons with lshr.
-    if (ICI.isSigned() != (Shr->getOpcode() == Instruction::AShr))
-      return nullptr;
-
-    // Otherwise, all lshr and most exact ashr's are equivalent to a udiv/sdiv
-    // by a power of 2.  Since we already have logic to simplify these,
-    // transform to div and then simplify the resultant comparison.
-    if (Shr->getOpcode() == Instruction::AShr &&
-        (!Shr->isExact() || ShAmtVal == TypeBits - 1))
-      return nullptr;
-
-    // Revisit the shift (to delete it).
-    Worklist.Add(Shr);
-
-    Constant *DivCst =
-      ConstantInt::get(Shr->getType(), APInt::getOneBitSet(TypeBits, ShAmtVal));
-
-    Value *Tmp =
-      Shr->getOpcode() == Instruction::AShr ?
-      Builder->CreateSDiv(Shr->getOperand(0), DivCst, "", Shr->isExact()) :
-      Builder->CreateUDiv(Shr->getOperand(0), DivCst, "", Shr->isExact());
-
-    ICI.setOperand(0, Tmp);
-
-    // If the builder folded the binop, just return it.
-    BinaryOperator *TheDiv = dyn_cast<BinaryOperator>(Tmp);
-    if (!TheDiv)
-      return &ICI;
-
-    // Otherwise, fold this div/compare.
-    assert(TheDiv->getOpcode() == Instruction::SDiv ||
-           TheDiv->getOpcode() == Instruction::UDiv);
-
-    Instruction *Res =
-        foldICmpDivConstConst(ICI, TheDiv, cast<ConstantInt>(DivCst));
-    assert(Res && "This div/cst should have folded!");
-    return Res;
-  }
-
-  // If we are comparing against bits always shifted out, the
-  // comparison cannot succeed.
-  APInt Comp = CmpRHSV << ShAmtVal;
-  ConstantInt *ShiftedCmpRHS = Builder->getInt(Comp);
-  if (Shr->getOpcode() == Instruction::LShr)
-    Comp = Comp.lshr(ShAmtVal);
-  else
-    Comp = Comp.ashr(ShAmtVal);
-
-  if (Comp != CmpRHSV) { // Comparing against a bit that we know is zero.
-    bool IsICMP_NE = ICI.getPredicate() == ICmpInst::ICMP_NE;
-    Constant *Cst = Builder->getInt1(IsICMP_NE);
-    return replaceInstUsesWith(ICI, Cst);
-  }
-
-  // Otherwise, check to see if the bits shifted out are known to be zero.
-  // If so, we can compare against the unshifted value:
-  //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
-  if (Shr->hasOneUse() && Shr->isExact())
-    return new ICmpInst(ICI.getPredicate(), Shr->getOperand(0), ShiftedCmpRHS);
-
-  if (Shr->hasOneUse()) {
-    // Otherwise strength reduce the shift into an and.
-    APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
-    Constant *Mask = Builder->getInt(Val);
-
-    Value *And = Builder->CreateAnd(Shr->getOperand(0),
-                                    Mask, Shr->getName()+".mask");
-    return new ICmpInst(ICI.getPredicate(), And, ShiftedCmpRHS);
-  }
-  return nullptr;
-}
-
 /// Handle "(icmp eq/ne (ashr/lshr const2, A), const1)" ->
 /// (icmp eq/ne A, Log2(const2/const1)) ->
 /// (icmp eq/ne A, Log2(const2) - Log2(const1)).
@@ -2071,9 +1983,10 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
                                                const APInt *C) {
   // An exact shr only shifts out zero bits, so:
   // icmp eq/ne (shr X, Y), 0 --> icmp eq/ne X, 0
+  Value *X = Shr->getOperand(0);
   CmpInst::Predicate Pred = Cmp.getPredicate();
   if (Cmp.isEquality() && Shr->isExact() && Shr->hasOneUse() && *C == 0)
-    return new ICmpInst(Pred, Shr->getOperand(0), Cmp.getOperand(1));
+    return new ICmpInst(Pred, X, Cmp.getOperand(1));
 
   // FIXME: This check restricts all folds under here to scalar types.
   // Handle equality comparisons of shift-by-constant.
@@ -2081,8 +1994,68 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
   if (!ShAmt)
     return nullptr;
 
-  if (Instruction *Res = foldICmpShrConstConst(Cmp, Shr, ShAmt))
+  // Check that the shift amount is in range.  If not, don't perform
+  // undefined shifts.  When the shift is visited it will be
+  // simplified.
+  uint32_t TypeBits = C->getBitWidth();
+  uint32_t ShAmtVal = (uint32_t)ShAmt->getLimitedValue(TypeBits);
+  if (ShAmtVal >= TypeBits || ShAmtVal == 0)
+    return nullptr;
+
+  bool IsAShr = Shr->getOpcode() == Instruction::AShr;
+  if (!Cmp.isEquality()) {
+    // If we have an unsigned comparison and an ashr, we can't simplify this.
+    // Similarly for signed comparisons with lshr.
+    if (Cmp.isSigned() != IsAShr)
+      return nullptr;
+
+    // Otherwise, all lshr and most exact ashr's are equivalent to a udiv/sdiv
+    // by a power of 2.  Since we already have logic to simplify these,
+    // transform to div and then simplify the resultant comparison.
+    if (IsAShr && (!Shr->isExact() || ShAmtVal == TypeBits - 1))
+      return nullptr;
+
+    // Revisit the shift (to delete it).
+    Worklist.Add(Shr);
+
+    Constant *DivCst = ConstantInt::get(
+        Shr->getType(), APInt::getOneBitSet(TypeBits, ShAmtVal));
+
+    Value *Tmp = IsAShr ? Builder->CreateSDiv(X, DivCst, "", Shr->isExact())
+                        : Builder->CreateUDiv(X, DivCst, "", Shr->isExact());
+
+    Cmp.setOperand(0, Tmp);
+
+    // If the builder folded the binop, just return it.
+    BinaryOperator *TheDiv = dyn_cast<BinaryOperator>(Tmp);
+    if (!TheDiv)
+      return &Cmp;
+
+    // Otherwise, fold this div/compare.
+    assert(TheDiv->getOpcode() == Instruction::SDiv ||
+           TheDiv->getOpcode() == Instruction::UDiv);
+
+    Instruction *Res =
+        foldICmpDivConstConst(Cmp, TheDiv, cast<ConstantInt>(DivCst));
+    assert(Res && "This div/cst should have folded!");
     return Res;
+  }
+
+  // Check if the bits shifted out are known to be zero. If so, we can compare
+  // against the unshifted value:
+  //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
+  ConstantInt *ShiftedCmpRHS = Builder->getInt(*C << ShAmtVal);
+  if (Shr->hasOneUse() && Shr->isExact())
+    return new ICmpInst(Pred, X, ShiftedCmpRHS);
+
+  if (Shr->hasOneUse()) {
+    // Otherwise strength reduce the shift into an and.
+    APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
+    Constant *Mask = Builder->getInt(Val);
+
+    Value *And = Builder->CreateAnd(X, Mask, Shr->getName() + ".mask");
+    return new ICmpInst(Pred, And, ShiftedCmpRHS);
+  }
 
   return nullptr;
 }

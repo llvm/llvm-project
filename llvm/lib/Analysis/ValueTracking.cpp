@@ -782,11 +782,11 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 // shift amount, compute the implied known-zero or known-one bits of the shift
 // operator's result respectively for that shift amount. The results from calling
 // KZF and KOF are conservatively combined for all permitted shift amounts.
-template <typename KZFunctor, typename KOFunctor>
-static void computeKnownBitsFromShiftOperator(const Operator *I,
-              APInt &KnownZero, APInt &KnownOne,
-              APInt &KnownZero2, APInt &KnownOne2,
-              unsigned Depth, const Query &Q, KZFunctor KZF, KOFunctor KOF) {
+static void computeKnownBitsFromShiftOperator(
+    const Operator *I, APInt &KnownZero, APInt &KnownOne, APInt &KnownZero2,
+    APInt &KnownOne2, unsigned Depth, const Query &Q,
+    function_ref<APInt(const APInt &, unsigned)> KZF,
+    function_ref<APInt(const APInt &, unsigned)> KOF) {
   unsigned BitWidth = KnownZero.getBitWidth();
 
   if (auto *SA = dyn_cast<ConstantInt>(I->getOperand(1))) {

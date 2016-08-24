@@ -580,7 +580,8 @@ void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
 
-  if (MRI->isSSA()) {
+  if (!MF->getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoPHIs)) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -857,6 +858,10 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     errs() << MCID.getNumOperands() << " operands expected, but "
         << MI->getNumOperands() << " given.\n";
   }
+
+  if (MI->isPHI() && MF->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoPHIs))
+    report("Found PHI instruction with NoPHIs property set", MI);
 
   // Check the tied operands.
   if (MI->isInlineAsm())

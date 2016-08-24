@@ -23,10 +23,13 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include <algorithm>
 #include <cctype>
 #include <cerrno>
-#include <sys/stat.h>
+#include <cstdio>
+#include <iterator>
 #include <system_error>
+#include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
 #if defined(HAVE_FCNTL_H)
@@ -266,8 +269,6 @@ raw_ostream &raw_ostream::operator<<(double N) {
   return this->operator<<(format("%e", N));
 }
 
-
-
 void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
@@ -382,7 +383,7 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
   // space.  Iterate until we win.
   SmallVector<char, 128> V;
 
-  while (1) {
+  while (true) {
     V.resize(NextBufferSize);
 
     // Try formatting into the SmallVector.
@@ -455,7 +456,6 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
   }
 }
 
-
 /// indent - Insert 'NumSpaces' spaces.
 raw_ostream &raw_ostream::indent(unsigned NumSpaces) {
   static const char Spaces[] = "                                "
@@ -474,7 +474,6 @@ raw_ostream &raw_ostream::indent(unsigned NumSpaces) {
   }
   return *this;
 }
-
 
 //===----------------------------------------------------------------------===//
 //  Formatted Output
@@ -562,7 +561,6 @@ raw_fd_ostream::~raw_fd_ostream() {
   if (has_error())
     report_fatal_error("IO failure on output stream.", /*GenCrashDiag=*/false);
 }
-
 
 void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   assert(FD >= 0 && "File already closed.");
@@ -739,7 +737,6 @@ raw_ostream &llvm::nulls() {
   static raw_null_ostream S;
   return S;
 }
-
 
 //===----------------------------------------------------------------------===//
 //  raw_string_ostream

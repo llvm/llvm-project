@@ -1816,10 +1816,11 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   } else if (Opcode == TargetOpcode::STACKMAP) {
-    return MI.getOperand(1).getImm();
+    StackMapOpers Opers(&MI);
+    return Opers.getNumPatchBytes();
   } else if (Opcode == TargetOpcode::PATCHPOINT) {
     PatchPointOpers Opers(&MI);
-    return Opers.getMetaOper(PatchPointOpers::NBytesPos).getImm();
+    return Opers.getNumPatchBytes();
   } else {
     const MCInstrDesc &Desc = get(Opcode);
     return Desc.getSize();

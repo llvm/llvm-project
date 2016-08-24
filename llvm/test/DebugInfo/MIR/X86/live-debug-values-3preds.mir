@@ -159,7 +159,6 @@ alignment:       4
 exposesReturnsTwice: false
 hasInlineAsm:    false
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false
 liveins:         

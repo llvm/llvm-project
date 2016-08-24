@@ -1522,7 +1522,7 @@ bool MIParser::parsePredicateOperand(MachineOperand &Dest) {
 
   lex();
   Dest = MachineOperand::CreatePredicate(Pred);
-  if (!expectAndConsume(MIToken::rparen))
+  if (expectAndConsume(MIToken::rparen))
     return error("predicate should be terminated by ')'.");
 
   return false;

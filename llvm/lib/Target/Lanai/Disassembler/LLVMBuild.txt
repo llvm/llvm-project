@@ -19,5 +19,5 @@
 type = Library
 name = LanaiDisassembler
 parent = Lanai
-required_libraries = LanaiMCTargetDesc LanaiInfo MC MCDisassembler Support
+required_libraries = LanaiDesc LanaiInfo MC MCDisassembler Support
 add_to_library_groups = Lanai

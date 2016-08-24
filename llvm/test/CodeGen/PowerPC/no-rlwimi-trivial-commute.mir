@@ -40,7 +40,6 @@ name:            main
 alignment:       2
 exposesReturnsTwice: false
 hasInlineAsm:    false
-isSSA:           true
 tracksRegLiveness: true
 tracksSubRegLiveness: false
 registers:       

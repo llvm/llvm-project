@@ -22,7 +22,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Dominators.h"
@@ -41,7 +41,9 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   if (F.hasAvailableExternallyLinkage())
     return false;
 
-  MachineFunction &MF = getAnalysis<MachineFunctionAnalysis>().getMF();
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
+  MachineFunction &MF = MMI.getMachineFunction(F);
+
   MachineFunctionProperties &MFProps = MF.getProperties();
 
 #ifndef NDEBUG
@@ -65,8 +67,8 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 }
 
 void MachineFunctionPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineFunctionAnalysis>();
-  AU.addPreserved<MachineFunctionAnalysis>();
+  AU.addRequired<MachineModuleInfo>();
+  AU.addPreserved<MachineModuleInfo>();
 
   // MachineFunctionPass preserves all LLVM IR passes, but there's no
   // high-level way to express this. Instead, just list a bunch of

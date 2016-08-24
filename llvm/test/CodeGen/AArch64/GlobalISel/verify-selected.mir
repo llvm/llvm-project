@@ -10,7 +10,6 @@
 
 ---
 name:            test
-isSSA: true
 regBankSelected: true
 selected: true
 registers:

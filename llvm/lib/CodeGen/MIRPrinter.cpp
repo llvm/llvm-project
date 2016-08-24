@@ -212,7 +212,6 @@ void MIRPrinter::print(const MachineFunction &MF) {
 void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineRegisterInfo &RegInfo,
                          const TargetRegisterInfo *TRI) {
-  MF.IsSSA = RegInfo.isSSA();
   MF.TracksRegLiveness = RegInfo.tracksLiveness();
   MF.TracksSubRegLiveness = RegInfo.subRegLivenessEnabled();
 

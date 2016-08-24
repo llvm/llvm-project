@@ -393,6 +393,10 @@ public:
   /// \returns number of elements in vector if isomorphism exists, 0 otherwise.
   unsigned canMapToVector(Type *T, const DataLayout &DL) const;
 
+  /// \returns True if the VectorizableTree is both tiny and not fully
+  /// vectorizable. We do not vectorize such trees.
+  bool isTreeTinyAndNotFullyVectorizable();
+
 private:
   struct TreeEntry;
 
@@ -1807,6 +1811,27 @@ bool BoUpSLP::isFullyVectorizableTinyTree() {
   return true;
 }
 
+bool BoUpSLP::isTreeTinyAndNotFullyVectorizable() {
+
+  // We can vectorize the tree if its size is greater than or equal to the
+  // minimum size specified by the MinTreeSize command line option.
+  if (VectorizableTree.size() >= MinTreeSize)
+    return false;
+
+  // If we have a tiny tree (a tree whose size is less than MinTreeSize), we
+  // can vectorize it if we can prove it fully vectorizable.
+  if (isFullyVectorizableTinyTree())
+    return false;
+
+  assert(VectorizableTree.empty()
+             ? ExternalUses.empty()
+             : true && "We shouldn't have any external users");
+
+  // Otherwise, we can't vectorize the tree. It is both tiny and not fully
+  // vectorizable.
+  return true;
+}
+
 int BoUpSLP::getSpillCost() {
   // Walk from the bottom of the tree to the top, tracking which values are
   // live. When we see a call instruction that is not part of our tree,
@@ -1873,14 +1898,6 @@ int BoUpSLP::getTreeCost() {
   int Cost = 0;
   DEBUG(dbgs() << "SLP: Calculating cost for tree of size " <<
         VectorizableTree.size() << ".\n");
-
-  // We only vectorize tiny trees if it is fully vectorizable.
-  if (VectorizableTree.size() < MinTreeSize && !isFullyVectorizableTinyTree()) {
-    if (VectorizableTree.empty()) {
-      assert(!ExternalUses.size() && "We should not have any external users");
-    }
-    return INT_MAX;
-  }
 
   unsigned BundleWidth = VectorizableTree[0].Scalars.size();
 
@@ -3698,6 +3715,9 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain,
     ArrayRef<Value *> Operands = Chain.slice(i, VF);
 
     R.buildTree(Operands);
+    if (R.isTreeTinyAndNotFullyVectorizable())
+      continue;
+
     R.computeMinimumValueSizes();
 
     int Cost = R.getTreeCost();
@@ -3898,6 +3918,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       Value *ReorderedOps[] = { Ops[1], Ops[0] };
       R.buildTree(ReorderedOps, None);
     }
+    if (R.isTreeTinyAndNotFullyVectorizable())
+      continue;
+
     R.computeMinimumValueSizes();
     int Cost = R.getTreeCost();
 
@@ -4174,7 +4197,10 @@ public:
       if (V.shouldReorder()) {
         SmallVector<Value *, 8> Reversed(VL.rbegin(), VL.rend());
         V.buildTree(Reversed, ReductionOps);
-      }      
+      }
+      if (V.isTreeTinyAndNotFullyVectorizable())
+        continue;
+
       V.computeMinimumValueSizes();
 
       // Estimate cost.

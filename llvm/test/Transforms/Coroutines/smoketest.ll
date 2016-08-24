@@ -1,5 +1,5 @@
 ; Test that all coroutine passes run in the correct order at all optimization
-; levels and -disable-coroutines removes coroutine passes from the pipeline.
+; levels and -enable-coroutines adds coroutine passes to the pipeline.
 ;
 ; RUN: opt < %s -disable-output -enable-coroutines -debug-pass=Arguments -O0 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-output -enable-coroutines -debug-pass=Arguments -O1 2>&1 | FileCheck %s

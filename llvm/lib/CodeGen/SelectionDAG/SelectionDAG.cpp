@@ -521,24 +521,6 @@ static void AddNodeIDNode(FoldingSetNodeID &ID, const SDNode *N) {
   AddNodeIDCustom(ID, N);
 }
 
-/// encodeMemSDNodeFlags - Generic routine for computing a value for use in
-/// the CSE map that carries volatility, temporalness, indexing mode, and
-/// extension/truncation information.
-///
-static inline unsigned
-encodeMemSDNodeFlags(int ConvType, ISD::MemIndexedMode AM, bool isVolatile,
-                     bool isNonTemporal, bool isInvariant) {
-  assert((ConvType & 3) == ConvType &&
-         "ConvType may not require more than 2 bits!");
-  assert((AM & 7) == AM &&
-         "AM may not require more than 3 bits!");
-  return ConvType |
-         (AM << 2) |
-         (isVolatile << 5) |
-         (isNonTemporal << 6) |
-         (isInvariant << 7);
-}
-
 //===----------------------------------------------------------------------===//
 //                              SelectionDAG Class
 //===----------------------------------------------------------------------===//
@@ -5101,9 +5083,8 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::LOAD, VTs, Ops);
   ID.AddInteger(MemVT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(ExtType, AM, MMO->isVolatile(),
-                                     MMO->isNonTemporal(),
-                                     MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<LoadSDNode>(
+      dl.getIROrder(), VTs, AM, ExtType, MemVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -5200,8 +5181,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::STORE, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(false, ISD::UNINDEXED, MMO->isVolatile(),
-                                     MMO->isNonTemporal(), MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<StoreSDNode>(
+      dl.getIROrder(), VTs, ISD::UNINDEXED, false, VT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -5265,8 +5246,8 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::STORE, VTs, Ops);
   ID.AddInteger(SVT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(true, ISD::UNINDEXED, MMO->isVolatile(),
-                                     MMO->isNonTemporal(), MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<StoreSDNode>(
+      dl.getIROrder(), VTs, ISD::UNINDEXED, true, SVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -5318,10 +5299,8 @@ SDValue SelectionDAG::getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MLOAD, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(ExtTy, ISD::UNINDEXED,
-                                     MMO->isVolatile(),
-                                     MMO->isNonTemporal(),
-                                     MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedLoadSDNode>(
+      dl.getIROrder(), VTs, ExtTy, MemVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -5349,8 +5328,8 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, const SDLoc &dl,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MSTORE, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(false, ISD::UNINDEXED, MMO->isVolatile(),
-                                     MMO->isNonTemporal(), MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedStoreSDNode>(
+      dl.getIROrder(), VTs, isTrunc, MemVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -5374,10 +5353,8 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MGATHER, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(ISD::NON_EXTLOAD, ISD::UNINDEXED,
-                                     MMO->isVolatile(),
-                                     MMO->isNonTemporal(),
-                                     MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedGatherSDNode>(
+      dl.getIROrder(), VTs, VT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -5411,9 +5388,8 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MSCATTER, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(encodeMemSDNodeFlags(false, ISD::UNINDEXED, MMO->isVolatile(),
-                                     MMO->isNonTemporal(),
-                                     MMO->isInvariant()));
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedScatterSDNode>(
+      dl.getIROrder(), VTs, VT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -6711,11 +6687,10 @@ AddrSpaceCastSDNode::AddrSpaceCastSDNode(unsigned Order, const DebugLoc &dl,
 MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
                      SDVTList VTs, EVT memvt, MachineMemOperand *mmo)
     : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MMO(mmo) {
-  SubclassData = encodeMemSDNodeFlags(0, ISD::UNINDEXED, MMO->isVolatile(),
-                                      MMO->isNonTemporal(), MMO->isInvariant());
-  assert(isVolatile() == MMO->isVolatile() && "Volatile encoding error!");
-  assert(isNonTemporal() == MMO->isNonTemporal() &&
-         "Non-temporal encoding error!");
+  MemSDNodeBits.IsVolatile = MMO->isVolatile();
+  MemSDNodeBits.IsNonTemporal = MMO->isNonTemporal();
+  MemSDNodeBits.IsInvariant = MMO->isInvariant();
+
   // We check here that the size of the memory operand fits within the size of
   // the MMO. This is because the MMO might indicate only a possible address
   // range instead of specifying the affected memory addresses precisely.

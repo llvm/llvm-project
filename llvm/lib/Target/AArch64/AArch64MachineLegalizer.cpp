@@ -26,6 +26,7 @@ using namespace llvm;
 
 AArch64MachineLegalizer::AArch64MachineLegalizer() {
   using namespace TargetOpcode;
+  const LLT p0 = LLT::pointer(0);
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -37,37 +38,68 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
 
   for (auto BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR}) {
     for (auto Ty : {s32, s64, v2s32, v4s32, v2s64})
-      setAction(BinOp, Ty, Legal);
+      setAction({BinOp, Ty}, Legal);
 
     for (auto Ty : {s8, s16})
-      setAction(BinOp, Ty, WidenScalar);
+      setAction({BinOp, Ty}, WidenScalar);
   }
 
   for (auto BinOp : {G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV})
     for (auto Ty : {s32, s64})
-      setAction(BinOp, Ty, Legal);
+      setAction({BinOp, Ty}, Legal);
 
   for (auto BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
     for (auto Ty : {s32, s64})
-      setAction(BinOp, Ty, Legal);
+      setAction({BinOp, Ty}, Legal);
 
-  for (auto MemOp : {G_LOAD, G_STORE})
-    for (auto Ty : {s32, s64})
-      setAction(MemOp, Ty, Legal);
+  for (auto MemOp : {G_LOAD, G_STORE}) {
+    for (auto Ty : {s8, s16, s32, s64})
+      setAction({MemOp, Ty}, Legal);
 
+    setAction({MemOp, s1}, WidenScalar);
+
+    // And everything's fine in addrspace 0.
+    setAction({MemOp, 1, p0}, Legal);
+  }
+
+  // Constants
   for (auto Ty : {s32, s64}) {
-    setAction(TargetOpcode::G_CONSTANT, Ty, Legal);
-    setAction(TargetOpcode::G_FCONSTANT, Ty, Legal);
+    setAction({TargetOpcode::G_CONSTANT, Ty}, Legal);
+    setAction({TargetOpcode::G_FCONSTANT, Ty}, Legal);
   }
 
   for (auto Ty : {s1, s8, s16})
-    setAction(TargetOpcode::G_CONSTANT, Ty, WidenScalar);
+    setAction({TargetOpcode::G_CONSTANT, Ty}, WidenScalar);
 
-  setAction(TargetOpcode::G_FCONSTANT, s16, WidenScalar);
+  setAction({TargetOpcode::G_FCONSTANT, s16}, WidenScalar);
 
-  setAction(G_BR, LLT::unsized(), Legal);
+  // Comparisons: we produce a result in s32 with undefined high-bits for
+  // now. Values being compared can be 32 or 64-bits.
+  for (auto CmpOp : { G_ICMP }) {
+    setAction({CmpOp, 0, s32}, Legal);
+    setAction({CmpOp, 1, s32}, Legal);
+    setAction({CmpOp, 1, s64}, Legal);
 
-  setAction(G_FRAME_INDEX, LLT::pointer(0), Legal);
+    for (auto Ty : {s1, s8, s16}) {
+      setAction({CmpOp, 0, Ty}, WidenScalar);
+      setAction({CmpOp, 1, Ty}, WidenScalar);
+    }
+  }
+
+  // Control-flow
+  setAction({G_BR, LLT::unsized()}, Legal);
+  setAction({G_BRCOND, s32}, Legal);
+  for (auto Ty : {s1, s8, s16})
+    setAction({G_BRCOND, Ty}, WidenScalar);
+
+  // Pointer-handling
+  setAction({G_FRAME_INDEX, p0}, Legal);
+
+  setAction({G_PTRTOINT, 0, s64}, Legal);
+  setAction({G_PTRTOINT, 1, p0}, Legal);
+
+  setAction({G_INTTOPTR, 0, p0}, Legal);
+  setAction({G_INTTOPTR, 1, s64}, Legal);
 
   computeTables();
 }

@@ -1031,9 +1031,11 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
 }
 
 PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
-                                                  CGSCCAnalysisManager &AM) {
+                                                  CGSCCAnalysisManager &AM,
+                                                  LazyCallGraph &CG,
+                                                  CGSCCUpdateResult &) {
   FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
   // We pass a lambda into functions to wire them up to the analysis manager
   // for getting function analyses.

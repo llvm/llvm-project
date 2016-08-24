@@ -14,7 +14,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"

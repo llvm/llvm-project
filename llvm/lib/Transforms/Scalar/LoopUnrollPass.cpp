@@ -948,6 +948,10 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
       L, TTI, ProvidedThreshold, ProvidedCount, ProvidedAllowPartial,
       ProvidedRuntime);
 
+  // Exit early if unrolling is disabled.
+  if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
+    return false;
+
   // If the loop contains a convergent operation, the prelude we'd add
   // to do the first few instructions before we hit the unrolled loop
   // is unsafe -- it adds a control-flow dependency to the convergent

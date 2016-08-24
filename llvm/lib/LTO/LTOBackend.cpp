@@ -143,6 +143,20 @@ bool opt(Config &C, TargetMachine *TM, unsigned Task, Module &M,
   return true;
 }
 
+/// Monolithic LTO does not support caching (yet), this is a convenient wrapper
+/// around AddOutput to workaround this.
+static AddOutputFn getUncachedOutputWrapper(AddOutputFn &AddOutput,
+                                            unsigned Task) {
+  return [Task, &AddOutput](unsigned TaskId) {
+    auto Output = AddOutput(Task);
+    if (Output->isCachingEnabled() && Output->tryLoadFromCache(""))
+      report_fatal_error("Cache hit without a valid key?");
+    errs() << Task << " == " << TaskId << "\n";
+    assert(Task == TaskId && "Unexpexted TaskId mismatch");
+    return Output;
+  };
+}
+
 void codegen(Config &C, TargetMachine *TM, AddOutputFn AddOutput, unsigned Task,
              Module &M) {
   if (C.PreCodeGenModuleHook && !C.PreCodeGenModuleHook(Task, M))
@@ -190,7 +204,10 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddOutputFn AddOutput,
 
               std::unique_ptr<TargetMachine> TM =
                   createTargetMachine(C, MPartInCtx->getTargetTriple(), T);
-              codegen(C, TM.get(), AddOutput, ThreadId, *MPartInCtx);
+
+              codegen(C, TM.get(),
+                      getUncachedOutputWrapper(AddOutput, ThreadId), ThreadId,
+                      *MPartInCtx);
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
@@ -228,11 +245,12 @@ Error lto::backend(Config &C, AddOutputFn AddOutput,
     if (!opt(C, TM.get(), 0, *M, /*IsThinLto=*/false))
       return Error();
 
-  if (ParallelCodeGenParallelismLevel == 1)
-    codegen(C, TM.get(), AddOutput, 0, *M);
-  else
+  if (ParallelCodeGenParallelismLevel == 1) {
+    codegen(C, TM.get(), getUncachedOutputWrapper(AddOutput, 0), 0, *M);
+  } else {
     splitCodeGen(C, TM.get(), AddOutput, ParallelCodeGenParallelismLevel,
                  std::move(M));
+  }
   return Error();
 }
 
@@ -271,6 +289,8 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddOutputFn AddOutput,
     return Error();
 
   auto ModuleLoader = [&](StringRef Identifier) {
+    assert(Mod.getContext().isODRUniquingDebugTypes() &&
+           "ODR Type uniquing shoudl be enabled on the context");
     return std::move(getLazyBitcodeModule(MemoryBuffer::getMemBuffer(
                                               ModuleMap[Identifier], false),
                                           Mod.getContext(),

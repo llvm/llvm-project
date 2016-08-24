@@ -34,7 +34,6 @@
 ...
 ---
 name:            foo
-isSSA:           true
 tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16

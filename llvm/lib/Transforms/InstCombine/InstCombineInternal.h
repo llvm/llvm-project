@@ -550,8 +550,6 @@ private:
                                     Constant *RHSC);
   Instruction *foldICmpDivConstConst(ICmpInst &ICI, BinaryOperator *DivI,
                                      ConstantInt *DivRHS);
-  Instruction *foldICmpShrConstConst(ICmpInst &ICI, BinaryOperator *DivI,
-                                     ConstantInt *DivRHS);
   Instruction *foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
                                    ConstantInt *CI1, ConstantInt *CI2);
   Instruction *foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,

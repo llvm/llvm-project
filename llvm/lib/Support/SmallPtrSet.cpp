@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 
 using namespace llvm;
@@ -91,7 +92,7 @@ const void * const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
   unsigned ProbeAmt = 1;
   const void *const *Array = CurArray;
   const void *const *Tombstone = nullptr;
-  while (1) {
+  while (true) {
     // If we found an empty bucket, the pointer doesn't exist in the set.
     // Return a tombstone if we've seen one so far, or the empty bucket if
     // not.

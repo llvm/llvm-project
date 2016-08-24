@@ -63,7 +63,6 @@
 # Check that we assign a relevant register bank for %0.
 # Based on the type i32, this should be gpr.
 name:            defaultMapping
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
@@ -81,7 +80,6 @@ body: |
 # Based on the type <2 x i32>, this should be fpr.
 # FPR is used for both floating point and vector registers.
 name:            defaultMappingVector
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
@@ -99,7 +97,6 @@ body: |
 # Indeed based on the source of the copy it should live
 # in FPR, but at the use, it should be GPR.
 name:            defaultMapping1Repair
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
@@ -120,7 +117,6 @@ body: |
 
 # Check that we repair the assignment for %0 differently for both uses.
 name:            defaultMapping2Repairs
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
@@ -147,7 +143,6 @@ body: |
 # requires that it lives in GPR. Make sure regbankselect
 # fixes that.
 name:            defaultMappingDefRepair
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
@@ -169,7 +164,6 @@ body: |
 ---
 # Check that we are able to propagate register banks from phis.
 name:            phiPropagation
-isSSA:           true
 legalized:       true
 tracksRegLiveness:   true
 # CHECK:      registers:
@@ -207,7 +201,6 @@ body: |
 ---
 # Make sure we can repair physical register uses as well.
 name:            defaultMappingUseRepairPhysReg
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
@@ -229,7 +222,6 @@ body: |
 ---
 # Make sure we can repair physical register defs.
 name:            defaultMappingDefRepairPhysReg
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
@@ -250,7 +242,6 @@ body: |
 # Check that the greedy mode is able to switch the
 # G_OR instruction from fpr to gpr.
 name:            greedyMappingOr
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr }
@@ -297,7 +288,6 @@ body: |
 # G_OR instruction from fpr to gpr, while still honoring
 # %2 constraint.
 name:            greedyMappingOrWithConstraints
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr }
@@ -344,7 +334,6 @@ body: |
 ---
 # CHECK-LABEL: name: ignoreTargetSpecificInst
 name:            ignoreTargetSpecificInst
-isSSA:           true
 legalized:       true
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64 }
@@ -372,9 +361,7 @@ body: |
 # CHECK-LABEL: name: regBankSelected_property
 # CHECK: legalized: true
 # CHECK: regBankSelected: true
-# CHECK: isSSA: true
 name:            regBankSelected_property
-isSSA:           true
 legalized:       true
 regBankSelected: false
 body:             |

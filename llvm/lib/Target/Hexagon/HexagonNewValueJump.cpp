@@ -29,7 +29,6 @@
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

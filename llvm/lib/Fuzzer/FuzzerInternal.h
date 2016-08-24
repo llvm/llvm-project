@@ -26,10 +26,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "FuzzerExtFunctions.h"
-#include "FuzzerInterface.h"
-#include "FuzzerValueBitMap.h"
-
 // Platform detection.
 #ifdef __linux__
 #define LIBFUZZER_LINUX 1
@@ -40,6 +36,16 @@
 #else
 #error "Support for your platform has not been implemented"
 #endif
+
+#ifdef __x86_64
+#define ATTRIBUTE_TARGET_POPCNT __attribute__((target("popcnt")))
+#else
+#define ATTRIBUTE_TARGET_POPCNT
+#endif
+
+#include "FuzzerExtFunctions.h"
+#include "FuzzerInterface.h"
+#include "FuzzerValueBitMap.h"
 
 namespace fuzzer {
 
