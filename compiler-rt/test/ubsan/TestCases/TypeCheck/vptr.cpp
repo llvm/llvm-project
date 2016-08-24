@@ -50,6 +50,8 @@ struct V : S {};
 // Make p global so that lsan does not complain.
 T *p = 0;
 
+volatile void *sink1, *sink2;
+
 int access_p(T *p, char type);
 
 int main(int argc, char **argv) {
@@ -74,6 +76,11 @@ int main(int argc, char **argv) {
 
   char Buffer[sizeof(U)] = {};
   char TStorage[sizeof(T)];
+  // Allocate two dummy objects so that the real object
+  // is not on the boundary of mapped memory. Otherwise ubsan
+  // will not be able to describe the vptr in detail.
+  sink1 = new T;
+  sink2 = new U;
   switch (argv[1][1]) {
   case '0':
     p = reinterpret_cast<T*>(Buffer);
