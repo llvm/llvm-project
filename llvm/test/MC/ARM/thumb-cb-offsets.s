@@ -24,6 +24,13 @@ label1:
 label2:
   nop
 
+@ CHECK: out of range pc-relative fixup value
+  cbz r0, label4
+  .space 33
+label4:
+  nop
+
+  .align 2
 @ CHECK-NOT: label3
   cbnz r0, label3
   .space 128
