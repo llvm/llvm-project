@@ -25,6 +25,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
             case memory_order_acq_rel: __llvm_fence_ar_sg(); break;
             case memory_order_seq_cst: __llvm_fence_sc_sg(); break;
             }
+            break;
         case memory_scope_work_group:
             switch (order) {
             case memory_order_relaxed: break;
@@ -33,6 +34,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
             case memory_order_acq_rel: __llvm_fence_ar_wg(); break;
             case memory_order_seq_cst: __llvm_fence_sc_wg(); break;
             }
+            break;
         case memory_scope_device:
             switch (order) {
             case memory_order_relaxed: break;
@@ -41,6 +43,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
             case memory_order_acq_rel: __llvm_fence_ar_dev(); break;
             case memory_order_seq_cst: __llvm_fence_sc_dev(); break;
             }
+            break;
         case memory_scope_all_svm_devices:
             switch (order) {
             case memory_order_relaxed: break;
@@ -49,6 +52,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
             case memory_order_acq_rel: __llvm_fence_ar_sys(); break;
             case memory_order_seq_cst: __llvm_fence_sc_sys(); break;
             }
+            break;
         }
     }
 }

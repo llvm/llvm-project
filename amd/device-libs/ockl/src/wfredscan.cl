@@ -6,7 +6,6 @@
  *===------------------------------------------------------------------------*/
 
 #include "irif.h"
-extern uint __llvm_readlane(uint, int); // FIXME
 #include "ockl.h"
 #include "oclc.h"
 
@@ -74,7 +73,7 @@ extern uint __llvm_readlane(uint, int); // FIXME
 #define half_dpp(X,C,R,B,F) AS_HALF((ushort)uint_dpp((uint)AS_USHORT(X),C,R,B,F))
 
 // readlane
-#define uint_readlane(X,L) __llvm_readlane(X,L)
+#define uint_readlane(X,L) __llvm_amdgcn_readlane(X,L)
 #define ulong_readlane(X,L) ({ \
     uint2 __x = AS_UINT2(X); \
     uint2 __r; \

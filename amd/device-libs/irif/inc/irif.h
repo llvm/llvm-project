@@ -133,28 +133,46 @@ extern void __llvm_fence_sc_sys(void);
 
 // Atomics
 extern uint __llvm_ld_atomic_a1_x_dev_i32(__global uint *);
+extern ulong __llvm_ld_atomic_a1_x_dev_i64(__global ulong *);
+extern uint __llvm_ld_atomic_a3_x_wg_i32(__local uint *);
+extern ulong __llvm_ld_atomic_a3_x_wg_i64(__local ulong *);
+
+extern void __llvm_st_atomic_a1_x_dev_i32(__global uint *, uint);
+extern void __llvm_st_atomic_a1_x_dev_i64(__global ulong *, ulong);
+extern void __llvm_st_atomic_a3_x_wg_i32(__local uint *, uint);
+extern void __llvm_st_atomic_a3_x_wg_i64(__local ulong *, ulong);
 
 extern uint __llvm_atomic_add_a1_x_dev_i32(__global uint *, uint);
 extern ulong __llvm_atomic_add_a1_x_dev_i64(__global ulong *, ulong);
 extern uint __llvm_atomic_add_a3_x_wg_i32(__local uint *, uint);
 extern ulong __llvm_atomic_add_a3_x_wg_i64(__local ulong *, ulong);
 
-extern uint __llvm_atomic_max_a1_x_dev_i32(__global uint *, uint);
+extern uint __llvm_atomic_and_a1_x_dev_i32(__global uint *, uint);
+extern ulong __llvm_atomic_and_a1_x_dev_i64(__global ulong *, ulong);
+extern uint __llvm_atomic_and_a3_x_wg_i32(__local uint *, uint);
+extern ulong __llvm_atomic_and_a3_x_wg_i64(__local ulong *, ulong);
+
+extern uint __llvm_atomic_or_a1_x_dev_i32(__global uint *, uint);
+extern ulong __llvm_atomic_or_a1_x_dev_i64(__global ulong *, ulong);
+extern uint __llvm_atomic_or_a3_x_wg_i32(__local uint *, uint);
+extern ulong __llvm_atomic_or_a3_x_wg_i64(__local ulong *, ulong);
+
+extern uint __llvm_atomic_max_a1_x_dev_i32(__global int *, int);
 extern uint __llvm_atomic_umax_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_max_a1_x_dev_i64(__global ulong *, ulong);
+extern ulong __llvm_atomic_max_a1_x_dev_i64(__global long *, long);
 extern ulong __llvm_atomic_umax_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_max_a3_x_wg_i32(__local uint *, uint);
+extern uint __llvm_atomic_max_a3_x_wg_i32(__local int *, int);
 extern uint __llvm_atomic_umax_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_max_a3_x_wg_i64(__local ulong *, ulong);
+extern ulong __llvm_atomic_max_a3_x_wg_i64(__local long *, long);
 extern ulong __llvm_atomic_umax_a3_x_wg_i64(__local ulong *, ulong);
 
-extern uint __llvm_atomic_min_a1_x_dev_i32(__global uint *, uint);
+extern uint __llvm_atomic_min_a1_x_dev_i32(__global int *, int);
 extern uint __llvm_atomic_umin_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_min_a1_x_dev_i64(__global ulong *, ulong);
+extern ulong __llvm_atomic_min_a1_x_dev_i64(__global long *, long);
 extern ulong __llvm_atomic_umin_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_min_a3_x_wg_i32(__local uint *, uint);
+extern uint __llvm_atomic_min_a3_x_wg_i32(__local int *, int);
 extern uint __llvm_atomic_umin_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_min_a3_x_wg_i64(__local ulong *, ulong);
+extern ulong __llvm_atomic_min_a3_x_wg_i64(__local long *, long);
 extern ulong __llvm_atomic_umin_a3_x_wg_i64(__local ulong *, ulong);
 
 extern uint __llvm_cmpxchg_a1_x_x_dev_i32(__global uint *, uint, uint);
@@ -237,6 +255,9 @@ extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_hi(uint, uint) __asm("llv
 extern ulong __llvm_amdgcn_read_exec(void);
 extern uint __llvm_amdgcn_read_exec_lo(void);
 extern uint __llvm_amdgcn_read_exec_hi(void);
+
+extern uint __llvm_amdgcn_readfirstlane(uint);
+extern uint __llvm_amdgcn_readlane(uint, uint);
 
 extern __attribute__((const)) uint __llvm_amdgcn_lerp(uint, uint, uint) __asm("llvm.amdgcn.lerp");
 extern __attribute__((const)) ulong __llvm_amdgcn_mqsad_pk_u16_u8(ulong, uint, ulong) __asm("llvm.amdgcn.mqsad.pk.u16.u8");

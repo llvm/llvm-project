@@ -1,12 +1,51 @@
 target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
 target triple = "amdgcn--amdhsa"
 
+;;;
+;;; TODO add synchscope(N)
+;;;
+
 ;;;;; Load
 define i32 @__llvm_ld_atomic_a1_x_dev_i32(i32 addrspace(1)* nocapture readonly) #1 {
-  %2 = load atomic i32, i32 addrspace(1)* %0 monotonic, align 4
-    ret i32 %2
+  %2 = load atomic volatile i32, i32 addrspace(1)* %0 monotonic, align 4
+  ret i32 %2
 }
 
+define i64 @__llvm_ld_atomic_a1_x_dev_i64(i64 addrspace(1)* nocapture readonly) #1 {
+  %2 = load atomic volatile i64, i64 addrspace(1)* %0 monotonic, align 8
+  ret i64 %2
+}
+
+define i32 @__llvm_ld_atomic_a3_x_wg_i32(i32 addrspace(3)* nocapture readonly) #1 {
+  %2 = load atomic volatile i32, i32 addrspace(3)* %0 monotonic, align 4
+  ret i32 %2
+}
+
+define i64 @__llvm_ld_atomic_a3_x_wg_i64(i64 addrspace(3)* nocapture readonly) #1 {
+  %2 = load atomic volatile i64, i64 addrspace(3)* %0 monotonic, align 8
+  ret i64 %2
+}
+
+;;;;; Store
+define void @__llvm_st_atomic_a1_x_dev_i32(i32 addrspace(1)* nocapture, i32) #0 {
+  store atomic volatile i32 %1, i32 addrspace(1)* %0 monotonic, align 4
+  ret void
+}
+
+define void @__llvm_st_atomic_a1_x_dev_i64(i64 addrspace(1)* nocapture, i64) #0 {
+  store atomic volatile i64 %1, i64 addrspace(1)* %0 monotonic, align 4
+  ret void
+}
+
+define void @__llvm_st_atomic_a3_x_wg_i32(i32 addrspace(3)* nocapture, i32) #0 {
+  store atomic volatile i32 %1, i32 addrspace(3)* %0 monotonic, align 4
+  ret void
+}
+
+define void @__llvm_st_atomic_a3_x_wg_i64(i64 addrspace(3)* nocapture, i64) #0 {
+  store atomic volatile i64 %1, i64 addrspace(3)* %0 monotonic, align 4
+  ret void
+}
 
 ;;;;; Add
 define i32 @__llvm_atomic_add_a1_x_dev_i32(i32 addrspace(1)* nocapture, i32) #0 {
@@ -29,6 +68,47 @@ define i64 @__llvm_atomic_add_a3_x_wg_i64(i64 addrspace(3)* nocapture, i64) #0 {
   ret i64 %3
 }
 
+;;;;; And
+define i32 @__llvm_atomic_and_a1_x_dev_i32(i32 addrspace(1)* nocapture, i32) #0 {
+  %3 = atomicrmw volatile and i32 addrspace(1)* %0, i32 %1 monotonic
+  ret i32 %3
+}
+
+define i64 @__llvm_atomic_and_a1_x_dev_i64(i64 addrspace(1)* nocapture, i64) #0 {
+  %3 = atomicrmw volatile and i64 addrspace(1)* %0, i64 %1 monotonic
+  ret i64 %3
+}
+
+define i32 @__llvm_atomic_and_a3_x_wg_i32(i32 addrspace(3)* nocapture, i32) #0 {
+  %3 = atomicrmw volatile and i32 addrspace(3)* %0, i32 %1 monotonic
+  ret i32 %3
+}
+
+define i64 @__llvm_atomic_and_a3_x_wg_i64(i64 addrspace(3)* nocapture, i64) #0 {
+  %3 = atomicrmw volatile and i64 addrspace(3)* %0, i64 %1 monotonic
+  ret i64 %3
+}
+
+;;;;; Or
+define i32 @__llvm_atomic_or_a1_x_dev_i32(i32 addrspace(1)* nocapture, i32) #0 {
+  %3 = atomicrmw volatile or i32 addrspace(1)* %0, i32 %1 monotonic
+  ret i32 %3
+}
+
+define i64 @__llvm_atomic_or_a1_x_dev_i64(i64 addrspace(1)* nocapture, i64) #0 {
+  %3 = atomicrmw volatile or i64 addrspace(1)* %0, i64 %1 monotonic
+  ret i64 %3
+}
+
+define i32 @__llvm_atomic_or_a3_x_wg_i32(i32 addrspace(3)* nocapture, i32) #0 {
+  %3 = atomicrmw volatile or i32 addrspace(3)* %0, i32 %1 monotonic
+  ret i32 %3
+}
+
+define i64 @__llvm_atomic_or_a3_x_wg_i64(i64 addrspace(3)* nocapture, i64) #0 {
+  %3 = atomicrmw volatile or i64 addrspace(3)* %0, i64 %1 monotonic
+  ret i64 %3
+}
 
 ;;;;; Max
 define i32 @__llvm_atomic_max_a1_x_dev_i32(i32 addrspace(1)* nocapture, i32) #0 {
