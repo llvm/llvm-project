@@ -180,7 +180,8 @@ class LinuxLocalTI(DefaultTargetInfo):
         if llvm_unwinder:
             flags += ['-lunwind', '-ldl']
         else:
-            flags += ['-lgcc_s', '-lgcc']
+            flags += ['-lgcc_s']
+        flags += ['-lgcc']
         use_libatomic = self.full_config.get_lit_bool('use_libatomic', False)
         if use_libatomic:
             flags += ['-latomic']

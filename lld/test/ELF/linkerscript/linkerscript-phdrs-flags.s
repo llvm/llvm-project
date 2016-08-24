@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS FLAGS (1 + 0x2);} \
+# RUN: echo "PHDRS {all PT_LOAD FILEHDR PHDRS FLAGS (1 | 1 + 0x1);} \
 # RUN:       SECTIONS { \
 # RUN:           . = 0x10000200; \
 # RUN:           .text : {*(.text*)} :all \

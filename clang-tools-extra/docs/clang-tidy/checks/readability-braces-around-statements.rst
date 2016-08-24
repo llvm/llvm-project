@@ -11,14 +11,14 @@ Checks that bodies of ``if`` statements and loops (``for``, ``do while``, and
 
 Before:
 
-.. code:: c++
+.. code-block:: c++
 
   if (condition)
     statement;
 
 After:
 
-.. code:: c++
+.. code-block:: c++
 
   if (condition) {
     statement;

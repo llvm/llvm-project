@@ -69,6 +69,12 @@ TEST(FileSpecTest, AppendPathComponent)
     EXPECT_STREQ("/foo", fs_posix.GetDirectory().GetCString());
     EXPECT_STREQ("bar", fs_posix.GetFilename().GetCString());
 
+    FileSpec fs_posix_2("/foo", false, FileSpec::ePathSyntaxPosix);
+    fs_posix_2.AppendPathComponent("//bar/baz");
+    EXPECT_STREQ("/foo/bar/baz", fs_posix_2.GetCString());
+    EXPECT_STREQ("/foo/bar", fs_posix_2.GetDirectory().GetCString());
+    EXPECT_STREQ("baz", fs_posix_2.GetFilename().GetCString());
+
     FileSpec fs_windows("F:\\bar", false, FileSpec::ePathSyntaxWindows);
     fs_windows.AppendPathComponent("baz");
     EXPECT_STREQ("F:\\bar\\baz", fs_windows.GetCString());

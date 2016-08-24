@@ -117,34 +117,40 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   return Options;
 }
 
+template <typename T>
+static void mergeVectors(Optional<T> &Dest, const Optional<T> &Src) {
+  if (Src) {
+    if (Dest)
+      Dest->insert(Dest->end(), Src->begin(), Src->end());
+    else
+      Dest = Src;
+  }
+}
+
+static void mergeCommaSeparatedLists(Optional<std::string> &Dest,
+                                     const Optional<std::string> &Src) {
+  if (Src)
+    Dest = (Dest && !Dest->empty() ? *Dest + "," : "") + *Src;
+}
+
+template <typename T>
+static void overrideValue(Optional<T> &Dest, const Optional<T> &Src) {
+  if (Src)
+    Dest = Src;
+}
+
 ClangTidyOptions
 ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
   ClangTidyOptions Result = *this;
 
-  // Merge comma-separated glob lists by appending the new value after a comma.
-  if (Other.Checks)
-    Result.Checks =
-        (Result.Checks && !Result.Checks->empty() ? *Result.Checks + "," : "") +
-        *Other.Checks;
-  if (Other.WarningsAsErrors)
-    Result.WarningsAsErrors =
-        (Result.WarningsAsErrors && !Result.WarningsAsErrors->empty()
-             ? *Result.WarningsAsErrors + ","
-             : "") +
-        *Other.WarningsAsErrors;
-
-  if (Other.HeaderFilterRegex)
-    Result.HeaderFilterRegex = Other.HeaderFilterRegex;
-  if (Other.SystemHeaders)
-    Result.SystemHeaders = Other.SystemHeaders;
-  if (Other.AnalyzeTemporaryDtors)
-    Result.AnalyzeTemporaryDtors = Other.AnalyzeTemporaryDtors;
-  if (Other.User)
-    Result.User = Other.User;
-  if (Other.ExtraArgs)
-    Result.ExtraArgs = Other.ExtraArgs;
-  if (Other.ExtraArgsBefore)
-    Result.ExtraArgsBefore = Other.ExtraArgsBefore;
+  mergeCommaSeparatedLists(Result.Checks, Other.Checks);
+  mergeCommaSeparatedLists(Result.WarningsAsErrors, Other.WarningsAsErrors);
+  overrideValue(Result.HeaderFilterRegex, Other.HeaderFilterRegex);
+  overrideValue(Result.SystemHeaders, Other.SystemHeaders);
+  overrideValue(Result.AnalyzeTemporaryDtors, Other.AnalyzeTemporaryDtors);
+  overrideValue(Result.User, Other.User);
+  mergeVectors(Result.ExtraArgs, Other.ExtraArgs);
+  mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
 
   for (const auto &KeyValue : Other.CheckOptions)
     Result.CheckOptions[KeyValue.first] = KeyValue.second;

@@ -128,6 +128,7 @@ Clang-Tidy Checks
    readability-implicit-bool-cast
    readability-inconsistent-declaration-parameter-name
    readability-named-parameter
+   readability-non-const-parameter
    readability-redundant-control-flow
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
