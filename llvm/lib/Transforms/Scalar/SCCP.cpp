@@ -1538,17 +1538,6 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   return true;
 }
 
-static bool tryToReplaceInstWithConstant(SCCPSolver &Solver, Instruction *Inst,
-                                         bool shouldEraseFromParent) {
-  if (!tryToReplaceWithConstant(Solver, Inst))
-    return false;
-
-  // Delete the instruction.
-  if (shouldEraseFromParent)
-    Inst->eraseFromParent();
-  return true;
-}
-
 // runSCCP() - Run the Sparse Conditional Constant Propagation algorithm,
 // and return true if the function was modified.
 //
@@ -1597,8 +1586,9 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       if (Inst->getType()->isVoidTy() || isa<TerminatorInst>(Inst))
         continue;
 
-      if (tryToReplaceInstWithConstant(Solver, Inst,
-                                       true /* shouldEraseFromParent */)) {
+      if (tryToReplaceWithConstant(Solver, Inst)) {
+        if (isInstructionTriviallyDead(Inst))
+          Inst->eraseFromParent();
         // Hey, we just changed something!
         MadeChanges = true;
         ++NumInstRemoved;
@@ -1789,10 +1779,9 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
         Instruction *Inst = &*BI++;
         if (Inst->getType()->isVoidTy())
           continue;
-        if (tryToReplaceInstWithConstant(
-                Solver, Inst,
-                !isa<CallInst>(Inst) &&
-                    !isa<TerminatorInst>(Inst) /* shouldEraseFromParent */)) {
+        if (tryToReplaceWithConstant(Solver, Inst)) {
+          if (!isa<CallInst>(Inst) && !isa<TerminatorInst>(Inst))
+            Inst->eraseFromParent();
           // Hey, we just changed something!
           MadeChanges = true;
           ++IPNumInstRemoved;
