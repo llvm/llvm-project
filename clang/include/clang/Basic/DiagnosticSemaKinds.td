@@ -7681,10 +7681,8 @@ def err_ms_va_start_used_in_sysv_function : Error<
 def warn_second_arg_of_va_start_not_last_named_param : Warning<
   "second argument to 'va_start' is not the last named parameter">,
   InGroup<Varargs>;
-def warn_va_start_type_is_undefined : Warning<
-  "passing %select{an object that undergoes default argument promotion|"
-  "an object of reference type|a parameter declared with the 'register' "
-  "keyword}0 to 'va_start' has undefined behavior">, InGroup<Varargs>;
+def warn_va_start_of_reference_type_is_undefined : Warning<
+  "'va_start' has undefined behavior with reference types">, InGroup<Varargs>;
 def err_first_argument_to_va_arg_not_of_type_va_list : Error<
   "first argument to 'va_arg' is of type %0 and not 'va_list'">;
 def err_second_parameter_to_va_arg_incomplete: Error<
