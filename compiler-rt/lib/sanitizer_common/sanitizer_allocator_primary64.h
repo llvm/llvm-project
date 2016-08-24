@@ -30,74 +30,30 @@ template<class SizeClassAllocator> struct SizeClassAllocator64LocalCache;
 //
 // UserChunk: a piece of memory returned to user.
 // MetaChunk: kMetadataSize bytes of metadata associated with a UserChunk.
+
+// FreeArray is an array free-d chunks (stored as 4-byte offsets)
 //
 // A Region looks like this:
-// UserChunk1 ... UserChunkN <gap> MetaChunkN ... MetaChunk1
+// UserChunk1 ... UserChunkN <gap> MetaChunkN ... MetaChunk1 FreeArray
 template <const uptr kSpaceBeg, const uptr kSpaceSize,
           const uptr kMetadataSize, class SizeClassMap,
           class MapUnmapCallback = NoOpMapUnmapCallback>
 class SizeClassAllocator64 {
  public:
-  struct TransferBatch {
-    static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 4;
-    void SetFromRange(uptr region_beg, uptr beg_offset, uptr step, uptr count) {
-      count_ = count;
-      CHECK_LE(count_, kMaxNumCached);
-      region_beg_ = region_beg;
-      for (uptr i = 0; i < count; i++)
-        batch_[i] = static_cast<u32>((beg_offset + i * step) >> 4);
-    }
-    void SetFromArray(uptr region_beg, void *batch[], uptr count) {
-      count_ = count;
-      CHECK_LE(count_, kMaxNumCached);
-      region_beg_ = region_beg;
-      for (uptr i = 0; i < count; i++)
-        batch_[i] = static_cast<u32>(
-            ((reinterpret_cast<uptr>(batch[i])) - region_beg) >> 4);
-    }
-    void CopyToArray(void *to_batch[]) {
-      for (uptr i = 0, n = Count(); i < n; i++)
-        to_batch[i] = reinterpret_cast<void*>(Get(i));
-    }
-    uptr Count() const { return count_; }
-
-    // How much memory do we need for a batch containing n elements.
-    static uptr AllocationSizeRequiredForNElements(uptr n) {
-      return sizeof(uptr) * 2 + sizeof(u32) * n;
-    }
-    static uptr MaxCached(uptr class_id) {
-      return Min(kMaxNumCached, SizeClassMap::MaxCachedHint(class_id));
-    }
-
-    TransferBatch *next;
-
-   private:
-    uptr Get(uptr i) {
-      return region_beg_ + (static_cast<uptr>(batch_[i]) << 4);
-    }
-    // Instead of storing 64-bit pointers we store 32-bit offsets from the
-    // region start divided by 4. This imposes two limitations:
-    // * all allocations are 16-aligned,
-    // * regions are not larger than 2^36.
-    uptr region_beg_ : SANITIZER_WORDSIZE - 10;  // Region-beg is 4096-aligned.
-    uptr count_      : 10;
-    u32 batch_[kMaxNumCached];
-  };
-  static const uptr kBatchSize = sizeof(TransferBatch);
-  COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
-  COMPILER_CHECK(sizeof(TransferBatch) ==
-                 SizeClassMap::kMaxNumCachedHint * sizeof(u32));
-  COMPILER_CHECK(TransferBatch::kMaxNumCached < 1024);  // count_ uses 10 bits.
-
-  static uptr ClassIdToSize(uptr class_id) {
-    return class_id == SizeClassMap::kBatchClassID
-               ? sizeof(TransferBatch)
-               : SizeClassMap::Size(class_id);
-  }
-
   typedef SizeClassAllocator64<kSpaceBeg, kSpaceSize, kMetadataSize,
-      SizeClassMap, MapUnmapCallback> ThisT;
+                               SizeClassMap, MapUnmapCallback>
+      ThisT;
   typedef SizeClassAllocator64LocalCache<ThisT> AllocatorCache;
+
+  // When we know the size class (the region base) we can represent a pointer
+  // as a 4-byte integer (offset from the region start shifted right by 4).
+  typedef u32 CompactPtrT;
+  CompactPtrT PointerToCompactPtr(uptr base, uptr ptr) {
+    return static_cast<CompactPtrT>((ptr - base) >> 4);
+  }
+  uptr CompactPtrToPointer(uptr base, CompactPtrT ptr32) {
+    return base + (static_cast<uptr>(ptr32) << 4);
+  }
 
   void Init() {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
@@ -127,24 +83,39 @@ class SizeClassAllocator64 {
       alignment <= SizeClassMap::kMaxSize;
   }
 
-  NOINLINE TransferBatch *AllocateBatch(AllocatorStats *stat, AllocatorCache *c,
-                                        uptr class_id) {
-    CHECK_LT(class_id, kNumClasses);
+  NOINLINE void ReturnToAllocator(AllocatorStats *stat, uptr class_id,
+                                  const CompactPtrT *chunks, uptr n_chunks) {
     RegionInfo *region = GetRegionInfo(class_id);
-    TransferBatch *b = region->free_list.Pop();
-    if (!b)
-      b = PopulateFreeList(stat, c, class_id, region);
-    region->n_allocated += b->Count();
-    return b;
+    uptr region_beg = GetRegionBeginBySizeClass(class_id);
+    CompactPtrT *free_array = GetFreeArray(region_beg);
+
+    BlockingMutexLock l(&region->mutex);
+    uptr old_num_chunks = region->num_freed_chunks;
+    uptr new_num_freed_chunks = old_num_chunks + n_chunks;
+    EnsureFreeArraySpace(region, region_beg, new_num_freed_chunks);
+    for (uptr i = 0; i < n_chunks; i++)
+      free_array[old_num_chunks + i] = chunks[i];
+    region->num_freed_chunks = new_num_freed_chunks;
   }
 
-  NOINLINE void DeallocateBatch(AllocatorStats *stat, uptr class_id,
-                                TransferBatch *b) {
+  NOINLINE void GetFromAllocator(AllocatorStats *stat, uptr class_id,
+                                 CompactPtrT *chunks, uptr n_chunks) {
     RegionInfo *region = GetRegionInfo(class_id);
-    CHECK_GT(b->Count(), 0);
-    region->free_list.Push(b);
-    region->n_freed += b->Count();
+    uptr region_beg = GetRegionBeginBySizeClass(class_id);
+    CompactPtrT *free_array = GetFreeArray(region_beg);
+
+    BlockingMutexLock l(&region->mutex);
+    if (UNLIKELY(region->num_freed_chunks < n_chunks)) {
+      PopulateFreeArray(stat, class_id, region,
+                        n_chunks - region->num_freed_chunks);
+      CHECK_GE(region->num_freed_chunks, n_chunks);
+    }
+    region->num_freed_chunks -= n_chunks;
+    uptr base_idx = region->num_freed_chunks;
+    for (uptr i = 0; i < n_chunks; i++)
+      chunks[i] = free_array[base_idx + i];
   }
+
 
   bool PointerIsMine(const void *p) {
     uptr P = reinterpret_cast<uptr>(p);
@@ -198,8 +169,8 @@ class SizeClassAllocator64 {
     uptr class_id = GetSizeClass(p);
     uptr size = ClassIdToSize(class_id);
     uptr chunk_idx = GetChunkIdx(reinterpret_cast<uptr>(p), size);
-    return reinterpret_cast<void *>(SpaceBeg() +
-                                    (kRegionSize * (class_id + 1)) -
+    uptr region_beg = GetRegionBeginBySizeClass(class_id);
+    return reinterpret_cast<void *>(GetMetadataEnd(region_beg) -
                                     (1 + chunk_idx) * kMetadataSize);
   }
 
@@ -286,6 +257,10 @@ class SizeClassAllocator64 {
     }
   }
 
+  static uptr ClassIdToSize(uptr class_id) {
+    return SizeClassMap::Size(class_id);
+  }
+
   static uptr AdditionalSize() {
     return RoundUpTo(sizeof(RegionInfo) * kNumClassesRounded,
                      GetPageSizeCached());
@@ -297,6 +272,11 @@ class SizeClassAllocator64 {
 
  private:
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
+  // FreeArray is the array of free-d chunks (stored as 4-byte offsets).
+  // In the worst case it may reguire kRegionSize/SizeClassMap::kMinSize
+  // elements, but in reality this will not happen. For simplicity we
+  // dedicate 1/8 of the region's virtual space to FreeArray.
+  static const uptr kFreeArraySize = kRegionSize / 8;
 
   static const bool kUsingConstantSpaceBeg = kSpaceBeg != ~(uptr)0;
   uptr NonConstSpaceBeg;
@@ -306,16 +286,19 @@ class SizeClassAllocator64 {
   uptr SpaceEnd() const { return  SpaceBeg() + kSpaceSize; }
   // kRegionSize must be >= 2^32.
   COMPILER_CHECK((kRegionSize) >= (1ULL << (SANITIZER_WORDSIZE / 2)));
-  // kRegionSize must be <= 2^36, see TransferBatch.
+  // kRegionSize must be <= 2^36, see CompactPtrT.
   COMPILER_CHECK((kRegionSize) <= (1ULL << (SANITIZER_WORDSIZE / 2 + 4)));
   // Call mmap for user memory with at least this size.
   static const uptr kUserMapSize = 1 << 16;
   // Call mmap for metadata memory with at least this size.
   static const uptr kMetaMapSize = 1 << 16;
+  // Call mmap for free array memory with at least this size.
+  static const uptr kFreeArrayMapSize = 1 << 16;
 
   struct RegionInfo {
     BlockingMutex mutex;
-    LFStack<TransferBatch> free_list;
+    uptr num_freed_chunks;  // Number of elements in the freearray.
+    uptr mapped_free_array;  // Bytes mapped for freearray.
     uptr allocated_user;  // Bytes allocated for user memory.
     uptr allocated_meta;  // Bytes allocated for metadata.
     uptr mapped_user;  // Bytes mapped for user memory.
@@ -331,6 +314,10 @@ class SizeClassAllocator64 {
     return &regions[class_id];
   }
 
+  uptr GetMetadataEnd(uptr region_beg) {
+    return region_beg + kRegionSize - kFreeArraySize;
+  }
+
   uptr GetChunkIdx(uptr chunk, uptr size) {
     if (!kUsingConstantSpaceBeg)
       chunk -= SpaceBeg();
@@ -343,18 +330,33 @@ class SizeClassAllocator64 {
     return (u32)offset / (u32)size;
   }
 
-  NOINLINE TransferBatch *PopulateFreeList(AllocatorStats *stat,
-                                           AllocatorCache *c, uptr class_id,
-                                           RegionInfo *region) {
-    BlockingMutexLock l(&region->mutex);
-    TransferBatch *b = region->free_list.Pop();
-    if (b)
-      return b;
+  CompactPtrT *GetFreeArray(uptr region_beg) {
+    return reinterpret_cast<CompactPtrT *>(region_beg + kRegionSize -
+                                           kFreeArraySize);
+  }
+
+  void EnsureFreeArraySpace(RegionInfo *region, uptr region_beg,
+                            uptr num_freed_chunks) {
+    uptr needed_space = num_freed_chunks * sizeof(CompactPtrT);
+    if (region->mapped_free_array < needed_space) {
+      CHECK_LE(needed_space, kFreeArraySize);
+      uptr new_mapped_free_array = RoundUpTo(needed_space, kFreeArrayMapSize);
+      uptr current_map_end = reinterpret_cast<uptr>(GetFreeArray(region_beg)) +
+                             region->mapped_free_array;
+      uptr new_map_size = new_mapped_free_array - region->mapped_free_array;
+      MapWithCallback(current_map_end, new_map_size);
+      region->mapped_free_array = new_mapped_free_array;
+    }
+  }
+
+
+  NOINLINE void PopulateFreeArray(AllocatorStats *stat, uptr class_id,
+                                  RegionInfo *region, uptr requested_count) {
+    // region->mutex is held.
     uptr size = ClassIdToSize(class_id);
-    uptr count = TransferBatch::MaxCached(class_id);
     uptr beg_idx = region->allocated_user;
-    uptr end_idx = beg_idx + count * size;
-    uptr region_beg = SpaceBeg() + kRegionSize * class_id;
+    uptr end_idx = beg_idx + requested_count * size;
+    uptr region_beg = GetRegionBeginBySizeClass(class_id);
     if (end_idx + size > region->mapped_user) {
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
@@ -365,8 +367,19 @@ class SizeClassAllocator64 {
       stat->Add(AllocatorStatMapped, map_size);
       region->mapped_user += map_size;
     }
-    uptr total_count = (region->mapped_user - beg_idx - size)
-        / size / count * count;
+    CompactPtrT *free_array = GetFreeArray(region_beg);
+    uptr total_count = (region->mapped_user - beg_idx) / size;
+    uptr num_freed_chunks = region->num_freed_chunks;
+    EnsureFreeArraySpace(region, region_beg, num_freed_chunks + total_count);
+    for (uptr i = 0; i < total_count; i++) {
+      uptr chunk = beg_idx + i * size;
+      free_array[num_freed_chunks + total_count - 1 - i] =
+          PointerToCompactPtr(0, chunk);
+    }
+    region->num_freed_chunks += total_count;
+    region->allocated_user += total_count * size;
+    CHECK_LE(region->allocated_user, region->mapped_user);
+
     region->allocated_meta += total_count * kMetadataSize;
     if (region->allocated_meta > region->mapped_meta) {
       uptr map_size = kMetaMapSize;
@@ -374,7 +387,7 @@ class SizeClassAllocator64 {
         map_size += kMetaMapSize;
       // Do the mmap for the metadata.
       CHECK_GE(region->mapped_meta + map_size, region->allocated_meta);
-      MapWithCallback(region_beg + kRegionSize -
+      MapWithCallback(GetMetadataEnd(region_beg) -
                       region->mapped_meta - map_size, map_size);
       region->mapped_meta += map_size;
     }
@@ -385,19 +398,6 @@ class SizeClassAllocator64 {
           kRegionSize / 1024 / 1024, size);
       Die();
     }
-    for (;;) {
-      b = c->CreateBatch(class_id, this,
-                         (TransferBatch *)(region_beg + beg_idx));
-      b->SetFromRange(region_beg, beg_idx, size, count);
-      region->allocated_user += count * size;
-      CHECK_LE(region->allocated_user, region->mapped_user);
-      beg_idx += count * size;
-      if (beg_idx + count * size + size > region->mapped_user)
-        break;
-      CHECK_GT(b->Count(), 0);
-      region->free_list.Push(b);
-    }
-    return b;
   }
 };
 
