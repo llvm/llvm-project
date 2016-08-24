@@ -8745,6 +8745,13 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     V = DAG.getBitcast(SrcVT, V);
   }
 
+  // 32-bit targets need to load i64 as a f64 and then bitcast the result.
+  if (!Subtarget.is64Bit() && SrcVT == MVT::i64) {
+    V = DAG.getBitcast(MVT::f64, V);
+    unsigned NumBroadcastElts = BroadcastVT.getVectorNumElements();
+    BroadcastVT = MVT::getVectorVT(MVT::f64, NumBroadcastElts);
+  }
+
   return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, BroadcastVT, V));
 }
 
