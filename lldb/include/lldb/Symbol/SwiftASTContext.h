@@ -476,7 +476,7 @@ public:
     HasFatalErrors (swift::ASTContext *ast_context);
     
     bool
-    HasFatalErrors ()
+    HasFatalErrors () const
     {
         return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
     }
