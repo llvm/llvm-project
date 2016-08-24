@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 option(STREAM_EXECUTOR_UNIT_TESTS "enable unit tests" ON)
+option(STREAM_EXECUTOR_ENABLE_DOXYGEN "enable StreamExecutor doxygen" ON)
 
 # First find includes relative to the streamexecutor top-level source path.
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -61,3 +62,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
 add_subdirectory(lib)
+
+if (STREAM_EXECUTOR_ENABLE_DOXYGEN)
+    find_package(Doxygen REQUIRED)
+    configure_file(Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(
+        doc
+        ${DOXYGEN_EXECUTABLE}
+        ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        WORKING_DIRECTORY
+        ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT
+        "Generating API documentation with Doxygen"
+        VERBATIM)
+endif(STREAM_EXECUTOR_ENABLE_DOXYGEN)

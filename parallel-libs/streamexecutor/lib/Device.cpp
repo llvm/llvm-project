@@ -1,4 +1,4 @@
-//===-- Executor.cpp - Executor implementation ----------------------------===//
+//===-- Device.cpp - Device implementation --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of Executor class internals.
+/// Implementation of Device class internals.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "streamexecutor/Executor.h"
+#include "streamexecutor/Device.h"
 
 #include <cassert>
 
@@ -23,17 +23,17 @@
 
 namespace streamexecutor {
 
-Executor::Executor(PlatformExecutor *PExecutor) : PExecutor(PExecutor) {}
+Device::Device(PlatformDevice *PDevice) : PDevice(PDevice) {}
 
-Executor::~Executor() = default;
+Device::~Device() = default;
 
-Expected<std::unique_ptr<Stream>> Executor::createStream() {
+Expected<std::unique_ptr<Stream>> Device::createStream() {
   Expected<std::unique_ptr<PlatformStreamHandle>> MaybePlatformStream =
-      PExecutor->createStream();
+      PDevice->createStream();
   if (!MaybePlatformStream) {
     return MaybePlatformStream.takeError();
   }
-  assert((*MaybePlatformStream)->getExecutor() == PExecutor &&
+  assert((*MaybePlatformStream)->getDevice() == PDevice &&
          "an executor created a stream with a different stored executor");
   return llvm::make_unique<Stream>(std::move(*MaybePlatformStream));
 }

@@ -40,8 +40,8 @@ Clang-Tidy Checks
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting
    google-readability-function-size (redirects to readability-function-size) <google-readability-function-size>
-   google-readability-namespace-comments
-   google-readability-redundant-smartptr-get
+   google-readability-namespace-comments (redirects to llvm-namespace-comment) <google-readability-namespace-comments>
+   google-readability-redundant-smartptr-get (redirects to readability-redundant-smartptr-get) <google-readability-redundant-smartptr-get>
    google-readability-todo
    google-runtime-int
    google-runtime-member-string-references

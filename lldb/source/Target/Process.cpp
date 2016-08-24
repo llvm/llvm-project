@@ -4297,9 +4297,8 @@ Process::HaltPrivate()
 thread_result_t
 Process::PrivateStateThread (void *arg)
 {
-    PrivateStateThreadArgs real_args = *static_cast<PrivateStateThreadArgs *> (arg);
-    free (arg);
-    thread_result_t result = real_args.process->RunPrivateStateThread(real_args.is_secondary_thread);
+    std::unique_ptr<PrivateStateThreadArgs> args_up(static_cast<PrivateStateThreadArgs *>(arg));
+    thread_result_t result = args_up->process->RunPrivateStateThread(args_up->is_secondary_thread);
     return result;
 }
 

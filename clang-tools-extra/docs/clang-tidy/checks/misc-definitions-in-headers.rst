@@ -7,7 +7,7 @@ Finds non-extern non-inline function and variable definitions in header files,
 which can lead to potential ODR violations in case these headers are included
 from multiple translation units.
 
-.. code:: c++
+.. code-block:: c++
 
    // Foo.h
    int a = 1; // Warning: variable definition.
@@ -38,9 +38,10 @@ from multiple translation units.
    }
 
    class A {
-    public:
+   public:
      int f1() { return 1; } // OK: implicitly inline member function definition is allowed.
      int f2();
+
      static int d;
    };
 

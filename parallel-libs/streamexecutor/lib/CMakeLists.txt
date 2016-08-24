@@ -6,7 +6,7 @@ add_library(
 add_library(
     streamexecutor
     $<TARGET_OBJECTS:utils>
-    Executor.cpp
+    Device.cpp
     Kernel.cpp
     KernelSpec.cpp
     PackedKernelArgumentArray.cpp
