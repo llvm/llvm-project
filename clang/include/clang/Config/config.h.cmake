@@ -35,6 +35,9 @@
 /* Define if we have libxml2 */
 #cmakedefine CLANG_HAVE_LIBXML ${CLANG_HAVE_LIBXML}
 
+/* Define if we have sys/resource.h (rlimits) */
+#cmakedefine CLANG_HAVE_RLIMITS ${CLANG_HAVE_RLIMITS}
+
 /* The LLVM product name and version */
 #define BACKEND_PACKAGE_STRING "${BACKEND_PACKAGE_STRING}"
 

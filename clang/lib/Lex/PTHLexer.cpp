@@ -628,15 +628,15 @@ PTHLexer *PTHManager::CreateLexer(FileID FID) {
 namespace {
 class PTHStatData {
 public:
-  const bool HasData;
   uint64_t Size;
   time_t ModTime;
   llvm::sys::fs::UniqueID UniqueID;
+  const bool HasData;
   bool IsDirectory;
 
   PTHStatData(uint64_t Size, time_t ModTime, llvm::sys::fs::UniqueID UniqueID,
               bool IsDirectory)
-      : HasData(true), Size(Size), ModTime(ModTime), UniqueID(UniqueID),
+      : Size(Size), ModTime(ModTime), UniqueID(UniqueID), HasData(true),
         IsDirectory(IsDirectory) {}
 
   PTHStatData() : HasData(false) {}

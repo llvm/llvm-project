@@ -1085,6 +1085,18 @@ DerivedArgList *Darwin::TranslateArgs(const DerivedArgList &Args,
     }
   }
 
+  auto Arch = tools::darwin::getArchTypeForMachOArchName(BoundArch);
+  if ((Arch == llvm::Triple::arm || Arch == llvm::Triple::thumb)) {
+    if (Args.hasFlag(options::OPT_fomit_frame_pointer,
+                     options::OPT_fno_omit_frame_pointer, false))
+      getDriver().Diag(clang::diag::warn_drv_unsupported_opt_for_target)
+          << "-fomit-frame-pointer" << BoundArch;
+    if (Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
+                     options::OPT_mno_omit_leaf_frame_pointer, false))
+      getDriver().Diag(clang::diag::warn_drv_unsupported_opt_for_target)
+          << "-momit-leaf-frame-pointer" << BoundArch;
+  }
+
   return DAL;
 }
 
