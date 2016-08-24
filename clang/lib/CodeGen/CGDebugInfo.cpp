@@ -2646,6 +2646,9 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
       llvm::DIScope *Mod = getParentModuleOrNull(RDecl);
       FDContext = getContextDescriptor(RDecl, Mod ? Mod : TheCU);
     }
+    // Check if it is a noreturn-marked function
+    if (FD->isNoReturn())
+      Flags |= llvm::DINode::FlagNoReturn;
     // Collect template parameters.
     TParamsArray = CollectFunctionTemplateParams(FD, Unit);
   }
