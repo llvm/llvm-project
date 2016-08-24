@@ -3243,7 +3243,6 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
   // block.
   QualType Type;
   SourceLocation ParamLoc;
-  bool IsCRegister = false;
 
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Arg)) {
     if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(DR->getDecl())) {
@@ -3260,21 +3259,15 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
 
       Type = PV->getType();
       ParamLoc = PV->getLocation();
-      IsCRegister =
-          PV->getStorageClass() == SC_Register && !getLangOpts().CPlusPlus;
     }
   }
 
   if (!SecondArgIsLastNamedArgument)
     Diag(TheCall->getArg(1)->getLocStart(),
          diag::warn_second_arg_of_va_start_not_last_named_param);
-  else if (IsCRegister || Type->isReferenceType() ||
-           Type->isPromotableIntegerType() ||
-           Type->isSpecificBuiltinType(BuiltinType::Float)) {
-    unsigned Reason = 0;
-    if (Type->isReferenceType())  Reason = 1;
-    else if (IsCRegister)         Reason = 2;
-    Diag(Arg->getLocStart(), diag::warn_va_start_type_is_undefined) << Reason;
+  else if (Type->isReferenceType()) {
+    Diag(Arg->getLocStart(),
+         diag::warn_va_start_of_reference_type_is_undefined);
     Diag(ParamLoc, diag::note_parameter_type) << Type;
   }
 
