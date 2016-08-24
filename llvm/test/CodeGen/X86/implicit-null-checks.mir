@@ -130,7 +130,6 @@ body:             |
 name:            imp_null_check_with_bitwise_op_1
 alignment:       4
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false
 liveins:

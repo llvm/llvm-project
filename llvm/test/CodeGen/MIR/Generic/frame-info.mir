@@ -23,7 +23,6 @@
 ...
 ---
 name:            test
-isSSA:           true
 tracksRegLiveness: true
 
 # CHECK: frameInfo:
@@ -49,7 +48,6 @@ body: |
 ...
 ---
 name:            test2
-isSSA:           true
 tracksRegLiveness: true
 
 # CHECK: test2

@@ -98,6 +98,11 @@ public:
     return "SI Load / Store Optimizer";
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+      MachineFunctionProperties::Property::NoPHIs);
+  }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addPreserved<SlotIndexes>();
@@ -424,8 +429,6 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   LIS = &getAnalysis<LiveIntervals>();
 
   DEBUG(dbgs() << "Running SILoadStoreOptimizer\n");
-
-  assert(!MRI->isSSA());
 
   bool Modified = false;
 

@@ -10,7 +10,6 @@
 
 ---
 name:            baz
-isSSA:           true
 registers:
   - { id: 0, class: _ }
 body: |

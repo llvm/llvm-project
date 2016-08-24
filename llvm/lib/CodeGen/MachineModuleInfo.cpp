@@ -13,6 +13,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionInitializer.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -23,12 +24,14 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 using namespace llvm::dwarf;
 
 // Handle the Pass registration stuff necessary to use DataLayout's.
-INITIALIZE_PASS(MachineModuleInfo, "machinemoduleinfo",
-                "Machine Module Information", false, false)
+INITIALIZE_TM_PASS(MachineModuleInfo, "machinemoduleinfo",
+                   "Machine Module Information", false, false)
 char MachineModuleInfo::ID = 0;
 
 // Out of line virtual method.
@@ -186,18 +189,11 @@ void MMIAddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
 
 //===----------------------------------------------------------------------===//
 
-MachineModuleInfo::MachineModuleInfo(const MCAsmInfo &MAI,
-                                     const MCRegisterInfo &MRI,
-                                     const MCObjectFileInfo *MOFI)
-  : ImmutablePass(ID), Context(&MAI, &MRI, MOFI, nullptr, false) {
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
+  : ImmutablePass(ID), TM(*TM),
+    Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+            TM->getObjFileLowering(), nullptr, false) {
   initializeMachineModuleInfoPass(*PassRegistry::getPassRegistry());
-}
-
-MachineModuleInfo::MachineModuleInfo()
-  : ImmutablePass(ID), Context(nullptr, nullptr, nullptr) {
-  llvm_unreachable("This MachineModuleInfo constructor should never be called, "
-                   "MMI should always be explicitly constructed by "
-                   "LLVMTargetMachine");
 }
 
 MachineModuleInfo::~MachineModuleInfo() {
@@ -213,7 +209,7 @@ bool MachineModuleInfo::doInitialization(Module &M) {
   DbgInfoAvailable = UsesVAFloatArgument = UsesMorestackAddr = false;
   PersonalityTypeCache = EHPersonality::Unknown;
   AddrLabelSymbols = nullptr;
-  TheModule = nullptr;
+  TheModule = &M;
 
   return false;
 }
@@ -461,3 +457,63 @@ try_next:;
   FilterIds.push_back(0); // terminator
   return FilterID;
 }
+
+MachineFunction &MachineModuleInfo::getMachineFunction(const Function &F) {
+  // Shortcut for the common case where a sequence of MachineFunctionPasses
+  // all query for the same Function.
+  if (LastRequest == &F)
+    return *LastResult;
+
+  auto I = MachineFunctions.insert(
+      std::make_pair(&F, std::unique_ptr<MachineFunction>()));
+  MachineFunction *MF;
+  if (I.second) {
+    // No pre-existing machine function, create a new one.
+    MF = new MachineFunction(&F, TM, NextFnNum++, *this);
+    // Update the set entry.
+    I.first->second.reset(MF);
+
+    if (MFInitializer)
+      if (MFInitializer->initializeMachineFunction(*MF))
+        report_fatal_error("Unable to initialize machine function");
+  } else {
+    MF = I.first->second.get();
+  }
+
+  LastRequest = &F;
+  LastResult = MF;
+  return *MF;
+}
+
+void MachineModuleInfo::deleteMachineFunctionFor(Function &F) {
+  MachineFunctions.erase(&F);
+  LastRequest = nullptr;
+  LastResult = nullptr;
+}
+
+namespace {
+/// This pass frees the MachineFunction object associated with a Function.
+class FreeMachineFunction : public FunctionPass {
+public:
+  static char ID;
+  FreeMachineFunction() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineModuleInfo>();
+    AU.addPreserved<MachineModuleInfo>();
+  }
+
+  bool runOnFunction(Function &F) override {
+    MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
+    MMI.deleteMachineFunctionFor(F);
+    return true;
+  }
+};
+char FreeMachineFunction::ID;
+} // end anonymous namespace
+
+namespace llvm {
+FunctionPass *createFreeMachineFunctionPass() {
+  return new FreeMachineFunction();
+}
+} // end namespace llvm

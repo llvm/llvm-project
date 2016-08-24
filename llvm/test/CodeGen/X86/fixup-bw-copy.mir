@@ -39,7 +39,6 @@
 ---
 name:            test_movb_killed
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }
@@ -56,7 +55,6 @@ body:             |
 ---
 name:            test_movb_impuse
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }
@@ -73,7 +71,6 @@ body:             |
 ---
 name:            test_movb_impdef_gr64
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }
@@ -90,7 +87,6 @@ body:             |
 ---
 name:            test_movb_impdef_gr32
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }
@@ -107,7 +103,6 @@ body:             |
 ---
 name:            test_movb_impdef_gr16
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }
@@ -124,7 +119,6 @@ body:             |
 ---
 name:            test_movw_impdef_gr32
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }
@@ -141,7 +135,6 @@ body:             |
 ---
 name:            test_movw_impdef_gr64
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }

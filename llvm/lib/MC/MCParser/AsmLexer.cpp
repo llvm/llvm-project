@@ -11,16 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include <cassert>
 #include <cctype>
-#include <cerrno>
 #include <cstdio>
-#include <cstdlib>
+#include <cstring>
 #include <tuple>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 
@@ -136,6 +141,7 @@ static bool IsIdentifierChar(char c, bool AllowAt) {
   return isalnum(c) || c == '_' || c == '$' || c == '.' ||
          (c == '@' && AllowAt) || c == '?';
 }
+
 AsmToken AsmLexer::LexIdentifier() {
   // Check for floating point literals.
   if (CurPtr[-1] == '.' && isdigit(*CurPtr)) {
@@ -225,7 +231,7 @@ static void SkipIgnoredIntegerSuffix(const char *&CurPtr) {
 static unsigned doLookAhead(const char *&CurPtr, unsigned DefaultRadix) {
   const char *FirstHex = nullptr;
   const char *LookAhead = CurPtr;
-  while (1) {
+  while (true) {
     if (isdigit(*LookAhead)) {
       ++LookAhead;
     } else if (isxdigit(*LookAhead)) {
@@ -399,7 +405,6 @@ AsmToken AsmLexer::LexSingleQuote() {
 
   return AsmToken(AsmToken::Integer, Res, Value);
 }
-
 
 /// LexQuote: String: "..."
 AsmToken AsmLexer::LexQuote() {

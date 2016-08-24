@@ -159,8 +159,8 @@ public:
 
 /// \brief No-op CGSCC pass which does nothing.
 struct NoOpCGSCCPass {
-  PreservedAnalyses run(LazyCallGraph::SCC &C,
-                        CGSCCAnalysisManager &) {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
+                        LazyCallGraph &, CGSCCUpdateResult &UR) {
     return PreservedAnalyses::all();
   }
   static StringRef name() { return "NoOpCGSCCPass"; }
@@ -173,7 +173,7 @@ class NoOpCGSCCAnalysis : public AnalysisInfoMixin<NoOpCGSCCAnalysis> {
 
 public:
   struct Result {};
-  Result run(LazyCallGraph::SCC &, CGSCCAnalysisManager &) {
+  Result run(LazyCallGraph::SCC &, CGSCCAnalysisManager &, LazyCallGraph &G) {
     return Result();
   }
   static StringRef name() { return "NoOpCGSCCAnalysis"; }
@@ -580,7 +580,8 @@ bool PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
   if (Name == "require<" NAME ">") {                                           \
     CGPM.addPass(RequireAnalysisPass<                                          \
                  std::remove_reference<decltype(CREATE_PASS)>::type,           \
-                 LazyCallGraph::SCC>());                                       \
+                 LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,    \
+                 CGSCCUpdateResult &>());                                      \
     return true;                                                               \
   }                                                                            \
   if (Name == "invalidate<" NAME ">") {                                        \

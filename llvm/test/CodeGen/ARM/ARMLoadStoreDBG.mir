@@ -81,7 +81,6 @@ alignment:       1
 exposesReturnsTwice: false
 hasInlineAsm:    false
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false
 liveins:

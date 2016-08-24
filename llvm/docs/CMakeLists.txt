@@ -115,7 +115,7 @@ if (LLVM_ENABLE_SPHINX)
 endif()
 
 list(FIND LLVM_BINDINGS_LIST ocaml uses_ocaml)
-if( NOT uses_ocaml LESS 0 )
+if( NOT uses_ocaml LESS 0 AND LLVM_ENABLE_OCAMLDOC )
   set(doc_targets
         ocaml_llvm
         ocaml_llvm_all_backends

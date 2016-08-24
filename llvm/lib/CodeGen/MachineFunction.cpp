@@ -60,6 +60,7 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::AllVRegsAllocated: return "AllVRegsAllocated";
   case P::IsSSA: return "IsSSA";
   case P::Legalized: return "Legalized";
+  case P::NoPHIs: return "NoPHIs";
   case P::RegBankSelected: return "RegBankSelected";
   case P::Selected: return "Selected";
   case P::TracksLiveness: return "TracksLiveness";

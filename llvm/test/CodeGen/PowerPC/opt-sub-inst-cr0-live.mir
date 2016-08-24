@@ -34,7 +34,6 @@ alignment:       2
 exposesReturnsTwice: false
 hasInlineAsm:    false
 allVRegsAllocated: false
-isSSA:           true
 tracksRegLiveness: true
 tracksSubRegLiveness: false
 registers:

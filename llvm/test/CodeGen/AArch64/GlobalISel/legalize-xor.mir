@@ -11,7 +11,6 @@
 
 ---
 name:            test_scalar_xor_small
-isSSA:           true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -20,13 +19,13 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_scalar_xor_small
-    ; CHECK-DAG: [[LHS:%.*]](32) = G_ANYEXTEND s32 %0
-    ; CHECK-DAG: [[RHS:%.*]](32) = G_ANYEXTEND s32 %1
+    ; CHECK-DAG: [[LHS:%.*]](32) = G_ANYEXT { s32, s8 } %0
+    ; CHECK-DAG: [[RHS:%.*]](32) = G_ANYEXT { s32, s8 } %1
     ; CHECK: [[RES:%.*]](32) = G_XOR s32 [[LHS]], [[RHS]]
-    ; CHECK: %2(8) = G_TRUNC s8 [[RES]]
+    ; CHECK: %2(8) = G_TRUNC { s8, s32 } [[RES]]
 
-    %0(8) = G_TRUNC s8 %x0
-    %1(8) = G_TRUNC s8 %x1
+    %0(8) = G_TRUNC { s8, s64 } %x0
+    %1(8) = G_TRUNC { s8, s64 } %x1
     %2(8) = G_XOR s8 %0, %1
-    %x0 = G_ANYEXTEND s64 %2
+    %x0 = G_ANYEXT { s64, s8 } %2
 ...

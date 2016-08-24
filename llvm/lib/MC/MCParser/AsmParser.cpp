@@ -12,39 +12,58 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/AsmCond.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
 #include <cctype>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
+
 using namespace llvm;
 
 MCAsmParserSemaCallback::~MCAsmParserSemaCallback() {}
@@ -54,6 +73,7 @@ static cl::opt<unsigned> AsmMacroMaxNestingDepth(
      cl::desc("The maximum nesting depth allowed for assembly macros."));
 
 namespace {
+
 /// \brief Helper types for tracking macro definitions.
 typedef std::vector<AsmToken> MCAsmMacroArgument;
 typedef std::vector<MCAsmMacroArgument> MCAsmMacroArguments;
@@ -119,6 +139,7 @@ struct ParseStatementInfo {
 class AsmParser : public MCAsmParser {
   AsmParser(const AsmParser &) = delete;
   void operator=(const AsmParser &) = delete;
+
 private:
   AsmLexer Lexer;
   MCContext &Ctx;
@@ -212,6 +233,7 @@ public:
   MCAsmLexer &getLexer() override { return Lexer; }
   MCContext &getContext() override { return Ctx; }
   MCStreamer &getStreamer() override { return Out; }
+
   unsigned getAssemblerDialect() override {
     if (AssemblerDialect == ~0U)
       return MAI.getAssemblerDialect();
@@ -296,7 +318,6 @@ public:
   /// }
 
 private:
-
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
@@ -405,6 +426,7 @@ private:
     DK_SET, DK_EQU, DK_EQUIV, DK_ASCII, DK_ASCIZ, DK_STRING, DK_BYTE, DK_SHORT,
     DK_RELOC,
     DK_VALUE, DK_2BYTE, DK_LONG, DK_INT, DK_4BYTE, DK_QUAD, DK_8BYTE, DK_OCTA,
+    DK_DC, DK_DC_A, DK_DC_B, DK_DC_D, DK_DC_L, DK_DC_S, DK_DC_W, DK_DC_X,
     DK_SINGLE, DK_FLOAT, DK_DOUBLE, DK_ALIGN, DK_ALIGN32, DK_BALIGN, DK_BALIGNW,
     DK_BALIGNL, DK_P2ALIGN, DK_P2ALIGNW, DK_P2ALIGNL, DK_ORG, DK_FILL, DK_ENDR,
     DK_BUNDLE_ALIGN_MODE, DK_BUNDLE_LOCK, DK_BUNDLE_UNLOCK,
@@ -562,7 +584,8 @@ private:
 
   void initializeDirectiveKindMap();
 };
-}
+
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -570,7 +593,7 @@ extern MCAsmParserExtension *createDarwinAsmParser();
 extern MCAsmParserExtension *createELFAsmParser();
 extern MCAsmParserExtension *createCOFFAsmParser();
 
-}
+} // end namespace llvm
 
 enum { DEFAULT_ADDRSPACE = 0 };
 
@@ -707,7 +730,6 @@ const AsmToken &AsmParser::Lex() {
       return Lex();
     }
   }
-
 
   return *tok;
 }
@@ -1415,7 +1437,7 @@ unsigned AsmParser::getBinOpPrecedence(AsmToken::TokenKind K,
 /// Res contains the LHS of the expression on input.
 bool AsmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
                               SMLoc &EndLoc) {
-  while (1) {
+  while (true) {
     MCBinaryExpr::Opcode Kind = MCBinaryExpr::Add;
     unsigned TokPrec = getBinOpPrecedence(Lexer.getKind(), Kind);
 
@@ -1630,8 +1652,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
                                  IDLoc);
 
     getTargetParser().onLabelParsed(Sym);
-
-
 
     return false;
   }
@@ -1886,6 +1906,23 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveWarning(IDLoc);
     case DK_RELOC:
       return parseDirectiveReloc(IDLoc);
+    case DK_DC:
+      return parseDirectiveValue(2);
+    case DK_DC_A:
+      return parseDirectiveValue(getContext().getAsmInfo()->getPointerSize());
+    case DK_DC_B:
+      return parseDirectiveValue(1);
+    case DK_DC_D:
+      return parseDirectiveRealValue(APFloat::IEEEdouble);
+    case DK_DC_L:
+      return parseDirectiveValue(4);
+    case DK_DC_S:
+      return parseDirectiveRealValue(APFloat::IEEEsingle);
+    case DK_DC_W:
+      return parseDirectiveValue(2);
+    case DK_DC_X:
+      return TokError(Twine(IDVal) +
+                      " not currently supported for this target");
     }
 
     return Error(IDLoc, "unknown directive");
@@ -2239,6 +2276,7 @@ static bool isOperator(AsmToken::TokenKind kind) {
 }
 
 namespace {
+
 class AsmLexerSkipSpaceRAII {
 public:
   AsmLexerSkipSpaceRAII(AsmLexer &Lexer, bool SkipSpace) : Lexer(Lexer) {
@@ -2252,7 +2290,8 @@ public:
 private:
   AsmLexer &Lexer;
 };
-}
+
+} // end anonymous namespace
 
 bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
 
@@ -2271,7 +2310,7 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
 
   bool SpaceEaten;
 
-  for (;;) {
+  while (true) {
     SpaceEaten = false;
     if (Lexer.is(AsmToken::Eof) || Lexer.is(AsmToken::Equal))
       return TokError("unexpected token in macro instantiation");
@@ -2639,7 +2678,7 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     checkForValidSection();
 
-    for (;;) {
+    while (true) {
       std::string Data;
       if (check(getTok().isNot(AsmToken::String),
                 "expected string in '" + Twine(IDVal) + "' directive") ||
@@ -2713,7 +2752,7 @@ bool AsmParser::parseDirectiveValue(unsigned Size) {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     checkForValidSection();
 
-    for (;;) {
+    while (true) {
       const MCExpr *Value;
       SMLoc ExprLoc = getLexer().getLoc();
       if (parseExpression(Value))
@@ -2748,7 +2787,7 @@ bool AsmParser::parseDirectiveOctaValue() {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     checkForValidSection();
 
-    for (;;) {
+    while (true) {
       if (getTok().is(AsmToken::Error))
         return true;
       if (getTok().isNot(AsmToken::Integer) && getTok().isNot(AsmToken::BigNum))
@@ -2796,7 +2835,7 @@ bool AsmParser::parseDirectiveRealValue(const fltSemantics &Semantics) {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     checkForValidSection();
 
-    for (;;) {
+    while (true) {
       // We don't truly support arithmetic on floating point expressions, so we
       // have to manually parse unary prefixes.
       bool IsNeg = false;
@@ -3147,7 +3186,7 @@ bool AsmParser::parseDirectiveLoc() {
   unsigned Isa = 0;
   int64_t Discriminator = 0;
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
+    while (true) {
       if (getLexer().is(AsmToken::EndOfStatement))
         break;
 
@@ -3819,7 +3858,7 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
   AsmToken EndToken, StartToken = getTok();
   unsigned MacroDepth = 0;
   // Lex the macro definition.
-  for (;;) {
+  while (true) {
     // Ignore Lexing errors in macros.
     while (Lexer.is(AsmToken::Error)) {
       Lexer.Lex();
@@ -4125,7 +4164,7 @@ bool AsmParser::parseDirectiveLEB128(bool Signed) {
   checkForValidSection();
   const MCExpr *Value;
 
-  for (;;) {
+  while (true) {
     if (parseExpression(Value))
       return true;
 
@@ -4149,7 +4188,7 @@ bool AsmParser::parseDirectiveLEB128(bool Signed) {
 ///  ::= { ".globl", ".weak", ... } [ identifier ( , identifier )* ]
 bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
+    while (true) {
       StringRef Name;
       SMLoc Loc = getTok().getLoc();
 
@@ -4742,13 +4781,21 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".error"] = DK_ERROR;
   DirectiveKindMap[".warning"] = DK_WARNING;
   DirectiveKindMap[".reloc"] = DK_RELOC;
+  DirectiveKindMap[".dc"] = DK_DC;
+  DirectiveKindMap[".dc.a"] = DK_DC_A;
+  DirectiveKindMap[".dc.b"] = DK_DC_B;
+  DirectiveKindMap[".dc.d"] = DK_DC_D;
+  DirectiveKindMap[".dc.l"] = DK_DC_L;
+  DirectiveKindMap[".dc.s"] = DK_DC_S;
+  DirectiveKindMap[".dc.w"] = DK_DC_W;
+  DirectiveKindMap[".dc.x"] = DK_DC_X;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
   AsmToken EndToken, StartToken = getTok();
 
   unsigned NestLevel = 0;
-  for (;;) {
+  while (true) {
     // Check whether we have reached the end of the file.
     if (getLexer().is(AsmToken::Eof)) {
       Error(DirectiveLoc, "no matching '.endr' in definition");
@@ -5300,8 +5347,8 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
   return false;
 }
 
-} // namespace MCParserUtils
-} // namespace llvm
+} // end namespace MCParserUtils
+} // end namespace llvm
 
 /// \brief Create an MCAsmParser instance.
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,

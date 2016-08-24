@@ -77,6 +77,7 @@ struct LTOCodeGenerator {
   /// Resets \a HasVerifiedInput.
   void setModule(std::unique_ptr<LTOModule> M);
 
+  void setAsmUndefinedRefs(struct LTOModule *);
   void setTargetOptions(const TargetOptions &Options);
   void setDebugInfo(lto_debug_model);
   void setCodePICModel(Optional<Reloc::Model> Model) { RelocModel = Model; }

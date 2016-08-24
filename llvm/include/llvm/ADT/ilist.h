@@ -171,7 +171,7 @@ public:
   typedef node_type &node_reference;
 
 private:
-  node_pointer NodePtr = nullptr;
+  node_pointer NodePtr;
 
 public:
   /// Create from an ilist_node.
@@ -179,7 +179,7 @@ public:
 
   explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
   explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
-  ilist_iterator() = default;
+  ilist_iterator() : NodePtr(nullptr) {}
 
   // This is templated so that we can allow constructing a const iterator from
   // a nonconst iterator...

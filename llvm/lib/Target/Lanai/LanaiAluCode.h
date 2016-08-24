@@ -43,8 +43,8 @@ enum AluCode {
 
 // Bits indicating post- and pre-operators should be tested and set using Is*
 // and Make* utility functions
-constexpr int Lanai_PRE_OP = 0x40;
-constexpr int Lanai_POST_OP = 0x80;
+const int Lanai_PRE_OP = 0x40;
+const int Lanai_POST_OP = 0x80;
 
 inline static unsigned encodeLanaiAluCode(unsigned AluOp) {
   unsigned const OP_ENCODING_MASK = 0x07;

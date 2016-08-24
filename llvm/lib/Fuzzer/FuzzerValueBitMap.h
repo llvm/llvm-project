@@ -34,7 +34,7 @@ struct ValueBitMap {
 
   // Merges 'Other' into 'this', clears 'Other',
   // returns the number of set bits in 'this'.
-  __attribute__((target("popcnt")))
+  ATTRIBUTE_TARGET_POPCNT
   size_t MergeFrom(ValueBitMap &Other) {
     uintptr_t Res = 0;
     for (size_t i = 0; i < kMapSizeInWords; i++) {

@@ -9,7 +9,6 @@
 
 ---
 name:            test_copy
-isSSA:           true
 registers:
   - { id: 0, class: _ }
 body: |
@@ -25,7 +24,6 @@ body: |
 
 ---
 name:            test_targetspecific
-isSSA:           true
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_targetspecific

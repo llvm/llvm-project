@@ -389,7 +389,6 @@ struct MachineFunction {
   bool RegBankSelected = false;
   bool Selected = false;
   // Register information
-  bool IsSSA = false;
   bool TracksRegLiveness = false;
   bool TracksSubRegLiveness = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
@@ -415,7 +414,6 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("legalized", MF.Legalized);
     YamlIO.mapOptional("regBankSelected", MF.RegBankSelected);
     YamlIO.mapOptional("selected", MF.Selected);
-    YamlIO.mapOptional("isSSA", MF.IsSSA);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness);
     YamlIO.mapOptional("tracksSubRegLiveness", MF.TracksSubRegLiveness);
     YamlIO.mapOptional("registers", MF.VirtualRegisters);

@@ -31,7 +31,6 @@
 ...
 ---
 name:            bar
-isSSA:           true
 tracksRegLiveness: true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gr32 }
@@ -65,7 +64,6 @@ body: |
 ...
 ---
 name:            foo
-isSSA:           true
 tracksRegLiveness: true
 # CHECK: name: foo
 # CHECK:      registers:

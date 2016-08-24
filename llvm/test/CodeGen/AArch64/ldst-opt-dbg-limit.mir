@@ -30,7 +30,6 @@ alignment:       2
 exposesReturnsTwice: false
 hasInlineAsm:    false
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: false
 tracksSubRegLiveness: false
 liveins:         
@@ -88,7 +87,6 @@ alignment:       2
 exposesReturnsTwice: false
 hasInlineAsm:    false
 allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: false
 tracksSubRegLiveness: false
 liveins:         

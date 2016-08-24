@@ -144,7 +144,7 @@ static unsigned findUseIdx(const MachineInstr *MI, unsigned UseOperIdx) {
   unsigned UseIdx = 0;
   for (unsigned i = 0; i != UseOperIdx; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
-    if (MO.isReg() && MO.readsReg())
+    if (MO.isReg() && MO.readsReg() && !MO.isDef())
       ++UseIdx;
   }
   return UseIdx;

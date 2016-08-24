@@ -92,6 +92,7 @@ public:
   // Property descriptions:
   // IsSSA: True when the machine function is in SSA form and virtual registers
   //  have a single def.
+  // NoPHIs: The machine function does not contain any PHI instruction.
   // TracksLiveness: True when tracking register liveness accurately.
   //  While this property is set, register liveness information in basic block
   //  live-in lists and machine instruction operands (e.g. kill flags, implicit
@@ -117,6 +118,7 @@ public:
   //  all sizes attached to them have been eliminated.
   enum class Property : unsigned {
     IsSSA,
+    NoPHIs,
     TracksLiveness,
     AllVRegsAllocated,
     Legalized,

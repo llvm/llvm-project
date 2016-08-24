@@ -158,6 +158,11 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::NoPHIs);
+    }
+
     MachineFunctionProperties getSetProperties() const override {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::AllVRegsAllocated);
@@ -1092,8 +1097,6 @@ bool RAFast::runOnMachineFunction(MachineFunction &Fn) {
   RegClassInfo.runOnMachineFunction(Fn);
   UsedInInstr.clear();
   UsedInInstr.setUniverse(TRI->getNumRegUnits());
-
-  assert(!MRI->isSSA() && "regalloc requires leaving SSA");
 
   // initialize the virtual->physical register map to have a 'null'
   // mapping for all virtual registers
