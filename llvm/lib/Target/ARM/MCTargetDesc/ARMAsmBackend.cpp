@@ -710,7 +710,8 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
       (unsigned)Fixup.getKind() != ARM::fixup_arm_adr_pcrel_12 &&
       (unsigned)Fixup.getKind() != ARM::fixup_thumb_adr_pcrel_10 &&
       (unsigned)Fixup.getKind() != ARM::fixup_t2_adr_pcrel_12 &&
-      (unsigned)Fixup.getKind() != ARM::fixup_arm_thumb_cp) {
+      (unsigned)Fixup.getKind() != ARM::fixup_arm_thumb_cp &&
+      (unsigned)Fixup.getKind() != ARM::fixup_arm_thumb_cb) {
     if (Sym) {
       if (Asm.isThumbFunc(Sym))
         Value |= 1;
