@@ -39,10 +39,7 @@
 name:            main
 alignment:       2
 exposesReturnsTwice: false
-hasInlineAsm:    false
-isSSA:           true
 tracksRegLiveness: true
-tracksSubRegLiveness: false
 registers:       
   - { id: 0, class: g8rc_and_g8rc_nox0 }
   - { id: 1, class: g8rc_and_g8rc_nox0 }

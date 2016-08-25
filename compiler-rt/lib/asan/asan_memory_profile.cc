@@ -74,7 +74,7 @@ class HeapProfile {
 
 static void ChunkCallback(uptr chunk, void *arg) {
   HeapProfile *hp = reinterpret_cast<HeapProfile*>(arg);
-  AsanChunkView cv = FindHeapChunkByAddress(chunk);
+  AsanChunkView cv = FindHeapChunkByAllocBeg(chunk);
   if (!cv.IsAllocated()) return;
   u32 id = cv.GetAllocStackId();
   if (!id) return;

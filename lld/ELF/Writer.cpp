@@ -90,7 +90,7 @@ StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
   StringRef Name = S->getSectionName();
   for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
                       ".init_array.", ".fini_array.", ".ctors.", ".dtors.",
-                      ".tbss.", ".gcc_except_table.", ".tdata."})
+                      ".tbss.", ".gcc_except_table.", ".tdata.", ".ARM.exidx."})
     if (Name.startswith(V))
       return V.drop_back();
   return Name;

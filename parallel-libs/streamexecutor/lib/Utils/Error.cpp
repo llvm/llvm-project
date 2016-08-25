@@ -27,7 +27,7 @@ public:
 
   std::error_code convertToErrorCode() const override {
     llvm_unreachable(
-        "StreamExecutorError does not support convertion to std::error_code");
+        "StreamExecutorError does not support conversion to std::error_code");
   }
 
   std::string getErrorMessage() const { return Message; }
@@ -44,8 +44,8 @@ char StreamExecutorError::ID = 0;
 
 namespace streamexecutor {
 
-Error make_error(StringRef Message) {
-  return llvm::make_error<StreamExecutorError>(Message);
+Error make_error(Twine Message) {
+  return llvm::make_error<StreamExecutorError>(Message.str());
 }
 
 std::string consumeAndGetMessage(Error &&E) {

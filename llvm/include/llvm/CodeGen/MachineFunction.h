@@ -79,7 +79,6 @@ struct MachineFunctionInfo {
 /// Each of these has checking code in the MachineVerifier, and passes can
 /// require that a property be set.
 class MachineFunctionProperties {
-  // TODO: Add MachineVerifier checks for AllVRegsAllocated
   // Possible TODO: Allow targets to extend this (perhaps by allowing the
   // constructor to specify the size of the bit vector)
   // Possible TODO: Allow requiring the negative (e.g. VRegsAllocated could be
@@ -92,6 +91,7 @@ public:
   // Property descriptions:
   // IsSSA: True when the machine function is in SSA form and virtual registers
   //  have a single def.
+  // NoPHIs: The machine function does not contain any PHI instruction.
   // TracksLiveness: True when tracking register liveness accurately.
   //  While this property is set, register liveness information in basic block
   //  live-in lists and machine instruction operands (e.g. kill flags, implicit
@@ -99,8 +99,7 @@ public:
   //  that affect the values in registers, for example by the register
   //  scavenger.
   //  When this property is clear, liveness is no longer reliable.
-  // AllVRegsAllocated: All virtual registers have been allocated; i.e. all
-  //  register operands are physical registers.
+  // NoVRegs: The machine function does not use any virtual registers.
   // Legalized: In GlobalISel: the MachineLegalizer ran and all pre-isel generic
   //  instructions have been legalized; i.e., all instructions are now one of:
   //   - generic and always legal (e.g., COPY)
@@ -117,8 +116,9 @@ public:
   //  all sizes attached to them have been eliminated.
   enum class Property : unsigned {
     IsSSA,
+    NoPHIs,
     TracksLiveness,
-    AllVRegsAllocated,
+    NoVRegs,
     Legalized,
     RegBankSelected,
     Selected,

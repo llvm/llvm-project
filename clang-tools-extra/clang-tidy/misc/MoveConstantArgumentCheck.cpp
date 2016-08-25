@@ -74,12 +74,17 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (IsConstArg || IsTriviallyCopyable) {
     bool IsVariable = isa<DeclRefExpr>(Arg);
+    const auto *Var =
+        IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;
     auto Diag = diag(FileMoveRange.getBegin(),
                      "std::move of the %select{|const }0"
-                     "%select{expression|variable}1 "
-                     "%select{|of a trivially-copyable type }2"
-                     "has no effect; remove std::move()")
-                << IsConstArg << IsVariable << IsTriviallyCopyable;
+                     "%select{expression|variable %4}1 "
+                     "%select{|of the trivially-copyable type %5 }2"
+                     "has no effect; remove std::move()"
+                     "%select{| or make the variable non-const}3")
+                << IsConstArg << IsVariable << IsTriviallyCopyable
+                << (IsConstArg && IsVariable && !IsTriviallyCopyable)
+                << Var << Arg->getType();
 
     ReplaceCallWithArg(CallMove, Diag, SM, getLangOpts());
   } else if (ReceivingExpr) {

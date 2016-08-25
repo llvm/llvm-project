@@ -141,9 +141,22 @@ MachineInstrBuilder MachineIRBuilder::buildUAdde(LLT Ty, unsigned Res,
       .addUse(CarryIn);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildAnyExtend(LLT Ty, unsigned Res,
-                                                     unsigned Op) {
-  return buildInstr(TargetOpcode::G_ANYEXTEND, Ty).addDef(Res).addUse(Op);
+MachineInstrBuilder MachineIRBuilder::buildAnyExt(ArrayRef<LLT> Tys,
+                                                  unsigned Res, unsigned Op) {
+  validateTruncExt(Tys, true);
+  return buildInstr(TargetOpcode::G_ANYEXT, Tys).addDef(Res).addUse(Op);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSExt(ArrayRef<LLT> Tys, unsigned Res,
+                                                unsigned Op) {
+  validateTruncExt(Tys, true);
+  return buildInstr(TargetOpcode::G_SEXT, Tys).addDef(Res).addUse(Op);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildZExt(ArrayRef<LLT> Tys, unsigned Res,
+                                                unsigned Op) {
+  validateTruncExt(Tys, true);
+  return buildInstr(TargetOpcode::G_ZEXT, Tys).addDef(Res).addUse(Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<LLT> ResTys,
@@ -206,14 +219,16 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(ArrayRef<LLT> Tys,
   return MIB;
 }
 
-MachineInstrBuilder MachineIRBuilder::buildTrunc(LLT Ty, unsigned Res,
-                                           unsigned Op) {
-  return buildInstr(TargetOpcode::G_TRUNC, Ty).addDef(Res).addUse(Op);
+MachineInstrBuilder MachineIRBuilder::buildTrunc(ArrayRef<LLT> Tys,
+                                                 unsigned Res, unsigned Op) {
+  validateTruncExt(Tys, false);
+  return buildInstr(TargetOpcode::G_TRUNC, Tys).addDef(Res).addUse(Op);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildFPTrunc(LLT Ty, unsigned Res,
-                                           unsigned Op) {
-  return buildInstr(TargetOpcode::G_FPTRUNC, Ty).addDef(Res).addUse(Op);
+MachineInstrBuilder MachineIRBuilder::buildFPTrunc(ArrayRef<LLT> Tys,
+                                                   unsigned Res, unsigned Op) {
+  validateTruncExt(Tys, false);
+  return buildInstr(TargetOpcode::G_FPTRUNC, Tys).addDef(Res).addUse(Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildICmp(ArrayRef<LLT> Tys,
@@ -246,4 +261,25 @@ MachineInstrBuilder MachineIRBuilder::buildSelect(LLT Ty, unsigned Res,
       .addUse(Tst)
       .addUse(Op0)
       .addUse(Op1);
+}
+
+void MachineIRBuilder::validateTruncExt(ArrayRef<LLT> Tys, bool IsExtend) {
+#ifndef NDEBUG
+  assert(Tys.size() == 2 && "cast should have a source and a dest type");
+  LLT DstTy{Tys[0]}, SrcTy{Tys[1]};
+
+  if (DstTy.isVector()) {
+    assert(SrcTy.isVector() && "mismatched cast between vecot and non-vector");
+    assert(SrcTy.getNumElements() == DstTy.getNumElements() &&
+           "different number of elements in a trunc/ext");
+  } else
+    assert(DstTy.isScalar() && SrcTy.isScalar() && "invalid extend/trunc");
+
+  if (IsExtend)
+    assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+           "invalid narrowing extend");
+  else
+    assert(DstTy.getSizeInBits() < SrcTy.getSizeInBits() &&
+           "invalid widening trunc");
+#endif
 }

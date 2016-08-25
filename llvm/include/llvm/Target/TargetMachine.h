@@ -315,13 +315,6 @@ public:
   bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
                          raw_pwrite_stream &OS,
                          bool DisableVerify = true) override;
-
-  /// Add MachineModuleInfo pass to pass manager.
-  MachineModuleInfo &addMachineModuleInfo(PassManagerBase &PM) const;
-
-  /// Add MachineFunctionAnalysis pass to pass manager.
-  void addMachineFunctionAnalysis(PassManagerBase &PM,
-      MachineFunctionInitializer *MFInitializer) const;
 };
 
 } // End llvm namespace

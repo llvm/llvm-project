@@ -16,7 +16,6 @@
 # CHECK: %1 = EXTRACT_SUBREG %eax, {{[0-9]+}}
 # CHECK: %ax = REG_SEQUENCE %1, {{[0-9]+}}, %1, {{[0-9]+}}
 name:            t
-isSSA:           true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }

@@ -99,8 +99,10 @@ void TestSizeClassAllocator() {
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
 
-  static const uptr sizes[] = {1, 16, 30, 40, 100, 1000, 10000,
-    50000, 60000, 100000, 120000, 300000, 500000, 1000000, 2000000};
+  static const uptr sizes[] = {
+    1, 16,  30, 40, 100, 1000, 10000,
+    50000, 60000, 100000, 120000, 300000, 500000, 1000000, 2000000
+  };
 
   std::vector<void *> allocated;
 
@@ -300,8 +302,11 @@ TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
   cache.Init(0);
   AllocatorStats stats;
   stats.Init();
-  a->AllocateBatch(&stats, &cache, 32);
-  EXPECT_EQ(TestMapUnmapCallback::map_count, 3);  // State + alloc + metadata.
+  const size_t kNumChunks = 128;
+  uint32_t chunks[kNumChunks];
+  a->GetFromAllocator(&stats, 32, chunks, kNumChunks);
+  // State + alloc + metadata + freearray.
+  EXPECT_EQ(TestMapUnmapCallback::map_count, 4);
   a->TestOnlyUnmap();
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);  // The whole thing.
   delete a;
@@ -360,8 +365,10 @@ void FailInAssertionOnOOM() {
   cache.Init(0);
   AllocatorStats stats;
   stats.Init();
+  const size_t kNumChunks = 128;
+  uint32_t chunks[kNumChunks];
   for (int i = 0; i < 1000000; i++) {
-    a.AllocateBatch(&stats, &cache, 52);
+    a.GetFromAllocator(&stats, 52, chunks, kNumChunks);
   }
 
   a.TestOnlyUnmap();

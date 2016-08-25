@@ -107,12 +107,10 @@ enum class MatchState : uint8_t {
 };
 
 typedef std::bitset<7> StateSet;
-// N.B. These are unsigned instead of StateSets because some MSVC versions
-// apparently lack constexpr bitset ctors.
-LLVM_CONSTEXPR unsigned ReadOnlyStateMask =
+const unsigned ReadOnlyStateMask =
     (1U << static_cast<uint8_t>(MatchState::FlowFromReadOnly)) |
     (1U << static_cast<uint8_t>(MatchState::FlowFromMemAliasReadOnly));
-LLVM_CONSTEXPR unsigned WriteOnlyStateMask =
+const unsigned WriteOnlyStateMask =
     (1U << static_cast<uint8_t>(MatchState::FlowToWriteOnly)) |
     (1U << static_cast<uint8_t>(MatchState::FlowToMemAliasWriteOnly));
 

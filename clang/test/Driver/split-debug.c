@@ -33,11 +33,25 @@
 //
 // CHECK-IAS: objcopy
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -gmlt -fno-split-dwarf-inlining -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-GMLT-WITH-SPLIT < %t %s
+//
+// CHECK-GMLT-WITH-SPLIT: "-split-dwarf=Enable"
+// CHECK-GMLT-WITH-SPLIT: "-debug-info-kind=line-tables-only"
+// CHECK-GMLT-WITH-SPLIT: "-split-dwarf-file"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -gmlt -gsplit-dwarf -fno-split-dwarf-inlining -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-SPLIT-WITH-GMLT < %t %s
+//
+// CHECK-SPLIT-WITH-GMLT: "-split-dwarf=Enable"
+// CHECK-SPLIT-WITH-GMLT: "-debug-info-kind=line-tables-only"
+// CHECK-SPLIT-WITH-GMLT: "-split-dwarf-file"
+
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -gmlt -S -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-GMLT-OVER-SPLIT < %t %s
 //
-// CHECK-GMLT-OVER-SPLIT: "-debug-info-kind=line-tables-only"
 // CHECK-GMLT-OVER-SPLIT-NOT: "-split-dwarf=Enable"
+// CHECK-GMLT-OVER-SPLIT: "-debug-info-kind=line-tables-only"
 // CHECK-GMLT-OVER-SPLIT-NOT: "-split-dwarf-file"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -gmlt -gsplit-dwarf -S -### %s 2> %t
@@ -46,11 +60,18 @@
 // CHECK-SPLIT-OVER-GMLT: "-split-dwarf=Enable" "-debug-info-kind=limited"
 // CHECK-SPLIT-OVER-GMLT: "-split-dwarf-file"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -g0 -fno-split-dwarf-inlining -S -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
+//
+// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf=Enable"
+// CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
+// CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-file"
+
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -g0 -S -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-G0-OVER-SPLIT < %t %s
 //
-// CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
 // CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf=Enable"
+// CHECK-G0-OVER-SPLIT-NOT: "-debug-info-kind
 // CHECK-G0-OVER-SPLIT-NOT: "-split-dwarf-file"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -g0 -gsplit-dwarf -S -### %s 2> %t

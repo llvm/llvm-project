@@ -40,24 +40,6 @@ static void addEdge(SmallVectorImpl<LazyCallGraph::Edge> &Edges,
   }
 }
 
-static void findReferences(SmallVectorImpl<Constant *> &Worklist,
-                           SmallPtrSetImpl<Constant *> &Visited,
-                           SmallVectorImpl<LazyCallGraph::Edge> &Edges,
-                           DenseMap<Function *, int> &EdgeIndexMap) {
-  while (!Worklist.empty()) {
-    Constant *C = Worklist.pop_back_val();
-
-    if (Function *F = dyn_cast<Function>(C)) {
-      addEdge(Edges, EdgeIndexMap, *F, LazyCallGraph::Edge::Ref);
-      continue;
-    }
-
-    for (Value *Op : C->operand_values())
-      if (Visited.insert(cast<Constant>(Op)).second)
-        Worklist.push_back(cast<Constant>(Op));
-  }
-}
-
 LazyCallGraph::Node::Node(LazyCallGraph &G, Function &F)
     : G(&G), F(F), DFSNumber(0), LowLink(0) {
   DEBUG(dbgs() << "  Adding functions called by '" << F.getName()
@@ -90,7 +72,9 @@ LazyCallGraph::Node::Node(LazyCallGraph &G, Function &F)
   // We've collected all the constant (and thus potentially function or
   // function containing) operands to all of the instructions in the function.
   // Process them (recursively) collecting every function found.
-  findReferences(Worklist, Visited, Edges, EdgeIndexMap);
+  visitReferences(Worklist, Visited, [&](Function &F) {
+    addEdge(Edges, EdgeIndexMap, F, LazyCallGraph::Edge::Ref);
+  });
 }
 
 void LazyCallGraph::Node::insertEdgeInternal(Function &Target, Edge::Kind EK) {
@@ -144,7 +128,9 @@ LazyCallGraph::LazyCallGraph(Module &M) : NextDFSNumber(0) {
 
   DEBUG(dbgs() << "  Adding functions referenced by global initializers to the "
                   "entry set.\n");
-  findReferences(Worklist, Visited, EntryEdges, EntryIndexMap);
+  visitReferences(Worklist, Visited, [&](Function &F) {
+    addEdge(EntryEdges, EntryIndexMap, F, LazyCallGraph::Edge::Ref);
+  });
 
   for (const Edge &E : EntryEdges)
     RefSCCEntryNodes.push_back(&E.getFunction());
@@ -211,11 +197,14 @@ void LazyCallGraph::RefSCC::verify() {
   assert(!SCCs.empty() && "Can't have an empty SCC!");
 
   // Verify basic properties of the SCCs.
+  SmallPtrSet<SCC *, 4> SCCSet;
   for (SCC *C : SCCs) {
     assert(C && "Can't have a null SCC!");
     C->verify();
     assert(&C->getOuterRefSCC() == this &&
            "SCC doesn't think it is inside this RefSCC!");
+    bool Inserted = SCCSet.insert(C).second;
+    assert(Inserted && "Found a duplicate SCC!");
   }
 
   // Check that our indices map correctly.
@@ -223,6 +212,7 @@ void LazyCallGraph::RefSCC::verify() {
     SCC *C = SCCIndexPair.first;
     int i = SCCIndexPair.second;
     assert(C && "Can't have a null SCC in the indices!");
+    assert(SCCSet.count(C) && "Found an index for an SCC not in the RefSCC!");
     assert(SCCs[i] == C && "Index doesn't point to SCC!");
   }
 
@@ -478,8 +468,8 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
   return DeletedSCCs;
 }
 
-void LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN,
-                                                    Node &TargetN) {
+iterator_range<LazyCallGraph::RefSCC::iterator>
+LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
   assert(SourceN[TargetN].isCall() && "Must start with a call edge!");
 
   SCC &SourceSCC = *G->lookupSCC(SourceN);
@@ -500,7 +490,7 @@ void LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN,
     // Check that the RefSCC is still valid.
     verify();
 #endif
-    return;
+    return make_range(SCCs.end(), SCCs.end());
   }
 
   // Otherwise we are removing a call edge from a single SCC. This may break
@@ -666,6 +656,9 @@ void LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN,
   // We're done. Check the validity on our way out.
   verify();
 #endif
+
+  return make_range(SCCs.begin() + OldIdx,
+                    SCCs.begin() + OldIdx + NewSCCs.size());
 }
 
 void LazyCallGraph::RefSCC::switchOutgoingEdgeToCall(Node &SourceN,
@@ -1181,6 +1174,9 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
                                 RootPostOrderNumber;
                        }),
              SCCs.end());
+  SCCIndices.clear();
+  for (int i = 0, Size = SCCs.size(); i < Size; ++i)
+    SCCIndices[SCCs[i]] = i;
 
 #ifndef NDEBUG
   // Now we need to reconnect the current (root) SCC to the graph. We do this

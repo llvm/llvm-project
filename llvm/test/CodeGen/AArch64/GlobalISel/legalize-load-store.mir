@@ -1,0 +1,82 @@
+# RUN: llc -O0 -run-pass=legalize-mir -global-isel %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+  define void @test_load(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_store(i8* %addr) {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_load
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    ; CHECK-LABEL: name: test_load
+    %0(64) = COPY %x0
+
+    ; CHECK: [[BIT8:%[0-9]+]](8) = G_LOAD { s8, p0 } %0 :: (load 1 from %ir.addr)
+    ; CHECK: %1(1) = G_TRUNC { s1, s8 } [[BIT8]]
+    %1(1) = G_LOAD { s1, p0 } %0 :: (load 1 from %ir.addr)
+
+    ; CHECK: %2(8) = G_LOAD { s8, p0 } %0 :: (load 1 from %ir.addr)
+    %2(8) = G_LOAD { s8, p0 } %0 :: (load 1 from %ir.addr)
+
+    ; CHECK: %3(16) = G_LOAD { s16, p0 } %0 :: (load 2 from %ir.addr)
+    %3(16) = G_LOAD { s16, p0 } %0 :: (load 2 from %ir.addr)
+
+    ; CHECK: %4(32) = G_LOAD { s32, p0 } %0 :: (load 4 from %ir.addr)
+    %4(32) = G_LOAD { s32, p0 } %0 :: (load 4 from %ir.addr)
+
+    ; CHECK: %5(64) = G_LOAD { s64, p0 } %0 :: (load 8 from %ir.addr)
+    %5(64) = G_LOAD { s64, p0 } %0 :: (load 8 from %ir.addr)
+...
+
+---
+name:            test_store
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    ; CHECK-LABEL: name: test_store
+
+    %0(64) = COPY %x0
+    %1(32) = COPY %w1
+
+    ; CHECK: [[BIT8:%[0-9]+]](8) = G_ANYEXT { s8, s1 } %2
+    ; CHECK: G_STORE { s8, p0 } [[BIT8]], %0 :: (store 1 into %ir.addr)
+    %2(1) = G_TRUNC s1 %1
+    G_STORE { s1, p0 } %2, %0 :: (store 1 into %ir.addr)
+
+    ; CHECK: G_STORE { s8, p0 } %3, %0 :: (store 1 into %ir.addr)
+    %3(8) = G_TRUNC s8 %1
+    G_STORE { s8, p0 } %3, %0 :: (store 1 into %ir.addr)
+
+    ; CHECK: G_STORE { s16, p0 } %4, %0 :: (store 2 into %ir.addr)
+    %4(16) = G_TRUNC s16 %1
+    G_STORE { s16, p0 } %4, %0 :: (store 2 into %ir.addr)
+
+    ; CHECK: G_STORE { s32, p0 } %1, %0 :: (store 4 into %ir.addr)
+    G_STORE { s32, p0 } %1, %0 :: (store 4 into %ir.addr)
+
+    ; CHECK: G_STORE { s64, p0 } %0, %0 :: (store 8 into %ir.addr)
+    G_STORE { s64, p0 } %0, %0 :: (store 8 into %ir.addr)
+...

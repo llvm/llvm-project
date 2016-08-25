@@ -1,5 +1,6 @@
 ; RUN: opt < %s -slp-vectorizer -S | FileCheck %s --check-prefix=DEFAULT
 ; RUN: opt < %s -slp-schedule-budget=0 -slp-min-tree-size=0 -slp-threshold=-30 -slp-vectorizer -S | FileCheck %s --check-prefix=GATHER
+; RUN: opt < %s -slp-schedule-budget=0 -slp-threshold=-30 -slp-vectorizer -S | FileCheck %s --check-prefix=MAX-COST
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -44,6 +45,9 @@ target triple = "aarch64--linux-gnu"
 ; GATHER: %[[R5:.+]] = add <8 x i32> %[[R3]], %[[R4]]
 ; GATHER: %[[R6:.+]] = extractelement <8 x i32> %[[R5]], i32 0
 ; GATHER: %tmp34 = add i32 %[[R6]], %tmp17
+;
+; MAX-COST-LABEL: @PR28330(
+; MAX-COST-NOT: shufflevector
 
 define void @PR28330(i32 %n) {
 entry:

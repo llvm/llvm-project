@@ -18,7 +18,7 @@
 
 // Extend the underlying scalar type of an operation, leaving the high bits
 // unspecified.
-def G_ANYEXTEND : Instruction {
+def G_ANYEXT : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$src);
   let hasSideEffects = 0;

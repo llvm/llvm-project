@@ -766,9 +766,9 @@ void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
   BranchInst *BI = BranchInst::Create(TrueDest, FalseDest, BranchVal, InsertPt);
   if (TI) {
     // FIXME: check why white list is needed here:
-    ArrayRef<unsigned> WL = {LLVMContext::MD_dbg, LLVMContext::MD_prof,
-                             LLVMContext::MD_make_implicit};
-    BI->copyMetadata(*TI, WL);
+    unsigned WL[3] = {LLVMContext::MD_dbg, LLVMContext::MD_prof,
+                      LLVMContext::MD_make_implicit};
+    BI->copyMetadata(*TI, makeArrayRef(&WL[0], 3));
     if (Swapped)
       BI->swapProfMetadata();
   }

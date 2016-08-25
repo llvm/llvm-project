@@ -380,12 +380,35 @@ public:
     return AnalysisResults.empty();
   }
 
+  /// \brief Clear any results for a single unit of IR.
+  ///
+  /// This doesn't invalidate but directly clears the results. It is useful
+  /// when the IR is being removed and we want to clear out all the memory
+  /// pinned for it.
+  void clear(IRUnitT &IR) {
+    if (DebugLogging)
+      dbgs() << "Clearing all analysis results for: " << IR.getName() << "\n";
+
+    // Clear all the invalidated results associated specifically with this
+    // function.
+    SmallVector<void *, 8> InvalidatedPassIDs;
+    auto ResultsListI = AnalysisResultLists.find(&IR);
+    if (ResultsListI == AnalysisResultLists.end())
+      return;
+    // Clear the map pointing into the results list.
+    for (auto &PassIDAndResult : ResultsListI->second)
+      AnalysisResults.erase(std::make_pair(PassIDAndResult.first, &IR));
+
+    // And actually destroy and erase the results associated with this IR.
+    AnalysisResultLists.erase(ResultsListI);
+  }
+
   /// \brief Clear the analysis result cache.
   ///
   /// This routine allows cleaning up when the set of IR units itself has
   /// potentially changed, and thus we can't even look up a a result and
-  /// invalidate it directly. Notably, this does *not* call invalidate functions
-  /// as there is nothing to be done for them.
+  /// invalidate it directly. Notably, this does *not* call invalidate
+  /// functions as there is nothing to be done for them.
   void clear() {
     AnalysisResults.clear();
     AnalysisResultLists.clear();

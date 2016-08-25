@@ -54,10 +54,10 @@ class CLRemainingArgsJoined<string name> : Option<["/", "-"], name,
 
 def _SLASH_Brepro : CLFlag<"Brepro">,
   HelpText<"Emit an object file which can be reproduced over time">,
-  Alias<mincremental_linker_compatible>;
+  Alias<mno_incremental_linker_compatible>;
 def _SLASH_Brepro_ : CLFlag<"Brepro-">,
   HelpText<"Emit an object file which cannot be reproduced over time">,
-  Alias<mno_incremental_linker_compatible>;
+  Alias<mincremental_linker_compatible>;
 def _SLASH_C : CLFlag<"C">,
   HelpText<"Don't discard comments when preprocessing">, Alias<C>;
 def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;
@@ -120,6 +120,8 @@ def _SLASH_Qvec_ : CLFlag<"Qvec-">,
 def _SLASH_showIncludes : CLFlag<"showIncludes">,
   HelpText<"Print info about included files to stderr">,
   Alias<show_includes>;
+def _SLASH_source_charset : CLCompileJoined<"source-charset:">,
+  HelpText<"Source encoding, supports only UTF-8">, Alias<finput_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
   HelpText<"Language standard to compile for">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,

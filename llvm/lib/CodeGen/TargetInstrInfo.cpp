@@ -437,11 +437,15 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
                                     const TargetInstrInfo &TII) {
   unsigned StartIdx = 0;
   switch (MI.getOpcode()) {
-  case TargetOpcode::STACKMAP:
-    StartIdx = 2; // Skip ID, nShadowBytes.
+  case TargetOpcode::STACKMAP: {
+    // StackMapLiveValues are foldable
+    StackMapOpers opers(&MI);
+    StartIdx = opers.getVarIdx();
     break;
+  }
   case TargetOpcode::PATCHPOINT: {
-    // For PatchPoint, the call args are not foldable.
+    // For PatchPoint, the call args are not foldable (even if reported in the
+    // stackmap e.g. via anyregcc).
     PatchPointOpers opers(&MI);
     StartIdx = opers.getVarIdx();
     break;

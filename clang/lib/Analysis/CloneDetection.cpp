@@ -345,10 +345,9 @@ public:
   DEF_ADD_DATA(CallExpr, {
     // Function pointers don't have a callee and we just skip hashing it.
     if (const FunctionDecl *D = S->getDirectCallee()) {
-      // If the function is a template instantiation, we also need to handle
-      // the template arguments as they are no included in the qualified name.
-      if (D->isTemplateInstantiation()) {
-        auto Args = D->getTemplateSpecializationArgs();
+      // If the function is a template specialization, we also need to handle
+      // the template arguments as they are not included in the qualified name.
+      if (auto Args = D->getTemplateSpecializationArgs()) {
         std::string ArgString;
 
         // Print all template arguments into ArgString

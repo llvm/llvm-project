@@ -6,16 +6,19 @@ readability-non-const-parameter
 The check finds function parameters of a pointer type that could be changed to
 point to a constant type instead.
 
-When const is used properly, many mistakes can be avoided. Advantages when using
-const properly:
- * prevent unintentional modification of data
- * get additional warnings such as using uninitialized data
- * make it easier for developers to see possible side effects
+When ``const`` is used properly, many mistakes can be avoided. Advantages when
+using ``const`` properly:
+
+- prevent unintentional modification of data;
+
+- get additional warnings such as using uninitialized data;
+
+- make it easier for developers to see possible side effects.
 
 This check is not strict about constness, it only warns when the constness will
 make the function interface safer.
 
-.. code:: c++
+.. code-block:: c++
 
   // warning here; the declaration "const char *p" would make the function
   // interface safer.
@@ -41,4 +44,3 @@ make the function interface safer.
   int f3(struct S *p) {
     *(p->a) = 0;
   }
-

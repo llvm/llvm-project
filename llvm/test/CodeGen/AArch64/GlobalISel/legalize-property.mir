@@ -10,9 +10,7 @@
 # Check that we set the "legalized" property.
 # CHECK-LABEL: name: legalized_property
 # CHECK: legalized: true
-# CHECK: isSSA: true
 name:            legalized_property
-isSSA:           true
 legalized:       false
 body:             |
   bb.0:

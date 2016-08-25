@@ -14,7 +14,6 @@
 ---
 name: foo
 tracksRegLiveness: true
-allVRegsAllocated: true
 body: |
   bb.0:
     successors: %bb.1, %bb.2

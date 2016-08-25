@@ -15,14 +15,15 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/TableGen/Error.h"
+#include <cassert>
+#include <cstdint>
+#include <new>
 
 using namespace llvm;
 
@@ -51,6 +52,7 @@ public:
     using llvm::hash_value;
     return hash_value(Value.str());
   }
+
 private:
   std::string data;
 };
@@ -61,21 +63,24 @@ template<> struct DenseMapInfo<TableGenStringKey> {
     TableGenStringKey Empty("<<<EMPTY KEY>>>");
     return Empty;
   }
+
   static inline TableGenStringKey getTombstoneKey() {
     TableGenStringKey Tombstone("<<<TOMBSTONE KEY>>>");
     return Tombstone;
   }
+
   static unsigned getHashValue(const TableGenStringKey& Val) {
     using llvm::hash_value;
     return hash_value(Val);
   }
+
   static bool isEqual(const TableGenStringKey& LHS,
                       const TableGenStringKey& RHS) {
     return LHS.str() == RHS.str();
   }
 };
 
-} // namespace llvm
+} // end namespace llvm
 
 //===----------------------------------------------------------------------===//
 //    Type implementations
@@ -202,7 +207,6 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
   }
   return nullptr;
 }
-
 
 //===----------------------------------------------------------------------===//
 //    Initializer implementations
@@ -1320,7 +1324,6 @@ Init *VarInit::resolveListElementReference(Record &R,
   return nullptr;
 }
 
-
 RecTy *VarInit::getFieldType(const std::string &FieldName) const {
   if (RecordRecTy *RTy = dyn_cast<RecordRecTy>(getType()))
     if (const RecordVal *RV = RTy->getRecord()->getValue(FieldName))
@@ -1447,7 +1450,6 @@ Init *DefInit::getFieldInit(Record &R, const RecordVal *RV,
   return Def->getValue(FieldName)->getValue();
 }
 
-
 std::string DefInit::getAsString() const {
   return Def->getName();
 }
@@ -1572,7 +1574,6 @@ Init *DagInit::resolveReferences(Record &R, const RecordVal *RV) const {
   return const_cast<DagInit *>(this);
 }
 
-
 std::string DagInit::getAsString() const {
   std::string Result = "(" + Val->getAsString();
   if (!ValName.empty())
@@ -1587,7 +1588,6 @@ std::string DagInit::getAsString() const {
   }
   return Result + ")";
 }
-
 
 //===----------------------------------------------------------------------===//
 //    Other implementations
@@ -1628,7 +1628,7 @@ void Record::init() {
 
   // Every record potentially has a def at the top.  This value is
   // replaced with the top-level def name at instantiation time.
-  RecordVal DN("NAME", StringRecTy::get(), 0);
+  RecordVal DN("NAME", StringRecTy::get(), false);
   addValue(DN);
 }
 
@@ -1736,7 +1736,6 @@ Init *Record::getValueInit(StringRef FieldName) const {
       "' does not have a field named `" + FieldName + "'!\n");
   return R->getValue();
 }
-
 
 std::string Record::getValueAsString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
@@ -1884,7 +1883,6 @@ DagInit *Record::getValueAsDag(StringRef FieldName) const {
     FieldName + "' does not have a dag initializer!");
 }
 
-
 LLVM_DUMP_METHOD void MultiClass::dump() const {
   errs() << "Record:\n";
   Rec.dump();
@@ -1893,7 +1891,6 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
   for (const auto &Proto : DefPrototypes)
     Proto->dump();
 }
-
 
 LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 

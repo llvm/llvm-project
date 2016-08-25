@@ -12,29 +12,46 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLParser.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/AsmParser/SlotMapping.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalIFunc.h"
+#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstring>
+#include <iterator>
+#include <vector>
+
 using namespace llvm;
 
 static std::string getTypeString(Type *T) {
@@ -247,7 +264,7 @@ bool LLParser::ValidateEndOfModule() {
 //===----------------------------------------------------------------------===//
 
 bool LLParser::ParseTopLevelEntities() {
-  while (1) {
+  while (true) {
     switch (Lex.getKind()) {
     default:         return TokError("expected top-level entity");
     case lltok::Eof: return false;
@@ -274,7 +291,6 @@ bool LLParser::ParseTopLevelEntities() {
     }
   }
 }
-
 
 /// toplevelentity
 ///   ::= 'module' 'asm' STRINGCONSTANT
@@ -376,7 +392,6 @@ bool LLParser::ParseUnnamedType() {
   return false;
 }
 
-
 /// toplevelentity
 ///   ::= LocalVar '=' 'type' type
 bool LLParser::ParseNamedType() {
@@ -402,7 +417,6 @@ bool LLParser::ParseNamedType() {
 
   return false;
 }
-
 
 /// toplevelentity
 ///   ::= 'declare' FunctionHeader
@@ -1213,7 +1227,6 @@ GlobalValue *LLParser::GetGlobalVal(unsigned ID, Type *Ty, LocTy Loc) {
   return FwdVal;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Comdat Reference/Resolution Routines.
 //===----------------------------------------------------------------------===//
@@ -1230,7 +1243,6 @@ Comdat *LLParser::getComdat(const std::string &Name, LocTy Loc) {
   ForwardRefComdats[Name] = Loc;
   return C;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Helper Routines.
@@ -1350,7 +1362,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
 
   B.clear();
 
-  while (1) {
+  while (true) {
     lltok::Kind Token = Lex.getKind();
     switch (Token) {
     default:  // End of attributes.
@@ -1439,7 +1451,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
 
   B.clear();
 
-  while (1) {
+  while (true) {
     lltok::Kind Token = Lex.getKind();
     switch (Token) {
     default:  // End of attributes.
@@ -2056,7 +2068,7 @@ bool LLParser::ParseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
 
   // Parse the type suffixes.
-  while (1) {
+  while (true) {
     switch (Lex.getKind()) {
     // End of type.
     default:
@@ -2389,7 +2401,6 @@ bool LLParser::ParseStructDefinition(SMLoc TypeLoc, StringRef Name,
   return false;
 }
 
-
 /// ParseStructType: Handles packed and unpacked types.  </> parsed elsewhere.
 ///   StructType
 ///     ::= '{' '}'
@@ -2511,7 +2522,6 @@ bool LLParser::PerFunctionState::FinishFunction() {
                    Twine(ForwardRefValIDs.begin()->first) + "'");
   return false;
 }
-
 
 /// GetVal - Get a value with the specified name or ID, creating a
 /// forward reference record if needed.  This can return null if the value
@@ -3386,34 +3396,43 @@ struct MDUnsignedField : public MDFieldImpl<uint64_t> {
   MDUnsignedField(uint64_t Default = 0, uint64_t Max = UINT64_MAX)
       : ImplTy(Default), Max(Max) {}
 };
+
 struct LineField : public MDUnsignedField {
   LineField() : MDUnsignedField(0, UINT32_MAX) {}
 };
+
 struct ColumnField : public MDUnsignedField {
   ColumnField() : MDUnsignedField(0, UINT16_MAX) {}
 };
+
 struct DwarfTagField : public MDUnsignedField {
   DwarfTagField() : MDUnsignedField(0, dwarf::DW_TAG_hi_user) {}
   DwarfTagField(dwarf::Tag DefaultTag)
       : MDUnsignedField(DefaultTag, dwarf::DW_TAG_hi_user) {}
 };
+
 struct DwarfMacinfoTypeField : public MDUnsignedField {
   DwarfMacinfoTypeField() : MDUnsignedField(0, dwarf::DW_MACINFO_vendor_ext) {}
   DwarfMacinfoTypeField(dwarf::MacinfoRecordType DefaultType)
     : MDUnsignedField(DefaultType, dwarf::DW_MACINFO_vendor_ext) {}
 };
+
 struct DwarfAttEncodingField : public MDUnsignedField {
   DwarfAttEncodingField() : MDUnsignedField(0, dwarf::DW_ATE_hi_user) {}
 };
+
 struct DwarfVirtualityField : public MDUnsignedField {
   DwarfVirtualityField() : MDUnsignedField(0, dwarf::DW_VIRTUALITY_max) {}
 };
+
 struct DwarfLangField : public MDUnsignedField {
   DwarfLangField() : MDUnsignedField(0, dwarf::DW_LANG_hi_user) {}
 };
+
 struct DwarfCCField : public MDUnsignedField {
   DwarfCCField() : MDUnsignedField(0, dwarf::DW_CC_hi_user) {}
 };
+
 struct EmissionKindField : public MDUnsignedField {
   EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
 };
@@ -3435,24 +3454,28 @@ struct MDSignedField : public MDFieldImpl<int64_t> {
 struct MDBoolField : public MDFieldImpl<bool> {
   MDBoolField(bool Default = false) : ImplTy(Default) {}
 };
+
 struct MDField : public MDFieldImpl<Metadata *> {
   bool AllowNull;
 
   MDField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
 };
+
 struct MDConstant : public MDFieldImpl<ConstantAsMetadata *> {
   MDConstant() : ImplTy(nullptr) {}
 };
+
 struct MDStringField : public MDFieldImpl<MDString *> {
   bool AllowEmpty;
   MDStringField(bool AllowEmpty = true)
       : ImplTy(nullptr), AllowEmpty(AllowEmpty) {}
 };
+
 struct MDFieldList : public MDFieldImpl<SmallVector<Metadata *, 4>> {
   MDFieldList() : ImplTy(SmallVector<Metadata *, 4>()) {}
 };
 
-} // end namespace
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -4001,14 +4024,16 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(globals, MDField, );                                                \
   OPTIONAL(imports, MDField, );                                                \
   OPTIONAL(macros, MDField, );                                                 \
-  OPTIONAL(dwoId, MDUnsignedField, );
+  OPTIONAL(dwoId, MDUnsignedField, );                                          \
+  OPTIONAL(splitDebugInlining, MDBoolField, = true);
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = DICompileUnit::getDistinct(
       Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
-      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val);
+      retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
+      splitDebugInlining.Val);
   return false;
 }
 
@@ -4138,7 +4163,6 @@ bool LLParser::ParseDIMacroFile(MDNode *&Result, bool IsDistinct) {
                            (Context, type.Val, line.Val, file.Val, nodes.Val));
   return false;
 }
-
 
 /// ParseDIModule:
 ///   ::= !DIModule(scope: !0, name: "SomeModule", configMacros: "-DNDEBUG",
@@ -4405,7 +4429,6 @@ bool LLParser::ParseMetadata(Metadata *&MD, PerFunctionState *PFS) {
   return false;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Function Parsing.
 //===----------------------------------------------------------------------===//
@@ -4571,7 +4594,6 @@ bool LLParser::ParseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
   BB = cast<BasicBlock>(V);
   return false;
 }
-
 
 /// FunctionHeader
 ///   ::= OptionalLinkage OptionalVisibility OptionalCallingConv OptRetAttrs
@@ -5153,7 +5175,6 @@ bool LLParser::ParseRet(Instruction *&Inst, BasicBlock *BB,
   return false;
 }
 
-
 /// ParseBr
 ///   ::= 'br' TypeAndValue
 ///   ::= 'br' TypeAndValue ',' TypeAndValue ',' TypeAndValue
@@ -5267,7 +5288,6 @@ bool LLParser::ParseIndirectBr(Instruction *&Inst, PerFunctionState &PFS) {
   Inst = IBI;
   return false;
 }
-
 
 /// ParseInvoke
 ///   ::= 'invoke' OptionalCallingConv OptionalAttrs Type Value ParamList
@@ -5616,7 +5636,6 @@ bool LLParser::ParseLogical(Instruction *&Inst, PerFunctionState &PFS,
   return false;
 }
 
-
 /// ParseCompare
 ///  ::= 'icmp' IPredicates TypeAndValue ',' Value
 ///  ::= 'fcmp' FPredicates TypeAndValue ',' Value
@@ -5781,7 +5800,8 @@ int LLParser::ParsePHI(Instruction *&Inst, PerFunctionState &PFS) {
 
   bool AteExtraComma = false;
   SmallVector<std::pair<Value*, BasicBlock*>, 16> PHIVals;
-  while (1) {
+
+  while (true) {
     PHIVals.push_back(std::make_pair(Op0, cast<BasicBlock>(Op1)));
 
     if (!EatIfPresent(lltok::comma))

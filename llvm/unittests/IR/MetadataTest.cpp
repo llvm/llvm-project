@@ -94,7 +94,7 @@ protected:
     return DICompileUnit::getDistinct(Context, 1, getFile(), "clang", false,
                                       "-g", 2, "", DICompileUnit::FullDebug,
                                       getTuple(), getTuple(), getTuple(),
-                                      getTuple(), getTuple(), 0);
+                                      getTuple(), getTuple(), 0, true);
   }
   DIType *getBasicType(StringRef Name) {
     return DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, Name);
@@ -1391,8 +1391,7 @@ TEST_F(DICompileUnitTest, get) {
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, GlobalVariables, ImportedEntities, Macros,
-      DWOId);
+      RetainedTypes, GlobalVariables, ImportedEntities, Macros, DWOId, true);
 
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, N->getTag());
   EXPECT_EQ(SourceLanguage, N->getSourceLanguage());
@@ -1449,7 +1448,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   auto *N = DICompileUnit::getDistinct(
       Context, SourceLanguage, File, Producer, IsOptimized, Flags,
       RuntimeVersion, SplitDebugFilename, EmissionKind, EnumTypes,
-      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId);
+      RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true);
 
   auto *GlobalVariables = MDTuple::getDistinct(Context, None);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());

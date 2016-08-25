@@ -1,0 +1,204 @@
+# RUN: llc -march=hexagon -hexagon-subreg-liveness -start-after machine-scheduler -stop-after stack-slot-coloring -o - %s | FileCheck %s
+
+--- |
+  target triple = "hexagon"
+
+  ; Function Attrs: nounwind optsize
+  define void @main() #0 {
+  entry:
+    br label %for.body
+
+  for.body:                                         ; preds = %if.end82, %entry
+    %lsr.iv = phi i32 [ %lsr.iv.next, %if.end82 ], [ 524288, %entry ]
+    %call9 = tail call i32 @lrand48() #0
+    %conv10 = sext i32 %call9 to i64
+    %shr11 = lshr i64 %conv10, 9
+    %or12 = or i64 0, %shr11
+    %call14 = tail call i32 @lrand48() #0
+    %conv15138 = zext i32 %call14 to i64
+    %shr16 = lshr i64 %conv15138, 9
+    %0 = call i64 @llvm.hexagon.S2.extractup(i64 %conv15138, i32 22, i32 9)
+    %1 = shl i64 %0, 42
+    %shl17 = shl i64 %shr16, 42
+    %or22 = or i64 0, %1
+    %or26 = or i64 %or22, 0
+    %shr30 = lshr i64 undef, 25
+    %2 = call i64 @llvm.hexagon.S2.extractup(i64 undef, i32 6, i32 25)
+    %and = and i64 %shr30, 63
+    %sub = shl i64 2, %2
+    %add = add i64 %sub, -1
+    %shl37 = shl i64 %add, 0
+    %call38 = tail call i32 @lrand48() #0
+    %conv39141 = zext i32 %call38 to i64
+    %shr40 = lshr i64 %conv39141, 25
+    %3 = call i64 @llvm.hexagon.S2.extractup(i64 %conv39141, i32 6, i32 25)
+    %and41 = and i64 %shr40, 63
+    %sub43 = shl i64 2, %3
+    %add45 = add i64 %sub43, -1
+    %call46 = tail call i32 @lrand48() #0
+    %shr48 = lshr i64 undef, 25
+    %4 = call i64 @llvm.hexagon.S2.extractup(i64 undef, i32 6, i32 25)
+    %and49 = and i64 %shr48, 63
+    %shl50 = shl i64 %add45, %4
+    %and52 = and i64 %shl37, %or12
+    %and54 = and i64 %shl50, %or26
+    store i64 %and54, i64* undef, align 8
+    %cmp56 = icmp eq i64 %and52, 0
+    br i1 %cmp56, label %for.end, label %if.end82
+
+  if.end82:                                         ; preds = %for.body
+    %lsr.iv.next = add nsw i32 %lsr.iv, -1
+    %exitcond = icmp eq i32 %lsr.iv.next, 0
+    br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:                                          ; preds = %if.end82, %for.body
+    unreachable
+  }
+
+  declare i32 @lrand48() #0
+  declare i64 @llvm.hexagon.S2.extractup(i64, i32, i32) #1
+
+  attributes #0 = { nounwind optsize "target-cpu"="hexagonv55" "target-features"="-hvx,-hvx-double" }
+  attributes #1 = { nounwind readnone }
+
+...
+---
+name:            main
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: doubleregs }
+  - { id: 5, class: intregs }
+  - { id: 6, class: doubleregs }
+  - { id: 7, class: doubleregs }
+  - { id: 8, class: doubleregs }
+  - { id: 9, class: doubleregs }
+  - { id: 10, class: intregs }
+  - { id: 11, class: doubleregs }
+  - { id: 12, class: doubleregs }
+  - { id: 13, class: doubleregs }
+  - { id: 14, class: intregs }
+  - { id: 15, class: doubleregs }
+  - { id: 16, class: doubleregs }
+  - { id: 17, class: intregs }
+  - { id: 18, class: doubleregs }
+  - { id: 19, class: intregs }
+  - { id: 20, class: doubleregs }
+  - { id: 21, class: doubleregs }
+  - { id: 22, class: doubleregs }
+  - { id: 23, class: intregs }
+  - { id: 24, class: doubleregs }
+  - { id: 25, class: predregs }
+  - { id: 26, class: predregs }
+  - { id: 27, class: intregs }
+  - { id: 28, class: intregs }
+  - { id: 29, class: doubleregs }
+  - { id: 30, class: intregs }
+  - { id: 31, class: intregs }
+  - { id: 32, class: doubleregs }
+  - { id: 33, class: intregs }
+  - { id: 34, class: intregs }
+  - { id: 35, class: doubleregs }
+  - { id: 36, class: doubleregs }
+  - { id: 37, class: intregs }
+  - { id: 38, class: intregs }
+  - { id: 39, class: doubleregs }
+  - { id: 40, class: doubleregs }
+  - { id: 41, class: intregs }
+  - { id: 42, class: intregs }
+  - { id: 43, class: doubleregs }
+  - { id: 44, class: intregs }
+  - { id: 45, class: intregs }
+  - { id: 46, class: doubleregs }
+  - { id: 47, class: doubleregs }
+  - { id: 48, class: doubleregs }
+  - { id: 49, class: doubleregs }
+  - { id: 50, class: doubleregs }
+  - { id: 51, class: doubleregs }
+  - { id: 52, class: intregs }
+  - { id: 53, class: intregs }
+  - { id: 54, class: intregs }
+  - { id: 55, class: doubleregs }
+  - { id: 56, class: doubleregs }
+  - { id: 57, class: intregs }
+  - { id: 58, class: intregs }
+  - { id: 59, class: intregs }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    successors: %bb.1.for.body
+
+    %59 = A2_tfrsi 524288
+    undef %32.subreg_hireg = A2_tfrsi 0
+    %8 = S2_extractup undef %9, 6, 25
+    %47 = A2_tfrpi 2
+    %13 = A2_tfrpi -1
+    %13 = S2_asl_r_p_acc %13, %47, %8.subreg_loreg
+    %51 = A2_tfrpi 0
+
+    ; CHECK: %d2 = S2_extractup undef %d0, 6, 25
+    ; CHECK: %d0 = A2_tfrpi 2
+    ; CHECK: %d13 = A2_tfrpi -1
+    ; CHECK-NOT: undef %r4
+
+  bb.1.for.body:
+    successors: %bb.3.for.end, %bb.2.if.end82
+
+    ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
+    J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3, implicit-def %r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
+    undef %29.subreg_loreg = COPY killed %r0
+    %29.subreg_hireg = S2_asr_i_r %29.subreg_loreg, 31
+    ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
+    J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3, implicit-def %r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
+    %32.subreg_loreg = COPY killed %r0
+    %7 = S2_extractup %32, 22, 9
+    ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
+    J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3, implicit-def %r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
+    undef %43.subreg_loreg = COPY killed %r0
+    %43.subreg_hireg = COPY %32.subreg_hireg
+    %16 = S2_extractup %43, 6, 25
+    %18 = A2_tfrpi -1
+    %18 = S2_asl_r_p_acc %18, %47, %16.subreg_loreg
+    ADJCALLSTACKDOWN 0, implicit-def dead %r29, implicit-def dead %r30, implicit %r31, implicit %r30, implicit %r29
+    J2_call @lrand48, implicit-def dead %d0, implicit-def dead %d1, implicit-def dead %d2, implicit-def dead %d3, implicit-def dead %d4, implicit-def dead %d5, implicit-def dead %d6, implicit-def dead %d7, implicit-def dead %r28, implicit-def dead %r31, implicit-def dead %p0, implicit-def dead %p1, implicit-def dead %p2, implicit-def dead %p3, implicit-def dead %m0, implicit-def dead %m1, implicit-def dead %lc0, implicit-def dead %lc1, implicit-def dead %sa0, implicit-def dead %sa1, implicit-def dead %usr, implicit-def %usr_ovf, implicit-def dead %cs0, implicit-def dead %cs1, implicit-def dead %w0, implicit-def dead %w1, implicit-def dead %w2, implicit-def dead %w3, implicit-def dead %w4, implicit-def dead %w5, implicit-def dead %w6, implicit-def dead %w7, implicit-def dead %w8, implicit-def dead %w9, implicit-def dead %w10, implicit-def dead %w11, implicit-def dead %w12, implicit-def dead %w13, implicit-def dead %w14, implicit-def dead %w15, implicit-def dead %q0, implicit-def dead %q1, implicit-def dead %q2, implicit-def dead %q3
+    ADJCALLSTACKUP 0, 0, implicit-def dead %r29, implicit-def dead %r30, implicit-def dead %r31, implicit %r29
+    %22 = S2_asl_r_p %18, %8.subreg_loreg
+    %21 = COPY %13
+    %21 = S2_lsr_i_p_and %21, %29, 9
+    %22 = S2_asl_i_p_and %22, %7, 42
+    S2_storerd_io undef %23, 0, %22 :: (store 8 into `i64* undef`)
+    %25 = C2_cmpeqp %21, %51
+    J2_jumpt %25, %bb.3.for.end, implicit-def dead %pc
+    J2_jump %bb.2.if.end82, implicit-def dead %pc
+
+  bb.2.if.end82:
+    successors: %bb.3.for.end, %bb.1.for.body
+
+    %59 = A2_addi %59, -1
+    %26 = C2_cmpeqi %59, 0
+    J2_jumpf %26, %bb.1.for.body, implicit-def dead %pc
+    J2_jump %bb.3.for.end, implicit-def dead %pc
+
+  bb.3.for.end:
+
+...

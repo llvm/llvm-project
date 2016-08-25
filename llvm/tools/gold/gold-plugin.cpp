@@ -17,6 +17,7 @@
 #include "llvm/Config/config.h" // plugin-api.h requires HAVE_STDINT_H
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -161,6 +162,8 @@ namespace options {
   // corresponding bitcode file, will use a path formed by replacing the
   // bitcode file's path prefix matching oldprefix with newprefix.
   static std::string thinlto_prefix_replace;
+  // Optional path to a directory for caching ThinLTO objects.
+  static std::string cache_dir;
   // Additional options to pass into the code generator.
   // Note: This array will contain all plugin options which are not claimed
   // as plugin exclusive to pass to the code generator.
@@ -199,6 +202,8 @@ namespace options {
       thinlto_prefix_replace = opt.substr(strlen("thinlto-prefix-replace="));
       if (thinlto_prefix_replace.find(";") == std::string::npos)
         message(LDPL_FATAL, "thinlto-prefix-replace expects 'old;new' format");
+    } else if (opt.startswith("cache-dir=")) {
+      cache_dir = opt.substr(strlen("cache-dir="));
     } else if (opt.size() == 2 && opt[0] == 'O') {
       if (opt[1] < '0' || opt[1] > '3')
         message(LDPL_FATAL, "Optimization level must be between 0 and 3");
@@ -792,12 +797,19 @@ static ld_plugin_status allSymbolsReadHook() {
   std::vector<uintptr_t> IsTemporary(MaxTasks);
   std::vector<SmallString<128>> Filenames(MaxTasks);
 
-  auto AddOutput = [&](size_t Task) {
+  auto AddOutput =
+      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectOutput> {
     auto &OutputName = Filenames[Task];
     getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps, OutputName,
                       MaxTasks > 1 ? Task : -1);
     IsTemporary[Task] = !SaveTemps;
-    return llvm::make_unique<LTOOutput>(OutputName);
+    if (options::cache_dir.empty())
+      return llvm::make_unique<LTOOutput>(OutputName);
+
+    return llvm::make_unique<CacheObjectOutput>(
+        options::cache_dir, [OutputName](std::unique_ptr<MemoryBuffer> Buffer) {
+          *LTOOutput(OutputName).getStream() << Buffer->getBuffer();
+        });
   };
 
   check(Lto->run(AddOutput));

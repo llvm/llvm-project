@@ -225,7 +225,8 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                     FeatureNEON,
                                     FeaturePerfMon,
                                     FeaturePostRAScheduler,
-                                    FeatureUseRSqrt
+                                    FeatureUseRSqrt,
+                                    FeatureZCZeroing
                                     ]>;
 
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",

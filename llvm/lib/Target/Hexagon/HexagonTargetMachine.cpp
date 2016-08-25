@@ -112,6 +112,9 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
                     createVLIWMachineSched);
 
 namespace llvm {
+  extern char &HexagonExpandCondsetsID;
+  void initializeHexagonExpandCondsetsPass(PassRegistry&);
+
   FunctionPass *createHexagonBitSimplify();
   FunctionPass *createHexagonBranchRelaxation();
   FunctionPass *createHexagonCallFrameInformation();
@@ -120,7 +123,6 @@ namespace llvm {
   FunctionPass *createHexagonConstPropagationPass();
   FunctionPass *createHexagonCopyToCombine();
   FunctionPass *createHexagonEarlyIfConversion();
-  FunctionPass *createHexagonExpandCondsets();
   FunctionPass *createHexagonFixupHwLoops();
   FunctionPass *createHexagonGenExtract();
   FunctionPass *createHexagonGenInsert();
@@ -164,6 +166,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           TT, CPU, FS, Options, getEffectiveRelocModel(RM), CM,
           (HexagonNoOpt ? CodeGenOpt::None : OL)),
       TLOF(make_unique<HexagonTargetObjectFile>()) {
+  initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
 
@@ -287,10 +290,8 @@ bool HexagonPassConfig::addInstSelector() {
 
 void HexagonPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOpt::None) {
-    if (EnableExpandCondsets) {
-      Pass *Exp = createHexagonExpandCondsets();
-      insertPass(&RegisterCoalescerID, IdentifyingPassPtr(Exp));
-    }
+    if (EnableExpandCondsets)
+      insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening(), false);
     if (!DisableHardwareLoops)

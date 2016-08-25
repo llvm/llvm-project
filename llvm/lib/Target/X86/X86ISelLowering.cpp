@@ -4236,6 +4236,21 @@ static bool isUndefOrInRange(ArrayRef<int> Mask,
   return true;
 }
 
+/// Return true if Val is undef, zero or if its value falls within the
+/// specified range (L, H].
+static bool isUndefOrZeroOrInRange(int Val, int Low, int Hi) {
+  return isUndefOrZero(Val) || (Val >= Low && Val < Hi);
+}
+
+/// Return true if every element in Mask is undef, zero or if its value
+/// falls within the specified range (L, H].
+static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
+  for (int M : Mask)
+    if (!isUndefOrZeroOrInRange(M, Low, Hi))
+      return false;
+  return true;
+}
+
 /// Return true if every element in Mask, beginning
 /// from position Pos and ending in Pos+Size, falls within the specified
 /// sequential range (Low, Low+Size]. or is undef.
@@ -5728,11 +5743,13 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   int LoadSize =
       (1 + LastLoadedElt - FirstLoadedElt) * LDBaseVT.getStoreSizeInBits();
 
-  // VZEXT_LOAD - consecutive load/undefs followed by zeros/undefs.
-  if (IsConsecutiveLoad && FirstLoadedElt == 0 && LoadSize == 64 &&
+  // VZEXT_LOAD - consecutive 32/64-bit load/undefs followed by zeros/undefs.
+  if (IsConsecutiveLoad && FirstLoadedElt == 0 &&
+      (LoadSize == 32 || LoadSize == 64) &&
       ((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))) {
-    MVT VecSVT = VT.isFloatingPoint() ? MVT::f64 : MVT::i64;
-    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / 64);
+    MVT VecSVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(LoadSize)
+                                      : MVT::getIntegerVT(LoadSize);
+    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / LoadSize);
     if (TLI.isTypeLegal(VecVT)) {
       SDVTList Tys = DAG.getVTList(VecVT, MVT::Other);
       SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
@@ -5756,20 +5773,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       }
 
       return DAG.getBitcast(VT, ResNode);
-    }
-  }
-
-  // VZEXT_MOVL - consecutive 32-bit load/undefs followed by zeros/undefs.
-  if (IsConsecutiveLoad && FirstLoadedElt == 0 && LoadSize == 32 &&
-      ((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))) {
-    MVT VecSVT = VT.isFloatingPoint() ? MVT::f32 : MVT::i32;
-    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / 32);
-    if (TLI.isTypeLegal(VecVT)) {
-      SDValue V = LastLoadedElt != 0 ? CreateLoad(VecSVT, LDBase)
-                                     : DAG.getBitcast(VecSVT, EltBase);
-      V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, V);
-      V = DAG.getNode(X86ISD::VZEXT_MOVL, DL, VecVT, V);
-      return DAG.getBitcast(VT, V);
     }
   }
 
@@ -8743,6 +8746,13 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
       SrcVT = BroadcastVT.getScalarType();
     }
     V = DAG.getBitcast(SrcVT, V);
+  }
+
+  // 32-bit targets need to load i64 as a f64 and then bitcast the result.
+  if (!Subtarget.is64Bit() && SrcVT == MVT::i64) {
+    V = DAG.getBitcast(MVT::f64, V);
+    unsigned NumBroadcastElts = BroadcastVT.getVectorNumElements();
+    BroadcastVT = MVT::getVectorVT(MVT::f64, NumBroadcastElts);
   }
 
   return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, BroadcastVT, V));
@@ -25352,6 +25362,21 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   unsigned Shuffle, PermuteImm;
 
   if (UnaryShuffle) {
+    // If we are shuffling a X86ISD::VZEXT_LOAD then we can use the load
+    // directly if we don't shuffle the lower element and we shuffle the upper
+    // (zero) elements within themselves.
+    if (V1.getOpcode() == X86ISD::VZEXT_LOAD &&
+        (V1.getScalarValueSizeInBits() % MaskEltSizeInBits) == 0) {
+      unsigned Scale = V1.getScalarValueSizeInBits() / MaskEltSizeInBits;
+      ArrayRef<int> HiMask(Mask.data() + Scale, NumMaskElts - Scale);
+      if (isSequentialOrUndefInRange(Mask, 0, Scale, 0) &&
+          isUndefOrZeroOrInRange(HiMask, Scale, NumMaskElts)) {
+        DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, V1),
+                      /*AddTo*/ true);
+        return true;
+      }
+    }
+
     if (matchUnaryVectorShuffle(MaskVT, Mask, Subtarget, Shuffle, ShuffleVT)) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
@@ -30507,17 +30532,6 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineVZextMovl(SDNode *N, SelectionDAG &DAG) {
-  SDValue Op = peekThroughBitcasts(N->getOperand(0));
-  EVT VT = N->getValueType(0), OpVT = Op.getValueType();
-  if (Op.getOpcode() == X86ISD::VZEXT_LOAD &&
-      VT.getVectorElementType().getSizeInBits() ==
-      OpVT.getVectorElementType().getSizeInBits()) {
-    return DAG.getBitcast(VT, Op);
-  }
-  return SDValue();
-}
-
 static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
@@ -31503,7 +31517,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
   case X86ISD::BT:          return combineBT(N, DAG, DCI);
-  case X86ISD::VZEXT_MOVL:  return combineVZextMovl(N, DAG);
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:    return combineZext(N, DAG, DCI, Subtarget);
   case ISD::SIGN_EXTEND:    return combineSext(N, DAG, DCI, Subtarget);
@@ -31539,6 +31552,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERM2X128:
+  case X86ISD::VZEXT_MOVL:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case ISD::FMA:            return combineFMA(N, DAG, Subtarget);
   case ISD::MGATHER:

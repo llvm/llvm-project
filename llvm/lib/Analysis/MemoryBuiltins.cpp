@@ -114,7 +114,7 @@ static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
   // MallocLike is chosen here because allocsize makes no guarantees about the
   // nullness of the result of the function, nor does it deal with strings, nor
   // does it require that the memory returned is zeroed out.
-  LLVM_CONSTEXPR auto AllocSizeAllocTy = MallocLike;
+  const AllocType AllocSizeAllocTy = MallocLike;
   if ((AllocTy & AllocSizeAllocTy) == AllocSizeAllocTy &&
       Callee->hasFnAttribute(Attribute::AllocSize)) {
     Attribute Attr = Callee->getFnAttribute(Attribute::AllocSize);

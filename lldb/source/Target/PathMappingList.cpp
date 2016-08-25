@@ -224,6 +224,7 @@ PathMappingList::ReverseRemapPath (const ConstString &path, ConstString &new_pat
 
     for (const auto& it : m_pairs)
     {
+        // FIXME: This should be using FileSpec API's to do the path appending.
         const size_t prefixLen = it.second.GetLength();
         if (::strncmp (it.second.GetCString(), path_cstr, prefixLen) == 0)
         {
@@ -242,7 +243,6 @@ PathMappingList::FindFile (const FileSpec &orig_spec, FileSpec &new_spec) const
     if (!m_pairs.empty())
     {
         char orig_path[PATH_MAX];
-        char new_path[PATH_MAX];
         const size_t orig_path_len = orig_spec.GetPath (orig_path, sizeof(orig_path));
         if (orig_path_len > 0)
         {
@@ -255,13 +255,10 @@ PathMappingList::FindFile (const FileSpec &orig_spec, FileSpec &new_spec) const
                 {
                     if (::strncmp (pos->first.GetCString(), orig_path, prefix_len) == 0)
                     {
-                        const size_t new_path_len = snprintf(new_path, sizeof(new_path), "%s/%s", pos->second.GetCString(), orig_path + prefix_len);
-                        if (new_path_len < sizeof(new_path))
-                        {
-                            new_spec.SetFile (new_path, true);
-                            if (new_spec.Exists())
-                                return true;
-                        }
+                        new_spec.SetFile(pos->second.GetCString(), false);
+                        new_spec.AppendPathComponent(orig_path+prefix_len);
+                        if (new_spec.Exists())
+                            return true;
                     }
                 }
             }

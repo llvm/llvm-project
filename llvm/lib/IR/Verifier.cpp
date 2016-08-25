@@ -1119,7 +1119,7 @@ void Verifier::visitDIGlobalVariable(const DIGlobalVariable &N) {
   if (auto *V = N.getRawVariable()) {
     AssertDI(isa<ConstantAsMetadata>(V) &&
                  !isa<Function>(cast<ConstantAsMetadata>(V)->getValue()),
-             "invalid global varaible ref", &N, V);
+             "invalid global variable ref", &N, V);
     visitConstantExprsRecursively(cast<ConstantAsMetadata>(V)->getValue());
   }
   if (auto *Member = N.getRawStaticDataMemberDeclaration()) {

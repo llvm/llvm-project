@@ -38,7 +38,7 @@ using namespace llvm;
 //
 // In order to do this, we need to reserve one value of the second (optional)
 // allocsize argument to signify "not present."
-LLVM_CONSTEXPR static unsigned AllocSizeNumElemsNotPresent = -1;
+static const unsigned AllocSizeNumElemsNotPresent = -1;
 
 static uint64_t packAllocSizeArgs(unsigned ElemSizeArg,
                                   const Optional<unsigned> &NumElemsArg) {

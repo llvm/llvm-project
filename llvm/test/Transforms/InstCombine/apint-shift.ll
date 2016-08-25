@@ -230,11 +230,10 @@ define i1 @test17(i106 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test17vec(<2 x i106> %A) {
 ; CHECK-LABEL: @test17vec(
-; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i106> %A, <i106 3, i106 3>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i106> [[B]], <i106 1234, i106 1234>
+; CHECK-NEXT:    [[B_MASK:%.*]] = and <2 x i106> %A, <i106 -8, i106 -8>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i106> [[B_MASK]], <i106 9872, i106 9872>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = lshr <2 x i106> %A, <i106 3, i106 3>
@@ -261,11 +260,9 @@ define i1 @test19(i37 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold too.
 define <2 x i1> @test19vec(<2 x i37> %A) {
 ; CHECK-LABEL: @test19vec(
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i37> %A, <i37 2, i37 2>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i37> [[B]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i37> %A, <i37 4, i37 4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = ashr <2 x i37> %A, <i37 2, i37 2>
@@ -286,8 +283,8 @@ define i1 @test19a(i39 %A) {
 ; FIXME: Vectors should fold too.
 define <2 x i1> @test19a_vec(<2 x i39> %A) {
 ; CHECK-LABEL: @test19a_vec(
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i39> %A, <i39 2, i39 2>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i39> [[B]], <i39 -1, i39 -1>
+; CHECK-NEXT:    [[B_MASK:%.*]] = and <2 x i39> %A, <i39 -4, i39 -4>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i39> [[B_MASK]], <i39 -4, i39 -4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = ashr <2 x i39> %A, <i39 2, i39 2>

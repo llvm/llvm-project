@@ -30,7 +30,7 @@
 /// }
 /// \endcode
 ///
-/// Error instances are implicitly convertable to bool. Error values convert to
+/// Error instances are implicitly convertible to bool. Error values convert to
 /// true and successes convert to false. Error instances must have their boolean
 /// values checked or they must be moved before they go out of scope, otherwise
 /// their destruction will cause the program to abort with a warning about an
@@ -169,10 +169,10 @@ namespace streamexecutor {
 using llvm::consumeError;
 using llvm::Error;
 using llvm::Expected;
-using llvm::StringRef;
+using llvm::Twine;
 
 // Makes an Error object from an error message.
-Error make_error(StringRef Message);
+Error make_error(Twine Message);
 
 // Consumes the input error and returns its error message.
 //

@@ -20,7 +20,6 @@
 ...
 ---
 name:            main
-isSSA:           true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc_and_g8rc_nox0 }

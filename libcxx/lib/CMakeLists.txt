@@ -225,8 +225,8 @@ if (LIBCXX_INSTALL_LIBRARY)
     set(experimental_lib cxx_experimental)
   endif()
   install(TARGETS ${LIBCXX_TARGETS} ${experimental_lib}
-    LIBRARY DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT libcxx
-    ARCHIVE DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT libcxx
+    LIBRARY DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
+    ARCHIVE DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     )
   # NOTE: This install command must go after the cxx install command otherwise
   # it will not be executed after the library symlinks are installed.
@@ -248,13 +248,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
       set(experimental_lib_install_target cxx_experimental)
     endif()
     if(LIBCXX_INSTALL_HEADERS)
-      set(header_install_target install-libcxx-headers)
+      set(header_install_target install-cxx-headers)
     endif()
-    add_custom_target(install-libcxx
+    add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               ${experimental_lib_install_target}
                               ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
-                      -DCMAKE_INSTALL_COMPONENT=libcxx
+                      -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+    add_custom_target(install-libcxx DEPENDS install-cxx)
 endif()

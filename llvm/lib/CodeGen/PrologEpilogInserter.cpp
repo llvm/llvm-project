@@ -80,7 +80,7 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     MachineFunctionProperties MFP;
     if (UsesCalleeSaves)
-      MFP.set(MachineFunctionProperties::Property::AllVRegsAllocated);
+      MFP.set(MachineFunctionProperties::Property::NoVRegs);
     return MFP;
   }
 

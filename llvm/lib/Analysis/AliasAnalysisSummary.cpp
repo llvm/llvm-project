@@ -7,25 +7,23 @@ namespace llvm {
 namespace cflaa {
 
 namespace {
-LLVM_CONSTEXPR unsigned AttrEscapedIndex = 0;
-LLVM_CONSTEXPR unsigned AttrUnknownIndex = 1;
-LLVM_CONSTEXPR unsigned AttrGlobalIndex = 2;
-LLVM_CONSTEXPR unsigned AttrCallerIndex = 3;
-LLVM_CONSTEXPR unsigned AttrFirstArgIndex = 4;
-LLVM_CONSTEXPR unsigned AttrLastArgIndex = NumAliasAttrs;
-LLVM_CONSTEXPR unsigned AttrMaxNumArgs = AttrLastArgIndex - AttrFirstArgIndex;
+const unsigned AttrEscapedIndex = 0;
+const unsigned AttrUnknownIndex = 1;
+const unsigned AttrGlobalIndex = 2;
+const unsigned AttrCallerIndex = 3;
+const unsigned AttrFirstArgIndex = 4;
+const unsigned AttrLastArgIndex = NumAliasAttrs;
+const unsigned AttrMaxNumArgs = AttrLastArgIndex - AttrFirstArgIndex;
 
-// NOTE: These aren't AliasAttrs because bitsets don't have a constexpr
-// ctor for some versions of MSVC that we support. We could maybe refactor,
-// but...
+// It would be *slightly* prettier if we changed these to AliasAttrs, but it
+// seems that both GCC and MSVC emit dynamic initializers for const bitsets.
 using AliasAttr = unsigned;
-LLVM_CONSTEXPR AliasAttr AttrNone = 0;
-LLVM_CONSTEXPR AliasAttr AttrEscaped = 1 << AttrEscapedIndex;
-LLVM_CONSTEXPR AliasAttr AttrUnknown = 1 << AttrUnknownIndex;
-LLVM_CONSTEXPR AliasAttr AttrGlobal = 1 << AttrGlobalIndex;
-LLVM_CONSTEXPR AliasAttr AttrCaller = 1 << AttrCallerIndex;
-LLVM_CONSTEXPR AliasAttr ExternalAttrMask =
-    AttrEscaped | AttrUnknown | AttrGlobal;
+const AliasAttr AttrNone = 0;
+const AliasAttr AttrEscaped = 1 << AttrEscapedIndex;
+const AliasAttr AttrUnknown = 1 << AttrUnknownIndex;
+const AliasAttr AttrGlobal = 1 << AttrGlobalIndex;
+const AliasAttr AttrCaller = 1 << AttrCallerIndex;
+const AliasAttr ExternalAttrMask = AttrEscaped | AttrUnknown | AttrGlobal;
 }
 
 AliasAttrs getAttrNone() { return AttrNone; }

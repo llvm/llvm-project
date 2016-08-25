@@ -1211,6 +1211,17 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     MO.setIsUndef(true);
     DEBUG(dbgs() << "\tnew undef: " << UseIdx << '\t' << MI);
   }
+
+  // A def of a subregister may be a use of the other subregisters, so
+  // deleting a def of a subregister may also remove uses. Since CopyMI
+  // is still part of the function (but about to be erased), mark all
+  // defs of DstReg in it as <undef>, so that shrinkToUses would
+  // ignore them.
+  for (MachineOperand &MO : CopyMI->operands())
+    if (MO.isReg() && MO.isDef() && MO.getReg() == DstReg)
+      MO.setIsUndef(true);
+  LIS->shrinkToUses(&DstLI);
+
   return true;
 }
 
@@ -1890,12 +1901,22 @@ public:
   /// no useful information and can be removed.
   void pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask);
 
+  /// Pruning values in subranges can lead to removing segments in these
+  /// subranges started by IMPLICIT_DEFs. The corresponding segments in
+  /// the main range also need to be removed. This function will mark
+  /// the corresponding values in the main range as pruned, so that
+  /// eraseInstrs can do the final cleanup.
+  /// The parameter @p LI must be the interval whose main range is the
+  /// live range LR.
+  void pruneMainSegments(LiveInterval &LI, bool &ShrinkMainRange);
+
   /// Erase any machine instructions that have been coalesced away.
   /// Add erased instructions to ErasedInstrs.
   /// Add foreign virtual registers to ShrinkRegs if their live range ended at
   /// the erased instrs.
   void eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                   SmallVectorImpl<unsigned> &ShrinkRegs);
+                   SmallVectorImpl<unsigned> &ShrinkRegs,
+                   LiveInterval *LI = nullptr);
 
   /// Remove liverange defs at places where implicit defs will be removed.
   void removeImplicitDefs();
@@ -2416,7 +2437,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           for (MachineOperand &MO :
                Indexes->getInstructionFromIndex(Def)->operands()) {
             if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
-              MO.setIsUndef(EraseImpDef);
+              if (MO.getSubReg() != 0)
+                MO.setIsUndef(EraseImpDef);
               MO.setIsDead(false);
             }
           }
@@ -2449,8 +2471,7 @@ void JoinVals::pruneValues(JoinVals &Other,
   }
 }
 
-void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask)
-{
+void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
   // Look for values being erased.
   bool DidPrune = false;
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
@@ -2487,6 +2508,30 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask)
     LI.removeEmptySubRanges();
 }
 
+/// Check if any of the subranges of @p LI contain a definition at @p Def.
+static bool isDefInSubRange(LiveInterval &LI, SlotIndex Def) {
+  for (LiveInterval::SubRange &SR : LI.subranges()) {
+    if (VNInfo *VNI = SR.Query(Def).valueOutOrDead())
+      if (VNI->def == Def)
+        return true;
+  }
+  return false;
+}
+
+void JoinVals::pruneMainSegments(LiveInterval &LI, bool &ShrinkMainRange) {
+  assert(&static_cast<LiveRange&>(LI) == &LR);
+
+  for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
+    if (Vals[i].Resolution != CR_Keep)
+      continue;
+    VNInfo *VNI = LR.getValNumInfo(i);
+    if (VNI->isUnused() || VNI->isPHIDef() || isDefInSubRange(LI, VNI->def))
+      continue;
+    Vals[i].Pruned = true;
+    ShrinkMainRange = true;
+  }
+}
+
 void JoinVals::removeImplicitDefs() {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     Val &V = Vals[i];
@@ -2500,7 +2545,8 @@ void JoinVals::removeImplicitDefs() {
 }
 
 void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
-                           SmallVectorImpl<unsigned> &ShrinkRegs) {
+                           SmallVectorImpl<unsigned> &ShrinkRegs,
+                           LiveInterval *LI) {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     // Get the def location before markUnused() below invalidates it.
     SlotIndex Def = LR.getValNumInfo(i)->def;
@@ -2512,12 +2558,64 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
       if (!Vals[i].ErasableImplicitDef || !Vals[i].Pruned)
         break;
       // Remove value number i from LR.
+      // For intervals with subranges, removing a segment from the main range
+      // may require extending the previous segment: for each definition of
+      // a subregister, there will be a corresponding def in the main range.
+      // That def may fall in the middle of a segment from another subrange.
+      // In such cases, removing this def from the main range must be
+      // complemented by extending the main range to account for the liveness
+      // of the other subrange.
       VNInfo *VNI = LR.getValNumInfo(i);
+      SlotIndex Def = VNI->def;
+      // The new end point of the main range segment to be extended.
+      SlotIndex NewEnd;
+      if (LI != nullptr) {
+        LiveRange::iterator I = LR.FindSegmentContaining(Def);
+        assert(I != LR.end());
+        // Do not extend beyond the end of the segment being removed.
+        // The segment may have been pruned in preparation for joining
+        // live ranges.
+        NewEnd = I->end;
+      }
+
       LR.removeValNo(VNI);
       // Note that this VNInfo is reused and still referenced in NewVNInfo,
       // make it appear like an unused value number.
       VNI->markUnused();
-      DEBUG(dbgs() << "\t\tremoved " << i << '@' << Def << ": " << LR << '\n');
+
+      if (LI != nullptr && LI->hasSubRanges()) {
+        assert(static_cast<LiveRange*>(LI) == &LR);
+        // Determine the end point based on the subrange information:
+        // minimum of (earliest def of next segment,
+        //             latest end point of containing segment)
+        SlotIndex ED, LE;
+        for (LiveInterval::SubRange &SR : LI->subranges()) {
+          LiveRange::iterator I = SR.find(Def);
+          if (I == SR.end())
+            continue;
+          if (I->start > Def)
+            ED = ED.isValid() ? std::min(ED, I->start) : I->start;
+          else
+            LE = LE.isValid() ? std::max(LE, I->end) : I->end;
+        }
+        if (LE.isValid())
+          NewEnd = std::min(NewEnd, LE);
+        if (ED.isValid())
+          NewEnd = std::min(NewEnd, ED);
+
+        // We only want to do the extension if there was a subrange that
+        // was live across Def.
+        if (LE.isValid()) {
+          LiveRange::iterator S = LR.find(Def);
+          if (S != LR.begin())
+            std::prev(S)->end = NewEnd;
+        }
+      }
+      DEBUG({
+        dbgs() << "\t\tremoved " << i << '@' << Def << ": " << LR << '\n';
+        if (LI != nullptr)
+          dbgs() << "\t\t  LHS = " << *LI << '\n';
+      });
       LLVM_FALLTHROUGH;
     }
 
@@ -2698,6 +2796,10 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     }
     DEBUG(dbgs() << "\tJoined SubRanges " << LHS << "\n");
 
+    // Pruning implicit defs from subranges may result in the main range
+    // having stale segments.
+    LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
+
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
     RHSVals.pruneSubRegValues(LHS, ShrinkMask);
   }
@@ -2713,7 +2815,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   // Erase COPY and IMPLICIT_DEF instructions. This may cause some external
   // registers to require trimming.
   SmallVector<unsigned, 8> ShrinkRegs;
-  LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
+  LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
   RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
   while (!ShrinkRegs.empty())
     shrinkToUses(&LIS->getInterval(ShrinkRegs.pop_back_val()));

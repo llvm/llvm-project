@@ -4,7 +4,6 @@
 
 ---
 name:            test_size_regclass
-isSSA:           true
 registers:
   - { id: 0, class: gr32 }
 body: |

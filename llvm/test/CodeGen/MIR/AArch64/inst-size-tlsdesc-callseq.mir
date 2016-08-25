@@ -33,11 +33,7 @@
 name:            test_tlsdesc_callseq_length
 alignment:       2
 exposesReturnsTwice: false
-hasInlineAsm:    false
-allVRegsAllocated: true
-isSSA:           false
 tracksRegLiveness: false
-tracksSubRegLiveness: false
 liveins:
   - { reg: '%w0' }
 frameInfo:

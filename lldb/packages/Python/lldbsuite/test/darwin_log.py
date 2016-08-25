@@ -296,6 +296,15 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
         # Call super's setUp().
         super(DarwinLogEventBasedTestBase, self).setUp()
 
+        # Until other systems support this, exit
+        # early if we're not macOS version 10.12
+        # or greater.
+        version = platform.mac_ver()[0].split('.')
+        if ((int(version[0]) == 10) and (int(version[1]) < 12) or
+            (int(version[0]) < 10)):
+                self.skipTest("DarwinLog tests currently require macOS 10.12+")
+                return
+
         # Source filename.
         self.source = 'main.c'
 

@@ -153,12 +153,6 @@ protected:
                   uint32_t sdk_idx,
                   lldb_private::FileSpec &local_file);
 
-    bool
-    GetFileInSDKRoot (const char *platform_file_path,
-                      const char *sdkroot_path,
-                      bool symbols_dirs_only,
-                      lldb_private::FileSpec &local_file);
-
     uint32_t
     FindFileInAllSDKs (const lldb_private::FileSpec &platform_file,
                        lldb_private::FileSpecList &file_list);

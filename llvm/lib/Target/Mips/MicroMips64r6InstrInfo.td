@@ -74,24 +74,28 @@ class DSRLV_MM64R6_ENC : POOL32S_3R_FM_MMR6<"dsrlv", 0b001010000>;
 //
 //===----------------------------------------------------------------------===//
 
-class DAUI_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd>
+class DAUI_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
+                          InstrItinClass Itin>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs GPROpnd:$rt);
   dag InOperandList = (ins GPROpnd:$rs, simm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
   list<dag> Pattern = [];
+  InstrItinClass Itinerary = Itin;
 }
-class DAUI_MMR6_DESC : DAUI_MMR6_DESC_BASE<"daui", GPR64Opnd>;
+class DAUI_MMR6_DESC : DAUI_MMR6_DESC_BASE<"daui", GPR64Opnd, II_DAUI>;
 
-class DAHI_DATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd>
+class DAHI_DATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
+                          InstrItinClass Itin>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs GPROpnd:$rs);
   dag InOperandList = (ins GPROpnd:$rt, simm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $imm");
   string Constraints = "$rs = $rt";
+  InstrItinClass Itinerary = Itin;
 }
-class DAHI_MMR6_DESC : DAHI_DATI_DESC_BASE<"dahi", GPR64Opnd>;
-class DATI_MMR6_DESC : DAHI_DATI_DESC_BASE<"dati", GPR64Opnd>;
+class DAHI_MMR6_DESC : DAHI_DATI_DESC_BASE<"dahi", GPR64Opnd, II_DAHI>;
+class DATI_MMR6_DESC : DAHI_DATI_DESC_BASE<"dati", GPR64Opnd, II_DATI>;
 
 class EXTBITS_DESC_BASE<string instr_asm, RegisterOperand RO, Operand PosOpnd,
                         Operand SizeOpnd, SDPatternOperator Op = null_frag>
@@ -115,26 +119,33 @@ class DEXTU_MMR6_DESC : EXTBITS_DESC_BASE<"dextu", GPR64Opnd, uimm5_plus32,
                                           uimm5_plus1, MipsExt>;
 
 class DALIGN_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
-                      Operand ImmOpnd> : MMR6Arch<instr_asm>, MipsR6Inst {
+                      Operand ImmOpnd, InstrItinClass itin>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs GPROpnd:$rd);
   dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt, ImmOpnd:$bp);
   string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt, $bp");
   list<dag> Pattern = [];
+  InstrItinClass Itinerary = itin;
 }
 
-class DALIGN_MMR6_DESC : DALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3>;
+class DALIGN_MMR6_DESC : DALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3,
+                                          II_DALIGN>;
 
-class DDIV_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddiv", GPR64Opnd, sdiv>;
-class DMOD_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmod", GPR64Opnd, srem>;
-class DDIVU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddivu", GPR64Opnd, udiv>;
-class DMODU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmodu", GPR64Opnd, urem>;
+class DDIV_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddiv", GPR64Opnd, II_DDIV,
+                                               sdiv>;
+class DMOD_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmod", GPR64Opnd, II_DMOD,
+                                               srem>;
+class DDIVU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddivu", GPR64Opnd, II_DDIVU,
+                                                udiv>;
+class DMODU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmodu", GPR64Opnd, II_DMODU,
+                                                urem>;
 
 class DCLO_MM64R6_DESC {
   dag OutOperandList = (outs GPR64Opnd:$rt);
   dag InOperandList = (ins GPR64Opnd:$rs);
   string AsmString = !strconcat("dclo", "\t$rt, $rs");
   list<dag> Pattern = [(set GPR64Opnd:$rt, (ctlz (not GPR64Opnd:$rs)))];
-  InstrItinClass Itinerary = II_CLO;
+  InstrItinClass Itinerary = II_DCLO;
   Format Form = FrmR;
   string BaseOpcode = "dclo";
 }
@@ -144,7 +155,7 @@ class DCLZ_MM64R6_DESC {
   dag InOperandList = (ins GPR64Opnd:$rs);
   string AsmString = !strconcat("dclz", "\t$rt, $rs");
   list<dag> Pattern = [(set GPR64Opnd:$rt, (ctlz GPR64Opnd:$rs))];
-  InstrItinClass Itinerary = II_CLZ;
+  InstrItinClass Itinerary = II_DCLZ;
   Format Form = FrmR;
   string BaseOpcode = "dclz";
 }
@@ -154,16 +165,18 @@ class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
 class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>;
 class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5, uimm5_inssize_plus1,
                                  MipsIns>;
-class DMTC0_MM64R6_DESC : MTC0_MMR6_DESC_BASE<"dmtc0", COP0Opnd, GPR64Opnd>;
+class DMTC0_MM64R6_DESC : MTC0_MMR6_DESC_BASE<"dmtc0", COP0Opnd, GPR64Opnd,
+                                              II_DMTC0>;
 class DMTC1_MM64R6_DESC : MTC1_MMR6_DESC_BASE<"dmtc1", FGR64Opnd, GPR64Opnd,
                                               II_DMTC1, bitconvert>;
-class DMTC2_MM64R6_DESC : MTC2_MMR6_DESC_BASE<"dmtc2", COP2Opnd, GPR64Opnd>;
-
-class DMFC0_MM64R6_DESC : MFC0_MMR6_DESC_BASE<"dmfc0", GPR64Opnd, COP0Opnd>;
+class DMTC2_MM64R6_DESC : MTC2_MMR6_DESC_BASE<"dmtc2", COP2Opnd, GPR64Opnd,
+                                              II_DMTC2>;
+class DMFC0_MM64R6_DESC : MFC0_MMR6_DESC_BASE<"dmfc0", GPR64Opnd, COP0Opnd,
+                                              II_DMFC0>;
 class DMFC1_MM64R6_DESC : MFC1_MMR6_DESC_BASE<"dmfc1", GPR64Opnd, FGR64Opnd,
                                               II_DMFC1, bitconvert>;
-class DMFC2_MM64R6_DESC : MFC2_MMR6_DESC_BASE<"dmfc2", GPR64Opnd, COP2Opnd>;
-
+class DMFC2_MM64R6_DESC : MFC2_MMR6_DESC_BASE<"dmfc2", GPR64Opnd, COP2Opnd,
+                                              II_DMFC2>;
 class DADD_MM64R6_DESC : ArithLogicR<"dadd", GPR64Opnd, 1, II_DADD>;
 class DADDIU_MM64R6_DESC : ArithLogicI<"daddiu", simm16_64, GPR64Opnd,
                                        II_DADDIU, immSExt16, add>,
@@ -188,7 +201,8 @@ class DSUB_DESC_BASE<string instr_asm, RegisterOperand RO,
 class DSUB_MM64R6_DESC : DSUB_DESC_BASE<"dsub", GPR64Opnd, II_DSUB>;
 class DSUBU_MM64R6_DESC : DSUB_DESC_BASE<"dsubu", GPR64Opnd, II_DSUBU, sub>;
 
-class LDPC_MM64R6_DESC : PCREL_MMR6_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3>;
+class LDPC_MM64R6_DESC : PCREL_MMR6_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3,
+                                              II_LDPC>;
 
 class MUL_MM64R6_DESC_BASE<string opstr, RegisterOperand GPROpnd,
                            InstrItinClass Itin = NoItinerary,
@@ -207,19 +221,20 @@ class DMULU_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMULU>;
 class DMUHU_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmuhu", GPR64Opnd, II_DMUHU,
                                                mulhu>;
 
-class DSBH_DSHD_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
+class DSBH_DSHD_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
+                          InstrItinClass Itin> {
   dag OutOperandList = (outs GPROpnd:$rt);
   dag InOperandList = (ins GPROpnd:$rs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs");
   bit hasSideEffects = 0;
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = NoItinerary;
+  InstrItinClass Itinerary = Itin;
   Format Form = FrmR;
   string BaseOpcode = instr_asm;
 }
 
-class DSBH_MM64R6_DESC : DSBH_DSHD_DESC_BASE<"dsbh", GPR64Opnd>;
-class DSHD_MM64R6_DESC : DSBH_DSHD_DESC_BASE<"dshd", GPR64Opnd>;
+class DSBH_MM64R6_DESC : DSBH_DSHD_DESC_BASE<"dsbh", GPR64Opnd, II_DSBH>;
+class DSHD_MM64R6_DESC : DSBH_DSHD_DESC_BASE<"dshd", GPR64Opnd, II_DSHD>;
 
 class SHIFT_ROTATE_IMM_MM64R6<string instr_asm, Operand ImmOpnd,
                               InstrItinClass itin,

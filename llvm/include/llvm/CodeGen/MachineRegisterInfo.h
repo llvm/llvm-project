@@ -51,7 +51,7 @@ private:
   Delegate *TheDelegate;
 
   /// True if subregister liveness is tracked.
-  bool TracksSubRegLiveness;
+  const bool TracksSubRegLiveness;
 
   /// VRegInfo - Information we keep for each virtual register.
   ///
@@ -197,10 +197,6 @@ public:
   }
   bool subRegLivenessEnabled() const {
     return TracksSubRegLiveness;
-  }
-
-  void enableSubRegLiveness(bool Enable = true) {
-    TracksSubRegLiveness = Enable;
   }
 
   //===--------------------------------------------------------------------===//

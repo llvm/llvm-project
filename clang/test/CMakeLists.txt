@@ -29,6 +29,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-format
   c-index-test diagtool
   clang-tblgen
+  clang-offload-bundler
   )
   
 if(CLANG_ENABLE_STATIC_ANALYZER)
