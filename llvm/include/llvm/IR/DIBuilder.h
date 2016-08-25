@@ -101,7 +101,7 @@ namespace llvm {
                       unsigned RV, StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
-                      uint64_t DWOId = 0);
+                      uint64_t DWOId = 0, bool SplitDebugInlining = true);
 
     /// Create a file descriptor to hold debugging information
     /// for a file.

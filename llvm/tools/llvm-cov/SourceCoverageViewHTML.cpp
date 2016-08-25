@@ -15,6 +15,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
@@ -88,10 +89,11 @@ pre {
   padding: 5px 10px;
   border-bottom: 1px solid #dbdbdb;
   background-color: #eee;
+  line-height: 35px;
 }
 .centered {
   display: table;
-  margin-left: auto;
+  margin-left: left;
   margin-right: auto;
   border: 1px solid #dbdbdb;
   border-radius: 3px;
@@ -169,6 +171,23 @@ td:first-child {
 td:last-child {
   border-right: none;
 }
+.project-title {
+  font-size:36.0pt;
+  line-height:200%;
+  font-family:Calibri;
+  font-weight: bold;
+}
+.report-title {
+  font-size:16.0pt;
+  line-height:120%;
+  font-family:Arial;
+  font-weight: bold;
+}
+.created-time {
+  font-size:14.0pt;
+  line-height:120%;
+  font-family:Arial;
+}
 )";
 
 const char *EndHeader = "</head>";
@@ -197,6 +216,20 @@ const char *BeginTable = "<table>";
 
 const char *EndTable = "</table>";
 
+const char *BeginProjectTitleDiv = "<div class='project-title'>";
+
+const char *EndProjectTitleDiv = "</div>";
+
+const char *BeginReportTitleDiv = "<div class='report-title'>";
+
+const char *EndReportTitleDiv = "</div>";
+
+const char *BeginCreatedTimeDiv = "<div class='created-time'>";
+
+const char *EndCreatedTimeDiv = "</div>";
+
+const char *LineBreak = "<br>";
+
 std::string getPathToStyle(StringRef ViewPath) {
   std::string PathToStyle = "";
   std::string PathSep = sys::path::get_separator();
@@ -219,12 +252,12 @@ void emitPrelude(raw_ostream &OS, const CoverageViewOptions &Opts,
     OS << "<link rel='stylesheet' type='text/css' href='"
        << escape(PathToStyle, Opts) << "'>";
 
-  OS << EndHeader << "<body>" << BeginCenteredDiv;
+  OS << EndHeader << "<body>";
 }
 
 void emitEpilog(raw_ostream &OS) {
-  OS << EndCenteredDiv << "</body>"
-                          "</html>";
+  OS << "</body>"
+     << "</html>";
 }
 
 } // anonymous namespace
@@ -261,15 +294,26 @@ Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
   // Emit a table containing links to reports for each file in the covmapping.
   assert(Opts.hasOutputDirectory() && "No output directory for index file");
   emitPrelude(OSRef, Opts, getPathToStyle(""));
+  if (Opts.hasProjectTitle())
+    OSRef << BeginProjectTitleDiv
+          << tag("span", escape(Opts.ProjectTitle, Opts)) << EndProjectTitleDiv;
+  OSRef << BeginReportTitleDiv
+        << tag("span", escape("Code Coverage Report", Opts))
+        << EndReportTitleDiv;
+  if (Opts.hasCreatedTime())
+    OSRef << BeginCreatedTimeDiv
+          << tag("span", escape(Opts.CreatedTimeStr, Opts))
+          << EndCreatedTimeDiv;
+  OSRef << LineBreak;
+  OSRef << BeginCenteredDiv << BeginTable;
   OSRef << BeginSourceNameDiv << "Index" << EndSourceNameDiv;
-  OSRef << BeginTable;
   for (StringRef SF : SourceFiles) {
     std::string LinkText = escape(sys::path::relative_path(SF), Opts);
     std::string LinkTarget =
         escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
     OSRef << tag("tr", tag("td", tag("pre", a(LinkTarget, LinkText), "code")));
   }
-  OSRef << EndTable;
+  OSRef << EndTable << EndCenteredDiv;
   emitEpilog(OSRef);
 
   // Emit the default stylesheet.
@@ -284,16 +328,24 @@ Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
 }
 
 void SourceCoverageViewHTML::renderViewHeader(raw_ostream &OS) {
-  OS << BeginTable;
+  OS << LineBreak << BeginCenteredDiv << BeginTable;
 }
 
 void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
-  OS << EndTable;
+  OS << EndTable << EndCenteredDiv;
 }
 
-void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS) {
-  OS << BeginSourceNameDiv << tag("pre", escape(getSourceName(), getOptions()))
-     << EndSourceNameDiv;
+void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
+  OS << BeginSourceNameDiv;
+  // Render the source name for the view.
+  std::string SourceFile = isFunctionView() ? "Function: " : "Source: ";
+  SourceFile += getSourceName().str();
+  OS << tag("pre", escape(SourceFile, getOptions()));
+  // Render the object file name for the view.
+  if (WholeFile)
+    OS << tag("pre",
+              escape("Binary: " + getOptions().ObjectFilename, getOptions()));
+  OS << EndSourceNameDiv;
 }
 
 void SourceCoverageViewHTML::renderLinePrefix(raw_ostream &OS, unsigned) {
@@ -488,4 +540,29 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
   OS << BeginExpansionDiv;
   ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true, ViewDepth);
   OS << EndExpansionDiv;
+}
+
+void SourceCoverageViewHTML::renderCellInTitle(raw_ostream &OS,
+                                               StringRef CellText) {
+  if (getOptions().hasProjectTitle())
+    OS << BeginProjectTitleDiv
+       << tag("span", escape(getOptions().ProjectTitle, getOptions()))
+       << EndProjectTitleDiv;
+
+  OS << BeginReportTitleDiv << tag("span", escape(CellText, getOptions()))
+     << EndReportTitleDiv;
+
+  if (getOptions().hasCreatedTime())
+    OS << BeginCreatedTimeDiv
+       << tag("span", escape(getOptions().CreatedTimeStr, getOptions()))
+       << EndCreatedTimeDiv;
+}
+
+void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
+                                               unsigned ViewDepth) {
+  renderLinePrefix(OS, ViewDepth);
+  OS << tag("td", tag("span", tag("pre", escape("Line No.", getOptions()))))
+     << tag("td", tag("span", tag("pre", escape("Count No.", getOptions()))))
+     << tag("td", tag("span", tag("pre", escape("Source", getOptions()))));
+  renderLineSuffix(OS, ViewDepth);
 }

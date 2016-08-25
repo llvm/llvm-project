@@ -1,12 +1,16 @@
-; RUN: opt < %s -sccp -loop-deletion -simplifycfg -S | not grep br
+; RUN: opt < %s -sccp -loop-deletion -simplifycfg -S | FileCheck %s
 
+declare double @sqrt(double) readnone nounwind
+%empty = type {}
+declare %empty @has_side_effects()
+
+define double @test_0(i32 %param) {
+; CHECK-LABEL: @test_0(
+; CHECK-NOT: br
+entry:
 ; No matter how hard you try, sqrt(1.0) is always 1.0.  This allows the
 ; optimizer to delete this loop.
 
-declare double @sqrt(double)
-
-define double @test(i32 %param) {
-entry:
 	br label %Loop
 Loop:		; preds = %Loop, %entry
 	%I2 = phi i32 [ 0, %entry ], [ %I3, %Loop ]		; <i32> [#uses=1]
@@ -19,3 +23,9 @@ Exit:		; preds = %Loop
 	ret double %V
 }
 
+define i32 @test_1() {
+; CHECK-LABEL: @test_1(
+; CHECK: call %empty @has_side_effects()
+  %1 = call %empty @has_side_effects()
+  ret i32 0
+}

@@ -79,10 +79,7 @@
 name:            f
 alignment:       1
 exposesReturnsTwice: false
-hasInlineAsm:    false
-allVRegsAllocated: true
 tracksRegLiveness: true
-tracksSubRegLiveness: false
 liveins:
   - { reg: '%r0' }
   - { reg: '%r1' }

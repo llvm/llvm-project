@@ -177,7 +177,7 @@ public:
   bool runOnMachineFunction(MachineFunction&) override;
   MachineFunctionProperties getSetProperties() const override {
     return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::AllVRegsAllocated);
+        MachineFunctionProperties::Property::NoVRegs);
   }
 };
 } // end anonymous namespace
@@ -338,6 +338,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   assert(LI.liveAt(BaseIndex) &&
          "Reads of completely dead register should be marked undef already");
   unsigned SubRegIdx = MO.getSubReg();
+  assert(SubRegIdx != 0 && LI.hasSubRanges());
   LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(SubRegIdx);
   // See if any of the relevant subregister liveranges is defined at this point.
   for (const LiveInterval::SubRange &SR : LI.subranges()) {

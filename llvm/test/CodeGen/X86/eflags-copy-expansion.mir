@@ -19,7 +19,6 @@
 
 ---
 name:            foo
-allVRegsAllocated: true
 tracksRegLiveness: true
 liveins:
   - { reg: '%edi' }

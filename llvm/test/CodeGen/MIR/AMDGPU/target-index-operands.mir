@@ -41,8 +41,7 @@
 
 ...
 ---
-name:            float
-tracksSubRegLiveness: true
+name: float
 liveins:
   - { reg: '%sgpr0_sgpr1' }
 frameInfo:
@@ -72,8 +71,7 @@ body: |
     S_ENDPGM
 ...
 ---
-name:            float2
-tracksSubRegLiveness: true
+name: float2
 liveins:
   - { reg: '%sgpr0_sgpr1' }
 frameInfo:

@@ -15,10 +15,7 @@
 name:            test_mov_0
 alignment:       2
 exposesReturnsTwice: false
-hasInlineAsm:    false
-allVRegsAllocated: true
 tracksRegLiveness: false
-tracksSubRegLiveness: false
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false

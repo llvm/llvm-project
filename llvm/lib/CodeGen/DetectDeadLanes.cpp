@@ -577,12 +577,12 @@ bool DetectDeadLanes::runOnMachineFunction(MachineFunction &MF) {
   // register coalescer cannot deal with hidden dead defs. However without
   // subregister liveness enabled, the expected benefits of this pass are small
   // so we safe the compile time.
-  if (!MF.getSubtarget().enableSubRegLiveness()) {
+  MRI = &MF.getRegInfo();
+  if (!MRI->subRegLivenessEnabled()) {
     DEBUG(dbgs() << "Skipping Detect dead lanes pass\n");
     return false;
   }
 
-  MRI = &MF.getRegInfo();
   TRI = MRI->getTargetRegisterInfo();
 
   unsigned NumVirtRegs = MRI->getNumVirtRegs();

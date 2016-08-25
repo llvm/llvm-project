@@ -548,8 +548,6 @@ private:
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
-  Instruction *foldICmpDivConstConst(ICmpInst &ICI, BinaryOperator *DivI,
-                                     ConstantInt *DivRHS);
   Instruction *foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
                                    ConstantInt *CI1, ConstantInt *CI2);
   Instruction *foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,

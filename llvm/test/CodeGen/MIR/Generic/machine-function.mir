@@ -24,7 +24,6 @@
 # CHECK: name: foo
 # CHECK-NEXT: alignment:
 # CHECK-NEXT: exposesReturnsTwice: false
-# CHECK-NEXT: hasInlineAsm: false
 # CHECK: ...
 name:            foo
 body: |
@@ -34,7 +33,6 @@ body: |
 # CHECK: name: bar
 # CHECK-NEXT: alignment:
 # CHECK-NEXT: exposesReturnsTwice: false
-# CHECK-NEXT: hasInlineAsm: false
 # CHECK: ...
 name:            bar
 body: |
@@ -44,7 +42,6 @@ body: |
 # CHECK: name: func
 # CHECK-NEXT: alignment: 8
 # CHECK-NEXT: exposesReturnsTwice: false
-# CHECK-NEXT: hasInlineAsm: false
 # CHECK: ...
 name:            func
 alignment:       8
@@ -55,12 +52,10 @@ body: |
 # CHECK: name: func2
 # CHECK-NEXT: alignment: 16
 # CHECK-NEXT: exposesReturnsTwice: true
-# CHECK-NEXT: hasInlineAsm: true
 # CHECK: ...
 name:            func2
 alignment:       16
 exposesReturnsTwice: true
-hasInlineAsm:    true
 body: |
   bb.0:
 ...

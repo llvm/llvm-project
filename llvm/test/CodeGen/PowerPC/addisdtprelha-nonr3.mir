@@ -26,10 +26,7 @@
 name:            test1
 alignment:       4
 exposesReturnsTwice: false
-hasInlineAsm:    false
-allVRegsAllocated: true
 tracksRegLiveness: true
-tracksSubRegLiveness: false
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false

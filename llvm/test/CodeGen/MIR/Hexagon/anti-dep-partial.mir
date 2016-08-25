@@ -10,7 +10,6 @@
 ---
 name: foo
 tracksRegLiveness: true
-allVRegsAllocated: true
 body: |
   bb.0:
     successors:

@@ -109,14 +109,15 @@ bool SourceCoverageView::hasSubViews() const {
 std::unique_ptr<SourceCoverageView>
 SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
                            const CoverageViewOptions &Options,
-                           coverage::CoverageData &&CoverageInfo) {
+                           coverage::CoverageData &&CoverageInfo,
+                           bool FunctionView) {
   switch (Options.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    return llvm::make_unique<SourceCoverageViewText>(SourceName, File, Options,
-                                                     std::move(CoverageInfo));
+    return llvm::make_unique<SourceCoverageViewText>(
+        SourceName, File, Options, std::move(CoverageInfo), FunctionView);
   case CoverageViewOptions::OutputFormat::HTML:
-    return llvm::make_unique<SourceCoverageViewHTML>(SourceName, File, Options,
-                                                     std::move(CoverageInfo));
+    return llvm::make_unique<SourceCoverageViewHTML>(
+        SourceName, File, Options, std::move(CoverageInfo), FunctionView);
   }
   llvm_unreachable("Unknown coverage output format!");
 }
@@ -135,11 +136,15 @@ void SourceCoverageView::addInstantiation(
 
 void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
                                bool ShowSourceName, unsigned ViewDepth) {
-  if (ShowSourceName)
-    renderSourceName(OS);
+  if (WholeFile)
+    renderCellInTitle(OS, "Code Coverage Report");
 
   renderViewHeader(OS);
 
+  if (ShowSourceName)
+    renderSourceName(OS, WholeFile);
+
+  renderTableHeader(OS, ViewDepth);
   // We need the expansions and instantiations sorted so we can go through them
   // while we iterate lines.
   std::sort(ExpansionSubViews.begin(), ExpansionSubViews.end());
