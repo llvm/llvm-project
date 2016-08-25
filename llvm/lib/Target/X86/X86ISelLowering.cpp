@@ -12957,10 +12957,11 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
       }
       // If lower/upper loads are the same and the only users of the load, then
       // lower to a VBROADCASTF128/VBROADCASTI128/etc.
-      if (SubVec2 == SubVec &&
-          isa<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2)) &&
-          areOnlyUsersOf(SubVec2.getNode(), {Op, Vec})) {
-        return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
+      if (auto *Ld = dyn_cast<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2))) {
+        if (SubVec2 == SubVec && ISD::isNormalLoad(Ld) &&
+            areOnlyUsersOf(SubVec2.getNode(), {Op, Vec})) {
+          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
+        }
       }
     }
   }
