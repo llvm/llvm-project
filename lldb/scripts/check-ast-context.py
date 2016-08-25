@@ -62,30 +62,35 @@ class Index(object):
 
 def get_args():
   parser = argparse.ArgumentParser(description="Ensure that LLDB's SwiftASTContext class safely uses the underlying swift::ASTContext object")
-  parser.add_argument('--source',  type=str, help='location of the source tree', required=True)
-  parser.add_argument('--build',   type=str, help='location of the build tree', required=True)
-  parser.add_argument('--sdk',     type=str, help='location of the SDK root', default=None)
-  parser.add_argument('--verbose', type=bool,help='verbose output')
+  parser.add_argument('--file',      type=str, help='path to SwiftASTContext.cpp', required=True)
+  parser.add_argument('--llvmbuild', type=str, help='location of the LLVM build tree', required=True)
+  parser.add_argument('--swiftbuild',type=str, help='location of the Swift build tree', required=True)
+  parser.add_argument('--sdk',       type=str, help='location of the SDK root', default=None)
+  parser.add_argument('--verbose',   type=bool,help='verbose output')
 
   return parser.parse_args(sys.argv[1:])
 
 def detect_source_layout(args):
-  if os.path.isdir(os.path.join(args.source,'lldb')) and \
-     os.path.isdir(os.path.join(args.source,'swift')) and \
-     os.path.isdir(os.path.join(args.source,'clang')) and \
-     os.path.isdir(os.path.join(args.source,'llvm')):
-     args.lldb = os.path.join(args.source,'lldb')
-     args.swift = os.path.join(args.source,'swift')
-     args.clang = os.path.join(args.source,'clang')
-     args.llvm = os.path.join(args.source,'llvm')
-  else:
-    if os.path.isdir(os.path.join(args.source,'llvm')) and \
-       os.path.isdir(os.path.join(args.source,'llvm','tools','clang')) and \
-       os.path.isdir(os.path.join(args.source,'llvm','tools','swift')):
-       args.lldb = args.source
+  args.lldb = os.path.abspath(os.path.join(os.path.dirname(args.file),'..','..'))
+  if os.path.isdir(os.path.join(args.lldb,'llvm')) and \
+       os.path.isdir(os.path.join(args.lldb,'llvm','tools','clang')) and \
+       os.path.isdir(os.path.join(args.lldb,'llvm','tools','swift')):
+       args.source = args.lldb
        args.llvm = os.path.join(args.source,'llvm')
        args.clang = os.path.join(args.source,'llvm','tools','clang')
        args.swift = os.path.join(args.source,'llvm','tools','swift')
+       return True
+  args.parent = os.path.abspath(os.path.join(args.lldb,'..'))
+  if os.path.isdir(os.path.join(args.parent,'lldb')) and \
+     os.path.isdir(os.path.join(args.parent,'swift')) and \
+     os.path.isdir(os.path.join(args.parent,'clang')) and \
+     os.path.isdir(os.path.join(args.parent,'llvm')):
+     args.source = args.parent
+     args.swift = os.path.join(args.source,'swift')
+     args.clang = os.path.join(args.source,'clang')
+     args.llvm = os.path.join(args.source,'llvm')
+     return True
+  return False
 
 def init_libclang(src_path, lib_path):
   def look_for_node(cursor, f):
@@ -125,7 +130,7 @@ def main():
     args.sdk = subprocess.check_output('xcrun --sdk macosx --show-sdk-path', shell=True).strip()
   detect_source_layout(args)
   src_path = os.path.join(args.clang,'bindings','python')
-  lib_path = os.path.join(args.build,'llvm-macosx-x86_64','lib')
+  lib_path = os.path.join(args.llvmbuild,'lib')
   if not init_libclang(src_path, lib_path):
     print('libclang initialization failed - please try again')
 
@@ -138,9 +143,9 @@ def main():
     os.path.join(args.swift,'include'),
     os.path.join(args.lldb,'include'),
     os.path.join(args.lldb,'source'),
-    os.path.join(args.build,'llvm-macosx-x86_64','include'),
-    os.path.join(args.build,'llvm-macosx-x86_64','tools','clang','include'),
-    os.path.join(args.build,'swift-macosx-x86_64','include'),
+    os.path.join(args.llvmbuild,'include'),
+    os.path.join(args.llvmbuild,'tools','clang','include'),
+    os.path.join(args.swiftbuild,'include'),
   ]]
   lang = [CPP11()]
   sdk = [SDKRoot(args.sdk)]
