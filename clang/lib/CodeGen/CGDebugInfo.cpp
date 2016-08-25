@@ -454,7 +454,8 @@ void CGDebugInfo::CreateCompileUnit() {
   TheCU = DBuilder.createCompileUnit(
       LangTag, remapDIPath(MainFileName), remapDIPath(getCurrentDirname()),
       Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
-      CGM.getCodeGenOpts().SplitDwarfFile, EmissionKind, 0 /* DWOid */);
+      CGM.getCodeGenOpts().SplitDwarfFile, EmissionKind, 0 /* DWOid */,
+      CGM.getCodeGenOpts().SplitDwarfInlining);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {

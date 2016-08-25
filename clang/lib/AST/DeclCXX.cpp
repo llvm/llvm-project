@@ -1107,6 +1107,12 @@ CXXRecordDecl::getGenericLambdaTemplateParameterList() const {
   return nullptr;
 }
 
+Decl *CXXRecordDecl::getLambdaContextDecl() const {
+  assert(isLambda() && "Not a lambda closure type!");
+  ExternalASTSource *Source = getParentASTContext().getExternalSource();
+  return getLambdaData().ContextDecl.get(Source);
+}
+
 static CanQualType GetConversionType(ASTContext &Context, NamedDecl *Conv) {
   QualType T =
       cast<CXXConversionDecl>(Conv->getUnderlyingDecl()->getAsFunction())
