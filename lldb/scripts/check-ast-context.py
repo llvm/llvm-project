@@ -5,6 +5,15 @@ import subprocess
 import os
 import os.path
 import argparse
+import json
+import hashlib
+
+class Hasher(object):
+  @classmethod
+  def from_file(cls, file):
+    hl = hashlib.md5()
+    hl.update(file.read())
+    return hl.hexdigest()
 
 class IncludePath(object):
   def __init__(self, path):
@@ -64,6 +73,7 @@ def get_args():
   parser = argparse.ArgumentParser(description="Ensure that LLDB's SwiftASTContext class safely uses the underlying swift::ASTContext object")
   parser.add_argument('--file',      type=str, help='path to SwiftASTContext.cpp', required=True)
   parser.add_argument('--llvmbuild', type=str, help='location of the LLVM build tree', required=True)
+  parser.add_argument('--lldbbuild', type=str, help='location of the LLDB build tree', required=True)
   parser.add_argument('--swiftbuild',type=str, help='location of the Swift build tree', required=True)
   parser.add_argument('--sdk',       type=str, help='location of the SDK root', default=None)
   parser.add_argument('--verbose',   type=bool,help='verbose output')
@@ -72,6 +82,7 @@ def get_args():
 
 def detect_source_layout(args):
   args.lldb = os.path.abspath(os.path.join(os.path.dirname(args.file),'..','..'))
+  args.header = os.path.join(args.lldb,'include','lldb','Symbol','SwiftASTContext.h')
   if os.path.isdir(os.path.join(args.lldb,'llvm')) and \
        os.path.isdir(os.path.join(args.lldb,'llvm','tools','clang')) and \
        os.path.isdir(os.path.join(args.lldb,'llvm','tools','swift')):
@@ -91,6 +102,52 @@ def detect_source_layout(args):
      args.llvm = os.path.join(args.source,'llvm')
      return True
   return False
+
+def makehashes(args):
+  hashes = {}
+  with open(args.file) as f:
+    hashes['cpp'] = Hasher.from_file(f)
+  with open(args.header) as f:
+    hashes['h'] = Hasher.from_file(f)
+  return hashes
+
+def readhashes(args):
+  try:
+    p = os.path.join(args.lldbbuild,'check-ast-context.md5')
+    if os.path.exists(p):
+      with open(p, 'r') as f:
+        return json.load(f)
+  finally:
+    pass
+  return None
+
+def comparehashes(args):
+  made = makehashes(args)
+  read = readhashes(args)
+  if read is None:
+    return False
+  made_cpp = made.get('cpp')
+  read_cpp = read.get('cpp')
+  if made_cpp is None or read_cpp is None:
+    return False
+  if made_cpp != read_cpp:
+    return False
+  made_h = made.get('h')
+  read_h = read.get('h')
+  if made_h is None or read_h is None:
+    return False
+  if made_h != read_h:
+    return False
+  return True
+
+def writehashes(args):
+  try:
+    hashes = makehashes(args)
+    p = os.path.join(args.lldbbuild,'check-ast-context.md5')
+    with open(p, 'w') as f:
+      json.dump(hashes, f)
+  finally:
+    pass
 
 def init_libclang(src_path, lib_path):
   def look_for_node(cursor, f):
@@ -129,6 +186,9 @@ def main():
   if not args.sdk:
     args.sdk = subprocess.check_output('xcrun --sdk macosx --show-sdk-path', shell=True).strip()
   detect_source_layout(args)
+  if comparehashes(args):
+    if args.verbose: print('MD5 matches; skipping check')
+    return 0
   src_path = os.path.join(args.clang,'bindings','python')
   lib_path = os.path.join(args.llvmbuild,'lib')
   if not init_libclang(src_path, lib_path):
@@ -150,7 +210,7 @@ def main():
   lang = [CPP11()]
   sdk = [SDKRoot(args.sdk)]
   parser = index.parse(
-    os.path.join(args.lldb,'source','Symbol','SwiftASTContext.cpp'),
+    args.file,
     macros+lang+sdk+includes)
   
   def search_lambda(cursor):
@@ -221,6 +281,7 @@ def main():
       emit_fail(method)
       FAIL += 1
     
+  if FAIL == 0: writehashes(args)
   return FAIL
 
-if main() > 0: sys.exit(1)
+if main() > 0: sys.exit(1)  
