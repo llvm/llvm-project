@@ -206,7 +206,8 @@ static bool canThrow(const Value *V) {
       return false;
     return true;
   }
-  return true; // not a function, so an indirect call - can throw, we can't tell
+  // not a function, so an indirect call - can throw, we can't tell
+  return true;
 }
 
 // Returns an available name for a global value.

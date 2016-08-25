@@ -18,9 +18,9 @@
 /// and a byte count to tell how much memory is pointed to by that void*.
 ///
 /// GlobalDeviceMemory<T> is a subclass of GlobalDeviceMemoryBase which keeps
-/// track of the type of element to be stored in the device array. It is similar
-/// to a pair of a T* pointer and an element count to tell how many elements of
-/// type T fit in the memory pointed to by that T*.
+/// track of the type of element to be stored in the device memory. It is
+/// similar to a pair of a T* pointer and an element count to tell how many
+/// elements of type T fit in the memory pointed to by that T*.
 ///
 /// SharedDeviceMemoryBase is just the size in bytes of a shared memory buffer.
 ///
@@ -38,6 +38,7 @@
 #ifndef STREAMEXECUTOR_DEVICEMEMORY_H
 #define STREAMEXECUTOR_DEVICEMEMORY_H
 
+#include <cassert>
 #include <cstddef>
 
 namespace streamexecutor {
@@ -91,6 +92,71 @@ private:
   size_t ByteCount;   // Size in bytes of this allocation.
 };
 
+template <typename ElemT> class GlobalDeviceMemory;
+
+/// Reference to a slice of device memory.
+///
+/// Contains a base memory handle, an element count offset into that base
+/// memory, and an element count for the size of the slice.
+template <typename ElemT> class GlobalDeviceMemorySlice {
+public:
+  /// Intentionally implicit so GlobalDeviceMemory<T> can be passed to functions
+  /// expecting GlobalDeviceMemorySlice<T> arguments.
+  GlobalDeviceMemorySlice(const GlobalDeviceMemory<ElemT> &Memory)
+      : BaseMemory(Memory), ElementOffset(0),
+        ElementCount(Memory.getElementCount()) {}
+
+  GlobalDeviceMemorySlice(const GlobalDeviceMemory<ElemT> &BaseMemory,
+                          size_t ElementOffset, size_t ElementCount)
+      : BaseMemory(BaseMemory), ElementOffset(ElementOffset),
+        ElementCount(ElementCount) {
+    assert(ElementOffset + ElementCount <= BaseMemory.getElementCount() &&
+           "slicing past the end of a GlobalDeviceMemory buffer");
+  }
+
+  /// Gets the GlobalDeviceMemory backing this slice.
+  GlobalDeviceMemory<ElemT> getBaseMemory() const { return BaseMemory; }
+
+  /// Gets the offset of this slice from the base memory.
+  ///
+  /// The offset is measured in elements, not bytes.
+  size_t getElementOffset() const { return ElementOffset; }
+
+  /// Gets the number of elements in this slice.
+  size_t getElementCount() const { return ElementCount; }
+
+  /// Creates a slice of the memory with the first DropCount elements removed.
+  GlobalDeviceMemorySlice<ElemT> drop_front(size_t DropCount) const {
+    assert(DropCount <= ElementCount &&
+           "dropping more than the size of a slice");
+    return GlobalDeviceMemorySlice<ElemT>(BaseMemory, ElementOffset + DropCount,
+                                          ElementCount - DropCount);
+  }
+
+  /// Creates a slice of the memory with the last DropCount elements removed.
+  GlobalDeviceMemorySlice<ElemT> drop_back(size_t DropCount) const {
+    assert(DropCount <= ElementCount &&
+           "dropping more than the size of a slice");
+    return GlobalDeviceMemorySlice<ElemT>(BaseMemory, ElementOffset,
+                                          ElementCount - DropCount);
+  }
+
+  /// Creates a slice of the memory that chops off the first DropCount elements
+  /// and keeps the next TakeCount elements.
+  GlobalDeviceMemorySlice<ElemT> slice(size_t DropCount,
+                                       size_t TakeCount) const {
+    assert(DropCount + TakeCount <= ElementCount &&
+           "sub-slice operation overruns slice bounds");
+    return GlobalDeviceMemorySlice<ElemT>(BaseMemory, ElementOffset + DropCount,
+                                          TakeCount);
+  }
+
+private:
+  GlobalDeviceMemory<ElemT> BaseMemory;
+  size_t ElementOffset;
+  size_t ElementCount;
+};
+
 /// Typed wrapper around the "void *"-like GlobalDeviceMemoryBase class.
 ///
 /// For example, GlobalDeviceMemory<int> is a simple wrapper around
@@ -124,6 +190,11 @@ public:
   /// Returns the number of elements of type ElemT that constitute this
   /// allocation.
   size_t getElementCount() const { return getByteCount() / sizeof(ElemT); }
+
+  /// Converts this memory object into a slice.
+  GlobalDeviceMemorySlice<ElemT> asSlice() {
+    return GlobalDeviceMemorySlice<ElemT>(*this);
+  }
 
 private:
   /// Constructs a GlobalDeviceMemory instance from an opaque handle and an

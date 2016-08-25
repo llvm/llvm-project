@@ -109,6 +109,11 @@ public:
   /// Perform register allocation
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoPHIs);
+  }
+
 private:
 
   typedef std::map<const LiveInterval*, unsigned> LI2NodeMap;

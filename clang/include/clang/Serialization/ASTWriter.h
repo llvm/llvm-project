@@ -674,6 +674,7 @@ private:
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
   void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
+  void DefaultMemberInitializerInstantiated(const FieldDecl *D) override;
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;

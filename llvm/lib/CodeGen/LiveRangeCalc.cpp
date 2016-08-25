@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LiveRangeCalc.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -23,6 +24,7 @@ void LiveRangeCalc::resetLiveOutMap() {
   unsigned NumBlocks = MF->getNumBlockIDs();
   Seen.clear();
   Seen.resize(NumBlocks);
+  EntryInfoMap.clear();
   Map.resize(NumBlocks);
 }
 
@@ -64,9 +66,9 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
 
     unsigned SubReg = MO.getSubReg();
     if (LI.hasSubRanges() || (SubReg != 0 && TrackSubRegs)) {
-      LaneBitmask Mask = SubReg != 0 ? TRI.getSubRegIndexLaneMask(SubReg)
-                                     : MRI->getMaxLaneMaskForVReg(Reg);
-
+      LaneBitmask WholeMask = MRI->getMaxLaneMaskForVReg(Reg);
+      LaneBitmask SubMask = SubReg != 0 ? TRI.getSubRegIndexLaneMask(SubReg)
+                                        : WholeMask;
       // If this is the first time we see a subregister def, initialize
       // subranges by creating a copy of the main range.
       if (!LI.hasSubRanges() && !LI.empty()) {
@@ -74,17 +76,18 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
         LI.createSubRangeFrom(*Alloc, ClassMask, LI);
       }
 
+      LaneBitmask Mask = SubMask;
       for (LiveInterval::SubRange &S : LI.subranges()) {
         // A Mask for subregs common to the existing subrange and current def.
         LaneBitmask Common = S.LaneMask & Mask;
         if (Common == 0)
           continue;
-        // A Mask for subregs covered by the subrange but not the current def.
-        LaneBitmask LRest = S.LaneMask & ~Mask;
         LiveInterval::SubRange *CommonRange;
-        if (LRest != 0) {
-          // Split current subrange into Common and LRest ranges.
-          S.LaneMask = LRest;
+        // A Mask for subregs covered by the subrange but not the current def.
+        if (LaneBitmask RM = S.LaneMask & ~Mask) {
+          // Split the subrange S into two parts: one covered by the current
+          // def (CommonRange), and the one not affected by it (updated S).
+          S.LaneMask = RM;
           CommonRange = LI.createSubRangeFrom(*Alloc, Common, S);
         } else {
           assert(Common == S.LaneMask);
@@ -116,8 +119,9 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
   // necessary.
   if (LI.hasSubRanges()) {
     for (LiveInterval::SubRange &S : LI.subranges()) {
-      resetLiveOutMap();
-      extendToUses(S, Reg, S.LaneMask);
+      LiveRangeCalc SubLRC;
+      SubLRC.reset(MF, Indexes, DomTree, Alloc);
+      SubLRC.extendToUses(S, Reg, S.LaneMask, &LI);
     }
     LI.clear();
     constructMainRangeFromSubranges(LI);
@@ -139,9 +143,8 @@ void LiveRangeCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
         MainRange.createDeadDef(VNI->def, *Alloc);
     }
   }
-
   resetLiveOutMap();
-  extendToUses(MainRange, LI.reg);
+  extendToUses(MainRange, LI.reg, ~0U, &LI);
 }
 
 void LiveRangeCalc::createDeadDefs(LiveRange &LR, unsigned Reg) {
@@ -154,8 +157,12 @@ void LiveRangeCalc::createDeadDefs(LiveRange &LR, unsigned Reg) {
 }
 
 
-void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg,
-                                 LaneBitmask Mask) {
+void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
+                                 LiveInterval *LI) {
+  SmallVector<SlotIndex, 4> Undefs;
+  if (LI != nullptr)
+    LI->computeSubRangeUndefs(Undefs, Mask, *MRI, *Indexes);
+
   // Visit all operands that read Reg. This may include partial defs.
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
@@ -163,20 +170,16 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg,
     // by LiveIntervalAnalysis::addKillFlags().
     if (MO.isUse())
       MO.setIsKill(false);
-    else {
-      // We only care about uses, but on the main range (mask ~0u) this includes
-      // the "virtual" reads happening for subregister defs.
-      if (Mask != ~0u)
-        continue;
-    }
-
     if (!MO.readsReg())
       continue;
+
     unsigned SubReg = MO.getSubReg();
     if (SubReg != 0) {
-      LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(SubReg);
+      LaneBitmask SLM = TRI.getSubRegIndexLaneMask(SubReg);
+      if (MO.isDef())
+        SLM = MRI->getMaxLaneMaskForVReg(Reg) & ~SLM;
       // Ignore uses not covering the current subrange.
-      if ((SubRegMask & Mask) == 0)
+      if ((SLM & Mask) == 0)
         continue;
     }
 
@@ -205,7 +208,7 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg,
 
     // MI is reading Reg. We may have visited MI before if it happens to be
     // reading Reg multiple times. That is OK, extend() is idempotent.
-    extend(LR, UseIdx, Reg);
+    extend(LR, UseIdx, Reg, Undefs);
   }
 }
 
@@ -235,8 +238,8 @@ void LiveRangeCalc::updateFromLiveIns() {
   LiveIn.clear();
 }
 
-
-void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg) {
+void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
+                           ArrayRef<SlotIndex> Undefs) {
   assert(Use.isValid() && "Invalid SlotIndex");
   assert(Indexes && "Missing SlotIndexes");
   assert(DomTree && "Missing dominator tree");
@@ -245,14 +248,15 @@ void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg) {
   assert(UseMBB && "No MBB at Use");
 
   // Is there a def in the same MBB we can extend?
-  if (LR.extendInBlock(Indexes->getMBBStartIdx(UseMBB), Use))
+  auto EP = LR.extendInBlock(Undefs, Indexes->getMBBStartIdx(UseMBB), Use);
+  if (EP.first != nullptr || EP.second)
     return;
 
   // Find the single reaching def, or determine if Use is jointly dominated by
   // multiple values, and we may need to create even more phi-defs to preserve
   // VNInfo SSA form.  Perform a search for all predecessor blocks where we
   // know the dominating VNInfo.
-  if (findReachingDefs(LR, *UseMBB, Use, PhysReg))
+  if (findReachingDefs(LR, *UseMBB, Use, PhysReg, Undefs))
     return;
 
   // When there were multiple different values, we may need new PHIs.
@@ -271,8 +275,72 @@ void LiveRangeCalc::calculateValues() {
 }
 
 
+bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
+                                 MachineBasicBlock &MBB, BitVector &DefOnEntry,
+                                 BitVector &UndefOnEntry) {
+  unsigned BN = MBB.getNumber();
+  if (DefOnEntry[BN])
+    return true;
+  if (UndefOnEntry[BN])
+    return false;
+
+  auto MarkDefined =
+        [this,BN,&DefOnEntry,&UndefOnEntry] (MachineBasicBlock &B) -> bool {
+    for (MachineBasicBlock *S : B.successors())
+      DefOnEntry[S->getNumber()] = true;
+    DefOnEntry[BN] = true;
+    return true;
+  };
+
+  SetVector<unsigned> WorkList;
+  // Checking if the entry of MBB is reached by some def: add all predecessors
+  // that are potentially defined-on-exit to the work list.
+  for (MachineBasicBlock *P : MBB.predecessors())
+    WorkList.insert(P->getNumber());
+
+  for (unsigned i = 0; i != WorkList.size(); ++i) {
+    // Determine if the exit from the block is reached by some def.
+    unsigned N = WorkList[i];
+    MachineBasicBlock &B = *MF->getBlockNumbered(N);
+    if (Seen[N] && Map[&B].first != nullptr)
+      return MarkDefined(B);
+    SlotIndex Begin, End;
+    std::tie(Begin, End) = Indexes->getMBBRange(&B);
+    LiveRange::iterator UB = std::upper_bound(LR.begin(), LR.end(), End);
+    if (UB != LR.begin()) {
+      LiveRange::Segment &Seg = *std::prev(UB);
+      if (Seg.end > Begin) {
+        // There is a segment that overlaps B. If the range is not explicitly
+        // undefined between the end of the segment and the end of the block,
+        // treat the block as defined on exit. If it is, go to the next block
+        // on the work list.
+        if (LR.isUndefIn(Undefs, Seg.end, End))
+          continue;
+        return MarkDefined(B);
+      }
+    }
+
+    // No segment overlaps with this block. If this block is not defined on
+    // entry, or it undefines the range, do not process its predecessors.
+    if (UndefOnEntry[N] || LR.isUndefIn(Undefs, Begin, End)) {
+      UndefOnEntry[N] = true;
+      continue;
+    }
+    if (DefOnEntry[N])
+      return MarkDefined(B);
+
+    // Still don't know: add all predecessors to the work list.
+    for (MachineBasicBlock *P : B.predecessors())
+      WorkList.insert(P->getNumber());
+  }
+
+  UndefOnEntry[BN] = true;
+  return false;
+}
+
 bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
-                                     SlotIndex Use, unsigned PhysReg) {
+                                     SlotIndex Use, unsigned PhysReg,
+                                     ArrayRef<SlotIndex> Undefs) {
   unsigned UseMBBNum = UseMBB.getNumber();
 
   // Block numbers where LR should be live-in.
@@ -282,12 +350,14 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   bool UniqueVNI = true;
   VNInfo *TheVNI = nullptr;
 
+  bool FoundUndef = false;
+
   // Using Seen as a visited set, perform a BFS for all reaching defs.
   for (unsigned i = 0; i != WorkList.size(); ++i) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(WorkList[i]);
 
 #ifndef NDEBUG
-    if (MBB->pred_empty()) {
+    if (Undefs.size() > 0 && MBB->pred_empty()) {
       MBB->getParent()->verify();
       errs() << "Use of " << PrintReg(PhysReg)
              << " does not have a corresponding definition on every path:\n";
@@ -306,6 +376,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       llvm_unreachable("Invalid global physical register");
     }
 #endif
+    FoundUndef |= MBB->pred_empty();
 
     for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
          PE = MBB->pred_end(); PI != PE; ++PI) {
@@ -326,18 +397,21 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
        // First time we see Pred.  Try to determine the live-out value, but set
        // it as null if Pred is live-through with an unknown value.
-       VNInfo *VNI = LR.extendInBlock(Start, End);
+       auto EP = LR.extendInBlock(Undefs, Start, End);
+       VNInfo *VNI = EP.first;
+       FoundUndef |= EP.second;
        setLiveOutValue(Pred, VNI);
        if (VNI) {
          if (TheVNI && TheVNI != VNI)
            UniqueVNI = false;
          TheVNI = VNI;
-         continue;
        }
+       if (VNI || EP.second)
+         continue;
 
        // No, we need a live-in value for Pred as well
        if (Pred != &UseMBB)
-          WorkList.push_back(Pred->getNumber());
+         WorkList.push_back(Pred->getNumber());
        else
           // Loopback to UseMBB, so value is really live through.
          Use = SlotIndex();
@@ -345,6 +419,9 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   }
 
   LiveIn.clear();
+  FoundUndef |= (TheVNI == nullptr);
+  if (Undefs.size() > 0 && FoundUndef)
+    UniqueVNI = false;
 
   // Both updateSSA() and LiveRangeUpdater benefit from ordered blocks, but
   // neither require it. Skip the sorting overhead for small updates.
@@ -353,27 +430,39 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
   // If a unique reaching def was found, blit in the live ranges immediately.
   if (UniqueVNI) {
+    assert(TheVNI != nullptr);
     LiveRangeUpdater Updater(&LR);
-    for (SmallVectorImpl<unsigned>::const_iterator I = WorkList.begin(),
-         E = WorkList.end(); I != E; ++I) {
-       SlotIndex Start, End;
-       std::tie(Start, End) = Indexes->getMBBRange(*I);
-       // Trim the live range in UseMBB.
-       if (*I == UseMBBNum && Use.isValid())
-         End = Use;
-       else
-         Map[MF->getBlockNumbered(*I)] = LiveOutPair(TheVNI, nullptr);
-       Updater.add(Start, End, TheVNI);
+    for (unsigned BN : WorkList) {
+      SlotIndex Start, End;
+      std::tie(Start, End) = Indexes->getMBBRange(BN);
+      // Trim the live range in UseMBB.
+      if (BN == UseMBBNum && Use.isValid())
+        End = Use;
+      else
+        Map[MF->getBlockNumbered(BN)] = LiveOutPair(TheVNI, nullptr);
+      Updater.add(Start, End, TheVNI);
     }
     return true;
   }
 
+  // Prepare the defined/undefined bit vectors.
+  auto EF = EntryInfoMap.find(&LR);
+  if (EF == EntryInfoMap.end()) {
+    unsigned N = MF->getNumBlockIDs();
+    EF = EntryInfoMap.insert({&LR, {BitVector(), BitVector()}}).first;
+    EF->second.first.resize(N);
+    EF->second.second.resize(N);
+  }
+  BitVector &DefOnEntry = EF->second.first;
+  BitVector &UndefOnEntry = EF->second.second;
+
   // Multiple values were found, so transfer the work list to the LiveIn array
   // where UpdateSSA will use it as a work list.
   LiveIn.reserve(WorkList.size());
-  for (SmallVectorImpl<unsigned>::const_iterator
-       I = WorkList.begin(), E = WorkList.end(); I != E; ++I) {
-    MachineBasicBlock *MBB = MF->getBlockNumbered(*I);
+  for (unsigned BN : WorkList) {
+    MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
+    if (Undefs.size() > 0 && !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
+      continue;
     addLiveInBlock(LR, DomTree->getNode(MBB));
     if (MBB == &UseMBB)
       LiveIn.back().Kill = Use;
@@ -458,10 +547,12 @@ void LiveRangeCalc::updateSSA() {
         I.DomNode = nullptr;
 
         // Add liveness since updateFromLiveIns now skips this node.
-        if (I.Kill.isValid())
-          LR.addSegment(LiveInterval::Segment(Start, I.Kill, VNI));
-        else {
-          LR.addSegment(LiveInterval::Segment(Start, End, VNI));
+        if (I.Kill.isValid()) {
+          if (VNI)
+            LR.addSegment(LiveInterval::Segment(Start, I.Kill, VNI));
+        } else {
+          if (VNI)
+            LR.addSegment(LiveInterval::Segment(Start, End, VNI));
           LOP = LiveOutPair(VNI, Node);
         }
       } else if (IDomValue.first) {

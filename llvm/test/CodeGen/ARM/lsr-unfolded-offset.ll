@@ -15,7 +15,7 @@ target triple = "thumbv7-apple-ios"
 
 %struct.partition_entry = type { i32, i32, i64, i64 }
 
-define i32 @partition_overlap_check(%struct.partition_entry* nocapture %part, i32 %num_entries) nounwind readonly optsize ssp {
+define i32 @partition_overlap_check(%struct.partition_entry* nocapture %part, i32 %num_entries) nounwind readonly optsize ssp "no-frame-pointer-elim"="true" {
 entry:
   %cmp79 = icmp sgt i32 %num_entries, 0
   br i1 %cmp79, label %outer.loop, label %for.end72

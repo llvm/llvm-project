@@ -22,9 +22,14 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/LLVMContext.h"
@@ -34,6 +39,13 @@
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-sink"
@@ -48,12 +60,12 @@ UseBlockFreqInfo("machine-sink-bfi",
            cl::desc("Use block frequency info to find successors to sink"),
            cl::init(true), cl::Hidden);
 
-
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
 STATISTIC(NumSplit,     "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
 
 namespace {
+
   class MachineSinking : public MachineFunctionPass {
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
@@ -65,12 +77,12 @@ namespace {
     AliasAnalysis *AA;
 
     // Remember which edges have been considered for breaking.
-    SmallSet<std::pair<MachineBasicBlock*,MachineBasicBlock*>, 8>
+    SmallSet<std::pair<MachineBasicBlock*, MachineBasicBlock*>, 8>
     CEBCandidates;
     // Remember which edges we are about to split.
     // This is different from CEBCandidates since those edges
     // will be split.
-    SetVector<std::pair<MachineBasicBlock*,MachineBasicBlock*> > ToSplit;
+    SetVector<std::pair<MachineBasicBlock*, MachineBasicBlock*> > ToSplit;
 
     SparseBitVector<> RegsToClearKillFlags;
 
@@ -79,6 +91,7 @@ namespace {
 
   public:
     static char ID; // Pass identification
+
     MachineSinking() : MachineFunctionPass(ID) {
       initializeMachineSinkingPass(*PassRegistry::getPassRegistry());
     }
@@ -143,6 +156,7 @@ namespace {
     GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
                            AllSuccsCache &AllSuccessors) const;
   };
+
 } // end anonymous namespace
 
 char MachineSinking::ID = 0;
@@ -273,7 +287,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
   bool EverMadeChange = false;
 
-  while (1) {
+  while (true) {
     bool MadeChange = false;
 
     // Process all basic blocks.

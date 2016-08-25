@@ -172,6 +172,12 @@ class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
   [{ return N->hasOneUse(); }]
 >;
 
+class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2),
+  (op $src0, $src1, $src2),
+  [{ return N->hasOneUse(); }]
+>;
+
 //===----------------------------------------------------------------------===//
 // Load/Store Pattern Fragments
 //===----------------------------------------------------------------------===//
@@ -618,8 +624,10 @@ def smax_oneuse : HasOneUseBinOp<smax>;
 def smin_oneuse : HasOneUseBinOp<smin>;
 def umax_oneuse : HasOneUseBinOp<umax>;
 def umin_oneuse : HasOneUseBinOp<umin>;
+def sub_oneuse : HasOneUseBinOp<sub>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
 
+def select_oneuse : HasOneUseTernaryOp<select>;
 
 // 24-bit arithmetic patterns
 def umul24 : PatFrag <(ops node:$x, node:$y), (mul node:$x, node:$y)>;

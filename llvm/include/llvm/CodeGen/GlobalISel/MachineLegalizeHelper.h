@@ -60,20 +60,22 @@ public:
 
   /// Legalize an instruction by reducing the width of the underlying scalar
   /// type.
-  LegalizeResult narrowScalar(MachineInstr &MI, LLT NarrowTy);
+  LegalizeResult narrowScalar(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
   /// Legalize an instruction by performing the operation on a wider scalar type
   /// (for example a 16-bit addition can be safely performed at 32-bits
   /// precision, ignoring the unused bits).
-  LegalizeResult widenScalar(MachineInstr &MI, LLT WideTy);
+  LegalizeResult widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
 
   /// Legalize a vector instruction by splitting into multiple components, each
   /// acting on the same scalar type as the original but with fewer elements.
-  LegalizeResult fewerElementsVector(MachineInstr &MI, LLT NarrowTy);
+  LegalizeResult fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
+                                     LLT NarrowTy);
 
   /// Legalize a vector instruction by increasing the number of vector elements
   /// involved and ignoring the added elements later.
-  LegalizeResult moreElementsVector(MachineInstr &MI, LLT WideTy);
+  LegalizeResult moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
+                                    LLT WideTy);
 
 private:
 

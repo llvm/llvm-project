@@ -50,7 +50,6 @@
 ...
 ---
 name:            test
-isSSA:           true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
@@ -72,7 +71,6 @@ body: |
 ...
 ---
 name:            test_typed_immediates
-isSSA:           true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }

@@ -20,6 +20,7 @@
 #include "ImplicitBoolCastCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
 #include "NamedParameterCheck.h"
+#include "NonConstParameterCheck.h"
 #include "RedundantControlFlowCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
@@ -57,6 +58,8 @@ public:
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "readability-named-parameter");
+    CheckFactories.registerCheck<NonConstParameterCheck>(
+        "readability-non-const-parameter");
     CheckFactories.registerCheck<RedundantControlFlowCheck>(
         "readability-redundant-control-flow");
     CheckFactories.registerCheck<RedundantSmartptrGetCheck>(

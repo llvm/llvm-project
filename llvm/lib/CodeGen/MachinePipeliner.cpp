@@ -3082,20 +3082,18 @@ void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
     return;
   MachineInstr::mmo_iterator NewMemRefs = MF.allocateMemRefsArray(NumRefs);
   unsigned Refs = 0;
-  for (MachineInstr::mmo_iterator I = NewMI.memoperands_begin(),
-                                  E = NewMI.memoperands_end();
-       I != E; ++I) {
-    if ((*I)->isVolatile() || (*I)->isInvariant() || (!(*I)->getValue())) {
-      NewMemRefs[Refs++] = *I;
+  for (MachineMemOperand *MMO : NewMI.memoperands()) {
+    if (MMO->isVolatile() || MMO->isInvariant() || (!MMO->getValue())) {
+      NewMemRefs[Refs++] = MMO;
       continue;
     }
     unsigned Delta;
     if (computeDelta(OldMI, Delta)) {
       int64_t AdjOffset = Delta * Num;
       NewMemRefs[Refs++] =
-          MF.getMachineMemOperand(*I, AdjOffset, (*I)->getSize());
+          MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize());
     } else
-      NewMemRefs[Refs++] = MF.getMachineMemOperand(*I, 0, UINT64_MAX);
+      NewMemRefs[Refs++] = MF.getMachineMemOperand(MMO, 0, UINT64_MAX);
   }
   NewMI.setMemRefs(NewMemRefs, NewMemRefs + NumRefs);
 }

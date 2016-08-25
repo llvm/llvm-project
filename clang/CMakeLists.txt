@@ -177,6 +177,9 @@ if (LIBXML2_FOUND)
   set(CLANG_HAVE_LIBXML 1)
 endif()
 
+include(CheckIncludeFile)
+check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
+
 set(CLANG_RESOURCE_DIR "" CACHE STRING
   "Relative directory from the Clang binary to its resource files.")
 

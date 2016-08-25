@@ -68,6 +68,7 @@ option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
 option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY "Install libc++experimental.a" OFF)
 set(LIBCXX_ABI_VERSION 1 CACHE STRING "ABI version of libc++.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
+option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
 if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
   message(FATAL_ERROR "libc++ must be built as either a shared or static library.")
@@ -276,6 +277,10 @@ add_target_flags_if(LIBCXX_GCC_TOOLCHAIN "-gcc-toolchain ${LIBCXX_GCC_TOOLCHAIN}
 
 # Configure compiler.
 include(config-ix)
+
+if (LIBCXX_USE_COMPILER_RT)
+  list(APPEND LIBCXX_LINK_FLAGS "-rtlib=compiler-rt")
+endif()
 
 # Configure coverage options.
 if (LIBCXX_GENERATE_COVERAGE)

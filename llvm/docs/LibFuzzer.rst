@@ -256,6 +256,8 @@ The most important command line options are:
 ``-use_counters``
   Use `coverage counters`_ to generate approximate counts of how often code
   blocks are hit; defaults to 1.
+``-use_value_profile``
+  Use `value profile`_ to guide corpus expansion; defaults to 0.
 ``-use_traces``
   Use instruction traces (experimental, defaults to 0); see `Data-flow-guided fuzzing`_.
 ``-only_ascii``
@@ -334,6 +336,8 @@ Each output line also reports the following statistics (when non-zero):
 ``cov:``
   Total number of code blocks or edges covered by the executing the current
   corpus.
+``vp:``
+  Size of the `value profile`_.
 ``bits:``
   Rough measure of the number of code blocks or edges covered, and how often;
   only valid if the fuzzer is run with ``-use_counters=1``.
@@ -587,6 +591,29 @@ The dictionary syntax is similar to that used by AFL_ for its ``-x`` option::
   kw3="\xF7\xF8"
   # the name of the keyword followed by '=' may be omitted:
   "foo\x0Abar"
+
+Value Profile
+---------------
+
+*EXPERIMENTAL*.
+With an additional compiler flag ``-fsanitize-coverage=trace-cmp``
+(see SanitizerCoverageTraceDataFlow_)
+and extra run-time flag ``-use_value_profile=1`` the fuzzer will
+collect value profiles for the parameters of compare instructions
+and treat some new values as new coverage.
+
+The current imlpementation does roughly the following:
+
+* The compiler instruments all CMP instructions with a callback that receives both CMP arguments.
+* The callback computes `(caller_pc&4095) | (popcnt(Arg1 ^ Arg2) << 12)` and uses this value to set a bit in a bitset.
+* Every new observed bit in the bitset is treated as new coverage.
+
+
+This feature has a potential to discover many interesting inputs,
+but there are two downsides.
+First, the extra instrumentation may bring up to 2x additional slowdown.
+Second, the corpus may grow by several times.
+
 
 Data-flow-guided fuzzing
 ------------------------
@@ -900,6 +927,7 @@ Trophies
 .. _MemorySanitizer: http://clang.llvm.org/docs/MemorySanitizer.html
 .. _UndefinedBehaviorSanitizer: http://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 .. _`coverage counters`: http://clang.llvm.org/docs/SanitizerCoverage.html#coverage-counters
+.. _`value profile`: #value-profile
 .. _`caller-callee pairs`: http://clang.llvm.org/docs/SanitizerCoverage.html#caller-callee-coverage
 .. _BoringSSL: https://boringssl.googlesource.com/boringssl/
 .. _`fuzz various parts of LLVM itself`: `Fuzzing components of LLVM`_

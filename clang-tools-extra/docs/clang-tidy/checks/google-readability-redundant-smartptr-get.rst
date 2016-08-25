@@ -1,16 +1,10 @@
 .. title:: clang-tidy - google-readability-redundant-smartptr-get
+.. meta::
+   :http-equiv=refresh: 5;URL=readability-redundant-smartptr-get.html
 
 google-readability-redundant-smartptr-get
 =========================================
 
-
-Find and remove redundant calls to smart pointer's ``.get()`` method.
-
-Examples:
-
-.. code:: c++
-
-  ptr.get()->Foo()  ==>  ptr->Foo()
-  *ptr.get()  ==>  *ptr
-  *ptr->get()  ==>  **ptr
-
+The google-readability-redundant-smartptr-get check is an alias, please see
+`readability-redundant-smartptr-get <readability-redundant-smartptr-get.html>`_
+for more information.

@@ -91,6 +91,7 @@ class AsanChunkView {
 };
 
 AsanChunkView FindHeapChunkByAddress(uptr address);
+AsanChunkView FindHeapChunkByAllocBeg(uptr address);
 
 // List of AsanChunks with total size.
 class AsanChunkFifoList: public IntrusiveList<AsanChunk> {

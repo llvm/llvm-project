@@ -26,7 +26,6 @@
 # CHECK: S_NOP 0, implicit %4.sub1
 # CHECK: S_NOP 0, implicit undef %5.sub0
 name: test0
-isSSA: true
 registers:
   - { id: 0, class: sreg_32 }
   - { id: 1, class: sreg_32 }
@@ -84,7 +83,6 @@ body: |
 # CHECK: %10 = EXTRACT_SUBREG undef %0, {{[0-9]+}}
 # CHECK: S_NOP 0, implicit undef %10
 name: test1
-isSSA: true
 registers:
   - { id: 0, class: sreg_128 }
   - { id: 1, class: sreg_128 }
@@ -163,7 +161,6 @@ body: |
 # CHECK: S_NOP 0, implicit %16.sub1
 
 name: test2
-isSSA: true
 registers:
   - { id: 0, class: sreg_32 }
   - { id: 1, class: sreg_32 }
@@ -221,7 +218,6 @@ body: |
 # CHECK: %1 = COPY %vcc
 # CHECK: S_NOP 0, implicit %1
 name: test3
-isSSA: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64 }
@@ -242,7 +238,6 @@ body: |
 # CHECK: %1 = IMPLICIT_DEF
 # CHECK: S_NOP 0, implicit undef %1
 name: test4
-isSSA: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64 }
@@ -263,7 +258,6 @@ body: |
 # CHECK: %1 = REG_SEQUENCE undef %0, {{[0-9]+}}, %0, {{[0-9]+}}
 # CHECK: S_NOP 0, implicit %1.sub1
 name: test5
-isSSA: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32 }
@@ -290,7 +284,6 @@ body: |
 # CHECK:   S_NOP 0, implicit %4.sub0
 # CHECK:   S_NOP 0, implicit undef %4.sub3
 name: loop0
-isSSA: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32 }
@@ -344,7 +337,6 @@ body: |
 # CHECK: bb.2:
 # CHECK:   S_NOP 0, implicit %6.sub3
 name: loop1
-isSSA: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32 }
@@ -396,7 +388,6 @@ body: |
 # CHECK:   S_NOP 0, implicit %2.sub2
 # CHECK:   S_NOP 0, implicit %2.sub3
 name: loop2
-isSSA: true
 tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32 }

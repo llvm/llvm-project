@@ -15,6 +15,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 using namespace llvm;
 using namespace PatternMatch;
@@ -154,8 +155,9 @@ Instruction *InstCombiner::FoldSelectOpOp(SelectInst &SI, Instruction *TI,
     }
 
     // Fold this by inserting a select from the input values.
-    Value *NewSI = Builder->CreateSelect(SI.getCondition(), TI->getOperand(0),
-                                         FI->getOperand(0), SI.getName()+".v");
+    Value *NewSI =
+        Builder->CreateSelect(SI.getCondition(), TI->getOperand(0),
+                              FI->getOperand(0), SI.getName() + ".v", &SI);
     return CastInst::Create(Instruction::CastOps(TI->getOpcode()), NewSI,
                             TI->getType());
   }
@@ -199,8 +201,8 @@ Instruction *InstCombiner::FoldSelectOpOp(SelectInst &SI, Instruction *TI,
   }
 
   // If we reach here, they do have operations in common.
-  Value *NewSI = Builder->CreateSelect(SI.getCondition(), OtherOpT,
-                                       OtherOpF, SI.getName()+".v");
+  Value *NewSI = Builder->CreateSelect(SI.getCondition(), OtherOpT, OtherOpF,
+                                       SI.getName() + ".v", &SI);
 
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(TI)) {
     if (MatchIsOpZero)
@@ -497,6 +499,7 @@ Instruction *InstCombiner::visitSelectInstWithICmp(SelectInst &SI,
         ICI->setOperand(1, CmpRHS);
         SI.setOperand(1, TrueVal);
         SI.setOperand(2, FalseVal);
+        SI.swapProfMetadata();
 
         // Move ICI instruction right before the select instruction. Otherwise
         // the sext/zext value may be defined after the ICI instruction uses it.
@@ -712,8 +715,9 @@ Instruction *InstCombiner::FoldSPFofSPF(Instruction *Inner,
   if ((SPF1 == SPF_ABS && SPF2 == SPF_NABS) ||
       (SPF1 == SPF_NABS && SPF2 == SPF_ABS)) {
     SelectInst *SI = cast<SelectInst>(Inner);
-    Value *NewSI = Builder->CreateSelect(
-        SI->getCondition(), SI->getFalseValue(), SI->getTrueValue());
+    Value *NewSI =
+        Builder->CreateSelect(SI->getCondition(), SI->getFalseValue(),
+                              SI->getTrueValue(), SI->getName(), SI);
     return replaceInstUsesWith(Outer, NewSI);
   }
 
@@ -895,7 +899,7 @@ static Instruction *foldAddSubSelect(SelectInst &SI,
       if (AddOp != TI)
         std::swap(NewTrueOp, NewFalseOp);
       Value *NewSel = Builder.CreateSelect(CondVal, NewTrueOp, NewFalseOp,
-                                           SI.getName() + ".p");
+                                           SI.getName() + ".p", &SI);
 
       if (SI.getType()->isFPOrFPVectorTy()) {
         Instruction *RI =
@@ -935,7 +939,7 @@ static Instruction *foldSelectExtConst(InstCombiner::BuilderTy &Builder,
   Value *TrueVal = isExtTrueVal ? SmallVal : SmallConst;
   Value *FalseVal = isExtTrueVal ? SmallConst : SmallVal;
   Value *Select = Builder.CreateSelect(SI.getOperand(0), TrueVal, FalseVal,
-                                       "fold." + SI.getName());
+                                       "fold." + SI.getName(), &SI);
 
   if (isSigned)
     return new SExtInst(Select, SI.getType());
@@ -1180,9 +1184,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
           Cmp = Builder->CreateFCmp(Pred, LHS, RHS);
         }
 
-        Value *NewSI = Builder->CreateCast(CastOp,
-                                           Builder->CreateSelect(Cmp, LHS, RHS),
-                                           SelType);
+        Value *NewSI = Builder->CreateCast(
+            CastOp, Builder->CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI),
+            SelType);
         return replaceInstUsesWith(SI, NewSI);
       }
     }

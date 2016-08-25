@@ -347,11 +347,10 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
   PatchPointOpers Opers(&MI);
 
   unsigned EncodedBytes = 0;
-  const MachineOperand &CalleeMO =
-    Opers.getMetaOper(PatchPointOpers::TargetPos);
+  const MachineOperand &CalleeMO = Opers.getCallTarget();
 
   if (CalleeMO.isImm()) {
-    int64_t CallTarget = Opers.getMetaOper(PatchPointOpers::TargetPos).getImm();
+    int64_t CallTarget = CalleeMO.getImm();
     if (CallTarget) {
       assert((CallTarget & 0xFFFFFFFFFFFF) == CallTarget &&
              "High 16 bits of call target should be zero.");
@@ -430,7 +429,7 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
   EncodedBytes *= 4;
 
   // Emit padding.
-  unsigned NumBytes = Opers.getMetaOper(PatchPointOpers::NBytesPos).getImm();
+  unsigned NumBytes = Opers.getNumPatchBytes();
   assert(NumBytes >= EncodedBytes &&
          "Patchpoint can't request size less than the length of a call.");
   assert((NumBytes - EncodedBytes) % 4 == 0 &&

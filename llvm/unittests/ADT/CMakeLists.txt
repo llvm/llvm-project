@@ -17,7 +17,7 @@ set(ADTSources
   FoldingSet.cpp
   FunctionRefTest.cpp
   HashingTest.cpp
-  ilistTest.cpp
+  ilistTestTemp.cpp
   IListBaseTest.cpp
   IListNodeBaseTest.cpp
   IListSentinelTest.cpp

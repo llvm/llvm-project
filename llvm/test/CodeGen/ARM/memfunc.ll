@@ -8,7 +8,7 @@
 ; RUN: llc < %s -mtriple=arm-none-musleabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=arm-none-musleabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
 
-define void @f1(i8* %dest, i8* %src) {
+define void @f1(i8* %dest, i8* %src) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f1
 
@@ -98,7 +98,7 @@ entry:
 }
 
 ; Check that alloca arguments to memory intrinsics are automatically aligned if at least 8 bytes in size
-define void @f2(i8* %dest, i32 %n) {
+define void @f2(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f2
 
@@ -107,9 +107,9 @@ entry:
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: add r1, sp, #28
   ; CHECK-DARWIN: bl _memmove
-  ; CHECK-EABI: add r1, sp, #28
+  ; CHECK-EABI: {{add r1, sp, #28|sub r1, r(7|11), #20}}
   ; CHECK-EABI: bl __aeabi_memmove
-  ; CHECK-GNUEABI: add r1, sp, #28
+  ; CHECK-GNUEABI: {{add r1, sp, #28|sub r1, r(7|11), #20}}
   ; CHECK-GNUEABI: bl memmove
   %arr0 = alloca [9 x i8], align 1
   %0 = bitcast [9 x i8]* %arr0 to i8*
@@ -144,11 +144,11 @@ entry:
 }
 
 ; Check that alloca arguments are not aligned if less than 8 bytes in size
-define void @f3(i8* %dest, i32 %n) {
+define void @f3(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f3
 
-  ; CHECK: {{add(.w)? r1, sp, #17|sub(.w)? r1, r7, #15}}
+  ; CHECK: {{add(.w)? r1, sp, #17|sub(.w)? r1, r(7|11), #15}}
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: bl _memmove
   ; CHECK-EABI: bl __aeabi_memmove
@@ -157,7 +157,7 @@ entry:
   %0 = bitcast [7 x i8]* %arr0 to i8*
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %0, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r1, sp, #10}}
+  ; CHECK: {{add(.w)? r1, sp, #10|sub(.w)? r1, r(7|11), #22}}
   ; CHECK-IOS: bl _memcpy
   ; CHECK-DARWIN: bl _memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
@@ -166,7 +166,7 @@ entry:
   %1 = bitcast [7 x i8]* %arr1 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %1, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r0, sp, #3}}
+  ; CHECK: {{add(.w)? r0, sp, #3|sub(.w)? r0, r(7|11), #29}}
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
   ; CHECK-DARWIN: movs r1, #1
@@ -183,11 +183,11 @@ entry:
 }
 
 ; Check that alloca arguments are not aligned if size+offset is less than 8 bytes
-define void @f4(i8* %dest, i32 %n) {
+define void @f4(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f4
 
-  ; CHECK: {{add(.w)? r., sp, #23|sub(.w)? r., r7, #17}}
+  ; CHECK: {{add(.w)? r., sp, #23|sub(.w)? r., r(7|11), #17}}
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: bl _memmove
   ; CHECK-EABI: bl __aeabi_memmove
@@ -196,7 +196,7 @@ entry:
   %0 = getelementptr inbounds [9 x i8], [9 x i8]* %arr0, i32 0, i32 4
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %0, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(10|14)}}
+  ; CHECK: {{add(.w)? r., sp, #(10|14)|sub(.w) r., r(7|11), #26}}
   ; CHECK-IOS: bl _memcpy
   ; CHECK-DARWIN: bl _memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
@@ -205,7 +205,7 @@ entry:
   %1 = getelementptr inbounds [9 x i8], [9 x i8]* %arr1, i32 0, i32 4
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %1, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(1|5)}}
+  ; CHECK: {{add(.w)? r., sp, #(1|5)|sub(.w) r., r(7|11), #35}}
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
   ; CHECK-DARWIN: movs r1, #1
@@ -222,11 +222,11 @@ entry:
 }
 
 ; Check that alloca arguments are not aligned if the offset is not a multiple of 4
-define void @f5(i8* %dest, i32 %n) {
+define void @f5(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f5
 
-  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r7, #21}}
+  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r(7|11), #21}}
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: bl _memmove
   ; CHECK-EABI: bl __aeabi_memmove
@@ -235,7 +235,7 @@ entry:
   %0 = getelementptr inbounds [13 x i8], [13 x i8]* %arr0, i32 0, i32 1
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %0, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(10|14)}}
+  ; CHECK: {{add(.w)? r., sp, #(10|14)|sub(.w)? r., r(7|11), #34}}
   ; CHECK-IOS: bl _memcpy
   ; CHECK-DARWIN: bl _memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
@@ -244,7 +244,7 @@ entry:
   %1 = getelementptr inbounds [13 x i8], [13 x i8]* %arr1, i32 0, i32 1
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %1, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(1|5)}}
+  ; CHECK: {{add(.w)? r., sp, #(1|5)|sub(.w)? r., r(7|11), #47}}
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
   ; CHECK-DARWIN: movs r1, #1
@@ -261,11 +261,11 @@ entry:
 }
 
 ; Check that alloca arguments are not aligned if the offset is unknown
-define void @f6(i8* %dest, i32 %n, i32 %i) {
+define void @f6(i8* %dest, i32 %n, i32 %i) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f6
 
-  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r7, #25}}
+  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r(7|11), #(25|29)}}
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: bl _memmove
   ; CHECK-EABI: bl __aeabi_memmove
@@ -274,7 +274,7 @@ entry:
   %0 = getelementptr inbounds [13 x i8], [13 x i8]* %arr0, i32 0, i32 %i
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %0, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(10|14)}}
+  ; CHECK: {{add(.w)? r., sp, #(10|14)|sub(.w)? r., r(7|11), #42}}
   ; CHECK-IOS: bl _memcpy
   ; CHECK-DARWIN: bl _memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
@@ -283,7 +283,7 @@ entry:
   %1 = getelementptr inbounds [13 x i8], [13 x i8]* %arr1, i32 0, i32 %i
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %1, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(1|5)}}
+  ; CHECK: {{add(.w)? r., sp, #(1|5)|sub(.w)? r., r(7|11), #55}}
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
   ; CHECK-DARWIN: movs r1, #1
@@ -300,11 +300,11 @@ entry:
 }
 
 ; Check that alloca arguments are not aligned if the GEP is not inbounds
-define void @f7(i8* %dest, i32 %n) {
+define void @f7(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f7
 
-  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r7, #21}}
+  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r(7|11), #21}}
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: bl _memmove
   ; CHECK-EABI: bl __aeabi_memmove
@@ -313,7 +313,7 @@ entry:
   %0 = getelementptr [13 x i8], [13 x i8]* %arr0, i32 0, i32 4
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %0, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(10|14)}}
+  ; CHECK: {{add(.w)? r., sp, #(10|14)|sub(.w)? r., r(7|11), #34}}
   ; CHECK-IOS: bl _memcpy
   ; CHECK-DARWIN: bl _memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
@@ -322,7 +322,7 @@ entry:
   %1 = getelementptr [13 x i8], [13 x i8]* %arr1, i32 0, i32 4
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %1, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(1|5)}}
+  ; CHECK: {{add(.w)? r., sp, #(1|5)|sub(.w)? r., r(7|11), #47}}
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
   ; CHECK-DARWIN: movs r1, #1
@@ -339,11 +339,11 @@ entry:
 }
 
 ; Check that alloca arguments are not aligned when the offset is past the end of the allocation
-define void @f8(i8* %dest, i32 %n) {
+define void @f8(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   ; CHECK-LABEL: f8
 
-  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r7, #21}}
+  ; CHECK: {{add(.w)? r., sp, #27|sub(.w)? r., r(7|11), #21}}
   ; CHECK-IOS: bl _memmove
   ; CHECK-DARWIN: bl _memmove
   ; CHECK-EABI: bl __aeabi_memmove
@@ -352,7 +352,7 @@ entry:
   %0 = getelementptr inbounds [13 x i8], [13 x i8]* %arr0, i32 0, i32 16
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %0, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(10|14)}}
+  ; CHECK: {{add(.w)? r., sp, #(10|14)|sub(.w)? r., r(7|11), #34}}
   ; CHECK-IOS: bl _memcpy
   ; CHECK-DARWIN: bl _memcpy
   ; CHECK-EABI: bl __aeabi_memcpy
@@ -361,7 +361,7 @@ entry:
   %1 = getelementptr inbounds [13 x i8], [13 x i8]* %arr1, i32 0, i32 16
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %1, i32 %n, i32 0, i1 false)
 
-  ; CHECK: {{add(.w)? r., sp, #(1|5)}}
+  ; CHECK: {{add(.w)? r., sp, #(1|5)|sub(.w)? r., r(7|11), #47}}
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
   ; CHECK-DARWIN: movs r1, #1
@@ -388,7 +388,7 @@ entry:
 @arr7 = external global [7 x i8], align 1
 @arr8 = internal global [128 x i8] undef
 @arr9 = weak_odr global [128 x i8] undef
-define void @f9(i8* %dest, i32 %n) {
+define void @f9(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr1, i32 0, i32 0), i32 %n, i32 1, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @arr2, i32 0, i32 0), i32 %n, i32 1, i1 false)

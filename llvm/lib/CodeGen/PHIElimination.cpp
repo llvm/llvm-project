@@ -175,6 +175,8 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   ImpDefs.clear();
   VRegPHIUseCount.clear();
 
+  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+
   return Changed;
 }
 

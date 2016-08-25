@@ -70,17 +70,28 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
 #include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "peephole-opt"
@@ -118,6 +129,7 @@ STATISTIC(NumRewrittenCopies, "Number of copies rewritten");
 STATISTIC(NumNAPhysCopies, "Number of non-allocatable physical copies removed");
 
 namespace {
+
   class ValueTrackerResult;
 
   class PeepholeOptimizer : public MachineFunctionPass {
@@ -128,6 +140,7 @@ namespace {
 
   public:
     static char ID; // Pass identification
+
     PeepholeOptimizer() : MachineFunctionPass(ID) {
       initializePeepholeOptimizerPass(*PassRegistry::getPassRegistry());
     }
@@ -390,10 +403,12 @@ namespace {
     /// register of the last source.
     unsigned getReg() const { return Reg; }
   };
-}
+
+} // end anonymous namespace
 
 char PeepholeOptimizer::ID = 0;
 char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
+
 INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE,
                 "Peephole Optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
@@ -737,6 +752,7 @@ insertPHI(MachineRegisterInfo *MRI, const TargetInstrInfo *TII,
 }
 
 namespace {
+
 /// \brief Helper class to rewrite the arguments of a copy-like instruction.
 class CopyRewriter {
 protected:
@@ -820,7 +836,6 @@ public:
                TargetInstrInfo::RegSubRegPair Def,
                PeepholeOptimizer::RewriteMapTy &RewriteMap,
                bool HandleMultipleSources = true) {
-
     TargetInstrInfo::RegSubRegPair LookupSrc(Def.Reg, Def.SubReg);
     do {
       ValueTrackerResult Res = RewriteMap.lookup(LookupSrc);
@@ -859,7 +874,7 @@ public:
       const MachineOperand &MODef = NewPHI->getOperand(0);
       return TargetInstrInfo::RegSubRegPair(MODef.getReg(), MODef.getSubReg());
 
-    } while (1);
+    } while (true);
 
     return TargetInstrInfo::RegSubRegPair(0, 0);
   }
@@ -1001,6 +1016,7 @@ public:
     TrackSubReg = (unsigned)CopyLike.getOperand(3).getImm();
     return true;
   }
+
   bool RewriteCurrentSource(unsigned NewReg, unsigned NewSubReg) override {
     if (CurrentSrcIdx != 2)
       return false;
@@ -1141,7 +1157,8 @@ public:
     return true;
   }
 };
-} // End namespace.
+
+}  // end anonymous namespace
 
 /// \brief Get the appropriated CopyRewriter for \p MI.
 /// \return A pointer to a dynamically allocated CopyRewriter or nullptr

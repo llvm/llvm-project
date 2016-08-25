@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
@@ -30,6 +31,9 @@ static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
 static cl::opt<std::string> OutputFilename("o", cl::Required,
                                            cl::desc("Output filename"),
                                            cl::value_desc("filename"));
+
+static cl::opt<std::string> CacheDir("cache-dir", cl::desc("Cache Directory"),
+                                     cl::value_desc("directory"));
 
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
@@ -187,9 +191,16 @@ int main(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  auto AddOutput = [&](size_t Task) {
+  auto AddOutput =
+      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectOutput> {
     std::string Path = OutputFilename + "." + utostr(Task);
-    return llvm::make_unique<LTOOutput>(std::move(Path));
+    if (CacheDir.empty())
+      return llvm::make_unique<LTOOutput>(std::move(Path));
+
+    return llvm::make_unique<CacheObjectOutput>(
+        CacheDir, [Path](std::unique_ptr<MemoryBuffer> Buffer) {
+          *LTOOutput(Path).getStream() << Buffer->getBuffer();
+        });
   };
 
   check(Lto.run(AddOutput), "LTO::run failed");

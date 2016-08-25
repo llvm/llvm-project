@@ -1,6 +1,6 @@
 set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS}")
 # Disable the coverage and sanitizer instrumentation for the fuzzer itself.
-set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -mpopcnt -fno-sanitize=all -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters -Werror")
+set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fno-sanitize=all -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters -Werror")
 if( LLVM_USE_SANITIZE_COVERAGE )
   if(NOT "${LLVM_USE_SANITIZER}" STREQUAL "Address")
     message(FATAL_ERROR

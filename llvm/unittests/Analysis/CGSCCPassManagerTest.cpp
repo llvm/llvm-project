@@ -59,7 +59,7 @@ public:
 
   TestSCCAnalysis(int &Runs) : Runs(Runs) {}
 
-  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM) {
+  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &) {
     ++Runs;
     return Result(C.size());
   }
@@ -149,13 +149,14 @@ struct TestSCCPass {
         AnalyzedModuleFunctionCount(AnalyzedModuleFunctionCount),
         OnlyUseCachedResults(OnlyUseCachedResults) {}
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM) {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR) {
     ++RunCount;
 
     const ModuleAnalysisManager &MAM =
-        AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
+        AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG).getManager();
     FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
     if (TestModuleAnalysis::Result *TMA =
             MAM.getCachedResult<TestModuleAnalysis>(
                 *C.begin()->getFunction().getParent()))
@@ -171,7 +172,7 @@ struct TestSCCPass {
           AnalyzedInstrCount += FAR->InstructionCount;
     } else {
       // Typical path just runs the analysis as needed.
-      TestSCCAnalysis::Result &AR = AM.getResult<TestSCCAnalysis>(C);
+      TestSCCAnalysis::Result &AR = AM.getResult<TestSCCAnalysis>(C, CG);
       AnalyzedSCCFunctionCount += AR.FunctionCount;
       for (LazyCallGraph::Node &N : C) {
         TestFunctionAnalysis::Result &FAR =

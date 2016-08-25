@@ -180,7 +180,7 @@ entry:
   ; GP64-NOT-R6:  ld      $25, %call16(__modti3)($gp)
   ; 64R6:         ld      $25, %call16(__modti3)($gp)
 
-  ; MM32:         lw      $25, %call16(__modti3)($2)
+  ; MM32:         lw      $25, %call16(__modti3)($16)
 
   ; MM64:         ld      $25, %call16(__modti3)($2)
 

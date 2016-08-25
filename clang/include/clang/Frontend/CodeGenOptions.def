@@ -194,6 +194,9 @@ CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
 CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
                                        ///< contain explicit imports for
                                        ///< anonymous namespaces
+CODEGENOPT(SplitDwarfInlining, 1, 1) ///< Whether to include inlining info in the
+                                     ///< skeleton CU to allow for symbolication
+				     ///< of inline stack frames without .dwo files.
 
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 

@@ -3554,23 +3554,40 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   const FunctionDecl *PatternDecl = Function->getTemplateInstantiationPattern();
   assert(PatternDecl && "instantiating a non-template");
 
-  Stmt *Pattern = PatternDecl->getBody(PatternDecl);
-  assert(PatternDecl && "template definition is not a template");
-  if (!Pattern) {
-    // Try to find a defaulted definition
-    PatternDecl->isDefined(PatternDecl);
+  const FunctionDecl *PatternDef = PatternDecl->getDefinition();
+  Stmt *Pattern = nullptr;
+  if (PatternDef) {
+    Pattern = PatternDef->getBody(PatternDef);
+    PatternDecl = PatternDef;
   }
-  assert(PatternDecl && "template definition is not a template");
 
   // FIXME: We need to track the instantiation stack in order to know which
   // definitions should be visible within this instantiation.
   if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Function,
                                 Function->getInstantiatedFromMemberFunction(),
-                                     PatternDecl, PatternDecl, TSK,
-                                     /*Complain*/DefinitionRequired))
-     return;
+                                     PatternDecl, PatternDef, TSK,
+                                     /*Complain*/DefinitionRequired)) {
+    if (DefinitionRequired)
+      Function->setInvalidDecl();
+    else if (TSK == TSK_ExplicitInstantiationDefinition) {
+      // Try again at the end of the translation unit (at which point a
+      // definition will be required).
+      assert(!Recursive);
+      PendingInstantiations.push_back(
+        std::make_pair(Function, PointOfInstantiation));
+    } else if (TSK == TSK_ImplicitInstantiation) {
+      if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
+        Diag(PointOfInstantiation, diag::warn_func_template_missing)
+          << Function;
+        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
+        if (getLangOpts().CPlusPlus11)
+          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
+            << Function;
+      }
+    }
 
-
+    return;
+  }
 
   // Postpone late parsed template instantiations.
   if (PatternDecl->isLateTemplateParsed() &&
@@ -3604,40 +3621,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     Pattern = PatternDecl->getBody(PatternDecl);
   }
 
-  // FIXME: Check if we could sink these diagnostics in
-  // DiagnoseUninstantiableTemplate.
-  if (!Pattern && !PatternDecl->isDefaulted()) {
-    if (DefinitionRequired) {
-      if (Function->getPrimaryTemplate())
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_func_template)
-          << Function->getPrimaryTemplate();
-      else
-        Diag(PointOfInstantiation,
-             diag::err_explicit_instantiation_undefined_member)
-          << 1 << Function->getDeclName() << Function->getDeclContext();
-
-      if (PatternDecl)
-        Diag(PatternDecl->getLocation(),
-             diag::note_explicit_instantiation_here);
-      Function->setInvalidDecl();
-    } else if (TSK == TSK_ExplicitInstantiationDefinition) {
-      assert(!Recursive);
-      PendingInstantiations.push_back(
-        std::make_pair(Function, PointOfInstantiation));
-    } else if (TSK == TSK_ImplicitInstantiation) {
-      if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
-        Diag(PointOfInstantiation, diag::warn_func_template_missing)
-          << Function;
-        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
-          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
-            << Function;
-      }
-    }
-
-    return;
-  }
+  // Note, we should never try to instantiate a deleted function template.
+  assert((Pattern || PatternDecl->isDefaulted()) &&
+         "unexpected kind of function template definition");
 
   // C++1y [temp.explicit]p10:
   //   Except for inline functions, declarations with types deduced from their

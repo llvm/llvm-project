@@ -1834,6 +1834,37 @@ def : Pat<(sra (shl (i64 (anyext (i32 (z_select_ccmask 1, 0, imm32zx4:$valid,
 def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
                           (XGR GR64:$y, (NGR GR64:$y, GR64:$x))>;
 
+// Shift/rotate instructions only use the last 6 bits of the second operand
+// register, so we can safely use NILL (16 fewer bits than NILF) to only AND the
+// last 16 bits.
+// Complexity is added so that we match this before we match NILF on the AND
+// operation alone.
+let AddedComplexity = 4 in {
+  def : Pat<(shl GR32:$val, (and GR32:$shift, uimm32:$imm)),
+            (SLL GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(sra GR32:$val, (and GR32:$shift, uimm32:$imm)),
+            (SRA GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(srl GR32:$val, (and GR32:$shift, uimm32:$imm)),
+            (SRL GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(shl GR64:$val, (and GR32:$shift, uimm32:$imm)),
+            (SLLG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(sra GR64:$val, (and GR32:$shift, uimm32:$imm)),
+            (SRAG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(srl GR64:$val, (and GR32:$shift, uimm32:$imm)),
+            (SRLG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(rotl GR32:$val, (and GR32:$shift, uimm32:$imm)),
+            (RLL GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+
+  def : Pat<(rotl GR64:$val, (and GR32:$shift, uimm32:$imm)),
+            (RLLG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+}
+
 // Peepholes for turning scalar operations into block operations.
 defm : BlockLoadStore<anyextloadi8, i32, MVCSequence, NCSequence, OCSequence,
                       XCSequence, 1>;

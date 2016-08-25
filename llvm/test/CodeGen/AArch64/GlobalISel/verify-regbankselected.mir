@@ -12,7 +12,6 @@
 # CHECK: instruction: %vreg0<def>(64) = COPY
 # CHECK: operand 0: %vreg0<def>
 name:            test
-isSSA: true
 regBankSelected: true
 registers:
   - { id: 0, class: _ }

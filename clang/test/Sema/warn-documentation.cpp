@@ -368,6 +368,69 @@ typedef unsigned int test_not_function_like_typedef3;
 /// \param aaa Meow.
 typedef foo::not_a_function_wrapper<1> test_not_function_like_typedef4;
 
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using1 = int (int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using2 = int (*)(int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using3 = int (* const)(int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using4 = int (C::*)(int aaa, int ccc);
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using5 = foo::function_wrapper<int (int aaa, int ccc)>;
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using6 = foo::function_wrapper<int (int aaa, int ccc)> *;
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using7 = foo::function_wrapper<int (int aaa, int ccc)> &;
+
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \returns aaa.
+using test_function_like_using8 = foo::function_wrapper<int (int aaa, int ccc)> &&;
+
+using test_not_function_like_using1 = int (*)(int aaa);
+
+// expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}
+/// \param aaa Meow.
+using test_not_function_like_using2 = test_not_function_like_using1;
+
+// Check that the diagnostic uses the same command marker as the comment.
+// expected-warning@+1 {{'@param' command used in a comment that is not attached to a function declaration}}
+/// @param aaa Meow.
+using test_not_function_like_using3 = unsigned int;
+
+// expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}
+/// \param aaa Meow.
+using test_not_function_like_using4 = foo::not_a_function_wrapper<1>;
+
 /// \param aaa Aaa
 /// \param ... Vararg
 int test_vararg_param1(int aaa, ...);

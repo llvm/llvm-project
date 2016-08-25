@@ -316,7 +316,7 @@ private:
     LTOLLVMContext Ctx;
     bool HasModule = false;
     std::unique_ptr<Module> CombinedModule;
-    IRMover Mover;
+    std::unique_ptr<IRMover> Mover;
   } RegularLTO;
 
   struct ThinLTOState {

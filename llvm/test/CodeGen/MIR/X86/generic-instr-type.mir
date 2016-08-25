@@ -18,7 +18,6 @@
 
 ---
 name:            test_vregs
-isSSA:           true
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: _ }
 # CHECK-NEXT:   - { id: 1, class: _ }
@@ -50,7 +49,6 @@ body: |
 
 ---
 name:            test_unsized
-isSSA:           true
 body: |
   bb.0:
     successors: %bb.0

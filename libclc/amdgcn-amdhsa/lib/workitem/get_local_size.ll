@@ -1,6 +1,6 @@
 declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
 
-define i32 @get_local_size(i32 %dim) #1 {
+define i64 @get_local_size(i32 %dim) #1 {
   %dispatch_ptr = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %dispatch_ptr_i32 = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
   %xy_size_ptr = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i64 1
@@ -13,19 +13,22 @@ define i32 @get_local_size(i32 %dim) #1 {
 
 x_dim:
   %x_size = and i32 %xy_size, 65535
-  ret i32 %x_size
+  %x_size.ext = zext i32 %x_size to i64
+  ret i64 %x_size.ext
 
 y_dim:
   %y_size = lshr i32 %xy_size, 16
-  ret i32 %y_size
+  %y_size.ext = zext i32 %y_size to i64
+  ret i64 %y_size.ext
 
 z_dim:
   %z_size_ptr = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i64 2
   %z_size = load i32, i32 addrspace(2)* %z_size_ptr, align 4, !invariant.load !0, !range !1
-  ret i32 %z_size
+  %z_size.ext = zext i32 %z_size to i64
+  ret i64 %z_size.ext
 
 default:
-  ret i32 1
+  ret i64 1
 }
 
 attributes #0 = { nounwind readnone }

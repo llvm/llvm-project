@@ -979,8 +979,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
   PatchPointOpers opers(&MI);
   unsigned ScratchIdx = opers.getNextScratchIdx();
   unsigned EncodedBytes = 0;
-  const MachineOperand &CalleeMO =
-    opers.getMetaOper(PatchPointOpers::TargetPos);
+  const MachineOperand &CalleeMO = opers.getCallTarget();
 
   // Check for null target. If target is non-null (i.e. is non-zero or is
   // symbolic) then emit a call.
@@ -1016,7 +1015,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
   }
 
   // Emit padding.
-  unsigned NumBytes = opers.getMetaOper(PatchPointOpers::NBytesPos).getImm();
+  unsigned NumBytes = opers.getNumPatchBytes();
   assert(NumBytes >= EncodedBytes &&
          "Patchpoint can't request size less than the length of a call.");
 

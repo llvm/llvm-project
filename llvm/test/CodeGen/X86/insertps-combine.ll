@@ -112,14 +112,12 @@ define <4 x float> @shuffle_v4f32_z06z(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @shuffle_v4f32_05zz(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: shuffle_v4f32_05zz:
 ; SSE:       # BB#0:
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[1],zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_05zz:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[1],zero,zero
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
   %shuffle1 = shufflevector <4 x float> %shuffle, <4 x float> <float undef, float undef, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>

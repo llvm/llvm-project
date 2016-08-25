@@ -314,15 +314,12 @@ void MachineVerifier::verifySlotIndexes() const {
 
 void MachineVerifier::verifyProperties(const MachineFunction &MF) {
   // If a pass has introduced virtual registers without clearing the
-  // AllVRegsAllocated property (or set it without allocating the vregs)
+  // NoVRegs property (or set it without allocating the vregs)
   // then report an error.
   if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::AllVRegsAllocated) &&
-      MRI->getNumVirtRegs()) {
-    report(
-        "Function has AllVRegsAllocated property but there are VReg operands",
-        &MF);
-  }
+          MachineFunctionProperties::Property::NoVRegs) &&
+      MRI->getNumVirtRegs())
+    report("Function has NoVRegs property but there are VReg operands", &MF);
 }
 
 unsigned MachineVerifier::verify(MachineFunction &MF) {
@@ -580,7 +577,8 @@ void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
 
-  if (MRI->isSSA()) {
+  if (!MF->getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoPHIs)) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -857,6 +855,10 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     errs() << MCID.getNumOperands() << " operands expected, but "
         << MI->getNumOperands() << " given.\n";
   }
+
+  if (MI->isPHI() && MF->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoPHIs))
+    report("Found PHI instruction with NoPHIs property set", MI);
 
   // Check the tied operands.
   if (MI->isInlineAsm())
@@ -1808,18 +1810,25 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     bool hasRead = false;
     bool hasSubRegDef = false;
     bool hasDeadDef = false;
+    LaneBitmask RLM = MRI->getMaxLaneMaskForVReg(Reg);
     for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
       if (!MOI->isReg() || MOI->getReg() != Reg)
         continue;
-      if (LaneMask != 0 &&
-          (LaneMask & TRI->getSubRegIndexLaneMask(MOI->getSubReg())) == 0)
-        continue;
+      unsigned Sub = MOI->getSubReg();
+      LaneBitmask SLM = Sub != 0 ? TRI->getSubRegIndexLaneMask(Sub) : RLM;
       if (MOI->isDef()) {
-        if (MOI->getSubReg() != 0)
+        if (Sub != 0) {
           hasSubRegDef = true;
+          // An operand vreg0:sub0<def> reads vreg0:sub1..n. Invert the lane
+          // mask for subregister defs. Read-undef defs will be handled by
+          // readsReg below.
+          SLM = ~SLM & RLM;
+        }
         if (MOI->isDead())
           hasDeadDef = true;
       }
+      if (LaneMask != 0 && !(LaneMask & SLM))
+        continue;
       if (MOI->readsReg())
         hasRead = true;
     }

@@ -19,7 +19,6 @@
 ...
 ---
 name:            test
-hasInlineAsm:    true
 tracksRegLiveness: true
 liveins:
   - { reg: '%rdi' }
@@ -36,7 +35,6 @@ body: |
 ...
 ---
 name:            test2
-hasInlineAsm:    true
 tracksRegLiveness: true
 liveins:
   - { reg: '%rdi' }

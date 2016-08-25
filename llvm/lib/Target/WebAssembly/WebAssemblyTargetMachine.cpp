@@ -196,7 +196,7 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // Has no asserts of its own, but was not written to handle virtual regs.
   disablePass(&ShrinkWrapID);
 
-  // These functions all require the AllVRegsAllocated property.
+  // These functions all require the NoVRegs property.
   disablePass(&MachineCopyPropagationID);
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);

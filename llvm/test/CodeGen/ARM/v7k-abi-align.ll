@@ -2,25 +2,25 @@
 
 %struct = type { i8, i64, i8, double, i8, <2 x float>, i8, <4 x float> }
 
-define i32 @test_i64_align() {
+define i32 @test_i64_align() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_i64_align:
 ; CHECL: movs r0, #8
   ret i32 ptrtoint(i64* getelementptr(%struct, %struct* null, i32 0, i32 1) to i32)
 }
 
-define i32 @test_f64_align() {
+define i32 @test_f64_align() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_f64_align:
 ; CHECL: movs r0, #24
   ret i32 ptrtoint(double* getelementptr(%struct, %struct* null, i32 0, i32 3) to i32)
 }
 
-define i32 @test_v2f32_align() {
+define i32 @test_v2f32_align() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_v2f32_align:
 ; CHECL: movs r0, #40
   ret i32 ptrtoint(<2 x float>* getelementptr(%struct, %struct* null, i32 0, i32 5) to i32)
 }
 
-define i32 @test_v4f32_align() {
+define i32 @test_v4f32_align() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_v4f32_align:
 ; CHECL: movs r0, #64
   ret i32 ptrtoint(<4 x float>* getelementptr(%struct, %struct* null, i32 0, i32 7) to i32)
@@ -28,7 +28,7 @@ define i32 @test_v4f32_align() {
 
 ; Key point here is than an extra register has to be saved so that the DPRs end
 ; up in an aligned location (as prologue/epilogue inserter had calculated).
-define void @test_dpr_unwind_align() {
+define void @test_dpr_unwind_align() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_dpr_unwind_align:
 ; CHECK: push {r5, r6, r7, lr}
 ; CHECK-NOT: sub sp
@@ -51,7 +51,7 @@ define void @test_dpr_unwind_align() {
 
 ; This time, there's no viable way to tack CS-registers onto the list: a real SP
 ; adjustment needs to be performed to put d8 and d9 where they should be.
-define void @test_dpr_unwind_align_manually() {
+define void @test_dpr_unwind_align_manually() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_dpr_unwind_align_manually:
 ; CHECK: push {r4, r5, r6, r7, lr}
 ; CHECK-NOT: sub sp
@@ -76,7 +76,7 @@ define void @test_dpr_unwind_align_manually() {
 }
 
 ; If there's only a CS1 area, the sub should be in the right place:
-define void @test_dpr_unwind_align_just_cs1() {
+define void @test_dpr_unwind_align_just_cs1() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_dpr_unwind_align_just_cs1:
 ; CHECK: push {r4, r5, r6, r7, lr}
 ; CHECK: sub sp, #4
@@ -99,7 +99,7 @@ define void @test_dpr_unwind_align_just_cs1() {
 }
 
 ; If there are no DPRs, we shouldn't try to align the stack in stages anyway
-define void @test_dpr_unwind_align_no_dprs() {
+define void @test_dpr_unwind_align_no_dprs() "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_dpr_unwind_align_no_dprs:
 ; CHECK: push {r4, r5, r6, r7, lr}
 ; CHECK: sub sp, #12
@@ -117,7 +117,7 @@ define void @test_dpr_unwind_align_no_dprs() {
 
 ; 128-bit vectors should use 128-bit (i.e. correctly aligned) slots on
 ; the stack.
-define <4 x float> @test_v128_stack_pass([8 x double], float, <4 x float> %in) {
+define <4 x float> @test_v128_stack_pass([8 x double], float, <4 x float> %in) "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_v128_stack_pass:
 ; CHECK: add r[[ADDR:[0-9]+]], sp, #16
 ; CHECK: vld1.64 {d0, d1}, [r[[ADDR]]:128]
@@ -129,7 +129,7 @@ declare void @varargs(i32, ...)
 
 ; When varargs are enabled, we go down a different route. Still want 128-bit
 ; alignment though.
-define void @test_v128_stack_pass_varargs(<4 x float> %in) {
+define void @test_v128_stack_pass_varargs(<4 x float> %in) "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_v128_stack_pass_varargs:
 ; CHECK: add r[[ADDR:[0-9]+]], sp, #16
 ; CHECK: vst1.64 {d0, d1}, [r[[ADDR]]:128]
@@ -140,7 +140,7 @@ define void @test_v128_stack_pass_varargs(<4 x float> %in) {
 
 ; To be compatible with AAPCS's va_start model (store r0-r3 at incoming SP, give
 ; a single pointer), 64-bit quantities must be pass
-define i64 @test_64bit_gpr_align(i32, i64 %r2_r3, i32 %sp) {
+define i64 @test_64bit_gpr_align(i32, i64 %r2_r3, i32 %sp) "no-frame-pointer-elim"="true" {
 ; CHECK-LABEL: test_64bit_gpr_align:
 ; CHECK: ldr [[RHS:r[0-9]+]], [sp]
 ; CHECK: adds r0, [[RHS]], r2

@@ -99,7 +99,7 @@ AliasAttrs getExternallyVisibleAttrs(AliasAttrs);
 //===----------------------------------------------------------------------===//
 
 /// The maximum number of arguments we can put into a summary.
-LLVM_CONSTEXPR static unsigned MaxSupportedArgsInSummary = 50;
+static const unsigned MaxSupportedArgsInSummary = 50;
 
 /// We use InterfaceValue to describe parameters/return value, as well as
 /// potential memory locations that are pointed to by parameters/return value,
@@ -137,7 +137,7 @@ inline bool operator>=(InterfaceValue LHS, InterfaceValue RHS) {
 // We use UnknownOffset to represent pointer offsets that cannot be determined
 // at compile time. Note that MemoryLocation::UnknownSize cannot be used here
 // because we require a signed value.
-static LLVM_CONSTEXPR int64_t UnknownOffset = INT64_MAX;
+static const int64_t UnknownOffset = INT64_MAX;
 
 inline int64_t addOffset(int64_t LHS, int64_t RHS) {
   if (LHS == UnknownOffset || RHS == UnknownOffset)

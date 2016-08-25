@@ -85,58 +85,6 @@
 // implicit uses will be added later, after predication. The extra price,
 // however, is that finding the locations where the implicit uses need
 // to be added, and updating the live ranges will be more involved.
-//
-// An additional problem appears when subregister liveness tracking is
-// enabled. In such a scenario, the live interval for the super-register
-// will have live ranges for each subregister (i.e. subranges). This sub-
-// range contains all liveness information about the subregister, except
-// for one case: a "read-undef" flag from another subregister will not
-// be reflected: given
-//   vreg1:subreg_hireg<def,read-undef> = ...  ; "undefines" subreg_loreg
-// the subrange for subreg_loreg will not have any indication that it is
-// undefined at this point. Calculating subregister liveness based only
-// on the information from the subrange may create a segment which spans
-// over such a "read-undef" flag. This would create inconsistencies in
-// the liveness data, resulting in assertions or incorrect code.
-// Example:
-//   vreg1:subreg_loreg<def> = ...
-//   vreg1:subreg_hireg<def, read-undef> = ... ; "undefines" subreg_loreg
-//   ...
-//   vreg1:subreg_loreg<def> = A2_tfrt ...     ; may end up with imp-use
-//                                             ; of subreg_loreg
-// The remedy takes advantage of the fact, that at this point we have
-// an unconditional definition of the subregister. What this means is
-// that any preceding value in this subregister will be overwritten,
-// or in other words, the last use before this def is a kill. This also
-// implies that the first of the predicated transfers at this location
-// should not have any implicit uses.
-// Assume for a moment that no part of the corresponding super-register
-// is used as a source. In such case, the entire super-register can be
-// considered undefined immediately before this instruction. Because of
-// that, we can insert an IMPLICIT_DEF of the super-register at this
-// location, which will cause it to be reflected in all the associated
-// subranges. What is important here is that if an IMPLICIT_DEF of
-// subreg_loreg was used, we would lose the indication that subreg_hireg
-// is also considered undefined. This could lead to having implicit uses
-// incorrectly added.
-//
-// What is left is the two cases when the super-register is used as a
-// source.
-// * Case 1: the used part is the same as the one that is defined:
-//   vreg1<def> = ...
-//   ...
-//   vreg1:subreg_loreg<def,read-undef> = C2_mux ..., vreg1:subreg_loreg
-// In the end, the subreg_loreg should be marked as live at the point of
-// the splitting:
-//   vreg1:subreg_loreg<def,read-undef> = A2_tfrt ; should have imp-use
-//   vreg1:subreg_loreg<def,read-undef> = A2_tfrf ; should have imp-use
-// Hence, an IMPLICIT_DEF of only vreg1:subreg_hireg would be sufficient.
-// * Case 2: the used part does not overlap the part being defined:
-//   vreg1<def> = ...
-//   ...
-//   vreg1:subreg_loreg<def,read-undef> = C2_mux ..., vreg1:subreg_hireg
-// For this case, we insert an IMPLICIT_DEF of vreg1:subreg_hireg after
-// the C2_mux.
 
 #define DEBUG_TYPE "expand-condsets"
 
@@ -207,7 +155,6 @@ namespace {
     MachineDominatorTree *MDT;
     MachineRegisterInfo *MRI;
     LiveIntervals *LIS;
-    std::set<MachineInstr*> LocalImpDefs;
 
     bool CoaLimitActive, TfrLimitActive;
     unsigned CoaLimit, TfrLimit, CoaCounter, TfrCounter;
@@ -236,7 +183,6 @@ namespace {
     void addRefToMap(RegisterRef RR, ReferenceMap &Map, unsigned Exec);
     bool isRefInMap(RegisterRef, ReferenceMap &Map, unsigned Exec);
 
-    void removeImpDefSegments(LiveRange &Range);
     void updateDeadsInRange(unsigned Reg, LaneBitmask LM, LiveRange &Range);
     void updateKillFlags(unsigned Reg);
     void updateDeadFlags(unsigned Reg);
@@ -277,6 +223,10 @@ namespace {
 }
 
 char HexagonExpandCondsets::ID = 0;
+
+namespace llvm {
+  char &HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
+}
 
 INITIALIZE_PASS_BEGIN(HexagonExpandCondsets, "expand-condsets",
   "Hexagon Expand Condsets", false, false)
@@ -393,14 +343,6 @@ void HexagonExpandCondsets::updateKillFlags(unsigned Reg) {
 }
 
 
-void HexagonExpandCondsets::removeImpDefSegments(LiveRange &Range) {
-  auto StartImpDef = [this] (LiveRange::Segment &S) -> bool {
-    return S.start.isRegister() &&
-           LocalImpDefs.count(LIS->getInstructionFromIndex(S.start));
-  };
-  Range.segments.erase(remove_if(Range, StartImpDef), Range.end());
-}
-
 void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
       LiveRange &Range) {
   assert(TargetRegisterInfo::isVirtualRegister(Reg));
@@ -453,15 +395,19 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     if (!Seg.start.isRegister())
       continue;
     MachineInstr *DefI = LIS->getInstructionFromIndex(Seg.start);
-    if (LocalImpDefs.count(DefI))
-      continue;
     Defs.insert(DefI->getParent());
     if (HII->isPredicated(*DefI))
       PredDefs.push_back(Seg.start);
   }
+
+  SmallVector<SlotIndex,8> Undefs;
+  LiveInterval &LI = LIS->getInterval(Reg);
+  LI.computeSubRangeUndefs(Undefs, LM, *MRI, *LIS->getSlotIndexes());
+
   for (auto &SI : PredDefs) {
     MachineBasicBlock *BB = LIS->getMBBFromIndex(SI);
-    if (Range.extendInBlock(LIS->getMBBStartIdx(BB), SI))
+    auto P = Range.extendInBlock(Undefs, LIS->getMBBStartIdx(BB), SI);
+    if (P.first != nullptr || P.second)
       SI = SlotIndex();
   }
 
@@ -488,8 +434,6 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     if (!Seg.start.isRegister())
       continue;
     MachineInstr *DefI = LIS->getInstructionFromIndex(Seg.start);
-    if (LocalImpDefs.count(DefI))
-      continue;
     for (auto &Op : DefI->operands()) {
       if (Seg.start.isDead() || !IsRegDef(Op))
         continue;
@@ -498,12 +442,8 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     }
   }
 
-
   // Finally, add implicit uses to each predicated def that is reached
-  // by other defs. Remove segments started by implicit-defs first, since
-  // they do not define registers.
-  removeImpDefSegments(Range);
-
+  // by other defs.
   for (auto &Seg : Range) {
     if (!Seg.start.isRegister() || !Range.liveAt(Seg.start.getPrevSlot()))
       continue;
@@ -529,9 +469,6 @@ void HexagonExpandCondsets::updateDeadFlags(unsigned Reg) {
     for (LiveInterval::SubRange &S : LI.subranges()) {
       updateDeadsInRange(Reg, S.LaneMask, S);
       LIS->shrinkToUses(S, Reg);
-      // LI::shrinkToUses will add segments started by implicit-defs.
-      // Remove them again.
-      removeImpDefSegments(S);
     }
     LI.clear();
     LIS->constructMainRangeFromSubranges(LI);
@@ -648,36 +585,10 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
                << MI);
   MachineOperand &MD = MI.getOperand(0);  // Definition
   MachineOperand &MP = MI.getOperand(1);  // Predicate register
-  MachineOperand &MS1 = MI.getOperand(2); // Source value #1
-  MachineOperand &MS2 = MI.getOperand(3); // Source value #2
   assert(MD.isDef());
   unsigned DR = MD.getReg(), DSR = MD.getSubReg();
   bool ReadUndef = MD.isUndef();
   MachineBasicBlock::iterator At = MI;
-
-  if (ReadUndef && DSR != 0 && MRI->shouldTrackSubRegLiveness(DR)) {
-    unsigned NewSR = 0;
-    MachineBasicBlock::iterator DefAt = At;
-    bool SameReg = (MS1.isReg() && DR == MS1.getReg()) ||
-                   (MS2.isReg() && DR == MS2.getReg());
-    if (SameReg) {
-      NewSR = (DSR == Hexagon::subreg_loreg) ? Hexagon::subreg_hireg
-                                             : Hexagon::subreg_loreg;
-      // Advance the insertion point if the subregisters differ between
-      // the source and the target (with the same super-register).
-      // Note: this case has never occured during tests.
-      if ((MS1.isReg() && NewSR == MS1.getSubReg()) ||
-          (MS2.isReg() && NewSR == MS2.getSubReg()))
-        ++DefAt;
-    }
-    // Use "At", since "DefAt" may be end().
-    MachineBasicBlock &B = *At->getParent();
-    DebugLoc DL = At->getDebugLoc();
-    auto ImpD = BuildMI(B, DefAt, DL, HII->get(TargetOpcode::IMPLICIT_DEF))
-                  .addReg(DR, RegState::Define, NewSR);
-    LIS->InsertMachineInstrInMaps(*ImpD);
-    LocalImpDefs.insert(&*ImpD);
-  }
 
   // First, create the two invididual conditional transfers, and add each
   // of them to the live intervals information. Do that first and then remove
@@ -1256,7 +1167,6 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   MDT = &getAnalysis<MachineDominatorTree>();
   LIS = &getAnalysis<LiveIntervals>();
   MRI = &MF.getRegInfo();
-  LocalImpDefs.clear();
 
   DEBUG(LIS->print(dbgs() << "Before expand-condsets\n",
                    MF.getFunction()->getParent()));
@@ -1291,9 +1201,6 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
                       PredUpd.begin(), PredUpd.end(),
                       std::inserter(Diff, Diff.begin()));
   updateLiveness(Diff, false, false, true);
-
-  for (auto *ImpD : LocalImpDefs)
-    removeInstr(*ImpD);
 
   DEBUG({
     if (Changed)

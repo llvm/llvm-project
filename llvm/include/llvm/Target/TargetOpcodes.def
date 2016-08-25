@@ -233,7 +233,7 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC)
 HANDLE_TARGET_OPCODE(G_INTRINSIC_W_SIDE_EFFECTS)
 
 /// Generic extension allowing rubbish in high bits.
-HANDLE_TARGET_OPCODE(G_ANYEXTEND)
+HANDLE_TARGET_OPCODE(G_ANYEXT)
 
 /// Generic instruction to discard the high bits of a register. This differs
 /// from (G_EXTRACT val, 0) on its action on vectors: G_TRUNC will truncate

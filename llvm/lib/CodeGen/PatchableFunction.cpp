@@ -32,7 +32,7 @@ struct PatchableFunction : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &F) override;
    MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::AllVRegsAllocated);
+        MachineFunctionProperties::Property::NoVRegs);
   }
 };
 }

@@ -7,7 +7,7 @@
 ; Parameter with swiftself should be allocated to r10.
 ; CHECK-LABEL: swiftself_param:
 ; CHECK: mov r0, r10
-define i8 *@swiftself_param(i8* swiftself %addr0) {
+define i8 *@swiftself_param(i8* swiftself %addr0) "no-frame-pointer-elim"="true" {
     ret i8 *%addr0
 }
 
@@ -15,7 +15,7 @@ define i8 *@swiftself_param(i8* swiftself %addr0) {
 ; CHECK-LABEL: call_swiftself:
 ; CHECK: mov r10, r0
 ; CHECK: bl {{_?}}swiftself_param
-define i8 *@call_swiftself(i8* %arg) {
+define i8 *@call_swiftself(i8* %arg) "no-frame-pointer-elim"="true" {
   %res = call i8 *@swiftself_param(i8* swiftself %arg)
   ret i8 *%res
 }
@@ -25,7 +25,7 @@ define i8 *@call_swiftself(i8* %arg) {
 ; CHECK: push {r10}
 ; ...
 ; CHECK: pop {r10}
-define i8 *@swiftself_clobber(i8* swiftself %addr0) {
+define i8 *@swiftself_clobber(i8* swiftself %addr0) "no-frame-pointer-elim"="true" {
   call void asm sideeffect "", "~{r10}"()
   ret i8 *%addr0
 }
@@ -37,7 +37,7 @@ define i8 *@swiftself_clobber(i8* swiftself %addr0) {
 ; OPT: bl {{_?}}swiftself_param
 ; OPT-NOT: mov{{.*}}r10
 ; OPT-NEXT: bl {{_?}}swiftself_param
-define void @swiftself_passthrough(i8* swiftself %addr0) {
+define void @swiftself_passthrough(i8* swiftself %addr0) "no-frame-pointer-elim"="true" {
   call i8 *@swiftself_param(i8* swiftself %addr0)
   call i8 *@swiftself_param(i8* swiftself %addr0)
   ret void
@@ -47,7 +47,7 @@ define void @swiftself_passthrough(i8* swiftself %addr0) {
 ; CHECK-LABEL: swiftself_tail:
 ; TAILCALL: b {{_?}}swiftself_param
 ; TAILCALL-NOT: pop
-define i8* @swiftself_tail(i8* swiftself %addr0) {
+define i8* @swiftself_tail(i8* swiftself %addr0) "no-frame-pointer-elim"="true" {
   call void asm sideeffect "", "~{r10}"()
   %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
   ret i8* %res
@@ -59,7 +59,7 @@ define i8* @swiftself_tail(i8* swiftself %addr0) {
 ; CHECK: mov r10, r0
 ; CHECK: bl {{_?}}swiftself_param
 ; CHECK: pop
-define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind {
+define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind "no-frame-pointer-elim"="true" {
   %res = tail call i8* @swiftself_param(i8* swiftself %addr1)
   ret i8* %res
 }

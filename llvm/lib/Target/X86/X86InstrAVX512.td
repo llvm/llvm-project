@@ -3202,6 +3202,8 @@ let Predicates = [HasAVX512] in {
             (COPY_TO_REGCLASS (VMOVSSZrm addr:$src), VR128X)>;
   def : Pat<(v4f32 (X86vzmovl (loadv4f32 addr:$src))),
             (COPY_TO_REGCLASS (VMOVSSZrm addr:$src), VR128X)>;
+  def : Pat<(v4f32 (X86vzload addr:$src)),
+            (COPY_TO_REGCLASS (VMOVSSZrm addr:$src), VR128X)>;
 
   // MOVSDrm zeros the high parts of the register; represent this
   // with SUBREG_TO_REG. The AVX versions also write: DST[255:128] <- 0
@@ -3224,6 +3226,8 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v8f32 (X86vzmovl (insert_subvector undef,
                    (v4f32 (scalar_to_vector (loadf32 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
+  def : Pat<(v8f32 (X86vzload addr:$src)),
+            (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
   def : Pat<(v4f64 (X86vzmovl (insert_subvector undef,
                    (v2f64 (scalar_to_vector (loadf64 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
@@ -3237,6 +3241,8 @@ let Predicates = [HasAVX512] in {
             (SUBREG_TO_REG (i32 0), (VMOVDI2PDIZrm addr:$src), sub_xmm)>;
   def : Pat<(v16f32 (X86vzmovl (insert_subvector undef,
                    (v4f32 (scalar_to_vector (loadf32 addr:$src))), (iPTR 0)))),
+            (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
+  def : Pat<(v16f32 (X86vzload addr:$src)),
             (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
   def : Pat<(v8f64 (X86vzmovl (insert_subvector undef,
                    (v2f64 (scalar_to_vector (loadf64 addr:$src))), (iPTR 0)))),
@@ -3367,17 +3373,20 @@ let Predicates = [HasAVX512] in {
   let AddedComplexity = 20 in {
     def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
               (VMOVDI2PDIZrm addr:$src)>;
-
     def : Pat<(v4i32 (X86vzmovl (bc_v4i32 (loadv4f32 addr:$src)))),
               (VMOVDI2PDIZrm addr:$src)>;
     def : Pat<(v4i32 (X86vzmovl (bc_v4i32 (loadv2i64 addr:$src)))),
               (VMOVDI2PDIZrm addr:$src)>;
+    def : Pat<(v4i32 (X86vzload addr:$src)),
+              (VMOVDI2PDIZrm addr:$src)>;
+    def : Pat<(v8i32 (X86vzload addr:$src)),
+              (SUBREG_TO_REG (i32 0), (VMOVDI2PDIZrm addr:$src), sub_xmm)>;
     def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
-            (VMOVZPQILo2PQIZrm addr:$src)>;
+              (VMOVZPQILo2PQIZrm addr:$src)>;
     def : Pat<(v2f64 (X86vzmovl (v2f64 VR128X:$src))),
-            (VMOVZPQILo2PQIZrr VR128X:$src)>;
+              (VMOVZPQILo2PQIZrr VR128X:$src)>;
     def : Pat<(v2i64 (X86vzload addr:$src)),
-            (VMOVZPQILo2PQIZrm addr:$src)>;
+              (VMOVZPQILo2PQIZrm addr:$src)>;
     def : Pat<(v4i64 (X86vzload addr:$src)),
               (SUBREG_TO_REG (i64 0), (VMOVZPQILo2PQIZrm addr:$src), sub_xmm)>;
   }
@@ -3386,12 +3395,13 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v8i32 (X86vzmovl (insert_subvector undef,
                                (v4i32 (scalar_to_vector GR32:$src)),(iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVDI2PDIZrr GR32:$src), sub_xmm)>;
-
   def : Pat<(v16i32 (X86vzmovl (insert_subvector undef,
                                 (v4i32 (scalar_to_vector GR32:$src)),(iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVDI2PDIZrr GR32:$src), sub_xmm)>;
 
   // Use regular 128-bit instructions to match 512-bit scalar_to_vec+zext.
+  def : Pat<(v16i32 (X86vzload addr:$src)),
+            (SUBREG_TO_REG (i32 0), (VMOVDI2PDIZrm addr:$src), sub_xmm)>;
   def : Pat<(v8i64 (X86vzload addr:$src)),
             (SUBREG_TO_REG (i64 0), (VMOVZPQILo2PQIZrm addr:$src), sub_xmm)>;
 }

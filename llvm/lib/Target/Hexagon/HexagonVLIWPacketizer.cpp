@@ -22,7 +22,6 @@
 #include "HexagonVLIWPacketizer.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -81,7 +80,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
     MachineFunctionProperties getRequiredProperties() const override {
       return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::AllVRegsAllocated);
+          MachineFunctionProperties::Property::NoVRegs);
     }
 
   private:
@@ -339,7 +338,8 @@ bool HexagonPacketizerList::isNewifiable(const MachineInstr &MI,
   if (NewRC == &Hexagon::PredRegsRegClass)
     if (HII->isV60VectorInstruction(MI) && MI.mayStore())
       return false;
-  return HII->isCondInst(MI) || HII->isJumpR(MI) || HII->mayBeNewStore(MI);
+  return HII->isCondInst(MI) || HII->isJumpR(MI) || MI.isReturn() ||
+         HII->mayBeNewStore(MI);
 }
 
 // Promote an instructiont to its .cur form.
@@ -805,7 +805,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
 
   // predicate .new
   if (RC == &Hexagon::PredRegsRegClass)
-    if (HII->isCondInst(MI) || HII->isJumpR(MI))
+    if (HII->isCondInst(MI) || HII->isJumpR(MI) || MI.isReturn())
       return HII->predCanBeUsedAsDotNew(PI, DepReg);
 
   if (RC != &Hexagon::PredRegsRegClass && !HII->mayBeNewStore(MI))
@@ -1307,7 +1307,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       RC = HRI->getMinimalPhysRegClass(DepReg);
     }
 
-    if (I.isCall() || HII->isJumpR(I) || HII->isTailCall(I)) {
+    if (I.isCall() || HII->isJumpR(I) || I.isReturn() || HII->isTailCall(I)) {
       if (!isRegDependence(DepType))
         continue;
       if (!isCallDependent(I, DepType, SUJ->Succs[i].getReg()))

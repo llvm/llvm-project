@@ -59,7 +59,6 @@ add_llvm_library(LLVMCodeGen
   MachineCSE.cpp
   MachineDominanceFrontier.cpp
   MachineDominators.cpp
-  MachineFunctionAnalysis.cpp
   MachineFunction.cpp
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp

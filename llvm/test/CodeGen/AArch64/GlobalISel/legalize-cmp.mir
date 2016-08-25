@@ -1,0 +1,51 @@
+# RUN: llc -O0 -run-pass=legalize-mir -global-isel %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+  define void @test_icmp() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_icmp
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    %0(64) = COPY %x0
+    %1(64) = COPY %x0
+
+    %2(8) = G_TRUNC { s8, s64 } %0
+    %3(8) = G_TRUNC { s8, s64 } %1
+
+    ; CHECK: [[TST32:%[0-9]+]](32) = G_ICMP { s32, s64 } intpred(sge), %0, %1
+    ; CHECK: %4(1) = G_TRUNC { s1, s32 } [[TST32]]
+    %4(1) = G_ICMP { s1, s64 } intpred(sge), %0, %1
+
+    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
+    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
+    ; CHECK: %5(32) = G_ICMP { s32, s32 } intpred(ne), [[LHS32]], [[RHS32]]
+    %5(32) = G_ICMP { s32, s8 } intpred(ne), %2, %3
+
+    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
+    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
+    ; CHECK: %6(32) = G_ICMP { s32, s32 } intpred(ugt), [[LHS32]], [[RHS32]]
+    %6(32) = G_ICMP { s32, s8 } intpred(ugt), %2, %3
+
+    ; CHECK: [[LHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %2
+    ; CHECK: [[RHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %3
+    ; CHECK: %7(32) = G_ICMP { s32, s32 } intpred(sle), [[LHS32]], [[RHS32]]
+    %7(32) = G_ICMP { s32, s8 } intpred(sle), %2, %3
+
+...

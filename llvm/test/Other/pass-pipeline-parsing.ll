@@ -106,10 +106,10 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TWO-NOOP-CG
 ; CHECK-TWO-NOOP-CG: Starting llvm::Module pass manager run
 ; CHECK-TWO-NOOP-CG: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-TWO-NOOP-CG: Starting llvm::LazyCallGraph::SCC pass manager run
+; CHECK-TWO-NOOP-CG: Starting CGSCC pass manager run
 ; CHECK-TWO-NOOP-CG: Running pass: NoOpCGSCCPass
 ; CHECK-TWO-NOOP-CG: Running pass: NoOpCGSCCPass
-; CHECK-TWO-NOOP-CG: Finished llvm::LazyCallGraph::SCC pass manager run
+; CHECK-TWO-NOOP-CG: Finished CGSCC pass manager run
 ; CHECK-TWO-NOOP-CG: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -debug-pass-manager \
@@ -122,14 +122,14 @@
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpFunctionPass
 ; CHECK-NESTED-MP-CG-FP: Finished llvm::Function pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-NESTED-MP-CG-FP: Starting llvm::LazyCallGraph::SCC pass manager run
+; CHECK-NESTED-MP-CG-FP: Starting CGSCC pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpCGSCCPass
 ; CHECK-NESTED-MP-CG-FP: Running pass: CGSCCToFunctionPassAdaptor
 ; CHECK-NESTED-MP-CG-FP: Starting llvm::Function pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpFunctionPass
 ; CHECK-NESTED-MP-CG-FP: Finished llvm::Function pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpCGSCCPass
-; CHECK-NESTED-MP-CG-FP: Finished llvm::LazyCallGraph::SCC pass manager run
+; CHECK-NESTED-MP-CG-FP: Finished CGSCC pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-NESTED-MP-CG-FP: Starting llvm::Function pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpFunctionPass

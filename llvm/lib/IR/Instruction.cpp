@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -632,6 +633,47 @@ Instruction *Instruction::cloneImpl() const {
   llvm_unreachable("Subclass of Instruction failed to implement cloneImpl");
 }
 
+void Instruction::swapProfMetadata() {
+  MDNode *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData || ProfileData->getNumOperands() != 3 ||
+      !isa<MDString>(ProfileData->getOperand(0)))
+    return;
+
+  MDString *MDName = cast<MDString>(ProfileData->getOperand(0));
+  if (MDName->getString() != "branch_weights")
+    return;
+
+  // The first operand is the name. Fetch them backwards and build a new one.
+  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
+                     ProfileData->getOperand(1)};
+  setMetadata(LLVMContext::MD_prof,
+              MDNode::get(ProfileData->getContext(), Ops));
+}
+
+/// Copy meta data from \p SrcInst to this instruction. If WL is empty, all
+/// data will be copied, otherwise only ones specified in WL will be copied.
+void Instruction::copyMetadata(const Instruction &SrcInst,
+                               ArrayRef<unsigned> WL) {
+  if (!SrcInst.hasMetadata())
+    return;
+
+  DenseSet<unsigned> WLS;
+  for (unsigned M : WL)
+    WLS.insert(M);
+
+  // Otherwise, enumerate and copy over metadata from the old instruction to the
+  // new one.
+  SmallVector<std::pair<unsigned, MDNode *>, 4> TheMDs;
+  SrcInst.getAllMetadataOtherThanDebugLoc(TheMDs);
+  for (const auto &MD : TheMDs) {
+    if (WL.empty() || WLS.count(MD.first))
+      setMetadata(MD.first, MD.second);
+  }
+  if (WL.empty() || WLS.count(LLVMContext::MD_dbg))
+    setDebugLoc(SrcInst.getDebugLoc());
+  return;
+}
+
 Instruction *Instruction::clone() const {
   Instruction *New = nullptr;
   switch (getOpcode()) {
@@ -646,16 +688,6 @@ Instruction *Instruction::clone() const {
   }
 
   New->SubclassOptionalData = SubclassOptionalData;
-  if (!hasMetadata())
-    return New;
-
-  // Otherwise, enumerate and copy over metadata from the old instruction to the
-  // new one.
-  SmallVector<std::pair<unsigned, MDNode *>, 4> TheMDs;
-  getAllMetadataOtherThanDebugLoc(TheMDs);
-  for (const auto &MD : TheMDs)
-    New->setMetadata(MD.first, MD.second);
-
-  New->setDebugLoc(getDebugLoc());
+  New->copyMetadata(*this);
   return New;
 }
