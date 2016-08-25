@@ -28,7 +28,7 @@
 #define long_min  __llvm_atomic_min_a3_x_wg_i64
 
 #define AGEN(TYPE,OP) \
-__attribute__((overloadable,weak,always_inline)) TYPE \
+__attribute__((overloadable, always_inline)) TYPE \
 work_group_reduce_##OP(TYPE a) \
 { \
     uint n = get_num_sub_groups(); \
