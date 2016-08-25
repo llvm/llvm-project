@@ -372,7 +372,7 @@ JSONParser::GetToken (std::string &value)
                     if (escaped_ch == -1)
                     {
                         error << "error: an error occurred getting a character from offset " <<start_index;
-                        value = std::move(error.str());
+                        value = error.str();
                         return Token::Error;
 
                     }
@@ -390,7 +390,7 @@ JSONParser::GetToken (std::string &value)
                             {
                                 error << "error: wide character support is needed for unicode character 0x" << std::setprecision(4) << std::hex << escaped_ch;
                                 error << " at offset " << start_index;
-                                value = std::move(error.str());
+                                value = error.str();
                                 return Token::Error;
                             }
                         }
@@ -460,7 +460,7 @@ JSONParser::GetToken (std::string &value)
                             if (got_decimal_point)
                             {
                                 error << "error: extra decimal point found at offset " << start_index;
-                                value = std::move(error.str());
+                                value = error.str();
                                 return Token::Error;
                             }
                             else
@@ -475,7 +475,7 @@ JSONParser::GetToken (std::string &value)
                             if (exp_index != 0)
                             {
                                 error << "error: extra exponent character found at offset " << start_index;
-                                value = std::move(error.str());
+                                value = error.str();
                                 return Token::Error;
                             }
                             else
@@ -495,7 +495,7 @@ JSONParser::GetToken (std::string &value)
                             else
                             {
                                 error << "error: unexpected " << next_ch << " character at offset " << start_index;
-                                value = std::move(error.str());
+                                value = error.str();
                                 return Token::Error;
                             }
                             break;
@@ -521,7 +521,7 @@ JSONParser::GetToken (std::string &value)
                             else
                             {
                                 error << "error: got exponent character but no exponent digits at offset in float value \"" << value.c_str() << "\"";
-                                value = std::move(error.str());
+                                value = error.str();
                                 return Token::Error;
                             }
                         }
@@ -535,7 +535,7 @@ JSONParser::GetToken (std::string &value)
                             else
                             {
                                 error << "error: no digits after decimal point \"" << value.c_str() << "\"";
-                                value = std::move(error.str());
+                                value = error.str();
                                 return Token::Error;
                             }
                         }
@@ -551,7 +551,7 @@ JSONParser::GetToken (std::string &value)
                         else
                         {
                             error << "error: no digits negate sign \"" << value.c_str() << "\"";
-                            value = std::move(error.str());
+                            value = error.str();
                             return Token::Error;
                         }
                     }
@@ -559,7 +559,7 @@ JSONParser::GetToken (std::string &value)
                 else
                 {
                     error << "error: invalid number found at offset " << start_index;
-                    value = std::move(error.str());
+                    value = error.str();
                     return Token::Error;
                 }
             }
@@ -568,7 +568,7 @@ JSONParser::GetToken (std::string &value)
             break;
     }
     error << "error: failed to parse token at offset " << start_index << " (around character '" << ch << "')";
-    value = std::move(error.str());
+    value = error.str();
     return Token::Error;
 }
 

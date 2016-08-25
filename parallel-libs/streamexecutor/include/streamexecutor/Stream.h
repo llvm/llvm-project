@@ -12,19 +12,18 @@
 /// A Stream instance represents a queue of sequential, host-asynchronous work
 /// to be performed on a device.
 ///
-/// To enqueue work on a device, first create a Executor instance for a
-/// given device and then use that Executor to create a Stream instance.
-/// The Stream instance will perform its work on the device managed by the
-/// Executor that created it.
+/// To enqueue work on a device, first create a Device instance then use that
+/// Device to create a Stream instance. The Stream instance will perform its
+/// work on the device managed by the Device object that created it.
 ///
-/// The various "then" methods of the Stream object, such as thenMemcpyH2D and
+/// The various "then" methods of the Stream object, such as thenCopyH2D and
 /// thenLaunch, may be used to enqueue work on the Stream, and the
 /// blockHostUntilDone() method may be used to block the host code until the
 /// Stream has completed all its work.
 ///
-/// Multiple Stream instances can be created for the same Executor. This
-/// allows several independent streams of computation to be performed
-/// simultaneously on a single device.
+/// Multiple Stream instances can be created for the same Device. This allows
+/// several independent streams of computation to be performed simultaneously on
+/// a single device.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -94,108 +93,212 @@ public:
                      const ParameterTs &... Arguments) {
     auto ArgumentArray =
         make_kernel_argument_pack<ParameterTs...>(Arguments...);
-    setError(PExecutor->launch(ThePlatformStream.get(), BlockSize, GridSize,
-                               Kernel, ArgumentArray));
+    setError(PDevice->launch(ThePlatformStream.get(), BlockSize, GridSize,
+                             Kernel, ArgumentArray));
     return *this;
   }
 
-  /// Entrain onto the stream a memcpy of a given number of elements from a
-  /// device source to a host destination.
+  /// \name Device memory copying functions
   ///
-  /// HostDst must be a pointer to host memory allocated by
-  /// Executor::allocateHostMemory or otherwise allocated and then
-  /// registered with Executor::registerHostMemory.
-  template <typename T>
-  Stream &thenMemcpyD2H(const GlobalDeviceMemory<T> &DeviceSrc,
-                        llvm::MutableArrayRef<T> HostDst, size_t ElementCount) {
-    if (ElementCount > DeviceSrc.getElementCount())
-      setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", from device memory array of size " +
-               llvm::Twine(DeviceSrc.getElementCount()));
-    else if (ElementCount > HostDst.size())
-      setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", to host array of size " + llvm::Twine(HostDst.size()));
-    else
-      setError(PExecutor->memcpyD2H(ThePlatformStream.get(), DeviceSrc,
-                                    HostDst.data(), ElementCount * sizeof(T)));
-    return *this;
-  }
-
-  /// Same as thenMemcpyD2H above, but copies the entire source to the
-  /// destination.
-  template <typename T>
-  Stream &thenMemcpyD2H(const GlobalDeviceMemory<T> &DeviceSrc,
-                        llvm::MutableArrayRef<T> HostDst) {
-    return thenMemcpyD2H(DeviceSrc, HostDst, DeviceSrc.getElementCount());
-  }
-
-  /// Entrain onto the stream a memcpy of a given number of elements from a host
-  /// source to a device destination.
+  /// These methods enqueue a device memory copy operation on the stream and
+  /// return without waiting for the operation to complete.
   ///
-  /// HostSrc must be a pointer to host memory allocated by
-  /// Executor::allocateHostMemory or otherwise allocated and then
-  /// registered with Executor::registerHostMemory.
-  template <typename T>
-  Stream &thenMemcpyH2D(llvm::ArrayRef<T> HostSrc,
-                        GlobalDeviceMemory<T> *DeviceDst, size_t ElementCount) {
-    if (ElementCount > HostSrc.size())
-      setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", from host array of size " + llvm::Twine(HostSrc.size()));
-    else if (ElementCount > DeviceDst->getElementCount())
-      setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", to device memory array of size " +
-               llvm::Twine(DeviceDst->getElementCount()));
-    else
-      setError(PExecutor->memcpyH2D(ThePlatformStream.get(), HostSrc.data(),
-                                    DeviceDst, ElementCount * sizeof(T)));
-    return *this;
-  }
-
-  /// Same as thenMemcpyH2D above, but copies the entire source to the
-  /// destination.
-  template <typename T>
-  Stream &thenMemcpyH2D(llvm::ArrayRef<T> HostSrc,
-                        GlobalDeviceMemory<T> *DeviceDst) {
-    return thenMemcpyH2D(HostSrc, DeviceDst, HostSrc.size());
-  }
-
-  /// Entrain onto the stream a memcpy of a given number of elements from a
-  /// device source to a device destination.
-  template <typename T>
-  Stream &thenMemcpyD2D(const GlobalDeviceMemory<T> &DeviceSrc,
-                        GlobalDeviceMemory<T> *DeviceDst, size_t ElementCount) {
-    if (ElementCount > DeviceSrc.getElementCount())
-      setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", from device memory array of size " +
-               llvm::Twine(DeviceSrc.getElementCount()));
-    else if (ElementCount > DeviceDst->getElementCount())
-      setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", to device memory array of size " +
-               llvm::Twine(DeviceDst->getElementCount()));
-    else
-      setError(PExecutor->memcpyD2D(ThePlatformStream.get(), DeviceSrc,
-                                    DeviceDst, ElementCount * sizeof(T)));
-    return *this;
-  }
-
-  /// Same as thenMemcpyD2D above, but copies the entire source to the
-  /// destination.
-  template <typename T>
-  Stream &thenMemcpyD2D(const GlobalDeviceMemory<T> &DeviceSrc,
-                        GlobalDeviceMemory<T> *DeviceDst) {
-    return thenMemcpyD2D(DeviceSrc, DeviceDst, DeviceSrc.getElementCount());
-  }
-
-  /// Blocks the host code, waiting for the operations entrained on the stream
-  /// (enqueued up to this point in program execution) to complete.
+  /// Any host memory used as a source or destination for one of these
+  /// operations must be allocated with Device::allocateHostMemory or registered
+  /// with Device::registerHostMemory. Otherwise, the enqueuing operation may
+  /// block until the copy operation is fully complete.
   ///
-  /// Returns true if there are no errors on the stream.
-  bool blockHostUntilDone() {
-    Error E = PExecutor->blockHostUntilDone(ThePlatformStream.get());
-    bool returnValue = static_cast<bool>(E);
-    setError(std::move(E));
-    return returnValue;
+  /// The arguments and bounds checking for these methods match the API of the
+  /// \ref DeviceHostSyncCopyGroup
+  /// "host-synchronous device memory copying functions" of Device.
+  ///@{
+
+  template <typename T>
+  Stream &thenCopyD2H(GlobalDeviceMemorySlice<T> Src,
+                      llvm::MutableArrayRef<T> Dst, size_t ElementCount) {
+    if (ElementCount > Src.getElementCount())
+      setError("copying too many elements, " + llvm::Twine(ElementCount) +
+               ", from a device array of element count " +
+               llvm::Twine(Src.getElementCount()));
+    else if (ElementCount > Dst.size())
+      setError("copying too many elements, " + llvm::Twine(ElementCount) +
+               ", to a host array of element count " + llvm::Twine(Dst.size()));
+    else
+      setError(PDevice->copyD2H(ThePlatformStream.get(), Src.getBaseMemory(),
+                                Src.getElementOffset() * sizeof(T), Dst.data(),
+                                0, ElementCount * sizeof(T)));
+    return *this;
   }
+
+  template <typename T>
+  Stream &thenCopyD2H(GlobalDeviceMemorySlice<T> Src,
+                      llvm::MutableArrayRef<T> Dst) {
+    if (Src.getElementCount() != Dst.size())
+      setError("array size mismatch for D2H, device source has element count " +
+               llvm::Twine(Src.getElementCount()) +
+               " but host destination has element count " +
+               llvm::Twine(Dst.size()));
+    else
+      thenCopyD2H(Src, Dst, Src.getElementCount());
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2H(GlobalDeviceMemorySlice<T> Src, T *Dst,
+                      size_t ElementCount) {
+    thenCopyD2H(Src, llvm::MutableArrayRef<T>(Dst, ElementCount), ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, llvm::MutableArrayRef<T> Dst,
+                      size_t ElementCount) {
+    thenCopyD2H(Src.asSlice(), Dst, ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, llvm::MutableArrayRef<T> Dst) {
+    thenCopyD2H(Src.asSlice(), Dst);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, T *Dst, size_t ElementCount) {
+    thenCopyD2H(Src.asSlice(), Dst, ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemorySlice<T> Dst,
+                      size_t ElementCount) {
+    if (ElementCount > Src.size())
+      setError("copying too many elements, " + llvm::Twine(ElementCount) +
+               ", from a host array of element count " +
+               llvm::Twine(Src.size()));
+    else if (ElementCount > Dst.getElementCount())
+      setError("copying too many elements, " + llvm::Twine(ElementCount) +
+               ", to a device array of element count " +
+               llvm::Twine(Dst.getElementCount()));
+    else
+      setError(PDevice->copyH2D(
+          ThePlatformStream.get(), Src.data(), 0, Dst.getBaseMemory(),
+          Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemorySlice<T> Dst) {
+    if (Src.size() != Dst.getElementCount())
+      setError("array size mismatch for H2D, host source has element count " +
+               llvm::Twine(Src.size()) +
+               " but device destination has element count " +
+               llvm::Twine(Dst.getElementCount()));
+    else
+      thenCopyH2D(Src, Dst, Dst.getElementCount());
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyH2D(T *Src, GlobalDeviceMemorySlice<T> Dst,
+                      size_t ElementCount) {
+    thenCopyH2D(llvm::ArrayRef<T>(Src, ElementCount), Dst, ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst,
+                      size_t ElementCount) {
+    thenCopyH2D(Src, Dst.asSlice(), ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst) {
+    thenCopyH2D(Src, Dst.asSlice());
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyH2D(T *Src, GlobalDeviceMemory<T> Dst, size_t ElementCount) {
+    thenCopyH2D(Src, Dst.asSlice(), ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
+                      GlobalDeviceMemorySlice<T> Dst, size_t ElementCount) {
+    if (ElementCount > Src.getElementCount())
+      setError("copying too many elements, " + llvm::Twine(ElementCount) +
+               ", from a device array of element count " +
+               llvm::Twine(Src.getElementCount()));
+    else if (ElementCount > Dst.getElementCount())
+      setError("copying too many elements, " + llvm::Twine(ElementCount) +
+               ", to a device array of element count " +
+               llvm::Twine(Dst.getElementCount()));
+    else
+      setError(PDevice->copyD2D(
+          ThePlatformStream.get(), Src.getBaseMemory(),
+          Src.getElementOffset() * sizeof(T), Dst.getBaseMemory(),
+          Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
+                      GlobalDeviceMemorySlice<T> Dst) {
+    if (Src.getElementCount() != Dst.getElementCount())
+      setError("array size mismatch for D2D, device source has element count " +
+               llvm::Twine(Src.getElementCount()) +
+               " but device destination has element count " +
+               llvm::Twine(Dst.getElementCount()));
+    else
+      thenCopyD2D(Src, Dst, Src.getElementCount());
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemorySlice<T> Dst,
+                      size_t ElementCount) {
+    thenCopyD2D(Src.asSlice(), Dst, ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src,
+                      GlobalDeviceMemorySlice<T> Dst) {
+    thenCopyD2D(Src.asSlice(), Dst);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src, GlobalDeviceMemory<T> Dst,
+                      size_t ElementCount) {
+    thenCopyD2D(Src, Dst.asSlice(), ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
+                      GlobalDeviceMemory<T> Dst) {
+    thenCopyD2D(Src, Dst.asSlice());
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst,
+                      size_t ElementCount) {
+    thenCopyD2D(Src.asSlice(), Dst.asSlice(), ElementCount);
+    return *this;
+  }
+
+  template <typename T>
+  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst) {
+    thenCopyD2D(Src.asSlice(), Dst.asSlice());
+    return *this;
+  }
+
+  ///@} End device memory copying functions
 
 private:
   /// Sets the error state from an Error object.
@@ -218,8 +321,8 @@ private:
       ErrorMessage = Message.str();
   }
 
-  /// The PlatformExecutor that supports the operations of this stream.
-  PlatformExecutor *PExecutor;
+  /// The PlatformDevice that supports the operations of this stream.
+  PlatformDevice *PDevice;
 
   /// The platform-specific stream handle for this instance.
   std::unique_ptr<PlatformStreamHandle> ThePlatformStream;

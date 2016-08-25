@@ -98,8 +98,8 @@ protected:
     friend class ThreadGDBRemote;
 
     bool
-    ReadRegisterBytes (const RegisterInfo *reg_info,
-                       DataExtractor &data);
+    ReadRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data, GDBRemoteCommunicationClient &gdb_comm,
+                      const GDBRemoteCommunicationClient::Lock &lock);
 
     bool
     WriteRegisterBytes (const RegisterInfo *reg_info,
@@ -150,11 +150,13 @@ protected:
 
 private:
     // Helper function for ReadRegisterBytes().
-    bool GetPrimordialRegister(const RegisterInfo *reg_info,
-                               GDBRemoteCommunicationClient &gdb_comm);
+    bool
+    GetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                          const GDBRemoteCommunicationClient::Lock &lock);
     // Helper function for WriteRegisterBytes().
-    bool SetPrimordialRegister(const RegisterInfo *reg_info,
-                               GDBRemoteCommunicationClient &gdb_comm);
+    bool
+    SetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                          const GDBRemoteCommunicationClient::Lock &lock);
 
     DISALLOW_COPY_AND_ASSIGN (GDBRemoteRegisterContext);
 };

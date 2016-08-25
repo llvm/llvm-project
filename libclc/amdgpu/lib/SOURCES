@@ -16,5 +16,3 @@ image/write_imagef.cl
 image/write_imagei.cl
 image/write_imageui.cl
 image/write_image_impl.ll
-workitem/get_num_groups.ll
-workitem/get_global_size.ll

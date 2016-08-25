@@ -54,13 +54,13 @@
 /// function as follows:
 /// \code
 ///     namespace ccn = compiler_cuda_namespace;
-///     // Assumes Executor is a pointer to the StreamExecutor on which to
-///     // launch the kernel.
+///     // Assumes Device is a pointer to the Device on which to launch the
+///     // kernel.
 ///     //
 ///     // See KernelSpec.h for details on how the compiler can create a
 ///     // MultiKernelLoaderSpec instance like SaxpyKernelLoaderSpec below.
 ///     Expected<ccn::SaxpyKernel> MaybeKernel =
-///         ccn::SaxpyKernel::create(Executor, ccn::SaxpyKernelLoaderSpec);
+///         ccn::SaxpyKernel::create(Device, ccn::SaxpyKernelLoaderSpec);
 ///     if (!MaybeKernel) { /* Handle error */ }
 ///     ccn::SaxpyKernel SaxpyKernel = *MaybeKernel;
 ///     Launch(SaxpyKernel, A, X, Y);
@@ -84,7 +84,7 @@
 
 namespace streamexecutor {
 
-class Executor;
+class Device;
 class KernelInterface;
 
 /// The base class for device kernel functions.
@@ -100,13 +100,13 @@ public:
   KernelBase &operator=(KernelBase &&) = default;
   ~KernelBase();
 
-  /// Creates a kernel object from an Executor and a MultiKernelLoaderSpec.
+  /// Creates a kernel object from a Device and a MultiKernelLoaderSpec.
   ///
-  /// The Executor knows which platform it belongs to and the
+  /// The Device knows which platform it belongs to and the
   /// MultiKernelLoaderSpec knows how to find the kernel code for different
   /// platforms, so the combined information is enough to get the kernel code
   /// for the appropriate platform.
-  static Expected<KernelBase> create(Executor *ParentExecutor,
+  static Expected<KernelBase> create(Device *Dev,
                                      const MultiKernelLoaderSpec &Spec);
 
   const std::string &getName() const { return Name; }
@@ -116,11 +116,11 @@ public:
   KernelInterface *getImplementation() { return Implementation.get(); }
 
 private:
-  KernelBase(Executor *ParentExecutor, const std::string &Name,
+  KernelBase(Device *Dev, const std::string &Name,
              const std::string &DemangledName,
              std::unique_ptr<KernelInterface> Implementation);
 
-  Executor *ParentExecutor;
+  Device *TheDevice;
   std::string Name;
   std::string DemangledName;
   std::unique_ptr<KernelInterface> Implementation;
@@ -136,9 +136,9 @@ public:
   TypedKernel &operator=(TypedKernel &&) = default;
 
   /// Parameters here have the same meaning as in KernelBase::create.
-  static Expected<TypedKernel> create(Executor *ParentExecutor,
+  static Expected<TypedKernel> create(Device *Dev,
                                       const MultiKernelLoaderSpec &Spec) {
-    auto MaybeBase = KernelBase::create(ParentExecutor, Spec);
+    auto MaybeBase = KernelBase::create(Dev, Spec);
     if (!MaybeBase) {
       return MaybeBase.takeError();
     }

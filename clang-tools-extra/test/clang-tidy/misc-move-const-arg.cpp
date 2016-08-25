@@ -23,19 +23,19 @@ public:
 
 int f1() {
   return std::move(42);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of a trivially-copyable type has no effect; remove std::move() [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of the trivially-copyable type 'int' has no effect; remove std::move() [misc-move-const-arg]
   // CHECK-FIXES: return 42;
 }
 
 int f2(int x2) {
   return std::move(x2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable of a trivially-copyable type
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable 'x2' of the trivially-copyable type 'int'
   // CHECK-FIXES: return x2;
 }
 
 int *f3(int *x3) {
   return std::move(x3);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable of a trivially-copyable type
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable 'x3' of the trivially-copyable type 'int *'
   // CHECK-FIXES: return x3;
 }
 
@@ -43,7 +43,7 @@ A f4(A x4) { return std::move(x4); }
 
 A f5(const A x5) {
   return std::move(x5);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x5' has no effect; remove std::move() or make the variable non-const [misc-move-const-arg]
   // CHECK-FIXES: return x5;
 }
 
@@ -55,7 +55,7 @@ void f7() { int a = f6(10); }
 void f8() {
   const A a;
   M1(A b = std::move(a);)
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: std::move of the const variable
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: std::move of the const variable 'a' has no effect; remove std::move() or make the variable non-const
   // CHECK-FIXES: M1(A b = a;)
 }
 
@@ -64,7 +64,7 @@ int f9() { return M2(1); }
 
 template <typename T> T f10(const int x10) {
   return std::move(x10);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x10' of the trivially-copyable type 'const int' has no effect; remove std::move() [misc-move-const-arg]
   // CHECK-FIXES: return x10;
 }
 void f11() {

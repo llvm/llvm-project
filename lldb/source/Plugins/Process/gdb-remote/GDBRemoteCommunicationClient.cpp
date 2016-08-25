@@ -516,21 +516,27 @@ GDBRemoteCommunicationClient::GetRemoteQSupported ()
     }
 }
 
-bool
-GDBRemoteCommunicationClient::GetThreadSuffixSupported ()
+void
+GDBRemoteCommunicationClient::ComputeThreadSuffixSupport()
 {
-    if (m_supports_thread_suffix == eLazyBoolCalculate)
+    if (m_supports_thread_suffix != eLazyBoolCalculate)
+        return;
+
+    StringExtractorGDBRemote response;
+    m_supports_thread_suffix = eLazyBoolNo;
+    if (SendPacketAndWaitForResponse("QThreadSuffixSupported", response, false) == PacketResult::Success)
     {
-        StringExtractorGDBRemote response;
-        m_supports_thread_suffix = eLazyBoolNo;
-        if (SendPacketAndWaitForResponse("QThreadSuffixSupported", response, false) == PacketResult::Success)
-        {
-            if (response.IsOKResponse())
-                m_supports_thread_suffix = eLazyBoolYes;
-        }
+        if (response.IsOKResponse())
+            m_supports_thread_suffix = eLazyBoolYes;
     }
-    return m_supports_thread_suffix;
 }
+
+bool
+GDBRemoteCommunicationClient::GetThreadSuffixSupported()
+{
+    return m_supports_thread_suffix == eLazyBoolYes;
+}
+
 bool
 GDBRemoteCommunicationClient::GetVContSupported (char flavor)
 {
@@ -592,26 +598,17 @@ GDBRemoteCommunicationClient::GetVContSupported (char flavor)
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationClient::SendThreadSpecificPacketAndWaitForResponse(lldb::tid_t tid, StreamString &&payload,
                                                                          StringExtractorGDBRemote &response,
-                                                                         bool send_async)
+                                                                         const Lock &lock)
 {
-    Lock lock(*this, send_async);
-    if (!lock)
-    {
-        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for %s packet.", __FUNCTION__,
-                        payload.GetString().c_str());
-        return PacketResult::ErrorNoSequenceLock;
-    }
-
     if (GetThreadSuffixSupported())
         payload.Printf(";thread:%4.4" PRIx64 ";", tid);
     else
     {
-        if (!SetCurrentThread(tid))
+        if (!SetCurrentThread(tid, lock))
             return PacketResult::ErrorSendFailed;
     }
 
-    return SendPacketAndWaitForResponseNoLock(payload.GetString(), response);
+    return SendPacketAndWaitForResponse(payload.GetString(), response, lock);
 }
 
 // Check if the target supports 'p' packet. It sends out a 'p'
@@ -624,11 +621,20 @@ GDBRemoteCommunicationClient::GetpPacketSupported (lldb::tid_t tid)
 {
     if (m_supports_p == eLazyBoolCalculate)
     {
+        Lock lock(*this, false);
+        if (!lock)
+        {
+            Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
+            if (log)
+                log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
+            return false;
+        }
+
         m_supports_p = eLazyBoolNo;
         StreamString payload;
         payload.PutCString("p0");
         StringExtractorGDBRemote response;
-        if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+        if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
                 PacketResult::Success &&
             response.IsNormalResponse())
         {
@@ -766,7 +772,7 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
         // Construct payload
         char sizeDescriptor[128];
         snprintf(sizeDescriptor, sizeof(sizeDescriptor), "%x,%x", offset, response_size);
-        PacketResult result = SendPacketAndWaitForResponseNoLock(payload_prefix_str + sizeDescriptor, this_response);
+        PacketResult result = SendPacketAndWaitForResponse(payload_prefix_str + sizeDescriptor, this_response, lock);
         if (result != PacketResult::Success)
             return result;
 
@@ -2789,7 +2795,7 @@ GDBRemoteCommunicationClient::KillSpawnedProcess (lldb::pid_t pid)
 }
 
 bool
-GDBRemoteCommunicationClient::SetCurrentThread (uint64_t tid)
+GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid, const Lock &lock)
 {
     if (m_curr_tid == tid)
         return true;
@@ -2802,7 +2808,7 @@ GDBRemoteCommunicationClient::SetCurrentThread (uint64_t tid)
         packet_len = ::snprintf (packet, sizeof(packet), "Hg%" PRIx64, tid);
     assert (packet_len + 1 < (int)sizeof(packet));
     StringExtractorGDBRemote response;
-    if (SendPacketAndWaitForResponse(packet, packet_len, response, false) == PacketResult::Success)
+    if (SendPacketAndWaitForResponse(llvm::StringRef(packet, packet_len), response, lock) == PacketResult::Success)
     {
         if (response.IsOKResponse())
         {
@@ -2963,9 +2969,9 @@ GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thr
         StringExtractorGDBRemote response;
         
         PacketResult packet_result;
-        for (packet_result = SendPacketAndWaitForResponseNoLock("qfThreadInfo", response);
+        for (packet_result = SendPacketAndWaitForResponse("qfThreadInfo", response, lock);
              packet_result == PacketResult::Success && response.IsNormalResponse();
-             packet_result = SendPacketAndWaitForResponseNoLock("qsThreadInfo", response))
+             packet_result = SendPacketAndWaitForResponse("qsThreadInfo", response, lock))
         {
             char ch = response.GetChar();
             if (ch == 'l')
@@ -3496,12 +3502,12 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
 }
 
 DataBufferSP
-GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg)
+GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, const Lock &lock)
 {
     StreamString payload;
     payload.Printf("p%x", reg);
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success ||
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success ||
         !response.IsNormalResponse())
         return nullptr;
 
@@ -3511,12 +3517,12 @@ GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg)
 }
 
 DataBufferSP
-GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid)
+GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid, const Lock &lock)
 {
     StreamString payload;
     payload.PutChar('g');
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success ||
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success ||
         !response.IsNormalResponse())
         return nullptr;
 
@@ -3526,25 +3532,26 @@ GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid)
 }
 
 bool
-GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::ArrayRef<uint8_t> data)
+GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::ArrayRef<uint8_t> data,
+                                            const Lock &lock)
 {
     StreamString payload;
     payload.Printf("P%x=", reg_num);
     payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
-    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
                PacketResult::Success &&
            response.IsOKResponse();
 }
 
 bool
-GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data)
+GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data, const Lock &lock)
 {
     StreamString payload;
     payload.PutChar('G');
     payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
-    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
                PacketResult::Success &&
            response.IsOKResponse();
 }
@@ -3555,12 +3562,21 @@ GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save
     save_id = 0; // Set to invalid save ID
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
-    
+
+    Lock lock(*this, false);
+    if (!lock)
+    {
+        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
+        if (log)
+            log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
+        return false;
+    }
+
     m_supports_QSaveRegisterState = eLazyBoolYes;
     StreamString payload;
     payload.PutCString("QSaveRegisterState");
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success)
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success)
         return false;
 
     if (response.IsUnsupportedResponse())
@@ -3583,10 +3599,19 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
 
+    Lock lock(*this, false);
+    if (!lock)
+    {
+        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
+        if (log)
+            log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
+        return false;
+    }
+
     StreamString payload;
     payload.Printf("QRestoreRegisterState:%u", save_id);
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success)
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success)
         return false;
 
     if (response.IsOKResponse())
@@ -3815,7 +3840,7 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             StreamString packet;
             packet.PutCString ("qSymbol::");
             StringExtractorGDBRemote response;
-            while (SendPacketAndWaitForResponseNoLock(packet.GetString(), response) == PacketResult::Success)
+            while (SendPacketAndWaitForResponse(packet.GetString(), response, lock) == PacketResult::Success)
             {
                 if (response.IsOKResponse())
                 {

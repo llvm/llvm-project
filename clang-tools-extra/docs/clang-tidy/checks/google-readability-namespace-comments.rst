@@ -1,11 +1,9 @@
 .. title:: clang-tidy - google-readability-namespace-comments
+.. meta::
+   :http-equiv=refresh: 5;URL=llvm-namespace-comment.html
 
 google-readability-namespace-comments
 =====================================
 
-
-Checks that long namespaces have a closing comment.
-
-http://llvm.org/docs/CodingStandards.html#namespace-indentation
-
-https://google.github.io/styleguide/cppguide.html#Namespaces
+The google-readability-namespace-comments check is an alias, please see
+`llvm-namespace-comment <llvm-namespace-comment.html>`_ for more information.

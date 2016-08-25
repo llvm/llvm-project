@@ -1,4 +1,14 @@
 add_executable(
+    device_test
+    DeviceTest.cpp)
+target_link_libraries(
+    device_test
+    streamexecutor
+    ${GTEST_BOTH_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
+add_test(DeviceTest device_test)
+
+add_executable(
     kernel_test
     KernelTest.cpp)
 target_link_libraries(
