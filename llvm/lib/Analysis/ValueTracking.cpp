@@ -795,6 +795,14 @@ static void computeKnownBitsFromShiftOperator(
     computeKnownBits(I->getOperand(0), KnownZero, KnownOne, Depth + 1, Q);
     KnownZero = KZF(KnownZero, ShiftAmt);
     KnownOne  = KOF(KnownOne, ShiftAmt);
+    // If there is conflict between KnownZero and KnownOne, this must be an
+    // overflowing left shift, so the shift result is undefined. Clear KnownZero
+    // and KnownOne bits so that other code could propagate this undef.
+    if ((KnownZero & KnownOne) != 0) {
+      KnownZero.clearAllBits();
+      KnownOne.clearAllBits();
+    }
+
     return;
   }
 
@@ -1065,13 +1073,23 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
   }
   case Instruction::Shl: {
     // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
-    auto KZF = [BitWidth](const APInt &KnownZero, unsigned ShiftAmt) {
-      return (KnownZero << ShiftAmt) |
-             APInt::getLowBitsSet(BitWidth, ShiftAmt); // Low bits known 0.
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    auto KZF = [BitWidth, NSW](const APInt &KnownZero, unsigned ShiftAmt) {
+      APInt KZResult =
+          (KnownZero << ShiftAmt) |
+          APInt::getLowBitsSet(BitWidth, ShiftAmt); // Low bits known 0.
+      // If this shift has "nsw" keyword, then the result is either a poison
+      // value or has the same sign bit as the first operand.
+      if (NSW && KnownZero.isNegative())
+        KZResult.setBit(BitWidth - 1);
+      return KZResult;
     };
 
-    auto KOF = [BitWidth](const APInt &KnownOne, unsigned ShiftAmt) {
-      return KnownOne << ShiftAmt;
+    auto KOF = [BitWidth, NSW](const APInt &KnownOne, unsigned ShiftAmt) {
+      APInt KOResult = KnownOne << ShiftAmt;
+      if (NSW && KnownOne.isNegative())
+        KOResult.setBit(BitWidth - 1);
+      return KOResult;
     };
 
     computeKnownBitsFromShiftOperator(I, KnownZero, KnownOne,

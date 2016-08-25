@@ -174,9 +174,6 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.Name = MF.getName();
   YamlMF.Alignment = MF.getAlignment();
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
-  YamlMF.HasInlineAsm = MF.hasInlineAsm();
-  YamlMF.AllVRegsAllocated = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::AllVRegsAllocated);
 
   YamlMF.Legalized = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
@@ -213,7 +210,6 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineRegisterInfo &RegInfo,
                          const TargetRegisterInfo *TRI) {
   MF.TracksRegLiveness = RegInfo.tracksLiveness();
-  MF.TracksSubRegLiveness = RegInfo.subRegLivenessEnabled();
 
   // Print the virtual register definitions.
   for (unsigned I = 0, E = RegInfo.getNumVirtRegs(); I < E; ++I) {

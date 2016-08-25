@@ -414,11 +414,9 @@ define i1 @test36(i32 %a) {
   ret i1 %d
 }
 
-; FIXME: The trunc is removed, but the icmp+lshr fold is missing.
 define <2 x i1> @test36vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test36vec(
-; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i32> %a, <i32 31, i32 31>
-; CHECK-NEXT:    [[D:%.*]] = icmp eq <2 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    [[D:%.*]] = icmp sgt <2 x i32> %a, <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %b = lshr <2 x i32> %a, <i32 31, i32 31>

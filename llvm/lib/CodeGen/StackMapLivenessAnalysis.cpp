@@ -63,7 +63,7 @@ public:
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::AllVRegsAllocated);
+        MachineFunctionProperties::Property::NoVRegs);
   }
 
   /// \brief Calculate the liveness information for the given machine function.

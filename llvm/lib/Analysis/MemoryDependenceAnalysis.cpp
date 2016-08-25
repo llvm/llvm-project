@@ -15,24 +15,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PredIteratorCache.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "memdep"
@@ -292,7 +306,7 @@ unsigned MemoryDependenceResults::getLoadLoadClobberFullWidthSize(
   unsigned NewLoadByteSize = LI->getType()->getPrimitiveSizeInBits() / 8U;
   NewLoadByteSize = NextPowerOf2(NewLoadByteSize);
 
-  while (1) {
+  while (true) {
     // If this load size is bigger than our known alignment or would not fit
     // into a native integer register, then we fail.
     if (NewLoadByteSize > LoadAlign ||
@@ -355,9 +369,9 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
     return MemDepResult::getUnknown();
 
   MemDepResult Result = MemDepResult::getUnknown();
-  llvm::SmallSet<Value *, 14> Seen;
+  SmallSet<Value *, 14> Seen;
   // Queue to process all pointers that are equivalent to load operand.
-  llvm::SmallVector<Value *, 8> LoadOperandsQueue;
+  SmallVector<Value *, 8> LoadOperandsQueue;
   LoadOperandsQueue.push_back(LoadOperand);
   while (!LoadOperandsQueue.empty()) {
     Value *Ptr = LoadOperandsQueue.pop_back_val();
@@ -395,7 +409,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst) {
-
   const Value *MemLocBase = nullptr;
   int64_t MemLocOffset = 0;
   unsigned Limit = BlockScanLimit;
@@ -1684,6 +1697,7 @@ INITIALIZE_PASS_END(MemoryDependenceWrapperPass, "memdep",
 MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {
   initializeMemoryDependenceWrapperPassPass(*PassRegistry::getPassRegistry());
 }
+
 MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() {}
 
 void MemoryDependenceWrapperPass::releaseMemory() {

@@ -1,7 +1,6 @@
 ; RUN: opt -S -vectorize-num-stores-pred=1 -force-vector-width=1 -force-vector-interleave=2 -loop-vectorize -verify-loop-info -simplifycfg < %s | FileCheck %s --check-prefix=UNROLL
 ; RUN: opt -S -vectorize-num-stores-pred=1 -force-vector-width=1 -force-vector-interleave=2 -loop-vectorize -verify-loop-info < %s | FileCheck %s --check-prefix=UNROLL-NOSIMPLIFY
 ; RUN: opt -S -vectorize-num-stores-pred=1 -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -enable-cond-stores-vec -verify-loop-info -simplifycfg < %s | FileCheck %s --check-prefix=VEC
-; RUN: opt -S -vectorize-num-stores-pred=1 -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -enable-cond-stores-vec -verify-loop-info -simplifycfg -instcombine < %s | FileCheck %s --check-prefix=VEC-IC
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
@@ -12,53 +11,33 @@ entry:
   br label %for.body
 
 ; VEC-LABEL: test
+; VEC:   %[[v0:.+]] = add i64 %index, 0
+; VEC:   %[[v1:.+]] = add i64 %index, 1
+; VEC:   %[[v2:.+]] = getelementptr inbounds i32, i32* %f, i64 %[[v0]]
+; VEC:   %[[v4:.+]] = getelementptr inbounds i32, i32* %f, i64 %[[v1]]
 ; VEC:   %[[v8:.+]] = icmp sgt <2 x i32> %{{.*}}, <i32 100, i32 100>
 ; VEC:   %[[v9:.+]] = add nsw <2 x i32> %{{.*}}, <i32 20, i32 20>
 ; VEC:   %[[v10:.+]] = and <2 x i1> %[[v8]], <i1 true, i1 true>
 ; VEC:   %[[v11:.+]] = extractelement <2 x i1> %[[v10]], i32 0
 ; VEC:   %[[v12:.+]] = icmp eq i1 %[[v11]], true
-; VEC:   %[[v13:.+]] = extractelement <2 x i32> %[[v9]], i32 0
-; VEC:   %[[v14:.+]] = extractelement <2 x i32*> %{{.*}}, i32 0
 ; VEC:   br i1 %[[v12]], label %[[cond:.+]], label %[[else:.+]]
 ;
 ; VEC: [[cond]]:
-; VEC:   store i32 %[[v13]], i32* %[[v14]], align 4
+; VEC:   %[[v13:.+]] = extractelement <2 x i32> %[[v9]], i32 0
+; VEC:   store i32 %[[v13]], i32* %[[v2]], align 4
 ; VEC:   br label %[[else:.+]]
 ;
 ; VEC: [[else]]:
 ; VEC:   %[[v15:.+]] = extractelement <2 x i1> %[[v10]], i32 1
 ; VEC:   %[[v16:.+]] = icmp eq i1 %[[v15]], true
-; VEC:   %[[v17:.+]] = extractelement <2 x i32> %[[v9]], i32 1
-; VEC:   %[[v18:.+]] = extractelement <2 x i32*> %{{.+}} i32 1
 ; VEC:   br i1 %[[v16]], label %[[cond2:.+]], label %[[else2:.+]]
 ;
 ; VEC: [[cond2]]:
-; VEC:   store i32 %[[v17]], i32* %[[v18]], align 4
+; VEC:   %[[v17:.+]] = extractelement <2 x i32> %[[v9]], i32 1
+; VEC:   store i32 %[[v17]], i32* %[[v4]], align 4
 ; VEC:   br label %[[else2:.+]]
 ;
 ; VEC: [[else2]]:
-
-; VEC-IC-LABEL: test
-; VEC-IC:   %[[v1:.+]] = icmp sgt <2 x i32> %{{.*}}, <i32 100, i32 100>
-; VEC-IC:   %[[v2:.+]] = add nsw <2 x i32> %{{.*}}, <i32 20, i32 20>
-; VEC-IC:   %[[v3:.+]] = extractelement <2 x i1> %[[v1]], i32 0
-; VEC-IC:   br i1 %[[v3]], label %[[cond:.+]], label %[[else:.+]]
-;
-; VEC-IC: [[cond]]:
-; VEC-IC:   %[[v4:.+]] = extractelement <2 x i32> %[[v2]], i32 0
-; VEC-IC:   store i32 %[[v4]], i32* %{{.*}}, align 4
-; VEC-IC:   br label %[[else:.+]]
-;
-; VEC-IC: [[else]]:
-; VEC-IC:   %[[v5:.+]] = extractelement <2 x i1> %[[v1]], i32 1
-; VEC-IC:   br i1 %[[v5]], label %[[cond2:.+]], label %[[else2:.+]]
-;
-; VEC-IC: [[cond2]]:
-; VEC-IC:   %[[v6:.+]] = extractelement <2 x i32> %[[v2]], i32 1
-; VEC-IC:   store i32 %[[v6]], i32* %{{.*}}, align 4
-; VEC-IC:   br label %[[else2:.+]]
-;
-; VEC-IC: [[else2]]:
 
 ; UNROLL-LABEL: test
 ; UNROLL: vector.body:

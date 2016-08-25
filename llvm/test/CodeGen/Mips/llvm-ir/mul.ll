@@ -247,7 +247,7 @@ entry:
   ; 64R6:           daddu   $[[T3:[0-9]+]], $[[T2]], $[[T1]]
   ; 64R6:           daddu   $2, $[[T1]], $[[T0]]
 
-  ; MM32:           lw      $25, %call16(__multi3)($2)
+  ; MM32:           lw      $25, %call16(__multi3)($16)
 
   %r = mul i128 %a, %b
   ret i128 %r

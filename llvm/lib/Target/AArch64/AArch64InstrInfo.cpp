@@ -29,7 +29,7 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AArch64GenInstrInfo.inc"
 
-static LLVM_CONSTEXPR MachineMemOperand::Flags MOSuppressPair =
+static const MachineMemOperand::Flags MOSuppressPair =
     MachineMemOperand::MOTargetFlag1;
 
 static cl::opt<unsigned>

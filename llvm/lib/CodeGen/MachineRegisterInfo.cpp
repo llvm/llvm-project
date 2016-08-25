@@ -21,11 +21,16 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
+  cl::init(true), cl::desc("Enable subregister liveness tracking."));
+
 // Pin the vtable to this file.
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF), TheDelegate(nullptr), TracksSubRegLiveness(false) {
+    : MF(MF), TheDelegate(nullptr),
+      TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
+                           EnableSubRegLiveness) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);

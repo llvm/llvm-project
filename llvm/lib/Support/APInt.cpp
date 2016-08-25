@@ -1495,7 +1495,7 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
   assert(n>1 && "n must be > 1");
 
   // b denotes the base of the number system. In our case b is 2^32.
-  LLVM_CONSTEXPR uint64_t b = uint64_t(1) << 32;
+  const uint64_t b = uint64_t(1) << 32;
 
   DEBUG(dbgs() << "KnuthDiv: m=" << m << " n=" << n << '\n');
   DEBUG(dbgs() << "KnuthDiv: original:");

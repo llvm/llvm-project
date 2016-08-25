@@ -10,7 +10,6 @@
 ...
 ---
 name:            test
-hasInlineAsm:    true
 tracksRegLiveness: true
 liveins:
   - { reg: '%rdi' }

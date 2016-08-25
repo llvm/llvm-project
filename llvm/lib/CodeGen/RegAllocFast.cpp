@@ -165,7 +165,7 @@ namespace {
 
     MachineFunctionProperties getSetProperties() const override {
       return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::AllVRegsAllocated);
+          MachineFunctionProperties::Property::NoVRegs);
     }
 
   private:

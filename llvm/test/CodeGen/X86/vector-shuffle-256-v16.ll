@@ -3564,7 +3564,9 @@ define <16 x i16> @insert_dup_elt3_mem_v16i16_i32(i32* %ptr) #0 {
 ; AVX1-LABEL: insert_dup_elt3_mem_v16i16_i32:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

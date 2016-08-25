@@ -19,7 +19,7 @@ file(COPY .
 if (LIBCXX_INSTALL_HEADERS)
   install(DIRECTORY .
     DESTINATION include/c++/v1
-    COMPONENT libcxx-headers
+    COMPONENT cxx-headers
     FILES_MATCHING
     ${LIBCXX_HEADER_PATTERN}
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
@@ -47,17 +47,20 @@ if (LIBCXX_INSTALL_HEADERS)
       DESTINATION include/c++/v1
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
       RENAME __config
-      COMPONENT libcxx-headers)
+      COMPONENT cxx-headers)
   endif()
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     # this target is just needed as a placeholder for the distribution target
-    add_custom_target(libcxx-headers)
-    add_custom_target(install-libcxx-headers
-                      DEPENDS libcxx-headers ${generated_config_deps}
+    add_custom_target(cxx-headers)
+    add_custom_target(install-cxx-headers
+                      DEPENDS cxx-headers ${generated_config_deps}
                       COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=libcxx-headers
+                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+
+    add_custom_target(libcxx-headers)
+    add_custom_target(install-libcxx-headers DEPENDS install-cxx-headers)
   endif()
 
 endif()

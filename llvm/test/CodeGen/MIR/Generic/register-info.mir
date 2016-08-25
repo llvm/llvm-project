@@ -18,7 +18,6 @@
 ---
 # CHECK: name: foo
 # CHECK: tracksRegLiveness: false
-# CHECK-NEXT: tracksSubRegLiveness: false
 # CHECK: ...
 name:            foo
 body: |
@@ -27,11 +26,9 @@ body: |
 ---
 # CHECK: name: bar
 # CHECK: tracksRegLiveness: true
-# CHECK-NEXT: tracksSubRegLiveness: true
 # CHECK: ...
 name: bar
 tracksRegLiveness: true
-tracksSubRegLiveness: true
 body: |
   bb.0:
 ...

@@ -12,28 +12,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfUnit.h"
-#include "DwarfAccelTable.h"
+#include "AddressPool.h"
 #include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
 #include "DwarfExpression.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/None.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/MC/MachineLocation.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 
@@ -52,12 +57,15 @@ DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU,
 void DIEDwarfExpression::EmitOp(uint8_t Op, const char* Comment) {
   DU.addUInt(DIE, dwarf::DW_FORM_data1, Op);
 }
+
 void DIEDwarfExpression::EmitSigned(int64_t Value) {
   DU.addSInt(DIE, dwarf::DW_FORM_sdata, Value);
 }
+
 void DIEDwarfExpression::EmitUnsigned(uint64_t Value) {
   DU.addUInt(DIE, dwarf::DW_FORM_udata, Value);
 }
+
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                          unsigned MachineReg) {
   return MachineReg == TRI.getFrameRegister(*AP.MF);
@@ -737,7 +745,7 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
 void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
                                         const DIType *Ty, const DIE &TyDIE) {
   if (!Ty->getName().empty() && !Ty->isForwardDecl()) {
-    bool IsImplementation = 0;
+    bool IsImplementation = false;
     if (auto *CT = dyn_cast<DICompositeType>(Ty)) {
       // A runtime language of 0 actually means C/C++ and that any
       // non-negative value is some version of Objective-C/C++.

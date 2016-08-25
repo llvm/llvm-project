@@ -381,16 +381,12 @@ struct MachineFunction {
   StringRef Name;
   unsigned Alignment = 0;
   bool ExposesReturnsTwice = false;
-  bool HasInlineAsm = false;
-  // MachineFunctionProperties
-  bool AllVRegsAllocated = false;
   // GISel MachineFunctionProperties.
   bool Legalized = false;
   bool RegBankSelected = false;
   bool Selected = false;
   // Register information
   bool TracksRegLiveness = false;
-  bool TracksSubRegLiveness = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
   std::vector<MachineFunctionLiveIn> LiveIns;
   Optional<std::vector<FlowStringValue>> CalleeSavedRegisters;
@@ -409,13 +405,10 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapRequired("name", MF.Name);
     YamlIO.mapOptional("alignment", MF.Alignment);
     YamlIO.mapOptional("exposesReturnsTwice", MF.ExposesReturnsTwice);
-    YamlIO.mapOptional("hasInlineAsm", MF.HasInlineAsm);
-    YamlIO.mapOptional("allVRegsAllocated", MF.AllVRegsAllocated);
     YamlIO.mapOptional("legalized", MF.Legalized);
     YamlIO.mapOptional("regBankSelected", MF.RegBankSelected);
     YamlIO.mapOptional("selected", MF.Selected);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness);
-    YamlIO.mapOptional("tracksSubRegLiveness", MF.TracksSubRegLiveness);
     YamlIO.mapOptional("registers", MF.VirtualRegisters);
     YamlIO.mapOptional("liveins", MF.LiveIns);
     YamlIO.mapOptional("calleeSavedRegisters", MF.CalleeSavedRegisters);

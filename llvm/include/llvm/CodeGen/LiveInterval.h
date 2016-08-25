@@ -316,6 +316,10 @@ namespace llvm {
     /// add liveness for a dead def.
     VNInfo *createDeadDef(SlotIndex Def, VNInfo::Allocator &VNInfoAllocator);
 
+    /// Create a def of value @p VNI. Return @p VNI. If there already exists
+    /// a definition at VNI->def, the value defined there must be @p VNI.
+    VNInfo *createDeadDef(VNInfo *VNI);
+
     /// Create a copy of the given value. The new value will be identical except
     /// for the Value number.
     VNInfo *createValueCopy(const VNInfo *orig,
@@ -451,10 +455,29 @@ namespace llvm {
     /// may have grown since it was inserted).
     iterator addSegment(Segment S);
 
+    /// Attempt to extend a value defined after @p StartIdx to include @p Use.
+    /// Both @p StartIdx and @p Use should be in the same basic block. In case
+    /// of subranges, an extension could be prevented by an explicit "undef"
+    /// caused by a <def,read-undef> on a non-overlapping lane. The list of
+    /// location of such "undefs" should be provided in @p Undefs.
+    /// The return value is a pair: the first element is VNInfo of the value
+    /// that was extended (possibly nullptr), the second is a boolean value
+    /// indicating whether an "undef" was encountered.
     /// If this range is live before @p Use in the basic block that starts at
-    /// @p StartIdx, extend it to be live up to @p Use, and return the value. If
-    /// there is no segment before @p Use, return nullptr.
-    VNInfo *extendInBlock(SlotIndex StartIdx, SlotIndex Use);
+    /// @p StartIdx, and there is no intervening "undef", extend it to be live
+    /// up to @p Use, and return the pair {value, false}. If there is no
+    /// segment before @p Use and there is no "undef" between @p StartIdx and
+    /// @p Use, return {nullptr, false}. If there is an "undef" before @p Use,
+    /// return {nullptr, true}.
+    std::pair<VNInfo*,bool> extendInBlock(ArrayRef<SlotIndex> Undefs,
+        SlotIndex StartIdx, SlotIndex Use);
+
+    /// Simplified version of the above "extendInBlock", which assumes that
+    /// no register lanes are undefined by <def,read-undef> operands.
+    /// If this range is live before @p Use in the basic block that starts
+    /// at @p StartIdx, extend it to be live up to @p Use, and return the
+    /// value. If there is no segment before @p Use, return nullptr.
+    VNInfo *extendInBlock(SlotIndex StartIdx, SlotIndex Kill);
 
     /// join - Join two live ranges (this, and other) together.  This applies
     /// mappings to the value numbers in the LHS/RHS ranges as specified.  If
@@ -555,6 +578,16 @@ namespace llvm {
       return thisIndex < otherIndex;
     }
 
+    /// Returns true if there is an explicit "undef" between @p Begin
+    /// @p End.
+    bool isUndefIn(ArrayRef<SlotIndex> Undefs, SlotIndex Begin,
+                   SlotIndex End) const {
+      return std::any_of(Undefs.begin(), Undefs.end(),
+                [Begin,End] (SlotIndex Idx) -> bool {
+                  return Begin <= Idx && Idx < End;
+                });
+    }
+
     /// Flush segment set into the regular segment vector.
     /// The method is to be called after the live range
     /// has been created, if use of the segment set was
@@ -581,7 +614,6 @@ namespace llvm {
     friend class LiveRangeUpdater;
     void addSegmentToSet(Segment S);
     void markValNoForDeletion(VNInfo *V);
-
   };
 
   inline raw_ostream &operator<<(raw_ostream &OS, const LiveRange &LR) {
@@ -728,6 +760,13 @@ namespace llvm {
     void markNotSpillable() {
       weight = llvm::huge_valf;
     }
+
+    /// For a given lane mask @p LaneMask, compute indexes at which the
+    /// lane is marked undefined by subregister <def,read-undef> definitions.
+    void computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
+                               LaneBitmask LaneMask,
+                               const MachineRegisterInfo &MRI,
+                               const SlotIndexes &Indexes) const;
 
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();

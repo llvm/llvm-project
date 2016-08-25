@@ -143,6 +143,7 @@ void RegAllocBase::allocatePhysRegs() {
         continue;
       }
       DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
+      assert(!SplitVirtReg->empty() && "expecting non-empty interval");
       assert(TargetRegisterInfo::isVirtualRegister(SplitVirtReg->reg) &&
              "expect split value in virtual register");
       enqueue(SplitVirtReg);

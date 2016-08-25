@@ -325,12 +325,30 @@ private:
     return LRCalc[SpillMode != SM_Partition && RegIdx != 0];
   }
 
+  /// Find a subrange corresponding to the lane mask @p LM in the live
+  /// interval @p LI. The interval @p LI is assumed to contain such a subrange.
+  /// This function is used to find corresponding subranges between the
+  /// original interval and the new intervals.
+  LiveInterval::SubRange &getSubRangeForMask(LaneBitmask LM, LiveInterval &LI);
+
+  /// Add a segment to the interval LI for the value number VNI. If LI has
+  /// subranges, corresponding segments will be added to them as well, but
+  /// with newly created value numbers. If Original is true, dead def will
+  /// only be added a subrange of LI if the corresponding subrange of the
+  /// original interval has a def at this index. Otherwise, all subranges
+  /// of LI will be updated.
+  void addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original);
+
   /// defValue - define a value in RegIdx from ParentVNI at Idx.
   /// Idx does not have to be ParentVNI->def, but it must be contained within
   /// ParentVNI's live range in ParentLI. The new value is added to the value
-  /// map.
+  /// map. The value being defined may either come from rematerialization
+  /// (or an inserted copy), or it may be coming from the original interval.
+  /// The parameter Original should be true in the latter case, otherwise
+  /// it should be false.
   /// Return the new LI value.
-  VNInfo *defValue(unsigned RegIdx, const VNInfo *ParentVNI, SlotIndex Idx);
+  VNInfo *defValue(unsigned RegIdx, const VNInfo *ParentVNI, SlotIndex Idx,
+                   bool Original);
 
   /// forceRecompute - Force the live range of ParentVNI in RegIdx to be
   /// recomputed by LiveRangeCalc::extend regardless of the number of defs.
@@ -367,6 +385,11 @@ private:
   /// transferValues - Transfer values to the new ranges.
   /// Return true if any ranges were skipped.
   bool transferValues();
+
+  /// Live range @p LR has a live PHI def at the beginning of block @p B.
+  /// Extend the range @p LR of all predecessor values that reach this def.
+  void extendPHIRange(MachineBasicBlock &B, LiveRangeCalc &LRC,
+                      LiveRange &LR, ArrayRef<SlotIndex>);
 
   /// extendPHIKillRanges - Extend the ranges of all values killed by original
   /// parent PHIDefs.

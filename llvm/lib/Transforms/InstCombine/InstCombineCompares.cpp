@@ -1178,164 +1178,6 @@ Instruction *InstCombiner::foldICmpAddOpConst(Instruction &ICI,
   return new ICmpInst(ICmpInst::ICMP_SLT, X, ConstantExpr::getSub(SMax, C));
 }
 
-/// Fold "icmp pred, ([su]div X, DivRHS), CmpRHS" where DivRHS and CmpRHS are
-/// both known to be integer constants.
-Instruction *InstCombiner::foldICmpDivConstConst(ICmpInst &ICI,
-                                                 BinaryOperator *DivI,
-                                                 ConstantInt *DivRHS) {
-  ConstantInt *CmpRHS = cast<ConstantInt>(ICI.getOperand(1));
-  const APInt &CmpRHSV = CmpRHS->getValue();
-
-  // FIXME: If the operand types don't match the type of the divide
-  // then don't attempt this transform. The code below doesn't have the
-  // logic to deal with a signed divide and an unsigned compare (and
-  // vice versa). This is because (x /s C1) <s C2  produces different
-  // results than (x /s C1) <u C2 or (x /u C1) <s C2 or even
-  // (x /u C1) <u C2.  Simply casting the operands and result won't
-  // work. :(  The if statement below tests that condition and bails
-  // if it finds it.
-  bool DivIsSigned = DivI->getOpcode() == Instruction::SDiv;
-  if (!ICI.isEquality() && DivIsSigned != ICI.isSigned())
-    return nullptr;
-  if (DivRHS->isZero())
-    return nullptr; // The ProdOV computation fails on divide by zero.
-  if (DivIsSigned && DivRHS->isAllOnesValue())
-    return nullptr; // The overflow computation also screws up here
-  if (DivRHS->isOne()) {
-    // This eliminates some funny cases with INT_MIN.
-    ICI.setOperand(0, DivI->getOperand(0));   // X/1 == X.
-    return &ICI;
-  }
-
-  // Compute Prod = CI * DivRHS. We are essentially solving an equation
-  // of form X/C1=C2. We solve for X by multiplying C1 (DivRHS) and
-  // C2 (CI). By solving for X we can turn this into a range check
-  // instead of computing a divide.
-  Constant *Prod = ConstantExpr::getMul(CmpRHS, DivRHS);
-
-  // Determine if the product overflows by seeing if the product is
-  // not equal to the divide. Make sure we do the same kind of divide
-  // as in the LHS instruction that we're folding.
-  bool ProdOV = (DivIsSigned ? ConstantExpr::getSDiv(Prod, DivRHS) :
-                 ConstantExpr::getUDiv(Prod, DivRHS)) != CmpRHS;
-
-  // Get the ICmp opcode
-  ICmpInst::Predicate Pred = ICI.getPredicate();
-
-  // If the division is known to be exact, then there is no remainder from the
-  // divide, so the covered range size is unit, otherwise it is the divisor.
-  ConstantInt *RangeSize = DivI->isExact() ? getOne(Prod) : DivRHS;
-
-  // Figure out the interval that is being checked.  For example, a comparison
-  // like "X /u 5 == 0" is really checking that X is in the interval [0, 5).
-  // Compute this interval based on the constants involved and the signedness of
-  // the compare/divide.  This computes a half-open interval, keeping track of
-  // whether either value in the interval overflows.  After analysis each
-  // overflow variable is set to 0 if it's corresponding bound variable is valid
-  // -1 if overflowed off the bottom end, or +1 if overflowed off the top end.
-  int LoOverflow = 0, HiOverflow = 0;
-  Constant *LoBound = nullptr, *HiBound = nullptr;
-
-  if (!DivIsSigned) {  // udiv
-    // e.g. X/5 op 3  --> [15, 20)
-    LoBound = Prod;
-    HiOverflow = LoOverflow = ProdOV;
-    if (!HiOverflow) {
-      // If this is not an exact divide, then many values in the range collapse
-      // to the same result value.
-      HiOverflow = AddWithOverflow(HiBound, LoBound, RangeSize, false);
-    }
-  } else if (DivRHS->getValue().isStrictlyPositive()) { // Divisor is > 0.
-    if (CmpRHSV == 0) {       // (X / pos) op 0
-      // Can't overflow.  e.g.  X/2 op 0 --> [-1, 2)
-      LoBound = ConstantExpr::getNeg(SubOne(RangeSize));
-      HiBound = RangeSize;
-    } else if (CmpRHSV.isStrictlyPositive()) {   // (X / pos) op pos
-      LoBound = Prod;     // e.g.   X/5 op 3 --> [15, 20)
-      HiOverflow = LoOverflow = ProdOV;
-      if (!HiOverflow)
-        HiOverflow = AddWithOverflow(HiBound, Prod, RangeSize, true);
-    } else {                       // (X / pos) op neg
-      // e.g. X/5 op -3  --> [-15-4, -15+1) --> [-19, -14)
-      HiBound = AddOne(Prod);
-      LoOverflow = HiOverflow = ProdOV ? -1 : 0;
-      if (!LoOverflow) {
-        ConstantInt *DivNeg =cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
-        LoOverflow = AddWithOverflow(LoBound, HiBound, DivNeg, true) ? -1 : 0;
-      }
-    }
-  } else if (DivRHS->isNegative()) { // Divisor is < 0.
-    if (DivI->isExact())
-      RangeSize = cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
-    if (CmpRHSV == 0) {       // (X / neg) op 0
-      // e.g. X/-5 op 0  --> [-4, 5)
-      LoBound = AddOne(RangeSize);
-      HiBound = cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
-      if (HiBound == DivRHS) {     // -INTMIN = INTMIN
-        HiOverflow = 1;            // [INTMIN+1, overflow)
-        HiBound = nullptr;         // e.g. X/INTMIN = 0 --> X > INTMIN
-      }
-    } else if (CmpRHSV.isStrictlyPositive()) {   // (X / neg) op pos
-      // e.g. X/-5 op 3  --> [-19, -14)
-      HiBound = AddOne(Prod);
-      HiOverflow = LoOverflow = ProdOV ? -1 : 0;
-      if (!LoOverflow)
-        LoOverflow = AddWithOverflow(LoBound, HiBound, RangeSize, true) ? -1:0;
-    } else {                       // (X / neg) op neg
-      LoBound = Prod;       // e.g. X/-5 op -3  --> [15, 20)
-      LoOverflow = HiOverflow = ProdOV;
-      if (!HiOverflow)
-        HiOverflow = SubWithOverflow(HiBound, Prod, RangeSize, true);
-    }
-
-    // Dividing by a negative swaps the condition.  LT <-> GT
-    Pred = ICmpInst::getSwappedPredicate(Pred);
-  }
-
-  Value *X = DivI->getOperand(0);
-  switch (Pred) {
-  default: llvm_unreachable("Unhandled icmp opcode!");
-  case ICmpInst::ICMP_EQ:
-    if (LoOverflow && HiOverflow)
-      return replaceInstUsesWith(ICI, Builder->getFalse());
-    if (HiOverflow)
-      return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SGE :
-                          ICmpInst::ICMP_UGE, X, LoBound);
-    if (LoOverflow)
-      return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SLT :
-                          ICmpInst::ICMP_ULT, X, HiBound);
-    return replaceInstUsesWith(ICI, InsertRangeTest(X, LoBound, HiBound,
-                                                    DivIsSigned, true));
-  case ICmpInst::ICMP_NE:
-    if (LoOverflow && HiOverflow)
-      return replaceInstUsesWith(ICI, Builder->getTrue());
-    if (HiOverflow)
-      return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SLT :
-                          ICmpInst::ICMP_ULT, X, LoBound);
-    if (LoOverflow)
-      return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SGE :
-                          ICmpInst::ICMP_UGE, X, HiBound);
-    return replaceInstUsesWith(ICI, InsertRangeTest(X, LoBound, HiBound,
-                                                    DivIsSigned, false));
-  case ICmpInst::ICMP_ULT:
-  case ICmpInst::ICMP_SLT:
-    if (LoOverflow == +1)   // Low bound is greater than input range.
-      return replaceInstUsesWith(ICI, Builder->getTrue());
-    if (LoOverflow == -1)   // Low bound is less than input range.
-      return replaceInstUsesWith(ICI, Builder->getFalse());
-    return new ICmpInst(Pred, X, LoBound);
-  case ICmpInst::ICMP_UGT:
-  case ICmpInst::ICMP_SGT:
-    if (HiOverflow == +1)       // High bound greater than input range.
-      return replaceInstUsesWith(ICI, Builder->getFalse());
-    if (HiOverflow == -1)       // High bound less than input range.
-      return replaceInstUsesWith(ICI, Builder->getTrue());
-    if (Pred == ICmpInst::ICMP_UGT)
-      return new ICmpInst(ICmpInst::ICMP_UGE, X, HiBound);
-    return new ICmpInst(ICmpInst::ICMP_SGE, X, HiBound);
-  }
-}
-
 /// Handle "(icmp eq/ne (ashr/lshr const2, A), const1)" ->
 /// (icmp eq/ne A, Log2(const2/const1)) ->
 /// (icmp eq/ne A, Log2(const2) - Log2(const1)).
@@ -1988,17 +1830,14 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
   if (Cmp.isEquality() && Shr->isExact() && Shr->hasOneUse() && *C == 0)
     return new ICmpInst(Pred, X, Cmp.getOperand(1));
 
-  // FIXME: This check restricts all folds under here to scalar types.
-  // Handle equality comparisons of shift-by-constant.
-  ConstantInt *ShAmt = dyn_cast<ConstantInt>(Shr->getOperand(1));
-  if (!ShAmt)
+  const APInt *ShiftAmt;
+  if (!match(Shr->getOperand(1), m_APInt(ShiftAmt)))
     return nullptr;
 
-  // Check that the shift amount is in range.  If not, don't perform
-  // undefined shifts.  When the shift is visited it will be
-  // simplified.
-  uint32_t TypeBits = C->getBitWidth();
-  uint32_t ShAmtVal = (uint32_t)ShAmt->getLimitedValue(TypeBits);
+  // Check that the shift amount is in range. If not, don't perform undefined
+  // shifts. When the shift is visited it will be simplified.
+  unsigned TypeBits = C->getBitWidth();
+  unsigned ShAmtVal = ShiftAmt->getLimitedValue(TypeBits);
   if (ShAmtVal >= TypeBits || ShAmtVal == 0)
     return nullptr;
 
@@ -2013,6 +1852,11 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
     // by a power of 2.  Since we already have logic to simplify these,
     // transform to div and then simplify the resultant comparison.
     if (IsAShr && (!Shr->isExact() || ShAmtVal == TypeBits - 1))
+      return nullptr;
+
+    // FIXME: This check restricts this fold to scalar types.
+    ConstantInt *ShAmt = dyn_cast<ConstantInt>(Shr->getOperand(1));
+    if (!ShAmt)
       return nullptr;
 
     // Revisit the shift (to delete it).
@@ -2035,24 +1879,32 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
     assert(TheDiv->getOpcode() == Instruction::SDiv ||
            TheDiv->getOpcode() == Instruction::UDiv);
 
-    Instruction *Res =
-        foldICmpDivConstConst(Cmp, TheDiv, cast<ConstantInt>(DivCst));
+    Instruction *Res = foldICmpDivConstant(
+        Cmp, TheDiv, &(cast<ConstantInt>(DivCst)->getValue()));
     assert(Res && "This div/cst should have folded!");
     return Res;
   }
 
+  // Handle equality comparisons of shift-by-constant.
+
+  // If the comparison constant changes with the shift, the comparison cannot
+  // succeed (bits of the comparison constant cannot match the shifted value).
+  // This should be known by InstSimplify and already be folded to true/false.
+  assert(((IsAShr && C->shl(ShAmtVal).ashr(ShAmtVal) == *C) ||
+          (!IsAShr && C->shl(ShAmtVal).lshr(ShAmtVal) == *C)) &&
+         "Expected icmp+shr simplify did not occur.");
+
   // Check if the bits shifted out are known to be zero. If so, we can compare
   // against the unshifted value:
   //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
-  ConstantInt *ShiftedCmpRHS = Builder->getInt(*C << ShAmtVal);
-  if (Shr->hasOneUse() && Shr->isExact())
-    return new ICmpInst(Pred, X, ShiftedCmpRHS);
-
+  Constant *ShiftedCmpRHS = ConstantInt::get(Shr->getType(), *C << ShAmtVal);
   if (Shr->hasOneUse()) {
-    // Otherwise strength reduce the shift into an and.
-    APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
-    Constant *Mask = Builder->getInt(Val);
+    if (Shr->isExact())
+      return new ICmpInst(Pred, X, ShiftedCmpRHS);
 
+    // Otherwise strength reduce the shift into an 'and'.
+    APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
+    Constant *Mask = ConstantInt::get(Shr->getType(), Val);
     Value *And = Builder->CreateAnd(X, Mask, Shr->getName() + ".mask");
     return new ICmpInst(Pred, And, ShiftedCmpRHS);
   }
@@ -2090,7 +1942,7 @@ Instruction *InstCombiner::foldICmpUDivConstant(ICmpInst &Cmp,
 }
 
 Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &ICI,
-                                               BinaryOperator *LHSI,
+                                               BinaryOperator *DivI,
                                                const APInt *RHSV) {
   // FIXME: This check restricts all folds under here to scalar types.
   ConstantInt *RHS = dyn_cast<ConstantInt>(ICI.getOperand(1));
@@ -2103,10 +1955,161 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &ICI,
   // checked.  If there is an overflow on the low or high side, remember
   // it, otherwise compute the range [low, hi) bounding the new value.
   // See: InsertRangeTest above for the kinds of replacements possible.
-  if (ConstantInt *DivRHS = dyn_cast<ConstantInt>(LHSI->getOperand(1)))
-    if (Instruction *R =
-            foldICmpDivConstConst(ICI, LHSI, DivRHS))
-      return R;
+  ConstantInt *DivRHS = dyn_cast<ConstantInt>(DivI->getOperand(1));
+  if (!DivRHS)
+    return nullptr;
+
+  ConstantInt *CmpRHS = cast<ConstantInt>(ICI.getOperand(1));
+  const APInt &CmpRHSV = CmpRHS->getValue();
+
+  // FIXME: If the operand types don't match the type of the divide
+  // then don't attempt this transform. The code below doesn't have the
+  // logic to deal with a signed divide and an unsigned compare (and
+  // vice versa). This is because (x /s C1) <s C2  produces different
+  // results than (x /s C1) <u C2 or (x /u C1) <s C2 or even
+  // (x /u C1) <u C2.  Simply casting the operands and result won't
+  // work. :(  The if statement below tests that condition and bails
+  // if it finds it.
+  bool DivIsSigned = DivI->getOpcode() == Instruction::SDiv;
+  if (!ICI.isEquality() && DivIsSigned != ICI.isSigned())
+    return nullptr;
+  if (DivRHS->isZero())
+    return nullptr; // The ProdOV computation fails on divide by zero.
+  if (DivIsSigned && DivRHS->isAllOnesValue())
+    return nullptr; // The overflow computation also screws up here
+  if (DivRHS->isOne()) {
+    // This eliminates some funny cases with INT_MIN.
+    ICI.setOperand(0, DivI->getOperand(0));   // X/1 == X.
+    return &ICI;
+  }
+
+  // Compute Prod = CI * DivRHS. We are essentially solving an equation
+  // of form X/C1=C2. We solve for X by multiplying C1 (DivRHS) and
+  // C2 (CI). By solving for X we can turn this into a range check
+  // instead of computing a divide.
+  Constant *Prod = ConstantExpr::getMul(CmpRHS, DivRHS);
+
+  // Determine if the product overflows by seeing if the product is
+  // not equal to the divide. Make sure we do the same kind of divide
+  // as in the LHS instruction that we're folding.
+  bool ProdOV = (DivIsSigned ? ConstantExpr::getSDiv(Prod, DivRHS) :
+                 ConstantExpr::getUDiv(Prod, DivRHS)) != CmpRHS;
+
+  // Get the ICmp opcode
+  ICmpInst::Predicate Pred = ICI.getPredicate();
+
+  // If the division is known to be exact, then there is no remainder from the
+  // divide, so the covered range size is unit, otherwise it is the divisor.
+  ConstantInt *RangeSize = DivI->isExact() ? getOne(Prod) : DivRHS;
+
+  // Figure out the interval that is being checked.  For example, a comparison
+  // like "X /u 5 == 0" is really checking that X is in the interval [0, 5).
+  // Compute this interval based on the constants involved and the signedness of
+  // the compare/divide.  This computes a half-open interval, keeping track of
+  // whether either value in the interval overflows.  After analysis each
+  // overflow variable is set to 0 if it's corresponding bound variable is valid
+  // -1 if overflowed off the bottom end, or +1 if overflowed off the top end.
+  int LoOverflow = 0, HiOverflow = 0;
+  Constant *LoBound = nullptr, *HiBound = nullptr;
+
+  if (!DivIsSigned) {  // udiv
+    // e.g. X/5 op 3  --> [15, 20)
+    LoBound = Prod;
+    HiOverflow = LoOverflow = ProdOV;
+    if (!HiOverflow) {
+      // If this is not an exact divide, then many values in the range collapse
+      // to the same result value.
+      HiOverflow = AddWithOverflow(HiBound, LoBound, RangeSize, false);
+    }
+  } else if (DivRHS->getValue().isStrictlyPositive()) { // Divisor is > 0.
+    if (CmpRHSV == 0) {       // (X / pos) op 0
+      // Can't overflow.  e.g.  X/2 op 0 --> [-1, 2)
+      LoBound = ConstantExpr::getNeg(SubOne(RangeSize));
+      HiBound = RangeSize;
+    } else if (CmpRHSV.isStrictlyPositive()) {   // (X / pos) op pos
+      LoBound = Prod;     // e.g.   X/5 op 3 --> [15, 20)
+      HiOverflow = LoOverflow = ProdOV;
+      if (!HiOverflow)
+        HiOverflow = AddWithOverflow(HiBound, Prod, RangeSize, true);
+    } else {                       // (X / pos) op neg
+      // e.g. X/5 op -3  --> [-15-4, -15+1) --> [-19, -14)
+      HiBound = AddOne(Prod);
+      LoOverflow = HiOverflow = ProdOV ? -1 : 0;
+      if (!LoOverflow) {
+        ConstantInt *DivNeg =cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
+        LoOverflow = AddWithOverflow(LoBound, HiBound, DivNeg, true) ? -1 : 0;
+      }
+    }
+  } else if (DivRHS->isNegative()) { // Divisor is < 0.
+    if (DivI->isExact())
+      RangeSize = cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
+    if (CmpRHSV == 0) {       // (X / neg) op 0
+      // e.g. X/-5 op 0  --> [-4, 5)
+      LoBound = AddOne(RangeSize);
+      HiBound = cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
+      if (HiBound == DivRHS) {     // -INTMIN = INTMIN
+        HiOverflow = 1;            // [INTMIN+1, overflow)
+        HiBound = nullptr;         // e.g. X/INTMIN = 0 --> X > INTMIN
+      }
+    } else if (CmpRHSV.isStrictlyPositive()) {   // (X / neg) op pos
+      // e.g. X/-5 op 3  --> [-19, -14)
+      HiBound = AddOne(Prod);
+      HiOverflow = LoOverflow = ProdOV ? -1 : 0;
+      if (!LoOverflow)
+        LoOverflow = AddWithOverflow(LoBound, HiBound, RangeSize, true) ? -1:0;
+    } else {                       // (X / neg) op neg
+      LoBound = Prod;       // e.g. X/-5 op -3  --> [15, 20)
+      LoOverflow = HiOverflow = ProdOV;
+      if (!HiOverflow)
+        HiOverflow = SubWithOverflow(HiBound, Prod, RangeSize, true);
+    }
+
+    // Dividing by a negative swaps the condition.  LT <-> GT
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  Value *X = DivI->getOperand(0);
+  switch (Pred) {
+    default: llvm_unreachable("Unhandled icmp opcode!");
+    case ICmpInst::ICMP_EQ:
+      if (LoOverflow && HiOverflow)
+        return replaceInstUsesWith(ICI, Builder->getFalse());
+      if (HiOverflow)
+        return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SGE :
+                            ICmpInst::ICMP_UGE, X, LoBound);
+      if (LoOverflow)
+        return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SLT :
+                            ICmpInst::ICMP_ULT, X, HiBound);
+      return replaceInstUsesWith(ICI, InsertRangeTest(X, LoBound, HiBound,
+                                                      DivIsSigned, true));
+    case ICmpInst::ICMP_NE:
+      if (LoOverflow && HiOverflow)
+        return replaceInstUsesWith(ICI, Builder->getTrue());
+      if (HiOverflow)
+        return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SLT :
+                            ICmpInst::ICMP_ULT, X, LoBound);
+      if (LoOverflow)
+        return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SGE :
+                            ICmpInst::ICMP_UGE, X, HiBound);
+      return replaceInstUsesWith(ICI, InsertRangeTest(X, LoBound, HiBound,
+                                                      DivIsSigned, false));
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_SLT:
+      if (LoOverflow == +1)   // Low bound is greater than input range.
+        return replaceInstUsesWith(ICI, Builder->getTrue());
+      if (LoOverflow == -1)   // Low bound is less than input range.
+        return replaceInstUsesWith(ICI, Builder->getFalse());
+      return new ICmpInst(Pred, X, LoBound);
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_SGT:
+      if (HiOverflow == +1)       // High bound greater than input range.
+        return replaceInstUsesWith(ICI, Builder->getFalse());
+      if (HiOverflow == -1)       // High bound less than input range.
+        return replaceInstUsesWith(ICI, Builder->getTrue());
+      if (Pred == ICmpInst::ICMP_UGT)
+        return new ICmpInst(ICmpInst::ICMP_UGE, X, HiBound);
+      return new ICmpInst(ICmpInst::ICMP_SGE, X, HiBound);
+  }
 
   return nullptr;
 }

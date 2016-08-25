@@ -1409,7 +1409,7 @@ struct MDFieldPrinter {
                      bool ShouldSkipNull = true);
   template <class IntTy>
   void printInt(StringRef Name, IntTy Int, bool ShouldSkipZero = true);
-  void printBool(StringRef Name, bool Value);
+  void printBool(StringRef Name, bool Value, Optional<bool> Default = None);
   void printDIFlags(StringRef Name, unsigned Flags);
   template <class IntTy, class Stringifier>
   void printDwarfEnum(StringRef Name, IntTy Value, Stringifier toString,
@@ -1472,7 +1472,10 @@ void MDFieldPrinter::printInt(StringRef Name, IntTy Int, bool ShouldSkipZero) {
   Out << FS << Name << ": " << Int;
 }
 
-void MDFieldPrinter::printBool(StringRef Name, bool Value) {
+void MDFieldPrinter::printBool(StringRef Name, bool Value,
+                               Optional<bool> Default) {
+  if (Default && Value == *Default)
+    return;
   Out << FS << Name << ": " << (Value ? "true" : "false");
 }
 
@@ -1666,6 +1669,7 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printMetadata("imports", N->getRawImportedEntities());
   Printer.printMetadata("macros", N->getRawMacros());
   Printer.printInt("dwoId", N->getDWOId());
+  Printer.printBool("splitDebugInlining", N->getSplitDebugInlining(), true);
   Out << ")";
 }
 
