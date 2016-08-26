@@ -22,7 +22,7 @@
 namespace llvm {
 namespace lto {
 /// Type for client-supplied callback when a buffer is loaded from the cache.
-typedef std::function<void(std::unique_ptr<MemoryBuffer>)> AddBufferFn;
+typedef std::function<void(std::string)> AddBufferFn;
 
 /// Manage caching on the filesystem.
 ///
@@ -65,7 +65,7 @@ class CacheObjectOutput : public NativeObjectOutput {
   /// Path to temporary file used to buffer output that will be committed to the
   /// cache entry when this object is destroyed
   SmallString<128> TempFilename;
-  /// User-supplied callback, called when the buffer is pulled out of the cache
+  /// User-supplied callback, used to provide path to cache entry
   /// (potentially after creating it).
   AddBufferFn AddBuffer;
 
@@ -77,8 +77,8 @@ public:
   /// Create a CacheObjectOutput: the client is supposed to create it in the
   /// callback supplied to LTO::run. The \p CacheDirectoryPath points to the
   /// directory on disk where to store the cache, and \p AddBuffer will be
-  /// called when the buffer is pulled out of the cache (potentially after
-  /// creating it).
+  /// called when the buffer is ready to be pulled out of the cache
+  /// (potentially after creating it).
   CacheObjectOutput(StringRef CacheDirectoryPath, AddBufferFn AddBuffer)
       : CacheDirectoryPath(CacheDirectoryPath), AddBuffer(AddBuffer) {}
 
