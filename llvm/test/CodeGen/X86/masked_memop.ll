@@ -2346,6 +2346,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    ## implicit-def: %XMM0
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_2
@@ -2356,6 +2357,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $14, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.load1
@@ -2364,6 +2366,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $13, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.load4
@@ -2372,6 +2375,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $12, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.load7
@@ -2380,6 +2384,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $11, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.load10
@@ -2388,6 +2393,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $10, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.load13
@@ -2396,6 +2402,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $9, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.load16
@@ -2404,6 +2411,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $8, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.load19
@@ -2412,6 +2420,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $7, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.load22
@@ -2420,6 +2429,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $6, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_20
 ; AVX512F-NEXT:  ## BB#19: ## %cond.load25
@@ -2428,6 +2438,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $5, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_22
 ; AVX512F-NEXT:  ## BB#21: ## %cond.load28
@@ -2436,6 +2447,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $4, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_24
 ; AVX512F-NEXT:  ## BB#23: ## %cond.load31
@@ -2444,6 +2456,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $3, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_26
 ; AVX512F-NEXT:  ## BB#25: ## %cond.load34
@@ -2452,6 +2465,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $2, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_28
 ; AVX512F-NEXT:  ## BB#27: ## %cond.load37
@@ -2460,6 +2474,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:    kshiftlw $1, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_30
 ; AVX512F-NEXT:  ## BB#29: ## %cond.load40
@@ -2467,6 +2482,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:  LBB50_30: ## %else41
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB50_32
 ; AVX512F-NEXT:  ## BB#31: ## %cond.load43
@@ -4613,6 +4629,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.load
@@ -4623,6 +4640,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.load1
@@ -4633,6 +4651,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.load4
@@ -4643,6 +4662,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.load7
@@ -4653,6 +4673,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.load10
@@ -4663,6 +4684,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.load13
@@ -4673,6 +4695,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.load16
@@ -4683,6 +4706,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.load19
@@ -4693,6 +4717,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.load22
@@ -4703,6 +4728,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, (%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_20
 ; AVX512F-NEXT:  ## BB#19: ## %cond.load25
@@ -4713,6 +4739,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_22
 ; AVX512F-NEXT:  ## BB#21: ## %cond.load28
@@ -4723,6 +4750,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_24
 ; AVX512F-NEXT:  ## BB#23: ## %cond.load31
@@ -4733,6 +4761,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_26
 ; AVX512F-NEXT:  ## BB#25: ## %cond.load34
@@ -4744,6 +4773,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_28
 ; AVX512F-NEXT:  ## BB#27: ## %cond.load37
@@ -4755,6 +4785,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_30
 ; AVX512F-NEXT:  ## BB#29: ## %cond.load40
@@ -4765,6 +4796,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_32
 ; AVX512F-NEXT:  ## BB#31: ## %cond.load43
@@ -4775,6 +4807,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_34
 ; AVX512F-NEXT:  ## BB#33: ## %cond.load46
@@ -4786,6 +4819,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_36
 ; AVX512F-NEXT:  ## BB#35: ## %cond.load49
@@ -4797,6 +4831,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_38
 ; AVX512F-NEXT:  ## BB#37: ## %cond.load52
@@ -4808,6 +4843,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_40
 ; AVX512F-NEXT:  ## BB#39: ## %cond.load55
@@ -4819,6 +4855,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_42
 ; AVX512F-NEXT:  ## BB#41: ## %cond.load58
@@ -4830,6 +4867,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_44
 ; AVX512F-NEXT:  ## BB#43: ## %cond.load61
@@ -4841,6 +4879,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_46
 ; AVX512F-NEXT:  ## BB#45: ## %cond.load64
@@ -4852,6 +4891,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_48
 ; AVX512F-NEXT:  ## BB#47: ## %cond.load67
@@ -4863,6 +4903,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_50
 ; AVX512F-NEXT:  ## BB#49: ## %cond.load70
@@ -4874,6 +4915,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_52
 ; AVX512F-NEXT:  ## BB#51: ## %cond.load73
@@ -4885,6 +4927,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_54
 ; AVX512F-NEXT:  ## BB#53: ## %cond.load76
@@ -4896,6 +4939,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_56
 ; AVX512F-NEXT:  ## BB#55: ## %cond.load79
@@ -4907,6 +4951,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_58
 ; AVX512F-NEXT:  ## BB#57: ## %cond.load82
@@ -4919,6 +4964,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_60
 ; AVX512F-NEXT:  ## BB#59: ## %cond.load85
@@ -4931,6 +4977,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_62
 ; AVX512F-NEXT:  ## BB#61: ## %cond.load88
@@ -4942,6 +4989,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_64
 ; AVX512F-NEXT:  ## BB#63: ## %cond.load91
@@ -4953,6 +5001,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_66
 ; AVX512F-NEXT:  ## BB#65: ## %cond.load94
@@ -4963,6 +5012,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_68
 ; AVX512F-NEXT:  ## BB#67: ## %cond.load97
@@ -4973,6 +5023,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_70
 ; AVX512F-NEXT:  ## BB#69: ## %cond.load100
@@ -4983,6 +5034,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_72
 ; AVX512F-NEXT:  ## BB#71: ## %cond.load103
@@ -4993,6 +5045,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_74
 ; AVX512F-NEXT:  ## BB#73: ## %cond.load106
@@ -5003,6 +5056,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_76
 ; AVX512F-NEXT:  ## BB#75: ## %cond.load109
@@ -5013,6 +5067,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_78
 ; AVX512F-NEXT:  ## BB#77: ## %cond.load112
@@ -5023,6 +5078,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_80
 ; AVX512F-NEXT:  ## BB#79: ## %cond.load115
@@ -5033,6 +5089,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_82
 ; AVX512F-NEXT:  ## BB#81: ## %cond.load118
@@ -5043,6 +5100,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_84
 ; AVX512F-NEXT:  ## BB#83: ## %cond.load121
@@ -5053,6 +5111,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_86
 ; AVX512F-NEXT:  ## BB#85: ## %cond.load124
@@ -5063,6 +5122,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_88
 ; AVX512F-NEXT:  ## BB#87: ## %cond.load127
@@ -5073,6 +5133,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_90
 ; AVX512F-NEXT:  ## BB#89: ## %cond.load130
@@ -5084,6 +5145,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_92
 ; AVX512F-NEXT:  ## BB#91: ## %cond.load133
@@ -5095,26 +5157,29 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_94
 ; AVX512F-NEXT:  ## BB#93: ## %cond.load136
 ; AVX512F-NEXT:    vpinsrb $14, 46(%rdi), %xmm1, %xmm3
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512F-NEXT:  LBB52_94: ## %else137
-; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
+; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k5
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_96
 ; AVX512F-NEXT:  ## BB#95: ## %cond.load139
 ; AVX512F-NEXT:    vpinsrb $15, 47(%rdi), %xmm1, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512F-NEXT:  LBB52_96: ## %else140
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $15, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_98
 ; AVX512F-NEXT:  ## BB#97: ## %cond.load142
@@ -5122,10 +5187,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $0, 48(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_98: ## %else143
-; AVX512F-NEXT:    kshiftlw $14, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_100
 ; AVX512F-NEXT:  ## BB#99: ## %cond.load145
@@ -5133,10 +5199,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $1, 49(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_100: ## %else146
-; AVX512F-NEXT:    kshiftlw $13, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $13, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_102
 ; AVX512F-NEXT:  ## BB#101: ## %cond.load148
@@ -5144,10 +5211,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $2, 50(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_102: ## %else149
-; AVX512F-NEXT:    kshiftlw $12, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_104
 ; AVX512F-NEXT:  ## BB#103: ## %cond.load151
@@ -5155,10 +5223,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $3, 51(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_104: ## %else152
-; AVX512F-NEXT:    kshiftlw $11, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $11, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_106
 ; AVX512F-NEXT:  ## BB#105: ## %cond.load154
@@ -5166,10 +5235,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $4, 52(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_106: ## %else155
-; AVX512F-NEXT:    kshiftlw $10, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $10, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_108
 ; AVX512F-NEXT:  ## BB#107: ## %cond.load157
@@ -5177,10 +5247,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $5, 53(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_108: ## %else158
-; AVX512F-NEXT:    kshiftlw $9, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $9, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_110
 ; AVX512F-NEXT:  ## BB#109: ## %cond.load160
@@ -5188,10 +5259,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $6, 54(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_110: ## %else161
-; AVX512F-NEXT:    kshiftlw $8, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $8, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_112
 ; AVX512F-NEXT:  ## BB#111: ## %cond.load163
@@ -5199,10 +5271,11 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $7, 55(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_112: ## %else164
-; AVX512F-NEXT:    kshiftlw $7, %k1, %k0
+; AVX512F-NEXT:    kshiftlw $7, %k5, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp) ## 2-byte Spill
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_114
 ; AVX512F-NEXT:  ## BB#113: ## %cond.load166
@@ -5210,9 +5283,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $8, 56(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_114: ## %else167
-; AVX512F-NEXT:    kshiftlw $6, %k1, %k2
-; AVX512F-NEXT:    kshiftrw $15, %k2, %k2
+; AVX512F-NEXT:    kshiftlw $6, %k5, %k0
+; AVX512F-NEXT:    kshiftrw $15, %k0, %k2
 ; AVX512F-NEXT:    kmovw %k2, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_116
 ; AVX512F-NEXT:  ## BB#115: ## %cond.load169
@@ -5220,9 +5294,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $9, 57(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_116: ## %else170
-; AVX512F-NEXT:    kshiftlw $5, %k1, %k3
-; AVX512F-NEXT:    kshiftrw $15, %k3, %k3
+; AVX512F-NEXT:    kshiftlw $5, %k5, %k0
+; AVX512F-NEXT:    kshiftrw $15, %k0, %k3
 ; AVX512F-NEXT:    kmovw %k3, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_118
 ; AVX512F-NEXT:  ## BB#117: ## %cond.load172
@@ -5230,9 +5305,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $10, 58(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_118: ## %else173
-; AVX512F-NEXT:    kshiftlw $4, %k1, %k4
-; AVX512F-NEXT:    kshiftrw $15, %k4, %k4
+; AVX512F-NEXT:    kshiftlw $4, %k5, %k0
+; AVX512F-NEXT:    kshiftrw $15, %k0, %k4
 ; AVX512F-NEXT:    kmovw %k4, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_120
 ; AVX512F-NEXT:  ## BB#119: ## %cond.load175
@@ -5240,9 +5316,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $11, 59(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_120: ## %else176
-; AVX512F-NEXT:    kshiftlw $3, %k1, %k5
-; AVX512F-NEXT:    kshiftrw $15, %k5, %k5
-; AVX512F-NEXT:    kmovw %k5, %eax
+; AVX512F-NEXT:    kshiftlw $3, %k5, %k0
+; AVX512F-NEXT:    kshiftrw $15, %k0, %k6
+; AVX512F-NEXT:    kmovw %k6, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_122
 ; AVX512F-NEXT:  ## BB#121: ## %cond.load178
@@ -5250,9 +5327,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $12, 60(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_122: ## %else179
-; AVX512F-NEXT:    kshiftlw $2, %k1, %k6
-; AVX512F-NEXT:    kshiftrw $15, %k6, %k6
-; AVX512F-NEXT:    kmovw %k6, %eax
+; AVX512F-NEXT:    kshiftlw $2, %k5, %k0
+; AVX512F-NEXT:    kshiftrw $15, %k0, %k7
+; AVX512F-NEXT:    kmovw %k7, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_124
 ; AVX512F-NEXT:  ## BB#123: ## %cond.load181
@@ -5260,9 +5338,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $13, 61(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_124: ## %else182
-; AVX512F-NEXT:    kshiftlw $1, %k1, %k7
-; AVX512F-NEXT:    kshiftrw $15, %k7, %k7
-; AVX512F-NEXT:    kmovw %k7, %eax
+; AVX512F-NEXT:    kshiftlw $1, %k5, %k0
+; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_126
 ; AVX512F-NEXT:  ## BB#125: ## %cond.load184
@@ -5270,8 +5349,9 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $14, 62(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_126: ## %else185
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    kshiftrw $15, %k5, %k5
+; AVX512F-NEXT:    kmovw %k5, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB52_128
 ; AVX512F-NEXT:  ## BB#127: ## %cond.load187
@@ -5279,137 +5359,137 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $15, 63(%rdi), %xmm2, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:  LBB52_128: ## %else188
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw (%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw (%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, (%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
+; AVX512F-NEXT:    kmovw %k1, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
 ; AVX512F-NEXT:    kmovw %k2, %eax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp) ## 4-byte Spill
 ; AVX512F-NEXT:    kmovw %k3, %r12d
 ; AVX512F-NEXT:    kmovw %k4, %r15d
-; AVX512F-NEXT:    kmovw %k5, %r14d
-; AVX512F-NEXT:    kmovw %k6, %ebx
-; AVX512F-NEXT:    kmovw %k7, %r11d
-; AVX512F-NEXT:    kmovw %k1, %r10d
+; AVX512F-NEXT:    kmovw %k6, %r14d
+; AVX512F-NEXT:    kmovw %k7, %ebx
+; AVX512F-NEXT:    kmovw %k0, %r11d
+; AVX512F-NEXT:    kmovw %k5, %r10d
 ; AVX512F-NEXT:    kmovw -{{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
@@ -5482,7 +5562,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    kmovw %k0, %r15d
 ; AVX512F-NEXT:    vpinsrb $12, %r14d, %xmm6, %xmm6
 ; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
-; AVX512F-NEXT:    kmovw %k0, %r14d
+; AVX512F-NEXT:    kmovw %k0, %ebp
 ; AVX512F-NEXT:    vpinsrb $13, %ebx, %xmm6, %xmm6
 ; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
 ; AVX512F-NEXT:    kmovw %k0, %ebx
@@ -5510,7 +5590,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; AVX512F-NEXT:    vpinsrb $8, %r13d, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpinsrb $9, %r12d, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpinsrb $10, %r15d, %xmm2, %xmm2
-; AVX512F-NEXT:    vpinsrb $11, %r14d, %xmm2, %xmm2
+; AVX512F-NEXT:    vpinsrb $11, %ebp, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpinsrb $12, %ebx, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpinsrb $13, %r11d, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpinsrb $14, %r10d, %xmm2, %xmm2
@@ -5609,6 +5689,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    ## implicit-def: %XMM0
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_2
@@ -5619,6 +5700,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $14, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.load1
@@ -5627,6 +5709,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $13, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.load4
@@ -5635,6 +5718,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $12, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.load7
@@ -5643,6 +5727,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $11, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.load10
@@ -5651,6 +5736,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $10, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.load13
@@ -5659,6 +5745,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $9, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.load16
@@ -5667,6 +5754,7 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:    kshiftlw $8, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB53_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.load19
@@ -5963,6 +6051,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    ## implicit-def: %YMM0
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_2
@@ -5973,6 +6062,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $14, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.load1
@@ -5982,6 +6072,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $13, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.load4
@@ -5991,6 +6082,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $12, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.load7
@@ -6000,6 +6092,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $11, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.load10
@@ -6009,6 +6102,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $10, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.load13
@@ -6018,6 +6112,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $9, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.load16
@@ -6027,6 +6122,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $8, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.load19
@@ -6036,6 +6132,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $7, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.load22
@@ -6046,6 +6143,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $6, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_20
 ; AVX512F-NEXT:  ## BB#19: ## %cond.load25
@@ -6056,6 +6154,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $5, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_22
 ; AVX512F-NEXT:  ## BB#21: ## %cond.load28
@@ -6066,6 +6165,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $4, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_24
 ; AVX512F-NEXT:  ## BB#23: ## %cond.load31
@@ -6076,6 +6176,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $3, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_26
 ; AVX512F-NEXT:  ## BB#25: ## %cond.load34
@@ -6086,6 +6187,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $2, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_28
 ; AVX512F-NEXT:  ## BB#27: ## %cond.load37
@@ -6096,6 +6198,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    kshiftlw $1, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_30
 ; AVX512F-NEXT:  ## BB#29: ## %cond.load40
@@ -6105,6 +6208,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:  LBB54_30: ## %else41
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB54_32
 ; AVX512F-NEXT:  ## BB#31: ## %cond.load43
@@ -7022,6 +7126,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
@@ -7030,6 +7135,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.store1
@@ -7038,6 +7144,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.store3
@@ -7046,6 +7153,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.store5
@@ -7054,6 +7162,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.store7
@@ -7062,6 +7171,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.store9
@@ -7070,6 +7180,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.store11
@@ -7078,6 +7189,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.store13
@@ -7086,6 +7198,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.store15
@@ -7094,6 +7207,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_20
 ; AVX512F-NEXT:  ## BB#19: ## %cond.store17
@@ -7102,6 +7216,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_22
 ; AVX512F-NEXT:  ## BB#21: ## %cond.store19
@@ -7110,6 +7225,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_24
 ; AVX512F-NEXT:  ## BB#23: ## %cond.store21
@@ -7118,6 +7234,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_26
 ; AVX512F-NEXT:  ## BB#25: ## %cond.store23
@@ -7126,6 +7243,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_28
 ; AVX512F-NEXT:  ## BB#27: ## %cond.store25
@@ -7134,6 +7252,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_30
 ; AVX512F-NEXT:  ## BB#29: ## %cond.store27
@@ -7141,6 +7260,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; AVX512F-NEXT:  LBB56_30: ## %else28
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB56_32
 ; AVX512F-NEXT:  ## BB#31: ## %cond.store29
@@ -8653,6 +8773,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
@@ -8661,6 +8782,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.store1
@@ -8669,6 +8791,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.store3
@@ -8677,6 +8800,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.store5
@@ -8685,6 +8809,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.store7
@@ -8693,6 +8818,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.store9
@@ -8701,6 +8827,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.store11
@@ -8709,6 +8836,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.store13
@@ -8717,6 +8845,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.store15
@@ -8725,6 +8854,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_20
 ; AVX512F-NEXT:  ## BB#19: ## %cond.store17
@@ -8733,6 +8863,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_22
 ; AVX512F-NEXT:  ## BB#21: ## %cond.store19
@@ -8741,6 +8872,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_24
 ; AVX512F-NEXT:  ## BB#23: ## %cond.store21
@@ -8749,6 +8881,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_26
 ; AVX512F-NEXT:  ## BB#25: ## %cond.store23
@@ -8758,6 +8891,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_28
 ; AVX512F-NEXT:  ## BB#27: ## %cond.store25
@@ -8767,6 +8901,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_30
 ; AVX512F-NEXT:  ## BB#29: ## %cond.store27
@@ -8775,6 +8910,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_32
 ; AVX512F-NEXT:  ## BB#31: ## %cond.store29
@@ -8783,6 +8919,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_34
 ; AVX512F-NEXT:  ## BB#33: ## %cond.store31
@@ -8792,6 +8929,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $14, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_36
 ; AVX512F-NEXT:  ## BB#35: ## %cond.store33
@@ -8801,6 +8939,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $13, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_38
 ; AVX512F-NEXT:  ## BB#37: ## %cond.store35
@@ -8810,6 +8949,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $12, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_40
 ; AVX512F-NEXT:  ## BB#39: ## %cond.store37
@@ -8819,6 +8959,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $11, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_42
 ; AVX512F-NEXT:  ## BB#41: ## %cond.store39
@@ -8828,6 +8969,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $10, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_44
 ; AVX512F-NEXT:  ## BB#43: ## %cond.store41
@@ -8837,6 +8979,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $9, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_46
 ; AVX512F-NEXT:  ## BB#45: ## %cond.store43
@@ -8846,6 +8989,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $8, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_48
 ; AVX512F-NEXT:  ## BB#47: ## %cond.store45
@@ -8855,6 +8999,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $7, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_50
 ; AVX512F-NEXT:  ## BB#49: ## %cond.store47
@@ -8864,6 +9009,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $6, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_52
 ; AVX512F-NEXT:  ## BB#51: ## %cond.store49
@@ -8873,6 +9019,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $5, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_54
 ; AVX512F-NEXT:  ## BB#53: ## %cond.store51
@@ -8882,6 +9029,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $4, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_56
 ; AVX512F-NEXT:  ## BB#55: ## %cond.store53
@@ -8891,6 +9039,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $3, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_58
 ; AVX512F-NEXT:  ## BB#57: ## %cond.store55
@@ -8901,6 +9050,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $2, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_60
 ; AVX512F-NEXT:  ## BB#59: ## %cond.store57
@@ -8911,6 +9061,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $1, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_62
 ; AVX512F-NEXT:  ## BB#61: ## %cond.store59
@@ -8920,6 +9071,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_64
 ; AVX512F-NEXT:  ## BB#63: ## %cond.store61
@@ -8929,6 +9081,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_66
 ; AVX512F-NEXT:  ## BB#65: ## %cond.store63
@@ -8937,6 +9090,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_68
 ; AVX512F-NEXT:  ## BB#67: ## %cond.store65
@@ -8945,6 +9099,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_70
 ; AVX512F-NEXT:  ## BB#69: ## %cond.store67
@@ -8953,6 +9108,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_72
 ; AVX512F-NEXT:  ## BB#71: ## %cond.store69
@@ -8961,6 +9117,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_74
 ; AVX512F-NEXT:  ## BB#73: ## %cond.store71
@@ -8969,6 +9126,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_76
 ; AVX512F-NEXT:  ## BB#75: ## %cond.store73
@@ -8977,6 +9135,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_78
 ; AVX512F-NEXT:  ## BB#77: ## %cond.store75
@@ -8985,6 +9144,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_80
 ; AVX512F-NEXT:  ## BB#79: ## %cond.store77
@@ -8993,6 +9153,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_82
 ; AVX512F-NEXT:  ## BB#81: ## %cond.store79
@@ -9001,6 +9162,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_84
 ; AVX512F-NEXT:  ## BB#83: ## %cond.store81
@@ -9009,6 +9171,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_86
 ; AVX512F-NEXT:  ## BB#85: ## %cond.store83
@@ -9017,6 +9180,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_88
 ; AVX512F-NEXT:  ## BB#87: ## %cond.store85
@@ -9025,6 +9189,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_90
 ; AVX512F-NEXT:  ## BB#89: ## %cond.store87
@@ -9034,6 +9199,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_92
 ; AVX512F-NEXT:  ## BB#91: ## %cond.store89
@@ -9043,6 +9209,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_94
 ; AVX512F-NEXT:  ## BB#93: ## %cond.store91
@@ -9051,6 +9218,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_96
 ; AVX512F-NEXT:  ## BB#95: ## %cond.store93
@@ -9059,6 +9227,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_98
 ; AVX512F-NEXT:  ## BB#97: ## %cond.store95
@@ -9068,6 +9237,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $14, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_100
 ; AVX512F-NEXT:  ## BB#99: ## %cond.store97
@@ -9077,6 +9247,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $13, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_102
 ; AVX512F-NEXT:  ## BB#101: ## %cond.store99
@@ -9086,6 +9257,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $12, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_104
 ; AVX512F-NEXT:  ## BB#103: ## %cond.store101
@@ -9095,6 +9267,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $11, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_106
 ; AVX512F-NEXT:  ## BB#105: ## %cond.store103
@@ -9104,6 +9277,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $10, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_108
 ; AVX512F-NEXT:  ## BB#107: ## %cond.store105
@@ -9113,6 +9287,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $9, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_110
 ; AVX512F-NEXT:  ## BB#109: ## %cond.store107
@@ -9122,6 +9297,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $8, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_112
 ; AVX512F-NEXT:  ## BB#111: ## %cond.store109
@@ -9131,6 +9307,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $7, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_114
 ; AVX512F-NEXT:  ## BB#113: ## %cond.store111
@@ -9140,6 +9317,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $6, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_116
 ; AVX512F-NEXT:  ## BB#115: ## %cond.store113
@@ -9149,6 +9327,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $5, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_118
 ; AVX512F-NEXT:  ## BB#117: ## %cond.store115
@@ -9158,6 +9337,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $4, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_120
 ; AVX512F-NEXT:  ## BB#119: ## %cond.store117
@@ -9167,6 +9347,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $3, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_122
 ; AVX512F-NEXT:  ## BB#121: ## %cond.store119
@@ -9176,6 +9357,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $2, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_124
 ; AVX512F-NEXT:  ## BB#123: ## %cond.store121
@@ -9185,6 +9367,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:    kshiftlw $1, %k1, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_126
 ; AVX512F-NEXT:  ## BB#125: ## %cond.store123
@@ -9193,6 +9376,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; AVX512F-NEXT:  LBB58_126: ## %else124
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB58_128
 ; AVX512F-NEXT:  ## BB#127: ## %cond.store125
@@ -9273,6 +9457,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
@@ -9281,6 +9466,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.store1
@@ -9289,6 +9475,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.store3
@@ -9297,6 +9484,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.store5
@@ -9305,6 +9493,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.store7
@@ -9313,6 +9502,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.store9
@@ -9321,6 +9511,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.store11
@@ -9329,6 +9520,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.store13
@@ -9574,6 +9766,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
@@ -9582,6 +9775,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_4
 ; AVX512F-NEXT:  ## BB#3: ## %cond.store1
@@ -9590,6 +9784,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_6
 ; AVX512F-NEXT:  ## BB#5: ## %cond.store3
@@ -9598,6 +9793,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_8
 ; AVX512F-NEXT:  ## BB#7: ## %cond.store5
@@ -9606,6 +9802,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_10
 ; AVX512F-NEXT:  ## BB#9: ## %cond.store7
@@ -9614,6 +9811,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_12
 ; AVX512F-NEXT:  ## BB#11: ## %cond.store9
@@ -9622,6 +9820,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_14
 ; AVX512F-NEXT:  ## BB#13: ## %cond.store11
@@ -9630,6 +9829,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_16
 ; AVX512F-NEXT:  ## BB#15: ## %cond.store13
@@ -9638,6 +9838,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.store15
@@ -9647,6 +9848,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_20
 ; AVX512F-NEXT:  ## BB#19: ## %cond.store17
@@ -9656,6 +9858,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_22
 ; AVX512F-NEXT:  ## BB#21: ## %cond.store19
@@ -9665,6 +9868,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_24
 ; AVX512F-NEXT:  ## BB#23: ## %cond.store21
@@ -9674,6 +9878,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_26
 ; AVX512F-NEXT:  ## BB#25: ## %cond.store23
@@ -9683,6 +9888,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_28
 ; AVX512F-NEXT:  ## BB#27: ## %cond.store25
@@ -9692,6 +9898,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_30
 ; AVX512F-NEXT:  ## BB#29: ## %cond.store27
@@ -9700,6 +9907,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:  LBB60_30: ## %else28
 ; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    andl $1, %eax
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_32
 ; AVX512F-NEXT:  ## BB#31: ## %cond.store29

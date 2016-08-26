@@ -182,9 +182,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     _ValueType* allocate(size_t __n) {
         if (__n > max_size()) {
-            __libcpp_throw(length_error(
+            __throw_length_error(
                 "std::experimental::pmr::polymorphic_allocator<T>::allocate(size_t n)"
-                " 'n' exceeds maximum supported size"));
+                " 'n' exceeds maximum supported size");
         }
         return static_cast<_ValueType*>(
             __res_->allocate(__n * sizeof(_ValueType), alignof(_ValueType))
@@ -383,9 +383,9 @@ protected:
     virtual void * do_allocate(size_t __bytes, size_t)
     {
         if (__bytes > __max_size()) {
-            __libcpp_throw(length_error(
+            __throw_length_error(
                 "std::experimental::pmr::resource_adaptor<T>::do_allocate(size_t bytes, size_t align)"
-                " 'bytes' exceeds maximum supported size"));
+                " 'bytes' exceeds maximum supported size");
         }
         size_t __s = __aligned_allocation_size(__bytes, _MaxAlign) / _MaxAlign;
         return __alloc_.allocate(__s);

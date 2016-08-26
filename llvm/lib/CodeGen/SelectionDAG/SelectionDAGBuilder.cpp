@@ -2996,6 +2996,7 @@ void SelectionDAGBuilder::visitExtractElement(const User &I) {
 void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   SDValue Src1 = getValue(I.getOperand(0));
   SDValue Src2 = getValue(I.getOperand(1));
+  SDLoc DL = getCurSDLoc();
 
   SmallVector<int, 8> Mask;
   ShuffleVectorInst::getShuffleMask(cast<Constant>(I.getOperand(2)), Mask);
@@ -3007,7 +3008,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   unsigned SrcNumElts = SrcVT.getVectorNumElements();
 
   if (SrcNumElts == MaskNumElts) {
-    setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2, Mask));
+    setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, Mask));
     return;
   }
 
@@ -3050,8 +3051,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
         else
           ConcatOps.push_back(Src2);
       }
-      setValue(&I, DAG.getNode(ISD::CONCAT_VECTORS, getCurSDLoc(),
-                               VT, ConcatOps));
+      setValue(&I, DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps));
       return;
     }
 
@@ -3064,11 +3064,9 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     MOps2[0] = Src2;
 
     Src1 = Src1.isUndef() ? DAG.getUNDEF(VT)
-                          : DAG.getNode(ISD::CONCAT_VECTORS,
-                                        getCurSDLoc(), VT, MOps1);
+                          : DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, MOps1);
     Src2 = Src2.isUndef() ? DAG.getUNDEF(VT)
-                          : DAG.getNode(ISD::CONCAT_VECTORS,
-                                        getCurSDLoc(), VT, MOps2);
+                          : DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, MOps2);
 
     // Readjust mask for new input vector length.
     SmallVector<int, 8> MappedOps;
@@ -3079,8 +3077,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
       MappedOps.push_back(Idx);
     }
 
-    setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2,
-                                      MappedOps));
+    setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
     return;
   }
 
@@ -3139,10 +3136,9 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
         if (RangeUse[Input] == 0)
           Src = DAG.getUNDEF(VT);
         else {
-          SDLoc dl = getCurSDLoc();
           Src = DAG.getNode(
-              ISD::EXTRACT_SUBVECTOR, dl, VT, Src,
-              DAG.getConstant(StartIdx[Input], dl,
+              ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
+              DAG.getConstant(StartIdx[Input], DL,
                               TLI.getVectorIdxTy(DAG.getDataLayout())));
         }
       }
@@ -3160,8 +3156,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
         MappedOps.push_back(Idx);
       }
 
-      setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2,
-                                        MappedOps));
+      setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
       return;
     }
   }
@@ -3171,7 +3166,6 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   // to insert and build vector.
   EVT EltVT = VT.getVectorElementType();
   EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
-  SDLoc dl = getCurSDLoc();
   SmallVector<SDValue,8> Ops;
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     int Idx = Mask[i];
@@ -3183,14 +3177,14 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
       SDValue &Src = Idx < (int)SrcNumElts ? Src1 : Src2;
       if (Idx >= (int)SrcNumElts) Idx -= SrcNumElts;
 
-      Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                        EltVT, Src, DAG.getConstant(Idx, dl, IdxVT));
+      Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                        EltVT, Src, DAG.getConstant(Idx, DL, IdxVT));
     }
 
     Ops.push_back(Res);
   }
 
-  setValue(&I, DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops));
+  setValue(&I, DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Ops));
 }
 
 void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {

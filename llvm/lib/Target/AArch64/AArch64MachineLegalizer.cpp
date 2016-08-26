@@ -36,17 +36,31 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
 
-  for (auto BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR}) {
-    for (auto Ty : {s32, s64, v2s32, v4s32, v2s64})
+  for (auto BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL}) {
+    // These operations naturally get the right answer when used on
+    // GPR32, even if the actual type is narrower.
+    for (auto Ty : {s1, s8, s16, s32, s64, v2s32, v4s32, v2s64})
+      setAction({BinOp, Ty}, Legal);
+  }
+
+  for (auto BinOp : {G_LSHR, G_ASHR, G_SDIV, G_UDIV}) {
+    for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 
-    for (auto Ty : {s8, s16})
+    for (auto Ty : {s1, s8, s16})
       setAction({BinOp, Ty}, WidenScalar);
   }
 
-  for (auto BinOp : {G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV})
-    for (auto Ty : {s32, s64})
-      setAction({BinOp, Ty}, Legal);
+  for (auto BinOp : { G_SREM, G_UREM })
+    for (auto Ty : { s1, s8, s16, s32, s64 })
+      setAction({BinOp, Ty}, Lower);
+
+  for (auto Op : { G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULO, G_UMULO }) {
+    for (auto Ty : { s32, s64 })
+      setAction({Op, Ty}, Legal);
+
+    setAction({Op, 1, s1}, Legal);
+  }
 
   for (auto BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
     for (auto Ty : {s32, s64})
@@ -68,22 +82,67 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
     setAction({TargetOpcode::G_FCONSTANT, Ty}, Legal);
   }
 
+  setAction({G_CONSTANT, p0}, Legal);
+
   for (auto Ty : {s1, s8, s16})
     setAction({TargetOpcode::G_CONSTANT, Ty}, WidenScalar);
 
   setAction({TargetOpcode::G_FCONSTANT, s16}, WidenScalar);
 
-  // Comparisons: we produce a result in s32 with undefined high-bits for
-  // now. Values being compared can be 32 or 64-bits.
-  for (auto CmpOp : { G_ICMP }) {
-    setAction({CmpOp, 0, s32}, Legal);
-    setAction({CmpOp, 1, s32}, Legal);
-    setAction({CmpOp, 1, s64}, Legal);
+  setAction({G_ICMP, s1}, Legal);
+  setAction({G_ICMP, 1, s32}, Legal);
+  setAction({G_ICMP, 1, s64}, Legal);
 
-    for (auto Ty : {s1, s8, s16}) {
-      setAction({CmpOp, 0, Ty}, WidenScalar);
-      setAction({CmpOp, 1, Ty}, WidenScalar);
-    }
+  for (auto Ty : {s1, s8, s16}) {
+    setAction({G_ICMP, 1, Ty}, WidenScalar);
+  }
+
+  setAction({G_FCMP, s1}, Legal);
+  setAction({G_FCMP, 1, s32}, Legal);
+  setAction({G_FCMP, 1, s64}, Legal);
+
+  // Extensions
+  for (auto Ty : { s1, s8, s16, s32, s64 }) {
+    setAction({G_ZEXT, Ty}, Legal);
+    setAction({G_SEXT, Ty}, Legal);
+    setAction({G_ANYEXT, Ty}, Legal);
+  }
+
+  for (auto Ty : { s1, s8, s16, s32 }) {
+    setAction({G_ZEXT, 1, Ty}, Legal);
+    setAction({G_SEXT, 1, Ty}, Legal);
+    setAction({G_ANYEXT, 1, Ty}, Legal);
+  }
+
+  setAction({G_FPEXT, s64}, Legal);
+  setAction({G_FPEXT, 1, s32}, Legal);
+
+  // Truncations
+  for (auto Ty : { s16, s32 })
+    setAction({G_FPTRUNC, Ty}, Legal);
+
+  for (auto Ty : { s32, s64 })
+    setAction({G_FPTRUNC, 1, Ty}, Legal);
+
+  for (auto Ty : { s1, s8, s16, s32 })
+    setAction({G_TRUNC, Ty}, Legal);
+
+  for (auto Ty : { s8, s16, s32, s64 })
+    setAction({G_TRUNC, 1, Ty}, Legal);
+
+  // Conversions
+  for (auto Ty : { s1, s8, s16, s32, s64 }) {
+    setAction({G_FPTOSI, 0, Ty}, Legal);
+    setAction({G_FPTOUI, 0, Ty}, Legal);
+    setAction({G_SITOFP, 1, Ty}, Legal);
+    setAction({G_UITOFP, 1, Ty}, Legal);
+  }
+
+  for (auto Ty : { s32, s64 }) {
+    setAction({G_FPTOSI, 1, Ty}, Legal);
+    setAction({G_FPTOUI, 1, Ty}, Legal);
+    setAction({G_SITOFP, 0, Ty}, Legal);
+    setAction({G_UITOFP, 0, Ty}, Legal);
   }
 
   // Control-flow
@@ -91,6 +150,12 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   setAction({G_BRCOND, s32}, Legal);
   for (auto Ty : {s1, s8, s16})
     setAction({G_BRCOND, Ty}, WidenScalar);
+
+  // Select
+  for (auto Ty : {s1, s8, s16, s32, s64})
+    setAction({G_SELECT, Ty}, Legal);
+
+  setAction({G_SELECT, 1, s1}, Legal);
 
   // Pointer-handling
   setAction({G_FRAME_INDEX, p0}, Legal);

@@ -119,8 +119,25 @@ GDBRemoteRegisterContext::GetRegisterSet (size_t reg_set)
 bool
 GDBRemoteRegisterContext::ReadRegister (const RegisterInfo *reg_info, RegisterValue &value)
 {
+    ExecutionContext exe_ctx(CalculateThread());
+
+    Process *process = exe_ctx.GetProcessPtr();
+    Thread *thread = exe_ctx.GetThreadPtr();
+    if (process == NULL || thread == NULL)
+        return false;
+
+    GDBRemoteCommunicationClient &gdb_comm(((ProcessGDBRemote *)process)->GetGDBRemote());
+
+    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    if (!lock)
+    {
+        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD | GDBR_LOG_PACKETS))
+            log->Printf("GDBRemoteRegisterContext::%s failed to get packet sequence mutex", __FUNCTION__);
+        return false;
+    }
+
     // Read the register
-    if (ReadRegisterBytes (reg_info, m_reg_data))
+    if (ReadRegisterBytes(reg_info, m_reg_data, gdb_comm, lock))
     {
         const bool partial_data_ok = false;
         Error error (value.SetValueFromData(reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
@@ -204,30 +221,23 @@ GDBRemoteRegisterContext::PrivateSetRegisterValue (uint32_t reg, uint64_t new_re
 
 // Helper function for GDBRemoteRegisterContext::ReadRegisterBytes().
 bool
-GDBRemoteRegisterContext::GetPrimordialRegister(const RegisterInfo *reg_info,
-                                                GDBRemoteCommunicationClient &gdb_comm)
+GDBRemoteRegisterContext::GetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                                                const GDBRemoteCommunicationClient::Lock &lock)
 {
     const uint32_t lldb_reg = reg_info->kinds[eRegisterKindLLDB];
     const uint32_t remote_reg = reg_info->kinds[eRegisterKindProcessPlugin];
     StringExtractorGDBRemote response;
-    if (DataBufferSP buffer_sp = gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg))
+    if (DataBufferSP buffer_sp = gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg, lock))
         return PrivateSetRegisterValue(lldb_reg,
                                        llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
     return false;
 }
 
 bool
-GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataExtractor &data)
+GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data,
+                                            GDBRemoteCommunicationClient &gdb_comm,
+                                            const GDBRemoteCommunicationClient::Lock &lock)
 {
-    ExecutionContext exe_ctx (CalculateThread());
-
-    Process *process = exe_ctx.GetProcessPtr();
-    Thread *thread = exe_ctx.GetThreadPtr();
-    if (process == NULL || thread == NULL)
-        return false;
-
-    GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *)process)->GetGDBRemote());
-
     InvalidateIfNeeded(false);
 
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
@@ -236,7 +246,7 @@ GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataE
     {
         if (m_read_all_at_once)
         {
-            if (DataBufferSP buffer_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID()))
+            if (DataBufferSP buffer_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID(), lock))
             {
                 memcpy(const_cast<uint8_t *>(m_reg_data.GetDataStart()), buffer_sp->GetBytes(),
                        std::min(buffer_sp->GetByteSize(), m_reg_data.GetByteSize()));
@@ -269,7 +279,7 @@ GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataE
                 {
                     // Read the containing register if it hasn't already been read
                     if (!GetRegisterIsValid(prim_reg))
-                        success = GetPrimordialRegister(prim_reg_info, gdb_comm);
+                        success = GetPrimordialRegister(prim_reg_info, gdb_comm, lock);
                 }
             }
 
@@ -283,7 +293,7 @@ GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataE
         else
         {
             // Get each register individually
-            GetPrimordialRegister(reg_info, gdb_comm);
+            GetPrimordialRegister(reg_info, gdb_comm, lock);
         }
 
         // Make sure we got a valid register value after reading it
@@ -325,8 +335,8 @@ GDBRemoteRegisterContext::WriteRegister (const RegisterInfo *reg_info,
 
 // Helper function for GDBRemoteRegisterContext::WriteRegisterBytes().
 bool
-GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info,
-                                                GDBRemoteCommunicationClient &gdb_comm)
+GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                                                const GDBRemoteCommunicationClient::Lock &lock)
 {
     StreamString packet;
     StringExtractorGDBRemote response;
@@ -336,7 +346,7 @@ GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info,
 
     return gdb_comm.WriteRegister(
         m_thread.GetProtocolID(), reg_info->kinds[eRegisterKindProcessPlugin],
-        {m_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size), reg_info->byte_size});
+        {m_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size), reg_info->byte_size}, lock);
 }
 
 bool
@@ -383,7 +393,7 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
 
                     // Set all registers in one packet
                     if (gdb_comm.WriteAllRegisters(m_thread.GetProtocolID(),
-                                                   {m_reg_data.GetDataStart(), size_t(m_reg_data.GetByteSize())}))
+                                                   {m_reg_data.GetDataStart(), size_t(m_reg_data.GetByteSize())}, lock))
 
                     {
                         SetAllRegisterValid (false);
@@ -413,13 +423,13 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
                             if (value_reg_info == NULL)
                                 success = false;
                             else
-                                success = SetPrimordialRegister(value_reg_info, gdb_comm);
+                                success = SetPrimordialRegister(value_reg_info, gdb_comm, lock);
                         }
                     }
                     else
                     {
                         // This is an actual register, write it
-                        success = SetPrimordialRegister(reg_info, gdb_comm);
+                        success = SetPrimordialRegister(reg_info, gdb_comm, lock);
                     }
 
                     // Check if writing this register will invalidate any other register values?
@@ -525,7 +535,7 @@ GDBRemoteRegisterContext::ReadAllRegisterValues (lldb::DataBufferSP &data_sp)
         if (gdb_comm.SyncThreadState(m_thread.GetProtocolID()))
             InvalidateAllRegisters();
 
-        if (use_g_packet && (data_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID())))
+        if (use_g_packet && (data_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID(), lock)))
             return true;
 
         // We're going to read each register
@@ -536,7 +546,7 @@ GDBRemoteRegisterContext::ReadAllRegisterValues (lldb::DataBufferSP &data_sp)
         {
             if (reg_info->value_regs) // skip registers that are slices of real registers
                 continue;
-            ReadRegisterBytes(reg_info, m_reg_data);
+            ReadRegisterBytes(reg_info, m_reg_data, gdb_comm, lock);
             // ReadRegisterBytes saves the contents of the register in to the m_reg_data buffer
         }
         data_sp.reset(new DataBufferHeap(m_reg_data.GetDataStart(), m_reg_info.GetRegisterDataByteSize()));
@@ -587,7 +597,7 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
         if (use_g_packet)
         {
             if (gdb_comm.WriteAllRegisters(m_thread.GetProtocolID(),
-                                           {data_sp->GetBytes(), size_t(data_sp->GetByteSize())}))
+                                           {data_sp->GetBytes(), size_t(data_sp->GetByteSize())}, lock))
                 return true;
 
             uint32_t num_restored = 0;
@@ -674,7 +684,7 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
                 {
                     SetRegisterIsValid(reg, false);
                     if (gdb_comm.WriteRegister(m_thread.GetProtocolID(), reg_info->kinds[eRegisterKindProcessPlugin],
-                                               {restore_src, reg_byte_size}))
+                                               {restore_src, reg_byte_size}, lock))
                         ++num_restored;
                 }
             }
@@ -713,7 +723,7 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
 
                 SetRegisterIsValid(reg_info, false);
                 if (gdb_comm.WriteRegister(m_thread.GetProtocolID(), reg_info->kinds[eRegisterKindProcessPlugin],
-                                           {data_sp->GetBytes() + reg_info->byte_offset, reg_info->byte_size}))
+                                           {data_sp->GetBytes() + reg_info->byte_offset, reg_info->byte_size}, lock))
                     ++num_restored;
             }
             return num_restored > 0;

@@ -270,6 +270,8 @@ The most important command line options are:
   failure (crash, timeout) as ``$(exact_artifact_path)``. This overrides
   ``-artifact_prefix`` and will not use checksum in the file name. Do not use
   the same path for several parallel processes.
+``-print_pcs``
+  If 1, print out newly covered PCs. Defaults to 0.
 ``-print_final_stats``
   If 1, print statistics at exit.  Defaults to 0.
 ``-detect_leaks``

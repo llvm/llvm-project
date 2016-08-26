@@ -11,7 +11,13 @@ function(try_compile_only output)
   file(WRITE ${SIMPLE_C} "${ARG_SOURCE}\n")
   string(REGEX MATCHALL "<[A-Za-z0-9_]*>" substitutions
          ${CMAKE_C_COMPILE_OBJECT})
-  string(REPLACE ";" " " extra_flags "${ARG_FLAGS}")
+
+  set(TRY_COMPILE_FLAGS "${ARG_FLAGS}")
+  if(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_TARGET)
+    list(APPEND TRY_COMPILE_FLAGS "-target ${CMAKE_C_COMPILER_TARGET}")
+  endif()
+
+  string(REPLACE ";" " " extra_flags "${TRY_COMPILE_FLAGS}")
 
   set(test_compile_command "${CMAKE_C_COMPILE_OBJECT}")
   foreach(substitution ${substitutions})

@@ -208,12 +208,14 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(llvm::StringRef payload, Strin
         return PacketResult::ErrorSendFailed;
     }
 
-    return SendPacketAndWaitForResponseNoLock(payload, response);
+    return SendPacketAndWaitForResponse(payload, response, lock);
 }
 
 GDBRemoteCommunication::PacketResult
-GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(llvm::StringRef payload, StringExtractorGDBRemote &response)
+GDBRemoteClientBase::SendPacketAndWaitForResponse(llvm::StringRef payload, StringExtractorGDBRemote &response,
+                                                  const Lock &lock)
 {
+    assert(lock);
     PacketResult packet_result = SendPacketNoLock(payload.data(), payload.size());
     if (packet_result != PacketResult::Success)
         return packet_result;

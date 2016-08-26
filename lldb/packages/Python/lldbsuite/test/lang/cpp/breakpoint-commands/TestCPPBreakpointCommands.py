@@ -17,70 +17,68 @@ class CPPBreakpointCommandsTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"])
-    def test(self):
+
+    def make_breakpoint(self, name, type, expected_num_locations):
+        bkpt = self.target.BreakpointCreateByName (name,
+                                                   type,
+                                                   self.a_out_module,
+                                                   self.nested_comp_unit)
+        num_locations = bkpt.GetNumLocations()
+        self.assertTrue (num_locations == expected_num_locations, 
+                         "Wrong number of locations for '%s', expected: %d got: %d"%(
+                         name, expected_num_locations, num_locations))
+        return bkpt
+
+    def test_cpp_breakpoint_cmds(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
+
         exe = os.path.join(os.getcwd(), "a.out")
 
         # Create a target from the debugger.
 
-        target = self.dbg.CreateTarget (exe)
-        self.assertTrue(target, VALID_TARGET)
+        self.target = self.dbg.CreateTarget (exe)
+        self.assertTrue(self.target, VALID_TARGET)
 
-        a_out_module = lldb.SBFileSpecList()
-        a_out_module.Append(lldb.SBFileSpec(exe))
+        self.a_out_module = lldb.SBFileSpecList()
+        self.a_out_module.Append(lldb.SBFileSpec(exe))
 
-        nested_comp_unit = lldb.SBFileSpecList()
-        nested_comp_unit.Append (lldb.SBFileSpec("nested.cpp"))
+        self.nested_comp_unit = lldb.SBFileSpecList()
+        self.nested_comp_unit.Append (lldb.SBFileSpec("nested.cpp"))
 
         # First provide ONLY the method name.  This should get everybody...
-        auto_break = target.BreakpointCreateByName ("Function",
-                                                    lldb.eFunctionNameTypeAuto,
-                                                    a_out_module,
-                                                    nested_comp_unit)
-        self.assertTrue (auto_break.GetNumLocations() == 5)
+        self.make_breakpoint("Function",
+                              lldb.eFunctionNameTypeAuto,
+                              5)
 
         # Now add the Baz class specifier.  This should get the version contained in Bar,
         # AND the one contained in ::
-        auto_break = target.BreakpointCreateByName ("Baz::Function",
-                                                    lldb.eFunctionNameTypeAuto,
-                                                    a_out_module,
-                                                    nested_comp_unit)
-        self.assertTrue (auto_break.GetNumLocations() == 2)
+        self.make_breakpoint("Baz::Function",
+                              lldb.eFunctionNameTypeAuto,
+                              2)
 
         # Then add the Bar::Baz specifier.  This should get the version contained in Bar only
-        auto_break = target.BreakpointCreateByName ("Bar::Baz::Function",
-                                                    lldb.eFunctionNameTypeAuto,
-                                                    a_out_module,
-                                                    nested_comp_unit)
-        self.assertTrue (auto_break.GetNumLocations() == 1)
+        self.make_breakpoint("Bar::Baz::Function",
+                              lldb.eFunctionNameTypeAuto,
+                              1)
 
-        plain_method_break = target.BreakpointCreateByName ("Function", 
-                                                            lldb.eFunctionNameTypeMethod,
-                                                            a_out_module,
-                                                            nested_comp_unit)
-        self.assertTrue (plain_method_break.GetNumLocations() == 3)
+        self.make_breakpoint("Function", 
+                             lldb.eFunctionNameTypeMethod,
+                              3)
 
-        plain_method_break = target.BreakpointCreateByName ("Baz::Function", 
-                                                            lldb.eFunctionNameTypeMethod,
-                                                            a_out_module,
-                                                            nested_comp_unit)
-        self.assertTrue (plain_method_break.GetNumLocations() == 2)
+        self.make_breakpoint("Baz::Function", 
+                              lldb.eFunctionNameTypeMethod,
+                              2)
 
-        plain_method_break = target.BreakpointCreateByName ("Bar::Baz::Function", 
-                                                            lldb.eFunctionNameTypeMethod,
-                                                            a_out_module,
-                                                            nested_comp_unit)
-        self.assertTrue (plain_method_break.GetNumLocations() == 1)
+        self.make_breakpoint("Bar::Baz::Function", 
+                             lldb.eFunctionNameTypeMethod,
+                             1)
 
-        plain_method_break = target.BreakpointCreateByName ("Function", 
-                                                            lldb.eFunctionNameTypeBase,
-                                                            a_out_module,
-                                                            nested_comp_unit)
-        self.assertTrue (plain_method_break.GetNumLocations() == 2)
+        self.make_breakpoint("Function", 
+                             lldb.eFunctionNameTypeBase,
+                             2)
 
-        plain_method_break = target.BreakpointCreateByName ("Bar::Function", 
-                                                            lldb.eFunctionNameTypeBase,
-                                                            a_out_module,
-                                                            nested_comp_unit)
-        self.assertTrue (plain_method_break.GetNumLocations() == 1)
+        self.make_breakpoint("Bar::Function", 
+                             lldb.eFunctionNameTypeBase,
+                             1)
+

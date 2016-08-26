@@ -66,9 +66,15 @@ typedef SizeClassAllocator32<kAllocatorSpace, kAllocatorSize, 0,
     CompactSizeClassMap, kAllocatorRegionSizeLog, ByteMap,
     MapUnmapCallback> PrimaryAllocator;
 #else
-typedef SizeClassAllocator64<Mapping::kHeapMemBeg,
-    Mapping::kHeapMemEnd - Mapping::kHeapMemBeg, 0,
-    DefaultSizeClassMap, MapUnmapCallback> PrimaryAllocator;
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = Mapping::kHeapMemBeg;
+  static const uptr kSpaceSize = Mapping::kHeapMemEnd - Mapping::kHeapMemBeg;
+  static const uptr kMetadataSize = 0;
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef __tsan::MapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #endif
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<MapUnmapCallback> SecondaryAllocator;

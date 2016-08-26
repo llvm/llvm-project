@@ -858,7 +858,7 @@ private:
     if (!CurrentToken->isOneOf(TT_LambdaLSquare, TT_ForEachMacro,
                                TT_FunctionLBrace, TT_ImplicitStringLiteral,
                                TT_InlineASMBrace, TT_JsFatArrow, TT_LambdaArrow,
-                               TT_RegexLiteral))
+                               TT_RegexLiteral, TT_TemplateString))
       CurrentToken->Type = TT_Unknown;
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;
@@ -1816,6 +1816,9 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return 100;
     if (Left.is(TT_JsTypeColon))
       return 35;
+    if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
+        (Right.is(TT_TemplateString) && Right.TokenText.startswith("}")))
+      return 100;
   }
 
   if (Left.is(tok::comma) || (Right.is(tok::identifier) && Right.Next &&
@@ -2114,6 +2117,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
+    if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
+        (Right.is(TT_TemplateString) && Right.TokenText.startswith("}")))
+      return false;
+    if (Left.is(tok::identifier) && Right.is(TT_TemplateString))
+      return false;
     if (Right.is(tok::star) &&
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
       return false;

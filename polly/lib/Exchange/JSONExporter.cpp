@@ -262,7 +262,7 @@ void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
   for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
                                                 E = NewAccessStrings.end();
        I != E; I++)
-    OS << "New access function '" << *I << "'detected in JSCOP file\n";
+    OS << "New access function '" << *I << "' detected in JSCOP file\n";
 }
 
 typedef Dependences::StatementToIslMapTy StatementToIslMapTy;

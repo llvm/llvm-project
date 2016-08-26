@@ -348,10 +348,10 @@ public:
 class ObjectFileHandler final : public FileHandler {
 
   /// The object file we are currently dealing with.
-  ObjectFile &Obj;
+  std::unique_ptr<ObjectFile> Obj;
 
   /// Return the input file contents.
-  StringRef getInputFileContents() const { return Obj.getData(); }
+  StringRef getInputFileContents() const { return Obj->getData(); }
 
   /// Return true if the provided section is an offload section and return the
   /// triple by reference.
@@ -400,7 +400,7 @@ public:
   void ReadHeader(MemoryBuffer &Input) {}
   StringRef ReadBundleStart(MemoryBuffer &Input) {
 
-    while (NextSection != Obj.section_end()) {
+    while (NextSection != Obj->section_end()) {
       CurrentSection = NextSection;
       ++NextSection;
 
@@ -561,9 +561,10 @@ public:
     GV->setSection(SectionName);
   }
 
-  ObjectFileHandler(ObjectFile &Obj)
-      : FileHandler(), Obj(Obj), CurrentSection(Obj.section_begin()),
-        NextSection(Obj.section_begin()) {}
+  ObjectFileHandler(std::unique_ptr<ObjectFile> ObjIn)
+      : FileHandler(), Obj(std::move(ObjIn)),
+        CurrentSection(Obj->section_begin()),
+        NextSection(Obj->section_begin()) {}
   ~ObjectFileHandler() {}
 };
 
@@ -677,12 +678,13 @@ static FileHandler *CreateObjectFileHandler(MemoryBuffer &FirstInput) {
   // We only support regular object files. If this is not an object file,
   // default to the binary handler. The handler will be owned by the client of
   // this function.
-  ObjectFile *Obj = dyn_cast<ObjectFile>(BinaryOrErr.get().release());
+  std::unique_ptr<ObjectFile> Obj(
+      dyn_cast<ObjectFile>(BinaryOrErr.get().release()));
 
   if (!Obj)
     return new BinaryFileHandler();
 
-  return new ObjectFileHandler(*Obj);
+  return new ObjectFileHandler(std::move(Obj));
 }
 
 /// Return an appropriate handler given the input files and options.
@@ -821,7 +823,7 @@ static bool UnbundleFiles() {
     }
     FH.get()->ReadBundle(OutputFile, Input);
     FH.get()->ReadBundleEnd(Input);
-    Worklist.remove(&*Output);
+    Worklist.erase(Output);
 
     // Record if we found the host bundle.
     if (hasHostKind(CurTriple))

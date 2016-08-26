@@ -455,6 +455,7 @@ private:
   void InterruptCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
+  void PrintNewPCs();
   bool RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
   void RunOneAndUpdateCorpus(const uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);
@@ -516,9 +517,10 @@ private:
   // Maximum recorded coverage.
   Coverage MaxCoverage;
 
-  // For -print_new_cov_pcs
+  // For -print_pcs
   uintptr_t* PcBuffer = nullptr;
   size_t PcBufferLen = 0;
+  size_t PrevPcBufferPos;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;

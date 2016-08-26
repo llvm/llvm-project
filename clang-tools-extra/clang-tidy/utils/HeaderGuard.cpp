@@ -20,7 +20,7 @@ namespace utils {
 
 /// \brief canonicalize a path by removing ./ and ../ components.
 static std::string cleanPath(StringRef Path) {
-  SmallString<256> Result =  Path;
+  SmallString<256> Result = Path;
   llvm::sys::path::remove_dots(Result, true);
   return Result.str();
 }
@@ -274,13 +274,13 @@ void HeaderGuardCheck::registerPPCallbacks(CompilerInstance &Compiler) {
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {
-  return FileName.endswith(".h");
+  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
 }
 
 bool HeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) { return true; }
 
 bool HeaderGuardCheck::shouldSuggestToAddHeaderGuard(StringRef FileName) {
-  return FileName.endswith(".h");
+  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
 }
 
 std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {

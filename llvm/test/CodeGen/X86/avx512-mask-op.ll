@@ -173,6 +173,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    kshiftlw $10, %k0, %k0
 ; CHECK-NEXT:    kshiftrw $15, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -187,6 +188,8 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    kshiftlw $10, %k0, %k0
 ; CHECK-NEXT:    kshiftrw $15, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -201,7 +204,8 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    kshiftlw $10, %k0, %k0
 ; CHECK-NEXT:    kshiftrw $15, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %AX<kill>
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -606,6 +610,7 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; SKX-NEXT:    kmovq %rdi, %k0
 ; SKX-NEXT:    cmpl %edx, %esi
 ; SKX-NEXT:    setg %al
+; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0
 ; SKX-NEXT:    vpsllq $40, %xmm0, %xmm0
@@ -1760,7 +1765,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %k0, %r13d
 ; KNL-NEXT:    kshiftlw $7, %k2, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %edx
+; KNL-NEXT:    kmovw %k0, %ecx
 ; KNL-NEXT:    kshiftlw $6, %k2, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %esi
@@ -1775,7 +1780,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    kshiftlw $2, %k2, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    kmovw %k0, %edx
 ; KNL-NEXT:    kshiftlw $1, %k2, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    vmovd %r10d, %xmm2
@@ -1789,12 +1794,12 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    vpinsrb $5, %r15d, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $6, %r12d, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $7, %r13d, %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $8, %edx, %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $9, %esi, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $10, %ebp, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $11, %ebx, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; KNL-NEXT:    vpinsrb $13, %edx, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $14, %r10d, %xmm1, %xmm1
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
@@ -1828,7 +1833,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %k0, %r13d
 ; KNL-NEXT:    kshiftlw $7, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %edx
+; KNL-NEXT:    kmovw %k0, %ecx
 ; KNL-NEXT:    kshiftlw $6, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %esi
@@ -1843,7 +1848,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    kshiftlw $2, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    kmovw %k0, %edx
 ; KNL-NEXT:    kshiftlw $1, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    vmovd %r10d, %xmm1
@@ -1857,12 +1862,12 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $8, %edx, %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $9, %esi, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $10, %ebp, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $11, %ebx, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
+; KNL-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
 ; KNL-NEXT:    vpinsrb $14, %r10d, %xmm0, %xmm0
 ; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0

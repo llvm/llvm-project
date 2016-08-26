@@ -54,12 +54,16 @@ std::bad_typeid::what() const _NOEXCEPT
   {
 #ifndef _LIBCPP_NO_EXCEPTIONS
      throw std::bad_typeid();
+#else
+     _VSTD::abort();
 #endif
   }
   void __cxxabiv1::__cxa_bad_cast()
   {
 #ifndef _LIBCPP_NO_EXCEPTIONS
       throw std::bad_cast();
+#else
+      _VSTD::abort();
 #endif
   }
 #endif

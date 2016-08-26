@@ -738,10 +738,10 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ; KNL-LABEL: bug27873:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    andl $1, %esi
-; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    movl $160, %ecx
 ; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    mulq %rcx
+; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    seto %al
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0

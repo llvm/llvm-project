@@ -100,17 +100,12 @@ namespace Check {
 class Pattern {
   SMLoc PatternLoc;
 
-  Check::CheckType CheckTy;
-
   /// FixedStr - If non-empty, this pattern is a fixed string match with the
   /// specified fixed string.
   StringRef FixedStr;
 
   /// RegEx - If non-empty, this is a regex pattern.
   std::string RegExStr;
-
-  /// \brief Contains the number of line this pattern is in.
-  unsigned LineNumber;
 
   /// VariableUses - Entries in this vector map to uses of a variable in the
   /// pattern, e.g. "foo[[bar]]baz".  In this case, the RegExStr will contain
@@ -123,10 +118,13 @@ class Pattern {
   /// E.g. for the pattern "foo[[bar:.*]]baz", VariableDefs will map "bar" to 1.
   std::map<StringRef, unsigned> VariableDefs;
 
-public:
+  Check::CheckType CheckTy;
 
-  Pattern(Check::CheckType Ty)
-    : CheckTy(Ty) { }
+  /// \brief Contains the number of line this pattern is in.
+  unsigned LineNumber;
+
+public:
+  explicit Pattern(Check::CheckType Ty) : CheckTy(Ty) {}
 
   /// getLoc - Return the location in source code.
   SMLoc getLoc() const { return PatternLoc; }

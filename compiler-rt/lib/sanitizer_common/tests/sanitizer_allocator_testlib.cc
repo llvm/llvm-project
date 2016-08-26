@@ -34,13 +34,22 @@ LD_PRELOAD=`pwd`/testmalloc.so /your/app
 # define SANITIZER_FREE_HOOK(p)
 #endif
 
-namespace {
 static const uptr kAllocatorSpace = 0x600000000000ULL;
 static const uptr kAllocatorSize  =  0x10000000000ULL;  // 1T.
 
-// typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, 0,
-typedef SizeClassAllocator64<~(uptr)0, kAllocatorSize, 0,
-  CompactSizeClassMap> PrimaryAllocator;
+struct __AP64 {
+  static const uptr kSpaceBeg = ~(uptr)0;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 0;
+  typedef CompactSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags =
+      SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
+};
+
+namespace {
+
+typedef SizeClassAllocator64<__AP64> PrimaryAllocator;
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<> SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,

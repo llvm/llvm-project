@@ -50,11 +50,7 @@ public:
 
 protected:
     virtual void* do_allocate(size_t, size_t) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw std::bad_alloc();
-#else
-        abort();
-#endif
+        __throw_bad_alloc();
     }
     virtual void do_deallocate(void *, size_t, size_t) {}
     virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT

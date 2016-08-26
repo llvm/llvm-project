@@ -20,7 +20,7 @@ inline bool capture_error_or_throw(std::error_code* user_ec,
         *user_ec = my_ec;
         return true;
     }
-    __libcpp_throw(filesystem_error(msg, std::forward<Args>(args)..., my_ec));
+    __throw_filesystem_error(msg, std::forward<Args>(args)..., my_ec);
     return false;
 }
 
@@ -33,7 +33,7 @@ inline bool set_or_throw(std::error_code& my_ec,
         *user_ec = my_ec;
         return true;
     }
-    __libcpp_throw(filesystem_error(msg, std::forward<Args>(args)..., my_ec));
+    __throw_filesystem_error(msg, std::forward<Args>(args)..., my_ec);
     return false;
 }
 

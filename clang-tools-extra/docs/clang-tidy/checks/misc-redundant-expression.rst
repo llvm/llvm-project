@@ -6,14 +6,18 @@ misc-redundant-expression
 Detect redundant expressions which are typically errors due to copy-paste.
 
 Depending on the operator expressions may be
-  * redundant,
-  * always be `true`,
-  * always be `false`,
-  * always be a constant (zero or one)
+
+- redundant,
+
+- always be ``true``,
+
+- always be ``false``,
+
+- always be a constant (zero or one).
 
 Example:
 
-.. code:: c++
+.. code-block:: c++
 
   ((x+1) | (x+1))             // (x+1) is redundant
   (p->x == p->x)              // always true

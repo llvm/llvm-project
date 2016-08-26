@@ -17,6 +17,7 @@
 template<class SizeClassAllocator> struct SizeClassAllocator64LocalCache;
 
 // SizeClassAllocator64 -- allocator for 64-bit address space.
+// The template parameter Params is a class containing the actual parameters.
 //
 // Space: a portion of address space of kSpaceSize bytes starting at SpaceBeg.
 // If kSpaceBeg is ~0 then SpaceBeg is chosen dynamically my mmap.
@@ -35,14 +36,26 @@ template<class SizeClassAllocator> struct SizeClassAllocator64LocalCache;
 //
 // A Region looks like this:
 // UserChunk1 ... UserChunkN <gap> MetaChunkN ... MetaChunk1 FreeArray
-template <const uptr kSpaceBeg, const uptr kSpaceSize,
-          const uptr kMetadataSize, class SizeClassMap,
-          class MapUnmapCallback = NoOpMapUnmapCallback>
+
+struct SizeClassAllocator64FlagMasks {  //  Bit masks.
+  enum {
+    kRandomShuffleChunks = 1,
+  };
+};
+
+template <class Params>
 class SizeClassAllocator64 {
  public:
-  typedef SizeClassAllocator64<kSpaceBeg, kSpaceSize, kMetadataSize,
-                               SizeClassMap, MapUnmapCallback>
-      ThisT;
+  static const uptr kSpaceBeg = Params::kSpaceBeg;
+  static const uptr kSpaceSize = Params::kSpaceSize;
+  static const uptr kMetadataSize = Params::kMetadataSize;
+  typedef typename Params::SizeClassMap SizeClassMap;
+  typedef typename Params::MapUnmapCallback MapUnmapCallback;
+
+  static const bool kRandomShuffleChunks =
+      Params::kFlags & SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
+
+  typedef SizeClassAllocator64<Params> ThisT;
   typedef SizeClassAllocator64LocalCache<ThisT> AllocatorCache;
 
   // When we know the size class (the region base) we can represent a pointer
@@ -303,9 +316,22 @@ class SizeClassAllocator64 {
     uptr allocated_meta;  // Bytes allocated for metadata.
     uptr mapped_user;  // Bytes mapped for user memory.
     uptr mapped_meta;  // Bytes mapped for metadata.
+    u32 rand_state; // Seed for random shuffle, used if kRandomShuffleChunks.
     uptr n_allocated, n_freed;  // Just stats.
   };
   COMPILER_CHECK(sizeof(RegionInfo) >= kCacheLineSize);
+
+  u32 Rand(u32 *state) {  // ANSI C linear congruential PRNG.
+    return (*state = *state * 1103515245 + 12345) >> 16;
+  }
+
+  u32 RandN(u32 *state, u32 n) { return Rand(state) % n; }  // [0, n)
+
+  void RandomShuffle(u32 *a, u32 n, u32 *rand_state) {
+    if (n <= 1) return;
+    for (u32 i = n - 1; i > 0; i--)
+      Swap(a[i], a[RandN(rand_state, i + 1)]);
+  }
 
   RegionInfo *GetRegionInfo(uptr class_id) {
     CHECK_LT(class_id, kNumClasses);
@@ -358,6 +384,8 @@ class SizeClassAllocator64 {
     uptr end_idx = beg_idx + requested_count * size;
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
     if (end_idx + size > region->mapped_user) {
+      if (!kUsingConstantSpaceBeg && region->mapped_user == 0)
+        region->rand_state = region_beg;  // Comes from ASLR.
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
       while (end_idx + size > region->mapped_user + map_size)
@@ -376,6 +404,9 @@ class SizeClassAllocator64 {
       free_array[num_freed_chunks + total_count - 1 - i] =
           PointerToCompactPtr(0, chunk);
     }
+    if (kRandomShuffleChunks)
+      RandomShuffle(&free_array[num_freed_chunks], total_count,
+                    &region->rand_state);
     region->num_freed_chunks += total_count;
     region->allocated_user += total_count * size;
     CHECK_LE(region->allocated_user, region->mapped_user);

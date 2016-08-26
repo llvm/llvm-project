@@ -9,7 +9,7 @@ object is compare to an object with integral type.
 
 Examples:
 
-.. code:: c++
+.. code-block:: c++
 
   char* ptr;
   if ((ptr = malloc(...)) < nullptr)   // Pointer comparison with operator '<'

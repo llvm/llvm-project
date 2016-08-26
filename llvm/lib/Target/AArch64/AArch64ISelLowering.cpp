@@ -4036,6 +4036,22 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
       }
     }
 
+    // Avoid materializing a constant when possible by reusing a known value in
+    // a register.  However, don't perform this optimization if the known value
+    // is one, zero or negative one.  We can always materialize these values
+    // using CSINC, CSEL and CSINV with wzr/xzr as the FVal, respectively.
+    ConstantSDNode *RHSVal = dyn_cast<ConstantSDNode>(RHS);
+    if (Opcode == AArch64ISD::CSEL && RHSVal && !RHSVal->isOne() &&
+        !RHSVal->isNullValue() && !RHSVal->isAllOnesValue()) {
+      AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
+      // Transform "a == C ? C : x" to "a == C ? a : x" and "a != C ? x : C" to
+      // "a != C ? x : a" to avoid materializing C.
+      if (CTVal && CTVal == RHSVal && AArch64CC == AArch64CC::EQ)
+        TVal = LHS;
+      else if (CFVal && CFVal == RHSVal && AArch64CC == AArch64CC::NE)
+        FVal = LHS;
+    }
+
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
 
@@ -7762,13 +7778,15 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
 /// Fold a floating-point divide by power of two into fixed-point to
 /// floating-point conversion.
 static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
                                   const AArch64Subtarget *Subtarget) {
   if (!Subtarget->hasNEON())
     return SDValue();
 
   SDValue Op = N->getOperand(0);
   unsigned Opc = Op->getOpcode();
-  if (!Op.getValueType().isVector() ||
+  if (!Op.getValueType().isVector() || !Op.getValueType().isSimple() ||
+      !Op.getOperand(0).getValueType().isSimple() ||
       (Opc != ISD::SINT_TO_FP && Opc != ISD::UINT_TO_FP))
     return SDValue();
 
@@ -7805,9 +7823,12 @@ static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
     ResTy = FloatBits == 32 ? MVT::v2i32 : MVT::v2i64;
     break;
   case 4:
-    ResTy = MVT::v4i32;
+    ResTy = FloatBits == 32 ? MVT::v4i32 : MVT::v4i64;
     break;
   }
+
+  if (ResTy == MVT::v4i64 && DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   SDLoc DL(N);
   SDValue ConvInput = Op.getOperand(0);
@@ -9867,7 +9888,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_UINT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::FDIV:
-    return performFDivCombine(N, DAG, Subtarget);
+    return performFDivCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget);
   case ISD::SRL:

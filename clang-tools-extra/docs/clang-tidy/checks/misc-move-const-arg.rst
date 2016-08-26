@@ -5,17 +5,18 @@ misc-move-const-arg
 
 The check warns
 
-  - if ``std::move()`` is called with a constant argument,
-  - if ``std::move()`` is called with an argument of a trivially-copyable type,
-    or
-  - if the result of ``std::move()`` is passed as a const reference argument.
+- if ``std::move()`` is called with a constant argument,
+
+- if ``std::move()`` is called with an argument of a trivially-copyable type,
+
+- if the result of ``std::move()`` is passed as a const reference argument.
 
 In all three cases, the check will suggest a fix that removes the
 ``std::move()``.
 
 Here are examples of each of the three cases:
 
-.. code:: c++
+.. code-block:: c++
 
   const string s;
   return std::move(s);  // Warning: std::move of the const variable has no effect

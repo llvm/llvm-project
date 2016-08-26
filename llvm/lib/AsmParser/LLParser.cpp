@@ -287,7 +287,9 @@ bool LLParser::ParseTopLevelEntities() {
     case lltok::kw_attributes: if (ParseUnnamedAttrGrp()) return true; break;
     case lltok::kw_uselistorder: if (ParseUseListOrder()) return true; break;
     case lltok::kw_uselistorder_bb:
-                                 if (ParseUseListOrderBB()) return true; break;
+      if (ParseUseListOrderBB())
+        return true;
+      break;
     }
   }
 }

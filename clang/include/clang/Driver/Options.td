@@ -991,6 +991,8 @@ def fno_show_column : Flag<["-"], "fno-show-column">, Group<f_Group>, Flags<[CC1
   HelpText<"Do not include column number on diagnostics">;
 def fno_show_source_location : Flag<["-"], "fno-show-source-location">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Do not include source location information with diagnostics">;
+def fdiagnostics_absolute_paths : Flag<["-"], "fdiagnostics-absolute-paths">, Group<f_Group>,
+  Flags<[CC1Option, CoreOption]>, HelpText<"Print absolute paths in diagnostics">;
 def fno_spell_checking : Flag<["-"], "fno-spell-checking">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Disable spell-checking">;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
@@ -1305,8 +1307,8 @@ def gno_record_gcc_switches : Flag<["-"], "gno-record-gcc-switches">,
   Group<g_flags_Group>;
 def gstrict_dwarf : Flag<["-"], "gstrict-dwarf">, Group<g_flags_Group>;
 def gno_strict_dwarf : Flag<["-"], "gno-strict-dwarf">, Group<g_flags_Group>;
-def gcolumn_info : Flag<["-"], "gcolumn-info">, Group<g_flags_Group>;
-def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>;
+def gcolumn_info : Flag<["-"], "gcolumn-info">, Group<g_flags_Group>, Flags<[CoreOption]>;
+def gno_column_info : Flag<["-"], "gno-column-info">, Group<g_flags_Group>, Flags<[CoreOption]>;
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;

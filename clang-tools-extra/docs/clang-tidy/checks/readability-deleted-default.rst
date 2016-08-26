@@ -6,7 +6,7 @@ readability-deleted-default
 Checks that constructors and assignment operators marked as ``= default`` are
 not actually deleted by the compiler.
 
-.. code:: c++
+.. code-block:: c++
 
   class Example {
   public:
@@ -16,7 +16,7 @@ not actually deleted by the compiler.
     Example(const Example& Other) = default;
     // This operator is deleted because I cannot be assigned (it is const).
     Example& operator=(const Example& Other) = default;
+
   private:
     const int I;
   };
-

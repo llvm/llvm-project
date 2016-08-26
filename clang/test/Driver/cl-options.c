@@ -50,6 +50,15 @@
 // fpstrict-NOT: -menable-unsafe-fp-math
 // fpstrict-NOT: -ffast-math
 
+// RUN: %clang_cl /Z7 -gcolumn-info -### -- %s 2>&1 | FileCheck -check-prefix=gcolumn %s
+// gcolumn: -dwarf-column-info
+
+// RUN: %clang_cl /Z7 -gno-column-info -### -- %s 2>&1 | FileCheck -check-prefix=gnocolumn %s
+// gnocolumn-NOT: -dwarf-column-info
+
+// RUN: %clang_cl /Z7 -### -- %s 2>&1 | FileCheck -check-prefix=gdefcolumn %s
+// gdefcolumn-NOT: -dwarf-column-info
+
 // RUN: %clang_cl /GA -### -- %s 2>&1 | FileCheck -check-prefix=GA %s
 // GA: -ftls-model=local-exec
 
@@ -330,7 +339,6 @@
 // RUN:     /FAs \
 // RUN:     /FAu \
 // RUN:     /favor:blend \
-// RUN:     /FC \
 // RUN:     /Fifoo \
 // RUN:     /Fmfoo \
 // RUN:     /FpDebug\main.pch \
@@ -482,6 +490,7 @@
 // RUN:     -fdiagnostics-color \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdiagnostics-parseable-fixits \
+// RUN:     -fdiagnostics-absolute-paths \
 // RUN:     -ferror-limit=10 \
 // RUN:     -fmsc-version=1800 \
 // RUN:     -fno-strict-aliasing \

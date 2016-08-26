@@ -26,6 +26,7 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   this->TII = MF.getSubtarget().getInstrInfo();
   this->DL = DebugLoc();
   this->MI = nullptr;
+  this->InsertedInstr = nullptr;
 }
 
 void MachineIRBuilder::setMBB(MachineBasicBlock &MBB, bool Beginning) {
@@ -53,6 +54,15 @@ MachineBasicBlock::iterator MachineIRBuilder::getInsertPt() {
   return Before ? getMBB().begin() : getMBB().end();
 }
 
+void MachineIRBuilder::recordInsertions(
+    std::function<void(MachineInstr *)> Inserted) {
+  InsertedInstr = Inserted;
+}
+
+void MachineIRBuilder::stopRecordingInsertions() {
+  InsertedInstr = nullptr;
+}
+
 //------------------------------------------------------------------------------
 // Build instruction variants.
 //------------------------------------------------------------------------------
@@ -69,6 +79,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opcode,
     assert(!isPreISelGenericOpcode(Opcode) &&
            "Generic instruction must have a type");
   getMBB().insert(getInsertPt(), MIB);
+  if (InsertedInstr)
+    InsertedInstr(MIB);
   return MIB;
 }
 
@@ -82,6 +94,22 @@ MachineInstrBuilder MachineIRBuilder::buildFrameIndex(LLT Ty, unsigned Res,
 MachineInstrBuilder MachineIRBuilder::buildAdd(LLT Ty, unsigned Res,
                                                 unsigned Op0, unsigned Op1) {
   return buildInstr(TargetOpcode::G_ADD, Ty)
+      .addDef(Res)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSub(LLT Ty, unsigned Res,
+                                                unsigned Op0, unsigned Op1) {
+  return buildInstr(TargetOpcode::G_SUB, Ty)
+      .addDef(Res)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildMul(LLT Ty, unsigned Res,
+                                                unsigned Op0, unsigned Op1) {
+  return buildInstr(TargetOpcode::G_MUL, Ty)
       .addDef(Res)
       .addUse(Op0)
       .addUse(Op1);
@@ -129,11 +157,10 @@ MachineInstrBuilder MachineIRBuilder::buildStore(LLT VTy, LLT PTy,
       .addMemOperand(&MMO);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildUAdde(LLT Ty, unsigned Res,
-                                                 unsigned CarryOut,
-                                                 unsigned Op0, unsigned Op1,
-                                                 unsigned CarryIn) {
-  return buildInstr(TargetOpcode::G_UADDE, Ty)
+MachineInstrBuilder
+MachineIRBuilder::buildUAdde(ArrayRef<LLT> Tys, unsigned Res, unsigned CarryOut,
+                             unsigned Op0, unsigned Op1, unsigned CarryIn) {
+  return buildInstr(TargetOpcode::G_UADDE, Tys)
       .addDef(Res)
       .addDef(CarryOut)
       .addUse(Op0)
@@ -181,6 +208,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<LLT> ResTys,
     MIB.addImm(Idx);
 
   getMBB().insert(getInsertPt(), MIB);
+  if (InsertedInstr)
+    InsertedInstr(MIB);
 
   return MIB;
 }

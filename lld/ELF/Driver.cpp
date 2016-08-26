@@ -334,6 +334,16 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
   return UnresolvedPolicy::Error;
 }
 
+static bool isOutputFormatBinary(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_oformat)) {
+    StringRef S = Arg->getValue();
+    if (S == "binary")
+      return true;
+    error("unknown --oformat value: " + S);
+  }
+  return false;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -440,6 +450,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->BuildId = BuildIdKind::Md5;
     } else if (S == "sha1") {
       Config->BuildId = BuildIdKind::Sha1;
+    } else if (S == "uuid") {
+      Config->BuildId = BuildIdKind::Uuid;
     } else if (S == "none") {
       Config->BuildId = BuildIdKind::None;
     } else if (S.startswith("0x")) {
@@ -449,6 +461,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       error("unknown --build-id style: " + S);
     }
   }
+
+  Config->OFormatBinary = isOutputFormatBinary(Args);
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());

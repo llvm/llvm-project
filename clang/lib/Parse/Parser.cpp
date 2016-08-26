@@ -544,11 +544,21 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
   if (Tok.is(tok::kw_module)) {
     Result = ParseModuleDecl();
     return false;
+  } else if (getLangOpts().getCompilingModule() ==
+             LangOptions::CMK_ModuleInterface) {
+    Diag(Tok, diag::err_expected_module_interface_decl);
   }
-  // FIXME: If we're parsing a module interface and we don't have a module
-  // declaration here, diagnose.
 
-  return ParseTopLevelDecl(Result);
+  // C11 6.9p1 says translation units must have at least one top-level
+  // declaration. C++ doesn't have this restriction. We also don't want to
+  // complain if we have a precompiled header, although technically if the PCH
+  // is empty we should still emit the (pedantic) diagnostic.
+  bool NoTopLevelDecls = ParseTopLevelDecl(Result);
+  if (NoTopLevelDecls && !Actions.getASTContext().getExternalSource() &&
+      !getLangOpts().CPlusPlus)
+    Diag(diag::ext_empty_translation_unit);
+
+  return NoTopLevelDecls;
 }
 
 /// ParseTopLevelDecl - Parse one top-level declaration, return whatever the
@@ -818,6 +828,11 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::kw___if_exists:
   case tok::kw___if_not_exists:
     ParseMicrosoftIfExistsExternalDeclaration();
+    return nullptr;
+
+  case tok::kw_module:
+    Diag(Tok, diag::err_unexpected_module_decl);
+    SkipUntil(tok::semi);
     return nullptr;
 
   default:

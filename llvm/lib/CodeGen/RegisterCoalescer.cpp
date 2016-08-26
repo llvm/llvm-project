@@ -2372,7 +2372,7 @@ bool JoinVals::resolveConflicts(JoinVals &Other) {
       Indexes->getInstructionFromIndex(TaintExtent.front().first);
     assert(LastMI && "Range must end at a proper instruction");
     unsigned TaintNum = 0;
-    for(;;) {
+    for (;;) {
       assert(MI != MBB->end() && "Bad LastMI");
       if (usesLanes(*MI, Other.Reg, Other.SubIdx, TaintedLanes)) {
         DEBUG(dbgs() << "\t\ttainted lanes used by: " << *MI);
@@ -2690,8 +2690,15 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
 
   // Recompute the parts of the live range we had to remove because of
   // CR_Replace conflicts.
-  DEBUG(dbgs() << "\t\trestoring liveness to " << EndPoints.size()
-               << " points: " << LRange << '\n');
+  DEBUG({
+    dbgs() << "\t\trestoring liveness to " << EndPoints.size() << " points: ";
+    for (unsigned i = 0, n = EndPoints.size(); i != n; ++i) {
+      dbgs() << EndPoints[i];
+      if (i != n-1)
+        dbgs() << ',';
+    }
+    dbgs() << ":  " << LRange << '\n';
+  });
   LIS->extendToIndices(LRange, EndPoints);
 }
 
@@ -2832,8 +2839,15 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   if (!EndPoints.empty()) {
     // Recompute the parts of the live range we had to remove because of
     // CR_Replace conflicts.
-    DEBUG(dbgs() << "\t\trestoring liveness to " << EndPoints.size()
-                 << " points: " << LHS << '\n');
+    DEBUG({
+      dbgs() << "\t\trestoring liveness to " << EndPoints.size() << " points: ";
+      for (unsigned i = 0, n = EndPoints.size(); i != n; ++i) {
+        dbgs() << EndPoints[i];
+        if (i != n-1)
+          dbgs() << ',';
+      }
+      dbgs() << ":  " << LHS << '\n';
+    });
     LIS->extendToIndices((LiveRange&)LHS, EndPoints);
   }
 

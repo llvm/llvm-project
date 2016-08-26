@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTWriter.h"
@@ -21,12 +22,11 @@
 using namespace clang;
 
 PCHGenerator::PCHGenerator(
-  const Preprocessor &PP, StringRef OutputFile,
-  clang::Module *Module, StringRef isysroot,
-  std::shared_ptr<PCHBuffer> Buffer,
-  ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
-  bool AllowASTWithErrors, bool IncludeTimestamps)
-    : PP(PP), OutputFile(OutputFile), Module(Module), isysroot(isysroot.str()),
+    const Preprocessor &PP, StringRef OutputFile, StringRef isysroot,
+    std::shared_ptr<PCHBuffer> Buffer,
+    ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
+    bool AllowASTWithErrors, bool IncludeTimestamps)
+    : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       SemaPtr(nullptr), Buffer(Buffer), Stream(Buffer->Data),
       Writer(Stream, Extensions, IncludeTimestamps),
       AllowASTWithErrors(AllowASTWithErrors) {
@@ -44,6 +44,16 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   bool hasErrors = PP.getDiagnostics().hasErrorOccurred();
   if (hasErrors && !AllowASTWithErrors)
     return;
+
+  Module *Module = nullptr;
+  if (PP.getLangOpts().isCompilingModule()) {
+    Module = PP.getHeaderSearchInfo().lookupModule(
+        PP.getLangOpts().CurrentModule, /*AllowSearch*/ false);
+    if (!Module) {
+      assert(hasErrors && "emitting module but current module doesn't exist");
+      return;
+    }
+  }
 
   // Emit the PCH file to the Buffer.
   assert(SemaPtr && "No Sema?");

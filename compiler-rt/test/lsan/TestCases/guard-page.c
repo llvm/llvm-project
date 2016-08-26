@@ -22,7 +22,7 @@ static void die(const char* msg, int err) {
 static void ctxfunc() {
   pthread_mutex_lock(&mutex);
   ctxfunc_started = 1;
-  printf("ctxfunc\n");
+  // printf("ctxfunc\n");
   pthread_cond_signal(&cond);
   pthread_mutex_unlock(&mutex);
   // Leave this context alive when the program exits.
@@ -36,11 +36,11 @@ static void* thread(void* arg) {
 
   if (getcontext(&ctx) < 0)
     die("getcontext", 0);
-  stack = malloc(1 << 12);
+  stack = malloc(1 << 11);
   if (stack == NULL)
     die("malloc", 0);
   ctx.uc_stack.ss_sp = stack;
-  ctx.uc_stack.ss_size = 1 << 12;
+  ctx.uc_stack.ss_size = 1 << 11;
   makecontext(&ctx, ctxfunc, 0);
   setcontext(&ctx);
   die("setcontext", 0);

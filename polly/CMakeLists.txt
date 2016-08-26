@@ -9,34 +9,28 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   if( NOT EXISTS ${LLVM_INSTALL_ROOT}/include/llvm )
     message(FATAL_ERROR "LLVM_INSTALL_ROOT (${LLVM_INSTALL_ROOT}) is not a valid LLVM installation.")
   endif(NOT EXISTS ${LLVM_INSTALL_ROOT}/include/llvm)
-  #FileCheck is not install by default, warn the user to Copy FileCheck
+  # FileCheck, not and llvm-lit are not install by default, warn the user to copy them.
   if( NOT EXISTS ${LLVM_INSTALL_ROOT}/bin/FileCheck
-      OR NOT EXISTS ${LLVM_INSTALL_ROOT}/bin/not)
-    message(WARNING "FileCheck or not are required by running regress tests, "
-                    "but they are not installed! Please copy it to "
+      OR NOT EXISTS ${LLVM_INSTALL_ROOT}/bin/not
+      OR NOT EXISTS ${LLVM_INSTALL_ROOT}/bin/llvm-lit )
+    message(WARNING "'FileCheck', 'not' and 'llvm-lit' are required by running regress tests, "
+                    "but they are not installed! Please copy them to "
                     "${LLVM_INSTALL_ROOT}/bin.")
-  endif(NOT EXISTS ${LLVM_INSTALL_ROOT}/bin/FileCheck
-        OR NOT EXISTS ${LLVM_INSTALL_ROOT}/bin/not)
+  endif()
   # Add the llvm header path.
   include_directories(${LLVM_INSTALL_ROOT}/include/)
 
   # Get the system librarys that will link into LLVM.
-  function(get_system_libs return_var)
-    # Returns in `return_var' a list of system libraries used by LLVM.
-    if( NOT MSVC )
-      if( MINGW )
-        set(system_libs ${system_libs} imagehlp psapi)
-      elseif( CMAKE_HOST_UNIX )
-        if( HAVE_LIBDL )
-          set(system_libs ${system_libs} ${CMAKE_DL_LIBS})
-        endif()
-        if( LLVM_ENABLE_THREADS AND HAVE_LIBPTHREAD )
-          set(system_libs ${system_libs} pthread)
-        endif()
-      endif( MINGW )
-    endif( NOT MSVC )
-    set(${return_var} ${system_libs} PARENT_SCOPE)
-  endfunction(get_system_libs)
+  execute_process(COMMAND "${LLVM_INSTALL_ROOT}/bin/llvm-config" --system-libs
+                  OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  message(STATUS "System libs required by LLVM: ${LLVM_SYSTEM_LIBS}")
+
+  # Determine where LLVM stores its libraries.
+  execute_process(COMMAND "${LLVM_INSTALL_ROOT}/bin/llvm-config" --libdir
+                  OUTPUT_VARIABLE LLVM_LIBRARY_DIR
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  link_directories("${LLVM_LIBRARY_DIR}")
 
   # Now set the header paths.
   execute_process(COMMAND "${LLVM_INSTALL_ROOT}/bin/llvm-config" --includedir
@@ -83,9 +77,31 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
     endif()
   endif()
 
+  # Sources available, too?
+  execute_process(COMMAND "${LLVM_INSTALL_ROOT}/bin/llvm-config" --src-root
+                  OUTPUT_VARIABLE MAIN_SRC_DIR
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(LLVM_SOURCE_ROOT ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+
+  # Enable unit tests if available.
+  set(UNITTEST_DIR ${LLVM_SOURCE_ROOT}/utils/unittest)
+  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
+    add_library(gtest ${UNITTEST_DIR}/googletest/src/gtest-all.cc)
+    target_include_directories(gtest PUBLIC "${UNITTEST_DIR}/googletest/include" PRIVATE "${UNITTEST_DIR}/googletest")
+    target_link_libraries(gtest ${LLVM_SYSTEM_LIBS})
+
+    add_library(gtest_main ${UNITTEST_DIR}/UnitTestMain/TestMain.cpp)
+    target_link_libraries(gtest_main gtest)
+
+    set(POLLY_GTEST_AVAIL 1)
+  endif()
+
   # Make sure the isl c files are built as fPIC
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-endif(NOT DEFINED LLVM_MAIN_SRC_DIR)
+else ()
+  set(LLVM_SOURCE_ROOT "${LLVM_MAIN_SRC_DIR}")
+  set(POLLY_GTEST_AVAIL 1)
+endif ()
 
 set(POLLY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(POLLY_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -164,6 +180,9 @@ add_definitions( -D_GNU_SOURCE )
 add_subdirectory(docs)
 add_subdirectory(lib)
 add_subdirectory(test)
+if (POLLY_GTEST_AVAIL)
+  add_subdirectory(unittests)
+endif ()
 add_subdirectory(tools)
 # TODO: docs.
 
@@ -172,7 +191,7 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/include/polly/Config/config.h.cmake
                 ${POLLY_BINARY_DIR}/include/polly/Config/config.h )
 
 # Add target to check formatting of polly files
-file( GLOB_RECURSE files *.h lib/*.cpp lib/*.c tools/*.cpp tools/*.c tools/*.h)
+file( GLOB_RECURSE files *.h lib/*.cpp lib/*.c tools/*.cpp tools/*.c tools/*.h unittests/*.cpp)
 file( GLOB_RECURSE jsonfiles lib/JSON/*.h lib/JSON/*.cpp)
 file( GLOB_RECURSE external lib/External/*.h lib/External/*.c)
 list( REMOVE_ITEM files ${jsonfiles} ${external})

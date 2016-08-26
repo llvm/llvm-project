@@ -297,7 +297,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   if (LangOpts.ModulesStrictDeclUse) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
         << RequestingModule->getFullModuleName() << Filename;
-  } else if (RequestingModule && RequestingModuleIsModuleInterface) {
+  } else if (RequestingModule && RequestingModuleIsModuleInterface &&
+             LangOpts.isCompilingModule()) {
+    // Do not diagnose when we are not compiling a module. 
     diag::kind DiagID = RequestingModule->getTopLevelModule()->IsFramework ?
         diag::warn_non_modular_include_in_framework_module :
         diag::warn_non_modular_include_in_module;
@@ -558,6 +560,25 @@ ModuleMap::findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
   return std::make_pair(Result, true);
 }
 
+Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
+                                                StringRef Name) {
+  assert(LangOpts.CurrentModule == Name && "module name mismatch");
+  assert(!Modules[Name] && "redefining existing module");
+
+  auto *Result =
+      new Module(Name, Loc, nullptr, /*IsFramework*/ false,
+                 /*IsExplicit*/ false, NumCreatedModules++);
+  Modules[Name] = SourceModule = Result;
+
+  // Mark the main source file as being within the newly-created module so that
+  // declarations and macros are properly visibility-restricted to it.
+  auto *MainFile = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+  assert(MainFile && "no input file for module interface");
+  Headers[MainFile].push_back(KnownHeader(Result, PrivateHeader));
+
+  return Result;
+}
+
 /// \brief For a framework module, infer the framework against which we
 /// should link.
 static void inferFrameworkLink(Module *Mod, const DirectoryEntry *FrameworkDir,
@@ -805,7 +826,7 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
   Mod->Headers[headerRoleToKind(Role)].push_back(std::move(Header));
 
   bool isCompilingModuleHeader =
-      LangOpts.CompilingModule && Mod->getTopLevelModule() == SourceModule;
+      LangOpts.isCompilingModule() && Mod->getTopLevelModule() == SourceModule;
   if (!Imported || isCompilingModuleHeader) {
     // When we import HeaderFileInfo, the external source is expected to
     // set the isModuleHeader flag itself.

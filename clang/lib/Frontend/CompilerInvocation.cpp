@@ -945,6 +945,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                  /*Default=*/true);
   Opts.ShowFixits = !Args.hasArg(OPT_fno_diagnostics_fixit_info);
   Opts.ShowLocation = !Args.hasArg(OPT_fno_show_source_location);
+  Opts.AbsolutePath = Args.hasArg(OPT_fdiagnostics_absolute_paths);
   Opts.ShowOptionNames = Args.hasArg(OPT_fdiagnostics_show_option);
 
   llvm::sys::Process::UseANSIEscapeCodes(Args.hasArg(OPT_fansi_escape_codes));
@@ -1116,6 +1117,8 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       Opts.ProgramAction = frontend::FixIt; break;
     case OPT_emit_module:
       Opts.ProgramAction = frontend::GenerateModule; break;
+    case OPT_emit_module_interface:
+      Opts.ProgramAction = frontend::GenerateModuleInterface; break;
     case OPT_emit_pch:
       Opts.ProgramAction = frontend::GeneratePCH; break;
     case OPT_emit_pth:
@@ -2259,6 +2262,7 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
   case frontend::EmitObj:
   case frontend::FixIt:
   case frontend::GenerateModule:
+  case frontend::GenerateModuleInterface:
   case frontend::GeneratePCH:
   case frontend::GeneratePTH:
   case frontend::ParseSyntaxOnly:

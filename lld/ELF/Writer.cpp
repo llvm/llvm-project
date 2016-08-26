@@ -58,6 +58,7 @@ private:
   std::vector<Phdr> createPhdrs();
   void assignAddresses();
   void assignFileOffsets();
+  void assignFileOffsetsBinary();
   void setPhdrs();
   void fixHeaders();
   void fixSectionAlignments();
@@ -65,6 +66,7 @@ private:
   void openFile();
   void writeHeader();
   void writeSections();
+  void writeSectionsBinary();
   void writeBuildId();
 
   std::unique_ptr<FileOutputBuffer> Buffer;
@@ -154,6 +156,8 @@ template <class ELFT> void elf::writeResult() {
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
     BuildId.reset(new BuildIdSha1<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Uuid)
+    BuildId.reset(new BuildIdUuid<ELFT>);
   else if (Config->BuildId == BuildIdKind::Hexstring)
     BuildId.reset(new BuildIdHexstring<ELFT>);
 
@@ -268,7 +272,12 @@ template <class ELFT> void Writer<ELFT>::run() {
       fixSectionAlignments();
       assignAddresses();
     }
-    assignFileOffsets();
+
+    if (!Config->OFormatBinary)
+      assignFileOffsets();
+    else
+      assignFileOffsetsBinary();
+
     setPhdrs();
     fixAbsoluteSymbols();
   }
@@ -276,8 +285,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   openFile();
   if (HasError)
     return;
-  writeHeader();
-  writeSections();
+  if (!Config->OFormatBinary) {
+    writeHeader();
+    writeSections();
+  } else {
+    writeSectionsBinary();
+  }
   writeBuildId();
   if (HasError)
     return;
@@ -1056,8 +1069,10 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Config->ImageBase + Out<ELFT>::ElfHeader->getSize() +
-               Out<ELFT>::ProgramHeaders->getSize();
+  uintX_t VA = Config->ImageBase;
+  if (!Config->OFormatBinary)
+    VA +=
+        Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
 
   uintX_t ThreadBssOffset = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
@@ -1097,25 +1112,34 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
   return alignTo(Off, Target->PageSize, Sec->getVA());
 }
 
+template <class ELFT, class uintX_t>
+void setOffset(OutputSectionBase<ELFT> *Sec, uintX_t &Off) {
+  if (Sec->getType() == SHT_NOBITS) {
+    Sec->setFileOffset(Off);
+    return;
+  }
+
+  Off = getFileAlignment<ELFT>(Off, Sec);
+  Sec->setFileOffset(Off);
+  Off += Sec->getSize();
+}
+
+template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
+  uintX_t Off = 0;
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    if (Sec->getFlags() & SHF_ALLOC)
+      setOffset(Sec, Off);
+  FileSize = alignTo(Off, sizeof(uintX_t));
+}
+
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uintX_t Off = 0;
+  setOffset(Out<ELFT>::ElfHeader, Off);
+  setOffset(Out<ELFT>::ProgramHeaders, Off);
 
-  auto Set = [&](OutputSectionBase<ELFT> *Sec) {
-    if (Sec->getType() == SHT_NOBITS) {
-      Sec->setFileOffset(Off);
-      return;
-    }
-
-    Off = getFileAlignment<ELFT>(Off, Sec);
-    Sec->setFileOffset(Off);
-    Off += Sec->getSize();
-  };
-
-  Set(Out<ELFT>::ElfHeader);
-  Set(Out<ELFT>::ProgramHeaders);
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    Set(Sec);
+    setOffset(Sec, Off);
 
   SectionHeaderOff = alignTo(Off, sizeof(uintX_t));
   FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);
@@ -1260,6 +1284,13 @@ template <class ELFT> void Writer<ELFT>::openFile() {
     error(EC, "failed to open " + Config->OutputFile);
   else
     Buffer = std::move(*BufferOrErr);
+}
+
+template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
+  uint8_t *Buf = Buffer->getBufferStart();
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    if (Sec->getFlags() & SHF_ALLOC)
+      Sec->writeTo(Buf + Sec->getFileOff());
 }
 
 // Write section contents to a mmap'ed file.

@@ -491,11 +491,6 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   if (Log2_32(Count) > BEWidth)
     return false;
 
-  // If this loop is nested, then the loop unroller changes the code in the
-  // parent loop, so the Scalar Evolution pass needs to be run again.
-  if (Loop *ParentLoop = L->getParentLoop())
-    SE->forgetLoop(ParentLoop);
-
   BasicBlock *Latch = L->getLoopLatch();
 
   // Loop structure is the following:
@@ -685,6 +680,12 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
     ConnectProlog(L, BECount, Count, PrologExit, PreHeader, NewPreHeader,
                   VMap, DT, LI, PreserveLCSSA);
   }
+
+  // If this loop is nested, then the loop unroller changes the code in the
+  // parent loop, so the Scalar Evolution pass needs to be run again.
+  if (Loop *ParentLoop = L->getParentLoop())
+    SE->forgetLoop(ParentLoop);
+
   NumRuntimeUnrolled++;
   return true;
 }
