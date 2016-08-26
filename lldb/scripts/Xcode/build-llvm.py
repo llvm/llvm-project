@@ -82,8 +82,11 @@ def BUILD_SCRIPT_ENVIRONMENT ():
 
 def collect_archives_in_path (path): 
     files = os.listdir(path)
-    # Only use libclang and libLLVM archives, and exclude libclang_rt
-    regexp = "^lib(clang[^_]|LLVM|gtest).*$"
+    # Only use libclang and libLLVM archives (and gtests), and exclude libclang_rt.
+    # Also include swigt and cmark.
+    # This is not a very scalable solution.  Direct dependency determination would
+    # be preferred.
+    regexp = "^lib(clang[^_]|LLVM|gtest|swift|cmark).*$"
     return [os.path.join(path, file) for file in files if file.endswith(".a") and re.match(regexp, file)]
 
 def archive_list ():
