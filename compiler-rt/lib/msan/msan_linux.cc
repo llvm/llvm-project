@@ -66,7 +66,8 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range %p - %p.\n", beg, end);
+      Printf("FATAL: Cannot protect memory range %p - %p (%s).\n", beg, end,
+             name);
       return false;
     }
   }

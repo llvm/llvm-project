@@ -46,6 +46,13 @@ struct Mapping42 {
   static const uptr kShadowMask = ~0x3c000000000;
 };
 
+struct Mapping48 {
+  static const uptr kShadowAddr = 0x10000;
+  static const uptr kUnionTableAddr = 0x8000000000;
+  static const uptr kAppAddr = 0xffff00008000;
+  static const uptr kShadowMask = ~0xfffff0000000;
+};
+
 extern int vmaSize;
 # define DFSAN_RUNTIME_VMA 1
 #else
@@ -72,11 +79,13 @@ uptr MappingImpl(void) {
 template<int Type>
 uptr MappingArchImpl(void) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return MappingImpl<Mapping39, Type>();
-  else
-    return MappingImpl<Mapping42, Type>();
+  switch (vmaSize) {
+    case 39: return MappingImpl<Mapping39, Type>();
+    case 42: return MappingImpl<Mapping42, Type>();
+    case 48: return MappingImpl<Mapping48, Type>();
+  }
   DCHECK(0);
+  return 0;
 #else
   return MappingImpl<Mapping, Type>();
 #endif

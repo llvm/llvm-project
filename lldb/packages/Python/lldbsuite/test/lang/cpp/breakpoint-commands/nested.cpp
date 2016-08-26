@@ -11,7 +11,7 @@ namespace Foo
       int Function () 
       {
         printf ("%s returning: %d.\n", __FUNCTION__, m_value);
-        return m_value;
+        return m_value + 1;
       }
     private:
       int m_value;
@@ -24,7 +24,7 @@ namespace Foo
       int Function () 
       {
         printf ("%s returning: %d.\n", __FUNCTION__, m_value);
-        return m_value;
+        return m_value + 2;
       }
     private:
       int m_value;
@@ -34,7 +34,7 @@ namespace Foo
     int Function ()
     {
       printf ("%s returning: %d.\n", __FUNCTION__, bar_value);
-      return bar_value;
+      return bar_value + 3;
     }
   }
 }
@@ -46,7 +46,7 @@ public:
     int Function () 
     {
         printf ("%s returning: %d.\n", __FUNCTION__, m_value);
-        return m_value;
+        return m_value + 4;
     }
 private:
     int m_value;

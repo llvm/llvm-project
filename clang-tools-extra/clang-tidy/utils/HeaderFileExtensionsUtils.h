@@ -12,8 +12,8 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace tidy {
@@ -40,6 +40,10 @@ bool isSpellingLocInHeaderFile(
 bool parseHeaderFileExtensions(StringRef AllHeaderFileExtensions,
                                HeaderFileExtensionsSet &HeaderFileExtensions,
                                char delimiter);
+
+/// \brief Decides whether a file has a header file extension.
+bool isHeaderFileExtension(StringRef FileName,
+                           HeaderFileExtensionsSet HeaderFileExtensions);
 
 } // namespace utils
 } // namespace tidy

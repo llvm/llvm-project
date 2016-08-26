@@ -61,6 +61,15 @@ bool parseHeaderFileExtensions(StringRef AllHeaderFileExtensions,
   return true;
 }
 
+bool isHeaderFileExtension(StringRef FileName,
+                           HeaderFileExtensionsSet HeaderFileExtensions) {
+  StringRef extension = ::llvm::sys::path::extension(FileName);
+  if (extension.startswith("."))
+    extension = extension.substr(1);
+
+  return HeaderFileExtensions.count(extension) > 0;
+}
+
 } // namespace utils
 } // namespace tidy
 } // namespace clang

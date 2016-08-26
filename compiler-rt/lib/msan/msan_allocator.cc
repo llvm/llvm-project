@@ -56,23 +56,32 @@ struct MsanMapUnmapCallback {
 #else
   static const uptr kAllocatorSpace = 0x600000000000ULL;
 #endif
-  static const uptr kAllocatorSize = 0x40000000000; // 4T.
-  static const uptr kMetadataSize  = sizeof(Metadata);
   static const uptr kMaxAllowedMallocSize = 8UL << 30;
 
-  typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, kMetadataSize,
-                             DefaultSizeClassMap,
-                             MsanMapUnmapCallback> PrimaryAllocator;
+  struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+    static const uptr kSpaceBeg = kAllocatorSpace;
+    static const uptr kSpaceSize = 0x40000000000; // 4T.
+    static const uptr kMetadataSize = sizeof(Metadata);
+    typedef DefaultSizeClassMap SizeClassMap;
+    typedef MsanMapUnmapCallback MapUnmapCallback;
+    static const uptr kFlags = 0;
+  };
+
+  typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 
 #elif defined(__powerpc64__)
-  static const uptr kAllocatorSpace = 0x300000000000;
-  static const uptr kAllocatorSize  = 0x020000000000;  // 2T
-  static const uptr kMetadataSize  = sizeof(Metadata);
   static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
 
-  typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, kMetadataSize,
-                             DefaultSizeClassMap,
-                             MsanMapUnmapCallback> PrimaryAllocator;
+  struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+    static const uptr kSpaceBeg = 0x300000000000;
+    static const uptr kSpaceSize = 0x020000000000; // 2T.
+    static const uptr kMetadataSize = sizeof(Metadata);
+    typedef DefaultSizeClassMap SizeClassMap;
+    typedef MsanMapUnmapCallback MapUnmapCallback;
+    static const uptr kFlags = 0;
+  };
+
+  typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #elif defined(__aarch64__)
   static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
   static const uptr kRegionSizeLog = 20;

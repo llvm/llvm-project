@@ -42,13 +42,36 @@ static const uptr kAllocatorSize  = 0x010000000000ULL;  // 1T.
 static const u64 kAddressSpaceSize = 1ULL << 47;
 #endif
 
-typedef SizeClassAllocator64<
-  kAllocatorSpace, kAllocatorSize, 16, DefaultSizeClassMap> Allocator64;
-typedef SizeClassAllocator64<
-  ~(uptr)0, kAllocatorSize, 16, DefaultSizeClassMap> Allocator64Dynamic;
+struct AP64 {  // Allocator Params. Short name for shorter demangled names..
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 16;
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
 
-typedef SizeClassAllocator64<
-  kAllocatorSpace, kAllocatorSize, 16, CompactSizeClassMap> Allocator64Compact;
+struct AP64Dyn {
+  static const uptr kSpaceBeg = ~(uptr)0;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 16;
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+
+struct AP64Compact {
+  static const uptr kSpaceBeg = ~(uptr)0;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 16;
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+
+typedef SizeClassAllocator64<AP64> Allocator64;
+typedef SizeClassAllocator64<AP64Dyn> Allocator64Dynamic;
+typedef SizeClassAllocator64<AP64Compact> Allocator64Compact;
 #elif defined(__mips64)
 static const u64 kAddressSpaceSize = 1ULL << 40;
 #elif defined(__aarch64__)
@@ -288,12 +311,20 @@ int TestMapUnmapCallback::unmap_count;
 // These tests can fail on Windows if memory is somewhat full and lit happens
 // to run them all at the same time. FIXME: Make them not flaky and reenable.
 #if !SANITIZER_WINDOWS
+
+struct AP64WithCallback {
+    static const uptr kSpaceBeg = kAllocatorSpace;
+    static const uptr kSpaceSize = kAllocatorSize;
+    static const uptr kMetadataSize = 16;
+    typedef DefaultSizeClassMap SizeClassMap;
+    typedef TestMapUnmapCallback MapUnmapCallback;
+    static const uptr kFlags = 0;
+};
+
 TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
   TestMapUnmapCallback::map_count = 0;
   TestMapUnmapCallback::unmap_count = 0;
-  typedef SizeClassAllocator64<
-      kAllocatorSpace, kAllocatorSize, 16, DefaultSizeClassMap,
-      TestMapUnmapCallback> Allocator64WithCallBack;
+  typedef SizeClassAllocator64<AP64WithCallback> Allocator64WithCallBack;
   Allocator64WithCallBack *a = new Allocator64WithCallBack;
   a->Init();
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);  // Allocator state.
@@ -845,12 +876,20 @@ TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
 #if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64
+typedef SizeClassMap<63, 128, 16> SpecialSizeClassMap;
+struct AP64_SpecialSizeClassMap {
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 0;
+  typedef SpecialSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+
 // Regression test for out-of-memory condition in PopulateFreeList().
 TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   // In a world where regions are small and chunks are huge...
-  typedef SizeClassMap<63, 128, 16> SpecialSizeClassMap;
-  typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, 0,
-                               SpecialSizeClassMap> SpecialAllocator64;
+  typedef SizeClassAllocator64<AP64_SpecialSizeClassMap> SpecialAllocator64;
   const uptr kRegionSize =
       kAllocatorSize / SpecialSizeClassMap::kNumClassesRounded;
   SpecialAllocator64 *a = new SpecialAllocator64;
