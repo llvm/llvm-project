@@ -794,6 +794,12 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     // FIXME: Implement for other architectures.
     return RAA_Default;
 
+  case llvm::Triple::thumb:
+    // Use the simple Itanium rules for now.
+    // FIXME: This is incompatible with MSVC for arguments with a dtor and no
+    // copy ctor.
+    return !canCopyArgument(RD) ? RAA_Indirect : RAA_Default;
+
   case llvm::Triple::x86:
     // All record arguments are passed in memory on x86.  Decide whether to
     // construct the object directly in argument memory, or to construct the

@@ -40,7 +40,9 @@ namespace frontend {
     EmitCodeGenOnly,        ///< Generate machine code, but don't emit anything.
     EmitObj,                ///< Emit a .o file.
     FixIt,                  ///< Parse and apply any fixits to the source.
-    GenerateModule,         ///< Generate pre-compiled module.
+    GenerateModule,         ///< Generate pre-compiled module from a module map.
+    GenerateModuleInterface,///< Generate pre-compiled module from a C++ module
+                            ///< interface file.
     GeneratePCH,            ///< Generate pre-compiled header.
     GeneratePTH,            ///< Generate pre-tokenized header.
     InitOnly,               ///< Only execute frontend initialization.

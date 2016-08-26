@@ -909,7 +909,6 @@ public:
 class PCHGenerator : public SemaConsumer {
   const Preprocessor &PP;
   std::string OutputFile;
-  clang::Module *Module;
   std::string isysroot;
   Sema *SemaPtr;
   std::shared_ptr<PCHBuffer> Buffer;
@@ -925,7 +924,7 @@ protected:
 public:
   PCHGenerator(
     const Preprocessor &PP, StringRef OutputFile,
-    clang::Module *Module, StringRef isysroot,
+    StringRef isysroot,
     std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors = false,
