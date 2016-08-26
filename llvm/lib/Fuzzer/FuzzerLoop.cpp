@@ -441,14 +441,8 @@ void Fuzzer::ShuffleAndMinimize() {
 }
 
 bool Fuzzer::UpdateMaxCoverage() {
-  uintptr_t PrevPcBufferPos = MaxCoverage.PcBufferPos;
+  PrevPcBufferPos = MaxCoverage.PcBufferPos;
   bool Res = RecordMaxCoverage(&MaxCoverage);
-
-  if (Options.PrintNewCovPcs && PrevPcBufferPos != MaxCoverage.PcBufferPos) {
-    for (size_t I = PrevPcBufferPos; I < MaxCoverage.PcBufferPos; ++I) {
-      Printf("%p\n", PcBuffer[I]);
-    }
-  }
 
   return Res;
 }
@@ -566,6 +560,21 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
   }
 }
 
+void Fuzzer::PrintNewPCs() {
+  if (Options.PrintNewCovPcs && PrevPcBufferPos != MaxCoverage.PcBufferPos) {
+    for (size_t I = PrevPcBufferPos; I < MaxCoverage.PcBufferPos; ++I) {
+      if (EF->__sanitizer_symbolize_pc) {
+        char PcDescr[1024];
+        EF->__sanitizer_symbolize_pc(reinterpret_cast<void*>(PcBuffer[I]),
+                                     "%p %F %L", PcDescr, sizeof(PcDescr));
+        Printf("\tNEW_PC: %s\n", PcDescr);
+      } else {
+        Printf("\tNEW_PC: %p\n", PcBuffer[I]);
+      }
+    }
+  }
+}
+
 void Fuzzer::ReportNewCoverage(const Unit &U) {
   Corpus.push_back(U);
   UpdateCorpusDistribution();
@@ -574,6 +583,7 @@ void Fuzzer::ReportNewCoverage(const Unit &U) {
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
+  PrintNewPCs();
 }
 
 // Finds minimal number of units in 'Extra' that add coverage to 'Initial'.

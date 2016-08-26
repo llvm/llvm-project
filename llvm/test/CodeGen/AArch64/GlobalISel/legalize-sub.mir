@@ -19,10 +19,7 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_scalar_sub_small
-    ; CHECK-DAG: [[LHS:%.*]](32) = G_ANYEXT { s32, s8 } %0
-    ; CHECK-DAG: [[RHS:%.*]](32) = G_ANYEXT { s32, s8 } %1
-    ; CHECK: [[RES:%.*]](32) = G_SUB s32 [[LHS]], [[RHS]]
-    ; CHECK: %2(8) = G_TRUNC { s8, s32 } [[RES]]
+    ; CHECK: [[RES:%.*]](8) = G_SUB s8 %0, %1
 
     %0(8) = G_TRUNC { s8, s64 } %x0
     %1(8) = G_TRUNC { s8, s64 } %x1

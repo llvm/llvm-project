@@ -37,16 +37,22 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   const LLT v2s64 = LLT::vector(2, 64);
 
   for (auto BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR}) {
-    for (auto Ty : {s32, s64, v2s32, v4s32, v2s64})
+    // These operations naturally get the right answer when used on
+    // GPR32, even if the actual type is narrower.
+    for (auto Ty : {s1, s8, s16, s32, s64, v2s32, v4s32, v2s64})
       setAction({BinOp, Ty}, Legal);
-
-    for (auto Ty : {s8, s16})
-      setAction({BinOp, Ty}, WidenScalar);
   }
 
   for (auto BinOp : {G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV})
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
+
+  for (auto Op : { G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULO, G_UMULO }) {
+    for (auto Ty : { s32, s64 })
+      setAction({Op, Ty}, Legal);
+
+    setAction({Op, 1, s1}, Legal);
+  }
 
   for (auto BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
     for (auto Ty : {s32, s64})
@@ -68,6 +74,8 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
     setAction({TargetOpcode::G_FCONSTANT, Ty}, Legal);
   }
 
+  setAction({G_CONSTANT, p0}, Legal);
+
   for (auto Ty : {s1, s8, s16})
     setAction({TargetOpcode::G_CONSTANT, Ty}, WidenScalar);
 
@@ -85,6 +93,33 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
       setAction({CmpOp, 1, Ty}, WidenScalar);
     }
   }
+
+  // Extensions
+  for (auto Ty : { s1, s8, s16, s32, s64 }) {
+    setAction({G_ZEXT, Ty}, Legal);
+    setAction({G_SEXT, Ty}, Legal);
+    setAction({G_ANYEXT, Ty}, Legal);
+  }
+
+  for (auto Ty : { s1, s8, s16, s32 }) {
+    setAction({G_ZEXT, 1, Ty}, Legal);
+    setAction({G_SEXT, 1, Ty}, Legal);
+    setAction({G_ANYEXT, 1, Ty}, Legal);
+  }
+
+  // Truncations
+  for (auto Ty : { s16, s32 })
+    setAction({G_FPTRUNC, Ty}, Legal);
+
+  for (auto Ty : { s32, s64 })
+    setAction({G_FPTRUNC, 1, Ty}, Legal);
+
+  for (auto Ty : { s1, s8, s16, s32 })
+    setAction({G_TRUNC, Ty}, Legal);
+
+  for (auto Ty : { s8, s16, s32, s64 })
+    setAction({G_TRUNC, 1, Ty}, Legal);
+
 
   // Control-flow
   setAction({G_BR, LLT::unsized()}, Legal);

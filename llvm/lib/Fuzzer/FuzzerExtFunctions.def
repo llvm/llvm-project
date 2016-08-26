@@ -40,6 +40,8 @@ EXT_FUNC(__sanitizer_get_total_unique_caller_callee_pairs, size_t, (), false);
 EXT_FUNC(__sanitizer_get_total_unique_coverage, size_t, (), true);
 EXT_FUNC(__sanitizer_print_memory_profile, int, (size_t), false);
 EXT_FUNC(__sanitizer_print_stack_trace, void, (), true);
+EXT_FUNC(__sanitizer_symbolize_pc, void,
+         (void *, const char *fmt, char *out_buf, size_t out_buf_size), false);
 EXT_FUNC(__sanitizer_reset_coverage, void, (), true);
 EXT_FUNC(__sanitizer_set_death_callback, void, (void (*)(void)), true);
 EXT_FUNC(__sanitizer_set_report_fd, void, (void*), false);

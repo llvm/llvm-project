@@ -196,3 +196,25 @@ entry:
   %1 = tail call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %y, <4 x float> %vecinit4.i)
   ret <4 x float> %1
 }
+
+define <4 x float> @cmpss_fold(float* %x, <4 x float> %y) {
+; X32-LABEL: cmpss_fold:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    cmpeqss (%eax), %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: cmpss_fold:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    cmpeqss (%rdi), %xmm0
+; X64-NEXT:    retq
+entry:
+  %0 = load float, float* %x, align 1
+  %vecinit.i = insertelement <4 x float> undef, float %0, i32 0
+  %vecinit2.i = insertelement <4 x float> %vecinit.i, float 0.000000e+00, i32 1
+  %vecinit3.i = insertelement <4 x float> %vecinit2.i, float 0.000000e+00, i32 2
+  %vecinit4.i = insertelement <4 x float> %vecinit3.i, float 0.000000e+00, i32 3
+  %1 = tail call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %y, <4 x float> %vecinit4.i, i8 0)
+  ret <4 x float> %1
+}
+declare <4 x float> @llvm.x86.sse.cmp.ss(<4 x float>, <4 x float>, i8) nounwind readnone

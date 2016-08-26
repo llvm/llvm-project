@@ -1098,8 +1098,8 @@ public:
   unsigned getRawSubclassData() const {
     uint16_t Data;
     memcpy(&Data, &SDNodeBits, sizeof(SDNodeBits));
-    static_assert(sizeof(SDNodeBits) == sizeof(uint16_t),
-                  "SDNodeBits field too small?");
+    static_assert(sizeof(SDNodeBits) <= sizeof(uint16_t),
+                  "SDNodeBits field too large?");
     return Data;
   }
 
