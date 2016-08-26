@@ -775,99 +775,66 @@ private:
 OptionDefinition
 CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_NOT_10, false, "shlib", 's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion, eArgTypeShlibName,
-        "Set the breakpoint only in this shared library.  "
-        "Can repeat this option multiple times to specify multiple shared libraries."},
-
-    { LLDB_OPT_SET_ALL, false, "ignore-count", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,
-        "Set the number of times this breakpoint is skipped before stopping." },
-
-    { LLDB_OPT_SET_ALL, false, "one-shot", 'o', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "The breakpoint is deleted the first time it causes a stop." },
-
-    { LLDB_OPT_SET_ALL, false, "condition",    'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression,
-        "The breakpoint stops only if this condition expression evaluates to true."},
-
-    { LLDB_OPT_SET_ALL, false, "thread-index", 'x', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadIndex,
-        "The breakpoint stops only for the thread whose indeX matches this argument."},
-
-    { LLDB_OPT_SET_ALL, false, "thread-id", 't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadID,
-        "The breakpoint stops only for the thread whose TID matches this argument."},
-
-    { LLDB_OPT_SET_ALL, false, "thread-name", 'T', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadName,
-        "The breakpoint stops only for the thread whose thread name matches this argument."},
-
-    { LLDB_OPT_SET_ALL, false, "hardware", 'H', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Require the breakpoint to use hardware breakpoints."},
-
-    { LLDB_OPT_SET_ALL, false, "queue-name", 'q', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeQueueName,
-        "The breakpoint stops only for threads in the queue whose name is given by this argument."},
-
-    { LLDB_OPT_FILE, false, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,
-        "Specifies the source file in which to set this breakpoint.  "
-        "Note, by default lldb only looks for files that are #included if they use the standard include file extensions.  "
-        "To set breakpoints on .c/.cpp/.m/.mm files that are #included, set target.inline-breakpoint-strategy"
-        " to \"always\"."},
-
-    { LLDB_OPT_SET_1, true, "line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
-        "Specifies the line number on which to set this breakpoint."},
+  // clang-format off
+  {LLDB_OPT_NOT_10,               false, "shlib",                  's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion,     eArgTypeShlibName,           "Set the breakpoint only in this shared library.  Can repeat this option "
+                                                                                                                                                                                                   "multiple times to specify multiple shared libraries."},
+  {LLDB_OPT_SET_ALL,              false, "ignore-count",           'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeCount,               "Set the number of times this breakpoint is skipped before stopping." },
+  {LLDB_OPT_SET_ALL,              false, "one-shot",               'o', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "The breakpoint is deleted the first time it causes a stop." },
+  {LLDB_OPT_SET_ALL,              false, "condition",              'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeExpression,          "The breakpoint stops only if this condition expression evaluates to true."},
+  {LLDB_OPT_SET_ALL,              false, "thread-index",           'x', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeThreadIndex,         "The breakpoint stops only for the thread whose indeX matches this argument."},
+  {LLDB_OPT_SET_ALL,              false, "thread-id",              't', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeThreadID,            "The breakpoint stops only for the thread whose TID matches this argument."},
+  {LLDB_OPT_SET_ALL,              false, "thread-name",            'T', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeThreadName,          "The breakpoint stops only for the thread whose thread name matches this "
+                                                                                                                                                                                                   "argument."},
+  {LLDB_OPT_SET_ALL,              false, "hardware",               'H', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "Require the breakpoint to use hardware breakpoints."},
+  {LLDB_OPT_SET_ALL,              false, "queue-name",             'q', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeQueueName,           "The breakpoint stops only for threads in the queue whose name is given by "
+                                                                                                                                                                                                   "this argument."},
+  {LLDB_OPT_FILE,                 false, "file",                   'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,            "Specifies the source file in which to set this breakpoint.  Note, by default "
+                                                                                                                                                                                                   "lldb only looks for files that are #included if they use the standard include "
+                                                                                                                                                                                                   "file extensions.  To set breakpoints on .c/.cpp/.m/.mm files that are "
+                                                                                                                                                                                                   "#included, set target.inline-breakpoint-strategy to \"always\"."},
+  {LLDB_OPT_SET_1,                true,  "line",                   'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,             "Specifies the line number on which to set this breakpoint."},
 
     // Comment out this option for the moment, as we don't actually use it, but will in the future.
     // This way users won't see it, but the infrastructure is left in place.
     //    { 0, false, "column",     'C', OptionParser::eRequiredArgument, nullptr, "<column>",
     //    "Set the breakpoint by source location at this particular column."},
 
-    { LLDB_OPT_SET_2, true, "address", 'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression,
-        "Set the breakpoint at the specified address.  "
-        "If the address maps uniquely to a particular "
-        "binary, then the address will be converted to a \"file\" address, so that the breakpoint will track that binary+offset no matter where "
-        "the binary eventually loads.  "
-        "Alternately, if you also specify the module - with the -s option - then the address will be treated as "
-        "a file address in that module, and resolved accordingly.  Again, this will allow lldb to track that offset on "
-        "subsequent reloads.  The module need not have been loaded at the time you specify this breakpoint, and will "
-        "get resolved when the module is loaded."},
-
-    { LLDB_OPT_SET_3, true, "name", 'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
-        "Set the breakpoint by function name.  Can be repeated multiple times to make one breakpoint for multiple names" },
-
-    { LLDB_OPT_SET_9, false, "source-regexp-function", 'X', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
-        "When used with '-p' limits the source regex to source contained in the named functions.  Can be repeated multiple times." },
-
-    { LLDB_OPT_SET_4, true, "fullname", 'F', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFullName,
-        "Set the breakpoint by fully qualified function names. For C++ this means namespaces and all arguments, and "
-        "for Objective C this means a full function prototype with class and selector.  "
-        "Can be repeated multiple times to make one breakpoint for multiple names." },
-
-    { LLDB_OPT_SET_5, true, "selector", 'S', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeSelector,
-        "Set the breakpoint by ObjC selector name. Can be repeated multiple times to make one breakpoint for multiple Selectors." },
-
-    { LLDB_OPT_SET_6, true, "method", 'M', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeMethod,
-        "Set the breakpoint by C++ method names.  Can be repeated multiple times to make one breakpoint for multiple methods." },
-
-    { LLDB_OPT_SET_7, true, "func-regex", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegularExpression,
-        "Set the breakpoint by function name, evaluating a regular-expression to find the function name(s)." },
-
-    { LLDB_OPT_SET_8, true, "basename", 'b', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
-        "Set the breakpoint by function basename (C++ namespaces and arguments will be ignored). "
-        "Can be repeated multiple times to make one breakpoint for multiple symbols." },
-
-    { LLDB_OPT_SET_9, true, "source-pattern-regexp", 'p', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegularExpression,
-        "Set the breakpoint by specifying a regular expression which is matched against the source text in a source file or files "
-        "specified with the -f option.  The -f option can be specified more than once.  "
-        "If no source files are specified, uses the current \"default source file\".  "
-        "If you want to match against all source files, pass the \"--all-files\" option." },
-
-    { LLDB_OPT_SET_9, false, "all-files", 'A', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "All files are searched for source pattern matches." },
-
-    { LLDB_OPT_SET_10, true, "language-exception", 'E', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,
-        "Set the breakpoint on exceptions thrown by the specified language (without options, on throw but not catch.)" },
-
-    { LLDB_OPT_SET_10, false, "on-throw", 'w', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
-        "Set the breakpoint on exception throW." },
-
-    { LLDB_OPT_SET_10, false, "on-catch", 'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
-        "Set the breakpoint on exception catcH." },
+  {LLDB_OPT_SET_2,                true,  "address",                'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeAddressOrExpression, "Set the breakpoint at the specified address.  If the address maps uniquely to "
+                                                                                                                                                                                                   "a particular binary, then the address will be converted to a \"file\" "
+                                                                                                                                                                                                   "address, so that the breakpoint will track that binary+offset no matter where "
+                                                                                                                                                                                                   "the binary eventually loads.  Alternately, if you also specify the module - "
+                                                                                                                                                                                                   "with the -s option - then the address will be treated as a file address in "
+                                                                                                                                                                                                   "that module, and resolved accordingly.  Again, this will allow lldb to track "
+                                                                                                                                                                                                   "that offset on subsequent reloads.  The module need not have been loaded at "
+                                                                                                                                                                                                   "the time you specify this breakpoint, and will get resolved when the module "
+                                                                                                                                                                                                   "is loaded."},
+  {LLDB_OPT_SET_3,                true,  "name",                   'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeFunctionName,        "Set the breakpoint by function name.  Can be repeated multiple times to make "
+                                                                                                                                                                                                   "one breakpoint for multiple names"},
+  {LLDB_OPT_SET_9,                false, "source-regexp-function", 'X', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeFunctionName,        "When used with '-p' limits the source regex to source contained in the named "
+                                                                                                                                                                                                   "functions.  Can be repeated multiple times."},
+  {LLDB_OPT_SET_4,                true,  "fullname",               'F', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeFullName,            "Set the breakpoint by fully qualified function names. For C++ this means "
+                                                                                                                                                                                                   "namespaces and all arguments, and for Objective C this means a full function "
+                                                                                                                                                                                                   "prototype with class and selector.  Can be repeated multiple times to make "
+                                                                                                                                                                                                   "one breakpoint for multiple names."},
+  {LLDB_OPT_SET_5,                true,  "selector",               'S', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeSelector,            "Set the breakpoint by ObjC selector name. Can be repeated multiple times to "
+                                                                                                                                                                                                   "make one breakpoint for multiple Selectors."},
+  {LLDB_OPT_SET_6,                true,  "method",                 'M', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeMethod,              "Set the breakpoint by C++ method names.  Can be repeated multiple times to "
+                                                                                                                                                                                                   "make one breakpoint for multiple methods."},
+  {LLDB_OPT_SET_7,                true,  "func-regex",             'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeRegularExpression,   "Set the breakpoint by function name, evaluating a regular-expression to find "
+                                                                                                                                                                                                   "the function name(s)."},
+  {LLDB_OPT_SET_8,                true,  "basename",               'b', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeFunctionName,        "Set the breakpoint by function basename (C++ namespaces and arguments will be "
+                                                                                                                                                                                                   "ignored).  Can be repeated multiple times to make one breakpoint for multiple "
+                                                                                                                                                                                                   "symbols."},
+  {LLDB_OPT_SET_9,                true,  "source-pattern-regexp",  'p', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeRegularExpression,   "Set the breakpoint by specifying a regular expression which is matched "
+                                                                                                                                                                                                   "against the source text in a source file or files specified with the -f "
+                                                                                                                                                                                                   "option.  The -f option can be specified more than once.  If no source files "
+                                                                                                                                                                                                   "are specified, uses the current \"default source file\".  If you want to "
+                                                                                                                                                                                                   "match against all source files, pass the \"--all-files\" option."},
+  {LLDB_OPT_SET_9,                false, "all-files",              'A', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "All files are searched for source pattern matches."},
+  {LLDB_OPT_SET_10,               true,  "language-exception",     'E', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLanguage,            "Set the breakpoint on exceptions thrown by the specified language (without "
+                                                                                                                                                                                                   "options, on throw but not catch.)"},
+  {LLDB_OPT_SET_10,               false, "on-throw",               'w', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception throW."},
+  {LLDB_OPT_SET_10,               false, "on-catch",               'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception catcH."},
 
     { LLDB_OPT_SET_10, false, "exception-typename", 'O', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeTypeName,
         "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop "
@@ -875,26 +842,20 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
         " or you can specify the full type name including modules.  Other submatches are not supported at present."
         "Only supported for Swift at present."},
 
-    { LLDB_OPT_EXPR_LANGUAGE, false, "language", 'L', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,
-        "Specifies the Language to use when interpreting the breakpoint's expression (note: currently only implemented for setting breakpoints on identifiers).  If not set the target.language setting is used." },
-
-    { LLDB_OPT_SKIP_PROLOGUE, false, "skip-prologue", 'K', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
-        "sKip the prologue if the breakpoint is at the beginning of a function.  If not set the target.skip-prologue setting is used." },
-
-    { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
-
-    { LLDB_OPT_SET_ALL, false, "breakpoint-name", 'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName,
-        "Adds this to the list of names for this breakpoint."},
-
-    { LLDB_OPT_OFFSET_APPLIES, false, "address-slide", 'R', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,
-        "Add the specified offset to whatever address(es) the breakpoint resolves to.  "
+  {LLDB_OPT_EXPR_LANGUAGE,        false, "language",               'L', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLanguage,            "Specifies the Language to use when interpreting the breakpoint's expression "
+                                                                                                                                                                                                   "(note: currently only implemented for setting breakpoints on identifiers).  "
+                                                                                                                                                                                                   "If not set the target.language setting is used."},
+  {LLDB_OPT_SKIP_PROLOGUE,        false, "skip-prologue",          'K', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "sKip the prologue if the breakpoint is at the beginning of a function.  "
+                                                                                                                                                                                                   "If not set the target.skip-prologue setting is used."},
+  {LLDB_OPT_SET_ALL,              false, "dummy-breakpoints",      'D', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, "
+                                                                                                                                                                                                   "which prime new targets."},
+  {LLDB_OPT_SET_ALL,              false, "breakpoint-name",        'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBreakpointName,      "Adds this to the list of names for this breakpoint."},
+  {LLDB_OPT_OFFSET_APPLIES,       false, "address-slide",          'R', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeAddress,             "Add the specified offset to whatever address(es) the breakpoint resolves to.  "
         "At present this applies the offset directly as given, and doesn't try to align it to instruction boundaries."},
-
-    { LLDB_OPT_MOVE_TO_NEAREST_CODE, false, "move-to-nearest-code", 'm', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
-        "Move breakpoints to nearest code. If not set the target.move-to-nearest-code setting is used." },
-
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  {LLDB_OPT_MOVE_TO_NEAREST_CODE, false, "move-to-nearest-code", 'm', OptionParser::eRequiredArgument,   nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Move breakpoints to nearest code. If not set the target.move-to-nearest-code "
+                                                                                                                                                                                                   "setting is used."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -1194,18 +1155,19 @@ private:
 OptionDefinition
 CommandObjectBreakpointModify::CommandOptions::g_option_table[] =
 {
-{ LLDB_OPT_SET_ALL, false, "ignore-count", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount, "Set the number of times this breakpoint is skipped before stopping." },
-{ LLDB_OPT_SET_ALL, false, "one-shot",     'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean, "The breakpoint is deleted the first time it stop causes a stop." },
-{ LLDB_OPT_SET_ALL, false, "thread-index", 'x', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadIndex, "The breakpoint stops only for the thread whose index matches this argument."},
-{ LLDB_OPT_SET_ALL, false, "thread-id",    't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadID, "The breakpoint stops only for the thread whose TID matches this argument."},
-{ LLDB_OPT_SET_ALL, false, "thread-name",  'T', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadName, "The breakpoint stops only for the thread whose thread name matches this argument."},
-{ LLDB_OPT_SET_ALL, false, "queue-name",   'q', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeQueueName, "The breakpoint stops only for threads in the queue whose name is given by this argument."},
-{ LLDB_OPT_SET_ALL, false, "condition",    'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "The breakpoint stops only if this condition expression evaluates to true."},
-{ LLDB_OPT_SET_1,   false, "enable",       'e', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone, "Enable the breakpoint."},
-{ LLDB_OPT_SET_2,   false, "disable",      'd', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone, "Disable the breakpoint."},
-{ LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,  nullptr, nullptr, 0, eArgTypeNone, "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
-
-{ 0,                false, nullptr,            0 , 0,                 nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_ALL, false, "ignore-count", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,       "Set the number of times this breakpoint is skipped before stopping."},
+  {LLDB_OPT_SET_ALL, false, "one-shot",     'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,     "The breakpoint is deleted the first time it stop causes a stop."},
+  {LLDB_OPT_SET_ALL, false, "thread-index", 'x', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadIndex, "The breakpoint stops only for the thread whose index matches this argument."},
+  {LLDB_OPT_SET_ALL, false, "thread-id",    't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadID,    "The breakpoint stops only for the thread whose TID matches this argument."},
+  {LLDB_OPT_SET_ALL, false, "thread-name",  'T', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadName,  "The breakpoint stops only for the thread whose thread name matches this argument."},
+  {LLDB_OPT_SET_ALL, false, "queue-name",   'q', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeQueueName,   "The breakpoint stops only for threads in the queue whose name is given by this argument."},
+  {LLDB_OPT_SET_ALL, false, "condition",    'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression,  "The breakpoint stops only if this condition expression evaluates to true."},
+  {LLDB_OPT_SET_1,   false, "enable",       'e', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,        "Enable the breakpoint."},
+  {LLDB_OPT_SET_2,   false, "disable",      'd', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,        "Disable the breakpoint."},
+  {LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,  nullptr, nullptr, 0, eArgTypeNone,        "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -1604,24 +1566,16 @@ private:
 OptionDefinition
 CommandObjectBreakpointList::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_ALL, false, "internal", 'i', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Show debugger internal breakpoints" },
-
-    { LLDB_OPT_SET_1, false, "brief",    'b', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Give a brief description of the breakpoint (no location info)."},
-
+  // clang-format off
+    {LLDB_OPT_SET_ALL, false, "internal",          'i', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Show debugger internal breakpoints" },
+    {LLDB_OPT_SET_1,   false, "brief",             'b', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Give a brief description of the breakpoint (no location info)."},
     // FIXME: We need to add an "internal" command, and then add this sort of thing to it.
     // But I need to see it for now, and don't want to wait.
-    { LLDB_OPT_SET_2, false, "full",    'f', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Give a full description of the breakpoint and its locations."},
-
-    { LLDB_OPT_SET_3, false, "verbose", 'v', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Explain everything we know about the breakpoint (for debugging debugger bugs)." },
-
-    { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "List Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
-
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+    {LLDB_OPT_SET_2,   false, "full",              'f', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Give a full description of the breakpoint and its locations."},
+    {LLDB_OPT_SET_3,   false, "verbose",           'v', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Explain everything we know about the breakpoint (for debugging debugger bugs)."},
+    {LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "List Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -1813,13 +1767,11 @@ private:
 OptionDefinition
 CommandObjectBreakpointClear::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,
-        "Specify the breakpoint by source location in this particular file."},
-
-    { LLDB_OPT_SET_1, true, "line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
-        "Specify the breakpoint by source location at this particular line."},
-
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename, "Specify the breakpoint by source location in this particular file."},
+  {LLDB_OPT_SET_1, true,  "line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,  "Specify the breakpoint by source location at this particular line."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -1999,13 +1951,11 @@ private:
 OptionDefinition
 CommandObjectBreakpointDelete::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "force", 'f', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Delete all breakpoints without querying for confirmation."},
-
-    { LLDB_OPT_SET_1, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Delete Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
-
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_1, false, "force",             'f', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Delete all breakpoints without querying for confirmation."},
+  {LLDB_OPT_SET_1, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Delete Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -2013,12 +1963,11 @@ CommandObjectBreakpointDelete::CommandOptions::g_option_table[] =
 //-------------------------------------------------------------------------
 
 static OptionDefinition g_breakpoint_name_options[] = {
-    {LLDB_OPT_SET_1, false, "name", 'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName,
-     "Specifies a breakpoint name to use."},
-    {LLDB_OPT_SET_2, false, "breakpoint-id", 'B', OptionParser::eRequiredArgument, nullptr, nullptr, 0,
-     eArgTypeBreakpointID, "Specify a breakpoint ID to use."},
-    {LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-     "Operate on Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  // clang-format off
+  {LLDB_OPT_SET_1,   false, "name",              'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName, "Specifies a breakpoint name to use."},
+  {LLDB_OPT_SET_2,   false, "breakpoint-id",     'B', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointID,   "Specify a breakpoint ID to use."},
+  {LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,           "Operate on Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+  // clang-format on
 };
 class BreakpointNameOptionGroup : public OptionGroup
 {

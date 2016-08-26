@@ -256,6 +256,8 @@ CommandObjectArgs::DoExecute (Args& args, CommandReturnObject &result)
 OptionDefinition
 CommandObjectArgs::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation."},
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };

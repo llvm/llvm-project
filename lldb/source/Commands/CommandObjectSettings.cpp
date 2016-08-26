@@ -284,8 +284,10 @@ private:
 OptionDefinition
 CommandObjectSettingsSet::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument,   nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value." },
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 //-------------------------------------------------------------------------
