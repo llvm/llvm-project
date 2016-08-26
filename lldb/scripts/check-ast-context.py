@@ -73,6 +73,7 @@ def get_args():
   parser = argparse.ArgumentParser(description="Ensure that LLDB's SwiftASTContext class safely uses the underlying swift::ASTContext object")
   parser.add_argument('--file',      type=str, help='path to SwiftASTContext.cpp', required=True)
   parser.add_argument('--llvmbuild', type=str, help='location of the LLVM build tree', required=True)
+  parser.add_argument('--llvmbarch', type=str, help='LLVM build directory architecture', default=None)
   parser.add_argument('--lldbbuild', type=str, help='location of the LLDB build tree', required=True)
   parser.add_argument('--swiftbuild',type=str, help='location of the Swift build tree', required=True)
   parser.add_argument('--sdk',       type=str, help='location of the SDK root', default=None)
@@ -83,6 +84,9 @@ def get_args():
 def detect_source_layout(args):
   args.lldb = os.path.abspath(os.path.join(os.path.dirname(args.file),'..','..'))
   args.header = os.path.join(args.lldb,'include','lldb','Symbol','SwiftASTContext.h')
+  if not(os.path.exists(os.path.join(args.llvmbuild,'lib','libclang.dylib'))):
+     if os.path.exists(os.path.join(args.llvmbuild,args.llvmbarch,'lib','libclang.dylib')):
+       args.llvmbuild = os.path.join(args.llvmbuild,args.llvmbarch)
   if os.path.isdir(os.path.join(args.lldb,'llvm')) and \
        os.path.isdir(os.path.join(args.lldb,'llvm','tools','clang')) and \
        os.path.isdir(os.path.join(args.lldb,'llvm','tools','swift')):
@@ -101,6 +105,7 @@ def detect_source_layout(args):
      args.clang = os.path.join(args.source,'clang')
      args.llvm = os.path.join(args.source,'llvm')
      return True
+  if args.verbose: print('arg dictionary = %s' % args)
   return False
 
 def makehashes(args):
