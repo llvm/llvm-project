@@ -396,7 +396,8 @@ raw_pwrite_stream *GenerateModuleAction::ComputeASTConsumerArguments(
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     CI.getFrontendOpts().OutputFile =
         HS.getModuleFileName(CI.getLangOpts().CurrentModule,
-                             ModuleMapForUniquing->getName());
+                             ModuleMapForUniquing->getName(),
+                             /*UsePrebuiltPath=*/false);
   }
 
   // We use createOutputFile here because this is exposed via libclang, and we

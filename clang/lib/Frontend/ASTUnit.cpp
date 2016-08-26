@@ -2796,6 +2796,7 @@ const FileEntry *ASTUnit::getPCHFile() {
     switch (M.Kind) {
     case serialization::MK_ImplicitModule:
     case serialization::MK_ExplicitModule:
+    case serialization::MK_PrebuiltModule:
       return true; // skip dependencies.
     case serialization::MK_PCH:
       Mod = &M;

@@ -67,7 +67,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
   const FileEntry *Entry;
-  if (Type == MK_ExplicitModule) {
+  if (Type == MK_ExplicitModule || Type == MK_PrebuiltModule) {
     // If we're not expecting to pull this file out of the module cache, it
     // might have a different mtime due to being moved across filesystems in
     // a distributed build. The size must still match, though. (As must the

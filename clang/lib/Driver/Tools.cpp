@@ -4973,6 +4973,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Path));
   }
 
+  if (HaveModules) {
+    // -fprebuilt-module-path specifies where to load the prebuilt module files.
+    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path))
+      CmdArgs.push_back(Args.MakeArgString(
+          std::string("-fprebuilt-module-path=") + A->getValue()));
+  }
+
   // When building modules and generating crashdumps, we need to dump a module
   // dependency VFS alongside the output.
   if (HaveModules && C.isForDiagnostics()) {

@@ -122,11 +122,29 @@ const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
 std::string HeaderSearch::getModuleFileName(Module *Module) {
   const FileEntry *ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
-  return getModuleFileName(Module->Name, ModuleMap->getName());
+  return getModuleFileName(Module->Name, ModuleMap->getName(),
+                           /*UsePrebuiltPath*/false);
 }
 
 std::string HeaderSearch::getModuleFileName(StringRef ModuleName,
-                                            StringRef ModuleMapPath) {
+                                            StringRef ModuleMapPath,
+                                            bool UsePrebuiltPath) {
+  if (UsePrebuiltPath) {
+    if (HSOpts->PrebuiltModulePaths.empty())
+      return std::string();
+
+    // Go though each prebuilt module path and try to find the pcm file.
+    for (const std::string &Dir : HSOpts->PrebuiltModulePaths) {
+      SmallString<256> Result(Dir);
+      llvm::sys::fs::make_absolute(Result);
+
+      llvm::sys::path::append(Result, ModuleName + ".pcm");
+      if (getFileMgr().getFile(Result.str()))
+        return Result.str().str();
+    }
+    return std::string();
+  }
+
   // If we don't have a module cache path or aren't supposed to use one, we
   // can't do anything.
   if (getModuleCachePath().empty())
