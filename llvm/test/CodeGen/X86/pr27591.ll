@@ -8,8 +8,9 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movb %al, %cl
-; CHECK-NEXT:    kmovw %ecx, %k0
+; CHECK-NEXT:    movb %al, %dil
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kmovb %k0, %eax
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %edi
@@ -28,14 +29,16 @@ define void @test2(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movb %al, %cl
-; CHECK-NEXT:    kmovw %ecx, %k0
-; CHECK-NEXT:    kmovw %k0, %ecx
-; CHECK-NEXT:    movb %cl, %al
+; CHECK-NEXT:    movb %al, %dil
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    kmovw %k0, %edi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    movl $-1, %edx
-; CHECK-NEXT:    cmovnel %edx, %edi
+; CHECK-NEXT:    movl $-1, %ecx
+; CHECK-NEXT:    cmovnel %ecx, %edi
 ; CHECK-NEXT:    callq callee2
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

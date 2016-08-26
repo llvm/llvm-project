@@ -1,8 +1,10 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -verify-scev-maps -S |FileCheck %s
 
 ; SCEV expansion uses existing value when the SCEV has no AddRec expr.
+; CHECK-LABEL: @foo(
 ; CHECK: select
 ; CHECK-NOT: select
+; CHECK: ret
 
 @a = common global [1000 x i16] zeroinitializer, align 16
 

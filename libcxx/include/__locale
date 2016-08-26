@@ -165,10 +165,9 @@ template <class _Facet>
 locale
 locale::combine(const locale& __other) const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (!_VSTD::has_facet<_Facet>(__other))
-        throw runtime_error("locale::combine: locale missing facet");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_runtime_error("locale::combine: locale missing facet");
+
     return locale(*this, &const_cast<_Facet&>(_VSTD::use_facet<_Facet>(__other)));
 }
 
@@ -1183,8 +1182,6 @@ _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_TYPE_VIS codecvt_byname<char, char, mbsta
 _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
 _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>)
 _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>)
-
-_LIBCPP_FUNC_VIS void __throw_runtime_error(const char*);
 
 template <size_t _Np>
 struct __narrow_to_utf8

@@ -1525,260 +1525,260 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; KNL-NEXT:    vptestmd %zmm4, %zmm4, %k0
 ; KNL-NEXT:    kshiftlw $14, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    kshiftlw $15, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r15d
+; KNL-NEXT:    kmovw %k1, %r13d
 ; KNL-NEXT:    kshiftlw $13, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r12d
+; KNL-NEXT:    kmovw %k1, %ecx
 ; KNL-NEXT:    kshiftlw $12, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %edx
+; KNL-NEXT:    kmovw %k1, %r11d
 ; KNL-NEXT:    kshiftlw $11, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r13d
+; KNL-NEXT:    kmovw %k1, %r8d
 ; KNL-NEXT:    kshiftlw $10, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %eax
-; KNL-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
+; KNL-NEXT:    kmovw %k1, %edi
 ; KNL-NEXT:    kshiftlw $9, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %esi
+; KNL-NEXT:    kmovw %k1, %edx
 ; KNL-NEXT:    kshiftlw $8, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %edi
+; KNL-NEXT:    kmovw %k1, %esi
 ; KNL-NEXT:    kshiftlw $7, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r8d
+; KNL-NEXT:    kmovw %k1, %ebx
 ; KNL-NEXT:    kshiftlw $6, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r9d
+; KNL-NEXT:    kmovw %k1, %ebp
 ; KNL-NEXT:    kshiftlw $5, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r10d
+; KNL-NEXT:    kmovw %k1, %r14d
 ; KNL-NEXT:    kshiftlw $4, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r11d
+; KNL-NEXT:    kmovw %k1, %r15d
 ; KNL-NEXT:    kshiftlw $3, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %ebx
+; KNL-NEXT:    kmovw %k1, %r12d
 ; KNL-NEXT:    kshiftlw $2, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %ebp
+; KNL-NEXT:    kmovw %k1, %r10d
 ; KNL-NEXT:    kshiftlw $1, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %r14d
+; KNL-NEXT:    kmovw %k1, %r9d
 ; KNL-NEXT:    vptestmd %zmm5, %zmm5, %k1
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vmovd %r15d, %xmm4
-; KNL-NEXT:    kmovw %k0, %r15d
+; KNL-NEXT:    vmovd %r13d, %xmm4
+; KNL-NEXT:    kmovw %k0, %r13d
 ; KNL-NEXT:    kshiftlw $14, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $1, %ecx, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    kshiftlw $15, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $2, %r12d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vpinsrb $2, %ecx, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %ecx
 ; KNL-NEXT:    kshiftlw $13, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $3, %edx, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %r12d
+; KNL-NEXT:    vpinsrb $3, %r11d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r11d
 ; KNL-NEXT:    kshiftlw $12, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $4, %r13d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %edx
+; KNL-NEXT:    vpinsrb $4, %r8d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r8d
 ; KNL-NEXT:    kshiftlw $11, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $5, -{{[0-9]+}}(%rsp), %xmm4, %xmm4 ## 4-byte Folded Reload
-; KNL-NEXT:    kmovw %k0, %r13d
+; KNL-NEXT:    vpinsrb $5, %edi, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %edi
+; KNL-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) ## 4-byte Spill
 ; KNL-NEXT:    kshiftlw $10, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $6, %esi, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %esi
-; KNL-NEXT:    movl %esi, -{{[0-9]+}}(%rsp) ## 4-byte Spill
+; KNL-NEXT:    vpinsrb $6, %edx, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %edx
 ; KNL-NEXT:    kshiftlw $9, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $7, %edi, %xmm4, %xmm4
+; KNL-NEXT:    vpinsrb $7, %esi, %xmm4, %xmm4
 ; KNL-NEXT:    kmovw %k0, %esi
 ; KNL-NEXT:    kshiftlw $8, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $8, %r8d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %edi
+; KNL-NEXT:    vpinsrb $8, %ebx, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %ebx
 ; KNL-NEXT:    kshiftlw $7, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $9, %r9d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %r8d
+; KNL-NEXT:    vpinsrb $9, %ebp, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %ebp
 ; KNL-NEXT:    kshiftlw $6, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $10, %r10d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %r9d
+; KNL-NEXT:    vpinsrb $10, %r14d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r14d
 ; KNL-NEXT:    kshiftlw $5, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $11, %r11d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %r10d
+; KNL-NEXT:    vpinsrb $11, %r15d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r15d
 ; KNL-NEXT:    kshiftlw $4, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $12, %ebx, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %ebx
+; KNL-NEXT:    vpinsrb $12, %r12d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %edi
 ; KNL-NEXT:    kshiftlw $3, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $13, %ebp, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %ebp
+; KNL-NEXT:    vpinsrb $13, %r10d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r10d
 ; KNL-NEXT:    kshiftlw $2, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $14, %r14d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %r11d
+; KNL-NEXT:    vpinsrb $14, %r9d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r9d
 ; KNL-NEXT:    kshiftlw $1, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $15, %r15d, %xmm4, %xmm4
-; KNL-NEXT:    kmovw %k0, %r14d
+; KNL-NEXT:    vpinsrb $15, %r13d, %xmm4, %xmm4
+; KNL-NEXT:    kmovw %k0, %r12d
 ; KNL-NEXT:    vptestmd %zmm6, %zmm6, %k0
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vmovd %eax, %xmm5
-; KNL-NEXT:    kmovw %k1, %r15d
+; KNL-NEXT:    vmovd %ecx, %xmm5
+; KNL-NEXT:    kmovw %k1, %r13d
 ; KNL-NEXT:    kshiftlw $14, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $1, %ecx, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    vpinsrb $1, %eax, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %eax
+; KNL-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
 ; KNL-NEXT:    kshiftlw $15, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $2, %r12d, %xmm5, %xmm5
+; KNL-NEXT:    vpinsrb $2, %r11d, %xmm5, %xmm5
 ; KNL-NEXT:    kmovw %k1, %eax
 ; KNL-NEXT:    kshiftlw $13, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $3, %edx, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %r12d
+; KNL-NEXT:    vpinsrb $3, %r8d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp) ## 4-byte Spill
 ; KNL-NEXT:    kshiftlw $12, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $4, %r13d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %edx
+; KNL-NEXT:    vpinsrb $4, -{{[0-9]+}}(%rsp), %xmm5, %xmm5 ## 4-byte Folded Reload
+; KNL-NEXT:    kmovw %k1, %ecx
 ; KNL-NEXT:    kshiftlw $11, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $5, -{{[0-9]+}}(%rsp), %xmm5, %xmm5 ## 4-byte Folded Reload
-; KNL-NEXT:    kmovw %k1, %r13d
+; KNL-NEXT:    vpinsrb $5, %edx, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %r8d
 ; KNL-NEXT:    kshiftlw $10, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
 ; KNL-NEXT:    vpinsrb $6, %esi, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %esi
-; KNL-NEXT:    movl %esi, -{{[0-9]+}}(%rsp) ## 4-byte Spill
+; KNL-NEXT:    kmovw %k1, %edx
 ; KNL-NEXT:    kshiftlw $9, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $7, %edi, %xmm5, %xmm5
+; KNL-NEXT:    vpinsrb $7, %ebx, %xmm5, %xmm5
 ; KNL-NEXT:    kmovw %k1, %esi
 ; KNL-NEXT:    kshiftlw $8, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $8, %r8d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %edi
+; KNL-NEXT:    vpinsrb $8, %ebp, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %ebp
 ; KNL-NEXT:    kshiftlw $7, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $9, %r9d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %r8d
+; KNL-NEXT:    vpinsrb $9, %r14d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %ebx
 ; KNL-NEXT:    kshiftlw $6, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $10, %r10d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %r9d
+; KNL-NEXT:    vpinsrb $10, %r15d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %r11d
 ; KNL-NEXT:    kshiftlw $5, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $11, %ebx, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %ebx
+; KNL-NEXT:    vpinsrb $11, %edi, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %edi
 ; KNL-NEXT:    kshiftlw $4, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $12, %ebp, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %ebp
+; KNL-NEXT:    vpinsrb $12, %r10d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %r10d
 ; KNL-NEXT:    kshiftlw $3, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $13, %r11d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %r10d
+; KNL-NEXT:    vpinsrb $13, %r9d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %r9d
 ; KNL-NEXT:    kshiftlw $2, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $14, %r14d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %r11d
+; KNL-NEXT:    vpinsrb $14, %r12d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %r14d
 ; KNL-NEXT:    kshiftlw $1, %k0, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    vpinsrb $15, %r15d, %xmm5, %xmm5
-; KNL-NEXT:    kmovw %k1, %r14d
+; KNL-NEXT:    vpinsrb $15, %r13d, %xmm5, %xmm5
+; KNL-NEXT:    kmovw %k1, %r15d
 ; KNL-NEXT:    vptestmd %zmm7, %zmm7, %k1
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    vmovd %eax, %xmm6
-; KNL-NEXT:    kmovw %k0, %r15d
+; KNL-NEXT:    kmovw %k0, %r12d
 ; KNL-NEXT:    kshiftlw $14, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $1, %ecx, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    vpinsrb $1, -{{[0-9]+}}(%rsp), %xmm6, %xmm6 ## 4-byte Folded Reload
+; KNL-NEXT:    kmovw %k0, %r13d
 ; KNL-NEXT:    kshiftlw $15, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $2, %r12d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r12d
+; KNL-NEXT:    vpinsrb $2, -{{[0-9]+}}(%rsp), %xmm6, %xmm6 ## 4-byte Folded Reload
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    kshiftlw $13, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $3, %edx, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %edx
+; KNL-NEXT:    vpinsrb $3, %ecx, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %ecx
 ; KNL-NEXT:    kshiftlw $12, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $4, %r13d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r13d
+; KNL-NEXT:    vpinsrb $4, %r8d, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %r8d
 ; KNL-NEXT:    kshiftlw $11, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $5, -{{[0-9]+}}(%rsp), %xmm6, %xmm6 ## 4-byte Folded Reload
-; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vpinsrb $5, %edx, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %edx
 ; KNL-NEXT:    kshiftlw $10, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    vpinsrb $6, %esi, %xmm6, %xmm6
 ; KNL-NEXT:    kmovw %k0, %esi
 ; KNL-NEXT:    kshiftlw $9, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $7, %edi, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %edi
+; KNL-NEXT:    vpinsrb $7, %ebp, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %ebp
 ; KNL-NEXT:    kshiftlw $8, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $8, %r8d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r8d
+; KNL-NEXT:    vpinsrb $8, %ebx, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %ebx
 ; KNL-NEXT:    kshiftlw $7, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $9, %r9d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r9d
+; KNL-NEXT:    vpinsrb $9, %r11d, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %r11d
 ; KNL-NEXT:    kshiftlw $6, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $10, %ebx, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %ebx
+; KNL-NEXT:    vpinsrb $10, %edi, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %edi
 ; KNL-NEXT:    kshiftlw $5, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $11, %ebp, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %ebp
+; KNL-NEXT:    vpinsrb $11, %r10d, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %r10d
 ; KNL-NEXT:    kshiftlw $4, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $12, %r10d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r10d
+; KNL-NEXT:    vpinsrb $12, %r9d, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %r9d
 ; KNL-NEXT:    kshiftlw $3, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $13, %r11d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r11d
+; KNL-NEXT:    vpinsrb $13, %r14d, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %r14d
 ; KNL-NEXT:    kshiftlw $2, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $14, %r14d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r14d
+; KNL-NEXT:    vpinsrb $14, %r15d, %xmm6, %xmm6
+; KNL-NEXT:    kmovw %k0, %r15d
 ; KNL-NEXT:    kshiftlw $1, %k1, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    vpinsrb $15, %r15d, %xmm6, %xmm6
-; KNL-NEXT:    kmovw %k0, %r15d
-; KNL-NEXT:    kshiftrw $15, %k1, %k0
-; KNL-NEXT:    vmovd %r12d, %xmm7
+; KNL-NEXT:    vpinsrb $15, %r12d, %xmm6, %xmm6
 ; KNL-NEXT:    kmovw %k0, %r12d
-; KNL-NEXT:    vpinsrb $1, %ecx, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $2, %edx, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $3, %r13d, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $4, %eax, %xmm7, %xmm7
+; KNL-NEXT:    kshiftrw $15, %k1, %k0
+; KNL-NEXT:    vmovd %eax, %xmm7
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vpinsrb $1, %r13d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $2, %ecx, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $3, %r8d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $4, %edx, %xmm7, %xmm7
 ; KNL-NEXT:    vpinsrb $5, %esi, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $6, %edi, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $7, %r8d, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $8, %r9d, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $9, %ebx, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $10, %ebp, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $11, %r10d, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $12, %r11d, %xmm7, %xmm7
-; KNL-NEXT:    vpinsrb $13, %r14d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $6, %ebp, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $7, %ebx, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $8, %r11d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $9, %edi, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $10, %r10d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $11, %r9d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $12, %r14d, %xmm7, %xmm7
+; KNL-NEXT:    vpinsrb $13, %r15d, %xmm7, %xmm7
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm4, %ymm4
 ; KNL-NEXT:    vpsraw $15, %ymm4, %ymm4
@@ -1791,8 +1791,8 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; KNL-NEXT:    vpsllw $15, %ymm4, %ymm4
 ; KNL-NEXT:    vpsraw $15, %ymm4, %ymm4
 ; KNL-NEXT:    vpand %ymm2, %ymm4, %ymm2
-; KNL-NEXT:    vpinsrb $14, %r15d, %xmm7, %xmm4
-; KNL-NEXT:    vpinsrb $15, %r12d, %xmm4, %xmm4
+; KNL-NEXT:    vpinsrb $14, %r12d, %xmm7, %xmm4
+; KNL-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm4
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm4, %ymm4
 ; KNL-NEXT:    vpsraw $15, %ymm4, %ymm4

@@ -334,7 +334,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("Dictionary: %zd entries\n", Dictionary.size());
   bool DoPlainRun = AllInputsAreFiles();
   Options.SaveArtifacts = !DoPlainRun;
-  Options.PrintNewCovPcs = Flags.print_new_cov_pcs;
+  Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.TruncateUnits = Flags.truncate_units;
   Options.PruneCorpus = Flags.prune_corpus;

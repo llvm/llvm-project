@@ -107,8 +107,6 @@ static void PrintLegend(InternalScopedString *str) {
   str->append("\n");
   PrintShadowByte(str, "  Heap left redzone:       ",
                   kAsanHeapLeftRedzoneMagic);
-  PrintShadowByte(str, "  Heap right redzone:      ",
-                  kAsanHeapRightRedzoneMagic);
   PrintShadowByte(str, "  Freed heap region:       ", kAsanHeapFreeMagic);
   PrintShadowByte(str, "  Stack left redzone:      ",
                   kAsanStackLeftRedzoneMagic);
@@ -691,7 +689,6 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
     int read_after_free_bonus = 0;
     switch (shadow_val) {
       case kAsanHeapLeftRedzoneMagic:
-      case kAsanHeapRightRedzoneMagic:
       case kAsanArrayCookieMagic:
         bug_descr = "heap-buffer-overflow";
         bug_type_score = 10;

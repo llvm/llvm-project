@@ -29,14 +29,20 @@
 
 namespace __scudo {
 
-const uptr AllocatorSpace = ~0ULL;
-const uptr AllocatorSize  =  0x10000000000ULL;
 const uptr MinAlignmentLog = 4; // 16 bytes for x64
 const uptr MaxAlignmentLog = 24;
 
-typedef DefaultSizeClassMap SizeClassMap;
-typedef SizeClassAllocator64<AllocatorSpace, AllocatorSize, 0, SizeClassMap>
-  PrimaryAllocator;
+struct AP {
+  static const uptr kSpaceBeg = ~0ULL;
+  static const uptr kSpaceSize = 0x10000000000ULL;
+  static const uptr kMetadataSize = 0;
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags =
+      SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
+};
+
+typedef SizeClassAllocator64<AP> PrimaryAllocator;
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<> SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>

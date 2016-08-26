@@ -1,22 +1,26 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
-// RUN: echo 'int a, b;' > %t/x.h
-// RUN: echo 'module x { header "x.h" module y {} } module z {}' > %t/map
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: echo 'module x; int a, b;' > %t/x.cppm
+// RUN: echo 'module x.y; int c;' > %t/x.y.cppm
+//
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %t/x.cppm -o %t/x.pcm
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface -fmodule-file=%t/x.pcm %t/x.y.cppm -o %t/x.y.pcm
+//
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=1 -DMODULE_KIND=implementation -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=2 -DMODULE_KIND=implementation -DMODULE_NAME=x
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=3 -DMODULE_KIND= -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=4 -DMODULE_KIND=partition -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=5 -DMODULE_KIND=elderberry -DMODULE_NAME=z
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=1 -DMODULE_KIND=implementation -DMODULE_NAME='z [[]]'
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=6 -DMODULE_KIND=implementation -DMODULE_NAME='z [[fancy]]'
-// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%S/Inputs -fmodules-cache-path=%t -fmodule-map-file=%t/map -verify %s \
+// RUN: %clang_cc1 -std=c++1z -fmodules-ts -I%t -fmodule-file=%t/x.y.pcm -verify %s \
 // RUN:            -DTEST=7 -DMODULE_KIND=implementation -DMODULE_NAME='z [[maybe_unused]]'
 
 module MODULE_KIND MODULE_NAME;
@@ -34,7 +38,8 @@ module MODULE_KIND MODULE_NAME;
 
 int use_1 = a;
 #if TEST != 2
-// expected-error@-2 {{undeclared}}
+// expected-error@-2 {{declaration of 'a' must be imported from module 'x' before it is required}}
+// expected-note@x.cppm:1 {{here}}
 #endif
 
 import x;

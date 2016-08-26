@@ -895,26 +895,22 @@ template <bool>
 class __deque_base_common
 {
 protected:
-    void __throw_length_error() const;
-    void __throw_out_of_range() const;
+    _LIBCPP_NORETURN void __throw_length_error() const;
+    _LIBCPP_NORETURN void __throw_out_of_range() const;
 };
 
 template <bool __b>
 void
 __deque_base_common<__b>::__throw_length_error() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw length_error("deque");
-#endif
+    _VSTD::__throw_length_error("deque");
 }
 
 template <bool __b>
 void
 __deque_base_common<__b>::__throw_out_of_range() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw out_of_range("deque");
-#endif
+    _VSTD::__throw_out_of_range("deque");
 }
 
 template <class _Tp, class _Allocator>

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-linux | FileCheck -check-prefix LINUX %s
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN32 %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=thumb-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA %s
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN64 %s
 
 struct Empty {};
@@ -92,6 +93,9 @@ SmallWithCtor small_with_ctor_return() { return SmallWithCtor(); }
 // LINUX-LABEL: define void @_Z22small_with_ctor_returnv(%struct.SmallWithCtor* noalias sret %agg.result)
 // WIN32: define void @"\01?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(%struct.SmallWithCtor* noalias sret %agg.result)
 // WIN64: define void @"\01?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(%struct.SmallWithCtor* noalias sret %agg.result)
+// FIXME: The 'sret' mark here doesn't seem to be enough to convince LLVM to
+// preserve the hidden sret pointer in R0 across the function.
+// WOA: define arm_aapcs_vfpcc void @"\01?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(%struct.SmallWithCtor* noalias sret %agg.result)
 
 SmallWithVftable small_with_vftable_return() { return SmallWithVftable(); }
 // LINUX-LABEL: define void @_Z25small_with_vftable_returnv(%struct.SmallWithVftable* noalias sret %agg.result)
@@ -102,6 +106,7 @@ MediumWithCopyCtor medium_with_copy_ctor_return() { return MediumWithCopyCtor();
 // LINUX-LABEL: define void @_Z28medium_with_copy_ctor_returnv(%struct.MediumWithCopyCtor* noalias sret %agg.result)
 // WIN32: define void @"\01?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(%struct.MediumWithCopyCtor* noalias sret %agg.result)
 // WIN64: define void @"\01?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(%struct.MediumWithCopyCtor* noalias sret %agg.result)
+// WOA: define arm_aapcs_vfpcc void @"\01?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(%struct.MediumWithCopyCtor* noalias sret %agg.result)
 
 // Returning a large struct that doesn't fit into a register.
 Big big_return() { return Big(); }
@@ -114,22 +119,26 @@ void small_arg(Small s) {}
 // LINUX-LABEL: define void @_Z9small_arg5Small(i32 %s.0)
 // WIN32: define void @"\01?small_arg@@YAXUSmall@@@Z"(i32 %s.0)
 // WIN64: define void @"\01?small_arg@@YAXUSmall@@@Z"(i32 %s.coerce)
+// WOA: define arm_aapcs_vfpcc void @"\01?small_arg@@YAXUSmall@@@Z"([1 x i32] %s.coerce)
 
 void medium_arg(Medium s) {}
 // LINUX-LABEL: define void @_Z10medium_arg6Medium(i32 %s.0, i32 %s.1)
 // WIN32: define void @"\01?medium_arg@@YAXUMedium@@@Z"(i32 %s.0, i32 %s.1)
 // WIN64: define void @"\01?medium_arg@@YAXUMedium@@@Z"(i64 %s.coerce)
+// WOA: define arm_aapcs_vfpcc void @"\01?medium_arg@@YAXUMedium@@@Z"([2 x i32] %s.coerce)
 
 void small_arg_with_ctor(SmallWithCtor s) {}
 // LINUX-LABEL: define void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* byval align 4 %s)
 // WIN32: define void @"\01?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.0)
 // WIN64: define void @"\01?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.coerce)
+// WOA: define arm_aapcs_vfpcc void @"\01?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"([1 x i32] %s.coerce)
 
 // FIXME: We could coerce to a series of i32s here if we wanted to.
 void multibyte_arg(Multibyte s) {}
 // LINUX-LABEL: define void @_Z13multibyte_arg9Multibyte(%struct.Multibyte* byval align 4 %s)
 // WIN32: define void @"\01?multibyte_arg@@YAXUMultibyte@@@Z"(%struct.Multibyte* byval align 4 %s)
 // WIN64: define void @"\01?multibyte_arg@@YAXUMultibyte@@@Z"(i32 %s.coerce)
+// WOA: define arm_aapcs_vfpcc void @"\01?multibyte_arg@@YAXUMultibyte@@@Z"([1 x i32] %s.coerce)
 
 void packed_arg(Packed s) {}
 // LINUX-LABEL: define void @_Z10packed_arg6Packed(%struct.Packed* byval align 4 %s)
@@ -144,6 +153,11 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 // WIN64: define void @"\01?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i32 %s.coerce) {{.*}} {
 // WIN64:   call void @"\01??1SmallWithDtor@@QEAA@XZ"
 // WIN64: }
+
+// FIXME: MSVC incompatible!
+// WOA: define arm_aapcs_vfpcc void @"\01?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(%struct.SmallWithDtor* %s) {{.*}} {
+// WOA:   call arm_aapcs_vfpcc void @"\01??1SmallWithDtor@@QAA@XZ"(%struct.SmallWithDtor* %s)
+// WOA: }
 
 void call_small_arg_with_dtor() {
   small_arg_with_dtor(SmallWithDtor());
@@ -211,6 +225,7 @@ void medium_arg_with_copy_ctor(MediumWithCopyCtor s) {}
 // LINUX-LABEL: define void @_Z25medium_arg_with_copy_ctor18MediumWithCopyCtor(%struct.MediumWithCopyCtor* %s)
 // WIN32: define void @"\01?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(<{ %struct.MediumWithCopyCtor }>* inalloca)
 // WIN64: define void @"\01?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
+// WOA: define arm_aapcs_vfpcc void @"\01?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
 
 void big_arg(Big s) {}
 // LINUX-LABEL: define void @_Z7big_arg3Big(%struct.Big* byval align 4 %s)

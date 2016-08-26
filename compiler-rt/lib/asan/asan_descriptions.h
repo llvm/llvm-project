@@ -43,7 +43,6 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
   const char *ShadowByte(u8 byte) {
     switch (byte) {
       case kAsanHeapLeftRedzoneMagic:
-      case kAsanHeapRightRedzoneMagic:
       case kAsanArrayCookieMagic:
         return Red();
       case kAsanHeapFreeMagic:

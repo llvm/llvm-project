@@ -2454,7 +2454,10 @@ ObjectFileMachO::ParseSymtab ()
 
                 if (!data_was_read)
                 {
-                    if (memory_module_load_level == eMemoryModuleLoadLevelComplete)
+                    // Always load dyld - the dynamic linker - from memory if we didn't find a binary anywhere else.
+                    // lldb will not register dylib/framework/bundle loads/unloads if we don't have the dyld symbols,
+                    // we force dyld to load from memory despite the user's target.memory-module-load-level setting.
+                    if (memory_module_load_level == eMemoryModuleLoadLevelComplete || m_header.filetype == llvm::MachO::MH_DYLINKER)
                     {
                         DataBufferSP nlist_data_sp (ReadMemory (process_sp, symoff_addr, nlist_data_byte_size));
                         if (nlist_data_sp)
@@ -2472,8 +2475,7 @@ ObjectFileMachO::ParseSymtab ()
                                 indirect_symbol_index_data.SetData (indirect_syms_data_sp, 0, indirect_syms_data_sp->GetByteSize());
                         }
                     }
-                    
-                    if (memory_module_load_level >= eMemoryModuleLoadLevelPartial)
+                    else if (memory_module_load_level >= eMemoryModuleLoadLevelPartial)
                     {
                         if (function_starts_load_command.cmd)
                         {

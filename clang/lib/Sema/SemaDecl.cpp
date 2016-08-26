@@ -15180,48 +15180,84 @@ void Sema::diagnoseMisplacedModuleImport(Module *M, SourceLocation ImportLoc) {
 Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation ModuleLoc,
                                            ModuleDeclKind MDK,
                                            ModuleIdPath Path) {
-  // We should see 'module implementation' if and only if we are not compiling
-  // a module interface.
-  if (getLangOpts().CompilingModule ==
-      (MDK == ModuleDeclKind::Implementation)) {
+  // 'module implementation' requires that we are not compiling a module of any
+  // kind. 'module' and 'module partition' require that we are compiling a
+  // module inteface (not a module map).
+  auto CMK = getLangOpts().getCompilingModule();
+  if (MDK == ModuleDeclKind::Implementation
+          ? CMK != LangOptions::CMK_None
+          : CMK != LangOptions::CMK_ModuleInterface) {
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
       << (unsigned)MDK;
     return nullptr;
   }
 
   // FIXME: Create a ModuleDecl and return it.
-  // FIXME: Teach the lexer to handle this declaration too.
+
+  // FIXME: Most of this work should be done by the preprocessor rather than
+  // here, in case we look ahead across something where the current
+  // module matters (eg a #include).
+
+  // The dots in a module name in the Modules TS are a lie. Unlike Clang's
+  // hierarchical module map modules, the dots here are just another character
+  // that can appear in a module name. Flatten down to the actual module name.
+  std::string ModuleName;
+  for (auto &Piece : Path) {
+    if (!ModuleName.empty())
+      ModuleName += ".";
+    ModuleName += Piece.first->getName();
+  }
+
+  // If a module name was explicitly specified on the command line, it must be
+  // correct.
+  if (!getLangOpts().CurrentModule.empty() &&
+      getLangOpts().CurrentModule != ModuleName) {
+    Diag(Path.front().second, diag::err_current_module_name_mismatch)
+        << SourceRange(Path.front().second, Path.back().second)
+        << getLangOpts().CurrentModule;
+    return nullptr;
+  }
+  const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+
+  auto &Map = PP.getHeaderSearchInfo().getModuleMap();
 
   switch (MDK) {
-  case ModuleDeclKind::Module:
+  case ModuleDeclKind::Module: {
     // FIXME: Check we're not in a submodule.
-    // FIXME: Set CurrentModule and create a corresponding Module object.
+
+    // We can't have imported a definition of this module or parsed a module
+    // map defining it already.
+    if (auto *M = Map.findModule(ModuleName)) {
+      Diag(Path[0].second, diag::err_module_redefinition) << ModuleName;
+      if (M->DefinitionLoc.isValid())
+        Diag(M->DefinitionLoc, diag::note_prev_module_definition);
+      else if (const auto *FE = M->getASTFile())
+        Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
+            << FE->getName();
+      return nullptr;
+    }
+
+    // Create a Module for the module that we're defining.
+    Module *Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
+    assert(Mod && "module creation should not fail");
+
+    // Enter the semantic scope of the module.
+    ActOnModuleBegin(ModuleLoc, Mod);
     return nullptr;
+  }
 
   case ModuleDeclKind::Partition:
     // FIXME: Check we are in a submodule of the named module.
     return nullptr;
 
   case ModuleDeclKind::Implementation:
-    DeclResult Import = ActOnModuleImport(ModuleLoc, ModuleLoc, Path);
+    std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
+        PP.getIdentifierInfo(ModuleName), Path[0].second);
+
+    DeclResult Import = ActOnModuleImport(ModuleLoc, ModuleLoc, ModuleNameLoc);
     if (Import.isInvalid())
       return nullptr;
-    ImportDecl *ID = cast<ImportDecl>(Import.get());
-
-    // The current module is whatever we just loaded.
-    //
-    // FIXME: We should probably do this from the lexer rather than waiting
-    // until now, in case we look ahead across something where the current
-    // module matters (eg a #include).
-    auto Name = ID->getImportedModule()->getTopLevelModuleName();
-    if (!getLangOpts().CurrentModule.empty() &&
-        getLangOpts().CurrentModule != Name) {
-      Diag(Path.front().second, diag::err_current_module_name_mismatch)
-          << SourceRange(Path.front().second, Path.back().second)
-          << getLangOpts().CurrentModule;
-    }
-    const_cast<LangOptions&>(getLangOpts()).CurrentModule = Name;
-    return ConvertDeclToDeclGroup(ID);
+    return ConvertDeclToDeclGroup(Import.get());
   }
 
   llvm_unreachable("unexpected module decl kind");
@@ -15246,8 +15282,8 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // Import-from-implementation is valid in the Modules TS. FIXME: Should we
   // warn on a redundant import of the current module?
   if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
-      (getLangOpts().CompilingModule || !getLangOpts().ModulesTS))
-    Diag(ImportLoc, getLangOpts().CompilingModule
+      (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS))
+    Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import
                         : diag::err_module_import_in_implementation)
         << Mod->getFullModuleName() << getLangOpts().CurrentModule;

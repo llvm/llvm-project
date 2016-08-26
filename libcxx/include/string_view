@@ -261,7 +261,7 @@ public:
 	const_reference at(size_type __pos) const
 	{
 		return __pos >= size()
-			? (__libcpp_throw(out_of_range("string_view::at")), __data[0])
+			? (__throw_out_of_range("string_view::at"), __data[0])
 			: __data[__pos];
 	}
 
@@ -319,7 +319,7 @@ public:
 	size_type copy(_CharT* __s, size_type __n, size_type __pos = 0) const
 	{
 		if (__pos > size())
-			__libcpp_throw(out_of_range("string_view::copy"));
+			__throw_out_of_range("string_view::copy");
 		size_type __rlen = _VSTD::min( __n, size() - __pos );
 		copy_n(begin() + __pos, __rlen, __s );
 		return __rlen;
@@ -329,7 +329,7 @@ public:
 	basic_string_view substr(size_type __pos = 0, size_type __n = npos) const
 	{
 		return __pos > size()
-			? (__libcpp_throw((out_of_range("string_view::substr"))), basic_string_view())
+			? (__throw_out_of_range("string_view::substr"), basic_string_view())
 			: basic_string_view(data() + __pos, _VSTD::min(__n, size() - __pos));
 	}
 

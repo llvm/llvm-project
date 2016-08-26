@@ -1,6 +1,11 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-hexagon-hvx -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -enable-hexagon-hvx -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print -trace-hex-vector-stores-only < %s | FileCheck --check-prefix=VSTPRINT %s
 ;   generate .long XXXX which is a vector debug print instruction.
 ; CHECK: .long 0x1dffe0
+; CHECK: .long 0x1dffe0
+; CHECK: .long 0x1dffe0
+; VSTPRINT: .long 0x1dffe0
+; VSTPRINT-NOT: .long 0x1dffe0
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-n16:32"
 target triple = "hexagon"
 

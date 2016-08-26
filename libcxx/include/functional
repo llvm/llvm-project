@@ -1382,6 +1382,16 @@ class _LIBCPP_EXCEPTION_ABI bad_function_call
 {
 };
 
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_bad_function_call()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_function_call();
+#else
+	_VSTD::abort();
+#endif
+}
+
 template<class _Fp> class _LIBCPP_TYPE_VIS_ONLY function; // undefined
 
 namespace __function
@@ -1882,10 +1892,8 @@ template<class _Rp, class ..._ArgTypes>
 _Rp
 function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __arg) const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__f_ == 0)
-        throw bad_function_call();
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_bad_function_call();
     return (*__f_)(_VSTD::forward<_ArgTypes>(__arg)...);
 }
 

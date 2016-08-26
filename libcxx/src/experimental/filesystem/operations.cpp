@@ -51,7 +51,7 @@ void set_or_throw(std::error_code const& m_ec, std::error_code* ec,
     } else {
         string msg_s("std::experimental::filesystem::");
         msg_s += msg;
-        __libcpp_throw(filesystem_error(msg_s, p, p2, m_ec));
+        __throw_filesystem_error(msg_s, p, p2, m_ec);
     }
 }
 

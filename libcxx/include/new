@@ -97,6 +97,8 @@ public:
     virtual const char* what() const _NOEXCEPT;
 };
 
+_LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
+
 #if defined(_LIBCPP_BUILDING_NEW) || (_LIBCPP_STD_VER > 11)
 
 class _LIBCPP_EXCEPTION_ABI bad_array_length
@@ -111,8 +113,6 @@ public:
 #define _LIBCPP_BAD_ARRAY_LENGTH_DEFINED
 
 #endif  // defined(_LIBCPP_BUILDING_NEW) || (_LIBCPP_STD_VER > 11)
-
-_LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
 
 struct _LIBCPP_TYPE_VIS nothrow_t {};
 extern _LIBCPP_FUNC_VIS const nothrow_t nothrow;
@@ -176,6 +176,18 @@ inline _LIBCPP_INLINE_VISIBILITY void __deallocate(void *__ptr) {
   __builtin_operator_delete(__ptr);
 #endif
 }
+
+#ifdef _LIBCPP_BAD_ARRAY_LENGTH_DEFINED
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_bad_array_length()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_array_length();
+#else
+	_VSTD::abort();
+#endif
+}
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

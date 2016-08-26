@@ -685,7 +685,7 @@ bool Preprocessor::needModuleMacros() const {
     return true;
   // Otherwise, we only need module macros if we're actually compiling a module
   // interface.
-  return getLangOpts().CompilingModule;
+  return getLangOpts().isCompilingModule();
 }
 
 void Preprocessor::LeaveSubmodule() {

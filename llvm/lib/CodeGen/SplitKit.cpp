@@ -387,7 +387,7 @@ LiveInterval::SubRange &SplitEditor::getSubRangeForMask(LaneBitmask LM,
     if (S.LaneMask == LM)
       return S;
   llvm_unreachable("SubRange for this mask not found");
-};
+}
 
 void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
   if (!LI.hasSubRanges()) {

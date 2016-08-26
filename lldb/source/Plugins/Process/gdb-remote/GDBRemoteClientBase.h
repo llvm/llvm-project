@@ -73,7 +73,7 @@ public:
         Lock(GDBRemoteClientBase &comm, bool interrupt);
         ~Lock();
 
-        explicit operator bool() { return m_acquired; }
+        explicit operator bool() const { return m_acquired; }
 
         // Whether we had to interrupt the continue thread to acquire the connection.
         bool
@@ -83,7 +83,7 @@ public:
         }
 
     private:
-        std::unique_lock<std::recursive_mutex> m_async_lock;
+        std::unique_lock<std::mutex> m_async_lock;
         GDBRemoteClientBase &m_comm;
         bool m_acquired;
         bool m_did_interrupt;
@@ -94,7 +94,7 @@ public:
 
 protected:
     PacketResult
-    SendPacketAndWaitForResponseNoLock(llvm::StringRef payload, StringExtractorGDBRemote &response);
+    SendPacketAndWaitForResponse(llvm::StringRef payload, StringExtractorGDBRemote &response, const Lock &lock);
 
     virtual void
     OnRunPacketSent(bool first);
@@ -126,7 +126,7 @@ private:
 
     // This handles the synchronization between individual async threads. For now they just use a
     // simple mutex.
-    std::recursive_mutex m_async_mutex;
+    std::mutex m_async_mutex;
 
     bool
     ShouldStop(const UnixSignals &signals, StringExtractorGDBRemote &response);

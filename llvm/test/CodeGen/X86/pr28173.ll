@@ -5,13 +5,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Note that the kmovs should really *not* appear in the output, this is an
 ; artifact of the current poor lowering. This is tracked by PR28175.
 
+; CHECK-LABEL: @foo64
+; CHECK: kmov
+; CHECK: kmov
+; CHECK: orq  $-2, %rax
+; CHECK: ret
 define i64 @foo64(i1 zeroext %i, i32 %j) #0 {
-; CHECK-LABEL: foo64:
-; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill
-; CHECK-NEXT:    orq $-2, %rdi
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    retq
   br label %bb
 
 bb:
@@ -23,12 +22,12 @@ end:
   ret i64 %v
 }
 
+; CHECK-LABEL: @foo16
+; CHECK: kmov
+; CHECK: kmov
+; CHECK: orl $65534, %eax
+; CHECK: retq
 define i16 @foo16(i1 zeroext %i, i32 %j) #0 {
-; CHECK-LABEL: foo16:
-; CHECK:       # BB#0:
-; CHECK-NEXT:    orl $65534, %edi # imm = 0xFFFE
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    retq
   br label %bb
 
 bb:

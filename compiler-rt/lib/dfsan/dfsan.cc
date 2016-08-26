@@ -114,6 +114,26 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 // | reserved by kernel |
 // +--------------------+ 0x0000000000
 
+// On Linux/AArch64 (48-bit VMA), memory is laid out as follow:
+//
+// +--------------------+ 0x1000000000000 (top of memory)
+// | application memory |
+// +--------------------+ 0xffff00008000 (kAppAddr)
+// |       unused       |
+// +--------------------+ 0xaaaab0000000 (top of PIE address)
+// | application PIE    |
+// +--------------------+ 0xaaaaa0000000 (top of PIE address)
+// |                    |
+// |       unused       |
+// |                    |
+// +--------------------+ 0x1200000000 (kUnusedAddr)
+// |    union table     |
+// +--------------------+ 0x8000000000 (kUnionTableAddr)
+// |   shadow memory    |
+// +--------------------+ 0x0000010000 (kShadowAddr)
+// | reserved by kernel |
+// +--------------------+ 0x0000000000
+
 typedef atomic_dfsan_label dfsan_union_table_t[kNumLabels][kNumLabels];
 
 #ifdef DFSAN_RUNTIME_VMA
@@ -372,11 +392,12 @@ static void InitializePlatformEarly() {
 #ifdef DFSAN_RUNTIME_VMA
   __dfsan::vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
-  if (__dfsan::vmaSize == 39 || __dfsan::vmaSize == 42) {
+  if (__dfsan::vmaSize == 39 || __dfsan::vmaSize == 42 ||
+      __dfsan::vmaSize == 48) {
     __dfsan_shadow_ptr_mask = ShadowMask();
   } else {
     Printf("FATAL: DataFlowSanitizer: unsupported VMA range\n");
-    Printf("FATAL: Found %d - Supported 39 and 42\n", __dfsan::vmaSize);
+    Printf("FATAL: Found %d - Supported 39, 42, and 48\n", __dfsan::vmaSize);
     Die();
   }
 #endif

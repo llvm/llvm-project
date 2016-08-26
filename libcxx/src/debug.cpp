@@ -152,11 +152,8 @@ __libcpp_db::__insert_c(void* __c)
         size_t nc = __next_prime(2*static_cast<size_t>(__cend_ - __cbeg_) + 1);
         __c_node** cbeg = static_cast<__c_node**>(calloc(nc, sizeof(void*)));
         if (cbeg == nullptr)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_alloc();
-#else
-            abort();
-#endif
+            __throw_bad_alloc();
+
         for (__c_node** p = __cbeg_; p != __cend_; ++p)
         {
             __c_node* q = *p;
@@ -178,11 +175,8 @@ __libcpp_db::__insert_c(void* __c)
     __c_node* r = __cbeg_[hc] =
       static_cast<__c_node*>(malloc(sizeof(__c_node)));
     if (__cbeg_[hc] == nullptr)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw bad_alloc();
-#else
-        abort();
-#endif
+        __throw_bad_alloc();
+
     r->__c_ = __c;
     r->__next_ = p;
     ++__csz_;
@@ -475,11 +469,8 @@ __c_node::__add(__i_node* i)
         __i_node** beg =
            static_cast<__i_node**>(malloc(nc * sizeof(__i_node*)));
         if (beg == nullptr)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_alloc();
-#else
-            abort();
-#endif
+            __throw_bad_alloc();
+
         if (nc > 1)
             memcpy(beg, beg_, nc/2*sizeof(__i_node*));
         free(beg_);
@@ -501,11 +492,8 @@ __libcpp_db::__insert_iterator(void* __i)
         size_t nc = __next_prime(2*static_cast<size_t>(__iend_ - __ibeg_) + 1);
         __i_node** ibeg = static_cast<__i_node**>(calloc(nc, sizeof(void*)));
         if (ibeg == nullptr)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_alloc();
-#else
-            abort();
-#endif
+            __throw_bad_alloc();
+
         for (__i_node** p = __ibeg_; p != __iend_; ++p)
         {
             __i_node* q = *p;
@@ -527,11 +515,8 @@ __libcpp_db::__insert_iterator(void* __i)
     __i_node* r = __ibeg_[hi] =
       static_cast<__i_node*>(malloc(sizeof(__i_node)));
     if (r == nullptr)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw bad_alloc();
-#else
-        abort();
-#endif
+        __throw_bad_alloc();
+
     ::new(r) __i_node(__i, p, nullptr);
     ++__isz_;
     return r;

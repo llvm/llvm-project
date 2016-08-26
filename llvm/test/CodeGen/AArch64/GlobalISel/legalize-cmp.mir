@@ -20,6 +20,7 @@ registers:
   - { id: 5, class: _ }
   - { id: 6, class: _ }
   - { id: 7, class: _ }
+  - { id: 8, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -48,4 +49,9 @@ body: |
     ; CHECK: %7(32) = G_ICMP { s32, s32 } intpred(sle), [[LHS32]], [[RHS32]]
     %7(32) = G_ICMP { s32, s8 } intpred(sle), %2, %3
 
+    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
+    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
+    ; CHECK: [[TST32:%[0-9]+]](32) = G_ICMP { s32, s32 } intpred(ult), [[LHS32]], [[RHS32]]
+    ; CHECK: %8(1) = G_TRUNC { s1, s32 } [[TST32]]
+    %8(1) = G_ICMP { s1, s8 } intpred(ult), %2, %3
 ...

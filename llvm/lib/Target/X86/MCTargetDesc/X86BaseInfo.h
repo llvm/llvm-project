@@ -627,26 +627,25 @@ namespace X86II {
   ///                  in this instruction.
   /// If this is a two-address instruction,skip one of the register operands.
   /// FIXME: This should be handled during MCInst lowering.
-  inline int getOperandBias(const MCInstrDesc& Desc)
+  inline unsigned getOperandBias(const MCInstrDesc& Desc)
   {
     unsigned NumOps = Desc.getNumOperands();
-    unsigned CurOp = 0;
     if (NumOps > 1 && Desc.getOperandConstraint(1, MCOI::TIED_TO) == 0)
-      ++CurOp;
-    else if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
-             Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1)
+      return 1;
+    if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
+        Desc.getOperandConstraint(3, MCOI::TIED_TO) == 1)
       // Special case for AVX-512 GATHER with 2 TIED_TO operands
       // Skip the first 2 operands: dst, mask_wb
-      CurOp += 2;
-    else if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
-             Desc.getOperandConstraint(NumOps - 1, MCOI::TIED_TO) == 1)
+      return 2;
+    if (NumOps > 3 && Desc.getOperandConstraint(2, MCOI::TIED_TO) == 0 &&
+        Desc.getOperandConstraint(NumOps - 1, MCOI::TIED_TO) == 1)
       // Special case for GATHER with 2 TIED_TO operands
       // Skip the first 2 operands: dst, mask_wb
-      CurOp += 2;
-    else if (NumOps > 2 && Desc.getOperandConstraint(NumOps - 2, MCOI::TIED_TO) == 0)
+      return 2;
+    if (NumOps > 2 && Desc.getOperandConstraint(NumOps - 2, MCOI::TIED_TO) == 0)
       // SCATTER
-      ++CurOp;
-    return CurOp;
+      return 1;
+    return 0;
   }
 
   /// getMemoryOperandNo - The function returns the MCInst operand # for the

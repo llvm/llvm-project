@@ -132,7 +132,6 @@ extern bool asan_init_is_running;
 extern void (*death_callback)(void);
 // These magic values are written to shadow for better error reporting.
 const int kAsanHeapLeftRedzoneMagic = 0xfa;
-const int kAsanHeapRightRedzoneMagic = 0xfb;
 const int kAsanHeapFreeMagic = 0xfd;
 const int kAsanStackLeftRedzoneMagic = 0xf1;
 const int kAsanStackMidRedzoneMagic = 0xf2;
