@@ -18,7 +18,6 @@
 #include "SwiftUserExpression.h"
 
 #include "lldb/Core/Log.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -1391,7 +1390,7 @@ SwiftExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
     
     // Do the auto-importing after Name Binding, that's when the Imports for the source file are figured out.
     {
-        Mutex::Locker global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
+        std::lock_guard<std::recursive_mutex> global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
 
         Error auto_import_error;
         if (!PerformAutoImport (*source_file, true, auto_import_error))
@@ -1781,7 +1780,7 @@ SwiftExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
     }
     
     {
-        Mutex::Locker global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
+        std::lock_guard<std::recursive_mutex> global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
 
         m_module = swift::performIRGeneration(m_swift_ast_context->GetIRGenOptions(),
                                               module,
@@ -1812,7 +1811,7 @@ SwiftExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
     }
     
     {
-        Mutex::Locker global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
+        std::lock_guard<std::recursive_mutex> global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
 
         LLVMVerifyModule((LLVMOpaqueModule*)m_module.get(), LLVMReturnStatusAction, nullptr);
     }

@@ -253,8 +253,8 @@ static MemberInfoCache *
 GetMemberInfoCache (const swift::ASTContext *a)
 {
     static ASTMemberInfoCacheMap g_cache;
-    static Mutex g_mutex;
-    Mutex::Locker locker(g_mutex);
+    static std::mutex g_mutex;
+    std::lock_guard<std::mutex> locker(g_mutex);
     ASTMemberInfoCacheMap::iterator pos = g_cache.find(a);
     if (pos == g_cache.end())
     {
@@ -268,8 +268,8 @@ static EnumInfoCache *
 GetEnumInfoCache (const swift::ASTContext *a)
 {
     static ASTEnumInfoCacheMap g_cache;
-    static Mutex g_mutex;
-    Mutex::Locker locker(g_mutex);
+    static std::mutex g_mutex;
+    std::lock_guard<std::mutex> locker(g_mutex);
     ASTEnumInfoCacheMap::iterator pos = g_cache.find(a);
     if (pos == g_cache.end())
     {
@@ -2577,9 +2577,9 @@ GetSDKDirectory (SDKType sdk_type, uint32_t least_major, uint32_t least_minor)
     }
     
     typedef std::map<uint64_t, ConstString> SDKDirectoryCache;
-    static Mutex g_sdk_cache_mutex;
+    static std::mutex g_mutex;
     static SDKDirectoryCache g_sdk_cache;
-    Mutex::Locker locker(g_sdk_cache_mutex);
+    std::lock_guard<std::mutex> locker(g_mutex);
     const uint64_t major_minor = (uint64_t)major << 32 | (uint64_t)minor;
     SDKDirectoryCache::iterator pos = g_sdk_cache.find(major_minor);
     if (pos != g_sdk_cache.end())

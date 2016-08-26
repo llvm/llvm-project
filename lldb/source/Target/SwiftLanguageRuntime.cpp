@@ -3381,14 +3381,14 @@ SwiftLanguageRuntime::SwiftExceptionPrecondition::ConfigurePrecondition(Args &ar
 void
 SwiftLanguageRuntime::AddToLibraryNegativeCache (const char *library_name)
 {
-    Mutex::Locker locker(m_negative_cache_mutex);
+    std::lock_guard<std::mutex> locker(m_negative_cache_mutex);
     m_library_negative_cache.insert(library_name);
 }
 
 bool
 SwiftLanguageRuntime::IsInLibraryNegativeCache (const char *library_name)
 {
-    Mutex::Locker locker(m_negative_cache_mutex);
+    std::lock_guard<std::mutex> locker(m_negative_cache_mutex);
     return m_library_negative_cache.count(library_name) == 1;
 }
 
@@ -3875,7 +3875,7 @@ public:
                          "demangle",
                          "Demangle a Swift mangled name",
                          "language swift demangle"),
-    m_options(interpreter)
+    m_options()
     {
     }
     
@@ -3894,11 +3894,11 @@ public:
     {
     public:
         
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter),
+        CommandOptions() :
+        Options(),
         m_expand(false,false)
         {
-            OptionParsingStarting ();
+            OptionParsingStarting (nullptr);
         }
         
         virtual
@@ -3907,7 +3907,8 @@ public:
         }
         
         virtual Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg)
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context)
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -3926,7 +3927,7 @@ public:
         }
         
         void
-        OptionParsingStarting ()
+        OptionParsingStarting (ExecutionContext *execution_context)
         {
             m_expand.Clear();
         }
