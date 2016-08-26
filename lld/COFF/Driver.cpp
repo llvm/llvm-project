@@ -16,6 +16,7 @@
 #include "Writer.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/LibDriver/LibDriver.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -69,6 +70,10 @@ MemoryBufferRef LinkerDriver::openFile(StringRef Path) {
 }
 
 static std::unique_ptr<InputFile> createFile(MemoryBufferRef MB) {
+  if (Driver->Cpio)
+    Driver->Cpio->append(relativeToRoot(MB.getBufferIdentifier()),
+                         MB.getBuffer());
+
   // File type is detected by contents, not by file extension.
   file_magic Magic = identify_magic(MB.getBuffer());
   if (Magic == file_magic::archive)
@@ -247,6 +252,59 @@ static uint64_t getDefaultImageBase() {
   return Config->DLL ? 0x10000000 : 0x400000;
 }
 
+static std::string createResponseFile(const llvm::opt::InputArgList &Args,
+                                      ArrayRef<MemoryBufferRef> MBs,
+                                      ArrayRef<StringRef> SearchPaths) {
+  SmallString<0> Data;
+  raw_svector_ostream OS(Data);
+
+  for (auto *Arg : Args) {
+    switch (Arg->getOption().getID()) {
+    case OPT_linkrepro:
+    case OPT_INPUT:
+    case OPT_defaultlib:
+    case OPT_libpath:
+      break;
+    default:
+      OS << stringize(Arg) << "\n";
+    }
+  }
+
+  for (StringRef Path : SearchPaths) {
+    std::string RelPath = relativeToRoot(Path);
+    OS << "/libpath:" << quote(RelPath) << "\n";
+  }
+
+  for (MemoryBufferRef MB : MBs) {
+    std::string InputPath = relativeToRoot(MB.getBufferIdentifier());
+    OS << quote(InputPath) << "\n";
+  }
+
+  return Data.str();
+}
+
+static unsigned getDefaultDebugType(const llvm::opt::InputArgList &Args) {
+  unsigned DebugTypes = static_cast<unsigned>(DebugType::CV);
+  if (Args.hasArg(OPT_driver))
+    DebugTypes |= static_cast<unsigned>(DebugType::PData);
+  if (Args.hasArg(OPT_profile))
+    DebugTypes |= static_cast<unsigned>(DebugType::Fixup);
+  return DebugTypes;
+}
+
+static unsigned parseDebugType(StringRef Arg) {
+  llvm::SmallVector<StringRef, 3> Types;
+  Arg.split(Types, ',', /*KeepEmpty=*/false);
+
+  unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
+  for (StringRef Type : Types)
+    DebugTypes |= StringSwitch<unsigned>(Type.lower())
+                      .Case("cv", static_cast<unsigned>(DebugType::CV))
+                      .Case("pdata", static_cast<unsigned>(DebugType::PData))
+                      .Case("fixup", static_cast<unsigned>(DebugType::Fixup));
+  return DebugTypes;
+}
+
 void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
@@ -273,6 +331,17 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  if (auto *Arg = Args.getLastArg(OPT_linkrepro)) {
+    SmallString<64> Path = StringRef(Arg->getValue());
+    llvm::sys::path::append(Path, "repro");
+    ErrorOr<CpioFile *> F = CpioFile::create(Path);
+    if (F)
+      Cpio.reset(*F);
+    else
+      llvm::errs() << "/linkrepro: failed to open " << Path
+                   << ".cpio: " << F.getError().message() << '\n';
+  }
+
   if (Args.filtered_begin(OPT_INPUT) == Args.filtered_end())
     fatal("no input files");
 
@@ -295,8 +364,13 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
     Config->Force = true;
 
   // Handle /debug
-  if (Args.hasArg(OPT_debug))
+  if (Args.hasArg(OPT_debug)) {
     Config->Debug = true;
+    Config->DebugTypes =
+        Args.hasArg(OPT_debugtype)
+            ? parseDebugType(Args.getLastArg(OPT_debugtype)->getValue())
+            : getDefaultDebugType(Args);
+  }
 
   // Handle /noentry
   if (Args.hasArg(OPT_noentry)) {
@@ -511,8 +585,15 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
   if (!Resources.empty()) {
     std::unique_ptr<MemoryBuffer> MB = convertResToCOFF(Resources);
     Symtab.addFile(createFile(MB->getMemBufferRef()));
+
+    MBs.push_back(MB->getMemBufferRef());
     OwningMBs.push_back(std::move(MB)); // take ownership
   }
+
+  if (Cpio)
+    Cpio->append("response.txt",
+                 createResponseFile(Args, MBs,
+                                    ArrayRef<StringRef>(SearchPaths).slice(1)));
 
   // Handle /largeaddressaware
   if (Config->is64() || Args.hasArg(OPT_largeaddressaware))

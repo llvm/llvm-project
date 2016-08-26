@@ -241,6 +241,8 @@ __throw_bad_alloc()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw bad_alloc();
+#else
+    _VSTD::abort();
 #endif
 }
 

@@ -13,7 +13,6 @@
 
 #else
 
-#include "lldb-python.h"
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -624,7 +623,18 @@ PythonInteger::GetInteger() const
     {
         assert(PyLong_Check(m_py_obj) && "PythonInteger::GetInteger has a PyObject that isn't a PyLong");
 
-        return PyLong_AsLongLong(m_py_obj);
+        int overflow = 0;
+        int64_t result = PyLong_AsLongLongAndOverflow(m_py_obj, &overflow);
+        if (overflow != 0)
+        {
+            // We got an integer that overflows, like 18446744072853913392L
+            // we can't use PyLong_AsLongLong() as it will return
+            // 0xffffffffffffffff. If we use the unsigned long long
+            // it will work as expected.
+            const uint64_t uval = PyLong_AsUnsignedLongLong(m_py_obj);
+            result = *((int64_t *)&uval);
+        }
+        return result;
     }
     return UINT64_MAX;
 }

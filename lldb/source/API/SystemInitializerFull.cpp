@@ -28,6 +28,7 @@
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/JavaASTContext.h"
+#include "lldb/Symbol/OCamlASTContext.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"
@@ -44,6 +45,7 @@
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOS.h"
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
@@ -56,6 +58,7 @@
 #include "Plugins/Language/Java/JavaLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
+#include "Plugins/Language/OCaml/OCamlLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Go/GoLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Java/JavaLanguageRuntime.h"
@@ -98,6 +101,7 @@
 #include "Plugins/Process/mach-core/ProcessMachCore.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
 #endif
+#include "Plugins/StructuredData/DarwinLog/StructuredDataDarwinLog.h"
 
 #if defined(__FreeBSD__)
 #include "Plugins/Process/FreeBSD/ProcessFreeBSD.h"
@@ -337,6 +341,7 @@ SystemInitializerFull::Initialize()
     ClangASTContext::Initialize();
     GoASTContext::Initialize();
     JavaASTContext::Initialize();
+    OCamlASTContext::Initialize();
     SwiftASTContext::Initialize();
 
     ABIMacOSX_i386::Initialize();
@@ -384,6 +389,7 @@ SystemInitializerFull::Initialize()
     JavaLanguage::Initialize();
     ObjCLanguage::Initialize();
     ObjCPlusPlusLanguage::Initialize();
+    OCamlLanguage::Initialize();
 
     ::SwiftInitialize();
 
@@ -403,6 +409,11 @@ SystemInitializerFull::Initialize()
     PlatformRemoteAppleWatch::Initialize();
     DynamicLoaderDarwinKernel::Initialize();
 #endif
+
+    // This plugin is valid on any host that talks to a Darwin remote.
+    // It shouldn't be limited to __APPLE__.
+    StructuredDataDarwinLog::Initialize();
+
     //----------------------------------------------------------------------
     // Platform agnostic plugins
     //----------------------------------------------------------------------
@@ -410,6 +421,7 @@ SystemInitializerFull::Initialize()
 
     process_gdb_remote::ProcessGDBRemote::Initialize();
     DynamicLoaderMacOSXDYLD::Initialize();
+    DynamicLoaderMacOS::Initialize();
     DynamicLoaderPOSIXDYLD::Initialize();
     DynamicLoaderStatic::Initialize();
     DynamicLoaderWindowsDYLD::Initialize();
@@ -459,7 +471,7 @@ void SystemInitializerFull::InitializeSWIG()
 void
 SystemInitializerFull::Terminate()
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     Debugger::SettingsTerminate();
 
@@ -469,6 +481,7 @@ SystemInitializerFull::Terminate()
     ClangASTContext::Terminate();
     GoASTContext::Terminate();
     JavaASTContext::Terminate();
+    OCamlASTContext::Terminate();
     SwiftASTContext::Terminate();
 
     ABIMacOSX_i386::Terminate();
@@ -516,6 +529,7 @@ SystemInitializerFull::Terminate()
     JavaLanguage::Terminate();
     ObjCLanguage::Terminate();
     ObjCPlusPlusLanguage::Terminate();
+    OCamlLanguage::Terminate();
 
 #if defined(__APPLE__)
     DynamicLoaderDarwinKernel::Terminate();
@@ -535,7 +549,10 @@ SystemInitializerFull::Terminate()
 
     platform_gdb_server::PlatformRemoteGDBServer::Terminate();
     process_gdb_remote::ProcessGDBRemote::Terminate();
+    StructuredDataDarwinLog::Terminate();
+
     DynamicLoaderMacOSXDYLD::Terminate();
+    DynamicLoaderMacOS::Terminate();
     DynamicLoaderPOSIXDYLD::Terminate();
     DynamicLoaderStatic::Terminate();
     DynamicLoaderWindowsDYLD::Terminate();

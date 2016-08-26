@@ -4,6 +4,7 @@ import hashlib
 import fnmatch
 import os
 import platform
+import re
 import subprocess
 import sys
 
@@ -81,7 +82,9 @@ def BUILD_SCRIPT_ENVIRONMENT ():
 
 def collect_archives_in_path (path): 
     files = os.listdir(path)
-    return [os.path.join(path, file) for file in files if file.endswith(".a")]
+    # Only use libclang and libLLVM archives, and exclude libclang_rt
+    regexp = "^lib(clang[^_]|LLVM|gtest).*$"
+    return [os.path.join(path, file) for file in files if file.endswith(".a") and re.match(regexp, file)]
 
 def archive_list ():
     paths = library_paths()

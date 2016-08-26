@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -34,7 +35,7 @@ int main()
                                                                   NotConstructible> >
                                    > C;
         C c(test_allocator<std::pair<const NotConstructible, NotConstructible> >(10));
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() ==
@@ -54,11 +55,29 @@ int main()
                                                                   NotConstructible> >
                                    > C;
         C c(min_allocator<std::pair<const NotConstructible, NotConstructible> >{});
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() ==
                (min_allocator<std::pair<const NotConstructible, NotConstructible> >()));
+        assert(c.size() == 0);
+        assert(c.empty());
+        assert(std::distance(c.begin(), c.end()) == 0);
+        assert(c.load_factor() == 0);
+        assert(c.max_load_factor() == 1);
+    }
+    {
+        typedef explicit_allocator<std::pair<const NotConstructible, NotConstructible>> A;
+        typedef std::unordered_multimap<NotConstructible, NotConstructible,
+                                   test_hash<std::hash<NotConstructible> >,
+                                   test_compare<std::equal_to<NotConstructible> >,
+                                   A
+                                   > C;
+        C c(A{});
+        LIBCPP_ASSERT(c.bucket_count() == 0);
+        assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
+        assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
+        assert(c.get_allocator() == A{});
         assert(c.size() == 0);
         assert(c.empty());
         assert(std::distance(c.begin(), c.end()) == 0);
@@ -75,7 +94,7 @@ int main()
 
         A a(10);
         C c(2, a);
-        assert(c.bucket_count() == 2);
+        LIBCPP_ASSERT(c.bucket_count() == 2);
         assert(c.hash_function() == HF());
         assert(c.key_eq() == Comp());
         assert(c.get_allocator() == a);
@@ -95,7 +114,7 @@ int main()
         A a(10);
         HF hf(12);
         C c(2, hf, a);
-        assert(c.bucket_count() == 2);
+        LIBCPP_ASSERT(c.bucket_count() == 2);
         assert(c.hash_function() == hf);
         assert(!(c.hash_function() == HF()));
         assert(c.key_eq() == Comp());

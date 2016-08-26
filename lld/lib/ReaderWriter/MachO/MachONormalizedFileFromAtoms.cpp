@@ -22,6 +22,7 @@
 
 #include "MachONormalizedFile.h"
 #include "ArchHandler.h"
+#include "DebugInfo.h"
 #include "MachONormalizedFileBinaryUtils.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/MachO.h"
 #include <map>
 #include <system_error>
+#include <unordered_set>
 
 using llvm::StringRef;
 using llvm::isa;
@@ -120,6 +122,7 @@ public:
   void      copySectionInfo(NormalizedFile &file);
   void      updateSectionInfo(NormalizedFile &file);
   void      buildAtomToAddressMap();
+  llvm::Error synthesizeDebugNotes(NormalizedFile &file);
   llvm::Error addSymbols(const lld::File &atomFile, NormalizedFile &file);
   void      addIndirectSymbols(const lld::File &atomFile, NormalizedFile &file);
   void      addRebaseAndBindingInfo(const lld::File &, NormalizedFile &file);
@@ -201,6 +204,7 @@ private:
   bool                          _allSourceFilesHaveMinVersions = true;
   LoadCommandType               _minVersionCommandType = (LoadCommandType)0;
   uint32_t                      _minVersion = 0;
+  std::vector<lld::mach_o::Stab> _stabs;
 };
 
 Util::~Util() {
@@ -785,6 +789,158 @@ void Util::buildAtomToAddressMap() {
   }
 }
 
+llvm::Error Util::synthesizeDebugNotes(NormalizedFile &file) {
+
+  // Bail out early if we don't need to generate a debug map.
+  if (_ctx.debugInfoMode() == MachOLinkingContext::DebugInfoMode::noDebugMap)
+    return llvm::Error::success();
+
+  std::vector<const DefinedAtom*> atomsNeedingDebugNotes;
+  std::set<const mach_o::MachOFile*> filesWithStabs;
+  bool objFileHasDwarf = false;
+  const File *objFile = nullptr;
+
+  for (SectionInfo *sect : _sectionInfos) {
+    for (const AtomInfo &info : sect->atomsAndOffsets) {
+      if (const DefinedAtom *atom = dyn_cast<DefinedAtom>(info.atom)) {
+
+        // FIXME: No stabs/debug-notes for symbols that wouldn't be in the
+        //        symbol table.
+        // FIXME: No stabs/debug-notes for kernel dtrace probes.
+
+        if (atom->contentType() == DefinedAtom::typeCFI ||
+            atom->contentType() == DefinedAtom::typeCString)
+          continue;
+
+        // Whenever we encounter a new file, update the 'objfileHasDwarf' flag.
+        if (&info.atom->file() != objFile) {
+          objFileHasDwarf = false;
+          if (const mach_o::MachOFile *atomFile =
+              dyn_cast<mach_o::MachOFile>(&info.atom->file())) {
+            if (atomFile->debugInfo()) {
+              if (isa<mach_o::DwarfDebugInfo>(atomFile->debugInfo()))
+                objFileHasDwarf = true;
+              else if (isa<mach_o::StabsDebugInfo>(atomFile->debugInfo()))
+                filesWithStabs.insert(atomFile);
+            }
+          }
+        }
+
+        // If this atom is from a file that needs dwarf, add it to the list.
+        if (objFileHasDwarf)
+          atomsNeedingDebugNotes.push_back(info.atom);
+      }
+    }
+  }
+
+  // Sort atoms needing debug notes by file ordinal, then atom ordinal.
+  std::sort(atomsNeedingDebugNotes.begin(), atomsNeedingDebugNotes.end(),
+            [](const DefinedAtom *lhs, const DefinedAtom *rhs) {
+              if (lhs->file().ordinal() != rhs->file().ordinal())
+                return (lhs->file().ordinal() < rhs->file().ordinal());
+              return (lhs->ordinal() < rhs->ordinal());
+            });
+
+  // FIXME: Handle <rdar://problem/17689030>: Add -add_ast_path option to \
+  //        linker which add N_AST stab entry to output
+  // See OutputFile::synthesizeDebugNotes in ObjectFile.cpp in ld64.
+
+  StringRef oldFileName = "";
+  StringRef oldDirPath = "";
+  bool wroteStartSO = false;
+  std::unordered_set<std::string> seenFiles;
+  for (const DefinedAtom *atom : atomsNeedingDebugNotes) {
+    const auto &atomFile = cast<mach_o::MachOFile>(atom->file());
+    assert(dyn_cast_or_null<lld::mach_o::DwarfDebugInfo>(atomFile.debugInfo())
+           && "file for atom needing debug notes does not contain dwarf");
+    auto &dwarf = cast<lld::mach_o::DwarfDebugInfo>(*atomFile.debugInfo());
+
+    auto &tu = dwarf.translationUnitSource();
+    StringRef newFileName = tu.name;
+    StringRef newDirPath = tu.path;
+
+    // Add an SO whenever the TU source file changes.
+    if (newFileName != oldFileName || newDirPath != oldDirPath) {
+      // Translation unit change, emit ending SO
+      if (oldFileName != "")
+        _stabs.push_back(mach_o::Stab(nullptr, N_SO, 1, 0, 0, ""));
+
+      oldFileName = newFileName;
+      oldDirPath = newDirPath;
+
+      // If newDirPath doesn't end with a '/' we need to add one:
+      if (newDirPath.back() != '/') {
+        char *p =
+          file.ownedAllocations.Allocate<char>(newDirPath.size() + 2);
+        memcpy(p, newDirPath.data(), newDirPath.size());
+        p[newDirPath.size()] = '/';
+        p[newDirPath.size() + 1] = '\0';
+        newDirPath = p;
+      }
+
+      // New translation unit, emit start SOs:
+      _stabs.push_back(mach_o::Stab(nullptr, N_SO, 0, 0, 0, newDirPath));
+      _stabs.push_back(mach_o::Stab(nullptr, N_SO, 0, 0, 0, newFileName));
+
+      // Synthesize OSO for start of file.
+      char *fullPath = nullptr;
+      {
+        SmallString<1024> pathBuf(atomFile.path());
+        if (auto EC = llvm::sys::fs::make_absolute(pathBuf))
+          return llvm::errorCodeToError(EC);
+        fullPath = file.ownedAllocations.Allocate<char>(pathBuf.size() + 1);
+        memcpy(fullPath, pathBuf.c_str(), pathBuf.size() + 1);
+      }
+
+      // Get mod time.
+      uint32_t modTime = 0;
+      llvm::sys::fs::file_status stat;
+      if (!llvm::sys::fs::status(fullPath, stat))
+        if (llvm::sys::fs::exists(stat))
+          modTime = stat.getLastModificationTime().toEpochTime();
+
+      _stabs.push_back(mach_o::Stab(nullptr, N_OSO, _ctx.getCPUSubType(), 1,
+                                    modTime, fullPath));
+      // <rdar://problem/6337329> linker should put cpusubtype in n_sect field
+      // of nlist entry for N_OSO debug note entries.
+      wroteStartSO = true;
+    }
+
+    if (atom->contentType() == DefinedAtom::typeCode) {
+      // Synthesize BNSYM and start FUN stabs.
+      _stabs.push_back(mach_o::Stab(atom, N_BNSYM, 1, 0, 0, ""));
+      _stabs.push_back(mach_o::Stab(atom, N_FUN, 1, 0, 0, atom->name()));
+      // Synthesize any SOL stabs needed
+      // FIXME: add SOL stabs.
+      _stabs.push_back(mach_o::Stab(nullptr, N_FUN, 0, 0,
+                                    atom->rawContent().size(), ""));
+      _stabs.push_back(mach_o::Stab(nullptr, N_ENSYM, 1, 0,
+                                    atom->rawContent().size(), ""));
+    } else {
+      if (atom->scope() == Atom::scopeTranslationUnit)
+        _stabs.push_back(mach_o::Stab(atom, N_STSYM, 1, 0, 0, atom->name()));
+      else
+        _stabs.push_back(mach_o::Stab(nullptr, N_GSYM, 1, 0, 0, atom->name()));
+    }
+  }
+
+  // Emit ending SO if necessary.
+  if (wroteStartSO)
+    _stabs.push_back(mach_o::Stab(nullptr, N_SO, 1, 0, 0, ""));
+
+  // Copy any stabs from .o file.
+  for (const auto *objFile : filesWithStabs) {
+    const auto &stabsList =
+      cast<mach_o::StabsDebugInfo>(objFile->debugInfo())->stabs();
+    for (auto &stab : stabsList) {
+      // FIXME: Drop stabs whose atoms have been dead-stripped.
+      _stabs.push_back(stab);
+    }
+  }
+
+  return llvm::Error::success();
+}
+
 uint16_t Util::descBits(const DefinedAtom* atom) {
   uint16_t desc = 0;
   switch (atom->merge()) {
@@ -807,7 +963,8 @@ uint16_t Util::descBits(const DefinedAtom* atom) {
     desc |= REFERENCED_DYNAMICALLY;
   if (_archHandler.isThumbFunction(*atom))
     desc |= N_ARM_THUMB_DEF;
-  if (atom->deadStrip() == DefinedAtom::deadStripNever) {
+  if (atom->deadStrip() == DefinedAtom::deadStripNever &&
+      _ctx.outputMachOType() == llvm::MachO::MH_OBJECT) {
     if ((atom->contentType() != DefinedAtom::typeInitializerPtr)
      && (atom->contentType() != DefinedAtom::typeTerminatorPtr))
     desc |= N_NO_DEAD_STRIP;
@@ -868,10 +1025,27 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
   llvm_unreachable("atom->scope() unknown enum value");
 }
 
+
+
 llvm::Error Util::addSymbols(const lld::File &atomFile,
                              NormalizedFile &file) {
   bool rMode = (_ctx.outputMachOType() == llvm::MachO::MH_OBJECT);
-  // Mach-O symbol table has three regions: locals, globals, undefs.
+  // Mach-O symbol table has four regions: stabs, locals, globals, undefs.
+
+  // Add all stabs.
+  for (auto &stab : _stabs) {
+    Symbol sym;
+    sym.type = static_cast<NListType>(stab.type);
+    sym.scope = 0;
+    sym.sect = stab.other;
+    sym.desc = stab.desc;
+    if (stab.atom)
+      sym.value = _atomToAddress[stab.atom];
+    else
+      sym.value = stab.value;
+    sym.name = stab.str;
+    file.stabsSymbols.push_back(sym);
+  }
 
   // Add all local (non-global) symbols in address order
   std::vector<AtomAndIndex> globals;
@@ -1040,15 +1214,15 @@ void Util::addIndirectSymbols(const lld::File &atomFile, NormalizedFile &file) {
   }
 }
 
-void Util::addDependentDylibs(const lld::File &atomFile,NormalizedFile &nFile) {
+void Util::addDependentDylibs(const lld::File &atomFile,
+                              NormalizedFile &nFile) {
   // Scan all imported symbols and build up list of dylibs they are from.
   int ordinal = 1;
-  for (const SharedLibraryAtom *slAtom : atomFile.sharedLibrary()) {
-    StringRef loadPath = slAtom->loadName();
-    DylibPathToInfo::iterator pos = _dylibInfo.find(loadPath);
+  for (const auto *dylib : _ctx.allDylibs()) {
+    DylibPathToInfo::iterator pos = _dylibInfo.find(dylib->installName());
     if (pos == _dylibInfo.end()) {
       DylibInfo info;
-      bool flatNamespaceAtom = &slAtom->file() == _ctx.flatNamespaceFile();
+      bool flatNamespaceAtom = dylib == _ctx.flatNamespaceFile();
 
       // If we're in -flat_namespace mode (or this atom came from the flat
       // namespace file under -undefined dynamic_lookup) then use the flat
@@ -1057,24 +1231,22 @@ void Util::addDependentDylibs(const lld::File &atomFile,NormalizedFile &nFile) {
         info.ordinal = BIND_SPECIAL_DYLIB_FLAT_LOOKUP;
       else
         info.ordinal = ordinal++;
-      info.hasWeak = slAtom->canBeNullAtRuntime();
+      info.hasWeak = false;
       info.hasNonWeak = !info.hasWeak;
-      _dylibInfo[loadPath] = info;
+      _dylibInfo[dylib->installName()] = info;
 
       // Unless this was a flat_namespace atom, record the source dylib.
       if (!flatNamespaceAtom) {
         DependentDylib depInfo;
-        depInfo.path = loadPath;
+        depInfo.path = dylib->installName();
         depInfo.kind = llvm::MachO::LC_LOAD_DYLIB;
-        depInfo.currentVersion = _ctx.dylibCurrentVersion(loadPath);
-        depInfo.compatVersion = _ctx.dylibCompatVersion(loadPath);
+        depInfo.currentVersion = _ctx.dylibCurrentVersion(dylib->path());
+        depInfo.compatVersion = _ctx.dylibCompatVersion(dylib->path());
         nFile.dependentDylibs.push_back(depInfo);
       }
     } else {
-      if ( slAtom->canBeNullAtRuntime() )
-        pos->second.hasWeak = true;
-      else
-        pos->second.hasNonWeak = true;
+      pos->second.hasWeak = false;
+      pos->second.hasNonWeak = !pos->second.hasWeak;
     }
   }
   // Automatically weak link dylib in which all symbols are weak (canBeNull).
@@ -1404,6 +1576,8 @@ normalizedFromAtoms(const lld::File &atomFile,
   util.copySectionInfo(normFile);
   util.assignAddressesToSections(normFile);
   util.buildAtomToAddressMap();
+  if (auto err = util.synthesizeDebugNotes(normFile))
+    return std::move(err);
   util.updateSectionInfo(normFile);
   util.copySectionContent(normFile);
   if (auto ec = util.addSymbols(atomFile, normFile)) {

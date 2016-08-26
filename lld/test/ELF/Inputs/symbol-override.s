@@ -11,6 +11,6 @@ nop
 
 .globl do
 .type do,@function
-do: 
+do:
 callq foo@PLT
 callq bar@PLT

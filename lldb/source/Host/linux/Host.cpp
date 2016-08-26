@@ -19,6 +19,7 @@
 
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/Support/ScopedPrinter.h"
 // Project includes
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
@@ -26,9 +27,6 @@
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#ifdef __ANDROID_NDK__
-#include "lldb/Host/android/Android.h"
-#endif
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
 
@@ -236,7 +234,7 @@ Host::FindProcessThreads (const lldb::pid_t pid, TidMap &tids_to_attach)
     bool tids_changed = false;
     static const char procdir[] = "/proc/";
     static const char taskdir[] = "/task/";
-    std::string process_task_dir = procdir + std::to_string(pid) + taskdir;
+    std::string process_task_dir = procdir + llvm::to_string(pid) + taskdir;
     DIR *dirproc = opendir (process_task_dir.c_str());
 
     if (dirproc)

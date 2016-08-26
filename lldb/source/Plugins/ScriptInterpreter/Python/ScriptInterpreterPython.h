@@ -198,6 +198,8 @@ public:
 
     bool ScriptedThreadPlanShouldStop(StructuredData::ObjectSP implementor_sp, Event *event, bool &script_error) override;
 
+    bool ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp, bool &script_error) override;
+
     lldb::StateType ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp, bool &script_error) override;
 
     StructuredData::GenericSP OSPlugin_CreatePluginObject(const char *class_name, lldb::ProcessSP process_sp) override;

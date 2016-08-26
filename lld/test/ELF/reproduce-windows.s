@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, cpio
 
 # Test that a repro archive always uses / instead of \.
 # RUN: rm -rf %t.dir

@@ -18,7 +18,8 @@
 namespace clang {
 namespace include_fixer {
 
-/// \brief A context for the symbol being queried.
+/// \brief A context for a file being processed. It includes all query
+/// information, e.g. symbols being queried in database, all header candidates.
 class IncludeFixerContext {
 public:
   struct HeaderInfo {
@@ -46,21 +47,39 @@ public:
   };
 
   IncludeFixerContext() = default;
-  IncludeFixerContext(const QuerySymbolInfo &QuerySymbol,
-                      const std::vector<find_all_symbols::SymbolInfo> Symbols);
+  IncludeFixerContext(StringRef FilePath,
+                      std::vector<QuerySymbolInfo> QuerySymbols,
+                      std::vector<find_all_symbols::SymbolInfo> Symbols);
 
   /// \brief Get symbol name.
   llvm::StringRef getSymbolIdentifier() const {
-    return QuerySymbol.RawIdentifier;
+    return QuerySymbolInfos.front().RawIdentifier;
   }
 
   /// \brief Get replacement range of the symbol.
-  tooling::Range getSymbolRange() const { return QuerySymbol.Range; }
+  tooling::Range getSymbolRange() const {
+    return QuerySymbolInfos.front().Range;
+  }
 
+  /// \brief Get the file path to the file being processed.
+  StringRef getFilePath() const { return FilePath; }
+
+  /// \brief Get header information.
   const std::vector<HeaderInfo> &getHeaderInfos() const { return HeaderInfos; }
+
+  /// \brief Get information of symbols being querid.
+  const std::vector<QuerySymbolInfo> &getQuerySymbolInfos() const {
+    return QuerySymbolInfos;
+  }
 
 private:
   friend struct llvm::yaml::MappingTraits<IncludeFixerContext>;
+
+  /// \brief The file path to the file being processed.
+  std::string FilePath;
+
+  /// \brief All instances of an unidentified symbol being queried.
+  std::vector<QuerySymbolInfo> QuerySymbolInfos;
 
   /// \brief The symbol candidates which match SymbolIdentifier. The symbols are
   /// sorted in a descending order based on the popularity info in SymbolInfo.
@@ -68,9 +87,6 @@ private:
 
   /// \brief The header information.
   std::vector<HeaderInfo> HeaderInfos;
-
-  /// \brief The information of the symbol being queried.
-  QuerySymbolInfo QuerySymbol;
 };
 
 } // namespace include_fixer

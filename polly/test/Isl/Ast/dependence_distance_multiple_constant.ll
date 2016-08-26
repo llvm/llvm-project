@@ -1,7 +1,9 @@
 ; RUN: opt %loadPolly -basicaa -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;        void f(int *restrict A, int *restrict B, int N) {
 ; CHECK:   #pragma minimal dependence distance: 5
+; PINFO:   for.cond: Loop is not parallel.
 ;          for (int i = 0; i < N; i++) {
 ;            A[i + 7] = A[i] + 1;
 ;            B[i + 5] = B[i] + 1;

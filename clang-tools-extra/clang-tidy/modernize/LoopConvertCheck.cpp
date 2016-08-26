@@ -517,7 +517,17 @@ void LoopConvertCheck::doConversion(
   if (VarNameFromAlias) {
     const auto *AliasVar = cast<VarDecl>(AliasDecl->getSingleDecl());
     VarName = AliasVar->getName().str();
-    AliasVarIsRef = AliasVar->getType()->isReferenceType();
+
+    // Use the type of the alias if it's not the same
+    QualType AliasVarType = AliasVar->getType();
+    assert(!AliasVarType.isNull() && "Type in VarDecl is null");
+    if (AliasVarType->isReferenceType()) {
+      AliasVarType = AliasVarType.getNonReferenceType();
+      AliasVarIsRef = true;
+    }
+    if (Descriptor.ElemType.isNull() ||
+        !Context->hasSameUnqualifiedType(AliasVarType, Descriptor.ElemType))
+      Descriptor.ElemType = AliasVarType;
 
     // We keep along the entire DeclStmt to keep the correct range here.
     SourceRange ReplaceRange = AliasDecl->getSourceRange();

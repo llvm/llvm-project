@@ -2036,26 +2036,15 @@ template<typename, typename _Tp> struct __select_2nd { typedef _Tp type; };
 
 template <class _Tp, class _Arg>
 typename __select_2nd<decltype((_VSTD::declval<_Tp>() = _VSTD::declval<_Arg>())), true_type>::type
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-__is_assignable_test(_Tp&&, _Arg&&);
-#else
-__is_assignable_test(_Tp, _Arg&);
-#endif
+__is_assignable_test(int);
 
-template <class _Arg>
-false_type
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-__is_assignable_test(__any, _Arg&&);
-#else
-__is_assignable_test(__any, _Arg&);
-#endif
+template <class, class>
+false_type __is_assignable_test(...);
+
 
 template <class _Tp, class _Arg, bool = is_void<_Tp>::value || is_void<_Arg>::value>
 struct __is_assignable_imp
-    : public common_type
-        <
-            decltype(_VSTD::__is_assignable_test(declval<_Tp>(), declval<_Arg>()))
-        >::type {};
+    : public decltype((_VSTD::__is_assignable_test<_Tp, _Arg>(0))) {};
 
 template <class _Tp, class _Arg>
 struct __is_assignable_imp<_Tp, _Arg, true>
@@ -2913,119 +2902,75 @@ struct _LIBCPP_TYPE_VIS_ONLY is_constructible
 
 //      main is_constructible test
 
-template <class _Tp, class ..._Args>
-typename __select_2nd<decltype(_VSTD::move(_Tp(_VSTD::declval<_Args>()...))), true_type>::type
-__is_constructible_test(_Tp&&, _Args&& ...);
 
-template <class ..._Args>
-false_type
-__is_constructible_test(__any, _Args&& ...);
-
-template <bool, class _Tp, class... _Args>
-struct __libcpp_is_constructible // false, _Tp is not a scalar
-    : public common_type
-             <
-                 decltype(__is_constructible_test(declval<_Tp>(), declval<_Args>()...))
-             >::type
-    {};
-
-//      function types are not constructible
-
-template <class _Rp, class... _A1, class... _A2>
-struct __libcpp_is_constructible<false, _Rp(_A1...), _A2...>
-    : public false_type
-    {};
-
-//      handle scalars and reference types
-
-//      Scalars are default constructible, references are not
-
-template <class _Tp>
-struct __libcpp_is_constructible<true, _Tp>
-    : public is_scalar<_Tp>
-    {};
-
-//      Scalars and references are constructible from one arg if that arg is
-//          implicitly convertible to the scalar or reference.
-
-template <class _Tp>
-struct __is_constructible_ref
+struct __is_constructible_helper
 {
-    true_type static __lxx(_Tp);
-    false_type static __lxx(...);
+    template <class _Tp>
+    static true_type __test_ref(_Tp);
+    template <class>
+    static false_type __test_ref(...);
+
+    template <class _Tp, class ..._Args,
+        class = decltype(_Tp(_VSTD::declval<_Args>()...))>
+    static true_type __test_nary(int);
+    template <class _Tp, class...>
+    static false_type __test_nary(...);
+
+    template <class _Tp, class _A0, class = decltype(::new _Tp(_VSTD::declval<_A0>()))>
+    static is_destructible<_Tp> __test_unary(int);
+    template <class, class>
+    static false_type __test_unary(...);
 };
 
-template <class _Tp, class _A0>
-struct __libcpp_is_constructible<true, _Tp, _A0>
-    : public common_type
-             <
-                 decltype(__is_constructible_ref<_Tp>::__lxx(declval<_A0>()))
-             >::type
-    {};
+template <class _Tp, bool = is_void<_Tp>::value>
+struct __is_default_constructible
+    : decltype(__is_constructible_helper::__test_nary<_Tp>(0))
+{};
 
-//      Scalars and references are not constructible from multiple args.
+template <class _Tp>
+struct __is_default_constructible<_Tp, true> : false_type {};
 
-template <class _Tp, class _A0, class ..._Args>
-struct __libcpp_is_constructible<true, _Tp, _A0, _Args...>
-    : public false_type
-    {};
+template <class _Tp>
+struct __is_default_constructible<_Tp[], false> : false_type {};
 
-//      Treat scalars and reference types separately
-
-template <bool, class _Tp, class... _Args>
-struct __is_constructible_void_check
-    : public __libcpp_is_constructible<is_scalar<_Tp>::value || is_reference<_Tp>::value,
-                                _Tp, _Args...>
-    {};
-
-//      If any of T or Args is void, is_constructible should be false
+template <class _Tp, size_t _Nx>
+struct __is_default_constructible<_Tp[_Nx], false>
+    : __is_default_constructible<typename remove_all_extents<_Tp>::type>  {};
 
 template <class _Tp, class... _Args>
-struct __is_constructible_void_check<true, _Tp, _Args...>
-    : public false_type
-    {};
-
-template <class ..._Args> struct __contains_void;
-
-template <> struct __contains_void<> : false_type {};
-
-template <class _A0, class ..._Args>
-struct __contains_void<_A0, _Args...>
+struct __libcpp_is_constructible
 {
-    static const bool value = is_void<_A0>::value ||
-                              __contains_void<_Args...>::value;
+  static_assert(sizeof...(_Args) > 1, "Wrong specialization");
+  typedef decltype(__is_constructible_helper::__test_nary<_Tp, _Args...>(0))
+      type;
 };
+
+template <class _Tp>
+struct __libcpp_is_constructible<_Tp> : __is_default_constructible<_Tp> {};
+
+template <class _Tp, class _A0>
+struct __libcpp_is_constructible<_Tp, _A0>
+    : public decltype(__is_constructible_helper::__test_unary<_Tp, _A0>(0))
+{};
+
+template <class _Tp, class _A0>
+struct __libcpp_is_constructible<_Tp&, _A0>
+    : public decltype(__is_constructible_helper::
+    __test_ref<_Tp&>(_VSTD::declval<_A0>()))
+{};
+
+template <class _Tp, class _A0>
+struct __libcpp_is_constructible<_Tp&&, _A0>
+    : public decltype(__is_constructible_helper::
+    __test_ref<_Tp&&>(_VSTD::declval<_A0>()))
+{};
 
 //      is_constructible entry point
 
 template <class _Tp, class... _Args>
 struct _LIBCPP_TYPE_VIS_ONLY is_constructible
-    : public __is_constructible_void_check<__contains_void<_Tp, _Args...>::value
-                                        || is_abstract<_Tp>::value,
-                                           _Tp, _Args...>
-    {};
+    : public __libcpp_is_constructible<_Tp, _Args...>::type {};
 
-//      Array types are default constructible if their element type
-//      is default constructible
-
-template <class _Ap, size_t _Np>
-struct __libcpp_is_constructible<false, _Ap[_Np]>
-    : public is_constructible<typename remove_all_extents<_Ap>::type>
-    {};
-
-//      Otherwise array types are not constructible by this syntax
-
-template <class _Ap, size_t _Np, class ..._Args>
-struct __libcpp_is_constructible<false, _Ap[_Np], _Args...>
-    : public false_type
-    {};
-
-//      Incomplete array types are not constructible
-
-template <class _Ap, class ..._Args>
-struct __libcpp_is_constructible<false, _Ap[], _Args...>
-    : public false_type
-    {};
 
 #else  // _LIBCPP_HAS_NO_VARIADICS
 

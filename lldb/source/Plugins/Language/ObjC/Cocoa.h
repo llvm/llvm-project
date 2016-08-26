@@ -70,6 +70,9 @@ namespace lldb_private {
         
         bool
         ObjCBOOLSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+
+        bool
+        ObjCBooleanSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         
         template <bool is_sel_ptr>
         bool

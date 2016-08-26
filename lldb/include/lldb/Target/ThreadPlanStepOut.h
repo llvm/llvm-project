@@ -32,7 +32,8 @@ public:
                        Vote run_vote,
                        uint32_t frame_idx,
                        LazyBool step_out_avoids_code_without_debug_info,
-                       bool continue_to_next_branch = false);
+                       bool continue_to_next_branch = false,
+                       bool gather_return_value = true);
 
     ~ThreadPlanStepOut() override;
 
@@ -46,7 +47,8 @@ public:
     void DidPush() override;
     bool IsPlanStale() override;
     
-    lldb::ValueObjectSP GetReturnValueObject() override
+    lldb::ValueObjectSP 
+    GetReturnValueObject() override
     {
         return m_return_valobj_sp;
     }
@@ -71,20 +73,21 @@ protected:
 private:
     static uint32_t s_default_flag_values;  // These are the default flag values for the ThreadPlanStepThrough.
     
-    lldb::addr_t m_step_from_insn;
-    StackID  m_step_out_to_id;
-    StackID  m_immediate_step_from_id;
-    lldb::break_id_t m_return_bp_id;
-    lldb::addr_t m_return_addr;
-    lldb::addr_t m_swift_error_return_addr;
-    bool m_stop_others;
-    lldb::ThreadPlanSP m_step_out_to_inline_plan_sp;    // This plan implements step out to the real function containing
-                                                        // an inlined frame so we can then step out of that.
-    lldb::ThreadPlanSP m_step_through_inline_plan_sp;   // This plan then steps past the inlined frame(s).
-    lldb::ThreadPlanSP m_step_out_further_plan_sp;      // This plan keeps stepping out if ShouldStopHere told us to.
-    Function *m_immediate_step_from_function;
+    lldb::addr_t        m_step_from_insn;
+    StackID             m_step_out_to_id;
+    StackID             m_immediate_step_from_id;
+    lldb::break_id_t    m_return_bp_id;
+    lldb::addr_t        m_return_addr;
+    lldb::addr_t        m_swift_error_return_addr;
+    bool                m_stop_others;
+    lldb::ThreadPlanSP  m_step_out_to_inline_plan_sp;    // This plan implements step out to the real function containing
+                                                         // an inlined frame so we can then step out of that.
+    lldb::ThreadPlanSP  m_step_through_inline_plan_sp;   // This plan then steps past the inlined frame(s).
+    lldb::ThreadPlanSP  m_step_out_further_plan_sp;      // This plan keeps stepping out if ShouldStopHere told us to.
+    Function           *m_immediate_step_from_function;
     lldb::ValueObjectSP m_return_valobj_sp;
     bool                m_is_swift_error_value;
+    bool                m_calculate_return_value;
 
     friend lldb::ThreadPlanSP
     Thread::QueueThreadPlanForStepOut (bool abort_other_plans,

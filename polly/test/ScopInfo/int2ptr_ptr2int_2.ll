@@ -1,5 +1,7 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadPolly -analyze -polly-scops \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -S -polly-codegen \
+; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
 ;
 ;    void f(long *A, long *B, long *ptr, long val) {
 ;      for (long i = 0; i < 100; i++) {
@@ -21,10 +23,6 @@
 ; IR:      polly.stmt.for.body:
 ; IR-NEXT:  %p_tmp = ptrtoint i64* %scevgep to i64
 ; IR-NEXT:  %p_add = add nsw i64 %p_tmp, 1
-; IR-NEXT:  %p_tmp1 = inttoptr i64 %26 to i64*
-; IR-NEXT:  %p_add.ptr2 = getelementptr inbounds i64, i64* %p_tmp1, i64 1
-; IR-NEXT:  %p_tmp2 = ptrtoint i64* %p_add.ptr2 to i64
-; IR-NEXT:  %p_arrayidx = getelementptr inbounds i64, i64* %B, i64 %p_tmp2
 ; IR-NEXT:  %p_arrayidx3 = getelementptr inbounds i64, i64* %A, i64 %p_add
 ; IR-NEXT:  %tmp4_p_scalar_ = load i64, i64* %p_arrayidx3
 ; IR-NEXT:  %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge

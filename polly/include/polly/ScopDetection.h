@@ -564,7 +564,7 @@ public:
   ///        the function.
   ///
   /// @param F The function to mark as invalid.
-  void markFunctionAsInvalid(Function *F) const;
+  static void markFunctionAsInvalid(Function *F);
 
   /// @brief Verify if all valid Regions in this Function are still valid
   /// after some transformations.

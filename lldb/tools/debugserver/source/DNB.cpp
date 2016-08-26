@@ -41,6 +41,7 @@
     #endif
 #endif
 
+#include "MacOSX/DarwinLog/DarwinLogCollector.h"
 #include "MacOSX/MachProcess.h"
 #include "MacOSX/MachTask.h"
 #include "MacOSX/Genealogy.h"
@@ -1866,6 +1867,12 @@ DNBProcessGetAvailableProfileData (nub_process_t pid, char *buf, nub_size_t buf_
     if (GetProcessSP (pid, procSP))
         return procSP->GetAsyncProfileData (buf, buf_size);
     return 0;
+}
+
+DarwinLogEventVector
+DNBProcessGetAvailableDarwinLogEvents(nub_process_t pid)
+{
+    return DarwinLogCollector::GetEventsForProcess(pid);
 }
 
 nub_size_t

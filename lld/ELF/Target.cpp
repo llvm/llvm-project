@@ -10,7 +10,7 @@
 // Machine-specific things, such as applying relocations, creation of
 // GOT or PLT entries, etc., are handled in this file.
 //
-// Refer the ELF spec for the single letter varaibles, S, A or P, used
+// Refer the ELF spec for the single letter variables, S, A or P, used
 // in this file.
 //
 // Some functions defined in this file has "relaxTls" as part of their names.
@@ -178,6 +178,9 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  bool isTlsLocalDynamicRel(uint32_t Type) const override;
+  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
+  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
@@ -211,6 +214,7 @@ public:
 TargetInfo *createTarget() {
   switch (Config->EMachine) {
   case EM_386:
+  case EM_IAMCU:
     return new X86TargetInfo();
   case EM_AARCH64:
     return new AArch64TargetInfo();
@@ -436,6 +440,7 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_386_GOTPC:
   case R_386_PC32:
   case R_386_PLT32:
+  case R_386_TLS_LE:
     return read32le(Buf);
   }
 }
@@ -541,6 +546,7 @@ void X86TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
 }
 
 template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
+  MaxPageSize = 0x200000; // 2MiB
   CopyRel = R_X86_64_COPY;
   GotRel = R_X86_64_GLOB_DAT;
   PltRel = R_X86_64_JUMP_SLOT;
@@ -1458,6 +1464,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo() {
 void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
   switch (Type) {
+  case R_AMDGPU_ABS32:
   case R_AMDGPU_GOTPCREL:
   case R_AMDGPU_REL32:
     write32le(Loc, Val);
@@ -1469,6 +1476,8 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
 
 RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
+  case R_AMDGPU_ABS32:
+    return R_ABS;
   case R_AMDGPU_REL32:
     return R_PC;
   case R_AMDGPU_GOTPCREL:
@@ -1491,6 +1500,9 @@ ARMTargetInfo::ARMTargetInfo() {
   GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 20;
+  // ARM uses Variant 1 TLS
+  TcbSize = 8;
+  NeedsThunks = true;
 }
 
 RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
@@ -1514,8 +1526,15 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     // GOT(S) + A - GOT_ORG
     return R_GOT_OFF;
   case R_ARM_GOT_PREL:
-    // GOT(S) + - GOT_ORG
+  case R_ARM_TLS_IE32:
+    // GOT(S) + A - P
     return R_GOT_PC;
+  case R_ARM_TARGET1:
+    return Config->Target1Rel ? R_PC : R_ABS;
+  case R_ARM_TLS_GD32:
+    return R_TLSGD_PC;
+  case R_ARM_TLS_LDM32:
+    return R_TLSLD_PC;
   case R_ARM_BASE_PREL:
     // B(S) + A - P
     // FIXME: currently B(S) assumed to be .got, this may not hold for all
@@ -1528,10 +1547,14 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
+  case R_ARM_TLS_LE32:
+    return R_TLS;
   }
 }
 
 uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
+  if (Type == R_ARM_TARGET1 && !Config->Target1Rel)
+    return R_ARM_ABS32;
   if (Type == R_ARM_ABS32)
     return Type;
   // Keep it going with a dummy value so that we can find more reloc errors.
@@ -1613,6 +1636,12 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_TARGET1:
+  case R_ARM_TLS_GD32:
+  case R_ARM_TLS_IE32:
+  case R_ARM_TLS_LDM32:
+  case R_ARM_TLS_LDO32:
+  case R_ARM_TLS_LE32:
     write32le(Loc, Val);
     break;
   case R_ARM_PREL31:
@@ -1736,6 +1765,12 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_TARGET1:
+  case R_ARM_TLS_GD32:
+  case R_ARM_TLS_LDM32:
+  case R_ARM_TLS_LDO32:
+  case R_ARM_TLS_IE32:
+  case R_ARM_TLS_LE32:
     return SignExtend64<32>(read32le(Buf));
   case R_ARM_PREL31:
     return SignExtend64<31>(read32le(Buf));
@@ -1793,6 +1828,18 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   }
 }
 
+bool ARMTargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
+  return Type == R_ARM_TLS_LDO32 || Type == R_ARM_TLS_LDM32;
+}
+
+bool ARMTargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
+  return Type == R_ARM_TLS_GD32;
+}
+
+bool ARMTargetInfo::isTlsInitialExecRel(uint32_t Type) const {
+  return Type == R_ARM_TLS_IE32;
+}
+
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   GotPltHeaderEntriesNum = 2;
   PageSize = 65536;
@@ -1802,6 +1849,7 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   PltHeaderSize = 32;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
+  NeedsThunks = true;
   if (ELFT::Is64Bits) {
     RelativeRel = (R_MIPS_64 << 8) | R_MIPS_REL32;
     TlsGotRel = R_MIPS_TLS_TPREL64;
@@ -1854,7 +1902,11 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
       return R_MIPS_GOT_LOCAL_PAGE;
   // fallthrough
   case R_MIPS_CALL16:
+  case R_MIPS_CALL_HI16:
+  case R_MIPS_CALL_LO16:
   case R_MIPS_GOT_DISP:
+  case R_MIPS_GOT_HI16:
+  case R_MIPS_GOT_LO16:
   case R_MIPS_TLS_GOTTPREL:
     return R_MIPS_GOT_OFF;
   case R_MIPS_GOT_PAGE:
@@ -1921,6 +1973,12 @@ static void writeMipsLo16(uint8_t *Loc, uint64_t V) {
   write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
 }
 
+template <class ELFT> static bool isMipsR6() {
+  const auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
+  uint32_t Arch = FirstObj.getObj().getHeader()->e_flags & EF_MIPS_ARCH;
+  return Arch == EF_MIPS_ARCH_32R6 || Arch == EF_MIPS_ARCH_64R6;
+}
+
 template <class ELFT>
 void MipsTargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
@@ -1945,7 +2003,8 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   const endianness E = ELFT::TargetEndianness;
   write32<E>(Buf, 0x3c0f0000);      // lui   $15, %hi(.got.plt entry)
   write32<E>(Buf + 4, 0x8df90000);  // l[wd] $25, %lo(.got.plt entry)($15)
-  write32<E>(Buf + 8, 0x03200008);  // jr    $25
+                                    // jr    $25
+  write32<E>(Buf + 8, isMipsR6<ELFT>() ? 0x03200009 : 0x03200008);
   write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
   writeMipsHi16<E>(Buf, GotEntryAddr);
   writeMipsLo16<E>(Buf + 4, GotEntryAddr);
@@ -1994,7 +2053,7 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
     // FIXME (simon): If the relocation target symbol is not a PLT entry
     // we should use another expression for calculation:
     // ((A << 2) | (P & 0xf0000000)) >> 2
-    return SignExtend64<28>(read32<E>(Buf) << 2);
+    return SignExtend64<28>((read32<E>(Buf) & 0x3ffffff) << 2);
   case R_MIPS_GPREL16:
   case R_MIPS_LO16:
   case R_MIPS_PCLO16:
@@ -2063,7 +2122,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write64<E>(Loc, Val);
     break;
   case R_MIPS_26:
-    write32<E>(Loc, (read32<E>(Loc) & ~0x3ffffff) | (Val >> 2));
+    write32<E>(Loc, (read32<E>(Loc) & ~0x3ffffff) | ((Val >> 2) & 0x3ffffff));
     break;
   case R_MIPS_GOT_DISP:
   case R_MIPS_GOT_PAGE:
@@ -2074,6 +2133,8 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     checkInt<16>(Val, Type);
   // fallthrough
   case R_MIPS_CALL16:
+  case R_MIPS_CALL_LO16:
+  case R_MIPS_GOT_LO16:
   case R_MIPS_GOT_OFST:
   case R_MIPS_LO16:
   case R_MIPS_PCLO16:
@@ -2082,6 +2143,8 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_TLS_TPREL_LO16:
     writeMipsLo16<E>(Loc, Val);
     break;
+  case R_MIPS_CALL_HI16:
+  case R_MIPS_GOT_HI16:
   case R_MIPS_HI16:
   case R_MIPS_PCHI16:
   case R_MIPS_TLS_DTPREL_HI16:

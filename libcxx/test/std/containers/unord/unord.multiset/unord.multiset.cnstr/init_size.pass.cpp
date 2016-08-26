@@ -20,6 +20,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -45,7 +46,7 @@ int main()
             },
             7
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         assert(c.count(1) == 2);
         assert(c.count(2) == 2);
@@ -78,7 +79,7 @@ int main()
             },
             7
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         assert(c.count(1) == 2);
         assert(c.count(2) == 2);

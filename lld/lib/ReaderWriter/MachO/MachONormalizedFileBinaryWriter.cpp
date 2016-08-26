@@ -68,19 +68,7 @@ struct TrieEdge : public llvm::ilist_node<TrieEdge> {
 namespace llvm {
   using lld::mach_o::normalized::TrieEdge;
   template <>
-  struct ilist_traits<TrieEdge>
-    : public ilist_default_traits<TrieEdge> {
-  private:
-    mutable ilist_half_node<TrieEdge> Sentinel;
-  public:
-    TrieEdge *createSentinel() const {
-      return static_cast<TrieEdge*>(&Sentinel);
-    }
-    void destroySentinel(TrieEdge *) const {}
-
-    TrieEdge *provideInitialHead() const { return createSentinel(); }
-    TrieEdge *ensureHead(TrieEdge*) const { return createSentinel(); }
-    static void noteHead(TrieEdge*, TrieEdge*) {}
+  struct ilist_traits<TrieEdge> : public ilist_default_traits<TrieEdge> {
     void deleteNode(TrieEdge *N) {}
 
   private:
@@ -103,6 +91,9 @@ struct TrieNode {
 
   void addSymbol(const Export &entry, BumpPtrAllocator &allocator,
                  std::vector<TrieNode *> &allNodes);
+
+  void addOrderedNodes(const Export &entry,
+                       std::vector<TrieNode *> &allNodes);
   bool updateOffset(uint32_t &offset);
   void appendToByteBuffer(ByteBuffer &out);
 
@@ -115,6 +106,7 @@ private:
   StringRef                 _importedName;
   uint32_t                  _trieOffset;
   bool                      _hasExportInfo;
+  bool                      _ordered = false;
 };
 
 /// Utility class for writing a mach-o binary file given an in-memory
@@ -639,7 +631,9 @@ llvm::Error MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
   seg->vmsize = _file.sections.back().address
               + _file.sections.back().content.size();
   seg->fileoff = _endOfLoadCommands;
-  seg->filesize = seg->vmsize;
+  seg->filesize = _sectInfo[&_file.sections.back()].fileOffset +
+                  _file.sections.back().content.size() -
+                  _sectInfo[&_file.sections.front()].fileOffset;
   seg->maxprot = VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE;
   seg->initprot = VM_PROT_READ|VM_PROT_WRITE|VM_PROT_EXECUTE;
   seg->nsects = _file.sections.size();
@@ -789,8 +783,8 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
     st->cmd     = LC_SYMTAB;
     st->cmdsize = sizeof(symtab_command);
     st->symoff  = _startOfSymbols;
-    st->nsyms   = _file.localSymbols.size() + _file.globalSymbols.size()
-                                            + _file.undefinedSymbols.size();
+    st->nsyms   = _file.stabsSymbols.size() + _file.localSymbols.size() +
+                  _file.globalSymbols.size() + _file.undefinedSymbols.size();
     st->stroff  = _startOfSymbolStrings;
     st->strsize = _endOfSymbolStrings - _startOfSymbolStrings;
     if (_swap)
@@ -876,8 +870,8 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
     st->cmd     = LC_SYMTAB;
     st->cmdsize = sizeof(symtab_command);
     st->symoff  = _startOfSymbols;
-    st->nsyms   = _file.localSymbols.size() + _file.globalSymbols.size()
-                                            + _file.undefinedSymbols.size();
+    st->nsyms   = _file.stabsSymbols.size() + _file.localSymbols.size() +
+                  _file.globalSymbols.size() + _file.undefinedSymbols.size();
     st->stroff  = _startOfSymbolStrings;
     st->strsize = _endOfSymbolStrings - _startOfSymbolStrings;
     if (_swap)
@@ -890,7 +884,8 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
       dst->cmd            = LC_DYSYMTAB;
       dst->cmdsize        = sizeof(dysymtab_command);
       dst->ilocalsym      = _symbolTableLocalsStartIndex;
-      dst->nlocalsym      = _file.localSymbols.size();
+      dst->nlocalsym      = _file.stabsSymbols.size() +
+                            _file.localSymbols.size();
       dst->iextdefsym     = _symbolTableGlobalsStartIndex;
       dst->nextdefsym     = _file.globalSymbols.size();
       dst->iundefsym      = _symbolTableUndefinesStartIndex;
@@ -1101,7 +1096,10 @@ void MachOFileLayout::writeSymbolTable() {
   // Write symbol table and symbol strings in parallel.
   uint32_t symOffset = _startOfSymbols;
   uint32_t strOffset = _startOfSymbolStrings;
-  _buffer[strOffset++] = '\0'; // Reserve n_strx offset of zero to mean no name.
+  // Reserve n_strx offset of zero to mean no name.
+  _buffer[strOffset++] = ' ';
+  _buffer[strOffset++] = '\0';
+  appendSymbols(_file.stabsSymbols, symOffset, strOffset);
   appendSymbols(_file.localSymbols, symOffset, strOffset);
   appendSymbols(_file.globalSymbols, symOffset, strOffset);
   appendSymbols(_file.undefinedSymbols, symOffset, strOffset);
@@ -1182,19 +1180,44 @@ void MachOFileLayout::buildRebaseInfo() {
 void MachOFileLayout::buildBindInfo() {
   // TODO: compress bind info.
   uint64_t lastAddend = 0;
+  int lastOrdinal = 0x80000000;
+  StringRef lastSymbolName;
+  BindType lastType = (BindType)0;
+  Hex32 lastSegOffset = ~0U;
+  uint8_t lastSegIndex = (uint8_t)~0U;
   for (const BindLocation& entry : _file.bindingInfo) {
-    _bindingInfo.append_byte(BIND_OPCODE_SET_TYPE_IMM | entry.kind);
-    _bindingInfo.append_byte(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
-                            | entry.segIndex);
-    _bindingInfo.append_uleb128(entry.segOffset);
-    if (entry.ordinal > 0)
-      _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                               (entry.ordinal & 0xF));
-    else
-      _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
-                               (entry.ordinal & 0xF));
-    _bindingInfo.append_byte(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM);
-    _bindingInfo.append_string(entry.symbolName);
+    if (entry.ordinal != lastOrdinal) {
+      if (entry.ordinal <= 0)
+        _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
+                                 (entry.ordinal & BIND_IMMEDIATE_MASK));
+      else if (entry.ordinal <= BIND_IMMEDIATE_MASK)
+        _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                 entry.ordinal);
+      else {
+        _bindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+        _bindingInfo.append_uleb128(entry.ordinal);
+      }
+      lastOrdinal = entry.ordinal;
+    }
+
+    if (lastSymbolName != entry.symbolName) {
+      _bindingInfo.append_byte(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM);
+      _bindingInfo.append_string(entry.symbolName);
+      lastSymbolName = entry.symbolName;
+    }
+
+    if (lastType != entry.kind) {
+      _bindingInfo.append_byte(BIND_OPCODE_SET_TYPE_IMM | entry.kind);
+      lastType = entry.kind;
+    }
+
+    if (lastSegIndex != entry.segIndex || lastSegOffset != entry.segOffset) {
+      _bindingInfo.append_byte(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+                               | entry.segIndex);
+      _bindingInfo.append_uleb128(entry.segOffset);
+      lastSegIndex = entry.segIndex;
+      lastSegOffset = entry.segOffset;
+    }
     if (entry.addend != lastAddend) {
       _bindingInfo.append_byte(BIND_OPCODE_SET_ADDEND_SLEB);
       _bindingInfo.append_sleb128(entry.addend);
@@ -1208,22 +1231,25 @@ void MachOFileLayout::buildBindInfo() {
 
 void MachOFileLayout::buildLazyBindInfo() {
   for (const BindLocation& entry : _file.lazyBindingInfo) {
-    _lazyBindingInfo.append_byte(BIND_OPCODE_SET_TYPE_IMM | entry.kind);
     _lazyBindingInfo.append_byte(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
                             | entry.segIndex);
-    _lazyBindingInfo.append_uleb128Fixed(entry.segOffset, 5);
-    if (entry.ordinal > 0)
-      _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                   (entry.ordinal & 0xF));
-    else
+    _lazyBindingInfo.append_uleb128(entry.segOffset);
+    if (entry.ordinal <= 0)
       _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM |
-                                   (entry.ordinal & 0xF));
+                                   (entry.ordinal & BIND_IMMEDIATE_MASK));
+    else if (entry.ordinal <= BIND_IMMEDIATE_MASK)
+      _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                   entry.ordinal);
+    else {
+      _lazyBindingInfo.append_byte(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+      _lazyBindingInfo.append_uleb128(entry.ordinal);
+    }
+    // FIXME: We need to | the opcode here with flags.
     _lazyBindingInfo.append_byte(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM);
     _lazyBindingInfo.append_string(entry.symbolName);
     _lazyBindingInfo.append_byte(BIND_OPCODE_DO_BIND);
     _lazyBindingInfo.append_byte(BIND_OPCODE_DONE);
   }
-  _lazyBindingInfo.append_byte(BIND_OPCODE_DONE);
   _lazyBindingInfo.align(_is64 ? 8 : 4);
 }
 
@@ -1285,6 +1311,24 @@ void TrieNode::addSymbol(const Export& entry,
     newNode->_importedName = entry.otherName.copy(allocator);
   newNode->_hasExportInfo = true;
   allNodes.push_back(newNode);
+}
+
+void TrieNode::addOrderedNodes(const Export& entry,
+                               std::vector<TrieNode*> &orderedNodes) {
+  if (!_ordered) {
+    orderedNodes.push_back(this);
+    _ordered = true;
+  }
+
+  StringRef partialStr = entry.name.drop_front(_cummulativeString.size());
+  for (TrieEdge &edge : _children) {
+    StringRef edgeStr = edge._subString;
+    if (partialStr.startswith(edgeStr)) {
+      // Already have matching edge, go down that path.
+      edge._child->addOrderedNodes(entry, orderedNodes);
+      return;
+    }
+  }
 }
 
 bool TrieNode::updateOffset(uint32_t& offset) {
@@ -1392,20 +1436,26 @@ void MachOFileLayout::buildExportTrie() {
     rootNode->addSymbol(entry, allocator, allNodes);
   }
 
+  std::vector<TrieNode*> orderedNodes;
+  orderedNodes.reserve(allNodes.size());
+
+  for (const Export& entry : _file.exportInfo)
+    rootNode->addOrderedNodes(entry, orderedNodes);
+
   // Assign each node in the vector an offset in the trie stream, iterating
   // until all uleb128 sizes have stabilized.
   bool more;
   do {
     uint32_t offset = 0;
     more = false;
-    for (TrieNode* node : allNodes) {
+    for (TrieNode* node : orderedNodes) {
       if (node->updateOffset(offset))
         more = true;
     }
   } while (more);
 
   // Serialize trie to ByteBuffer.
-  for (TrieNode* node : allNodes) {
+  for (TrieNode* node : orderedNodes) {
     node->appendToByteBuffer(_exportTrie);
   }
   _exportTrie.align(_is64 ? 8 : 4);
@@ -1414,10 +1464,15 @@ void MachOFileLayout::buildExportTrie() {
 void MachOFileLayout::computeSymbolTableSizes() {
   // MachO symbol tables have three ranges: locals, globals, and undefines
   const size_t nlistSize = (_is64 ? sizeof(nlist_64) : sizeof(nlist));
-  _symbolTableSize = nlistSize * (_file.localSymbols.size()
+  _symbolTableSize = nlistSize * (_file.stabsSymbols.size()
+                                + _file.localSymbols.size()
                                 + _file.globalSymbols.size()
                                 + _file.undefinedSymbols.size());
-  _symbolStringPoolSize = 1; // Always reserve 1-byte for the empty string.
+  // Always reserve 1-byte for the empty string and 1-byte for its terminator.
+  _symbolStringPoolSize = 2;
+  for (const Symbol &sym : _file.stabsSymbols) {
+    _symbolStringPoolSize += (sym.name.size()+1);
+  }
   for (const Symbol &sym : _file.localSymbols) {
     _symbolStringPoolSize += (sym.name.size()+1);
   }
@@ -1428,7 +1483,8 @@ void MachOFileLayout::computeSymbolTableSizes() {
     _symbolStringPoolSize += (sym.name.size()+1);
   }
   _symbolTableLocalsStartIndex = 0;
-  _symbolTableGlobalsStartIndex = _file.localSymbols.size();
+  _symbolTableGlobalsStartIndex = _file.stabsSymbols.size() +
+                                  _file.localSymbols.size();
   _symbolTableUndefinesStartIndex = _symbolTableGlobalsStartIndex
                                     + _file.globalSymbols.size();
 

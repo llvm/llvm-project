@@ -286,25 +286,29 @@ void Writer::createSections() {
 }
 
 void Writer::createMiscChunks() {
+  OutputSection *RData = createSection(".rdata");
+
   // Create thunks for locally-dllimported symbols.
   if (!Symtab->LocalImportChunks.empty()) {
-    OutputSection *Sec = createSection(".rdata");
     for (Chunk *C : Symtab->LocalImportChunks)
-      Sec->addChunk(C);
+      RData->addChunk(C);
   }
 
   // Create SEH table. x86-only.
   if (Config->Machine != I386)
     return;
+
   std::set<Defined *> Handlers;
+
   for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
     if (!File->SEHCompat)
       return;
     for (SymbolBody *B : File->SEHandlers)
       Handlers.insert(cast<Defined>(B->repl()));
   }
+
   SEHTable.reset(new SEHTableChunk(Handlers));
-  createSection(".rdata")->addChunk(SEHTable.get());
+  RData->addChunk(SEHTable.get());
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -584,22 +588,17 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Dir[IAT].RelativeVirtualAddress = Idata.getIATRVA();
     Dir[IAT].Size = Idata.getIATSize();
   }
-  if (!DelayIdata.empty()) {
-    Dir[DELAY_IMPORT_DESCRIPTOR].RelativeVirtualAddress =
-        DelayIdata.getDirRVA();
-    Dir[DELAY_IMPORT_DESCRIPTOR].Size = DelayIdata.getDirSize();
-  }
   if (OutputSection *Sec = findSection(".rsrc")) {
     Dir[RESOURCE_TABLE].RelativeVirtualAddress = Sec->getRVA();
     Dir[RESOURCE_TABLE].Size = Sec->getVirtualSize();
   }
-  if (OutputSection *Sec = findSection(".reloc")) {
-    Dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = Sec->getRVA();
-    Dir[BASE_RELOCATION_TABLE].Size = Sec->getVirtualSize();
-  }
   if (OutputSection *Sec = findSection(".pdata")) {
     Dir[EXCEPTION_TABLE].RelativeVirtualAddress = Sec->getRVA();
     Dir[EXCEPTION_TABLE].Size = Sec->getVirtualSize();
+  }
+  if (OutputSection *Sec = findSection(".reloc")) {
+    Dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = Sec->getRVA();
+    Dir[BASE_RELOCATION_TABLE].Size = Sec->getVirtualSize();
   }
   if (Symbol *Sym = Symtab->findUnderscore("_tls_used")) {
     if (Defined *B = dyn_cast<Defined>(Sym->Body)) {
@@ -625,6 +624,11 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       Dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress = B->getRVA();
       Dir[LOAD_CONFIG_TABLE].Size = LoadConfigSize;
     }
+  }
+  if (!DelayIdata.empty()) {
+    Dir[DELAY_IMPORT_DESCRIPTOR].RelativeVirtualAddress =
+        DelayIdata.getDirRVA();
+    Dir[DELAY_IMPORT_DESCRIPTOR].Size = DelayIdata.getDirSize();
   }
 
   // Write section table

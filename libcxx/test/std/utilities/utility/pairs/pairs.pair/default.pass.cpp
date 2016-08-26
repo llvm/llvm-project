@@ -27,14 +27,15 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "archetypes.hpp"
 
 int main()
 {
     {
-    typedef std::pair<float, short*> P;
-    P p;
-    assert(p.first == 0.0f);
-    assert(p.second == nullptr);
+        typedef std::pair<float, short*> P;
+        P p;
+        assert(p.first == 0.0f);
+        assert(p.second == nullptr);
     }
 #if TEST_STD_VER >= 11
     {
@@ -42,6 +43,13 @@ int main()
         constexpr P p;
         static_assert(p.first == 0.0f, "");
         static_assert(p.second == nullptr, "");
+    }
+    {
+        using NoDefault = ImplicitTypes::NoDefault;
+        using P = std::pair<int, NoDefault>;
+        static_assert(!std::is_default_constructible<P>::value, "");
+        using P2 = std::pair<NoDefault, int>;
+        static_assert(!std::is_default_constructible<P>::value, "");
     }
 #endif
 }

@@ -254,8 +254,9 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints (Process *process)
 
     Error read_err;
     addr_t addr = LLDB_INVALID_ADDRESS;
-    addr_t kernel_addresses_64[] = { 0xffffff8000002010ULL, 0xffffff8000004010ULL, 
-                                     0xfffffff000002010ULL, 0xfffffff000004010ULL, 
+    addr_t kernel_addresses_64[] = { 0xfffffff000004010ULL,   // newest arm64 devices
+                                     0xffffff8000004010ULL,   // 2014-2015-ish arm64 devices
+                                     0xffffff8000002010ULL,   // oldest arm64 devices
                                      LLDB_INVALID_ADDRESS };
     addr_t kernel_addresses_32[] = { 0xffff0110,
                                      LLDB_INVALID_ADDRESS };
@@ -783,6 +784,9 @@ DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule (Process *p
     // have the correct segment load addresses.
     if (!ReadMemoryModule (process))
     {
+        Log *log(GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
+        if (log)
+            log->Printf("Unable to read '%s' from memory at address 0x%" PRIx64 " to get the segment load addresses.", m_name.c_str(), m_load_address);
         return false;
     }
 

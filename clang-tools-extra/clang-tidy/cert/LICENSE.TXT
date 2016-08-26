@@ -7,7 +7,7 @@ additions:
 Any file referencing a CERT Secure Coding guideline:
 Please allow this letter to serve as confirmation that open source projects on
 http://llvm.org are permitted to link via hypertext to the CERT(R) secure coding
-guidelines available at https://www.securecoding.cert.org.   
+guidelines available at https://www.securecoding.cert.org.
 
 The foregoing is permitted by the Terms of Use as follows:
 "Linking to the Service

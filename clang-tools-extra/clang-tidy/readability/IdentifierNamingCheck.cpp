@@ -9,13 +9,13 @@
 
 #include "IdentifierNamingCheck.h"
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/DenseMapInfo.h"
 
 #define DEBUG_TYPE "clang-tidy"
 
@@ -163,6 +163,8 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
         .Case("UPPER_CASE", CT_UpperCase)
         .Case("camelBack", CT_CamelBack)
         .Case("CamelCase", CT_CamelCase)
+        .Case("Camel_Snake_Case", CT_CamelSnakeCase)
+        .Case("camel_Snake_Back", CT_CamelSnakeBack)
         .Default(CT_AnyCase);
   };
 
@@ -189,6 +191,10 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
       return "UPPER_CASE";
     case CT_CamelCase:
       return "CamelCase";
+    case CT_CamelSnakeCase:
+      return "Camel_Snake_Case";
+    case CT_CamelSnakeBack:
+      return "camel_Snake_Back";
     }
 
     llvm_unreachable("Unknown Case Type");
@@ -230,6 +236,8 @@ static bool matchesStyle(StringRef Name,
       llvm::Regex("^[a-z][a-zA-Z0-9]*$"),
       llvm::Regex("^[A-Z][A-Z0-9_]*$"),
       llvm::Regex("^[A-Z][a-zA-Z0-9]*$"),
+      llvm::Regex("^[A-Z]([a-z0-9]*(_[A-Z])?)*"),
+      llvm::Regex("^[a-z]([a-z0-9]*(_[A-Z])?)*"),
   };
 
   bool Matches = true;
@@ -317,6 +325,27 @@ static std::string fixupWithCase(StringRef Name,
         Fixup += Word.substr(0, 1).upper();
         Fixup += Word.substr(1).lower();
       }
+    }
+    break;
+
+  case IdentifierNamingCheck::CT_CamelSnakeCase:
+    for (auto const &Word : Words) {
+      if (&Word != &Words.front())
+        Fixup += "_";
+      Fixup += Word.substr(0, 1).upper();
+      Fixup += Word.substr(1).lower();
+    }
+    break;
+
+  case IdentifierNamingCheck::CT_CamelSnakeBack:
+    for (auto const &Word : Words) {
+      if (&Word != &Words.front()) {
+        Fixup += "_";
+        Fixup += Word.substr(0, 1).upper();
+      } else {
+        Fixup += Word.substr(0, 1).lower();
+      }
+      Fixup += Word.substr(1).lower();
     }
     break;
   }

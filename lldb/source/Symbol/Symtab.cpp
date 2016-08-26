@@ -265,7 +265,7 @@ Symtab::InitNameIndexes()
     if (!m_name_indexes_computed)
     {
         m_name_indexes_computed = true;
-        Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+        Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
         // Create the name index vector to be able to quickly search by name
         const size_t num_symbols = m_symbols.size();
 #if 1
@@ -495,7 +495,7 @@ Symtab::AppendSymbolNamesToMap (const IndexCollection &indexes,
 {
     if (add_demangled || add_mangled)
     {
-        Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+        Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
         std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
         // Create the name index vector to be able to quickly search by name
@@ -656,7 +656,7 @@ Symtab::SortSymbolIndexesByValue (std::vector<uint32_t>& indexes, bool remove_du
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__,__PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,LLVM_PRETTY_FUNCTION);
     // No need to sort if we have zero or one items...
     if (indexes.size() <= 1)
         return;
@@ -681,7 +681,7 @@ Symtab::AppendSymbolIndexesWithName (const ConstString& symbol_name, std::vector
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     if (symbol_name)
     {
         const char *symbol_cstr = symbol_name.GetCString();
@@ -698,7 +698,7 @@ Symtab::AppendSymbolIndexesWithName (const ConstString& symbol_name, Debug symbo
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     if (symbol_name)
     {
         const size_t old_size = indexes.size();
@@ -834,7 +834,7 @@ Symtab::FindAllSymbolsWithNameAndType (const ConstString &name, SymbolType symbo
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     // Initialize all of the lookup by name indexes before converting NAME
     // to a uniqued string NAME_STR below.
     if (!m_name_indexes_computed)
@@ -854,7 +854,7 @@ Symtab::FindAllSymbolsWithNameAndType (const ConstString &name, SymbolType symbo
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     // Initialize all of the lookup by name indexes before converting NAME
     // to a uniqued string NAME_STR below.
     if (!m_name_indexes_computed)
@@ -883,7 +883,7 @@ Symtab::FindFirstSymbolWithNameAndType (const ConstString &name, SymbolType symb
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, "%s", LLVM_PRETTY_FUNCTION);
     if (!m_name_indexes_computed)
         InitNameIndexes();
 

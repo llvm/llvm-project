@@ -60,6 +60,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 
   std::pair<ELFKind, uint16_t> Ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
+          .Case("aarch64elf", {ELF64LEKind, EM_AARCH64})
           .Case("aarch64linux", {ELF64LEKind, EM_AARCH64})
           .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
@@ -70,6 +71,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
+          .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Case("elf_x86_64", {ELF64LEKind, EM_X86_64})
           .Default({ELFNoneKind, EM_NONE});
 
@@ -254,6 +256,17 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
+static Optional<StringRef>
+getZOptionValue(opt::InputArgList &Args, StringRef Key) {
+  for (auto *Arg : Args.filtered(OPT_z)) {
+    StringRef Value = Arg->getValue();
+    size_t Pos = Value.find("=");
+    if (Pos != StringRef::npos && Key == Value.substr(0, Pos))
+      return Value.substr(Pos + 1);
+  }
+  return None;
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -261,19 +274,20 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     printHelp(ArgsArr[0]);
     return;
   }
-  if (Args.hasArg(OPT_version)) {
+  if (Args.hasArg(OPT_version))
     outs() << getVersionString();
-    return;
-  }
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
-    Cpio.reset(CpioFile::create(Path));
-    if (Cpio) {
+    ErrorOr<CpioFile *> F = CpioFile::create(Path);
+    if (F) {
+      Cpio.reset(*F);
       Cpio->append("response.txt", createResponseFile(Args));
       Cpio->append("version.txt", getVersionString());
-    }
+    } else
+      error(F.getError(),
+            Twine("--reproduce: failed to open ") + Path + ".cpio");
   }
 
   readConfigs(Args);
@@ -320,6 +334,16 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
   return UnresolvedPolicy::Error;
 }
 
+static bool isOutputFormatBinary(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_oformat)) {
+    StringRef S = Arg->getValue();
+    if (S == "binary")
+      return true;
+    error("unknown --oformat value: " + S);
+  }
+  return false;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -361,6 +385,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
+  Config->Target1Rel = Args.hasArg(OPT_target1_rel);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);
@@ -390,6 +415,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
+
+  if (Optional<StringRef> Value = getZOptionValue(Args, "stack-size"))
+    if (Value->getAsInteger(0, Config->ZStackSize))
+      error("invalid stack size: " + *Value);
 
   if (Config->Relocatable)
     Config->StripAll = false;
@@ -430,6 +459,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       error("unknown --build-id style: " + S);
     }
   }
+
+  Config->OFormatBinary = isOutputFormatBinary(Args);
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
@@ -556,7 +587,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanShlibUndefined();
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
-  Symtab.scanSymbolVersions();
 
   Symtab.addCombinedLtoObject();
   if (HasError)
@@ -584,5 +614,5 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
         MS->splitIntoPieces();
     }
 
-  writeResult<ELFT>(&Symtab);
+  writeResult<ELFT>();
 }

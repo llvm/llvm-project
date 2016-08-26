@@ -115,92 +115,61 @@ protected:
     typedef DirectoriesSearchedCollection::iterator DirectoriesSearchedIterator;
 
 
-    static lldb_private::FileSpec::EnumerateDirectoryResult
-    GetKextDirectoriesInSDK (void *baton,
-                             lldb_private::FileSpec::FileType file_type,
-                             const lldb_private::FileSpec &file_spec);
-
-    static lldb_private::FileSpec::EnumerateDirectoryResult 
-    GetKextsInDirectory (void *baton,
-                         lldb_private::FileSpec::FileType file_type,
-                         const lldb_private::FileSpec &file_spec);
-
-    // Populate m_search_directories vector of directories
+    // Populate m_search_directories and m_search_directories_no_recursing vectors of directories
     void
     CollectKextAndKernelDirectories ();
 
-    // Directories where we may find iOS SDKs with kext bundles in them
     void
-    GetiOSSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
+    GetUserSpecifiedDirectoriesToSearch ();
 
-    // Directories where we may find AppleTVOS SDKs with kext bundles in them
-    void
-    GetAppleTVOSSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
+    static void
+    AddRootSubdirsToSearchPaths (PlatformDarwinKernel *thisp, const std::string &dir);
     
-    // Directories where we may find WatchOS SDKs with kext bundles in them
     void
-    GetWatchOSSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
+    AddSDKSubdirsToSearchPaths (const std::string &dir);
 
-    // Directories where we may find Mac OS X SDKs with kext bundles in them
-    void
-    GetMacSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
-
-    // Directories where we may find Mac OS X or iOS SDKs with kext bundles in them
-    void
-    GetGenericSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
-
-    // Directories where we may find iOS kext bundles
-    void
-    GetiOSDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
-
-    // Directories where we may find MacOSX kext bundles
-    void
-    GetMacDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
-
-    // Directories where we may find iOS or MacOSX kext bundles
-    void
-    GetGenericDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
-
-    // Directories specified via the "kext-directories" setting - maybe KDK/SDKs, may be plain directories
-    void
-    GetUserSpecifiedDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
+    static lldb_private::FileSpec::EnumerateDirectoryResult
+    FindKDKandSDKDirectoriesInDirectory (void *baton, lldb_private::FileSpec::FileType file_type, const lldb_private::FileSpec &file_spec);
 
     void
-    GetCurrentDirectoryToSearch (std::vector<lldb_private::FileSpec> &directories);
+    SearchForKextsAndKernelsRecursively ();
 
-    // Directories where we may find kernels exclusively
-    void
-    GetKernelDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories);
+    static lldb_private::FileSpec::EnumerateDirectoryResult
+    GetKernelsAndKextsInDirectoryWithRecursion (void *baton, lldb_private::FileSpec::FileType file_type, const lldb_private::FileSpec &file_spec);
 
-    // Search through a vector of SDK FileSpecs, add any directories that may contain kexts
-    // to the vector of kext dir FileSpecs
-    void
-    SearchSDKsForKextDirectories (std::vector<lldb_private::FileSpec> sdk_dirs, std::vector<lldb_private::FileSpec> &kext_dirs);
+    static lldb_private::FileSpec::EnumerateDirectoryResult
+    GetKernelsAndKextsInDirectoryNoRecursion (void *baton, lldb_private::FileSpec::FileType file_type, const lldb_private::FileSpec &file_spec);
 
-    // Search through all of the directories passed in, find all .kext bundles in those directories,
-    // get the CFBundleIDs out of the Info.plists and add the bundle ID and kext path to m_name_to_kext_path_map.
-    void
-    IndexKextsInDirectories ();
+    static lldb_private::FileSpec::EnumerateDirectoryResult
+    GetKernelsAndKextsInDirectoryHelper (void *baton, lldb_private::FileSpec::FileType file_type, const lldb_private::FileSpec &file_spec, bool recurse);
 
-    // Search through all of the directories passed in, find all kernel binaries in those directories
-    // (look for "kernel*", "mach.*", assume those are kernels.  False positives aren't a huge problem.)
-    void
-    IndexKernelsInDirectories ();
+    static void
+    AddKextToMap (PlatformDarwinKernel *thisp, const lldb_private::FileSpec &file_spec);
 
-    // Callback which iterates over all the files in a given directory, looking for kernel binaries
-    static lldb_private::FileSpec::EnumerateDirectoryResult 
-    GetKernelsInDirectory (void *baton,
-                         lldb_private::FileSpec::FileType file_type,
-                         const lldb_private::FileSpec &file_spec);
+    // Returns true if there is a .dSYM bundle next to the kext, or next to the binary inside the kext.
+    static bool
+    KextHasdSYMSibling (const lldb_private::FileSpec &kext_bundle_filepath);
+
+    // Returns true if there is a .dSYM bundle next to the kernel
+    static bool
+    KernelHasdSYMSibling (const lldb_private::FileSpec &kext_bundle_filepath);
 
     lldb_private::Error
     ExamineKextForMatchingUUID (const lldb_private::FileSpec &kext_bundle_path, const lldb_private::UUID &uuid, const lldb_private::ArchSpec &arch, lldb::ModuleSP &exe_module_sp);
 
-private:
+    // Most of the ivars are assembled under FileSpec::EnumerateDirectory calls where the
+    // function being called for each file/directory must be static.  We'll pass a this pointer
+    // as a baton and access the ivars directly.  Toss-up whether this should just be a struct
+    // at this point.
 
-    BundleIDToKextMap             m_name_to_kext_path_map; // multimap of CFBundleID to FileSpec on local filesystem
+public:
+
+    BundleIDToKextMap             m_name_to_kext_path_map_with_dsyms; // multimap of CFBundleID to FileSpec on local filesystem, kexts with dSYMs next to them
+    BundleIDToKextMap             m_name_to_kext_path_map_without_dsyms;   // multimap of CFBundleID to FileSpec on local filesystem, kexts without dSYMs next to them
     DirectoriesSearchedCollection m_search_directories;    // list of directories we search for kexts/kernels
-    KernelBinaryCollection        m_kernel_binaries;       // list of kernel binaries we found on local filesystem
+    DirectoriesSearchedCollection m_search_directories_no_recursing; // list of directories we search for kexts/kernels, no recursion
+    KernelBinaryCollection        m_kernel_binaries_with_dsyms;    // list of kernel binaries we found on local filesystem, without dSYMs next to them
+    KernelBinaryCollection        m_kernel_binaries_without_dsyms; // list of kernel binaries we found on local filesystem, with dSYMs next to them
     lldb_private::LazyBool        m_ios_debug_session;
 
     DISALLOW_COPY_AND_ASSIGN (PlatformDarwinKernel);

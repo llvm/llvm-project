@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Terminal.h"
+
+#include "lldb/Host/PosixApi.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include <fcntl.h>

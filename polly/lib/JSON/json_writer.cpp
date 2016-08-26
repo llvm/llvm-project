@@ -120,7 +120,7 @@ std::string valueToQuotedString( const char *value )
    std::string result;
    result.reserve(maxsize); // to avoid lots of mallocs
    result += "\"";
-   for (const char* c=value; *c != 0; ++c)
+   for (const char* c = value; *c != 0; ++c)
    {
       switch(*c)
       {

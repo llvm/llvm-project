@@ -1,10 +1,6 @@
 atomic/atomic.cl
 math/nextafter.cl
 math/sqrt.cl
-workitem/get_num_groups.ll
-workitem/get_local_size.ll
-workitem/get_global_size.ll
-workitem/get_work_dim.ll
 synchronization/barrier.cl
 image/get_image_width.cl
 image/get_image_height.cl

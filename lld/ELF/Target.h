@@ -62,6 +62,7 @@ public:
 
   unsigned TlsGdRelaxSkip = 1;
   unsigned PageSize = 4096;
+  unsigned MaxPageSize = 4096;
 
   // On freebsd x86_64 the first page cannot be mmaped.
   // On linux that is controled by vm.mmap_min_addr. At least on some x86_64
@@ -91,6 +92,8 @@ public:
 
   // Set to 0 for variant 2
   unsigned TcbSize = 0;
+
+  bool NeedsThunks = false;
 
   virtual RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
                                   RelExpr Expr) const;

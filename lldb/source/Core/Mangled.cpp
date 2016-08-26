@@ -24,12 +24,12 @@
 #endif
 
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
-
 // Provide a fast-path demangler implemented in FastDemangle.cpp until it can
 // replace the existing C++ demangler with a complete implementation
 #include "lldb/Core/FastDemangle.h"
 #include "lldb/Core/CxaDemangle.h"
-
+#else
+#include <cxxabi.h>
 #endif
 
 
@@ -308,7 +308,7 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
     if (m_mangled && !m_demangled)
     {
         // We need to generate and cache the demangled name.
-        Timer scoped_timer (__PRETTY_FUNCTION__,
+        Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                             "Mangled::GetDemangledName (m_mangled = %s)",
                             m_mangled.GetCString());
 

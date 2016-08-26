@@ -36,8 +36,8 @@ void variadic2(int zzz, Args&&... args);
 
 void templates() {
   variadic(/*xxx=*/0, /*yyy=*/1);
-  variadic2(/*zzZ=*/0, /*xxx=*/1, /*yyy=*/2);
-  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: argument name 'zzZ' in comment does not match parameter name 'zzz'
+  variadic2(/*zzU=*/0, /*xxx=*/1, /*yyy=*/2);
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: argument name 'zzU' in comment does not match parameter name 'zzz'
   // CHECK-FIXES: variadic2(/*zzz=*/0, /*xxx=*/1, /*yyy=*/2);
 }
 
@@ -46,3 +46,8 @@ void qqq(bool aaa);
 void f() { qqq(/*bbb=*/FALSE); }
 // CHECK-MESSAGES: [[@LINE-1]]:16: warning: argument name 'bbb' in comment does not match parameter name 'aaa'
 // CHECK-FIXES: void f() { qqq(/*bbb=*/FALSE); }
+
+void f(bool _with_underscores_);
+void ignores_underscores() {
+  f(/*With_Underscores=*/false);
+}

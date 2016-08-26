@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -34,7 +35,7 @@ int main()
                                                                   NotConstructible> >
                                    > C;
         C c(7);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() ==
@@ -54,7 +55,7 @@ int main()
                                                                  NotConstructible> >
                                    > C;
         C c(7);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() ==

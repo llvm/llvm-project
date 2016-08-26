@@ -172,7 +172,7 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(const ArchSpec &target_
     m_user_register_count (GetUserRegisterInfoCount (target_arch))
 {
     RegisterInfo orig_ax = { "orig_rax", NULL, sizeof(((GPR*)NULL)->orig_rax), (LLVM_EXTENSION offsetof(GPR, orig_rax)), eEncodingUint, \
-              eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, NULL, NULL };
+              eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 };
     d_register_infos.push_back(orig_ax);
 }
 

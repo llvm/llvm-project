@@ -24,14 +24,15 @@ using namespace lldb_private;
 using namespace lldb_utility;
 // CoreSimulator lives as part of Xcode, which means we can't really link against it, so we dlopen()
 // it at runtime, and error out nicely if that fails
-@interface SimDeviceSet
+@interface SimServiceContext
 {}
-+ (id) defaultSet;
++ (id) sharedServiceContextForDeveloperDir:(NSString*)dir error:(NSError**)error;
 @end
 // However, the drawback is that the compiler will not know about the selectors we're trying to use
 // until runtime; to appease clang in this regard, define a fake protocol on NSObject that exposes
 // the needed interface names for us
 @protocol LLDBCoreSimulatorSupport <NSObject>
+- (id) defaultDeviceSetWithError:(NSError**)error;
 - (NSArray *) devices;
 - (id) deviceType;
 - (NSString *) name;
@@ -466,18 +467,13 @@ CoreSimulatorSupport::Device::Boot (Error &err)
         return false;
     }
 
-#define kSimDeviceBootEnv            @"env"           /* An NSDictionary of "extra" environment key/values */
 #define kSimDeviceBootPersist        @"persist"       /* An NSNumber (boolean) indicating whether or not the session should outlive the calling process (default false) */
-#define kSimDeviceBootDisabledJobs   @"disabled_jobs" /* An NSDictionary of NSStrings -> NSNumbers, each string is the name of a job, and the value is the corresponding state (true if disabled) */
     
     NSDictionary *options = @{
                               kSimDeviceBootPersist : @NO,
-                              kSimDeviceBootDisabledJobs : @{@"com.apple.backboardd" : @YES}
                               };
-    
-#undef kSimDeviceBootEnv
+
 #undef kSimDeviceBootPersist
-#undef kSimDeviceBootDisabledJobs
     
     NSError* nserror;
     if ([m_dev bootWithOptions:options error:&nserror])
@@ -677,15 +673,26 @@ CoreSimulatorSupport::Device::Spawn (ProcessLaunchInfo& launch_info)
 }
 
 CoreSimulatorSupport::DeviceSet
-CoreSimulatorSupport::DeviceSet::GetAllDevices ()
+CoreSimulatorSupport::DeviceSet::GetAllDevices (const char *developer_dir)
 {
-    return DeviceSet([[NSClassFromString(@"SimDeviceSet") defaultSet] devices]);
+    if (!developer_dir || !developer_dir[0])
+        return DeviceSet([NSArray new]);
+
+    Class SimServiceContextClass = NSClassFromString(@"SimServiceContext");
+    NSString *dev_dir = @(developer_dir);
+    NSError *error = nil;
+
+    id serviceContext = [SimServiceContextClass sharedServiceContextForDeveloperDir:dev_dir error:&error];
+    if (!serviceContext)
+        return DeviceSet([NSArray new]);
+
+    return DeviceSet([[serviceContext defaultDeviceSetWithError:&error] devices]);
 }
 
 CoreSimulatorSupport::DeviceSet
-CoreSimulatorSupport::DeviceSet::GetAvailableDevices ()
+CoreSimulatorSupport::DeviceSet::GetAvailableDevices (const char *developer_dir)
 {
-    return GetAllDevices().GetDevicesIf( [] (Device d) -> bool {
+    return GetAllDevices(developer_dir).GetDevicesIf( [] (Device d) -> bool {
         return (d && d.GetDeviceType() && d.GetDeviceRuntime() && d.GetDeviceRuntime().IsAvailable());
     });
 }

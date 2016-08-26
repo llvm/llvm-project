@@ -26,6 +26,7 @@
 // This tests a conforming extension
 
 #include <unordered_map>
+#include <utility>
 #include <cassert>
 
 #include "test_macros.h"
@@ -122,79 +123,65 @@ int main()
 	typedef std::pair<const MoveOnly, MoveOnly> MapType;
     {
         typedef std::unordered_map<MoveOnly, MoveOnly> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
                            std::equal_to<MoveOnly>, test_allocator<MapType>> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
                           std::equal_to<MoveOnly>, other_allocator<MapType>> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>> C;
-        C c1, c2;
-        static_assert(!noexcept(swap(c1, c2)), "");
+        static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
                                                          some_comp<MoveOnly>> C;
-        C c1, c2;
-        static_assert(!noexcept(swap(c1, c2)), "");
+        static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 
 #if TEST_STD_VER >= 14
     { // POCS allocator, throwable swap for hash, throwable swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>, some_comp <MoveOnly>, some_alloc <MapType>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // always equal allocator, throwable swap for hash, throwable swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>, some_comp <MoveOnly>, some_alloc2<MapType>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // POCS allocator, throwable swap for hash, nothrow swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>, some_comp2<MoveOnly>, some_alloc <MapType>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // always equal allocator, throwable swap for hash, nothrow swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>, some_comp2<MoveOnly>, some_alloc2<MapType>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // POCS allocator, nothrow swap for hash, throwable swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash2<MoveOnly>, some_comp <MoveOnly>, some_alloc <MapType>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // always equal allocator, nothrow swap for hash, throwable swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash2<MoveOnly>, some_comp <MoveOnly>, some_alloc2<MapType>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // POCS allocator, nothrow swap for hash, nothrow swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash2<MoveOnly>, some_comp2<MoveOnly>, some_alloc <MapType>> C;
-    C c1, c2;
-    static_assert( noexcept(swap(c1, c2)), "");
+    static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // always equal allocator, nothrow swap for hash, nothrow swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash2<MoveOnly>, some_comp2<MoveOnly>, some_alloc2<MapType>> C;
-    C c1, c2;
-    static_assert( noexcept(swap(c1, c2)), "");
+    static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 
     { // NOT always equal allocator, nothrow swap for hash, nothrow swap for comp
     typedef std::unordered_map<MoveOnly, MoveOnly, some_hash2<MoveOnly>, some_comp2<MoveOnly>, some_alloc3<MapType>> C;
-    C c1, c2;
-    static_assert( noexcept(swap(c1, c2)), "");
+    LIBCPP_STATIC_ASSERT( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 #endif
 }

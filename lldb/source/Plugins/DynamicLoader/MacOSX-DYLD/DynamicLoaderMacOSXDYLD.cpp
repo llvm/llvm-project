@@ -89,6 +89,11 @@ DynamicLoaderMacOSXDYLD::CreateInstance (Process* process, bool force)
             }
         }
     }
+
+    if (UseDYLDSPI (process) == true)
+    {
+        create = false;
+    }
     
     if (create)
         return new DynamicLoaderMacOSXDYLD (process);
@@ -296,6 +301,7 @@ DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(lldb::
 {
     std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
     DataExtractor data; // Load command data
+    static ConstString g_dyld_all_image_infos ("dyld_all_image_infos");
     if (ReadMachHeader (addr, &m_dyld.header, &data))
     {
         if (m_dyld.header.filetype == llvm::MachO::MH_DYLINKER)
@@ -316,7 +322,6 @@ DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(lldb::
 
             if (m_dyld_all_image_infos_addr == LLDB_INVALID_ADDRESS && dyld_module_sp.get())
             {
-                static ConstString g_dyld_all_image_infos ("dyld_all_image_infos");
                 const Symbol *symbol = dyld_module_sp->FindFirstSymbolWithNameAndType (g_dyld_all_image_infos, eSymbolTypeData);
                 if (symbol)
                     m_dyld_all_image_infos_addr = symbol->GetLoadAddress(&target);
@@ -340,6 +345,7 @@ DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(lldb::
                 target.ModulesDidLoad(modules);
                 SetDYLDModule (dyld_module_sp);
             }
+
             return true;
         }
     }
@@ -592,7 +598,7 @@ DynamicLoaderMacOSXDYLD::AddModulesUsingImageInfosAddress (lldb::addr_t image_in
         bool return_value = false;
         if (JSONImageInformationIntoImageInfo (image_infos_json_sp, image_infos))
         {
-            AddExecutableModuleIfInImageInfos (image_infos);
+            UpdateSpecialBinariesFromNewImageInfos (image_infos);
             return_value = AddModulesUsingImageInfos (image_infos);
         }
         m_dyld_image_infos_stop_id = m_process->GetStopID();
@@ -1105,7 +1111,7 @@ DynamicLoaderMacOSXDYLD::SetNotificationBreakpoint ()
             bool resolved = m_process->GetTarget().ResolveLoadAddress(m_dyld_all_image_infos.notification, so_addr);
             if (!resolved)
             {
-                ModuleSP dyld_module_sp = m_dyld_module_wp.lock();
+                ModuleSP dyld_module_sp = GetDYLDModule();
                 if (dyld_module_sp)
                 {
                     std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
@@ -1145,6 +1151,79 @@ DynamicLoaderMacOSXDYLD::CanLoadImage ()
 
     error.SetErrorString("unsafe to load or unload shared libraries");
     return error;
+}
+
+bool
+DynamicLoaderMacOSXDYLD::GetSharedCacheInformation (lldb::addr_t &base_address,
+                                               UUID &uuid,
+                                               LazyBool &using_shared_cache,
+                                               LazyBool &private_shared_cache)
+{
+    base_address = LLDB_INVALID_ADDRESS;
+    uuid.Clear();
+    using_shared_cache = eLazyBoolCalculate;
+    private_shared_cache = eLazyBoolCalculate;
+
+    if (m_process)
+    {
+        addr_t all_image_infos = m_process->GetImageInfoAddress();
+
+        // The address returned by GetImageInfoAddress may be the address of dyld (don't want)
+        // or it may be the address of the dyld_all_image_infos structure (want).  The first four
+        // bytes will be either the version field (all_image_infos) or a Mach-O file magic constant.
+        // Version 13 and higher of dyld_all_image_infos is required to get the sharedCacheUUID field.
+
+        Error err;
+        uint32_t version_or_magic = m_process->ReadUnsignedIntegerFromMemory (all_image_infos, 4, -1, err);
+        if (version_or_magic != static_cast<uint32_t>(-1)
+            && version_or_magic != llvm::MachO::MH_MAGIC
+            && version_or_magic != llvm::MachO::MH_CIGAM
+            && version_or_magic != llvm::MachO::MH_MAGIC_64
+            && version_or_magic != llvm::MachO::MH_CIGAM_64
+            && version_or_magic >= 13)
+        {
+            addr_t sharedCacheUUID_address = LLDB_INVALID_ADDRESS;
+            int wordsize = m_process->GetAddressByteSize();
+            if (wordsize == 8)
+            {
+                sharedCacheUUID_address = all_image_infos + 160;  // sharedCacheUUID <mach-o/dyld_images.h>
+            }
+            if (wordsize == 4)
+            {
+                sharedCacheUUID_address = all_image_infos + 84;   // sharedCacheUUID <mach-o/dyld_images.h>
+            }
+            if (sharedCacheUUID_address != LLDB_INVALID_ADDRESS)
+            {
+                uuid_t shared_cache_uuid;
+                if (m_process->ReadMemory (sharedCacheUUID_address, shared_cache_uuid, sizeof (uuid_t), err) == sizeof (uuid_t))
+                {
+                    uuid.SetBytes (shared_cache_uuid);
+                    if (uuid.IsValid ())
+                    {
+                        using_shared_cache = eLazyBoolYes;
+                    }
+                }
+
+                if (version_or_magic >= 15)
+                {
+                    // The sharedCacheBaseAddress field is the next one in the dyld_all_image_infos struct.
+                    addr_t sharedCacheBaseAddr_address = sharedCacheUUID_address + 16;
+                    Error error;
+                    base_address = m_process->ReadUnsignedIntegerFromMemory (sharedCacheBaseAddr_address, wordsize, LLDB_INVALID_ADDRESS, error);
+                    if (error.Fail())
+                        base_address = LLDB_INVALID_ADDRESS;
+                }
+
+                return true;
+            }
+
+            //
+            // add
+            // NB: sharedCacheBaseAddress is the next field in dyld_all_image_infos after
+            // sharedCacheUUID -- that is, 16 bytes after it, if we wanted to fetch it.
+        }
+    }
+    return false;
 }
 
 void

@@ -27,7 +27,11 @@
 #include "MachONormalizedFileBinaryUtils.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Dwarf.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/LEB128.h"
@@ -499,7 +503,7 @@ const Section* findSectionCoveringAddress(const NormalizedFile &normalizedFile,
 
 const MachODefinedAtom *
 findAtomCoveringAddress(const NormalizedFile &normalizedFile, MachOFile &file,
-                        uint64_t addr, Reference::Addend *addend) {
+                        uint64_t addr, Reference::Addend &addend) {
   const Section *sect = nullptr;
   sect = findSectionCoveringAddress(normalizedFile, addr);
   if (!sect)
@@ -509,7 +513,7 @@ findAtomCoveringAddress(const NormalizedFile &normalizedFile, MachOFile &file,
   uint64_t offsetInSect = addr - sect->address;
   auto atom =
       file.findAtomCoveringAddress(*sect, offsetInSect, &offsetInTarget);
-  *addend = offsetInTarget;
+  addend = offsetInTarget;
   return atom;
 }
 
@@ -548,19 +552,23 @@ llvm::Error convertRelocs(const Section &section,
                            -> llvm::Error {
     // Find symbol from index.
     const Symbol *sym = nullptr;
+    uint32_t numStabs  = normalizedFile.stabsSymbols.size();
     uint32_t numLocal  = normalizedFile.localSymbols.size();
     uint32_t numGlobal = normalizedFile.globalSymbols.size();
     uint32_t numUndef  = normalizedFile.undefinedSymbols.size();
-    if (symbolIndex < numLocal) {
-      sym = &normalizedFile.localSymbols[symbolIndex];
-    } else if (symbolIndex < numLocal+numGlobal) {
-      sym = &normalizedFile.globalSymbols[symbolIndex-numLocal];
-    } else if (symbolIndex < numLocal+numGlobal+numUndef) {
-      sym = &normalizedFile.undefinedSymbols[symbolIndex-numLocal-numGlobal];
+    assert(symbolIndex >= numStabs && "Searched for stab via atomBySymbol?");
+    if (symbolIndex < numStabs+numLocal) {
+      sym = &normalizedFile.localSymbols[symbolIndex-numStabs];
+    } else if (symbolIndex < numStabs+numLocal+numGlobal) {
+      sym = &normalizedFile.globalSymbols[symbolIndex-numStabs-numLocal];
+    } else if (symbolIndex < numStabs+numLocal+numGlobal+numUndef) {
+      sym = &normalizedFile.undefinedSymbols[symbolIndex-numStabs-numLocal-
+                                             numGlobal];
     } else {
       return llvm::make_error<GenericError>(Twine("symbol index (")
                                      + Twine(symbolIndex) + ") out of range");
     }
+
     // Find atom from symbol.
     if ((sym->type & N_TYPE) == N_SECT) {
       if (sym->sect > normalizedFile.sections.size())
@@ -683,6 +691,297 @@ bool isDebugInfoSection(const Section &section) {
   if ((section.attributes & S_ATTR_DEBUG) == 0)
     return false;
   return section.segmentName.equals("__DWARF");
+}
+
+static const Atom* findDefinedAtomByName(MachOFile &file, Twine name) {
+  std::string strName = name.str();
+  for (auto *atom : file.defined())
+    if (atom->name() == strName)
+      return atom;
+  return nullptr;
+}
+
+static StringRef copyDebugString(StringRef str, BumpPtrAllocator &alloc) {
+  char *strCopy = alloc.Allocate<char>(str.size() + 1);
+  memcpy(strCopy, str.data(), str.size());
+  strCopy[str.size()] = '\0';
+  return strCopy;
+}
+
+llvm::Error parseStabs(MachOFile &file,
+                       const NormalizedFile &normalizedFile,
+                       bool copyRefs) {
+
+  if (normalizedFile.stabsSymbols.empty())
+    return llvm::Error::success();
+
+  // FIXME: Kill this off when we can move to sane yaml parsing.
+  std::unique_ptr<BumpPtrAllocator> allocator;
+  if (copyRefs)
+    allocator = llvm::make_unique<BumpPtrAllocator>();
+
+  enum { start, inBeginEnd } state = start;
+
+  const Atom *currentAtom = nullptr;
+  uint64_t currentAtomAddress = 0;
+  StabsDebugInfo::StabsList stabsList;
+  for (const auto &stabSym : normalizedFile.stabsSymbols) {
+    Stab stab(nullptr, stabSym.type, stabSym.sect, stabSym.desc,
+              stabSym.value, stabSym.name);
+    switch (state) {
+    case start:
+      switch (static_cast<StabType>(stabSym.type)) {
+      case N_BNSYM:
+        state = inBeginEnd;
+        currentAtomAddress = stabSym.value;
+        Reference::Addend addend;
+        currentAtom = findAtomCoveringAddress(normalizedFile, file,
+                                              currentAtomAddress, addend);
+        if (addend != 0)
+          return llvm::make_error<GenericError>(
+                   "Non-zero addend for BNSYM '" + stabSym.name + "' in " +
+                   file.path());
+        if (currentAtom)
+          stab.atom = currentAtom;
+        else {
+          // FIXME: ld64 just issues a warning here - should we match that?
+          return llvm::make_error<GenericError>(
+                   "can't find atom for stabs BNSYM at " +
+                   Twine::utohexstr(stabSym.value) + " in " + file.path());
+        }
+        break;
+      case N_SO:
+      case N_OSO:
+        // Not associated with an atom, just copy.
+        if (copyRefs)
+          stab.str = copyDebugString(stabSym.name, *allocator);
+        else
+          stab.str = stabSym.name;
+        break;
+      case N_GSYM: {
+        auto colonIdx = stabSym.name.find(':');
+        if (colonIdx != StringRef::npos) {
+          StringRef name = stabSym.name.substr(0, colonIdx);
+          currentAtom = findDefinedAtomByName(file, "_" + name);
+          stab.atom = currentAtom;
+          if (copyRefs)
+            stab.str = copyDebugString(stabSym.name, *allocator);
+          else
+            stab.str = stabSym.name;
+        } else {
+          currentAtom = findDefinedAtomByName(file, stabSym.name);
+          stab.atom = currentAtom;
+          if (copyRefs)
+            stab.str = copyDebugString(stabSym.name, *allocator);
+          else
+            stab.str = stabSym.name;
+        }
+        if (stab.atom == nullptr)
+          return llvm::make_error<GenericError>(
+                   "can't find atom for N_GSYM stabs" + stabSym.name +
+                   " in " + file.path());
+        break;
+      }
+      case N_FUN:
+        return llvm::make_error<GenericError>(
+                 "old-style N_FUN stab '" + stabSym.name + "' unsupported");
+      default:
+        return llvm::make_error<GenericError>(
+                 "unrecognized stab symbol '" + stabSym.name + "'");
+      }
+      break;
+    case inBeginEnd:
+      stab.atom = currentAtom;
+      switch (static_cast<StabType>(stabSym.type)) {
+      case N_ENSYM:
+        state = start;
+        currentAtom = nullptr;
+        break;
+      case N_FUN:
+        // Just copy the string.
+        if (copyRefs)
+          stab.str = copyDebugString(stabSym.name, *allocator);
+        else
+          stab.str = stabSym.name;
+        break;
+      default:
+        return llvm::make_error<GenericError>(
+                 "unrecognized stab symbol '" + stabSym.name + "'");
+      }
+    }
+    llvm::dbgs() << "Adding to stabsList: " << stab << "\n";
+    stabsList.push_back(stab);
+  }
+
+  file.setDebugInfo(llvm::make_unique<StabsDebugInfo>(std::move(stabsList)));
+
+  // FIXME: Kill this off when we fix YAML memory ownership.
+  file.debugInfo()->setAllocator(std::move(allocator));
+
+  return llvm::Error::success();
+}
+
+static llvm::DataExtractor
+dataExtractorFromSection(const NormalizedFile &normalizedFile,
+                         const Section &S) {
+  const bool is64 = MachOLinkingContext::is64Bit(normalizedFile.arch);
+  const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
+  StringRef SecData(reinterpret_cast<const char*>(S.content.data()),
+                    S.content.size());
+  return llvm::DataExtractor(SecData, !isBig, is64 ? 8 : 4);
+}
+
+// FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
+//        inspection" code if possible.
+static uint32_t getCUAbbrevOffset(llvm::DataExtractor abbrevData,
+                                  uint64_t abbrCode) {
+  uint64_t curCode;
+  uint32_t offset = 0;
+  while ((curCode = abbrevData.getULEB128(&offset)) != abbrCode) {
+    // Tag
+    abbrevData.getULEB128(&offset);
+    // DW_CHILDREN
+    abbrevData.getU8(&offset);
+    // Attributes
+    while (abbrevData.getULEB128(&offset) | abbrevData.getULEB128(&offset))
+      ;
+  }
+  return offset;
+}
+
+// FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
+//        inspection" code if possible.
+static Expected<const char *>
+getIndexedString(const NormalizedFile &normalizedFile,
+                 uint32_t form, llvm::DataExtractor infoData,
+                 uint32_t &infoOffset, const Section &stringsSection) {
+  if (form == llvm::dwarf::DW_FORM_string)
+   return infoData.getCStr(&infoOffset);
+  if (form != llvm::dwarf::DW_FORM_strp)
+    return llvm::make_error<GenericError>(
+        "string field encoded without DW_FORM_strp");
+  uint32_t stringOffset = infoData.getU32(&infoOffset);
+  llvm::DataExtractor stringsData =
+    dataExtractorFromSection(normalizedFile, stringsSection);
+  return stringsData.getCStr(&stringOffset);
+}
+
+// FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
+//        inspection" code if possible.
+static llvm::Expected<TranslationUnitSource>
+readCompUnit(const NormalizedFile &normalizedFile,
+             const Section &info,
+             const Section &abbrev,
+             const Section &strings,
+             StringRef path) {
+  // FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
+  //        inspection" code if possible.
+  uint32_t offset = 0;
+  auto infoData = dataExtractorFromSection(normalizedFile, info);
+  uint32_t length = infoData.getU32(&offset);
+  if (length == 0xffffffff)
+    infoData.getU64(&offset);
+  else if (length > 0xffffff00)
+    return llvm::make_error<GenericError>("Malformed DWARF in " + path);
+
+  uint16_t version = infoData.getU16(&offset);
+
+  if (version < 2 || version > 4)
+    return llvm::make_error<GenericError>("Unsupported DWARF version in " +
+                                          path);
+
+  infoData.getU32(&offset); // Abbrev offset (should be zero)
+  uint8_t addrSize = infoData.getU8(&offset);
+
+  uint32_t abbrCode = infoData.getULEB128(&offset);
+  auto abbrevData = dataExtractorFromSection(normalizedFile, abbrev);
+  uint32_t abbrevOffset = getCUAbbrevOffset(abbrevData, abbrCode);
+  uint64_t tag = abbrevData.getULEB128(&abbrevOffset);
+  if (tag != llvm::dwarf::DW_TAG_compile_unit)
+    return llvm::make_error<GenericError>("top level DIE is not a compile unit");
+  // DW_CHILDREN
+  abbrevData.getU8(&abbrevOffset);
+  uint32_t name;
+  uint32_t form;
+  TranslationUnitSource tu;
+  while ((name = abbrevData.getULEB128(&abbrevOffset)) |
+             (form = abbrevData.getULEB128(&abbrevOffset)) &&
+         (name != 0 || form != 0)) {
+    switch (name) {
+    case llvm::dwarf::DW_AT_name: {
+      if (auto eName = getIndexedString(normalizedFile, form, infoData, offset,
+                                        strings))
+          tu.name = *eName;
+      else
+        return eName.takeError();
+      break;
+    }
+    case llvm::dwarf::DW_AT_comp_dir: {
+      if (auto eName = getIndexedString(normalizedFile, form, infoData, offset,
+                                        strings))
+        tu.path = *eName;
+      else
+        return eName.takeError();
+      break;
+    }
+    default:
+      llvm::DWARFFormValue::skipValue(form, infoData, &offset, version,
+                                      addrSize);
+    }
+  }
+  return tu;
+}
+
+llvm::Error parseDebugInfo(MachOFile &file,
+                           const NormalizedFile &normalizedFile, bool copyRefs) {
+
+  // Find the interesting debug info sections.
+  const Section *debugInfo = nullptr;
+  const Section *debugAbbrev = nullptr;
+  const Section *debugStrings = nullptr;
+
+  for (auto &s : normalizedFile.sections) {
+    if (s.segmentName == "__DWARF") {
+      if (s.sectionName == "__debug_info")
+        debugInfo = &s;
+      else if (s.sectionName == "__debug_abbrev")
+        debugAbbrev = &s;
+      else if (s.sectionName == "__debug_str")
+        debugStrings = &s;
+    }
+  }
+
+  if (!debugInfo)
+    return parseStabs(file, normalizedFile, copyRefs);
+
+  if (debugInfo->content.size() == 0)
+    return llvm::Error::success();
+
+  if (debugInfo->content.size() < 12)
+    return llvm::make_error<GenericError>("Malformed __debug_info section in " +
+                                          file.path() + ": too small");
+
+  if (!debugAbbrev)
+    return llvm::make_error<GenericError>("Missing __dwarf_abbrev section in " +
+                                          file.path());
+
+  if (auto tuOrErr = readCompUnit(normalizedFile, *debugInfo, *debugAbbrev,
+                                  *debugStrings, file.path())) {
+    // FIXME: Kill of allocator and code under 'copyRefs' when we fix YAML
+    //        memory ownership.
+    std::unique_ptr<BumpPtrAllocator> allocator;
+    if (copyRefs) {
+      allocator = llvm::make_unique<BumpPtrAllocator>();
+      tuOrErr->name = copyDebugString(tuOrErr->name, *allocator);
+      tuOrErr->path = copyDebugString(tuOrErr->path, *allocator);
+    }
+    file.setDebugInfo(llvm::make_unique<DwarfDebugInfo>(std::move(*tuOrErr)));
+    if (copyRefs)
+      file.debugInfo()->setAllocator(std::move(allocator));
+  } else
+    return tuOrErr.takeError();
+
+  return llvm::Error::success();
 }
 
 static int64_t readSPtr(bool is64, bool isBig, const uint8_t *addr) {
@@ -853,7 +1152,7 @@ static llvm::Error processCIE(const NormalizedFile &normalizedFile,
       const MachODefinedAtom *func = nullptr;
       Reference::Addend addend;
       func = findAtomCoveringAddress(normalizedFile, file, funcAddress,
-                                     &addend);
+                                     addend);
       atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
                          handler.unwindRefToPersonalityFunctionKind(),
                          PersonalityFunctionField, func, addend);
@@ -936,7 +1235,7 @@ static llvm::Error processFDE(const NormalizedFile &normalizedFile,
     }
     Reference::Addend addend;
     auto *target = findAtomCoveringAddress(normalizedFile, file,
-                                           targetAddress, &addend);
+                                           targetAddress, addend);
     atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
                        refKind, refAddress, target, addend);
 
@@ -1095,7 +1394,6 @@ llvm::Error parseObjCImageInfo(const Section &sect,
   return llvm::Error();
 }
 
-
 /// Converts normalized mach-o file into an lld::File and lld::Atoms.
 llvm::Expected<std::unique_ptr<lld::File>>
 objectToAtoms(const NormalizedFile &normalizedFile, StringRef path,
@@ -1135,10 +1433,10 @@ normalizedObjectToAtoms(MachOFile *file,
 
   // Create atoms from each section.
   for (auto &sect : normalizedFile.sections) {
-    DEBUG(llvm::dbgs() << "Creating atoms: "; sect.dump());
+
+    // If this is a debug-info section parse it specially.
     if (isDebugInfoSection(sect))
       continue;
-
 
     // If the file contains an objc_image_info struct, then we should parse the
     // ObjC flags and Swift version.
@@ -1248,6 +1546,10 @@ normalizedObjectToAtoms(MachOFile *file,
   for (const DefinedAtom* defAtom : file->defined()) {
     reinterpret_cast<const SimpleDefinedAtom*>(defAtom)->sortReferences();
   }
+
+  if (auto err = parseDebugInfo(*file, normalizedFile, copyRefs))
+    return err;
+
   return llvm::Error();
 }
 
@@ -1323,14 +1625,6 @@ normalizedToAtoms(const NormalizedFile &normalizedFile, StringRef path,
     llvm_unreachable("unhandled MachO file type!");
   }
 }
-
-#ifndef NDEBUG
-void Section::dump(llvm::raw_ostream &OS) const {
-  OS << "Section (\"" << segmentName << ", " << sectionName << "\"";
-  OS << ", addr: " << llvm::format_hex(address, 16, true);
-  OS << ", size: " << llvm::format_hex(content.size(), 8, true) << ")\n";
-}
-#endif
 
 } // namespace normalized
 } // namespace mach_o

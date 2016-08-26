@@ -73,8 +73,10 @@ math/atan2.cl
 math/atan2pi.cl
 math/atanh.cl
 math/atanpi.cl
+math/cbrt.cl
 math/copysign.cl
 math/cos.cl
+math/cosh.cl
 math/cospi.cl
 math/ep_log.cl
 math/erf.cl

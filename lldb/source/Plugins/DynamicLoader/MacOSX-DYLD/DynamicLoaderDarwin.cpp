@@ -151,21 +151,6 @@ DynamicLoaderDarwin::FindTargetModuleForImageInfo (ImageInfo &image_info, bool c
     return module_sp;
 }
 
-DynamicLoaderDarwin::ImageInfo *
-DynamicLoaderDarwin::FindImageInfoForAddress (addr_t load_address)
-{
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    const size_t image_count = m_dyld_image_infos.size();
-    for (size_t i = 0; i < image_count; i++)
-    {
-        if (load_address == m_dyld_image_infos[i].address)
-        {
-            return &m_dyld_image_infos[i];
-        }
-    }
-    return NULL;
-}
-
 void
 DynamicLoaderDarwin::UnloadImages (const std::vector<lldb::addr_t> &solib_addresses)
 {
@@ -219,6 +204,46 @@ DynamicLoaderDarwin::UnloadImages (const std::vector<lldb::addr_t> &solib_addres
             unloaded_module_list.LogUUIDAndPaths (log, "DynamicLoaderDarwin::UnloadModules");
         }
         m_process->GetTarget().GetImages().Remove (unloaded_module_list);
+        m_dyld_image_infos_stop_id = m_process->GetStopID();
+    }
+}
+
+void
+DynamicLoaderDarwin::UnloadAllImages ()
+{
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
+    ModuleList unloaded_modules_list;
+
+    Target &target = m_process->GetTarget();
+    const ModuleList &target_modules = target.GetImages();
+    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
+
+    size_t num_modules = target_modules.GetSize();
+    ModuleSP dyld_sp (GetDYLDModule());
+
+    for (size_t i = 0; i < num_modules; i++)
+    {
+        ModuleSP module_sp = target_modules.GetModuleAtIndexUnlocked (i);
+
+        // Don't remove dyld - else we'll lose our breakpoint notifying us about libraries
+        // being re-loaded...
+        if (module_sp.get() != nullptr
+            && module_sp.get() != dyld_sp.get())
+        {
+            UnloadSections (module_sp);
+            unloaded_modules_list.Append (module_sp);
+        }
+    }
+
+    if (unloaded_modules_list.GetSize() != 0)
+    {
+        if (log)
+        {
+            log->PutCString("Unloaded:");
+            unloaded_modules_list.LogUUIDAndPaths (log, "DynamicLoaderDarwin::UnloadAllImages");
+        }
+        target.GetImages().Remove(unloaded_modules_list);
+        m_dyld_image_infos.clear();
         m_dyld_image_infos_stop_id = m_process->GetStopID();
     }
 }
@@ -401,6 +426,23 @@ DynamicLoaderDarwin::JSONImageInformationIntoImageInfo (StructuredData::ObjectSP
         image_infos[i].header.cpusubtype = mh->GetValueForKey("cpusubtype")->GetAsInteger()->GetValue();
         image_infos[i].header.filetype = mh->GetValueForKey("filetype")->GetAsInteger()->GetValue();
 
+        if (image->HasKey("min_version_os_name"))
+        {
+            std::string os_name = image->GetValueForKey("min_version_os_name")->GetAsString()->GetValue();
+            if (os_name == "macosx")
+                image_infos[i].os_type = llvm::Triple::MacOSX;
+            else if (os_name == "ios" || os_name == "iphoneos")
+                image_infos[i].os_type = llvm::Triple::IOS;
+            else if (os_name == "tvos")
+                image_infos[i].os_type = llvm::Triple::TvOS;
+            else if (os_name == "watchos")
+                image_infos[i].os_type = llvm::Triple::WatchOS;
+        }
+        if (image->HasKey("min_version_os_sdk"))
+        {
+            image_infos[i].min_version_os_sdk = image->GetValueForKey("min_version_os_sdk")->GetAsString()->GetValue();
+        }
+
         // Fields that aren't used by DynamicLoaderDarwin so debugserver doesn't currently send them
         // in the reply.
 
@@ -483,15 +525,82 @@ DynamicLoaderDarwin::JSONImageInformationIntoImageInfo (StructuredData::ObjectSP
 }
 
 void
-DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfos (ImageInfo::collection &image_infos)
+DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos (ImageInfo::collection &image_infos)
 {
+    uint32_t exe_idx = UINT32_MAX;
+    uint32_t dyld_idx = UINT32_MAX;
+    Target &target = m_process->GetTarget();
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
+    ConstString g_dyld_sim_filename ("dyld_sim");
+
+    ArchSpec target_arch = target.GetArchitecture();
     const size_t image_infos_size = image_infos.size();
     for (size_t i = 0; i < image_infos_size; i++)
     {
         if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER)
         {
-            UpdateDYLDImageInfoFromNewImageInfo (image_infos[i]);
-            break; // FIXME simulator debugging w/ multiple dylds
+            // In a "simulator" process (an x86 process that is ios/tvos/watchos)
+            // we will have two dyld modules -- a "dyld" that we want to keep track of,
+            // and a "dyld_sim" which we don't need to keep track of here.  
+            // If the target is an x86 system and the OS of the dyld binary is 
+            // ios/tvos/watchos, then we are looking at dyld_sym.
+
+            // debugserver has only recently (late 2016) started sending up the
+            // os type for each binary it sees -- so if we don't have an os
+            // type, use a filename check as our next best guess.
+            if (image_infos[i].os_type == llvm::Triple::OSType::UnknownOS)
+            {
+                if (image_infos[i].file_spec.GetFilename() != g_dyld_sim_filename)
+                {
+                    dyld_idx = i;
+                }
+            }
+            else if (target_arch.GetTriple().getArch() == llvm::Triple::x86 
+                     || target_arch.GetTriple().getArch() == llvm::Triple::x86_64)
+            {
+                if (image_infos[i].os_type != llvm::Triple::OSType::IOS
+                    && image_infos[i].os_type != llvm::Triple::TvOS
+                    && image_infos[i].os_type != llvm::Triple::WatchOS)
+                {
+                    dyld_idx = i;
+                }
+            }
+        }
+        else if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE)
+        {
+            exe_idx = i;
+        }
+    }
+
+    if (exe_idx != UINT32_MAX)
+    {
+        const bool can_create = true;
+        ModuleSP exe_module_sp (FindTargetModuleForImageInfo (image_infos[exe_idx], can_create, NULL));
+        if (exe_module_sp)
+        {
+            if (log)
+                log->Printf ("Found executable module: %s", exe_module_sp->GetFileSpec().GetPath().c_str());
+            target.GetImages().AppendIfNeeded (exe_module_sp);
+            UpdateImageLoadAddress (exe_module_sp.get(), image_infos[exe_idx]);
+            if (exe_module_sp.get() != target.GetExecutableModulePointer())
+            {
+                const bool get_dependent_images = false;
+                target.SetExecutableModule (exe_module_sp, get_dependent_images);
+            }
+        }
+    }
+
+    if (dyld_idx != UINT32_MAX)
+    {
+        const bool can_create = true;
+        ModuleSP dyld_sp = FindTargetModuleForImageInfo (image_infos[dyld_idx], can_create, NULL);
+        if (dyld_sp.get())
+        {
+            if (log)
+                log->Printf ("Found dyld module: %s", dyld_sp->GetFileSpec().GetPath().c_str());
+            target.GetImages().AppendIfNeeded (dyld_sp);
+            UpdateImageLoadAddress (dyld_sp.get(), image_infos[dyld_idx]);
+            SetDYLDModule (dyld_sp);
         }
     }
 }
@@ -499,7 +608,6 @@ DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfos (ImageInfo::collection
 void
 DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo (ImageInfo &image_info)
 {
-    // FIXME simulator debugging w/ multiple dylds
     if (image_info.header.filetype == llvm::MachO::MH_DYLINKER)
     {
         const bool can_create = true;
@@ -510,44 +618,6 @@ DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo (ImageInfo &image_info)
             target.GetImages().AppendIfNeeded (dyld_sp);
             UpdateImageLoadAddress (dyld_sp.get(), image_info);
             SetDYLDModule (dyld_sp);
-        }
-    }
-}
-
-void
-DynamicLoaderDarwin::AddExecutableModuleIfInImageInfos (ImageInfo::collection &image_infos)
-{
-    const size_t image_infos_size = image_infos.size();
-    for (size_t i = 0; i < image_infos_size; i++)
-    {
-        if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE)
-        {
-            Target &target = m_process->GetTarget();
-            const bool can_create = true;
-            ModuleSP exe_module_sp (FindTargetModuleForImageInfo (image_infos[i], can_create, NULL));
-    
-            if (exe_module_sp)
-            {
-                UpdateImageLoadAddress (exe_module_sp.get(), image_infos[i]);
-    
-                if (exe_module_sp.get() != target.GetExecutableModulePointer())
-                {
-                    // Don't load dependent images since we are in dyld where we will know
-                    // and find out about all images that are loaded. Also when setting the
-                    // executable module, it will clear the targets module list, and if we
-                    // have an in memory dyld module, it will get removed from the list
-                    // so we will need to add it back after setting the executable module,
-                    // so we first try and see if we already have a weak pointer to the
-                    // dyld module, make it into a shared pointer, then add the executable,
-                    // then re-add it back to make sure it is always in the list.
-                    
-                    const bool get_dependent_images = false;
-                    m_process->GetTarget().SetExecutableModule (exe_module_sp, 
-                                                                get_dependent_images);
-    
-                    UpdateDYLDImageInfoFromNewImageInfos (image_infos);
-                }
-            }
         }
     }
 }
@@ -1141,3 +1211,57 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp, const ll
     return LLDB_INVALID_ADDRESS;
 }
 
+bool
+DynamicLoaderDarwin::UseDYLDSPI (Process *process)
+{
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
+    uint32_t major, minor, update;
+
+    bool use_new_spi_interface = false;
+
+    if (process->GetHostOSVersion (major, minor, update))
+    {
+        const llvm::Triple::OSType os_type = process->GetTarget().GetArchitecture().GetTriple().getOS();
+
+        // macOS 10.12 and newer
+        if (os_type == llvm::Triple::MacOSX
+            && (major >= 10 || (major == 10 && minor >= 12)))
+        {
+            use_new_spi_interface = true;
+        }
+
+        // iOS 10 and newer
+        if (os_type == llvm::Triple::IOS && major >= 10)
+        {
+            use_new_spi_interface = true;
+        }
+
+        // tvOS 10 and newer
+        if (os_type == llvm::Triple::TvOS && major >= 10)
+        {
+            use_new_spi_interface = true;
+        }
+
+        // watchOS 3 and newer
+        if (os_type == llvm::Triple::WatchOS && major >= 3)
+        {
+            use_new_spi_interface = true;
+        }
+    }
+
+
+    // FIXME: Temporarily force the use of the old DynamicLoader plugin until all
+    // the different use cases have been tested & the updated SPIs are available 
+    // everywhere.
+    use_new_spi_interface = false;
+
+    if (log)
+    {
+        if (use_new_spi_interface)
+            log->Printf ("DynamicLoaderDarwin::UseDYLDSPI: Use new DynamicLoader plugin");
+        else
+            log->Printf ("DynamicLoaderDarwin::UseDYLDSPI: Use old DynamicLoader plugin");
+
+    }
+    return use_new_spi_interface;
+}

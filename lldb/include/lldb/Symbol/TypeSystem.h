@@ -75,6 +75,7 @@ public:
         eKindSwift,
         eKindGo,
         eKindJava,
+        eKindOCaml,
         kNumKinds
     };
 

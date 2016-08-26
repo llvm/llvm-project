@@ -52,9 +52,9 @@ OptionGroupOutputFile::GetDefinitions ()
 }
 
 Error
-OptionGroupOutputFile::SetOptionValue (CommandInterpreter &interpreter,
-                                       uint32_t option_idx,
-                                       const char *option_arg)
+OptionGroupOutputFile::SetOptionValue(uint32_t option_idx,
+                                      const char *option_arg,
+                                      ExecutionContext *execution_context)
 {
     Error error;
     const int short_option = g_option_table[option_idx].short_option;
@@ -78,7 +78,8 @@ OptionGroupOutputFile::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupOutputFile::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupOutputFile::OptionParsingStarting(
+                                            ExecutionContext *execution_context)
 {
     m_file.Clear();
     m_append.Clear();

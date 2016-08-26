@@ -12,17 +12,30 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/IslNodeBuilder.h"
 #include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
+#include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/SCEVValidator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #include "isl/union_map.h"
 
@@ -56,22 +69,65 @@ static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
                                   cl::cat(PollyCategory));
 
+static cl::opt<bool> DumpKernelASM("polly-acc-dump-kernel-asm",
+                                   cl::desc("Dump the kernel assembly code"),
+                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                                   cl::cat(PollyCategory));
+
+static cl::opt<bool> FastMath("polly-acc-fastmath",
+                              cl::desc("Allow unsafe math optimizations"),
+                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                              cl::cat(PollyCategory));
+static cl::opt<bool> SharedMemory("polly-acc-use-shared",
+                                  cl::desc("Use shared memory"), cl::Hidden,
+                                  cl::init(false), cl::ZeroOrMore,
+                                  cl::cat(PollyCategory));
+static cl::opt<bool> PrivateMemory("polly-acc-use-private",
+                                   cl::desc("Use private memory"), cl::Hidden,
+                                   cl::init(false), cl::ZeroOrMore,
+                                   cl::cat(PollyCategory));
+
+static cl::opt<std::string>
+    CudaVersion("polly-acc-cuda-version",
+                cl::desc("The CUDA version to compile for"), cl::Hidden,
+                cl::init("sm_30"), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 /// Create the ast expressions for a ScopStmt.
 ///
 /// This function is a callback for to generate the ast expressions for each
 /// of the scheduled ScopStmts.
 static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
-    void *Stmt, isl_ast_build *Build,
+    void *StmtT, isl_ast_build *Build,
     isl_multi_pw_aff *(*FunctionIndex)(__isl_take isl_multi_pw_aff *MPA,
                                        isl_id *Id, void *User),
     void *UserIndex,
     isl_ast_expr *(*FunctionExpr)(isl_ast_expr *Expr, isl_id *Id, void *User),
-    void *User_expr) {
+    void *UserExpr) {
 
-  // TODO: Implement the AST expression generation. For now we just return a
-  // nullptr to ensure that we do not free uninitialized pointers.
+  ScopStmt *Stmt = (ScopStmt *)StmtT;
 
-  return nullptr;
+  isl_ctx *Ctx;
+
+  if (!Stmt || !Build)
+    return NULL;
+
+  Ctx = isl_ast_build_get_ctx(Build);
+  isl_id_to_ast_expr *RefToExpr = isl_id_to_ast_expr_alloc(Ctx, 0);
+
+  for (MemoryAccess *Acc : *Stmt) {
+    isl_map *AddrFunc = Acc->getAddressFunction();
+    AddrFunc = isl_map_intersect_domain(AddrFunc, Stmt->getDomain());
+    isl_id *RefId = Acc->getId();
+    isl_pw_multi_aff *PMA = isl_pw_multi_aff_from_map(AddrFunc);
+    isl_multi_pw_aff *MPA = isl_multi_pw_aff_from_pw_multi_aff(PMA);
+    MPA = isl_multi_pw_aff_coalesce(MPA);
+    MPA = FunctionIndex(MPA, RefId, UserIndex);
+    isl_ast_expr *Access = isl_ast_build_access_from_multi_pw_aff(Build, MPA);
+    Access = FunctionExpr(Access, RefId, UserExpr);
+    RefToExpr = isl_id_to_ast_expr_set(RefToExpr, RefId, Access);
+  }
+
+  return RefToExpr;
 }
 
 /// Generate code for a GPU specific isl AST.
@@ -86,9 +142,32 @@ public:
   GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
                  DominatorTree &DT, Scop &S, gpu_prog *Prog)
-      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S), Prog(Prog) {}
+      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S), Prog(Prog) {
+    getExprBuilder().setIDToSAI(&IDToSAI);
+  }
+
+  /// Create after-run-time-check initialization code.
+  void initializeAfterRTH();
+
+  /// Finalize the generated scop.
+  virtual void finalize();
 
 private:
+  /// A vector of array base pointers for which a new ScopArrayInfo was created.
+  ///
+  /// This vector is used to delete the ScopArrayInfo when it is not needed any
+  /// more.
+  std::vector<Value *> LocalArrays;
+
+  /// A map from ScopArrays to their corresponding device allocations.
+  std::map<ScopArrayInfo *, Value *> DeviceAllocations;
+
+  /// The current GPU context.
+  Value *GPUContext;
+
+  /// The set of isl_ids allocated in the kernel
+  std::vector<isl_id *> KernelIds;
+
   /// A module containing GPU code.
   ///
   /// This pointer is only set in case we are currently generating GPU code.
@@ -108,18 +187,84 @@ private:
   /// By releasing this set all isl_ids will be freed.
   std::set<std::unique_ptr<isl_id, IslIdDeleter>> KernelIDs;
 
+  IslExprBuilder::IDToScopArrayInfoTy IDToSAI;
+
   /// Create code for user-defined AST nodes.
   ///
   /// These AST nodes can be of type:
   ///
   ///   - ScopStmt:      A computational statement (TODO)
   ///   - Kernel:        A GPU kernel call (TODO)
-  ///   - Data-Transfer: A GPU <-> CPU data-transfer (TODO)
+  ///   - Data-Transfer: A GPU <-> CPU data-transfer
   ///   - In-kernel synchronization
   ///   - In-kernel memory copy statement
   ///
   /// @param UserStmt The ast node to generate code for.
   virtual void createUser(__isl_take isl_ast_node *UserStmt);
+
+  enum DataDirection { HOST_TO_DEVICE, DEVICE_TO_HOST };
+
+  /// Create code for a data transfer statement
+  ///
+  /// @param TransferStmt The data transfer statement.
+  /// @param Direction The direction in which to transfer data.
+  void createDataTransfer(__isl_take isl_ast_node *TransferStmt,
+                          enum DataDirection Direction);
+
+  /// Find llvm::Values referenced in GPU kernel.
+  ///
+  /// @param Kernel The kernel to scan for llvm::Values
+  ///
+  /// @returns A set of values referenced by the kernel.
+  SetVector<Value *> getReferencesInKernel(ppcg_kernel *Kernel);
+
+  /// Compute the sizes of the execution grid for a given kernel.
+  ///
+  /// @param Kernel The kernel to compute grid sizes for.
+  ///
+  /// @returns A tuple with grid sizes for X and Y dimension
+  std::tuple<Value *, Value *> getGridSizes(ppcg_kernel *Kernel);
+
+  /// Compute the sizes of the thread blocks for a given kernel.
+  ///
+  /// @param Kernel The kernel to compute thread block sizes for.
+  ///
+  /// @returns A tuple with thread block sizes for X, Y, and Z dimensions.
+  std::tuple<Value *, Value *, Value *> getBlockSizes(ppcg_kernel *Kernel);
+
+  /// Create kernel launch parameters.
+  ///
+  /// @param Kernel        The kernel to create parameters for.
+  /// @param F             The kernel function that has been created.
+  /// @param SubtreeValues The set of llvm::Values referenced by this kernel.
+  ///
+  /// @returns A stack allocated array with pointers to the parameter
+  ///          values that are passed to the kernel.
+  Value *createLaunchParameters(ppcg_kernel *Kernel, Function *F,
+                                SetVector<Value *> SubtreeValues);
+
+  /// Create declarations for kernel variable.
+  ///
+  /// This includes shared memory declarations.
+  ///
+  /// @param Kernel        The kernel definition to create variables for.
+  /// @param FN            The function into which to generate the variables.
+  void createKernelVariables(ppcg_kernel *Kernel, Function *FN);
+
+  /// Add CUDA annotations to module.
+  ///
+  /// Add a set of CUDA annotations that declares the maximal block dimensions
+  /// that will be used to execute the CUDA kernel. This allows the NVIDIA
+  /// PTX compiler to bound the number of allocated registers to ensure the
+  /// resulting kernel is known to run with up to as many block dimensions
+  /// as specified here.
+  ///
+  /// @param M         The module to add the annotations to.
+  /// @param BlockDimX The size of block dimension X.
+  /// @param BlockDimY The size of block dimension Y.
+  /// @param BlockDimZ The size of block dimension Z.
+  void addCUDAAnnotations(Module *M, Value *BlockDimX, Value *BlockDimY,
+                          Value *BlockDimZ);
 
   /// Create GPU kernel.
   ///
@@ -128,6 +273,17 @@ private:
   /// @param KernelStmt The ast node to generate kernel code for.
   void createKernel(__isl_take isl_ast_node *KernelStmt);
 
+  /// Generate code that computes the size of an array.
+  ///
+  /// @param Array The array for which to compute a size.
+  Value *getArraySize(gpu_array_info *Array);
+
+  /// Prepare the kernel arguments for kernel code generation
+  ///
+  /// @param Kernel The kernel to generate code for.
+  /// @param FN     The function created for the kernel.
+  void prepareKernelArguments(ppcg_kernel *Kernel, Function *FN);
+
   /// Create kernel function.
   ///
   /// Create a kernel function located in a newly created module that can serve
@@ -135,7 +291,9 @@ private:
   /// start block of this newly created function.
   ///
   /// @param Kernel The kernel to generate code for.
-  void createKernelFunction(ppcg_kernel *Kernel);
+  /// @param SubtreeValues The set of llvm::Values referenced by this kernel.
+  void createKernelFunction(ppcg_kernel *Kernel,
+                            SetVector<Value *> &SubtreeValues);
 
   /// Create the declaration of a kernel function.
   ///
@@ -147,23 +305,384 @@ private:
   ///   - Other LLVM Value references (TODO)
   ///
   /// @param Kernel The kernel to generate the function declaration for.
+  /// @param SubtreeValues The set of llvm::Values referenced by this kernel.
+  ///
   /// @returns The newly declared function.
-  Function *createKernelFunctionDecl(ppcg_kernel *Kernel);
+  Function *createKernelFunctionDecl(ppcg_kernel *Kernel,
+                                     SetVector<Value *> &SubtreeValues);
 
   /// Insert intrinsic functions to obtain thread and block ids.
   ///
   /// @param The kernel to generate the intrinsic functions for.
   void insertKernelIntrinsics(ppcg_kernel *Kernel);
 
+  /// Create a global-to-shared or shared-to-global copy statement.
+  ///
+  /// @param CopyStmt The copy statement to generate code for
+  void createKernelCopy(ppcg_kernel_stmt *CopyStmt);
+
+  /// Create code for a ScopStmt called in @p Expr.
+  ///
+  /// @param Expr The expression containing the call.
+  /// @param KernelStmt The kernel statement referenced in the call.
+  void createScopStmt(isl_ast_expr *Expr, ppcg_kernel_stmt *KernelStmt);
+
   /// Create an in-kernel synchronization call.
   void createKernelSync();
+
+  /// Create a PTX assembly string for the current GPU kernel.
+  ///
+  /// @returns A string containing the corresponding PTX assembly code.
+  std::string createKernelASM();
+
+  /// Remove references from the dominator tree to the kernel function @p F.
+  ///
+  /// @param F The function to remove references to.
+  void clearDominators(Function *F);
+
+  /// Remove references from scalar evolution to the kernel function @p F.
+  ///
+  /// @param F The function to remove references to.
+  void clearScalarEvolution(Function *F);
+
+  /// Remove references from loop info to the kernel function @p F.
+  ///
+  /// @param F The function to remove references to.
+  void clearLoops(Function *F);
 
   /// Finalize the generation of the kernel function.
   ///
   /// Free the LLVM-IR module corresponding to the kernel and -- if requested --
   /// dump its IR to stderr.
-  void finalizeKernelFunction();
+  ///
+  /// @returns The Assembly string of the kernel.
+  std::string finalizeKernelFunction();
+
+  /// Create code that allocates memory to store arrays on device.
+  void allocateDeviceArrays();
+
+  /// Free all allocated device arrays.
+  void freeDeviceArrays();
+
+  /// Create a call to initialize the GPU context.
+  ///
+  /// @returns A pointer to the newly initialized context.
+  Value *createCallInitContext();
+
+  /// Create a call to get the device pointer for a kernel allocation.
+  ///
+  /// @param Allocation The Polly GPU allocation
+  ///
+  /// @returns The device parameter corresponding to this allocation.
+  Value *createCallGetDevicePtr(Value *Allocation);
+
+  /// Create a call to free the GPU context.
+  ///
+  /// @param Context A pointer to an initialized GPU context.
+  void createCallFreeContext(Value *Context);
+
+  /// Create a call to allocate memory on the device.
+  ///
+  /// @param Size The size of memory to allocate
+  ///
+  /// @returns A pointer that identifies this allocation.
+  Value *createCallAllocateMemoryForDevice(Value *Size);
+
+  /// Create a call to free a device array.
+  ///
+  /// @param Array The device array to free.
+  void createCallFreeDeviceMemory(Value *Array);
+
+  /// Create a call to copy data from host to device.
+  ///
+  /// @param HostPtr A pointer to the host data that should be copied.
+  /// @param DevicePtr A device pointer specifying the location to copy to.
+  void createCallCopyFromHostToDevice(Value *HostPtr, Value *DevicePtr,
+                                      Value *Size);
+
+  /// Create a call to copy data from device to host.
+  ///
+  /// @param DevicePtr A pointer to the device data that should be copied.
+  /// @param HostPtr A host pointer specifying the location to copy to.
+  void createCallCopyFromDeviceToHost(Value *DevicePtr, Value *HostPtr,
+                                      Value *Size);
+
+  /// Create a call to get a kernel from an assembly string.
+  ///
+  /// @param Buffer The string describing the kernel.
+  /// @param Entry  The name of the kernel function to call.
+  ///
+  /// @returns A pointer to a kernel object
+  Value *createCallGetKernel(Value *Buffer, Value *Entry);
+
+  /// Create a call to free a GPU kernel.
+  ///
+  /// @param GPUKernel THe kernel to free.
+  void createCallFreeKernel(Value *GPUKernel);
+
+  /// Create a call to launch a GPU kernel.
+  ///
+  /// @param GPUKernel  The kernel to launch.
+  /// @param GridDimX   The size of the first grid dimension.
+  /// @param GridDimY   The size of the second grid dimension.
+  /// @param GridBlockX The size of the first block dimension.
+  /// @param GridBlockY The size of the second block dimension.
+  /// @param GridBlockZ The size of the third block dimension.
+  /// @param Paramters  A pointer to an array that contains itself pointers to
+  ///                   the parameter values passed for each kernel argument.
+  void createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
+                              Value *GridDimY, Value *BlockDimX,
+                              Value *BlockDimY, Value *BlockDimZ,
+                              Value *Parameters);
 };
+
+void GPUNodeBuilder::initializeAfterRTH() {
+  BasicBlock *NewBB = SplitBlock(Builder.GetInsertBlock(),
+                                 &*Builder.GetInsertPoint(), &DT, &LI);
+  NewBB->setName("polly.acc.initialize");
+  Builder.SetInsertPoint(&NewBB->front());
+
+  GPUContext = createCallInitContext();
+  allocateDeviceArrays();
+}
+
+void GPUNodeBuilder::finalize() {
+  freeDeviceArrays();
+  createCallFreeContext(GPUContext);
+  IslNodeBuilder::finalize();
+}
+
+void GPUNodeBuilder::allocateDeviceArrays() {
+  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+
+  for (int i = 0; i < Prog->n_array; ++i) {
+    gpu_array_info *Array = &Prog->array[i];
+    auto *ScopArray = (ScopArrayInfo *)Array->user;
+    std::string DevArrayName("p_dev_array_");
+    DevArrayName.append(Array->name);
+
+    Value *ArraySize = getArraySize(Array);
+    Value *DevArray = createCallAllocateMemoryForDevice(ArraySize);
+    DevArray->setName(DevArrayName);
+    DeviceAllocations[ScopArray] = DevArray;
+  }
+
+  isl_ast_build_free(Build);
+}
+
+void GPUNodeBuilder::addCUDAAnnotations(Module *M, Value *BlockDimX,
+                                        Value *BlockDimY, Value *BlockDimZ) {
+  auto AnnotationNode = M->getOrInsertNamedMetadata("nvvm.annotations");
+
+  for (auto &F : *M) {
+    if (F.getCallingConv() != CallingConv::PTX_Kernel)
+      continue;
+
+    Value *V[] = {BlockDimX, BlockDimY, BlockDimZ};
+
+    Metadata *Elements[] = {
+        ValueAsMetadata::get(&F),   MDString::get(M->getContext(), "maxntidx"),
+        ValueAsMetadata::get(V[0]), MDString::get(M->getContext(), "maxntidy"),
+        ValueAsMetadata::get(V[1]), MDString::get(M->getContext(), "maxntidz"),
+        ValueAsMetadata::get(V[2]),
+    };
+    MDNode *Node = MDNode::get(M->getContext(), Elements);
+    AnnotationNode->addOperand(Node);
+  }
+}
+
+void GPUNodeBuilder::freeDeviceArrays() {
+  for (auto &Array : DeviceAllocations)
+    createCallFreeDeviceMemory(Array.second);
+}
+
+Value *GPUNodeBuilder::createCallGetKernel(Value *Buffer, Value *Entry) {
+  const char *Name = "polly_getKernel";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {Buffer, Entry});
+}
+
+Value *GPUNodeBuilder::createCallGetDevicePtr(Value *Allocation) {
+  const char *Name = "polly_getDevicePtr";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {Allocation});
+}
+
+void GPUNodeBuilder::createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
+                                            Value *GridDimY, Value *BlockDimX,
+                                            Value *BlockDimY, Value *BlockDimZ,
+                                            Value *Parameters) {
+  const char *Name = "polly_launchKernel";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
+                         BlockDimZ, Parameters});
+}
+
+void GPUNodeBuilder::createCallFreeKernel(Value *GPUKernel) {
+  const char *Name = "polly_freeKernel";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {GPUKernel});
+}
+
+void GPUNodeBuilder::createCallFreeDeviceMemory(Value *Array) {
+  const char *Name = "polly_freeDeviceMemory";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {Array});
+}
+
+Value *GPUNodeBuilder::createCallAllocateMemoryForDevice(Value *Size) {
+  const char *Name = "polly_allocateMemoryForDevice";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt64Ty());
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {Size});
+}
+
+void GPUNodeBuilder::createCallCopyFromHostToDevice(Value *HostData,
+                                                    Value *DeviceData,
+                                                    Value *Size) {
+  const char *Name = "polly_copyFromHostToDevice";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt64Ty());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {HostData, DeviceData, Size});
+}
+
+void GPUNodeBuilder::createCallCopyFromDeviceToHost(Value *DeviceData,
+                                                    Value *HostData,
+                                                    Value *Size) {
+  const char *Name = "polly_copyFromDeviceToHost";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt64Ty());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {DeviceData, HostData, Size});
+}
+
+Value *GPUNodeBuilder::createCallInitContext() {
+  const char *Name = "polly_initContext";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {});
+}
+
+void GPUNodeBuilder::createCallFreeContext(Value *Context) {
+  const char *Name = "polly_freeContext";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {Context});
+}
 
 /// Check if one string is a prefix of another.
 ///
@@ -171,6 +690,58 @@ private:
 /// @param Prefix The prefix to look for.
 static bool isPrefix(std::string String, std::string Prefix) {
   return String.find(Prefix) == 0;
+}
+
+Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
+  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+  Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
+
+  if (!gpu_array_is_scalar(Array)) {
+    auto OffsetDimZero = isl_pw_aff_copy(Array->bound[0]);
+    isl_ast_expr *Res = isl_ast_build_expr_from_pw_aff(Build, OffsetDimZero);
+
+    for (unsigned int i = 1; i < Array->n_index; i++) {
+      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i]);
+      isl_ast_expr *Expr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
+      Res = isl_ast_expr_mul(Res, Expr);
+    }
+
+    Value *NumElements = ExprBuilder.create(Res);
+    ArraySize = Builder.CreateMul(ArraySize, NumElements);
+  }
+  isl_ast_build_free(Build);
+  return ArraySize;
+}
+
+void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
+                                        enum DataDirection Direction) {
+  isl_ast_expr *Expr = isl_ast_node_user_get_expr(TransferStmt);
+  isl_ast_expr *Arg = isl_ast_expr_get_op_arg(Expr, 0);
+  isl_id *Id = isl_ast_expr_get_id(Arg);
+  auto Array = (gpu_array_info *)isl_id_get_user(Id);
+  auto ScopArray = (ScopArrayInfo *)(Array->user);
+
+  Value *Size = getArraySize(Array);
+  Value *DevPtr = DeviceAllocations[ScopArray];
+
+  Value *HostPtr;
+
+  if (gpu_array_is_scalar(Array))
+    HostPtr = BlockGen.getOrCreateAlloca(ScopArray);
+  else
+    HostPtr = ScopArray->getBasePtr();
+
+  HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
+
+  if (Direction == HOST_TO_DEVICE)
+    createCallCopyFromHostToDevice(HostPtr, DevPtr, Size);
+  else
+    createCallCopyFromDeviceToHost(DevPtr, HostPtr, Size);
+
+  isl_id_free(Id);
+  isl_ast_expr_free(Arg);
+  isl_ast_expr_free(Expr);
+  isl_ast_node_free(TransferStmt);
 }
 
 void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
@@ -187,10 +758,15 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     return;
   }
 
-  if (isPrefix(Str, "to_device") || isPrefix(Str, "from_device")) {
-    // TODO: Insert memory copies
+  if (isPrefix(Str, "to_device")) {
+    createDataTransfer(UserStmt, HOST_TO_DEVICE);
     isl_ast_expr_free(Expr);
-    isl_ast_node_free(UserStmt);
+    return;
+  }
+
+  if (isPrefix(Str, "from_device")) {
+    createDataTransfer(UserStmt, DEVICE_TO_HOST);
+    isl_ast_expr_free(Expr);
     return;
   }
 
@@ -201,12 +777,11 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 
   switch (KernelStmt->type) {
   case ppcg_kernel_domain:
-    // TODO Create kernel user stmt
-    isl_ast_expr_free(Expr);
+    createScopStmt(Expr, KernelStmt);
     isl_ast_node_free(UserStmt);
     return;
   case ppcg_kernel_copy:
-    // TODO: Create kernel copy stmt
+    createKernelCopy(KernelStmt);
     isl_ast_expr_free(Expr);
     isl_ast_node_free(UserStmt);
     return;
@@ -221,11 +796,266 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   isl_ast_node_free(UserStmt);
   return;
 }
+void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
+  isl_ast_expr *LocalIndex = isl_ast_expr_copy(KernelStmt->u.c.local_index);
+  LocalIndex = isl_ast_expr_address_of(LocalIndex);
+  Value *LocalAddr = ExprBuilder.create(LocalIndex);
+  isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
+  Index = isl_ast_expr_address_of(Index);
+  Value *GlobalAddr = ExprBuilder.create(Index);
+
+  if (KernelStmt->u.c.read) {
+    LoadInst *Load = Builder.CreateLoad(GlobalAddr, "shared.read");
+    Builder.CreateStore(Load, LocalAddr);
+  } else {
+    LoadInst *Load = Builder.CreateLoad(LocalAddr, "shared.write");
+    Builder.CreateStore(Load, GlobalAddr);
+  }
+}
+
+void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
+                                    ppcg_kernel_stmt *KernelStmt) {
+  auto Stmt = (ScopStmt *)KernelStmt->u.d.stmt->stmt;
+  isl_id_to_ast_expr *Indexes = KernelStmt->u.d.ref2expr;
+
+  LoopToScevMapT LTS;
+  LTS.insert(OutsideLoopIterations.begin(), OutsideLoopIterations.end());
+
+  createSubstitutions(Expr, Stmt, LTS);
+
+  if (Stmt->isBlockStmt())
+    BlockGen.copyStmt(*Stmt, LTS, Indexes);
+  else
+    assert(0 && "Region statement not supported\n");
+}
 
 void GPUNodeBuilder::createKernelSync() {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto *Sync = Intrinsic::getDeclaration(M, Intrinsic::nvvm_barrier0);
   Builder.CreateCall(Sync, {});
+}
+
+/// Collect llvm::Values referenced from @p Node
+///
+/// This function only applies to isl_ast_nodes that are user_nodes referring
+/// to a ScopStmt. All other node types are ignore.
+///
+/// @param Node The node to collect references for.
+/// @param User A user pointer used as storage for the data that is collected.
+///
+/// @returns isl_bool_true if data could be collected successfully.
+isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
+  if (isl_ast_node_get_type(Node) != isl_ast_node_user)
+    return isl_bool_true;
+
+  isl_ast_expr *Expr = isl_ast_node_user_get_expr(Node);
+  isl_ast_expr *StmtExpr = isl_ast_expr_get_op_arg(Expr, 0);
+  isl_id *Id = isl_ast_expr_get_id(StmtExpr);
+  const char *Str = isl_id_get_name(Id);
+  isl_id_free(Id);
+  isl_ast_expr_free(StmtExpr);
+  isl_ast_expr_free(Expr);
+
+  if (!isPrefix(Str, "Stmt"))
+    return isl_bool_true;
+
+  Id = isl_ast_node_get_annotation(Node);
+  auto *KernelStmt = (ppcg_kernel_stmt *)isl_id_get_user(Id);
+  auto Stmt = (ScopStmt *)KernelStmt->u.d.stmt->stmt;
+  isl_id_free(Id);
+
+  addReferencesFromStmt(Stmt, User, false /* CreateScalarRefs */);
+
+  return isl_bool_true;
+}
+
+SetVector<Value *> GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
+  SetVector<Value *> SubtreeValues;
+  SetVector<const SCEV *> SCEVs;
+  SetVector<const Loop *> Loops;
+  SubtreeReferences References = {
+      LI, SE, S, ValueMap, SubtreeValues, SCEVs, getBlockGenerator()};
+
+  for (const auto &I : IDToValue)
+    SubtreeValues.insert(I.second);
+
+  isl_ast_node_foreach_descendant_top_down(
+      Kernel->tree, collectReferencesInGPUStmt, &References);
+
+  for (const SCEV *Expr : SCEVs)
+    findValues(Expr, SE, SubtreeValues);
+
+  for (auto &SAI : S.arrays())
+    SubtreeValues.remove(SAI->getBasePtr());
+
+  isl_space *Space = S.getParamSpace();
+  for (long i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
+    isl_id *Id = isl_space_get_dim_id(Space, isl_dim_param, i);
+    assert(IDToValue.count(Id));
+    Value *Val = IDToValue[Id];
+    SubtreeValues.remove(Val);
+    isl_id_free(Id);
+  }
+  isl_space_free(Space);
+
+  for (long i = 0; i < isl_space_dim(Kernel->space, isl_dim_set); i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_set, i);
+    assert(IDToValue.count(Id));
+    Value *Val = IDToValue[Id];
+    SubtreeValues.remove(Val);
+    isl_id_free(Id);
+  }
+
+  return SubtreeValues;
+}
+
+void GPUNodeBuilder::clearDominators(Function *F) {
+  DomTreeNode *N = DT.getNode(&F->getEntryBlock());
+  std::vector<BasicBlock *> Nodes;
+  for (po_iterator<DomTreeNode *> I = po_begin(N), E = po_end(N); I != E; ++I)
+    Nodes.push_back(I->getBlock());
+
+  for (BasicBlock *BB : Nodes)
+    DT.eraseNode(BB);
+}
+
+void GPUNodeBuilder::clearScalarEvolution(Function *F) {
+  for (BasicBlock &BB : *F) {
+    Loop *L = LI.getLoopFor(&BB);
+    if (L)
+      SE.forgetLoop(L);
+  }
+}
+
+void GPUNodeBuilder::clearLoops(Function *F) {
+  for (BasicBlock &BB : *F) {
+    Loop *L = LI.getLoopFor(&BB);
+    if (L)
+      SE.forgetLoop(L);
+    LI.removeBlock(&BB);
+  }
+}
+
+std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
+  std::vector<Value *> Sizes;
+  isl_ast_build *Context = isl_ast_build_from_context(S.getContext());
+
+  for (long i = 0; i < Kernel->n_grid; i++) {
+    isl_pw_aff *Size = isl_multi_pw_aff_get_pw_aff(Kernel->grid_size, i);
+    isl_ast_expr *GridSize = isl_ast_build_expr_from_pw_aff(Context, Size);
+    Value *Res = ExprBuilder.create(GridSize);
+    Res = Builder.CreateTrunc(Res, Builder.getInt32Ty());
+    Sizes.push_back(Res);
+  }
+  isl_ast_build_free(Context);
+
+  for (long i = Kernel->n_grid; i < 3; i++)
+    Sizes.push_back(ConstantInt::get(Builder.getInt32Ty(), 1));
+
+  return std::make_tuple(Sizes[0], Sizes[1]);
+}
+
+std::tuple<Value *, Value *, Value *>
+GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
+  std::vector<Value *> Sizes;
+
+  for (long i = 0; i < Kernel->n_block; i++) {
+    Value *Res = ConstantInt::get(Builder.getInt32Ty(), Kernel->block_dim[i]);
+    Sizes.push_back(Res);
+  }
+
+  for (long i = Kernel->n_block; i < 3; i++)
+    Sizes.push_back(ConstantInt::get(Builder.getInt32Ty(), 1));
+
+  return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
+}
+
+Value *
+GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
+                                       SetVector<Value *> SubtreeValues) {
+  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(),
+                                 std::distance(F->arg_begin(), F->arg_end()));
+
+  BasicBlock *EntryBlock =
+      &Builder.GetInsertBlock()->getParent()->getEntryBlock();
+  std::string Launch = "polly_launch_" + std::to_string(Kernel->id);
+  Instruction *Parameters =
+      new AllocaInst(ArrayTy, Launch + "_params", EntryBlock->getTerminator());
+
+  int Index = 0;
+  for (long i = 0; i < Prog->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+
+    Value *DevArray = DeviceAllocations[(ScopArrayInfo *)SAI];
+    DevArray = createCallGetDevicePtr(DevArray);
+    Instruction *Param = new AllocaInst(
+        Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(DevArray, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  int NumHostIters = isl_space_dim(Kernel->space, isl_dim_set);
+
+  for (long i = 0; i < NumHostIters; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_set, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Instruction *Param = new AllocaInst(
+        Val->getType(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
+
+  for (long i = 0; i < NumVars; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Instruction *Param = new AllocaInst(
+        Val->getType(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  for (auto Val : SubtreeValues) {
+    Instruction *Param = new AllocaInst(
+        Val->getType(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(Val, Param);
+    Value *Slot = Builder.CreateGEP(
+        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  auto Location = EntryBlock->getTerminator();
+  return new BitCastInst(Parameters, Builder.getInt8PtrTy(),
+                         Launch + "_params_i8ptr", Location);
 }
 
 void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
@@ -234,19 +1064,77 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_id_free(Id);
   isl_ast_node_free(KernelStmt);
 
+  Value *BlockDimX, *BlockDimY, *BlockDimZ;
+  std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);
+
+  SetVector<Value *> SubtreeValues = getReferencesInKernel(Kernel);
+
   assert(Kernel->tree && "Device AST of kernel node is empty");
 
   Instruction &HostInsertPoint = *Builder.GetInsertPoint();
   IslExprBuilder::IDToValueTy HostIDs = IDToValue;
+  ValueMapT HostValueMap = ValueMap;
+  BlockGenerator::ScalarAllocaMapTy HostScalarMap = ScalarMap;
+  BlockGenerator::ScalarAllocaMapTy HostPHIOpMap = PHIOpMap;
+  ScalarMap.clear();
+  PHIOpMap.clear();
 
-  createKernelFunction(Kernel);
+  SetVector<const Loop *> Loops;
+
+  // Create for all loops we depend on values that contain the current loop
+  // iteration. These values are necessary to generate code for SCEVs that
+  // depend on such loops. As a result we need to pass them to the subfunction.
+  for (const Loop *L : Loops) {
+    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                                            SE.getUnknown(Builder.getInt64(1)),
+                                            L, SCEV::FlagAnyWrap);
+    Value *V = generateSCEV(OuterLIV);
+    OutsideLoopIterations[L] = SE.getUnknown(V);
+    SubtreeValues.insert(V);
+  }
+
+  createKernelFunction(Kernel, SubtreeValues);
 
   create(isl_ast_node_copy(Kernel->tree));
+
+  Function *F = Builder.GetInsertBlock()->getParent();
+  addCUDAAnnotations(F->getParent(), BlockDimX, BlockDimY, BlockDimZ);
+  clearDominators(F);
+  clearScalarEvolution(F);
+  clearLoops(F);
 
   Builder.SetInsertPoint(&HostInsertPoint);
   IDToValue = HostIDs;
 
-  finalizeKernelFunction();
+  ValueMap = std::move(HostValueMap);
+  ScalarMap = std::move(HostScalarMap);
+  PHIOpMap = std::move(HostPHIOpMap);
+  EscapeMap.clear();
+  IDToSAI.clear();
+  Annotator.resetAlternativeAliasBases();
+  for (auto &BasePtr : LocalArrays)
+    S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
+  LocalArrays.clear();
+
+  Value *Parameters = createLaunchParameters(Kernel, F, SubtreeValues);
+
+  std::string ASMString = finalizeKernelFunction();
+  std::string Name = "kernel_" + std::to_string(Kernel->id);
+  Value *KernelString = Builder.CreateGlobalStringPtr(ASMString, Name);
+  Value *NameString = Builder.CreateGlobalStringPtr(Name, Name + "_name");
+  Value *GPUKernel = createCallGetKernel(KernelString, NameString);
+
+  Value *GridDimX, *GridDimY;
+  std::tie(GridDimX, GridDimY) = getGridSizes(Kernel);
+
+  createCallLaunchKernel(GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
+                         BlockDimZ, Parameters);
+  createCallFreeKernel(GPUKernel);
+
+  for (auto Id : KernelIds)
+    isl_id_free(Id);
+
+  KernelIds.clear();
 }
 
 /// Compute the DataLayout string for the NVPTX backend.
@@ -263,7 +1151,9 @@ static std::string computeNVPTXDataLayout(bool is64Bit) {
   return Ret;
 }
 
-Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
+Function *
+GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
+                                         SetVector<Value *> &SubtreeValues) {
   std::vector<Type *> Args;
   std::string Identifier = "kernel_" + std::to_string(Kernel->id);
 
@@ -281,8 +1171,15 @@ Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
 
   int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
 
-  for (long i = 0; i < NumVars; i++)
-    Args.push_back(Builder.getInt64Ty());
+  for (long i = 0; i < NumVars; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
+    Value *Val = IDToValue[Id];
+    isl_id_free(Id);
+    Args.push_back(Val->getType());
+  }
+
+  for (auto *V : SubtreeValues)
+    Args.push_back(V->getType());
 
   auto *FT = FunctionType::get(Builder.getVoidTy(), Args, false);
   auto *FN = Function::Create(FT, Function::ExternalLinkage, Identifier,
@@ -294,7 +1191,28 @@ Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
     if (!ppcg_kernel_requires_array_argument(Kernel, i))
       continue;
 
-    Arg->setName(Prog->array[i].name);
+    Arg->setName(Kernel->array[i].array->name);
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    Type *EleTy = SAI->getElementType();
+    Value *Val = &*Arg;
+    SmallVector<const SCEV *, 4> Sizes;
+    isl_ast_build *Build =
+        isl_ast_build_from_context(isl_set_copy(Prog->context));
+    for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
+      isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
+          Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
+      auto V = ExprBuilder.create(DimSize);
+      Sizes.push_back(SE.getSCEV(V));
+    }
+    const ScopArrayInfo *SAIRep =
+        S.getOrCreateScopArrayInfo(Val, EleTy, Sizes, ScopArrayInfo::MK_Array);
+    LocalArrays.push_back(Val);
+
+    isl_ast_build_free(Build);
+    KernelIds.push_back(Id);
+    IDToSAI[Id] = SAIRep;
     Arg++;
   }
 
@@ -309,8 +1227,16 @@ Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
   for (long i = 0; i < NumVars; i++) {
     isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
     Arg->setName(isl_id_get_name(Id));
+    Value *Val = IDToValue[Id];
+    ValueMap[Val] = &*Arg;
     IDToValue[Id] = &*Arg;
     KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
+    Arg++;
+  }
+
+  for (auto *V : SubtreeValues) {
+    Arg->setName(V->getName());
+    ValueMap[V] = &*Arg;
     Arg++;
   }
 
@@ -346,14 +1272,91 @@ void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
   }
 }
 
-void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel) {
+void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
+  auto Arg = FN->arg_begin();
+  for (long i = 0; i < Kernel->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    isl_id_free(Id);
+
+    if (SAI->getNumberOfDimensions() > 0) {
+      Arg++;
+      continue;
+    }
+
+    Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
+    Value *ArgPtr = &*Arg;
+    Type *TypePtr = SAI->getElementType()->getPointerTo();
+    Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
+    Value *Val = Builder.CreateLoad(TypedArgPtr);
+    Builder.CreateStore(Val, Alloca);
+
+    Arg++;
+  }
+}
+
+void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+
+  for (int i = 0; i < Kernel->n_var; ++i) {
+    struct ppcg_kernel_var &Var = Kernel->var[i];
+    isl_id *Id = isl_space_get_tuple_id(Var.array->space, isl_dim_set);
+    Type *EleTy = ScopArrayInfo::getFromId(Id)->getElementType();
+
+    Type *ArrayTy = EleTy;
+    SmallVector<const SCEV *, 4> Sizes;
+
+    for (unsigned int j = 1; j < Var.array->n_index; ++j) {
+      isl_val *Val = isl_vec_get_element_val(Var.size, j);
+      long Bound = isl_val_get_num_si(Val);
+      isl_val_free(Val);
+      Sizes.push_back(S.getSE()->getConstant(Builder.getInt64Ty(), Bound));
+    }
+
+    for (int j = Var.array->n_index - 1; j >= 0; --j) {
+      isl_val *Val = isl_vec_get_element_val(Var.size, j);
+      long Bound = isl_val_get_num_si(Val);
+      isl_val_free(Val);
+      ArrayTy = ArrayType::get(ArrayTy, Bound);
+    }
+
+    const ScopArrayInfo *SAI;
+    Value *Allocation;
+    if (Var.type == ppcg_access_shared) {
+      auto GlobalVar = new GlobalVariable(
+          *M, ArrayTy, false, GlobalValue::InternalLinkage, 0, Var.name,
+          nullptr, GlobalValue::ThreadLocalMode::NotThreadLocal, 3);
+      GlobalVar->setAlignment(EleTy->getPrimitiveSizeInBits() / 8);
+      GlobalVar->setInitializer(Constant::getNullValue(ArrayTy));
+
+      Allocation = GlobalVar;
+    } else if (Var.type == ppcg_access_private) {
+      Allocation = Builder.CreateAlloca(ArrayTy, 0, "private_array");
+    } else {
+      llvm_unreachable("unknown variable type");
+    }
+    SAI = S.getOrCreateScopArrayInfo(Allocation, EleTy, Sizes,
+                                     ScopArrayInfo::MK_Array);
+    Id = isl_id_alloc(S.getIslCtx(), Var.name, nullptr);
+    IDToValue[Id] = Allocation;
+    LocalArrays.push_back(Allocation);
+    KernelIds.push_back(Id);
+    IDToSAI[Id] = SAI;
+  }
+}
+
+void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
+                                          SetVector<Value *> &SubtreeValues) {
 
   std::string Identifier = "kernel_" + std::to_string(Kernel->id);
   GPUModule.reset(new Module(Identifier, Builder.getContext()));
   GPUModule->setTargetTriple(Triple::normalize("nvptx64-nvidia-cuda"));
   GPUModule->setDataLayout(computeNVPTXDataLayout(true /* is64Bit */));
 
-  Function *FN = createKernelFunctionDecl(Kernel);
+  Function *FN = createKernelFunctionDecl(Kernel, SubtreeValues);
 
   BasicBlock *PrevBlock = Builder.GetInsertBlock();
   auto EntryBlock = BasicBlock::Create(Builder.getContext(), "entry", FN);
@@ -365,16 +1368,72 @@ void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel) {
   Builder.CreateRetVoid();
   Builder.SetInsertPoint(EntryBlock, EntryBlock->begin());
 
+  ScopDetection::markFunctionAsInvalid(FN);
+
+  prepareKernelArguments(Kernel, FN);
+  createKernelVariables(Kernel, FN);
   insertKernelIntrinsics(Kernel);
 }
 
-void GPUNodeBuilder::finalizeKernelFunction() {
+std::string GPUNodeBuilder::createKernelASM() {
+  llvm::Triple GPUTriple(Triple::normalize("nvptx64-nvidia-cuda"));
+  std::string ErrMsg;
+  auto GPUTarget = TargetRegistry::lookupTarget(GPUTriple.getTriple(), ErrMsg);
+
+  if (!GPUTarget) {
+    errs() << ErrMsg << "\n";
+    return "";
+  }
+
+  TargetOptions Options;
+  Options.UnsafeFPMath = FastMath;
+  std::unique_ptr<TargetMachine> TargetM(
+      GPUTarget->createTargetMachine(GPUTriple.getTriple(), CudaVersion, "",
+                                     Options, Optional<Reloc::Model>()));
+
+  SmallString<0> ASMString;
+  raw_svector_ostream ASMStream(ASMString);
+  llvm::legacy::PassManager PM;
+
+  PM.add(createTargetTransformInfoWrapperPass(TargetM->getTargetIRAnalysis()));
+
+  if (TargetM->addPassesToEmitFile(
+          PM, ASMStream, TargetMachine::CGFT_AssemblyFile, true /* verify */)) {
+    errs() << "The target does not support generation of this file type!\n";
+    return "";
+  }
+
+  PM.run(*GPUModule);
+
+  return ASMStream.str();
+}
+
+std::string GPUNodeBuilder::finalizeKernelFunction() {
+  // Verify module.
+  llvm::legacy::PassManager Passes;
+  Passes.add(createVerifierPass());
+  Passes.run(*GPUModule);
 
   if (DumpKernelIR)
     outs() << *GPUModule << "\n";
 
+  // Optimize module.
+  llvm::legacy::PassManager OptPasses;
+  PassManagerBuilder PassBuilder;
+  PassBuilder.OptLevel = 3;
+  PassBuilder.SizeLevel = 0;
+  PassBuilder.populateModulePassManager(OptPasses);
+  OptPasses.run(*GPUModule);
+
+  std::string Assembly = createKernelASM();
+
+  if (DumpKernelASM)
+    outs() << Assembly << "\n";
+
   GPUModule.release();
   KernelIDs.clear();
+
+  return Assembly;
 }
 
 namespace {
@@ -405,6 +1464,7 @@ public:
     DebugOptions->dump_schedule = false;
     DebugOptions->dump_final_schedule = false;
     DebugOptions->dump_sizes = false;
+    DebugOptions->verbose = false;
 
     Options->debug = DebugOptions;
 
@@ -418,9 +1478,9 @@ public:
 
     Options->tile_size = 32;
 
-    Options->use_private_memory = false;
-    Options->use_shared_memory = false;
-    Options->max_shared_memory = 0;
+    Options->use_private_memory = PrivateMemory;
+    Options->use_shared_memory = SharedMemory;
+    Options->max_shared_memory = 48 * 1024;
 
     Options->target = PPCG_TARGET_CUDA;
     Options->openmp = false;
@@ -522,7 +1582,7 @@ public:
     }
 
     for (auto &Array : S->arrays()) {
-      auto Id = Array.second->getBasePtrId();
+      auto Id = Array->getBasePtrId();
       Names = isl_id_to_ast_expr_set(Names, Id, isl_ast_expr_copy(Zero));
     }
 
@@ -601,9 +1661,10 @@ public:
       isl_map *Universe = isl_map_universe(Space);
       Access->tagged_access =
           isl_map_domain_product(Acc->getAccessRelation(), Universe);
-      Access->exact_write = Acc->isWrite();
+      Access->exact_write = !Acc->isMayWrite();
       Access->ref_id = Acc->getId();
       Access->next = Accesses;
+      Access->n_index = Acc->getScopArrayInfo()->getNumberOfDimensions();
       Accesses = Access;
     }
 
@@ -639,21 +1700,78 @@ public:
 
   /// Derive the extent of an array.
   ///
-  /// The extent of an array is defined by the set of memory locations for
-  /// which a memory access in the iteration domain exists.
+  /// The extent of an array is the set of elements that are within the
+  /// accessed array. For the inner dimensions, the extent constraints are
+  /// 0 and the size of the corresponding array dimension. For the first
+  /// (outermost) dimension, the extent constraints are the minimal and maximal
+  /// subscript value for the first dimension.
   ///
   /// @param Array The array to derive the extent for.
   ///
   /// @returns An isl_set describing the extent of the array.
   __isl_give isl_set *getExtent(ScopArrayInfo *Array) {
+    unsigned NumDims = Array->getNumberOfDimensions();
     isl_union_map *Accesses = S->getAccesses();
     Accesses = isl_union_map_intersect_domain(Accesses, S->getDomains());
+    Accesses = isl_union_map_detect_equalities(Accesses);
     isl_union_set *AccessUSet = isl_union_map_range(Accesses);
+    AccessUSet = isl_union_set_coalesce(AccessUSet);
+    AccessUSet = isl_union_set_detect_equalities(AccessUSet);
+    AccessUSet = isl_union_set_coalesce(AccessUSet);
+
+    if (isl_union_set_is_empty(AccessUSet)) {
+      isl_union_set_free(AccessUSet);
+      return isl_set_empty(Array->getSpace());
+    }
+
+    if (Array->getNumberOfDimensions() == 0) {
+      isl_union_set_free(AccessUSet);
+      return isl_set_universe(Array->getSpace());
+    }
+
     isl_set *AccessSet =
         isl_union_set_extract_set(AccessUSet, Array->getSpace());
-    isl_union_set_free(AccessUSet);
 
-    return AccessSet;
+    isl_union_set_free(AccessUSet);
+    isl_local_space *LS = isl_local_space_from_space(Array->getSpace());
+
+    isl_pw_aff *Val =
+        isl_pw_aff_from_aff(isl_aff_var_on_domain(LS, isl_dim_set, 0));
+
+    isl_pw_aff *OuterMin = isl_set_dim_min(isl_set_copy(AccessSet), 0);
+    isl_pw_aff *OuterMax = isl_set_dim_max(AccessSet, 0);
+    OuterMin = isl_pw_aff_add_dims(OuterMin, isl_dim_in,
+                                   isl_pw_aff_dim(Val, isl_dim_in));
+    OuterMax = isl_pw_aff_add_dims(OuterMax, isl_dim_in,
+                                   isl_pw_aff_dim(Val, isl_dim_in));
+    OuterMin =
+        isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in, Array->getBasePtrId());
+    OuterMax =
+        isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in, Array->getBasePtrId());
+
+    isl_set *Extent = isl_set_universe(Array->getSpace());
+
+    Extent = isl_set_intersect(
+        Extent, isl_pw_aff_le_set(OuterMin, isl_pw_aff_copy(Val)));
+    Extent = isl_set_intersect(Extent, isl_pw_aff_ge_set(OuterMax, Val));
+
+    for (unsigned i = 1; i < NumDims; ++i)
+      Extent = isl_set_lower_bound_si(Extent, isl_dim_set, i, 0);
+
+    for (unsigned i = 1; i < NumDims; ++i) {
+      isl_pw_aff *PwAff =
+          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i));
+      isl_pw_aff *Val = isl_pw_aff_from_aff(isl_aff_var_on_domain(
+          isl_local_space_from_space(Array->getSpace()), isl_dim_set, i));
+      PwAff = isl_pw_aff_add_dims(PwAff, isl_dim_in,
+                                  isl_pw_aff_dim(Val, isl_dim_in));
+      PwAff = isl_pw_aff_set_tuple_id(PwAff, isl_dim_in,
+                                      isl_pw_aff_get_tuple_id(Val, isl_dim_in));
+      auto *Set = isl_pw_aff_gt_set(PwAff, Val);
+      Extent = isl_set_intersect(Set, Extent);
+    }
+
+    return Extent;
   }
 
   /// Derive the bounds of an array.
@@ -693,9 +1811,7 @@ public:
   /// @param PPCGProg The program to compute the arrays for.
   void createArrays(gpu_prog *PPCGProg) {
     int i = 0;
-    for (auto &Element : S->arrays()) {
-      ScopArrayInfo *Array = Element.second.get();
-
+    for (auto &Array : S->arrays()) {
       std::string TypeName;
       raw_string_ostream OS(TypeName);
 
@@ -723,6 +1839,7 @@ public:
       PPCGArray.global = false;
       PPCGArray.linearize = false;
       PPCGArray.dep_order = nullptr;
+      PPCGArray.user = Array;
 
       setArrayBounds(PPCGArray, Array);
       i++;
@@ -737,8 +1854,7 @@ public:
   isl_union_map *getArrayIdentity() {
     isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
 
-    for (auto &Item : S->arrays()) {
-      ScopArrayInfo *Array = Item.second.get();
+    for (auto &Array : S->arrays()) {
       isl_space *Space = Array->getSpace();
       Space = isl_space_map_from_set(Space);
       isl_map *Identity = isl_map_identity(Space);
@@ -768,7 +1884,6 @@ public:
         isl_union_map_copy(PPCGScop->tagged_must_kills);
     PPCGProg->to_inner = getArrayIdentity();
     PPCGProg->to_outer = getArrayIdentity();
-    PPCGProg->may_persist = compute_may_persist(PPCGProg);
     PPCGProg->any_to_outer = nullptr;
     PPCGProg->array_order = nullptr;
     PPCGProg->n_stmts = std::distance(S->begin(), S->end());
@@ -778,6 +1893,8 @@ public:
                                        PPCGProg->n_array);
 
     createArrays(PPCGProg);
+
+    PPCGProg->may_persist = compute_may_persist(PPCGProg);
 
     return PPCGProg;
   }
@@ -996,13 +2113,22 @@ public:
         executeScopConditionally(*S, this, Builder.getTrue());
 
     // TODO: Handle LICM
-    // TODO: Verify run-time checks
     auto SplitBlock = StartBlock->getSinglePredecessor();
     Builder.SetInsertPoint(SplitBlock->getTerminator());
     NodeBuilder.addParameters(S->getContext());
+
+    isl_ast_build *Build = isl_ast_build_alloc(S->getIslCtx());
+    isl_ast_expr *Condition = IslAst::buildRunCondition(S, Build);
+    isl_ast_build_free(Build);
+
+    Value *RTC = NodeBuilder.createRTC(Condition);
+    Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
+
     Builder.SetInsertPoint(&*StartBlock->begin());
+
+    NodeBuilder.initializeAfterRTH();
     NodeBuilder.create(Root);
-    NodeBuilder.finalizeSCoP(*S);
+    NodeBuilder.finalize();
   }
 
   bool runOnScop(Scop &CurrentScop) override {

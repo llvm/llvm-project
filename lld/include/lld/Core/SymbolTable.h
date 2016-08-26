@@ -46,21 +46,11 @@ public:
   /// @brief add atom to symbol table
   bool add(const AbsoluteAtom &);
 
-  /// @brief checks if name is in symbol table and if so atom is not
-  ///        UndefinedAtom
-  bool isDefined(StringRef sym);
-
   /// @brief returns atom in symbol table for specified name (or nullptr)
   const Atom *findByName(StringRef sym);
 
   /// @brief returns vector of remaining UndefinedAtoms
   std::vector<const UndefinedAtom *> undefines();
-
-  /// returns vector of tentative definitions
-  std::vector<StringRef> tentativeDefinitions();
-
-  /// @brief add atom to replacement table
-  void addReplacement(const Atom *replaced, const Atom *replacement);
 
   /// @brief if atom has been coalesced away, return replacement, else return atom
   const Atom *replacement(const Atom *);

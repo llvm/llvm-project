@@ -18,7 +18,7 @@
 
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/Support/ScopHelper.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "isl/map.h"
 
@@ -57,8 +57,8 @@ public:
   ///
   /// @see The EscapeMap member.
   using EscapeUsersAllocaMapTy =
-      DenseMap<Instruction *,
-               std::pair<AssertingVH<Value>, EscapeUserVectorTy>>;
+      MapVector<Instruction *,
+                std::pair<AssertingVH<Value>, EscapeUserVectorTy>>;
 
   ///@}
 
@@ -536,10 +536,28 @@ protected:
   void copyInstruction(ScopStmt &Stmt, Instruction *Inst, ValueMapT &BBMap,
                        LoopToScevMapT &LTS, isl_id_to_ast_expr *NewAccesses);
 
-  /// @brief Helper to determine if @p Inst can be synthezised in @p Stmt.
+  /// @brief Helper to determine if @p Inst can be synthesized in @p Stmt.
   ///
   /// @returns false, iff @p Inst can be synthesized in @p Stmt.
   bool canSyntheziseInStmt(ScopStmt &Stmt, Instruction *Inst);
+
+  /// @brief Remove dead instructions generated for BB
+  ///
+  /// @param BB The basic block code for which code has been generated.
+  /// @param BBMap A local map from old to new instructions.
+  void removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap);
+
+  /// @brief Invalidate the scalar evolution expressions for a scop.
+  ///
+  /// This function invalidates the scalar evolution results for all
+  /// instructions that are part of a given scop. This is necessary to ensure
+  /// that later scops do not obtain scalar evolution expressions that reference
+  /// values that earlier dominated the later scop, but have been moved in the
+  /// conditional part of an earlier scop and consequently do not any more
+  /// dominate the later scop.
+  ///
+  /// @param S The scop to invalidate.
+  void invalidateScalarEvolution(Scop &S);
 };
 
 /// @brief Generate a new vector basic block for a polyhedral statement.
@@ -563,7 +581,7 @@ public:
   ///                     within this basic block), one for each lane.
   /// @param Schedule    A map from the statement to a schedule where the
   ///                    innermost dimension is the dimension of the innermost
-  ///                    loop containing the statemenet.
+  ///                    loop containing the statement.
   /// @param NewAccesses A map from memory access ids to new ast expressions,
   ///                    which may contain new access expressions for certain
   ///                    memory accesses.
@@ -580,7 +598,7 @@ private:
   // vector lane, ...
   // Each map, contains information about Instructions in the old ScoP, which
   // are recalculated in the new SCoP. When copying the basic block, we replace
-  // all referenes to the old instructions with their recalculated values.
+  // all references to the old instructions with their recalculated values.
   //
   // For example, when the code generator produces this AST:
   //
@@ -595,7 +613,7 @@ private:
   std::vector<LoopToScevMapT> &VLTS;
 
   // A map from the statement to a schedule where the innermost dimension is the
-  // dimension of the innermost loop containing the statemenet.
+  // dimension of the innermost loop containing the statement.
   isl_map *Schedule;
 
   VectorBlockGenerator(BlockGenerator &BlockGen,

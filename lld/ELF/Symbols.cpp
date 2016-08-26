@@ -58,13 +58,15 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       Offset += Addend;
       Addend = 0;
     }
-    uintX_t VA = SC->OutSec->getVA() + SC->getOffset(Offset);
+    uintX_t VA = (SC->OutSec ? SC->OutSec->getVA() : 0) + SC->getOffset(Offset);
     if (D.isTls())
       return VA - Out<ELFT>::TlsPhdr->p_vaddr;
     return VA;
   }
   case SymbolBody::DefinedCommonKind:
-    return Out<ELFT>::Bss->getVA() + cast<DefinedCommon>(Body).OffsetInBss;
+    return CommonInputSection<ELFT>::X->OutSec->getVA() +
+           CommonInputSection<ELFT>::X->OutSecOff +
+           cast<DefinedCommon<ELFT>>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(Body);
     if (!SS.NeedsCopyOrPltAddr)
@@ -99,11 +101,6 @@ SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
 StringRef SymbolBody::getName() const {
   assert(!isLocal());
   return StringRef(Name.S, Name.Len);
-}
-
-void SymbolBody::setName(StringRef S) {
-  Name.S = S.data();
-  Name.Len = S.size();
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -180,7 +177,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
-  if (const auto *C = dyn_cast<DefinedCommon>(this))
+  if (const auto *C = dyn_cast<DefinedCommon<ELFT>>(this))
     return C->Size;
   if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
     return DR->Size;
@@ -223,8 +220,10 @@ DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
     : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
-DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
-                             uint8_t StOther, uint8_t Type, InputFile *File)
+template <class ELFT>
+DefinedCommon<ELFT>::DefinedCommon(StringRef N, uint64_t Size,
+                                   uint64_t Alignment, uint8_t StOther,
+                                   uint8_t Type, InputFile *File)
     : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
       Alignment(Alignment), Size(Size) {
   this->File = File;
@@ -334,3 +333,8 @@ template class elf::DefinedSynthetic<ELF32LE>;
 template class elf::DefinedSynthetic<ELF32BE>;
 template class elf::DefinedSynthetic<ELF64LE>;
 template class elf::DefinedSynthetic<ELF64BE>;
+
+template class elf::DefinedCommon<ELF32LE>;
+template class elf::DefinedCommon<ELF32BE>;
+template class elf::DefinedCommon<ELF64LE>;
+template class elf::DefinedCommon<ELF64BE>;

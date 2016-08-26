@@ -176,7 +176,7 @@ bool polly::PollyInvariantLoadHoisting;
 static cl::opt<bool, true> XPollyInvariantLoadHoisting(
     "polly-invariant-load-hoisting", cl::desc("Hoist invariant loads."),
     cl::location(PollyInvariantLoadHoisting), cl::Hidden, cl::ZeroOrMore,
-    cl::init(true), cl::cat(PollyCategory));
+    cl::init(false), cl::cat(PollyCategory));
 
 /// @brief The minimal trip count under which loops are considered unprofitable.
 static const unsigned MIN_LOOP_TRIP_COUNT = 8;
@@ -1151,12 +1151,16 @@ Region *ScopDetection::expandRegion(Region &R) {
       //  - if false, .tbd. => stop  (should this really end the loop?)
       if (!allBlocksValid(Context) || Context.Log.hasErrors()) {
         removeCachedResults(*ExpandedRegion);
+        DetectionContextMap.erase(It.first);
         break;
       }
 
       // Store this region, because it is the greatest valid (encountered so
       // far).
-      removeCachedResults(*LastValidRegion);
+      if (LastValidRegion) {
+        removeCachedResults(*LastValidRegion);
+        DetectionContextMap.erase(getBBPairForRegion(LastValidRegion.get()));
+      }
       LastValidRegion = std::move(ExpandedRegion);
 
       // Create and test the next greater region (if any)
@@ -1166,6 +1170,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     } else {
       // Create and test the next greater region (if any)
       removeCachedResults(*ExpandedRegion);
+      DetectionContextMap.erase(It.first);
       ExpandedRegion =
           std::unique_ptr<Region>(ExpandedRegion->getExpandedRegion());
     }
@@ -1402,7 +1407,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
   return true;
 }
 
-void ScopDetection::markFunctionAsInvalid(Function *F) const {
+void ScopDetection::markFunctionAsInvalid(Function *F) {
   F->addFnAttr(PollySkipFnAttr);
 }
 

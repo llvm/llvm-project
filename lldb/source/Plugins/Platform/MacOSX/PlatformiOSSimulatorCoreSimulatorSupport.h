@@ -280,10 +280,10 @@ namespace CoreSimulatorSupport
     {
     public:
         static DeviceSet
-        GetAllDevices ();
+        GetAllDevices (const char *developer_dir);
         
         static DeviceSet
-        GetAvailableDevices ();
+        GetAvailableDevices (const char *developer_dir);
         
         size_t
         GetNumDevices ();

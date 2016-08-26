@@ -32,10 +32,10 @@ REPL::REPL(LLVMCastKind kind, Target &target) :
 {
     // Make sure all option values have sane defaults
     Debugger &debugger = m_target.GetDebugger();
-    CommandInterpreter &ci = debugger.GetCommandInterpreter();
-    m_format_options.OptionParsingStarting(ci);
-    m_varobj_options.OptionParsingStarting(ci);
-    m_command_options.OptionParsingStarting(ci);
+    auto exe_ctx = debugger.GetCommandInterpreter().GetExecutionContext();
+    m_format_options.OptionParsingStarting(&exe_ctx);
+    m_varobj_options.OptionParsingStarting(&exe_ctx);
+    m_command_options.OptionParsingStarting(&exe_ctx);
     
     // Default certain settings for REPL regardless of the global settings.
     m_command_options.unwind_on_error = false;

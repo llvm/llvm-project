@@ -169,12 +169,6 @@ function(find_python_libs_windows)
 endfunction(find_python_libs_windows)
 
 if (NOT LLDB_DISABLE_PYTHON)
-  if(UNIX)
-    # This is necessary for crosscompile on Ubuntu 14.04 64bit. Need a proper fix.
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-      set(CMAKE_LIBRARY_ARCHITECTURE "x86_64-linux-gnu")
-    endif()
-  endif()
 
   if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
     find_python_libs_windows()
@@ -275,16 +269,6 @@ endif()
 string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" LLDB_VERSION
   ${PACKAGE_VERSION})
 message(STATUS "LLDB version: ${LLDB_VERSION}")
-
-if (CMAKE_VERSION VERSION_LESS 2.8.12)
-  set(cmake_2_8_12_INTERFACE)
-  set(cmake_2_8_12_PRIVATE)
-  set(cmake_2_8_12_PUBLIC)
-else ()
-  set(cmake_2_8_12_INTERFACE INTERFACE)
-  set(cmake_2_8_12_PRIVATE PRIVATE)
-  set(cmake_2_8_12_PUBLIC PUBLIC)
-endif ()
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -419,4 +403,13 @@ if(LLDB_USING_LIBSTDCXX)
             "- enable exceptions (via LLVM_ENABLE_EH)\n"
             "- ignore this warning and accept occasional instability")
     endif()
+endif()
+
+if(MSVC)
+    set(LLDB_USE_BUILTIN_DEMANGLER ON)
+else()
+    option(LLDB_USE_BUILTIN_DEMANGLER "Use lldb's builtin demangler instead of the system one" ON)
+endif()
+if(LLDB_USE_BUILTIN_DEMANGLER)
+    add_definitions(-DLLDB_USE_BUILTIN_DEMANGLER)
 endif()

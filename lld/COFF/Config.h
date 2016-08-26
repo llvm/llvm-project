@@ -61,6 +61,13 @@ struct Export {
   }
 };
 
+enum class DebugType {
+  None  = 0x0,
+  CV    = 0x1,  /// CodeView
+  PData = 0x2,  /// Procedure Data
+  Fixup = 0x4,  /// Relocation Table
+};
+
 // Global configuration.
 struct Configuration {
   enum ManifestKind { SideBySide, Embed, No };
@@ -78,6 +85,7 @@ struct Configuration {
   bool Force = false;
   bool Debug = false;
   bool WriteSymtab = true;
+  unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
 
   // Symbols in this set are considered as live by the garbage collector.
   std::set<Undefined *> GCRoot;

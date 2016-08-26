@@ -618,10 +618,9 @@ basic_filebuf<_CharT, _Traits>::underflow()
             size_t __nr = fread((void*)__extbufnext_, 1, __nmemb, __file_);
             if (__nr != 0)
             {
-#ifndef _LIBCPP_NO_EXCEPTIONS
                 if (!__cv_)
-                    throw bad_cast();
-#endif
+                    __throw_bad_cast();
+
                 __extbufend_ = __extbufnext_ + __nr;
                 char_type*  __inext;
                 __r = __cv_->in(__st_, __extbuf_, __extbufend_, __extbufnext_,
@@ -700,10 +699,9 @@ basic_filebuf<_CharT, _Traits>::overflow(int_type __c)
             codecvt_base::result __r;
             do
             {
-#ifndef _LIBCPP_NO_EXCEPTIONS
                 if (!__cv_)
-                    throw bad_cast();
-#endif
+                    __throw_bad_cast();
+
                 const char_type* __e;
                 __r = __cv_->out(__st_, this->pbase(), this->pptr(), __e,
                                         __extbuf_, __extbuf_ + __ebs_, __extbe);
@@ -793,10 +791,9 @@ typename basic_filebuf<_CharT, _Traits>::pos_type
 basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
                                         ios_base::openmode)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (!__cv_)
-        throw bad_cast();
-#endif
+        __throw_bad_cast();
+
     int __width = __cv_->encoding();
     if (__file_ == 0 || (__width <= 0 && __off != 0) || sync())
         return pos_type(off_type(-1));
@@ -852,10 +849,9 @@ basic_filebuf<_CharT, _Traits>::sync()
 {
     if (__file_ == 0)
         return 0;
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (!__cv_)
-        throw bad_cast();
-#endif
+        __throw_bad_cast();
+
     if (__cm_ & ios_base::out)
     {
         if (this->pptr() != this->pbase())

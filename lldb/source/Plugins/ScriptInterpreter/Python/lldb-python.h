@@ -15,6 +15,12 @@
 #ifdef LLDB_DISABLE_PYTHON
 // Python is disabled in this build
 #else
+#include "llvm/Support/Compiler.h"
+#if defined(LLVM_ON_WIN32)
+// If anyone #includes Host/PosixApi.h later, it will try to typedef pid_t.  We need to ensure
+// this doesn't happen.
+#define NO_PID_T
+#endif
 #if defined(__linux__)
 // features.h will define _POSIX_C_SOURCE if _GNU_SOURCE is defined.  This value
 // may be different from the value that Python defines it to be which results

@@ -386,7 +386,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
                                   lldb::TargetSP &target_sp,
                                   bool is_dummy_target)
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "TargetList::CreateTarget (file = '%s', arch = '%s')",
                         user_exe_path,
                         specified_arch.GetArchitectureName());

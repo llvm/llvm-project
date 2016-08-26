@@ -34,7 +34,20 @@
                                     <b>Important</b>: Where not explicitly outlined below, assume that the
                                     <a href="http://llvm.org/docs/CodingStandards.html">LLVM Coding Conventions</a> are to be followed.
                                   </p>
-
+                                      <h3>Include Order:</h3>
+                                      <p>LLDB follows <a href="http://llvm.org/docs/CodingStandards.html#include-style">LLVM's include order</a>,
+                                        with an addition for LLDB specific headers.</p>
+                                        <ol class="arabic simple" id="local-private-headers">
+                                            <span id="main-module-header"></span>
+                                            <li>Main Module Header</li>
+                                            <li>Local/Private Headers</li>
+                                            <li><code class="docutils literal"><span class="pre">lldb/...</span></code></li>
+                                            <li><code class="docutils literal"><span class="pre">llvm/...</span></code></li>
+                                            <li>System <code class="docutils literal"><span class="pre">#include</span></code>s</li>
+                                        </ol>
+                                      <p>If you encounter existing code that does not follow this ordering, it should not be
+                                        taken as an indication that it is ok to not use it.  Instead, the surrounding ordering
+                                        should be fixed gradually and incrementally.</p>
                                       <h3>Source code width:</h3>
                                       <p>lldb does not follow the 80 character line restriction llvm imposes.  In our 
                                         experience, trying to fit C++ code into an 80 character line results in code that

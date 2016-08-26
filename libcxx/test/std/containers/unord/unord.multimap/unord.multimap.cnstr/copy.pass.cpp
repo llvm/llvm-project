@@ -21,6 +21,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -51,7 +52,7 @@ int main()
             test_allocator<std::pair<const int, std::string> >(10)
            );
         C c = c0;
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         C::const_iterator i = c.cbegin();
         assert(i->first == 1);
@@ -105,7 +106,7 @@ int main()
             other_allocator<std::pair<const int, std::string> >(10)
            );
         C c = c0;
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         C::const_iterator i = c.cbegin();
         assert(i->first == 1);
@@ -160,7 +161,7 @@ int main()
             min_allocator<std::pair<const int, std::string> >()
            );
         C c = c0;
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         C::const_iterator i = c.cbegin();
         assert(i->first == 1);

@@ -941,7 +941,7 @@ ProcessKDP::AsyncThread (void *arg)
             if (log)
                 log->Printf ("ProcessKDP::AsyncThread (pid = %" PRIu64 ") listener.WaitForEvent (NULL, event_sp)...",
                              pid);
-            if (listener_sp->WaitForEvent (NULL, event_sp))
+            if (listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp))
             {
                 uint32_t event_type = event_sp->GetType();
                 if (log)
@@ -1050,7 +1050,7 @@ public:
                              "process plugin packet send",
                              "Send a custom packet through the KDP protocol by specifying the command byte and the packet payload data. A packet will be sent with a correct header and payload, and the raw result bytes will be displayed as a string value. ",
                              NULL),
-        m_option_group (interpreter),
+        m_option_group(),
         m_command_byte(LLDB_OPT_SET_1, true , "command", 'c', 0, eArgTypeNone, "Specify the command byte to use when sending the KDP request packet.", 0),
         m_packet_data (LLDB_OPT_SET_1, false, "payload", 'p', 0, eArgTypeNone, "Specify packet payload bytes as a hex ASCII string with no spaces or hex prefixes.", NULL)
     {

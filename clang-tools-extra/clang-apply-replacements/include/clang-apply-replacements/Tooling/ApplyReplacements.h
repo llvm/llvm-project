@@ -91,6 +91,11 @@ bool mergeAndDeduplicate(const TUReplacements &TUs,
                          FileToReplacementsMap &GroupedReplacements,
                          clang::SourceManager &SM);
 
+// FIXME: Remove this function after changing clang-apply-replacements to use
+// Replacements class.
+bool applyAllReplacements(const std::vector<tooling::Replacement> &Replaces,
+                          Rewriter &Rewrite);
+
 /// \brief Apply all replacements in \c GroupedReplacements.
 ///
 /// \param[in] GroupedReplacements Deduplicated and conflict free Replacements

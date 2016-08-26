@@ -1527,6 +1527,8 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
     test_directory = os.path.dirname(os.path.realpath(__file__))
     if test_subdir and len(test_subdir) > 0:
         test_subdir = os.path.join(test_directory, test_subdir)
+        if not os.path.isdir(test_subdir):
+          print('specified test subdirectory {} is not a valid directory\n'.format(test_subdir))
     else:
         test_subdir = test_directory
 

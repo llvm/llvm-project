@@ -44,7 +44,7 @@ public:
                             "command history",
                             "Dump the history of commands in this session.",
                             nullptr),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -60,8 +60,8 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions() :
+            Options(),
             m_start_idx(0),
             m_stop_idx(0),
             m_count(0),
@@ -72,7 +72,8 @@ protected:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -107,7 +108,7 @@ protected:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_start_idx.Clear();
             m_stop_idx.Clear();
@@ -238,7 +239,7 @@ public:
     CommandObjectCommandsSource(CommandInterpreter &interpreter)
         : CommandObjectParsed(interpreter, "command source", "Read and execute LLDB commands from the file <filename>.",
                               nullptr),
-          m_options(interpreter)
+          m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData file_arg;
@@ -274,8 +275,8 @@ public:
     {
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
-        
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eDiskFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -296,8 +297,8 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions() :
+            Options(),
             m_stop_on_error (true),
             m_silent_run (false),
             m_stop_on_continue (true)
@@ -307,7 +308,8 @@ protected:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -335,7 +337,7 @@ protected:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_stop_on_error.Clear();
             m_silent_run.Clear();
@@ -454,9 +456,9 @@ protected:
         }
         
         Error
-        SetOptionValue (CommandInterpreter &interpreter,
-                        uint32_t option_idx,
-                        const char *option_value) override
+        SetOptionValue (uint32_t option_idx,
+                        const char *option_value,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             
@@ -483,7 +485,7 @@ protected:
         }
         
         void
-        OptionParsingStarting (CommandInterpreter &interpreter) override
+        OptionParsingStarting (ExecutionContext *execution_context) override
         {
             m_help.Clear();
             m_long_help.Clear();
@@ -509,7 +511,7 @@ public:
     CommandObjectCommandsAlias(CommandInterpreter &interpreter)
         : CommandObjectRaw(interpreter, "command alias", "Define a custom command in terms of an existing command.",
                            nullptr),
-          m_option_group(interpreter),
+          m_option_group(),
           m_command_options()
     {
         m_option_group.Append(&m_command_options);
@@ -630,8 +632,9 @@ protected:
             result.AppendError ("'command alias' requires at least two arguments");
             return false;
         }
-        
-        m_option_group.NotifyOptionParsingStarting();
+
+        ExecutionContext exe_ctx = GetCommandInterpreter().GetExecutionContext();
+        m_option_group.NotifyOptionParsingStarting(&exe_ctx);
         
         const char * remainder = nullptr;
         
@@ -663,7 +666,7 @@ protected:
                 if (!ParseOptions (args, result))
                     return false;
                 
-                Error error (m_option_group.NotifyOptionParsingFinished());
+                Error error (m_option_group.NotifyOptionParsingFinished(&exe_ctx));
                 if (error.Fail())
                 {
                     result.AppendError (error.AsCString());
@@ -1092,7 +1095,7 @@ public:
                               "Define a custom command in terms of existing commands by matching regular expressions.",
                               "command regex <cmd-name> [s/<regex>/<subst>/ ...]"),
           IOHandlerDelegateMultiline("", IOHandlerDelegate::Completion::LLDBCommand),
-          m_options(interpreter)
+          m_options()
     {
         SetHelpLong(R"(
 )" "This command allows the user to create powerful regular expression commands \
@@ -1376,15 +1379,16 @@ private:
      class CommandOptions : public Options
      {
      public:
-         CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+         CommandOptions() :
+            Options()
          {
          }
 
          ~CommandOptions() override = default;
 
          Error
-         SetOptionValue (uint32_t option_idx, const char *option_arg) override
+         SetOptionValue (uint32_t option_idx, const char *option_arg,
+                         ExecutionContext *execution_context) override
          {
              Error error;
              const int short_option = m_getopt_table[option_idx].val;
@@ -1406,7 +1410,7 @@ private:
          }
          
          void
-         OptionParsingStarting () override
+         OptionParsingStarting (ExecutionContext *execution_context) override
          {
              m_help.clear();
              m_syntax.clear();
@@ -1693,7 +1697,7 @@ public:
                             "command script import",
                             "Import a scripting module in LLDB.",
                             nullptr),
-        m_options(interpreter)
+        m_options()
     {
         CommandArgumentEntry arg1;
         CommandArgumentData cmd_arg;
@@ -1723,8 +1727,8 @@ public:
     {
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
-        
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eDiskFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -1745,15 +1749,16 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1772,7 +1777,7 @@ protected:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_allow_reload = true;
         }
@@ -1867,7 +1872,7 @@ public:
                             "Add a scripted function as an LLDB command.",
                             nullptr),
         IOHandlerDelegateMultiline ("DONE"),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg1;
         CommandArgumentData cmd_arg;
@@ -1895,8 +1900,8 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions() :
+            Options(),
             m_class_name(),
             m_funct_name(),
             m_short_help(),
@@ -1907,7 +1912,8 @@ protected:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1940,7 +1946,7 @@ protected:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_class_name.clear();
             m_funct_name.clear();

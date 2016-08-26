@@ -36,18 +36,27 @@ struct TestCase {
     CHECK(err_str.empty()) << "Could not construct regex \"" << regex << "\""
                            << " got Error: " << err_str;
 
+    std::string near = "<EOF>";
     std::string line;
+    bool first = true;
     while (remaining_output.eof() == false) {
         CHECK(remaining_output.good());
         std::getline(remaining_output, line);
+        // Keep the first line as context.
+        if (first) {
+            near = line;
+            first = false;
+        }
         if (r.Match(line)) return;
         CHECK(match_rule != MR_Next) << "Expected line \"" << line
-                                     << "\" to match regex \"" << regex << "\"";
+                                     << "\" to match regex \"" << regex << "\""
+                                     << "\nstarted matching at line: \"" << near << "\"";
     }
 
     CHECK(remaining_output.eof() == false)
         << "End of output reached before match for regex \"" << regex
-        << "\" was found";
+        << "\" was found"
+        << "\nstarted matching at line: \"" << near << "\"";
   }
 };
 
@@ -112,7 +121,7 @@ std::string join(First f, Args&&... args) {
     return std::string(std::move(f)) + "[ ]+" + join(std::forward<Args>(args)...);
 }
 
-std::string dec_re = "[0-9]+\\.[0-9]+";
+std::string dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
 
 #define ADD_COMPLEXITY_CASES(...) \
     int CONCAT(dummy, __LINE__) = AddComplexityTest(__VA_ARGS__)
@@ -138,7 +147,7 @@ int AddComplexityTest(std::vector<TestCase>* console_out, std::vector<TestCase>*
   });
   AddCases(csv_out, {
     {"^\"" + big_o_test_name + "\",," + dec_re + "," + dec_re + "," + big_o + ",,,,,$"},
-    {"^\"" + rms_test_name + "\",," + dec_re + "," + dec_re + ",,,,,,$"}
+    {"^\"" + rms_test_name + "\",," + dec_re + "," + dec_re + ",,,,,,$", MR_Next}
   });
   return 0;
 }
@@ -151,12 +160,15 @@ int AddComplexityTest(std::vector<TestCase>* console_out, std::vector<TestCase>*
 
 void BM_Complexity_O1(benchmark::State& state) {
   while (state.KeepRunning()) {
+      for (int i=0; i < 1024; ++i) {
+          benchmark::DoNotOptimize(&i);
+      }
   }
-  state.SetComplexityN(state.range_x());
+  state.SetComplexityN(state.range(0));
 }
 BENCHMARK(BM_Complexity_O1) -> Range(1, 1<<18) -> Complexity(benchmark::o1);
-BENCHMARK(BM_Complexity_O1) -> Range(1, 1<<18) -> Complexity([](int){return 1.0; });
 BENCHMARK(BM_Complexity_O1) -> Range(1, 1<<18) -> Complexity();
+BENCHMARK(BM_Complexity_O1) -> Range(1, 1<<18) -> Complexity([](int){return 1.0; });
 
 const char* big_o_1_test_name = "BM_Complexity_O1_BigO";
 const char* rms_o_1_test_name = "BM_Complexity_O1_RMS";
@@ -165,6 +177,10 @@ const char* lambda_big_o_1 = "f\\(N\\)";
 
 // Add enum tests
 ADD_COMPLEXITY_CASES(&ConsoleOutputTests, &JSONOutputTests, &CSVOutputTests, 
+                     big_o_1_test_name, rms_o_1_test_name, enum_auto_big_o_1);
+
+// Add auto enum tests
+ADD_COMPLEXITY_CASES(&ConsoleOutputTests, &JSONOutputTests, &CSVOutputTests,
                      big_o_1_test_name, rms_o_1_test_name, enum_auto_big_o_1);
 
 // Add lambda tests
@@ -185,12 +201,12 @@ std::vector<int> ConstructRandomVector(int size) {
 }
 
 void BM_Complexity_O_N(benchmark::State& state) {
-  auto v = ConstructRandomVector(state.range_x());
-  const int item_not_in_vector = state.range_x()*2; // Test worst case scenario (item not in vector)
+  auto v = ConstructRandomVector(state.range(0));
+  const int item_not_in_vector = state.range(0)*2; // Test worst case scenario (item not in vector)
   while (state.KeepRunning()) {
       benchmark::DoNotOptimize(std::find(v.begin(), v.end(), item_not_in_vector));
   }
-  state.SetComplexityN(state.range_x());
+  state.SetComplexityN(state.range(0));
 }
 BENCHMARK(BM_Complexity_O_N) -> RangeMultiplier(2) -> Range(1<<10, 1<<16) -> Complexity(benchmark::oN);
 BENCHMARK(BM_Complexity_O_N) -> RangeMultiplier(2) -> Range(1<<10, 1<<16) -> Complexity([](int n) -> double{return n; });
@@ -214,11 +230,11 @@ ADD_COMPLEXITY_CASES(&ConsoleOutputTests, &JSONOutputTests, &CSVOutputTests,
 // ========================================================================= //
 
 static void BM_Complexity_O_N_log_N(benchmark::State& state) {
-  auto v = ConstructRandomVector(state.range_x());
+  auto v = ConstructRandomVector(state.range(0));
   while (state.KeepRunning()) {
       std::sort(v.begin(), v.end());
   }
-  state.SetComplexityN(state.range_x());
+  state.SetComplexityN(state.range(0));
 }
 BENCHMARK(BM_Complexity_O_N_log_N) -> RangeMultiplier(2) -> Range(1<<10, 1<<16) -> Complexity(benchmark::oNLogN);
 BENCHMARK(BM_Complexity_O_N_log_N) -> RangeMultiplier(2) -> Range(1<<10, 1<<16) -> Complexity([](int n) {return n * std::log2(n); });
@@ -244,14 +260,8 @@ ADD_COMPLEXITY_CASES(&ConsoleOutputTests, &JSONOutputTests, &CSVOutputTests,
 
 
 int main(int argc, char* argv[]) {
-  // Add --color_print=false to argv since we don't want to match color codes.
-  char new_arg[64];
-  char* new_argv[64];
-  std::copy(argv, argv + argc, new_argv);
-  new_argv[argc++] = std::strcpy(new_arg, "--color_print=false");
-  benchmark::Initialize(&argc, new_argv);
-
-  benchmark::ConsoleReporter CR;
+  benchmark::Initialize(&argc, argv);
+  benchmark::ConsoleReporter CR(benchmark::ConsoleReporter::OO_None);
   benchmark::JSONReporter JR;
   benchmark::CSVReporter CSVR;
   struct ReporterTest {

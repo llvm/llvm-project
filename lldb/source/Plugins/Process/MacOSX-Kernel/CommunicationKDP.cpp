@@ -210,11 +210,10 @@ CommunicationKDP::GetSequenceMutex(std::unique_lock<std::recursive_mutex> &lock)
     return (lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex, std::try_to_lock)).owns_lock();
 }
 
-
 bool
-CommunicationKDP::WaitForNotRunningPrivate (const TimeValue *timeout_ptr)
+CommunicationKDP::WaitForNotRunningPrivate(const std::chrono::microseconds &timeout)
 {
-    return m_is_running.WaitForValueEqualTo (false, timeout_ptr, NULL);
+    return m_is_running.WaitForValueEqualTo(false, timeout, NULL);
 }
 
 size_t
@@ -244,7 +243,7 @@ CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock (DataExtractor &pac
         
         if (log)
             log->Printf ("%s: Read (buffer, (sizeof(buffer), timeout_usec = 0x%x, status = %s, error = %s) => bytes_read = %" PRIu64,
-                         __PRETTY_FUNCTION__,
+                         LLVM_PRETTY_FUNCTION,
                          timeout_usec, 
                          Communication::ConnectionStatusAsCString (status),
                          error.AsCString(), 

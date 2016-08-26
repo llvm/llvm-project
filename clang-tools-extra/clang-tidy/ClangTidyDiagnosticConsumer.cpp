@@ -77,7 +77,14 @@ protected:
       assert(Range.getBegin().isFileID() && Range.getEnd().isFileID() &&
              "Only file locations supported in fix-it hints.");
 
-      Error.Fix.insert(tooling::Replacement(SM, Range, FixIt.CodeToInsert));
+      tooling::Replacement Replacement(SM, Range, FixIt.CodeToInsert);
+      llvm::Error Err = Error.Fix[Replacement.getFilePath()].add(Replacement);
+      // FIXME: better error handling.
+      if (Err) {
+        llvm::errs() << "Fix conflicts with existing fix! "
+                    << llvm::toString(std::move(Err)) << "\n";
+      }
+      assert(!Err && "Fix conflicts with existing fix!");
     }
   }
 
@@ -176,8 +183,7 @@ DiagnosticBuilder ClangTidyContext::diag(
   assert(Loc.isValid());
   unsigned ID = DiagEngine->getDiagnosticIDs()->getCustomDiagID(
       Level, (Description + " [" + CheckName + "]").str());
-  if (CheckNamesByDiagnosticID.count(ID) == 0)
-    CheckNamesByDiagnosticID.insert(std::make_pair(ID, CheckName.str()));
+  CheckNamesByDiagnosticID.try_emplace(ID, CheckName);
   return DiagEngine->Report(Loc, ID);
 }
 
@@ -427,7 +433,7 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors(
   // replacements. To detect overlapping replacements, we use a sweep line
   // algorithm over these sets of intervals.
   // An event here consists of the opening or closing of an interval. During the
-  // proccess, we maintain a counter with the amount of open intervals. If we
+  // process, we maintain a counter with the amount of open intervals. If we
   // find an endpoint of an interval and this counter is different from 0, it
   // means that this interval overlaps with another one, so we set it as
   // inapplicable.
@@ -449,7 +455,7 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors(
       //   priority than begin events.
       //
       // * If we have several begin points at the same position, we will mark as
-      //   inapplicable the ones that we proccess later, so the first one has to
+      //   inapplicable the ones that we process later, so the first one has to
       //   be the one with the latest end point, because this one will contain
       //   all the other intervals. For the same reason, if we have several end
       //   points in the same position, the last one has to be the one with the
@@ -457,14 +463,14 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors(
       //   position of the complementary.
       //
       // * In case of two equal intervals, the one whose error is bigger can
-      //   potentially contain the other one, so we want to proccess its begin
+      //   potentially contain the other one, so we want to process its begin
       //   points before and its end points later.
       //
       // * Finally, if we have two equal intervals whose errors have the same
       //   size, none of them will be strictly contained inside the other.
       //   Sorting by ErrorId will guarantee that the begin point of the first
-      //   one will be proccessed before, disallowing the second one, and the
-      //   end point of the first one will also be proccessed before,
+      //   one will be processed before, disallowing the second one, and the
+      //   end point of the first one will also be processed before,
       //   disallowing the first one.
       if (Type == ET_Begin)
         Priority = std::make_tuple(Begin, Type, -End, -ErrorSize, ErrorId);
@@ -489,25 +495,29 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors(
   std::vector<int> Sizes;
   for (const auto &Error : Errors) {
     int Size = 0;
-    for (const auto &Replace : Error.Fix)
-      Size += Replace.getLength();
+    for (const auto &FileAndReplaces : Error.Fix) {
+      for (const auto &Replace : FileAndReplaces.second)
+        Size += Replace.getLength();
+    }
     Sizes.push_back(Size);
   }
 
   // Build events from error intervals.
   std::map<std::string, std::vector<Event>> FileEvents;
   for (unsigned I = 0; I < Errors.size(); ++I) {
-    for (const auto &Replace : Errors[I].Fix) {
-      unsigned Begin = Replace.getOffset();
-      unsigned End = Begin + Replace.getLength();
-      const std::string &FilePath = Replace.getFilePath();
-      // FIXME: Handle empty intervals, such as those from insertions.
-      if (Begin == End)
-        continue;
-      FileEvents[FilePath].push_back(
-          Event(Begin, End, Event::ET_Begin, I, Sizes[I]));
-      FileEvents[FilePath].push_back(
-          Event(Begin, End, Event::ET_End, I, Sizes[I]));
+    for (const auto &FileAndReplace : Errors[I].Fix) {
+      for (const auto &Replace : FileAndReplace.second) {
+        unsigned Begin = Replace.getOffset();
+        unsigned End = Begin + Replace.getLength();
+        const std::string &FilePath = Replace.getFilePath();
+        // FIXME: Handle empty intervals, such as those from insertions.
+        if (Begin == End)
+          continue;
+        FileEvents[FilePath].push_back(
+            Event(Begin, End, Event::ET_Begin, I, Sizes[I]));
+        FileEvents[FilePath].push_back(
+            Event(Begin, End, Event::ET_End, I, Sizes[I]));
+      }
     }
   }
 

@@ -699,7 +699,8 @@ PlatformLinux::DebugProcess (ProcessLaunchInfo &launch_info,
         // Handle the hijacking of process events.
         if (listener_sp)
         {
-            const StateType state = process_sp->WaitForProcessToStop (NULL, NULL, false, listener_sp);
+            const StateType state =
+                process_sp->WaitForProcessToStop(std::chrono::microseconds(0), NULL, false, listener_sp);
 
             if (state == eStateStopped)
             {

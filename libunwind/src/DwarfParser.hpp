@@ -62,7 +62,7 @@ public:
   };
 
   enum {
-    kMaxRegisterNumber = 120
+    kMaxRegisterNumber = _LIBUNWIND_HIGHEST_DWARF_REGISTER
   };
   enum RegisterSavedWhere {
     kRegisterUnused,

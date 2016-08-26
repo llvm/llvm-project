@@ -491,7 +491,7 @@ SBDebugger::HandleProcessEvent (const SBProcess &process, const SBEvent &event, 
             if (err != nullptr)
                 ::fwrite (stdio_buffer, 1, len, err);
     }
-    
+
     if (event_type & Process::eBroadcastBitStateChanged)
     {
         StateType event_state = SBProcess::GetStateFromEvent (event);
@@ -1228,12 +1228,15 @@ SBDebugger::SetCurrentPlatform (const char *platform_name_cstr)
 bool
 SBDebugger::SetCurrentPlatformSDKRoot (const char *sysroot)
 {
+    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
     if (m_opaque_sp)
     {
         PlatformSP platform_sp (m_opaque_sp->GetPlatformList().GetSelectedPlatform());
         
         if (platform_sp)
         {
+            if (log && sysroot)
+                log->Printf ("SBDebugger::SetCurrentPlatformSDKRoot (\"%s\")", sysroot);
             platform_sp->SetSDKRootDirectory (ConstString (sysroot));
             return true;
         }

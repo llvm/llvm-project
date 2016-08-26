@@ -1,12 +1,16 @@
 ; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ; CHECK: #pragma known-parallel reduction (^ : sum)
 ;        void f(int N, int M, int P, int sum[P][M]) {
+; PINFO:   for.cond: Loop is not parallel.
 ;          for (int i = 0; i < N; i++)
-;            for (int j = 0; j < P; j++)
-; CHECK:       #pragma simd
-;              for (int k = 0; k < M; k++)
-;                sum[j][k] ^= j;
+; PINFO-NEXT: for.cond1: Loop is parallel.
+;             for (int j = 0; j < P; j++)
+; CHECK:        #pragma simd
+; PINFO-NEXT:   for.cond4: Loop is parallel.
+;               for (int k = 0; k < M; k++)
+;                 sum[j][k] ^= j;
 ;        }
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"

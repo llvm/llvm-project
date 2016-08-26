@@ -75,7 +75,7 @@ PlatformPOSIX::GetConnectionOptions (lldb_private::CommandInterpreter& interpret
     auto iter = m_options.find(&interpreter), end = m_options.end();
     if (iter == end)
     {
-        std::unique_ptr<lldb_private::OptionGroupOptions> options(new OptionGroupOptions(interpreter));
+        std::unique_ptr<lldb_private::OptionGroupOptions> options(new OptionGroupOptions());
         options->Append(m_option_group_platform_rsync.get());
         options->Append(m_option_group_platform_ssh.get());
         options->Append(m_option_group_platform_caching.get());
@@ -882,6 +882,7 @@ PlatformPOSIX::EvaluateLibdlExpression(lldb_private::Process* process,
     expr_options.SetIgnoreBreakpoints(true);
     expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
     expr_options.SetLanguage(eLanguageTypeC_plus_plus);
+    expr_options.SetTrapExceptions(false); // dlopen can't throw exceptions, so don't do the work to trap them.
     expr_options.SetTimeoutUsec(2000000); // 2 seconds
 
     Error expr_error;

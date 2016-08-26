@@ -40,6 +40,16 @@ OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
   Header.sh_addralign = 1;
 }
 
+template <class ELFT> uint32_t OutputSectionBase<ELFT>::getPhdrFlags() const {
+  uintX_t Flags = getFlags();
+  uint32_t Ret = PF_R;
+  if (Flags & SHF_WRITE)
+    Ret |= PF_W;
+  if (Flags & SHF_EXECINSTR)
+    Ret |= PF_X;
+  return Ret;
+}
+
 template <class ELFT>
 void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *Shdr) {
   *Shdr = Header;
@@ -385,8 +395,9 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalize() {
-  this->Header.sh_link = Static ? Out<ELFT>::SymTab->SectionIndex
-                                : Out<ELFT>::DynSymTab->SectionIndex;
+  this->Header.sh_link = Out<ELFT>::DynSymTab
+                             ? Out<ELFT>::DynSymTab->SectionIndex
+                             : Out<ELFT>::SymTab->SectionIndex;
   this->Header.sh_size = Relocs.size() * this->Header.sh_entsize;
 }
 
@@ -668,17 +679,17 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (Out<ELFT>::HashTab)
     Add({DT_HASH, Out<ELFT>::HashTab});
 
-  if (PreInitArraySec) {
-    Add({DT_PREINIT_ARRAY, PreInitArraySec});
-    Add({DT_PREINIT_ARRAYSZ, PreInitArraySec->getSize()});
+  if (Out<ELFT>::PreinitArray) {
+    Add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
+    Add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
   }
-  if (InitArraySec) {
-    Add({DT_INIT_ARRAY, InitArraySec});
-    Add({DT_INIT_ARRAYSZ, (uintX_t)InitArraySec->getSize()});
+  if (Out<ELFT>::InitArray) {
+    Add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
+    Add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
   }
-  if (FiniArraySec) {
-    Add({DT_FINI_ARRAY, FiniArraySec});
-    Add({DT_FINI_ARRAYSZ, (uintX_t)FiniArraySec->getSize()});
+  if (Out<ELFT>::FiniArray) {
+    Add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
+    Add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
@@ -748,6 +759,9 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
     switch (E.Kind) {
     case Entry::SecAddr:
       P->d_un.d_ptr = E.OutSec->getVA();
+      break;
+    case Entry::SecSize:
+      P->d_un.d_val = E.OutSec->getSize();
       break;
     case Entry::SymAddr:
       P->d_un.d_ptr = E.Sym->template getVA<ELFT>();
@@ -963,41 +977,22 @@ template <class ELFT>
 EhOutputSection<ELFT>::EhOutputSection()
     : OutputSectionBase<ELFT>(".eh_frame", SHT_PROGBITS, SHF_ALLOC) {}
 
-// Returns the first relocation that points to a region
-// between Begin and Begin+Size.
-template <class IntTy, class RelTy>
-static const RelTy *getReloc(IntTy Begin, IntTy Size, ArrayRef<RelTy> &Rels) {
-  for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
-    if (I->r_offset < Begin)
-      continue;
-
-    // Truncate Rels for fast access. That means we expect that the
-    // relocations are sorted and we are looking up symbols in
-    // sequential order. It is naturally satisfied for .eh_frame.
-    Rels = Rels.slice(I - Rels.begin());
-    if (I->r_offset < Begin + Size)
-      return I;
-    return nullptr;
-  }
-  Rels = ArrayRef<RelTy>();
-  return nullptr;
-}
-
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
 // and where their relocations point to.
 template <class ELFT>
 template <class RelTy>
-CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
+CieRecord *EhOutputSection<ELFT>::addCie(EhSectionPiece &Piece,
                                          EhInputSection<ELFT> *Sec,
-                                         ArrayRef<RelTy> &Rels) {
+                                         ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
   if (read32<E>(Piece.data().data() + 4) != 0)
     fatal("CIE expected at beginning of .eh_frame: " + Sec->getSectionName());
 
   SymbolBody *Personality = nullptr;
-  if (const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels))
-    Personality = &Sec->getFile()->getRelocTargetSym(*Rel);
+  unsigned FirstRelI = Piece.FirstRelocation;
+  if (FirstRelI != (unsigned)-1)
+    Personality = &Sec->getFile()->getRelocTargetSym(Rels[FirstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *Cie = &CieMap[{Piece.data(), Personality}];
@@ -1014,13 +1009,14 @@ CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
 // points to a live function.
 template <class ELFT>
 template <class RelTy>
-bool EhOutputSection<ELFT>::isFdeLive(SectionPiece &Piece,
+bool EhOutputSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
                                       EhInputSection<ELFT> *Sec,
-                                      ArrayRef<RelTy> &Rels) {
-  const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels);
-  if (!Rel)
+                                      ArrayRef<RelTy> Rels) {
+  unsigned FirstRelI = Piece.FirstRelocation;
+  if (FirstRelI == (unsigned)-1)
     fatal("FDE doesn't reference another section");
-  SymbolBody &B = Sec->getFile()->getRelocTargetSym(*Rel);
+  const RelTy &Rel = Rels[FirstRelI];
+  SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
     return false;
@@ -1039,7 +1035,7 @@ void EhOutputSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
   const endianness E = ELFT::TargetEndianness;
 
   DenseMap<size_t, CieRecord *> OffsetToCie;
-  for (SectionPiece &Piece : Sec->Pieces) {
+  for (EhSectionPiece &Piece : Sec->Pieces) {
     // The empty record is the end marker.
     if (Piece.size() == 4)
       return;
@@ -1323,6 +1319,8 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
 
 static uint8_t getSymbolBinding(SymbolBody *Body) {
   Symbol *S = Body->symbol();
+  if (Config->Relocatable)
+    return S->Binding;
   uint8_t Visibility = S->Visibility;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
@@ -1456,7 +1454,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     break;
   }
   case SymbolBody::DefinedCommonKind:
-    return Out<ELFT>::Bss;
+    return CommonInputSection<ELFT>::X->OutSec;
   case SymbolBody::SharedKind:
     if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
       return Out<ELFT>::Bss;
@@ -1745,6 +1743,46 @@ void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
+MipsAbiFlagsOutputSection<ELFT>::MipsAbiFlagsOutputSection()
+    : OutputSectionBase<ELFT>(".MIPS.abiflags", SHT_MIPS_ABIFLAGS, SHF_ALLOC) {
+  this->Header.sh_addralign = 8;
+  this->Header.sh_entsize = sizeof(Elf_Mips_ABIFlags);
+  this->Header.sh_size = sizeof(Elf_Mips_ABIFlags);
+  memset(&Flags, 0, sizeof(Flags));
+}
+
+template <class ELFT>
+void MipsAbiFlagsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  memcpy(Buf, &Flags, sizeof(Flags));
+}
+
+template <class ELFT>
+void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  // Check compatibility and merge fields from input .MIPS.abiflags
+  // to the output one.
+  auto *S = cast<MipsAbiFlagsInputSection<ELFT>>(C);
+  S->OutSec = this;
+  if (S->Flags->version != 0) {
+    error(getFilename(S->getFile()) + ": unexpected .MIPS.abiflags version " +
+          Twine(S->Flags->version));
+    return;
+  }
+  // LLD checks ISA compatibility in getMipsEFlags(). Here we just
+  // select the highest number of ISA/Rev/Ext.
+  Flags.isa_level = std::max(Flags.isa_level, S->Flags->isa_level);
+  Flags.isa_rev = std::max(Flags.isa_rev, S->Flags->isa_rev);
+  Flags.isa_ext = std::max(Flags.isa_ext, S->Flags->isa_ext);
+  Flags.gpr_size = std::max(Flags.gpr_size, S->Flags->gpr_size);
+  Flags.cpr1_size = std::max(Flags.cpr1_size, S->Flags->cpr1_size);
+  Flags.cpr2_size = std::max(Flags.cpr2_size, S->Flags->cpr2_size);
+  Flags.ases |= S->Flags->ases;
+  Flags.flags1 |= S->Flags->flags1;
+  Flags.flags2 |= S->Flags->flags2;
+  Flags.fp_abi = elf::getMipsFpAbiFlag(Flags.fp_abi, S->Flags->fp_abi,
+                                       getFilename(S->getFile()));
+}
+
+template <class ELFT>
 std::pair<OutputSectionBase<ELFT> *, bool>
 OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
                                    StringRef OutsecName) {
@@ -1769,15 +1807,14 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   case InputSectionBase<ELFT>::MipsOptions:
     Sec = new MipsOptionsOutputSection<ELFT>();
     break;
+  case InputSectionBase<ELFT>::MipsAbiFlags:
+    Sec = new MipsAbiFlagsOutputSection<ELFT>();
+    break;
+  case InputSectionBase<ELFT>::Layout:
+    llvm_unreachable("Invalid section type");
   }
+  Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
-}
-
-template <class ELFT>
-OutputSectionBase<ELFT> *OutputSectionFactory<ELFT>::lookup(StringRef Name,
-                                                            uint32_t Type,
-                                                            uintX_t Flags) {
-  return Map.lookup({Name, Type, Flags, 0});
 }
 
 template <class ELFT>
@@ -1901,6 +1938,11 @@ template class MipsOptionsOutputSection<ELF32LE>;
 template class MipsOptionsOutputSection<ELF32BE>;
 template class MipsOptionsOutputSection<ELF64LE>;
 template class MipsOptionsOutputSection<ELF64BE>;
+
+template class MipsAbiFlagsOutputSection<ELF32LE>;
+template class MipsAbiFlagsOutputSection<ELF32BE>;
+template class MipsAbiFlagsOutputSection<ELF64LE>;
+template class MipsAbiFlagsOutputSection<ELF64BE>;
 
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;

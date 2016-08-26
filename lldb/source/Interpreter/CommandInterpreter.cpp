@@ -179,7 +179,7 @@ CommandInterpreter::GetSpaceReplPrompts () const
 void
 CommandInterpreter::Initialize ()
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     CommandReturnObject result;
 
@@ -428,7 +428,7 @@ CommandInterpreter::ProcessEmbeddedScriptCommands (const char *arg)
 void
 CommandInterpreter::LoadCommandDictionary ()
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     lldb::ScriptLanguage script_language = m_debugger.GetScriptLanguage();
     
@@ -1563,7 +1563,7 @@ CommandInterpreter::HandleCommand (const char *command_line,
     if (log)
         log->Printf ("Processing command: %s", command_line);
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, "Handling command: %s.", command_line);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, "Handling command: %s.", command_line);
     
     if (!no_context_switching)
         UpdateExecutionContext (override_context);

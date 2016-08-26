@@ -4,3 +4,4 @@
 // CHECK: writable SHF_MERGE section is not supported
 
 .section .foo,"awM",@progbits,4
+.quad 0

@@ -9,6 +9,7 @@
 
 #include "Chunks.h"
 #include "Config.h"
+#include "Driver.h"
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
@@ -63,7 +64,7 @@ std::string InputFile::getShortName() {
 
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
-  File = check(Archive::create(MB), "failed to parse static library");
+  File = check(Archive::create(MB), getShortName());
 
   // Allocate a buffer for Lazy objects.
   size_t NumSyms = File->getNumberOfSymbols();
@@ -80,7 +81,7 @@ void ArchiveFile::parse() {
   for (auto &Child : File->children(Err))
     Seen[Child.getChildOffset()].clear();
   if (Err)
-    fatal(Err, "failed to parse static library");
+    fatal(Err, getShortName());
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -93,21 +94,28 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   // Return an empty buffer if we have already returned the same buffer.
   if (Seen[C.getChildOffset()].test_and_set())
     return MemoryBufferRef();
-  return check(C.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   Sym->getName());
+
+  MemoryBufferRef MB =
+      check(C.getMemoryBufferRef(),
+            "could not get the buffer for the member defining symbol " +
+                Sym->getName());
+  if (C.getParent()->isThin() && Driver->Cpio)
+    Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
+                         MB.getBuffer());
+
+  return MB;
 }
 
 void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.
   std::unique_ptr<Binary> Bin =
-      check(createBinary(MB), "failed to parse object file");
+      check(createBinary(MB), getShortName());
 
   if (auto *Obj = dyn_cast<COFFObjectFile>(Bin.get())) {
     Bin.release();
     COFFObj.reset(Obj);
   } else {
-    fatal(getName() + " is not a COFF file");
+    fatal(getShortName() + " is not a COFF file");
   }
 
   // Read section and symbol tables.
@@ -161,7 +169,7 @@ void ObjectFile::initializeSymbols() {
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
     COFFSymbolRef Sym =
-        check(COFFObj->getSymbol(I), "broken object file: " + getName());
+        check(COFFObj->getSymbol(I), "broken object file: " + getShortName());
 
     const void *AuxP = nullptr;
     if (Sym.getNumberOfAuxSymbols())
@@ -223,12 +231,12 @@ Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
 
   // Reserved sections numbers don't have contents.
   if (llvm::COFF::isReservedSectionNumber(SectionNumber))
-    fatal("broken object file: " + getName());
+    fatal("broken object file: " + getShortName());
 
   // This symbol references a section which is not present in the section
   // header.
   if ((uint32_t)SectionNumber >= SparseChunks.size())
-    fatal("broken object file: " + getName());
+    fatal("broken object file: " + getShortName());
 
   // Nothing else to do without a section chunk.
   auto *SC = cast_or_null<SectionChunk>(SparseChunks[SectionNumber]);

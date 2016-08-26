@@ -1060,3 +1060,15 @@ void f() {
 }
 
 } // namespace InitLists
+
+void bug28341() {
+  char v[5];
+  for(int i = 0; i < 5; ++i) {
+      unsigned char value = v[i];
+      if (value > 127)
+        ;
+  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for(unsigned char value : v)
+  // CHECK-FIXES-NEXT: if (value > 127)
+  }
+}

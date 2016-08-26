@@ -1552,6 +1552,9 @@ FileSpec::AppendPathComponent(const char *new_path)
             stream.PutChar(GetPrefferedPathSeparator(m_syntax));
     }
 
+    while (IsPathSeparator(new_path[0], m_syntax))
+        new_path++;
+
     stream.PutCString(new_path);
 
     const bool resolve = false;

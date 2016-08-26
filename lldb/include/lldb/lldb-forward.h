@@ -91,6 +91,7 @@ class   Error;
 class   EvaluateExpressionOptions;
 class   Event;
 class   EventData;
+class   EventDataStructuredData;
 class   ExecutionContext;
 class   ExecutionContextRef;
 class   ExecutionContextRefLocker;
@@ -218,6 +219,7 @@ class   StreamFile;
 class   StreamString;
 class   StringList;
 struct  StringSummaryFormat;
+class   StructuredDataPlugin;
 class   SystemRuntime;
 class   TypeSummaryImpl;
 class   TypeSummaryOptions;
@@ -336,6 +338,7 @@ namespace lldb {
     typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
     typedef std::shared_ptr<lldb_private::Event> EventSP;
     typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
+    typedef std::shared_ptr<lldb_private::EventDataStructuredData> EventDataStructuredDataSP;
     typedef std::shared_ptr<lldb_private::ExecutionContextRef> ExecutionContextRefSP;
     typedef std::shared_ptr<lldb_private::ExpressionVariable> ExpressionVariableSP;
     typedef std::shared_ptr<lldb_private::File> FileSP;
@@ -419,6 +422,10 @@ namespace lldb {
     typedef std::weak_ptr<lldb_private::Stream> StreamWP;
     typedef std::shared_ptr<lldb_private::StreamFile> StreamFileSP;
     typedef std::shared_ptr<lldb_private::StringSummaryFormat> StringTypeSummaryImplSP;
+    typedef std::shared_ptr<lldb_private::StructuredDataPlugin>
+        StructuredDataPluginSP;
+    typedef std::weak_ptr<lldb_private::StructuredDataPlugin>
+    StructuredDataPluginWP;
     typedef std::shared_ptr<lldb_private::SymbolFile> SymbolFileSP;
     typedef std::shared_ptr<lldb_private::SymbolFileType> SymbolFileTypeSP;
     typedef std::weak_ptr<lldb_private::SymbolFileType> SymbolFileTypeWP;

@@ -12,16 +12,19 @@
 
 #ifndef LLDB_DISABLE_PYTHON
 
+// LLDB Python header must be included first
+#include "lldb-python.h"
+
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-defines.h"
 #include "lldb/Core/ConstString.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/Flags.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/lldb-defines.h"
 
 #include "llvm/ADT/ArrayRef.h"
 

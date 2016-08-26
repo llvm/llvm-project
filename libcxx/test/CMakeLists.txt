@@ -1,3 +1,5 @@
+include(AddLLVM) # for add_lit_testsuite
+
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
@@ -50,10 +52,12 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   set(experimental_dep cxx_experimental)
 endif()
 
-add_lit_testsuite(check-libcxx
+add_lit_testsuite(check-cxx
   "Running libcxx tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS cxx ${experimental_dep})
+
+add_custom_target(check-libcxx DEPENDS check-cxx)
 
 if (LIBCXX_GENERATE_COVERAGE)
   include(CodeCoverage)

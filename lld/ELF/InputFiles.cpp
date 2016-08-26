@@ -11,6 +11,7 @@
 #include "Driver.h"
 #include "Error.h"
 #include "InputSection.h"
+#include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
@@ -162,6 +163,21 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Config->Optimize == 0)
     return false;
 
+  // We don't merge if linker script has SECTIONS command. When script
+  // do layout it can merge several sections with different attributes
+  // into single output sections. We currently do not support adding
+  // mergeable input sections to regular output ones as well as adding
+  // regular input sections to mergeable output.
+  if (ScriptConfig->HasContents)
+    return false;
+
+  // A mergeable section with size 0 is useless because they don't have
+  // any data to merge. A mergeable string section with size 0 can be
+  // argued as invalid because it doesn't end with a null character.
+  // We'll avoid a mess by handling them as if they were non-mergeable.
+  if (Sec.sh_size == 0)
+    return false;
+
   uintX_t Flags = Sec.sh_flags;
   if (!(Flags & SHF_MERGE))
     return false;
@@ -252,6 +268,18 @@ void elf::ObjectFile<ELFT>::initializeSections(
       // they can be used to reason about object compatibility.
       Sections[I] = &InputSection<ELFT>::Discarded;
       break;
+    case SHT_MIPS_REGINFO:
+      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
+      Sections[I] = MipsReginfo.get();
+      break;
+    case SHT_MIPS_OPTIONS:
+      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
+      Sections[I] = MipsOptions.get();
+      break;
+    case SHT_MIPS_ABIFLAGS:
+      MipsAbiFlags.reset(new MipsAbiFlagsInputSection<ELFT>(this, &Sec));
+      Sections[I] = MipsAbiFlags.get();
+      break;
     default:
       Sections[I] = createInputSection(Sec);
     }
@@ -298,19 +326,6 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   if (Config->StripDebug && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
 
-  // A MIPS object file has a special sections that contain register
-  // usage info, which need to be handled by the linker specially.
-  if (Config->EMachine == EM_MIPS) {
-    if (Name == ".reginfo") {
-      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
-      return MipsReginfo.get();
-    }
-    if (Name == ".MIPS.options") {
-      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
-      return MipsOptions.get();
-    }
-  }
-
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
@@ -337,10 +352,15 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index == 0)
     return nullptr;
-  if (Index >= Sections.size() || !Sections[Index])
+  if (Index >= Sections.size())
     fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   InputSectionBase<ELFT> *S = Sections[Index];
-  if (S == &InputSectionBase<ELFT>::Discarded)
+  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03
+  // could generate broken objects. STT_SECTION symbols can be
+  // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
+  // In this case it is fine for section to be null here as we
+  // do not allocate sections of these types.
+  if (!S || S == &InputSectionBase<ELFT>::Discarded)
     return S;
   return S->Repl;
 }
@@ -551,18 +571,16 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   }
 }
 
-static ELFKind getELFKind(MemoryBufferRef MB) {
-  std::string TripleStr = getBitcodeTargetTriple(MB, Driver->Context);
-  Triple TheTriple(TripleStr);
-  bool Is64Bits = TheTriple.isArch64Bit();
-  if (TheTriple.isLittleEndian())
-    return Is64Bits ? ELF64LEKind : ELF32LEKind;
-  return Is64Bits ? ELF64BEKind : ELF32BEKind;
+static ELFKind getBitcodeELFKind(MemoryBufferRef MB) {
+  Triple T(getBitcodeTargetTriple(MB, Driver->Context));
+  if (T.isLittleEndian())
+    return T.isArch64Bit() ? ELF64LEKind : ELF32LEKind;
+  return T.isArch64Bit() ? ELF64BEKind : ELF32BEKind;
 }
 
-static uint8_t getMachineKind(MemoryBufferRef MB) {
-  std::string TripleStr = getBitcodeTargetTriple(MB, Driver->Context);
-  switch (Triple(TripleStr).getArch()) {
+static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
+  Triple T(getBitcodeTargetTriple(MB, Driver->Context));
+  switch (T.getArch()) {
   case Triple::aarch64:
     return EM_AARCH64;
   case Triple::arm:
@@ -577,19 +595,18 @@ static uint8_t getMachineKind(MemoryBufferRef MB) {
   case Triple::ppc64:
     return EM_PPC64;
   case Triple::x86:
-    return EM_386;
+    return T.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
     return EM_X86_64;
   default:
     fatal(MB.getBufferIdentifier() +
-          ": could not infer e_machine from bitcode target triple " +
-          TripleStr);
+          ": could not infer e_machine from bitcode target triple " + T.str());
   }
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
-  EKind = getELFKind(MB);
-  EMachine = getMachineKind(MB);
+  EKind = getBitcodeELFKind(MB);
+  EMachine = getBitcodeMachineKind(MB);
 }
 
 static uint8_t getGvVisibility(const GlobalValue *GV) {

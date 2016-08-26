@@ -19,6 +19,7 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/StringExtractor.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -30,6 +31,7 @@ DynamicRegisterInfo::DynamicRegisterInfo () :
     m_set_names (),
     m_value_regs_map (),
     m_invalidate_regs_map (),
+    m_dynamic_reg_size_map (),
     m_reg_data_byte_size (0),
     m_finalized (false)
 {
@@ -43,6 +45,7 @@ DynamicRegisterInfo::DynamicRegisterInfo(const lldb_private::StructuredData::Dic
     m_set_names (),
     m_value_regs_map (),
     m_invalidate_regs_map (),
+    m_dynamic_reg_size_map (),
     m_reg_data_byte_size (0),
     m_finalized (false)
 {
@@ -292,6 +295,27 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict, con
 
         reg_info.byte_size = bitsize / 8;
 
+        std::string dwarf_opcode_string;
+        if (reg_info_dict->GetValueForKeyAsString ("dynamic_size_dwarf_expr_bytes", dwarf_opcode_string))
+        {
+            reg_info.dynamic_size_dwarf_len = dwarf_opcode_string.length () / 2;
+            assert (reg_info.dynamic_size_dwarf_len > 0);
+
+            std::vector<uint8_t> dwarf_opcode_bytes(reg_info.dynamic_size_dwarf_len);
+            uint32_t j;
+            StringExtractor opcode_extractor;
+            // Swap "dwarf_opcode_string" over into "opcode_extractor"
+            opcode_extractor.GetStringRef ().swap (dwarf_opcode_string);
+            uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
+                                                                  reg_info.dynamic_size_dwarf_len);
+            assert (ret_val == reg_info.dynamic_size_dwarf_len);
+
+            for (j = 0; j < reg_info.dynamic_size_dwarf_len; ++j)
+                m_dynamic_reg_size_map[i].push_back(dwarf_opcode_bytes[j]);
+
+            reg_info.dynamic_size_dwarf_expr_bytes = m_dynamic_reg_size_map[i].data ();
+        }
+
         std::string format_str;
         if (reg_info_dict->GetValueForKeyAsString("format", format_str, nullptr))
         {
@@ -417,6 +441,14 @@ DynamicRegisterInfo::AddRegister (RegisterInfo &reg_info,
         for (i=0; reg_info.invalidate_regs[i] != LLDB_INVALID_REGNUM; ++i)
             m_invalidate_regs_map[reg_num].push_back(reg_info.invalidate_regs[i]);
     }
+    if (reg_info.dynamic_size_dwarf_expr_bytes)
+    {
+        for (i = 0; i < reg_info.dynamic_size_dwarf_len; ++i)
+           m_dynamic_reg_size_map[reg_num].push_back(reg_info.dynamic_size_dwarf_expr_bytes[i]);
+
+        reg_info.dynamic_size_dwarf_expr_bytes = m_dynamic_reg_size_map[reg_num].data ();
+    }
+
     m_regs.push_back (reg_info);
     uint32_t set = GetRegisterSetIndexByName (set_name, true);
     assert (set < m_sets.size());
@@ -641,6 +673,14 @@ DynamicRegisterInfo::GetRegisterInfoAtIndex (uint32_t i) const
     return NULL;
 }
 
+RegisterInfo *
+DynamicRegisterInfo::GetRegisterInfoAtIndex (uint32_t i)
+{
+    if (i < m_regs.size())
+        return &m_regs[i];
+    return NULL;
+}
+
 const RegisterSet *
 DynamicRegisterInfo::GetRegisterSet (uint32_t i) const
 {
@@ -688,6 +728,7 @@ DynamicRegisterInfo::Clear()
     m_set_names.clear();
     m_value_regs_map.clear();
     m_invalidate_regs_map.clear();
+    m_dynamic_reg_size_map.clear();
     m_reg_data_byte_size = 0;
     m_finalized = false;
 }

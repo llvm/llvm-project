@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -33,7 +34,7 @@ int main()
                                    test_allocator<NotConstructible>
                                    > C;
         C c(test_allocator<NotConstructible>(10));
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() == test_allocator<NotConstructible>(10));
@@ -51,7 +52,7 @@ int main()
                                    min_allocator<NotConstructible>
                                    > C;
         C c(min_allocator<NotConstructible>{});
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() == min_allocator<NotConstructible>());
@@ -71,7 +72,7 @@ int main()
 
         A a(43);
         C c(3, a);
-        assert(c.bucket_count() == 3);
+        LIBCPP_ASSERT(c.bucket_count() == 3);
         assert(c.hash_function() == HF());
         assert(c.key_eq() == Comp ());
         assert(c.get_allocator() == a);
@@ -92,7 +93,7 @@ int main()
         HF hf(42);
         A a(43);
         C c(4, hf, a);
-        assert(c.bucket_count() == 4);
+        LIBCPP_ASSERT(c.bucket_count() == 4);
         assert(c.hash_function() == hf);
         assert(!(c.hash_function() == HF()));
         assert(c.key_eq() == Comp ());

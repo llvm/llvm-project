@@ -17,6 +17,7 @@
 // UNSUPPORTED: c++98, c++03
 
 #include <queue>
+#include <utility>
 #include <cassert>
 
 #include "MoveOnly.h"
@@ -25,7 +26,6 @@ int main()
 {
     {
         typedef std::queue<MoveOnly> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 }

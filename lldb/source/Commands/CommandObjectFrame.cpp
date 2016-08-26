@@ -90,16 +90,17 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
-            OptionParsingStarting ();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             bool success = false;
@@ -121,7 +122,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             relative_frame_offset = INT32_MIN;
         }
@@ -144,7 +145,7 @@ public:
               "Select the current stack frame by index from within the current thread (see 'thread backtrace'.)",
               nullptr, eCommandRequiresThread | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                            eCommandProcessMustBePaused),
-          m_options(interpreter)
+          m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData index_arg;
@@ -247,7 +248,10 @@ protected:
             {
                 result.AppendErrorWithFormat ("too many arguments; expected frame-index, saw '%s'.\n",
                                               command.GetArgumentAtIndex(0));
-                m_options.GenerateOptionUsage (result.GetErrorStream(), this);
+                m_options.GenerateOptionUsage(result.GetErrorStream(), this,
+                                              GetCommandInterpreter()
+                                                .GetDebugger()
+                                                .GetTerminalWidth());
                 return false;
             }
         }
@@ -294,7 +298,7 @@ public:
                                              "'var->child.x'.",
               nullptr, eCommandRequiresFrame | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
                            eCommandProcessMustBePaused | eCommandRequiresProcess),
-          m_option_group(interpreter),
+          m_option_group(),
           m_option_variable(true), // Include the frame specific options by passing "true"
           m_option_format(eFormatDefault),
           m_varobj_options()
@@ -339,8 +343,8 @@ public:
         // Arguments are the standard source file completer.
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
-        
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eVariablePathCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,

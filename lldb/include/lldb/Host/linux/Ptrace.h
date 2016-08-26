@@ -14,33 +14,24 @@
 
 #include <sys/ptrace.h>
 
-#ifdef __ANDROID_NDK__
-#define PT_DETACH PTRACE_DETACH
+#ifndef __GLIBC__
 typedef int __ptrace_request;
 #endif
 
 #define DEBUG_PTRACE_MAXBYTES 20
 
 // Support ptrace extensions even when compiled without required kernel support
-#ifndef PT_GETREGS
-    #ifndef PTRACE_GETREGS
-        #define PTRACE_GETREGS 12
-    #endif
+#ifndef PTRACE_GETREGS
+    #define PTRACE_GETREGS 12
 #endif
-#ifndef PT_SETREGS
-    #ifndef PTRACE_SETREGS
-        #define PTRACE_SETREGS 13
-    #endif
+#ifndef PTRACE_SETREGS
+    #define PTRACE_SETREGS 13
 #endif
-#ifndef PT_GETFPREGS
-    #ifndef PTRACE_GETFPREGS
-        #define PTRACE_GETFPREGS 14
-    #endif
+#ifndef PTRACE_GETFPREGS
+    #define PTRACE_GETFPREGS 14
 #endif
-#ifndef PT_SETFPREGS
-    #ifndef PTRACE_SETFPREGS
-        #define PTRACE_SETFPREGS 15
-    #endif
+#ifndef PTRACE_SETFPREGS
+    #define PTRACE_SETFPREGS 15
 #endif
 #ifndef PTRACE_GETREGSET
     #define PTRACE_GETREGSET 0x4204

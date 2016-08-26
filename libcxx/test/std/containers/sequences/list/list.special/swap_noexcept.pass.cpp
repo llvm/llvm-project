@@ -21,6 +21,7 @@
 // This tests a conforming extension
 
 #include <list>
+#include <utility>
 #include <cassert>
 
 #include "test_macros.h"
@@ -56,35 +57,30 @@ int main()
 {
     {
         typedef std::list<MoveOnly> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::list<MoveOnly, test_allocator<MoveOnly>> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::list<MoveOnly, other_allocator<MoveOnly>> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::list<MoveOnly, some_alloc<MoveOnly>> C;
-        C c1, c2;
 #if TEST_STD_VER >= 14
     //  In c++14, if POCS is set, swapping the allocator is required not to throw
-        static_assert( noexcept(swap(c1, c2)), "");
+        static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #else
-        static_assert(!noexcept(swap(c1, c2)), "");
+        static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #endif
     }
 #if TEST_STD_VER >= 14
     {
         typedef std::list<MoveOnly, some_alloc2<MoveOnly>> C;
-        C c1, c2;
     //  if the allocators are always equal, then the swap can be noexcept
-        static_assert( noexcept(swap(c1, c2)), "");
+        static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 #endif
 

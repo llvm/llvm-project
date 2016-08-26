@@ -12,13 +12,14 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
-#include "lldb/Target/DynamicLoader.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -177,35 +178,65 @@ DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
 {
     Target &target = m_process->GetTarget();
     ModuleList &modules = target.GetImages();
+    ModuleSpec module_spec (file, target.GetArchitecture());
     ModuleSP module_sp;
 
-    ModuleSpec module_spec (file, target.GetArchitecture());
     if ((module_sp = modules.FindFirstModule (module_spec)))
     {
         UpdateLoadedSections(module_sp, link_map_addr, base_addr, base_addr_is_offset);
+        return module_sp;
     }
-    else if ((module_sp = target.GetSharedModule(module_spec)))
+
+    if ((module_sp = target.GetSharedModule(module_spec)))
     {
         UpdateLoadedSections(module_sp, link_map_addr, base_addr, base_addr_is_offset);
+        return module_sp;
     }
-    else
-    {
-        if (base_addr_is_offset)
-        {
-            // Try to fetch the load address of the file from the process as we need absolute load
-            // address to read the file out of the memory instead of a load bias.
-            bool is_loaded = false;
-            lldb::addr_t load_addr;
-            Error error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
-            if (error.Success() && is_loaded)
-                base_addr = load_addr;
-        }
 
-        if ((module_sp = m_process->ReadModuleFromMemory(file, base_addr)))
+    bool check_alternative_file_name = true;
+    if (base_addr_is_offset)
+    {
+        // Try to fetch the load address of the file from the process as we need absolute load
+        // address to read the file out of the memory instead of a load bias.
+        bool is_loaded = false;
+        lldb::addr_t load_addr;
+        Error error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
+        if (error.Success() && is_loaded)
         {
-            UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
-            target.GetImages().AppendIfNeeded(module_sp);
+            check_alternative_file_name = false;
+            base_addr = load_addr;
         }
+    }
+
+    // We failed to find the module based on its name. Lets try to check if we can find a
+    // different name based on the memory region info.
+    if (check_alternative_file_name)
+    {
+        MemoryRegionInfo memory_info;
+        Error error = m_process->GetMemoryRegionInfo(base_addr, memory_info);
+        if (error.Success() && memory_info.GetMapped() && memory_info.GetRange().GetRangeBase() == base_addr)
+        {
+            ModuleSpec new_module_spec(FileSpec(memory_info.GetName().AsCString(), false),
+                                       target.GetArchitecture());
+
+            if ((module_sp = modules.FindFirstModule(new_module_spec)))
+            {
+                UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
+                return module_sp;
+            }
+
+            if ((module_sp = target.GetSharedModule(new_module_spec)))
+            {
+                UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
+                return module_sp;
+            }
+        }
+    }
+
+    if ((module_sp = m_process->ReadModuleFromMemory(file, base_addr)))
+    {
+        UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
+        target.GetImages().AppendIfNeeded(module_sp);
     }
 
     return module_sp;

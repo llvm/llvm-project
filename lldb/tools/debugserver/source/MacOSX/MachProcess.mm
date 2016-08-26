@@ -43,7 +43,6 @@
 #include "PseudoTerminal.h"
 
 #include "CFBundle.h"
-#include "CFData.h"
 #include "CFString.h"
 
 #ifdef WITH_SPRINGBOARD

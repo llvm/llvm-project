@@ -127,7 +127,7 @@ ConversionKind ClassifyFormatString(StringRef Fmt, const LangOptions &LO,
 
   Handler H;
   analyze_format_string::ParseScanfString(H, Fmt.begin(), Fmt.end(), LO, TI);
-  
+
   return H.get();
 }
 

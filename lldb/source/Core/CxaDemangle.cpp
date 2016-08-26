@@ -10,16 +10,15 @@
 // - Added "#undef _LIBCPP_EXTERN_TEMPLATE" to avoid warning
 // - Implemented missing rebind, construct, destroy in malloc_alloc
 // - Replaced noexcept, constexpr, alignas with their LLVM_* equivalents
-// - Included win32.h for snprintf implementation for MSVC
+// - Included PosixApi.h for snprintf implementation for MSVC
 // - Removed constexpr member initialization for MSVC
 // - Changed argument to alignas() to a literal for MSVC
 // - Include <cstdio> for fprintf, stderr like entities.
 //----------------------------------------------------------------------
 
-#if defined(_MSC_VER)
-#include "lldb/Host/windows/win32.h" // snprintf
-#endif
 #include "llvm/Support/Compiler.h"   // LLVM_{NOEXCEPT, CONSTEXPR, ALIGNAS}
+
+#include "lldb/Host/PosixApi.h"
 #include "lldb/lldb-private.h"
 #undef _LIBCPP_EXTERN_TEMPLATE       // Avoid warning below
 

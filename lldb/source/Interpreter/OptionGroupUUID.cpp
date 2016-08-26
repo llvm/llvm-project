@@ -46,9 +46,9 @@ OptionGroupUUID::GetDefinitions ()
 }
 
 Error
-OptionGroupUUID::SetOptionValue (CommandInterpreter &interpreter,
-                                 uint32_t option_idx,
-                                 const char *option_arg)
+OptionGroupUUID::SetOptionValue(uint32_t option_idx,
+                                const char *option_arg,
+                                ExecutionContext *execution_context)
 {
     Error error;
     const int short_option = g_option_table[option_idx].short_option;
@@ -70,7 +70,7 @@ OptionGroupUUID::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupUUID::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupUUID::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_uuid.Clear();
 }

@@ -1,5 +1,5 @@
 # RUN: lld -flavor darwin -arch x86_64  %s %p/Inputs/interposing-section.yaml \
-# RUN: -dylib -o %t %p/Inputs/libSystem.yaml
+# RUN: -dylib -o %t %p/Inputs/x86_64/libSystem.yaml
 # RUN: llvm-objdump -private-headers %t | FileCheck %s
 #
 # RUN: lld -flavor darwin -arch x86_64  %s -r -o %t1

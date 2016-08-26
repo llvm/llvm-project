@@ -16,6 +16,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 template <class T>
@@ -38,6 +39,6 @@ int main()
     }
     {
         typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
-        static_assert(!std::is_nothrow_destructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
     }
 }

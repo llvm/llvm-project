@@ -507,7 +507,7 @@ def skipUnlessPlatform(oslist):
     # This decorator cannot be ported to `skipIf` yet because it is used on entire
     # classes, which `skipIf` explicitly forbids.
     return unittest2.skipUnless(lldbplatformutil.getPlatform() in oslist,
-                                "requires on of %s" % (", ".join(oslist)))
+                                "requires one of %s" % (", ".join(oslist)))
 
 def skipIfTargetAndroid(api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.

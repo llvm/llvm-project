@@ -16,6 +16,7 @@
 #include "Driver.h"
 #include "Error.h"
 #include "lld/Config/Version.h"
+#include "lld/Core/Reproduce.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
@@ -105,107 +106,6 @@ std::string elf::getVersionString() {
   return "LLD " + Version + " " + Repo + "\n";
 }
 
-// Makes a given pathname an absolute path first, and then remove
-// beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
-// assuming that the current directory is "/home/john/bar".
-std::string elf::relativeToRoot(StringRef Path) {
-  SmallString<128> Abs = Path;
-  if (std::error_code EC = fs::make_absolute(Abs))
-    fatal("make_absolute failed: " + EC.message());
-  path::remove_dots(Abs, /*remove_dot_dot=*/true);
-
-  // This is Windows specific. root_name() returns a drive letter
-  // (e.g. "c:") or a UNC name (//net). We want to keep it as part
-  // of the result.
-  SmallString<128> Res;
-  StringRef Root = path::root_name(Abs);
-  if (Root.endswith(":"))
-    Res = Root.drop_back();
-  else if (Root.startswith("//"))
-    Res = Root.substr(2);
-
-  path::append(Res, path::relative_path(Abs));
-  return Res.str();
-}
-
-CpioFile::CpioFile(std::unique_ptr<raw_fd_ostream> OS, StringRef S)
-    : OS(std::move(OS)), Basename(S) {}
-
-CpioFile *CpioFile::create(StringRef OutputPath) {
-  std::string Path = (OutputPath + ".cpio").str();
-  std::error_code EC;
-  auto OS = llvm::make_unique<raw_fd_ostream>(Path, EC, fs::F_None);
-  if (EC) {
-    error(EC, "--reproduce: failed to open " + Path);
-    return nullptr;
-  }
-  return new CpioFile(std::move(OS), path::filename(OutputPath));
-}
-
-static void writeMember(raw_fd_ostream &OS, StringRef Path, StringRef Data) {
-  // The c_dev/c_ino pair should be unique according to the spec,
-  // but no one seems to care.
-  OS << "070707";                        // c_magic
-  OS << "000000";                        // c_dev
-  OS << "000000";                        // c_ino
-  OS << "100664";                        // c_mode: C_ISREG | rw-rw-r--
-  OS << "000000";                        // c_uid
-  OS << "000000";                        // c_gid
-  OS << "000001";                        // c_nlink
-  OS << "000000";                        // c_rdev
-  OS << "00000000000";                   // c_mtime
-  OS << format("%06o", Path.size() + 1); // c_namesize
-  OS << format("%011o", Data.size());    // c_filesize
-  OS << Path << '\0';                    // c_name
-  OS << Data;                            // c_filedata
-}
-
-void CpioFile::append(StringRef Path, StringRef Data) {
-  if (!Seen.insert(Path).second)
-    return;
-
-  // Construct an in-archive filename so that /home/foo/bar is stored
-  // as baz/home/foo/bar where baz is the basename of the output file.
-  // (i.e. in that case we are creating baz.cpio.)
-  SmallString<128> Fullpath;
-  path::append(Fullpath, Basename, Path);
-
-  // Use unix path separators so the cpio can be extracted on both unix and
-  // windows.
-  std::replace(Fullpath.begin(), Fullpath.end(), '\\', '/');
-
-  writeMember(*OS, Fullpath, Data);
-
-  // Print the trailer and seek back.
-  // This way we have a valid archive if we crash.
-  uint64_t Pos = OS->tell();
-  writeMember(*OS, "TRAILER!!!", "");
-  OS->seek(Pos);
-}
-
-// Quote a given string if it contains a space character.
-static std::string quote(StringRef S) {
-  if (S.find(' ') == StringRef::npos)
-    return S;
-  return ("\"" + S + "\"").str();
-}
-
-static std::string rewritePath(StringRef S) {
-  if (fs::exists(S))
-    return relativeToRoot(S);
-  return S;
-}
-
-static std::string stringize(opt::Arg *Arg) {
-  std::string K = Arg->getSpelling();
-  if (Arg->getNumValues() == 0)
-    return K;
-  std::string V = quote(Arg->getValue());
-  if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
-    return K + V;
-  return K + " " + V;
-}
-
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
 std::string elf::createResponseFile(const opt::InputArgList &Args) {
@@ -226,8 +126,8 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
     case OPT_alias_script_T:
     case OPT_script:
     case OPT_version_script:
-      OS << Arg->getSpelling() << " "
-         << quote(rewritePath(Arg->getValue())) << "\n";
+      OS << Arg->getSpelling() << " " << quote(rewritePath(Arg->getValue()))
+         << "\n";
       break;
     default:
       OS << stringize(Arg) << "\n";

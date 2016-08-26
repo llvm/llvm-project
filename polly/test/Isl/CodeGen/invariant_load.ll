@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK-NEXT:    %polly.access.B = getelementptr i32, i32* %B, i64 0

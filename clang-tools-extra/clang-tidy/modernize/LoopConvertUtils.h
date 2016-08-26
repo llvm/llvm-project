@@ -337,7 +337,8 @@ private:
   bool TraverseArraySubscriptExpr(ArraySubscriptExpr *E);
   bool TraverseCXXMemberCallExpr(CXXMemberCallExpr *MemberCall);
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *OpCall);
-  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C);
+  bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
+                             Expr *Init);
   bool TraverseMemberExpr(MemberExpr *Member);
   bool TraverseUnaryDeref(UnaryOperator *Uop);
   bool VisitDeclRefExpr(DeclRefExpr *E);

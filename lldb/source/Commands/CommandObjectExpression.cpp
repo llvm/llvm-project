@@ -81,9 +81,9 @@ CommandObjectExpression::CommandOptions::GetNumDefinitions ()
 }
 
 Error
-CommandObjectExpression::CommandOptions::SetOptionValue (CommandInterpreter &interpreter,
-                                                         uint32_t option_idx,
-                                                         const char *option_arg)
+CommandObjectExpression::CommandOptions::SetOptionValue (uint32_t option_idx,
+                                                         const char *option_arg,
+                                            ExecutionContext *execution_context)
 {
     Error error;
 
@@ -195,13 +195,15 @@ CommandObjectExpression::CommandOptions::SetOptionValue (CommandInterpreter &int
 }
 
 void
-CommandObjectExpression::CommandOptions::OptionParsingStarting (CommandInterpreter &interpreter)
+CommandObjectExpression::CommandOptions::OptionParsingStarting(
+                                            ExecutionContext *execution_context)
 {
-    Process *process = interpreter.GetExecutionContext().GetProcessPtr();
-    if (process != nullptr)
+    auto process_sp =
+        execution_context ? execution_context->GetProcessSP() : ProcessSP();
+    if (process_sp)
     {
-        ignore_breakpoints = process->GetIgnoreBreakpointsInExpressions();
-        unwind_on_error    = process->GetUnwindOnErrorInExpressions();
+        ignore_breakpoints = process_sp->GetIgnoreBreakpointsInExpressions();
+        unwind_on_error    = process_sp->GetUnwindOnErrorInExpressions();
     }
     else
     {
@@ -234,7 +236,7 @@ CommandObjectExpression::CommandObjectExpression(CommandInterpreter &interpreter
           "Evaluate an expression on the current thread.  Displays any returned value with LLDB's default formatting.",
           nullptr, eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
-      m_option_group(interpreter),
+      m_option_group(),
       m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into Swift REPL", false, true),
 #ifdef LLDB_CONFIGURATION_DEBUG
@@ -592,7 +594,8 @@ CommandObjectExpression::DoExecute(const char *command,
                                    CommandReturnObject &result)
 {
     m_fixed_expression.clear();
-    m_option_group.NotifyOptionParsingStarting();
+    auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
+    m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
     const char * expr = nullptr;
 
@@ -630,7 +633,7 @@ CommandObjectExpression::DoExecute(const char *command,
             if (!ParseOptions (args, result))
                 return false;
             
-            Error error (m_option_group.NotifyOptionParsingFinished());
+            Error error (m_option_group.NotifyOptionParsingFinished(&exe_ctx));
             if (error.Fail())
             {
                 result.AppendError (error.AsCString());

@@ -20,7 +20,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -30,13 +29,11 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include <algorithm>
-#include <string>
 #include <set>
+#include <string>
 #include <vector>
 
-
 using namespace llvm;
-using namespace clang::ast_matchers;
 
 namespace clang {
 namespace rename {
@@ -46,90 +43,111 @@ namespace {
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
 // Decl refers to class and adds USRs of all overridden methods if Decl refers
 // to virtual method.
-//
-// FIXME: It's better to match ctors/dtors via typeLoc's instead of adding
-// their USRs to the storage, because we can also match CXXConversionDecl's by
-// typeLoc and we won't have to "manually" handle them here.
-class AdditionalUSRFinder : public MatchFinder::MatchCallback {
+class AdditionalUSRFinder : public RecursiveASTVisitor<AdditionalUSRFinder> {
 public:
   explicit AdditionalUSRFinder(const Decl *FoundDecl, ASTContext &Context,
-                             std::vector<std::string> *USRs)
-    : FoundDecl(FoundDecl), Context(Context), USRs(USRs), USRSet(), Finder() {}
+                               std::vector<std::string> *USRs)
+      : FoundDecl(FoundDecl), Context(Context), USRs(USRs) {}
 
   void Find() {
-    USRSet.insert(getUSRForDecl(FoundDecl));
-    addUSRsFromOverrideSetsAndCtorDtors();
-    addMatchers();
-    Finder.matchAST(Context);
+    // Fill OverriddenMethods and PartialSpecs storages.
+    TraverseDecl(Context.getTranslationUnitDecl());
+    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
+      addUSRsOfOverridenFunctions(MethodDecl);
+      for (const auto &OverriddenMethod : OverriddenMethods) {
+        if (checkIfOverriddenFunctionAscends(OverriddenMethod)) {
+          USRSet.insert(getUSRForDecl(OverriddenMethod));
+        }
+      }
+    } else if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
+      handleCXXRecordDecl(RecordDecl);
+    } else if (const auto *TemplateDecl =
+                   dyn_cast<ClassTemplateDecl>(FoundDecl)) {
+      handleClassTemplateDecl(TemplateDecl);
+    } else {
+      USRSet.insert(getUSRForDecl(FoundDecl));
+    }
     USRs->insert(USRs->end(), USRSet.begin(), USRSet.end());
   }
 
+  bool VisitCXXMethodDecl(const CXXMethodDecl *MethodDecl) {
+    if (MethodDecl->isVirtual()) {
+      OverriddenMethods.push_back(MethodDecl);
+    }
+    return true;
+  }
+
+  bool VisitClassTemplatePartialSpecializationDecl(
+      const ClassTemplatePartialSpecializationDecl *PartialSpec) {
+    PartialSpecs.push_back(PartialSpec);
+    return true;
+  }
+
 private:
-  void addMatchers() {
-    const auto CXXMethodDeclMatcher =
-        cxxMethodDecl(isVirtual()).bind("cxxMethodDecl");
-    Finder.addMatcher(CXXMethodDeclMatcher, this);
+  void handleCXXRecordDecl(const CXXRecordDecl *RecordDecl) {
+    RecordDecl = RecordDecl->getDefinition();
+    if (const auto *ClassTemplateSpecDecl =
+            dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl)) {
+      handleClassTemplateDecl(ClassTemplateSpecDecl->getSpecializedTemplate());
+    }
+    addUSRsOfCtorDtors(RecordDecl);
   }
 
-  // FIXME: Implement hasOverriddenMethod and matchesUSR matchers to make
-  // lookups more efficient.
-  virtual void run(const MatchFinder::MatchResult &Result) {
-    const auto *VirtualMethod =
-        Result.Nodes.getNodeAs<CXXMethodDecl>("cxxMethodDecl");
-    bool Found = false;
-    for (const auto &OverriddenMethod : VirtualMethod->overridden_methods()) {
+  void handleClassTemplateDecl(const ClassTemplateDecl *TemplateDecl) {
+    for (const auto *Specialization : TemplateDecl->specializations()) {
+      addUSRsOfCtorDtors(Specialization);
+    }
+    for (const auto *PartialSpec : PartialSpecs) {
+      if (PartialSpec->getSpecializedTemplate() == TemplateDecl) {
+        addUSRsOfCtorDtors(PartialSpec);
+      }
+    }
+    addUSRsOfCtorDtors(TemplateDecl->getTemplatedDecl());
+  }
+
+  void addUSRsOfCtorDtors(const CXXRecordDecl *RecordDecl) {
+    RecordDecl = RecordDecl->getDefinition();
+    for (const auto *CtorDecl : RecordDecl->ctors()) {
+      USRSet.insert(getUSRForDecl(CtorDecl));
+    }
+    USRSet.insert(getUSRForDecl(RecordDecl->getDestructor()));
+    USRSet.insert(getUSRForDecl(RecordDecl));
+  }
+
+  void addUSRsOfOverridenFunctions(const CXXMethodDecl *MethodDecl) {
+    USRSet.insert(getUSRForDecl(MethodDecl));
+    for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
+      // Recursively visit each OverridenMethod.
+      addUSRsOfOverridenFunctions(OverriddenMethod);
+    }
+  }
+
+  bool checkIfOverriddenFunctionAscends(const CXXMethodDecl *MethodDecl) {
+    for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
       if (USRSet.find(getUSRForDecl(OverriddenMethod)) != USRSet.end()) {
-        Found = true;
+        return true;
       }
+      return checkIfOverriddenFunctionAscends(OverriddenMethod);
     }
-    if (Found) {
-      USRSet.insert(getUSRForDecl(VirtualMethod));
-    }
-  }
-
-  void addUSRsFromOverrideSetsAndCtorDtors() {
-    // If D is CXXRecordDecl we should add all USRs of its constructors.
-    if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
-      // Ignore destructors. Find the declaration of and explicit calls to a
-      // destructor through TagTypeLoc (and it is better for the purpose of
-      // renaming).
-      //
-      // For example, in the following code segment,
-      //  1  class C {
-      //  2    ~C();
-      //  3  };
-      //
-      // At line 3, there is a NamedDecl starting from '~' and a TagTypeLoc
-      // starting from 'C'.
-      RecordDecl = RecordDecl->getDefinition();
-
-      // Iterate over all the constructors and add their USRs.
-      for (const auto *CtorDecl : RecordDecl->ctors()) {
-        USRSet.insert(getUSRForDecl(CtorDecl));
-      }
-    }
-    // If D is CXXMethodDecl we should add all USRs of its overriden methods.
-    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
-      for (auto &OverriddenMethod : MethodDecl->overridden_methods()) {
-        USRSet.insert(getUSRForDecl(OverriddenMethod));
-      }
-    }
+    return false;
   }
 
   const Decl *FoundDecl;
   ASTContext &Context;
   std::vector<std::string> *USRs;
   std::set<std::string> USRSet;
-  MatchFinder Finder;
+  std::vector<const CXXMethodDecl *> OverriddenMethods;
+  std::vector<const ClassTemplatePartialSpecializationDecl *> PartialSpecs;
 };
 } // namespace
 
 struct NamedDeclFindingConsumer : public ASTConsumer {
   void HandleTranslationUnit(ASTContext &Context) override {
-    const auto &SourceMgr = Context.getSourceManager();
+    const SourceManager &SourceMgr = Context.getSourceManager();
     // The file we look for the USR in will always be the main source file.
-    const auto Point = SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
-                           .getLocWithOffset(SymbolOffset);
+    const SourceLocation Point =
+        SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
+            .getLocWithOffset(SymbolOffset);
     if (!Point.isValid())
       return;
     const NamedDecl *FoundDecl = nullptr;

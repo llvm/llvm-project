@@ -134,8 +134,8 @@ DWARFDebugAranges::AppendRange (dw_offset_t offset, dw_addr_t low_pc, dw_addr_t 
 void
 DWARFDebugAranges::Sort (bool minimize)
 {    
-    Timer scoped_timer(__PRETTY_FUNCTION__, "%s this = %p",
-                       __PRETTY_FUNCTION__, static_cast<void*>(this));
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "%s this = %p",
+                       LLVM_PRETTY_FUNCTION, static_cast<void*>(this));
 
     Log *log (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
     size_t orig_arange_size = 0;

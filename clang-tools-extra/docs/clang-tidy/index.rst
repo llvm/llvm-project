@@ -48,27 +48,28 @@ The ``-list-checks`` option lists all the enabled checks. When used without
 available checks or with any other value of ``-checks=`` to see which checks are
 enabled by this value.
 
+.. _checks-groups-table:
+
 There are currently the following groups of checks:
 
-* Checks related to the LLVM coding conventions have names starting with
-  ``llvm-``.
+====================== =========================================================
+Name prefix            Description
+====================== =========================================================
+``boost-``             Checks related to Boost library.
+``cert-``              Checks related to CERT Secure Coding Guidelines.
+``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
+``clang-analyzer-``    Clang Static Analyzer checks.
+``google-``            Checks related to the Google coding conventions.
+``llvm-``              Checks related to the LLVM coding conventions.
+``misc-``              Checks that we didn't have a better category for.
+``modernize-``         Checks that advocate usage of modern (currently "modern"
+                       means "C++11") language constructs.
+``mpi-``               Checks related to MPI (Message Passing Interface).
+``performance-``       Checks that target performance-related issues.
+``readability-``       Checks that target readability-related issues that don't
+                       relate to any particular coding style.
+====================== =========================================================
 
-* Checks related to the Google coding conventions have names starting with
-  ``google-``.
-
-* Checks named ``modernize-*`` advocate the usage of modern (currently "modern"
-  means "C++11") language constructs.
-
-* The ``readability-`` checks target readability-related issues that don't
-  relate to any particular coding style.
-
-* Checks with names starting with ``misc-`` the checks that we didn't have a
-  better category for.
-
-* Clang static analyzer checks are named starting with ``clang-analyzer-``.
-
-* Checks related to Boost library starts with ``boost-``. 
-  
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by clang-tidy and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect
@@ -79,7 +80,7 @@ does not enable any checks itself).
 
 Clang diagnostics have check names starting with ``clang-diagnostic-``.
 Diagnostics which have a corresponding warning option, are named
-``clang-diagostic-<warning-option>``, e.g. Clang warning controlled by
+``clang-diagnostic-<warning-option>``, e.g. Clang warning controlled by
 ``-Wliteral-conversion`` will be reported with check name
 ``clang-diagnostic-literal-conversion``.
 
@@ -140,7 +141,7 @@ An overview of all the command-line options:
                                    report to stderr.
     -export-fixes=<filename>     - 
                                    YAML file to store suggested fixes in. The
-                                   stored fixes can be applied to the input sorce
+                                   stored fixes can be applied to the input source
                                    code with clang-apply-replacements.
     -extra-arg=<string>          - Additional argument to append to the compiler command line
     -extra-arg-before=<string>   - Additional argument to prepend to the compiler command line
@@ -246,7 +247,7 @@ rest of this document explains how to do this.
 There are a few tools particularly useful when developing clang-tidy checks:
   * ``add_new_check.py`` is a script to automate the process of adding a new
     check, it will create the check, update the CMake file and create a test;
-  * ``rename_check.py`` does what the script name suggest, renames an existsing
+  * ``rename_check.py`` does what the script name suggests, renames an existing
     check;
   * :program:`clang-query` is invaluable for interactive prototyping of AST
     matchers and exploration of the Clang AST;
@@ -339,29 +340,13 @@ style used in the project. For code reviews we mostly use `LLVM Phabricator`_.
 .. _LLVM Coding Standards: http://llvm.org/docs/CodingStandards.html
 .. _LLVM Phabricator: http://llvm.org/docs/Phabricator.html
 
-
-Next, you need to decide which module the check belongs to. If the check
-verifies conformance of the code to a certain coding style, it probably deserves
-a separate module and a directory in ``clang-tidy/``. There are already modules
-implementing checks related to:
-
-* `C++ Core Guidelines
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/cppcoreguidelines/>`_
-* `CERT Secure Coding Standards
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/cert/>`_
-* `Google Style Guide
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/>`_
-* `LLVM Style
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/llvm/>`_
-* `modernizing C/C++ code
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/modernize/>`_
-* potential `performance problems
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/performance/>`_
-* various `readability issues
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/readability/>`_
-* and `miscellaneous checks
-  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/misc/>`_
-  that we couldn't find a better category for.
+Next, you need to decide which module the check belongs to. Modules
+are located in subdirectories of `clang-tidy/
+<http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/>`_
+and contain checks targeting a certain aspect of code quality (performance,
+readability, etc.), certain coding style or standard (Google, LLVM, CERT, etc.)
+or a widely used API (e.g. MPI). Their names are same as user-facing check
+groups names described :ref:`above <checks-groups-table>`.
 
 After choosing the module, you need to create a class for your check:
 
@@ -562,7 +547,7 @@ source code is at `test/clang-tidy/google-readability-casting.cpp`_):
   }
 
 There are many dark corners in the C++ language, and it may be difficult to make
-your check work perfectly in all cases, especially if it issues fixit hints. The
+your check work perfectly in all cases, especially if it issues fix-it hints. The
 most frequent pitfalls are macros and templates:
 
 1. code written in a macro body/template definition may have a different meaning
@@ -570,7 +555,7 @@ most frequent pitfalls are macros and templates:
 2. multiple macro expansions/template instantiations may result in the same code
    being inspected by the check multiple times (possibly, with different
    meanings, see 1), and the same warning (or a slightly different one) may be
-   issued by the check multipe times; clang-tidy will deduplicate _identical_
+   issued by the check multiple times; clang-tidy will deduplicate _identical_
    warnings, but if the warnings are slightly different, all of them will be
    shown to the user (and used for applying fixes, if any);
 3. making replacements to a macro body/template definition may be fine for some

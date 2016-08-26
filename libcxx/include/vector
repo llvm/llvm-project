@@ -99,7 +99,7 @@ public:
     void push_back(const value_type& x);
     void push_back(value_type&& x);
     template <class... Args>
-        void emplace_back(Args&&... args);
+        reference emplace_back(Args&&... args);
     void pop_back();
 
     template <class... Args> iterator emplace(const_iterator position, Args&&... args);
@@ -218,7 +218,7 @@ public:
     const_reference back() const;
 
     void push_back(const value_type& x);
-    template <class... Args> void emplace_back(Args&&... args);  // C++14
+    template <class... Args> reference emplace_back(Args&&... args);  // C++14
     void pop_back();
 
     template <class... Args> iterator emplace(const_iterator position, Args&&... args);  // C++14
@@ -290,30 +290,22 @@ class __vector_base_common
 {
 protected:
     _LIBCPP_ALWAYS_INLINE __vector_base_common() {}
-    void __throw_length_error() const;
-    void __throw_out_of_range() const;
+    _LIBCPP_NORETURN void __throw_length_error() const;
+    _LIBCPP_NORETURN void __throw_out_of_range() const;
 };
 
 template <bool __b>
 void
 __vector_base_common<__b>::__throw_length_error() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw length_error("vector");
-#else
-    assert(!"vector length_error");
-#endif
+    _VSTD::__throw_length_error("vector");
 }
 
 template <bool __b>
 void
 __vector_base_common<__b>::__throw_out_of_range() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw out_of_range("vector");
-#else
-    assert(!"vector out_of_range");
-#endif
+    _VSTD::__throw_out_of_range("vector");
 }
 
 #ifdef _LIBCPP_MSVC
@@ -687,7 +679,7 @@ public:
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
-        void emplace_back(_Args&&... __args);
+        reference emplace_back(_Args&&... __args);
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
@@ -1632,7 +1624,7 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args)
 template <class _Tp, class _Allocator>
 template <class... _Args>
 inline
-void
+typename vector<_Tp, _Allocator>::reference
 vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
 {
     if (this->__end_ < this->__end_cap())
@@ -1646,6 +1638,7 @@ vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
     }
     else
         __emplace_back_slow_path(_VSTD::forward<_Args>(__args)...);
+    return this->back();
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
@@ -2314,8 +2307,10 @@ public:
     void push_back(const value_type& __x);
 #if _LIBCPP_STD_VER > 11
     template <class... _Args>
-    _LIBCPP_INLINE_VISIBILITY void emplace_back(_Args&&... __args)
-        { push_back ( value_type ( _VSTD::forward<_Args>(__args)... )); }
+    _LIBCPP_INLINE_VISIBILITY reference emplace_back(_Args&&... __args) {
+        push_back ( value_type ( _VSTD::forward<_Args>(__args)... ));
+        return this->back();
+    }
 #endif
 
     _LIBCPP_INLINE_VISIBILITY void pop_back() {--__size_;}

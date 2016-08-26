@@ -14,6 +14,7 @@
 #ifndef __DNB_h__
 #define __DNB_h__
 
+#include "MacOSX/DarwinLog/DarwinLogEvent.h"
 #include "MacOSX/Genealogy.h"
 #include "MacOSX/ThreadInfo.h"
 #include "JSONGenerator.h"
@@ -81,6 +82,8 @@ nub_bool_t      DNBProcessMemoryDeallocate  (nub_process_t pid, nub_addr_t addr)
 int             DNBProcessMemoryRegionInfo  (nub_process_t pid, nub_addr_t addr, DNBRegionInfo *region_info) DNB_EXPORT;
 std::string     DNBProcessGetProfileData (nub_process_t pid, DNBProfileDataScanType scanType) DNB_EXPORT;
 nub_bool_t      DNBProcessSetEnableAsyncProfiling   (nub_process_t pid, nub_bool_t enable, uint64_t interval_usec, DNBProfileDataScanType scan_type) DNB_EXPORT;
+DarwinLogEventVector DNBProcessGetAvailableDarwinLogEvents(nub_process_t pid);
+
 
 //----------------------------------------------------------------------
 // Process status

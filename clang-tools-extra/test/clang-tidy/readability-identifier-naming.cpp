@@ -59,10 +59,10 @@
 // RUN:     {key: readability-identifier-naming.UsingCase, value: lower_case}, \
 // RUN:     {key: readability-identifier-naming.ValueTemplateParameterCase, value: camelBack}, \
 // RUN:     {key: readability-identifier-naming.VariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.VirtualMethodCase, value: UPPER_CASE}, \
+// RUN:     {key: readability-identifier-naming.VirtualMethodCase, value: Camel_Snake_Case}, \
 // RUN:     {key: readability-identifier-naming.VirtualMethodPrefix, value: 'v_'}, \
 // RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.TypeAliasCase, value: lower_case}, \
+// RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
 // RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0} \
 // RUN:   ]}' -- -std=c++11 -fno-delayed-template-parsing \
@@ -261,7 +261,7 @@ class abstract_class {
 // CHECK-FIXES: {{^}}    virtual ~AAbstractClass() = 0;{{$}}
     virtual void VIRTUAL_METHOD();
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for virtual method 'VIRTUAL_METHOD'
-// CHECK-FIXES: {{^}}    virtual void v_VIRTUAL_METHOD();{{$}}
+// CHECK-FIXES: {{^}}    virtual void v_Virtual_Method();{{$}}
     void non_Virtual_METHOD() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for private method 'non_Virtual_METHOD'
 // CHECK-FIXES: {{^}}    void __non_Virtual_METHOD() {}{{$}}
@@ -316,12 +316,12 @@ struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 
 using my_struct_type = THIS___Structure;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'my_struct_type'
-// CHECK-FIXES: {{^}}using my_struct_type_t = this_structure;{{$}}
+// CHECK-FIXES: {{^}}using my_Struct_Type_t = this_structure;{{$}}
 
 template<typename t_t>
 using SomeOtherTemplate = my_other_templated_class  <:: FOO_NS  ::my_class>;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'SomeOtherTemplate'
-// CHECK-FIXES: {{^}}using some_other_template_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
+// CHECK-FIXES: {{^}}using some_Other_Template_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
 
 static void static_Function() {
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for function 'static_Function'

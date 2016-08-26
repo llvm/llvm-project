@@ -125,9 +125,6 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <stdexcept>
 #include <iosfwd>
 #include <__functional_base>
-#if defined(_LIBCPP_NO_EXCEPTIONS)
-    #include <cassert>
-#endif
 
 #include <__undef_min_max>
 
@@ -326,11 +323,8 @@ __bitset<_N_words, _Size>::to_ulong(false_type) const
     const_iterator __e = __make_iter(_Size);
     const_iterator __i = _VSTD::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
     if (__i != __e)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw overflow_error("bitset to_ulong overflow error");
-#else
-        assert(!"bitset to_ulong overflow error");
-#endif
+        __throw_overflow_error("bitset to_ulong overflow error");
+
     return __first_[0];
 }
 
@@ -349,11 +343,8 @@ __bitset<_N_words, _Size>::to_ullong(false_type) const
     const_iterator __e = __make_iter(_Size);
     const_iterator __i = _VSTD::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
     if (__i != __e)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw overflow_error("bitset to_ullong overflow error");
-#else
-        assert(!"bitset to_ullong overflow error");
-#endif
+        __throw_overflow_error("bitset to_ullong overflow error");
+
     return to_ullong(true_type());
 }
 
@@ -763,11 +754,8 @@ bitset<_Size>::bitset(const _CharT* __str,
     size_t __rlen = _VSTD::min(__n, char_traits<_CharT>::length(__str));
     for (size_t __i = 0; __i < __rlen; ++__i)
         if (__str[__i] != __zero && __str[__i] != __one)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw invalid_argument("bitset string ctor has invalid argument");
-#else
-            assert(!"bitset string ctor has invalid argument");
-#endif
+            __throw_invalid_argument("bitset string ctor has invalid argument");
+
     size_t _Mp = _VSTD::min(__rlen, _Size);
     size_t __i = 0;
     for (; __i < _Mp; ++__i)
@@ -789,19 +777,13 @@ bitset<_Size>::bitset(const basic_string<_CharT,_Traits,_Allocator>& __str,
        _CharT __zero, _CharT __one)
 {
     if (__pos > __str.size())
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("bitset string pos out of range");
-#else
-        assert(!"bitset string pos out of range");
-#endif
+        __throw_out_of_range("bitset string pos out of range");
+
     size_t __rlen = _VSTD::min(__n, __str.size() - __pos);
     for (size_t __i = __pos; __i < __pos + __rlen; ++__i)
         if (!_Traits::eq(__str[__i], __zero) && !_Traits::eq(__str[__i], __one))
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw invalid_argument("bitset string ctor has invalid argument");
-#else
-            assert(!"bitset string ctor has invalid argument");
-#endif
+            __throw_invalid_argument("bitset string ctor has invalid argument");
+
     size_t _Mp = _VSTD::min(__rlen, _Size);
     size_t __i = 0;
     for (; __i < _Mp; ++__i)
@@ -876,11 +858,8 @@ bitset<_Size>&
 bitset<_Size>::set(size_t __pos, bool __val)
 {
     if (__pos >= _Size)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("bitset set argument out of range");
-#else
-        assert(!"bitset set argument out of range");
-#endif
+        __throw_out_of_range("bitset set argument out of range");
+
     (*this)[__pos] = __val;
     return *this;
 }
@@ -899,11 +878,8 @@ bitset<_Size>&
 bitset<_Size>::reset(size_t __pos)
 {
     if (__pos >= _Size)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("bitset reset argument out of range");
-#else
-        assert(!"bitset reset argument out of range");
-#endif
+        __throw_out_of_range("bitset reset argument out of range");
+
     (*this)[__pos] = false;
     return *this;
 }
@@ -932,11 +908,8 @@ bitset<_Size>&
 bitset<_Size>::flip(size_t __pos)
 {
     if (__pos >= _Size)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("bitset flip argument out of range");
-#else
-        assert(!"bitset flip argument out of range");
-#endif
+        __throw_out_of_range("bitset flip argument out of range");
+
     reference r = base::__make_ref(__pos);
     r = ~r;
     return *this;
@@ -1027,11 +1000,8 @@ bool
 bitset<_Size>::test(size_t __pos) const
 {
     if (__pos >= _Size)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("bitset test argument out of range");
-#else
-        assert(!"bitset test argument out of range");
-#endif
+        __throw_out_of_range("bitset test argument out of range");
+
     return (*this)[__pos];
 }
 

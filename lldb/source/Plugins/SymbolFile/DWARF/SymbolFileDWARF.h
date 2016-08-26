@@ -75,6 +75,7 @@ public:
     friend class DWARFASTParserSwift;
     friend class DWARFASTParserGo;
     friend class DWARFASTParserJava;
+    friend class DWARFASTParserOCaml;
 
     //------------------------------------------------------------------
     // Static Functions

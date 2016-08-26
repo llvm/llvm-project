@@ -12,7 +12,9 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
 #include <set>
 
@@ -33,6 +35,9 @@ namespace lldb_private
     typedef Language *(*LanguageCreateInstance) (lldb::LanguageType language);
     typedef LanguageRuntime *(*LanguageRuntimeCreateInstance) (Process *process, lldb::LanguageType language);
     typedef lldb::CommandObjectSP (*LanguageRuntimeGetCommandObject) (CommandInterpreter& interpreter);
+    typedef lldb::StructuredDataPluginSP (*StructuredDataPluginCreateInstance)
+        (Process &process);
+    typedef Error (*StructuredDataFilterLaunchInfo)(ProcessLaunchInfo &launch_info, Target *target);
     typedef SystemRuntime *(*SystemRuntimeCreateInstance) (Process *process);
     typedef lldb::PlatformSP (*PlatformCreateInstance) (bool force, const ArchSpec *arch);
     typedef lldb::ProcessSP (*ProcessCreateInstance) (lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *crash_file_path);

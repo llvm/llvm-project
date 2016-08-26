@@ -23,10 +23,10 @@ TEST(ArgumentCommentCheckTest, ThisEditDistanceAboveThreshold) {
 TEST(ArgumentCommentCheckTest, OtherEditDistanceAboveThreshold) {
   EXPECT_EQ("void f(int xxx, int yyy); void g() { f(/*xxx=*/0, 0); }",
             runCheckOnCode<ArgumentCommentCheck>(
-                "void f(int xxx, int yyy); void g() { f(/*Xxx=*/0, 0); }"));
+                "void f(int xxx, int yyy); void g() { f(/*Zxx=*/0, 0); }"));
   EXPECT_EQ("struct C { C(int xxx, int yyy); }; C c(/*xxx=*/0, 0);",
             runCheckOnCode<ArgumentCommentCheck>(
-                "struct C { C(int xxx, int yyy); }; C c(/*Xxx=*/0, 0);"));
+                "struct C { C(int xxx, int yyy); }; C c(/*Zxx=*/0, 0);"));
 }
 
 TEST(ArgumentCommentCheckTest, OtherEditDistanceBelowThreshold) {

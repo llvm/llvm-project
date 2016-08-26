@@ -26,7 +26,9 @@ ExternalProject_Add(google-benchmark-libcxx
         PREFIX benchmark-libcxx
         SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx
-        CMAKE_CACHE_DEFAULT_ARGS
+        CMAKE_CACHE_ARGS
+          -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+          -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
           -DCMAKE_BUILD_TYPE:STRING=RELEASE
           -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
           -DCMAKE_CXX_FLAGS:STRING=${BENCHMARK_LIBCXX_COMPILE_FLAGS}
@@ -45,7 +47,9 @@ if (LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB)
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native
         CMAKE_CACHE_ARGS
           -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
-        CMAKE_CACHE_DEFAULT_ARGS
+        CMAKE_CACHE_ARGS
+          -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+          -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
           -DCMAKE_BUILD_TYPE:STRING=RELEASE
           -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>)
 endif()
@@ -63,6 +67,7 @@ set(BENCHMARK_TEST_COMPILE_FLAGS
 )
 set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     -nostdinc++
+    -cxx-isystem ${LIBCXX_SOURCE_DIR}/include
     ${BENCHMARK_TEST_COMPILE_FLAGS}
     -Wno-user-defined-literals
 )
@@ -82,7 +87,12 @@ macro(add_benchmark_test name source_file)
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
   add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
   add_dependencies(libcxx-benchmarks ${libcxx_target})
-  target_link_libraries(${libcxx_target} cxx -lbenchmark)
+  if (LIBCXX_ENABLE_SHARED)
+    target_link_libraries(${libcxx_target} cxx_shared)
+  else()
+    target_link_libraries(${libcxx_target} cxx_static)
+  endif()
+  target_link_libraries(${libcxx_target} -lbenchmark)
   set_target_properties(${libcxx_target}
     PROPERTIES
           OUTPUT_NAME "${name}.libcxx.out"

@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -27,7 +28,7 @@ int main()
         typedef C::const_iterator I;
         typedef int P;
         const C c;
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
     }
     {
         typedef std::unordered_multiset<int> C;
@@ -45,7 +46,7 @@ int main()
             P(80)
         };
         const C c(std::begin(a), std::end(a));
-        assert(c.bucket_count() >= 11);
+        assert(c.bucket_count() >= 8);
     }
 #if TEST_STD_VER >= 11
     {
@@ -54,7 +55,7 @@ int main()
         typedef C::const_iterator I;
         typedef int P;
         const C c;
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
     }
     {
         typedef std::unordered_multiset<int, std::hash<int>,
@@ -73,7 +74,7 @@ int main()
             P(80)
         };
         const C c(std::begin(a), std::end(a));
-        assert(c.bucket_count() >= 11);
+        assert(c.bucket_count() >= 8);
     }
 #endif
 }

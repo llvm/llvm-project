@@ -6,10 +6,15 @@ cppcoreguidelines-pro-bounds-constant-array-index
 This check flags all array subscript expressions on static arrays and
 ``std::arrays`` that either do not have a constant integer expression index or
 are out of bounds (for ``std::array``). For out-of-bounds checking of static
-arrays, see the clang-diagnostic-array-bounds check.
-
-The check can generate fixes after the option :option:`GslHeader` has been set
-to the name of the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.
+arrays, see the `-Warray-bounds` Clang diagnostic.
 
 This rule is part of the "Bounds safety" profile of the C++ Core Guidelines, see
 https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Pro-bounds-arrayindex.
+
+Options
+-------
+
+.. option:: GslHeader
+
+   The check can generate fixes after this option has been set to the name of
+   the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.

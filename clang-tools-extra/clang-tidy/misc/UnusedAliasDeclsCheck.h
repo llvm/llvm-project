@@ -15,7 +15,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {	
+namespace misc {
 
 /// Finds unused namespace alias declarations.
 class UnusedAliasDeclsCheck : public ClangTidyCheck {

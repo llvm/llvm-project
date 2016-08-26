@@ -86,7 +86,7 @@ SystemInitializerCommon::Initialize()
 
     Log::Initialize();
     HostInfo::Initialize();
-    Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     llvm::install_fatal_error_handler(fatal_error_handler, 0);
 
@@ -128,7 +128,7 @@ SystemInitializerCommon::Initialize()
 void
 SystemInitializerCommon::Terminate()
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
     ObjectContainerBSDArchive::Terminate();
     ObjectFileELF::Terminate();
     ObjectFilePECOFF::Terminate();

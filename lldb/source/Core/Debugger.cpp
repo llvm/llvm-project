@@ -61,6 +61,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
@@ -1597,7 +1598,9 @@ Debugger::HandleProcessEvent (const EventSP &event_sp)
 {
     using namespace lldb;
     const uint32_t event_type = event_sp->GetType();
-    ProcessSP process_sp = Process::ProcessEventData::GetProcessFromEvent(event_sp.get());
+    ProcessSP process_sp = (event_type == Process::eBroadcastBitStructuredData)
+        ? EventDataStructuredData::GetProcessFromEvent(event_sp.get())
+        : Process::ProcessEventData::GetProcessFromEvent(event_sp.get());
 
     StreamSP output_stream_sp = GetAsyncOutputStream();
     StreamSP error_stream_sp = GetAsyncErrorStream();
@@ -1613,6 +1616,9 @@ Debugger::HandleProcessEvent (const EventSP &event_sp)
         const bool got_state_changed = (event_type & Process::eBroadcastBitStateChanged) != 0;
         const bool got_stdout = (event_type & Process::eBroadcastBitSTDOUT) != 0;
         const bool got_stderr = (event_type & Process::eBroadcastBitSTDERR) != 0;
+        const bool got_structured_data = (event_type &
+             Process::eBroadcastBitStructuredData) != 0;
+
         if (got_state_changed)
         {
             StateType event_state = Process::ProcessEventData::GetStateFromEvent (event_sp.get());
@@ -1635,6 +1641,45 @@ Debugger::HandleProcessEvent (const EventSP &event_sp)
         if (got_stderr || got_state_changed)
         {
             GetProcessSTDERR (process_sp.get(), error_stream_sp.get());
+        }
+
+        // Give structured data events an opportunity to display.
+        if (got_structured_data)
+        {
+            StructuredDataPluginSP plugin_sp =
+                EventDataStructuredData::GetPluginFromEvent(event_sp.get());
+            if (plugin_sp)
+            {
+                auto structured_data_sp =
+                    EventDataStructuredData::GetObjectFromEvent(event_sp.get());
+                if (output_stream_sp)
+                {
+                    StreamString content_stream;
+                    Error error = plugin_sp->GetDescription(structured_data_sp,
+                                                            content_stream);
+                    if (error.Success())
+                    {
+                        if (!content_stream.GetString().empty())
+                        {
+                            // Add newline.
+                            content_stream.PutChar('\n');
+                            content_stream.Flush();
+
+                            // Print it.
+                            output_stream_sp->PutCString(content_stream
+                                                         .GetString().c_str());
+                        }
+                    }
+                    else
+                    {
+                        error_stream_sp->Printf("Failed to print structured "
+                                                "data with plugin %s: %s",
+                                                plugin_sp->GetPluginName()
+                                                    .AsCString(),
+                                                error.AsCString());
+                    }
+                }
+            }
         }
 
         // Now display any stopped state changes after any STDIO
@@ -1701,7 +1746,8 @@ Debugger::DefaultEventHandler()
     BroadcastEventSpec process_event_spec (broadcaster_class_process,
                                            Process::eBroadcastBitStateChanged   |
                                            Process::eBroadcastBitSTDOUT         |
-                                           Process::eBroadcastBitSTDERR);
+                                           Process::eBroadcastBitSTDERR         |
+                                           Process::eBroadcastBitStructuredData);
 
     BroadcastEventSpec thread_event_spec (broadcaster_class_thread,
                                           Thread::eBroadcastBitStackChanged     |
@@ -1723,7 +1769,7 @@ Debugger::DefaultEventHandler()
     while (!done)
     {
         EventSP event_sp;
-        if (listener_sp->WaitForEvent(nullptr, event_sp))
+        if (listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp))
         {
             if (event_sp)
             {
@@ -1820,7 +1866,7 @@ Debugger::StartEventHandlerThread()
         // eBroadcastBitEventThreadIsListening so we don't need to check the event, we just need
         // to wait an infinite amount of time for it (nullptr timeout as the first parameter)
         lldb::EventSP event_sp;
-        listener_sp->WaitForEvent(nullptr, event_sp);
+        listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
     }
     return m_event_handler_thread.IsJoinable();
 }

@@ -68,9 +68,9 @@ OptionGroupVariable::~OptionGroupVariable ()
 }
 
 Error
-OptionGroupVariable::SetOptionValue (CommandInterpreter &interpreter,
-                                     uint32_t option_idx, 
-                                     const char *option_arg)
+OptionGroupVariable::SetOptionValue(uint32_t option_idx,
+                                    const char *option_arg,
+                                    ExecutionContext *execution_context)
 {
     Error error;
     if (!include_frame_options)
@@ -101,7 +101,7 @@ OptionGroupVariable::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupVariable::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupVariable::OptionParsingStarting(ExecutionContext *execution_context)
 {
     show_args     = true;   // Frame option only
     show_locals   = true;   // Frame option only

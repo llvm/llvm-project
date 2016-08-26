@@ -19,6 +19,7 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_arm.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_arm.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_arm64.h"
@@ -144,6 +145,9 @@ ThreadElfCore::CreateRegisterContextForFrame (StackFrame *frame)
                     case llvm::Triple::systemz:
                         reg_interface = new RegisterContextLinux_s390x(arch);
                         break;
+                    case llvm::Triple::x86:
+                        reg_interface = new RegisterContextLinux_i386(arch);
+                        break;
                     case llvm::Triple::x86_64:
                         reg_interface = new RegisterContextLinux_x86_64(arch);
                         break;
@@ -219,20 +223,65 @@ ELFLinuxPrStatus::ELFLinuxPrStatus()
     memset(this, 0, sizeof(ELFLinuxPrStatus));
 }
 
-bool
+Error
 ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch)
 {
+    Error error;
     ByteOrder byteorder = data.GetByteOrder();
-    size_t len;
+    if (GetSize(arch) > data.GetByteSize())
+    {
+        error.SetErrorStringWithFormat("NT_PRSTATUS size should be %lu, but the remaining bytes are: %" PRIu64,
+                                       GetSize(arch), data.GetByteSize());
+        return error;
+    }
+
     switch(arch.GetCore())
     {
         case ArchSpec::eCore_s390x_generic:
         case ArchSpec::eCore_x86_64_x86_64:
-            len = data.ExtractBytes(0, ELFLINUXPRSTATUS64_SIZE, byteorder, this);
-            return len == ELFLINUXPRSTATUS64_SIZE;
+            data.ExtractBytes(0, sizeof(ELFLinuxPrStatus), byteorder, this);
+            break;
+        case ArchSpec::eCore_x86_32_i386:
+        case ArchSpec::eCore_x86_32_i486:
+        {
+            // Parsing from a 32 bit ELF core file, and populating/reusing the structure
+            // properly, because the struct is for the 64 bit version
+            offset_t offset = 0;
+            si_signo = data.GetU32(&offset);
+            si_code = data.GetU32(&offset);
+            si_errno = data.GetU32(&offset);
+
+            pr_cursig = data.GetU16(&offset);
+            offset += 2; // pad
+
+            pr_sigpend = data.GetU32(&offset);
+            pr_sighold = data.GetU32(&offset);
+
+            pr_pid = data.GetU32(&offset);
+            pr_ppid = data.GetU32(&offset);
+            pr_pgrp = data.GetU32(&offset);
+            pr_sid = data.GetU32(&offset);
+
+            pr_utime.tv_sec = data.GetU32(&offset);
+            pr_utime.tv_usec = data.GetU32(&offset);
+
+            pr_stime.tv_sec = data.GetU32(&offset);
+            pr_stime.tv_usec = data.GetU32(&offset);
+
+            pr_cutime.tv_sec = data.GetU32(&offset);
+            pr_cutime.tv_usec = data.GetU32(&offset);
+
+            pr_cstime.tv_sec = data.GetU32(&offset);
+            pr_cstime.tv_usec = data.GetU32(&offset);
+
+            break;
+        }
         default:
-            return false;
+            error.SetErrorStringWithFormat("ELFLinuxPrStatus::%s Unknown architecture", __FUNCTION__);
+            break;
     }
+
+    return error;
 }
 
 //----------------------------------------------------------------
@@ -243,19 +292,61 @@ ELFLinuxPrPsInfo::ELFLinuxPrPsInfo()
     memset(this, 0, sizeof(ELFLinuxPrPsInfo));
 }
 
-bool
+Error
 ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch)
 {
+    Error error;
     ByteOrder byteorder = data.GetByteOrder();
-    size_t len;
+    if (GetSize(arch) > data.GetByteSize())
+    {
+        error.SetErrorStringWithFormat("NT_PRPSINFO size should be %lu, but the remaining bytes are: %" PRIu64,
+                                       GetSize(arch), data.GetByteSize());
+        return error;
+    }
+
     switch(arch.GetCore())
     {
         case ArchSpec::eCore_s390x_generic:
         case ArchSpec::eCore_x86_64_x86_64:
-            len = data.ExtractBytes(0, ELFLINUXPRPSINFO64_SIZE, byteorder, this);
-            return len == ELFLINUXPRPSINFO64_SIZE;
+            data.ExtractBytes(0, sizeof(ELFLinuxPrPsInfo), byteorder, this);
+            break;
+        case ArchSpec::eCore_x86_32_i386:
+        case ArchSpec::eCore_x86_32_i486:
+        {
+            // Parsing from a 32 bit ELF core file, and populating/reusing the structure
+            // properly, because the struct is for the 64 bit version
+            size_t size = 0;
+            offset_t offset = 0;
+
+            pr_state = data.GetU8(&offset);
+            pr_sname = data.GetU8(&offset);
+            pr_zomb = data.GetU8(&offset);
+            pr_nice = data.GetU8(&offset);
+
+            pr_flag = data.GetU32(&offset);
+            pr_uid = data.GetU16(&offset);
+            pr_gid = data.GetU16(&offset);
+
+            pr_pid = data.GetU32(&offset);
+            pr_ppid = data.GetU32(&offset);
+            pr_pgrp = data.GetU32(&offset);
+            pr_sid = data.GetU32(&offset);
+
+            size = 16;
+            data.ExtractBytes(offset, size, byteorder, pr_fname);
+            offset += size;
+
+            size = 80;
+            data.ExtractBytes(offset, size, byteorder, pr_psargs);
+            offset += size;
+
+            break;
+        }
         default:
-            return false;
+            error.SetErrorStringWithFormat("ELFLinuxPrPsInfo::%s Unknown architecture", __FUNCTION__);
+            break;
     }
+
+    return error;
 }
 

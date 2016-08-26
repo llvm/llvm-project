@@ -45,12 +45,13 @@ class CommandObjectSourceInfo : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) : Options(interpreter) {}
+        CommandOptions() : Options() {}
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = g_option_table[option_idx].short_option;
@@ -84,8 +85,10 @@ class CommandObjectSourceInfo : public CommandObjectParsed
 
                 case 'a':
                 {
-                    ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
-                    address = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                    address = Args::StringToAddress(execution_context,
+                                                    option_arg,
+                                                    LLDB_INVALID_ADDRESS,
+                                                    &error);
                 }
                 break;
                 case 's':
@@ -100,7 +103,7 @@ class CommandObjectSourceInfo : public CommandObjectParsed
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             file_spec.Clear();
             file_name.clear();
@@ -137,7 +140,7 @@ public:
                                                           "process.  Defaults to instruction pointer in current stack "
                                                           "frame.",
                               nullptr, eCommandRequiresTarget),
-          m_options(interpreter)
+          m_options()
     {
     }
 
@@ -728,15 +731,16 @@ class CommandObjectSourceList : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter)
+        CommandOptions() :
+            Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = g_option_table[option_idx].short_option;
@@ -764,8 +768,10 @@ class CommandObjectSourceList : public CommandObjectParsed
 
             case 'a':
                 {
-                    ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-                    address = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                    address = Args::StringToAddress(execution_context,
+                                                    option_arg,
+                                                    LLDB_INVALID_ADDRESS,
+                                                    &error);
                 }
                 break;
             case 's':
@@ -787,7 +793,7 @@ class CommandObjectSourceList : public CommandObjectParsed
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             file_spec.Clear();
             file_name.clear();
@@ -825,7 +831,7 @@ public:
         : CommandObjectParsed(interpreter, "source list",
                               "Display source code for the current target process as specified by options.", nullptr,
                               eCommandRequiresTarget),
-          m_options(interpreter)
+          m_options()
     {
     }
 

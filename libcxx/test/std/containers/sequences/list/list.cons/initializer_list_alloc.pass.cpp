@@ -24,7 +24,7 @@ int main()
     std::list<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));
     assert(d.size() == 4);
-    std::list<int>::iterator i = d.begin();
+    std::list<int, test_allocator<int>>::iterator i = d.begin();
     assert(*i++ == 3);
     assert(*i++ == 4);
     assert(*i++ == 5);

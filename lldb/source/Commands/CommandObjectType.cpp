@@ -131,17 +131,18 @@ private:
     {
     public:
         CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override;
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override;
         
         void
-        OptionParsingStarting () override;
+        OptionParsingStarting(ExecutionContext *execution_context) override;
         
         const OptionDefinition*
         GetDefinitions () override
@@ -361,15 +362,16 @@ private:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter)
+        CommandOptions() :
+            Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -410,7 +412,7 @@ private:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_cascade = true;
             m_class_name = "";
@@ -639,7 +641,7 @@ private:
         }
         
         void
-        OptionParsingStarting (CommandInterpreter &interpreter) override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_cascade = true;
             m_skip_pointers = false;
@@ -650,9 +652,9 @@ private:
         }
 
         Error
-        SetOptionValue (CommandInterpreter &interpreter,
-                        uint32_t option_idx,
-                        const char *option_value) override
+        SetOptionValue(uint32_t option_idx,
+                       const char *option_value,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = g_option_table[option_idx].short_option;
@@ -718,9 +720,9 @@ public:
                             "type format add",
                             "Add a new formatting style for a type.",
                             nullptr),
-        m_option_group (interpreter),
-        m_format_options (eFormatInvalid),
-        m_command_options ()
+        m_option_group(),
+        m_format_options(eFormatInvalid),
+        m_command_options()
     {
         CommandArgumentEntry type_arg;
         CommandArgumentData type_style_arg;
@@ -877,15 +879,16 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -910,7 +913,7 @@ protected:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_delete_all = false;
             m_category = "default";
@@ -952,7 +955,7 @@ public:
                             name,
                             help,
                             nullptr),
-        m_options(interpreter),
+        m_options(),
         m_formatter_kind_mask(formatter_kind_mask)
     {
         CommandArgumentEntry type_arg;
@@ -1056,15 +1059,16 @@ private:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1083,7 +1087,7 @@ private:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_delete_all = false;
         }
@@ -1120,7 +1124,7 @@ public:
                             name,
                             help,
                             nullptr),
-        m_options(interpreter),
+        m_options(),
         m_formatter_kind_mask(formatter_kind_mask)
     {
     }
@@ -1215,8 +1219,8 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter),
+        CommandOptions() :
+        Options(),
         m_category_regex("",""),
         m_category_language(lldb::eLanguageTypeUnknown, lldb::eLanguageTypeUnknown)
         {
@@ -1225,7 +1229,8 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -1250,7 +1255,7 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_category_regex.Clear();
             m_category_language.Clear();
@@ -1295,7 +1300,7 @@ public:
                             name,
                             help,
                             nullptr),
-        m_options(interpreter)
+        m_options()
     {
         CommandArgumentEntry type_arg;
         CommandArgumentData type_style_arg;
@@ -1473,7 +1478,11 @@ public:
 #endif // LLDB_DISABLE_PYTHON
 
 Error
-CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue (uint32_t option_idx, const char *option_arg)
+CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(uint32_t option_idx,
+                                                            const char
+                                                            *option_arg,
+                                                            ExecutionContext
+                                                            *execution_context)
 {
     Error error;
     const int short_option = m_getopt_table[option_idx].val;
@@ -1539,7 +1548,8 @@ CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue (uint32_t option_idx
 }
 
 void
-CommandObjectTypeSummaryAdd::CommandOptions::OptionParsingStarting ()
+CommandObjectTypeSummaryAdd::CommandOptions::OptionParsingStarting(
+                                            ExecutionContext *execution_context)
 {
     m_flags.Clear().SetCascades().SetDontShowChildren().SetDontShowValue(false);
     m_flags.SetShowMembersOneLiner(false).SetSkipPointers(false).SetSkipReferences(false).SetHideItemNames(false);
@@ -2069,8 +2079,8 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter),
+        CommandOptions() :
+        Options(),
         m_define_enabled(false,false),
         m_cate_language(eLanguageTypeUnknown,eLanguageTypeUnknown)
         {
@@ -2079,7 +2089,8 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -2101,7 +2112,7 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_define_enabled.Clear();
             m_cate_language.Clear();
@@ -2137,7 +2148,7 @@ public:
                             "type category define",
                             "Define a new category as a source of formatters.",
                             nullptr),
-        m_options(interpreter)
+        m_options()
     {
         CommandArgumentEntry type_arg;
         CommandArgumentData type_style_arg;
@@ -2199,15 +2210,16 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -2231,7 +2243,7 @@ class CommandObjectTypeCategoryEnable : public CommandObjectParsed
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_language = lldb::eLanguageTypeUnknown;
         }
@@ -2266,7 +2278,7 @@ public:
                             "type category enable",
                             "Enable a category as a source of formatters.",
                             nullptr),
-        m_options(interpreter)
+        m_options()
     {
         CommandArgumentEntry type_arg;
         CommandArgumentData type_style_arg;
@@ -2419,15 +2431,16 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -2451,7 +2464,7 @@ class CommandObjectTypeCategoryDisable : public CommandObjectParsed
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_language = lldb::eLanguageTypeUnknown;
         }
@@ -2485,7 +2498,7 @@ public:
                             "type category disable",
                             "Disable a category as a source of formatters.",
                             nullptr),
-        m_options(interpreter)
+        m_options()
     {
         CommandArgumentEntry type_arg;
         CommandArgumentData type_style_arg;
@@ -2845,7 +2858,7 @@ CommandObjectTypeSynthAdd::CommandObjectTypeSynthAdd (CommandInterpreter &interp
                         "Add a new synthetic provider for a type.",
                         nullptr),
     IOHandlerDelegateMultiline ("DONE"),
-    m_options (interpreter)
+    m_options()
 {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
@@ -2928,15 +2941,16 @@ private:
         typedef std::vector<std::string> option_vector;
 
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options (interpreter)
+        CommandOptions() :
+        Options()
         {
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -2974,7 +2988,7 @@ private:
         }
         
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_cascade = true;
             m_skip_pointers = false;
@@ -3076,7 +3090,7 @@ public:
                             "type filter add",
                             "Add a new filter for a type.",
                             nullptr),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry type_arg;
         CommandArgumentData type_style_arg;
@@ -3257,9 +3271,9 @@ protected:
         }
         
         Error
-        SetOptionValue (CommandInterpreter &interpreter,
-                        uint32_t option_idx,
-                        const char *option_value) override
+        SetOptionValue (uint32_t option_idx,
+                        const char *option_value,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             
@@ -3284,7 +3298,7 @@ protected:
         }
         
         void
-        OptionParsingStarting (CommandInterpreter &interpreter) override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_show_help = false;
             m_language = eLanguageTypeUnknown;
@@ -3307,7 +3321,7 @@ public:
                       "Lookup types and declarations in the current target, following language-specific naming conventions.",
                       "type lookup <type-specifier>",
                       eCommandRequiresTarget),
-    m_option_group(interpreter),
+    m_option_group(),
     m_command_options()
     {
         m_option_group.Append(&m_command_options);
@@ -3356,8 +3370,9 @@ public:
             result.SetError("type lookup cannot be invoked without a type name as argument");
             return false;
         }
-        
-        m_option_group.NotifyOptionParsingStarting();
+
+        auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
+        m_option_group.NotifyOptionParsingStarting(&exe_ctx);
         
         const char * name_of_type = nullptr;
         
@@ -3389,7 +3404,8 @@ public:
                 if (!ParseOptions (args, result))
                     return false;
                 
-                Error error (m_option_group.NotifyOptionParsingFinished());
+                Error error(m_option_group.NotifyOptionParsingFinished(
+                                                                     &exe_ctx));
                 if (error.Fail())
                 {
                     result.AppendError (error.AsCString());
@@ -3401,9 +3417,9 @@ public:
         if (nullptr == name_of_type)
             name_of_type = raw_command_line;
         
-        TargetSP target_sp(GetCommandInterpreter().GetDebugger().GetSelectedTarget());
-        const bool fill_all_in = true;
-        ExecutionContext exe_ctx(target_sp.get(), fill_all_in);
+        // TargetSP target_sp(GetCommandInterpreter().GetDebugger().GetSelectedTarget());
+        // const bool fill_all_in = true;
+        // ExecutionContext exe_ctx(target_sp.get(), fill_all_in);
         ExecutionContextScope *best_scope = exe_ctx.GetBestExecutionContextScope();
         
         bool any_found = false;
@@ -3411,6 +3427,7 @@ public:
         std::vector<Language*> languages;
         
         bool is_global_search = false;
+        LanguageType guessed_language = lldb::eLanguageTypeUnknown;
 
         if ( (is_global_search = (m_command_options.m_language == eLanguageTypeUnknown)) )
         {
@@ -3428,22 +3445,24 @@ public:
         // so the cost of the sort is going to be dwarfed by the actual lookup anyway
         if (StackFrame* frame = m_exe_ctx.GetFramePtr())
         {
-            LanguageType lang = GuessLanguage(frame);
-            if (lang != eLanguageTypeUnknown)
+            guessed_language = GuessLanguage(frame);
+            if (guessed_language != eLanguageTypeUnknown)
             {
                 std::sort(languages.begin(),
                           languages.end(),
-                          [lang] (Language* lang1,
-                                  Language* lang2) -> bool {
+                          [guessed_language] (Language* lang1,
+                                              Language* lang2) -> bool {
                               if (!lang1 || !lang2) return false;
                               LanguageType lt1 = lang1->GetLanguageType();
                               LanguageType lt2 = lang2->GetLanguageType();
-                              if (lt1 == lang) return true; // make the selected frame's language come first
-                              if (lt2 == lang) return false; // make the selected frame's language come first
+                              if (lt1 == guessed_language) return true; // make the selected frame's language come first
+                              if (lt2 == guessed_language) return false; // make the selected frame's language come first
                               return (lt1 < lt2); // normal comparison otherwise
                           });
             }
         }
+        
+        bool is_first_language = true;
         
         for (Language* language : languages)
         {
@@ -3464,9 +3483,16 @@ public:
                         }
                     }
                 }
-                // this is "type lookup SomeName" and we did find a match, so get out
-                if (any_found && is_global_search)
-                    break;
+            }
+            // this is "type lookup SomeName" and we did find a match, so get out
+            if (any_found && is_global_search)
+                break;
+            else if (is_first_language && is_global_search && guessed_language != lldb::eLanguageTypeUnknown)
+            {
+                is_first_language = false;
+                result.GetOutputStream().Printf("no type was found in the current language %s matching '%s'; performing a global search across all languages\n",
+                                                Language::GetNameForLanguageType(guessed_language),
+                                                name_of_type);
             }
         }
         

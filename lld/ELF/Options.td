@@ -119,6 +119,9 @@ def no_undefined_version: F<"no-undefined-version">,
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
+  HelpText<"Specify the binary format for the output object file">;
+
 def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,
@@ -145,6 +148,10 @@ def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
 def sysroot: J<"sysroot=">, HelpText<"Set the system root">;
+
+def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_REL32">;
+
+def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_ABS32">;
 
 def threads: F<"threads">, HelpText<"Enable use of threads">;
 
@@ -199,7 +206,8 @@ def alias_fini_fini: J<"fini=">, Alias<fini>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;
 def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;
-def alias_o_output: Joined<["--"], "output=">, Alias<o>;
+def alias_o_output: J<"output=">, Alias<o>;
+def alias_o_output2 : S<"output">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
 def alias_rpath_R: Joined<["-"], "R">, Alias<rpath>;
@@ -242,6 +250,7 @@ def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def define_common: F<"define-common">;
 def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
+def g: Flag<["-"], "g">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
@@ -256,7 +265,9 @@ def rpath_link_eq: J<"rpath-link=">;
 def sort_common: F<"sort-common">;
 def warn_execstack: F<"warn-execstack">;
 def warn_shared_textrel: F<"warn-shared-textrel">;
-def G: Separate<["-"], "G">;
+def EB : F<"EB">;
+def EL : F<"EL">;
+def G: JoinedOrSeparate<["-"], "G">;
 
 // Aliases for ignored options
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;

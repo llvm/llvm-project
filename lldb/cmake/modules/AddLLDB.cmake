@@ -4,7 +4,7 @@ function(lldb_link_common_libs name targetkind)
   endif()
 
   if(${targetkind} MATCHES "SHARED")
-    set(LINK_KEYWORD ${cmake_2_8_12_PUBLIC})
+    set(LINK_KEYWORD PUBLIC)
   endif()
 
   if(${targetkind} MATCHES "SHARED" OR ${targetkind} MATCHES "EXE")

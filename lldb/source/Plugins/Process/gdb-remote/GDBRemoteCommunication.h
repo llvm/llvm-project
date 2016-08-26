@@ -12,6 +12,8 @@
 
 // C Includes
 // C++ Includes
+#include <condition_variable>
+#include <mutex>
 #include <string>
 #include <queue>
 #include <vector>
@@ -22,7 +24,6 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/Args.h"
@@ -113,31 +114,16 @@ public:
     CalculcateChecksum (const char *payload,
                         size_t payload_length);
 
-    bool
-    GetSequenceMutex(Mutex::Locker& locker, const char *failure_message = nullptr);
-
     PacketType
     CheckForPacket (const uint8_t *src, 
                     size_t src_len, 
                     StringExtractorGDBRemote &packet);
 
     bool
-    IsRunning() const
-    {
-        return m_public_is_running.GetValue();
-    }
-
-    bool
     GetSendAcks ()
     {
         return m_send_acks;
     }
-
-    //------------------------------------------------------------------
-    // Client and server must implement these pure virtual functions
-    //------------------------------------------------------------------
-    virtual bool
-    GetThreadSuffixSupported () = 0;
 
     //------------------------------------------------------------------
     // Set the global packet timeout.
@@ -170,7 +156,8 @@ public:
                             Platform *platform, // If non nullptr, then check with the platform for the GDB server binary if it can't be located
                             ProcessLaunchInfo &launch_info,
                             uint16_t *port,
-                            const Args& inferior_args = Args());
+                            const Args *inferior_args,
+                            int pass_comm_fd); // Communication file descriptor to pass during fork/exec to avoid having to connect/accept
 
     void
     DumpHistory(Stream &strm);
@@ -284,13 +271,6 @@ protected:
     uint32_t m_packet_timeout;
     uint32_t m_echo_number;
     LazyBool m_supports_qEcho;
-#ifdef ENABLE_MUTEX_ERROR_CHECKING
-    TrackingMutex m_sequence_mutex;
-#else
-    Mutex m_sequence_mutex;    // Restrict access to sending/receiving packets to a single thread at a time
-#endif
-    Predicate<bool> m_public_is_running;
-    Predicate<bool> m_private_is_running;
     History m_history;
     bool m_send_acks;
     bool m_is_platform; // Set to true if this class represents a platform,
@@ -298,10 +278,6 @@ protected:
                         // a single process
     
     CompressionType m_compression_type;
-
-    PacketResult
-    SendPacket (const char *payload,
-                size_t payload_length);
 
     PacketResult
     SendPacketNoLock (const char *payload, 
@@ -318,9 +294,6 @@ protected:
     WaitForPacketWithTimeoutMicroSecondsNoLock (StringExtractorGDBRemote &response, 
                                                 uint32_t timeout_usec,
                                                 bool sync_on_timeout);
-
-    bool
-    WaitForNotRunningPrivate (const TimeValue *timeout_ptr);
 
     bool
     CompressionIsEnabled ()
@@ -364,8 +337,8 @@ protected:
 
 private:
     std::queue<StringExtractorGDBRemote> m_packet_queue; // The packet queue
-    lldb_private::Mutex m_packet_queue_mutex;            // Mutex for accessing queue
-    Condition m_condition_queue_not_empty;               // Condition variable to wait for packets
+    std::mutex m_packet_queue_mutex;                     // Mutex for accessing queue
+    std::condition_variable m_condition_queue_not_empty; // Condition variable to wait for packets
 
     HostThread m_listen_thread;
     std::string m_listen_url;

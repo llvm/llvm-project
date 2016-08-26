@@ -24,6 +24,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -39,7 +41,7 @@ int main()
             P(2, "four"),
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         assert(std::distance(c.begin(), c.end()) == c.size());
         assert(std::distance(c.cbegin(), c.cend()) == c.size());
@@ -61,7 +63,7 @@ int main()
             P(2, "four"),
         };
         const C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         assert(std::distance(c.begin(), c.end()) == c.size());
         assert(std::distance(c.cbegin(), c.cend()) == c.size());

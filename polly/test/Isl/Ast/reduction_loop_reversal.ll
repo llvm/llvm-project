@@ -1,10 +1,14 @@
 ; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ; CHECK-NOT: #pragma simd{{\s*$}}
 ; CHECK: #pragma simd reduction
 ; CHECK: Stmt_S0(n - c1)
 ; CHECK: #pragma simd{{\s*$}}
 ; CHECK: Stmt_S1(n - c1)
+;
+; PINFO:       for.cond2: Loop is parallel.
+; PINFO-NEXT:  for.cond: Loop is not parallel.
 ;
 ;    void rlr(int *A, long n) {
 ;      for (long i = 0; i < 2 * n; i++)

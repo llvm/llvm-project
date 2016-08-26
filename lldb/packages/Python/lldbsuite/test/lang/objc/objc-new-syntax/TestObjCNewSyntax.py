@@ -27,7 +27,7 @@ class ObjCNewSyntaxTestCase(TestBase):
 
     @skipUnlessDarwin
     @expectedFailureAll(oslist=['macosx'], compiler='clang', compiler_version=['<', '7.0.0'])
-    @expectedFailureAll(oslist=['macosx'], debug_info="gmodules", bugnumber="rdar://26558099")
+    @expectedFailureAll(oslist=['macosx'], debug_info=['gmodules'], bugnumber='rdar://27792848')
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion('12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
     def test_expr(self):
         self.build()

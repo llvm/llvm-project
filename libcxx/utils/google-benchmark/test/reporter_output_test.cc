@@ -114,7 +114,9 @@ std::string join(First f, Args&&... args) {
     return std::string(std::move(f)) + "[ ]+" + join(std::forward<Args>(args)...);
 }
 
-std::string dec_re = "[0-9]+\\.[0-9]+";
+
+
+std::string dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
 
 }  // end namespace
 
@@ -185,7 +187,7 @@ ADD_CASES(&CSVOutputTests, {
 void BM_Complexity_O1(benchmark::State& state) {
   while (state.KeepRunning()) {
   }
-  state.SetComplexityN(state.range_x());
+  state.SetComplexityN(state.range(0));
 }
 BENCHMARK(BM_Complexity_O1)->Range(1, 1<<18)->Complexity(benchmark::o1);
 
@@ -203,14 +205,8 @@ ADD_CASES(&ConsoleOutputTests, {
 
 
 int main(int argc, char* argv[]) {
-  // Add --color_print=false to argv since we don't want to match color codes.
-  char new_arg[64];
-  char* new_argv[64];
-  std::copy(argv, argv + argc, new_argv);
-  new_argv[argc++] = std::strcpy(new_arg, "--color_print=false");
-  benchmark::Initialize(&argc, new_argv);
-
-  benchmark::ConsoleReporter CR;
+  benchmark::Initialize(&argc, argv);
+  benchmark::ConsoleReporter CR(benchmark::ConsoleReporter::OO_None);
   benchmark::JSONReporter JR;
   benchmark::CSVReporter CSVR;
   struct ReporterTest {

@@ -20,6 +20,7 @@
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/SelectHelper.h"
 
 // C Includes
 #include <errno.h>
@@ -572,7 +573,7 @@ ConnectionFileDescriptor::GetURI()
     return m_uri;
 }
 
-// This ConnectionFileDescriptor::BytesAvailable() uses select().
+// This ConnectionFileDescriptor::BytesAvailable() uses select() via SelectHelper
 //
 // PROS:
 //  - select is consistent across most unix platforms
@@ -586,11 +587,6 @@ ConnectionFileDescriptor::GetURI()
 //     be used or a new version of ConnectionFileDescriptor::BytesAvailable()
 //     should be written for the system that is running into the limitations.
 
-#if defined(__APPLE__)
-#define FD_SET_DATA(fds) fds.data()
-#else
-#define FD_SET_DATA(fds) &fds
-#endif
 
 ConnectionStatus
 ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr)
@@ -602,21 +598,6 @@ ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr
     if (log)
         log->Printf("%p ConnectionFileDescriptor::BytesAvailable (timeout_usec = %u)", static_cast<void *>(this), timeout_usec);
 
-    struct timeval *tv_ptr;
-    struct timeval tv;
-    if (timeout_usec == UINT32_MAX)
-    {
-        // Infinite wait...
-        tv_ptr = nullptr;
-    }
-    else
-    {
-        TimeValue time_value;
-        time_value.OffsetWithMicroSeconds(timeout_usec);
-        tv.tv_sec = time_value.seconds();
-        tv.tv_usec = time_value.microseconds();
-        tv_ptr = &tv;
-    }
 
     // Make a copy of the file descriptors to make sure we don't
     // have another thread change these values out from under us
@@ -624,8 +605,14 @@ ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr
     const IOObject::WaitableHandle handle = m_read_sp->GetWaitableHandle();
     const int pipe_fd = m_pipe.GetReadFileDescriptor();
 
+
     if (handle != IOObject::kInvalidHandleValue)
     {
+        SelectHelper select_helper;
+        if (timeout_usec != UINT32_MAX)
+            select_helper.SetTimeout(std::chrono::microseconds(timeout_usec));
+
+        select_helper.FDSetRead(handle);
 #if defined(_MSC_VER)
         // select() won't accept pipes on Windows.  The entire Windows codepath needs to be
         // converted over to using WaitForMultipleObjects and event HANDLEs, but for now at least
@@ -633,62 +620,14 @@ ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr
         const bool have_pipe_fd = false;
 #else
         const bool have_pipe_fd = pipe_fd >= 0;
-#if !defined(__APPLE__)
-        assert(handle < FD_SETSIZE);
+#endif
         if (have_pipe_fd)
-            assert(pipe_fd < FD_SETSIZE);
-#endif
-#endif
+            select_helper.FDSetRead(pipe_fd);
+
         while (handle == m_read_sp->GetWaitableHandle())
         {
-            const int nfds = std::max<int>(handle, pipe_fd) + 1;
-#if defined(__APPLE__)
-            llvm::SmallVector<fd_set, 1> read_fds;
-            read_fds.resize((nfds / FD_SETSIZE) + 1);
-            for (size_t i = 0; i < read_fds.size(); ++i)
-                FD_ZERO(&read_fds[i]);
-// FD_SET doesn't bounds check, it just happily walks off the end
-// but we have taken care of making the extra storage with our
-// SmallVector of fd_set objects
-#else
-            fd_set read_fds;
-            FD_ZERO(&read_fds);
-#endif
-            FD_SET(handle, FD_SET_DATA(read_fds));
-            if (have_pipe_fd)
-                FD_SET(pipe_fd, FD_SET_DATA(read_fds));
 
-            Error error;
-
-            if (log)
-            {
-                if (have_pipe_fd)
-                    log->Printf(
-                        "%p ConnectionFileDescriptor::BytesAvailable()  ::select (nfds=%i, fds={%i, %i}, NULL, NULL, timeout=%p)...",
-                        static_cast<void *>(this), nfds, handle, pipe_fd, static_cast<void *>(tv_ptr));
-                else
-                    log->Printf("%p ConnectionFileDescriptor::BytesAvailable()  ::select (nfds=%i, fds={%i}, NULL, NULL, timeout=%p)...",
-                                static_cast<void *>(this), nfds, handle, static_cast<void *>(tv_ptr));
-            }
-
-            const int num_set_fds = ::select(nfds, FD_SET_DATA(read_fds), NULL, NULL, tv_ptr);
-            if (num_set_fds < 0)
-                error.SetErrorToErrno();
-            else
-                error.Clear();
-
-            if (log)
-            {
-                if (have_pipe_fd)
-                    log->Printf("%p ConnectionFileDescriptor::BytesAvailable()  ::select (nfds=%i, fds={%i, %i}, NULL, NULL, timeout=%p) "
-                                "=> %d, error = %s",
-                                static_cast<void *>(this), nfds, handle, pipe_fd, static_cast<void *>(tv_ptr), num_set_fds,
-                                error.AsCString());
-                else
-                    log->Printf("%p ConnectionFileDescriptor::BytesAvailable()  ::select (nfds=%i, fds={%i}, NULL, NULL, timeout=%p) => "
-                                "%d, error = %s",
-                                static_cast<void *>(this), nfds, handle, static_cast<void *>(tv_ptr), num_set_fds, error.AsCString());
-            }
+            Error error = select_helper.Select();
 
             if (error_ptr)
                 *error_ptr = error;
@@ -704,6 +643,9 @@ ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr
                     default:     // Other unknown error
                         return eConnectionStatusError;
 
+                    case ETIMEDOUT:
+                        return eConnectionStatusTimedOut;
+
                     case EAGAIN: // The kernel was (perhaps temporarily) unable to
                                  // allocate the requested number of file descriptors,
                                  // or we have non-blocking IO
@@ -713,15 +655,12 @@ ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr
                         break; // Lets keep reading to until we timeout
                 }
             }
-            else if (num_set_fds == 0)
+            else
             {
-                return eConnectionStatusTimedOut;
-            }
-            else if (num_set_fds > 0)
-            {
-                if (FD_ISSET(handle, FD_SET_DATA(read_fds)))
+                if (select_helper.FDIsSetRead(handle))
                     return eConnectionStatusSuccess;
-                if (have_pipe_fd && FD_ISSET(pipe_fd, FD_SET_DATA(read_fds)))
+
+                if (select_helper.FDIsSetRead(pipe_fd))
                 {
                     // There is an interrupt or exit command in the command pipe
                     // Read the data from that pipe:
@@ -877,11 +816,7 @@ ConnectionFileDescriptor::GetListeningPort(uint32_t timeout_sec)
     if (timeout_sec == UINT32_MAX)
         m_port_predicate.WaitForValueNotEqualTo(0, bound_port);
     else
-    {
-        TimeValue timeout = TimeValue::Now();
-        timeout.OffsetWithSeconds(timeout_sec);
-        m_port_predicate.WaitForValueNotEqualTo(0, bound_port, &timeout);
-    }
+        m_port_predicate.WaitForValueNotEqualTo(0, bound_port, std::chrono::seconds(timeout_sec));
     return bound_port;
 }
 

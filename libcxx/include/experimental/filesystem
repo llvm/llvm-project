@@ -228,7 +228,7 @@
 #include <system_error>
 #include <utility>
 #include <iomanip> // for quoted
-#include <experimental/string_view>
+#include <string_view>
 
 #include <__debug>
 
@@ -498,6 +498,21 @@ struct __is_pathable_string<basic_string<_ECharT, _Traits, _Alloc>,
     }
 };
 
+
+template <class _ECharT, class _Traits>
+struct __is_pathable_string<basic_string_view<_ECharT, _Traits>,
+                            _Void<typename __can_convert_char<_ECharT>::__char_type>>
+: public __can_convert_char<_ECharT>
+{
+    using _Str = basic_string_view<_ECharT, _Traits>;
+    using _Base = __can_convert_char<_ECharT>;
+    static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
+    static _ECharT const* __range_end(_Str const& __s) { return __s.data() + __s.length(); }
+    static _ECharT __first_or_null(_Str const& __s) {
+        return __s.empty() ? _ECharT{} : __s[0];
+    }
+};
+
 template <class _Source,
           class _DS = typename decay<_Source>::type,
           class _UnqualPtrType = typename remove_const<
@@ -642,6 +657,7 @@ class _LIBCPP_TYPE_VIS path
 public:
     typedef char value_type;
     typedef basic_string<value_type> string_type;
+    typedef _VSTD::string_view __string_view;
     static _LIBCPP_CONSTEXPR value_type preferred_separator = '/';
 
     // constructors and destructor
@@ -788,6 +804,12 @@ public:
     }
 
     _LIBCPP_INLINE_VISIBILITY
+    path& operator+=(__string_view __x) {
+        __pn_ += __x;
+        return *this;
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
     path& operator+=(const value_type* __x) {
         __pn_ += __x;
         return *this;
@@ -798,7 +820,6 @@ public:
         __pn_ += __x;
         return *this;
     }
-
 
     template <class _ECharT>
     typename enable_if<__can_convert_char<_ECharT>::value, path&>::type
@@ -896,30 +917,31 @@ public:
     std::u32string generic_u32string() const { return string<char32_t>(); }
 
 private:
-    _LIBCPP_FUNC_VIS int __compare(const value_type*) const;
-    _LIBCPP_FUNC_VIS string_view __root_name() const;
-    _LIBCPP_FUNC_VIS string_view __root_directory() const;
-    _LIBCPP_FUNC_VIS string_view __relative_path() const;
-    _LIBCPP_FUNC_VIS string_view __parent_path() const;
-    _LIBCPP_FUNC_VIS string_view __filename() const;
-    _LIBCPP_FUNC_VIS string_view __stem() const;
-    _LIBCPP_FUNC_VIS string_view __extension() const;
+    _LIBCPP_FUNC_VIS int __compare(__string_view) const;
+    _LIBCPP_FUNC_VIS __string_view __root_name() const;
+    _LIBCPP_FUNC_VIS __string_view __root_directory() const;
+    _LIBCPP_FUNC_VIS __string_view __relative_path() const;
+    _LIBCPP_FUNC_VIS __string_view __parent_path() const;
+    _LIBCPP_FUNC_VIS __string_view __filename() const;
+    _LIBCPP_FUNC_VIS __string_view __stem() const;
+    _LIBCPP_FUNC_VIS __string_view __extension() const;
 
 public:
     // compare
-    _LIBCPP_INLINE_VISIBILITY int compare(const path& __p) const _NOEXCEPT { return __compare(__p.c_str());}
-    _LIBCPP_INLINE_VISIBILITY int compare(const string_type& __s) const { return __compare(__s.c_str()); }
+    _LIBCPP_INLINE_VISIBILITY int compare(const path& __p) const _NOEXCEPT { return __compare(__p.__pn_);}
+    _LIBCPP_INLINE_VISIBILITY int compare(const string_type& __s) const { return __compare(__s); }
+    _LIBCPP_INLINE_VISIBILITY int compare(__string_view __s) const { return __compare(__s); }
     _LIBCPP_INLINE_VISIBILITY int compare(const value_type* __s) const  { return __compare(__s); }
 
     // decomposition
-    _LIBCPP_INLINE_VISIBILITY path root_name()      const { return  __root_name().to_string(); }
-    _LIBCPP_INLINE_VISIBILITY path root_directory() const { return  __root_directory().to_string(); }
-    _LIBCPP_INLINE_VISIBILITY path root_path()      const { return root_name().append(__root_directory().to_string()); }
-    _LIBCPP_INLINE_VISIBILITY path relative_path()  const { return __relative_path().to_string(); }
-    _LIBCPP_INLINE_VISIBILITY path parent_path()    const { return __parent_path().to_string(); }
-    _LIBCPP_INLINE_VISIBILITY path filename()       const { return __filename().to_string(); }
-    _LIBCPP_INLINE_VISIBILITY path stem()           const { return __stem().to_string();}
-    _LIBCPP_INLINE_VISIBILITY path extension()      const { return __extension().to_string(); }
+    _LIBCPP_INLINE_VISIBILITY path root_name()      const { return  string_type(__root_name()); }
+    _LIBCPP_INLINE_VISIBILITY path root_directory() const { return  string_type(__root_directory()); }
+    _LIBCPP_INLINE_VISIBILITY path root_path()      const { return root_name().append(string_type(__root_directory())); }
+    _LIBCPP_INLINE_VISIBILITY path relative_path()  const { return string_type(__relative_path()); }
+    _LIBCPP_INLINE_VISIBILITY path parent_path()    const { return string_type(__parent_path()); }
+    _LIBCPP_INLINE_VISIBILITY path filename()       const { return string_type(__filename()); }
+    _LIBCPP_INLINE_VISIBILITY path stem()           const { return string_type(__stem());}
+    _LIBCPP_INLINE_VISIBILITY path extension()      const { return string_type(__extension()); }
 
     // query
     _LIBCPP_INLINE_VISIBILITY bool empty() const _NOEXCEPT { return __pn_.empty(); }
@@ -945,7 +967,7 @@ public:
 
 private:
     inline _LIBCPP_INLINE_VISIBILITY
-    path& __assign_view(string_view const& __s) noexcept { __pn_ = __s.to_string(); return *this; }
+    path& __assign_view(__string_view const& __s) noexcept { __pn_ = string_type(__s); return *this; }
     string_type __pn_;
 };
 
@@ -1153,6 +1175,17 @@ private:
     typedef pair<path, path> _Storage;
     shared_ptr<_Storage> __paths_;
 };
+
+template <class... _Args>
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_filesystem_error(_Args && ...__args)
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw filesystem_error(std::forward<_Args>(__args)...);
+#else
+    _VSTD::abort();
+#endif
+}
 
 // operational functions
 

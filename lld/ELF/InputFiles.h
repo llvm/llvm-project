@@ -16,6 +16,7 @@
 #include "Symbols.h"
 
 #include "lld/Core/LLVM.h"
+#include "lld/Core/Reproduce.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Comdat.h"
@@ -175,6 +176,8 @@ private:
   std::unique_ptr<MipsReginfoInputSection<ELFT>> MipsReginfo;
   // MIPS .MIPS.options section defined by this file.
   std::unique_ptr<MipsOptionsInputSection<ELFT>> MipsOptions;
+  // MIPS .MIPS.abiflags section defined by this file.
+  std::unique_ptr<MipsAbiFlagsInputSection<ELFT>> MipsAbiFlags;
 
   llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
   llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;

@@ -122,13 +122,16 @@ struct _Unwind_Exception {
   uintptr_t private_1; // non-zero means forced unwind
   uintptr_t private_2; // holds sp that phase1 found for phase2 to use
 #ifndef __LP64__
-  // The gcc implementation of _Unwind_Exception used attribute mode on the
-  // above fields which had the side effect of causing this whole struct to
+  // The implementation of _Unwind_Exception uses an attribute mode on the
+  // above fields which has the side effect of causing this whole struct to
   // round up to 32 bytes in size. To be more explicit, we add pad fields
   // added for binary compatibility.
   uint32_t reserved[3];
 #endif
-};
+  // The Itanium ABI requires that _Unwind_Exception objects are "double-word
+  // aligned".  GCC has interpreted this to mean "use the maximum useful
+  // alignment for the target"; so do we.
+} __attribute__((__aligned__));
 
 typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
     (int version,

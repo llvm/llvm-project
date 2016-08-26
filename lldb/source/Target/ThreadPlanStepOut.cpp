@@ -49,7 +49,8 @@ ThreadPlanStepOut::ThreadPlanStepOut
     Vote run_vote,
     uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
-    bool continue_to_next_branch
+    bool continue_to_next_branch,
+    bool gather_return_value
 ) :
     ThreadPlan (ThreadPlan::eKindStepOut, "Step out", thread, stop_vote, run_vote),
     ThreadPlanShouldStopHere (this),
@@ -59,7 +60,8 @@ ThreadPlanStepOut::ThreadPlanStepOut
     m_swift_error_return_addr (LLDB_INVALID_ADDRESS),
     m_stop_others (stop_others),
     m_immediate_step_from_function(nullptr),
-    m_is_swift_error_value(false)
+    m_is_swift_error_value(false),
+    m_calculate_return_value(gather_return_value)
 {
     SetFlagsToDefault();
     SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
@@ -574,6 +576,9 @@ ThreadPlanStepOut::QueueInlinedStepPlan (bool queue_now)
 void
 ThreadPlanStepOut::CalculateReturnValue ()
 {
+    if (!m_calculate_return_value)
+        return;
+
     if (m_return_valobj_sp)
         return;
     // First check if we have an error return address, and if that pointer contains a valid error return, grab it:

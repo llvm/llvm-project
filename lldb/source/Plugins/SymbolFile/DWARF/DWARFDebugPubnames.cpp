@@ -31,7 +31,7 @@ DWARFDebugPubnames::DWARFDebugPubnames() :
 bool
 DWARFDebugPubnames::Extract(const DWARFDataExtractor& data)
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "DWARFDebugPubnames::Extract (byte_size = %" PRIu64 ")",
                         (uint64_t)data.GetByteSize());
     Log *log (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_PUBNAMES));
@@ -64,7 +64,7 @@ DWARFDebugPubnames::Extract(const DWARFDataExtractor& data)
 bool
 DWARFDebugPubnames::GeneratePubnames(SymbolFileDWARF* dwarf2Data)
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "DWARFDebugPubnames::GeneratePubnames (data = %p)",
                         static_cast<void*>(dwarf2Data));
 

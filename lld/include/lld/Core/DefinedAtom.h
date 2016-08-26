@@ -354,10 +354,6 @@ public:
     return atomContentType == typeCFI;
   }
 
-  // Returns true if lhs should be placed before rhs in the final output.
-  static bool compareByPosition(const DefinedAtom *lhs,
-                                const DefinedAtom *rhs);
-
 protected:
   // DefinedAtom is an abstract base class. Only subclasses can access
   // constructor.

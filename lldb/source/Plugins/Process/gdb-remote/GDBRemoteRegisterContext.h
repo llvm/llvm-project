@@ -98,8 +98,8 @@ protected:
     friend class ThreadGDBRemote;
 
     bool
-    ReadRegisterBytes (const RegisterInfo *reg_info,
-                       DataExtractor &data);
+    ReadRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data, GDBRemoteCommunicationClient &gdb_comm,
+                      const GDBRemoteCommunicationClient::Lock &lock);
 
     bool
     WriteRegisterBytes (const RegisterInfo *reg_info,
@@ -107,8 +107,8 @@ protected:
                         uint32_t data_offset);
 
     bool
-    PrivateSetRegisterValue (uint32_t reg, StringExtractor &response);
-    
+    PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
+
     bool
     PrivateSetRegisterValue (uint32_t reg, uint64_t val);
 
@@ -143,9 +143,6 @@ protected:
             m_reg_valid[reg] = valid;
     }
 
-    void
-    SyncThreadState(Process *process);  // Assumes the sequence mutex has already been acquired.
-    
     GDBRemoteDynamicRegisterInfo &m_reg_info;
     std::vector<bool> m_reg_valid;
     DataExtractor m_reg_data;
@@ -153,11 +150,13 @@ protected:
 
 private:
     // Helper function for ReadRegisterBytes().
-    bool GetPrimordialRegister(const RegisterInfo *reg_info,
-                               GDBRemoteCommunicationClient &gdb_comm);
+    bool
+    GetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                          const GDBRemoteCommunicationClient::Lock &lock);
     // Helper function for WriteRegisterBytes().
-    bool SetPrimordialRegister(const RegisterInfo *reg_info,
-                               GDBRemoteCommunicationClient &gdb_comm);
+    bool
+    SetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                          const GDBRemoteCommunicationClient::Lock &lock);
 
     DISALLOW_COPY_AND_ASSIGN (GDBRemoteRegisterContext);
 };

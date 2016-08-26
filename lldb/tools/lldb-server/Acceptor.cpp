@@ -10,6 +10,7 @@
 #include "Acceptor.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -142,7 +143,7 @@ Acceptor::Create(StringRef name, const bool child_processes_inherit, Error &erro
             TCPSocket* tcp_socket = static_cast<TCPSocket*>(listener_socket_up.get());
             local_socket_id = [tcp_socket]() {
                 auto local_port = tcp_socket->GetLocalPortNumber();
-                return (local_port != 0) ? std::to_string(local_port) : "";
+                return (local_port != 0) ? llvm::to_string(local_port) : "";
             };
         }
         else

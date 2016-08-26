@@ -28,6 +28,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
+#include "constexpr_char_traits.hpp"
 
 namespace fs = std::experimental::filesystem;
 
@@ -59,6 +60,8 @@ struct MakeTestType {
   using value_type = CharT;
   using string_type = std::basic_string<CharT>;
   using string_type2 = std::basic_string<CharT, std::char_traits<CharT>, min_allocator<CharT>>;
+  using string_view_type = std::basic_string_view<CharT>;
+  using string_view_type2 = std::basic_string_view<CharT, constexpr_char_traits<CharT>>;
   using cstr_type = CharT* const;
   using const_cstr_type = const CharT*;
   using array_type = CharT[25];
@@ -81,6 +84,8 @@ struct MakeTestType {
   static void Test() {
     AssertPathable<string_type>();
     AssertPathable<string_type2>();
+    AssertPathable<string_view_type>();
+    AssertPathable<string_view_type2>();
     AssertPathable<cstr_type>();
     AssertPathable<const_cstr_type>();
     AssertPathable<array_type>();

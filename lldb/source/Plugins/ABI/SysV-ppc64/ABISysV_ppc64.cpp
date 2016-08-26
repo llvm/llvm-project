@@ -115,7 +115,7 @@ enum dwarf_regnums
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR(reg, alt, kind1, kind2, kind3, kind4)           \
     { #reg, alt, 8, 0, eEncodingUint, \
-      eFormatHex, { kind1, kind2, kind3, kind4}, nullptr, nullptr }
+      eFormatHex, { kind1, kind2, kind3, kind4}, nullptr, nullptr, nullptr, 0 }
 
 static const RegisterInfo
 g_register_infos[] =
@@ -158,7 +158,7 @@ g_register_infos[] =
     DEFINE_GPR(xer,      "xer",   dwarf_xer,   dwarf_xer,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_GPR(ctr,      "ctr",   dwarf_ctr,   dwarf_ctr,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_GPR(pc,       "pc",    dwarf_pc,    dwarf_pc,    LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM),
-    { nullptr, nullptr, 8, 0, eEncodingUint, eFormatHex, { dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM}, nullptr, nullptr }
+    { nullptr, nullptr, 8, 0, eEncodingUint, eFormatHex, { dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM}, nullptr, nullptr, nullptr, 0 }
 };
 
 static const uint32_t k_num_register_infos = llvm::array_lengthof(g_register_infos);

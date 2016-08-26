@@ -19,24 +19,21 @@
 #include <numeric>
 
 // Other libraries and framework includes
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamGDBRemote.h"
 #include "lldb/Core/StreamString.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
-#include "lldb/Host/Endian.h"
-#include "lldb/Host/Host.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Target/Target.h"
 
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
@@ -56,7 +53,7 @@ using namespace lldb_private::process_gdb_remote;
 // GDBRemoteCommunicationClient constructor
 //----------------------------------------------------------------------
 GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
-    : GDBRemoteCommunication("gdb-remote.client", "gdb-remote.client.rx_packet"),
+    : GDBRemoteClientBase("gdb-remote.client", "gdb-remote.client.rx_packet"),
       m_supports_not_sending_acks(eLazyBoolCalculate),
       m_supports_thread_suffix(eLazyBoolCalculate),
       m_supports_threads_in_stop_reply(eLazyBoolCalculate),
@@ -88,6 +85,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_augmented_libraries_svr4_read(eLazyBoolCalculate),
       m_supports_jThreadExtendedInfo(eLazyBoolCalculate),
       m_supports_jLoadedDynamicLibrariesInfos(eLazyBoolCalculate),
+      m_supports_jGetSharedCacheInfo(eLazyBoolCalculate),
       m_supports_qProcessInfoPID(true),
       m_supports_qfProcessInfo(true),
       m_supports_qUserName(true),
@@ -108,14 +106,6 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_curr_tid(LLDB_INVALID_THREAD_ID),
       m_curr_tid_run(LLDB_INVALID_THREAD_ID),
       m_num_supported_hardware_watchpoints(0),
-      m_async_mutex(),
-      m_async_packet_predicate(false),
-      m_async_packet(),
-      m_async_result(PacketResult::Success),
-      m_async_response(),
-      m_async_signal(-1),
-      m_interrupt_sent(false),
-      m_thread_id_to_used_usec_map(),
       m_host_arch(),
       m_process_arch(),
       m_os_version_major(UINT32_MAX),
@@ -127,7 +117,10 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_gdb_server_name(),
       m_gdb_server_version(UINT32_MAX),
       m_default_packet_timeout(0),
-      m_max_packet_size(0)
+      m_max_packet_size(0),
+      m_qSupported_response(),
+      m_supported_async_json_packets_is_valid(false),
+      m_supported_async_json_packets_sp()
 {
 }
 
@@ -391,6 +384,9 @@ GDBRemoteCommunicationClient::ResetDiscoverableSettings (bool did_exec)
         m_gdb_server_version = UINT32_MAX;
         m_default_packet_timeout = 0;
         m_max_packet_size = 0;
+        m_qSupported_response.clear();
+        m_supported_async_json_packets_is_valid = false;
+        m_supported_async_json_packets_sp.reset();
     }
 
     // These flags should be reset when we first connect to a GDB server
@@ -426,6 +422,12 @@ GDBRemoteCommunicationClient::GetRemoteQSupported ()
                                      /*send_async=*/false) == PacketResult::Success)
     {
         const char *response_cstr = response.GetStringRef().c_str();
+
+        // Hang on to the qSupported packet, so that platforms can do custom
+        // configuration of the transport before attaching/launching the
+        // process.
+        m_qSupported_response = response_cstr;
+
         if (::strstr (response_cstr, "qXfer:auxv:read+"))
             m_supports_qXfer_auxv_read = eLazyBoolYes;
         if (::strstr (response_cstr, "qXfer:libraries-svr4:read+"))
@@ -514,21 +516,27 @@ GDBRemoteCommunicationClient::GetRemoteQSupported ()
     }
 }
 
-bool
-GDBRemoteCommunicationClient::GetThreadSuffixSupported ()
+void
+GDBRemoteCommunicationClient::ComputeThreadSuffixSupport()
 {
-    if (m_supports_thread_suffix == eLazyBoolCalculate)
+    if (m_supports_thread_suffix != eLazyBoolCalculate)
+        return;
+
+    StringExtractorGDBRemote response;
+    m_supports_thread_suffix = eLazyBoolNo;
+    if (SendPacketAndWaitForResponse("QThreadSuffixSupported", response, false) == PacketResult::Success)
     {
-        StringExtractorGDBRemote response;
-        m_supports_thread_suffix = eLazyBoolNo;
-        if (SendPacketAndWaitForResponse("QThreadSuffixSupported", response, false) == PacketResult::Success)
-        {
-            if (response.IsOKResponse())
-                m_supports_thread_suffix = eLazyBoolYes;
-        }
+        if (response.IsOKResponse())
+            m_supports_thread_suffix = eLazyBoolYes;
     }
-    return m_supports_thread_suffix;
 }
+
+bool
+GDBRemoteCommunicationClient::GetThreadSuffixSupported()
+{
+    return m_supports_thread_suffix == eLazyBoolYes;
+}
+
 bool
 GDBRemoteCommunicationClient::GetVContSupported (char flavor)
 {
@@ -587,6 +595,22 @@ GDBRemoteCommunicationClient::GetVContSupported (char flavor)
     return false;
 }
 
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationClient::SendThreadSpecificPacketAndWaitForResponse(lldb::tid_t tid, StreamString &&payload,
+                                                                         StringExtractorGDBRemote &response,
+                                                                         const Lock &lock)
+{
+    if (GetThreadSuffixSupported())
+        payload.Printf(";thread:%4.4" PRIx64 ";", tid);
+    else
+    {
+        if (!SetCurrentThread(tid, lock))
+            return PacketResult::ErrorSendFailed;
+    }
+
+    return SendPacketAndWaitForResponse(payload.GetString(), response, lock);
+}
+
 // Check if the target supports 'p' packet. It sends out a 'p'
 // packet and checks the response. A normal packet will tell us
 // that support is available.
@@ -597,18 +621,24 @@ GDBRemoteCommunicationClient::GetpPacketSupported (lldb::tid_t tid)
 {
     if (m_supports_p == eLazyBoolCalculate)
     {
-        StringExtractorGDBRemote response;
-        m_supports_p = eLazyBoolNo;
-        char packet[256];
-        if (GetThreadSuffixSupported())
-            snprintf(packet, sizeof(packet), "p0;thread:%" PRIx64 ";", tid);
-        else
-            snprintf(packet, sizeof(packet), "p0");
-        
-        if (SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success)
+        Lock lock(*this, false);
+        if (!lock)
         {
-            if (response.IsNormalResponse())
-                m_supports_p = eLazyBoolYes;
+            Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
+            if (log)
+                log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
+            return false;
+        }
+
+        m_supports_p = eLazyBoolNo;
+        StreamString payload;
+        payload.PutCString("p0");
+        StringExtractorGDBRemote response;
+        if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
+                PacketResult::Success &&
+            response.IsNormalResponse())
+        {
+            m_supports_p = eLazyBoolYes;
         }
     }
     return m_supports_p;
@@ -677,6 +707,24 @@ GDBRemoteCommunicationClient::GetLoadedDynamicLibrariesInfosSupported ()
 }
 
 bool
+GDBRemoteCommunicationClient::GetSharedCacheInfoSupported ()
+{
+    if (m_supports_jGetSharedCacheInfo == eLazyBoolCalculate)
+    {
+        StringExtractorGDBRemote response;
+        m_supports_jGetSharedCacheInfo = eLazyBoolNo;
+        if (SendPacketAndWaitForResponse("jGetSharedCacheInfo:", response, false) == PacketResult::Success)
+        {
+            if (response.IsOKResponse())
+            {
+                m_supports_jGetSharedCacheInfo = eLazyBoolYes;
+            }
+        }
+    }
+    return m_supports_jGetSharedCacheInfo;
+}
+
+bool
 GDBRemoteCommunicationClient::GetxPacketSupported ()
 {
     if (m_supports_x == eLazyBoolCalculate)
@@ -701,9 +749,8 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
     std::string &response_string
 )
 {
-    Mutex::Locker locker;
-    if (!GetSequenceMutex(locker,
-                          "ProcessGDBRemote::SendPacketsAndConcatenateResponses() failed due to not getting the sequence mutex"))
+    Lock lock(*this, false);
+    if (!lock)
     {
         Log *log (ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet (GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
         if (log)
@@ -725,9 +772,7 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
         // Construct payload
         char sizeDescriptor[128];
         snprintf(sizeDescriptor, sizeof(sizeDescriptor), "%x,%x", offset, response_size);
-        PacketResult result = SendPacketAndWaitForResponse((payload_prefix_str + sizeDescriptor).c_str(),
-                                                           this_response,
-                                                           /*send_async=*/false);
+        PacketResult result = SendPacketAndWaitForResponse(payload_prefix_str + sizeDescriptor, this_response, lock);
         if (result != PacketResult::Success)
             return result;
 
@@ -745,725 +790,6 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
             // We're done
             return PacketResult::Success;
     }
-}
-
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
-(
-    const char *payload,
-    StringExtractorGDBRemote &response,
-    bool send_async
-)
-{
-    return SendPacketAndWaitForResponse (payload, 
-                                         ::strlen (payload),
-                                         response,
-                                         send_async);
-}
-
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketAndWaitForResponseNoLock (const char *payload,
-                                                                  size_t payload_length,
-                                                                  StringExtractorGDBRemote &response)
-{
-    PacketResult packet_result = SendPacketNoLock(payload, payload_length);
-    if (packet_result == PacketResult::Success)
-    {
-        const size_t max_response_retries = 3;
-        for (size_t i=0; i<max_response_retries; ++i)
-        {
-            packet_result = ReadPacket(response, GetPacketTimeoutInMicroSeconds (), true);
-            // Make sure we received a response
-            if (packet_result != PacketResult::Success)
-                return packet_result;
-            // Make sure our response is valid for the payload that was sent
-            if (response.ValidateResponse())
-                return packet_result;
-            // Response says it wasn't valid
-            Log *log = ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS);
-            if (log)
-                log->Printf("error: packet with payload \"%*s\" got invalid response \"%s\": %s",
-                            (int)payload_length,
-                            payload,
-                            response.GetStringRef().c_str(),
-                            (i == (max_response_retries - 1)) ? "using invalid response and giving up" : "ignoring response and waiting for another");
-        }
-    }
-    return packet_result;
-}
-
-GDBRemoteCommunicationClient::PacketResult
-GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
-(
-    const char *payload,
-    size_t payload_length,
-    StringExtractorGDBRemote &response,
-    bool send_async
-)
-{
-    PacketResult packet_result = PacketResult::ErrorSendFailed;
-    Mutex::Locker locker;
-    Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
-
-    // In order to stop async notifications from being processed in the middle of the
-    // send/receive sequence Hijack the broadcast. Then rebroadcast any events when we are done.
-    static ListenerSP hijack_listener_sp(Listener::MakeListener("lldb.NotifyHijacker"));
-    HijackBroadcaster(hijack_listener_sp, eBroadcastBitGdbReadThreadGotNotify);
-
-    if (GetSequenceMutex (locker))
-    {
-        packet_result = SendPacketAndWaitForResponseNoLock (payload, payload_length, response);
-    }
-    else
-    {
-        if (send_async)
-        {
-            if (IsRunning())
-            {
-                std::lock_guard<std::recursive_mutex> guard(m_async_mutex);
-                m_async_packet.assign(payload, payload_length);
-                m_async_response.CopyResponseValidator(response);
-                m_async_packet_predicate.SetValue (true, eBroadcastNever);
-                
-                if (log) 
-                    log->Printf ("async: async packet = %s", m_async_packet.c_str());
-
-                bool timed_out = false;
-                if (SendInterrupt(locker, 2, timed_out))
-                {
-                    if (m_interrupt_sent)
-                    {
-                        m_interrupt_sent = false;
-                        TimeValue timeout_time;
-                        timeout_time = TimeValue::Now();
-                        timeout_time.OffsetWithSeconds (m_packet_timeout);
-
-                        if (log) 
-                            log->Printf ("async: sent interrupt");
-
-                        if (m_async_packet_predicate.WaitForValueEqualTo (false, &timeout_time, &timed_out))
-                        {
-                            if (log) 
-                                log->Printf ("async: got response");
-
-                            // Swap the response buffer to avoid malloc and string copy
-                            response.GetStringRef().swap (m_async_response.GetStringRef());
-                            packet_result = m_async_result;
-                        }
-                        else
-                        {
-                            if (log) 
-                                log->Printf ("async: timed out waiting for response");
-                        }
-                        
-                        // Make sure we wait until the continue packet has been sent again...
-                        if (m_private_is_running.WaitForValueEqualTo (true, &timeout_time, &timed_out))
-                        {
-                            if (log)
-                            {
-                                if (timed_out) 
-                                    log->Printf ("async: timed out waiting for process to resume, but process was resumed");
-                                else
-                                    log->Printf ("async: async packet sent");
-                            }
-                        }
-                        else
-                        {
-                            if (log) 
-                                log->Printf ("async: timed out waiting for process to resume");
-                        }
-                    }
-                    else
-                    {
-                        // We had a racy condition where we went to send the interrupt
-                        // yet we were able to get the lock, so the process must have
-                        // just stopped?
-                        if (log) 
-                            log->Printf ("async: got lock without sending interrupt");
-                        // Send the packet normally since we got the lock
-                        packet_result = SendPacketAndWaitForResponseNoLock (payload, payload_length, response);
-                    }
-                }
-                else
-                {
-                    if (log) 
-                        log->Printf ("async: failed to interrupt");
-                }
-
-                m_async_response.SetResponseValidator(nullptr, nullptr);
-
-            }
-            else
-            {
-                if (log) 
-                    log->Printf ("async: not running, async is ignored");
-            }
-        }
-        else
-        {
-            if (log) 
-                log->Printf("error: failed to get packet sequence mutex, not sending packet '%*s'", (int) payload_length, payload);
-        }
-    }
-
-    // Remove our Hijacking listener from the broadcast.
-    RestoreBroadcaster();
-
-    // If a notification event occurred, rebroadcast since it can now be processed safely.
-    EventSP event_sp;
-    if (hijack_listener_sp->GetNextEvent(event_sp))
-        BroadcastEvent(event_sp);
-
-    return packet_result;
-}
-
-static const char *end_delimiter = "--end--;";
-static const int end_delimiter_len = 8;
-
-std::string
-GDBRemoteCommunicationClient::HarmonizeThreadIdsForProfileData
-(   ProcessGDBRemote *process,
-    StringExtractorGDBRemote& profileDataExtractor
-)
-{
-    std::map<uint64_t, uint32_t> new_thread_id_to_used_usec_map;
-    std::stringstream final_output;
-    std::string name, value;
-
-    // Going to assuming thread_used_usec comes first, else bail out.
-    while (profileDataExtractor.GetNameColonValue(name, value))
-    {
-        if (name.compare("thread_used_id") == 0)
-        {
-            StringExtractor threadIDHexExtractor(value.c_str());
-            uint64_t thread_id = threadIDHexExtractor.GetHexMaxU64(false, 0);
-            
-            bool has_used_usec = false;
-            uint32_t curr_used_usec = 0;
-            std::string usec_name, usec_value;
-            uint32_t input_file_pos = profileDataExtractor.GetFilePos();
-            if (profileDataExtractor.GetNameColonValue(usec_name, usec_value))
-            {
-                if (usec_name.compare("thread_used_usec") == 0)
-                {
-                    has_used_usec = true;
-                    curr_used_usec = strtoull(usec_value.c_str(), NULL, 0);
-                }
-                else
-                {
-                    // We didn't find what we want, it is probably
-                    // an older version. Bail out.
-                    profileDataExtractor.SetFilePos(input_file_pos);
-                }
-            }
-
-            if (has_used_usec)
-            {
-                uint32_t prev_used_usec = 0;
-                std::map<uint64_t, uint32_t>::iterator iterator = m_thread_id_to_used_usec_map.find(thread_id);
-                if (iterator != m_thread_id_to_used_usec_map.end())
-                {
-                    prev_used_usec = m_thread_id_to_used_usec_map[thread_id];
-                }
-                
-                uint32_t real_used_usec = curr_used_usec - prev_used_usec;
-                // A good first time record is one that runs for at least 0.25 sec
-                bool good_first_time = (prev_used_usec == 0) && (real_used_usec > 250000);
-                bool good_subsequent_time = (prev_used_usec > 0) &&
-                    ((real_used_usec > 0) || (process->HasAssignedIndexIDToThread(thread_id)));
-                
-                if (good_first_time || good_subsequent_time)
-                {
-                    // We try to avoid doing too many index id reservation,
-                    // resulting in fast increase of index ids.
-                    
-                    final_output << name << ":";
-                    int32_t index_id = process->AssignIndexIDToThread(thread_id);
-                    final_output << index_id << ";";
-                    
-                    final_output << usec_name << ":" << usec_value << ";";
-                }
-                else
-                {
-                    // Skip past 'thread_used_name'.
-                    std::string local_name, local_value;
-                    profileDataExtractor.GetNameColonValue(local_name, local_value);
-                }
-                
-                // Store current time as previous time so that they can be compared later.
-                new_thread_id_to_used_usec_map[thread_id] = curr_used_usec;
-            }
-            else
-            {
-                // Bail out and use old string.
-                final_output << name << ":" << value << ";";
-            }
-        }
-        else
-        {
-            final_output << name << ":" << value << ";";
-        }
-    }
-    final_output << end_delimiter;
-    m_thread_id_to_used_usec_map = new_thread_id_to_used_usec_map;
-    
-    return final_output.str();
-}
-
-bool
-GDBRemoteCommunicationClient::SendvContPacket
-(
-    ProcessGDBRemote *process,
-    const char *payload,
-    size_t packet_length,
-    StringExtractorGDBRemote &response
-)
-{
-
-    m_curr_tid = LLDB_INVALID_THREAD_ID;
-    Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-    if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
-
-    // we want to lock down packet sending while we continue
-    Mutex::Locker locker(m_sequence_mutex);
-
-    // here we broadcast this before we even send the packet!!
-    // this signals doContinue() to exit
-    BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
-
-    // set the public state to running
-    m_public_is_running.SetValue(true, eBroadcastNever);
-
-    // Set the starting continue packet into "continue_packet". This packet
-    // may change if we are interrupted and we continue after an async packet...
-    std::string continue_packet(payload, packet_length);
-
-    if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s () sending vCont packet: %s", __FUNCTION__, continue_packet.c_str());
-
-    if (SendPacketNoLock(continue_packet.c_str(), continue_packet.size()) != PacketResult::Success)
-         return false;
-
-    // set the private state to running and broadcast this
-    m_private_is_running.SetValue(true, eBroadcastAlways);
-
-    if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s () ReadPacket(%s)", __FUNCTION__, continue_packet.c_str());
-
-    // wait for the response to the vCont
-    if (ReadPacket(response, UINT32_MAX, false) == PacketResult::Success)
-    {
-        if (response.IsOKResponse())
-            return true;
-    }
-
-    return false;
-}
-
-StateType
-GDBRemoteCommunicationClient::SendContinuePacketAndWaitForResponse
-(
-    ProcessGDBRemote *process,
-    const char *payload,
-    size_t packet_length,
-    StringExtractorGDBRemote &response
-)
-{
-    m_curr_tid = LLDB_INVALID_THREAD_ID;
-    Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
-    if (log)
-        log->Printf ("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
-
-    Mutex::Locker locker(m_sequence_mutex);
-    StateType state = eStateRunning;
-
-    m_public_is_running.SetValue (true, eBroadcastNever);
-    // Set the starting continue packet into "continue_packet". This packet
-    // may change if we are interrupted and we continue after an async packet...
-    std::string continue_packet(payload, packet_length);
-
-    const auto sigstop_signo = process->GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
-    const auto sigint_signo = process->GetUnixSignals()->GetSignalNumberFromName("SIGINT");
-
-    bool got_async_packet = false;
-    bool broadcast_sent = false;
-    
-    while (state == eStateRunning)
-    {
-        if (!got_async_packet)
-        {
-            if (log)
-                log->Printf ("GDBRemoteCommunicationClient::%s () sending continue packet: %s", __FUNCTION__, continue_packet.c_str());
-            if (SendPacketNoLock(continue_packet.c_str(), continue_packet.size()) != PacketResult::Success)
-                state = eStateInvalid;
-            else
-                m_interrupt_sent = false;
-        
-            if (! broadcast_sent)
-            {
-                BroadcastEvent(eBroadcastBitRunPacketSent, NULL);
-                broadcast_sent = true;
-            }
-
-            m_private_is_running.SetValue (true, eBroadcastAlways);
-        }
-        
-        got_async_packet = false;
-
-        if (log)
-            log->Printf ("GDBRemoteCommunicationClient::%s () ReadPacket(%s)", __FUNCTION__, continue_packet.c_str());
-
-        if (ReadPacket(response, UINT32_MAX, false) == PacketResult::Success)
-        {
-            if (response.Empty())
-                state = eStateInvalid;
-            else
-            {
-                const char stop_type = response.GetChar();
-                if (log)
-                    log->Printf ("GDBRemoteCommunicationClient::%s () got packet: %s", __FUNCTION__, response.GetStringRef().c_str());
-                switch (stop_type)
-                {
-                case 'T':
-                case 'S':
-                    {
-                        if (process->GetStopID() == 0)
-                        {
-                            if (process->GetID() == LLDB_INVALID_PROCESS_ID)
-                            {
-                                lldb::pid_t pid = GetCurrentProcessID ();
-                                if (pid != LLDB_INVALID_PROCESS_ID)
-                                    process->SetID (pid);
-                            }
-                            process->BuildDynamicRegisterInfo (true);
-                        }
-
-                        // Privately notify any internal threads that we have stopped
-                        // in case we wanted to interrupt our process, yet we might
-                        // send a packet and continue without returning control to the
-                        // user.
-                        m_private_is_running.SetValue (false, eBroadcastAlways);
-
-                        const uint8_t signo = response.GetHexU8 (UINT8_MAX);
-
-                        bool continue_after_async = m_async_signal != -1 || m_async_packet_predicate.GetValue();
-                        if (continue_after_async || m_interrupt_sent)
-                        {
-                            // We sent an interrupt packet to stop the inferior process
-                            // for an async signal or to send an async packet while running
-                            // but we might have been single stepping and received the
-                            // stop packet for the step instead of for the interrupt packet.
-                            // Typically when an interrupt is sent a SIGINT or SIGSTOP
-                            // is used, so if we get anything else, we need to try and
-                            // get another stop reply packet that may have been sent
-                            // due to sending the interrupt when the target is stopped
-                            // which will just re-send a copy of the last stop reply
-                            // packet. If we don't do this, then the reply for our
-                            // async packet will be the repeat stop reply packet and cause
-                            // a lot of trouble for us! We also have some debugserver
-                            // binaries that would send two stop replies anytime the process
-                            // was interrupted, so we need to also check for an extra
-                            // stop reply packet if we interrupted the process
-                            const bool received_nonstop_signal = signo != sigint_signo && signo != sigstop_signo;
-                            if (m_interrupt_sent || received_nonstop_signal)
-                            {
-                                if (received_nonstop_signal)
-                                    continue_after_async = false;
-
-                                // Try for a very brief time (0.1s) to get another stop reply
-                                // packet to make sure it doesn't get in the way
-                                StringExtractorGDBRemote extra_stop_reply_packet;
-                                uint32_t timeout_usec = 100000;
-                                if (ReadPacket (extra_stop_reply_packet, timeout_usec, false) == PacketResult::Success)
-                                {
-                                    switch (extra_stop_reply_packet.GetChar())
-                                    {
-                                    case 'T':
-                                    case 'S':
-                                        // We did get an extra stop reply, which means
-                                        // our interrupt didn't stop the target so we
-                                        // shouldn't continue after the async signal
-                                        // or packet is sent...
-                                        continue_after_async = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (m_async_signal != -1)
-                        {
-                            if (log)
-                                log->Printf ("async: send signo = %s", Host::GetSignalAsCString (m_async_signal));
-
-                            // Save off the async signal we are supposed to send
-                            const int async_signal = m_async_signal;
-                            // Clear the async signal member so we don't end up
-                            // sending the signal multiple times...
-                            m_async_signal = -1;
-                            // Check which signal we stopped with
-                            if (signo == async_signal)
-                            {
-                                if (log) 
-                                    log->Printf ("async: stopped with signal %s, we are done running", Host::GetSignalAsCString (signo));
-
-                                // We already stopped with a signal that we wanted
-                                // to stop with, so we are done
-                            }
-                            else
-                            {
-                                // We stopped with a different signal that the one
-                                // we wanted to stop with, so now we must resume
-                                // with the signal we want
-                                char signal_packet[32];
-                                int signal_packet_len = 0;
-                                signal_packet_len = ::snprintf (signal_packet,
-                                                                sizeof (signal_packet),
-                                                                "C%2.2x",
-                                                                async_signal);
-
-                                if (log) 
-                                    log->Printf ("async: stopped with signal %s, resume with %s", 
-                                                       Host::GetSignalAsCString (signo),
-                                                       Host::GetSignalAsCString (async_signal));
-
-                                // Set the continue packet to resume even if the
-                                // interrupt didn't cause our stop (ignore continue_after_async)
-                                continue_packet.assign(signal_packet, signal_packet_len);
-                                continue;
-                            }
-                        }
-                        else if (m_async_packet_predicate.GetValue())
-                        {
-                            Log * packet_log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PACKETS));
-
-                            // We are supposed to send an asynchronous packet while
-                            // we are running.
-                            m_async_response.Clear();
-                            if (m_async_packet.empty())
-                            {
-                                m_async_result = PacketResult::ErrorSendFailed;
-                                if (packet_log)
-                                    packet_log->Printf ("async: error: empty async packet");                            
-
-                            }
-                            else
-                            {
-                                if (packet_log) 
-                                    packet_log->Printf ("async: sending packet");
-                                
-                                m_async_result = SendPacketAndWaitForResponse (&m_async_packet[0],
-                                                                               m_async_packet.size(),
-                                                                               m_async_response,
-                                                                               false);
-                            }
-                            // Let the other thread that was trying to send the async
-                            // packet know that the packet has been sent and response is
-                            // ready...
-                            m_async_packet_predicate.SetValue(false, eBroadcastAlways);
-
-                            if (packet_log) 
-                                packet_log->Printf ("async: sent packet, continue_after_async = %i", continue_after_async);
-
-                            // Set the continue packet to resume if our interrupt
-                            // for the async packet did cause the stop
-                            if (continue_after_async)
-                            {
-                                // Reverting this for now as it is causing deadlocks
-                                // in programs (<rdar://problem/11529853>). In the future
-                                // we should check our thread list and "do the right thing"
-                                // for new threads that show up while we stop and run async
-                                // packets. Setting the packet to 'c' to continue all threads
-                                // is the right thing to do 99.99% of the time because if a
-                                // thread was single stepping, and we sent an interrupt, we
-                                // will notice above that we didn't stop due to an interrupt
-                                // but stopped due to stepping and we would _not_ continue.
-                                continue_packet.assign (1, 'c');
-                                continue;
-                            }
-                        }
-                        // Stop with signal and thread info
-                        state = eStateStopped;
-                    }
-                    break;
-
-                case 'W':
-                case 'X':
-                    // process exited
-                    state = eStateExited;
-                    break;
-
-                case 'O':
-                    // STDOUT
-                    {
-                        got_async_packet = true;
-                        std::string inferior_stdout;
-                        inferior_stdout.reserve(response.GetBytesLeft () / 2);
-
-                        uint8_t ch;
-                        while (response.GetHexU8Ex(ch))
-                        {
-                            if (ch != 0)
-                                inferior_stdout.append(1, (char)ch);
-                        }
-                        process->AppendSTDOUT (inferior_stdout.c_str(), inferior_stdout.size());
-                    }
-                    break;
-
-                case 'A':
-                    // Async miscellaneous reply. Right now, only profile data is coming through this channel.
-                    {
-                        got_async_packet = true;
-                        std::string input = response.GetStringRef().substr(1); // '1' to move beyond 'A'
-                        if (m_partial_profile_data.length() > 0)
-                        {
-                            m_partial_profile_data.append(input);
-                            input = m_partial_profile_data;
-                            m_partial_profile_data.clear();
-                        }
-                        
-                        size_t found, pos = 0, len = input.length();
-                        while ((found = input.find(end_delimiter, pos)) != std::string::npos)
-                        {
-                            StringExtractorGDBRemote profileDataExtractor(input.substr(pos, found).c_str());
-                            std::string profile_data = HarmonizeThreadIdsForProfileData(process, profileDataExtractor);
-                            process->BroadcastAsyncProfileData (profile_data);
-                            
-                            pos = found + end_delimiter_len;
-                        }
-                        
-                        if (pos < len)
-                        {
-                            // Last incomplete chunk.
-                            m_partial_profile_data = input.substr(pos);
-                        }
-                    }
-                    break;
-
-                case 'E':
-                    // ERROR
-                    state = eStateInvalid;
-                    break;
-
-                default:
-                    if (log)
-                        log->Printf ("GDBRemoteCommunicationClient::%s () unrecognized async packet", __FUNCTION__);
-                    state = eStateInvalid;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            if (log)
-                log->Printf ("GDBRemoteCommunicationClient::%s () ReadPacket(...) => false", __FUNCTION__);
-            state = eStateInvalid;
-        }
-    }
-    if (log)
-        log->Printf ("GDBRemoteCommunicationClient::%s () => %s", __FUNCTION__, StateAsCString(state));
-    response.SetFilePos(0);
-    m_private_is_running.SetValue (false, eBroadcastAlways);
-    m_public_is_running.SetValue (false, eBroadcastAlways);
-    return state;
-}
-
-bool
-GDBRemoteCommunicationClient::SendAsyncSignal (int signo)
-{
-    std::lock_guard<std::recursive_mutex> guard(m_async_mutex);
-    m_async_signal = signo;
-    bool timed_out = false;
-    Mutex::Locker locker;
-    if (SendInterrupt (locker, 1, timed_out))
-        return true;
-    m_async_signal = -1;
-    return false;
-}
-
-// This function takes a mutex locker as a parameter in case the GetSequenceMutex
-// actually succeeds. If it doesn't succeed in acquiring the sequence mutex 
-// (the expected result), then it will send the halt packet. If it does succeed
-// then the caller that requested the interrupt will want to keep the sequence
-// locked down so that no one else can send packets while the caller has control.
-// This function usually gets called when we are running and need to stop the 
-// target. It can also be used when we are running and we need to do something
-// else (like read/write memory), so we need to interrupt the running process
-// (gdb remote protocol requires this), and do what we need to do, then resume.
-
-bool
-GDBRemoteCommunicationClient::SendInterrupt
-(
-    Mutex::Locker& locker, 
-    uint32_t seconds_to_wait_for_stop,             
-    bool &timed_out
-)
-{
-    timed_out = false;
-    Log *log (ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet (GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
-
-    if (IsRunning())
-    {
-        // Only send an interrupt if our debugserver is running...
-        if (GetSequenceMutex (locker))
-        {
-            if (log)
-                log->Printf ("SendInterrupt () - got sequence mutex without having to interrupt");
-        }
-        else
-        {
-            // Someone has the mutex locked waiting for a response or for the
-            // inferior to stop, so send the interrupt on the down low...
-            char ctrl_c = '\x03';
-            ConnectionStatus status = eConnectionStatusSuccess;
-            size_t bytes_written = Write (&ctrl_c, 1, status, NULL);
-            if (log)
-                log->PutCString("send packet: \\x03");
-            if (bytes_written > 0)
-            {
-                m_interrupt_sent = true;
-                if (seconds_to_wait_for_stop)
-                {
-                    TimeValue timeout;
-                    if (seconds_to_wait_for_stop)
-                    {
-                        timeout = TimeValue::Now();
-                        timeout.OffsetWithSeconds (seconds_to_wait_for_stop);
-                    }
-                    if (m_private_is_running.WaitForValueEqualTo (false, &timeout, &timed_out))
-                    {
-                        if (log)
-                            log->PutCString ("SendInterrupt () - sent interrupt, private state stopped");
-                        return true;
-                    }
-                    else
-                    {
-                        if (log)
-                            log->Printf ("SendInterrupt () - sent interrupt, timed out wating for async thread resume");
-                    }
-                }
-                else
-                {
-                    if (log)
-                        log->Printf ("SendInterrupt () - sent interrupt, not waiting for stop...");
-                    return true;
-                }
-            }
-            else
-            {
-                if (log)
-                    log->Printf ("SendInterrupt () - failed to write interrupt");
-            }
-            return false;
-        }
-    }
-    else
-    {
-        if (log)
-            log->Printf ("SendInterrupt () - not running");
-    }
-    return true;
 }
 
 lldb::pid_t
@@ -2438,6 +1764,13 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
                         region_info.SetExecutable (MemoryRegionInfo::eNo);
                         region_info.SetMapped(MemoryRegionInfo::eNo);
                     }
+                }
+                else if (name.compare ("name") == 0)
+                {
+                    StringExtractorGDBRemote name_extractor;
+                    name_extractor.GetStringRef().swap(value);
+                    name_extractor.GetHexByteString(value);
+                    region_info.SetName(value.c_str());
                 }
                 else if (name.compare ("error") == 0)
                 {
@@ -3462,7 +2795,7 @@ GDBRemoteCommunicationClient::KillSpawnedProcess (lldb::pid_t pid)
 }
 
 bool
-GDBRemoteCommunicationClient::SetCurrentThread (uint64_t tid)
+GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid, const Lock &lock)
 {
     if (m_curr_tid == tid)
         return true;
@@ -3475,7 +2808,7 @@ GDBRemoteCommunicationClient::SetCurrentThread (uint64_t tid)
         packet_len = ::snprintf (packet, sizeof(packet), "Hg%" PRIx64, tid);
     assert (packet_len + 1 < (int)sizeof(packet));
     StringExtractorGDBRemote response;
-    if (SendPacketAndWaitForResponse(packet, packet_len, response, false) == PacketResult::Success)
+    if (SendPacketAndWaitForResponse(llvm::StringRef(packet, packet_len), response, lock) == PacketResult::Success)
     {
         if (response.IsOKResponse())
         {
@@ -3627,18 +2960,18 @@ size_t
 GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thread_ids, 
                                                    bool &sequence_mutex_unavailable)
 {
-    Mutex::Locker locker;
     thread_ids.clear();
-    
-    if (GetSequenceMutex (locker, "ProcessGDBRemote::UpdateThreadList() failed due to not getting the sequence mutex"))
+
+    Lock lock(*this, false);
+    if (lock)
     {
         sequence_mutex_unavailable = false;
         StringExtractorGDBRemote response;
         
         PacketResult packet_result;
-        for (packet_result = SendPacketAndWaitForResponseNoLock ("qfThreadInfo", strlen("qfThreadInfo"), response);
+        for (packet_result = SendPacketAndWaitForResponse("qfThreadInfo", response, lock);
              packet_result == PacketResult::Success && response.IsNormalResponse();
-             packet_result = SendPacketAndWaitForResponseNoLock ("qsThreadInfo", strlen("qsThreadInfo"), response))
+             packet_result = SendPacketAndWaitForResponse("qsThreadInfo", response, lock))
         {
             char ch = response.GetChar();
             if (ch == 'l')
@@ -3686,16 +3019,10 @@ GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thr
 lldb::addr_t
 GDBRemoteCommunicationClient::GetShlibInfoAddr()
 {
-    if (!IsRunning())
-    {
-        StringExtractorGDBRemote response;
-        if (SendPacketAndWaitForResponse("qShlibInfoAddr", ::strlen ("qShlibInfoAddr"), response, false) == PacketResult::Success)
-        {
-            if (response.IsNormalResponse())
-                return response.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
-        }
-    }
-    return LLDB_INVALID_ADDRESS;
+    StringExtractorGDBRemote response;
+    if (SendPacketAndWaitForResponse("qShlibInfoAddr", response, false) != PacketResult::Success || !response.IsNormalResponse())
+        return LLDB_INVALID_ADDRESS;
+    return response.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
 }
 
 lldb_private::Error
@@ -4174,94 +3501,93 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
     return m_avoid_g_packets == eLazyBoolYes;
 }
 
-bool
-GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, StringExtractorGDBRemote &response)
+DataBufferSP
+GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, const Lock &lock)
 {
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for p packet."))
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-        
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[64];
-            int packet_len = 0;
-            if (thread_suffix_supported)
-                packet_len = ::snprintf (packet, sizeof(packet), "p%x;thread:%4.4" PRIx64 ";", reg, tid);
-            else
-                packet_len = ::snprintf (packet, sizeof(packet), "p%x", reg);
-            assert (packet_len < ((int)sizeof(packet) - 1));
-            return SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success;
-        }
-    }
-    return false;
+    StreamString payload;
+    payload.Printf("p%x", reg);
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success ||
+        !response.IsNormalResponse())
+        return nullptr;
 
+    DataBufferSP buffer_sp(new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+    response.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+    return buffer_sp;
 }
 
+DataBufferSP
+GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid, const Lock &lock)
+{
+    StreamString payload;
+    payload.PutChar('g');
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success ||
+        !response.IsNormalResponse())
+        return nullptr;
+
+    DataBufferSP buffer_sp(new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+    response.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+    return buffer_sp;
+}
 
 bool
-GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractorGDBRemote &response)
+GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::ArrayRef<uint8_t> data,
+                                            const Lock &lock)
 {
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for g packet."))
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[64];
-            int packet_len = 0;
-            // Get all registers in one packet
-            if (thread_suffix_supported)
-                packet_len = ::snprintf (packet, sizeof(packet), "g;thread:%4.4" PRIx64 ";", tid);
-            else
-                packet_len = ::snprintf (packet, sizeof(packet), "g");
-            assert (packet_len < ((int)sizeof(packet) - 1));
-            return SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success;
-        }
-    }
-    return false;
+    StreamString payload;
+    payload.Printf("P%x=", reg_num);
+    payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
+    StringExtractorGDBRemote response;
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
+               PacketResult::Success &&
+           response.IsOKResponse();
 }
+
+bool
+GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data, const Lock &lock)
+{
+    StreamString payload;
+    payload.PutChar('G');
+    payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
+    StringExtractorGDBRemote response;
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
+               PacketResult::Success &&
+           response.IsOKResponse();
+}
+
 bool
 GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save_id)
 {
     save_id = 0; // Set to invalid save ID
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
-    
-    m_supports_QSaveRegisterState = eLazyBoolYes;
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for QSaveRegisterState."))
-    {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[256];
-            if (thread_suffix_supported)
-                ::snprintf (packet, sizeof(packet), "QSaveRegisterState;thread:%4.4" PRIx64 ";", tid);
-            else
-                ::snprintf(packet, sizeof(packet), "QSaveRegisterState");
-            
-            StringExtractorGDBRemote response;
 
-            if (SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success)
-            {
-                if (response.IsUnsupportedResponse())
-                {
-                    // This packet isn't supported, don't try calling it again
-                    m_supports_QSaveRegisterState = eLazyBoolNo;
-                }
-                    
-                const uint32_t response_save_id = response.GetU32(0);
-                if (response_save_id != 0)
-                {
-                    save_id = response_save_id;
-                    return true;
-                }
-            }
-        }
+    Lock lock(*this, false);
+    if (!lock)
+    {
+        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
+        if (log)
+            log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
+        return false;
     }
-    return false;
+
+    m_supports_QSaveRegisterState = eLazyBoolYes;
+    StreamString payload;
+    payload.PutCString("QSaveRegisterState");
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success)
+        return false;
+
+    if (response.IsUnsupportedResponse())
+        m_supports_QSaveRegisterState = eLazyBoolNo;
+
+    const uint32_t response_save_id = response.GetU32(0);
+    if (response_save_id == 0)
+        return false;
+
+    save_id = response_save_id;
+    return true;
 }
 
 bool
@@ -4272,43 +3598,47 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
     // order to be useful
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
-    
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for QRestoreRegisterState."))
+
+    Lock lock(*this, false);
+    if (!lock)
     {
-        const bool thread_suffix_supported = GetThreadSuffixSupported();
-        if (thread_suffix_supported || SetCurrentThread(tid))
-        {
-            char packet[256];
-            if (thread_suffix_supported)
-                ::snprintf (packet, sizeof(packet), "QRestoreRegisterState:%u;thread:%4.4" PRIx64 ";", save_id, tid);
-            else
-                ::snprintf (packet, sizeof(packet), "QRestoreRegisterState:%u" PRIx64 ";", save_id);
-            
-            StringExtractorGDBRemote response;
-            
-            if (SendPacketAndWaitForResponse(packet, response, false) == PacketResult::Success)
-            {
-                if (response.IsOKResponse())
-                {
-                    return true;
-                }
-                else if (response.IsUnsupportedResponse())
-                {
-                    // This packet isn't supported, don't try calling this packet or
-                    // QSaveRegisterState again...
-                    m_supports_QSaveRegisterState = eLazyBoolNo;
-                }
-            }
-        }
+        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
+        if (log)
+            log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
+        return false;
     }
+
+    StreamString payload;
+    payload.Printf("QRestoreRegisterState:%u", save_id);
+    StringExtractorGDBRemote response;
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success)
+        return false;
+
+    if (response.IsOKResponse())
+        return true;
+
+    if (response.IsUnsupportedResponse())
+        m_supports_QSaveRegisterState = eLazyBoolNo;
     return false;
 }
 
 bool
-GDBRemoteCommunicationClient::GetModuleInfo (const FileSpec& module_file_spec,
-                                             const lldb_private::ArchSpec& arch_spec,
-                                             ModuleSpec &module_spec)
+GDBRemoteCommunicationClient::SyncThreadState(lldb::tid_t tid)
+{
+    if (!GetSyncThreadStateSupported())
+        return false;
+
+    StreamString packet;
+    StringExtractorGDBRemote response;
+    packet.Printf("QSyncThreadState:%4.4" PRIx64 ";", tid);
+    return SendPacketAndWaitForResponse(packet.GetString(), response, false) ==
+               GDBRemoteCommunication::PacketResult::Success &&
+           response.IsOKResponse();
+}
+
+bool
+GDBRemoteCommunicationClient::GetModuleInfo(const FileSpec &module_file_spec, const lldb_private::ArchSpec &arch_spec,
+                                            ModuleSpec &module_spec)
 {
     if (!m_supports_qModuleInfo)
         return false;
@@ -4504,13 +3834,13 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
 
     if (m_supports_qSymbol && m_qSymbol_requests_done == false)
     {
-        Mutex::Locker locker;
-        if (GetSequenceMutex(locker, "GDBRemoteCommunicationClient::ServeSymbolLookups() failed due to not getting the sequence mutex"))
+        Lock lock(*this, false);
+        if (lock)
         {
             StreamString packet;
             packet.PutCString ("qSymbol::");
             StringExtractorGDBRemote response;
-            while (SendPacketAndWaitForResponseNoLock(packet.GetData(), packet.GetSize(), response) == PacketResult::Success)
+            while (SendPacketAndWaitForResponse(packet.GetString(), response, lock) == PacketResult::Success)
             {
                 if (response.IsOKResponse())
                 {
@@ -4625,6 +3955,136 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             return;
 
         }
+        else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+        {
+            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex.", __FUNCTION__);
+        }
     }
 }
 
+StructuredData::Array*
+GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins()
+{
+    if (!m_supported_async_json_packets_is_valid)
+    {
+        // Query the server for the array of supported asynchronous JSON
+        // packets.
+        m_supported_async_json_packets_is_valid = true;
+
+        Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
+            GDBR_LOG_PROCESS));
+
+        // Poll it now.
+        StringExtractorGDBRemote response;
+        const bool send_async = false;
+        if (SendPacketAndWaitForResponse("qStructuredDataPlugins", response,
+                                         send_async) == PacketResult::Success)
+        {
+            m_supported_async_json_packets_sp = StructuredData::ParseJSON(
+                response.GetStringRef());
+            if (m_supported_async_json_packets_sp &&
+                !m_supported_async_json_packets_sp->GetAsArray())
+            {
+                // We were returned something other than a JSON array.  This
+                // is invalid.  Clear it out.
+                if (log)
+                    log->Printf("GDBRemoteCommunicationClient::%s(): "
+                                "QSupportedAsyncJSONPackets returned invalid "
+                                "result: %s", __FUNCTION__,
+                                response.GetStringRef().c_str());
+                m_supported_async_json_packets_sp.reset();
+            }
+        }
+        else
+        {
+            if (log)
+                log->Printf("GDBRemoteCommunicationClient::%s(): "
+                            "QSupportedAsyncJSONPackets unsupported",
+                            __FUNCTION__);
+        }
+
+        if (log && m_supported_async_json_packets_sp)
+        {
+            StreamString  stream;
+            m_supported_async_json_packets_sp->Dump(stream);
+            log->Printf("GDBRemoteCommunicationClient::%s(): supported async "
+                        "JSON packets: %s", __FUNCTION__,
+                        stream.GetString().c_str());
+        }
+    }
+
+    return m_supported_async_json_packets_sp
+        ? m_supported_async_json_packets_sp->GetAsArray()
+        : nullptr;
+}
+
+Error
+GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
+    const ConstString &type_name,
+    const StructuredData::ObjectSP &config_sp)
+{
+    Error error;
+
+    if (type_name.GetLength() == 0)
+    {
+        error.SetErrorString("invalid type_name argument");
+        return error;
+    }
+
+    // Build command: Configure{type_name}: serialized config
+    // data.
+    StreamGDBRemote stream;
+    stream.PutCString("QConfigure");
+    stream.PutCString(type_name.AsCString());
+    stream.PutChar(':');
+    if (config_sp)
+    {
+        // Gather the plain-text version of the configuration data.
+        StreamString unescaped_stream;
+        config_sp->Dump(unescaped_stream);
+        unescaped_stream.Flush();
+
+        // Add it to the stream in escaped fashion.
+        stream.PutEscapedBytes(unescaped_stream.GetData(),
+                               unescaped_stream.GetSize());
+    }
+    stream.Flush();
+
+    // Send the packet.
+    const bool send_async = false;
+    StringExtractorGDBRemote response;
+    auto result = SendPacketAndWaitForResponse(stream.GetString().c_str(),
+                                               response, send_async);
+    if (result == PacketResult::Success)
+    {
+        // We failed if the config result comes back other than OK.
+        if (strcmp(response.GetStringRef().c_str(), "OK") == 0)
+        {
+            // Okay!
+            error.Clear();
+        }
+        else
+        {
+            error.SetErrorStringWithFormat("configuring StructuredData feature "
+                                           "%s failed with error %s",
+                                           type_name.AsCString(),
+                                           response.GetStringRef().c_str());
+        }
+    }
+    else
+    {
+        // Can we get more data here on the failure?
+        error.SetErrorStringWithFormat("configuring StructuredData feature %s "
+                                       "failed when sending packet: "
+                                       "PacketResult=%d", type_name.AsCString(),
+                                       result);
+    }
+    return error;
+}
+
+void
+GDBRemoteCommunicationClient::OnRunPacketSent(bool first)
+{
+    GDBRemoteClientBase::OnRunPacketSent(first);
+    m_curr_tid = LLDB_INVALID_THREAD_ID;
+}

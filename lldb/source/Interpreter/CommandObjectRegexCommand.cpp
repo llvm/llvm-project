@@ -131,7 +131,7 @@ CommandObjectRegexCommand::HandleCompletion (Args &input,
     if (m_completion_type_mask)
     {
         std::string completion_str (input.GetArgumentAtIndex (cursor_index), cursor_char_position);
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter,
+        CommandCompletions::InvokeCommonCompletionCallbacks (GetCommandInterpreter(),
                                                              m_completion_type_mask,
                                                              completion_str.c_str(),
                                                              match_start_point,

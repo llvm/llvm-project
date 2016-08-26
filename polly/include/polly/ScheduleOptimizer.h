@@ -20,6 +20,27 @@ struct isl_schedule;
 struct isl_schedule_node;
 struct isl_union_map;
 
+/// @brief Parameters of the micro kernel.
+///
+/// Parameters, which determine sizes of rank-1 (i.e., outer product) update
+/// used in the optimized matrix multiplication.
+///
+struct MicroKernelParamsTy {
+  int Mr;
+  int Nr;
+};
+
+/// @brief Parameters of the macro kernel.
+///
+/// Parameters, which determine sizes of blocks of partitioned matrices
+/// used in the optimized matrix multiplication.
+///
+struct MacroKernelParamsTy {
+  int Mc;
+  int Nc;
+  int Kc;
+};
+
 namespace polly {
 extern bool DisablePollyTiling;
 class Scop;
@@ -48,7 +69,7 @@ public:
   ///
   /// This function takes a node in an (possibly already optimized) schedule
   /// tree and applies a set of additional optimizations on this schedule tree
-  /// node and its descendents. The transformations applied include:
+  /// node and its descendants. The transformations applied include:
   ///
   ///   - Tiling
   ///   - Prevectorization
@@ -105,10 +126,10 @@ private:
   applyRegisterTiling(__isl_take isl_schedule_node *Node,
                       llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
 
-  /// @brief Apply the BLIS matmul optimization pattern
+  /// @brief Apply the BLIS matmul optimization pattern.
   ///
-  /// Apply the BLIS matmul optimization pattern. BLIS implements gemm
-  /// as three nested loops around a macro-kernel, plus two packing routines.
+  /// Apply the BLIS matmul optimization pattern. BLIS implements gemm as three
+  /// nested loops around a macro-kernel, plus two packing routines.
   /// The macro-kernel is implemented in terms of two additional loops around
   /// a micro-kernel. The micro-kernel is a loop around a rank-1
   /// (i.e., outer product) update.
@@ -119,19 +140,20 @@ private:
   /// Technical Report, 2014
   /// http://www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf
   ///
-  /// We create the BLIS micro-kernel by applying a combination of tiling
-  /// and unrolling. In subsequent changes we will add the extraction
-  /// of the BLIS macro-kernel and implement the packing transformation.
+  /// In our case matrices are stored in row-major order, which is taken into
+  /// account during the creation of the BLIS kernels and the computation
+  /// of their parameters.
   ///
-  /// It is assumed that the Node is successfully checked
-  /// by ScheduleTreeOptimizer::isMatrMultPattern. Consequently
-  /// in case of matmul kernels the application of optimizeMatMulPattern
-  /// can lead to close-to-peak performance. Maybe it can be generalized
-  /// to effectively optimize the whole class of successfully checked
-  /// statements.
+  /// @see ScheduleTreeOptimizer::createMicroKernel
+  /// @see ScheduleTreeOptimizer::createMacroKernel
+  /// @see getMicroKernelParams
+  /// @see getMacroKernelParams
   ///
-  /// @param Node the node that contains a band to be optimized.
-  /// @return Modified isl_schedule_node.
+  /// TODO: Implement the packing transformation.
+  ///
+  /// @param Node The node that contains a band to be optimized. The node
+  ///             is required to successfully pass
+  ///             ScheduleTreeOptimizer::isMatrMultPattern.
   static __isl_give isl_schedule_node *
   optimizeMatMulPattern(__isl_take isl_schedule_node *Node,
                         const llvm::TargetTransformInfo *TTI);
@@ -232,6 +254,35 @@ private:
   ///
   /// @param Node The node to check.
   static bool isMatrMultPattern(__isl_keep isl_schedule_node *Node);
+
+  /// @brief Create the BLIS macro-kernel.
+  ///
+  /// We create the BLIS macro-kernel by applying a combination of tiling
+  /// of dimensions of the band node and interchanging of two innermost
+  /// modified dimensions. The values of of MacroKernelParams's fields are used
+  /// as tile sizes.
+  ///
+  /// @param Node The schedule node to be modified.
+  /// @param MacroKernelParams Parameters of the macro kernel
+  ///                          to be used as tile sizes.
+  static __isl_give isl_schedule_node *
+  createMacroKernel(__isl_take isl_schedule_node *Node,
+                    MacroKernelParamsTy MacroKernelParams);
+
+  /// @brief Create the BLIS macro-kernel.
+  ///
+  /// We create the BLIS macro-kernel by applying a combination of tiling
+  /// of dimensions of the band node and interchanging of two innermost
+  /// modified dimensions. The values passed in MicroKernelParam are used
+  /// as tile sizes.
+  ///
+  /// @param Node The schedule node to be modified.
+  /// @param MicroKernelParams Parameters of the micro kernel
+  ///                          to be used as tile sizes.
+  /// @see MicroKernelParamsTy
+  static __isl_give isl_schedule_node *
+  createMicroKernel(__isl_take isl_schedule_node *Node,
+                    MicroKernelParamsTy MicroKernelParams);
 };
 
 #endif

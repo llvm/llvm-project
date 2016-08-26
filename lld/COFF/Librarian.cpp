@@ -54,7 +54,7 @@ static uint16_t getImgRelRelocation() {
   }
 }
 
-template <class T> void append(std::vector<uint8_t> &B, const T &Data) {
+template <class T> static void append(std::vector<uint8_t> &B, const T &Data) {
   size_t S = B.size();
   B.resize(S + sizeof(T));
   memcpy(&B[S], &Data, sizeof(T));

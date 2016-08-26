@@ -14,7 +14,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {	
+namespace misc {
 
 /// Finds instances where an integer is assigned to a string.
 ///

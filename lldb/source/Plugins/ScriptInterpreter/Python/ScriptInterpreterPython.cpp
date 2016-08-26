@@ -13,7 +13,9 @@
 
 #else
 
+// LLDB Python header must be included first
 #include "lldb-python.h"
+
 #include "ScriptInterpreterPython.h"
 #include "PythonDataObjects.h"
 #include "PythonExceptionState.h"
@@ -989,7 +991,7 @@ protected:
 void
 ScriptInterpreterPython::ExecuteInterpreterLoop ()
 {
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     Debugger &debugger = GetCommandInterpreter().GetDebugger();
 
@@ -1823,6 +1825,23 @@ ScriptInterpreterPython::ScriptedThreadPlanShouldStop(StructuredData::ObjectSP i
     return should_stop;
 }
 
+bool
+ScriptInterpreterPython::ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp, bool &script_error)
+{
+    bool is_stale = true;
+    StructuredData::Generic *generic = nullptr;
+    if (implementor_sp)
+        generic = implementor_sp->GetAsGeneric();
+    if (generic)
+    {
+        Locker py_lock(this, Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+        is_stale = g_swig_call_thread_plan(generic->GetValue(), "is_stale", nullptr, script_error);
+        if (script_error)
+            return true;
+    }
+    return is_stale;
+}
+
 lldb::StateType
 ScriptInterpreterPython::ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp, bool &script_error)
 {
@@ -2008,7 +2027,7 @@ ScriptInterpreterPython::GetScriptedSummary(const char *python_function_name, ll
                                             std::string &retval)
 {
     
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
     
     if (!valobj.get())
     {
@@ -3174,7 +3193,7 @@ ScriptInterpreterPython::InitializePrivate ()
 
     g_initialized = true;
 
-    Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
     // RAII-based initialization which correctly handles multiple-initialization, version-
     // specific differences among Python 2 and Python 3, and saving and restoring various

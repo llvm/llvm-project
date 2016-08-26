@@ -16,6 +16,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 template <class T>
@@ -42,6 +43,6 @@ int main()
     }
     {
         typedef std::vector<bool, some_alloc<bool>> C;
-        static_assert(!std::is_nothrow_destructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
     }
 }

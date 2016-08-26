@@ -17,7 +17,6 @@
 #include "lldb/Core/Listener.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamString.h"
-#include "lldb/Host/TimeValue.h"
 
 
 using namespace lldb;
@@ -202,15 +201,14 @@ SBListener::WaitForEvent (uint32_t timeout_secs, SBEvent &event)
 
     if (m_opaque_sp)
     {
-        TimeValue time_value;
+        std::chrono::microseconds timeout = std::chrono::microseconds(0);
         if (timeout_secs != UINT32_MAX)
         {
             assert (timeout_secs != 0); // Take this out after all calls with timeout set to zero have been removed....
-            time_value = TimeValue::Now();
-            time_value.OffsetWithSeconds (timeout_secs);
+            timeout = std::chrono::seconds(timeout_secs);
         }
         EventSP event_sp;
-        if (m_opaque_sp->WaitForEvent (time_value.IsValid() ? &time_value : NULL, event_sp))
+        if (m_opaque_sp->WaitForEvent(timeout, event_sp))
         {
             event.reset (event_sp);
             success = true;
@@ -247,16 +245,11 @@ SBListener::WaitForEventForBroadcaster
 {
     if (m_opaque_sp && broadcaster.IsValid())
     {
-        TimeValue time_value;
+        std::chrono::microseconds timeout = std::chrono::microseconds(0);
         if (num_seconds != UINT32_MAX)
-        {
-            time_value = TimeValue::Now();
-            time_value.OffsetWithSeconds (num_seconds);
-        }
+            timeout = std::chrono::seconds(num_seconds);
         EventSP event_sp;
-        if (m_opaque_sp->WaitForEventForBroadcaster (time_value.IsValid() ? &time_value : NULL,
-                                                         broadcaster.get(),
-                                                         event_sp))
+        if (m_opaque_sp->WaitForEventForBroadcaster(timeout, broadcaster.get(), event_sp))
         {
             event.reset (event_sp);
             return true;
@@ -278,17 +271,11 @@ SBListener::WaitForEventForBroadcasterWithType
 {
     if (m_opaque_sp && broadcaster.IsValid())
     {
-        TimeValue time_value;
+        std::chrono::microseconds timeout = std::chrono::microseconds(0);
         if (num_seconds != UINT32_MAX)
-        {
-            time_value = TimeValue::Now();
-            time_value.OffsetWithSeconds (num_seconds);
-        }
+            timeout = std::chrono::seconds(num_seconds);
         EventSP event_sp;
-        if (m_opaque_sp->WaitForEventForBroadcasterWithType (time_value.IsValid() ? &time_value : NULL,
-                                                              broadcaster.get(),
-                                                              event_type_mask,
-                                                              event_sp))
+        if (m_opaque_sp->WaitForEventForBroadcasterWithType(timeout, broadcaster.get(), event_type_mask, event_sp))
         {
             event.reset (event_sp);
             return true;

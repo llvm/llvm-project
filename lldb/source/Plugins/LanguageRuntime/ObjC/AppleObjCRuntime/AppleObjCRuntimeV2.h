@@ -125,6 +125,10 @@ public:
         return m_tagged_pointer_vendor_ap.get();
     }
     
+    void
+    GetValuesForGlobalCFBooleans(lldb::addr_t& cf_true,
+                                 lldb::addr_t& cf_false) override;
+    
     // none of these are valid ISAs - we use them to infer the type
     // of tagged pointers - if we have something meaningful to say
     // we report an actual type - otherwise, we just say tagged
@@ -307,26 +311,26 @@ private:
     
     struct DescriptorMapUpdateResult
     {
-        bool update_ran;
-        bool any_found;
+        bool m_update_ran;
+        uint32_t m_num_found;
         
         DescriptorMapUpdateResult (bool ran,
-                                   bool found)
+                                   uint32_t found)
         {
-            update_ran = ran;
-            any_found = found;
+            m_update_ran = ran;
+            m_num_found = found;
         }
         
         static DescriptorMapUpdateResult
         Fail ()
         {
-            return {false, false};
+            return {false, 0};
         }
         
         static DescriptorMapUpdateResult
-        Success ()
+        Success (uint32_t found)
         {
-            return {true, true};
+            return {true, found};
         }
     };
 
@@ -340,11 +344,11 @@ private:
     GetISAHashTablePointer ();
 
     bool
-    UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table, uint32_t &discovered_classes_count);
+    UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table);
     
-    bool
-    UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table, uint32_t &discovered_classes_count);
-    
+    DescriptorMapUpdateResult
+    UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
+
     uint32_t
     ParseClassInfoArray (const lldb_private::DataExtractor &data,
                          uint32_t num_class_infos);
@@ -352,11 +356,20 @@ private:
     DescriptorMapUpdateResult
     UpdateISAToDescriptorMapSharedCache ();
     
+    enum class SharedCacheWarningReason
+    {
+        eExpressionExecutionFailure,
+        eNotEnoughClassesRead
+    };
+    
     void
-    WarnIfNoClassesFound (bool globally);
+    WarnIfNoClassesCached (SharedCacheWarningReason reason);
 
     lldb::addr_t
     GetSharedCacheReadOnlyAddress();
+    
+    bool
+    GetCFBooleanValuesIfNeeded ();
     
     friend class ClassDescriptorV2;
     friend class SwiftLanguageRuntime;
@@ -377,11 +390,9 @@ private:
     std::unique_ptr<NonPointerISACache>     m_non_pointer_isa_cache_ap;
     std::unique_ptr<TaggedPointerVendor>    m_tagged_pointer_vendor_ap;
     EncodingToTypeSP                        m_encoding_to_type_sp;
-    struct {
-        bool in_shared_cache : 1;
-        bool globally : 1;
-    }                                       m_warn_if_no_classes_cached;
     bool                                    m_noclasses_warning_emitted;
+    llvm::Optional<std::pair<lldb::addr_t,
+                             lldb::addr_t>>  m_CFBoolean_values;
 };
     
 } // namespace lldb_private

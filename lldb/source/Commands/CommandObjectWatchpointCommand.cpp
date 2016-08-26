@@ -41,7 +41,7 @@ public:
               interpreter, "add",
               "Add a set of LLDB commands to a watchpoint, to be executed whenever the watchpoint is hit.", nullptr),
           IOHandlerDelegateMultiline("DONE", IOHandlerDelegate::Completion::LLDBCommand),
-          m_options(interpreter)
+          m_options()
     {
         SetHelpLong (
 R"(
@@ -280,8 +280,8 @@ are no syntax errors may indicate that a function was declared but never called.
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
+        CommandOptions() :
+            Options(),
             m_use_commands (false),
             m_use_script_language (false),
             m_script_language (eScriptLanguageNone),
@@ -294,7 +294,8 @@ are no syntax errors may indicate that a function was declared but never called.
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -338,7 +339,7 @@ are no syntax errors may indicate that a function was declared but never called.
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_use_commands = true;
             m_use_script_language = false;

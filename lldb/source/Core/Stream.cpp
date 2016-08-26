@@ -9,6 +9,7 @@
 
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/Endian.h"
+#include "lldb/Host/PosixApi.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>

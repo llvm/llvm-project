@@ -2103,13 +2103,10 @@ ClangExpressionDeclMap::AddOneFunction (NameSearchContext &context,
                             StreamString ss;
                             
                             function->DumpSymbolContext(&ss);
-                            
+
                             log->Printf("  CEDM::FEVD[%u] Imported decl for function %s (description %s), returned %s",
-                                        current_id,
-                                        copied_function_decl->getName().str().c_str(),
-                                        ss.GetData(),
+                                        current_id, copied_function_decl->getNameAsString().c_str(), ss.GetData(),
                                         ast_dumper.GetCString());
-                            
                         }
                         
                         context.AddNamedDecl(copied_function_decl);

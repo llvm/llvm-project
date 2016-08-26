@@ -20,6 +20,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/SelectHelper.h"
 
 using namespace lldb_private;
 using namespace lldb_private::line_editor;
@@ -155,11 +156,10 @@ IsInputPending (FILE * file)
     // instead use some kind of yet-to-be-created abstraction that select-like functionality on
     // non-socket objects.
     const int fd = fileno (file);
-    fd_set fds;
-    FD_ZERO (&fds);
-    FD_SET (fd, &fds);
-    timeval timeout = { 0, 0 };
-    return select (fd + 1, &fds, NULL, NULL, &timeout);
+    SelectHelper select_helper;
+    select_helper.SetTimeout(std::chrono::microseconds(0));
+    select_helper.FDSetRead(fd);
+    return select_helper.Select().Success();
 }
 
 namespace lldb_private

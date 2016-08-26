@@ -24,13 +24,14 @@ types without a user-provided constructor and are not initialized. The suggested
 fix is to zero initialize the variable via ``{}`` for C++11 and beyond or ``=
 {}`` for older language versions.
 
-IgnoreArrays option
--------------------
+Options
+-------
 
-For performance critical code, it may be important to not zero
-fixed-size array members. If on, IgnoreArrays will not warn about
-array members that are not zero-initialized during construction.
-IgnoreArrays is false by default.
+.. option:: IgnoreArrays
+
+   If set to non-zero, the check will not warn about array members that are not
+   zero-initialized during construction. For performance critical code, it may
+   be important to not initialize fixed-size array members.  Default is `0`.
 
 This rule is part of the "Type safety" profile of the C++ Core
 Guidelines, corresponding to rule Type.6. See

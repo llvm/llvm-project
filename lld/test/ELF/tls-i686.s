@@ -28,7 +28,7 @@ _start:
  movl %gs:0, %ecx
  leal var@ntpoff(%ecx), %eax
  movl %gs:0, %ecx
- leal var1@ntpoff(%ecx), %eax
+ leal var1@ntpoff+123(%ecx), %eax
 
 // DIS:      Disassembly of section test:
 // DIS-NEXT: _start:
@@ -41,7 +41,7 @@ _start:
 // DIS-NEXT: 1201c: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
 // DIS-NEXT: 12023: 8d 81 f8 ff ff ff    leal -8(%ecx), %eax
 // DIS-NEXT: 12029: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
-// DIS-NEXT: 12030: 8d 81 fc ff ff ff    leal -4(%ecx), %eax
+// DIS-NEXT: 12030: 8d 81 77 00 00 00    leal 119(%ecx), %eax
 
 // RELOC: Relocations [
 // RELOC-NEXT: ]
@@ -57,7 +57,7 @@ _start:
 // DISSHARED-NEXT: 201c: 65 8b 0d 00 00 00 00  movl %gs:0, %ecx
 // DISSHARED-NEXT: 2023: 8d 81 00 00 00 00     leal (%ecx), %eax
 // DISSHARED-NEXT: 2029: 65 8b 0d 00 00 00 00  movl %gs:0, %ecx
-// DISSHARED-NEXT: 2030: 8d 81 00 00 00 00     leal (%ecx), %eax
+// DISSHARED-NEXT: 2030: 8d 81 7b 00 00 00     leal 123(%ecx), %eax
 
 // RELOCSHARED:      Relocations [
 // RELOCSHARED-NEXT: Section (4) .rel.dyn {

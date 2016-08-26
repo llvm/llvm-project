@@ -107,7 +107,7 @@ SymbolVendorELF::CreateInstance (const lldb::ModuleSP &module_sp, lldb_private::
     if (file_spec_list.IsEmpty())
         return NULL;
 
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "SymbolVendorELF::CreateInstance (module = %s)",
                         module_sp->GetFileSpec().GetPath().c_str());
 

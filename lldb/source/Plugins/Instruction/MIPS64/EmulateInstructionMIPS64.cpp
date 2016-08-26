@@ -28,6 +28,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Stream.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/UnwindPlan.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -482,10 +483,15 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction (const char *op_name)
         //----------------------------------------------------------------------
         // Prologue/Epilogue instructions
         //----------------------------------------------------------------------
-        { "DADDiu",     &EmulateInstructionMIPS64::Emulate_DADDiu,      "DADDIU rt,rs,immediate"    },
-        { "ADDiu",      &EmulateInstructionMIPS64::Emulate_DADDiu,      "ADDIU rt,rs,immediate"     },
-        { "SD",         &EmulateInstructionMIPS64::Emulate_SD,          "SD rt,offset(rs)"          },
-        { "LD",         &EmulateInstructionMIPS64::Emulate_LD,          "LD rt,offset(base)"        },
+        { "DADDiu",     &EmulateInstructionMIPS64::Emulate_DADDiu,      "DADDIU rt, rs, immediate"    },
+        { "ADDiu",      &EmulateInstructionMIPS64::Emulate_DADDiu,      "ADDIU  rt, rs, immediate"    },
+        { "SD",         &EmulateInstructionMIPS64::Emulate_SD,          "SD     rt, offset(rs)"       },
+        { "LD",         &EmulateInstructionMIPS64::Emulate_LD,          "LD     rt, offset(base)"     },
+        { "DSUBU",      &EmulateInstructionMIPS64::Emulate_DSUBU_DADDU, "DSUBU  rd, rs, rt"           },
+        { "SUBU",       &EmulateInstructionMIPS64::Emulate_DSUBU_DADDU, "SUBU   rd, rs, rt"           },
+        { "DADDU",      &EmulateInstructionMIPS64::Emulate_DSUBU_DADDU, "DADDU  rd, rs, rt"           },
+        { "ADDU",       &EmulateInstructionMIPS64::Emulate_DSUBU_DADDU, "ADDU   rd, rs, rt"           },
+        { "LUI",        &EmulateInstructionMIPS64::Emulate_LUI,         "LUI    rt, immediate"        },
 
 
 
@@ -771,36 +777,57 @@ EmulateInstructionMIPS64::nonvolatile_reg_p (uint64_t regnum)
 bool
 EmulateInstructionMIPS64::Emulate_DADDiu (llvm::MCInst& insn)
 {
+    // DADDIU rt, rs, immediate
+    // GPR[rt] <- GPR[rs] + sign_extend(immediate)
+
+    uint8_t dst, src;
     bool success = false;
     const uint32_t imm16 = insn.getOperand(2).getImm();
-    uint64_t imm = SignedBits(imm16, 15, 0);
-    uint64_t result;
-    uint32_t src, dst;
+    int64_t imm = SignedBits(imm16, 15, 0);
 
     dst = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     src = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
 
-    /* Check if this is daddiu sp,<src>,imm16 */
-    if (dst == dwarf_sp_mips64)
+    // If immediate is greater than 2^16 - 1 then clang generate
+    // LUI, (D)ADDIU,(D)SUBU instructions in prolog.
+    // Example
+    // lui    $1, 0x2
+    // daddiu $1, $1, -0x5920
+    // dsubu  $sp, $sp, $1
+    // In this case, (D)ADDIU dst and src will be same and not equal to sp
+    if (dst == src)
     {
+        Context context;
+
         /* read <src> register */
-        uint64_t src_opd_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + src, 0, &success);
+        const int64_t src_opd_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + src, 0, &success);
         if (!success)
             return false;
 
-        result = src_opd_val + imm;
+        /* Check if this is daddiu sp, sp, imm16 */
+        if (dst == dwarf_sp_mips64)
+        {
+            uint64_t result = src_opd_val + imm;
+            RegisterInfo reg_info_sp;
 
-        Context context;
-        RegisterInfo reg_info_sp;
-        if (GetRegisterInfo (eRegisterKindDWARF, dwarf_sp_mips64, reg_info_sp))
-            context.SetRegisterPlusOffset (reg_info_sp, imm);
+            if (GetRegisterInfo (eRegisterKindDWARF, dwarf_sp_mips64, reg_info_sp))
+                context.SetRegisterPlusOffset (reg_info_sp, imm);
 
-        /* We are allocating bytes on stack */
-        context.type = eContextAdjustStackPointer;
+            /* We are allocating bytes on stack */
+            context.type = eContextAdjustStackPointer;
 
-        WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_sp_mips64, result);
+            WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_sp_mips64, result);
+            return true;
+        }
+
+        imm += src_opd_val;
+        context.SetImmediateSigned (imm);
+        context.type = eContextImmediate;
+
+        if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_zero_mips64 + dst, imm))
+            return false;
     }
-    
+
     return true;
 }
 
@@ -832,7 +859,7 @@ EmulateInstructionMIPS64::Emulate_SD (llvm::MCInst& insn)
     address = address + imm;
 
     /* We look for sp based non-volatile register stores */
-    if (base == dwarf_sp_mips64 && nonvolatile_reg_p (src))
+    if (nonvolatile_reg_p (src))
     {
         Context context;
         RegisterValue data_src;
@@ -888,7 +915,7 @@ EmulateInstructionMIPS64::Emulate_LD (llvm::MCInst& insn)
     WriteRegisterUnsigned (bad_vaddr_context, eRegisterKindDWARF, dwarf_bad_mips64, address);
 
 
-    if (base == dwarf_sp_mips64 && nonvolatile_reg_p (src))
+    if (nonvolatile_reg_p (src))
     {
         RegisterValue data_src;
         RegisterInfo reg_info_src;
@@ -908,6 +935,104 @@ EmulateInstructionMIPS64::Emulate_LD (llvm::MCInst& insn)
     return false;
 }
 
+bool
+EmulateInstructionMIPS64::Emulate_LUI (llvm::MCInst& insn)
+{
+    // LUI rt, immediate
+    // GPR[rt] <- sign_extend(immediate << 16)
+
+    const uint32_t imm32 = insn.getOperand(1).getImm() << 16;
+    int64_t imm = SignedBits(imm32, 31, 0);
+    uint8_t rt;
+    Context context;
+    
+    rt = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
+    context.SetImmediateSigned (imm);
+    context.type = eContextImmediate;
+
+    if (WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_zero_mips64 + rt, imm))
+        return true;
+
+    return false;
+}
+
+bool
+EmulateInstructionMIPS64::Emulate_DSUBU_DADDU (llvm::MCInst& insn)
+{
+    // DSUBU sp, <src>, <rt>
+    // DADDU sp, <src>, <rt>
+    // DADDU dst, sp, <rt>
+
+    bool success = false;
+    uint64_t result;
+    uint8_t src, dst, rt;
+    const char *op_name = m_insn_info->getName (insn.getOpcode ());
+    
+    dst = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
+    src = m_reg_info->getEncodingValue (insn.getOperand(1).getReg());
+
+    /* Check if sp is destination register */
+    if (dst == dwarf_sp_mips64)
+    {
+        rt = m_reg_info->getEncodingValue (insn.getOperand(2).getReg());
+
+        /* read <src> register */
+        uint64_t src_opd_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + src, 0, &success);
+        if (!success)
+           return false;
+
+        /* read <rt > register */
+        uint64_t rt_opd_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
+        if (!success)
+            return false;
+
+        if (!strcasecmp (op_name, "DSUBU") || !strcasecmp (op_name, "SUBU"))
+            result = src_opd_val - rt_opd_val;
+        else
+            result = src_opd_val + rt_opd_val;
+
+        Context context;
+        RegisterInfo reg_info_sp;
+        if (GetRegisterInfo (eRegisterKindDWARF, dwarf_sp_mips64, reg_info_sp))
+            context.SetRegisterPlusOffset (reg_info_sp, rt_opd_val);
+
+        /* We are allocating bytes on stack */
+        context.type = eContextAdjustStackPointer;
+
+        WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_sp_mips64, result);
+
+        return true;
+    }
+    else if (src == dwarf_sp_mips64)
+    {
+        rt = m_reg_info->getEncodingValue (insn.getOperand(2).getReg());
+
+        /* read <src> register */
+        uint64_t src_opd_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + src, 0, &success);
+        if (!success)
+            return false;
+
+       /* read <rt> register */
+       uint64_t rt_opd_val = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_zero_mips64 + rt, 0, &success);
+       if (!success)
+           return false;
+
+       Context context;
+
+       if (!strcasecmp (op_name, "DSUBU") || !strcasecmp (op_name, "SUBU"))
+           result = src_opd_val - rt_opd_val;
+       else
+           result = src_opd_val + rt_opd_val;
+
+       context.SetImmediateSigned (result);
+       context.type = eContextImmediate;
+
+       if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_zero_mips64 + dst, result))
+           return false;
+    }
+
+    return true;
+}
 
 /*
     Emulate below MIPS branch instructions.

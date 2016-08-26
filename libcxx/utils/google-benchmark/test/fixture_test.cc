@@ -44,7 +44,7 @@ BENCHMARK_DEFINE_F(MyFixture, Bar)(benchmark::State& st) {
     assert(data.get() != nullptr);
     assert(*data == 42);
   }
-  st.SetItemsProcessed(st.range_x());
+  st.SetItemsProcessed(st.range(0));
 }
 BENCHMARK_REGISTER_F(MyFixture, Bar)->Arg(42);
 BENCHMARK_REGISTER_F(MyFixture, Bar)->Arg(42)->ThreadPerCpu();

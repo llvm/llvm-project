@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
 ;
 ; Check that we do not consolidate the invariant loads to smp[order - 1] and
 ; smp[order - 2] in the blocks %0 and %16. While they have the same pointer

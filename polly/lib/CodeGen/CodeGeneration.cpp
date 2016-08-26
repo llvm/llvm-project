@@ -66,20 +66,6 @@ public:
   RegionInfo *RI;
   ///}
 
-  /// @brief Build the runtime condition.
-  ///
-  /// Build the condition that evaluates at run-time to true iff all
-  /// assumptions taken for the SCoP hold, and to false otherwise.
-  ///
-  /// @return A value evaluating to true/false if execution is save/unsafe.
-  Value *buildRTC(PollyIRBuilder &Builder, IslExprBuilder &ExprBuilder) {
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
-    Value *RTC = ExprBuilder.create(AI->getRunCondition());
-    if (!RTC->getType()->isIntegerTy(1))
-      RTC = Builder.CreateIsNotNull(RTC);
-    return RTC;
-  }
-
   void verifyGeneratedFunction(Scop &S, Function &F) {
     if (!verifyFunction(F, &errs()) || !Verify)
       return;
@@ -148,7 +134,6 @@ public:
     PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
 
     IslNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, S);
-    IslExprBuilder &ExprBuilder = NodeBuilder.getExprBuilder();
 
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional
@@ -189,22 +174,15 @@ public:
 
       isl_ast_node_free(AstRoot);
     } else {
-
+      NodeBuilder.allocateNewArrays();
       NodeBuilder.addParameters(S.getContext());
-
-      ExprBuilder.setTrackOverflow(true);
-      Value *RTC = buildRTC(Builder, ExprBuilder);
-      Value *OverflowHappened = Builder.CreateNot(
-          ExprBuilder.getOverflowState(), "polly.rtc.overflown");
-      RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
-      ExprBuilder.setTrackOverflow(false);
+      Value *RTC = NodeBuilder.createRTC(AI->getRunCondition());
 
       Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
       Builder.SetInsertPoint(&StartBlock->front());
 
       NodeBuilder.create(AstRoot);
-
-      NodeBuilder.finalizeSCoP(S);
+      NodeBuilder.finalize();
       fixRegionInfo(EnteringBB->getParent(), R->getParent());
     }
 

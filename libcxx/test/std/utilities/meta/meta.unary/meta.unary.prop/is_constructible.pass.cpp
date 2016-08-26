@@ -27,6 +27,9 @@ private:
     A(char);
 };
 
+struct Base {};
+struct Derived : public Base {};
+
 class Abstract
 {
     virtual void foo() = 0;
@@ -36,6 +39,21 @@ class AbstractDestructor
 {
     virtual ~AbstractDestructor() = 0;
 };
+
+struct PrivateDtor {
+  PrivateDtor(int) {}
+private:
+  ~PrivateDtor() {}
+};
+
+struct S {
+   template <class T>
+#if TEST_STD_VER >= 11
+   explicit
+#endif
+   operator T () const { return T(); }
+};
+
 
 template <class T>
 void test_is_constructible()
@@ -101,13 +119,54 @@ int main()
     test_is_not_constructible<int&> ();
     test_is_not_constructible<Abstract> ();
     test_is_not_constructible<AbstractDestructor> ();
+    test_is_constructible<int, S>();
+    test_is_not_constructible<int&, S>();
 
-//  LWG 2560  -- postpone this test until bots updated
-//     test_is_not_constructible<void()> ();
-#if TEST_STD_VER > 11
-//     test_is_not_constructible<void() const> ();
-//     test_is_not_constructible<void() volatile> ();
-//     test_is_not_constructible<void() &> ();
-//     test_is_not_constructible<void() &&> ();
+#if TEST_STD_VER >= 11
+    test_is_constructible<int const&, int>();
+    test_is_constructible<int const&, int&&>();
+
+    test_is_not_constructible<int&, int>();
+    test_is_not_constructible<int&, int const&>();
+    test_is_not_constructible<int&, int&&>();
+
+    test_is_constructible<int&&, int>();
+    test_is_constructible<int&&, int&&>();
+    test_is_not_constructible<int&&, int&>();
+    test_is_not_constructible<int&&, int const&&>();
+
+    test_is_constructible<Base, Derived>();
+    test_is_constructible<Base&, Derived&>();
+    test_is_not_constructible<Derived&, Base&>();
+    test_is_constructible<Base const&, Derived const&>();
+    test_is_not_constructible<Derived const&, Base const&>();
+    test_is_not_constructible<Derived const&, Base>();
+
+    test_is_constructible<Base&&, Derived>();
+    test_is_constructible<Base&&, Derived&&>();
+    test_is_not_constructible<Derived&&, Base&&>();
+    test_is_not_constructible<Derived&&, Base>();
+
+    // test that T must also be destructible
+    test_is_constructible<PrivateDtor&, PrivateDtor&>();
+    test_is_not_constructible<PrivateDtor, int>();
+
+    test_is_not_constructible<void() const, void() const>();
+    test_is_not_constructible<void() const, void*>();
+
+// TODO: Remove this workaround once Clang <= 3.7 are no longer used regularly.
+// In those compiler versions the __is_constructible builtin gives the wrong
+// results for abominable function types.
+#if (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER < 703) \
+ || (defined(TEST_CLANG_VER) && TEST_CLANG_VER < 308)
+#define WORKAROUND_CLANG_BUG
+#endif
+#if !defined(WORKAROUND_CLANG_BUG)
+    test_is_not_constructible<void()>();
+    test_is_not_constructible<void() const> ();
+    test_is_not_constructible<void() volatile> ();
+    test_is_not_constructible<void() &> ();
+    test_is_not_constructible<void() &&> ();
+#endif
 #endif
 }

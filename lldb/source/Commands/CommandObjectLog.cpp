@@ -47,7 +47,7 @@ public:
                             "log enable",
                             "Enable logging for a single log channel.",
                             nullptr),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -104,17 +104,18 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
-            log_file (),
-            log_options (0)
+        CommandOptions() :
+            Options(),
+            log_file(),
+            log_options(0)
         {
         }
 
         ~CommandOptions () override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -140,7 +141,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             log_file.Clear();
             log_options = 0;

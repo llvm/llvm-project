@@ -141,6 +141,9 @@ public:
     lldb::SBCommand
     AddCommand (const char* name, lldb::SBCommandPluginInterface *impl, const char* help);
 
+    lldb::SBCommand
+    AddCommand (const char* name, lldb::SBCommandPluginInterface *impl, const char* help, const char* syntax);
+
     void
     SourceInitFileInHomeDirectory (lldb::SBCommandReturnObject &result);
 
@@ -308,6 +311,9 @@ public:
     lldb::SBCommand
     AddCommand(const char* name, lldb::SBCommandPluginInterface* impl, const char* help = nullptr);
     
+    lldb::SBCommand
+    AddCommand(const char* name, lldb::SBCommandPluginInterface* impl, const char* help, const char* syntax);
+
 private:
     friend class SBDebugger;
     friend class SBCommandInterpreter;

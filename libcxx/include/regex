@@ -127,6 +127,8 @@ class basic_regex
 public:
     // types:
     typedef charT                               value_type;
+    typedef traits                              traits_type;
+    typedef typename traits::string_type        string_type;
     typedef regex_constants::syntax_option_type flag_type;
     typedef typename traits::locale_type        locale_type;
 
@@ -145,7 +147,7 @@ public:
     // construct/copy/destroy:
     basic_regex();
     explicit basic_regex(const charT* p, flag_type f = regex_constants::ECMAScript);
-    basic_regex(const charT* p, size_t len, flag_type f);
+    basic_regex(const charT* p, size_t len, flag_type f = regex_constants::ECMAScript);
     basic_regex(const basic_regex&);
     basic_regex(basic_regex&&) noexcept;
     template <class ST, class SA>
@@ -762,7 +764,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <memory>
 #include <vector>
 #include <deque>
-#include <cassert>
 
 #include <__undef_min_max>
 
@@ -957,13 +958,13 @@ public:
 };
 
 template <regex_constants::error_type _Ev>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_regex_error()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw regex_error(_Ev);
 #else
-    assert(!"regex_error");
+    _VSTD::abort();
 #endif
 }
 
@@ -2475,6 +2476,8 @@ class _LIBCPP_TYPE_VIS_ONLY basic_regex
 public:
     // types:
     typedef _CharT                              value_type;
+    typedef _Traits                             traits_type;
+    typedef typename _Traits::string_type       string_type;
     typedef regex_constants::syntax_option_type flag_type;
     typedef typename _Traits::locale_type       locale_type;
 
@@ -2515,7 +2518,7 @@ public:
           __end_(0)
         {__parse(__p, __p + __traits_.length(__p));}
     _LIBCPP_INLINE_VISIBILITY
-    basic_regex(const value_type* __p, size_t __len, flag_type __f)
+    basic_regex(const value_type* __p, size_t __len, flag_type __f = regex_constants::ECMAScript)
         : __flags_(__f), __marked_count_(0), __loop_count_(0), __open_count_(0),
           __end_(0)
         {__parse(__p, __p + __len);}

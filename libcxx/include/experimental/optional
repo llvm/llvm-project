@@ -513,15 +513,21 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr explicit operator bool() const noexcept {return this->__engaged_;}
 
+	_LIBCPP_NORETURN _LIBCPP_INLINE_VISIBILITY 
+	constexpr void __throw_bad_optional_access() const
+	{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+        throw bad_optional_access();
+#else
+        _VSTD::abort();
+#endif
+	}
+	
     _LIBCPP_INLINE_VISIBILITY
     constexpr value_type const& value() const
     {
         if (!this->__engaged_)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_optional_access();
-#else
-            assert(!"bad optional access");
-#endif
+            __throw_bad_optional_access();
         return this->__val_;
     }
 
@@ -529,11 +535,7 @@ public:
     value_type& value()
     {
         if (!this->__engaged_)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_optional_access();
-#else
-            assert(!"bad optional access");
-#endif
+            __throw_bad_optional_access();
         return this->__val_;
     }
 

@@ -64,7 +64,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   set(PACKAGE_NAME libcxxabi)
-  set(PACKAGE_VERSION 3.7.0svn)
+  set(PACKAGE_VERSION 4.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -93,7 +93,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LLVM_INCLUDE_TESTS OFF)
   endif()
 
-  set(LIBCXXABI_LIBDIR_SUFFIX "" CACHE STRING
+  set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
       "Define suffix of library directory name (32/64)")
 
   set(LIBCXXABI_BUILT_STANDALONE 1)
@@ -189,8 +189,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
   set(LIBCXXABI_LIBCXX_LIBRARY_PATH "${LIBCXXABI_LIBRARY_DIR}" CACHE PATH
       "The path to libc++ library.")
-endif ()
-
+endif()
 
 # Check that we can build with 32 bits if requested.
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
@@ -246,7 +245,7 @@ endif()
 
 if (LIBCXXABI_USE_COMPILER_RT)
   list(APPEND LIBCXXABI_LINK_FLAGS "-rtlib=compiler-rt")
-endif ()
+endif()
 
 append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WERROR_FLAG -Werror=return-type)
 
@@ -383,7 +382,7 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
 
   include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
   include_directories("${LIBCXXABI_LIBUNWIND_SOURCES}")
-endif ()
+endif()
 
 # Add source code. This also contains all of the logic for deciding linker flags
 # soname, etc...

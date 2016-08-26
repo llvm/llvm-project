@@ -1382,6 +1382,16 @@ class _LIBCPP_EXCEPTION_ABI bad_function_call
 {
 };
 
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_bad_function_call()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_function_call();
+#else
+	_VSTD::abort();
+#endif
+}
+
 template<class _Fp> class _LIBCPP_TYPE_VIS_ONLY function; // undefined
 
 namespace __function
@@ -1595,12 +1605,10 @@ public:
     function(nullptr_t) _NOEXCEPT : __f_(0) {}
     function(const function&);
     function(function&&) _NOEXCEPT;
-    template<class _Fp>
-      function(_Fp, typename enable_if
-                                     <
-                                        __callable<_Fp>::value &&
-                                        !is_same<_Fp, function>::value
-                                      >::type* = 0);
+    template<class _Fp, class = typename enable_if<
+        __callable<_Fp>::value && !is_same<_Fp, function>::value
+    >::type>
+    function(_Fp);
 
     template<class _Alloc>
       _LIBCPP_INLINE_VISIBILITY
@@ -1612,9 +1620,8 @@ public:
       function(allocator_arg_t, const _Alloc&, const function&);
     template<class _Alloc>
       function(allocator_arg_t, const _Alloc&, function&&);
-    template<class _Fp, class _Alloc>
-      function(allocator_arg_t, const _Alloc& __a, _Fp __f,
-               typename enable_if<__callable<_Fp>::value>::type* = 0);
+    template<class _Fp, class _Alloc, class = typename enable_if<__callable<_Fp>::value>::type>
+      function(allocator_arg_t, const _Alloc& __a, _Fp __f);
 
     function& operator=(const function&);
     function& operator=(function&&) _NOEXCEPT;
@@ -1728,13 +1735,8 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
 }
 
 template<class _Rp, class ..._ArgTypes>
-template <class _Fp>
-function<_Rp(_ArgTypes...)>::function(_Fp __f,
-                                     typename enable_if
-                                     <
-                                        __callable<_Fp>::value &&
-                                        !is_same<_Fp, function>::value
-                                     >::type*)
+template <class _Fp, class>
+function<_Rp(_ArgTypes...)>::function(_Fp __f)
     : __f_(0)
 {
     if (__function::__not_null(__f))
@@ -1757,9 +1759,8 @@ function<_Rp(_ArgTypes...)>::function(_Fp __f,
 }
 
 template<class _Rp, class ..._ArgTypes>
-template <class _Fp, class _Alloc>
-function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp __f,
-                                     typename enable_if<__callable<_Fp>::value>::type*)
+template <class _Fp, class _Alloc, class>
+function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp __f)
     : __f_(0)
 {
     typedef allocator_traits<_Alloc> __alloc_traits;
@@ -1891,10 +1892,8 @@ template<class _Rp, class ..._ArgTypes>
 _Rp
 function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __arg) const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__f_ == 0)
-        throw bad_function_call();
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_bad_function_call();
     return (*__f_)(_VSTD::forward<_ArgTypes>(__arg)...);
 }
 
@@ -2583,18 +2582,28 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<long double>
 };
 
 #if _LIBCPP_STD_VER > 11
-template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash
+
+template <class _Tp, bool = is_enum<_Tp>::value>
+struct _LIBCPP_TYPE_VIS_ONLY __enum_hash
     : public unary_function<_Tp, size_t>
 {
-    static_assert(is_enum<_Tp>::value, "This hash only works for enumeration types");
-
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(_Tp __v) const _NOEXCEPT
     {
         typedef typename underlying_type<_Tp>::type type;
         return hash<type>{}(static_cast<type>(__v));
     }
+};
+template <class _Tp>
+struct _LIBCPP_TYPE_VIS_ONLY __enum_hash<_Tp, false> {
+    __enum_hash() = delete;
+    __enum_hash(__enum_hash const&) = delete;
+    __enum_hash& operator=(__enum_hash const&) = delete;
+};
+
+template <class _Tp>
+struct _LIBCPP_TYPE_VIS_ONLY hash : public __enum_hash<_Tp>
+{
 };
 #endif
 

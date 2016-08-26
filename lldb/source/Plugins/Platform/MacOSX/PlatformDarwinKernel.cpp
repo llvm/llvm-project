@@ -285,17 +285,19 @@ PlatformDarwinKernel::DebuggerInitialize (lldb_private::Debugger &debugger)
 //------------------------------------------------------------------
 PlatformDarwinKernel::PlatformDarwinKernel (lldb_private::LazyBool is_ios_debug_session) :
     PlatformDarwin (false),    // This is a remote platform
-    m_name_to_kext_path_map(),
+    m_name_to_kext_path_map_with_dsyms(),
+    m_name_to_kext_path_map_without_dsyms(),
     m_search_directories(),
-    m_kernel_binaries(),
+    m_search_directories_no_recursing(),
+    m_kernel_binaries_with_dsyms(),
+    m_kernel_binaries_without_dsyms(),
     m_ios_debug_session(is_ios_debug_session)
 
 {
     if (GetGlobalProperties()->GetSearchForKexts())
     {
         CollectKextAndKernelDirectories ();
-        IndexKextsInDirectories ();
-        IndexKernelsInDirectories ();
+        SearchForKextsAndKernelsRecursively ();
     }
 }
 
@@ -320,14 +322,53 @@ PlatformDarwinKernel::GetStatus (Stream &strm)
     else if (m_ios_debug_session == eLazyBoolNo)
         strm.Printf ("Mac OS X kernel debugging\n");
     else
-            strm.Printf ("unknown kernel debugging\n");
+        strm.Printf ("unknown kernel debugging\n");
+
+    strm.Printf ("Directories searched recursively:\n");
     const uint32_t num_kext_dirs = m_search_directories.size();
     for (uint32_t i=0; i<num_kext_dirs; ++i)
     {
-        const FileSpec &kext_dir = m_search_directories[i];
-        strm.Printf (" Kext directories: [%2u] \"%s\"\n", i, kext_dir.GetPath().c_str());
+        strm.Printf ("[%d] %s\n", i, m_search_directories[i].GetPath().c_str());
     }
-    strm.Printf (" Total number of kexts indexed: %d\n", (int) m_name_to_kext_path_map.size());
+
+    strm.Printf ("Directories not searched recursively:\n");
+    const uint32_t num_kext_dirs_no_recursion = m_search_directories_no_recursing.size();
+    for (uint32_t i = 0; i < num_kext_dirs_no_recursion; i++)
+    {
+        strm.Printf ("[%d] %s\n", i, m_search_directories_no_recursing[i].GetPath().c_str());
+    }
+
+    strm.Printf (" Number of kexts with dSYMs indexed: %d\n", (int) m_name_to_kext_path_map_with_dsyms.size());
+    strm.Printf (" Number of kexts without dSYMs indexed: %d\n", (int) m_name_to_kext_path_map_without_dsyms.size());
+    strm.Printf (" Number of Kernel binaries with dSYMs indexed: %d\n", (int) m_kernel_binaries_with_dsyms.size());
+    strm.Printf (" Number of Kernel binaries without dSYMs indexed: %d\n", (int) m_kernel_binaries_without_dsyms.size());
+
+    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
+    if (log)
+    {
+        log->Printf("\nkexts with dSYMs");
+        for (auto pos : m_name_to_kext_path_map_with_dsyms)
+        {
+            log->Printf ("%s", pos.second.GetPath().c_str());
+        }
+        log->Printf("\nkexts without dSYMs");
+
+        for (auto pos : m_name_to_kext_path_map_without_dsyms)
+        {
+            log->Printf ("%s", pos.second.GetPath().c_str());
+        }
+        log->Printf("\nkernels with dSYMS");
+        for (auto fs : m_kernel_binaries_with_dsyms)
+        {
+            log->Printf ("%s", fs.GetPath().c_str());
+        }
+        log->Printf("\nkernels without dSYMS");
+        for (auto fs : m_kernel_binaries_without_dsyms)
+        {
+            log->Printf ("%s", fs.GetPath().c_str());
+        }
+        log->Printf("\n");
+    }
 }
 
 // Populate the m_search_directories vector with directories we should search
@@ -340,235 +381,51 @@ PlatformDarwinKernel::CollectKextAndKernelDirectories ()
     // kext bundles that won't be used in this debug session.  If this is an ios kext debug
     // session, looking in /System/Library/Extensions is a waste of stat()s, for example.
 
-    // Build up a list of all SDKs we'll be searching for directories of kexts/kernels
-    // e.g. /Applications/Xcode.app//Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.Internal.sdk
-    std::vector<FileSpec> sdk_dirs;
+    // DeveloperDirectory is something like "/Applications/Xcode.app/Contents/Developer"
+    std::string developer_dir = GetDeveloperDirectory();
+    if (developer_dir.empty())
+        developer_dir = "/Applications/Xcode.app/Contents/Developer";
+
     if (m_ios_debug_session != eLazyBoolNo)
     {
-        GetiOSSDKDirectoriesToSearch (sdk_dirs);
-        GetAppleTVOSSDKDirectoriesToSearch (sdk_dirs);
-        GetWatchOSSDKDirectoriesToSearch (sdk_dirs);
+        AddSDKSubdirsToSearchPaths (developer_dir + "/Platforms/iPhoneOS.platform/Developer/SDKs");
+        AddSDKSubdirsToSearchPaths (developer_dir + "/Platforms/AppleTVOS.platform/Developer/SDKs");
+        AddSDKSubdirsToSearchPaths (developer_dir + "/Platforms/WatchOS.platform/Developer/SDKs");
     }
     if (m_ios_debug_session != eLazyBoolYes)
-        GetMacSDKDirectoriesToSearch (sdk_dirs);
-
-    GetGenericSDKDirectoriesToSearch (sdk_dirs);
-
-    // Build up a list of directories that hold may kext bundles & kernels
-    //
-    // e.g. given /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
-    // find 
-    // /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.Internal.sdk/
-    // and
-    // /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.Internal.sdk/System/Library/Extensions
-
-    std::vector<FileSpec> kext_dirs;
-    SearchSDKsForKextDirectories (sdk_dirs, kext_dirs);
-
-    if (m_ios_debug_session != eLazyBoolNo)
-        GetiOSDirectoriesToSearch (kext_dirs);
-    if (m_ios_debug_session != eLazyBoolYes)
-        GetMacDirectoriesToSearch (kext_dirs);
-
-    GetGenericDirectoriesToSearch (kext_dirs);
-
-    GetUserSpecifiedDirectoriesToSearch (kext_dirs);
-
-    GetKernelDirectoriesToSearch (kext_dirs);
-
-    GetCurrentDirectoryToSearch (kext_dirs);
-
-    // We now have a complete list of directories that we will search for kext bundles
-    m_search_directories = kext_dirs;
-}
-
-void
-PlatformDarwinKernel::GetiOSSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    // DeveloperDirectory is something like "/Applications/Xcode.app/Contents/Developer"
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir == NULL)
-        developer_dir = "/Applications/Xcode.app/Contents/Developer";
-
-    char pathbuf[PATH_MAX];
-    ::snprintf (pathbuf, sizeof (pathbuf), "%s/Platforms/iPhoneOS.platform/Developer/SDKs", developer_dir);
-    FileSpec ios_sdk(pathbuf, true);
-    if (ios_sdk.Exists() && ios_sdk.IsDirectory())
     {
-        directories.push_back (ios_sdk);
-    }
-}
-
-void
-PlatformDarwinKernel::GetAppleTVOSSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    // DeveloperDirectory is something like "/Applications/Xcode.app/Contents/Developer"
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir == NULL)
-        developer_dir = "/Applications/Xcode.app/Contents/Developer";
-
-    char pathbuf[PATH_MAX];
-    ::snprintf (pathbuf, sizeof (pathbuf), "%s/Platforms/AppleTVOS.platform/Developer/SDKs", developer_dir);
-    FileSpec ios_sdk(pathbuf, true);
-    if (ios_sdk.Exists() && ios_sdk.IsDirectory())
-    {
-        directories.push_back (ios_sdk);
-    }
-}
-
-void
-PlatformDarwinKernel::GetWatchOSSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    // DeveloperDirectory is something like "/Applications/Xcode.app/Contents/Developer"
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir == NULL)
-        developer_dir = "/Applications/Xcode.app/Contents/Developer";
-
-    char pathbuf[PATH_MAX];
-    ::snprintf (pathbuf, sizeof (pathbuf), "%s/Platforms/watchOS.platform/Developer/SDKs", developer_dir);
-    FileSpec ios_sdk(pathbuf, true);
-    if (ios_sdk.Exists() && ios_sdk.IsDirectory())
-    {
-        directories.push_back (ios_sdk);
-    }
-    else
-    {
-        ::snprintf (pathbuf, sizeof (pathbuf), "%s/Platforms/WatchOS.platform/Developer/SDKs", developer_dir);
-        FileSpec alt_watch_sdk(pathbuf, true);
-        if (ios_sdk.Exists() && ios_sdk.IsDirectory())
-        {
-            directories.push_back (ios_sdk);
-        }
-    }
-}
-
-
-void
-PlatformDarwinKernel::GetMacSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    // DeveloperDirectory is something like "/Applications/Xcode.app/Contents/Developer"
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir == NULL)
-        developer_dir = "/Applications/Xcode.app/Contents/Developer";
-
-    char pathbuf[PATH_MAX];
-    ::snprintf (pathbuf, sizeof (pathbuf), "%s/Platforms/MacOSX.platform/Developer/SDKs", developer_dir);
-    FileSpec mac_sdk(pathbuf, true);
-    if (mac_sdk.Exists() && mac_sdk.IsDirectory())
-    {
-        directories.push_back (mac_sdk);
-    }
-}
-
-void
-PlatformDarwinKernel::GetGenericSDKDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    FileSpec generic_sdk("/AppleInternal/Developer/KDKs", true);
-    if (generic_sdk.Exists() && generic_sdk.IsDirectory())
-    {
-        directories.push_back (generic_sdk);
+        AddSDKSubdirsToSearchPaths (developer_dir + "/Platforms/MacOSX.platform/Developer/SDKs");
     }
 
+    AddSDKSubdirsToSearchPaths ("/Volumes/KernelDebugKit");
+    AddSDKSubdirsToSearchPaths ("/AppleInternal/Developer/KDKs");
     // The KDKs distributed from Apple installed on external
     // developer systems may be in directories like
     // /Library/Developer/KDKs/KDK_10.10_14A298i.kdk
-    FileSpec installed_kdks("/Library/Developer/KDKs", true);
-    if (installed_kdks.Exists() && installed_kdks.IsDirectory())
+    AddSDKSubdirsToSearchPaths ("/Library/Developer/KDKs");
+
+    if (m_ios_debug_session != eLazyBoolNo)
     {
-        directories.push_back (installed_kdks);
     }
+    if (m_ios_debug_session != eLazyBoolYes)
+    {
+        AddRootSubdirsToSearchPaths (this, "/");
+    }
+
+
+    GetUserSpecifiedDirectoriesToSearch ();
+
+    // Add simple directory /Applications/Xcode.app/Contents/Developer/../Symbols
+    FileSpec possible_dir (developer_dir + "/../Symbols", true);
+    if (possible_dir.Exists() && possible_dir.IsDirectory())
+        m_search_directories.push_back (possible_dir);
+
+    // Add simple directory of the current working directory
+    m_search_directories_no_recursing.push_back (FileSpec (".", true));
 }
 
 void
-PlatformDarwinKernel::GetiOSDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-}
-
-void
-PlatformDarwinKernel::GetMacDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    FileSpec sle("/System/Library/Extensions", true);
-    if (sle.Exists() && sle.IsDirectory())
-    {
-        directories.push_back(sle);
-    }
-
-    FileSpec le("/Library/Extensions", true);
-    if (le.Exists() && le.IsDirectory())
-    {
-        directories.push_back(le);
-    }
-
-    FileSpec kdk("/Volumes/KernelDebugKit", true);
-    if (kdk.Exists() && kdk.IsDirectory())
-    {
-        directories.push_back(kdk);
-    }
-}
-
-void
-PlatformDarwinKernel::GetGenericDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    // DeveloperDirectory is something like "/Applications/Xcode.app/Contents/Developer"
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir == NULL)
-        developer_dir = "/Applications/Xcode.app/Contents/Developer";
-
-    char pathbuf[PATH_MAX];
-    ::snprintf (pathbuf, sizeof (pathbuf), "%s/../Symbols", developer_dir);
-    FileSpec symbols_dir (pathbuf, true);
-    if (symbols_dir.Exists() && symbols_dir.IsDirectory())
-    {
-        directories.push_back (symbols_dir);
-    }
-}
-
-void
-PlatformDarwinKernel::GetKernelDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    FileSpec system_library_kernels ("/System/Library/Kernels", true);
-    if (system_library_kernels.Exists() && system_library_kernels.IsDirectory())
-    {
-        directories.push_back (system_library_kernels);
-    }
-    FileSpec slek("/System/Library/Extensions/KDK", true);
-    if (slek.Exists() && slek.IsDirectory())
-    {
-        directories.push_back(slek);
-    }
-}
-
-void
-PlatformDarwinKernel::GetCurrentDirectoryToSearch (std::vector<lldb_private::FileSpec> &directories)
-{
-    directories.push_back (FileSpec (".", true));
-
-    FileSpec sle_directory ("System/Library/Extensions", true);
-    if (sle_directory.Exists() && sle_directory.IsDirectory())
-    {
-        directories.push_back (sle_directory);
-    }
-
-    FileSpec le_directory ("Library/Extensions", true);
-    if (le_directory.Exists() && le_directory.IsDirectory())
-    {
-        directories.push_back (le_directory);
-    }
-
-    FileSpec slk_directory ("System/Library/Kernels", true);
-    if (slk_directory.Exists() && slk_directory.IsDirectory())
-    {
-        directories.push_back (slk_directory);
-    }
-    FileSpec slek("System/Library/Extensions/KDK", true);
-    if (slek.Exists() && slek.IsDirectory())
-    {
-        directories.push_back(slek);
-    }
-}
-
-void
-PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch (std::vector<lldb_private::FileSpec> &directories)
+PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch ()
 {
     FileSpecList user_dirs(GetGlobalProperties()->GetKextDirectories());
     std::vector<FileSpec> possible_sdk_dirs;
@@ -580,195 +437,172 @@ PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch (std::vector<lldb_priv
         dir.ResolvePath();
         if (dir.Exists() && dir.IsDirectory())
         {
-            directories.push_back (dir);
-            possible_sdk_dirs.push_back (dir);  // does this directory have a *.sdk or *.kdk that we should look in?
-
-            // Is there a "System/Library/Extensions" subdir of this directory?
-            std::string dir_sle_path = dir.GetPath();
-            dir_sle_path.append ("/System/Library/Extensions");
-            FileSpec dir_sle(dir_sle_path.c_str(), true);
-            if (dir_sle.Exists() && dir_sle.IsDirectory())
-            {
-                directories.push_back (dir_sle);
-            }
-
-            // Is there a "System/Library/Kernels" subdir of this directory?
-            std::string dir_slk_path = dir.GetPath();
-            dir_slk_path.append ("/System/Library/Kernels");
-            FileSpec dir_slk(dir_slk_path.c_str(), true);
-            if (dir_slk.Exists() && dir_slk.IsDirectory())
-            {
-                directories.push_back (dir_slk);
-            }
-
-            // Is there a "System/Library/Extensions/KDK" subdir of this directory?
-            std::string dir_slek_path = dir.GetPath();
-            dir_slek_path.append ("/System/Library/Kernels");
-            FileSpec dir_slek(dir_slek_path.c_str(), true);
-            if (dir_slek.Exists() && dir_slek.IsDirectory())
-            {
-                directories.push_back (dir_slek);
-            }
+            m_search_directories.push_back (dir);
         }
     }
-
-    SearchSDKsForKextDirectories (possible_sdk_dirs, directories);
 }
 
-// Scan through the SDK directories, looking for directories where kexts are likely.
-// Add those directories to kext_dirs.
 void
-PlatformDarwinKernel::SearchSDKsForKextDirectories (std::vector<lldb_private::FileSpec> sdk_dirs, std::vector<lldb_private::FileSpec> &kext_dirs)
+PlatformDarwinKernel::AddRootSubdirsToSearchPaths (PlatformDarwinKernel *thisp, const std::string &dir)
 {
-    const uint32_t num_sdks = sdk_dirs.size();
-    for (uint32_t i = 0; i < num_sdks; i++)
+    const char *subdirs[] = {
+        "/System/Library/Extensions",
+        "/Library/Extensions",
+        "/System/Library/Kernels",
+        "/System/Library/Extensions/KDK",   // this one probably only exist in /AppleInternal/Developer/KDKs/*.kdk/...
+        nullptr
+    };
+    for (int i = 0; subdirs[i] != nullptr; i++)
     {
-        const FileSpec &sdk_dir = sdk_dirs[i];
-        std::string sdk_dir_path = sdk_dir.GetPath();
-        if (!sdk_dir_path.empty())
-        {
-            const bool find_directories = true;
-            const bool find_files = false;
-            const bool find_other = false;
-            FileSpec::EnumerateDirectory (sdk_dir_path.c_str(),
-                                          find_directories,
-                                          find_files,
-                                          find_other,
-                                          GetKextDirectoriesInSDK,
-                                          &kext_dirs);
-        }
+        FileSpec testdir (dir + subdirs[i], true);
+        if (testdir.Exists() && testdir.IsDirectory())
+            thisp->m_search_directories.push_back (testdir);
     }
+
+    // Look for kernel binaries in the top level directory, without any recursion
+    thisp->m_search_directories_no_recursing.push_back (FileSpec (dir + "/", false));
 }
 
-// Callback for FileSpec::EnumerateDirectory().  
-// Step through the entries in a directory like
-//    /Applications/Xcode.app//Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs
-// looking for any subdirectories of the form MacOSX10.8.Internal.sdk/System/Library/Extensions
-// Adds these to the vector of FileSpec's.
-
-FileSpec::EnumerateDirectoryResult
-PlatformDarwinKernel::GetKextDirectoriesInSDK (void *baton,
-                                               FileSpec::FileType file_type,
-                                               const FileSpec &file_spec)
+// Given a directory path dir, look for any subdirs named *.kdk and *.sdk
+void
+PlatformDarwinKernel::AddSDKSubdirsToSearchPaths (const std::string &dir)
 {
+    // Look for *.kdk and *.sdk in dir
+    const bool find_directories = true;
+    const bool find_files = false;
+    const bool find_other = false;
+    FileSpec::EnumerateDirectory (dir.c_str(),
+                                  find_directories,
+                                  find_files,
+                                  find_other,
+                                  FindKDKandSDKDirectoriesInDirectory,
+                                  this);
+}
+
+// Helper function to find *.sdk and *.kdk directories in a given directory.
+FileSpec::EnumerateDirectoryResult
+PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory (void *baton,
+                                                           FileSpec::FileType file_type,
+                                                           const FileSpec &file_spec)
+{
+    static ConstString g_sdk_suffix = ConstString ("sdk");
+    static ConstString g_kdk_suffix = ConstString ("kdk");
+
+    PlatformDarwinKernel *thisp = (PlatformDarwinKernel *) baton;
     if (file_type == FileSpec::eFileTypeDirectory 
-        && (file_spec.GetFileNameExtension() == ConstString("sdk")
-            || file_spec.GetFileNameExtension() == ConstString("kdk")))
+        && (file_spec.GetFileNameExtension() == g_sdk_suffix
+            || file_spec.GetFileNameExtension() == g_kdk_suffix))
     {
-        std::string kext_directory_path = file_spec.GetPath();
-
-        // Append the raw directory path, e.g. /Library/Developer/KDKs/KDK_10.10_14A298i.kdk
-        // to the directory search list -- there may be kexts sitting directly
-        // in that directory instead of being in a System/Library/Extensions subdir.
-        ((std::vector<lldb_private::FileSpec> *)baton)->push_back(file_spec);
-
-        // Check to see if there is a System/Library/Extensions subdir & add it if it exists
-
-        std::string sle_kext_directory_path (kext_directory_path);
-        sle_kext_directory_path.append ("/System/Library/Extensions");
-        FileSpec sle_kext_directory (sle_kext_directory_path.c_str(), true);
-        if (sle_kext_directory.Exists() && sle_kext_directory.IsDirectory())
-        {
-            ((std::vector<lldb_private::FileSpec> *)baton)->push_back(sle_kext_directory);
-        }
-
-        // Check to see if there is a Library/Extensions subdir & add it if it exists
-
-        std::string le_kext_directory_path (kext_directory_path);
-        le_kext_directory_path.append ("/Library/Extensions");
-        FileSpec le_kext_directory (le_kext_directory_path.c_str(), true);
-        if (le_kext_directory.Exists() && le_kext_directory.IsDirectory())
-        {
-            ((std::vector<lldb_private::FileSpec> *)baton)->push_back(le_kext_directory);
-        }
-
-        // Check to see if there is a System/Library/Kernels subdir & add it if it exists
-        std::string slk_kernel_path (kext_directory_path);
-        slk_kernel_path.append ("/System/Library/Kernels");
-        FileSpec slk_kernel_directory (slk_kernel_path.c_str(), true);
-        if (slk_kernel_directory.Exists() && slk_kernel_directory.IsDirectory())
-        {
-            ((std::vector<lldb_private::FileSpec> *)baton)->push_back(slk_kernel_directory);
-        }
-
-        // Check to see if there is a System/Library/Extensions/KDK subdir & add it if it exists
-        std::string slek_kernel_path (kext_directory_path);
-        slek_kernel_path.append ("/System/Library/Extensions/KDK");
-        FileSpec slek_kernel_directory (slek_kernel_path.c_str(), true);
-        if (slek_kernel_directory.Exists() && slek_kernel_directory.IsDirectory())
-        {
-            ((std::vector<lldb_private::FileSpec> *)baton)->push_back(slek_kernel_directory);
-        }
+        AddRootSubdirsToSearchPaths (thisp, file_spec.GetPath());
     }
     return FileSpec::eEnumerateDirectoryResultNext;
 }
 
+// Recursively search trough m_search_directories looking for
+// kext and kernel binaries, adding files found to the appropriate
+// lists.
 void
-PlatformDarwinKernel::IndexKextsInDirectories ()
+PlatformDarwinKernel::SearchForKextsAndKernelsRecursively ()
 {
-    std::vector<FileSpec> kext_bundles;
-
     const uint32_t num_dirs = m_search_directories.size();
     for (uint32_t i = 0; i < num_dirs; i++)
     {
         const FileSpec &dir = m_search_directories[i];
         const bool find_directories = true;
-        const bool find_files = false;
-        const bool find_other = false;
+        const bool find_files = true;
+        const bool find_other = true;  // I think eFileTypeSymbolicLink are "other"s.
         FileSpec::EnumerateDirectory (dir.GetPath().c_str(),
                                       find_directories,
                                       find_files,
                                       find_other,
-                                      GetKextsInDirectory,
-                                      &kext_bundles);
+                                      GetKernelsAndKextsInDirectoryWithRecursion,
+                                      this);
+    }
+    const uint32_t num_dirs_no_recurse = m_search_directories_no_recursing.size();
+    for (uint32_t i = 0; i < num_dirs_no_recurse; i++)
+    {
+        const FileSpec &dir = m_search_directories_no_recursing[i];
+        const bool find_directories = true;
+        const bool find_files = true;
+        const bool find_other = true;  // I think eFileTypeSymbolicLink are "other"s.
+        FileSpec::EnumerateDirectory (dir.GetPath().c_str(),
+                                      find_directories,
+                                      find_files,
+                                      find_other,
+                                      GetKernelsAndKextsInDirectoryNoRecursion,
+                                      this);
     }
 
-    const uint32_t num_kexts = kext_bundles.size();
-    for (uint32_t i = 0; i < num_kexts; i++)
-    {
-        const FileSpec &kext = kext_bundles[i];
-        CFCBundle bundle (kext.GetPath().c_str());
-        CFStringRef bundle_id (bundle.GetIdentifier());
-        if (bundle_id && CFGetTypeID (bundle_id) == CFStringGetTypeID ())
-        {
-            char bundle_id_buf[PATH_MAX];
-            if (CFStringGetCString (bundle_id, bundle_id_buf, sizeof (bundle_id_buf), kCFStringEncodingUTF8))
-            {
-                ConstString bundle_conststr(bundle_id_buf);
-                m_name_to_kext_path_map.insert(std::pair<ConstString, FileSpec>(bundle_conststr, kext));
-            }
-        }
-    }
 }
 
-// Callback for FileSpec::EnumerateDirectory().
-// Step through the entries in a directory like /System/Library/Extensions, find .kext bundles, add them
-// to the vector of FileSpecs.
-// If a .kext bundle has a Contents/PlugIns or PlugIns subdir, search for kexts in there too.
+// We're only doing a filename match here.  We won't try opening the file to see if it's really
+// a kernel or not until we need to find a kernel of a given UUID.  There's no cheap way to find
+// the UUID of a file (or if it's a Mach-O binary at all) without creating a whole Module for
+// the file and throwing it away if it's not wanted.
+// 
+// Recurse into any subdirectories found.
 
 FileSpec::EnumerateDirectoryResult
-PlatformDarwinKernel::GetKextsInDirectory (void *baton,
-                                           FileSpec::FileType file_type,
-                                           const FileSpec &file_spec)
+PlatformDarwinKernel::GetKernelsAndKextsInDirectoryWithRecursion (void *baton,
+                                                                  FileSpec::FileType file_type,
+                                                                  const FileSpec &file_spec)
 {
-    if (file_type == FileSpec::eFileTypeDirectory && file_spec.GetFileNameExtension() == ConstString("kext"))
+    return GetKernelsAndKextsInDirectoryHelper (baton, file_type, file_spec, true);
+}
+
+FileSpec::EnumerateDirectoryResult
+PlatformDarwinKernel::GetKernelsAndKextsInDirectoryNoRecursion (void *baton,
+                                                                FileSpec::FileType file_type,
+                                                                const FileSpec &file_spec)
+{
+    return GetKernelsAndKextsInDirectoryHelper (baton, file_type, file_spec, false);
+}
+
+FileSpec::EnumerateDirectoryResult
+PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper (void *baton,
+                                                           FileSpec::FileType file_type,
+                                                           const FileSpec &file_spec,
+                                                           bool recurse)
+{
+    static ConstString g_kext_suffix = ConstString ("kext");
+    static ConstString g_dsym_suffix = ConstString ("dSYM");
+    static ConstString g_bundle_suffix = ConstString ("Bundle");
+    ConstString file_spec_extension = file_spec.GetFileNameExtension();
+
+    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
+    if (log)
+        log->Printf ("PlatformDarwinKernel examining %s", file_spec.GetPath().c_str());
+
+    PlatformDarwinKernel *thisp = (PlatformDarwinKernel *) baton;
+    if (file_type == FileSpec::eFileTypeRegular || file_type == FileSpec::eFileTypeSymbolicLink)
     {
-        ((std::vector<lldb_private::FileSpec> *)baton)->push_back(file_spec);
-        std::string kext_bundle_path = file_spec.GetPath();
+        ConstString filename = file_spec.GetFilename();
+        if ((strncmp (filename.GetCString(), "kernel", 6) == 0 || strncmp (filename.GetCString(), "mach", 4) == 0)
+            && file_spec_extension != g_dsym_suffix)
+        {
+            if (KernelHasdSYMSibling (file_spec))
+                thisp->m_kernel_binaries_with_dsyms.push_back (file_spec);
+            else
+                thisp->m_kernel_binaries_without_dsyms.push_back (file_spec);
+            return FileSpec::eEnumerateDirectoryResultNext;
+        }
+    } 
+    else if (file_type == FileSpec::eFileTypeDirectory && file_spec_extension == g_kext_suffix)
+    {
+        AddKextToMap (thisp, file_spec);
+        // Look to see if there is a PlugIns subdir with more kexts
+        FileSpec contents_plugins (file_spec.GetPath() + "/Contents/PlugIns", false);
         std::string search_here_too;
-        std::string contents_plugins_path = kext_bundle_path + "/Contents/PlugIns";
-        FileSpec contents_plugins (contents_plugins_path.c_str(), false);
         if (contents_plugins.Exists() && contents_plugins.IsDirectory())
         {
-            search_here_too = contents_plugins_path;
+            search_here_too = contents_plugins.GetPath();
         }
         else
         {
-            std::string plugins_path = kext_bundle_path + "/PlugIns";
-            FileSpec plugins (plugins_path.c_str(), false);
+            FileSpec plugins (file_spec.GetPath() + "/PlugIns", false);
             if (plugins.Exists() && plugins.IsDirectory())
             {
-                search_here_too = plugins_path;
+                search_here_too = plugins.GetPath();
             }
         }
 
@@ -781,60 +615,101 @@ PlatformDarwinKernel::GetKextsInDirectory (void *baton,
                                           find_directories,
                                           find_files,
                                           find_other,
-                                          GetKextsInDirectory,
+                                          recurse ? GetKernelsAndKextsInDirectoryWithRecursion : GetKernelsAndKextsInDirectoryNoRecursion,
                                           baton);
         }
+        return FileSpec::eEnumerateDirectoryResultNext;
     }
-    return FileSpec::eEnumerateDirectoryResultNext;
+    // Don't recurse into dSYM/kext/bundle directories
+    if (recurse 
+        && file_spec_extension != g_dsym_suffix 
+        && file_spec_extension != g_kext_suffix
+        && file_spec_extension != g_bundle_suffix)
+    {
+        return FileSpec::eEnumerateDirectoryResultEnter;
+    }
+    else
+    {
+        return FileSpec::eEnumerateDirectoryResultNext;
+    }
 }
 
 void
-PlatformDarwinKernel::IndexKernelsInDirectories ()
+PlatformDarwinKernel::AddKextToMap (PlatformDarwinKernel *thisp, const FileSpec &file_spec)
 {
-    std::vector<FileSpec> kernels;
-
-
-    const uint32_t num_dirs = m_search_directories.size();
-    for (uint32_t i = 0; i < num_dirs; i++)
+    CFCBundle bundle (file_spec.GetPath().c_str());
+    CFStringRef bundle_id (bundle.GetIdentifier());
+    if (bundle_id && CFGetTypeID (bundle_id) == CFStringGetTypeID ())
     {
-        const FileSpec &dir = m_search_directories[i];
-        const bool find_directories = false;
-        const bool find_files = true;
-        const bool find_other = true;  // I think eFileTypeSymbolicLink are "other"s.
-        FileSpec::EnumerateDirectory (dir.GetPath().c_str(),
-                                      find_directories,
-                                      find_files,
-                                      find_other,
-                                      GetKernelsInDirectory,
-                                      &m_kernel_binaries);
+        char bundle_id_buf[PATH_MAX];
+        if (CFStringGetCString (bundle_id, bundle_id_buf, sizeof (bundle_id_buf), kCFStringEncodingUTF8))
+        {
+            ConstString bundle_conststr(bundle_id_buf);
+            if (KextHasdSYMSibling (file_spec))
+                thisp->m_name_to_kext_path_map_with_dsyms.insert(std::pair<ConstString, FileSpec>(bundle_conststr, file_spec));
+            else
+                thisp->m_name_to_kext_path_map_without_dsyms.insert(std::pair<ConstString, FileSpec>(bundle_conststr, file_spec));
+        }
     }
 }
 
-// Callback for FileSpec::EnumerateDirectory().
-// Step through the entries in a directory like /System/Library/Kernels/, find kernel binaries,
-// add them to m_kernel_binaries.
-
-// We're only doing a filename match here.  We won't try opening the file to see if it's really
-// a kernel or not until we need to find a kernel of a given UUID.  There's no cheap way to find
-// the UUID of a file (or if it's a Mach-O binary at all) without creating a whole Module for
-// the file and throwing it away if it's not wanted.
-
-FileSpec::EnumerateDirectoryResult
-PlatformDarwinKernel::GetKernelsInDirectory (void *baton,
-                                           FileSpec::FileType file_type,
-                                           const FileSpec &file_spec)
+// Given a FileSpec of /dir/dir/foo.kext
+// Return true if any of these exist:
+//    /dir/dir/foo.kext.dSYM
+//    /dir/dir/foo.kext/Contents/MacOS/foo.dSYM
+//    /dir/dir/foo.kext/foo.dSYM
+bool
+PlatformDarwinKernel::KextHasdSYMSibling (const FileSpec &kext_bundle_filepath)
 {
-    if (file_type == FileSpec::eFileTypeRegular || file_type == FileSpec::eFileTypeSymbolicLink)
+    FileSpec dsym_fspec = kext_bundle_filepath;
+    std::string filename = dsym_fspec.GetFilename().AsCString();
+    filename += ".dSYM";
+    dsym_fspec.GetFilename() = ConstString (filename);
+    if (dsym_fspec.Exists() && dsym_fspec.IsDirectory())
     {
-        ConstString filename = file_spec.GetFilename();
-        if (strncmp (filename.GetCString(), "kernel", 6) == 0
-            || strncmp (filename.GetCString(), "mach", 4) == 0)
-        {
-            // This is m_kernel_binaries but we're in a class method here
-            ((std::vector<lldb_private::FileSpec> *)baton)->push_back(file_spec);
-        }
+        return true;
     }
-    return FileSpec::eEnumerateDirectoryResultNext;
+    // Should probably get the CFBundleExecutable here or call CFBundleCopyExecutableURL
+
+    // Look for a deep bundle foramt
+    ConstString executable_name = kext_bundle_filepath.GetFileNameStrippingExtension();
+    std::string deep_bundle_str = kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
+    deep_bundle_str += executable_name.AsCString();
+    deep_bundle_str += ".dSYM";
+    dsym_fspec.SetFile (deep_bundle_str, true);
+    if (dsym_fspec.Exists() && dsym_fspec.IsDirectory())
+    {
+        return true;
+    }
+
+    // look for a shallow bundle format
+    //
+    std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
+    shallow_bundle_str += executable_name.AsCString();
+    shallow_bundle_str += ".dSYM";
+    dsym_fspec.SetFile (shallow_bundle_str, true);
+    if (dsym_fspec.Exists() && dsym_fspec.IsDirectory())
+    {
+        return true;
+    }
+    return false;
+}
+
+// Given a FileSpec of /dir/dir/mach.development.t7004
+// Return true if a dSYM exists next to it:
+//    /dir/dir/mach.development.t7004.dSYM
+bool
+PlatformDarwinKernel::KernelHasdSYMSibling (const FileSpec &kernel_binary)
+{
+    FileSpec kernel_dsym = kernel_binary;
+    std::string filename = kernel_binary.GetFilename().AsCString();
+    filename += ".dSYM";
+    kernel_dsym.GetFilename() = ConstString (filename);
+    if (kernel_dsym.Exists() && kernel_dsym.IsDirectory())
+    {
+        return true;
+    }
+    return false;
 }
 
 
@@ -855,9 +730,11 @@ PlatformDarwinKernel::GetSharedModule (const ModuleSpec &module_spec,
     if (!kext_bundle_id.empty())
     {
         ConstString kext_bundle_cs(kext_bundle_id.c_str());
-        if (m_name_to_kext_path_map.count(kext_bundle_cs) > 0)
+
+        // First look through the kext bundles that had a dsym next to them
+        if (m_name_to_kext_path_map_with_dsyms.count(kext_bundle_cs) > 0)
         {
-            for (BundleIDToKextIterator it = m_name_to_kext_path_map.begin (); it != m_name_to_kext_path_map.end (); ++it)
+            for (BundleIDToKextIterator it = m_name_to_kext_path_map_with_dsyms.begin (); it != m_name_to_kext_path_map_with_dsyms.end (); ++it)
             {
                 if (it->first == kext_bundle_cs)
                 {
@@ -869,11 +746,60 @@ PlatformDarwinKernel::GetSharedModule (const ModuleSpec &module_spec,
                 }
             }
         }
+
+        // Second look through the kext binarys without dSYMs
+        if (m_name_to_kext_path_map_without_dsyms.count(kext_bundle_cs) > 0)
+        {
+            for (BundleIDToKextIterator it = m_name_to_kext_path_map_without_dsyms.begin (); it != m_name_to_kext_path_map_without_dsyms.end (); ++it)
+            {
+                if (it->first == kext_bundle_cs)
+                {
+                    error = ExamineKextForMatchingUUID (it->second, module_spec.GetUUID(), module_spec.GetArchitecture(), module_sp);
+                    if (module_sp.get())
+                    {
+                        return error;
+                    }
+                }
+            }
+        }
+
     }
 
     if (kext_bundle_id.compare("mach_kernel") == 0 && module_spec.GetUUID().IsValid())
     {
-        for (auto possible_kernel : m_kernel_binaries)
+        // First try all kernel binaries that have a dSYM next to them
+        for (auto possible_kernel : m_kernel_binaries_with_dsyms)
+        {
+            if (possible_kernel.Exists())
+            {
+                ModuleSpec kern_spec (possible_kernel);
+                kern_spec.GetUUID() = module_spec.GetUUID();
+                ModuleSP module_sp (new Module (kern_spec));
+                if (module_sp && module_sp->GetObjectFile() && module_sp->MatchesModuleSpec (kern_spec))
+                {
+                    // module_sp is an actual kernel binary we want to add.
+                    if (process)
+                    {
+                        process->GetTarget().GetImages().AppendIfNeeded (module_sp);
+                        error.Clear();
+                        return error;
+                    }
+                    else
+                    {
+                        error = ModuleList::GetSharedModule (kern_spec, module_sp, NULL, NULL, NULL);
+                        if (module_sp 
+                            && module_sp->GetObjectFile() 
+                            && module_sp->GetObjectFile()->GetType() != ObjectFile::Type::eTypeCoreFile)
+                        {
+                            return error;
+                        }
+                        module_sp.reset();
+                    }
+                }
+            }
+        }
+        // Second try all kernel binaries that don't have a dSYM
+        for (auto possible_kernel : m_kernel_binaries_without_dsyms)
         {
             if (possible_kernel.Exists())
             {

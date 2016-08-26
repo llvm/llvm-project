@@ -23,7 +23,7 @@ using namespace lldb;
 #define EXC_OFFSET_NAME(reg) (LLVM_EXTENSION offsetof (RegisterContextFreeBSD_arm64::EXC, reg) + sizeof (RegisterContextFreeBSD_arm64::GPR) + sizeof (RegisterContextFreeBSD_arm64::FPU))
 #define DBG_OFFSET_NAME(reg) (LLVM_EXTENSION offsetof (RegisterContextFreeBSD_arm64::DBG, reg) + sizeof (RegisterContextFreeBSD_arm64::GPR) + sizeof (RegisterContextFreeBSD_arm64::FPU) + sizeof (RegisterContextFreeBSD_arm64::EXC))
 
-#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextFreeBSD_arm64::DBG *)NULL)->reg[i]), DBG_OFFSET_NAME(reg[i]), lldb::eEncodingUint, lldb::eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, dbg_##reg##i }, NULL, NULL
+#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextFreeBSD_arm64::DBG *)NULL)->reg[i]), DBG_OFFSET_NAME(reg[i]), lldb::eEncodingUint, lldb::eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, dbg_##reg##i }, NULL, NULL, NULL, 0
 #define REG_CONTEXT_SIZE (sizeof (RegisterContextFreeBSD_arm64::GPR) + sizeof (RegisterContextFreeBSD_arm64::FPU) + sizeof (RegisterContextFreeBSD_arm64::EXC))
 
 //-----------------------------------------------------------------------------

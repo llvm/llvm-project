@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ; CHECK:          #pragma known-parallel reduction (+ : A)
 ; CHECK-NEXT:     for (int c0 = 0; c0 <= 2; c0 += 1) {
@@ -11,6 +12,9 @@
 ; CHECK-NEXT:         for (int c1 = c0 / 2; c1 < 2 * n; c1 += 2)
 ; CHECK-NEXT:           Stmt_S0(c1);
 ; CHECK-NEXT:     }
+;
+; PINFO:      for.cond2: Loop is parallel.
+; PINFO-NEXT: for.cond: Loop is not parallel.
 ;
 ;    void rms(int *A, long n) {
 ;      for (long i = 0; i < 2 * n; i++)

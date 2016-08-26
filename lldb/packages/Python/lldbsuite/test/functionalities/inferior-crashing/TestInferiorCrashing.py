@@ -49,7 +49,7 @@ class CrashingInferiorTestCase(TestBase):
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr24939')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
-    @expectedFailureAndroid(archs=['aarch64'], api_levels=list(range(21 + 1))) # No eh_frame for sa_restorer
+    @skipIfTargetAndroid() # debuggerd interferes with this test on Android
     def test_inferior_crashing_step_after_break(self):
         """Test that lldb functions correctly after stepping through a crash."""
         self.build()
@@ -190,8 +190,6 @@ class CrashingInferiorTestCase(TestBase):
         expected_state = 'exited' # Provide the exit code.
         if self.platformIsDarwin():
             expected_state = 'stopped' # TODO: Determine why 'next' and 'continue' have no effect after a crash.
-        elif re.match(".*-.*-.*-android", self.dbg.GetSelectedPlatform().GetTriple()):
-            expected_state = 'stopped' # android has a default SEGV handler, which will re-raise the signal, so we come up stopped again
 
         self.expect("next",
             substrs = ['Process', expected_state])

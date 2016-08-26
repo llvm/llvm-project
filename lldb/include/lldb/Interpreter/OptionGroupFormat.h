@@ -46,12 +46,12 @@ public:
     GetDefinitions() override;
     
     Error
-    SetOptionValue(CommandInterpreter &interpreter,
-                   uint32_t option_idx,
-                   const char *option_value) override;
+    SetOptionValue(uint32_t option_idx,
+                   const char *option_value,
+                   ExecutionContext *execution_context) override;
     
     void
-    OptionParsingStarting(CommandInterpreter &interpreter) override;
+    OptionParsingStarting(ExecutionContext *execution_context) override;
     
     lldb::Format
     GetFormat () const
@@ -111,7 +111,7 @@ public:
 
 protected:
     bool
-    ParserGDBFormatLetter (CommandInterpreter &interpreter,
+    ParserGDBFormatLetter (ExecutionContext *execution_context,
                            char format_letter,
                            lldb::Format &format,
                            uint32_t &byte_size);

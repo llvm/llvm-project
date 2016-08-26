@@ -380,11 +380,11 @@ ThreadGDBRemote::CreateRegisterContextForFrame (StackFrame *frame)
 }
 
 bool
-ThreadGDBRemote::PrivateSetRegisterValue (uint32_t reg, StringExtractor &response)
+ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data)
 {
     GDBRemoteRegisterContext *gdb_reg_ctx = static_cast<GDBRemoteRegisterContext *>(GetRegisterContext ().get());
     assert (gdb_reg_ctx);
-    return gdb_reg_ctx->PrivateSetRegisterValue (reg, response);
+    return gdb_reg_ctx->PrivateSetRegisterValue(reg, data);
 }
 
 bool

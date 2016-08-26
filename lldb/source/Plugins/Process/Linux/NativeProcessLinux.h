@@ -166,14 +166,8 @@ namespace process_linux {
         ::pid_t
         Attach(lldb::pid_t pid, Error &error);
 
-        static void
-        ChildFunc(const ProcessLaunchInfo &launch_info) LLVM_ATTRIBUTE_NORETURN;
-
         static Error
         SetDefaultPtraceOpts(const lldb::pid_t);
-
-        static bool
-        DupDescriptor(const FileSpec &file_spec, int fd, int flags);
 
         static void *
         MonitorThread(void *baton);

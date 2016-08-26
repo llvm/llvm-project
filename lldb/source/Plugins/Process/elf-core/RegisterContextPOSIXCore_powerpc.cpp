@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DataExtractor.h"
+#include "RegisterContextPOSIXCore_powerpc.h"
+
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
-#include "RegisterContextPOSIXCore_powerpc.h"
 
 using namespace lldb_private;
 
@@ -29,7 +30,7 @@ RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(Thread &threa
     m_fpr.SetByteOrder(fpregset.GetByteOrder());
     m_vec_buffer.reset(new DataBufferHeap(vregset.GetDataStart(), vregset.GetByteSize()));
     m_vec.SetData(m_vec_buffer);
-    m_vec.SetByteOrder(fpregset.GetByteOrder());
+    m_vec.SetByteOrder(vregset.GetByteOrder());
 }
 
 RegisterContextCorePOSIX_powerpc::~RegisterContextCorePOSIX_powerpc()

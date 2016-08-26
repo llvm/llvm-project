@@ -118,8 +118,18 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
 
   DiagConsumer.finish();
   tooling::Replacements Fixes;
-  for (const ClangTidyError &Error : Context.getErrors())
-    Fixes.insert(Error.Fix.begin(), Error.Fix.end());
+  for (const ClangTidyError &Error : Context.getErrors()) {
+    for (const auto &FileAndFixes : Error.Fix) {
+      for (const auto &Fix : FileAndFixes.second) {
+        auto Err = Fixes.add(Fix);
+        // FIXME: better error handling. Keep the behavior for now.
+        if (Err) {
+          llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+          return "";
+        }
+      }
+    }
+  }
   if (Errors)
     *Errors = Context.getErrors();
   auto Result = tooling::applyAllReplacements(Code, Fixes);

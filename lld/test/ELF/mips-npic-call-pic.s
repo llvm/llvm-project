@@ -56,20 +56,15 @@
 # CHECK-NEXT:    20078:       00 00 00 00     nop
 # CHECK-NEXT:    2007c:       00 00 00 00     nop
 #
-# CHECK:      fpic:
-# CHECK-NEXT:    20080:       00 00 00 00     nop
-# CHECK-NEXT:    20084:       00 00 00 00     nop
-# CHECK-NEXT:    20088:       00 00 00 00     nop
-# CHECK-NEXT:    2008c:       00 00 00 00     nop
-#
-# CHECK:      fnpic:
-# CHECK-NEXT:    20090:       00 00 00 00     nop
-# CHECK-NEXT:    20094:       00 00 00 00     nop
-# CHECK-NEXT:    20098:       00 00 00 00     nop
-# CHECK-NEXT:    2009c:       00 00 00 00     nop
-# CHECK-NEXT:    200a0:       3c 19 00 02     lui     $25, 2
-# CHECK-NEXT:    200a4:       08 00 80 20     j       131200 <fpic>
-# CHECK-NEXT:    200a8:       27 39 00 80     addiu   $25, $25, 128
+#CHECK:       fpic:
+#CHECK-NEXT:    20080:	 00 00 00 00 00 00 00 00         ........
+#CHECK-NEXT:    20088:	 00 00 00 00 00 00 00 00         
+
+#CHECK:       fnpic:
+#CHECK-NEXT:    20090:	 00 00 00 00 00 00 00 00         ........
+#CHECK-NEXT:    20098:	 00 00 00 00 00 00 00 00         ........
+#CHECK-NEXT:    200a0:	 3c 19 00 02 08 00 80 20         <...... 
+#CHECK-NEXT:    200a8:	 27 39 00 80 00 00 00 00         
 
 # Make sure tha thunks are created properly no matter how
 # objects are laid out.
@@ -117,21 +112,15 @@
 # REVERSE-NEXT:    20078:       0c 00 80 24     jal     131216 <fnpic>
 # REVERSE-NEXT:    2007c:       00 00 00 00     nop
 #
-# REVERSE:      fpic:
-# REVERSE-NEXT:    20080:       00 00 00 00     nop
-# REVERSE-NEXT:    20084:       00 00 00 00     nop
-# REVERSE-NEXT:    20088:       00 00 00 00     nop
-# REVERSE-NEXT:    2008c:       00 00 00 00     nop
+#REVERSE:       fpic:
+#REVERSE-NEXT:    20080:	 00 00 00 00 00 00 00 00         ........
+#REVERSE-NEXT:    20088:	 00 00 00 00 00 00 00 00         
 #
-# REVERSE:      fnpic:
-# REVERSE-NEXT:    20090:       00 00 00 00     nop
-# REVERSE-NEXT:    20094:       00 00 00 00     nop
-# REVERSE-NEXT:    20098:       00 00 00 00     nop
-# REVERSE-NEXT:    2009c:       00 00 00 00     nop
-# REVERSE-NEXT:    200a0:       3c 19 00 02     lui     $25, 2
-# REVERSE-NEXT:    200a4:       08 00 80 20     j       131200 <fpic>
-# REVERSE-NEXT:    200a8:       27 39 00 80     addiu   $25, $25, 128
-# REVERSE-NEXT:    200ac:       00 00 00 00     nop
+#REVERSE:       fnpic:
+#REVERSE-NEXT:    20090:	 00 00 00 00 00 00 00 00         ........
+#REVERSE-NEXT:    20098:	 00 00 00 00 00 00 00 00         ........
+#REVERSE-NEXT:    200a0:	 3c 19 00 02 08 00 80 20         <...... 
+#REVERSE-NEXT:    200a8:	 27 39 00 80 00 00 00 00         
 
   .text
   .globl __start

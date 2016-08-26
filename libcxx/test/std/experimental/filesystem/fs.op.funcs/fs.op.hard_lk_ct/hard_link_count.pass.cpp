@@ -45,18 +45,27 @@ TEST_CASE(hard_link_count_for_file)
 
 TEST_CASE(hard_link_count_for_directory)
 {
-    uintmax_t DirExpect = 3;
-    uintmax_t Dir3Expect = 2;
+    uintmax_t DirExpect = 3; // hard link from . .. and Dir2
+    uintmax_t Dir3Expect = 2; // hard link from . ..
+    uintmax_t DirExpectAlt = DirExpect;
+    uintmax_t Dir3ExpectAlt = Dir3Expect;
 #if defined(__APPLE__)
-    DirExpect += 2;
-    Dir3Expect += 1;
+    // Filesystems formatted with case sensitive hfs+ behave unixish as
+    // expected. Normal hfs+ filesystems report the number of directory
+    // entries instead.
+    DirExpectAlt = 5; // .  ..  Dir2  file1  file2
+    Dir3Expect = 3; // .  ..  file5
 #endif
-    TEST_CHECK(hard_link_count(StaticEnv::Dir) == DirExpect);
-    TEST_CHECK(hard_link_count(StaticEnv::Dir3) == Dir3Expect);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir) == DirExpect ||
+               hard_link_count(StaticEnv::Dir) == DirExpectAlt);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir3) == Dir3Expect ||
+               hard_link_count(StaticEnv::Dir3) == Dir3ExpectAlt);
 
     std::error_code ec;
-    TEST_CHECK(hard_link_count(StaticEnv::Dir, ec) == DirExpect);
-    TEST_CHECK(hard_link_count(StaticEnv::Dir3, ec) == Dir3Expect);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir, ec) == DirExpect ||
+               hard_link_count(StaticEnv::Dir, ec) == DirExpectAlt);
+    TEST_CHECK(hard_link_count(StaticEnv::Dir3, ec) == Dir3Expect ||
+               hard_link_count(StaticEnv::Dir3, ec) == Dir3ExpectAlt);
 }
 TEST_CASE(hard_link_count_increments_test)
 {

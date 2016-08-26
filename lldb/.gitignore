@@ -38,8 +38,13 @@ test/20*
 source/LLDBWrapPython.cpp
 .DS_Store
 __pycache__/
+*.lock
+*.so
 
 clang-module-cache
+
+# Skip ctags-style tags files
+tags
 
 # We should ignore Xcode-style embedding of llvm/ at lldb root dir.
 # Do not add trailing '/'s, they skip symlinks.
@@ -49,12 +54,17 @@ clang-module-cache
 /cmark
 PrebuiltSwiftlang
 intermediates
-test/crashinfo.so
-crashinfo.lock
-crashinfo.so
 
 # ctags files
 tags
+TAGS
 
 /clang
 /swift
+
+# Ignore test trace directories.
+20??-??-??-??_??_??/
+
+# Ignore crashlog support files.
+crashinfo.lock
+crashinfo.so

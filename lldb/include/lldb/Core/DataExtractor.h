@@ -1139,7 +1139,7 @@ public:
     const uint8_t*
     PeekData (lldb::offset_t offset, lldb::offset_t length) const
     {
-        if (length > 0 && ValidOffsetForDataOfSize(offset, length))
+        if (ValidOffsetForDataOfSize(offset, length))
             return m_start + offset;
         return nullptr;
     }

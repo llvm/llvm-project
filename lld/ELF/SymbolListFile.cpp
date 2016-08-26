@@ -31,11 +31,13 @@ using namespace lld::elf;
 // Multiple groups can be defined in the same file, and they are merged
 // into a single group.
 
+namespace {
 class DynamicListParser final : public ScriptParserBase {
 public:
   DynamicListParser(StringRef S) : ScriptParserBase(S) {}
   void run();
 };
+} // end anonymous namespace
 
 void DynamicListParser::run() {
   while (!atEOF()) {
@@ -62,6 +64,7 @@ void elf::parseDynamicList(MemoryBufferRef MB) {
 // No wildcards are supported, other than for the local entry. Symbol versioning
 // is also not supported.
 
+namespace {
 class VersionScriptParser final : public ScriptParserBase {
 public:
   VersionScriptParser(StringRef S) : ScriptParserBase(S) {}
@@ -74,17 +77,13 @@ private:
   void parseGlobal(StringRef VerStr);
   void parseLocal();
 };
+} // end anonymous namespace
 
-size_t elf::defineSymbolVersion(StringRef VerStr) {
+void VersionScriptParser::parseVersion(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
   size_t VersionId = Config->VersionDefinitions.size() + 2;
   Config->VersionDefinitions.push_back({VerStr, VersionId});
-  return VersionId;
-}
-
-void VersionScriptParser::parseVersion(StringRef VerStr) {
-  defineSymbolVersion(VerStr);
 
   if (skip("global:") || peek() != "local:")
     parseGlobal(VerStr);

@@ -109,7 +109,7 @@ struct UInt64Hash2 {
 
 template <class HashFn, class GenInputs>
 void BM_Hash(benchmark::State& st, HashFn fn, GenInputs gen) {
-    auto in = gen(st.range_x());
+    auto in = gen(st.range(0));
     const auto end = in.data() + in.size();
     std::size_t last_hash = 0;
     benchmark::DoNotOptimize(&last_hash);
@@ -264,5 +264,43 @@ BENCHMARK_CAPTURE(BM_FindRehash,
     unordered_set_string,
     std::unordered_set<std::string>{},
     getRandomStringInputs)->Arg(TestNumInputs);
+
+///////////////////////////////////////////////////////////////////////////////
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_int,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_string,
+    std::unordered_set<std::string>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_int,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_string,
+    std::unordered_set<std::string>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_int_insert_arg,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_string_insert_arg,
+    std::unordered_set<std::string>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_int_insert_arg,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<unsigned>)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_string_arg,
+    std::unordered_set<std::string>{},
+    getRandomCStringInputs)->Arg(TestNumInputs);
 
 BENCHMARK_MAIN()

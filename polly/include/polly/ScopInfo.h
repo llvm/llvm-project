@@ -91,8 +91,7 @@ enum AssumptionSign { AS_ASSUMPTION, AS_RESTRICTION };
 /// through the loop.
 typedef std::map<const Loop *, const SCEV *> LoopBoundMapType;
 
-typedef std::deque<MemoryAccess> AccFuncSetType;
-typedef std::map<const BasicBlock *, AccFuncSetType> AccFuncMapType;
+typedef std::vector<std::unique_ptr<MemoryAccess>> AccFuncVector;
 
 /// @brief A class to store information about arrays in the SCoP.
 ///
@@ -231,9 +230,10 @@ public:
   /// @param Kind           The kind of the array object.
   /// @param DL             The data layout of the module.
   /// @param S              The scop this array object belongs to.
+  /// @param BaseName       The optional name of this memory reference.
   ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *IslCtx,
                 ArrayRef<const SCEV *> DimensionSizes, enum MemoryKind Kind,
-                const DataLayout &DL, Scop *S);
+                const DataLayout &DL, Scop *S, const char *BaseName = nullptr);
 
   ///  @brief Update the element type of the ScopArrayInfo object.
   ///
@@ -533,7 +533,7 @@ private:
   /// For memory accesses of kind MK_PHI or MK_ExitPHI the access
   /// instruction of a load access is the PHI instruction. The access
   /// instruction of a PHI-store is the incoming's block's terminator
-  /// intruction.
+  /// instruction.
   ///
   /// For memory accesses of kind MK_Value the access instruction of a load
   /// access is nullptr because generally there can be multiple instructions in
@@ -647,7 +647,7 @@ private:
   /// @brief Create the access relation for the underlying memory intrinsic.
   void buildMemIntrinsicAccessRelation();
 
-  /// @brief Assemble the access relation from all availbale information.
+  /// @brief Assemble the access relation from all available information.
   ///
   /// In particular, used the information passes in the constructor and the
   /// parent ScopStmt set by setStatment().
@@ -705,7 +705,7 @@ public:
   ///
   /// After code generation moves some PHIs around during region simplification,
   /// we cannot reliably locate the original PHI node and its incoming values
-  /// anymore. For this reason we remember these explicitely for all PHI-kind
+  /// anymore. For this reason we remember these explicitly for all PHI-kind
   /// accesses.
   ArrayRef<std::pair<BasicBlock *, Value *>> getIncoming() const {
     assert(isAnyPHIKind());
@@ -782,7 +782,7 @@ public:
   /// @brief Get the ScopArrayInfo object for the base address.
   const ScopArrayInfo *getScopArrayInfo() const;
 
-  /// @brief Return a string representation of the accesse's reduction type.
+  /// @brief Return a string representation of the access's reduction type.
   const std::string getReductionOperatorStr() const;
 
   /// @brief Return a string representation of the reduction type @p RT.
@@ -1347,10 +1347,10 @@ private:
   /// The underlying Region.
   Region &R;
 
-  // Access function of statements (currently BasicBlocks) .
+  // Access functions of the SCoP.
   //
   // This owns all the MemoryAccess objects of the Scop created in this pass.
-  AccFuncMapType AccFuncMap;
+  AccFuncVector AccessFunctions;
 
   /// Flag to indicate that the scheduler actually optimized the SCoP.
   bool IsOptimized;
@@ -1398,15 +1398,28 @@ private:
   /// @brief The affinator used to translate SCEVs to isl expressions.
   SCEVAffinator Affinator;
 
-  typedef MapVector<std::pair<AssertingVH<const Value>, int>,
-                    std::unique_ptr<ScopArrayInfo>>
+  typedef std::map<std::pair<AssertingVH<const Value>, int>,
+                   std::unique_ptr<ScopArrayInfo>>
       ArrayInfoMapTy;
+
+  typedef StringMap<std::unique_ptr<ScopArrayInfo>> ArrayNameMapTy;
+
+  typedef SetVector<ScopArrayInfo *> ArrayInfoSetTy;
+
   /// @brief A map to remember ScopArrayInfo objects for all base pointers.
   ///
   /// As PHI nodes may have two array info objects associated, we add a flag
   /// that distinguishes between the PHI node specific ArrayInfo object
   /// and the normal one.
   ArrayInfoMapTy ScopArrayInfoMap;
+
+  /// @brief A map to remember ScopArrayInfo objects for all names of memory
+  ///        references.
+  ArrayNameMapTy ScopArrayNameMap;
+
+  /// @brief A set to remember ScopArrayInfo objects.
+  /// @see Scop::ScopArrayInfoMap
+  ArrayInfoSetTy ScopArrayInfoSet;
 
   /// @brief The assumptions under which this scop was built.
   ///
@@ -1518,9 +1531,10 @@ private:
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
        ScopDetection::DetectionContext &DC);
 
-  /// @brief Get or create the access function set in a BasicBlock
-  AccFuncSetType &getOrCreateAccessFunctions(const BasicBlock *BB) {
-    return AccFuncMap[BB];
+  /// @brief Add the access function to all MemoryAccess objects of the Scop
+  ///        created in this pass.
+  void addAccessFunction(MemoryAccess *Access) {
+    AccessFunctions.emplace_back(Access);
   }
   //@}
 
@@ -1625,7 +1639,7 @@ private:
   __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
 
   /// @brief Simplify the SCoP representation
-  void simplifySCoP(bool AfterHoisting, DominatorTree &DT, LoopInfo &LI);
+  void simplifySCoP(bool AfterHoisting);
 
   /// @brief Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
@@ -1830,17 +1844,6 @@ private:
 public:
   ~Scop();
 
-  /// @brief Get all access functions in a BasicBlock
-  ///
-  /// @param  BB The BasicBlock that containing the access functions.
-  ///
-  /// @return All access functions in BB
-  ///
-  AccFuncSetType *getAccessFunctions(const BasicBlock *BB) {
-    AccFuncMapType::iterator at = AccFuncMap.find(BB);
-    return at != AccFuncMap.end() ? &(at->second) : 0;
-  }
-
   ScalarEvolution *getSE() const;
 
   /// @brief Get the count of parameters used in this Scop.
@@ -1855,21 +1858,21 @@ public:
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
 
-  typedef ArrayInfoMapTy::iterator array_iterator;
-  typedef ArrayInfoMapTy::const_iterator const_array_iterator;
-  typedef iterator_range<ArrayInfoMapTy::iterator> array_range;
-  typedef iterator_range<ArrayInfoMapTy::const_iterator> const_array_range;
+  typedef ArrayInfoSetTy::iterator array_iterator;
+  typedef ArrayInfoSetTy::const_iterator const_array_iterator;
+  typedef iterator_range<ArrayInfoSetTy::iterator> array_range;
+  typedef iterator_range<ArrayInfoSetTy::const_iterator> const_array_range;
 
-  inline array_iterator array_begin() { return ScopArrayInfoMap.begin(); }
+  inline array_iterator array_begin() { return ScopArrayInfoSet.begin(); }
 
-  inline array_iterator array_end() { return ScopArrayInfoMap.end(); }
+  inline array_iterator array_end() { return ScopArrayInfoSet.end(); }
 
   inline const_array_iterator array_begin() const {
-    return ScopArrayInfoMap.begin();
+    return ScopArrayInfoSet.begin();
   }
 
   inline const_array_iterator array_end() const {
-    return ScopArrayInfoMap.end();
+    return ScopArrayInfoSet.end();
   }
 
   inline array_range arrays() {
@@ -2148,10 +2151,21 @@ public:
   ///
   /// @param ElementType The type of the elements stored in this array.
   /// @param Kind        The kind of the array info object.
+  /// @param BaseName    The optional name of this memory reference.
   const ScopArrayInfo *getOrCreateScopArrayInfo(Value *BasePtr,
                                                 Type *ElementType,
                                                 ArrayRef<const SCEV *> Sizes,
-                                                ScopArrayInfo::MemoryKind Kind);
+                                                ScopArrayInfo::MemoryKind Kind,
+                                                const char *BaseName = nullptr);
+
+  /// @brief Create an array and return the corresponding ScopArrayInfo object.
+  ///
+  /// @param ElementType The type of the elements stored in this array.
+  /// @param BaseName    The name of this memory reference.
+  /// @param Sizes       The sizes of dimensions.
+  const ScopArrayInfo *createScopArrayInfo(Type *ElementType,
+                                           const std::string &BaseName,
+                                           const std::vector<unsigned> &Sizes);
 
   /// @brief Return the cached ScopArrayInfo object for @p BasePtr.
   ///
@@ -2165,7 +2179,11 @@ public:
   /// @param BasePtr The base pointer of the ScopArrayInfo object to invalidate.
   /// @param Kind    The Kind of the ScopArrayInfo object.
   void invalidateScopArrayInfo(Value *BasePtr, ScopArrayInfo::MemoryKind Kind) {
-    ScopArrayInfoMap.erase(std::make_pair(BasePtr, Kind));
+    auto It = ScopArrayInfoMap.find(std::make_pair(BasePtr, Kind));
+    if (It == ScopArrayInfoMap.end())
+      return;
+    ScopArrayInfoSet.remove(It->second.get());
+    ScopArrayInfoMap.erase(It);
   }
 
   void setContext(isl_set *NewContext);
@@ -2275,6 +2293,10 @@ public:
   ///   >0 for other loops in the SCoP
   ///   -1 if @p L is nullptr or there is no outermost loop in the SCoP
   int getRelativeLoopDepth(const Loop *L) const;
+
+  /// @brief Find the ScopArrayInfo associated with an isl Id
+  ///        that has name @p Name.
+  ScopArrayInfo *getArrayInfoByName(const std::string BaseName);
 };
 
 /// @brief Print Scop scop to raw_ostream O.

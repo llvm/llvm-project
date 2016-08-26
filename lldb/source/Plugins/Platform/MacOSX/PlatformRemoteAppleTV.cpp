@@ -604,82 +604,33 @@ PlatformRemoteAppleTV::GetFileInSDK (const char *platform_file_path,
                                  uint32_t sdk_idx,
                                  lldb_private::FileSpec &local_file)
 {
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     if (sdk_idx < m_sdk_directory_infos.size())
     {
-        char sdkroot_path[PATH_MAX];
-        const SDKDirectoryInfo &sdk_dir_info = m_sdk_directory_infos[sdk_idx];
-        if (sdk_dir_info.directory.GetPath(sdkroot_path, sizeof(sdkroot_path)))
+        std::string sdkroot_path = m_sdk_directory_infos[sdk_idx].directory.GetPath();
+        if (!sdkroot_path.empty() && platform_file_path && platform_file_path[0])
         {
-            const bool symbols_dirs_only = true;
+            // We may need to interpose "/Symbols/" or "/Symbols.Internal/" between the
+            // SDK root directory and the file path.
 
-            return GetFileInSDKRoot (platform_file_path,
-                                     sdkroot_path,
-                                     symbols_dirs_only,
-                                     local_file);
-        }
-    }
-    return false;
-}
-
-bool
-PlatformRemoteAppleTV::GetFileInSDKRoot (const char *platform_file_path,
-                                     const char *sdkroot_path,
-                                     bool symbols_dirs_only,
-                                     lldb_private::FileSpec &local_file)
-{
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-    if (sdkroot_path && sdkroot_path[0] && platform_file_path && platform_file_path[0])
-    {
-        char resolved_path[PATH_MAX];
-        
-        if (!symbols_dirs_only)
-        {
-            ::snprintf (resolved_path, 
-                        sizeof(resolved_path), 
-                        "%s%s",
-                        sdkroot_path,
-                        platform_file_path);
-            
-            local_file.SetFile(resolved_path, true);
-            if (local_file.Exists())
+            const char *paths_to_try[] = { "Symbols", "", "Symbols.Internal", nullptr };
+            for (size_t i = 0; paths_to_try[i] != nullptr; i++)
             {
-                if (log)
+                local_file.SetFile (sdkroot_path.c_str(), false);
+                if (paths_to_try[i][0] != '\0')
+                    local_file.AppendPathComponent (paths_to_try[i]);
+                local_file.AppendPathComponent (platform_file_path);
+                local_file.ResolvePath();
+                if (local_file.Exists())
                 {
-                    log->Printf ("Found a copy of %s in the SDK dir %s", platform_file_path, sdkroot_path);
+                    if (log)
+                        log->Printf ("Found a copy of %s in the SDK dir %s/%s", platform_file_path, 
+                                                                                sdkroot_path.c_str(), 
+                                                                                paths_to_try[i]);
+                    return true;
                 }
-                return true;
+                local_file.Clear();
             }
-        }
-            
-        ::snprintf (resolved_path,
-                    sizeof(resolved_path), 
-                    "%s/Symbols.Internal%s",
-                    sdkroot_path,
-                    platform_file_path);
-        
-        local_file.SetFile(resolved_path, true);
-        if (local_file.Exists())
-        {
-            if (log)
-            {
-                log->Printf ("Found a copy of %s in the SDK dir %s/Symbols.Internal", platform_file_path, sdkroot_path);
-            }
-            return true;
-        }
-        ::snprintf (resolved_path,
-                    sizeof(resolved_path), 
-                    "%s/Symbols%s", 
-                    sdkroot_path, 
-                    platform_file_path);
-        
-        local_file.SetFile(resolved_path, true);
-        if (local_file.Exists())
-        {
-            if (log)
-            {
-                log->Printf ("Found a copy of %s in the SDK dir %s/Symbols", platform_file_path, sdkroot_path);
-            }
-            return true;                
         }
     }
     return false;

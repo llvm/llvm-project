@@ -156,7 +156,6 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @unittest2.expectedFailure("-break-insert doesn't work for absolute path")
     def test_lldbmi_break_insert_file_line_absolute_path(self):
         """Test that 'lldb-mi --interpreter' works for file:line breakpoints."""
 

@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-througput-vector-fma=1 -polly-target-latency-vector-fma=8 -analyze -polly-ast < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-througput-vector-fma=1 -polly-target-latency-vector-fma=8 -analyze -polly-ast -polly-target-cache-level-associativity=8,8 -polly-target-cache-level-sizes=32768,262144 < %s 2>&1 | FileCheck %s --check-prefix=EXTRACTION-OF-MACRO-KERNEL
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)
@@ -61,6 +62,56 @@
 ; CHECK:            }
 ; CHECK:          }
 ; CHECK:    }
+;
+; EXTRACTION-OF-MACRO-KERNEL:      // 1st level tiling - Tiles
+; EXTRACTION-OF-MACRO-KERNEL:      for (int c0 = 0; c0 <= 65; c0 += 1)
+; EXTRACTION-OF-MACRO-KERNEL:        for (int c1 = 0; c1 <= 3; c1 += 1)
+; EXTRACTION-OF-MACRO-KERNEL:          for (int c2 = 0; c2 <= 10; c2 += 1) {
+; EXTRACTION-OF-MACRO-KERNEL:            // 1st level tiling - Points
+; EXTRACTION-OF-MACRO-KERNEL:            // Register tiling - Tiles
+; EXTRACTION-OF-MACRO-KERNEL:            for (int c3 = 0; c3 <= 3; c3 += 1)
+; EXTRACTION-OF-MACRO-KERNEL:              for (int c4 = 0; c4 <= 11; c4 += 1)
+; EXTRACTION-OF-MACRO-KERNEL:                for (int c5 = 0; c5 <= 255; c5 += 1) {
+; EXTRACTION-OF-MACRO-KERNEL:                  // Register tiling - Points
+; EXTRACTION-OF-MACRO-KERNEL:                  // 1st level tiling - Tiles
+; EXTRACTION-OF-MACRO-KERNEL:                  // 1st level tiling - Points
+; EXTRACTION-OF-MACRO-KERNEL:                  {
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 1, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 2, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 3, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 5, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 6, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3, 96 * c2 + 8 * c4 + 7, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 1, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 2, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 3, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 5, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 6, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 1, 96 * c2 + 8 * c4 + 7, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 1, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 2, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 3, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 5, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 6, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 2, 96 * c2 + 8 * c4 + 7, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 1, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 2, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 3, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 4, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 5, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 6, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                    Stmt_bb24(16 * c0 + 4 * c3 + 3, 96 * c2 + 8 * c4 + 7, 256 * c1 + c5);
+; EXTRACTION-OF-MACRO-KERNEL:                  }
+; EXTRACTION-OF-MACRO-KERNEL:                }
+; EXTRACTION-OF-MACRO-KERNEL:          }
+; EXTRACTION-OF-MACRO-KERNEL:    }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

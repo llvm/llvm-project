@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <chrono>
 #include <list>
 #include <map>
 #include <mutex>
@@ -21,8 +22,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
-#include "lldb/Core/Broadcaster.h"
-#include "lldb/Host/Condition.h"
 #include "lldb/Core/Event.h"
 
 namespace lldb_private {
@@ -87,19 +86,15 @@ public:
 
     // Returns true if an event was received, false if we timed out.
     bool
-    WaitForEvent (const TimeValue *timeout,
-                  lldb::EventSP &event_sp);
+    WaitForEvent(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp);
 
     bool
-    WaitForEventForBroadcaster (const TimeValue *timeout,
-                                Broadcaster *broadcaster,
-                                lldb::EventSP &event_sp);
+    WaitForEventForBroadcaster(const std::chrono::microseconds &timeout, Broadcaster *broadcaster,
+                               lldb::EventSP &event_sp);
 
     bool
-    WaitForEventForBroadcasterWithType (const TimeValue *timeout,
-                                        Broadcaster *broadcaster,
-                                        uint32_t event_type_mask,
-                                        lldb::EventSP &event_sp);
+    WaitForEventForBroadcasterWithType(const std::chrono::microseconds &timeout, Broadcaster *broadcaster,
+                                       uint32_t event_type_mask, lldb::EventSP &event_sp);
 
     Event *
     PeekAtNextEvent ();
@@ -151,13 +146,10 @@ private:
     typedef std::vector<lldb::BroadcasterManagerWP> broadcaster_manager_collection;
 
     bool
-    FindNextEventInternal(Mutex::Locker& lock,
+    FindNextEventInternal(std::unique_lock<std::mutex> &lock,
                           Broadcaster *broadcaster,   // nullptr for any broadcaster
                           const ConstString *sources, // nullptr for any event
-                          uint32_t num_sources,
-                          uint32_t event_type_mask,
-                          lldb::EventSP &event_sp,
-                          bool remove);
+                          uint32_t num_sources, uint32_t event_type_mask, lldb::EventSP &event_sp, bool remove);
 
     bool
     GetNextEventInternal(Broadcaster *broadcaster,   // nullptr for any broadcaster
@@ -167,19 +159,17 @@ private:
                          lldb::EventSP &event_sp);
 
     bool
-    WaitForEventsInternal(const TimeValue *timeout,
+    WaitForEventsInternal(const std::chrono::microseconds &timeout,
                           Broadcaster *broadcaster,   // nullptr for any broadcaster
                           const ConstString *sources, // nullptr for any event
-                          uint32_t num_sources,
-                          uint32_t event_type_mask,
-                          lldb::EventSP &event_sp);
+                          uint32_t num_sources, uint32_t event_type_mask, lldb::EventSP &event_sp);
 
     std::string m_name;
     broadcaster_collection m_broadcasters;
     std::recursive_mutex m_broadcasters_mutex; // Protects m_broadcasters
     event_collection m_events;
-    Mutex m_events_mutex; // Protects m_broadcasters and m_events
-    Condition m_events_condition;
+    std::mutex m_events_mutex; // Protects m_broadcasters and m_events
+    std::condition_variable m_events_condition;
     broadcaster_manager_collection m_broadcaster_managers;
 
     void

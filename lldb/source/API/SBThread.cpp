@@ -1183,6 +1183,12 @@ SBThread::StepOverUntil (lldb::SBFrame &sb_frame,
 SBError
 SBThread::StepUsingScriptedThreadPlan (const char *script_class_name)
 {
+    return StepUsingScriptedThreadPlan(script_class_name, true);
+}
+
+SBError
+SBThread::StepUsingScriptedThreadPlan (const char *script_class_name, bool resume_immediately)
+{
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
     SBError sb_error;
 
@@ -1206,15 +1212,26 @@ SBThread::StepUsingScriptedThreadPlan (const char *script_class_name)
     Thread *thread = exe_ctx.GetThreadPtr();
     ThreadPlanSP thread_plan_sp = thread->QueueThreadPlanForStepScripted(false, script_class_name, false);
 
+    if (!thread_plan_sp)
+    {
+        sb_error.SetErrorStringWithFormat("Error queueing thread plan for class: %s", script_class_name);
+        return sb_error;
+    }
+    
+    if (!resume_immediately)
+    {
+        return sb_error;
+    }
+    
     if (thread_plan_sp)
         sb_error = ResumeNewPlan(exe_ctx, thread_plan_sp.get());
     else
     {
-        sb_error.SetErrorStringWithFormat("Error queuing thread plan for class: %s.", script_class_name);
+        sb_error.SetErrorStringWithFormat("Error resuming thread plan for class: %s.", script_class_name);
         if (log)
-        log->Printf ("SBThread(%p)::StepUsingScriptedThreadPlan: Error queuing thread plan for class: %s",
-                     static_cast<void*>(exe_ctx.GetThreadPtr()),
-                     script_class_name);
+            log->Printf ("SBThread(%p)::StepUsingScriptedThreadPlan: Error queuing thread plan for class: %s",
+                    static_cast<void*>(exe_ctx.GetThreadPtr()),
+                    script_class_name);
     }
 
     return sb_error;

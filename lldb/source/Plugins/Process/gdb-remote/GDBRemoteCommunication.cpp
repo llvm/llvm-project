@@ -33,6 +33,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 // Project includes
 #include "ProcessGDBRemoteLog.h"
@@ -152,23 +153,19 @@ GDBRemoteCommunication::History::Dump (Log *log) const
 //----------------------------------------------------------------------
 // GDBRemoteCommunication constructor
 //----------------------------------------------------------------------
-GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name, 
-                                               const char *listener_name) :
-    Communication(comm_name),
+GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name, const char *listener_name)
+    : Communication(comm_name),
 #ifdef LLDB_CONFIGURATION_DEBUG
-    m_packet_timeout (1000),
+      m_packet_timeout(1000),
 #else
-    m_packet_timeout (1),
+      m_packet_timeout(1),
 #endif
-    m_echo_number(0),
-    m_supports_qEcho (eLazyBoolCalculate),
-    m_sequence_mutex (Mutex::eMutexTypeRecursive),
-    m_public_is_running (false),
-    m_private_is_running (false),
-    m_history (512),
-    m_send_acks (true),
-    m_compression_type (CompressionType::None),
-    m_listen_url ()
+      m_echo_number(0),
+      m_supports_qEcho(eLazyBoolCalculate),
+      m_history(512),
+      m_send_acks(true),
+      m_compression_type(CompressionType::None),
+      m_listen_url()
 {
 }
 
@@ -224,13 +221,6 @@ GDBRemoteCommunication::SendNack ()
         log->Printf("<%4" PRIu64 "> send packet: %c", (uint64_t)bytes_written, ch);
     m_history.AddPacket (ch, History::ePacketTypeSend, bytes_written);
     return bytes_written;
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunication::SendPacket (const char *payload, size_t payload_length)
-{
-    Mutex::Locker locker(m_sequence_mutex);
-    return SendPacketNoLock (payload, payload_length);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -322,23 +312,6 @@ GDBRemoteCommunication::GetAck ()
     return result;
 }
 
-bool
-GDBRemoteCommunication::GetSequenceMutex (Mutex::Locker& locker, const char *failure_message)
-{
-    if (IsRunning())
-        return locker.TryLock (m_sequence_mutex, failure_message);
-
-    locker.Lock (m_sequence_mutex);
-    return true;
-}
-
-
-bool
-GDBRemoteCommunication::WaitForNotRunningPrivate (const TimeValue *timeout_ptr)
-{
-    return m_private_is_running.WaitForValueEqualTo (false, timeout_ptr, NULL);
-}
-
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::ReadPacket (StringExtractorGDBRemote &response, uint32_t timeout_usec, bool sync_on_timeout)
 {
@@ -356,20 +329,22 @@ GDBRemoteCommunication::ReadPacket (StringExtractorGDBRemote &response, uint32_t
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::PopPacketFromQueue (StringExtractorGDBRemote &response, uint32_t timeout_usec)
 {
-    // Calculate absolute timeout value
-    TimeValue timeout = TimeValue::Now();
-    timeout.OffsetWithMicroSeconds(timeout_usec);
+    auto until = std::chrono::system_clock::now() + std::chrono::microseconds(timeout_usec);
 
-    do
+    while (true)
     {
         // scope for the mutex
         {
             // lock down the packet queue
-            Mutex::Locker locker(m_packet_queue_mutex);
+            std::unique_lock<std::mutex> lock(m_packet_queue_mutex);
 
             // Wait on condition variable.
             if (m_packet_queue.size() == 0)
-                m_condition_queue_not_empty.Wait(m_packet_queue_mutex, &timeout);
+            {
+                std::cv_status result = m_condition_queue_not_empty.wait_until(lock, until);
+                if (result == std::cv_status::timeout)
+                  break;
+            }
 
             if (m_packet_queue.size() > 0)
             {
@@ -389,7 +364,7 @@ GDBRemoteCommunication::PopPacketFromQueue (StringExtractorGDBRemote &response, 
              return PacketResult::ErrorDisconnected;
 
       // Loop while not timed out
-    } while (TimeValue::Now() < timeout);
+    }
 
     return PacketResult::ErrorReplyTimeout;
 }
@@ -416,7 +391,7 @@ GDBRemoteCommunication::WaitForPacketWithTimeoutMicroSecondsNoLock (StringExtrac
         
         if (log)
             log->Printf ("%s: Read (buffer, (sizeof(buffer), timeout_usec = 0x%x, status = %s, error = %s) => bytes_read = %" PRIu64,
-                         __PRETTY_FUNCTION__,
+                         LLVM_PRETTY_FUNCTION,
                          timeout_usec, 
                          Communication::ConnectionStatusAsCString (status),
                          error.AsCString(), 
@@ -1116,7 +1091,8 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
                                                  Platform *platform,
                                                  ProcessLaunchInfo &launch_info,
                                                  uint16_t *port,
-                                                 const Args& inferior_args)
+                                                 const Args* inferior_args,
+                                                 int pass_comm_fd)
 {
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
     if (log)
@@ -1196,6 +1172,16 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
         if (url)
             debugserver_args.AppendArgument(url);
 
+        if (pass_comm_fd >= 0)
+        {
+            StreamString fd_arg;
+            fd_arg.Printf("--fd=%i", pass_comm_fd);
+            debugserver_args.AppendArgument(fd_arg.GetData());
+            // Send "pass_comm_fd" down to the inferior so it can use it to
+            // communicate back with this process
+            launch_info.AppendDuplicateFileAction(pass_comm_fd, pass_comm_fd);
+        }
+
         // use native registers, not the GDB registers
         debugserver_args.AppendArgument("--native-regs");
 
@@ -1214,7 +1200,7 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
         // port is null when debug server should listen on domain socket -
         // we're not interested in port value but rather waiting for debug server
         // to become available.
-        if ((port != nullptr && *port == 0) || port == nullptr)
+        if (pass_comm_fd == -1 && ((port != nullptr && *port == 0) || port == nullptr))
         {
             if (url)
             {
@@ -1250,7 +1236,7 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
                 }
                 int write_fd = socket_pipe.GetWriteFileDescriptor();
                 debugserver_args.AppendArgument("--pipe");
-                debugserver_args.AppendArgument(std::to_string(write_fd).c_str());
+                debugserver_args.AppendArgument(llvm::to_string(write_fd).c_str());
                 launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
 #endif
             }
@@ -1268,15 +1254,17 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
     
                 ConnectionFileDescriptor *connection = (ConnectionFileDescriptor *)GetConnection ();
                 // Wait for 10 seconds to resolve the bound port
-                *port = connection->GetListeningPort(10);
-                if (*port > 0)
+                uint16_t port_ = connection->GetListeningPort(10);
+                if (port_ > 0)
                 {
                     char port_cstr[32];
-                    snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", *port);
+                    snprintf(port_cstr, sizeof(port_cstr), "127.0.0.1:%i", port_);
                     // Send the host and port down that debugserver and specify an option
                     // so that it connects back to the port we are listening to in this process
                     debugserver_args.AppendArgument("--reverse-connect");
                     debugserver_args.AppendArgument(port_cstr);
+                    if (port)
+                        *port = port_;
                 }
                 else
                 {
@@ -1329,10 +1317,10 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
             }
         } while (has_env_var);
 
-        if (inferior_args.GetArgumentCount() > 0)
+        if (inferior_args && inferior_args->GetArgumentCount() > 0)
         {
             debugserver_args.AppendArgument ("--");
-            debugserver_args.AppendArguments (inferior_args);
+            debugserver_args.AppendArguments (*inferior_args);
         }
 
         // Copy the current environment to the gdbserver/debugserver instance
@@ -1362,8 +1350,7 @@ GDBRemoteCommunication::StartDebugserverProcess (const char *url,
         }
         error = Host::LaunchProcess(launch_info);
         
-        if (error.Success() &&
-            launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID)
+        if (error.Success() && (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) && pass_comm_fd == -1)
         {
             if (named_pipe_path.size() > 0)
             {
@@ -1479,12 +1466,11 @@ void GDBRemoteCommunication::AppendBytesToCache (const uint8_t * bytes, size_t l
             // scope for the mutex
             {
                 // lock down the packet queue
-                Mutex::Locker locker(m_packet_queue_mutex);
+                std::lock_guard<std::mutex> guard(m_packet_queue_mutex);
                 // push a new packet into the queue
                 m_packet_queue.push(packet);
                 // Signal condition variable that we have a packet
-                m_condition_queue_not_empty.Signal();
-
+                m_condition_queue_not_empty.notify_one();
             }
         }
 

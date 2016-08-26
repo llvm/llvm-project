@@ -14,9 +14,11 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     std::default_random_engine e;
     e.discard(9999);
-    assert(e() == 399268537u);
+    LIBCPP_ASSERT(e() == 399268537u);
 }

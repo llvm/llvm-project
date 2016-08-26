@@ -55,6 +55,12 @@
 #define KMP_CANCEL_THREADS
 #define KMP_THREAD_ATTR
 
+// Android does not have pthread_cancel.  Undefine KMP_CANCEL_THREADS if being
+// built on Android
+#if defined(__ANDROID__)
+#undef KMP_CANCEL_THREADS
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>

@@ -4,6 +4,7 @@ add_lld_library(lldCore
   File.cpp
   LinkingContext.cpp
   Reader.cpp
+  Reproduce.cpp
   Resolver.cpp
   SymbolTable.cpp
   Writer.cpp

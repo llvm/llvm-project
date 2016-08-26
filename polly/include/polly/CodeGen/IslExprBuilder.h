@@ -39,6 +39,7 @@ public:
 } // namespace llvm
 
 namespace polly {
+class ScopArrayInfo;
 
 /// @brief LLVM-IR generator for isl_ast_expr[essions]
 ///
@@ -91,6 +92,25 @@ class IslExprBuilder {
 public:
   /// @brief A map from isl_ids to llvm::Values.
   typedef llvm::MapVector<isl_id *, llvm::AssertingVH<llvm::Value>> IDToValueTy;
+
+  typedef llvm::MapVector<isl_id *, const ScopArrayInfo *> IDToScopArrayInfoTy;
+
+  /// @brief A map from isl_ids to ScopArrayInfo objects.
+  ///
+  /// This map is used to obtain ScopArrayInfo objects for isl_ids which do not
+  /// carry a ScopArrayInfo object in their user pointer. This is useful if the
+  /// construction of ScopArrayInfo objects happens only after references (e.g.
+  /// in an AST) to an isl_id are generated and the user pointer of the isl_id
+  /// can not be changed any more.
+  ///
+  /// This is useful for external users who just use the IslExprBuilder for
+  /// code generation.
+  IDToScopArrayInfoTy *IDToSAI = nullptr;
+
+  /// @brief Set the isl_id to ScopArrayInfo map.
+  ///
+  /// @param NewIDToSAI The new isl_id to ScopArrayInfo map to use.
+  void setIDToSAI(IDToScopArrayInfoTy *NewIDToSAI) { IDToSAI = NewIDToSAI; }
 
   /// @brief Construct an IslExprBuilder.
   ///

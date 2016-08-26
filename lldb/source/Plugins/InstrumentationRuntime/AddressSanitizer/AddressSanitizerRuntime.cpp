@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
@@ -22,7 +21,6 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -64,67 +62,26 @@ AddressSanitizerRuntime::GetTypeStatic()
     return eInstrumentationRuntimeTypeAddressSanitizer;
 }
 
-AddressSanitizerRuntime::AddressSanitizerRuntime(const ProcessSP &process_sp) :
-    m_is_active(false),
-    m_runtime_module(),
-    m_process_wp(),
-    m_breakpoint_id(0)
-{
-    if (process_sp)
-        m_process_wp = process_sp;
-}
-
 AddressSanitizerRuntime::~AddressSanitizerRuntime()
 {
     Deactivate();
 }
 
-bool ModuleContainsASanRuntime(Module * module)
+const RegularExpression &
+AddressSanitizerRuntime::GetPatternForRuntimeLibrary()
 {
-    const Symbol* symbol = module->FindFirstSymbolWithNameAndType(
-            ConstString("__asan_get_alloc_stack"),
-            lldb::eSymbolTypeAny);
-
-    return symbol != nullptr;
-}
-
-void
-AddressSanitizerRuntime::ModulesDidLoad(lldb_private::ModuleList &module_list)
-{
-    if (IsActive())
-        return;
-    
-    if (m_runtime_module) {
-        Activate();
-        return;
-    }
-
-    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
-    const size_t num_modules = module_list.GetSize();
-    for (size_t i = 0; i < num_modules; ++i)
-    {
-        Module *module_pointer = module_list.GetModulePointerAtIndexUnlocked(i);
-        const FileSpec & file_spec = module_pointer->GetFileSpec();
-        if (! file_spec)
-            continue;
-        
-        static RegularExpression g_asan_runtime_regex("libclang_rt.asan_(.*)_dynamic\\.dylib");
-        if (g_asan_runtime_regex.Execute (file_spec.GetFilename().GetCString()) || module_pointer->IsExecutable())
-        {
-            if (ModuleContainsASanRuntime(module_pointer))
-            {
-                m_runtime_module = module_pointer->shared_from_this();
-                Activate();
-                return;
-            }
-        }
-    }
+    // FIXME: This shouldn't include the "dylib" suffix.
+    static RegularExpression regex("libclang_rt.asan_(.*)_dynamic\\.dylib");
+    return regex;
 }
 
 bool
-AddressSanitizerRuntime::IsActive()
+AddressSanitizerRuntime::CheckIfRuntimeIsValid(const lldb::ModuleSP module_sp)
 {
-    return m_is_active;
+    const Symbol *symbol =
+        module_sp->FindFirstSymbolWithNameAndType(ConstString("__asan_get_alloc_stack"), lldb::eSymbolTypeAny);
+
+    return symbol != nullptr;
 }
 
 #define RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC 2*1000*1000
@@ -306,7 +263,7 @@ AddressSanitizerRuntime::NotifyBreakpointHit(void *baton, StoppointCallbackConte
 void
 AddressSanitizerRuntime::Activate()
 {
-    if (m_is_active)
+    if (IsActive())
         return;
 
     ProcessSP process_sp = GetProcessSP();
@@ -314,7 +271,7 @@ AddressSanitizerRuntime::Activate()
         return;
 
     ConstString symbol_name ("__asan::AsanDie()");
-    const Symbol *symbol = m_runtime_module->FindFirstSymbolWithNameAndType (symbol_name, eSymbolTypeCode);
+    const Symbol *symbol = GetRuntimeModuleSP()->FindFirstSymbolWithNameAndType (symbol_name, eSymbolTypeCode);
     
     if (symbol == NULL)
         return;
@@ -333,7 +290,7 @@ AddressSanitizerRuntime::Activate()
     Breakpoint *breakpoint = process_sp->GetTarget().CreateBreakpoint(symbol_address, internal, hardware).get();
     breakpoint->SetCallback (AddressSanitizerRuntime::NotifyBreakpointHit, this, true);
     breakpoint->SetBreakpointKind ("address-sanitizer-report");
-    m_breakpoint_id = breakpoint->GetID();
+    SetBreakpointID(breakpoint->GetID());
     
     StreamFileSP stream_sp (process_sp->GetTarget().GetDebugger().GetOutputFile());
     if (stream_sp)
@@ -341,20 +298,20 @@ AddressSanitizerRuntime::Activate()
             stream_sp->Printf ("AddressSanitizer debugger support is active. Memory error breakpoint has been installed and you can now use the 'memory history' command.\n");
     }
 
-    m_is_active = true;
+    SetActive(true);
 }
 
 void
 AddressSanitizerRuntime::Deactivate()
 {
-    if (m_breakpoint_id != LLDB_INVALID_BREAK_ID)
+    if (GetBreakpointID() != LLDB_INVALID_BREAK_ID)
     {
         ProcessSP process_sp = GetProcessSP();
         if (process_sp)
         {
-            process_sp->GetTarget().RemoveBreakpointByID(m_breakpoint_id);
-            m_breakpoint_id = LLDB_INVALID_BREAK_ID;
+            process_sp->GetTarget().RemoveBreakpointByID(GetBreakpointID());
+            SetBreakpointID(LLDB_INVALID_BREAK_ID);
         }
     }
-    m_is_active = false;
+    SetActive(false);
 }

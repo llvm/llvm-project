@@ -20,6 +20,7 @@
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Host/IOObject.h"
+#include "lldb/Host/PosixApi.h"
 
 namespace lldb_private {
 

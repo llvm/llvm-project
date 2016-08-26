@@ -36,6 +36,13 @@ class BreakpointConditionsTestCase(TestBase):
         self.build()
         self.breakpoint_conditions_python()
 
+    @skipIfWindows # Requires EE to support COFF on Windows (http://llvm.org/pr22232)
+    @add_test_categories(['pyapi'])
+    def test_breakpoint_invalid_condition_and_python_api(self):
+        """Use Python APIs to set breakpoint conditions."""
+        self.build()
+        self.breakpoint_invalid_conditions_python()
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -101,29 +108,6 @@ class BreakpointConditionsTestCase(TestBase):
             startstr = '(int) val = 1')
 
         self.runCmd("process kill")
-        self.runCmd("breakpoint disable")
-
-        self.runCmd("breakpoint set -p Loop")
-        arch = self.getArchitecture()
-        if arch in ['x86_64', 'i386']:
-            self.runCmd("breakpoint modify -c ($eax&&i)")
-        elif arch in ['aarch64']:
-            self.runCmd("breakpoint modify -c ($x0&&i)")
-        elif arch in ['arm']:
-            self.runCmd("breakpoint modify -c ($r0&&i)")
-        elif re.match("mips",arch):
-            self.runCmd("breakpoint modify -c ($r2&&i)")
-        elif arch in ['s390x']:
-            self.runCmd("breakpoint modify -c ($r2&&i)")
-        self.runCmd("run")
-
-        self.expect("process status", PROCESS_STOPPED,
-            patterns = ['Process .* stopped'])
-
-        self.runCmd("continue")
-
-        self.expect("process status", PROCESS_EXITED,
-            patterns = ['Process .* exited'])
 
     def breakpoint_conditions_python(self):
         """Use Python APIs to set breakpoint conditions."""
@@ -186,3 +170,40 @@ class BreakpointConditionsTestCase(TestBase):
         value = frame0.EvaluateExpression("$0", options)
         self.assertTrue(value.GetError().Fail(), "Conditions should not make result variables.")
         process.Continue()
+
+    def breakpoint_invalid_conditions_python(self):
+        """Use Python APIs to set breakpoint conditions."""
+        exe = os.path.join(os.getcwd(), "a.out")
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Now create a breakpoint on main.c by name 'c'.
+        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        #print("breakpoint:", breakpoint)
+        self.assertTrue(breakpoint and
+                        breakpoint.GetNumLocations() == 1,
+                        VALID_BREAKPOINT)
+
+        # Set the condition on the breakpoint.
+        breakpoint.SetCondition('no_such_variable == not_this_one_either')
+        self.expect(breakpoint.GetCondition(), exe=False,
+            startstr = 'no_such_variable == not_this_one_either')
+
+        # Now launch the process, and do not stop at entry point.
+        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # Frame #0 should be on self.line1 and the break condition should hold.
+        from lldbsuite.test.lldbutil import get_stopped_thread
+        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        frame0 = thread.GetFrameAtIndex(0)
+        var = frame0.FindValue('val', lldb.eValueTypeVariableArgument)
+        self.assertTrue(frame0.GetLineEntry().GetLine() == self.line1)
+
+        # The hit count for the breakpoint should be 1.
+        self.assertTrue(breakpoint.GetHitCount() == 1)
+
+

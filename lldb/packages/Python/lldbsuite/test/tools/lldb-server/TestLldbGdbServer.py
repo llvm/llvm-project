@@ -1234,7 +1234,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     def test_software_breakpoint_set_and_remove_work_debugserver(self):
         self.init_debugserver_test()
-        self.build()
+        if self.getArchitecture() == "arm":
+            # TODO: Handle case when setting breakpoint in thumb code
+            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+        else:
+            self.build()
         self.set_inferior_startup_launch()
         self.software_breakpoint_set_and_remove_work()
 
@@ -1242,7 +1246,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFlakeyLinux("llvm.org/pr25652")
     def test_software_breakpoint_set_and_remove_work_llgs(self):
         self.init_llgs_test()
-        self.build()
+        if self.getArchitecture() == "arm":
+            # TODO: Handle case when setting breakpoint in thumb code
+            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+        else:
+            self.build()
         self.set_inferior_startup_launch()
         self.software_breakpoint_set_and_remove_work()
 
@@ -1302,11 +1310,20 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Hex-encode the test message, adding null termination.
         hex_encoded_message = TEST_MESSAGE.encode("hex")
 
-        # Write the message to the inferior.
+        # Write the message to the inferior. Verify that we can read it with the hex-encoded (m)
+        # and binary (x) memory read packets.
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
-            ["read packet: $M{0:x},{1:x}:{2}#00".format(message_address, len(hex_encoded_message)/2, hex_encoded_message),
+            ["read packet: $M{0:x},{1:x}:{2}#00".format(message_address, len(TEST_MESSAGE), hex_encoded_message),
              "send packet: $OK#00",
+             "read packet: $m{0:x},{1:x}#00".format(message_address, len(TEST_MESSAGE)),
+             "send packet: ${0}#00".format(hex_encoded_message),
+             "read packet: $x{0:x},{1:x}#00".format(message_address, len(TEST_MESSAGE)),
+             "send packet: ${0}#00".format(TEST_MESSAGE),
+             "read packet: $m{0:x},4#00".format(message_address),
+             "send packet: ${0}#00".format(hex_encoded_message[0:8]),
+             "read packet: $x{0:x},4#00".format(message_address),
+             "send packet: ${0}#00".format(TEST_MESSAGE[0:4]),
              "read packet: $c#63",
              { "type":"output_match", "regex":r"^message: (.+)\r\n$", "capture":{ 1:"printed_message"} },
              "send packet: $W00#00",

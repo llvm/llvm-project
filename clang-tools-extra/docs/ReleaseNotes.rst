@@ -54,17 +54,47 @@ The improvements are...
 Improvements to clang-rename
 ----------------------------
 
-The improvements are...
+- Emacs integration was added.
 
 Improvements to clang-tidy
 --------------------------
 
-...
+- New `cppcoreguidelines-slicing
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-slicing.html>`_ check
 
-Clang-tidy changes from 3.9 to 4.0
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  Flags slicing of member variables or vtable.
 
-...
+- New `cppcoreguidelines-special-member-functions
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-special-member-functions.html>`_ check
+
+  Flags classes where some, but not all, special member functions are user-defined.
+
+- New `mpi-buffer-deref
+  <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
+
+  Flags buffers which are insufficiently dereferenced when passed to an MPI function call.
+
+- New `mpi-type-mismatch
+  <http://clang.llvm.org/extra/clang-tidy/checks/mpi-type-mismatch.html>`_ check
+
+  Flags MPI function calls with a buffer type and MPI data type mismatch.
+
+- New `performance-inefficient-string-concatenation
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-string-concatenation.html>`_ check
+
+  Warns about the performance overhead arising from concatenating strings using
+  the ``operator+``, instead of ``operator+=``.
+
+- New `readability-non-const-parameter
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-non-const-parameter.html>`_ check
+
+  Flags function parameters of a pointer type that could be changed to point to
+  a constant type instead.
+
+Improvements to include-fixer
+-----------------------------
+
+- Emacs integration was added.
 
 Improvements to modularize
 --------------------------

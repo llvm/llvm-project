@@ -153,7 +153,7 @@ protected:
         sb_return.Release();
         return ret;
     }
-    lldb::SBCommandPluginInterface* m_backend;
+    std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;
 };
 
 SBCommandInterpreter::SBCommandInterpreter (CommandInterpreter *interpreter) :
@@ -605,6 +605,17 @@ SBCommandInterpreter::AddCommand (const char* name, lldb::SBCommandPluginInterfa
     return lldb::SBCommand();
 }
 
+lldb::SBCommand
+SBCommandInterpreter::AddCommand (const char* name, lldb::SBCommandPluginInterface* impl, const char* help, const char* syntax)
+{
+    lldb::CommandObjectSP new_command_sp;
+    new_command_sp.reset(new CommandPluginInterfaceImplementation(*m_opaque_ptr,name, impl, help, syntax));
+
+    if (new_command_sp && m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
+        return lldb::SBCommand(new_command_sp);
+    return lldb::SBCommand();
+}
+
 SBCommand::SBCommand() = default;
 
 SBCommand::SBCommand (lldb::CommandObjectSP cmd_sp) : m_opaque_sp (cmd_sp)
@@ -676,6 +687,21 @@ SBCommand::AddCommand (const char* name, lldb::SBCommandPluginInterface *impl, c
         return lldb::SBCommand(new_command_sp);
     return lldb::SBCommand();
 }
+
+lldb::SBCommand
+SBCommand::AddCommand (const char* name, lldb::SBCommandPluginInterface *impl, const char* help, const char* syntax)
+{
+    if (!IsValid ())
+        return lldb::SBCommand();
+    if (!m_opaque_sp->IsMultiwordObject())
+        return lldb::SBCommand();
+    lldb::CommandObjectSP new_command_sp;
+    new_command_sp.reset(new CommandPluginInterfaceImplementation(m_opaque_sp->GetCommandInterpreter(),name,impl,help, syntax));
+    if (new_command_sp && m_opaque_sp->LoadSubCommand(name,new_command_sp))
+        return lldb::SBCommand(new_command_sp);
+    return lldb::SBCommand();
+}
+
 
 uint32_t
 SBCommand::GetFlags ()

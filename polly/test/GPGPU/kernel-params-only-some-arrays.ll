@@ -1,7 +1,11 @@
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=KERNEL %s
-;
+
+; RUN: opt %loadPolly -polly-codegen-ppcg \
+; RUN: -S < %s | \
+; RUN: FileCheck -check-prefix=IR %s
+
 ; REQUIRES: pollyacc
 ;
 ;    void kernel_params_only_some_arrays(float A[], float B[]) {
@@ -17,13 +21,14 @@
 ; KERNEL-NEXT: target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 ; KERNEL-NEXT: target triple = "nvptx64-nvidia-cuda"
 
-; KERNEL: define ptx_kernel void @kernel_0(i8* %MemRef_A) {
+; KERNEL: define ptx_kernel void @kernel_0(i8* %MemRef_A)
 ; KERNEL-NEXT:   entry:
 ; KERNEL-NEXT:     %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-NEXT:     %b0 = zext i32 %0 to i64
 ; KERNEL-NEXT:     %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; KERNEL-NEXT:     %t0 = zext i32 %1 to i64
-; KERNEL-NEXT:     ret void
+
+; KERNEL:     ret void
 ; KERNEL-NEXT: }
 
 ; KERNEL: ; ModuleID = 'kernel_1'
@@ -31,14 +36,24 @@
 ; KERNEL-NEXT: target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 ; KERNEL-NEXT: target triple = "nvptx64-nvidia-cuda"
 
-; KERNEL: define ptx_kernel void @kernel_1(i8* %MemRef_B) {
+; KERNEL: define ptx_kernel void @kernel_1(i8* %MemRef_B)
 ; KERNEL-NEXT:   entry:
 ; KERNEL-NEXT:     %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-NEXT:     %b0 = zext i32 %0 to i64
 ; KERNEL-NEXT:     %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; KERNEL-NEXT:     %t0 = zext i32 %1 to i64
-; KERNEL-NEXT:     ret void
+
+; KERNEL:     ret void
 ; KERNEL-NEXT: }
+
+
+; IR:       [[SLOT:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; IR-NEXT:  [[DATA:%.*]] = bitcast i8** %polly_launch_0_param_0 to i8*
+; IR-NEXT:  store i8* [[DATA]], i8** [[SLOT]]
+
+; IR:       [[SLOT:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_1_params, i64 0, i64 0
+; IR-NEXT:  [[DATA:%.*]] = bitcast i8** %polly_launch_1_param_0 to i8*
+; IR-NEXT:  store i8* [[DATA]], i8** [[SLOT]]
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

@@ -249,6 +249,7 @@ int test_parse(struct isl_ctx *ctx)
 	test_parse_map(ctx, "{ S1[i] -> [([i/10]),i%10] : 0 <= i <= 45 }");
 	test_parse_pwaff(ctx, "{ [i] -> [i + 1] : i > 0; [a] -> [a] : a < 0 }");
 	test_parse_pwqp(ctx, "{ [x] -> ([(x)/2] * [(x)/3]) }");
+	test_parse_pwaff(ctx, "{ [] -> [(100)] }");
 
 	return 0;
 }
@@ -1864,6 +1865,8 @@ struct {
 	{ 1, "{ [x, 0] : 0 <= x <= 10 and x mod 2 = 0; "
 	       "[x, 0] : 0 <= x <= 10 and x mod 2 = 1; "
 	       "[x, y] : 0 <= x <= 10 and 1 <= y <= 10 }" },
+	{ 1, "{ [a] : a <= 8 and "
+			"(a mod 10 = 7 or a mod 10 = 8 or a mod 10 = 9) }" },
 };
 
 /* A specialized coalescing test case that would result
@@ -1905,6 +1908,32 @@ static int test_coalesce_special(struct isl_ctx *ctx)
 	return 0;
 }
 
+/* A specialized coalescing test case that would result in an assertion
+ * in an earlier version of isl.
+ * The explicit call to isl_basic_set_union prevents the implicit
+ * equality constraints in the first basic map from being detected prior
+ * to the call to isl_set_coalesce, at least at the point
+ * where this test case was introduced.
+ */
+static int test_coalesce_special2(struct isl_ctx *ctx)
+{
+	const char *str;
+	isl_basic_set *bset1, *bset2;
+	isl_set *set;
+
+	str = "{ [x, y] : x, y >= 0 and x + 2y <= 1 and 2x + y <= 1 }";
+	bset1 = isl_basic_set_read_from_str(ctx, str);
+	str = "{ [x,0] : -1 <= x <= 1 and x mod 2 = 1 }" ;
+	bset2 = isl_basic_set_read_from_str(ctx, str);
+	set = isl_basic_set_union(bset1, bset2);
+	set = isl_set_coalesce(set);
+	isl_set_free(set);
+
+	if (!set)
+		return -1;
+	return 0;
+}
+
 /* Test the functionality of isl_set_coalesce.
  * That is, check that the output is always equal to the input
  * and in some cases that the result consists of a single disjunct.
@@ -1923,6 +1952,8 @@ static int test_coalesce(struct isl_ctx *ctx)
 	if (test_coalesce_unbounded_wrapping(ctx) < 0)
 		return -1;
 	if (test_coalesce_special(ctx) < 0)
+		return -1;
+	if (test_coalesce_special2(ctx) < 0)
 		return -1;
 
 	return 0;
@@ -2269,6 +2300,11 @@ struct {
 		"247j >= 62738 - i and 509j <= 129795 + i and "
 		"742j >= 188724 - i; "
 	    "[0, k, j] -> [1, 0, 248, 1] : k <= 255 and 248 <= j <= 254, k }" },
+	{ "{ [a] -> [b] : 0 <= b <= 255 and -509 + a <= 512b < a and "
+			"16*floor((8 + b)/16) <= 7 + b; "
+	    "[a] -> [1] }",
+	  "{ [a] -> [b = 1] : a >= 510 or a <= 0; "
+	    "[a] -> [b = 0] : 0 < a <= 509 }" },
 };
 
 static int test_lexmin(struct isl_ctx *ctx)
@@ -2351,6 +2387,44 @@ static int test_lexmin(struct isl_ctx *ctx)
 	return 0;
 }
 
+/* A specialized isl_set_min_val test case that would return the wrong result
+ * in earlier versions of isl.
+ * The explicit call to isl_basic_set_union prevents the second basic set
+ * from being determined to be empty prior to the call to isl_set_min_val,
+ * at least at the point where this test case was introduced.
+ */
+static int test_min_special(isl_ctx *ctx)
+{
+	const char *str;
+	isl_basic_set *bset1, *bset2;
+	isl_set *set;
+	isl_aff *obj;
+	isl_val *res;
+	int ok;
+
+	str = "{ [a, b] : a >= 2 and b >= 0 and 14 - a <= b <= 9 }";
+	bset1 = isl_basic_set_read_from_str(ctx, str);
+	str = "{ [a, b] : 1 <= a, b and a + b <= 1 }";
+	bset2 = isl_basic_set_read_from_str(ctx, str);
+	set = isl_basic_set_union(bset1, bset2);
+	obj = isl_aff_read_from_str(ctx, "{ [a, b] -> [a] }");
+
+	res = isl_set_min_val(set, obj);
+	ok = isl_val_cmp_si(res, 5) == 0;
+
+	isl_aff_free(obj);
+	isl_set_free(set);
+	isl_val_free(res);
+
+	if (!res)
+		return -1;
+	if (!ok)
+		isl_die(ctx, isl_error_unknown, "unexpected minimum",
+			return -1);
+
+	return 0;
+}
+
 struct {
 	const char *set;
 	const char *obj;
@@ -2394,6 +2468,9 @@ static int test_min(struct isl_ctx *ctx)
 			isl_die(ctx, isl_error_unknown,
 				"unexpected optimum", return -1);
 	}
+
+	if (test_min_special(ctx) < 0)
+		return -1;
 
 	return 0;
 }

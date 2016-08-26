@@ -81,6 +81,9 @@ public:
 
     bool
     IsPlanComplete();
+    
+    bool
+    IsPlanStale();
 
     bool
     IsValid();

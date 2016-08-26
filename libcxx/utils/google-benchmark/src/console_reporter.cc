@@ -30,8 +30,6 @@
 #include "string_util.h"
 #include "walltime.h"
 
-DECLARE_bool(color_print);
-
 namespace benchmark {
 
 bool ConsoleReporter::ReportContext(const Context& context) {
@@ -40,10 +38,10 @@ bool ConsoleReporter::ReportContext(const Context& context) {
   PrintBasicContext(&GetErrorStream(), context);
 
 #ifdef BENCHMARK_OS_WINDOWS
-  if (FLAGS_color_print && &std::cout != &GetOutputStream()) {
+  if (color_output_ && &std::cout != &GetOutputStream()) {
       GetErrorStream() << "Color printing is only supported for stdout on windows."
                           " Disabling color printing\n";
-      FLAGS_color_print = false;
+      color_output_ = false;
   }
 #endif
   std::string str = FormatString("%-*s %13s %13s %10s\n",
@@ -59,18 +57,29 @@ void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
     PrintRunData(run);
 }
 
-void ConsoleReporter::PrintRunData(const Run& result) {
-  auto& Out = GetOutputStream();
+static void  IgnoreColorPrint(std::ostream& out, LogColor,
+                               const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    out << FormatString(fmt, args);
+    va_end(args);
+}
 
+void ConsoleReporter::PrintRunData(const Run& result) {
+  typedef void(PrinterFn)(std::ostream&, LogColor, const char*, ...);
+  auto& Out = GetOutputStream();
+  PrinterFn* printer = color_output_ ? (PrinterFn*)ColorPrintf
+                                     : IgnoreColorPrint;
   auto name_color =
       (result.report_big_o || result.report_rms) ? COLOR_BLUE : COLOR_GREEN;
-  ColorPrintf(Out, name_color, "%-*s ", name_field_width_,
+  printer(Out, name_color, "%-*s ", name_field_width_,
               result.benchmark_name.c_str());
 
   if (result.error_occurred) {
-    ColorPrintf(Out, COLOR_RED, "ERROR OCCURRED: \'%s\'",
+    printer(Out, COLOR_RED, "ERROR OCCURRED: \'%s\'",
                 result.error_message.c_str());
-    ColorPrintf(Out, COLOR_DEFAULT, "\n");
+    printer(Out, COLOR_DEFAULT, "\n");
     return;
   }
   // Format bytes per second
@@ -91,34 +100,34 @@ void ConsoleReporter::PrintRunData(const Run& result) {
 
   if (result.report_big_o) {
     std::string big_o = GetBigOString(result.complexity);
-    ColorPrintf(Out, COLOR_YELLOW, "%10.2f %s %10.2f %s ", real_time,
+    printer(Out, COLOR_YELLOW, "%10.2f %s %10.2f %s ", real_time,
                 big_o.c_str(), cpu_time, big_o.c_str());
   } else if (result.report_rms) {
-    ColorPrintf(Out, COLOR_YELLOW, "%10.0f %% %10.0f %% ", real_time * 100,
+    printer(Out, COLOR_YELLOW, "%10.0f %% %10.0f %% ", real_time * 100,
                 cpu_time * 100);
   } else {
     const char* timeLabel = GetTimeUnitString(result.time_unit);
-    ColorPrintf(Out, COLOR_YELLOW, "%10.0f %s %10.0f %s ", real_time, timeLabel,
+    printer(Out, COLOR_YELLOW, "%10.0f %s %10.0f %s ", real_time, timeLabel,
                 cpu_time, timeLabel);
   }
 
   if (!result.report_big_o && !result.report_rms) {
-    ColorPrintf(Out, COLOR_CYAN, "%10lld", result.iterations);
+    printer(Out, COLOR_CYAN, "%10lld", result.iterations);
   }
 
   if (!rate.empty()) {
-    ColorPrintf(Out, COLOR_DEFAULT, " %*s", 13, rate.c_str());
+    printer(Out, COLOR_DEFAULT, " %*s", 13, rate.c_str());
   }
 
   if (!items.empty()) {
-    ColorPrintf(Out, COLOR_DEFAULT, " %*s", 18, items.c_str());
+    printer(Out, COLOR_DEFAULT, " %*s", 18, items.c_str());
   }
 
   if (!result.report_label.empty()) {
-    ColorPrintf(Out, COLOR_DEFAULT, " %s", result.report_label.c_str());
+    printer(Out, COLOR_DEFAULT, " %s", result.report_label.c_str());
   }
 
-  ColorPrintf(Out, COLOR_DEFAULT, "\n");
+  printer(Out, COLOR_DEFAULT, "\n");
 }
 
 }  // end namespace benchmark

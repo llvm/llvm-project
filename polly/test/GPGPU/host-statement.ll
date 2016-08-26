@@ -24,6 +24,7 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; CODE-NEXT: {
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (512) * (512) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_R, MemRef_R, (p_0 + 1) * (512) * sizeof(double), cudaMemcpyHostToDevice));
+; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_Q, MemRef_Q, (512) * (512) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(16);

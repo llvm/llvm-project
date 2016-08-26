@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy %s modernize-use-emplace %t
+// RUN: %check_clang_tidy %s modernize-use-emplace %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: modernize-use-emplace.ContainersWithPushBack, \
+// RUN:               value: '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector'}]}" -- -std=c++11
 
 namespace std {
 template <typename T>
@@ -9,6 +12,7 @@ public:
 
   template <typename... Args>
   void emplace_back(Args &&... args){};
+  ~vector();
 };
 template <typename T>
 class list {
@@ -18,6 +22,7 @@ public:
 
   template <typename... Args>
   void emplace_back(Args &&... args){};
+  ~list();
 };
 
 template <typename T>
@@ -28,6 +33,7 @@ public:
 
   template <typename... Args>
   void emplace_back(Args &&... args){};
+  ~deque();
 };
 
 template <typename T1, typename T2>
@@ -54,9 +60,23 @@ pair<T1, T2> make_pair(T1, T2) {
 template <typename T>
 class unique_ptr {
 public:
-  unique_ptr(T *) {}
+  explicit unique_ptr(T *) {}
+  ~unique_ptr();
 };
 } // namespace std
+
+namespace llvm {
+template <typename T>
+class LikeASmallVector {
+public:
+  void push_back(const T &) {}
+  void push_back(T &&) {}
+
+  template <typename... Args>
+  void emplace_back(Args &&... args){};
+};
+
+} // llvm
 
 void testInts() {
   std::vector<int> v;
@@ -72,6 +92,7 @@ struct Something {
   Something(int a, int b = 41) {}
   Something() {}
   void push_back(Something);
+  int getInt() { return 42; }
 };
 
 struct Convertable {
@@ -103,6 +124,15 @@ void test_Something() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: v.emplace_back();
 
+  Something Different;
+  v.push_back(Something(Different.getInt(), 42));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(Different.getInt(), 42);
+
+  v.push_back(Different.getInt());
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(Different.getInt());
+
   v.push_back(42);
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: v.emplace_back(42);
@@ -115,6 +145,23 @@ void test_Something() {
   v.push_back(Convertable{});
   Convertable s;
   v.push_back(s);
+}
+
+template <typename ElemType>
+void dependOnElem() {
+  std::vector<ElemType> v;
+  v.push_back(ElemType(42));
+}
+
+template <typename ContainerType>
+void dependOnContainer() {
+  ContainerType v;
+  v.push_back(Something(42));
+}
+
+void callDependent() {
+  dependOnElem<Something>();
+  dependOnContainer<std::vector<Something>>();
 }
 
 void test2() {
@@ -130,11 +177,19 @@ void test2() {
   v.push_back(getZoz(Something(1, 2)));
 }
 
+struct GetPair {
+  std::pair<int, long> getPair();
+};
 void testPair() {
   std::vector<std::pair<int, int>> v;
   v.push_back(std::pair<int, int>(1, 2));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: v.emplace_back(1, 2);
+
+  GetPair g;
+  v.push_back(g.getPair());
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(g.getPair());
 
   std::vector<std::pair<Something, Zoz>> v2;
   v2.push_back(std::pair<Something, Zoz>(Something(42, 42), Zoz(Something(21, 37))));
@@ -206,14 +261,14 @@ void testPointers() {
   v.push_back(new int(5));
 
   std::vector<std::unique_ptr<int>> v2;
-  v2.push_back(new int(42));
+  v2.push_back(std::unique_ptr<int>(new int(42)));
   // This call can't be replaced with emplace_back.
   // If emplacement will fail (not enough memory to add to vector)
   // we will have leak of int because unique_ptr won't be constructed
   // (and destructed) as in push_back case.
 
   auto *ptr = new int;
-  v2.push_back(ptr);
+  v2.push_back(std::unique_ptr<int>(ptr));
   // Same here
 }
 
@@ -240,6 +295,11 @@ void testOtherCointainers() {
   d.push_back(Something(42));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: d.emplace_back(42);
+
+  llvm::LikeASmallVector<Something> ls;
+  ls.push_back(Something(42));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
+  // CHECK-FIXES: ls.emplace_back(42);
 }
 
 class IntWrapper {
@@ -335,4 +395,30 @@ void testBitfields() {
   v.push_back(Something(42, var));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: v.emplace_back(42, var);
+}
+
+class PrivateCtor {
+  PrivateCtor(int z);
+
+public:
+  void doStuff() {
+    std::vector<PrivateCtor> v;
+    // This should not change it because emplace back doesn't have permission.
+    // Check currently doesn't support friend delcarations because pretty much
+    // nobody would want to be friend with std::vector :(.
+    v.push_back(PrivateCtor(42));
+  }
+};
+
+struct WithDtor {
+  WithDtor(int) {}
+  ~WithDtor();
+};
+
+void testWithDtor() {
+  std::vector<WithDtor> v;
+
+  v.push_back(WithDtor(42));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42);
 }

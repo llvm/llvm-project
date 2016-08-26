@@ -57,9 +57,9 @@ OptionGroupArchitecture::GetArchitecture (Platform *platform, ArchSpec &arch)
 
 
 Error
-OptionGroupArchitecture::SetOptionValue (CommandInterpreter &interpreter,
-                                 uint32_t option_idx,
-                                 const char *option_arg)
+OptionGroupArchitecture::SetOptionValue(uint32_t option_idx,
+                                        const char *option_arg,
+                                        ExecutionContext *execution_context)
 {
     Error error;
     const int short_option = g_option_table[option_idx].short_option;
@@ -79,7 +79,8 @@ OptionGroupArchitecture::SetOptionValue (CommandInterpreter &interpreter,
 }
 
 void
-OptionGroupArchitecture::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupArchitecture::OptionParsingStarting(
+                                            ExecutionContext *execution_context)
 {
     m_arch_str.clear();
 }

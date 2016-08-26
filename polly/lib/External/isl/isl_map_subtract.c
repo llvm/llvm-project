@@ -193,7 +193,7 @@ static int tab_add_divs(struct isl_tab *tab, __isl_keep isl_basic_map *bmap,
 		(*div_map)[i] = j;
 		if (j == tab->bmap->n_div) {
 			vec->size = 2 + dim + tab->bmap->n_div;
-			if (isl_tab_add_div(tab, vec, NULL, NULL) < 0)
+			if (isl_tab_add_div(tab, vec) < 0)
 				goto error;
 		}
 	}

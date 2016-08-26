@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/DataBufferHeap.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
+#include "lldb/Core/DataExtractor.h"
 
 class RegisterContextCorePOSIX_powerpc :
     public RegisterContextPOSIX_powerpc

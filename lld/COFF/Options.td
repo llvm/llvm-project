@@ -27,6 +27,7 @@ def failifmismatch : P<"failifmismatch", "">;
 def heap    : P<"heap", "Size of the heap">;
 def implib  : P<"implib", "Import library name">;
 def libpath : P<"libpath", "Additional library search path">;
+def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
@@ -61,7 +62,9 @@ def deffile : Joined<["/", "-"], "def:">,
     HelpText<"Use module-definition file">;
 
 def debug : F<"debug">, HelpText<"Embed a symbol table in the image">;
+def debugtype : P<"debugtype", "Debug Info Options">;
 def dll : F<"dll">, HelpText<"Create a DLL">;
+def driver : P<"driver", "Generate a Windows NT Kernel Mode Driver">;
 def nodefaultlib_all : F<"nodefaultlib">;
 def noentry : F<"noentry">;
 def profile : F<"profile">;

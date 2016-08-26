@@ -52,9 +52,12 @@ public:
     Archive::Child c = member->second;
 
     // Don't return a member already returned
-    ErrorOr<StringRef> buf = c.getBuffer();
-    if (!buf)
+    Expected<StringRef> buf = c.getBuffer();
+    if (!buf) {
+      // TODO: Actually report errors helpfully.
+      consumeError(buf.takeError());
       return nullptr;
+    }
     const char *memberStart = buf->data();
     if (_membersInstantiated.count(memberStart))
       return nullptr;
@@ -132,9 +135,9 @@ protected:
 private:
   std::error_code instantiateMember(Archive::Child member,
                                     std::unique_ptr<File> &result) const {
-    ErrorOr<llvm::MemoryBufferRef> mbOrErr = member.getMemoryBufferRef();
-    if (std::error_code ec = mbOrErr.getError())
-      return ec;
+    Expected<llvm::MemoryBufferRef> mbOrErr = member.getMemoryBufferRef();
+    if (!mbOrErr)
+      return errorToErrorCode(mbOrErr.takeError());
     llvm::MemoryBufferRef mb = mbOrErr.get();
     std::string memberPath = (_archive->getFileName() + "("
                            + mb.getBufferIdentifier() + ")").str();
@@ -166,9 +169,9 @@ private:
                                        << _archive->getFileName() << "':\n");
     for (const Archive::Symbol &sym : _archive->symbols()) {
       StringRef name = sym.getName();
-      ErrorOr<Archive::Child> memberOrErr = sym.getMember();
-      if (std::error_code ec = memberOrErr.getError())
-        return ec;
+      Expected<Archive::Child> memberOrErr = sym.getMember();
+      if (!memberOrErr)
+        return errorToErrorCode(memberOrErr.takeError());
       Archive::Child member = memberOrErr.get();
       DEBUG_WITH_TYPE("FileArchive",
                       llvm::dbgs()

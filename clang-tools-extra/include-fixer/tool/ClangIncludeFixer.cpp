@@ -29,6 +29,7 @@ using clang::include_fixer::IncludeFixerContext;
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(IncludeFixerContext)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::HeaderInfo)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::QuerySymbolInfo)
 
 namespace llvm {
 namespace yaml {
@@ -70,8 +71,9 @@ template <> struct MappingTraits<IncludeFixerContext::QuerySymbolInfo> {
 
 template <> struct MappingTraits<IncludeFixerContext> {
   static void mapping(IO &IO, IncludeFixerContext &Context) {
-    IO.mapRequired("QuerySymbolInfo", Context.QuerySymbol);
+    IO.mapRequired("QuerySymbolInfos", Context.QuerySymbolInfos);
     IO.mapRequired("HeaderInfos", Context.HeaderInfos);
+    IO.mapRequired("FilePath", Context.FilePath);
   }
 };
 } // namespace yaml
@@ -118,10 +120,11 @@ cl::opt<bool> OutputHeaders(
     cl::desc("Print the symbol being queried and all its relevant headers in\n"
              "JSON format to stdout:\n"
              "  {\n"
-             "    \"QuerySymbolInfo\": {\n"
-             "       \"RawIdentifier\": \"foo\",\n"
-             "       \"Range\": {\"Offset\": 0, \"Length\": 3}\n"
-             "    },\n"
+             "    \"FilePath\": \"/path/to/foo.cc\",\n"
+             "    \"QuerySymbolInfos\": [\n"
+             "       {\"RawIdentifier\": \"foo\",\n"
+             "        \"Range\": {\"Offset\": 0, \"Length\": 3}}\n"
+             "    ],\n"
              "    \"HeaderInfos\": [ {\"Header\": \"\\\"foo_a.h\\\"\",\n"
              "                      \"QualifiedName\": \"a::foo\"} ]\n"
              "  }"),
@@ -133,17 +136,18 @@ cl::opt<std::string> InsertHeader(
              "The result is written to stdout. It is currently used for\n"
              "editor integration. Support YAML/JSON format:\n"
              "  -insert-header=\"{\n"
-             "     QuerySymbolInfo: {\n"
-             "       RawIdentifier: foo,\n"
-             "       Range: {Offset: 0, Length: 3}\n"
-             "     },\n"
+             "     FilePath: \"/path/to/foo.cc\",\n"
+             "     QuerySymbolInfos: [\n"
+             "       {RawIdentifier: foo,\n"
+             "        Range: {Offset: 0, Length: 3}}\n"
+             "     ],\n"
              "     HeaderInfos: [ {Headers: \"\\\"foo_a.h\\\"\",\n"
              "                     QualifiedName: \"a::foo\"} ]}\""),
     cl::init(""), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string>
     Style("style",
-          cl::desc("Fallback style for reformatting after inserting new "
+          cl::desc("Fallback style for reformatting after inserting new\n"
                    "headers if there is no clang-format config file found."),
           cl::init("llvm"), cl::cat(IncludeFixerCategory));
 
@@ -202,13 +206,18 @@ createSymbolIndexManager(StringRef FilePath) {
 
 void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
   OS << "{\n"
-        "  \"QuerySymbolInfo\": {\n"
-        "     \"RawIdentifier\": \""
-     << Context.getSymbolIdentifier() << "\",\n";
-  OS << "     \"Range\": {";
-  OS << " \"Offset\":" << Context.getSymbolRange().getOffset() << ",";
-  OS << " \"Length\":" << Context.getSymbolRange().getLength() << " }\n";
-  OS << "  },\n";
+     << "  \"FilePath\": \""
+     << llvm::yaml::escape(Context.getFilePath()) << "\",\n"
+     << "  \"QuerySymbolInfos\": [\n";
+  for (const auto &Info : Context.getQuerySymbolInfos()) {
+    OS << "     {\"RawIdentifier\": \"" << Info.RawIdentifier << "\",\n";
+    OS << "      \"Range\":{";
+    OS << "\"Offset\":" << Info.Range.getOffset() << ",";
+    OS << "\"Length\":" << Info.Range.getLength() << "}}";
+    if (&Info != &Context.getQuerySymbolInfos().back())
+      OS << ",\n";
+  }
+  OS << "\n  ],\n";
   OS << "  \"HeaderInfos\": [\n";
   const auto &HeaderInfos = Context.getHeaderInfos();
   for (const auto &Info : HeaderInfos) {
@@ -247,9 +256,6 @@ int includeFixerMain(int argc, const char **argv) {
     tool.mapVirtualFile(options.getSourcePathList().front(), Code->getBuffer());
   }
 
-  StringRef FilePath = options.getSourcePathList().front();
-  format::FormatStyle InsertStyle = format::getStyle("file", FilePath, Style);
-
   if (!InsertHeader.empty()) {
     if (!STDINMode) {
       errs() << "Should be running in STDIN mode\n";
@@ -275,16 +281,7 @@ int includeFixerMain(int argc, const char **argv) {
       return 1;
     }
 
-    auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
-        Code->getBuffer(), FilePath, Context.getHeaderInfos().front().Header,
-        InsertStyle);
-    if (!Replacements) {
-      errs() << "Failed to create header insertion replacement: "
-             << llvm::toString(Replacements.takeError()) << "\n";
-      return 1;
-    }
-
-    // If a header have multiple symbols, we won't add the missing namespace
+    // If a header has multiple symbols, we won't add the missing namespace
     // qualifiers because we don't know which one is exactly used.
     //
     // Check whether all elements in HeaderInfos have the same qualified name.
@@ -294,10 +291,17 @@ int includeFixerMain(int argc, const char **argv) {
            const IncludeFixerContext::HeaderInfo &RHS) {
           return LHS.QualifiedName == RHS.QualifiedName;
         });
-    if (IsUniqueQualifiedName)
-      Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),
-                            Context.getSymbolRange().getLength(),
-                            Context.getHeaderInfos().front().QualifiedName});
+    format::FormatStyle InsertStyle =
+        format::getStyle("file", Context.getFilePath(), Style);
+    auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
+        Code->getBuffer(), Context, InsertStyle,
+        /*AddQualifiers=*/IsUniqueQualifiedName);
+    if (!Replacements) {
+      errs() << "Failed to create replacements: "
+             << llvm::toString(Replacements.takeError()) << "\n";
+      return 1;
+    }
+
     auto ChangedCode =
         tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
     if (!ChangedCode) {
@@ -315,8 +319,8 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
 
   // Now run our tool.
-  include_fixer::IncludeFixerContext Context;
-  include_fixer::IncludeFixerActionFactory Factory(*SymbolIndexMgr, Context,
+  std::vector<include_fixer::IncludeFixerContext> Contexts;
+  include_fixer::IncludeFixerActionFactory Factory(*SymbolIndexMgr, Contexts,
                                                    Style, MinimizeIncludePaths);
 
   if (tool.run(&Factory) != 0) {
@@ -325,47 +329,49 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
   }
 
+  assert(!Contexts.empty());
+
   if (OutputHeaders) {
-    writeToJson(llvm::outs(), Context);
+    // FIXME: Print contexts of all processing files instead of the first one.
+    writeToJson(llvm::outs(), Contexts.front());
     return 0;
   }
 
-  if (Context.getHeaderInfos().empty())
-    return 0;
+  std::vector<tooling::Replacements> FixerReplacements;
+  for (const auto &Context : Contexts) {
+    StringRef FilePath = Context.getFilePath();
+    format::FormatStyle InsertStyle = format::getStyle("file", FilePath, Style);
+    auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
+    if (!Buffer) {
+      errs() << "Couldn't open file: " + FilePath.str() + ": "
+             << Buffer.getError().message() + "\n";
+      return 1;
+    }
 
-  auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
-  if (!Buffer) {
-    errs() << "Couldn't open file: " << FilePath;
-    return 1;
+    auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
+        Buffer.get()->getBuffer(), Context, InsertStyle);
+    if (!Replacements) {
+      errs() << "Failed to create replacement: "
+             << llvm::toString(Replacements.takeError()) << "\n";
+      return 1;
+    }
+    FixerReplacements.push_back(*Replacements);
   }
 
-  auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
-      /*Code=*/Buffer.get()->getBuffer(), FilePath,
-      Context.getHeaderInfos().front().Header, InsertStyle);
-  if (!Replacements) {
-    errs() << "Failed to create header insertion replacement: "
-           << llvm::toString(Replacements.takeError()) << "\n";
-    return 1;
+  if (!Quiet) {
+    for (const auto &Context : Contexts) {
+      if (!Context.getHeaderInfos().empty()) {
+        llvm::errs() << "Added #include "
+                     << Context.getHeaderInfos().front().Header << " for "
+                     << Context.getFilePath() << "\n";
+      }
+    }
   }
-
-  if (!Quiet)
-    llvm::errs() << "Added #include" << Context.getHeaderInfos().front().Header;
-
-  // Add missing namespace qualifiers to the unidentified symbol.
-  Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),
-                        Context.getSymbolRange().getLength(),
-                        Context.getHeaderInfos().front().QualifiedName});
-
-  // Set up a new source manager for applying the resulting replacements.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
-  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
-  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
-  SourceManager SM(Diagnostics, tool.getFiles());
-  Diagnostics.setClient(&DiagnosticPrinter, false);
 
   if (STDINMode) {
-    auto ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
+    assert(FixerReplacements.size() == 1);
+    auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(),
+                                                     FixerReplacements.front());
     if (!ChangedCode) {
       llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
       return 1;
@@ -374,9 +380,21 @@ int includeFixerMain(int argc, const char **argv) {
     return 0;
   }
 
+  // Set up a new source manager for applying the resulting replacements.
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
+  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
+  SourceManager SM(Diagnostics, tool.getFiles());
+  Diagnostics.setClient(&DiagnosticPrinter, false);
+
   // Write replacements to disk.
   Rewriter Rewrites(SM, LangOptions());
-  tooling::applyAllReplacements(*Replacements, Rewrites);
+  for (const auto Replacement : FixerReplacements) {
+    if (!tooling::applyAllReplacements(Replacement, Rewrites)) {
+      llvm::errs() << "Failed to apply replacements.\n";
+      return 1;
+    }
+  }
   return Rewrites.overwriteChangedFiles();
 }
 

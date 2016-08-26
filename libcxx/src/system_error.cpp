@@ -258,6 +258,7 @@ __throw_system_error(int ev, const char* what_arg)
 #else
     (void)ev;
     (void)what_arg;
+    _VSTD::abort();
 #endif
 }
 

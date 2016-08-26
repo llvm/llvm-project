@@ -302,7 +302,11 @@ template <class ELFT> void ICF<ELFT>::run() {
   // the same group are consecutive in the vector.
   std::stable_sort(V.begin(), V.end(),
                    [](InputSection<ELFT> *A, InputSection<ELFT> *B) {
-                     return A->GroupId < B->GroupId;
+                     if (A->GroupId != B->GroupId)
+                       return A->GroupId < B->GroupId;
+                     // Within a group, put the highest alignment
+                     // requirement first, so that's the one we'll keep.
+                     return B->Alignment < A->Alignment;
                    });
 
   // Compare static contents and assign unique IDs for each static content.

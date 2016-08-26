@@ -117,9 +117,8 @@ template <class ELFT> uint8_t getFdeEncoding(ArrayRef<uint8_t> D) {
   StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());
   D = D.slice(Aug.size() + 1);
 
-  // Code alignment factor should always be 1 for .eh_frame.
-  if (readByte(D) != 1)
-    fatal("CIE code alignment must be 1");
+  // Skip code alignment factor.
+  skipLeb128(D);
 
   // Skip data alignment factor.
   skipLeb128(D);

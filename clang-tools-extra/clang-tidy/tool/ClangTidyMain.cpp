@@ -176,7 +176,7 @@ This option overrides the value read from a
 
 static cl::opt<std::string> ExportFixes("export-fixes", cl::desc(R"(
 YAML file to store suggested fixes in. The
-stored fixes can be applied to the input sorce
+stored fixes can be applied to the input source
 code with clang-apply-replacements.
 )"),
                                         cl::value_desc("filename"),
@@ -453,6 +453,11 @@ static int LLVM_ATTRIBUTE_UNUSED MiscModuleAnchorDestination =
 extern volatile int ModernizeModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ModernizeModuleAnchorDestination =
     ModernizeModuleAnchorSource;
+
+// This anchor is used to force the linker to link the MPIModule.
+extern volatile int MPIModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
+          MPIModuleAnchorSource;
 
 // This anchor is used to force the linker to link the PerformanceModule.
 extern volatile int PerformanceModuleAnchorSource;

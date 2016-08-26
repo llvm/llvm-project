@@ -85,7 +85,7 @@ SwiftLanguageRuntime::~SwiftLanguageRuntime()
 
 SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     LanguageRuntime (process),
-    m_negative_cache_mutex(Mutex::eMutexTypeNormal),
+    m_negative_cache_mutex(),
     m_SwiftNativeNSErrorISA(),
     m_memory_reader_sp(),
     m_promises_map(),

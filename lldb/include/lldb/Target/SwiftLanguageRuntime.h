@@ -15,6 +15,7 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 #include <tuple>
 #include <vector>
 // Other libraries and framework includes
@@ -531,7 +532,7 @@ protected:
     GetScratchSwiftASTContext ();
     
     std::unordered_set<std::string> m_library_negative_cache;  // We have to load swift dependent libraries by hand,
-    Mutex                           m_negative_cache_mutex;    // but if they are missing, we shouldn't keep trying.
+    std::mutex                      m_negative_cache_mutex;    // but if they are missing, we shouldn't keep trying.
     
     llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 

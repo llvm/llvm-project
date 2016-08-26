@@ -272,6 +272,8 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
         return false;
     }
 
+    error.Clear();
+        
     DiagnosticManager diagnostics;
 
     if (condition_hash != m_condition_hash || !m_user_expression_sp || !m_user_expression_sp->MatchesContext(exe_ctx))
@@ -282,7 +284,6 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
         if (comp_unit)
             language = comp_unit->GetLanguage();
         
-        Error error;
         m_user_expression_sp.reset(GetTarget().GetUserExpressionForLanguage(condition_text,
                                                                             nullptr,
                                                                             language,
@@ -302,7 +303,7 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
             error.SetErrorStringWithFormat("Couldn't parse conditional expression:\n%s",
                                            diagnostics.GetString().c_str());
             m_user_expression_sp.reset();
-            return false;
+            return true;
         }
 
         m_condition_hash = condition_hash;

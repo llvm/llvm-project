@@ -22,6 +22,7 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/PosixApi.h"
 
 #include <limits.h>
 

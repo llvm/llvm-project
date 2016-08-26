@@ -884,8 +884,8 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDIN (StringExtractorGDBRemote &
     FileAction file_action;
     std::string path;
     packet.GetHexByteString(path);
-    const bool read = false;
-    const bool write = true;
+    const bool read = true;
+    const bool write = false;
     if (file_action.Open(STDIN_FILENO, FileSpec{path, false}, read, write))
     {
         m_process_launch_info.AppendFileAction(file_action);
@@ -901,8 +901,8 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDOUT (StringExtractorGDBRemote 
     FileAction file_action;
     std::string path;
     packet.GetHexByteString(path);
-    const bool read = true;
-    const bool write = false;
+    const bool read = false;
+    const bool write = true;
     if (file_action.Open(STDOUT_FILENO, FileSpec{path, false}, read, write))
     {
         m_process_launch_info.AppendFileAction(file_action);
@@ -918,8 +918,8 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDERR (StringExtractorGDBRemote 
     FileAction file_action;
     std::string path;
     packet.GetHexByteString(path);
-    const bool read = true;
-    const bool write = false;
+    const bool read = false;
+    const bool write = true;
     if (file_action.Open(STDERR_FILENO, FileSpec{path, false}, read, write))
     {
         m_process_launch_info.AppendFileAction(file_action);

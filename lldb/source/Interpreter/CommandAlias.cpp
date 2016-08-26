@@ -12,6 +12,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "lldb/Core/StreamString.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
@@ -38,7 +39,9 @@ ProcessAliasOptionsArgs (lldb::CommandObjectSP &cmd_obj_sp,
     if (options)
     {
         // See if any options were specified as part of the alias;  if so, handle them appropriately.
-        options->NotifyOptionParsingStarting ();
+        ExecutionContext exe_ctx =
+            cmd_obj_sp->GetCommandInterpreter().GetExecutionContext();
+        options->NotifyOptionParsingStarting(&exe_ctx);
         args.Unshift ("dummy_arg");
         args.ParseAliasOptions (*options, result, option_arg_vector, options_string);
         args.Shift ();

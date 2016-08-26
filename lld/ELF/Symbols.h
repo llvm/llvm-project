@@ -73,7 +73,6 @@ public:
   bool isPreemptible() const;
 
   StringRef getName() const;
-  void setName(StringRef S);
 
   uint32_t getNameOffset() const {
     assert(isLocal());
@@ -168,7 +167,7 @@ public:
   BitcodeFile *file() { return (BitcodeFile *)this->File; }
 };
 
-class DefinedCommon : public Defined {
+template <class ELFT> class DefinedCommon : public Defined {
 public:
   DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t StOther,
                 uint8_t Type, InputFile *File);
@@ -179,7 +178,7 @@ public:
 
   // The output offset of this common symbol in the output bss. Computed by the
   // writer.
-  uint64_t OffsetInBss;
+  uint64_t Offset;
 
   // The maximum alignment we have seen for this symbol.
   uint64_t Alignment;
@@ -367,6 +366,9 @@ public:
 // Some linker-generated symbols need to be created as
 // DefinedRegular symbols.
 template <class ELFT> struct ElfSym {
+  // The content for __ehdr_start symbol.
+  static DefinedRegular<ELFT> *EhdrStart;
+
   // The content for _etext and etext symbols.
   static DefinedRegular<ELFT> *Etext;
   static DefinedRegular<ELFT> *Etext2;
@@ -383,6 +385,7 @@ template <class ELFT> struct ElfSym {
   static SymbolBody *MipsGpDisp;
 };
 
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::EhdrStart;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext2;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata;
@@ -434,7 +437,8 @@ struct Symbol {
   // assume that the size and alignment of ELF64LE symbols is sufficient for any
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
-      DefinedBitcode, DefinedCommon, DefinedRegular<llvm::object::ELF64LE>,
+      DefinedBitcode, DefinedCommon<llvm::object::ELF64LE>,
+      DefinedRegular<llvm::object::ELF64LE>,
       DefinedSynthetic<llvm::object::ELF64LE>, Undefined,
       SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
       Body;

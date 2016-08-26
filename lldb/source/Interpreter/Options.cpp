@@ -31,8 +31,7 @@ using namespace lldb_private;
 //-------------------------------------------------------------------------
 // Options
 //-------------------------------------------------------------------------
-Options::Options (CommandInterpreter &interpreter) :
-    m_interpreter (interpreter),
+Options::Options () :
     m_getopt_table ()
 {
     BuildValidOptionSets();
@@ -43,17 +42,17 @@ Options::~Options ()
 }
 
 void
-Options::NotifyOptionParsingStarting ()
+Options::NotifyOptionParsingStarting(ExecutionContext *execution_context)
 {
     m_seen_options.clear();
     // Let the subclass reset its option values
-    OptionParsingStarting ();
+    OptionParsingStarting(execution_context);
 }
 
 Error
-Options::NotifyOptionParsingFinished ()
+Options::NotifyOptionParsingFinished(ExecutionContext *execution_context)
 {
-    return OptionParsingFinished ();
+    return OptionParsingFinished(execution_context);
 }
 
 void
@@ -475,11 +474,11 @@ void
 Options::GenerateOptionUsage
 (
     Stream &strm,
-    CommandObject *cmd
+    CommandObject *cmd,
+    uint32_t screen_width
 )
 {
     const bool only_print_args = cmd->IsDashDashCommand();
-    const uint32_t screen_width = m_interpreter.GetDebugger().GetTerminalWidth();
 
     const OptionDefinition *opt_defs = GetDefinitions();
     const uint32_t save_indent_level = strm.GetIndentLevel();
@@ -760,6 +759,7 @@ Options::HandleOptionCompletion
     int char_pos,
     int match_start_point,
     int max_return_elements,
+    CommandInterpreter &interpreter,
     bool &word_complete,
     lldb_private::StringList &matches
 )
@@ -882,6 +882,7 @@ Options::HandleOptionCompletion
                                                 i,
                                                 match_start_point,
                                                 max_return_elements,
+                                                interpreter,
                                                 word_complete,
                                                 matches);
                 return true;
@@ -912,6 +913,7 @@ Options::HandleOptionArgumentCompletion
     int opt_element_index,
     int match_start_point,
     int max_return_elements,
+    CommandInterpreter &interpreter,
     bool &word_complete,
     lldb_private::StringList &matches
 )
@@ -982,7 +984,7 @@ Options::HandleOptionArgumentCompletion
                 if (module_name)
                 {
                     FileSpec module_spec(module_name, false);
-                    lldb::TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
+                    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
                     // Search filters require a target...
                     if (target_sp)
                         filter_ap.reset (new SearchFilterByModule (target_sp, module_spec));
@@ -992,7 +994,7 @@ Options::HandleOptionArgumentCompletion
         }
     }
 
-    return CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter,
+    return CommandCompletions::InvokeCommonCompletionCallbacks (interpreter,
                                                                 completion_mask,
                                                                 input.GetArgumentAtIndex (opt_arg_pos),
                                                                 match_start_point,
@@ -1056,7 +1058,8 @@ OptionGroupOptions::Finalize ()
 
 Error
 OptionGroupOptions::SetOptionValue (uint32_t option_idx,  
-                                    const char *option_value)
+                                    const char *option_value,
+                                    ExecutionContext *execution_context)
 {
     // After calling OptionGroupOptions::Append(...), you must finalize the groups
     // by calling OptionGroupOptions::Finlize()
@@ -1065,9 +1068,9 @@ OptionGroupOptions::SetOptionValue (uint32_t option_idx,
     Error error;
     if (option_idx < m_option_infos.size())
     {
-        error = m_option_infos[option_idx].option_group->SetOptionValue (m_interpreter, 
-                                                                         m_option_infos[option_idx].option_index,
-                                                                         option_value);
+        error = m_option_infos[option_idx].option_group->SetOptionValue (m_option_infos[option_idx].option_index,
+                                                                         option_value,
+                                                                         execution_context);
         
     }
     else
@@ -1078,7 +1081,7 @@ OptionGroupOptions::SetOptionValue (uint32_t option_idx,
 }
 
 void
-OptionGroupOptions::OptionParsingStarting ()
+OptionGroupOptions::OptionParsingStarting (ExecutionContext *execution_context)
 {
     std::set<OptionGroup*> group_set;
     OptionInfos::iterator pos, end = m_option_infos.end();
@@ -1087,13 +1090,13 @@ OptionGroupOptions::OptionParsingStarting ()
         OptionGroup* group = pos->option_group;
         if (group_set.find(group) == group_set.end())
         {
-            group->OptionParsingStarting (m_interpreter);
+            group->OptionParsingStarting(execution_context);
             group_set.insert(group);
         }
     }
 }
 Error
-OptionGroupOptions::OptionParsingFinished ()
+OptionGroupOptions::OptionParsingFinished (ExecutionContext *execution_context)
 {
     std::set<OptionGroup*> group_set;
     Error error;
@@ -1103,7 +1106,7 @@ OptionGroupOptions::OptionParsingFinished ()
         OptionGroup* group = pos->option_group;
         if (group_set.find(group) == group_set.end())
         {
-            error = group->OptionParsingFinished (m_interpreter);
+            error = group->OptionParsingFinished (execution_context);
             group_set.insert(group);
             if (error.Fail())
                 return error;

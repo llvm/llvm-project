@@ -55,7 +55,7 @@ public:
 
     void push(const value_type& x);
     void push(value_type&& x);
-    template <class... Args> void emplace(Args&&... args);
+    template <class... Args> reference emplace(Args&&... args);
     void pop();
 
     void swap(stack& c) noexcept(is_nothrow_swappable_v<Container>)
@@ -199,8 +199,8 @@ public:
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
-        void emplace(_Args&&... __args)
-        {c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+        reference emplace(_Args&&... __args)
+        { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY

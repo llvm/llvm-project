@@ -44,16 +44,16 @@ OptionGroupUInt64::~OptionGroupUInt64 ()
 }
 
 Error
-OptionGroupUInt64::SetOptionValue (CommandInterpreter &interpreter,
-                                   uint32_t option_idx,
-                                   const char *option_arg)
+OptionGroupUInt64::SetOptionValue(uint32_t option_idx,
+                                   const char *option_arg,
+                                  ExecutionContext *execution_context)
 {
     Error error (m_value.SetValueFromString (option_arg));
     return error;
 }
 
 void
-OptionGroupUInt64::OptionParsingStarting (CommandInterpreter &interpreter)
+OptionGroupUInt64::OptionParsingStarting(ExecutionContext *execution_context)
 {
     m_value.Clear();
 }

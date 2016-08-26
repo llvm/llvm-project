@@ -309,13 +309,24 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
 @
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
-#if !defined(__ARM_ARCH_ISA_ARM)
-  stm r0, {r0-r7}
+#if !defined(__ARM_ARCH_ISA_ARM) && __ARM_ARCH_ISA_THUMB == 1
+  stm r0!, {r0-r7}
+  mov r1, r8
+  mov r2, r9
+  mov r3, r10
+  stm r0!, {r1-r3}
+  mov r1, r11
   mov r2, sp
   mov r3, lr
-  str r2, [r0, #52]
-  str r3, [r0, #56]
-  str r3, [r0, #60]  @ store return address as pc
+  str r1, [r0, #0]   @ r11
+  @ r12 does not need storing, it it the intra-procedure-call scratch register
+  str r2, [r0, #8]   @ sp
+  str r3, [r0, #12]  @ lr
+  str r3, [r0, #16]  @ store return address as pc
+  @ T1 does not have a non-cpsr-clobbering register-zeroing instruction.
+  @ It is safe to use here though because we are about to return, and cpsr is
+  @ not expected to be preserved.
+  movs r0, #0        @ return UNW_ESUCCESS
 #else
   @ 32bit thumb-2 restrictions for stm:
   @ . the sp (r13) cannot be in the list
@@ -324,13 +335,6 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   str sp, [r0, #52]
   str lr, [r0, #56]
   str lr, [r0, #60]  @ store return address as pc
-#endif
-#if __ARM_ARCH_ISA_THUMB == 1
-  @ T1 does not have a non-cpsr-clobbering register-zeroing instruction.
-  @ It is safe to use here though because we are about to return, and cpsr is
-  @ not expected to be preserved.
-  movs r0, #0        @ return UNW_ESUCCESS
-#else
   mov r0, #0         @ return UNW_ESUCCESS
 #endif
   JMP(lr)
@@ -464,3 +468,6 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   l.sw     120(r3), r30
   l.sw     124(r3), r31
 #endif
+
+NO_EXEC_STACK_DIRECTIVE
+

@@ -4,7 +4,6 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
-  common/Condition.cpp
   common/File.cpp
   common/FileCache.cpp
   common/FileSpec.cpp
@@ -17,7 +16,6 @@ add_host_subdirectory(common
   common/HostThread.cpp
   common/IOObject.cpp
   common/LockFileBase.cpp
-  common/Mutex.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeBreakpoint.cpp
   common/NativeBreakpointList.cpp
@@ -60,7 +58,6 @@ add_host_subdirectory(posix
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
-    windows/Condition.cpp
     windows/ConnectionGenericFileWindows.cpp
     windows/EditLineWin.cpp
     windows/FileSystem.cpp
@@ -69,7 +66,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/HostProcessWindows.cpp
     windows/HostThreadWindows.cpp
     windows/LockFileWindows.cpp
-    windows/Mutex.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
     windows/ProcessRunLock.cpp
@@ -120,24 +116,17 @@ else()
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
         android/LibcGlue.cpp
-        android/ProcessLauncherAndroid.cpp
-        linux/AbstractSocket.cpp
-        linux/Host.cpp
-        linux/HostInfoLinux.cpp
-        linux/HostThreadLinux.cpp
-        linux/LibcGlue.cpp
-        linux/ThisThread.cpp
-        )
-    else()
-      add_host_subdirectory(linux
-        linux/AbstractSocket.cpp
-        linux/Host.cpp
-        linux/HostInfoLinux.cpp
-        linux/HostThreadLinux.cpp
-        linux/LibcGlue.cpp
-        linux/ThisThread.cpp
         )
     endif()
+    add_host_subdirectory(linux
+      linux/AbstractSocket.cpp
+      linux/Host.cpp
+      linux/HostInfoLinux.cpp
+      linux/HostThreadLinux.cpp
+      linux/LibcGlue.cpp
+      linux/ProcessLauncherLinux.cpp
+      linux/ThisThread.cpp
+      )
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     add_host_subdirectory(freebsd
@@ -154,19 +143,6 @@ else()
       netbsd/HostThreadNetBSD.cpp
       netbsd/ThisThread.cpp
       )
-  endif()
-endif()
-
-if (${get_python_libdir})
-  # Call a python script to gather the arch-specific libdir for
-  # modules like the lldb module.
-  execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/get_relative_lib_dir.py
-    RESULT_VARIABLE get_libdir_status
-    OUTPUT_VARIABLE relative_libdir
-    )
-  if (get_libdir_status EQUAL 0)
-    add_definitions(-DLLDB_PYTHON_RELATIVE_LIBDIR="${relative_libdir}")
   endif()
 endif()
 

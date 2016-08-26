@@ -10,6 +10,10 @@ management of ``#include`` directives in any file.
 an automated way of adding ``#include`` directives for missing symbols in one
 translation unit.
 
+While inserting missing ``#include``, :program:`clang-include-fixer` adds
+missing namespace qualifiers to all instances of an unidentified symbol if
+the symbol is missing some prefix namespace qualifiers.
+
 Setup
 =====
 
@@ -31,7 +35,7 @@ so only implementation files can be handled by tools.
 .. _How To Setup Tooling For LLVM: http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 
 Creating a Symbol Index From a Compilation Database
-------------------------------------------------------
+---------------------------------------------------
 
 The include fixer contains :program:`find-all-symbols`, a tool to create a
 symbol database in YAML format from a compilation database by parsing all
@@ -54,16 +58,20 @@ database for LLVM, any project built by CMake should follow similar steps.
     Added #include "foo.h"
 
 Integrate with Vim
--------------------
+------------------
 To run `clang-include-fixer` on a potentially unsaved buffer in Vim. Add the
 following key binding to your ``.vimrc``:
 
 .. code-block:: console
 
-  map ,cf :pyf path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/clang-include-fixer.py<cr>
+  noremap <leader>cf :pyf path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/clang-include-fixer.py<cr>
 
-This enables `clang-include-fixer` for NORMAL and VISUAL mode. Change ``,cf`` to
-another binding if you need clang-include-fixer on a different key.
+This enables `clang-include-fixer` for NORMAL and VISUAL mode. Change
+`<leader>cf` to another binding if you need clang-include-fixer on a different
+key. The `<leader> key
+<http://vim.wikia.com/wiki/Mapping_keys_in_Vim_-_Tutorial_(Part_3)#Map_leader>`_
+is a reference to a specific key defined by the mapleader variable and is bound
+to backslash by default.
 
 Make sure vim can find :program:`clang-include-fixer`:
 
@@ -75,10 +83,29 @@ You can customize the number of headers being shown by setting
 
 See ``clang-include-fixer.py`` for more details.
 
+Integrate with Emacs
+--------------------
+To run `clang-include-fixer` on a potentially unsaved buffer in Emacs.
+Ensure that Emacs finds ``clang-include-fixer.el`` by adding the directory containing the file to the ``load-path``
+and requiring the `clang-include-fixer` in your ```.emacs``:
+
+.. code-block:: console
+
+ (add-to-list 'load-path "path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/"
+ (require 'clang-include-fixer)
+
+Within Emacs the tool can be invoked with the command ``M-x clang-include-fixer``.
+
+Make sure Emacs can find :program:`clang-include-fixer`:
+
+- Add the path to :program:`clang-include-fixer` to the PATH environment variable.
+
+See ``clang-include-fixer.el`` for more details.
+
 How it Works
 ============
 
-To get the most information out of clang at parse time,
+To get the most information out of Clang at parse time,
 :program:`clang-include-fixer` runs in tandem with the parse and receives
 callbacks from Clang's semantic analysis. In particular it reuses the existing
 support for typo corrections. Whenever Clang tries to correct a potential typo

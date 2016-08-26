@@ -177,16 +177,6 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
     return NumberIterations + 1;
 }
 
-struct SubtreeReferences {
-  LoopInfo &LI;
-  ScalarEvolution &SE;
-  Scop &S;
-  ValueMapT &GlobalMap;
-  SetVector<Value *> &Values;
-  SetVector<const SCEV *> &SCEVs;
-  BlockGenerator &BlockGen;
-};
-
 /// @brief Extract the values and SCEVs needed to generate code for a block.
 static int findReferencesInBlock(struct SubtreeReferences &References,
                                  const ScopStmt *Stmt, const BasicBlock *BB) {
@@ -203,17 +193,8 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   return 0;
 }
 
-/// Extract the out-of-scop values and SCEVs referenced from a ScopStmt.
-///
-/// This includes the SCEVUnknowns referenced by the SCEVs used in the
-/// statement and the base pointers of the memory accesses. For scalar
-/// statements we force the generation of alloca memory locations and list
-/// these locations in the set of out-of-scop values as well.
-///
-/// @param Stmt    The statement for which to extract the information.
-/// @param UserPtr A void pointer that can be casted to a SubtreeReferences
-///                structure.
-static isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
+isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                               bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())
@@ -236,7 +217,8 @@ static isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
       continue;
     }
 
-    References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
+    if (CreateScalarRefs)
+      References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
   }
 
   return isl_stat_ok;
@@ -1076,14 +1058,14 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   if (ValueMap.count(MA->getAccessInstruction()))
     return true;
 
-  // Check for recurrsion which can be caused by additional constraints, e.g.,
-  // non-finitie loop contraints. In such a case we have to bail out and insert
+  // Check for recursion which can be caused by additional constraints, e.g.,
+  // non-finite loop constraints. In such a case we have to bail out and insert
   // a "false" runtime check that will cause the original code to be executed.
   auto PtrId = std::make_pair(IAClass.IdentifyingPointer, IAClass.AccessType);
   if (!PreloadedPtrs.insert(PtrId).second)
     return false;
 
-  // The exectution context of the IAClass.
+  // The execution context of the IAClass.
   isl_set *&ExecutionCtx = IAClass.ExecutionContext;
 
   // If the base pointer of this class is dependent on another one we have to
@@ -1167,6 +1149,32 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   return true;
 }
 
+void IslNodeBuilder::allocateNewArrays() {
+  for (auto &SAI : S.arrays()) {
+    if (SAI->getBasePtr())
+      continue;
+
+    Type *NewArrayType = nullptr;
+    for (unsigned i = SAI->getNumberOfDimensions() - 1; i >= 1; i--) {
+      auto *DimSize = SAI->getDimensionSize(i);
+      unsigned UnsignedDimSize = static_cast<const SCEVConstant *>(DimSize)
+                                     ->getAPInt()
+                                     .getLimitedValue();
+
+      if (!NewArrayType)
+        NewArrayType = SAI->getElementType();
+
+      NewArrayType = ArrayType::get(NewArrayType, UnsignedDimSize);
+    }
+
+    auto InstIt =
+        Builder.GetInsertBlock()->getParent()->getEntryBlock().getTerminator();
+    Value *CreatedArray =
+        new AllocaInst(NewArrayType, SAI->getName(), &*InstIt);
+    SAI->setBasePtr(CreatedArray);
+  }
+}
+
 bool IslNodeBuilder::preloadInvariantLoads() {
 
   auto &InvariantEquivClasses = S.getInvariantAccesses();
@@ -1214,7 +1222,37 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
 }
 
 Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
-  Instruction *InsertLocation = &*--(Builder.GetInsertBlock()->end());
+  /// We pass the insert location of our Builder, as Polly ensures during IR
+  /// generation that there is always a valid CFG into which instructions are
+  /// inserted. As a result, the insertpoint is known to be always followed by a
+  /// terminator instruction. This means the insert point may be specified by a
+  /// terminator instruction, but it can never point to an ->end() iterator
+  /// which does not have a corresponding instruction. Hence, dereferencing
+  /// the insertpoint to obtain an instruction is known to be save.
+  ///
+  /// We also do not need to update the Builder here, as new instructions are
+  /// always inserted _before_ the given InsertLocation. As a result, the
+  /// insert location remains valid.
+  assert(Builder.GetInsertBlock()->end() != Builder.GetInsertPoint() &&
+         "Insert location points after last valid instruction");
+  Instruction *InsertLocation = &*Builder.GetInsertPoint();
   return expandCodeFor(S, SE, DL, "polly", Expr, Expr->getType(),
                        InsertLocation, &ValueMap);
+}
+
+/// The AST expression we generate to perform the run-time check assumes
+/// computations on integer types of infinite size. As we only use 64-bit
+/// arithmetic we check for overflows, in case of which we set the result
+/// of this run-time check to false to be cosnservatively correct,
+Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
+  auto ExprBuilder = getExprBuilder();
+  ExprBuilder.setTrackOverflow(true);
+  Value *RTC = ExprBuilder.create(Condition);
+  if (!RTC->getType()->isIntegerTy(1))
+    RTC = Builder.CreateIsNotNull(RTC);
+  Value *OverflowHappened =
+      Builder.CreateNot(ExprBuilder.getOverflowState(), "polly.rtc.overflown");
+  RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
+  ExprBuilder.setTrackOverflow(false);
+  return RTC;
 }

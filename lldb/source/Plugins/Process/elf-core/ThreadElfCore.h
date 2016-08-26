@@ -21,17 +21,15 @@
 
 struct compat_timeval
 {
-    int64_t tv_sec;
-    int32_t tv_usec;
+    alignas(8) uint64_t tv_sec;
+    alignas(8) uint64_t tv_usec;
 };
 
 // PRSTATUS structure's size differs based on architecture.
-// Currently parsing done only for x86-64 architecture by
-// simply reading data from the buffer.
-// The following macros are used to specify the size.
-// Calculating size using sizeof() wont work because of padding.
-#define ELFLINUXPRSTATUS64_SIZE (112)
-#define ELFLINUXPRPSINFO64_SIZE (132)
+// This is the layout in the x86-64 arch.
+// In the i386 case we parse it manually and fill it again
+// in the same structure
+// The gp registers are also a part of this struct, but they are handled separately
 
 #undef si_signo
 #undef si_code
@@ -39,30 +37,34 @@ struct compat_timeval
 
 struct ELFLinuxPrStatus
 {
-    int32_t         si_signo;
-    int32_t         si_code;
-    int32_t         si_errno;
+    int32_t si_signo;
+    int32_t si_code;
+    int32_t si_errno;
 
-    int16_t         pr_cursig;
+    int16_t pr_cursig;
 
-    uint64_t        pr_sigpend;
-    uint64_t        pr_sighold;
+    alignas(8) uint64_t pr_sigpend;
+    alignas(8) uint64_t pr_sighold;
 
-    uint32_t        pr_pid;
-    uint32_t        pr_ppid;
-    uint32_t        pr_pgrp;
-    uint32_t        pr_sid;
+    uint32_t pr_pid;
+    uint32_t pr_ppid;
+    uint32_t pr_pgrp;
+    uint32_t pr_sid;
 
-    compat_timeval  pr_utime;
-    compat_timeval  pr_stime;
-    compat_timeval  pr_cutime;
-    compat_timeval  pr_cstime;
+    compat_timeval pr_utime;
+    compat_timeval pr_stime;
+    compat_timeval pr_cutime;
+    compat_timeval pr_cstime;
 
     ELFLinuxPrStatus();
 
-    bool
+    lldb_private::Error
     Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
 
+    // Return the bytesize of the structure
+    // 64 bit - just sizeof
+    // 32 bit - hardcoded because we are reusing the struct, but some of the members are smaller -
+    // so the layout is not the same
     static size_t
     GetSize(lldb_private::ArchSpec &arch)
     {
@@ -70,34 +72,47 @@ struct ELFLinuxPrStatus
         {
             case lldb_private::ArchSpec::eCore_s390x_generic:
             case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-                return ELFLINUXPRSTATUS64_SIZE;
+                return sizeof(ELFLinuxPrStatus);
+            case lldb_private::ArchSpec::eCore_x86_32_i386:
+            case lldb_private::ArchSpec::eCore_x86_32_i486:
+                return 72;
             default:
                 return 0;
         }
     }
 };
 
+static_assert(sizeof(ELFLinuxPrStatus) == 112, "sizeof ELFLinuxPrStatus is not correct!");
+
+// PRPSINFO structure's size differs based on architecture.
+// This is the layout in the x86-64 arch case.
+// In the i386 case we parse it manually and fill it again
+// in the same structure
 struct ELFLinuxPrPsInfo
 {
-    char        pr_state;
-    char        pr_sname;
-    char        pr_zomb;
-    char        pr_nice;
-    uint64_t    pr_flag;
-    uint32_t    pr_uid;
-    uint32_t    pr_gid;
-    int32_t     pr_pid;
-    int32_t     pr_ppid;
-    int32_t     pr_pgrp;
-    int32_t     pr_sid;
-    char        pr_fname[16];
-    char        pr_psargs[80];
+    char pr_state;
+    char pr_sname;
+    char pr_zomb;
+    char pr_nice;
+    alignas(8) uint64_t pr_flag;
+    uint32_t pr_uid;
+    uint32_t pr_gid;
+    int32_t pr_pid;
+    int32_t pr_ppid;
+    int32_t pr_pgrp;
+    int32_t pr_sid;
+    char pr_fname[16];
+    char pr_psargs[80];
 
     ELFLinuxPrPsInfo();
 
-    bool
+    lldb_private::Error
     Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
 
+    // Return the bytesize of the structure
+    // 64 bit - just sizeof
+    // 32 bit - hardcoded because we are reusing the struct, but some of the members are smaller -
+    // so the layout is not the same
     static size_t
     GetSize(lldb_private::ArchSpec &arch)
     {
@@ -105,12 +120,17 @@ struct ELFLinuxPrPsInfo
         {
             case lldb_private::ArchSpec::eCore_s390x_generic:
             case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-                return ELFLINUXPRPSINFO64_SIZE;
+                return sizeof(ELFLinuxPrPsInfo);
+            case lldb_private::ArchSpec::eCore_x86_32_i386:
+            case lldb_private::ArchSpec::eCore_x86_32_i486:
+                return 124;
             default:
                 return 0;
         }
     }
 };
+
+static_assert(sizeof(ELFLinuxPrPsInfo) == 136, "sizeof ELFLinuxPrPsInfo is not correct!");
 
 struct ThreadData
 {

@@ -30,7 +30,7 @@ __start:
 # CHECK-NEXT:   SectionHeaderOffset: 0x30088
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     EF_MIPS_ABI_O32
-# CHECK-NEXT:     EF_MIPS_ARCH_32R2
+# CHECK-NEXT:     EF_MIPS_ARCH_32
 # CHECK-NEXT:     EF_MIPS_CPIC
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 52
@@ -83,7 +83,7 @@ __start:
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 8
-# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:     EntrySize: 24
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 3

@@ -556,6 +556,7 @@ DWARFFormValue::IsBlockForm(const dw_form_t form)
 {
     switch (form)
     {
+    case DW_FORM_exprloc:
     case DW_FORM_block:
     case DW_FORM_block1:
     case DW_FORM_block2:

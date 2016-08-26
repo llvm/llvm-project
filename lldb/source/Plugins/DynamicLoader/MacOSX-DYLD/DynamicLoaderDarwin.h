@@ -22,9 +22,10 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/UUID.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/SafeMachO.h"
+
+#include "llvm/ADT/Triple.h"
 
 namespace lldb_private {
 
@@ -137,6 +138,8 @@ protected:
         llvm::MachO::mach_header header;    // The mach header for this image
         std::vector<Segment> segments;      // All segment vmaddr and vmsize pairs for this executable (from memory of inferior)
         uint32_t load_stop_id;              // The process stop ID that the sections for this image were loaded
+        llvm::Triple::OSType os_type;       // LC_VERSION_MIN_... load command os type
+        std::string min_version_os_sdk;     // LC_VERSION_MIN_... sdk value
 
         ImageInfo() :
             address(LLDB_INVALID_ADDRESS),
@@ -146,7 +149,9 @@ protected:
             uuid(),
             header(),
             segments(),
-            load_stop_id(0)
+            load_stop_id(0),
+            os_type (llvm::Triple::OSType::UnknownOS),
+            min_version_os_sdk()
         {
         }
 
@@ -164,6 +169,8 @@ protected:
             uuid.Clear();
             segments.clear();
             load_stop_id = 0;
+            os_type = llvm::Triple::OSType::UnknownOS;
+            min_version_os_sdk.clear();
         }
 
         bool
@@ -175,7 +182,8 @@ protected:
                 && file_spec == rhs.file_spec
                 && uuid == rhs.uuid
                 && memcmp(&header, &rhs.header, sizeof(header)) == 0
-                && segments == rhs.segments;
+                && segments == rhs.segments
+                && os_type == rhs.os_type;
         }
 
         bool
@@ -220,9 +228,6 @@ protected:
     bool
     UnloadModuleSections (lldb_private::Module *module, ImageInfo& info);
 
-    ImageInfo *
-    FindImageInfoForAddress (lldb::addr_t load_address);
-
     lldb::ModuleSP
     FindTargetModuleForImageInfo (ImageInfo &image_info,
                                   bool can_create,
@@ -230,6 +235,9 @@ protected:
 
     void
     UnloadImages (const std::vector<lldb::addr_t> &solib_addresses);
+
+    void
+    UnloadAllImages ();
 
     virtual bool
     SetNotificationBreakpoint () = 0;
@@ -258,10 +266,10 @@ protected:
     bool
     JSONImageInformationIntoImageInfo (lldb_private::StructuredData::ObjectSP image_details, ImageInfo::collection &image_infos);
 
-    // If image_infos contains / may contain dyld image, call this method
-    // to keep our internal record keeping of the special dyld binary up-to-date.
+    // If image_infos contains / may contain dyld or executable image, call this method
+    // to keep our internal record keeping of the special binaries up-to-date.
     void
-    UpdateDYLDImageInfoFromNewImageInfos (ImageInfo::collection &image_infos);
+    UpdateSpecialBinariesFromNewImageInfos (ImageInfo::collection &image_infos);
 
     // if image_info is a dyld binary, call this method
     void
@@ -275,7 +283,13 @@ protected:
     bool
     AddModulesUsingImageInfos (ImageInfo::collection &image_infos);
 
-    lldb::ModuleWP m_dyld_module_wp;
+    // Whether we should use the new dyld SPI to get shared library information, or read
+    // it directly out of the dyld_all_image_infos.  Whether we use the (newer) DynamicLoaderMacOS
+    // plugin or the (older) DynamicLoaderMacOSX plugin.
+    static bool
+    UseDYLDSPI (lldb_private::Process *process);
+
+    lldb::ModuleWP m_dyld_module_wp;     // the dyld whose file type (mac, ios, etc) matches the process
     lldb::ModuleWP m_libpthread_module_wp;
     lldb_private::Address m_pthread_getspecific_addr;
     ThreadIDToTLSMap m_tid_to_tls_map;

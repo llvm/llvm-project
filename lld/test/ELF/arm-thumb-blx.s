@@ -8,7 +8,7 @@
 // RUN:          .R_ARM_CALL24_callee4 : { *(.R_ARM_CALL24_callee_thumb_high) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %ttarget -o %t2 2>&1
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s 
+// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
 // REQUIRES: arm
 // Test BLX instruction is chosen for Thumb BL/BLX instruction and ARM callee
 // 2 byte nops are used to test the pc-rounding behaviour. As a BLX from a

@@ -85,6 +85,30 @@ CMICmdArgValString::CMICmdArgValString(const CMIUtilString &vrArgName, const boo
 }
 
 //++ ------------------------------------------------------------------------------------
+// Details: CMICmdArgValString constructor.
+// Type:    Method.
+// Args:    vrArgName       - (R) Argument's name to search by.
+//          vbMandatory     - (R) True = Yes must be present, false = optional argument.
+//          vbHandleByCmd   - (R) True = Command processes *this option, false = not handled.
+//          vbHandleQuotes  - (R) True = Parse a string surrounded by quotes spaces are not delimiters, false = only text up to
+// next delimiting space character.
+//          vbAcceptNumbers - (R) True = Parse a string and accept as a number if number, false = numbers not recognised as
+//          vbHandleDirPaths - (R) True = Parse a string and accept as a file path if a path, false = file paths are not
+// string types.
+// Return:  None.
+// Throws:  None.
+//--
+CMICmdArgValString::CMICmdArgValString(const CMIUtilString &vrArgName, const bool vbMandatory, const bool vbHandleByCmd,
+		const bool vbHandleQuotes, const bool vbAcceptNumbers, const bool vbHandleDirPaths)
+    : CMICmdArgValBaseTemplate(vrArgName, vbMandatory, vbHandleByCmd)
+    , m_bHandleQuotedString(vbHandleQuotes)
+    , m_bAcceptNumbers(vbAcceptNumbers)
+    , m_bHandleDirPaths(vbHandleDirPaths)
+    , m_bHandleAnything(false)
+{
+}
+
+//++ ------------------------------------------------------------------------------------
 // Details: CMICmdArgValString destructor.
 // Type:    Overridden.
 // Args:    None.

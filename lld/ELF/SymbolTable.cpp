@@ -171,16 +171,46 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
+// Parses a symbol in the form of <name>@<version> or <name>@@<version>.
+static std::pair<StringRef, uint16_t> getSymbolVersion(StringRef S) {
+  if (Config->VersionDefinitions.empty())
+    return {S, Config->DefaultSymbolVersion};
+
+  size_t Pos = S.find('@');
+  if (Pos == 0 || Pos == StringRef::npos)
+    return {S, Config->DefaultSymbolVersion};
+
+  StringRef Name = S.substr(0, Pos);
+  StringRef Verstr = S.substr(Pos + 1);
+  if (Verstr.empty())
+    return {S, Config->DefaultSymbolVersion};
+
+  // '@@' in a symbol name means the default version.
+  // It is usually the most recent one.
+  bool IsDefault = (Verstr[0] == '@');
+  if (IsDefault)
+    Verstr = Verstr.substr(1);
+
+  for (VersionDefinition &V : Config->VersionDefinitions) {
+    if (V.Name == Verstr)
+      return {Name, IsDefault ? V.Id : (V.Id | VERSYM_HIDDEN)};
+  }
+
+  // It is an error if the specified version was not defined.
+  error("symbol " + S + " has undefined version " + Verstr);
+  return {S, Config->DefaultSymbolVersion};
+}
+
 // Find an existing symbol or create and insert a new one.
 template <class ELFT>
-std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
-  auto P = Symtab.insert({Name, {(int)SymVector.size(), false}});
+std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef &Name) {
+  auto P = Symtab.insert({Name, SymIndex((int)SymVector.size(), false)});
   SymIndex &V = P.first->second;
   bool IsNew = P.second;
 
   if (V.Idx == -1) {
     IsNew = true;
-    V = {(int)SymVector.size(), true};
+    V = SymIndex((int)SymVector.size(), true);
   }
 
   Symbol *Sym;
@@ -190,8 +220,8 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
-    Sym->VersionId = Config->DefaultSymbolVersion;
     Sym->Traced = V.Traced;
+    std::tie(Name, Sym->VersionId) = getSymbolVersion(Name);
     SymVector.push_back(Sym);
   } else {
     Sym = SymVector[V.Idx];
@@ -203,7 +233,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
 // attributes.
 template <class ELFT>
 std::pair<Symbol *, bool>
-SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
+SymbolTable<ELFT>::insert(StringRef &Name, uint8_t Type, uint8_t Visibility,
                           bool CanOmitFromDynSym, bool IsUsedInRegularObj,
                           InputFile *File) {
   Symbol *S;
@@ -292,13 +322,15 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding) {
 // We have a new non-common defined symbol with the specified binding. Return 1
 // if the new symbol should win, -1 if the new symbol should lose, or 0 if there
 // is a conflict. If the new symbol wins, also update the binding.
-static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding) {
+template <class ELFT>
+static int compareDefinedNonCommon(Symbol *S, bool WasInserted,
+                                   uint8_t Binding) {
   if (int Cmp = compareDefined(S, WasInserted, Binding)) {
     if (Cmp > 0)
       S->Binding = Binding;
     return Cmp;
   }
-  if (isa<DefinedCommon>(S->body())) {
+  if (isa<DefinedCommon<ELFT>>(S->body())) {
     // Non-common symbols take precedence over common symbols.
     if (Config->WarnCommon)
       warning("common " + S->body()->getName() + " is overridden");
@@ -320,9 +352,10 @@ Symbol *SymbolTable<ELFT>::addCommon(StringRef N, uint64_t Size,
   int Cmp = compareDefined(S, WasInserted, Binding);
   if (Cmp > 0) {
     S->Binding = Binding;
-    replaceBody<DefinedCommon>(S, N, Size, Alignment, StOther, Type, File);
+    replaceBody<DefinedCommon<ELFT>>(S, N, Size, Alignment, StOther, Type,
+                                     File);
   } else if (Cmp == 0) {
-    auto *C = dyn_cast<DefinedCommon>(S->body());
+    auto *C = dyn_cast<DefinedCommon<ELFT>>(S->body());
     if (!C) {
       // Non-common symbols take precedence over common symbols.
       if (Config->WarnCommon)
@@ -358,7 +391,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, const Elf_Sym &Sym,
       insert(Name, Sym.getType(), Sym.getVisibility(),
              /*CanOmitFromDynSym*/ false, /*IsUsedInRegularObj*/ true,
              Section ? Section->getFile() : nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Sym.getBinding());
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, Sym.getBinding());
   if (Cmp > 0)
     replaceBody<DefinedRegular<ELFT>>(S, Name, Sym, Section);
   else if (Cmp == 0)
@@ -374,7 +407,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
   std::tie(S, WasInserted) =
       insert(Name, STT_NOTYPE, StOther & 3, /*CanOmitFromDynSym*/ false,
              /*IsUsedInRegularObj*/ true, nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, Binding);
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, Binding);
   if (Cmp > 0)
     replaceBody<DefinedRegular<ELFT>>(S, Name, StOther);
   else if (Cmp == 0)
@@ -385,13 +418,13 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
                                         OutputSectionBase<ELFT> *Section,
-                                        uintX_t Value) {
+                                        uintX_t Value, uint8_t StOther) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) =
-      insert(N, STT_NOTYPE, STV_HIDDEN, /*CanOmitFromDynSym*/ false,
-             /*IsUsedInRegularObj*/ true, nullptr);
-  int Cmp = compareDefinedNonCommon(S, WasInserted, STB_GLOBAL);
+  std::tie(S, WasInserted) = insert(N, STT_NOTYPE, /*Visibility*/ StOther & 0x3,
+                                    /*CanOmitFromDynSym*/ false,
+                                    /*IsUsedInRegularObj*/ true, nullptr);
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, STB_GLOBAL);
   if (Cmp > 0)
     replaceBody<DefinedSynthetic<ELFT>>(S, N, Value, Section);
   else if (Cmp == 0)
@@ -429,8 +462,8 @@ Symbol *SymbolTable<ELFT>::addBitcode(StringRef Name, bool IsWeak,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Type, StOther & 3, CanOmitFromDynSym,
                                     /*IsUsedInRegularObj*/ false, F);
-  int Cmp =
-      compareDefinedNonCommon(S, WasInserted, IsWeak ? STB_WEAK : STB_GLOBAL);
+  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted,
+                                          IsWeak ? STB_WEAK : STB_GLOBAL);
   if (Cmp > 0)
     replaceBody<DefinedBitcode>(S, Name, StOther, Type, F);
   else if (Cmp == 0)
@@ -465,7 +498,8 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
                                        const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Sym.getName());
+  StringRef Name = Sym.getName();
+  std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceBody<LazyArchive>(S, *F, Sym, SymbolBody::UnknownType);
     return;
@@ -626,84 +660,6 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
         for (SymbolBody *B : findAll(Sym.Name))
           if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
             B->symbol()->VersionId = V.Id;
-  }
-}
-
-// Returns the size of the longest version name.
-static int getMaxVersionLen() {
-  size_t Len = 0;
-  for (VersionDefinition &V : Config->VersionDefinitions)
-    Len = std::max(Len, V.Name.size());
-  return Len;
-}
-
-// Parses a symbol name in the form of <name>@<version> or <name>@@<version>.
-static std::pair<StringRef, uint16_t>
-getSymbolVersion(SymbolBody *B, int MaxVersionLen) {
-  StringRef S = B->getName();
-
-  // MaxVersionLen was passed so that we don't need to scan
-  // all characters in a symbol name. It is effective because
-  // versions are usually short and symbol names can be very long.
-  size_t Pos = S.find('@', std::max(0, int(S.size()) - MaxVersionLen - 2));
-  if (Pos == 0 || Pos == StringRef::npos)
-    return {"", 0};
-
-  StringRef Name = S.substr(0, Pos);
-  StringRef Verstr = S.substr(Pos + 1);
-  if (Verstr.empty())
-    return {"", 0};
-
-  // '@@' in a symbol name means the default version.
-  // It is usually the most recent one.
-  bool IsDefault = (Verstr[0] == '@');
-  if (IsDefault)
-    Verstr = Verstr.substr(1);
-
-  for (VersionDefinition &V : Config->VersionDefinitions) {
-    if (V.Name == Verstr)
-      return {Name, IsDefault ? V.Id : (V.Id | VERSYM_HIDDEN)};
-  }
-
-  // It is an error if the specified version was not defined.
-  error("symbol " + S + " has undefined version " + Verstr);
-  return {"", 0};
-}
-
-// Versions are usually assigned to symbols using version scripts,
-// but there's another way to assign versions to symbols.
-// If a symbol name contains '@', the string after it is not
-// actually a part of the symbol name but specifies a version.
-// This function takes care of it.
-template <class ELFT> void SymbolTable<ELFT>::scanSymbolVersions() {
-  if (Config->VersionDefinitions.empty())
-    return;
-
-  int MaxVersionLen = getMaxVersionLen();
-
-  // Unfortunately there's no way other than iterating over all
-  // symbols to look for '@' characters in symbol names.
-  // So this is inherently slow. A good news is that we do this
-  // only when versions have been defined.
-  for (Symbol *Sym : SymVector) {
-    // Symbol versions for exported symbols are by nature
-    // only for defined global symbols.
-    SymbolBody *B = Sym->body();
-    if (!B->isDefined())
-      continue;
-    uint8_t Visibility = B->getVisibility();
-    if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
-      continue;
-
-    // Look for '@' in the symbol name.
-    StringRef Name;
-    uint16_t Version;
-    std::tie(Name, Version) = getSymbolVersion(B, MaxVersionLen);
-    if (Name.empty())
-      continue;
-
-    B->setName(Name);
-    Sym->VersionId = Version;
   }
 }
 

@@ -92,6 +92,7 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoGnuUnique;
   bool NoUndefinedVersion;
+  bool OFormatBinary;
   bool Pic;
   bool Pie;
   bool PrintGcSections;
@@ -103,6 +104,7 @@ struct Configuration {
   bool StripAll;
   bool StripDebug;
   bool SysvHash = true;
+  bool Target1Rel;
   bool Threads;
   bool Trace;
   bool Verbose;
@@ -120,6 +122,7 @@ struct Configuration {
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint64_t EntryAddr = -1;
   uint64_t ImageBase;
+  uint64_t ZStackSize = -1;
   unsigned LtoJobs;
   unsigned LtoO;
   unsigned Optimize;

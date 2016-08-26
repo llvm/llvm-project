@@ -77,29 +77,32 @@ static std::string runIncludeFixer(
       SymbolInfo("Vector", SymbolInfo::SymbolKind::Class, "\"Vector.h\"", 2,
                  {{SymbolInfo::ContextType::Namespace, "a"}},
                  /*num_occurrences=*/1),
+      SymbolInfo("StrCat", SymbolInfo::SymbolKind::Class, "\"strcat.h\"",
+                 1, {{SymbolInfo::ContextType::Namespace, "str"}}),
+      SymbolInfo("str", SymbolInfo::SymbolKind::Class, "\"str.h\"",
+                 1, {}),
+      SymbolInfo("foo2", SymbolInfo::SymbolKind::Class, "\"foo2.h\"",
+                 1, {}),
   };
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
   SymbolIndexMgr->addSymbolIndex(
       llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols));
 
-  IncludeFixerContext FixerContext;
-  IncludeFixerActionFactory Factory(*SymbolIndexMgr, FixerContext, "llvm");
-
+  std::vector<IncludeFixerContext> FixerContexts;
+  IncludeFixerActionFactory Factory(*SymbolIndexMgr, FixerContexts, "llvm");
   std::string FakeFileName = "input.cc";
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
-  if (FixerContext.getHeaderInfos().empty())
+  assert(FixerContexts.size() == 1);
+  if (FixerContexts.front().getHeaderInfos().empty())
     return Code;
-  auto Replaces = clang::include_fixer::createInsertHeaderReplacements(
-      Code, FakeFileName, FixerContext.getHeaderInfos().front().Header);
+  auto Replaces = clang::include_fixer::createIncludeFixerReplacements(
+      Code, FixerContexts.front());
   EXPECT_TRUE(static_cast<bool>(Replaces))
       << llvm::toString(Replaces.takeError()) << "\n";
   if (!Replaces)
     return "";
   clang::RewriterTestContext Context;
   clang::FileID ID = Context.createInMemoryFile(FakeFileName, Code);
-  Replaces->insert({FakeFileName, FixerContext.getSymbolRange().getOffset(),
-                    FixerContext.getSymbolRange().getLength(),
-                    FixerContext.getHeaderInfos().front().QualifiedName});
   clang::tooling::applyAllReplacements(*Replaces, Context.Rewrite);
   return Context.getRewrittenText(ID);
 }
@@ -192,6 +195,16 @@ TEST(IncludeFixer, ScopedNamespaceSymbols) {
   // full match.
   EXPECT_EQ("#include \"bar.h\"\nnamespace A {\na::b::bar b;\n}",
             runIncludeFixer("namespace A {\nb::bar b;\n}"));
+
+  // Finds candidates for "str::StrCat".
+  EXPECT_EQ("#include \"strcat.h\"\nnamespace foo2 {\nstr::StrCat b;\n}",
+            runIncludeFixer("namespace foo2 {\nstr::StrCat b;\n}"));
+  // str::StrCat2 doesn't exist.
+  // In these two cases, StrCat2 is a nested class of class str.
+  EXPECT_EQ("#include \"str.h\"\nnamespace foo2 {\nstr::StrCat2 b;\n}",
+            runIncludeFixer("namespace foo2 {\nstr::StrCat2 b;\n}"));
+  EXPECT_EQ("#include \"str.h\"\nnamespace ns {\nstr::StrCat2 b;\n}",
+            runIncludeFixer("namespace ns {\nstr::StrCat2 b;\n}"));
 }
 
 TEST(IncludeFixer, EnumConstantSymbols) {
@@ -211,12 +224,12 @@ TEST(IncludeFixer, InsertAndSortSingleHeader) {
   std::string Code = "#include \"a.h\"\n"
                      "#include \"foo.h\"\n"
                      "\n"
-                     "namespace a { b::bar b; }";
+                     "namespace a {\nb::bar b;\n}\n";
   std::string Expected = "#include \"a.h\"\n"
                          "#include \"bar.h\"\n"
                          "#include \"foo.h\"\n"
                          "\n"
-                         "namespace a { b::bar b; }";
+                         "namespace a {\nb::bar b;\n}\n";
   EXPECT_EQ(Expected, runIncludeFixer(Code));
 }
 
@@ -256,7 +269,7 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
   // Test nested classes.
   EXPECT_EQ("#include \"bar.h\"\nnamespace d {\na::b::bar::t b;\n}\n",
             runIncludeFixer("namespace d {\nbar::t b;\n}\n"));
-  EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar::t b;\n}\n",
+  EXPECT_EQ("#include \"bar.h\"\nnamespace c {\na::b::bar::t b;\n}\n",
             runIncludeFixer("namespace c {\nbar::t b;\n}\n"));
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nb::bar::t b;\n}\n",
             runIncludeFixer("namespace a {\nbar::t b;\n}\n"));
@@ -273,6 +286,74 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
             runIncludeFixer("::a::b::bar b;\n"));
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\n::a::b::bar b;\n}\n",
             runIncludeFixer("namespace a {\n::a::b::bar b;\n}\n"));
+}
+
+TEST(IncludeFixer, FixNamespaceQualifiersForAllInstances) {
+  const char TestCode[] = R"(
+namespace a {
+bar b;
+int func1() {
+  bar a;
+                                                             bar *p = new bar();
+  return 0;
+}
+} // namespace a
+
+namespace a {
+bar func2() {
+  bar f;
+  return f;
+}
+} // namespace a
+
+// Non-fixed cases:
+void f() {
+  bar b;
+}
+
+namespace a {
+namespace c {
+  bar b;
+} // namespace c
+} // namespace a
+)";
+
+  const char ExpectedCode[] = R"(
+#include "bar.h"
+namespace a {
+b::bar b;
+int func1() {
+  b::bar a;
+  b::bar *p = new b::bar();
+  return 0;
+}
+} // namespace a
+
+namespace a {
+b::bar func2() {
+  b::bar f;
+  return f;
+}
+} // namespace a
+
+// Non-fixed cases:
+void f() {
+  bar b;
+}
+
+namespace a {
+namespace c {
+  bar b;
+} // namespace c
+} // namespace a
+)";
+
+  EXPECT_EQ(ExpectedCode, runIncludeFixer(TestCode));
+}
+
+TEST(IncludeFixer, DontAddQualifiersForMissingCompleteType) {
+  EXPECT_EQ("#include \"bar.h\"\nclass bar;\nvoid f() {\nbar* b;\nb->f();\n}",
+            runIncludeFixer("class bar;\nvoid f() {\nbar* b;\nb->f();\n}"));
 }
 
 } // namespace

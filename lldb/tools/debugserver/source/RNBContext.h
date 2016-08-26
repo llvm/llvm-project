@@ -25,21 +25,23 @@ class RNBContext
 public:
     enum
     {
-        event_proc_state_changed        = 0x01,
-        event_proc_thread_running       = 0x02, // Sticky
-        event_proc_thread_exiting       = 0x04,
-        event_proc_stdio_available      = 0x08,
-        event_proc_profile_data         = 0x10,
-        event_read_packet_available     = 0x20,
-        event_read_thread_running       = 0x40, // Sticky
-        event_read_thread_exiting       = 0x80,
+        event_proc_state_changed         = 0x001,
+        event_proc_thread_running        = 0x002, // Sticky
+        event_proc_thread_exiting        = 0x004,
+        event_proc_stdio_available       = 0x008,
+        event_proc_profile_data          = 0x010,
+        event_read_packet_available      = 0x020,
+        event_read_thread_running        = 0x040, // Sticky
+        event_read_thread_exiting        = 0x080,
+        event_darwin_log_data_available  = 0x100,
 
         normal_event_bits   = event_proc_state_changed |
                               event_proc_thread_exiting |
                               event_proc_stdio_available |
                               event_proc_profile_data | 
                               event_read_packet_available |
-                              event_read_thread_exiting,
+                              event_read_thread_exiting |
+                              event_darwin_log_data_available,
 
         sticky_event_bits   = event_proc_thread_running |
                               event_read_thread_running,

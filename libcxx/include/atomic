@@ -557,7 +557,6 @@ void atomic_signal_fence(memory_order m) noexcept;
 #endif
 
 #if _LIBCPP_STD_VER > 14
-// FIXME: use the right feature test macro value as chose by SG10.
 # define __cpp_lib_atomic_is_always_lock_free 201603L
 #endif
 

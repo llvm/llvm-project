@@ -17,10 +17,11 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostInfoBase.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <thread>
@@ -380,7 +381,7 @@ HostInfoBase::ComputeProcessTempFileDirectory(FileSpec &file_spec)
     if (!HostInfo::ComputeGlobalTempFileDirectory(temp_file_spec))
         return false;
 
-    std::string pid_str{std::to_string(Host::GetCurrentProcessID())};
+    std::string pid_str{llvm::to_string(Host::GetCurrentProcessID())};
     temp_file_spec.AppendPathComponent(pid_str);
     if (!FileSystem::MakeDirectory(temp_file_spec, eFilePermissionsDirectoryDefault).Success())
         return false;

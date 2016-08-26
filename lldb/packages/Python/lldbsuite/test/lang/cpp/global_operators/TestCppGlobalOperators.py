@@ -10,8 +10,7 @@ class TestCppGlobalOperators(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
-    def test_with_run_command(self):
+    def prepare_executable_and_get_frame(self):
         self.build()
 
         # Get main source file
@@ -42,8 +41,11 @@ class TestCppGlobalOperators(TestBase):
         self.assertTrue(process.GetState() == lldb.eStateStopped, PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
 
-        # Check if global operators are evaluated 
-        frame = thread.GetSelectedFrame()
+        return thread.GetSelectedFrame()
+
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    def test_equals_operator(self):
+        frame = self.prepare_executable_and_get_frame()
 
         test_result = frame.EvaluateExpression("operator==(s1, s2)")
         self.assertTrue(test_result.IsValid() and test_result.GetValue() == "false", "operator==(s1, s2) = false")
@@ -53,3 +55,25 @@ class TestCppGlobalOperators(TestBase):
 
         test_result = frame.EvaluateExpression("operator==(s2, s3)")
         self.assertTrue(test_result.IsValid() and test_result.GetValue() == "false", "operator==(s2, s3) = false")
+
+    def do_new_test(self, frame, expr, expected_value_name):
+        """Evaluate a new expression, and check its result"""
+
+        expected_value = frame.FindValue(expected_value_name, lldb.eValueTypeVariableGlobal)
+        self.assertTrue(expected_value.IsValid())
+
+        expected_value_addr = expected_value.AddressOf()
+        self.assertTrue(expected_value_addr.IsValid())
+
+        got = frame.EvaluateExpression(expr)
+        self.assertTrue(got.IsValid())
+        self.assertEqual(got.GetValueAsUnsigned(), expected_value_addr.GetValueAsUnsigned())
+        got_type = got.GetType()
+        self.assertTrue(got_type.IsPointerType())
+        self.assertEqual(got_type.GetPointeeType().GetName(), "Struct")
+
+    def test_operator_new(self):
+        frame = self.prepare_executable_and_get_frame()
+
+        self.do_new_test(frame, "new Struct()", "global_new_buf")
+        self.do_new_test(frame, "new(new_tag) Struct()", "tagged_new_buf")

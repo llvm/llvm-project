@@ -130,4 +130,11 @@ inline std::vector<std::string> getReverseSortedStringInputs(size_t N) {
     return inputs;
 }
 
+inline std::vector<const char*> getRandomCStringInputs(size_t N) {
+    static std::vector<std::string> inputs = getRandomStringInputs(N);
+    std::vector<const char*> cinputs;
+    for (auto const& str : inputs)
+        cinputs.push_back(str.c_str());
+    return cinputs;
+}
 #endif // BENCHMARK_GENERATE_INPUT_HPP

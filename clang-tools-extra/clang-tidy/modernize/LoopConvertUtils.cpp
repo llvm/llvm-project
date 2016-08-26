@@ -763,7 +763,8 @@ bool ForLoopIndexUseVisitor::VisitDeclRefExpr(DeclRefExpr *E) {
 ///   }
 /// \endcode
 bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
-                                                   const LambdaCapture *C) {
+                                                   const LambdaCapture *C,
+                                                   Expr *Init) {
   if (C->capturesVariable()) {
     const VarDecl *VDecl = C->getCapturedVar();
     if (areSameVariable(IndexVar, cast<ValueDecl>(VDecl))) {
@@ -776,7 +777,7 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                      C->getLocation()));
     }
   }
-  return VisitorBase::TraverseLambdaCapture(LE, C);
+  return VisitorBase::TraverseLambdaCapture(LE, C, Init);
 }
 
 /// \brief If we find that another variable is created just to refer to the loop
@@ -805,6 +806,18 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
 }
 
 bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
+  // If this is an initialization expression for a lambda capture, prune the
+  // traversal so that we don't end up diagnosing the contained DeclRefExpr as
+  // inconsistent usage. No need to record the usage here -- this is done in
+  // TraverseLambdaCapture().
+  if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
+    // Any child of a LambdaExpr that isn't the body is an initialization
+    // expression.
+    if (S != LE->getBody()) {
+      return true;
+    }
+  }
+
   // All this pointer swapping is a mechanism for tracking immediate parentage
   // of Stmts.
   const Stmt *OldNextParent = NextStmtParent;

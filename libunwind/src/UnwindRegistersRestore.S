@@ -322,9 +322,18 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_arm646jumptoEv)
 @
   .p2align 2
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm20restoreCoreAndJumpToEv)
-#if !defined(__ARM_ARCH_ISA_ARM)
-  ldr r2, [r0, #52]
-  ldr r3, [r0, #60]
+#if !defined(__ARM_ARCH_ISA_ARM) && __ARM_ARCH_ISA_THUMB == 1
+  @ r8-r11: ldm into r1-r4, then mov to r8-r11
+  adds r0, #0x20
+  ldm r0!, {r1-r4}
+  subs r0, #0x30
+  mov r8, r1
+  mov r9, r2
+  mov r10, r3
+  mov r11, r4
+  @ r12 does not need loading, it it the intra-procedure-call scratch register
+  ldr r2, [r0, #0x34]
+  ldr r3, [r0, #0x3c]
   mov sp, r2
   mov lr, r3         @ restore pc into lr
   ldm r0, {r0-r7}
@@ -479,3 +488,6 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
    l.nop
 
 #endif
+
+NO_EXEC_STACK_DIRECTIVE
+

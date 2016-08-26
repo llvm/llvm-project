@@ -52,3 +52,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# MSVC libraries test harness
+env.lst
+keep.lst

@@ -128,7 +128,7 @@ namespace lldb {
         Mutex::Locker locker (Module::GetAllocationModuleCollectionMutex());
         ModuleCollection &modules = GetModuleCollection();
         const size_t count = modules.size();
-        printf ("%s: %" PRIu64 " modules:\n", __PRETTY_FUNCTION__, (uint64_t)count);
+        printf ("%s: %" PRIu64 " modules:\n", LLVM_PRETTY_FUNCTION, (uint64_t)count);
         for (size_t i = 0; i < count; ++i)
         {
             
@@ -495,7 +495,7 @@ size_t
 Module::GetNumCompileUnits()
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "Module::GetNumCompileUnits (module = %p)",
                        static_cast<void*>(this));
     SymbolVendor *symbols = GetSymbolVendor ();
@@ -524,7 +524,7 @@ bool
 Module::ResolveFileAddress (lldb::addr_t vm_addr, Address& so_addr)
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    Timer scoped_timer(__PRETTY_FUNCTION__, "Module::ResolveFileAddress (vm_addr = 0x%" PRIx64 ")", vm_addr);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, "Module::ResolveFileAddress (vm_addr = 0x%" PRIx64 ")", vm_addr);
     SectionList *section_list = GetSectionList();
     if (section_list)
         return so_addr.ResolveAddressUsingFileSections(vm_addr, section_list);
@@ -687,7 +687,7 @@ uint32_t
 Module::ResolveSymbolContextsForFileSpec (const FileSpec &file_spec, uint32_t line, bool check_inlines, uint32_t resolve_scope, SymbolContextList& sc_list)
 {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "Module::ResolveSymbolContextForFilePath (%s:%u, check_inlines = %s, resolve_scope = 0x%8.8x)",
                        file_spec.GetPath().c_str(),
                        line,
@@ -1122,7 +1122,7 @@ Module::FindTypes_Impl (const SymbolContext& sc,
                         llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
                         TypeMap& types)
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
     if (!sc.module_sp || sc.module_sp.get() == this)
     {
         SymbolVendor *symbols = GetSymbolVendor ();
@@ -1227,7 +1227,7 @@ Module::GetSymbolVendor (bool can_create, lldb_private::Stream *feedback_strm)
             ObjectFile *obj_file = GetObjectFile ();
             if (obj_file != nullptr)
             {
-                Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
+                Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
                 m_symfile_ap.reset(SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
                 m_did_load_symbol_vendor = true;
             }
@@ -1474,7 +1474,7 @@ Module::GetObjectFile()
         std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (!m_did_load_objfile.load())
         {
-            Timer scoped_timer(__PRETTY_FUNCTION__,
+            Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                                "Module::GetObjectFile () module = %s", GetFileSpec().GetFilename().AsCString(""));
             DataBufferSP data_sp;
             lldb::offset_t data_offset = 0;
@@ -1545,7 +1545,7 @@ Module::GetUnifiedSectionList()
 const Symbol *
 Module::FindFirstSymbolWithNameAndType (const ConstString &name, SymbolType symbol_type)
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "Module::FindFirstSymbolWithNameAndType (name = %s, type = %i)",
                        name.AsCString(),
                        symbol_type);
@@ -1583,7 +1583,7 @@ Module::FindFunctionSymbols (const ConstString &name,
                              uint32_t name_type_mask,
                              SymbolContextList& sc_list)
 {
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "Module::FindSymbolsFunctions (name = %s, mask = 0x%8.8x)",
                        name.AsCString(),
                        name_type_mask);
@@ -1603,7 +1603,7 @@ Module::FindSymbolsWithNameAndType (const ConstString &name, SymbolType symbol_t
     // No need to protect this call using m_mutex all other method calls are
     // already thread safe.
 
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
                        name.AsCString(),
                        symbol_type);
@@ -1628,7 +1628,7 @@ Module::FindSymbolsMatchingRegExAndType (const RegularExpression &regex, SymbolT
     // No need to protect this call using m_mutex all other method calls are
     // already thread safe.
 
-    Timer scoped_timer(__PRETTY_FUNCTION__,
+    Timer scoped_timer(LLVM_PRETTY_FUNCTION,
                        "Module::FindSymbolsMatchingRegExAndType (regex = %s, type = %i)",
                        regex.GetText(),
                        symbol_type);

@@ -1,5 +1,6 @@
 # RUN: lld -flavor darwin -arch arm64 %s %p/Inputs/hello-world-arm64.yaml -o %t
 # RUN: llvm-nm -m -n %t | FileCheck %s
+# RUN: llvm-objdump -private-headers %t | FileCheck %s --check-prefix=CHECK-PRIVATE-HEADER
 #
 # Test that arm64 hello-world can be linked into a mach-o executable
 #
@@ -92,3 +93,10 @@ undefined-symbols:
 # CHECK:	(undefined) external _fprintf (from libSystem)
 # CHECK:	(undefined) external dyld_stub_binder (from libSystem)
 # CHECK:	{{[0-9a-f]+}} (__TEXT,__text) external _main
+
+# CHECK-PRIVATE-HEADER: sectname __stubs
+# CHECK-PRIVATE-HEADER-NEXT:  segname __TEXT
+# CHECK-PRIVATE-HEADER-NEXT:     addr 
+# CHECK-PRIVATE-HEADER-NEXT:     size 
+# CHECK-PRIVATE-HEADER-NEXT:   offset 
+# CHECK-PRIVATE-HEADER-NEXT:    align 2^1 (2)

@@ -56,6 +56,9 @@ public:
     const lldb_private::RegisterInfo *
     GetRegisterInfoAtIndex (uint32_t i) const;
 
+    lldb_private::RegisterInfo *
+    GetRegisterInfoAtIndex (uint32_t i);
+
     const lldb_private::RegisterSet *
     GetRegisterSet (uint32_t i) const;
 
@@ -81,6 +84,8 @@ protected:
     typedef std::vector <reg_num_collection> set_reg_num_collection;
     typedef std::vector <lldb_private::ConstString> name_collection;
     typedef std::map<uint32_t, reg_num_collection> reg_to_regs_map;
+    typedef std::vector <uint8_t> dwarf_opcode;
+    typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
 
     lldb_private::RegisterInfo *
     GetRegisterInfo (const lldb_private::ConstString &reg_name);
@@ -91,6 +96,7 @@ protected:
     name_collection m_set_names;
     reg_to_regs_map m_value_regs_map;
     reg_to_regs_map m_invalidate_regs_map;
+    dynamic_reg_size_map m_dynamic_reg_size_map;
     size_t m_reg_data_byte_size;   // The number of bytes required to store all registers
     bool m_finalized;
 };

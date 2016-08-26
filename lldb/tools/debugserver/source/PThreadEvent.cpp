@@ -28,14 +28,14 @@ PThreadEvent::PThreadEvent(uint32_t bits, uint32_t validBits) :
 
 PThreadEvent::~PThreadEvent()
 {
-    // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, __PRETTY_FUNCTION__);
+    // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, LLVM_PRETTY_FUNCTION);
 }
 
 
 uint32_t
 PThreadEvent::NewEventBit()
 {
-    // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, __PRETTY_FUNCTION__);
+    // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, LLVM_PRETTY_FUNCTION);
     PTHREAD_MUTEX_LOCKER (locker, m_mutex);
     uint32_t mask = 1;
     while (mask & m_validBits)
@@ -60,7 +60,7 @@ PThreadEvent::FreeEventBits(const uint32_t mask)
 uint32_t
 PThreadEvent::GetEventBits() const
 {
-    // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, __PRETTY_FUNCTION__);
+    // DNBLogThreadedIf(LOG_EVENTS, "%p %s", this, LLVM_PRETTY_FUNCTION);
     PTHREAD_MUTEX_LOCKER (locker, m_mutex);
     uint32_t bits = m_bits;
     return bits;

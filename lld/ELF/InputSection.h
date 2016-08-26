@@ -21,12 +21,11 @@
 namespace lld {
 namespace elf {
 
-template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
-
 class SymbolBody;
 
 template <class ELFT> class ICF;
 template <class ELFT> class DefinedRegular;
+template <class ELFT> class DefinedCommon;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
@@ -49,7 +48,15 @@ protected:
   SmallVector<char, 0> Uncompressed;
 
 public:
-  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions };
+  enum Kind {
+    Regular,
+    EHFrame,
+    Merge,
+    MipsReginfo,
+    MipsOptions,
+    MipsAbiFlags,
+    Layout
+  };
   Kind SectionKind;
 
   InputSectionBase() : Repl(this) {}
@@ -118,29 +125,8 @@ public:
   uint32_t Live : 1;
 };
 
-// Usually sections are copied to the output as atomic chunks of data,
-// but some special types of sections are split into small pieces of data
-// and each piece is copied to a different place in the output.
-// This class represents such special sections.
-template <class ELFT> class SplitInputSection : public InputSectionBase<ELFT> {
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  SplitInputSection(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
-                    typename InputSectionBase<ELFT>::Kind SectionKind);
-
-  // Splittable sections are handled as a sequence of data
-  // rather than a single large blob of data.
-  std::vector<SectionPiece> Pieces;
-
-  // Returns the SectionPiece at a given input section offset.
-  SectionPiece *getSectionPiece(uintX_t Offset);
-  const SectionPiece *getSectionPiece(uintX_t Offset) const;
-};
-
 // This corresponds to a SHF_MERGE section of an input file.
-template <class ELFT> class MergeInputSection : public SplitInputSection<ELFT> {
+template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Shdr Elf_Shdr;
@@ -159,23 +145,41 @@ public:
 
   void finalizePieces();
 
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<SectionPiece> Pieces;
+
+  // Returns the SectionPiece at a given input section offset.
+  SectionPiece *getSectionPiece(uintX_t Offset);
+  const SectionPiece *getSectionPiece(uintX_t Offset) const;
+
 private:
+  std::vector<SectionPiece> splitStrings(ArrayRef<uint8_t> A, size_t Size);
+  std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
+
   llvm::DenseMap<uintX_t, uintX_t> OffsetMap;
   llvm::DenseSet<uintX_t> LiveOffsets;
 };
 
+struct EhSectionPiece : public SectionPiece {
+  EhSectionPiece(size_t Off, ArrayRef<uint8_t> Data, unsigned FirstRelocation)
+      : SectionPiece(Off, Data), FirstRelocation(FirstRelocation) {}
+  unsigned FirstRelocation;
+};
+
 // This corresponds to a .eh_frame section of an input file.
-template <class ELFT> class EhInputSection : public SplitInputSection<ELFT> {
+template <class ELFT> class EhInputSection : public InputSectionBase<ELFT> {
 public:
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::uint uintX_t;
   EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
   void split();
+  template <class RelTy> void split(ArrayRef<RelTy> Rels);
 
-  // Translate an offset in the input section to an offset in the output
-  // section.
-  uintX_t getOffset(uintX_t Offset) const;
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<EhSectionPiece> Pieces;
 
   // Relocation section that refer to this one.
   const Elf_Shdr *RelocSection = nullptr;
@@ -263,6 +267,37 @@ public:
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
+
+template <class ELFT>
+class MipsAbiFlagsInputSection : public InputSectionBase<ELFT> {
+  typedef typename ELFT::Shdr Elf_Shdr;
+
+public:
+  MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  static bool classof(const InputSectionBase<ELFT> *S);
+
+  const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;
+};
+
+// Common symbols don't belong to any section. But it is easier for us
+// to handle them as if they belong to some input section. So we defined
+// this class. CommonInputSection is a virtual singleton class that
+// "contains" all common symbols.
+template <class ELFT> class CommonInputSection : public InputSection<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+public:
+  CommonInputSection(std::vector<DefinedCommon<ELFT> *> Syms);
+
+  // The singleton instance of this class.
+  static CommonInputSection<ELFT> *X;
+
+private:
+  static typename ELFT::Shdr Hdr;
+};
+
+template <class ELFT> CommonInputSection<ELFT> *CommonInputSection<ELFT>::X;
+template <class ELFT> typename ELFT::Shdr CommonInputSection<ELFT>::Hdr;
 
 } // namespace elf
 } // namespace lld

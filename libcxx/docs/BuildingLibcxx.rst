@@ -150,8 +150,15 @@ libc++ specific options
 
   **Default**: ``ON``
 
-  Build libc++ as a shared library. If ``OFF`` is specified then libc++ is
-  built as a static library.
+  Build libc++ as a shared library. Either :option:`LIBCXX_ENABLE_SHARED` or
+  :option:`LIBCXX_ENABLE_STATIC` has to be enabled.
+
+.. option:: LIBCXX_ENABLE_STATIC:BOOL
+
+  **Default**: ``ON``
+
+  Build libc++ as a static library. Either :option:`LIBCXX_ENABLE_SHARED` or
+  :option:`LIBCXX_ENABLE_STATIC` has to be enabled.
 
 .. option:: LIBCXX_LIBDIR_SUFFIX:STRING
 

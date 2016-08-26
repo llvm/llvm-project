@@ -42,7 +42,8 @@ static void rankByPopularity(std::vector<SymbolInfo> &Symbols) {
 }
 
 std::vector<find_all_symbols::SymbolInfo>
-SymbolIndexManager::search(llvm::StringRef Identifier) const {
+SymbolIndexManager::search(llvm::StringRef Identifier,
+                           bool IsNestedSearch) const {
   // The identifier may be fully qualified, so split it and get all the context
   // names.
   llvm::SmallVector<llvm::StringRef, 8> Names;
@@ -60,7 +61,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
   // either) and can report that result.
   bool TookPrefix = false;
   std::vector<clang::find_all_symbols::SymbolInfo> MatchedSymbols;
-  while (MatchedSymbols.empty() && !Names.empty()) {
+  do {
     std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
     for (const auto &DB : SymbolIndices) {
       auto Res = DB->search(Names.back().str());
@@ -116,7 +117,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
     }
     Names.pop_back();
     TookPrefix = true;
-  }
+  } while (MatchedSymbols.empty() && !Names.empty() && IsNestedSearch);
 
   rankByPopularity(MatchedSymbols);
   return MatchedSymbols;

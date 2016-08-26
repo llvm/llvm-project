@@ -28,16 +28,6 @@ if(NOT LIBCXX_INSTALL_LIBRARY)
   set(exclude_from_all EXCLUDE_FROM_ALL)
 endif()
 
-if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-else()
-  add_library(cxx STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-endif()
-
-if (DEFINED LIBCXX_CXX_ABI_DEPS)
-  add_dependencies(cxx LIBCXX_CXX_ABI_DEPS)
-endif()
-
 #if LIBCXX_CXX_ABI_LIBRARY_PATH is defined we want to add it to the search path.
 add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
 
@@ -139,18 +129,51 @@ if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
   endif()
 endif()
 
-target_link_libraries(cxx ${LIBCXX_LIBRARIES})
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
-set_target_properties(cxx
+# Add a object library that contains the compiled source files.
+add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+
+set_target_properties(cxx_objects
   PROPERTIES
     COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-    LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-    OUTPUT_NAME   "c++"
-    VERSION       "${LIBCXX_ABI_VERSION}.0"
-    SOVERSION     "${LIBCXX_ABI_VERSION}"
+)
+
+set(LIBCXX_TARGETS)
+
+# Build the shared library.
+if (LIBCXX_ENABLE_SHARED)
+  add_library(cxx_shared SHARED $<TARGET_OBJECTS:cxx_objects>)
+  target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
+  set_target_properties(cxx_shared
+    PROPERTIES
+      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
+      OUTPUT_NAME   "c++"
+      VERSION       "${LIBCXX_ABI_VERSION}.0"
+      SOVERSION     "${LIBCXX_ABI_VERSION}"
   )
+  list(APPEND LIBCXX_TARGETS "cxx_shared")
+endif()
+
+# Build the static library.
+if (LIBCXX_ENABLE_STATIC)
+  add_library(cxx_static STATIC $<TARGET_OBJECTS:cxx_objects>)
+  target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
+  set_target_properties(cxx_static
+    PROPERTIES
+      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
+      OUTPUT_NAME   "c++"
+  )
+  list(APPEND LIBCXX_TARGETS "cxx_static")
+endif()
+
+# Add a meta-target for both libraries.
+add_custom_target(cxx DEPENDS ${LIBCXX_TARGETS})
+
+if (DEFINED LIBCXX_CXX_ABI_DEPS)
+  add_dependencies(cxx LIBCXX_CXX_ABI_DEPS)
+endif()
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
@@ -158,7 +181,11 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
     file(GLOB LIBCXX_FILESYSTEM_SOURCES ../src/experimental/filesystem/*.cpp)
   endif()
   add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES} ${LIBCXX_FILESYSTEM_SOURCES})
-  target_link_libraries(cxx_experimental cxx)
+  if (LIBCXX_ENABLE_SHARED)
+    target_link_libraries(cxx_experimental cxx_shared)
+  else()
+    target_link_libraries(cxx_experimental cxx_static)
+  endif()
 
   set(experimental_flags "${LIBCXX_COMPILE_FLAGS}")
   check_flag_supported(-std=c++14)
@@ -174,7 +201,7 @@ endif()
 
 # Generate a linker script inplace of a libc++.so symlink. Rerun this command
 # after cxx builds.
-if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
   # is a target name and not a library. Ex cxxabi_shared.
   set(SCRIPT_ABI_LIBNAME "${LIBCXX_CXX_ABI_LIBRARY}")
@@ -183,11 +210,11 @@ if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   endif()
   # Generate a linker script inplace of a libc++.so symlink. Rerun this command
   # after cxx builds.
-  add_custom_command(TARGET cxx POST_BUILD
+  add_custom_command(TARGET cxx_shared POST_BUILD
     COMMAND
       ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
     ARGS
-      "$<TARGET_LINKER_FILE:cxx>"
+      "$<TARGET_LINKER_FILE:cxx_shared>"
       "${SCRIPT_ABI_LIBNAME}"
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
   )
@@ -197,13 +224,13 @@ if (LIBCXX_INSTALL_LIBRARY)
   if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
     set(experimental_lib cxx_experimental)
   endif()
-  install(TARGETS cxx ${experimental_lib}
-    LIBRARY DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT libcxx
-    ARCHIVE DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT libcxx
+  install(TARGETS ${LIBCXX_TARGETS} ${experimental_lib}
+    LIBRARY DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
+    ARCHIVE DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT cxx
     )
   # NOTE: This install command must go after the cxx install command otherwise
   # it will not be executed after the library symlinks are installed.
-  if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+  if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     # Replace the libc++ filename with $<TARGET_LINKER_FILE:cxx>
     # after we required CMake 3.0.
     install(FILES "${LIBCXX_LIBRARY_DIR}/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}"
@@ -221,13 +248,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
       set(experimental_lib_install_target cxx_experimental)
     endif()
     if(LIBCXX_INSTALL_HEADERS)
-      set(header_install_target install-libcxx-headers)
+      set(header_install_target install-cxx-headers)
     endif()
-    add_custom_target(install-libcxx
+    add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               ${experimental_lib_install_target}
                               ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
-                      -DCMAKE_INSTALL_COMPONENT=libcxx
+                      -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
+    add_custom_target(install-libcxx DEPENDS install-cxx)
 endif()

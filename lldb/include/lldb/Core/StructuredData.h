@@ -542,14 +542,9 @@ public:
             if (!key.empty())
             {
                 ConstString key_cs(key);
-                for (collection::const_iterator iter = m_dict.begin(); iter != m_dict.end(); ++iter)
-                {
-                    if (key_cs == iter->first)
-                    {
-                        value_sp = iter->second;
-                        break;
-                    }
-                }
+                collection::const_iterator iter = m_dict.find(key_cs);
+                if (iter != m_dict.end())
+                    value_sp = iter->second;
             }
             return value_sp;
         }

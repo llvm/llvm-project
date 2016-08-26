@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cfloat>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -58,7 +59,7 @@ int main()
             A(4)
            );
         c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");
@@ -103,7 +104,7 @@ int main()
             A(10)
            );
         c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");
@@ -149,7 +150,7 @@ int main()
             A(4)
            );
         c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");
@@ -196,7 +197,7 @@ int main()
             A()
            );
         c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");

@@ -1012,7 +1012,7 @@ File::CalculateInteractiveAndTerminal ()
         m_is_interactive = eLazyBoolNo;
         m_is_real_terminal = eLazyBoolNo;
         m_supports_colors = eLazyBoolNo;
-#if (defined(_WIN32) || defined(__ANDROID_NDK__))
+#if defined(_WIN32)
         if (_isatty(fd))
         {
             m_is_interactive = eLazyBoolYes;

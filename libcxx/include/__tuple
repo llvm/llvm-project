@@ -146,6 +146,12 @@ template <class ..._Tp> class _LIBCPP_TYPE_VIS_ONLY tuple;
 
 template <class... _Tp> struct __tuple_like<tuple<_Tp...> > : true_type {};
 
+template <class ..._Tp>
+class _LIBCPP_TYPE_VIS_ONLY tuple_size<tuple<_Tp...> >
+    : public integral_constant<size_t, sizeof...(_Tp)>
+{
+};
+
 template <size_t _Ip, class ..._Tp>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 typename tuple_element<_Ip, tuple<_Tp...> >::type&
@@ -431,7 +437,104 @@ struct __tuple_assignable<_Tp, _Up, true, true>
     >
 {};
 
+
+template <size_t _Ip, class ..._Tp>
+class _LIBCPP_TYPE_VIS_ONLY tuple_element<_Ip, tuple<_Tp...> >
+{
+public:
+    typedef typename tuple_element<_Ip, __tuple_types<_Tp...> >::type type;
+};
+
+#if _LIBCPP_STD_VER > 11
+template <size_t _Ip, class ..._Tp>
+using tuple_element_t = typename tuple_element <_Ip, _Tp...>::type;
+#endif
+
 #endif  // _LIBCPP_HAS_NO_VARIADICS
+
+#ifndef _LIBCPP_CXX03_LANG
+template <bool _IsTuple, class _SizeTrait, size_t _Expected>
+struct __tuple_like_with_size_imp : false_type {};
+
+template <class _SizeTrait, size_t _Expected>
+struct __tuple_like_with_size_imp<true, _SizeTrait, _Expected>
+    : integral_constant<bool, _SizeTrait::value == _Expected> {};
+
+template <class _Tuple, size_t _ExpectedSize,
+          class _RawTuple = typename __uncvref<_Tuple>::type>
+using __tuple_like_with_size = __tuple_like_with_size_imp<
+                                   __tuple_like<_RawTuple>::value,
+                                   tuple_size<_RawTuple>, _ExpectedSize
+                              >;
+
+struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
+    template <class ...>
+    static constexpr bool __enable_default() { return false; }
+    template <class ...>
+    static constexpr bool __enable_explicit() { return false; }
+    template <class ...>
+    static constexpr bool __enable_implicit() { return false; }
+    template <class ...>
+    static constexpr bool __enable_assign() { return false; }
+};
+#endif
+
+#if _LIBCPP_STD_VER > 14
+
+template <bool _CanCopy, bool _CanMove>
+struct __sfinae_ctor_base {};
+template <>
+struct __sfinae_ctor_base<false, false> {
+  __sfinae_ctor_base() = default;
+  __sfinae_ctor_base(__sfinae_ctor_base const&) = delete;
+  __sfinae_ctor_base(__sfinae_ctor_base &&) = delete;
+  __sfinae_ctor_base& operator=(__sfinae_ctor_base const&) = default;
+  __sfinae_ctor_base& operator=(__sfinae_ctor_base&&) = default;
+};
+template <>
+struct __sfinae_ctor_base<true, false> {
+  __sfinae_ctor_base() = default;
+  __sfinae_ctor_base(__sfinae_ctor_base const&) = default;
+  __sfinae_ctor_base(__sfinae_ctor_base &&) = delete;
+  __sfinae_ctor_base& operator=(__sfinae_ctor_base const&) = default;
+  __sfinae_ctor_base& operator=(__sfinae_ctor_base&&) = default;
+};
+template <>
+struct __sfinae_ctor_base<false, true> {
+  __sfinae_ctor_base() = default;
+  __sfinae_ctor_base(__sfinae_ctor_base const&) = delete;
+  __sfinae_ctor_base(__sfinae_ctor_base &&) = default;
+  __sfinae_ctor_base& operator=(__sfinae_ctor_base const&) = default;
+  __sfinae_ctor_base& operator=(__sfinae_ctor_base&&) = default;
+};
+
+template <bool _CanCopy, bool _CanMove>
+struct __sfinae_assign_base {};
+template <>
+struct __sfinae_assign_base<false, false> {
+  __sfinae_assign_base() = default;
+  __sfinae_assign_base(__sfinae_assign_base const&) = default;
+  __sfinae_assign_base(__sfinae_assign_base &&) = default;
+  __sfinae_assign_base& operator=(__sfinae_assign_base const&) = delete;
+  __sfinae_assign_base& operator=(__sfinae_assign_base&&) = delete;
+};
+template <>
+struct __sfinae_assign_base<true, false> {
+  __sfinae_assign_base() = default;
+  __sfinae_assign_base(__sfinae_assign_base const&) = default;
+  __sfinae_assign_base(__sfinae_assign_base &&) = default;
+  __sfinae_assign_base& operator=(__sfinae_assign_base const&) = default;
+  __sfinae_assign_base& operator=(__sfinae_assign_base&&) = delete;
+};
+template <>
+struct __sfinae_assign_base<false, true> {
+  __sfinae_assign_base() = default;
+  __sfinae_assign_base(__sfinae_assign_base const&) = default;
+  __sfinae_assign_base(__sfinae_assign_base &&) = default;
+  __sfinae_assign_base& operator=(__sfinae_assign_base const&) = delete;
+  __sfinae_assign_base& operator=(__sfinae_assign_base&&) = default;
+};
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

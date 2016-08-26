@@ -278,6 +278,24 @@ void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
   copyInstScalar(Stmt, Inst, BBMap, LTS);
 }
 
+void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
+  auto NewBB = Builder.GetInsertBlock();
+  for (auto I = NewBB->rbegin(); I != NewBB->rend(); I++) {
+    Instruction *NewInst = &*I;
+
+    if (!isInstructionTriviallyDead(NewInst))
+      continue;
+
+    for (auto Pair : BBMap)
+      if (Pair.second == NewInst) {
+        BBMap.erase(Pair.first);
+      }
+
+    NewInst->eraseFromParent();
+    I = NewBB->rbegin();
+  }
+}
+
 void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
                               isl_id_to_ast_expr *NewAccesses) {
   assert(Stmt.isBlockStmt() &&
@@ -287,6 +305,7 @@ void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
   BasicBlock *BB = Stmt.getBasicBlock();
   copyBB(Stmt, BB, BBMap, LTS, NewAccesses);
+  removeDeadInstructions(BB, BBMap);
 }
 
 BasicBlock *BlockGenerator::splitBB(BasicBlock *BB) {
@@ -341,6 +360,8 @@ Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
+  assert(!Access.isArrayKind() && "Trying to get alloca for array kind");
+
   if (Access.isPHIKind())
     return getOrCreatePHIAlloca(Access.getBaseAddr());
   else
@@ -348,6 +369,8 @@ Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
+  assert(!Array->isArrayKind() && "Trying to get alloca for array kind");
+
   if (Array->isPHIKind())
     return getOrCreatePHIAlloca(Array->getBasePtr());
   else
@@ -461,10 +484,9 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
   if (StartBB == S.getEntry())
     StartBB = SplitBBTerm->getSuccessor(1);
 
-  Builder.SetInsertPoint(StartBB->getTerminator());
+  Builder.SetInsertPoint(&*StartBB->begin());
 
-  for (auto &Pair : S.arrays()) {
-    auto &Array = Pair.second;
+  for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
       continue;
     if (Array->isPHIKind()) {
@@ -522,8 +544,8 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
   for (const auto &EscapeMapping : EscapeMap) {
     // Extract the escaping instruction and the escaping users as well as the
     // alloca the instruction was demoted to.
-    Instruction *EscapeInst = EscapeMapping.getFirst();
-    const auto &EscapeMappingValue = EscapeMapping.getSecond();
+    Instruction *EscapeInst = EscapeMapping.first;
+    const auto &EscapeMappingValue = EscapeMapping.second;
     const EscapeUserVectorTy &EscapeUsers = EscapeMappingValue.second;
     Value *ScalarAddr = EscapeMappingValue.first;
 
@@ -554,8 +576,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
 }
 
 void BlockGenerator::findOutsideUsers(Scop &S) {
-  for (auto &Pair : S.arrays()) {
-    auto &Array = Pair.second;
+  for (auto &Array : S.arrays()) {
 
     if (Array->getNumberOfDimensions() != 0)
       continue;
@@ -591,8 +612,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
 
   Builder.SetInsertPoint(OptExitBB->getTerminator());
 
-  for (auto &Pair : S.arrays()) {
-    auto &SAI = Pair.second;
+  for (auto &SAI : S.arrays()) {
     auto *Val = SAI->getBasePtr();
 
     // Only Value-like scalars need a merge PHI. Exit block PHIs receive either
@@ -626,11 +646,25 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
   }
 }
 
+void BlockGenerator::invalidateScalarEvolution(Scop &S) {
+  for (auto &Stmt : S)
+    if (Stmt.isBlockStmt())
+      for (auto &Inst : *Stmt.getBasicBlock())
+        SE.forgetValue(&Inst);
+    else if (Stmt.isRegionStmt())
+      for (auto *BB : Stmt.getRegion()->blocks())
+        for (auto &Inst : *BB)
+          SE.forgetValue(&Inst);
+    else
+      llvm_unreachable("Unexpected statement type found");
+}
+
 void BlockGenerator::finalizeSCoP(Scop &S) {
   findOutsideUsers(S);
   createScalarInitialization(S);
   createExitPHINodeMerges(S);
   createScalarFinalization(S);
+  invalidateScalarEvolution(S);
 }
 
 VectorBlockGenerator::VectorBlockGenerator(BlockGenerator &BlockGen,
@@ -873,7 +907,7 @@ bool VectorBlockGenerator::extractScalarValues(const Instruction *Inst,
 
       // If there is one scalar extracted, all scalar elements should have
       // already been extracted by the code here. So no need to check for the
-      // existance of all of them.
+      // existence of all of them.
       if (SM.count(Operand))
         break;
 

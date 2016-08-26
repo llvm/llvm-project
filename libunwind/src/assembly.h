@@ -35,19 +35,34 @@
 #define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
 
 #if defined(__APPLE__)
+
 #define SYMBOL_IS_FUNC(name)
+#define NO_EXEC_STACK_DIRECTIVE
+
 #elif defined(__ELF__)
+
 #if defined(__arm__)
 #define SYMBOL_IS_FUNC(name) .type name,%function
 #else
 #define SYMBOL_IS_FUNC(name) .type name,@function
 #endif
+
+#if defined(__GNU__) || defined(__ANDROID__) || defined(__FreeBSD__)
+#define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack,"",%progbits
 #else
+#define NO_EXEC_STACK_DIRECTIVE
+#endif
+
+#else
+
 #define SYMBOL_IS_FUNC(name)                                                   \
   .def name SEPARATOR                                                          \
     .scl 2 SEPARATOR                                                           \
     .type 32 SEPARATOR                                                         \
   .endef
+
+#define NO_EXEC_STACK_DIRECTIVE
+
 #endif
 
 #define DEFINE_LIBUNWIND_FUNCTION(name)                   \

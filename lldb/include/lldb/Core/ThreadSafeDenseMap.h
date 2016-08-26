@@ -12,46 +12,41 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 
 // Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 
 // Project includes
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
     
-template <typename _KeyType, typename _ValueType>
+template <typename _KeyType, typename _ValueType, typename _MutexType = std::mutex>
 class ThreadSafeDenseMap
 {
 public:
     typedef llvm::DenseMap<_KeyType,_ValueType> LLVMMapType;
-    
-    ThreadSafeDenseMap(unsigned map_initial_capacity = 0,
-                       Mutex::Type mutex_type = Mutex::eMutexTypeNormal) :
-        m_map(map_initial_capacity),
-        m_mutex(mutex_type)
-    {
-    }
-    
+
+    ThreadSafeDenseMap(unsigned map_initial_capacity = 0) : m_map(map_initial_capacity), m_mutex() {}
+
     void
     Insert (_KeyType k, _ValueType v)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<_MutexType> guard(m_mutex);
         m_map.insert(std::make_pair(k,v));
     }
     
     void
     Erase (_KeyType k)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<_MutexType> guard(m_mutex);
         m_map.erase(k);
     }
     
     _ValueType
     Lookup (_KeyType k)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<_MutexType> guard(m_mutex);
         return m_map.lookup(k);
     }
 
@@ -59,7 +54,7 @@ public:
     Lookup (_KeyType k,
             _ValueType& v)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<_MutexType> guard(m_mutex);
         auto iter = m_map.find(k),
              end = m_map.end();
         if (iter == end)
@@ -71,13 +66,13 @@ public:
     void
     Clear ()
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<_MutexType> guard(m_mutex);
         m_map.clear();
     }
 
 protected:
     LLVMMapType m_map;
-    Mutex m_mutex;
+    _MutexType m_mutex;
 };
 
 } // namespace lldb_private

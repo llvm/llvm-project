@@ -390,12 +390,14 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
           if (sin->n_strx > strSize)
             return true;
           sout.name  = &strings[sin->n_strx];
-          sout.type  = (NListType)(sin->n_type & N_TYPE);
+          sout.type = static_cast<NListType>(sin->n_type & (N_STAB|N_TYPE));
           sout.scope = (sin->n_type & (N_PEXT|N_EXT));
           sout.sect  = sin->n_sect;
           sout.desc  = sin->n_desc;
           sout.value = sin->n_value;
-          if (sout.type == N_UNDF)
+          if (sin->n_type & N_STAB)
+            f->stabsSymbols.push_back(sout);
+          else if (sout.type == N_UNDF)
             f->undefinedSymbols.push_back(sout);
           else if (sin->n_type & N_EXT)
             f->globalSymbols.push_back(sout);
@@ -429,6 +431,8 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
             f->undefinedSymbols.push_back(sout);
           else if (sout.scope == (SymbolScope)N_EXT)
             f->globalSymbols.push_back(sout);
+          else if (sin->n_type & N_STAB)
+            f->stabsSymbols.push_back(sout);
           else
             f->localSymbols.push_back(sout);
         }
@@ -535,7 +539,7 @@ public:
   loadFile(std::unique_ptr<MemoryBuffer> mb,
            const Registry &registry) const override {
     std::unique_ptr<File> ret =
-        llvm::make_unique<MachOFile>(std::move(mb), &_ctx);
+      llvm::make_unique<MachOFile>(std::move(mb), &_ctx);
     return std::move(ret);
   }
 

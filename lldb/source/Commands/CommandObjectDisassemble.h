@@ -30,15 +30,16 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter);
+        CommandOptions();
 
         ~CommandOptions() override;
 
         Error
-        SetOptionValue(uint32_t option_idx, const char *option_arg) override;
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override;
 
         void
-        OptionParsingStarting() override;
+        OptionParsingStarting(ExecutionContext *execution_context) override;
 
         const OptionDefinition*
         GetDefinitions() override;
@@ -58,7 +59,7 @@ public:
         }
         
         Error
-        OptionParsingFinished() override;
+        OptionParsingFinished(ExecutionContext *execution_context) override;
 
         bool show_mixed; // Show mixed source/assembly
         bool show_bytes;

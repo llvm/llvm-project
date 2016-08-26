@@ -26,6 +26,7 @@
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
+#include "polly/PolyhedralInfo.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
@@ -152,6 +153,11 @@ static cl::opt<bool>
                cl::desc("Show the Polly CFG right after code generation"),
                cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    EnablePolyhedralInfo("polly-enable-polyhedralinfo",
+                         cl::desc("Enable polyhedral interface of Polly"),
+                         cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 namespace polly {
 void initializePollyPasses(PassRegistry &Registry) {
   initializeCodeGenerationPass(Registry);
@@ -168,6 +174,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeIslAstInfoPass(Registry);
   initializeIslScheduleOptimizerPass(Registry);
   initializePollyCanonicalizePass(Registry);
+  initializePolyhedralInfoPass(Registry);
   initializeScopDetectionPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
@@ -216,6 +223,8 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
     PM.add(polly::createDOTOnlyPrinterPass());
 
   PM.add(polly::createScopInfoRegionPassPass());
+  if (EnablePolyhedralInfo)
+    PM.add(polly::createPolyhedralInfoPass());
 
   if (ImportJScop)
     PM.add(polly::createJSONImporterPass());

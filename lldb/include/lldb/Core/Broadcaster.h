@@ -24,6 +24,8 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -270,11 +272,10 @@ private:
 ///         //----------------------------------------------------------
 ///         enum
 ///         {
-///             eBroadcastBitStateChanged   = (1 << 0),
-///             eBroadcastBitInterrupt      = (1 << 1),
-///             eBroadcastBitSTDOUT         = (1 << 2),
-///             eBroadcastBitSTDERR         = (1 << 3),
-///             eBroadcastBitProfileData    = (1 << 4)
+///             eBroadcastBitOne   = (1 << 0),
+///             eBroadcastBitTwo   = (1 << 1),
+///             eBroadcastBitThree = (1 << 2),
+///             ...
 ///         };
 ///     \endcode
 //----------------------------------------------------------------------
@@ -615,12 +616,11 @@ protected:
         //------------------------------------------------------------------
         //
         //------------------------------------------------------------------
-        typedef std::list< std::pair<lldb::ListenerWP,uint32_t> > collection;
+        typedef llvm::SmallVector<std::pair<lldb::ListenerWP, uint32_t>, 4> collection;
         typedef std::map<uint32_t, std::string> event_names_map;
 
-        void
-        ListenerIterator (std::function <bool (const lldb::ListenerSP &listener_sp, uint32_t &event_mask)> const &callback);
-
+        llvm::SmallVector<std::pair<lldb::ListenerSP, uint32_t&>, 4>
+        GetListeners();
 
         Broadcaster &m_broadcaster;                     ///< The broadcsater that this implements
         event_names_map m_event_names;                  ///< Optionally define event names for readability and logging for each event bit

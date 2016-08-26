@@ -7,15 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/ProcessInfo.h"
+
 // C Includes
 // C++ Includes
 #include <climits>
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/ProcessInfo.h"
-
 #include "lldb/Core/Stream.h"
+#include "lldb/Host/PosixApi.h"
 
 using namespace lldb;
 using namespace lldb_private;

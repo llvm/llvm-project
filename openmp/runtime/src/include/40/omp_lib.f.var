@@ -66,19 +66,19 @@
 !         *** omp_* entry points
 !         ***
 
-          subroutine omp_set_num_threads(nthreads)
+          subroutine omp_set_num_threads(num_threads)
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) nthreads
+            integer (kind=omp_integer_kind) num_threads
           end subroutine omp_set_num_threads
 
-          subroutine omp_set_dynamic(enable)
+          subroutine omp_set_dynamic(dynamic_threads)
             use omp_lib_kinds
-            logical (kind=omp_logical_kind) enable
+            logical (kind=omp_logical_kind) dynamic_threads
           end subroutine omp_set_dynamic
 
-          subroutine omp_set_nested(enable)
+          subroutine omp_set_nested(nested)
             use omp_lib_kinds
-            logical (kind=omp_logical_kind) enable
+            logical (kind=omp_logical_kind) nested
           end subroutine omp_set_nested
 
           function omp_get_num_threads()
@@ -105,6 +105,11 @@
             use omp_lib_kinds
             logical (kind=omp_logical_kind) omp_in_parallel
           end function omp_in_parallel
+
+          function omp_in_final()
+            use omp_lib_kinds
+            logical (kind=omp_logical_kind) omp_in_final
+          end function omp_in_final
 
           function omp_get_dynamic()
             use omp_lib_kinds
@@ -153,16 +158,16 @@
             integer (kind=omp_integer_kind) omp_get_team_size
           end function omp_get_team_size
 
-          subroutine omp_set_schedule(kind, modifier)
+          subroutine omp_set_schedule(kind, chunk_size)
             use omp_lib_kinds
             integer (kind=omp_sched_kind) kind
-            integer (kind=omp_integer_kind) modifier
+            integer (kind=omp_integer_kind) chunk_size
           end subroutine omp_set_schedule
 
-          subroutine omp_get_schedule(kind, modifier)
+          subroutine omp_get_schedule(kind, chunk_size)
             use omp_lib_kinds
             integer (kind=omp_sched_kind) kind
-            integer (kind=omp_integer_kind) modifier
+            integer (kind=omp_integer_kind) chunk_size
           end subroutine omp_get_schedule
 
           function omp_get_proc_bind()
@@ -183,9 +188,9 @@
             integer (kind=omp_integer_kind) omp_get_default_device
           end function omp_get_default_device
 
-          subroutine omp_set_default_device(dflt_device)
+          subroutine omp_set_default_device(device_num)
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) dflt_device
+            integer (kind=omp_integer_kind) device_num
           end subroutine omp_set_default_device
 
           function omp_get_num_devices()
@@ -213,86 +218,86 @@
             logical (kind=omp_logical_kind) omp_is_initial_device
           end function omp_is_initial_device
 
-          subroutine omp_init_lock(lockvar)
+          subroutine omp_init_lock(svar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_lock_kind) lockvar
+            integer (kind=omp_lock_kind) svar
           end subroutine omp_init_lock
 
-          subroutine omp_destroy_lock(lockvar)
+          subroutine omp_destroy_lock(svar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_destroy_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_lock_kind) lockvar
+            integer (kind=omp_lock_kind) svar
           end subroutine omp_destroy_lock
 
-          subroutine omp_set_lock(lockvar)
+          subroutine omp_set_lock(svar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_set_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_lock_kind) lockvar
+            integer (kind=omp_lock_kind) svar
           end subroutine omp_set_lock
 
-          subroutine omp_unset_lock(lockvar)
+          subroutine omp_unset_lock(svar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_unset_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_lock_kind) lockvar
+            integer (kind=omp_lock_kind) svar
           end subroutine omp_unset_lock
 
-          function omp_test_lock(lockvar)
+          function omp_test_lock(svar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_test_lock
 !DIR$ ENDIF
             use omp_lib_kinds
             logical (kind=omp_logical_kind) omp_test_lock
-            integer (kind=omp_lock_kind) lockvar
+            integer (kind=omp_lock_kind) svar
           end function omp_test_lock
 
-          subroutine omp_init_nest_lock(lockvar)
+          subroutine omp_init_nest_lock(nvar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_nest_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_nest_lock_kind) lockvar
+            integer (kind=omp_nest_lock_kind) nvar
           end subroutine omp_init_nest_lock
 
-          subroutine omp_destroy_nest_lock(lockvar)
+          subroutine omp_destroy_nest_lock(nvar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_destroy_nest_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_nest_lock_kind) lockvar
+            integer (kind=omp_nest_lock_kind) nvar
           end subroutine omp_destroy_nest_lock
 
-          subroutine omp_set_nest_lock(lockvar)
+          subroutine omp_set_nest_lock(nvar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_set_nest_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_nest_lock_kind) lockvar
+            integer (kind=omp_nest_lock_kind) nvar
           end subroutine omp_set_nest_lock
 
-          subroutine omp_unset_nest_lock(lockvar)
+          subroutine omp_unset_nest_lock(nvar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_unset_nest_lock
 !DIR$ ENDIF
             use omp_lib_kinds
-            integer (kind=omp_nest_lock_kind) lockvar
+            integer (kind=omp_nest_lock_kind) nvar
           end subroutine omp_unset_nest_lock
 
-          function omp_test_nest_lock(lockvar)
+          function omp_test_nest_lock(nvar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_test_nest_lock
 !DIR$ ENDIF
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_test_nest_lock
-            integer (kind=omp_nest_lock_kind) lockvar
+            integer (kind=omp_nest_lock_kind) nvar
           end function omp_test_nest_lock
 
 !         ***

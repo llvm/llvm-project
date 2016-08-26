@@ -223,13 +223,9 @@ bool SymbolTable::AtomMappingInfo::isEqual(const DefinedAtom * const l,
                                            const DefinedAtom * const r) {
   if (l == r)
     return true;
-  if (l == getEmptyKey())
+  if (l == getEmptyKey() || r == getEmptyKey())
     return false;
-  if (r == getEmptyKey())
-    return false;
-  if (l == getTombstoneKey())
-    return false;
-  if (r == getTombstoneKey())
+  if (l == getTombstoneKey() || r == getTombstoneKey())
     return false;
   if (l->contentType() != r->contentType())
     return false;
@@ -265,17 +261,6 @@ const Atom *SymbolTable::findByName(StringRef sym) {
   return pos->second;
 }
 
-bool SymbolTable::isDefined(StringRef sym) {
-  if (const Atom *atom = findByName(sym))
-    return !isa<UndefinedAtom>(atom);
-  return false;
-}
-
-void SymbolTable::addReplacement(const Atom *replaced,
-                                 const Atom *replacement) {
-  _replacedAtoms[replaced] = replacement;
-}
-
 const Atom *SymbolTable::replacement(const Atom *atom) {
   // Find the replacement for a given atom. Atoms in _replacedAtoms
   // may be chained, so find the last one.
@@ -299,19 +284,6 @@ std::vector<const UndefinedAtom *> SymbolTable::undefines() {
     if (const auto *undef = dyn_cast<const UndefinedAtom>(atom))
       if (_replacedAtoms.count(undef) == 0)
         ret.push_back(undef);
-  }
-  return ret;
-}
-
-std::vector<StringRef> SymbolTable::tentativeDefinitions() {
-  std::vector<StringRef> ret;
-  for (auto entry : _nameTable) {
-    const Atom *atom = entry.second;
-    StringRef name   = entry.first;
-    assert(atom != nullptr);
-    if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom))
-      if (defAtom->merge() == DefinedAtom::mergeAsTentative)
-        ret.push_back(name);
   }
   return ret;
 }

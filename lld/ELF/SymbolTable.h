@@ -65,7 +65,7 @@ public:
                      InputSectionBase<ELFT> *Section);
   Symbol *addRegular(StringRef Name, uint8_t Binding, uint8_t StOther);
   Symbol *addSynthetic(StringRef N, OutputSectionBase<ELFT> *Section,
-                       uintX_t Value);
+                       uintX_t Value, uint8_t StOther);
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);
 
@@ -82,7 +82,6 @@ public:
   void scanShlibUndefined();
   void scanDynamicList();
   void scanVersionScript();
-  void scanSymbolVersions();
 
   SymbolBody *find(StringRef Name);
 
@@ -91,8 +90,8 @@ public:
 
 private:
   std::vector<SymbolBody *> findAll(StringRef Pattern);
-  std::pair<Symbol *, bool> insert(StringRef Name);
-  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
+  std::pair<Symbol *, bool> insert(StringRef &Name);
+  std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    bool IsUsedInRegularObj, InputFile *File);
 
@@ -102,6 +101,7 @@ private:
   std::map<std::string, SymbolBody *> getDemangledSyms();
 
   struct SymIndex {
+    SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
     int Idx : 31;
     unsigned Traced : 1;
   };

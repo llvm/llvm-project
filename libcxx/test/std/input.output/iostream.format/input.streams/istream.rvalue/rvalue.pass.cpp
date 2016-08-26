@@ -7,16 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <istream>
 
 // template <class charT, class traits, class T>
 //   basic_istream<charT, traits>&
-//   operator>>(basic_istream<charT, traits>&& is, T& x);
+//   operator>>(basic_istream<charT, traits>&& is, T&& x);
 
 #include <istream>
+#include <sstream>
 #include <cassert>
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class CharT>
 struct testbuf
@@ -42,11 +43,13 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+struct A{};
+bool called = false;
+void operator>>(std::istream&, A&&){ called = true; }
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         testbuf<char> sb("   123");
         int i = 0;
@@ -59,5 +62,11 @@ int main()
         std::wistream(&sb) >> i;
         assert(i == 123);
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    { // test perfect forwarding
+        assert(called == false);
+        std::istringstream ss;
+        auto& out = (std::move(ss) >> A{});
+        assert(&out == &ss);
+        assert(called);
+    }
 }

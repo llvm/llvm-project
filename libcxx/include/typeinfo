@@ -165,4 +165,16 @@ public:
 
 }  // std
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_bad_cast()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_cast();
+#else
+	_VSTD::abort();
+#endif
+}
+_LIBCPP_END_NAMESPACE_STD
+
 #endif  // __LIBCPP_TYPEINFO

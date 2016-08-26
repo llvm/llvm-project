@@ -51,12 +51,12 @@ namespace lldb_private {
         }
         
         Error
-        SetOptionValue(CommandInterpreter &interpreter,
-                       uint32_t option_idx,
-                       const char *option_value) override;
+        SetOptionValue(uint32_t option_idx,
+                       const char *option_value,
+                       ExecutionContext *execution_context) override;
         
         void
-        OptionParsingStarting(CommandInterpreter &interpreter) override;
+        OptionParsingStarting(ExecutionContext *execution_context) override;
         
         OptionValueBoolean &
         GetOptionValue ()

@@ -1260,7 +1260,7 @@ Target::SetExecutableModule (ModuleSP& executable_sp, bool get_dependent_files)
     
     if (executable_sp)
     {
-        Timer scoped_timer (__PRETTY_FUNCTION__,
+        Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                             "Target::SetExecutableModule (executable = '%s')",
                             executable_sp->GetFileSpec().GetPath().c_str());
 
@@ -3265,8 +3265,9 @@ Target::Launch (ProcessLaunchInfo &launch_info, Stream *stream)
                 m_process_sp->HijackProcessEvents(hijack_listener_sp);
             }
 
-            StateType state = m_process_sp->WaitForProcessToStop(nullptr, nullptr, false, hijack_listener_sp, nullptr);
-            
+            StateType state = m_process_sp->WaitForProcessToStop(std::chrono::microseconds(0), nullptr, false,
+                                                                 hijack_listener_sp, nullptr);
+
             if (state == eStateStopped)
             {
                 if (!launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
@@ -3276,7 +3277,8 @@ Target::Launch (ProcessLaunchInfo &launch_info, Stream *stream)
                         error = m_process_sp->PrivateResume();
                         if (error.Success())
                         {
-                            state = m_process_sp->WaitForProcessToStop(nullptr, nullptr, true, hijack_listener_sp, stream);
+                            state = m_process_sp->WaitForProcessToStop(std::chrono::microseconds(0), nullptr, true,
+                                                                       hijack_listener_sp, stream);
                             const bool must_be_alive = false; // eStateExited is ok, so this must be false
                             if (!StateIsStoppedState(state, must_be_alive))
                             {
@@ -3405,7 +3407,8 @@ Target::Attach (ProcessAttachInfo &attach_info, Stream *stream)
         }
         else
         {
-            state = process_sp->WaitForProcessToStop (nullptr, nullptr, false, attach_info.GetHijackListener(), stream);
+            state = process_sp->WaitForProcessToStop(std::chrono::microseconds(0), nullptr, false,
+                                                     attach_info.GetHijackListener(), stream);
             process_sp->RestoreProcessEvents ();
 
             if (state != eStateStopped)

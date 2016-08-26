@@ -89,7 +89,15 @@ GDBRemoteRegisterContext::GetRegisterCount ()
 const RegisterInfo *
 GDBRemoteRegisterContext::GetRegisterInfoAtIndex (size_t reg)
 {
-    return m_reg_info.GetRegisterInfoAtIndex (reg);
+    RegisterInfo* reg_info = m_reg_info.GetRegisterInfoAtIndex (reg);
+
+    if (reg_info && reg_info->dynamic_size_dwarf_expr_bytes)
+    {
+        const ArchSpec &arch = m_thread.GetProcess ()->GetTarget ().GetArchitecture ();
+        uint8_t reg_size = UpdateDynamicRegisterSize (arch, reg_info);
+        reg_info->byte_size = reg_size;
+    }
+    return reg_info;
 }
 
 size_t
@@ -111,8 +119,25 @@ GDBRemoteRegisterContext::GetRegisterSet (size_t reg_set)
 bool
 GDBRemoteRegisterContext::ReadRegister (const RegisterInfo *reg_info, RegisterValue &value)
 {
+    ExecutionContext exe_ctx(CalculateThread());
+
+    Process *process = exe_ctx.GetProcessPtr();
+    Thread *thread = exe_ctx.GetThreadPtr();
+    if (process == NULL || thread == NULL)
+        return false;
+
+    GDBRemoteCommunicationClient &gdb_comm(((ProcessGDBRemote *)process)->GetGDBRemote());
+
+    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    if (!lock)
+    {
+        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD | GDBR_LOG_PACKETS))
+            log->Printf("GDBRemoteRegisterContext::%s failed to get packet sequence mutex", __FUNCTION__);
+        return false;
+    }
+
     // Read the register
-    if (ReadRegisterBytes (reg_info, m_reg_data))
+    if (ReadRegisterBytes(reg_info, m_reg_data, gdb_comm, lock))
     {
         const bool partial_data_ok = false;
         Error error (value.SetValueFromData(reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
@@ -122,7 +147,7 @@ GDBRemoteRegisterContext::ReadRegister (const RegisterInfo *reg_info, RegisterVa
 }
 
 bool
-GDBRemoteRegisterContext::PrivateSetRegisterValue (uint32_t reg, StringExtractor &response)
+GDBRemoteRegisterContext::PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data)
 {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex (reg);
     if (reg_info == NULL)
@@ -131,14 +156,15 @@ GDBRemoteRegisterContext::PrivateSetRegisterValue (uint32_t reg, StringExtractor
     // Invalidate if needed
     InvalidateIfNeeded(false);
 
-    const uint32_t reg_byte_size = reg_info->byte_size;
-    const size_t bytes_copied = response.GetHexBytes (const_cast<uint8_t*>(m_reg_data.PeekData(reg_info->byte_offset, reg_byte_size)), reg_byte_size, '\xcc');
-    bool success = bytes_copied == reg_byte_size;
+    const size_t reg_byte_size = reg_info->byte_size;
+    memcpy(const_cast<uint8_t *>(m_reg_data.PeekData(reg_info->byte_offset, reg_byte_size)), data.data(),
+           std::min(data.size(), reg_byte_size));
+    bool success = data.size() >= reg_byte_size;
     if (success)
     {
         SetRegisterIsValid(reg, true);
     }
-    else if (bytes_copied > 0)
+    else if (data.size() > 0)
     {
         // Only set register is valid to false if we copied some bytes, else
         // leave it as it was.
@@ -195,29 +221,23 @@ GDBRemoteRegisterContext::PrivateSetRegisterValue (uint32_t reg, uint64_t new_re
 
 // Helper function for GDBRemoteRegisterContext::ReadRegisterBytes().
 bool
-GDBRemoteRegisterContext::GetPrimordialRegister(const RegisterInfo *reg_info,
-                                                GDBRemoteCommunicationClient &gdb_comm)
+GDBRemoteRegisterContext::GetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                                                const GDBRemoteCommunicationClient::Lock &lock)
 {
     const uint32_t lldb_reg = reg_info->kinds[eRegisterKindLLDB];
     const uint32_t remote_reg = reg_info->kinds[eRegisterKindProcessPlugin];
     StringExtractorGDBRemote response;
-    if (gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg, response))
-        return PrivateSetRegisterValue (lldb_reg, response);
+    if (DataBufferSP buffer_sp = gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg, lock))
+        return PrivateSetRegisterValue(lldb_reg,
+                                       llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
     return false;
 }
 
 bool
-GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataExtractor &data)
+GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data,
+                                            GDBRemoteCommunicationClient &gdb_comm,
+                                            const GDBRemoteCommunicationClient::Lock &lock)
 {
-    ExecutionContext exe_ctx (CalculateThread());
-
-    Process *process = exe_ctx.GetProcessPtr();
-    Thread *thread = exe_ctx.GetThreadPtr();
-    if (process == NULL || thread == NULL)
-        return false;
-
-    GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *)process)->GetGDBRemote());
-
     InvalidateIfNeeded(false);
 
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
@@ -226,15 +246,19 @@ GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataE
     {
         if (m_read_all_at_once)
         {
-            StringExtractorGDBRemote response;
-            if (!gdb_comm.ReadAllRegisters(m_thread.GetProtocolID(), response))
-                return false;
-            if (response.IsNormalResponse())
-                if (response.GetHexBytes(const_cast<void *>(reinterpret_cast<const void *>(m_reg_data.GetDataStart())),
-                                         m_reg_data.GetByteSize(), '\xcc') == m_reg_data.GetByteSize())
-                    SetAllRegisterValid (true);
+            if (DataBufferSP buffer_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID(), lock))
+            {
+                memcpy(const_cast<uint8_t *>(m_reg_data.GetDataStart()), buffer_sp->GetBytes(),
+                       std::min(buffer_sp->GetByteSize(), m_reg_data.GetByteSize()));
+                if (buffer_sp->GetByteSize() >= m_reg_data.GetByteSize())
+                {
+                    SetAllRegisterValid(true);
+                    return true;
+                }
+            }
+            return false;
         }
-        else if (reg_info->value_regs)
+        if (reg_info->value_regs)
         {
             // Process this composite register request by delegating to the constituent
             // primordial registers.
@@ -255,7 +279,7 @@ GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataE
                 {
                     // Read the containing register if it hasn't already been read
                     if (!GetRegisterIsValid(prim_reg))
-                        success = GetPrimordialRegister(prim_reg_info, gdb_comm);
+                        success = GetPrimordialRegister(prim_reg_info, gdb_comm, lock);
                 }
             }
 
@@ -269,7 +293,7 @@ GDBRemoteRegisterContext::ReadRegisterBytes (const RegisterInfo *reg_info, DataE
         else
         {
             // Get each register individually
-            GetPrimordialRegister(reg_info, gdb_comm);
+            GetPrimordialRegister(reg_info, gdb_comm, lock);
         }
 
         // Make sure we got a valid register value after reading it
@@ -311,54 +335,18 @@ GDBRemoteRegisterContext::WriteRegister (const RegisterInfo *reg_info,
 
 // Helper function for GDBRemoteRegisterContext::WriteRegisterBytes().
 bool
-GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info,
-                                                GDBRemoteCommunicationClient &gdb_comm)
+GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm,
+                                                const GDBRemoteCommunicationClient::Lock &lock)
 {
     StreamString packet;
     StringExtractorGDBRemote response;
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
-    packet.PutBytesAsRawHex8 (m_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size),
-                              reg_info->byte_size,
-                              endian::InlHostByteOrder(),
-                              endian::InlHostByteOrder());
-
-    if (gdb_comm.GetThreadSuffixSupported())
-        packet.Printf (";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-
     // Invalidate just this register
     SetRegisterIsValid(reg, false);
-    if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                              packet.GetString().size(),
-                                              response,
-                                              false) == GDBRemoteCommunication::PacketResult::Success)
-    {
-        if (response.IsOKResponse())
-            return true;
-    }
-    return false;
-}
 
-void
-GDBRemoteRegisterContext::SyncThreadState(Process *process)
-{
-    // NB.  We assume our caller has locked the sequence mutex.
-    
-    GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *) process)->GetGDBRemote());
-    if (!gdb_comm.GetSyncThreadStateSupported())
-        return;
-
-    StreamString packet;
-    StringExtractorGDBRemote response;
-    packet.Printf ("QSyncThreadState:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-    if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                              packet.GetString().size(),
-                                              response,
-                                              false) == GDBRemoteCommunication::PacketResult::Success)
-    {
-        if (response.IsOKResponse())
-            InvalidateAllRegisters();
-    }
+    return gdb_comm.WriteRegister(
+        m_thread.GetProtocolID(), reg_info->kinds[eRegisterKindProcessPlugin],
+        {m_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size), reg_info->byte_size}, lock);
 }
 
 bool
@@ -372,12 +360,6 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
         return false;
 
     GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *)process)->GetGDBRemote());
-// FIXME: This check isn't right because IsRunning checks the Public state, but this
-// is work you need to do - for instance in ShouldStop & friends - before the public
-// state has been changed.
-//    if (gdb_comm.IsRunning())
-//        return false;
-
 
 #if defined (LLDB_CONFIGURATION_DEBUG)
     assert (m_reg_data.GetByteSize() >= reg_info->byte_offset + reg_info->byte_size);
@@ -401,41 +383,21 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
                                   reg_info->byte_size,          // dst length
                                   m_reg_data.GetByteOrder()))   // dst byte order
     {
-        Mutex::Locker locker;
-        if (gdb_comm.GetSequenceMutex (locker, "Didn't get sequence mutex for write register."))
+        GDBRemoteClientBase::Lock lock(gdb_comm, false);
+        if (lock)
         {
-            const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
-            ProcessSP process_sp (m_thread.GetProcess());
-            if (thread_suffix_supported || static_cast<ProcessGDBRemote *>(process_sp.get())->GetGDBRemote().SetCurrentThread(m_thread.GetProtocolID()))
-            {
-                StreamString packet;
-                StringExtractorGDBRemote response;
-                
                 if (m_read_all_at_once)
                 {
-                    // Set all registers in one packet
-                    packet.PutChar ('G');
-                    packet.PutBytesAsRawHex8 (m_reg_data.GetDataStart(),
-                                              m_reg_data.GetByteSize(),
-                                              endian::InlHostByteOrder(),
-                                              endian::InlHostByteOrder());
-
-                    if (thread_suffix_supported)
-                        packet.Printf (";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-
                     // Invalidate all register values
                     InvalidateIfNeeded (true);
 
-                    if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                                              packet.GetString().size(),
-                                                              response,
-                                                              false) == GDBRemoteCommunication::PacketResult::Success)
+                    // Set all registers in one packet
+                    if (gdb_comm.WriteAllRegisters(m_thread.GetProtocolID(),
+                                                   {m_reg_data.GetDataStart(), size_t(m_reg_data.GetByteSize())}, lock))
+
                     {
                         SetAllRegisterValid (false);
-                        if (response.IsOKResponse())
-                        {
-                            return true;
-                        }
+                        return true;
                     }
                 }
                 else
@@ -461,13 +423,13 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
                             if (value_reg_info == NULL)
                                 success = false;
                             else
-                                success = SetPrimordialRegister(value_reg_info, gdb_comm);
+                                success = SetPrimordialRegister(value_reg_info, gdb_comm, lock);
                         }
                     }
                     else
                     {
                         // This is an actual register, write it
-                        success = SetPrimordialRegister(reg_info, gdb_comm);
+                        success = SetPrimordialRegister(reg_info, gdb_comm, lock);
                     }
 
                     // Check if writing this register will invalidate any other register values?
@@ -484,7 +446,6 @@ GDBRemoteRegisterContext::WriteRegisterBytes (const RegisterInfo *reg_info, Data
                     
                     return success;
                 }
-            }
         }
         else
         {
@@ -566,79 +527,30 @@ GDBRemoteRegisterContext::ReadAllRegisterValues (lldb::DataBufferSP &data_sp)
 
     GDBRemoteCommunicationClient &gdb_comm (((ProcessGDBRemote *)process)->GetGDBRemote());
 
-    StringExtractorGDBRemote response;
-
     const bool use_g_packet = gdb_comm.AvoidGPackets ((ProcessGDBRemote *)process) == false;
 
-    Mutex::Locker locker;
-    if (gdb_comm.GetSequenceMutex (locker, "Didn't get sequence mutex for read all registers."))
+    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    if (lock)
     {
-        SyncThreadState(process);
-        
-        char packet[32];
-        const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
-        ProcessSP process_sp (m_thread.GetProcess());
-        if (thread_suffix_supported || static_cast<ProcessGDBRemote *>(process_sp.get())->GetGDBRemote().SetCurrentThread(m_thread.GetProtocolID()))
+        if (gdb_comm.SyncThreadState(m_thread.GetProtocolID()))
+            InvalidateAllRegisters();
+
+        if (use_g_packet && (data_sp = gdb_comm.ReadAllRegisters(m_thread.GetProtocolID(), lock)))
+            return true;
+
+        // We're going to read each register
+        // individually and store them as binary data in a buffer.
+        const RegisterInfo *reg_info;
+
+        for (uint32_t i = 0; (reg_info = GetRegisterInfoAtIndex(i)) != NULL; i++)
         {
-            int packet_len = 0;
-            if (thread_suffix_supported)
-                packet_len = ::snprintf (packet, sizeof(packet), "g;thread:%4.4" PRIx64, m_thread.GetProtocolID());
-            else
-                packet_len = ::snprintf (packet, sizeof(packet), "g");
-            assert (packet_len < ((int)sizeof(packet) - 1));
-
-            if (use_g_packet && gdb_comm.SendPacketAndWaitForResponse(packet, packet_len, response, false) == GDBRemoteCommunication::PacketResult::Success)
-            {
-                int packet_len = 0;
-                if (thread_suffix_supported)
-                    packet_len = ::snprintf (packet, sizeof(packet), "g;thread:%4.4" PRIx64, m_thread.GetProtocolID());
-                else
-                    packet_len = ::snprintf (packet, sizeof(packet), "g");
-                assert (packet_len < ((int)sizeof(packet) - 1));
-    
-                if (gdb_comm.SendPacketAndWaitForResponse(packet, packet_len, response, false) == GDBRemoteCommunication::PacketResult::Success)
-                {
-                    if (response.IsErrorResponse())
-                        return false;
-    
-                    std::string &response_str = response.GetStringRef();
-                    if (isxdigit(response_str[0]))
-                    {
-                        response_str.insert(0, 1, 'G');
-                        if (thread_suffix_supported)
-                        {
-                            char thread_id_cstr[64];
-                            ::snprintf (thread_id_cstr, sizeof(thread_id_cstr), ";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-                            response_str.append (thread_id_cstr);
-                        }
-                        data_sp.reset (new DataBufferHeap (response_str.c_str(), response_str.size()));
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                // For the use_g_packet == false case, we're going to read each register 
-                // individually and store them as binary data in a buffer instead of as ascii
-                // characters.
-                const RegisterInfo *reg_info;
-
-                // data_sp will take ownership of this DataBufferHeap pointer soon.
-                DataBufferSP reg_ctx(new DataBufferHeap(m_reg_info.GetRegisterDataByteSize(), 0));
-
-                for (uint32_t i = 0; (reg_info = GetRegisterInfoAtIndex (i)) != NULL; i++)
-                {
-                    if (reg_info->value_regs) // skip registers that are slices of real registers
-                        continue;
-                    ReadRegisterBytes (reg_info, m_reg_data);
-                    // ReadRegisterBytes saves the contents of the register in to the m_reg_data buffer
-                }
-                memcpy (reg_ctx->GetBytes(), m_reg_data.GetDataStart(), m_reg_info.GetRegisterDataByteSize());
-
-                data_sp = reg_ctx;
-                return true;
-            }
+            if (reg_info->value_regs) // skip registers that are slices of real registers
+                continue;
+            ReadRegisterBytes(reg_info, m_reg_data, gdb_comm, lock);
+            // ReadRegisterBytes saves the contents of the register in to the m_reg_data buffer
         }
+        data_sp.reset(new DataBufferHeap(m_reg_data.GetDataStart(), m_reg_info.GetRegisterDataByteSize()));
+        return true;
     }
     else
     {
@@ -678,240 +590,143 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
 
     const bool use_g_packet = gdb_comm.AvoidGPackets ((ProcessGDBRemote *)process) == false;
 
-    StringExtractorGDBRemote response;
-    Mutex::Locker locker;
-    if (gdb_comm.GetSequenceMutex (locker, "Didn't get sequence mutex for write all registers."))
+    GDBRemoteClientBase::Lock lock(gdb_comm, false);
+    if (lock)
     {
-        const bool thread_suffix_supported = gdb_comm.GetThreadSuffixSupported();
-        ProcessSP process_sp (m_thread.GetProcess());
-        if (thread_suffix_supported || static_cast<ProcessGDBRemote *>(process_sp.get())->GetGDBRemote().SetCurrentThread(m_thread.GetProtocolID()))
+        // The data_sp contains the G response packet.
+        if (use_g_packet)
         {
-            // The data_sp contains the entire G response packet including the
-            // G, and if the thread suffix is supported, it has the thread suffix
-            // as well.
-            const char *G_packet = (const char *)data_sp->GetBytes();
-            size_t G_packet_len = data_sp->GetByteSize();
-            if (use_g_packet
-                && gdb_comm.SendPacketAndWaitForResponse (G_packet,
-                                                          G_packet_len,
-                                                          response,
-                                                          false) == GDBRemoteCommunication::PacketResult::Success)
+            if (gdb_comm.WriteAllRegisters(m_thread.GetProtocolID(),
+                                           {data_sp->GetBytes(), size_t(data_sp->GetByteSize())}, lock))
+                return true;
+
+            uint32_t num_restored = 0;
+            // We need to manually go through all of the registers and
+            // restore them manually
+            DataExtractor restore_data(data_sp, m_reg_data.GetByteOrder(), m_reg_data.GetAddressByteSize());
+
+            const RegisterInfo *reg_info;
+
+            // The g packet contents may either include the slice registers (registers defined in
+            // terms of other registers, e.g. eax is a subset of rax) or not.  The slice registers
+            // should NOT be in the g packet, but some implementations may incorrectly include them.
+            //
+            // If the slice registers are included in the packet, we must step over the slice registers
+            // when parsing the packet -- relying on the RegisterInfo byte_offset field would be incorrect.
+            // If the slice registers are not included, then using the byte_offset values into the
+            // data buffer is the best way to find individual register values.
+
+            uint64_t size_including_slice_registers = 0;
+            uint64_t size_not_including_slice_registers = 0;
+            uint64_t size_by_highest_offset = 0;
+
+            for (uint32_t reg_idx = 0; (reg_info = GetRegisterInfoAtIndex(reg_idx)) != NULL; ++reg_idx)
             {
-                // The data_sp contains the entire G response packet including the
-                // G, and if the thread suffix is supported, it has the thread suffix
-                // as well.
-                const char *G_packet = (const char *)data_sp->GetBytes();
-                size_t G_packet_len = data_sp->GetByteSize();
-                if (gdb_comm.SendPacketAndWaitForResponse (G_packet,
-                                                           G_packet_len,
-                                                           response,
-                                                           false) == GDBRemoteCommunication::PacketResult::Success)
-                {
-                    if (response.IsOKResponse())
-                        return true;
-                    else if (response.IsErrorResponse())
-                    {
-                        uint32_t num_restored = 0;
-                        // We need to manually go through all of the registers and
-                        // restore them manually
-    
-                        response.GetStringRef().assign (G_packet, G_packet_len);
-                        response.SetFilePos(1); // Skip the leading 'G'
+                size_including_slice_registers += reg_info->byte_size;
+                if (reg_info->value_regs == NULL)
+                    size_not_including_slice_registers += reg_info->byte_size;
+                if (reg_info->byte_offset >= size_by_highest_offset)
+                    size_by_highest_offset = reg_info->byte_offset + reg_info->byte_size;
+            }
 
-                        // G_packet_len is hex-ascii characters plus prefix 'G' plus suffix thread specifier.
-                        // This means buffer will be a little more than 2x larger than necessary but we resize
-                        // it down once we've extracted all hex ascii chars from the packet.
-                        DataBufferHeap buffer (G_packet_len, 0);
-
-                        const uint32_t bytes_extracted = response.GetHexBytes (buffer.GetBytes(),
-                                                                               buffer.GetByteSize(),
-                                                                               '\xcc');
-
-                        DataExtractor restore_data (buffer.GetBytes(),
-                                                    buffer.GetByteSize(),
-                                                    m_reg_data.GetByteOrder(),
-                                                    m_reg_data.GetAddressByteSize());
-
-                        if (bytes_extracted < restore_data.GetByteSize())
-                            restore_data.SetData(restore_data.GetDataStart(), bytes_extracted, m_reg_data.GetByteOrder());
-    
-                        const RegisterInfo *reg_info;
-
-                        // The g packet contents may either include the slice registers (registers defined in
-                        // terms of other registers, e.g. eax is a subset of rax) or not.  The slice registers 
-                        // should NOT be in the g packet, but some implementations may incorrectly include them.
-                        // 
-                        // If the slice registers are included in the packet, we must step over the slice registers 
-                        // when parsing the packet -- relying on the RegisterInfo byte_offset field would be incorrect.
-                        // If the slice registers are not included, then using the byte_offset values into the
-                        // data buffer is the best way to find individual register values.
-
-                        uint64_t size_including_slice_registers = 0;
-                        uint64_t size_not_including_slice_registers = 0;
-                        uint64_t size_by_highest_offset = 0;
-
-                        for (uint32_t reg_idx=0; (reg_info = GetRegisterInfoAtIndex (reg_idx)) != NULL; ++reg_idx)
-                        {
-                            size_including_slice_registers += reg_info->byte_size;
-                            if (reg_info->value_regs == NULL)
-                                size_not_including_slice_registers += reg_info->byte_size;
-                            if (reg_info->byte_offset >= size_by_highest_offset)
-                                size_by_highest_offset = reg_info->byte_offset + reg_info->byte_size;
-                        }
-
-                        bool use_byte_offset_into_buffer;
-                        if (size_by_highest_offset == restore_data.GetByteSize())
-                        {
-                            // The size of the packet agrees with the highest offset: + size in the register file
-                            use_byte_offset_into_buffer = true;
-                        }
-                        else if (size_not_including_slice_registers == restore_data.GetByteSize())
-                        {
-                            // The size of the packet is the same as concatenating all of the registers sequentially,
-                            // skipping the slice registers
-                            use_byte_offset_into_buffer = true;
-                        }
-                        else if (size_including_slice_registers == restore_data.GetByteSize())
-                        {
-                            // The slice registers are present in the packet (when they shouldn't be).
-                            // Don't try to use the RegisterInfo byte_offset into the restore_data, it will
-                            // point to the wrong place.
-                            use_byte_offset_into_buffer = false;
-                        }
-                        else {
-                            // None of our expected sizes match the actual g packet data we're looking at.
-                            // The most conservative approach here is to use the running total byte offset.
-                            use_byte_offset_into_buffer = false;
-                        }
-
-                        // In case our register definitions don't include the correct offsets,
-                        // keep track of the size of each reg & compute offset based on that.
-                        uint32_t running_byte_offset = 0;
-                        for (uint32_t reg_idx=0; (reg_info = GetRegisterInfoAtIndex (reg_idx)) != NULL; ++reg_idx, running_byte_offset += reg_info->byte_size)
-                        {
-                            // Skip composite aka slice registers (e.g. eax is a slice of rax).
-                            if (reg_info->value_regs)
-                                continue;
-
-                            const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-
-                            uint32_t register_offset;
-                            if (use_byte_offset_into_buffer)
-                            {
-                                register_offset = reg_info->byte_offset;
-                            }
-                            else
-                            {
-                                register_offset = running_byte_offset;
-                            }
-
-                            // Only write down the registers that need to be written
-                            // if we are going to be doing registers individually.
-                            bool write_reg = true;
-                            const uint32_t reg_byte_size = reg_info->byte_size;
-    
-                            const char *restore_src = (const char *)restore_data.PeekData(register_offset, reg_byte_size);
-                            if (restore_src)
-                            {
-                                StreamString packet;
-                                packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
-                                packet.PutBytesAsRawHex8 (restore_src,
-                                                          reg_byte_size,
-                                                          endian::InlHostByteOrder(),
-                                                          endian::InlHostByteOrder());
-
-                                if (thread_suffix_supported)
-                                    packet.Printf (";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-
-                                SetRegisterIsValid(reg, false);
-                                if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                                                          packet.GetString().size(),
-                                                                          response,
-                                                                          false) == GDBRemoteCommunication::PacketResult::Success)
-                                {
-                                    const char *current_src = (const char *)m_reg_data.PeekData(register_offset, reg_byte_size);
-                                    if (current_src)
-                                        write_reg = memcmp (current_src, restore_src, reg_byte_size) != 0;
-                                }
-    
-                                if (write_reg)
-                                {
-                                    StreamString packet;
-                                    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
-                                    packet.PutBytesAsRawHex8 (restore_src,
-                                                              reg_byte_size,
-                                                              endian::InlHostByteOrder(),
-                                                              endian::InlHostByteOrder());
-    
-                                    if (thread_suffix_supported)
-                                        packet.Printf (";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-    
-                                    SetRegisterIsValid(reg, false);
-                                    if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                                                              packet.GetString().size(),
-                                                                              response,
-                                                                              false) == GDBRemoteCommunication::PacketResult::Success)
-                                    {
-                                        if (response.IsOKResponse())
-                                            ++num_restored;
-                                    }
-                                }
-                            }
-                        }
-                        return num_restored > 0;
-                    }
-                }
+            bool use_byte_offset_into_buffer;
+            if (size_by_highest_offset == restore_data.GetByteSize())
+            {
+                // The size of the packet agrees with the highest offset: + size in the register file
+                use_byte_offset_into_buffer = true;
+            }
+            else if (size_not_including_slice_registers == restore_data.GetByteSize())
+            {
+                // The size of the packet is the same as concatenating all of the registers sequentially,
+                // skipping the slice registers
+                use_byte_offset_into_buffer = true;
+            }
+            else if (size_including_slice_registers == restore_data.GetByteSize())
+            {
+                // The slice registers are present in the packet (when they shouldn't be).
+                // Don't try to use the RegisterInfo byte_offset into the restore_data, it will
+                // point to the wrong place.
+                use_byte_offset_into_buffer = false;
             }
             else
             {
-                // For the use_g_packet == false case, we're going to write each register 
-                // individually.  The data buffer is binary data in this case, instead of 
-                // ascii characters.
-
-                bool arm64_debugserver = false;
-                if (m_thread.GetProcess().get())
-                {
-                    const ArchSpec &arch = m_thread.GetProcess()->GetTarget().GetArchitecture();
-                    if (arch.IsValid()
-                        && arch.GetMachine() == llvm::Triple::aarch64
-                        && arch.GetTriple().getVendor() == llvm::Triple::Apple
-                        && arch.GetTriple().getOS() == llvm::Triple::IOS)
-                    {
-                        arm64_debugserver = true;
-                    }
-                }
-                uint32_t num_restored = 0;
-                const RegisterInfo *reg_info;
-                for (uint32_t i = 0; (reg_info = GetRegisterInfoAtIndex (i)) != NULL; i++)
-                {
-                    if (reg_info->value_regs) // skip registers that are slices of real registers
-                        continue;
-                    // Skip the fpsr and fpcr floating point status/control register writing to
-                    // work around a bug in an older version of debugserver that would lead to
-                    // register context corruption when writing fpsr/fpcr.
-                    if (arm64_debugserver &&
-                        (strcmp (reg_info->name, "fpsr") == 0 || strcmp (reg_info->name, "fpcr") == 0))
-                    {
-                        continue;
-                    }
-                    StreamString packet;
-                    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
-                    packet.PutBytesAsRawHex8 (data_sp->GetBytes() + reg_info->byte_offset, reg_info->byte_size, endian::InlHostByteOrder(), endian::InlHostByteOrder());
-                    if (thread_suffix_supported)
-                        packet.Printf (";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
-
-                    SetRegisterIsValid(reg_info, false);
-                    if (gdb_comm.SendPacketAndWaitForResponse(packet.GetString().c_str(),
-                                                              packet.GetString().size(),
-                                                              response,
-                                                              false) == GDBRemoteCommunication::PacketResult::Success)
-                    {
-                        if (response.IsOKResponse())
-                            ++num_restored;
-                    }
-                }
-                return num_restored > 0;
+                // None of our expected sizes match the actual g packet data we're looking at.
+                // The most conservative approach here is to use the running total byte offset.
+                use_byte_offset_into_buffer = false;
             }
+
+            // In case our register definitions don't include the correct offsets,
+            // keep track of the size of each reg & compute offset based on that.
+            uint32_t running_byte_offset = 0;
+            for (uint32_t reg_idx = 0; (reg_info = GetRegisterInfoAtIndex(reg_idx)) != NULL;
+                 ++reg_idx, running_byte_offset += reg_info->byte_size)
+            {
+                // Skip composite aka slice registers (e.g. eax is a slice of rax).
+                if (reg_info->value_regs)
+                    continue;
+
+                const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+
+                uint32_t register_offset;
+                if (use_byte_offset_into_buffer)
+                {
+                    register_offset = reg_info->byte_offset;
+                }
+                else
+                {
+                    register_offset = running_byte_offset;
+                }
+
+                const uint32_t reg_byte_size = reg_info->byte_size;
+
+                const uint8_t *restore_src = restore_data.PeekData(register_offset, reg_byte_size);
+                if (restore_src)
+                {
+                    SetRegisterIsValid(reg, false);
+                    if (gdb_comm.WriteRegister(m_thread.GetProtocolID(), reg_info->kinds[eRegisterKindProcessPlugin],
+                                               {restore_src, reg_byte_size}, lock))
+                        ++num_restored;
+                }
+            }
+            return num_restored > 0;
+        }
+        else
+        {
+            // For the use_g_packet == false case, we're going to write each register
+            // individually.  The data buffer is binary data in this case, instead of
+            // ascii characters.
+
+            bool arm64_debugserver = false;
+            if (m_thread.GetProcess().get())
+            {
+                const ArchSpec &arch = m_thread.GetProcess()->GetTarget().GetArchitecture();
+                if (arch.IsValid() && arch.GetMachine() == llvm::Triple::aarch64 &&
+                    arch.GetTriple().getVendor() == llvm::Triple::Apple &&
+                    arch.GetTriple().getOS() == llvm::Triple::IOS)
+                {
+                    arm64_debugserver = true;
+                }
+            }
+            uint32_t num_restored = 0;
+            const RegisterInfo *reg_info;
+            for (uint32_t i = 0; (reg_info = GetRegisterInfoAtIndex(i)) != NULL; i++)
+            {
+                if (reg_info->value_regs) // skip registers that are slices of real registers
+                    continue;
+                // Skip the fpsr and fpcr floating point status/control register writing to
+                // work around a bug in an older version of debugserver that would lead to
+                // register context corruption when writing fpsr/fpcr.
+                if (arm64_debugserver && (strcmp(reg_info->name, "fpsr") == 0 || strcmp(reg_info->name, "fpcr") == 0))
+                {
+                    continue;
+                }
+
+                SetRegisterIsValid(reg_info, false);
+                if (gdb_comm.WriteRegister(m_thread.GetProtocolID(), reg_info->kinds[eRegisterKindProcessPlugin],
+                                           {data_sp->GetBytes() + reg_info->byte_offset, reg_info->byte_size}, lock))
+                    ++num_restored;
+            }
+            return num_restored > 0;
         }
     }
     else
@@ -985,117 +800,119 @@ GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch)
         g_q8_regs, g_q9_regs, g_q10_regs, g_q11_regs, g_q12_regs, g_q13_regs, g_q14_regs, g_q15_regs
     };
 
+    // clang-format off
     static RegisterInfo g_register_infos[] = {
-//   NAME    ALT    SZ  OFF  ENCODING          FORMAT          EH_FRAME             DWARF                GENERIC                 PROCESS PLUGIN  LLDB      VALUE REGS    INVALIDATE REGS
-//   ======  ====== === ===  =============     ============    ===================  ===================  ======================  =============   ====      ==========    ===============
-    { "r0", "arg1",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r0,          dwarf_r0,            LLDB_REGNUM_GENERIC_ARG1,0,               0 },        NULL,              NULL},
-    { "r1", "arg2",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r1,          dwarf_r1,            LLDB_REGNUM_GENERIC_ARG2,1,               1 },        NULL,              NULL},
-    { "r2", "arg3",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r2,          dwarf_r2,            LLDB_REGNUM_GENERIC_ARG3,2,               2 },        NULL,              NULL},
-    { "r3", "arg4",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r3,          dwarf_r3,            LLDB_REGNUM_GENERIC_ARG4,3,               3 },        NULL,              NULL},
-    { "r4",   NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r4,          dwarf_r4,            LLDB_INVALID_REGNUM,     4,               4 },        NULL,              NULL},
-    { "r5",   NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r5,          dwarf_r5,            LLDB_INVALID_REGNUM,     5,               5 },        NULL,              NULL},
-    { "r6",   NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r6,          dwarf_r6,            LLDB_INVALID_REGNUM,     6,               6 },        NULL,              NULL},
-    { "r7",   "fp",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r7,          dwarf_r7,            LLDB_REGNUM_GENERIC_FP,  7,               7 },        NULL,              NULL},
-    { "r8",   NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r8,          dwarf_r8,            LLDB_INVALID_REGNUM,     8,               8 },        NULL,              NULL},
-    { "r9",   NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r9,          dwarf_r9,            LLDB_INVALID_REGNUM,     9,               9 },        NULL,              NULL},
-    { "r10",  NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r10,         dwarf_r10,           LLDB_INVALID_REGNUM,    10,              10 },        NULL,              NULL},
-    { "r11",  NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r11,         dwarf_r11,           LLDB_INVALID_REGNUM,    11,              11 },        NULL,              NULL},
-    { "r12",  NULL,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r12,         dwarf_r12,           LLDB_INVALID_REGNUM,    12,              12 },        NULL,              NULL},
-    { "sp",   "r13",  4,   0, eEncodingUint,    eFormatHex,   { ehframe_sp,          dwarf_sp,            LLDB_REGNUM_GENERIC_SP, 13,              13 },        NULL,              NULL},
-    { "lr",   "r14",  4,   0, eEncodingUint,    eFormatHex,   { ehframe_lr,          dwarf_lr,            LLDB_REGNUM_GENERIC_RA, 14,              14 },        NULL,              NULL},
-    { "pc",   "r15",  4,   0, eEncodingUint,    eFormatHex,   { ehframe_pc,          dwarf_pc,            LLDB_REGNUM_GENERIC_PC, 15,              15 },        NULL,              NULL},
-    { "f0",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    16,              16 },        NULL,              NULL},
-    { "f1",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    17,              17 },        NULL,              NULL},
-    { "f2",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    18,              18 },        NULL,              NULL},
-    { "f3",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    19,              19 },        NULL,              NULL},
-    { "f4",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    20,              20 },        NULL,              NULL},
-    { "f5",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    21,              21 },        NULL,              NULL},
-    { "f6",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    22,              22 },        NULL,              NULL},
-    { "f7",   NULL,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    23,              23 },        NULL,              NULL},
-    { "fps",  NULL,   4,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    24,              24 },        NULL,              NULL},
-    { "cpsr","flags", 4,   0, eEncodingUint,    eFormatHex,   { ehframe_cpsr,        dwarf_cpsr,          LLDB_INVALID_REGNUM,    25,              25 },        NULL,              NULL},
-    { "s0",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s0,            LLDB_INVALID_REGNUM,    26,              26 },        NULL,              NULL},
-    { "s1",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s1,            LLDB_INVALID_REGNUM,    27,              27 },        NULL,              NULL},
-    { "s2",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s2,            LLDB_INVALID_REGNUM,    28,              28 },        NULL,              NULL},
-    { "s3",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s3,            LLDB_INVALID_REGNUM,    29,              29 },        NULL,              NULL},
-    { "s4",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s4,            LLDB_INVALID_REGNUM,    30,              30 },        NULL,              NULL},
-    { "s5",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s5,            LLDB_INVALID_REGNUM,    31,              31 },        NULL,              NULL},
-    { "s6",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s6,            LLDB_INVALID_REGNUM,    32,              32 },        NULL,              NULL},
-    { "s7",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s7,            LLDB_INVALID_REGNUM,    33,              33 },        NULL,              NULL},
-    { "s8",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s8,            LLDB_INVALID_REGNUM,    34,              34 },        NULL,              NULL},
-    { "s9",   NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s9,            LLDB_INVALID_REGNUM,    35,              35 },        NULL,              NULL},
-    { "s10",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s10,           LLDB_INVALID_REGNUM,    36,              36 },        NULL,              NULL},
-    { "s11",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s11,           LLDB_INVALID_REGNUM,    37,              37 },        NULL,              NULL},
-    { "s12",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s12,           LLDB_INVALID_REGNUM,    38,              38 },        NULL,              NULL},
-    { "s13",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s13,           LLDB_INVALID_REGNUM,    39,              39 },        NULL,              NULL},
-    { "s14",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s14,           LLDB_INVALID_REGNUM,    40,              40 },        NULL,              NULL},
-    { "s15",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s15,           LLDB_INVALID_REGNUM,    41,              41 },        NULL,              NULL},
-    { "s16",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s16,           LLDB_INVALID_REGNUM,    42,              42 },        NULL,              NULL},
-    { "s17",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s17,           LLDB_INVALID_REGNUM,    43,              43 },        NULL,              NULL},
-    { "s18",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s18,           LLDB_INVALID_REGNUM,    44,              44 },        NULL,              NULL},
-    { "s19",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s19,           LLDB_INVALID_REGNUM,    45,              45 },        NULL,              NULL},
-    { "s20",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s20,           LLDB_INVALID_REGNUM,    46,              46 },        NULL,              NULL},
-    { "s21",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s21,           LLDB_INVALID_REGNUM,    47,              47 },        NULL,              NULL},
-    { "s22",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s22,           LLDB_INVALID_REGNUM,    48,              48 },        NULL,              NULL},
-    { "s23",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s23,           LLDB_INVALID_REGNUM,    49,              49 },        NULL,              NULL},
-    { "s24",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s24,           LLDB_INVALID_REGNUM,    50,              50 },        NULL,              NULL},
-    { "s25",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s25,           LLDB_INVALID_REGNUM,    51,              51 },        NULL,              NULL},
-    { "s26",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s26,           LLDB_INVALID_REGNUM,    52,              52 },        NULL,              NULL},
-    { "s27",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s27,           LLDB_INVALID_REGNUM,    53,              53 },        NULL,              NULL},
-    { "s28",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s28,           LLDB_INVALID_REGNUM,    54,              54 },        NULL,              NULL},
-    { "s29",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s29,           LLDB_INVALID_REGNUM,    55,              55 },        NULL,              NULL},
-    { "s30",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s30,           LLDB_INVALID_REGNUM,    56,              56 },        NULL,              NULL},
-    { "s31",  NULL,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s31,           LLDB_INVALID_REGNUM,    57,              57 },        NULL,              NULL},
-    { "fpscr",NULL,   4,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    58,              58 },        NULL,              NULL},
-    { "d16",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d16,           LLDB_INVALID_REGNUM,    59,              59 },        NULL,              NULL},
-    { "d17",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d17,           LLDB_INVALID_REGNUM,    60,              60 },        NULL,              NULL},
-    { "d18",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d18,           LLDB_INVALID_REGNUM,    61,              61 },        NULL,              NULL},
-    { "d19",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d19,           LLDB_INVALID_REGNUM,    62,              62 },        NULL,              NULL},
-    { "d20",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d20,           LLDB_INVALID_REGNUM,    63,              63 },        NULL,              NULL},
-    { "d21",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d21,           LLDB_INVALID_REGNUM,    64,              64 },        NULL,              NULL},
-    { "d22",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d22,           LLDB_INVALID_REGNUM,    65,              65 },        NULL,              NULL},
-    { "d23",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d23,           LLDB_INVALID_REGNUM,    66,              66 },        NULL,              NULL},
-    { "d24",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d24,           LLDB_INVALID_REGNUM,    67,              67 },        NULL,              NULL},
-    { "d25",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d25,           LLDB_INVALID_REGNUM,    68,              68 },        NULL,              NULL},
-    { "d26",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d26,           LLDB_INVALID_REGNUM,    69,              69 },        NULL,              NULL},
-    { "d27",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d27,           LLDB_INVALID_REGNUM,    70,              70 },        NULL,              NULL},
-    { "d28",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d28,           LLDB_INVALID_REGNUM,    71,              71 },        NULL,              NULL},
-    { "d29",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d29,           LLDB_INVALID_REGNUM,    72,              72 },        NULL,              NULL},
-    { "d30",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d30,           LLDB_INVALID_REGNUM,    73,              73 },        NULL,              NULL},
-    { "d31",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d31,           LLDB_INVALID_REGNUM,    74,              74 },        NULL,              NULL},
-    { "d0",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d0,            LLDB_INVALID_REGNUM,    75,              75 },   g_d0_regs,              NULL},
-    { "d1",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d1,            LLDB_INVALID_REGNUM,    76,              76 },   g_d1_regs,              NULL},
-    { "d2",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d2,            LLDB_INVALID_REGNUM,    77,              77 },   g_d2_regs,              NULL},
-    { "d3",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d3,            LLDB_INVALID_REGNUM,    78,              78 },   g_d3_regs,              NULL},
-    { "d4",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d4,            LLDB_INVALID_REGNUM,    79,              79 },   g_d4_regs,              NULL},
-    { "d5",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d5,            LLDB_INVALID_REGNUM,    80,              80 },   g_d5_regs,              NULL},
-    { "d6",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d6,            LLDB_INVALID_REGNUM,    81,              81 },   g_d6_regs,              NULL},
-    { "d7",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d7,            LLDB_INVALID_REGNUM,    82,              82 },   g_d7_regs,              NULL},
-    { "d8",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d8,            LLDB_INVALID_REGNUM,    83,              83 },   g_d8_regs,              NULL},
-    { "d9",   NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d9,            LLDB_INVALID_REGNUM,    84,              84 },   g_d9_regs,              NULL},
-    { "d10",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d10,           LLDB_INVALID_REGNUM,    85,              85 },  g_d10_regs,              NULL},
-    { "d11",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d11,           LLDB_INVALID_REGNUM,    86,              86 },  g_d11_regs,              NULL},
-    { "d12",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d12,           LLDB_INVALID_REGNUM,    87,              87 },  g_d12_regs,              NULL},
-    { "d13",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d13,           LLDB_INVALID_REGNUM,    88,              88 },  g_d13_regs,              NULL},
-    { "d14",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d14,           LLDB_INVALID_REGNUM,    89,              89 },  g_d14_regs,              NULL},
-    { "d15",  NULL,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d15,           LLDB_INVALID_REGNUM,    90,              90 },  g_d15_regs,              NULL},
-    { "q0",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q0,    LLDB_INVALID_REGNUM,    91,              91 },   g_q0_regs,              NULL},
-    { "q1",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q1,    LLDB_INVALID_REGNUM,    92,              92 },   g_q1_regs,              NULL},
-    { "q2",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q2,    LLDB_INVALID_REGNUM,    93,              93 },   g_q2_regs,              NULL},
-    { "q3",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q3,    LLDB_INVALID_REGNUM,    94,              94 },   g_q3_regs,              NULL},
-    { "q4",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q4,    LLDB_INVALID_REGNUM,    95,              95 },   g_q4_regs,              NULL},
-    { "q5",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q5,    LLDB_INVALID_REGNUM,    96,              96 },   g_q5_regs,              NULL},
-    { "q6",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q6,    LLDB_INVALID_REGNUM,    97,              97 },   g_q6_regs,              NULL},
-    { "q7",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q7,    LLDB_INVALID_REGNUM,    98,              98 },   g_q7_regs,              NULL},
-    { "q8",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q8,    LLDB_INVALID_REGNUM,    99,              99 },   g_q8_regs,              NULL},
-    { "q9",   NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q9,    LLDB_INVALID_REGNUM,   100,             100 },   g_q9_regs,              NULL},
-    { "q10",  NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q10,   LLDB_INVALID_REGNUM,   101,             101 },  g_q10_regs,              NULL},
-    { "q11",  NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q11,   LLDB_INVALID_REGNUM,   102,             102 },  g_q11_regs,              NULL},
-    { "q12",  NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q12,   LLDB_INVALID_REGNUM,   103,             103 },  g_q12_regs,              NULL},
-    { "q13",  NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q13,   LLDB_INVALID_REGNUM,   104,             104 },  g_q13_regs,              NULL},
-    { "q14",  NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q14,   LLDB_INVALID_REGNUM,   105,             105 },  g_q14_regs,              NULL},
-    { "q15",  NULL,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q15,   LLDB_INVALID_REGNUM,   106,             106 },  g_q15_regs,              NULL}
+//   NAME     ALT     SZ   OFF  ENCODING          FORMAT          EH_FRAME             DWARF                GENERIC                 PROCESS PLUGIN  LLDB    VALUE REGS    INVALIDATE REGS SIZE EXPR SIZE LEN
+//   ======   ======  ===  ===  =============     ==========      ===================  ===================  ======================  =============   ====    ==========    =============== ========= ========
+    { "r0",   "arg1",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r0,          dwarf_r0,            LLDB_REGNUM_GENERIC_ARG1,0,               0 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r1",   "arg2",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r1,          dwarf_r1,            LLDB_REGNUM_GENERIC_ARG2,1,               1 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r2",   "arg3",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r2,          dwarf_r2,            LLDB_REGNUM_GENERIC_ARG3,2,               2 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r3",   "arg4",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r3,          dwarf_r3,            LLDB_REGNUM_GENERIC_ARG4,3,               3 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r4",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r4,          dwarf_r4,            LLDB_INVALID_REGNUM,     4,               4 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r5",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r5,          dwarf_r5,            LLDB_INVALID_REGNUM,     5,               5 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r6",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r6,          dwarf_r6,            LLDB_INVALID_REGNUM,     6,               6 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r7",     "fp",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r7,          dwarf_r7,            LLDB_REGNUM_GENERIC_FP,  7,               7 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r8",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r8,          dwarf_r8,            LLDB_INVALID_REGNUM,     8,               8 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r9",  nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r9,          dwarf_r9,            LLDB_INVALID_REGNUM,     9,               9 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r10", nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r10,         dwarf_r10,           LLDB_INVALID_REGNUM,    10,              10 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r11", nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r11,         dwarf_r11,           LLDB_INVALID_REGNUM,    11,              11 },     nullptr,           nullptr,  nullptr,       0 },
+    { "r12", nullptr,   4,   0, eEncodingUint,    eFormatHex,   { ehframe_r12,         dwarf_r12,           LLDB_INVALID_REGNUM,    12,              12 },     nullptr,           nullptr,  nullptr,       0 },
+    { "sp",     "r13",  4,   0, eEncodingUint,    eFormatHex,   { ehframe_sp,          dwarf_sp,            LLDB_REGNUM_GENERIC_SP, 13,              13 },     nullptr,           nullptr,  nullptr,       0 },
+    { "lr",     "r14",  4,   0, eEncodingUint,    eFormatHex,   { ehframe_lr,          dwarf_lr,            LLDB_REGNUM_GENERIC_RA, 14,              14 },     nullptr,           nullptr,  nullptr,       0 },
+    { "pc",     "r15",  4,   0, eEncodingUint,    eFormatHex,   { ehframe_pc,          dwarf_pc,            LLDB_REGNUM_GENERIC_PC, 15,              15 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f0",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    16,              16 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f1",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    17,              17 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f2",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    18,              18 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f3",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    19,              19 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f4",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    20,              20 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f5",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    21,              21 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f6",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    22,              22 },     nullptr,           nullptr,  nullptr,       0 },
+    { "f7",  nullptr,  12,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    23,              23 },     nullptr,           nullptr,  nullptr,       0 },
+    { "fps", nullptr,   4,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    24,              24 },     nullptr,           nullptr,  nullptr,       0 },
+    { "cpsr","flags",   4,   0, eEncodingUint,    eFormatHex,   { ehframe_cpsr,        dwarf_cpsr,          LLDB_INVALID_REGNUM,    25,              25 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s0",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s0,            LLDB_INVALID_REGNUM,    26,              26 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s1",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s1,            LLDB_INVALID_REGNUM,    27,              27 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s2",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s2,            LLDB_INVALID_REGNUM,    28,              28 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s3",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s3,            LLDB_INVALID_REGNUM,    29,              29 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s4",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s4,            LLDB_INVALID_REGNUM,    30,              30 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s5",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s5,            LLDB_INVALID_REGNUM,    31,              31 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s6",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s6,            LLDB_INVALID_REGNUM,    32,              32 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s7",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s7,            LLDB_INVALID_REGNUM,    33,              33 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s8",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s8,            LLDB_INVALID_REGNUM,    34,              34 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s9",  nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s9,            LLDB_INVALID_REGNUM,    35,              35 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s10", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s10,           LLDB_INVALID_REGNUM,    36,              36 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s11", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s11,           LLDB_INVALID_REGNUM,    37,              37 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s12", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s12,           LLDB_INVALID_REGNUM,    38,              38 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s13", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s13,           LLDB_INVALID_REGNUM,    39,              39 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s14", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s14,           LLDB_INVALID_REGNUM,    40,              40 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s15", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s15,           LLDB_INVALID_REGNUM,    41,              41 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s16", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s16,           LLDB_INVALID_REGNUM,    42,              42 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s17", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s17,           LLDB_INVALID_REGNUM,    43,              43 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s18", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s18,           LLDB_INVALID_REGNUM,    44,              44 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s19", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s19,           LLDB_INVALID_REGNUM,    45,              45 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s20", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s20,           LLDB_INVALID_REGNUM,    46,              46 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s21", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s21,           LLDB_INVALID_REGNUM,    47,              47 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s22", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s22,           LLDB_INVALID_REGNUM,    48,              48 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s23", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s23,           LLDB_INVALID_REGNUM,    49,              49 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s24", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s24,           LLDB_INVALID_REGNUM,    50,              50 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s25", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s25,           LLDB_INVALID_REGNUM,    51,              51 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s26", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s26,           LLDB_INVALID_REGNUM,    52,              52 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s27", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s27,           LLDB_INVALID_REGNUM,    53,              53 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s28", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s28,           LLDB_INVALID_REGNUM,    54,              54 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s29", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s29,           LLDB_INVALID_REGNUM,    55,              55 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s30", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s30,           LLDB_INVALID_REGNUM,    56,              56 },     nullptr,           nullptr,  nullptr,       0 },
+    { "s31", nullptr,   4,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_s31,           LLDB_INVALID_REGNUM,    57,              57 },     nullptr,           nullptr,  nullptr,       0 },
+    { "fpscr",nullptr,  4,   0, eEncodingUint,    eFormatHex,   { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    58,              58 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d16", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d16,           LLDB_INVALID_REGNUM,    59,              59 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d17", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d17,           LLDB_INVALID_REGNUM,    60,              60 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d18", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d18,           LLDB_INVALID_REGNUM,    61,              61 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d19", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d19,           LLDB_INVALID_REGNUM,    62,              62 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d20", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d20,           LLDB_INVALID_REGNUM,    63,              63 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d21", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d21,           LLDB_INVALID_REGNUM,    64,              64 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d22", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d22,           LLDB_INVALID_REGNUM,    65,              65 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d23", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d23,           LLDB_INVALID_REGNUM,    66,              66 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d24", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d24,           LLDB_INVALID_REGNUM,    67,              67 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d25", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d25,           LLDB_INVALID_REGNUM,    68,              68 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d26", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d26,           LLDB_INVALID_REGNUM,    69,              69 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d27", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d27,           LLDB_INVALID_REGNUM,    70,              70 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d28", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d28,           LLDB_INVALID_REGNUM,    71,              71 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d29", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d29,           LLDB_INVALID_REGNUM,    72,              72 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d30", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d30,           LLDB_INVALID_REGNUM,    73,              73 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d31", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d31,           LLDB_INVALID_REGNUM,    74,              74 },     nullptr,           nullptr,  nullptr,       0 },
+    { "d0",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d0,            LLDB_INVALID_REGNUM,    75,              75 },   g_d0_regs,           nullptr,  nullptr,       0 },
+    { "d1",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d1,            LLDB_INVALID_REGNUM,    76,              76 },   g_d1_regs,           nullptr,  nullptr,       0 },
+    { "d2",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d2,            LLDB_INVALID_REGNUM,    77,              77 },   g_d2_regs,           nullptr,  nullptr,       0 },
+    { "d3",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d3,            LLDB_INVALID_REGNUM,    78,              78 },   g_d3_regs,           nullptr,  nullptr,       0 },
+    { "d4",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d4,            LLDB_INVALID_REGNUM,    79,              79 },   g_d4_regs,           nullptr,  nullptr,       0 },
+    { "d5",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d5,            LLDB_INVALID_REGNUM,    80,              80 },   g_d5_regs,           nullptr,  nullptr,       0 },
+    { "d6",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d6,            LLDB_INVALID_REGNUM,    81,              81 },   g_d6_regs,           nullptr,  nullptr,       0 },
+    { "d7",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d7,            LLDB_INVALID_REGNUM,    82,              82 },   g_d7_regs,           nullptr,  nullptr,       0 },
+    { "d8",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d8,            LLDB_INVALID_REGNUM,    83,              83 },   g_d8_regs,           nullptr,  nullptr,       0 },
+    { "d9",  nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d9,            LLDB_INVALID_REGNUM,    84,              84 },   g_d9_regs,           nullptr,  nullptr,       0 },
+    { "d10", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d10,           LLDB_INVALID_REGNUM,    85,              85 },  g_d10_regs,           nullptr,  nullptr,       0 },
+    { "d11", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d11,           LLDB_INVALID_REGNUM,    86,              86 },  g_d11_regs,           nullptr,  nullptr,       0 },
+    { "d12", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d12,           LLDB_INVALID_REGNUM,    87,              87 },  g_d12_regs,           nullptr,  nullptr,       0 },
+    { "d13", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d13,           LLDB_INVALID_REGNUM,    88,              88 },  g_d13_regs,           nullptr,  nullptr,       0 },
+    { "d14", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d14,           LLDB_INVALID_REGNUM,    89,              89 },  g_d14_regs,           nullptr,  nullptr,       0 },
+    { "d15", nullptr,   8,   0, eEncodingIEEE754, eFormatFloat, { LLDB_INVALID_REGNUM, dwarf_d15,           LLDB_INVALID_REGNUM,    90,              90 },  g_d15_regs,           nullptr,  nullptr,       0 },
+    { "q0",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q0,    LLDB_INVALID_REGNUM,    91,              91 },   g_q0_regs,           nullptr,  nullptr,       0 },
+    { "q1",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q1,    LLDB_INVALID_REGNUM,    92,              92 },   g_q1_regs,           nullptr,  nullptr,       0 },
+    { "q2",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q2,    LLDB_INVALID_REGNUM,    93,              93 },   g_q2_regs,           nullptr,  nullptr,       0 },
+    { "q3",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q3,    LLDB_INVALID_REGNUM,    94,              94 },   g_q3_regs,           nullptr,  nullptr,       0 },
+    { "q4",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q4,    LLDB_INVALID_REGNUM,    95,              95 },   g_q4_regs,           nullptr,  nullptr,       0 },
+    { "q5",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q5,    LLDB_INVALID_REGNUM,    96,              96 },   g_q5_regs,           nullptr,  nullptr,       0 },
+    { "q6",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q6,    LLDB_INVALID_REGNUM,    97,              97 },   g_q6_regs,           nullptr,  nullptr,       0 },
+    { "q7",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q7,    LLDB_INVALID_REGNUM,    98,              98 },   g_q7_regs,           nullptr,  nullptr,       0 },
+    { "q8",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q8,    LLDB_INVALID_REGNUM,    99,              99 },   g_q8_regs,           nullptr,  nullptr,       0 },
+    { "q9",  nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q9,    LLDB_INVALID_REGNUM,   100,             100 },   g_q9_regs,           nullptr,  nullptr,       0 },
+    { "q10", nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q10,   LLDB_INVALID_REGNUM,   101,             101 },  g_q10_regs,           nullptr,  nullptr,       0 },
+    { "q11", nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q11,   LLDB_INVALID_REGNUM,   102,             102 },  g_q11_regs,           nullptr,  nullptr,       0 },
+    { "q12", nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q12,   LLDB_INVALID_REGNUM,   103,             103 },  g_q12_regs,           nullptr,  nullptr,       0 },
+    { "q13", nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q13,   LLDB_INVALID_REGNUM,   104,             104 },  g_q13_regs,           nullptr,  nullptr,       0 },
+    { "q14", nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q14,   LLDB_INVALID_REGNUM,   105,             105 },  g_q14_regs,           nullptr,  nullptr,       0 },
+    { "q15", nullptr,   16,  0, eEncodingVector,  eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM, dwarf_q15,   LLDB_INVALID_REGNUM,   106,             106 },  g_q15_regs,           nullptr,  nullptr,       0 }
     };
+    // clang-format on
 
     static const uint32_t num_registers = llvm::array_lengthof(g_register_infos);
     static ConstString gpr_reg_set ("General Purpose Registers");

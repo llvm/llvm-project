@@ -21,8 +21,6 @@
 #include <thread>
 
 // Other libraries and framework includes
-#include "llvm/ADT/Triple.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
@@ -37,13 +35,16 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Host/common/NativeThreadProtocol.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
@@ -203,6 +204,15 @@ GDBRemoteCommunicationServerLLGS::LaunchProcess ()
     if (!m_process_launch_info.GetArguments ().GetArgumentCount ())
         return Error ("%s: no process command line specified to launch", __FUNCTION__);
 
+    const bool should_forward_stdio = m_process_launch_info.GetFileActionForFD(STDIN_FILENO) == nullptr ||
+                                      m_process_launch_info.GetFileActionForFD(STDOUT_FILENO) == nullptr ||
+                                      m_process_launch_info.GetFileActionForFD(STDERR_FILENO) == nullptr;
+    m_process_launch_info.SetLaunchInSeparateProcessGroup(true);
+    m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
+
+    const bool default_to_use_pty = true;
+    m_process_launch_info.FinalizeFileActions(nullptr, default_to_use_pty);
+
     Error error;
     {
         std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
@@ -226,11 +236,7 @@ GDBRemoteCommunicationServerLLGS::LaunchProcess ()
     // file actions non-null
     // process launch -i/e/o will also make these file actions non-null
     // nullptr means that the traffic is expected to flow over gdb-remote protocol
-    if (
-        m_process_launch_info.GetFileActionForFD(STDIN_FILENO) == nullptr  ||
-        m_process_launch_info.GetFileActionForFD(STDOUT_FILENO) == nullptr  ||
-        m_process_launch_info.GetFileActionForFD(STDERR_FILENO) == nullptr
-        )
+    if (should_forward_stdio)
     {
         // nullptr means it's not redirected to file or pty (in case of LLGS local)
         // at least one of stdio will be transferred pty<->gdb-remote
@@ -485,8 +491,7 @@ GetRegistersAsJSON(NativeThreadProtocol &thread, bool abridged)
         StreamString stream;
         WriteRegisterValueInHexFixedWidth(stream, reg_ctx_sp, *reg_info_p, &reg_value);
 
-        register_object_sp->SetObject(std::to_string(reg_num),
-                std::make_shared<JSONString>(stream.GetString()));
+        register_object_sp->SetObject(llvm::to_string(reg_num), std::make_shared<JSONString>(stream.GetString()));
     }
 
     return register_object_sp;
@@ -996,14 +1001,6 @@ GDBRemoteCommunicationServerLLGS::StartSTDIOForwarding()
 {
     // Don't forward if not connected (e.g. when attaching).
     if (! m_stdio_communication.IsConnected())
-        return;
-
-    // llgs local-process debugging may specify PTY paths, which will make these
-    // file actions non-null
-    // process launch -e/o will also make these file actions non-null
-    // nullptr means that the traffic is expected to flow over gdb-remote protocol
-    if ( m_process_launch_info.GetFileActionForFD(STDOUT_FILENO) &&
-         m_process_launch_info.GetFileActionForFD(STDERR_FILENO))
         return;
 
     Error error;
@@ -1630,6 +1627,14 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo (StringExtractorGDBRemote
         response.PutChar (';');
     }
 
+    if (reg_info->dynamic_size_dwarf_expr_bytes)
+    {
+       const size_t dwarf_opcode_len = reg_info->dynamic_size_dwarf_len;
+       response.PutCString("dynamic_size_dwarf_expr_bytes:");
+       for(uint32_t i = 0; i < dwarf_opcode_len; ++i)
+           response.PutHex8 (reg_info->dynamic_size_dwarf_expr_bytes[i]);
+       response.PutChar(';');
+    }
     return SendPacketNoLock(response.GetData(), response.GetSize());
 }
 
@@ -1825,7 +1830,10 @@ GDBRemoteCommunicationServerLLGS::Handle_P (StringExtractorGDBRemote &packet)
         return SendErrorResponse (0x47);
     }
 
-    if (reg_size != reg_info->byte_size)
+    // The dwarf expression are evaluate on host site
+    // which may cause register size to change
+    // Hence the reg_size may not be same as reg_info->bytes_size
+    if ((reg_size != reg_info->byte_size) && !(reg_info->dynamic_size_dwarf_expr_bytes))
     {
         return SendIllFormedResponse (packet, "P packet register size is incorrect");
     }
@@ -2223,6 +2231,15 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo (StringExtractorGDBRe
                 response.PutChar ('x');
 
             response.PutChar (';');
+        }
+
+        // Name
+        ConstString name = region_info.GetName();
+        if (name)
+        {
+            response.PutCString("name:");
+            response.PutCStringAsRawHex8(name.AsCString());
+            response.PutChar(';');
         }
     }
 

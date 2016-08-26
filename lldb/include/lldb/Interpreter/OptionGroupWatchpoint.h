@@ -39,12 +39,12 @@ namespace lldb_private {
         GetDefinitions() override;
         
         Error
-        SetOptionValue(CommandInterpreter &interpreter,
-                       uint32_t option_idx,
-                       const char *option_arg) override;
+        SetOptionValue(uint32_t option_idx,
+                       const char *option_arg,
+                       ExecutionContext *execution_context) override;
         
         void
-        OptionParsingStarting(CommandInterpreter &interpreter) override;
+        OptionParsingStarting(ExecutionContext *execution_context) override;
         
         // Note:
         // eWatchRead == LLDB_WATCH_TYPE_READ; and

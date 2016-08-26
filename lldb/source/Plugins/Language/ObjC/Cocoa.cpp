@@ -30,6 +30,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ProcessStructReader.h"
 
+#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
+
 #include "NSString.h"
 
 using namespace lldb;
@@ -475,6 +477,9 @@ lldb_private::formatters::NSNumberSummaryProvider (ValueObject& valobj, Stream& 
     if (!class_name || !*class_name)
         return false;
     
+    if (!strcmp(class_name, "__NSCFBoolean"))
+        return ObjCBooleanSummaryProvider(valobj, stream, options);
+
     if (!strcmp(class_name,"NSNumber") || !strcmp(class_name,"__NSCFNumber"))
     {
         uint64_t value = 0;
@@ -896,6 +901,37 @@ lldb_private::formatters::ObjCBOOLSummaryProvider (ValueObject& valobj, Stream& 
             break;
     }
     return true;
+}
+
+bool
+lldb_private::formatters::ObjCBooleanSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    lldb::addr_t valobj_ptr_value = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    if (valobj_ptr_value == LLDB_INVALID_ADDRESS)
+        return false;
+
+    ProcessSP process_sp(valobj.GetProcessSP());
+    if (!process_sp)
+        return false;
+
+    if (AppleObjCRuntime *objc_runtime = (AppleObjCRuntime*)process_sp->GetObjCLanguageRuntime())
+    {
+        lldb::addr_t cf_true = LLDB_INVALID_ADDRESS,
+                     cf_false = LLDB_INVALID_ADDRESS;
+        objc_runtime->GetValuesForGlobalCFBooleans(cf_true, cf_false);
+        if (valobj_ptr_value == cf_true)
+        {
+            stream.PutCString("YES");
+            return true;
+        }
+        if (valobj_ptr_value == cf_false)
+        {
+            stream.PutCString("NO");
+            return true;
+        }
+    }
+
+    return false;
 }
 
 template <bool is_sel_ptr>

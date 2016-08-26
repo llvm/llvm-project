@@ -47,7 +47,7 @@ using namespace clang::driver;
 using namespace clang::tooling;
 using namespace llvm;
 
-template class llvm::Registry<clang::tidy::ClangTidyModule>;
+LLVM_INSTANTIATE_REGISTRY(clang::tidy::ClangTidyModuleRegistry)
 
 namespace clang {
 namespace tidy {
@@ -126,27 +126,32 @@ public:
       }
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
-      for (const tooling::Replacement &Fix : Error.Fix) {
-        // Retrieve the source range for applicable fixes. Macro definitions
-        // on the command line have locations in a virtual buffer and don't
-        // have valid file paths and are therefore not applicable.
-        SourceRange Range;
-        SourceLocation FixLoc;
-        if (Fix.isApplicable()) {
-          SmallString<128> FixAbsoluteFilePath = Fix.getFilePath();
-          Files.makeAbsolutePath(FixAbsoluteFilePath);
-          FixLoc = getLocation(FixAbsoluteFilePath, Fix.getOffset());
-          SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Fix.getLength());
-          Range = SourceRange(FixLoc, FixEndLoc);
-          Diag << FixItHint::CreateReplacement(Range, Fix.getReplacementText());
-        }
+      for (const auto &FileAndReplacements : Error.Fix) {
+        for (const auto &Replacement : FileAndReplacements.second) {
+          // Retrieve the source range for applicable fixes. Macro definitions
+          // on the command line have locations in a virtual buffer and don't
+          // have valid file paths and are therefore not applicable.
+          SourceRange Range;
+          SourceLocation FixLoc;
+          if (Replacement.isApplicable()) {
+            SmallString<128> FixAbsoluteFilePath = Replacement.getFilePath();
+            Files.makeAbsolutePath(FixAbsoluteFilePath);
+            FixLoc = getLocation(FixAbsoluteFilePath, Replacement.getOffset());
+            SourceLocation FixEndLoc =
+                FixLoc.getLocWithOffset(Replacement.getLength());
+            Range = SourceRange(FixLoc, FixEndLoc);
+            Diag << FixItHint::CreateReplacement(
+                Range, Replacement.getReplacementText());
+          }
 
-        ++TotalFixes;
-        if (ApplyFixes) {
-          bool Success = Fix.isApplicable() && Fix.apply(Rewrite);
-          if (Success)
-            ++AppliedFixes;
-          FixLocations.push_back(std::make_pair(FixLoc, Success));
+          ++TotalFixes;
+          if (ApplyFixes) {
+            bool Success =
+                Replacement.isApplicable() && Replacement.apply(Rewrite);
+            if (Success)
+              ++AppliedFixes;
+            FixLocations.push_back(std::make_pair(FixLoc, Success));
+          }
         }
       }
     }
@@ -421,10 +426,14 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
   ArgumentsAdjuster PerFileExtraArgumentsInserter =
       [&Context](const CommandLineArguments &Args, StringRef Filename) {
         ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
-        CommandLineArguments AdjustedArgs;
-        if (Opts.ExtraArgsBefore)
-          AdjustedArgs = *Opts.ExtraArgsBefore;
-        AdjustedArgs.insert(AdjustedArgs.begin(), Args.begin(), Args.end());
+        CommandLineArguments AdjustedArgs = Args;
+        if (Opts.ExtraArgsBefore) {
+          auto I = AdjustedArgs.begin();
+          if (I != AdjustedArgs.end() && !StringRef(*I).startswith("-"))
+            ++I; // Skip compiler binary name, if it is there.
+          AdjustedArgs.insert(I, Opts.ExtraArgsBefore->begin(),
+                              Opts.ExtraArgsBefore->end());
+        }
         if (Opts.ExtraArgs)
           AdjustedArgs.insert(AdjustedArgs.end(), Opts.ExtraArgs->begin(),
                               Opts.ExtraArgs->end());
@@ -511,9 +520,12 @@ void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix,
 void exportReplacements(const std::vector<ClangTidyError> &Errors,
                         raw_ostream &OS) {
   tooling::TranslationUnitReplacements TUR;
-  for (const ClangTidyError &Error : Errors)
-    TUR.Replacements.insert(TUR.Replacements.end(), Error.Fix.begin(),
-                            Error.Fix.end());
+  for (const ClangTidyError &Error : Errors) {
+    for (const auto &FileAndFixes : Error.Fix)
+      TUR.Replacements.insert(TUR.Replacements.end(),
+                              FileAndFixes.second.begin(),
+                              FileAndFixes.second.end());
+  }
 
   yaml::Output YAML(OS);
   YAML << TUR;

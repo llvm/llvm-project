@@ -16,6 +16,7 @@
 
 using namespace lld;
 
+namespace {
 class _YamlReaderErrorCategory : public std::error_category {
 public:
   const char* name() const LLVM_NOEXCEPT override {
@@ -33,6 +34,7 @@ public:
                      "message defined.");
   }
 };
+} // end anonymous namespace
 
 const std::error_category &lld::YamlReaderCategory() {
   static _YamlReaderErrorCategory o;

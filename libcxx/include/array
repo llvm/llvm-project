@@ -108,9 +108,6 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
-#if defined(_LIBCPP_NO_EXCEPTIONS)
-    #include <cassert>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -209,11 +206,8 @@ typename array<_Tp, _Size>::reference
 array<_Tp, _Size>::at(size_type __n)
 {
     if (__n >= _Size)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("array::at");
-#else
-        assert(!"array::at out_of_range");
-#endif
+        __throw_out_of_range("array::at");
+
     return __elems_[__n];
 }
 
@@ -223,11 +217,7 @@ typename array<_Tp, _Size>::const_reference
 array<_Tp, _Size>::at(size_type __n) const
 {
     if (__n >= _Size)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("array::at");
-#else
-        assert(!"array::at out_of_range");
-#endif
+        __throw_out_of_range("array::at");
     return __elems_[__n];
 }
 

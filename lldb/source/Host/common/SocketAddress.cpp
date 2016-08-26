@@ -14,15 +14,15 @@
 // C Includes
 #if !defined(_WIN32)
 #include <arpa/inet.h>
-#else
-#include "lldb/Host/windows/win32.h"
 #endif
+
 #include <assert.h>
 #include <string.h>
 
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Host/PosixApi.h"
 
 // WindowsXP needs an inet_ntop implementation
 #ifdef _WIN32

@@ -157,7 +157,7 @@ public:
                             "target create",
                             "Create a target using the argument as the main executable.",
                             nullptr),
-        m_option_group (interpreter),
+        m_option_group (),
         m_arch_option (),
         m_core_file (LLDB_OPT_SET_1, false, "core", 'c', 0, eArgTypeFilename, "Fullpath to a core file to use for this target."),
         m_platform_path (LLDB_OPT_SET_1, false, "platform-path", 'P', 0, eArgTypePath, "Path to the remote file to use for this target."),
@@ -208,7 +208,7 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eDiskFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -269,7 +269,7 @@ protected:
             }
 
             const char *file_path = command.GetArgumentAtIndex(0);
-            Timer scoped_timer(__PRETTY_FUNCTION__, "(lldb) target create '%s'", file_path);
+            Timer scoped_timer(LLVM_PRETTY_FUNCTION, "(lldb) target create '%s'", file_path);
             FileSpec file_spec;
 
             if (file_path)
@@ -594,7 +594,7 @@ public:
                             "target delete",
                             "Delete one or more targets by target index.",
                             nullptr),
-        m_option_group(interpreter),
+        m_option_group(),
         m_all_option(LLDB_OPT_SET_1, false, "all", 'a', "Delete all targets.", false, true),
         m_cleanup_option(
             LLDB_OPT_SET_1,
@@ -728,7 +728,7 @@ public:
         : CommandObjectParsed(interpreter, "target variable",
                               "Read global variables for the current target, before or while running a process.",
                               nullptr, eCommandRequiresTarget),
-          m_option_group(interpreter),
+          m_option_group(),
           m_option_variable(false), // Don't include frame options
           m_option_format(eFormatDefault),
           m_option_compile_units(LLDB_OPT_SET_1, false, "file", SHORT_OPTION_FILE, 0, eArgTypeFilename,
@@ -2068,7 +2068,7 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eModuleCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -2127,7 +2127,7 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eSourceFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -2220,7 +2220,7 @@ public:
                                                      "target modules dump symtab",
                                                      "Dump the symbol table from one or more target modules.",
                                                      nullptr),
-        m_options(interpreter)
+        m_options()
     {
     }
 
@@ -2235,9 +2235,9 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter),
-        m_sort_order (eSortOrderNone),
+        CommandOptions() :
+        Options(),
+        m_sort_order(eSortOrderNone)
         m_prefer_mangled(false,false)
         {
         }
@@ -2245,7 +2245,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -2272,7 +2273,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_sort_order = eSortOrderNone;
             m_prefer_mangled.Clear();
@@ -2716,7 +2717,7 @@ public:
                              "target modules add",
                              "Add a new module to the current target's modules.",
                              "target modules add [<module>]"),
-        m_option_group (interpreter),
+        m_option_group(),
         m_symbol_file (LLDB_OPT_SET_1, false, "symfile", 's', 0, eArgTypeFilename, "Fullpath to a stand alone debug symbols file for when debug symbols are not in the executable.")
     {
         m_option_group.Append (&m_uuid_option_group, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
@@ -2745,7 +2746,7 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eDiskFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -2912,7 +2913,7 @@ public:
                                                       "target modules load",
                                                       "Set the load addresses for one or more sections in a target module.",
                                                       "target modules load [--file <module> --uuid <uuid>] <sect-name> <address> [<sect-name> <address> ....]"),
-        m_option_group (interpreter),
+        m_option_group(),
         m_file_option (LLDB_OPT_SET_1, false, "file", 'f', 0, eArgTypeName, "Fullpath or basename for module to load.", ""),
         m_slide_option(LLDB_OPT_SET_1, false, "slide", 's', 0, eArgTypeOffset, "Set the load address for all sections to be the virtual address in the file plus the offset.", 0)
     {
@@ -3167,8 +3168,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter),
+        CommandOptions() :
+            Options(),
             m_format_array(),
             m_use_global_module_list (false),
             m_module_addr (LLDB_INVALID_ADDRESS)
@@ -3178,7 +3179,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
 
@@ -3189,8 +3191,10 @@ public:
             }
             else if (short_option == 'a')
             {
-                ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-                m_module_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                m_module_addr = Args::StringToAddress(execution_context,
+                                                      option_arg,
+                                                      LLDB_INVALID_ADDRESS,
+                                                      &error);
             }
             else
             {
@@ -3203,7 +3207,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_format_array.clear();
             m_use_global_module_list = false;
@@ -3232,7 +3236,7 @@ public:
                              "target modules list",
                              "List current executable and dependent shared library images.",
                              "target modules list [<cmd-options>]"),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -3606,8 +3610,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter),
+        CommandOptions() :
+            Options(),
             m_type(eLookupTypeInvalid),
             m_str(),
             m_addr(LLDB_INVALID_ADDRESS)
@@ -3617,7 +3621,8 @@ public:
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
 
@@ -3627,10 +3632,12 @@ public:
             {
                 case 'a':
                 {
-                    ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
                     m_str = option_arg;
                     m_type = eLookupTypeAddress;
-                    m_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                    m_addr = Args::StringToAddress(execution_context,
+                                                   option_arg,
+                                                   LLDB_INVALID_ADDRESS,
+                                                   &error);
                     if (m_addr == LLDB_INVALID_ADDRESS)
                         error.SetErrorStringWithFormat ("invalid address string '%s'", option_arg);
                     break;
@@ -3650,7 +3657,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_type = eLookupTypeInvalid;
             m_str.clear();
@@ -3683,7 +3690,7 @@ public:
                             eCommandRequiresProcess       |
                             eCommandProcessMustBeLaunched |
                             eCommandProcessMustBePaused   ),
-        m_options (interpreter)
+        m_options()
     {
     }
 
@@ -3912,16 +3919,17 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter)
+        CommandOptions() :
+            Options()
         {
-            OptionParsingStarting();
+            OptionParsingStarting(nullptr);
         }
 
         ~CommandOptions() override = default;
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue (uint32_t option_idx, const char *option_arg,
+                        ExecutionContext *execution_context) override
         {
             Error error;
 
@@ -3932,8 +3940,10 @@ public:
                 case 'a':
                     {
                         m_type = eLookupTypeAddress;
-                        ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
-                        m_addr = Args::StringToAddress(&exe_ctx, option_arg, LLDB_INVALID_ADDRESS, &error);
+                        m_addr = Args::StringToAddress(execution_context,
+                                                       option_arg,
+                                                       LLDB_INVALID_ADDRESS,
+                                                       &error);
                     }
                     break;
 
@@ -3998,7 +4008,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_type = eLookupTypeInvalid;
             m_str.clear();
@@ -4039,7 +4049,7 @@ public:
                             "Look up information within executable and dependent shared library images.",
                             nullptr,
                             eCommandRequiresTarget),
-        m_options (interpreter)
+        m_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData file_arg;
@@ -4202,7 +4212,10 @@ public:
                 break;
 
             default:
-                m_options.GenerateOptionUsage (result.GetErrorStream(), this);
+                m_options.GenerateOptionUsage(result.GetErrorStream(), this,
+                                              GetCommandInterpreter()
+                                                .GetDebugger()
+                                                .GetTerminalWidth());
                 syntax_error = true;
                 break;
         }
@@ -4404,7 +4417,7 @@ public:
                              "target symbols add",
                              "Add a debug symbol file to one of the target's current modules by specifying a path to a debug symbols file, or using the options to specify a module to download symbols for.",
                              "target symbols add [<symfile>]", eCommandRequiresTarget),
-        m_option_group (interpreter),
+        m_option_group(),
         m_file_option (LLDB_OPT_SET_1, false, "shlib", 's', CommandCompletions::eModuleCompletion, eArgTypeShlibName, "Fullpath or basename for module to find debug symbols for."),
         m_current_frame_option (LLDB_OPT_SET_2, false, "frame", 'F', "Locate the debug symbols the currently selected frame.", false, true)
 
@@ -4430,7 +4443,7 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+        CommandCompletions::InvokeCommonCompletionCallbacks(GetCommandInterpreter(),
                                                             CommandCompletions::eDiskFileCompletion,
                                                             completion_str.c_str(),
                                                             match_start_point,
@@ -4859,8 +4872,8 @@ public:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options(interpreter),
+        CommandOptions() :
+            Options(),
             m_line_start(0),
             m_line_end (UINT_MAX),
             m_func_name_type_mask (eFunctionNameTypeAuto),
@@ -4880,7 +4893,8 @@ public:
         }
 
         Error
-        SetOptionValue (uint32_t option_idx, const char *option_arg) override
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
         {
             Error error;
             const int short_option = m_getopt_table[option_idx].val;
@@ -4970,7 +4984,7 @@ public:
         }
 
         void
-        OptionParsingStarting () override
+        OptionParsingStarting(ExecutionContext *execution_context) override
         {
             m_class_name.clear();
             m_function_name.clear();
@@ -5019,7 +5033,7 @@ public:
                              "Add a hook to be executed when the target stops.",
                              "target stop-hook add"),
         IOHandlerDelegateMultiline ("DONE", IOHandlerDelegate::Completion::LLDBCommand),
-        m_options (interpreter)
+        m_options()
     {
     }
 

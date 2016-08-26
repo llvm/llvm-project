@@ -19,6 +19,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 template <class T>
@@ -32,21 +33,21 @@ int main()
 {
     {
         typedef std::vector<bool> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::vector<bool, test_allocator<bool>> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::vector<bool, other_allocator<bool>> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::vector<bool, some_alloc<bool>> C;
     //  In C++17, move constructors for allocators are not allowed to throw
 #if TEST_STD_VER > 14
-        static_assert( std::is_nothrow_move_constructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT( std::is_nothrow_move_constructible<C>::value, "");
 #else
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");
 #endif

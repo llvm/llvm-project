@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
+
 // <functional>
 
 // make sure that we can hash enumeration values
 // Not very portable
 
 #include "test_macros.h"
-
-#if TEST_STD_VER >= 14
 
 #include <functional>
 #include <cassert>
@@ -59,6 +59,3 @@ int main()
 
     test<Fruits>();
 }
-#else
-int main () {}
-#endif

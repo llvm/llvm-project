@@ -23,6 +23,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
@@ -52,7 +53,7 @@ int main()
             7,
             test_hash<std::hash<int> >(8)
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
         Eq eq = c.equal_range(1);
@@ -111,7 +112,7 @@ int main()
             7,
             test_hash<std::hash<int> >(8)
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
         Eq eq = c.equal_range(1);

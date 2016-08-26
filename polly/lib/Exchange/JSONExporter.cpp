@@ -23,6 +23,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "isl/constraint.h"
 #include "isl/map.h"
 #include "isl/printer.h"
@@ -73,8 +74,45 @@ struct JSONExporter : public ScopPass {
 
 struct JSONImporter : public ScopPass {
   static char ID;
-  std::vector<std::string> newAccessStrings;
+  std::vector<std::string> NewAccessStrings;
   explicit JSONImporter() : ScopPass(ID) {}
+
+  /// Import a new context from JScop.
+  ///
+  /// @param S The scop to update.
+  /// @param JScop The JScop file describing the new schedule.
+  ///
+  /// @returns True if the import succeeded, otherwise False.
+  bool importContext(Scop &S, Json::Value &JScop);
+
+  /// Import a new schedule from JScop.
+  ///
+  /// ... and verify that the new schedule does preserve existing data
+  /// dependences.
+  ///
+  /// @param S The scop to update.
+  /// @param JScop The JScop file describing the new schedule.
+  /// @param D The data dependences of the @p S.
+  ///
+  /// @returns True if the import succeeded, otherwise False.
+  bool importSchedule(Scop &S, Json::Value &JScop, const Dependences &D);
+
+  /// Import new arrays from JScop.
+  ///
+  /// @param S The scop to update.
+  /// @param JScop The JScop file describing new arrays.
+  ///
+  /// @returns True if the import succeeded, otherwise False.
+  bool importArrays(Scop &S, Json::Value &JScop);
+
+  /// Import new memory accesses from JScop.
+  ///
+  /// @param S The scop to update.
+  /// @param JScop The JScop file describing the new schedule.
+  /// @param DL The datalayout to assume.
+  ///
+  /// @returns True if the import succeeded, otherwise False.
+  bool importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL);
 
   std::string getFileName(Scop &S) const;
 
@@ -98,6 +136,35 @@ std::string JSONExporter::getFileName(Scop &S) const {
 
 void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { S.print(OS); }
 
+/// Export all arrays from the Scop.
+///
+/// @param S The Scop containing the arrays.
+///
+/// @returns Json::Value containing the arrays.
+Json::Value exportArrays(const Scop &S) {
+  Json::Value Arrays;
+  std::string Buffer;
+  llvm::raw_string_ostream RawStringOstream(Buffer);
+
+  for (auto &SAI : S.arrays()) {
+    if (!SAI->isArrayKind())
+      continue;
+
+    Json::Value Array;
+    Array["name"] = SAI->getName();
+    for (unsigned i = 1; i < SAI->getNumberOfDimensions(); i++) {
+      SAI->getDimensionSize(i)->print(RawStringOstream);
+      Array["sizes"].append(RawStringOstream.str());
+      Buffer.clear();
+    }
+    SAI->getElementType()->print(RawStringOstream);
+    Array["type"] = RawStringOstream.str();
+    Buffer.clear();
+    Arrays.append(Array);
+  }
+  return Arrays;
+}
+
 Json::Value JSONExporter::getJSON(Scop &S) const {
   Json::Value root;
   unsigned LineBegin, LineEnd;
@@ -113,6 +180,9 @@ Json::Value JSONExporter::getJSON(Scop &S) const {
   root["context"] = S.getContextStr();
   if (LineBegin != (unsigned)-1)
     root["location"] = Location;
+
+  root["arrays"] = exportArrays(S);
+
   root["statements"];
 
   for (ScopStmt &Stmt : S) {
@@ -189,13 +259,298 @@ std::string JSONImporter::getFileName(Scop &S) const {
 
 void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
   S.print(OS);
-  for (std::vector<std::string>::const_iterator I = newAccessStrings.begin(),
-                                                E = newAccessStrings.end();
+  for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
+                                                E = NewAccessStrings.end();
        I != E; I++)
     OS << "New access function '" << *I << "'detected in JSCOP file\n";
 }
 
 typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
+
+bool JSONImporter::importContext(Scop &S, Json::Value &JScop) {
+  isl_set *OldContext = S.getContext();
+  isl_set *NewContext =
+      isl_set_read_from_str(S.getIslCtx(), JScop["context"].asCString());
+
+  for (unsigned i = 0; i < isl_set_dim(OldContext, isl_dim_param); i++) {
+    isl_id *Id = isl_set_get_dim_id(OldContext, isl_dim_param, i);
+    NewContext = isl_set_set_dim_id(NewContext, isl_dim_param, i, Id);
+  }
+
+  isl_set_free(OldContext);
+  S.setContext(NewContext);
+  return true;
+}
+
+bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
+                                  const Dependences &D) {
+  StatementToIslMapTy NewSchedule;
+
+  int Index = 0;
+  for (ScopStmt &Stmt : S) {
+    Json::Value Schedule = JScop["statements"][Index]["schedule"];
+    isl_map *Map = isl_map_read_from_str(S.getIslCtx(), Schedule.asCString());
+    isl_space *Space = Stmt.getDomainSpace();
+
+    // Copy the old tuple id. This is necessary to retain the user pointer,
+    // that stores the reference to the ScopStmt this schedule belongs to.
+    Map = isl_map_set_tuple_id(Map, isl_dim_in,
+                               isl_space_get_tuple_id(Space, isl_dim_set));
+    for (unsigned i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
+      isl_id *Id = isl_space_get_dim_id(Space, isl_dim_param, i);
+      Map = isl_map_set_dim_id(Map, isl_dim_param, i, Id);
+    }
+    isl_space_free(Space);
+    NewSchedule[&Stmt] = Map;
+    Index++;
+  }
+
+  if (!D.isValidSchedule(S, &NewSchedule)) {
+    errs() << "JScop file contains a schedule that changes the "
+           << "dependences. Use -disable-polly-legality to continue anyways\n";
+    for (auto Element : NewSchedule)
+      isl_map_free(Element.second);
+    return false;
+  }
+
+  auto ScheduleMap = isl_union_map_empty(S.getParamSpace());
+  for (ScopStmt &Stmt : S) {
+    if (NewSchedule.find(&Stmt) != NewSchedule.end())
+      ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
+    else
+      ScheduleMap = isl_union_map_add_map(ScheduleMap, Stmt.getSchedule());
+  }
+
+  S.setSchedule(ScheduleMap);
+
+  return true;
+}
+
+bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
+                                  const DataLayout &DL) {
+  int StatementIdx = 0;
+  for (ScopStmt &Stmt : S) {
+    int MemoryAccessIdx = 0;
+    for (MemoryAccess *MA : Stmt) {
+      Json::Value Accesses = JScop["statements"][StatementIdx]["accesses"]
+                                  [MemoryAccessIdx]["relation"];
+      isl_map *NewAccessMap =
+          isl_map_read_from_str(S.getIslCtx(), Accesses.asCString());
+      isl_map *CurrentAccessMap = MA->getAccessRelation();
+
+      if (isl_map_dim(NewAccessMap, isl_dim_param) !=
+          isl_map_dim(CurrentAccessMap, isl_dim_param)) {
+        errs() << "JScop file changes the number of parameter dimensions\n";
+        isl_map_free(CurrentAccessMap);
+        isl_map_free(NewAccessMap);
+        return false;
+      }
+
+      isl_id *NewOutId;
+
+      if (MA->isArrayKind()) {
+        NewOutId = isl_map_get_tuple_id(NewAccessMap, isl_dim_out);
+        auto *SAI = S.getArrayInfoByName(isl_id_get_name(NewOutId));
+        isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
+        auto *OutSAI = ScopArrayInfo::getFromId(OutId);
+        if (!SAI || SAI->getElementType() != OutSAI->getElementType()) {
+          errs() << "JScop file contains access function with undeclared "
+                    "ScopArrayInfo\n";
+          isl_map_free(CurrentAccessMap);
+          isl_map_free(NewAccessMap);
+          isl_id_free(NewOutId);
+          return false;
+        }
+        isl_id_free(NewOutId);
+        NewOutId = SAI->getBasePtrId();
+      } else {
+        NewOutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
+      }
+
+      NewAccessMap = isl_map_set_tuple_id(NewAccessMap, isl_dim_out, NewOutId);
+
+      if (MA->isArrayKind()) {
+        // We keep the old alignment, thus we cannot allow accesses to memory
+        // locations that were not accessed before if the alignment of the
+        // access is not the default alignment.
+        bool SpecialAlignment = true;
+        if (LoadInst *LoadI = dyn_cast<LoadInst>(MA->getAccessInstruction())) {
+          SpecialAlignment =
+              DL.getABITypeAlignment(LoadI->getType()) != LoadI->getAlignment();
+        } else if (StoreInst *StoreI =
+                       dyn_cast<StoreInst>(MA->getAccessInstruction())) {
+          SpecialAlignment =
+              DL.getABITypeAlignment(StoreI->getValueOperand()->getType()) !=
+              StoreI->getAlignment();
+        }
+
+        if (SpecialAlignment) {
+          isl_set *NewAccessSet = isl_map_range(isl_map_copy(NewAccessMap));
+          isl_set *CurrentAccessSet =
+              isl_map_range(isl_map_copy(CurrentAccessMap));
+          bool IsSubset = isl_set_is_subset(NewAccessSet, CurrentAccessSet);
+          isl_set_free(NewAccessSet);
+          isl_set_free(CurrentAccessSet);
+
+          if (!IsSubset) {
+            errs() << "JScop file changes the accessed memory\n";
+            isl_map_free(CurrentAccessMap);
+            isl_map_free(NewAccessMap);
+            return false;
+          }
+        }
+      }
+
+      // We need to copy the isl_ids for the parameter dimensions to the new
+      // map. Without doing this the current map would have different
+      // ids then the new one, even though both are named identically.
+      for (unsigned i = 0; i < isl_map_dim(CurrentAccessMap, isl_dim_param);
+           i++) {
+        isl_id *Id = isl_map_get_dim_id(CurrentAccessMap, isl_dim_param, i);
+        NewAccessMap = isl_map_set_dim_id(NewAccessMap, isl_dim_param, i, Id);
+      }
+
+      // Copy the old tuple id. This is necessary to retain the user pointer,
+      // that stores the reference to the ScopStmt this access belongs to.
+      isl_id *Id = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_in);
+      NewAccessMap = isl_map_set_tuple_id(NewAccessMap, isl_dim_in, Id);
+
+      auto NewAccessDomain = isl_map_domain(isl_map_copy(NewAccessMap));
+      auto CurrentAccessDomain = isl_map_domain(isl_map_copy(CurrentAccessMap));
+
+      if (!isl_set_has_equal_space(NewAccessDomain, CurrentAccessDomain)) {
+        errs() << "JScop file contains access function with incompatible "
+               << "dimensions\n";
+        isl_map_free(CurrentAccessMap);
+        isl_map_free(NewAccessMap);
+        isl_set_free(NewAccessDomain);
+        isl_set_free(CurrentAccessDomain);
+        return false;
+      }
+
+      NewAccessDomain =
+          isl_set_intersect_params(NewAccessDomain, S.getContext());
+      CurrentAccessDomain =
+          isl_set_intersect_params(CurrentAccessDomain, S.getContext());
+
+      if (isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
+          isl_bool_false) {
+        errs() << "Mapping not defined for all iteration domain elements\n";
+        isl_set_free(CurrentAccessDomain);
+        isl_set_free(NewAccessDomain);
+        isl_map_free(CurrentAccessMap);
+        isl_map_free(NewAccessMap);
+        return false;
+      }
+
+      isl_set_free(CurrentAccessDomain);
+      isl_set_free(NewAccessDomain);
+
+      if (!isl_map_is_equal(NewAccessMap, CurrentAccessMap)) {
+        // Statistics.
+        ++NewAccessMapFound;
+        NewAccessStrings.push_back(Accesses.asCString());
+        MA->setNewAccessRelation(NewAccessMap);
+      } else {
+        isl_map_free(NewAccessMap);
+      }
+      isl_map_free(CurrentAccessMap);
+      MemoryAccessIdx++;
+    }
+    StatementIdx++;
+  }
+
+  return true;
+}
+
+/// @brief Check whether @p SAI and @p Array represent the same array.
+bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
+  std::string Buffer;
+  llvm::raw_string_ostream RawStringOstream(Buffer);
+
+  if (SAI->getName() != Array["name"].asCString())
+    return false;
+
+  if (SAI->getNumberOfDimensions() != Array["sizes"].size() + 1)
+    return false;
+
+  for (unsigned i = 0; i < Array["sizes"].size(); i++) {
+    SAI->getDimensionSize(i + 1)->print(RawStringOstream);
+    if (RawStringOstream.str() != Array["sizes"][i].asCString())
+      return false;
+    Buffer.clear();
+  }
+
+  SAI->getElementType()->print(RawStringOstream);
+  if (RawStringOstream.str() != Array["type"].asCString())
+    return false;
+
+  return true;
+}
+
+/// @brief Get the accepted primitive type from its textual representation
+///        @p TypeTextRepresentation.
+///
+/// @param TypeTextRepresentation The textual representation of the type.
+/// @return The pointer to the primitive type, if this type is accepted
+///         or nullptr otherwise.
+Type *parseTextType(const std::string &TypeTextRepresentation,
+                    LLVMContext &LLVMContext) {
+  std::map<std::string, Type *> MapStrToType = {
+      {"void", Type::getVoidTy(LLVMContext)},
+      {"half", Type::getHalfTy(LLVMContext)},
+      {"float", Type::getFloatTy(LLVMContext)},
+      {"double", Type::getDoubleTy(LLVMContext)},
+      {"x86_fp80", Type::getX86_FP80Ty(LLVMContext)},
+      {"fp128", Type::getFP128Ty(LLVMContext)},
+      {"ppc_fp128", Type::getPPC_FP128Ty(LLVMContext)},
+      {"i1", Type::getInt1Ty(LLVMContext)},
+      {"i8", Type::getInt8Ty(LLVMContext)},
+      {"i16", Type::getInt16Ty(LLVMContext)},
+      {"i32", Type::getInt32Ty(LLVMContext)},
+      {"i64", Type::getInt64Ty(LLVMContext)},
+      {"i128", Type::getInt128Ty(LLVMContext)}};
+
+  auto It = MapStrToType.find(TypeTextRepresentation);
+  if (It != MapStrToType.end())
+    return It->second;
+
+  errs() << "Textual representation can not be parsed: "
+         << TypeTextRepresentation << "\n";
+  return nullptr;
+}
+
+bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
+  Json::Value Arrays = JScop["arrays"];
+
+  if (Arrays.size() == 0)
+    return true;
+
+  unsigned ArrayIdx = 0;
+  for (auto &SAI : S.arrays()) {
+    if (!SAI->isArrayKind())
+      continue;
+    if (ArrayIdx + 1 > Arrays.size())
+      return false;
+    if (!areArraysEqual(SAI, Arrays[ArrayIdx]))
+      return false;
+    ArrayIdx++;
+  }
+
+  for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
+    auto *ElementType = parseTextType(Arrays[ArrayIdx]["type"].asCString(),
+                                      S.getSE()->getContext());
+    if (!ElementType)
+      return false;
+    std::vector<unsigned> DimSizes;
+    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
+      DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));
+    S.createScopArrayInfo(ElementType, Arrays[ArrayIdx]["name"].asCString(),
+                          DimSizes);
+  }
+
+  return true;
+}
 
 bool JSONImporter::runOnScop(Scop &S) {
   const Dependences &D =
@@ -226,169 +581,25 @@ bool JSONImporter::runOnScop(Scop &S) {
     return false;
   }
 
-  isl_set *OldContext = S.getContext();
-  isl_set *NewContext =
-      isl_set_read_from_str(S.getIslCtx(), jscop["context"].asCString());
+  bool Success = importContext(S, jscop);
 
-  for (unsigned i = 0; i < isl_set_dim(OldContext, isl_dim_param); i++) {
-    isl_id *id = isl_set_get_dim_id(OldContext, isl_dim_param, i);
-    NewContext = isl_set_set_dim_id(NewContext, isl_dim_param, i, id);
-  }
-
-  isl_set_free(OldContext);
-  S.setContext(NewContext);
-
-  StatementToIslMapTy NewSchedule;
-
-  int index = 0;
-
-  for (ScopStmt &Stmt : S) {
-    Json::Value schedule = jscop["statements"][index]["schedule"];
-    isl_map *m = isl_map_read_from_str(S.getIslCtx(), schedule.asCString());
-    isl_space *Space = Stmt.getDomainSpace();
-
-    // Copy the old tuple id. This is necessary to retain the user pointer,
-    // that stores the reference to the ScopStmt this schedule belongs to.
-    m = isl_map_set_tuple_id(m, isl_dim_in,
-                             isl_space_get_tuple_id(Space, isl_dim_set));
-    for (unsigned i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
-      isl_id *id = isl_space_get_dim_id(Space, isl_dim_param, i);
-      m = isl_map_set_dim_id(m, isl_dim_param, i, id);
-    }
-    isl_space_free(Space);
-    NewSchedule[&Stmt] = m;
-    index++;
-  }
-
-  if (!D.isValidSchedule(S, &NewSchedule)) {
-    errs() << "JScop file contains a schedule that changes the "
-           << "dependences. Use -disable-polly-legality to continue anyways\n";
-    for (StatementToIslMapTy::iterator SI = NewSchedule.begin(),
-                                       SE = NewSchedule.end();
-         SI != SE; ++SI)
-      isl_map_free(SI->second);
+  if (!Success)
     return false;
-  }
 
-  auto ScheduleMap = isl_union_map_empty(S.getParamSpace());
-  for (ScopStmt &Stmt : S) {
-    if (NewSchedule.find(&Stmt) != NewSchedule.end())
-      ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
-    else
-      ScheduleMap = isl_union_map_add_map(ScheduleMap, Stmt.getSchedule());
-  }
+  Success = importSchedule(S, jscop, D);
 
-  S.setSchedule(ScheduleMap);
+  if (!Success)
+    return false;
 
-  int statementIdx = 0;
-  for (ScopStmt &Stmt : S) {
-    int memoryAccessIdx = 0;
-    for (MemoryAccess *MA : Stmt) {
-      Json::Value accesses = jscop["statements"][statementIdx]["accesses"]
-                                  [memoryAccessIdx]["relation"];
-      isl_map *newAccessMap =
-          isl_map_read_from_str(S.getIslCtx(), accesses.asCString());
-      isl_map *currentAccessMap = MA->getAccessRelation();
+  Success = importArrays(S, jscop);
 
-      if (isl_map_dim(newAccessMap, isl_dim_param) !=
-          isl_map_dim(currentAccessMap, isl_dim_param)) {
-        errs() << "JScop file changes the number of parameter dimensions\n";
-        isl_map_free(currentAccessMap);
-        isl_map_free(newAccessMap);
-        return false;
-      }
+  if (!Success)
+    return false;
 
-      isl_id *OutId = isl_map_get_tuple_id(currentAccessMap, isl_dim_out);
-      newAccessMap = isl_map_set_tuple_id(newAccessMap, isl_dim_out, OutId);
+  Success = importAccesses(S, jscop, DL);
 
-      if (MA->isArrayKind()) {
-        // We keep the old alignment, thus we cannot allow accesses to memory
-        // locations that were not accessed before if the alignment of the
-        // access is not the default alignment.
-        bool SpecialAlignment = true;
-        if (LoadInst *LoadI = dyn_cast<LoadInst>(MA->getAccessInstruction())) {
-          SpecialAlignment =
-              DL.getABITypeAlignment(LoadI->getType()) != LoadI->getAlignment();
-        } else if (StoreInst *StoreI =
-                       dyn_cast<StoreInst>(MA->getAccessInstruction())) {
-          SpecialAlignment =
-              DL.getABITypeAlignment(StoreI->getValueOperand()->getType()) !=
-              StoreI->getAlignment();
-        }
-
-        if (SpecialAlignment) {
-          isl_set *newAccessSet = isl_map_range(isl_map_copy(newAccessMap));
-          isl_set *currentAccessSet =
-              isl_map_range(isl_map_copy(currentAccessMap));
-          bool isSubset = isl_set_is_subset(newAccessSet, currentAccessSet);
-          isl_set_free(newAccessSet);
-          isl_set_free(currentAccessSet);
-
-          if (!isSubset) {
-            errs() << "JScop file changes the accessed memory\n";
-            isl_map_free(currentAccessMap);
-            isl_map_free(newAccessMap);
-            return false;
-          }
-        }
-      }
-
-      // We need to copy the isl_ids for the parameter dimensions to the new
-      // map. Without doing this the current map would have different
-      // ids then the new one, even though both are named identically.
-      for (unsigned i = 0; i < isl_map_dim(currentAccessMap, isl_dim_param);
-           i++) {
-        isl_id *id = isl_map_get_dim_id(currentAccessMap, isl_dim_param, i);
-        newAccessMap = isl_map_set_dim_id(newAccessMap, isl_dim_param, i, id);
-      }
-
-      // Copy the old tuple id. This is necessary to retain the user pointer,
-      // that stores the reference to the ScopStmt this access belongs to.
-      isl_id *Id = isl_map_get_tuple_id(currentAccessMap, isl_dim_in);
-      newAccessMap = isl_map_set_tuple_id(newAccessMap, isl_dim_in, Id);
-
-      if (!isl_map_has_equal_space(currentAccessMap, newAccessMap)) {
-        errs() << "JScop file contains access function with incompatible "
-               << "dimensions\n";
-        isl_map_free(currentAccessMap);
-        isl_map_free(newAccessMap);
-        return false;
-      }
-
-      auto NewAccessDomain = isl_map_domain(isl_map_copy(newAccessMap));
-      auto CurrentAccessDomain = isl_map_domain(isl_map_copy(currentAccessMap));
-
-      NewAccessDomain =
-          isl_set_intersect_params(NewAccessDomain, S.getContext());
-      CurrentAccessDomain =
-          isl_set_intersect_params(CurrentAccessDomain, S.getContext());
-
-      if (isl_set_is_subset(CurrentAccessDomain, NewAccessDomain) ==
-          isl_bool_false) {
-        errs() << "Mapping not defined for all iteration domain elements\n";
-        isl_set_free(CurrentAccessDomain);
-        isl_set_free(NewAccessDomain);
-        isl_map_free(currentAccessMap);
-        isl_map_free(newAccessMap);
-        return false;
-      }
-
-      isl_set_free(CurrentAccessDomain);
-      isl_set_free(NewAccessDomain);
-
-      if (!isl_map_is_equal(newAccessMap, currentAccessMap)) {
-        // Statistics.
-        ++NewAccessMapFound;
-        newAccessStrings.push_back(accesses.asCString());
-        MA->setNewAccessRelation(newAccessMap);
-      } else {
-        isl_map_free(newAccessMap);
-      }
-      isl_map_free(currentAccessMap);
-      memoryAccessIdx++;
-    }
-    statementIdx++;
-  }
+  if (!Success)
+    return false;
 
   return false;
 }

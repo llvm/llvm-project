@@ -132,7 +132,7 @@ SymbolVendorMacOSX::CreateInstance (const lldb::ModuleSP &module_sp, lldb_privat
     if (obj_name != obj_file_macho)
         return NULL;
 
-    Timer scoped_timer (__PRETTY_FUNCTION__,
+    Timer scoped_timer (LLVM_PRETTY_FUNCTION,
                         "SymbolVendorMacOSX::CreateInstance (module = %s)",
                         module_sp->GetFileSpec().GetPath().c_str());
     SymbolVendorMacOSX* symbol_vendor = new SymbolVendorMacOSX(module_sp);
@@ -210,6 +210,57 @@ SymbolVendorMacOSX::CreateInstance (const lldb::ModuleSP &module_sp, lldb_privat
                                                     DBGSourcePath = resolved_source_path.GetPath();
                                                 }
                                                 module_sp->GetSourceMappingList().Append (ConstString(DBGBuildSourcePath), ConstString(DBGSourcePath), true);
+                                            }
+
+                                            // DBGSourcePathRemapping is a dictionary in the plist with 
+                                            // keys which are DBGBuildSourcePath file paths and 
+                                            // values which are DBGSourcePath file paths
+
+                                            StructuredData::ObjectSP plist_sp = plist.GetStructuredData();
+                                            if (plist_sp.get() 
+                                                && plist_sp->GetAsDictionary()
+                                                && plist_sp->GetAsDictionary()->HasKey("DBGSourcePathRemapping")
+                                                && plist_sp->GetAsDictionary()->GetValueForKey("DBGSourcePathRemapping")->GetAsDictionary())
+                                            {
+
+                                                // In an early version of DBGSourcePathRemapping, the DBGSourcePath
+                                                // values were incorrect.  If we have a newer style 
+                                                // DBGSourcePathRemapping, there will be a DBGVersion key in the plist
+                                                // (we don't care about the value at this point).
+                                                //
+                                                // If this is an old style DBGSourcePathRemapping, ignore the
+                                                // value half of the key-value remappings and use reuse the original
+                                                // gloal DBGSourcePath string.
+                                                bool new_style_source_remapping_dictionary = false;
+                                                std::string original_DBGSourcePath_value = DBGSourcePath;
+                                                if (plist_sp->GetAsDictionary()->HasKey("DBGVersion"))
+                                                {
+                                                    new_style_source_remapping_dictionary = true;
+                                                }
+
+                                                StructuredData::Dictionary *remappings_dict = plist_sp->GetAsDictionary()->GetValueForKey("DBGSourcePathRemapping")->GetAsDictionary();
+                                                remappings_dict->ForEach ([&module_sp, new_style_source_remapping_dictionary, original_DBGSourcePath_value](ConstString key, StructuredData::Object *object) -> bool
+                                                {
+                                                    if (object && object->GetAsString())
+                                                    {
+
+                                                        // key is DBGBuildSourcePath
+                                                        // object is DBGSourcePath
+                                                        std::string DBGSourcePath = object->GetStringValue();
+                                                        if (new_style_source_remapping_dictionary == false && !original_DBGSourcePath_value.empty())
+                                                        {
+                                                            DBGSourcePath = original_DBGSourcePath_value;
+                                                        }
+                                                        if (DBGSourcePath[0] == '~')
+                                                        {
+                                                            FileSpec resolved_source_path(DBGSourcePath.c_str(), true);
+                                                            DBGSourcePath = resolved_source_path.GetPath();
+                                                        }
+                                                        module_sp->GetSourceMappingList().Append (key, ConstString(DBGSourcePath), true);
+                                                    }
+                                                    return true;
+                                                });
+
                                             }
                                         }
                                     }

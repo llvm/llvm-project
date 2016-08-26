@@ -16,6 +16,7 @@
 #include <limits.h>
 
 // C++ Includes
+#include <chrono>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -420,20 +421,21 @@ protected:
 class ProcessLaunchCommandOptions : public Options
 {
 public:
-    ProcessLaunchCommandOptions (CommandInterpreter &interpreter) :
-        Options(interpreter)
+    ProcessLaunchCommandOptions () :
+        Options()
     {
         // Keep default values of all options in one place: OptionParsingStarting ()
-        OptionParsingStarting ();
+        OptionParsingStarting (nullptr);
     }
 
     ~ProcessLaunchCommandOptions() override = default;
 
     Error
-    SetOptionValue (uint32_t option_idx, const char *option_arg) override;
+    SetOptionValue (uint32_t option_idx, const char *option_arg,
+                    ExecutionContext *execution_context) override;
     
     void
-    OptionParsingStarting() override
+    OptionParsingStarting(ExecutionContext *execution_context) override
     {
         launch_info.Clear();
         disable_aslr = eLazyBoolCalculate;
@@ -758,7 +760,8 @@ public:
         eBroadcastBitInterrupt      = (1 << 1),
         eBroadcastBitSTDOUT         = (1 << 2),
         eBroadcastBitSTDERR         = (1 << 3),
-        eBroadcastBitProfileData    = (1 << 4)
+        eBroadcastBitProfileData    = (1 << 4),
+        eBroadcastBitStructuredData = (1 << 5),
     };
 
     enum
@@ -1919,6 +1922,9 @@ public:
 
     //------------------------------------------------------------------
     /// Retrieve the list of shared libraries that are loaded for this process
+    /// This method is used on pre-macOS 10.12, pre-iOS 10, pre-tvOS 10, 
+    /// pre-watchOS 3 systems.  The following two methods are for newer versions
+    /// of those OSes.
     /// 
     /// For certain platforms, the time it takes for the DynamicLoader plugin to
     /// read all of the shared libraries out of memory over a slow communication
@@ -1943,6 +1949,35 @@ public:
     //------------------------------------------------------------------
     virtual lldb_private::StructuredData::ObjectSP
     GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_address, lldb::addr_t image_count)
+    {
+        return StructuredData::ObjectSP();
+    }
+
+    // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can return
+    // the full list of loaded shared libraries without needing any input.
+    virtual lldb_private::StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos ()
+    {
+        return StructuredData::ObjectSP();
+    }
+
+    // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can return
+    // information about binaries given their load addresses.
+    virtual lldb_private::StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos (const std::vector<lldb::addr_t> &load_addresses)
+    {
+        return StructuredData::ObjectSP();
+    }
+
+    //------------------------------------------------------------------
+    // Get information about the library shared cache, if that exists
+    //
+    // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can return
+    // information about the library shared cache (a set of standard libraries that are
+    // loaded at the same location for all processes on a system) in use.
+    //------------------------------------------------------------------
+    virtual lldb_private::StructuredData::ObjectSP
+    GetSharedCacheInfo ()
     {
         return StructuredData::ObjectSP();
     }
@@ -2902,12 +2937,9 @@ public:
     // function releases the run lock after the stop. Setting use_run_lock to false
     // will avoid this behavior.
     lldb::StateType
-    WaitForProcessToStop(const TimeValue *timeout,
-                         lldb::EventSP *event_sp_ptr = nullptr,
-                         bool wait_always = true,
-                         lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
-                         Stream *stream = nullptr,
-                         bool use_run_lock = true);
+    WaitForProcessToStop(const std::chrono::microseconds &timeout, lldb::EventSP *event_sp_ptr = nullptr,
+                         bool wait_always = true, lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
+                         Stream *stream = nullptr, bool use_run_lock = true);
 
     uint32_t
     GetIOHandlerID () const
@@ -2929,8 +2961,7 @@ public:
     SyncIOHandler (uint32_t iohandler_id, uint64_t timeout_msec);
 
     lldb::StateType
-    WaitForStateChangedEvents(const TimeValue *timeout,
-                              lldb::EventSP &event_sp,
+    WaitForStateChangedEvents(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp,
                               lldb::ListenerSP hijack_listener); // Pass an empty ListenerSP to use builtin listener
 
     //--------------------------------------------------------------------------------------
@@ -3246,6 +3277,71 @@ public:
     AdvanceAddressToNextBranchInstruction (Address default_stop_addr, 
                                            AddressRange range_bounds);
 
+    //------------------------------------------------------------------
+    /// Configure asynchronous structured data feature.
+    ///
+    /// Each Process type that supports using an asynchronous StructuredData
+    /// feature should implement this to enable/disable/configure the feature.
+    /// The default implementation here will always return an error indiciating
+    /// the feature is unsupported.
+    ///
+    /// StructuredDataPlugin implementations will call this to configure
+    /// a feature that has been reported as being supported.
+    ///
+    /// @param[in] type_name
+    ///     The StructuredData type name as previously discovered by
+    ///     the Process-derived instance.
+    ///
+    /// @param[in] config
+    ///     Configuration data for the feature being enabled.  This config
+    ///     data, which may be null, will be passed along to the feature
+    ///     to process.  The feature will dictate whether this is a dictionary,
+    ///     an array or some other object.  If the feature needs to be
+    ///     set up properly before it can be enabled, then the config should
+    ///     also take an enable/disable flag.
+    ///
+    /// @return
+    ///     Returns the result of attempting to configure the feature.
+    //------------------------------------------------------------------
+    virtual Error
+    ConfigureStructuredData(const ConstString &type_name,
+                            const StructuredData::ObjectSP &config_sp);
+
+    //------------------------------------------------------------------
+    /// Broadcasts the given structured data object from the given
+    /// plugin.
+    ///
+    /// StructuredDataPlugin instances can use this to optionally
+    /// broadcast any of their data if they want to make it available
+    /// for clients.  The data will come in on the structured data
+    /// event bit (eBroadcastBitStructuredData).
+    ///
+    /// @param[in] object_sp
+    ///     The structured data object to broadcast.
+    ///
+    /// @param[in] plugin_sp
+    ///     The plugin that will be reported in the event's plugin
+    ///     parameter.
+    //------------------------------------------------------------------
+    void
+    BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
+                            const lldb::StructuredDataPluginSP &plugin_sp);
+
+    //------------------------------------------------------------------
+    /// Returns the StructuredDataPlugin associated with a given type
+    /// name, if there is one.
+    ///
+    /// There will only be a plugin for a given StructuredDataType if the
+    /// debugged process monitor claims that the feature is supported.
+    /// This is one way to tell whether a feature is available.
+    ///
+    /// @return
+    ///     The plugin if one is available for the specified feature;
+    ///     otherwise, returns an empty shared pointer.
+    //------------------------------------------------------------------
+    lldb::StructuredDataPluginSP
+    GetStructuredDataPlugin(const ConstString &type_name) const;
+
 protected:
     void
     SetState (lldb::EventSP &event_sp);
@@ -3384,6 +3480,57 @@ protected:
     }
 
     //------------------------------------------------------------------
+    /// Loads any plugins associated with asynchronous structured data
+    /// and maps the relevant supported type name to the plugin.
+    ///
+    /// Processes can receive asynchronous structured data from the
+    /// process monitor.  This method will load and map any structured
+    /// data plugins that support the given set of supported type names.
+    /// Later, if any of these features are enabled, the process monitor
+    /// is free to generate asynchronous structured data.  The data must
+    /// come in as a single \b StructuredData::Dictionary.  That dictionary
+    /// must have a string field named 'type', with a value that equals
+    /// the relevant type name string (one of the values in
+    /// \b supported_type_names).
+    ///
+    /// @param[in] supported_type_names
+    ///     An array of zero or more type names.  Each must be unique.
+    ///     For each entry in the list, a StructuredDataPlugin will be
+    ///     searched for that supports the structured data type name.
+    //------------------------------------------------------------------
+    void
+    MapSupportedStructuredDataPlugins(const StructuredData::Array
+                                           &supported_type_names);
+
+    //------------------------------------------------------------------
+    /// Route the incoming structured data dictionary to the right plugin.
+    ///
+    /// The incoming structured data must be a dictionary, and it must
+    /// have a key named 'type' that stores a string value.  The string
+    /// value must be the name of the structured data feature that
+    /// knows how to handle it.
+    ///
+    /// @param[in] object_sp
+    ///     When non-null and pointing to a dictionary, the 'type'
+    ///     key's string value is used to look up the plugin that
+    ///     was registered for that structured data type.  It then
+    ///     calls the following method on the StructuredDataPlugin
+    ///     instance:
+    ///
+    ///     virtual void
+    ///     HandleArrivalOfStructuredData(Process &process,
+    ///                                   const ConstString &type_name,
+    ///                                   const StructuredData::ObjectSP
+    ///                                   &object_sp)
+    ///
+    /// @return
+    ///     True if the structured data was routed to a plugin; otherwise,
+    ///     false.
+    //------------------------------------------------------------------
+    bool
+    RouteAsyncStructuredData(const StructuredData::ObjectSP object_sp);
+
+    //------------------------------------------------------------------
     // Type definitions
     //------------------------------------------------------------------
     typedef std::map<lldb::LanguageType, lldb::LanguageRuntimeSP> LanguageRuntimeCollection;
@@ -3400,6 +3547,9 @@ protected:
         {
         }
     };
+
+    using StructuredDataPluginMap = std::map<ConstString,
+                                             lldb::StructuredDataPluginSP>;
     
     //------------------------------------------------------------------
     // Member variables
@@ -3470,7 +3620,9 @@ protected:
     bool m_can_interpret_function_calls; // Some targets, e.g the OSX kernel, don't support the ability to modify the stack.
     WarningsCollection          m_warnings_issued;  // A set of object pointers which have already had warnings printed
     std::mutex                  m_run_thread_plan_lock;
-    
+    StructuredDataPluginMap     m_structured_data_plugin_map;
+
+
     enum {
         eCanJITDontKnow= 0,
         eCanJITYes,
@@ -3529,21 +3681,20 @@ protected:
     HaltPrivate();
 
     lldb::StateType
-    WaitForProcessStopPrivate (const TimeValue *timeout, lldb::EventSP &event_sp);
+    WaitForProcessStopPrivate(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp);
 
     // This waits for both the state change broadcaster, and the control broadcaster.
     // If control_only, it only waits for the control broadcaster.
 
     bool
-    WaitForEventsPrivate (const TimeValue *timeout, lldb::EventSP &event_sp, bool control_only);
+    WaitForEventsPrivate(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp, bool control_only);
 
     lldb::StateType
-    WaitForStateChangedEventsPrivate (const TimeValue *timeout, lldb::EventSP &event_sp);
+    WaitForStateChangedEventsPrivate(const std::chrono::microseconds &timeout, lldb::EventSP &event_sp);
 
     lldb::StateType
-    WaitForState (const TimeValue *timeout,
-                  const lldb::StateType *match_states,
-                  const uint32_t num_match_states);
+    WaitForState(const std::chrono::microseconds &timeout, const lldb::StateType *match_states,
+                 const uint32_t num_match_states);
 
     size_t
     WriteMemoryPrivate (lldb::addr_t addr, const void *buf, size_t size, Error &error);
@@ -3556,7 +3707,7 @@ protected:
     
     void
     BroadcastAsyncProfileData(const std::string &one_profile_data);
-    
+
     static void
     STDIOReadThreadBytesReceived (void *baton, const void *src, size_t src_len);
     

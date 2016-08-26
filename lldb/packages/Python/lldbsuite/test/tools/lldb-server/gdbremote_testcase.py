@@ -699,7 +699,7 @@ class GdbRemoteTestCaseBase(TestBase):
 
         # Validate keys are known.
         for (key, val) in list(mem_region_dict.items()):
-            self.assertTrue(key in ["start", "size", "permissions", "error"])
+            self.assertTrue(key in ["start", "size", "permissions", "name", "error"])
             self.assertIsNotNone(val)
 
         # Return the dictionary of key-value pairs for the memory region.

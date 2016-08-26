@@ -1,7 +1,9 @@
 ; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;         void f(int *A, int N) {
 ; CHECK:    #pragma minimal dependence distance: ((N - 1) % 2) + 1
+; PINFO:    for.cond: Loop is not parallel.
 ;           for (int i = 0; i < N; i++)
 ;             A[i] = A[N - i] + 1;
 ;         }

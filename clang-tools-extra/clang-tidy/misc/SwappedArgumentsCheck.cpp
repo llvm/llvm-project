@@ -91,7 +91,7 @@ void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
         << RHSFrom->getType()
         << tooling::fixit::createReplacement(*LHS, *RHS, Ctx)
         << tooling::fixit::createReplacement(*RHS, *LHS, Ctx);
-    
+
     // Remember that we emitted a warning for this argument.
     UsedArgs.insert(RHSCast);
   }

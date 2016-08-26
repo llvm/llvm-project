@@ -74,7 +74,7 @@ ADD_CASES("BM_error_before_running",
 void BM_error_during_running(benchmark::State& state) {
   int first_iter = true;
   while (state.KeepRunning()) {
-    if (state.range_x() == 1 && state.thread_index <= (state.threads / 2)) {
+    if (state.range(0) == 1 && state.thread_index <= (state.threads / 2)) {
       assert(first_iter);
       first_iter = false;
       state.SkipWithError("error message");
@@ -116,7 +116,7 @@ ADD_CASES(
 void BM_error_while_paused(benchmark::State& state) {
   bool first_iter = true;
   while (state.KeepRunning()) {
-    if (state.range_x() == 1 && state.thread_index <= (state.threads / 2)) {
+    if (state.range(0) == 1 && state.thread_index <= (state.threads / 2)) {
       assert(first_iter);
       first_iter = false;
       state.PauseTiming();

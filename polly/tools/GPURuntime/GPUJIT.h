@@ -44,59 +44,54 @@
  * const char *Entry = "_Z8myKernelPi";
  *
  * int main() {
- *   PollyGPUContext *Context;
- *   PollyGPUModule *Module;
  *   PollyGPUFunction *Kernel;
- *   PollyGPUDevice *Device;
- *   PollyGPUDevicePtr *PtrDevData;
+ *   PollyGPUContext *Context;
+ *   PollyGPUDevicePtr *DevArray;
  *   int *HostData;
- *   PollyGPUEvent *Start;
- *   PollyGPUEvent *Stop;
- *   float *ElapsedTime;
  *   int MemSize;
- *   int BlockWidth = 16;
- *   int BlockHeight = 16;
- *   int GridWidth = 8;
- *   int GridHeight = 8;
+ *
+ *   int GridX = 8;
+ *   int GridY = 8;
+ *
+ *   int BlockX = 16;
+ *   int BlockY = 16;
+ *   int BlockZ = 1;
  *
  *   MemSize = 256*64*sizeof(int);
- *   polly_initDevice(&Context, &Device);
- *   polly_getPTXModule(KernelString, &Module);
- *   polly_getPTXKernelEntry(Entry, Module, &Kernel);
- *   polly_setKernelParameters(Kernel, BlockWidth, BlockHeight, DevData);
- *   polly_startTimerByCudaEvent(&Start, &Stop);
- *   polly_launchKernel(Kernel, GridWidth, GridHeight);
+ *   Context = polly_initContext();
+ *   DevArray = polly_allocateMemoryForDevice(MemSize);
+ *   Kernel = polly_getKernel(KernelString, KernelName);
+ *
+ *   void *Params[1];
+ *   void *DevPtr = polly_getDevicePtr(DevArray)
+ *   Params[0] = &DevPtr;
+ *
+ *   polly_launchKernel(Kernel, GridX, GridY, BlockX, BlockY, BlockZ, Params);
+ *
  *   polly_copyFromDeviceToHost(HostData, DevData, MemSize);
- *   polly_stopTimerByCudaEvent(Start, Stop, ElapsedTime);
- *   polly_cleanupGPGPUResources(HostData, DevData, Module, Context, Kernel);
+ *   polly_freeKernel(Kernel);
+ *   polly_freeDeviceMemory(DevArray);
+ *   polly_freeContext(Context);
  * }
  *
  */
 
 typedef struct PollyGPUContextT PollyGPUContext;
-typedef struct PollyGPUModuleT PollyGPUModule;
 typedef struct PollyGPUFunctionT PollyGPUFunction;
-typedef struct PollyGPUDeviceT PollyGPUDevice;
 typedef struct PollyGPUDevicePtrT PollyGPUDevicePtr;
-typedef struct PollyGPUEventT PollyGPUEvent;
 
-void polly_initDevice(PollyGPUContext **Context, PollyGPUDevice **Device);
-void polly_getPTXModule(void *PTXBuffer, PollyGPUModule **Module);
-void polly_getPTXKernelEntry(const char *KernelName, PollyGPUModule *Module,
-                             PollyGPUFunction **Kernel);
-void polly_startTimerByCudaEvent(PollyGPUEvent **Start, PollyGPUEvent **Stop);
-void polly_stopTimerByCudaEvent(PollyGPUEvent *Start, PollyGPUEvent *Stop,
-                                float *ElapsedTimes);
-void polly_copyFromHostToDevice(PollyGPUDevicePtr *DevData, void *HostData,
-                                int MemSize);
-void polly_copyFromDeviceToHost(void *HostData, PollyGPUDevicePtr *DevData,
-                                int MemSize);
-void polly_setKernelParameters(PollyGPUFunction *Kernel, int BlockWidth,
-                               int BlockHeight, PollyGPUDevicePtr *DevData);
-void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
-                        int GridHeight);
-void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
-                                 PollyGPUModule *Module,
-                                 PollyGPUContext *Context,
-                                 PollyGPUFunction *Kernel);
+PollyGPUContext *polly_initContext();
+PollyGPUFunction *polly_getKernel(const char *PTXBuffer,
+                                  const char *KernelName);
+void polly_freeKernel(PollyGPUFunction *Kernel);
+void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
+                                long MemSize);
+void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
+                                long MemSize);
+void polly_launchKernel(PollyGPUFunction *Kernel, unsigned int GridDimX,
+                        unsigned int GridDimY, unsigned int BlockSizeX,
+                        unsigned int BlockSizeY, unsigned int BlockSizeZ,
+                        void **Parameters);
+void polly_freeDeviceMemory(PollyGPUDevicePtr *Allocation);
+void polly_freeContext(PollyGPUContext *Context);
 #endif /* GPUJIT_H_ */

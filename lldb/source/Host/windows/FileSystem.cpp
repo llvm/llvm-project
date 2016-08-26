@@ -112,7 +112,7 @@ Error
 FileSystem::SetFilePermissions(const FileSpec &file_spec, uint32_t file_permissions)
 {
     Error error;
-    error.SetErrorStringWithFormat("%s is not supported on this host", __PRETTY_FUNCTION__);
+    error.SetErrorStringWithFormat("%s is not supported on this host", LLVM_PRETTY_FUNCTION);
     return error;
 }
 

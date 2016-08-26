@@ -13,6 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "llvm/Support/Compiler.h"
+#include "lldb/Core/dwarf.h"
 
 // Project includes
 
@@ -36,23 +37,29 @@
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR(reg, alt, kind1, kind2, kind3, kind4)            \
     { #reg, alt, sizeof(((GPR_linux_mips*)NULL)->reg) / 2, GPR_OFFSET(reg), eEncodingUint,  \
-      eFormatHex, { kind1, kind2, kind3, kind4, gpr_##reg##_mips }, NULL, NULL }
+      eFormatHex, { kind1, kind2, kind3, kind4, gpr_##reg##_mips }, NULL, NULL, NULL, 0}
+
+const uint8_t dwarf_opcode_mips [] = {
+                                        llvm::dwarf::DW_OP_regx, dwarf_sr_mips, llvm::dwarf::DW_OP_lit1,
+                                        llvm::dwarf::DW_OP_lit26, llvm::dwarf::DW_OP_shl, llvm::dwarf::DW_OP_and,
+                                        llvm::dwarf::DW_OP_lit26, llvm::dwarf::DW_OP_shr
+                                     };
 
 #define DEFINE_FPR(reg, alt, kind1, kind2, kind3, kind4)           \
     { #reg, alt, sizeof(((FPR_linux_mips*)NULL)->reg), FPR_OFFSET(reg), eEncodingIEEE754,   \
-      eFormatFloat, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL }
+      eFormatFloat, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL, dwarf_opcode_mips, sizeof(dwarf_opcode_mips)}
 
 #define DEFINE_FPR_INFO(reg, alt, kind1, kind2, kind3, kind4)      \
    { #reg, alt, sizeof(((FPR_linux_mips*)NULL)->reg), FPR_OFFSET(reg), eEncodingUint,   \
-     eFormatHex, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL }
+     eFormatHex, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL, NULL, 0}
 
 #define DEFINE_MSA(reg, alt, kind1, kind2, kind3, kind4)    \
     { #reg, alt, sizeof(((MSA_linux_mips*)0)->reg), MSA_OFFSET(reg), eEncodingVector,   \
-      eFormatVectorOfUInt8, { kind1, kind2, kind3, kind4, msa_##reg##_mips }, NULL, NULL }
+      eFormatVectorOfUInt8, { kind1, kind2, kind3, kind4, msa_##reg##_mips }, NULL, NULL, NULL, 0}
 
 #define DEFINE_MSA_INFO(reg, alt, kind1, kind2, kind3, kind4)    \
     { #reg, alt, sizeof(((MSA_linux_mips*)0)->reg), MSA_OFFSET(reg), eEncodingUint, \
-      eFormatHex, { kind1, kind2, kind3, kind4, msa_##reg##_mips }, NULL, NULL }
+      eFormatHex, { kind1, kind2, kind3, kind4, msa_##reg##_mips }, NULL, NULL, NULL, 0}
 
 // RegisterKind: EH_Frame, DWARF, Generic, Procss Plugin, LLDB
 

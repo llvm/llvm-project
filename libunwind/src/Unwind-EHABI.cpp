@@ -574,7 +574,7 @@ static _Unwind_Reason_Code unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor
     unw_get_reg(cursor, UNW_REG_SP, &sp);
     if (unw_get_proc_info(cursor, &frameInfo) != UNW_ESUCCESS) {
       _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): unw_get_proc_info "
-                                 "failed => _URC_FATAL_PHASE1_ERROR\n",
+                                 "failed => _URC_FATAL_PHASE2_ERROR\n",
                                  static_cast<void *>(exception_object));
       return _URC_FATAL_PHASE2_ERROR;
     }
@@ -804,6 +804,10 @@ _Unwind_VRS_Set(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                            *(unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#else
+    case _UVRSC_WMMXC:
+    case _UVRSC_WMMXD:
+      break;
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register class");
@@ -854,6 +858,10 @@ _Unwind_VRS_Get_Internal(_Unwind_Context *context,
                            (unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#else
+    case _UVRSC_WMMXC:
+    case _UVRSC_WMMXD:
+      break;
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register class");
