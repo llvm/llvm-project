@@ -945,6 +945,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                  /*Default=*/true);
   Opts.ShowFixits = !Args.hasArg(OPT_fno_diagnostics_fixit_info);
   Opts.ShowLocation = !Args.hasArg(OPT_fno_show_source_location);
+  Opts.AbsolutePath = Args.hasArg(OPT_fdiagnostics_absolute_paths);
   Opts.ShowOptionNames = Args.hasArg(OPT_fdiagnostics_show_option);
 
   llvm::sys::Process::UseANSIEscapeCodes(Args.hasArg(OPT_fansi_escape_codes));

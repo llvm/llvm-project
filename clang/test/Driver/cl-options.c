@@ -184,9 +184,19 @@
 // RUN: %clang_cl /source-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=source-charset-utf-16 %s
 // source-charset-utf-16: invalid value 'utf-16'
 
+// /execution-charset: should warn on everything except UTF-8.
+// RUN: %clang_cl /execution-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-utf-16 %s
+// execution-charset-utf-16: invalid value 'utf-16'
+//
 // RUN: %clang_cl /Umymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // RUN: %clang_cl /U mymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // U: "-U" "mymacro"
+
+// RUN: %clang_cl /validate-charset -### -- %s 2>&1 | FileCheck -check-prefix=validate-charset %s
+// validate-charset: -Winvalid-source-encoding
+
+// RUN: %clang_cl /validate-charset- -### -- %s 2>&1 | FileCheck -check-prefix=validate-charset_ %s
+// validate-charset_: -Wno-invalid-source-encoding
 
 // RUN: %clang_cl /vd2 -### -- %s 2>&1 | FileCheck -check-prefix=VD2 %s
 // VD2: -vtordisp-mode=2
@@ -289,6 +299,7 @@
 // RUN:    /d2FastFail \
 // RUN:    /d2Zi+ \
 // RUN:    /errorReport:foo \
+// RUN:    /execution-charset:utf-8 \
 // RUN:    /FC \
 // RUN:    /Fdfoo \
 // RUN:    /FS \
@@ -302,6 +313,7 @@
 // RUN:    /sdl \
 // RUN:    /sdl- \
 // RUN:    /source-charset:utf-8 \
+// RUN:    /utf-8 \
 // RUN:    /vmg \
 // RUN:    /volatile:iso \
 // RUN:    /w12345 \
@@ -339,7 +351,6 @@
 // RUN:     /FAs \
 // RUN:     /FAu \
 // RUN:     /favor:blend \
-// RUN:     /FC \
 // RUN:     /Fifoo \
 // RUN:     /Fmfoo \
 // RUN:     /FpDebug\main.pch \
@@ -491,6 +502,7 @@
 // RUN:     -fdiagnostics-color \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdiagnostics-parseable-fixits \
+// RUN:     -fdiagnostics-absolute-paths \
 // RUN:     -ferror-limit=10 \
 // RUN:     -fmsc-version=1800 \
 // RUN:     -fno-strict-aliasing \
