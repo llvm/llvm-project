@@ -13,13 +13,6 @@
 #include "lldb/Host/windows/windows.h"
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
-#define LLDB_USE_BUILTIN_DEMANGLER
-#elif defined(__FreeBSD__)
-#define LLDB_USE_BUILTIN_DEMANGLER
-#elif defined(__GLIBCXX__)
-#define LLDB_USE_BUILTIN_DEMANGLER
-#else
-#include <cxxabi.h>
 #endif
 
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
