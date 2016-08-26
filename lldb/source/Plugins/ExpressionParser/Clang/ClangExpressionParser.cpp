@@ -894,7 +894,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 
         Process *process = exe_ctx.GetProcessPtr();
 
-        if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel)
+        if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel && ir_can_run)
         {
             lldb_private::Error interpret_error;
 

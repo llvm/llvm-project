@@ -611,9 +611,11 @@ private:
     FunctionValueCache m_entry_instruction_finder;
     
     static bool
-    UnfoldConstant (llvm::Constant *old_constant, 
+    UnfoldConstant (llvm::Constant *old_constant,
+                    llvm::Function *llvm_function,
                     FunctionValueCache &value_maker,
-                    FunctionValueCache &entry_instruction_finder);
+                    FunctionValueCache &entry_instruction_finder,
+                    lldb_private::Stream *error_stream);
     
     //------------------------------------------------------------------
     /// Construct a reference to m_reloc_placeholder with a given type

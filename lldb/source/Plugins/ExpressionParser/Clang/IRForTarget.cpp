@@ -552,7 +552,7 @@ IRForTarget::RewriteObjCConstString (llvm::GlobalVariable *ns_str,
                                 llvm::cast<Instruction>(m_entry_instruction_finder.GetValue(function)));
     });
 
-    if (!UnfoldConstant(ns_str, CFSCWB_Caller, m_entry_instruction_finder))
+    if (!UnfoldConstant(ns_str, nullptr, CFSCWB_Caller, m_entry_instruction_finder, nullptr))
     {
         if (log)
             log->PutCString("Couldn't replace the NSString with the result of the call");
@@ -1602,8 +1602,10 @@ IRForTarget::RemoveGuards(BasicBlock &basic_block)
 // This function does not report errors; its callers are responsible.
 bool
 IRForTarget::UnfoldConstant(Constant *old_constant,
+                            llvm::Function *llvm_function,
                             FunctionValueCache &value_maker,
-                            FunctionValueCache &entry_instruction_finder)
+                            FunctionValueCache &entry_instruction_finder,
+                            lldb_private::Stream *error_stream)
 {
     lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
@@ -1647,7 +1649,7 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
                                                    llvm::cast<Instruction>(entry_instruction_finder.GetValue(function)));
                         });
 
-                        if (!UnfoldConstant(constant_expr, bit_cast_maker, entry_instruction_finder))
+                        if (!UnfoldConstant(constant_expr, llvm_function, bit_cast_maker, entry_instruction_finder, error_stream))
                             return false;
                     }
                     break;
@@ -1685,7 +1687,7 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
                             return GetElementPtrInst::Create(nullptr, ptr, indices, "", llvm::cast<Instruction>(entry_instruction_finder.GetValue(function)));
                         });
 
-                        if (!UnfoldConstant(constant_expr, get_element_pointer_maker, entry_instruction_finder))
+                        if (!UnfoldConstant(constant_expr, llvm_function, get_element_pointer_maker, entry_instruction_finder, error_stream))
                             return false;
                     }
                     break;
@@ -1702,6 +1704,14 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
         {
             if (Instruction *inst = llvm::dyn_cast<Instruction>(user))
             {
+                if (llvm_function && inst->getParent()->getParent() != llvm_function)
+                {
+                    if (error_stream)
+                    {
+                        error_stream->PutCString("error: Capturing non-local variables in expressions is unsupported.\n");
+                    }
+                    return false;
+                }
                 inst->replaceUsesOfWith(old_constant, value_maker.GetValue(inst->getParent()->getParent()));
             }
             else
@@ -1896,10 +1906,21 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
             if (Constant *constant = dyn_cast<Constant>(value))
             {
-                UnfoldConstant(constant, body_result_maker, m_entry_instruction_finder);
+                if (!UnfoldConstant(constant, &llvm_function, body_result_maker, m_entry_instruction_finder, m_error_stream))
+                {
+                    return false;
+                }
             }
             else if (Instruction *instruction = dyn_cast<Instruction>(value))
             {
+                if (instruction->getParent()->getParent() != &llvm_function)
+                {
+                    if (m_error_stream)
+                    {
+                        m_error_stream->PutCString("error: Capturing non-local variables in expressions is unsupported.\n");
+                    }
+                    return false;
+                }
                 value->replaceAllUsesWith(body_result_maker.GetValue(instruction->getParent()->getParent()));
             }
             else
