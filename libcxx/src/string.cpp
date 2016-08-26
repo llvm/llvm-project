@@ -40,7 +40,7 @@ void throw_helper( const string& msg )
     throw T( msg );
 #else
     fprintf(stderr, "%s\n", msg.c_str());
-    abort();
+    _VSTD::abort();
 #endif
 }
 

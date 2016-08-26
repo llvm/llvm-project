@@ -764,7 +764,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <memory>
 #include <vector>
 #include <deque>
-#include <cassert>
 
 #include <__undef_min_max>
 
@@ -959,13 +958,13 @@ public:
 };
 
 template <regex_constants::error_type _Ev>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_regex_error()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw regex_error(_Ev);
 #else
-    assert(!"regex_error");
+    _VSTD::abort();
 #endif
 }
 

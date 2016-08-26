@@ -3701,10 +3701,10 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
         if (__r == codecvt_base::ok)
             return __ws;
     }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+
     if (__wide_err_string_.empty())
-        throw range_error("wstring_convert: from_bytes error");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_range_error("wstring_convert: from_bytes error");
+
     return __wide_err_string_;
 }
 
@@ -3790,10 +3790,10 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
                 return __bs;
         }
     }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+
     if (__byte_err_string_.empty())
-        throw range_error("wstring_convert: to_bytes error");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_range_error("wstring_convert: to_bytes error");
+
     return __byte_err_string_;
 }
 

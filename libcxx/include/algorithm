@@ -89,7 +89,7 @@ template <class InputIterator1, class InputIterator2>
 
 template <class InputIterator1, class InputIterator2>
     pair<InputIterator1, InputIterator2>
-    mismatch(InputIterator1 first1, InputIterator1 last1, 
+    mismatch(InputIterator1 first1, InputIterator1 last1,
              InputIterator2 first2, InputIterator2 last2); // **C++14**
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
@@ -109,7 +109,7 @@ template <class InputIterator1, class InputIterator2>
 
 template <class InputIterator1, class InputIterator2>
     bool
-    equal(InputIterator1 first1, InputIterator1 last1, 
+    equal(InputIterator1 first1, InputIterator1 last1,
           InputIterator2 first2, InputIterator2 last2); // **C++14**
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
@@ -688,7 +688,7 @@ struct __equal_to<_T1, const _T1>
 template <class _T1, class _T2 = _T1>
 struct __less
 {
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     bool operator()(const _T1& __x, const _T1& __y) const {return __x < __y;}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -1229,7 +1229,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 template <class _BinaryPredicate, class _InputIterator1, class _InputIterator2>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
-__equal(_InputIterator1 __first1, _InputIterator1 __last1, 
+__equal(_InputIterator1 __first1, _InputIterator1 __last1,
         _InputIterator2 __first2, _InputIterator2 __last2, _BinaryPredicate __pred,
         input_iterator_tag, input_iterator_tag )
 {
@@ -1242,8 +1242,8 @@ __equal(_InputIterator1 __first1, _InputIterator1 __last1,
 template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
-__equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, 
-        _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2, _BinaryPredicate __pred, 
+__equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
+        _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2, _BinaryPredicate __pred,
       random_access_iterator_tag, random_access_iterator_tag )
 {
     if ( _VSTD::distance(__first1, __last1) != _VSTD::distance(__first2, __last2))
@@ -1256,11 +1256,11 @@ __equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
-equal(_InputIterator1 __first1, _InputIterator1 __last1, 
+equal(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2, _BinaryPredicate __pred )
 {
     return _VSTD::__equal<typename add_lvalue_reference<_BinaryPredicate>::type>
-       (__first1, __last1, __first2, __last2, __pred, 
+       (__first1, __last1, __first2, __last2, __pred,
         typename iterator_traits<_InputIterator1>::iterator_category(),
         typename iterator_traits<_InputIterator2>::iterator_category());
 }
@@ -1268,7 +1268,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1,
 template <class _InputIterator1, class _InputIterator2>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
-equal(_InputIterator1 __first1, _InputIterator1 __last1, 
+equal(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2)
 {
     typedef typename iterator_traits<_InputIterator1>::value_type __v1;
@@ -1342,7 +1342,7 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 template<class _BinaryPredicate, class _ForwardIterator1, class _ForwardIterator2>
 bool
 __is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
-                 _ForwardIterator2 __first2, _ForwardIterator2 __last2, 
+                 _ForwardIterator2 __first2, _ForwardIterator2 __last2,
                  _BinaryPredicate __pred,
                  forward_iterator_tag, forward_iterator_tag )
 {
@@ -1393,7 +1393,7 @@ __next_iter:;
 template<class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>
 bool
 __is_permutation(_RandomAccessIterator1 __first1, _RandomAccessIterator2 __last1,
-               _RandomAccessIterator1 __first2, _RandomAccessIterator2 __last2, 
+               _RandomAccessIterator1 __first2, _RandomAccessIterator2 __last2,
                _BinaryPredicate __pred,
                random_access_iterator_tag, random_access_iterator_tag )
 {
@@ -1472,7 +1472,7 @@ __search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 }
 
 template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 
+_LIBCPP_CONSTEXPR_AFTER_CXX11
 pair<_RandomAccessIterator1, _RandomAccessIterator1>
 __search(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
          _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2, _BinaryPredicate __pred,
@@ -2799,7 +2799,7 @@ minmax(initializer_list<_Tp> __t, _Compare __comp)
             __result.second = *__first;
         ++__first;
     }
-    
+
     while (__first != __last)
     {
         _Tp __prev = *__first++;
@@ -2811,7 +2811,7 @@ minmax(initializer_list<_Tp> __t, _Compare __comp)
             if ( __comp(__prev, __result.first))    __result.first  = __prev;
             if (!__comp(*__first, __result.second)) __result.second = *__first;
             }
-                
+
         __first++;
     }
     return __result;
@@ -4437,7 +4437,7 @@ __buffered_inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator 
             ::new(__p) value_type(_VSTD::move(*__i));
         typedef reverse_iterator<_BidirectionalIterator> _RBi;
         typedef reverse_iterator<value_type*> _Rv;
-        __half_inplace_merge(_Rv(__p), _Rv(__buff), 
+        __half_inplace_merge(_Rv(__p), _Rv(__buff),
                              _RBi(__middle), _RBi(__first),
                              _RBi(__last), __negate<_Compare>(__comp));
     }

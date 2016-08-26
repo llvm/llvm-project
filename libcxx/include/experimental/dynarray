@@ -106,10 +106,6 @@ public:
 
 #include <__undef___deallocate>
 
-#if defined(_LIBCPP_NO_EXCEPTIONS)
-    #include <cassert>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -142,13 +138,8 @@ private:
     static inline _LIBCPP_INLINE_VISIBILITY value_type* __allocate ( size_t count )
     {
         if ( numeric_limits<size_t>::max() / sizeof (value_type) <= count )
-        {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_array_length();
-#else
-            assert(!"dynarray::allocation");
-#endif
-        }
+            __throw_bad_array_length();
+
         return static_cast<value_type *> (_VSTD::__allocate (sizeof(value_type) * count));
     }
 
@@ -283,13 +274,8 @@ typename dynarray<_Tp>::reference
 dynarray<_Tp>::at(size_type __n)
 {
     if (__n >= __size_)
-    {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("dynarray::at");
-#else
-        assert(!"dynarray::at out_of_range");
-#endif
-    }
+        __throw_out_of_range("dynarray::at");
+
     return data()[__n];
 }
 
@@ -299,13 +285,8 @@ typename dynarray<_Tp>::const_reference
 dynarray<_Tp>::at(size_type __n) const
 {
     if (__n >= __size_)
-    {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw out_of_range("dynarray::at");
-#else
-        assert(!"dynarray::at out_of_range");
-#endif
-    }
+        __throw_out_of_range("dynarray::at");
+
     return data()[__n];
 }
 

@@ -92,6 +92,7 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoGnuUnique;
   bool NoUndefinedVersion;
+  bool OFormatBinary;
   bool Pic;
   bool Pie;
   bool PrintGcSections;

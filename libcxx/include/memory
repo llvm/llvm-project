@@ -637,9 +637,6 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <tuple>
 #include <stdexcept>
 #include <cstring>
-#if defined(_LIBCPP_NO_EXCEPTIONS)
-    #include <cassert>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
@@ -1757,8 +1754,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
         {
         if (__n > max_size())
-            __libcpp_throw(length_error("allocator<T>::allocate(size_t n)"
-                                      " 'n' exceeds maximum supported size"));
+            __throw_length_error("allocator<T>::allocate(size_t n)"
+                                 " 'n' exceeds maximum supported size");
         return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
         }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
@@ -1853,8 +1850,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
     {
         if (__n > max_size())
-            __libcpp_throw(length_error("allocator<const T>::allocate(size_t n)"
-                                      " 'n' exceeds maximum supported size"));
+            __throw_length_error("allocator<const T>::allocate(size_t n)"
+                                 " 'n' exceeds maximum supported size");
         return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
     }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
@@ -3787,6 +3784,16 @@ public:
     virtual const char* what() const  _NOEXCEPT;
 };
 
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_bad_weak_ptr()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_weak_ptr();
+#else
+    _VSTD::abort();
+#endif
+}
+
 template<class _Tp> class _LIBCPP_TYPE_VIS_ONLY weak_ptr;
 
 class _LIBCPP_TYPE_VIS __shared_count
@@ -5443,11 +5450,7 @@ shared_ptr<_Tp>::shared_ptr(const weak_ptr<_Yp>& __r,
       __cntrl_(__r.__cntrl_ ? __r.__cntrl_->lock() : __r.__cntrl_)
 {
     if (__cntrl_ == 0)
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        throw bad_weak_ptr();
-#else
-        assert(!"bad_weak_ptr");
-#endif
+        __throw_bad_weak_ptr();
 }
 
 template<class _Tp>

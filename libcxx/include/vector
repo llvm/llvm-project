@@ -290,30 +290,22 @@ class __vector_base_common
 {
 protected:
     _LIBCPP_ALWAYS_INLINE __vector_base_common() {}
-    void __throw_length_error() const;
-    void __throw_out_of_range() const;
+    _LIBCPP_NORETURN void __throw_length_error() const;
+    _LIBCPP_NORETURN void __throw_out_of_range() const;
 };
 
 template <bool __b>
 void
 __vector_base_common<__b>::__throw_length_error() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw length_error("vector");
-#else
-    assert(!"vector length_error");
-#endif
+    _VSTD::__throw_length_error("vector");
 }
 
 template <bool __b>
 void
 __vector_base_common<__b>::__throw_out_of_range() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw out_of_range("vector");
-#else
-    assert(!"vector out_of_range");
-#endif
+    _VSTD::__throw_out_of_range("vector");
 }
 
 #ifdef _LIBCPP_MSVC

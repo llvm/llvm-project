@@ -3427,6 +3427,7 @@ public:
         std::vector<Language*> languages;
         
         bool is_global_search = false;
+        LanguageType guessed_language = lldb::eLanguageTypeUnknown;
 
         if ( (is_global_search = (m_command_options.m_language == eLanguageTypeUnknown)) )
         {
@@ -3443,22 +3444,24 @@ public:
         // so the cost of the sort is going to be dwarfed by the actual lookup anyway
         if (StackFrame* frame = m_exe_ctx.GetFramePtr())
         {
-            LanguageType lang = GuessLanguage(frame);
-            if (lang != eLanguageTypeUnknown)
+            guessed_language = GuessLanguage(frame);
+            if (guessed_language != eLanguageTypeUnknown)
             {
                 std::sort(languages.begin(),
                           languages.end(),
-                          [lang] (Language* lang1,
-                                  Language* lang2) -> bool {
+                          [guessed_language] (Language* lang1,
+                                              Language* lang2) -> bool {
                               if (!lang1 || !lang2) return false;
                               LanguageType lt1 = lang1->GetLanguageType();
                               LanguageType lt2 = lang2->GetLanguageType();
-                              if (lt1 == lang) return true; // make the selected frame's language come first
-                              if (lt2 == lang) return false; // make the selected frame's language come first
+                              if (lt1 == guessed_language) return true; // make the selected frame's language come first
+                              if (lt2 == guessed_language) return false; // make the selected frame's language come first
                               return (lt1 < lt2); // normal comparison otherwise
                           });
             }
         }
+        
+        bool is_first_language = true;
         
         for (Language* language : languages)
         {
@@ -3479,9 +3482,16 @@ public:
                         }
                     }
                 }
-                // this is "type lookup SomeName" and we did find a match, so get out
-                if (any_found && is_global_search)
-                    break;
+            }
+            // this is "type lookup SomeName" and we did find a match, so get out
+            if (any_found && is_global_search)
+                break;
+            else if (is_first_language && is_global_search && guessed_language != lldb::eLanguageTypeUnknown)
+            {
+                is_first_language = false;
+                result.GetOutputStream().Printf("no type was found in the current language %s matching '%s'; performing a global search across all languages\n",
+                                                Language::GetNameForLanguageType(guessed_language),
+                                                name_of_type);
             }
         }
         

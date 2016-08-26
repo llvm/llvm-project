@@ -679,10 +679,8 @@ template<class _Rp>
 _Rp
 function<_Rp()>::operator()() const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__f_ == 0)
-        throw bad_function_call();
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_bad_function_call();
     return (*__f_)();
 }
 
@@ -955,10 +953,8 @@ template<class _Rp, class _A0>
 _Rp
 function<_Rp(_A0)>::operator()(_A0 __a0) const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__f_ == 0)
-        throw bad_function_call();
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_bad_function_call();
     return (*__f_)(__a0);
 }
 
@@ -1231,10 +1227,8 @@ template<class _Rp, class _A0, class _A1>
 _Rp
 function<_Rp(_A0, _A1)>::operator()(_A0 __a0, _A1 __a1) const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__f_ == 0)
-        throw bad_function_call();
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_bad_function_call();
     return (*__f_)(__a0, __a1);
 }
 
@@ -1507,10 +1501,8 @@ template<class _Rp, class _A0, class _A1, class _A2>
 _Rp
 function<_Rp(_A0, _A1, _A2)>::operator()(_A0 __a0, _A1 __a1, _A2 __a2) const
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__f_ == 0)
-        throw bad_function_call();
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_bad_function_call();
     return (*__f_)(__a0, __a1, __a2);
 }
 
