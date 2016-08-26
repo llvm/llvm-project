@@ -55,6 +55,9 @@ public:
   ///
   /// Considered as an opaque blob, the legal code will use and define the same
   /// registers as \p MI.
+  LegalizeResult legalizeInstrStep(MachineInstr &MI,
+                                   const MachineLegalizer &Legalizer);
+
   LegalizeResult legalizeInstr(MachineInstr &MI,
                                const MachineLegalizer &Legalizer);
 

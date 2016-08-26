@@ -19,6 +19,10 @@ endforeach()
 # triggered by the external project call for the runtimes target below.
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
+  function(runtime_register_component name)
+    set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
+  endfunction()
+
   cmake_minimum_required(VERSION 3.4.3)
 
   # Add the root project's CMake modules, and the LLVM build's modules to the
@@ -37,7 +41,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # Setting these variables will allow the sub-build to put their outputs into
   # the library and bin directories of the top-level build.
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR})
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
 
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
@@ -52,10 +56,63 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # will be included under here.
     set(HAVE_${canon_name} On)
 
+    # Between each sub-project we want to cache and clear the LIT properties
+    set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
+    set_property(GLOBAL PROPERTY LLVM_LIT_PARAMS)
+    set_property(GLOBAL PROPERTY LLVM_LIT_DEPENDS)
+    set_property(GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
+
     add_subdirectory(${projName})
+
+    get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
+    get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
+    get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
+    get_property(LLVM_LIT_EXTRA_ARGS GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
+
+    list(APPEND RUNTIMES_LIT_TESTSUITES ${LLVM_LIT_TESTSUITES})
+    list(APPEND RUNTIMES_LIT_PARAMS ${LLVM_LIT_PARAMS})
+    list(APPEND RUNTIMES_LIT_DEPENDS ${LLVM_LIT_DEPENDS})
+    list(APPEND RUNTIMES_LIT_EXTRA_ARGS ${LLVM_LIT_EXTRA_ARGS})
   endforeach()
 
+  if(LLVM_INCLUDE_TESTS)
+    # Add a global check rule now that all subdirectories have been traversed
+    # and we know the total set of lit testsuites.
+    
+    add_lit_target(check-runtimes
+      "Running all regression tests"
+      ${RUNTIMES_LIT_TESTSUITES}
+      PARAMS ${RUNTIMES_LIT_PARAMS}
+      DEPENDS ${RUNTIMES_LIT_DEPENDS}
+      ARGS ${RUNTIMES_LIT_EXTRA_ARGS}
+      )
+    add_custom_target(test-depends-runtimes DEPENDS ${RUNTIMES_LIT_DEPENDS})
+  endif()
+
+  get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)
+  list(REMOVE_DUPLICATES SUB_COMPONENTS)
+  foreach(component ${SUB_COMPONENTS})
+    if(NOT TARGET ${component})
+      message(SEND_ERROR "Missing target for runtime component ${component}!")
+      continue()
+    endif()
+    if(LLVM_INCLUDE_TESTS AND NOT TARGET check-${component})
+      message(SEND_ERROR "Missing check target for runtime component ${component}!")
+      continue()
+    endif()
+
+    if(TARGET install-${component})
+      list(APPEND SUB_INSTALL_TARGETS install-${component})
+    endif()
+  endforeach()
+
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
+    ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
+
 else() # if this is included from LLVM's CMake
+  include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
   include(LLVMExternalProjectUtils)
 
   # If compiler-rt is present we need to build the builtin libraries first. This
@@ -86,6 +143,14 @@ else() # if this is included from LLVM's CMake
   endforeach()
 
   if(runtimes)
+
+    foreach(runtime_name ${runtime_names})
+      list(APPEND extra_targets
+        ${runtime_name}
+        install-${runtime_name}
+        check-${runtime_name})
+    endforeach()
+
     # Create a runtimes target that uses this file as its top-level CMake file.
     # The runtimes target is a configuration of all the runtime libraries
     # together in a single CMake invocaiton.
@@ -95,7 +160,13 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                              PASSTHROUGH_PREFIXES ${prefixes}
-                             EXTRA_TARGETS ${runtime_names}
+                             EXTRA_TARGETS ${extra_targets}
+                                            test-depends-runtimes
+                                            check-runtimes
+                                            ${SUB_COMPONENTS}
+                                            ${SUB_INSTALL_TARGETS}
                              USE_TOOLCHAIN)
+    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS test-depends-runtimes)
+
   endif()
 endif()

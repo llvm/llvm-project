@@ -20,6 +20,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool> TraceHexVectorStoresOnly("trace-hex-vector-stores-only",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Enables tracing of vector stores"));
+
 namespace llvm {
   FunctionPass *createHexagonVectorPrint();
   void initializeHexagonVectorPrintPass(PassRegistry&);
@@ -89,7 +93,7 @@ static bool getInstrVecReg(const MachineInstr &MI, unsigned &Reg) {
   if (MI.getOperand(0).isReg() && MI.getOperand(0).isDef()) {
     Reg = MI.getOperand(0).getReg();
     if (isVecReg(Reg))
-      return true;
+      return !TraceHexVectorStoresOnly;
   }
   // Vec store.
   if (MI.mayStore() && MI.getNumOperands() >= 3 && MI.getOperand(2).isReg()) {
@@ -117,7 +121,8 @@ bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
       if (MI.isBundle()) {
         MachineBasicBlock::instr_iterator MII = MI.getIterator();
         for (++MII; MII != MBB.instr_end() && MII->isInsideBundle(); ++MII) {
-          if (MII->getNumOperands() < 1) continue;
+          if (MII->getNumOperands() < 1)
+            continue;
           unsigned Reg = 0;
           if (getInstrVecReg(*MII, Reg)) {
             VecPrintList.push_back((&*MII));
@@ -134,7 +139,8 @@ bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
     }
 
   Changed = VecPrintList.size() > 0;
-  if (!Changed) return Changed;
+  if (!Changed)
+    return Changed;
 
   for (auto *I : VecPrintList) {
     DebugLoc DL = I->getDebugLoc();
@@ -146,11 +152,15 @@ bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
     MachineBasicBlock::instr_iterator MII = I->getIterator();
     if (I->isInsideBundle()) {
       DEBUG(dbgs() << "add to end of bundle\n"; I->dump());
-      while (MII->isInsideBundle()) ++MII;
+      while (MBB->instr_end() != MII && MII->isInsideBundle())
+        MII++;
     } else {
       DEBUG(dbgs() << "add after instruction\n"; I->dump());
       MII++;
     }
+    if (MBB->instr_end() == MII)
+      continue;
+
     if (Reg >= Hexagon::V0 && Reg <= Hexagon::V31) {
       DEBUG(dbgs() << "adding dump for V" << Reg-Hexagon::V0 << '\n');
       addAsmInstr(MBB, Reg, MII, DL, QII, Fn);

@@ -31,8 +31,9 @@ MachineLegalizeHelper::MachineLegalizeHelper(MachineFunction &MF)
   MIRBuilder.setMF(MF);
 }
 
-MachineLegalizeHelper::LegalizeResult MachineLegalizeHelper::legalizeInstr(
-    MachineInstr &MI, const MachineLegalizer &Legalizer) {
+MachineLegalizeHelper::LegalizeResult
+MachineLegalizeHelper::legalizeInstrStep(MachineInstr &MI,
+                                         const MachineLegalizer &Legalizer) {
   auto Action = Legalizer.getAction(MI);
   switch (std::get<0>(Action)) {
   case MachineLegalizer::Legal:
@@ -46,6 +47,30 @@ MachineLegalizeHelper::LegalizeResult MachineLegalizeHelper::legalizeInstr(
   default:
     return UnableToLegalize;
   }
+}
+
+MachineLegalizeHelper::LegalizeResult
+MachineLegalizeHelper::legalizeInstr(MachineInstr &MI,
+                                     const MachineLegalizer &Legalizer) {
+  std::queue<MachineInstr *> WorkList;
+  MIRBuilder.recordInsertions([&](MachineInstr *MI) { WorkList.push(MI); });
+  WorkList.push(&MI);
+
+  bool Changed = false;
+  LegalizeResult Res;
+  do {
+    Res = legalizeInstrStep(*WorkList.front(), Legalizer);
+    if (Res == UnableToLegalize) {
+      MIRBuilder.stopRecordingInsertions();
+      return UnableToLegalize;
+    }
+    Changed |= Res == Legalized;
+    WorkList.pop();
+  } while (!WorkList.empty());
+
+  MIRBuilder.stopRecordingInsertions();
+
+  return Changed ? Legalized : AlreadyLegal;
 }
 
 void MachineLegalizeHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,

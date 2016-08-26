@@ -476,7 +476,6 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   // Traverse basic blocks.
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end(); BI != BE;
        ++BI) {
-dbgs() << "BB#" << BI->getNumber() << "\n";
     PotentiallyNewifiableTFR.clear();
     findPotentialNewifiableTFRs(*BI);
 
