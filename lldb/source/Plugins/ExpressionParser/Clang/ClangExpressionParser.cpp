@@ -332,7 +332,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     target_sp = exe_scope->CalculateTarget();
     if (!target_sp)
     {
-        lldb_assert(exe_scope, "Can't make an expression parser with a null target.", __FUNCTION__, __FILE__, __LINE__);
+        lldb_assert(target_sp.get(), "Can't make an expression parser with a null target.", __FUNCTION__, __FILE__, __LINE__);
         return;
     }
     
