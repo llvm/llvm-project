@@ -129,8 +129,16 @@ const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
 # endif
 typedef DefaultSizeClassMap SizeClassMap;
-typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, 0 /*metadata*/,
-    SizeClassMap, AsanMapUnmapCallback> PrimaryAllocator;
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 0;
+  typedef __asan::SizeClassMap SizeClassMap;
+  typedef AsanMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #else  // Fallback to SizeClassAllocator32.
 static const uptr kRegionSizeLog = 20;
 static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;

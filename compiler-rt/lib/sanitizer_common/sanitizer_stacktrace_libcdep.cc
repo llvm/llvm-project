@@ -83,3 +83,22 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
 }
 
 }  // namespace __sanitizer
+
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
+                              uptr out_buf_size) {
+  using namespace __sanitizer;
+  pc = StackTrace::GetPreviousInstructionPc(pc);
+  SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc);
+  if (!frame) {
+    internal_strncpy(out_buf, "<can't symbolize>", out_buf_size);
+    return;
+  }
+  InternalScopedString frame_desc(GetPageSizeCached());
+  RenderFrame(&frame_desc, fmt, 0, frame->info,
+              common_flags()->symbolize_vs_style,
+              common_flags()->strip_path_prefix);
+  internal_strncpy(out_buf, frame_desc.data(), out_buf_size);
+}
+}  // extern "C"
