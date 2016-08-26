@@ -416,6 +416,38 @@ using test_function_like_using7 = foo::function_wrapper<int (int aaa, int ccc)> 
 /// \returns aaa.
 using test_function_like_using8 = foo::function_wrapper<int (int aaa, int ccc)> &&;
 
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using9 = int(T aaa, int ccc);
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using10 = int (*)(T aaa, int ccc);
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using11 = foo::function_wrapper<int (T aaa, int ccc)>;
+
+// expected-warning@+4 {{template parameter 'U' not found in the template declaration}} expected-note@+4 {{did you mean 'T'?}}
+// expected-warning@+2 {{parameter 'bbb' not found in the function declaration}} expected-note@+2 {{did you mean 'ccc'?}}
+/// \param aaa Meow.
+/// \param bbb Bbb.
+/// \tparam U Uuu.
+template<typename T>
+using test_function_like_using12 = foo::function_wrapper<int (T aaa, int ccc)> *;
+
 using test_not_function_like_using1 = int (*)(int aaa);
 
 // expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}

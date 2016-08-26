@@ -1045,7 +1045,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
 
   // Construct a module-generating action. Passing through the module map is
   // safe because the FileManager is shared between the compiler instances.
-  GenerateModuleAction CreateModuleAction(
+  GenerateModuleFromModuleMapAction CreateModuleAction(
       ModMap.getModuleMapFileForUniquing(Module), Module->IsSystem);
 
   ImportingInstance.getDiagnostics().Report(ImportLoc,

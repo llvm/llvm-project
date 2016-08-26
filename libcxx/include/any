@@ -85,7 +85,6 @@ namespace std {
 #include <typeinfo>
 #include <type_traits>
 #include <cstdlib>
-#include <cassert>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -102,6 +101,16 @@ public:
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14
+
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+void __throw_bad_any_cast()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_any_cast();
+#else
+	_VSTD::abort();
+#endif
+}
 
 // Forward declarations
 class _LIBCPP_TYPE_VIS_ONLY any;
@@ -580,7 +589,7 @@ _ValueType any_cast(any const & __v)
     using _Tp = add_const_t<remove_reference_t<_ValueType>>;
     _Tp * __tmp = _VSTD::any_cast<_Tp>(&__v);
     if (__tmp == nullptr)
-        __libcpp_throw(bad_any_cast());
+        __throw_bad_any_cast();
     return *__tmp;
 }
 
@@ -595,7 +604,7 @@ _ValueType any_cast(any & __v)
     typedef typename remove_reference<_ValueType>::type _Tp;
     _Tp * __tmp = _VSTD::any_cast<_Tp>(&__v);
     if (__tmp == nullptr)
-        __libcpp_throw(bad_any_cast());
+        __throw_bad_any_cast();
     return *__tmp;
 }
 
@@ -615,7 +624,7 @@ _ValueType any_cast(any && __v)
     >;
     _Tp * __tmp = _VSTD::any_cast<_Tp>(&__v);
     if (__tmp == nullptr)
-        __libcpp_throw(bad_any_cast());
+        __throw_bad_any_cast();
     return _VSTD::forward<_ForwardTp>(*__tmp);
 }
 

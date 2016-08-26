@@ -14,5 +14,5 @@ z_dim:
   %z = call i32 @llvm.r600.read.ngroups.z() nounwind readnone
   ret i32 %z
 default:
-  ret i32 0
+  ret i32 1
 }

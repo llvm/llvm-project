@@ -414,6 +414,15 @@ public:
                                                bool IsFramework,
                                                bool IsExplicit);
 
+  /// \brief Create a new module for a C++ Modules TS module interface unit.
+  /// The module must not already exist, and will be configured for the current
+  /// compilation.
+  ///
+  /// Note that this also sets the current module to the newly-created module.
+  ///
+  /// \returns The newly-created module.
+  Module *createModuleForInterfaceUnit(SourceLocation Loc, StringRef Name);
+
   /// \brief Infer the contents of a framework module map from the given
   /// framework directory.
   Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,

@@ -512,13 +512,13 @@ public:
     virtual ~future_error() _NOEXCEPT;
 };
 
-inline _LIBCPP_ALWAYS_INLINE
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_future_error(future_errc _Ev)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw future_error(make_error_code(_Ev));
 #else
-    assert(!"future_error");
+    _VSTD::abort();
 #endif
 }
 

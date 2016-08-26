@@ -310,6 +310,20 @@ void DeclInfo::fill() {
     Kind = TypedefKind;
     TemplateKind = Template;
     TemplateParameters = TAT->getTemplateParameters();
+    TypeAliasDecl *TAD = TAT->getTemplatedDecl();
+    if (!TAD)
+      break;
+
+    const TypeSourceInfo *TSI = TAD->getTypeSourceInfo();
+    if (!TSI)
+      break;
+    TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+    FunctionTypeLoc FTL;
+    if (getFunctionTypeLoc(TL, FTL)) {
+      Kind = FunctionKind;
+      ParamVars = FTL.getParams();
+      ReturnType = FTL.getReturnLoc().getType();
+    }
     break;
   }
   case Decl::Enum:

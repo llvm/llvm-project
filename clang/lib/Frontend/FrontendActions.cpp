@@ -91,7 +91,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   auto Buffer = std::make_shared<PCHBuffer>();
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
-                        CI.getPreprocessor(), OutputFile, nullptr, Sysroot,
+                        CI.getPreprocessor(), OutputFile, Sysroot,
                         Buffer, CI.getFrontendOpts().ModuleFileExtensions,
                         /*AllowASTWithErrors*/false,
                         /*IncludeTimestamps*/
@@ -130,18 +130,18 @@ GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
                                         StringRef InFile) {
-  std::string Sysroot;
-  std::string OutputFile;
-  std::unique_ptr<raw_pwrite_stream> OS =
-      ComputeASTConsumerArguments(CI, InFile, Sysroot, OutputFile);
+  std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return nullptr;
+
+  std::string OutputFile = CI.getFrontendOpts().OutputFile;
+  std::string Sysroot;
 
   auto Buffer = std::make_shared<PCHBuffer>();
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
 
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
-                        CI.getPreprocessor(), OutputFile, Module, Sysroot,
+                        CI.getPreprocessor(), OutputFile, Sysroot,
                         Buffer, CI.getFrontendOpts().ModuleFileExtensions,
                         /*AllowASTWithErrors=*/false,
                         /*IncludeTimestamps=*/
@@ -150,6 +150,23 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
       CI, InFile, OutputFile, std::move(OS), Buffer));
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
+
+bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI, 
+                                                 StringRef Filename) {
+  // Set up embedding for any specified files. Do this before we load any
+  // source files, including the primary module map for the compilation.
+  for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
+    if (const auto *FE = CI.getFileManager().getFile(F, /*openFile*/true))
+      CI.getSourceManager().setFileIsTransient(FE);
+    else
+      CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
+  }
+  if (CI.getFrontendOpts().ModulesEmbedAllFiles)
+    CI.getSourceManager().setAllFilesAreTransient(true);
+
+  return true;
+}
+
 
 static SmallVectorImpl<char> &
 operator+=(SmallVectorImpl<char> &Includes, StringRef RHS) {
@@ -266,9 +283,12 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
   return std::error_code();
 }
 
-bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI, 
-                                                 StringRef Filename) {
-  CI.getLangOpts().CompilingModule = true;
+bool GenerateModuleFromModuleMapAction::BeginSourceFileAction(
+    CompilerInstance &CI, StringRef Filename) {
+  CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleMap);
+
+  if (!GenerateModuleAction::BeginSourceFileAction(CI, Filename))
+    return false;
 
   // Find the module map file.
   const FileEntry *ModuleMap =
@@ -279,17 +299,6 @@ bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI,
     return false;
   }
   
-  // Set up embedding for any specified files. Do this before we load any
-  // source files, including the primary module map for the compilation.
-  for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
-    if (const auto *FE = CI.getFileManager().getFile(F, /*openFile*/true))
-      CI.getSourceManager().setFileIsTransient(FE);
-    else
-      CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
-  }
-  if (CI.getFrontendOpts().ModulesEmbedAllFiles)
-    CI.getSourceManager().setAllFilesAreTransient(true);
-
   // Parse the module map file.
   HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
   if (HS.loadModuleMapFile(ModuleMap, IsSystem))
@@ -386,10 +395,8 @@ bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI,
 }
 
 std::unique_ptr<raw_pwrite_stream>
-GenerateModuleAction::ComputeASTConsumerArguments(CompilerInstance &CI,
-                                                  StringRef InFile,
-                                                  std::string &Sysroot,
-                                                  std::string &OutputFile) {
+GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
+                                                    StringRef InFile) {
   // If no output file was provided, figure out where this module would go
   // in the module cache.
   if (CI.getFrontendOpts().OutputFile.empty()) {
@@ -403,16 +410,28 @@ GenerateModuleAction::ComputeASTConsumerArguments(CompilerInstance &CI,
   // We use createOutputFile here because this is exposed via libclang, and we
   // must disable the RemoveFileOnSignal behavior.
   // We use a temporary to avoid race conditions.
-  std::unique_ptr<raw_pwrite_stream> OS =
-      CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
-                          /*RemoveFileOnSignal=*/false, InFile,
-                          /*Extension=*/"", /*useTemporary=*/true,
-                          /*CreateMissingDirectories=*/true);
-  if (!OS)
-    return nullptr;
+  return CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
+                             /*RemoveFileOnSignal=*/false, InFile,
+                             /*Extension=*/"", /*useTemporary=*/true,
+                             /*CreateMissingDirectories=*/true);
+}
 
-  OutputFile = CI.getFrontendOpts().OutputFile;
-  return OS;
+bool GenerateModuleInterfaceAction::BeginSourceFileAction(CompilerInstance &CI,
+                                                          StringRef Filename) {
+  if (!CI.getLangOpts().ModulesTS) {
+    CI.getDiagnostics().Report(diag::err_module_interface_requires_modules_ts);
+    return false;
+  }
+
+  CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
+
+  return GenerateModuleAction::BeginSourceFileAction(CI, Filename);
+}
+
+std::unique_ptr<raw_pwrite_stream>
+GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
+                                                StringRef InFile) {
+  return CI.createDefaultOutputFile(/*Binary=*/true, InFile, "pcm");
 }
 
 SyntaxOnlyAction::~SyntaxOnlyAction() {

@@ -1122,7 +1122,7 @@ TEST_F(FormatTestJS, ImportWrapping) {
 TEST_F(FormatTestJS, TemplateStrings) {
   // Keeps any whitespace/indentation within the template string.
   verifyFormat("var x = `hello\n"
-            "     ${  name    }\n"
+            "     ${name}\n"
             "  !`;",
             "var x    =    `hello\n"
                    "     ${  name    }\n"
@@ -1206,6 +1206,18 @@ TEST_F(FormatTestJS, TemplateStrings) {
                "var y;",
                "var x = ` \\` a`;\n"
                "var y;");
+  // Escaped dollar.
+  verifyFormat("var x = ` \\${foo}`;\n");
+}
+
+TEST_F(FormatTestJS, NestedTemplateStrings) {
+  verifyFormat(
+      "var x = `<ul>${xs.map(x => `<li>${x}</li>`).join('\\n')}</ul>`;");
+  verifyFormat("var x = `he${({text: 'll'}.text)}o`;");
+}
+
+TEST_F(FormatTestJS, TaggedTemplateStrings) {
+  verifyFormat("var x = html`<ul>`;");
 }
 
 TEST_F(FormatTestJS, CastSyntax) {

@@ -5,4 +5,5 @@ workitem/get_group_id.cl
 workitem/get_global_size.ll
 workitem/get_local_id.cl
 workitem/get_local_size.ll
+workitem/get_num_groups.ll
 workitem/get_work_dim.cl

@@ -64,6 +64,9 @@ public:
     SendPacketsAndConcatenateResponses (const char *send_payload_prefix,
                                         std::string &response_string);
 
+    void
+    ComputeThreadSuffixSupport();
+
     bool
     GetThreadSuffixSupported();
 
@@ -395,9 +398,6 @@ public:
                          uint32_t recv_size);
     
     bool
-    SetCurrentThread (uint64_t tid);
-    
-    bool
     SetCurrentThreadForRun (uint64_t tid);
 
     bool
@@ -488,17 +488,18 @@ public:
 
     lldb::DataBufferSP
     ReadRegister(lldb::tid_t tid,
-                 uint32_t reg_num); // Must be the eRegisterKindProcessPlugin register number
+                 uint32_t reg_num, // Must be the eRegisterKindProcessPlugin register number
+                 const Lock &lock);
 
     lldb::DataBufferSP
-    ReadAllRegisters(lldb::tid_t tid);
+    ReadAllRegisters(lldb::tid_t tid, const Lock &lock);
 
     bool
     WriteRegister(lldb::tid_t tid, uint32_t reg_num, // eRegisterKindProcessPlugin register number
-                  llvm::ArrayRef<uint8_t> data);
+                  llvm::ArrayRef<uint8_t> data, const Lock &lock);
 
     bool
-    WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data);
+    WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data, const Lock &lock);
 
     bool
     SaveRegisterState(lldb::tid_t tid, uint32_t &save_id);
@@ -686,7 +687,10 @@ protected:
 
     PacketResult
     SendThreadSpecificPacketAndWaitForResponse(lldb::tid_t tid, StreamString &&payload,
-                                               StringExtractorGDBRemote &response, bool send_async);
+                                               StringExtractorGDBRemote &response, const Lock &lock);
+
+    bool
+    SetCurrentThread(uint64_t tid, const Lock &lock);
 
 private:
     DISALLOW_COPY_AND_ASSIGN (GDBRemoteCommunicationClient);

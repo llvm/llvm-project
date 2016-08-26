@@ -1797,7 +1797,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                        diag::err_expected_id_building_module);
-        return getLangOpts().CompilingModule && II &&
+        return getLangOpts().isCompilingModule() && II &&
                (II->getName() == getLangOpts().CurrentModule);
       });
   } else if (II == Ident__MODULE__) {

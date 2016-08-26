@@ -119,6 +119,9 @@ def no_undefined_version: F<"no-undefined-version">,
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
+  HelpText<"Specify the binary format for the output object file">;
+
 def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,

@@ -1021,6 +1021,10 @@ def warn_pragma_unroll_cuda_value_in_parens : Warning<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
+def err_expected_module_interface_decl : Error<
+  "expected module declaration at start of module interface">;
+def err_unexpected_module_decl : Error<
+  "module declaration must be the first declaration in the translation unit">;
 def err_module_expected_ident : Error<
   "expected a module name after module%select{| import}0">;
 def err_unexpected_module_kind : Error<
