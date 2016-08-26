@@ -106,8 +106,7 @@ if(NOT APPLE)
 endif()
 
 # Build ASan runtimes shipped with Clang.
-add_custom_target(asan)
-set_target_properties(asan PROPERTIES FOLDER "Compiler-RT Misc")
+add_compiler_rt_component(asan)
 
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.asan
@@ -224,7 +223,6 @@ else()
 endif()
 
 add_compiler_rt_resource_file(asan_blacklist asan_blacklist.txt asan)
-add_dependencies(compiler-rt asan)
 
 add_subdirectory(scripts)
 
