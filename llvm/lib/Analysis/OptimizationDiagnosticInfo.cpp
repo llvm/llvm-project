@@ -68,29 +68,32 @@ void OptimizationRemarkEmitter::emitOptimizationRemark(const char *PassName,
 
 void OptimizationRemarkEmitter::emitOptimizationRemarkMissed(
     const char *PassName, const DebugLoc &DLoc, const Value *V,
-    const Twine &Msg) {
+    const Twine &Msg, bool IsVerbose) {
   LLVMContext &Ctx = F->getContext();
-  Ctx.diagnose(DiagnosticInfoOptimizationRemarkMissed(PassName, *F, DLoc, Msg,
-                                                      computeHotness(V)));
+  if (!IsVerbose || shouldEmitVerbose())
+    Ctx.diagnose(DiagnosticInfoOptimizationRemarkMissed(PassName, *F, DLoc, Msg,
+                                                        computeHotness(V)));
 }
 
 void OptimizationRemarkEmitter::emitOptimizationRemarkMissed(
-    const char *PassName, Loop *L, const Twine &Msg) {
-  emitOptimizationRemarkMissed(PassName, L->getStartLoc(), L->getHeader(), Msg);
+    const char *PassName, Loop *L, const Twine &Msg, bool IsVerbose) {
+  emitOptimizationRemarkMissed(PassName, L->getStartLoc(), L->getHeader(), Msg,
+                               IsVerbose);
 }
 
 void OptimizationRemarkEmitter::emitOptimizationRemarkAnalysis(
     const char *PassName, const DebugLoc &DLoc, const Value *V,
-    const Twine &Msg) {
+    const Twine &Msg, bool IsVerbose) {
   LLVMContext &Ctx = F->getContext();
-  Ctx.diagnose(DiagnosticInfoOptimizationRemarkAnalysis(PassName, *F, DLoc, Msg,
-                                                        computeHotness(V)));
+  if (!IsVerbose || shouldEmitVerbose())
+    Ctx.diagnose(DiagnosticInfoOptimizationRemarkAnalysis(
+        PassName, *F, DLoc, Msg, computeHotness(V)));
 }
 
 void OptimizationRemarkEmitter::emitOptimizationRemarkAnalysis(
-    const char *PassName, Loop *L, const Twine &Msg) {
+    const char *PassName, Loop *L, const Twine &Msg, bool IsVerbose) {
   emitOptimizationRemarkAnalysis(PassName, L->getStartLoc(), L->getHeader(),
-                                 Msg);
+                                 Msg, IsVerbose);
 }
 
 void OptimizationRemarkEmitter::emitOptimizationRemarkAnalysisFPCommute(
