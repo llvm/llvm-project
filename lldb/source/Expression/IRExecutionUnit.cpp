@@ -58,7 +58,8 @@ IRExecutionUnit::IRExecutionUnit (std::unique_ptr<llvm::LLVMContext> &context_ap
 
 IRExecutionUnit::~IRExecutionUnit ()
 {
-    Mutex::Locker global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
+    std::lock_guard<std::recursive_mutex> global_context_locker(
+                                  IRExecutionUnit::GetLLVMGlobalContextMutex());
     
     m_module_ap.reset();
     m_execution_engine_ap.reset();
@@ -1505,10 +1506,10 @@ IRExecutionUnit::CreateJITModule (const char *name,
     return lldb::ModuleSP();
 }
 
-Mutex &
+std::recursive_mutex &
 IRExecutionUnit::GetLLVMGlobalContextMutex ()
 {
-    static Mutex s_llvm_context_mutex(Mutex::Type::eMutexTypeRecursive);
+    static std::recursive_mutex s_llvm_context_mutex;
     
     return s_llvm_context_mutex;
 }

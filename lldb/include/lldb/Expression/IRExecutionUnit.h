@@ -14,6 +14,7 @@
 // C++ Includes
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -147,7 +148,7 @@ public:
     //------------------------------------------------------------------
     /// Accessor for the mutex that guards LLVM::getGlobalContext()
     //------------------------------------------------------------------
-    static Mutex &
+    static std::recursive_mutex &
     GetLLVMGlobalContextMutex ();
 
     lldb::addr_t

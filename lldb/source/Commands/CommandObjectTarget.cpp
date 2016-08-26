@@ -2237,7 +2237,7 @@ public:
     public:
         CommandOptions() :
         Options(),
-        m_sort_order(eSortOrderNone)
+        m_sort_order(eSortOrderNone),
         m_prefer_mangled(false,false)
         {
         }
