@@ -4,10 +4,11 @@ set(XRAY_SOURCES
   xray_init.cc
 	xray_interface.cc
 	xray_flags.cc
+  xray_inmemory_log.cc
 )
 
 set(x86_64_SOURCES
-		xray_trampoline_x86.S
+		xray_trampoline_x86_64.S
 		${XRAY_SOURCES})
 
 include_directories(..)
@@ -18,9 +19,9 @@ set(XRAY_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
 
 add_compiler_rt_object_libraries(RTXray
-		ARCHS ${XRAY_SUPPORTED_ARCH}
-		SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
-		DEFS ${XRAY_COMMON_DEFINITIONS})
+    ARCHS ${XRAY_SUPPORTED_ARCH}
+    SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
+    DEFS ${XRAY_COMMON_DEFINITIONS})
 
 add_custom_target(xray)
 set(XRAY_COMMON_RUNTIME_OBJECT_LIBS

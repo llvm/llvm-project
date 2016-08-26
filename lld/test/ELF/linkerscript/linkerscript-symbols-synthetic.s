@@ -7,8 +7,10 @@
 # RUN: echo "SECTIONS { \
 # RUN:          .foo : { \
 # RUN:              begin_foo = .; \
+# RUN:              PROVIDE(_begin_foo = .); \
 # RUN:              *(.foo) \
 # RUN:              end_foo = .; \
+# RUN:              PROVIDE_HIDDEN(_end_foo = .); \
 # RUN:              size_foo_1 = SIZEOF(.foo); \
 # RUN:              . = ALIGN(0x1000); \
 # RUN:              begin_bar = .; \
@@ -19,7 +21,10 @@
 # RUN:            size_foo_3 = SIZEOF(.foo); }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=SIMPLE %s
-# SIMPLE:      0000000000000120         .foo    00000000 begin_foo
+
+# SIMPLE:      0000000000000128         .foo    00000000 .hidden _end_foo
+# SIMPLE:      0000000000000120         .foo    00000000 _begin_foo
+# SIMPLE-NEXT: 0000000000000120         .foo    00000000 begin_foo
 # SIMPLE-NEXT: 0000000000000128         .foo    00000000 end_foo
 # SIMPLE-NEXT: 0000000000000008         .foo    00000000 size_foo_1
 # SIMPLE-NEXT: 0000000000001000         .foo    00000000 begin_bar
@@ -36,3 +41,5 @@ _start:
 
 .section .bar,"a"
  .long 0
+
+.global _begin_foo, _end_foo

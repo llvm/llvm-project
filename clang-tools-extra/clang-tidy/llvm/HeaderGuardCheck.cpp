@@ -13,8 +13,21 @@ namespace clang {
 namespace tidy {
 namespace llvm {
 
-bool LLVMHeaderGuardCheck::shouldFixHeaderGuard(StringRef Filename) {
-  return Filename.endswith(".h");
+LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
+                                           ClangTidyContext* Context)
+    : HeaderGuardCheck(Name, Context),
+      RawStringHeaderFileExtensions(
+          Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
+  utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
+                                   HeaderFileExtensions, ',');
+}
+
+void LLVMHeaderGuardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
+}
+
+bool LLVMHeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) {
+  return utils::isHeaderFileExtension(FileName, HeaderFileExtensions);
 }
 
 std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,

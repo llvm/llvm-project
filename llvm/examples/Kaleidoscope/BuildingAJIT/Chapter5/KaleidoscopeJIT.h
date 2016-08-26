@@ -146,7 +146,7 @@ public:
       exit(1);
     }
 
-    // Build a singlton module set to hold our module.
+    // Build a singleton module set to hold our module.
     std::vector<std::unique_ptr<Module>> Ms;
     Ms.push_back(std::move(M));
 

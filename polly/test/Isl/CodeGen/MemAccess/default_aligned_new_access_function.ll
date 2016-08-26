@@ -4,8 +4,8 @@
 ; different locations than the original ones (but the alignment is the
 ; default, thus there is no problem).
 ;
-; CHECK-DAG: New access function '{ Stmt_for_body[i0] -> MemRef_B[0] }'detected in JSCOP file
-; CHECK-DAG: New access function '{ Stmt_for_body[i0] -> MemRef_A[i0] }'detected in JSCOP file
+; CHECK-DAG: New access function '{ Stmt_for_body[i0] -> MemRef_B[0] }' detected in JSCOP file
+; CHECK-DAG: New access function '{ Stmt_for_body[i0] -> MemRef_A[i0] }' detected in JSCOP file
 ;
 ;    void simple_stride(int *restrict A, int *restrict B) {
 ;      for (int i = 0; i < 16; i++)

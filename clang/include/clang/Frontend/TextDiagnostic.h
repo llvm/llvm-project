@@ -107,6 +107,8 @@ protected:
                                   const SourceManager &SM) override;
 
 private:
+  void emitFilename(StringRef Filename, const SourceManager &SM);
+
   void emitSnippetAndCaret(SourceLocation Loc, DiagnosticsEngine::Level Level,
                            SmallVectorImpl<CharSourceRange>& Ranges,
                            ArrayRef<FixItHint> Hints,

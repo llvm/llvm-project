@@ -7788,6 +7788,7 @@ defm : pclmul_alias<"lqlq", 0x00>;
 
 let Predicates = [HasSSE4A] in {
 
+let ExeDomain = SSEPackedInt in {
 let Constraints = "$src = $dst" in {
 def EXTRQI : Ii8<0x78, MRMXr, (outs VR128:$dst),
                  (ins VR128:$src, u8imm:$len, u8imm:$idx),
@@ -7811,6 +7812,7 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
                  [(set VR128:$dst, (int_x86_sse4a_insertq VR128:$src,
                                     VR128:$mask))]>, XD;
 }
+} // ExeDomain = SSEPackedInt
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions

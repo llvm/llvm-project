@@ -727,6 +727,12 @@ public:
   void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
+template <class ELFT> class BuildIdUuid final : public BuildIdSection<ELFT> {
+public:
+  BuildIdUuid() : BuildIdSection<ELFT>(16) {}
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+};
+
 template <class ELFT>
 class BuildIdHexstring final : public BuildIdSection<ELFT> {
 public:

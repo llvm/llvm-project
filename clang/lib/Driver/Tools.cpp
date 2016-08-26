@@ -5914,6 +5914,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_show_source_location))
     CmdArgs.push_back("-fno-show-source-location");
 
+  if (Args.hasArg(options::OPT_fdiagnostics_absolute_paths))
+    CmdArgs.push_back("-fdiagnostics-absolute-paths");
+
   if (!Args.hasFlag(options::OPT_fshow_column, options::OPT_fno_show_column,
                     true))
     CmdArgs.push_back("-fno-show-column");

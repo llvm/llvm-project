@@ -14,20 +14,15 @@
 #include "lldb/Host/windows/windows.h"
 #include <Dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
-#define LLDB_USE_BUILTIN_DEMANGLER
-#elif defined (__FreeBSD__)
-#define LLDB_USE_BUILTIN_DEMANGLER
-#else
-#include <cxxabi.h>
 #endif
 
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
-
 // Provide a fast-path demangler implemented in FastDemangle.cpp until it can
 // replace the existing C++ demangler with a complete implementation
 #include "lldb/Core/FastDemangle.h"
 #include "lldb/Core/CxaDemangle.h"
-
+#else
+#include <cxxabi.h>
 #endif
 
 

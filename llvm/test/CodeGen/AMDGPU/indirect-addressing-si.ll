@@ -125,27 +125,32 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}insert_w_offset:
-; CHECK: s_load_dword [[IN:s[0-9]+]]
-; CHECK: s_mov_b32 m0, [[IN]]
-; CHECK: v_movreld_b32_e32
-define void @insert_w_offset(float addrspace(1)* %out, i32 %in) {
+; CHECK-DAG: s_load_dword [[IN:s[0-9]+]]
+; CHECK-DAG: s_mov_b32 m0, [[IN]]
+; CHECK-DAG: v_mov_b32_e32 v[[ELT0:[0-9]+]], 1.0
+; CHECK-DAG: v_mov_b32_e32 v[[ELT1:[0-9]+]], 2.0
+; CHECK-DAG: v_mov_b32_e32 v[[ELT2:[0-9]+]], 0x40400000
+; CHECK-DAG: v_mov_b32_e32 v[[ELT3:[0-9]+]], 4.0
+; CHECK-DAG: v_mov_b32_e32 v[[INS:[0-9]+]], 0x40a00000
+; CHECK: v_movreld_b32_e32 v[[ELT1]], v[[INS]]
+; CHECK: buffer_store_dwordx4 v{{\[}}[[ELT0]]:[[ELT3]]{{\]}}
+define void @insert_w_offset(<4 x float> addrspace(1)* %out, i32 %in) {
 entry:
   %0 = add i32 %in, 1
   %1 = insertelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, float 5.0, i32 %0
-  %2 = extractelement <4 x float> %1, i32 2
-  store float %2, float addrspace(1)* %out
+  store <4 x float> %1, <4 x float> addrspace(1)* %out
   ret void
 }
 
 ; CHECK-LABEL: {{^}}insert_wo_offset:
 ; CHECK: s_load_dword [[IN:s[0-9]+]]
 ; CHECK: s_mov_b32 m0, [[IN]]
-; CHECK: v_movreld_b32_e32
-define void @insert_wo_offset(float addrspace(1)* %out, i32 %in) {
+; CHECK: v_movreld_b32_e32 v[[ELT0:[0-9]+]]
+; CHECK: buffer_store_dwordx4 v{{\[}}[[ELT0]]:
+define void @insert_wo_offset(<4 x float> addrspace(1)* %out, i32 %in) {
 entry:
   %0 = insertelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, float 5.0, i32 %in
-  %1 = extractelement <4 x float> %0, i32 2
-  store float %1, float addrspace(1)* %out
+  store <4 x float> %0, <4 x float> addrspace(1)* %out
   ret void
 }
 

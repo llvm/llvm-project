@@ -991,6 +991,8 @@ def fno_show_column : Flag<["-"], "fno-show-column">, Group<f_Group>, Flags<[CC1
   HelpText<"Do not include column number on diagnostics">;
 def fno_show_source_location : Flag<["-"], "fno-show-source-location">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Do not include source location information with diagnostics">;
+def fdiagnostics_absolute_paths : Flag<["-"], "fdiagnostics-absolute-paths">, Group<f_Group>,
+  Flags<[CC1Option, CoreOption]>, HelpText<"Print absolute paths in diagnostics">;
 def fno_spell_checking : Flag<["-"], "fno-spell-checking">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Disable spell-checking">;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,

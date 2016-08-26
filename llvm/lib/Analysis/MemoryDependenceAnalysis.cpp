@@ -341,7 +341,7 @@ static bool isVolatile(Instruction *Inst) {
 
 MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
 
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
@@ -352,7 +352,8 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
         return invariantGroupDependency;
     }
   }
-  return getSimplePointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst);
+  return getSimplePointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst,
+                                        Limit);
 }
 
 MemDepResult
@@ -408,11 +409,17 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
-    BasicBlock *BB, Instruction *QueryInst) {
+    BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
+
   const Value *MemLocBase = nullptr;
   int64_t MemLocOffset = 0;
-  unsigned Limit = BlockScanLimit;
   bool isInvariantLoad = false;
+
+  if (!Limit) {
+    unsigned DefaultLimit = BlockScanLimit;
+    return getSimplePointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst,
+                                          &DefaultLimit);
+  }
 
   // We must be careful with atomic accesses, as they may allow another thread
   //   to touch this location, clobbering it. We are conservative: if the
@@ -487,8 +494,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
 
     // Limit the amount of scanning we do so we don't end up with quadratic
     // running time on extreme testcases.
-    --Limit;
-    if (!Limit)
+    --*Limit;
+    if (!*Limit)
       return MemDepResult::getUnknown();
 
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
@@ -1710,6 +1717,10 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequiredTransitive<AAResultsWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
+}
+
+unsigned MemoryDependenceResults::getDefaultBlockScanLimit() const {
+  return BlockScanLimit;
 }
 
 bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {

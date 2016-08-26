@@ -297,7 +297,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   if (LangOpts.ModulesStrictDeclUse) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
         << RequestingModule->getFullModuleName() << Filename;
-  } else if (RequestingModule && RequestingModuleIsModuleInterface) {
+  } else if (RequestingModule && RequestingModuleIsModuleInterface &&
+             LangOpts.isCompilingModule()) {
+    // Do not diagnose when we are not compiling a module. 
     diag::kind DiagID = RequestingModule->getTopLevelModule()->IsFramework ?
         diag::warn_non_modular_include_in_framework_module :
         diag::warn_non_modular_include_in_module;

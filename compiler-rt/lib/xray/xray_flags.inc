@@ -16,3 +16,7 @@
 
 XRAY_FLAG(bool, patch_premain, true,
           "Whether to patch instrumentation points before main.")
+XRAY_FLAG(bool, xray_naive_log, true,
+          "Whether to install the naive log implementation.")
+XRAY_FLAG(const char *, xray_logfile_base, "xray-log.",
+          "Filename base for the xray logfile.")
