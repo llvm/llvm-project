@@ -8,7 +8,7 @@ verify the validity of the conversion, such as ``atoi()`` or ``scanf()``. It
 does not flag calls to ``strtol()``, or other, related conversion functions that
 do perform better error checking.
 
-.. code:: c
+.. code-block:: c
 
   #include <stdlib.h>
   

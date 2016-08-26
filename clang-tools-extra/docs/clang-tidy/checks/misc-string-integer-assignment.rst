@@ -7,13 +7,13 @@ The check finds assignments of an integer to ``std::basic_string<CharT>``
 (``std::string``, ``std::wstring``, etc.). The source of the problem is the
 following assignment operator of ``std::basic_string<CharT>``:
 
-.. code:: c++
+.. code-block:: c++
 
   basic_string& operator=( CharT ch );
 
 Numeric types can be implicitly casted to character types.
 
-.. code:: c++
+.. code-block:: c++
 
   std::string s;
   int x = 5965;
@@ -22,7 +22,7 @@ Numeric types can be implicitly casted to character types.
 
 Use the appropriate conversion functions or character literals.
 
-.. code:: c++
+.. code-block:: c++
 
   std::string s;
   int x = 5965;
@@ -31,7 +31,7 @@ Use the appropriate conversion functions or character literals.
 
 In order to suppress false positives, use an explicit cast.
 
-.. code:: c++
+.. code-block:: c++
 
   std::string s;
   s = static_cast<char>(6);

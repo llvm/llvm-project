@@ -43,7 +43,7 @@ bool parseHeaderFileExtensions(StringRef AllHeaderFileExtensions,
 
 /// \brief Decides whether a file has a header file extension.
 bool isHeaderFileExtension(StringRef FileName,
-                           HeaderFileExtensionsSet HeaderFileExtensions);
+                           const HeaderFileExtensionsSet &HeaderFileExtensions);
 
 } // namespace utils
 } // namespace tidy

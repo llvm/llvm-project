@@ -18,6 +18,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -763,6 +764,22 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
   OS << '\n';
 }
 
+void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
+  SmallVector<char, 128> AbsoluteFilename;
+  if (DiagOpts->AbsolutePath) {
+    const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
+        llvm::sys::path::parent_path(Filename));
+    if (Dir) {
+      StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
+      llvm::sys::path::append(AbsoluteFilename, DirName,
+                              llvm::sys::path::filename(Filename));
+      Filename = StringRef(AbsoluteFilename.data(), AbsoluteFilename.size());
+    }
+  }
+
+  OS << Filename;
+}
+
 /// \brief Print out the file/line/column information and include trace.
 ///
 /// This method handlen the emission of the diagnostic location information.
@@ -779,7 +796,7 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
     if (FID.isValid()) {
       const FileEntry* FE = SM.getFileEntryForID(FID);
       if (FE && FE->isValid()) {
-        OS << FE->getName();
+        emitFilename(FE->getName(), SM);
         if (FE->isInPCH())
           OS << " (in PCH)";
         OS << ": ";
@@ -795,7 +812,7 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
   if (DiagOpts->ShowColors)
     OS.changeColor(savedColor, true);
 
-  OS << PLoc.getFilename();
+  emitFilename(PLoc.getFilename(), SM);
   switch (DiagOpts->getFormat()) {
   case DiagnosticOptions::Clang: OS << ':'  << LineNo; break;
   case DiagnosticOptions::MSVC:  OS << '('  << LineNo; break;

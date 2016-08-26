@@ -168,6 +168,8 @@ def classyfier1(lines):
                 yield  {'TransitiveClosureDep','DepInfo'}
                 line = i.__next__()
             continue
+        elif line.startswith("New access function '"):
+            yield {'NewAccessFunction'}
         else:
             yield set()
         line = i.__next__()

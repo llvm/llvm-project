@@ -19,7 +19,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SHA1.h"
-#include <map>
+#include "llvm/Support/RandomNumberGenerator.h"
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -1681,6 +1681,12 @@ void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
 }
 
 template <class ELFT>
+void BuildIdUuid<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  if (getRandomBytes(this->HashBuf, 16))
+    error("entropy source failure");
+}
+
+template <class ELFT>
 BuildIdHexstring<ELFT>::BuildIdHexstring()
     : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
 
@@ -1993,6 +1999,11 @@ template class BuildIdSha1<ELF32LE>;
 template class BuildIdSha1<ELF32BE>;
 template class BuildIdSha1<ELF64LE>;
 template class BuildIdSha1<ELF64BE>;
+
+template class BuildIdUuid<ELF32LE>;
+template class BuildIdUuid<ELF32BE>;
+template class BuildIdUuid<ELF64LE>;
+template class BuildIdUuid<ELF64BE>;
 
 template class BuildIdHexstring<ELF32LE>;
 template class BuildIdHexstring<ELF32BE>;

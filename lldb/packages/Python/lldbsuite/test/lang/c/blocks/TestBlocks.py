@@ -57,8 +57,10 @@ class BlocksTestCase(TestBase):
         self.launch_common()
 
         self.runCmd("expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };")
-
         self.expect("expression $add(2,3)", VARIABLES_DISPLAYED_CORRECTLY, substrs = [" = 5"])
+
+        self.runCmd("expression int $a = 3")
+        self.expect("expression int (^$addA)(int) = ^int(int b) { return $a + b; };", "Proper error is reported on capture", error=True)
     
     def wait_for_breakpoint(self):
         if self.is_started == False:

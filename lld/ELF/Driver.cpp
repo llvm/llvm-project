@@ -450,6 +450,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->BuildId = BuildIdKind::Md5;
     } else if (S == "sha1") {
       Config->BuildId = BuildIdKind::Sha1;
+    } else if (S == "uuid") {
+      Config->BuildId = BuildIdKind::Uuid;
     } else if (S == "none") {
       Config->BuildId = BuildIdKind::None;
     } else if (S.startswith("0x")) {
