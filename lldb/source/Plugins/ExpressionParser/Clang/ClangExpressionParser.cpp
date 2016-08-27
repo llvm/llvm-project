@@ -891,9 +891,15 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 
         bool ir_can_run = ir_for_target.runOnModule(*execution_unit_sp->GetModule());
 
+        if (!ir_can_run)
+        {
+            err.SetErrorString("The expression could not be prepared to run in the target");
+            return err;
+        }
+
         Process *process = exe_ctx.GetProcessPtr();
 
-        if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel && ir_can_run)
+        if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel)
         {
             lldb_private::Error interpret_error;
 
@@ -907,12 +913,6 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                 err.SetErrorStringWithFormat("Can't run the expression locally: %s", interpret_error.AsCString());
                 return err;
             }
-        }
-
-        if (!ir_can_run)
-        {
-            err.SetErrorString("The expression could not be prepared to run in the target");
-            return err;
         }
 
         if (!process && execution_policy == eExecutionPolicyAlways)
