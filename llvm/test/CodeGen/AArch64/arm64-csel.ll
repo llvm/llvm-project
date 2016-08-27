@@ -228,3 +228,43 @@ entry:
   %inc.c = add i64 %inc, %c
   ret i64 %inc.c
 }
+
+define i32 @foo20(i32 %x) {
+; CHECK-LABEL: foo20:
+; CHECK: cmp w0, #5
+; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: csinc w0, w[[REG]], wzr, eq
+  %cmp = icmp eq i32 %x, 5
+  %res = select i1 %cmp, i32 6, i32 1
+  ret i32 %res
+}
+
+define i64 @foo21(i64 %x) {
+; CHECK-LABEL: foo21:
+; CHECK: cmp x0, #5
+; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: csinc x0, x[[REG]], xzr, eq
+  %cmp = icmp eq i64 %x, 5
+  %res = select i1 %cmp, i64 6, i64 1
+  ret i64 %res
+}
+
+define i32 @foo22(i32 %x) {
+; CHECK-LABEL: foo22:
+; CHECK: cmp w0, #5
+; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: csinc w0, w[[REG]], wzr, ne
+  %cmp = icmp eq i32 %x, 5
+  %res = select i1 %cmp, i32 1, i32 6
+  ret i32 %res
+}
+
+define i64 @foo23(i64 %x) {
+; CHECK-LABEL: foo23:
+; CHECK: cmp x0, #5
+; CHECK: orr w[[REG:[0-9]+]], wzr, #0x6
+; CHECK: csinc x0, x[[REG]], xzr, ne
+  %cmp = icmp eq i64 %x, 5
+  %res = select i1 %cmp, i64 1, i64 6
+  ret i64 %res
+}

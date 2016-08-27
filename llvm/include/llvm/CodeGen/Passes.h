@@ -53,6 +53,8 @@ namespace llvm {
   /// using the MIR serialization format.
   MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 
+  MachineFunctionPass *createResetMachineFunctionPass();
+
   /// createCodeGenPreparePass - Transform the code to expose more pattern
   /// matching during instruction selection.
   FunctionPass *createCodeGenPreparePass(const TargetMachine *TM = nullptr);

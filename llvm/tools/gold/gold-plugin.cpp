@@ -802,14 +802,13 @@ static ld_plugin_status allSymbolsReadHook() {
     auto &OutputName = Filenames[Task];
     getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps, OutputName,
                       MaxTasks > 1 ? Task : -1);
-    IsTemporary[Task] = !SaveTemps;
+    IsTemporary[Task] = !SaveTemps && options::cache_dir.empty();
     if (options::cache_dir.empty())
       return llvm::make_unique<LTOOutput>(OutputName);
 
     return llvm::make_unique<CacheObjectOutput>(
-        options::cache_dir, [OutputName](std::unique_ptr<MemoryBuffer> Buffer) {
-          *LTOOutput(OutputName).getStream() << Buffer->getBuffer();
-        });
+        options::cache_dir,
+        [&OutputName](std::string EntryPath) { OutputName = EntryPath; });
   };
 
   check(Lto->run(AddOutput));

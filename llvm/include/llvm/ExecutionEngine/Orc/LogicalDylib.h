@@ -130,7 +130,7 @@ public:
     for (typename LogicalModuleList::size_type I = 0, E = LogicalModules.size();
          I != E; ++I)
       if (auto Sym = LogicalModules[I].Resources.findSymbol(Name, ExportedSymbolsOnly))
-        return &LogicalModules[I]->Resources;
+        return &LogicalModules[I].Resources;
     return nullptr;
   }
 

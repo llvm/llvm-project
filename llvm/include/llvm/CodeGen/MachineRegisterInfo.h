@@ -166,7 +166,7 @@ public:
 
   // leaveSSA - Indicates that the machine function is no longer in SSA form.
   void leaveSSA() {
-    MF->getProperties().clear(MachineFunctionProperties::Property::IsSSA);
+    MF->getProperties().reset(MachineFunctionProperties::Property::IsSSA);
   }
 
   /// tracksLiveness - Returns true when tracking register liveness accurately.
@@ -182,7 +182,7 @@ public:
   /// This should be called by late passes that invalidate the liveness
   /// information.
   void invalidateLiveness() {
-    MF->getProperties().clear(
+    MF->getProperties().reset(
         MachineFunctionProperties::Property::TracksLiveness);
   }
 

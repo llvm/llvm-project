@@ -1453,6 +1453,36 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return emitIndirectDst(MI, *BB, getSubtarget()->getInstrInfo());
   case AMDGPU::SI_KILL:
     return splitKillBlock(MI, BB);
+  case AMDGPU::V_CNDMASK_B64_PSEUDO: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+
+    unsigned Dst = MI.getOperand(0).getReg();
+    unsigned Src0 = MI.getOperand(1).getReg();
+    unsigned Src1 = MI.getOperand(2).getReg();
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned SrcCond = MI.getOperand(3).getReg();
+
+    unsigned DstLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    unsigned DstHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
+      .addReg(Src0, 0, AMDGPU::sub0)
+      .addReg(Src1, 0, AMDGPU::sub0)
+      .addReg(SrcCond);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
+      .addReg(Src0, 0, AMDGPU::sub1)
+      .addReg(Src1, 0, AMDGPU::sub1)
+      .addReg(SrcCond);
+
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
+      .addReg(DstLo)
+      .addImm(AMDGPU::sub0)
+      .addReg(DstHi)
+      .addImm(AMDGPU::sub1);
+    MI.eraseFromParent();
+    return BB;
+  }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }

@@ -1657,8 +1657,8 @@ SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
   SITII = static_cast<const SIInstrInfo*>(TII);
   SITRI = static_cast<const SIRegisterInfo*>(TRI);
 
-  VGPRSetID = SITRI->getVGPR32PressureSet();
-  SGPRSetID = SITRI->getSGPR32PressureSet();
+  VGPRSetID = SITRI->getVGPRPressureSet();
+  SGPRSetID = SITRI->getSGPRPressureSet();
 }
 
 SIScheduleDAGMI::~SIScheduleDAGMI() {

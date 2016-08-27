@@ -709,8 +709,9 @@ public:
                                      StringRef FileName);
 
   /// \brief Associate a filename with a specified logical file number.  This
-  /// implements the '.cv_file 4 "foo.c"' assembler directive.
-  virtual unsigned EmitCVFileDirective(unsigned FileNo, StringRef Filename);
+  /// implements the '.cv_file 4 "foo.c"' assembler directive. Returns true on
+  /// success.
+  virtual bool EmitCVFileDirective(unsigned FileNo, StringRef Filename);
 
   /// \brief This implements the CodeView '.cv_loc' assembler directive.
   virtual void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,

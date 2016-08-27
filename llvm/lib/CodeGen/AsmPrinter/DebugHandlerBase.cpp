@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;

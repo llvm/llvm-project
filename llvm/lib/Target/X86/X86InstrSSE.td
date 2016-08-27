@@ -2325,6 +2325,7 @@ multiclass sse12_cmp_scalar<RegisterClass RC, X86MemOperand x86memop,
                             Operand CC, SDNode OpNode, ValueType VT,
                             PatFrag ld_frag, string asm, string asm_alt,
                             OpndItins itins, ImmLeaf immLeaf> {
+  let isCommutable = 1 in
   def rr : SIi8<0xC2, MRMSrcReg,
                 (outs RC:$dst), (ins RC:$src1, RC:$src2, CC:$cc), asm,
                 [(set RC:$dst, (OpNode (VT RC:$src1), RC:$src2, immLeaf:$cc))],
@@ -7788,6 +7789,7 @@ defm : pclmul_alias<"lqlq", 0x00>;
 
 let Predicates = [HasSSE4A] in {
 
+let ExeDomain = SSEPackedInt in {
 let Constraints = "$src = $dst" in {
 def EXTRQI : Ii8<0x78, MRMXr, (outs VR128:$dst),
                  (ins VR128:$src, u8imm:$len, u8imm:$idx),
@@ -7811,6 +7813,7 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
                  [(set VR128:$dst, (int_x86_sse4a_insertq VR128:$src,
                                     VR128:$mask))]>, XD;
 }
+} // ExeDomain = SSEPackedInt
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions

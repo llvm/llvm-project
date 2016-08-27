@@ -30,28 +30,11 @@ body: |
     %2(8) = G_TRUNC { s8, s64 } %0
     %3(8) = G_TRUNC { s8, s64 } %1
 
-    ; CHECK: [[TST32:%[0-9]+]](32) = G_ICMP { s32, s64 } intpred(sge), %0, %1
-    ; CHECK: %4(1) = G_TRUNC { s1, s32 } [[TST32]]
+    ; CHECK: %4(1) = G_ICMP { s1, s64 } intpred(sge), %0, %1
     %4(1) = G_ICMP { s1, s64 } intpred(sge), %0, %1
 
     ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
     ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
-    ; CHECK: %5(32) = G_ICMP { s32, s32 } intpred(ne), [[LHS32]], [[RHS32]]
-    %5(32) = G_ICMP { s32, s8 } intpred(ne), %2, %3
-
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
-    ; CHECK: %6(32) = G_ICMP { s32, s32 } intpred(ugt), [[LHS32]], [[RHS32]]
-    %6(32) = G_ICMP { s32, s8 } intpred(ugt), %2, %3
-
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %2
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %3
-    ; CHECK: %7(32) = G_ICMP { s32, s32 } intpred(sle), [[LHS32]], [[RHS32]]
-    %7(32) = G_ICMP { s32, s8 } intpred(sle), %2, %3
-
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
-    ; CHECK: [[TST32:%[0-9]+]](32) = G_ICMP { s32, s32 } intpred(ult), [[LHS32]], [[RHS32]]
-    ; CHECK: %8(1) = G_TRUNC { s1, s32 } [[TST32]]
+    ; CHECK: %8(1) = G_ICMP { s1, s32 } intpred(ult), [[LHS32]], [[RHS32]]
     %8(1) = G_ICMP { s1, s8 } intpred(ult), %2, %3
 ...

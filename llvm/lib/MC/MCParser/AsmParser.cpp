@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
@@ -233,6 +234,8 @@ public:
   MCAsmLexer &getLexer() override { return Lexer; }
   MCContext &getContext() override { return Ctx; }
   MCStreamer &getStreamer() override { return Out; }
+
+  CodeViewContext &getCVContext() { return Ctx.getCVContext(); }
 
   unsigned getAssemblerDialect() override {
     if (AssemblerDialect == ~0U)
@@ -3274,9 +3277,9 @@ bool AsmParser::parseDirectiveCVFile() {
       parseEscapedString(Filename) ||
       parseToken(AsmToken::EndOfStatement,
                  "unexpected token in '.cv_file' directive"))
-    return true; 
+    return true;
 
- if (getStreamer().EmitCVFileDirective(FileNumber, Filename) == 0)
+  if (!getStreamer().EmitCVFileDirective(FileNumber, Filename))
     Error(FileNumberLoc, "file number already allocated");
 
   return false;
@@ -3300,7 +3303,7 @@ bool AsmParser::parseDirectiveCVLoc() {
       parseIntToken(FileNumber, "expected integer in '.cv_loc' directive") ||
       check(FileNumber < 1, Loc,
             "file number less than one in '.cv_loc' directive") ||
-      check(!getContext().isValidCVFileNumber(FileNumber), Loc,
+      check(!getCVContext().isValidFileNumber(FileNumber), Loc,
             "unassigned file number in '.cv_loc' directive"))
     return true;
 

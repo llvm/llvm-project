@@ -311,7 +311,7 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
   if (isSSA(MF))
     Properties.set(MachineFunctionProperties::Property::IsSSA);
   else
-    Properties.clear(MachineFunctionProperties::Property::IsSSA);
+    Properties.reset(MachineFunctionProperties::Property::IsSSA);
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (MRI.getNumVirtRegs() == 0)

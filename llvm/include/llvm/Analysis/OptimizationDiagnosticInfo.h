@@ -91,21 +91,24 @@ public:
   /// -Rpass-missed= is given and the name matches the regular expression in
   /// -Rpass, then the remark will be emitted.  \p DLoc is the debug location
   /// where the diagnostic is generated. \p V is the IR Value that identifies
-  /// the code region. \p Msg is the message string to use.
+  /// the code region. \p Msg is the message string to use.  If \p IsVerbose is
+  /// true, the message is considered verbose and will only be emitted when
+  /// verbose output is turned on.
   void emitOptimizationRemarkMissed(const char *PassName, const DebugLoc &DLoc,
-                                    const Value *V, const Twine &Msg);
+                                    const Value *V, const Twine &Msg,
+                                    bool IsVerbose = false);
 
   /// \brief Same as above but derives the IR Value for the code region and the
   /// debug location from the Loop parameter \p L.
   void emitOptimizationRemarkMissed(const char *PassName, Loop *L,
-                                    const Twine &Msg);
+                                    const Twine &Msg, bool IsVerbose = false);
 
   /// \brief Same as above but derives the debug location and the code region
   /// from the debug location and the basic block of \p Inst, respectively.
   void emitOptimizationRemarkMissed(const char *PassName, Instruction *Inst,
-                                    const Twine &Msg) {
+                                    const Twine &Msg, bool IsVerbose = false) {
     emitOptimizationRemarkMissed(PassName, Inst->getDebugLoc(),
-                                 Inst->getParent(), Msg);
+                                 Inst->getParent(), Msg, IsVerbose);
   }
 
   /// Emit an optimization analysis remark message.
@@ -114,22 +117,46 @@ public:
   /// -Rpass-analysis= is given and \p PassName matches the regular expression
   /// in -Rpass, then the remark will be emitted. \p DLoc is the debug location
   /// where the diagnostic is generated. \p V is the IR Value that identifies
-  /// the code region. \p Msg is the message string to use.
+  /// the code region. \p Msg is the message string to use. If \p IsVerbose is
+  /// true, the message is considered verbose and will only be emitted when
+  /// verbose output is turned on.
   void emitOptimizationRemarkAnalysis(const char *PassName,
                                       const DebugLoc &DLoc, const Value *V,
-                                      const Twine &Msg);
+                                      const Twine &Msg, bool IsVerbose = false);
 
   /// \brief Same as above but derives the IR Value for the code region and the
   /// debug location from the Loop parameter \p L.
   void emitOptimizationRemarkAnalysis(const char *PassName, Loop *L,
-                                      const Twine &Msg);
+                                      const Twine &Msg, bool IsVerbose = false);
 
   /// \brief Same as above but derives the debug location and the code region
   /// from the debug location and the basic block of \p Inst, respectively.
   void emitOptimizationRemarkAnalysis(const char *PassName, Instruction *Inst,
-                                      const Twine &Msg) {
+                                      const Twine &Msg,
+                                      bool IsVerbose = false) {
     emitOptimizationRemarkAnalysis(PassName, Inst->getDebugLoc(),
-                                   Inst->getParent(), Msg);
+                                   Inst->getParent(), Msg, IsVerbose);
+  }
+
+  /// \brief This variant allows specifying what should be emitted for missed
+  /// and analysis remarks in one call.
+  ///
+  /// \p PassName is the name of the pass emitting the message. If
+  /// -Rpass-missed= is given and \p PassName matches the regular expression, \p
+  /// MsgForMissedRemark is emitted.
+  ///
+  /// If -Rpass-analysis= is given and \p PassName matches the regular
+  /// expression, \p MsgForAnalysisRemark is emitted.
+  ///
+  /// The debug location and the code region is derived from \p Inst. If \p
+  /// IsVerbose is true, the message is considered verbose and will only be
+  /// emitted when verbose output is turned on.
+  void emitOptimizationRemarkMissedAndAnalysis(
+      const char *PassName, Instruction *Inst, const Twine &MsgForMissedRemark,
+      const Twine &MsgForAnalysisRemark, bool IsVerbose = false) {
+    emitOptimizationRemarkAnalysis(PassName, Inst, MsgForAnalysisRemark,
+                                   IsVerbose);
+    emitOptimizationRemarkMissed(PassName, Inst, MsgForMissedRemark, IsVerbose);
   }
 
   /// \brief Emit an optimization analysis remark related to floating-point
@@ -173,10 +200,19 @@ private:
 
   Optional<uint64_t> computeHotness(const Value *V);
 
+  /// \brief Only allow verbose messages if we know we're filtering by hotness
+  /// (BFI is only set in this case).
+  bool shouldEmitVerbose() { return BFI != nullptr; }
+
   OptimizationRemarkEmitter(const OptimizationRemarkEmitter &) = delete;
   void operator=(const OptimizationRemarkEmitter &) = delete;
 };
 
+/// OptimizationRemarkEmitter legacy analysis pass
+///
+/// Note that this pass shouldn't generally be marked as preserved by other
+/// passes.  It's holding onto BFI, so if the pass does not preserve BFI, BFI
+/// could be freed.
 class OptimizationRemarkEmitterWrapperPass : public FunctionPass {
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 

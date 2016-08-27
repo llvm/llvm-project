@@ -136,8 +136,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // be used later when inserting skips.
   MachineInstr *NewBr =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addOperand(MI.getOperand(2))
-    .addReg(SaveExecReg, getKillRegState(SaveExec.isKill()));
+    .addOperand(MI.getOperand(2));
 
   if (!LIS) {
     MI.eraseFromParent();
@@ -196,8 +195,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // Insert a pseudo terminator to help keep the verifier happy.
   MachineInstr *Branch =
     BuildMI(MBB, Term, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addMBB(DestBB)
-    .addReg(DstReg);
+    .addMBB(DestBB);
 
   if (!LIS) {
     MI.eraseFromParent();

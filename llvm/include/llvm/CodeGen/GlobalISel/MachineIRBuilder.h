@@ -144,6 +144,28 @@ public:
   MachineInstrBuilder buildAdd(LLT Ty, unsigned Res, unsigned Op0,
                                 unsigned Op1);
 
+  /// Build and insert \p Res<def> = G_SUB \p Ty \p Op0, \p Op1
+  ///
+  /// G_SUB sets \p Res to the sum of integer parameters \p Op0 and \p Op1,
+  /// truncated to their width.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildSub(LLT Ty, unsigned Res, unsigned Op0,
+                               unsigned Op1);
+
+  /// Build and insert \p Res<def> = G_MUL \p Ty \p Op0, \p Op1
+  ///
+  /// G_MUL sets \p Res to the sum of integer parameters \p Op0 and \p Op1,
+  /// truncated to their width.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildMul(LLT Ty, unsigned Res, unsigned Op0,
+                               unsigned Op1);
+
   /// Build and insert \p Res<def>, \p CarryOut = G_UADDE \p Tys \p Op0, \p Op1,
   /// \p CarryIn
   ///

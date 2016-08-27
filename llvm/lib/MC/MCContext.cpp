@@ -494,14 +494,6 @@ CodeViewContext &MCContext::getCVContext() {
   return *CVContext.get();
 }
 
-unsigned MCContext::getCVFile(StringRef FileName, unsigned FileNumber) {
-  return getCVContext().addFile(FileNumber, FileName) ? FileNumber : 0;
-}
-
-bool MCContext::isValidCVFileNumber(unsigned FileNumber) {
-  return getCVContext().isValidFileNumber(FileNumber);
-}
-
 //===----------------------------------------------------------------------===//
 // Error Reporting
 //===----------------------------------------------------------------------===//

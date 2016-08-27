@@ -350,6 +350,11 @@ public:
                           DominatorTree &DT)
       : AA(AA), AC(AC), TLI(TLI), DT(DT) {}
 
+  /// Some methods limit the number of instructions they will examine.
+  /// The return value of this method is the default limit that will be
+  /// used if no limit is explicitly passed in.
+  unsigned getDefaultBlockScanLimit() const;
+
   /// Returns the instruction on which a memory operation depends.
   ///
   /// See the class comment for more details.  It is illegal to call this on
@@ -409,19 +414,25 @@ public:
   /// operations.  If isLoad is false, this routine ignores may-aliases
   /// with reads from read-only locations. If possible, pass the query
   /// instruction as well; this function may take advantage of the metadata
-  /// annotated to the query instruction to refine the result.
+  /// annotated to the query instruction to refine the result. \p Limit
+  /// can be used to set the maximum number of instructions that will be
+  /// examined to find the pointer dependency. On return, it will be set to
+  /// the number of instructions left to examine. If a null pointer is passed
+  /// in, the limit will default to the value of -memdep-block-scan-limit.
   ///
   /// Note that this is an uncached query, and thus may be inefficient.
   MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
                                         BasicBlock::iterator ScanIt,
                                         BasicBlock *BB,
-                                        Instruction *QueryInst = nullptr);
+                                        Instruction *QueryInst = nullptr,
+                                        unsigned *Limit = nullptr);
 
   MemDepResult getSimplePointerDependencyFrom(const MemoryLocation &MemLoc,
                                               bool isLoad,
                                               BasicBlock::iterator ScanIt,
                                               BasicBlock *BB,
-                                              Instruction *QueryInst);
+                                              Instruction *QueryInst,
+                                              unsigned *Limit = nullptr);
 
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not

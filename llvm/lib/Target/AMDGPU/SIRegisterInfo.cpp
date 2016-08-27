@@ -95,19 +95,38 @@ SIRegisterInfo::SIRegisterInfo() : AMDGPURegisterInfo(),
                                    VGPRPressureSets(getNumRegPressureSets()) {
   unsigned NumRegPressureSets = getNumRegPressureSets();
 
-  SGPR32SetID = NumRegPressureSets;
-  VGPR32SetID = NumRegPressureSets;
-  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
-    if (strncmp("SGPR_32", getRegPressureSetName(i), 7) == 0)
-      SGPR32SetID = i;
-    else if (strncmp("VGPR_32", getRegPressureSetName(i), 7) == 0)
-      VGPR32SetID = i;
+  SGPRSetID = NumRegPressureSets;
+  VGPRSetID = NumRegPressureSets;
 
+  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
     classifyPressureSet(i, AMDGPU::SGPR0, SGPRPressureSets);
     classifyPressureSet(i, AMDGPU::VGPR0, VGPRPressureSets);
   }
-  assert(SGPR32SetID < NumRegPressureSets &&
-         VGPR32SetID < NumRegPressureSets);
+
+  // Determine the number of reg units for each pressure set.
+  std::vector<unsigned> PressureSetRegUnits(NumRegPressureSets, 0);
+  for (unsigned i = 0, e = getNumRegUnits(); i != e; ++i) {
+    const int *PSets = getRegUnitPressureSets(i);
+    for (unsigned j = 0; PSets[j] != -1; ++j) {
+      ++PressureSetRegUnits[PSets[j]];
+    }
+  }
+
+  unsigned VGPRMax = 0, SGPRMax = 0;
+  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
+    if (isVGPRPressureSet(i) && PressureSetRegUnits[i] > VGPRMax) {
+      VGPRSetID = i;
+      VGPRMax = PressureSetRegUnits[i];
+      continue;
+    }
+    if (isSGPRPressureSet(i) && PressureSetRegUnits[i] > SGPRMax) {
+      SGPRSetID = i;
+      SGPRMax = PressureSetRegUnits[i];
+    }
+  }
+
+  assert(SGPRSetID < NumRegPressureSets &&
+         VGPRSetID < NumRegPressureSets);
 }
 
 void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const {

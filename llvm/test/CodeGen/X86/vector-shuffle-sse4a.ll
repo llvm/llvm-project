@@ -52,7 +52,7 @@ define <16 x i8> @shuf_0zzzuuuuuuuuuuuu(<16 x i8> %a0) {
 define <16 x i8> @shuf_0zzzzzzz1zzzzzzz(<16 x i8> %a0) {
 ; BTVER1-LABEL: shuf_0zzzzzzz1zzzzzzz:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    movaps %xmm0, %xmm1
+; BTVER1-NEXT:    movdqa %xmm0, %xmm1
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm1 = xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -69,7 +69,7 @@ define <16 x i8> @shuf_0zzzzzzz1zzzzzzz(<16 x i8> %a0) {
 define <16 x i8> @shuf_2zzzzzzz3zzzzzzz(<16 x i8> %a0) {
 ; BTVER1-LABEL: shuf_2zzzzzzz3zzzzzzz:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    movaps %xmm0, %xmm1
+; BTVER1-NEXT:    movdqa %xmm0, %xmm1
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm1 = xmm1[3],zero,zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -101,7 +101,7 @@ define <16 x i8> @shuf_01zzuuuuuuuuuuuu(<16 x i8> %a0) {
 define <16 x i8> @shuf_01zzzzzz23zzzzzz(<16 x i8> %a0) {
 ; BTVER1-LABEL: shuf_01zzzzzz23zzzzzz:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    movaps %xmm0, %xmm1
+; BTVER1-NEXT:    movdqa %xmm0, %xmm1
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm1 = xmm1[2,3],zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -154,7 +154,7 @@ define <8 x i16> @shuf_012zuuuu(<8 x i16> %a0) {
 define <8 x i16> @shuf_0zzz1zzz(<8 x i16> %a0) {
 ; BTVER1-LABEL: shuf_0zzz1zzz:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    movaps %xmm0, %xmm1
+; BTVER1-NEXT:    movdqa %xmm0, %xmm1
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm1 = xmm1[2,3],zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; BTVER1-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
