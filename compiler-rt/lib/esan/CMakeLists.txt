@@ -1,7 +1,6 @@
 # Build for the EfficiencySanitizer runtime support library.
 
-add_custom_target(esan)
-set_target_properties(esan PROPERTIES FOLDER "Compiler-RT Misc")
+add_compiler_rt_component(esan)
 
 set(ESAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF ESAN_RTL_CFLAGS)
@@ -35,8 +34,6 @@ foreach (arch ${ESAN_SUPPORTED_ARCH})
     clang_rt.esan-${arch}
     clang_rt.esan-${arch}-symbols)
 endforeach()
-
-add_dependencies(compiler-rt esan)
 
 if (COMPILER_RT_INCLUDE_TESTS)
   # TODO(bruening): add tests via add_subdirectory(tests)

@@ -33,9 +33,9 @@ struct MsanMapUnmapCallback {
 
     // We are about to unmap a chunk of user memory.
     // Mark the corresponding shadow memory as not needed.
-    FlushUnneededShadowMemory(MEM_TO_SHADOW(p), size);
+    ReleaseMemoryToOS(MEM_TO_SHADOW(p), size);
     if (__msan_get_track_origins())
-      FlushUnneededShadowMemory(MEM_TO_ORIGIN(p), size);
+      ReleaseMemoryToOS(MEM_TO_ORIGIN(p), size);
   }
 };
 

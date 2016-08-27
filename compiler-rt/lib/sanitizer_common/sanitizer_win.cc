@@ -235,13 +235,13 @@ bool MprotectNoAccess(uptr addr, uptr size) {
 }
 
 
-void FlushUnneededShadowMemory(uptr addr, uptr size) {
+void ReleaseMemoryToOS(uptr addr, uptr size) {
   // This is almost useless on 32-bits.
   // FIXME: add madvise-analog when we move to 64-bits.
 }
 
 void NoHugePagesInRegion(uptr addr, uptr size) {
-  // FIXME: probably similar to FlushUnneededShadowMemory.
+  // FIXME: probably similar to ReleaseMemoryToOS.
 }
 
 void DontDumpShadowMemory(uptr addr, uptr length) {

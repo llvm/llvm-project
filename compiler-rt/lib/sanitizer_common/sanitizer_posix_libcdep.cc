@@ -54,7 +54,7 @@ uptr GetThreadSelf() {
   return (uptr)pthread_self();
 }
 
-void FlushUnneededShadowMemory(uptr addr, uptr size) {
+void ReleaseMemoryToOS(uptr addr, uptr size) {
   madvise((void*)addr, size, MADV_DONTNEED);
 }
 

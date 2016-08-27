@@ -61,11 +61,12 @@ class SizeClassAllocator64 {
   // When we know the size class (the region base) we can represent a pointer
   // as a 4-byte integer (offset from the region start shifted right by 4).
   typedef u32 CompactPtrT;
+  static const uptr kCompactPtrScale = 4;
   CompactPtrT PointerToCompactPtr(uptr base, uptr ptr) {
-    return static_cast<CompactPtrT>((ptr - base) >> 4);
+    return static_cast<CompactPtrT>((ptr - base) >> kCompactPtrScale);
   }
   uptr CompactPtrToPointer(uptr base, CompactPtrT ptr32) {
-    return base + (static_cast<uptr>(ptr32) << 4);
+    return base + (static_cast<uptr>(ptr32) << kCompactPtrScale);
   }
 
   void Init() {
@@ -109,6 +110,7 @@ class SizeClassAllocator64 {
     for (uptr i = 0; i < n_chunks; i++)
       free_array[old_num_chunks + i] = chunks[i];
     region->num_freed_chunks = new_num_freed_chunks;
+    region->n_freed += n_chunks;
   }
 
   NOINLINE void GetFromAllocator(AllocatorStats *stat, uptr class_id,
@@ -127,6 +129,7 @@ class SizeClassAllocator64 {
     uptr base_idx = region->num_freed_chunks;
     for (uptr i = 0; i < n_chunks; i++)
       chunks[i] = free_array[base_idx + i];
+    region->n_allocated += n_chunks;
   }
 
 
@@ -206,6 +209,21 @@ class SizeClassAllocator64 {
         stats[class_id] = rss;
   }
 
+  void PrintStats(uptr class_id, uptr rss) {
+    RegionInfo *region = GetRegionInfo(class_id);
+    if (region->mapped_user == 0) return;
+    uptr in_use = region->n_allocated - region->n_freed;
+    uptr avail_chunks = region->allocated_user / ClassIdToSize(class_id);
+    Printf(
+        "  %02zd (%zd): mapped: %zdK allocs: %zd frees: %zd inuse: %zd "
+        "num_freed_chunks %zd"
+        " avail: %zd rss: %zdK releases: %zd\n",
+        class_id, ClassIdToSize(class_id), region->mapped_user >> 10,
+        region->n_allocated, region->n_freed, in_use,
+        region->num_freed_chunks, avail_chunks, rss >> 10,
+        region->rtoi.num_releases);
+  }
+
   void PrintStats() {
     uptr total_mapped = 0;
     uptr n_allocated = 0;
@@ -223,21 +241,8 @@ class SizeClassAllocator64 {
     for (uptr class_id = 0; class_id < kNumClasses; class_id++)
       rss_stats[class_id] = SpaceBeg() + kRegionSize * class_id;
     GetMemoryProfile(FillMemoryProfile, rss_stats, kNumClasses);
-    for (uptr class_id = 1; class_id < kNumClasses; class_id++) {
-      RegionInfo *region = GetRegionInfo(class_id);
-      if (region->mapped_user == 0) continue;
-      uptr in_use = region->n_allocated - region->n_freed;
-      uptr avail_chunks = region->allocated_user / ClassIdToSize(class_id);
-      Printf("  %02zd (%zd): mapped: %zdK allocs: %zd frees: %zd inuse: %zd"
-             " avail: %zd rss: %zdK\n",
-             class_id,
-             ClassIdToSize(class_id),
-             region->mapped_user >> 10,
-             region->n_allocated,
-             region->n_freed,
-             in_use, avail_chunks,
-             rss_stats[class_id] >> 10);
-    }
+    for (uptr class_id = 1; class_id < kNumClasses; class_id++)
+      PrintStats(class_id, rss_stats[class_id]);
   }
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
@@ -279,6 +284,11 @@ class SizeClassAllocator64 {
                      GetPageSizeCached());
   }
 
+  void ReleaseToOS() {
+    for (uptr class_id = 1; class_id < kNumClasses; class_id++)
+      ReleaseToOS(class_id);
+  }
+
   typedef SizeClassMap SizeClassMapT;
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
   static const uptr kNumClassesRounded = SizeClassMap::kNumClassesRounded;
@@ -307,6 +317,13 @@ class SizeClassAllocator64 {
   static const uptr kMetaMapSize = 1 << 16;
   // Call mmap for free array memory with at least this size.
   static const uptr kFreeArrayMapSize = 1 << 16;
+  // Granularity of ReleaseToOs (aka madvise).
+  static const uptr kReleaseToOsGranularity = 1 << 12;
+
+  struct ReleaseToOsInfo {
+    uptr n_freed_at_last_release;
+    uptr num_releases;
+  };
 
   struct RegionInfo {
     BlockingMutex mutex;
@@ -318,6 +335,7 @@ class SizeClassAllocator64 {
     uptr mapped_meta;  // Bytes mapped for metadata.
     u32 rand_state; // Seed for random shuffle, used if kRandomShuffleChunks.
     uptr n_allocated, n_freed;  // Just stats.
+    ReleaseToOsInfo rtoi;
   };
   COMPILER_CHECK(sizeof(RegionInfo) >= kCacheLineSize);
 
@@ -428,6 +446,59 @@ class SizeClassAllocator64 {
       Printf("The process has exhausted %zuMB for size class %zu.\n",
           kRegionSize / 1024 / 1024, size);
       Die();
+    }
+  }
+
+  bool MaybeReleaseChunkRange(uptr region_beg, uptr chunk_size,
+                              CompactPtrT first, CompactPtrT last) {
+    uptr beg_ptr = CompactPtrToPointer(region_beg, first);
+    uptr end_ptr = CompactPtrToPointer(region_beg, last) + chunk_size;
+    CHECK_GE(end_ptr - beg_ptr, kReleaseToOsGranularity);
+    beg_ptr = RoundUpTo(beg_ptr, kReleaseToOsGranularity);
+    end_ptr = RoundDownTo(end_ptr, kReleaseToOsGranularity);
+    if (end_ptr == beg_ptr) return false;
+    ReleaseMemoryToOS(beg_ptr, end_ptr - beg_ptr);
+    return true;
+  }
+
+  // Releases some RAM back to OS.
+  // Algorithm:
+  // * Lock the region.
+  // * Sort the chunks.
+  // * Find ranges fully covered by free-d chunks
+  // * Release them to OS with madvise.
+  //
+  // TODO(kcc): make sure we don't do it too frequently.
+  void ReleaseToOS(uptr class_id) {
+    RegionInfo *region = GetRegionInfo(class_id);
+    uptr region_beg = GetRegionBeginBySizeClass(class_id);
+    CompactPtrT *free_array = GetFreeArray(region_beg);
+    uptr chunk_size = ClassIdToSize(class_id);
+    uptr scaled_chunk_size = chunk_size >> kCompactPtrScale;
+    const uptr kScaledGranularity = kReleaseToOsGranularity >> kCompactPtrScale;
+    BlockingMutexLock l(&region->mutex);
+    uptr n = region->num_freed_chunks;
+    if (n * chunk_size < kReleaseToOsGranularity)
+      return;   // No chance to release anything.
+    if ((region->rtoi.n_freed_at_last_release - region->n_freed) * chunk_size <
+        kReleaseToOsGranularity)
+      return;  // Nothing new to release.
+    SortArray(free_array, n);
+    uptr beg = free_array[0];
+    uptr prev = free_array[0];
+    for (uptr i = 1; i < n; i++) {
+      uptr chunk = free_array[i];
+      CHECK_GT(chunk, prev);
+      if (chunk - prev != scaled_chunk_size) {
+        CHECK_GT(chunk - prev, scaled_chunk_size);
+        if (prev + scaled_chunk_size - beg >= kScaledGranularity) {
+          MaybeReleaseChunkRange(region_beg, chunk_size, beg, prev);
+          region->rtoi.n_freed_at_last_release = region->n_freed;
+          region->rtoi.num_releases++;
+        }
+        beg = chunk;
+      }
+      prev = chunk;
     }
   }
 };

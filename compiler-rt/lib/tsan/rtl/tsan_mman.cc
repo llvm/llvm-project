@@ -54,7 +54,7 @@ struct MapUnmapCallback {
     diff = p + size - RoundDown(p + size, kPageSize);
     if (diff != 0)
       size -= diff;
-    FlushUnneededShadowMemory((uptr)MemToMeta(p), size / kMetaRatio);
+    ReleaseMemoryToOS((uptr)MemToMeta(p), size / kMetaRatio);
   }
 };
 
