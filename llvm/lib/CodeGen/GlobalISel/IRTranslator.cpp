@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -30,12 +31,21 @@
 using namespace llvm;
 
 char IRTranslator::ID = 0;
-INITIALIZE_PASS(IRTranslator, "irtranslator", "IRTranslator LLVM IR -> MI",
+INITIALIZE_PASS_BEGIN(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
+                false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 
 IRTranslator::IRTranslator() : MachineFunctionPass(ID), MRI(nullptr) {
   initializeIRTranslatorPass(*PassRegistry::getPassRegistry());
 }
+
+void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<TargetPassConfig>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
 
 unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
   unsigned &ValReg = ValToVReg[&Val];
@@ -51,8 +61,14 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
 
     if (auto CV = dyn_cast<Constant>(&Val)) {
       bool Success = translate(*CV, VReg);
-      if (!Success)
+      if (!Success) {
+        if (!TPC->isGlobalISelAbortEnabled()) {
+          MIRBuilder.getMF().getProperties().set(
+              MachineFunctionProperties::Property::FailedISel);
+          return 0;
+        }
         report_fatal_error("unable to translate constant");
+      }
     }
   }
   return ValReg;
@@ -67,6 +83,10 @@ unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     Alignment = LI->getAlignment();
     ValTy = LI->getType();
+  } else if (!TPC->isGlobalISelAbortEnabled()) {
+    MIRBuilder.getMF().getProperties().set(
+        MachineFunctionProperties::Property::FailedISel);
+    return 1;
   } else
     llvm_unreachable("unhandled memory instruction");
 
@@ -154,6 +174,10 @@ bool IRTranslator::translateBr(const User &U) {
 
 bool IRTranslator::translateLoad(const User &U) {
   const LoadInst &LI = cast<LoadInst>(U);
+
+  if (!TPC->isGlobalISelAbortEnabled() && !LI.isSimple())
+    return false;
+
   assert(LI.isSimple() && "only simple loads are supported at the moment");
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -171,6 +195,10 @@ bool IRTranslator::translateLoad(const User &U) {
 
 bool IRTranslator::translateStore(const User &U) {
   const StoreInst &SI = cast<StoreInst>(U);
+
+  if (!TPC->isGlobalISelAbortEnabled() && !SI.isSimple())
+    return false;
+
   assert(SI.isSimple() && "only simple loads are supported at the moment");
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -353,6 +381,9 @@ bool IRTranslator::translateCall(const User &U) {
 }
 
 bool IRTranslator::translateStaticAlloca(const AllocaInst &AI) {
+  if (!TPC->isGlobalISelAbortEnabled() && !AI.isStaticAlloca())
+    return false;
+
   assert(AI.isStaticAlloca() && "only handle static allocas now");
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned ElementSize = DL->getTypeStoreSize(AI.getAllocatedType());
@@ -408,6 +439,8 @@ bool IRTranslator::translate(const Instruction &Inst) {
     case Instruction::OPCODE: return translate##OPCODE(Inst);
 #include "llvm/IR/Instruction.def"
   default:
+    if (!TPC->isGlobalISelAbortEnabled())
+      return false;
     llvm_unreachable("unknown opcode");
   }
 }
@@ -429,9 +462,13 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
       case Instruction::OPCODE: return translate##OPCODE(*CE);
 #include "llvm/IR/Instruction.def"
     default:
+      if (!TPC->isGlobalISelAbortEnabled())
+        return false;
       llvm_unreachable("unknown opcode");
     }
-  } else
+  } else if (!TPC->isGlobalISelAbortEnabled())
+    return false;
+  else
     llvm_unreachable("unhandled constant kind");
 
   return true;
@@ -456,6 +493,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
   EntryBuilder.setMF(MF);
   MRI = &MF.getRegInfo();
   DL = &F.getParent()->getDataLayout();
+  TPC = &getAnalysis<TargetPassConfig>();
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
@@ -467,8 +505,14 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
     VRegArgs.push_back(getOrCreateVReg(Arg));
   bool Succeeded =
       CLI->lowerFormalArguments(MIRBuilder, F.getArgumentList(), VRegArgs);
-  if (!Succeeded)
+  if (!Succeeded) {
+    if (!TPC->isGlobalISelAbortEnabled()) {
+      MIRBuilder.getMF().getProperties().set(
+          MachineFunctionProperties::Property::FailedISel);
+      return false;
+    }
     report_fatal_error("Unable to lower arguments");
+  }
 
   // Now that we've got the ABI handling code, it's safe to set a location for
   // any Constants we find in the IR.
@@ -486,7 +530,10 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
       bool Succeeded = translate(Inst);
       if (!Succeeded) {
         DEBUG(dbgs() << "Cannot translate: " << Inst << '\n');
-        report_fatal_error("Unable to translate instruction");
+        if (TPC->isGlobalISelAbortEnabled())
+          report_fatal_error("Unable to translate instruction");
+        MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+        break;
       }
     }
   }

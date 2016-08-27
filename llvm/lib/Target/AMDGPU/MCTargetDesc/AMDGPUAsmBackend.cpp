@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
@@ -46,6 +47,13 @@ public:
     : MCAsmBackend() {}
 
   unsigned getNumFixupKinds() const override { return AMDGPU::NumTargetFixupKinds; };
+
+  void processFixupValue(const MCAssembler &Asm,
+                         const MCAsmLayout &Layout,
+                         const MCFixup &Fixup, const MCFragment *DF,
+                         const MCValue &Target, uint64_t &Value,
+                         bool &IsResolved) override;
+
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
                   uint64_t Value, bool IsPCRel) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -74,6 +82,8 @@ void AMDGPUMCObjectWriter::writeObject(MCAssembler &Asm,
 
 static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
+  case AMDGPU::fixup_si_sopp_br:
+    return 2;
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
@@ -92,40 +102,61 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   }
 }
 
+static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
+                                 MCContext *Ctx) {
+  int64_t SignedValue = static_cast<int64_t>(Value);
+
+  switch (Fixup.getKind()) {
+  case AMDGPU::fixup_si_sopp_br: {
+    int64_t BrImm = (SignedValue - 4) / 4;
+
+    if (Ctx && !isInt<16>(BrImm))
+      Ctx->reportError(Fixup.getLoc(), "branch size exceeds simm16");
+
+    return BrImm;
+  }
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case FK_Data_8:
+  case FK_PCRel_4:
+    return Value;
+  default:
+    llvm_unreachable("unhandled fixup kind");
+  }
+}
+
+void AMDGPUAsmBackend::processFixupValue(const MCAssembler &Asm,
+                                         const MCAsmLayout &Layout,
+                                         const MCFixup &Fixup, const MCFragment *DF,
+                                         const MCValue &Target, uint64_t &Value,
+                                         bool &IsResolved) {
+  if (IsResolved)
+    (void)adjustFixupValue(Fixup, Value, &Asm.getContext());
+
+}
+
 void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                   unsigned DataSize, uint64_t Value,
                                   bool IsPCRel) const {
+  unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
+  if (!Value)
+    return; // Doesn't change encoding.
 
-  switch ((unsigned)Fixup.getKind()) {
-    case AMDGPU::fixup_si_sopp_br: {
-      int64_t BrImm = ((int64_t)Value - 4) / 4;
-      if (!isInt<16>(BrImm))
-        report_fatal_error("branch size exceeds simm16");
+  Value = adjustFixupValue(Fixup, Value, nullptr);
 
-      uint16_t *Dst = (uint16_t*)(Data + Fixup.getOffset());
-      *Dst = BrImm;
-      break;
-    }
+  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 
-    default: {
-      // FIXME: Copied from AArch64
-      unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-      if (!Value)
-        return; // Doesn't change encoding.
-      MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+  // Shift the value into position.
+  Value <<= Info.TargetOffset;
 
-      // Shift the value into position.
-      Value <<= Info.TargetOffset;
+  uint32_t Offset = Fixup.getOffset();
+  assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
 
-      unsigned Offset = Fixup.getOffset();
-      assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
-
-      // For each byte of the fragment that the fixup touches, mask in the
-      // bits from the fixup value.
-      for (unsigned i = 0; i != NumBytes; ++i)
-        Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
-    }
-  }
+  // For each byte of the fragment that the fixup touches, mask in the bits from
+  // the fixup value.
+  for (unsigned i = 0; i != NumBytes; ++i)
+    Data[Offset + i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
 }
 
 const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(

@@ -174,8 +174,8 @@ public:
       } else {
         GO = cast<GlobalObject>(GV);
       }
-      if (GV)
-        return GV->getComdat();
+      if (GO)
+        return GO->getComdat();
       return nullptr;
     }
     uint64_t getCommonSize() const {
@@ -367,8 +367,6 @@ private:
 
   // Global mapping from mangled symbol names to resolutions.
   StringMap<GlobalResolution> GlobalResolutions;
-
-  void writeToResolutionFile(InputFile *Input, ArrayRef<SymbolResolution> Res);
 
   void addSymbolToGlobalRes(object::IRObjectFile *Obj,
                             SmallPtrSet<GlobalValue *, 8> &Used,

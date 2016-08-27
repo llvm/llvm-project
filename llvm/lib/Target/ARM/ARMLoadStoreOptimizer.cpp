@@ -1851,7 +1851,7 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
   if (MBB.empty()) return false;
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  if (MBBI != MBB.begin() &&
+  if (MBBI != MBB.begin() && MBBI != MBB.end() &&
       (MBBI->getOpcode() == ARM::BX_RET ||
        MBBI->getOpcode() == ARM::tBX_RET ||
        MBBI->getOpcode() == ARM::MOVPCLR)) {

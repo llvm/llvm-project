@@ -1700,6 +1700,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VDIVSSZrr_Int,     X86::VDIVSSZrm_Int,       0 },
     { X86::VDIVSDZrr,         X86::VDIVSDZrm,           0 },
     { X86::VDIVSDZrr_Int,     X86::VDIVSDZrm_Int,       0 },
+    { X86::VCMPPDZrri,        X86::VCMPPDZrmi,          0 },
+    { X86::VCMPPSZrri,        X86::VCMPPSZrmi,          0 },
+    { X86::VCMPSDZrr,         X86::VCMPSDZrm,           0 },
+    { X86::VCMPSSZrr,         X86::VCMPSSZrm,           0 },
     { X86::VCMPSDZrr_Int,     X86::VCMPSDZrm_Int,       0 },
     { X86::VCMPSSZrr_Int,     X86::VCMPSSZrm_Int,       0 },
     { X86::VANDPDZrr,         X86::VANDPDZrm,           0 },
@@ -1828,6 +1832,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VMINPSZ256rr,      X86::VMINPSZ256rm,        0 },
     { X86::VMINCPSZ128rr,     X86::VMINCPSZ128rm,       0 },
     { X86::VMINCPSZ256rr,     X86::VMINCPSZ256rm,       0 },
+    { X86::VCMPPDZ128rri,     X86::VCMPPDZ128rmi,       0 },
+    { X86::VCMPPDZ256rri,     X86::VCMPPDZ256rmi,       0 },
+    { X86::VCMPPSZ128rri,     X86::VCMPPSZ128rmi,       0 },
+    { X86::VCMPPSZ256rri,     X86::VCMPPSZ256rmi,       0 },
 
     // AES foldable instructions
     { X86::AESDECLASTrr,      X86::AESDECLASTrm,        TB_ALIGN_16 },
@@ -3381,12 +3389,24 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }
+  case X86::CMPSDrr:
+  case X86::CMPSSrr:
   case X86::CMPPDrri:
   case X86::CMPPSrri:
+  case X86::VCMPSDrr:
+  case X86::VCMPSSrr:
   case X86::VCMPPDrri:
   case X86::VCMPPSrri:
   case X86::VCMPPDYrri:
-  case X86::VCMPPSYrri: {
+  case X86::VCMPPSYrri:
+  case X86::VCMPSDZrr:
+  case X86::VCMPSSZrr:
+  case X86::VCMPPDZrri:
+  case X86::VCMPPSZrri:
+  case X86::VCMPPDZ128rri:
+  case X86::VCMPPSZ128rri:
+  case X86::VCMPPDZ256rri:
+  case X86::VCMPPSZ256rri: {
     // Float comparison can be safely commuted for
     // Ordered/Unordered/Equal/NotEqual tests
     unsigned Imm = MI.getOperand(3).getImm() & 0x7;
@@ -3629,12 +3649,24 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     return false;
 
   switch (MI.getOpcode()) {
+  case X86::CMPSDrr:
+  case X86::CMPSSrr:
   case X86::CMPPDrri:
   case X86::CMPPSrri:
+  case X86::VCMPSDrr:
+  case X86::VCMPSSrr:
   case X86::VCMPPDrri:
   case X86::VCMPPSrri:
   case X86::VCMPPDYrri:
-  case X86::VCMPPSYrri: {
+  case X86::VCMPPSYrri:
+  case X86::VCMPSDZrr:
+  case X86::VCMPSSZrr:
+  case X86::VCMPPDZrri:
+  case X86::VCMPPSZrri:
+  case X86::VCMPPDZ128rri:
+  case X86::VCMPPSZ128rri:
+  case X86::VCMPPDZ256rri:
+  case X86::VCMPPSZ256rri: {
     // Float comparison can be safely commuted for
     // Ordered/Unordered/Equal/NotEqual tests
     unsigned Imm = MI.getOperand(3).getImm() & 0x7;

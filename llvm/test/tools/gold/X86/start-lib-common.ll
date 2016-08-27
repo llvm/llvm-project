@@ -19,4 +19,4 @@
 
 ; Check that the common symbol is not dropped completely, which was a regression
 ; in r262676.
-; CHECK: @x = common global [4 x i8] zeroinitializer
+; CHECK: @x = common global i32 0, align 8

@@ -55,16 +55,23 @@ static OptionEnumValueElement g_description_verbosity_type[] =
 OptionDefinition
 CommandObjectExpression::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "all-threads",        'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Should we run all threads if the execution doesn't complete on one thread."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "ignore-breakpoints", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Ignore breakpoint hits while running expressions"},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "timeout",            't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger,  "Timeout value (in microseconds) for running the expression."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",       'X', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "If true, simple fix-it hints will be automatically applied to the expression." },
-    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "top-level",          'p', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "Interpret the expression as top-level definitions rather than code to be immediately executed."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "allow-jit",          'j', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Controls whether the expression can fall back to being JITted if it's not supported by the interpreter (defaults to true)."}
+  // clang-format off
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "all-threads",           'a', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "Should we run all threads if the execution doesn't complete on one thread."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "ignore-breakpoints",    'i', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "Ignore breakpoint hits while running expressions"},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "timeout",               't', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeUnsignedInteger,      "Timeout value (in microseconds) for running the expression."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",       'u', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "Clean up program state if the expression causes a crash, or raises a signal.  "
+                                                                                                                                                                                  "Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",                 'g', OptionParser::eNoArgument,       nullptr, nullptr,                      0, eArgTypeNone,                 "When specified, debug the JIT code by setting a breakpoint on the first instruction "
+                                                                                                                                                                                  "and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",              'l', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeLanguage,             "Specifies the Language to use when parsing the expression.  If not set the target.language "
+                                                                                                                                                                                  "setting is used." },
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",          'X', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeLanguage,             "If true, simple fix-it hints will be automatically applied to the expression." },
+  {LLDB_OPT_SET_1,                  false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity, "How verbose should the output of this expression be, if the object description is asked for."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "top-level",             'p', OptionParser::eNoArgument,       nullptr, nullptr,                      0, eArgTypeNone,                 "Interpret the expression as top-level definitions rather than code to be immediately "
+                                                                                                                                                                                  "executed."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "allow-jit",             'j', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "Controls whether the expression can fall back to being JITted if it's not supported by "
+                                                                                                                                                                                  "the interpreter (defaults to true)."}
+  // clang-format on
 };
 
 uint32_t

@@ -11,6 +11,7 @@
 #include "AArch64RegisterInfo.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"

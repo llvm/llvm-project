@@ -51,7 +51,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v8i16:
-; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:1{{$}}
+; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -65,8 +65,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v16i16:
-; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:3 offset1:2{{$}}
-; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:1{{$}}
+; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
+; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 
 
 ; EG: LDS_READ_RET
@@ -256,7 +256,7 @@ define void @local_zextload_v16i16_to_v16i32(<16 x i32> addrspace(3)* %out, <16 
 
 ; FUNC-LABEL: {{^}}local_sextload_v16i16_to_v16i32:
 ; GCN-DAG: ds_read_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+$}}
-; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:3 offset1:1{{$}}
+; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:1 offset1:3{{$}}
 ; GCN-DAG: ds_read_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:16{{$}}
 define void @local_sextload_v16i16_to_v16i32(<16 x i32> addrspace(3)* %out, <16 x i16> addrspace(3)* %in) #0 {
   %load = load <16 x i16>, <16 x i16> addrspace(3)* %in
@@ -280,7 +280,7 @@ define void @local_zextload_v32i16_to_v32i32(<32 x i32> addrspace(3)* %out, <32 
 ; FUNC-LABEL: {{^}}local_sextload_v32i16_to_v32i32:
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:1 offset1:2{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:3 offset1:4
-; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:5{{$}}
+; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:5{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:6 offset1:7
 define void @local_sextload_v32i16_to_v32i32(<32 x i32> addrspace(3)* %out, <32 x i16> addrspace(3)* %in) #0 {
   %load = load <32 x i16>, <32 x i16> addrspace(3)* %in

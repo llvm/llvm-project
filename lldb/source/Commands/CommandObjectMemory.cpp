@@ -51,13 +51,16 @@ using namespace lldb_private;
 static OptionDefinition
 g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "num-per-line" ,'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNumberPerLine ,"The number of items per line to display."},
-    { LLDB_OPT_SET_2, false, "binary"       ,'b', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone          ,"If true, memory will be saved as binary. If false, the memory is saved save as an ASCII dump that uses the format, size, count and number per line settings."},
-    { LLDB_OPT_SET_3, true , "type"         ,'t', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNone          ,"The name of a type to view memory as."},
-    { LLDB_OPT_SET_3, false , "offset"      ,'E', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount         ,"How many elements of the specified type to skip before starting to display data."},
-    { LLDB_OPT_SET_1|
-      LLDB_OPT_SET_2|
-      LLDB_OPT_SET_3, false, "force"        ,'r', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone          ,"Necessary if reading over target.max-memory-read-size bytes."},
+  // clang-format off
+  {LLDB_OPT_SET_1, false, "num-per-line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNumberPerLine, "The number of items per line to display." },
+  {LLDB_OPT_SET_2, false, "binary",       'b', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,          "If true, memory will be saved as binary. If false, the memory is saved save as an ASCII dump that "
+                                                                                                                            "uses the format, size, count and number per line settings." },
+  {LLDB_OPT_SET_3, true , "type",         't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNone,          "The name of a type to view memory as." },
+  {LLDB_OPT_SET_3, false, "offset",       'E', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,         "How many elements of the specified type to skip before starting to display data." },
+  {LLDB_OPT_SET_1 |
+   LLDB_OPT_SET_2 |
+   LLDB_OPT_SET_3, false, "force",        'r', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,          "Necessary if reading over target.max-memory-read-size bytes." },
+  // clang-format on
 };
 
 class OptionGroupReadMemory : public OptionGroup
@@ -956,10 +959,12 @@ protected:
 OptionDefinition
 g_memory_find_option_table[] =
 {
-    { LLDB_OPT_SET_1, true, "expression", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "Evaluate an expression to obtain a byte pattern."},
-    { LLDB_OPT_SET_2, true, "string", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeName,   "Use text to find a byte pattern."},
-    { LLDB_OPT_SET_ALL, false, "count", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,   "How many times to perform the search."},
-    { LLDB_OPT_SET_ALL, false, "dump-offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,   "When dumping memory for a match, an offset from the match location to start dumping from."},
+  // clang-format off
+  {LLDB_OPT_SET_1,   true,  "expression",  'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "Evaluate an expression to obtain a byte pattern."},
+  {LLDB_OPT_SET_2,   true,  "string",      's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeName,       "Use text to find a byte pattern."},
+  {LLDB_OPT_SET_ALL, false, "count",       'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,      "How many times to perform the search."},
+  {LLDB_OPT_SET_ALL, false, "dump-offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,     "When dumping memory for a match, an offset from the match location to start dumping from."},
+  // clang-format on
 };
 
 //----------------------------------------------------------------------
@@ -1241,8 +1246,10 @@ protected:
 OptionDefinition
 g_memory_write_option_table[] =
 {
-{ LLDB_OPT_SET_1, true,  "infile", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFilename, "Write memory using the contents of a file."},
-{ LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,   "Start writing bytes from an offset within the input file."},
+  // clang-format off
+  {LLDB_OPT_SET_1, true,  "infile", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFilename, "Write memory using the contents of a file."},
+  {LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,   "Start writing bytes from an offset within the input file."},
+  // clang-format on
 };
 
 //----------------------------------------------------------------------

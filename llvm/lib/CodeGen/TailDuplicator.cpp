@@ -119,8 +119,13 @@ static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
 }
 
 /// Tail duplicate the block and cleanup.
-bool TailDuplicator::tailDuplicateAndUpdate(bool IsSimple,
-                                            MachineBasicBlock *MBB) {
+/// \p IsSimple - return value of isSimpleBB
+/// \p MBB - block to be duplicated
+/// \p DuplicatedPreds - if non-null, \p DuplicatedPreds will contain a list of
+///     all Preds that received a copy of \p MBB.
+bool TailDuplicator::tailDuplicateAndUpdate(
+    bool IsSimple, MachineBasicBlock *MBB,
+    SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds) {
   // Save the successors list.
   SmallSetVector<MachineBasicBlock *, 8> Succs(MBB->succ_begin(),
                                                MBB->succ_end());
@@ -215,6 +220,9 @@ bool TailDuplicator::tailDuplicateAndUpdate(bool IsSimple,
 
   if (NewPHIs.size())
     NumAddedPHIs += NewPHIs.size();
+
+  if (DuplicatedPreds)
+    *DuplicatedPreds = std::move(TDBBs);
 
   return true;
 }

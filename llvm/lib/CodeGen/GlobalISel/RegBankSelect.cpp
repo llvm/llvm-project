@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/CommandLine.h"
@@ -41,6 +42,7 @@ INITIALIZE_PASS_BEGIN(RegBankSelect, "regbankselect",
                       false, false);
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RegBankSelect, "regbankselect",
                     "Assign register bank of generic virtual registers", false,
                     false)
@@ -61,6 +63,7 @@ void RegBankSelect::init(MachineFunction &MF) {
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
+  TPC = &getAnalysis<TargetPassConfig>();
   if (OptMode != Mode::Fast) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
     MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
@@ -78,6 +81,7 @@ void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineBranchProbabilityInfo>();
   }
+  AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -104,10 +108,12 @@ bool RegBankSelect::assignmentMatch(
   return CurRegBank == DesiredRegBrank;
 }
 
-void RegBankSelect::repairReg(
+bool RegBankSelect::repairReg(
     MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
     RegBankSelect::RepairingPlacement &RepairPt,
     const iterator_range<SmallVectorImpl<unsigned>::const_iterator> &NewVRegs) {
+  if (ValMapping.BreakDown.size() != 1 && !TPC->isGlobalISelAbortEnabled())
+    return false;
   assert(ValMapping.BreakDown.size() == 1 && "Not yet implemented");
   // An empty range of new register means no repairing.
   assert(NewVRegs.begin() != NewVRegs.end() && "We should not have to repair");
@@ -150,6 +156,7 @@ void RegBankSelect::repairReg(
   }
   // TODO:
   // Legalize NewInstrs if need be.
+  return true;
 }
 
 uint64_t RegBankSelect::getRepairCost(
@@ -196,16 +203,20 @@ uint64_t RegBankSelect::getRepairCost(
     // TODO: use a dedicated constant for ImpossibleCost.
     if (Cost != UINT_MAX)
       return Cost;
-    assert(false && "Legalization not available yet");
+    assert(!TPC->isGlobalISelAbortEnabled() &&
+           "Legalization not available yet");
     // Return the legalization cost of that repairing.
   }
-  assert(false && "Complex repairing not implemented yet");
-  return 1;
+  assert(!TPC->isGlobalISelAbortEnabled() &&
+         "Complex repairing not implemented yet");
+  return UINT_MAX;
 }
 
 RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
     MachineInstr &MI, RegisterBankInfo::InstructionMappings &PossibleMappings,
     SmallVectorImpl<RepairingPlacement> &RepairPts) {
+  assert(!PossibleMappings.empty() &&
+         "Do not know how to map this instruction");
 
   RegisterBankInfo::InstructionMapping *BestMapping = nullptr;
   MappingCost Cost = MappingCost::ImpossibleCost();
@@ -220,7 +231,15 @@ RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
         RepairPts.emplace_back(std::move(RepairPt));
     }
   }
-  assert(BestMapping && "No suitable mapping for instruction");
+  if (!BestMapping && !TPC->isGlobalISelAbortEnabled()) {
+    // If none of the mapping worked that means they are all impossible.
+    // Thus, pick the first one and set an impossible repairing point.
+    // It will trigger the failed isel mode.
+    BestMapping = &(*PossibleMappings.begin());
+    RepairPts.emplace_back(
+        RepairingPlacement(MI, 0, *TRI, *this, RepairingPlacement::Impossible));
+  } else
+    assert(BestMapping && "No suitable mapping for instruction");
   return *BestMapping;
 }
 
@@ -467,7 +486,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
   return Cost;
 }
 
-void RegBankSelect::applyMapping(
+bool RegBankSelect::applyMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
     SmallVectorImpl<RegBankSelect::RepairingPlacement> &RepairPts) {
   // OpdMapper will hold all the information needed for the rewritting.
@@ -475,9 +494,9 @@ void RegBankSelect::applyMapping(
 
   // First, place the repairing code.
   for (RepairingPlacement &RepairPt : RepairPts) {
-    assert(RepairPt.canMaterialize() &&
-           RepairPt.getKind() != RepairingPlacement::Impossible &&
-           "This mapping is impossible");
+    if (!RepairPt.canMaterialize() ||
+        RepairPt.getKind() == RepairingPlacement::Impossible)
+      return false;
     assert(RepairPt.getKind() != RepairingPlacement::None &&
            "This should not make its way in the list");
     unsigned OpIdx = RepairPt.getOpIdx();
@@ -496,7 +515,8 @@ void RegBankSelect::applyMapping(
       break;
     case RepairingPlacement::Insert:
       OpdMapper.createVRegs(OpIdx);
-      repairReg(MO, ValMapping, RepairPt, OpdMapper.getVRegs(OpIdx));
+      if (!repairReg(MO, ValMapping, RepairPt, OpdMapper.getVRegs(OpIdx)))
+        return false;
       break;
     default:
       llvm_unreachable("Other kind should not happen");
@@ -505,9 +525,10 @@ void RegBankSelect::applyMapping(
   // Second, rewrite the instruction.
   DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
   RBI->applyMapping(OpdMapper);
+  return true;
 }
 
-void RegBankSelect::assignInstr(MachineInstr &MI) {
+bool RegBankSelect::assignInstr(MachineInstr &MI) {
   DEBUG(dbgs() << "Assign: " << MI);
   // Remember the repairing placement for all the operands.
   SmallVector<RepairingPlacement, 4> RepairPts;
@@ -517,13 +538,13 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
     BestMapping = RBI->getInstrMapping(MI);
     MappingCost DefaultCost = computeMapping(MI, BestMapping, RepairPts);
     (void)DefaultCost;
-    assert(DefaultCost != MappingCost::ImpossibleCost() &&
-           "Default mapping is not suited");
+    if (DefaultCost == MappingCost::ImpossibleCost())
+      return false;
   } else {
     RegisterBankInfo::InstructionMappings PossibleMappings =
         RBI->getInstrPossibleMappings(MI);
-    assert(!PossibleMappings.empty() &&
-           "Do not know how to map this instruction");
+    if (PossibleMappings.empty())
+      return false;
     BestMapping = std::move(findBestMapping(MI, PossibleMappings, RepairPts));
   }
   // Make sure the mapping is valid for MI.
@@ -533,10 +554,15 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
 
   // After this call, MI may not be valid anymore.
   // Do not use it.
-  applyMapping(MI, BestMapping, RepairPts);
+  return applyMapping(MI, BestMapping, RepairPts);
 }
 
 bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
+  // If the ISel pipeline failed, do not bother running that pass.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::FailedISel))
+    return false;
+
   DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
   const Function *F = MF.getFunction();
   Mode SaveOptMode = OptMode;
@@ -553,6 +579,11 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
     for (const MachineBasicBlock &MBB : MF) {
       for (const MachineInstr &MI : MBB) {
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI)) {
+          if (!TPC->isGlobalISelAbortEnabled()) {
+            MF.getProperties().set(
+                MachineFunctionProperties::Property::FailedISel);
+            return false;
+          }
           std::string ErrStorage;
           raw_string_ostream Err(ErrStorage);
           Err << "Instruction is not legal: " << MI << '\n';
@@ -581,7 +612,12 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       if (isTargetSpecificOpcode(MI.getOpcode()))
         continue;
 
-      assignInstr(MI);
+      if (!assignInstr(MI)) {
+        if (TPC->isGlobalISelAbortEnabled())
+          report_fatal_error("Unable to map instruction");
+        MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+        return false;
+      }
     }
   }
   OptMode = SaveOptMode;

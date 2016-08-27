@@ -426,6 +426,10 @@ static void SplitCriticalSideEffectEdges(Function &Fn) {
 }
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
+  // If we already selected that function, we do not need to run SDISel.
+  if (mf.getProperties().hasProperty(
+          MachineFunctionProperties::Property::Selected))
+    return false;
   // Do some sanity-checking on the command-line options.
   assert((!EnableFastISelVerbose || TM.Options.EnableFastISel) &&
          "-fast-isel-verbose requires -fast-isel");

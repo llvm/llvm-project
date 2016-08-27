@@ -345,7 +345,9 @@ multiclass AVX512_maskable_custom_cmp<bits<8> O, Format F,
                                   string OpcodeStr,
                                   string AttSrcAsm, string IntelSrcAsm,
                                   list<dag> Pattern,
-                                  list<dag> MaskingPattern> {
+                                  list<dag> MaskingPattern,
+                                  bit IsCommutable = 0> {
+    let isCommutable = IsCommutable in
     def NAME: AVX512<O, F, Outs, Ins,
                        OpcodeStr#"\t{"#AttSrcAsm#", $dst|"#
                                      "$dst, "#IntelSrcAsm#"}",
@@ -362,20 +364,21 @@ multiclass AVX512_maskable_common_cmp<bits<8> O, Format F, X86VectorVTInfo _,
                                   dag Ins, dag MaskingIns,
                                   string OpcodeStr,
                                   string AttSrcAsm, string IntelSrcAsm,
-                                  dag RHS, dag MaskingRHS> :
+                                  dag RHS, dag MaskingRHS,
+                                  bit IsCommutable = 0> :
   AVX512_maskable_custom_cmp<O, F, Outs, Ins, MaskingIns, OpcodeStr,
                          AttSrcAsm, IntelSrcAsm,
                          [(set _.KRC:$dst, RHS)],
-                         [(set _.KRC:$dst, MaskingRHS)]>;
+                         [(set _.KRC:$dst, MaskingRHS)], IsCommutable>;
 
 multiclass AVX512_maskable_cmp<bits<8> O, Format F, X86VectorVTInfo _,
                            dag Outs, dag Ins, string OpcodeStr,
                            string AttSrcAsm, string IntelSrcAsm,
-                           dag RHS> :
+                           dag RHS, bit IsCommutable = 0> :
    AVX512_maskable_common_cmp<O, F, _, Outs, Ins,
                           !con((ins _.KRCWM:$mask), Ins),
                           OpcodeStr, AttSrcAsm, IntelSrcAsm, RHS,
-                          (and _.KRCWM:$mask, RHS)>;
+                          (and _.KRCWM:$mask, RHS), IsCommutable>;
 
 multiclass AVX512_maskable_cmp_alt<bits<8> O, Format F, X86VectorVTInfo _,
                            dag Outs, dag Ins, string OpcodeStr,
@@ -1483,6 +1486,7 @@ multiclass avx512_cmp_scalar<X86VectorVTInfo _, SDNode OpNode, SDNode OpNodeRnd>
   }// let isAsmParserOnly = 1, hasSideEffects = 0
 
   let isCodeGenOnly = 1 in {
+    let isCommutable = 1 in
     def rr : AVX512Ii8<0xC2, MRMSrcReg,
                 (outs _.KRC:$dst), (ins _.FRC:$src1, _.FRC:$src2, AVXCC:$cc),
                 !strconcat("vcmp${cc}", _.Suffix,
@@ -1802,7 +1806,7 @@ multiclass avx512_vcmp_common<X86VectorVTInfo _> {
                    "$src2, $src1", "$src1, $src2",
                    (X86cmpm (_.VT _.RC:$src1),
                          (_.VT _.RC:$src2),
-                           imm:$cc)>;
+                           imm:$cc), 1>;
 
   defm  rmi  : AVX512_maskable_cmp<0xC2, MRMSrcMem, _,
                 (outs _.KRC:$dst),(ins _.RC:$src1, _.MemOp:$src2, AVXCC:$cc),

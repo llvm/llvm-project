@@ -185,9 +185,8 @@ define i1 @test_fcmp_une(half %a, half %b) #0 {
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
 ; CHECK-NEXT: fcmp s0, s1
-; CHECK-NEXT: orr [[TRUE:w[0-9]+]], wzr, #0x1
-; CHECK-NEXT: csel [[CC:w[0-9]+]], [[TRUE]], wzr, eq
-; CHECK-NEXT: csel w0, [[TRUE]], [[CC]], vs
+; CHECK-NEXT: cset [[TRUE:w[0-9]+]], eq
+; CHECK-NEXT: csinc w0, [[TRUE]], wzr, vc
 ; CHECK-NEXT: ret
 define i1 @test_fcmp_ueq(half %a, half %b) #0 {
   %r = fcmp ueq half %a, %b
@@ -254,9 +253,8 @@ define i1 @test_fcmp_uno(half %a, half %b) #0 {
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
 ; CHECK-NEXT: fcmp s0, s1
-; CHECK-NEXT: orr [[TRUE:w[0-9]+]], wzr, #0x1
-; CHECK-NEXT: csel [[CC:w[0-9]+]], [[TRUE]], wzr, mi
-; CHECK-NEXT: csel w0, [[TRUE]], [[CC]], gt
+; CHECK-NEXT: cset [[TRUE:w[0-9]+]], mi
+; CHECK-NEXT: csinc w0, [[TRUE]], wzr, le
 ; CHECK-NEXT: ret
 define i1 @test_fcmp_one(half %a, half %b) #0 {
   %r = fcmp one half %a, %b

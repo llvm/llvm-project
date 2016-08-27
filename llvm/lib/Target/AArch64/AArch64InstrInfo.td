@@ -1133,6 +1133,14 @@ def : Pat<(AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV),
           (CSINCWr WZR, WZR, (i32 imm:$cc))>;
 def : Pat<(AArch64csel (i64 0), (i64 1), (i32 imm:$cc), NZCV),
           (CSINCXr XZR, XZR, (i32 imm:$cc))>;
+def : Pat<(AArch64csel GPR32:$tval, (i32 1), (i32 imm:$cc), NZCV),
+          (CSINCWr GPR32:$tval, WZR, (i32 imm:$cc))>;
+def : Pat<(AArch64csel GPR64:$tval, (i64 1), (i32 imm:$cc), NZCV),
+          (CSINCXr GPR64:$tval, XZR, (i32 imm:$cc))>;
+def : Pat<(AArch64csel (i32 1), GPR32:$fval, (i32 imm:$cc), NZCV),
+          (CSINCWr GPR32:$fval, WZR, (i32 (inv_cond_XFORM imm:$cc)))>;
+def : Pat<(AArch64csel (i64 1), GPR64:$fval, (i32 imm:$cc), NZCV),
+          (CSINCXr GPR64:$fval, XZR, (i32 (inv_cond_XFORM imm:$cc)))>;
 def : Pat<(AArch64csel (i32 0), (i32 -1), (i32 imm:$cc), NZCV),
           (CSINVWr WZR, WZR, (i32 imm:$cc))>;
 def : Pat<(AArch64csel (i64 0), (i64 -1), (i32 imm:$cc), NZCV),

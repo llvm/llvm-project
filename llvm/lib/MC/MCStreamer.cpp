@@ -12,6 +12,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -215,16 +216,16 @@ void MCStreamer::EnsureValidDwarfFrame() {
     report_fatal_error("No open frame");
 }
 
-unsigned MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
-  return getContext().getCVFile(Filename, FileNo);
+bool MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
+  return getContext().getCVContext().addFile(FileNo, Filename);
 }
 
 void MCStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     unsigned Line, unsigned Column,
                                     bool PrologueEnd, bool IsStmt,
                                     StringRef FileName) {
-  getContext().setCurrentCVLoc(FunctionId, FileNo, Line, Column, PrologueEnd,
-                               IsStmt);
+  getContext().getCVContext().setCurrentCVLoc(FunctionId, FileNo, Line, Column,
+                                              PrologueEnd, IsStmt);
 }
 
 void MCStreamer::EmitCVLinetableDirective(unsigned FunctionId,

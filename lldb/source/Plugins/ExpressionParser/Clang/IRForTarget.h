@@ -101,7 +101,7 @@ public:
     IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
                 bool resolve_vars,
                 lldb_private::IRExecutionUnit &execution_unit,
-                lldb_private::Stream *error_stream,
+                lldb_private::Stream &error_stream,
                 const char* func_name = "$__lldb_expr");
     
     //------------------------------------------------------------------
@@ -563,7 +563,7 @@ private:
     llvm::Constant *m_sel_registerName;   ///< The address of the function sel_registerName, cast to the appropriate
                                           ///function pointer type
     llvm::IntegerType *m_intptr_ty;       ///< The type of an integer large enough to hold a pointer.
-    lldb_private::Stream *m_error_stream; ///< If non-NULL, the stream on which errors should be printed
+    lldb_private::Stream &m_error_stream; ///< The stream on which errors should be printed
     lldb_private::IRExecutionUnit &m_execution_unit; ///< The execution unit containing the IR being created.
 
     llvm::StoreInst *m_result_store; ///< If non-NULL, the store instruction that writes to the result variable.  If
@@ -615,7 +615,7 @@ private:
                     llvm::Function *llvm_function,
                     FunctionValueCache &value_maker,
                     FunctionValueCache &entry_instruction_finder,
-                    lldb_private::Stream *error_stream);
+                    lldb_private::Stream &error_stream);
     
     //------------------------------------------------------------------
     /// Construct a reference to m_reloc_placeholder with a given type

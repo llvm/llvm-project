@@ -1018,7 +1018,10 @@ public:
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
+    // pass.  Function analyses need to be preserved across loop transformations
+    // but ORE cannot be preserved (see comment before the pass definition).
+    OptimizationRemarkEmitter ORE(&F);
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
     return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA,

@@ -13,6 +13,7 @@
 
 using namespace llvm;
 using llvm::MachineLegalizer::LegalizeAction::Legal;
+using llvm::MachineLegalizer::LegalizeAction::Lower;
 using llvm::MachineLegalizer::LegalizeAction::NarrowScalar;
 using llvm::MachineLegalizer::LegalizeAction::WidenScalar;
 using llvm::MachineLegalizer::LegalizeAction::FewerElements;
@@ -26,6 +27,7 @@ namespace llvm {
 std::ostream &
 operator<<(std::ostream &OS, const llvm::MachineLegalizer::LegalizeAction Act) {
   switch (Act) {
+  case Lower: OS << "Lower"; break;
   case Legal: OS << "Legal"; break;
   case NarrowScalar: OS << "NarrowScalar"; break;
   case WidenScalar:  OS << "WidenScalar"; break;

@@ -29,6 +29,8 @@ registers:
   - { id: 14, class: _ }
   - { id: 15, class: _ }
   - { id: 16, class: _ }
+  - { id: 17, class: _ }
+  - { id: 18, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -70,4 +72,8 @@ body: |
     ; CHECK: %16(16) = G_ANYEXT { s16, s8 } %2
     %15(8) = G_ZEXT { s8, s1 } %1
     %16(16) = G_ANYEXT { s16, s8 } %2
+
+    ; CHECK: %18(64) = G_FPEXT { s64, s32 } %17
+    %17(32) = G_TRUNC { s32, s64 }  %0
+    %18(64) = G_FPEXT { s64, s32 } %17
 ...

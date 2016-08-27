@@ -64,8 +64,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v16i8:
-; GCN: ds_read2_b64  v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
-; GCN: ds_write2_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:{{[0-9]+}}], v[{{[0-9]+}}:[[HI]]{{\]}} offset0:1{{$}}
+; GCN: ds_read2_b64  v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
+; GCN: ds_write2_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:{{[0-9]+}}], v[{{[0-9]+}}:[[HI]]{{\]}} offset1:1{{$}}
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET

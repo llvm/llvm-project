@@ -111,8 +111,9 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
   if (Insertion.second) {
     // We have to compute the full filepath and emit a .cv_file directive.
     StringRef FullPath = getFullFilepath(F);
-    NextId = OS.EmitCVFileDirective(NextId, FullPath);
-    assert(NextId == FileIdMap.size() && ".cv_file directive failed");
+    bool Success = OS.EmitCVFileDirective(NextId, FullPath);
+    (void)Success;
+    assert(Success && ".cv_file directive failed");
   }
   return Insertion.first->second;
 }
