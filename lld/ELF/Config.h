@@ -30,7 +30,7 @@ enum ELFKind {
   ELF64BEKind
 };
 
-enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring };
+enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring, Uuid };
 
 enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
 

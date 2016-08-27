@@ -156,6 +156,8 @@ template <class ELFT> void elf::writeResult() {
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
     BuildId.reset(new BuildIdSha1<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Uuid)
+    BuildId.reset(new BuildIdUuid<ELFT>);
   else if (Config->BuildId == BuildIdKind::Hexstring)
     BuildId.reset(new BuildIdHexstring<ELFT>);
 

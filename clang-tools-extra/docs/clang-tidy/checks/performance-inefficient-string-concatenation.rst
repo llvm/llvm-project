@@ -3,16 +3,18 @@
 performance-inefficient-string-concatenation
 ============================================
 
-This check warns about the performance overhead arising from concatenating strings using the ``operator+``, for instance:
+This check warns about the performance overhead arising from concatenating
+strings using the ``operator+``, for instance:
     
-.. code:: c++
+.. code-block:: c++
 
     std::string a("Foo"), b("Bar");
     a = a + b;
 
-Instead of this structure you should use ``operator+=`` or ``std::string``'s (``std::basic_string``) class member function ``append()``. For instance:
+Instead of this structure you should use ``operator+=`` or ``std::string``'s
+(``std::basic_string``) class member function ``append()``. For instance:
    
-.. code:: c++
+.. code-block:: c++
 
    std::string a("Foo"), b("Baz");
    for (int i = 0; i < 20000; ++i) {
@@ -21,7 +23,7 @@ Instead of this structure you should use ``operator+=`` or ``std::string``'s (``
 
 Could be rewritten in a greatly more efficient way like:
 
-.. code:: c++
+.. code-block:: c++
 
    std::string a("Foo"), b("Baz");
    for (int i = 0; i < 20000; ++i) {
@@ -30,7 +32,7 @@ Could be rewritten in a greatly more efficient way like:
 
 And this can be rewritten too:
 
-.. code:: c++
+.. code-block:: c++
 
    void f(const std::string&) {}
    std::string a("Foo"), b("Baz");
@@ -40,7 +42,7 @@ And this can be rewritten too:
 
 In a slightly more efficient way like:
 
-.. code:: c++
+.. code-block:: c++
 
    void f(const std::string&) {}
    std::string a("Foo"), b("Baz");

@@ -10,13 +10,13 @@ Right now it only handles free functions, not member functions.
 
 Given:
 
-.. code:: c++
+.. code-block:: c++
 
   int add(int x, int y) { return x + y; }
 
 Then:
 
-.. code:: c++
+.. code-block:: c++
 
   void f() {
     int x = 2;
@@ -25,7 +25,7 @@ Then:
 
 is replaced by:
 
-.. code:: c++
+.. code-block:: c++
 
   void f() {
     int x = 2;
@@ -35,4 +35,3 @@ is replaced by:
 ``std::bind`` can be hard to read and can result in larger object files and
 binaries due to type information that will not be produced by equivalent
 lambdas.
-

@@ -11,7 +11,7 @@ than the pointee.
 For instance, in the following code, the resulting type is ``int *`` ``const``
 rather than ``const int *``:
 
-.. code:: c++
+.. code-block:: c++
 
   typedef int *int_ptr;
   void f(const int_ptr ptr);

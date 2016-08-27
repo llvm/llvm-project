@@ -3,11 +3,11 @@
 modernize-use-using
 ===================
 
-Use C++11's ``using`` instead of ``typedef``.
+The check converts the usage of ``typedef`` with ``using`` keyword.
 
 Before:
 
-.. code:: c++
+.. code-block:: c++
 
   typedef int variable;
 
@@ -16,7 +16,7 @@ Before:
 
 After:
 
-.. code:: c++
+.. code-block:: c++
 
   using variable = int;
 
