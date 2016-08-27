@@ -417,16 +417,17 @@ Error LTO::run(AddOutputFn AddOutput) {
 Error LTO::runRegularLTO(AddOutputFn AddOutput) {
   // Make sure commons have the right size/alignment: we kept the largest from
   // all the prevailing when adding the inputs, and we apply it here.
+  const DataLayout &DL = RegularLTO.CombinedModule->getDataLayout();
   for (auto &I : RegularLTO.Commons) {
-    ArrayType *Ty =
-        ArrayType::get(Type::getInt8Ty(RegularLTO.Ctx), I.second.Size);
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
-    if (OldGV && OldGV->getType()->getElementType() == Ty) {
+    if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
       OldGV->setAlignment(I.second.Align);
       continue;
     }
+    ArrayType *Ty =
+        ArrayType::get(Type::getInt8Ty(RegularLTO.Ctx), I.second.Size);
     auto *GV = new GlobalVariable(*RegularLTO.CombinedModule, Ty, false,
                                   GlobalValue::CommonLinkage,
                                   ConstantAggregateZero::get(Ty), "");
