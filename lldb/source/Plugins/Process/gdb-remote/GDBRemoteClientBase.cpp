@@ -216,7 +216,7 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(llvm::StringRef payload, Strin
                                                   const Lock &lock)
 {
     assert(lock);
-    PacketResult packet_result = SendPacketNoLock(payload.data(), payload.size());
+    PacketResult packet_result = SendPacketNoLock(payload);
     if (packet_result != PacketResult::Success)
         return packet_result;
 
@@ -255,7 +255,7 @@ GDBRemoteClientBase::SendvContPacket(llvm::StringRef payload, StringExtractorGDB
         log->Printf("GDBRemoteCommunicationClient::%s () sending vCont packet: %.*s", __FUNCTION__, int(payload.size()),
                     payload.data());
 
-    if (SendPacketNoLock(payload.data(), payload.size()) != PacketResult::Success)
+    if (SendPacketNoLock(payload) != PacketResult::Success)
         return false;
 
     OnRunPacketSent(true);
@@ -354,8 +354,7 @@ GDBRemoteClientBase::ContinueLock::lock()
             log->Printf("GDBRemoteClientBase::ContinueLock::%s() cancelled", __FUNCTION__);
         return LockResult::Cancelled;
     }
-    if (m_comm.SendPacketNoLock(m_comm.m_continue_packet.data(), m_comm.m_continue_packet.size()) !=
-        PacketResult::Success)
+    if (m_comm.SendPacketNoLock(m_comm.m_continue_packet) != PacketResult::Success)
         return LockResult::Failed;
 
     lldbassert(!m_comm.m_is_running);

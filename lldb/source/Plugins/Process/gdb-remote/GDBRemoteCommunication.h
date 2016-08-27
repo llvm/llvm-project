@@ -111,8 +111,7 @@ public:
     SendNack ();
 
     char
-    CalculcateChecksum (const char *payload,
-                        size_t payload_length);
+    CalculcateChecksum (llvm::StringRef payload);
 
     PacketType
     CheckForPacket (const uint8_t *src, 
@@ -280,8 +279,7 @@ protected:
     CompressionType m_compression_type;
 
     PacketResult
-    SendPacketNoLock (const char *payload, 
-                      size_t payload_length);
+    SendPacketNoLock (llvm::StringRef payload);
 
     PacketResult
     ReadPacket (StringExtractorGDBRemote &response, uint32_t timeout_usec, bool sync_on_timeout);
