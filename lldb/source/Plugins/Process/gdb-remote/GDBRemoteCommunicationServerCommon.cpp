@@ -264,7 +264,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo (StringExtractorGDBRemote &
     if (g_default_packet_timeout_sec > 0)
         response.Printf ("default_packet_timeout:%u;", g_default_packet_timeout_sec);
 
-    return SendPacketNoLock (response.GetData(), response.GetSize());
+    return SendPacketNoLock (response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -280,7 +280,7 @@ GDBRemoteCommunicationServerCommon::Handle_qProcessInfoPID (StringExtractorGDBRe
         {
             StreamString response;
             CreateProcessInfoResponse (proc_info, response);
-            return SendPacketNoLock (response.GetData(), response.GetSize());
+            return SendPacketNoLock (response.GetString());
         }
     }
     return SendErrorResponse (1);
@@ -395,7 +395,7 @@ GDBRemoteCommunicationServerCommon::Handle_qsProcessInfo (StringExtractorGDBRemo
         StreamString response;
         CreateProcessInfoResponse (m_proc_infos.GetProcessInfoAtIndex(m_proc_infos_index), response);
         ++m_proc_infos_index;
-        return SendPacketNoLock (response.GetData(), response.GetSize());
+        return SendPacketNoLock (response.GetString());
     }
     return SendErrorResponse (4);
 }
@@ -480,7 +480,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest (StringExtractorGDBRemote 
                     bytes_left = 0;
                 }
             }
-            return SendPacketNoLock (response.GetData(), response.GetSize());
+            return SendPacketNoLock (response.GetString());
         }
     }
     return SendErrorResponse (7);
@@ -510,7 +510,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open (StringExtractorGDBRemote 
                 response.Printf("%i", fd);
                 if (save_errno)
                     response.Printf(",%i", save_errno);
-                return SendPacketNoLock(response.GetData(), response.GetSize());
+                return SendPacketNoLock(response.GetString());
             }
         }
     }
@@ -539,7 +539,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close (StringExtractorGDBRemote
     response.Printf("%i", err);
     if (save_errno)
         response.Printf(",%i", save_errno);
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -638,7 +638,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Size (StringExtractorGDBRemote 
             response.PutChar(',');
             response.PutHex64(retcode); // TODO: replace with Host::GetSyswideErrorCode()
         }
-        return SendPacketNoLock(response.GetData(), response.GetSize());
+        return SendPacketNoLock(response.GetString());
     }
     return SendErrorResponse(22);
 }
@@ -657,7 +657,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Mode (StringExtractorGDBRemote 
         response.Printf("F%u", mode);
         if (mode == 0 || error.Fail())
             response.Printf(",%i", (int)error.GetError());
-        return SendPacketNoLock(response.GetData(), response.GetSize());
+        return SendPacketNoLock(response.GetString());
     }
     return SendErrorResponse(23);
 }
@@ -678,7 +678,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Exists (StringExtractorGDBRemot
             response.PutChar('1');
         else
             response.PutChar('0');
-        return SendPacketNoLock(response.GetData(), response.GetSize());
+        return SendPacketNoLock(response.GetString());
     }
     return SendErrorResponse(24);
 }
@@ -694,7 +694,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_symlink (StringExtractorGDBRemo
     Error error = FileSystem::Symlink(FileSpec{src, true}, FileSpec{dst, false});
     StreamString response;
     response.Printf("F%u,%u", error.GetError(), error.GetError());
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -706,7 +706,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_unlink (StringExtractorGDBRemot
     Error error = FileSystem::Unlink(FileSpec{path, true});
     StreamString response;
     response.Printf("F%u,%u", error.GetError(), error.GetError());
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -745,7 +745,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell (StringExtractorGDBRe
                 response.PutChar(',');
                 response.PutEscapedBytes(output.c_str(), output.size());
             }
-            return SendPacketNoLock(response.GetData(), response.GetSize());
+            return SendPacketNoLock(response.GetString());
         }
     }
     return SendErrorResponse(24);
@@ -779,7 +779,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_MD5 (StringExtractorGDBRemote &
             response.PutHex64(a);
             response.PutHex64(b);
         }
-        return SendPacketNoLock(response.GetData(), response.GetSize());
+        return SendPacketNoLock(response.GetString());
     }
     return SendErrorResponse(25);
 }
@@ -798,7 +798,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_mkdir (StringExtractorGDBRe
         StreamGDBRemote response;
         response.Printf("F%u", error.GetError());
 
-        return SendPacketNoLock(response.GetData(), response.GetSize());
+        return SendPacketNoLock(response.GetString());
     }
     return SendErrorResponse(20);
 }
@@ -818,7 +818,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_chmod (StringExtractorGDBRe
         StreamGDBRemote response;
         response.Printf("F%u", error.GetError());
 
-        return SendPacketNoLock(response.GetData(), response.GetSize());
+        return SendPacketNoLock(response.GetString());
     }
     return SendErrorResponse(19);
 }
@@ -840,7 +840,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported (StringExtractorGDBRemote 
     response.PutCString (";qXfer:auxv:read+");
 #endif
 
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -936,7 +936,7 @@ GDBRemoteCommunicationServerCommon::Handle_qLaunchSuccess (StringExtractorGDBRem
     StreamString response;
     response.PutChar('E');
     response.PutCString(m_process_launch_error.AsCString("<unknown error>"));
-    return SendPacketNoLock (response.GetData(), response.GetSize());
+    return SendPacketNoLock (response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1077,7 +1077,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qEcho (StringExtractorGDBRemote &packet)
 {
     // Just echo back the exact same packet for qEcho...
-    return SendPacketNoLock(packet.GetStringRef().c_str(), packet.GetStringRef().size());
+    return SendPacketNoLock(packet.GetStringRef());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1144,7 +1144,7 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo (StringExtractorGDBRemote
     response.PutHex64(file_size);
     response.PutChar(';');
 
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 void

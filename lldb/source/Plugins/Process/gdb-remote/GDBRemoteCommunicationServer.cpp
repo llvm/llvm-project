@@ -103,7 +103,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendUnimplementedResponse (const char *)
 {
     // TODO: Log the packet we aren't handling...
-    return SendPacketNoLock ("", 0);
+    return SendPacketNoLock ("");
 }
 
 
@@ -113,7 +113,7 @@ GDBRemoteCommunicationServer::SendErrorResponse (uint8_t err)
     char packet[16];
     int packet_len = ::snprintf (packet, sizeof(packet), "E%2.2x", err);
     assert (packet_len < (int)sizeof(packet));
-    return SendPacketNoLock (packet, packet_len);
+    return SendPacketNoLock (llvm::StringRef(packet, packet_len));
 }
 
 GDBRemoteCommunication::PacketResult
@@ -128,7 +128,7 @@ GDBRemoteCommunicationServer::SendIllFormedResponse (const StringExtractorGDBRem
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendOKResponse ()
 {
-    return SendPacketNoLock ("OK", 2);
+    return SendPacketNoLock ("OK");
 }
 
 bool
