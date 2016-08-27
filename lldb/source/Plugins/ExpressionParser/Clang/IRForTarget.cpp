@@ -78,7 +78,7 @@ FindEntryInstruction (llvm::Function *function)
 IRForTarget::IRForTarget (lldb_private::ClangExpressionDeclMap *decl_map,
                           bool resolve_vars,
                           lldb_private::IRExecutionUnit &execution_unit,
-                          lldb_private::Stream *error_stream,
+                          lldb_private::Stream &error_stream,
                           const char *func_name) :
     ModulePass(ID),
     m_resolve_vars(resolve_vars),
@@ -239,8 +239,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
         if (log)
             log->PutCString("Result variable had no data");
 
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Result variable's name (%s) exists, but not its definition\n", result_name);
+        m_error_stream.Printf("Internal error [IRForTarget]: Result variable's name (%s) exists, but not its definition\n", result_name);
 
         return false;
     }
@@ -255,8 +254,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
         if (log)
             log->PutCString("Result variable isn't a GlobalVariable");
 
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Result variable (%s) is defined, but is not a global variable\n", result_name);
+        m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) is defined, but is not a global variable\n", result_name);
 
         return false;
     }
@@ -267,8 +265,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
         if (log)
             log->PutCString("Result variable doesn't have a corresponding Decl");
 
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Result variable (%s) does not have a corresponding Clang entity\n", result_name);
+        m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) does not have a corresponding Clang entity\n", result_name);
 
         return false;
     }
@@ -289,8 +286,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
         if (log)
             log->PutCString("Result variable Decl isn't a VarDecl");
 
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Result variable (%s)'s corresponding Clang entity isn't a variable\n", result_name);
+        m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s)'s corresponding Clang entity isn't a variable\n", result_name);
 
         return false;
     }
@@ -327,8 +323,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
             if (log)
                 log->PutCString("Expected result to have pointer type, but it did not");
 
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Lvalue result (%s) is not a pointer variable\n", result_name);
+            m_error_stream.Printf("Internal error [IRForTarget]: Lvalue result (%s) is not a pointer variable\n", result_name);
 
             return false;
         }
@@ -350,8 +345,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
         if (log)
             log->Printf("Result type has size 0");
 
-        if (m_error_stream)
-            m_error_stream->Printf("Error [IRForTarget]: Size of result type '%s' couldn't be determined\n",
+        m_error_stream.Printf("Error [IRForTarget]: Size of result type '%s' couldn't be determined\n",
                                    type_desc_stream.GetData());
         return false;
     }
@@ -422,8 +416,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
             if (log)
                 log->Printf("Couldn't find initializer for unused variable");
 
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Result variable (%s) has no writes and no initializer\n", result_name);
+            m_error_stream.Printf("Internal error [IRForTarget]: Result variable (%s) has no writes and no initializer\n", result_name);
 
             return false;
         }
@@ -478,8 +471,7 @@ IRForTarget::RewriteObjCConstString (llvm::GlobalVariable *ns_str,
             if (log)
                 log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
 
-            if (m_error_stream)
-                m_error_stream->Printf("Error [IRForTarget]: Rewriting an Objective-C constant string requires CFStringCreateWithBytes\n");
+            m_error_stream.Printf("Error [IRForTarget]: Rewriting an Objective-C constant string requires CFStringCreateWithBytes\n");
 
             return false;
         }
@@ -552,13 +544,12 @@ IRForTarget::RewriteObjCConstString (llvm::GlobalVariable *ns_str,
                                 llvm::cast<Instruction>(m_entry_instruction_finder.GetValue(function)));
     });
 
-    if (!UnfoldConstant(ns_str, nullptr, CFSCWB_Caller, m_entry_instruction_finder, nullptr))
+    if (!UnfoldConstant(ns_str, nullptr, CFSCWB_Caller, m_entry_instruction_finder, m_error_stream))
     {
         if (log)
             log->PutCString("Couldn't replace the NSString with the result of the call");
 
-        if (m_error_stream)
-            m_error_stream->Printf("Error [IRForTarget]: Couldn't replace an Objective-C constant string with a dynamic string\n");
+        m_error_stream.Printf("error [IRForTarget internal]: Couldn't replace an Objective-C constant string with a dynamic string\n");
 
         return false;
     }
@@ -593,8 +584,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString variable is not a GlobalVariable");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string is not a global variable\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string is not a global variable\n");
 
                 return false;
             }
@@ -604,8 +594,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString variable does not have an initializer");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string does not have an initializer\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string does not have an initializer\n");
 
                 return false;
             }
@@ -617,8 +606,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString variable's initializer is not a ConstantStruct");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string is not a structure constant\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string is not a structure constant\n");
 
                 return false;
             }
@@ -637,8 +625,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->Printf("NSString variable's initializer structure has an unexpected number of members.  Should be 4, is %d", nsstring_struct->getNumOperands());
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: The struct for an Objective-C constant string is not as expected\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: The struct for an Objective-C constant string is not as expected\n");
 
                 return false;
             }
@@ -650,8 +637,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString initializer's str element was empty");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string does not have a string initializer\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string does not have a string initializer\n");
 
                 return false;
             }
@@ -663,8 +649,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString initializer's str element is not a ConstantExpr");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer is not constant\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer is not constant\n");
 
                 return false;
             }
@@ -674,8 +659,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->Printf("NSString initializer's str element is not a GetElementPtr expression, it's a %s", nsstring_expr->getOpcodeName());
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer is not an array\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer is not an array\n");
 
                 return false;
             }
@@ -689,8 +673,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString initializer's str element is not a GlobalVariable");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to a global\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to a global\n");
 
                 return false;
             }
@@ -700,8 +683,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("NSString initializer's str element does not have an initializer");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to initialized data\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to initialized data\n");
 
                 return false;
             }
@@ -713,7 +695,7 @@ IRForTarget::RewriteObjCConstStrings()
                     log->PutCString("NSString initializer's str element is not a ConstantArray");
 
                 if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to an array\n");
+                    m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to an array\n");
 
                 return false;
             }
@@ -724,7 +706,7 @@ IRForTarget::RewriteObjCConstStrings()
                     log->PutCString("NSString initializer's str element is not a C string array");
 
                 if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to a C string\n");
+                    m_error_stream.Printf("Internal error [IRForTarget]: An Objective-C constant string's string initializer doesn't point to a C string\n");
 
                 return false;
             }
@@ -771,8 +753,7 @@ IRForTarget::RewriteObjCConstStrings()
                 if (log)
                     log->PutCString("__CFConstantStringClassReference is not a global variable");
 
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: Found a CFConstantStringClassReference, but it is not a global object\n");
+                m_error_stream.Printf("Internal error [IRForTarget]: Found a CFConstantStringClassReference, but it is not a global object\n");
 
                 return false;
             }
@@ -943,8 +924,7 @@ IRForTarget::RewriteObjCSelectors (BasicBlock &basic_block)
     {
         if (!RewriteObjCSelector(*iter))
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Couldn't change a static reference to an Objective-C selector to a dynamic reference\n");
+            m_error_stream.Printf("Internal error [IRForTarget]: Couldn't change a static reference to an Objective-C selector to a dynamic reference\n");
 
             if (log)
                 log->PutCString("Couldn't rewrite a reference to an Objective-C selector");
@@ -1058,8 +1038,7 @@ IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block)
                     if (log)
                         log->Printf("Rejecting a numeric persistent variable.");
 
-                    if (m_error_stream)
-                        m_error_stream->Printf("Error [IRForTarget]: Names starting with $0, $1, ... are reserved for use as result names\n");
+                    m_error_stream.Printf("Error [IRForTarget]: Names starting with $0, $1, ... are reserved for use as result names\n");
 
                     return false;
                 }
@@ -1077,8 +1056,7 @@ IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block)
     {
         if (!RewritePersistentAlloc(*iter))
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Couldn't rewrite the creation of a persistent variable\n");
+            m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite the creation of a persistent variable\n");
 
             if (log)
                 log->PutCString("Couldn't rewrite the creation of a persistent variable");
@@ -1318,8 +1296,7 @@ IRForTarget::MaybeHandleCallArguments (CallInst *Old)
          ++op_index)
         if (!MaybeHandleVariable(Old->getArgOperand(op_index))) // conservatively believe that this is a store
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Couldn't rewrite one of the arguments of a function call.\n");
+            m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite one of the arguments of a function call.\n");
 
             return false;
         }
@@ -1471,8 +1448,7 @@ IRForTarget::ResolveExternals (Function &llvm_function)
         {
             if (!HandleSymbol(&global_var))
             {
-                if (m_error_stream)
-                    m_error_stream->Printf("Error [IRForTarget]: Couldn't find Objective-C indirect ivar symbol %s\n", global_name.c_str());
+                m_error_stream.Printf("Error [IRForTarget]: Couldn't find Objective-C indirect ivar symbol %s\n", global_name.c_str());
 
                 return false;
             }
@@ -1481,8 +1457,7 @@ IRForTarget::ResolveExternals (Function &llvm_function)
         {
             if (!HandleObjCClass(&global_var))
             {
-                if (m_error_stream)
-                    m_error_stream->Printf("Error [IRForTarget]: Couldn't resolve the class for an Objective-C static method call\n");
+                m_error_stream.Printf("Error [IRForTarget]: Couldn't resolve the class for an Objective-C static method call\n");
 
                 return false;
             }
@@ -1491,8 +1466,7 @@ IRForTarget::ResolveExternals (Function &llvm_function)
         {
             if (!HandleObjCClass(&global_var))
             {
-                if (m_error_stream)
-                    m_error_stream->Printf("Error [IRForTarget]: Couldn't resolve the class for an Objective-C static method call\n");
+                m_error_stream.Printf("Error [IRForTarget]: Couldn't resolve the class for an Objective-C static method call\n");
 
                 return false;
             }
@@ -1501,8 +1475,7 @@ IRForTarget::ResolveExternals (Function &llvm_function)
         {
             if (!MaybeHandleVariable (&global_var))
             {
-                if (m_error_stream)
-                    m_error_stream->Printf("Internal error [IRForTarget]: Couldn't rewrite external variable %s\n", global_name.c_str());
+                m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite external variable %s\n", global_name.c_str());
 
                 return false;
             }
@@ -1605,10 +1578,8 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
                             llvm::Function *llvm_function,
                             FunctionValueCache &value_maker,
                             FunctionValueCache &entry_instruction_finder,
-                            lldb_private::Stream *error_stream)
+                            lldb_private::Stream &error_stream)
 {
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
     SmallVector<User*, 16> users;
 
     // We do this because the use list might change, invalidating our iterator.
@@ -1631,8 +1602,7 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
                 switch (constant_expr->getOpcode())
                 {
                 default:
-                    if (log)
-                        log->Printf("Unhandled constant expression type: \"%s\"", PrintValue(constant_expr).c_str());
+                    error_stream.Printf("error [IRForTarget internal]: Unhandled constant expression type: \"%s\"", PrintValue(constant_expr).c_str());
                     return false;
                 case Instruction::BitCast:
                     {
@@ -1695,8 +1665,7 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
             }
             else
             {
-                if (log)
-                    log->Printf("Unhandled constant type: \"%s\"", PrintValue(constant).c_str());
+                error_stream.Printf("error [IRForTarget internal]: Unhandled constant type: \"%s\"", PrintValue(constant).c_str());
                 return false;
             }
         }
@@ -1706,18 +1675,14 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
             {
                 if (llvm_function && inst->getParent()->getParent() != llvm_function)
                 {
-                    if (error_stream)
-                    {
-                        error_stream->PutCString("error: Capturing non-local variables in expressions is unsupported.\n");
-                    }
+                    error_stream.PutCString("error: Capturing non-local variables in expressions is unsupported.\n");
                     return false;
                 }
                 inst->replaceUsesOfWith(old_constant, value_maker.GetValue(inst->getParent()->getParent()));
             }
             else
             {
-                if (log)
-                    log->Printf("Unhandled non-constant type: \"%s\"", PrintValue(user).c_str());
+                error_stream.Printf("error [IRForTarget internal]: Unhandled non-constant type: \"%s\"", PrintValue(user).c_str());
                 return false;
             }
         }
@@ -1757,8 +1722,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
     if (iter == llvm_function.getArgumentList().end())
     {
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Wrapper takes no arguments (should take at least a struct pointer)");
+        m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes no arguments (should take at least a struct pointer)");
 
         return false;
     }
@@ -1771,8 +1735,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
         if (iter == llvm_function.getArgumentList().end())
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Wrapper takes only 'this' argument (should take a struct pointer too)");
+            m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes only 'this' argument (should take a struct pointer too)");
 
             return false;
         }
@@ -1785,16 +1748,14 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
         if (iter == llvm_function.getArgumentList().end())
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Wrapper takes only 'self' argument (should take '_cmd' and a struct pointer too)");
+            m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes only 'self' argument (should take '_cmd' and a struct pointer too)");
 
             return false;
         }
 
         if (!iter->getName().equals("_cmd"))
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Wrapper takes '%s' after 'self' argument (should take '_cmd')", iter->getName().str().c_str());
+            m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes '%s' after 'self' argument (should take '_cmd')", iter->getName().str().c_str());
 
             return false;
         }
@@ -1803,8 +1764,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
         if (iter == llvm_function.getArgumentList().end())
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Wrapper takes only 'self' and '_cmd' arguments (should take a struct pointer too)");
+            m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes only 'self' and '_cmd' arguments (should take a struct pointer too)");
 
             return false;
         }
@@ -1814,8 +1774,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
     if (!argument->getName().equals("$__lldb_arg"))
     {
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Wrapper takes an argument named '%s' instead of the struct pointer", argument->getName().str().c_str());
+        m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes an argument named '%s' instead of the struct pointer", argument->getName().str().c_str());
 
         return false;
     }
@@ -1828,8 +1787,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
     if (!FirstEntryInstruction)
     {
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Couldn't find the first instruction in the wrapper for use in rewriting");
+        m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find the first instruction in the wrapper for use in rewriting");
 
         return false;
     }
@@ -1839,8 +1797,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
     if (!offset_type)
     {
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Couldn't produce an offset type");
+        m_error_stream.Printf("Internal error [IRForTarget]: Couldn't produce an offset type");
 
         return false;
     }
@@ -1854,8 +1811,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
 
         if (!m_decl_map->GetStructElement (decl, value, offset, name, element_index))
         {
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Structure information is incomplete");
+            m_error_stream.Printf("Internal error [IRForTarget]: Structure information is incomplete");
 
             return false;
         }
@@ -1915,10 +1871,7 @@ IRForTarget::ReplaceVariables (Function &llvm_function)
             {
                 if (instruction->getParent()->getParent() != &llvm_function)
                 {
-                    if (m_error_stream)
-                    {
-                        m_error_stream->PutCString("error: Capturing non-local variables in expressions is unsupported.\n");
-                    }
+                    m_error_stream.PutCString("error: Capturing non-local variables in expressions is unsupported.\n");
                     return false;
                 }
                 value->replaceAllUsesWith(body_result_maker.GetValue(instruction->getParent()->getParent()));
@@ -1989,9 +1942,8 @@ IRForTarget::runOnModule (Module &llvm_module)
         if (log)
             log->Printf("Couldn't find \"%s()\" in the module", m_func_name.AsCString());
 
-        if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Couldn't find wrapper '%s' in the module",
-                                   m_func_name.AsCString());
+         m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find wrapper '%s' in the module",
+                               m_func_name.AsCString());
 
         return false;
     }
