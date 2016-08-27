@@ -9,7 +9,7 @@
 // RUN: %env_asan_opts=symbolize=0 not %run %t 2>&1 | %asan_symbolize | FileCheck %s
 // XFAIL: arm-linux-gnueabi
 // XFAIL: armv7l-unknown-linux-gnueabihf
-// UNSUPPORTED: x86_64h-apple,x86_64-apple
+// UNSUPPORTED: x86_64h-darwin,x86_64-darwin
 
 #if !defined(SHARED_LIB)
 #include <dlfcn.h>
