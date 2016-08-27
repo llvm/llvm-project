@@ -654,6 +654,8 @@ struct Allocator {
     fallback_mutex.Unlock();
     allocator.ForceUnlock();
   }
+
+  void ReleaseToOS() { allocator.ReleaseToOS(); }
 };
 
 static Allocator instance(LINKER_INITIALIZED);
@@ -695,8 +697,11 @@ StackTrace AsanChunkView::GetFreeStack() {
   return GetStackTraceFromId(GetFreeStackId());
 }
 
+void ReleaseToOS() { instance.ReleaseToOS(); }
+
 void InitializeAllocator(const AllocatorOptions &options) {
   instance.Initialize(options);
+  SetAllocatorReleaseToOSCallback(ReleaseToOS);
 }
 
 void ReInitializeAllocator(const AllocatorOptions &options) {

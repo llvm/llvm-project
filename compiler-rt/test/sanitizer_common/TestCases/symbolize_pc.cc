@@ -1,5 +1,6 @@
 // RUN: %clangxx -O0 %s -o %t
 // RUN: %env_tool_opts=strip_path_prefix=/TestCases/ %run %t 2>&1 | FileCheck %s
+// REQUIRES: x86_64-target-arch
 //
 // Tests __sanitizer_symbolize_pc.
 #include <stdio.h>

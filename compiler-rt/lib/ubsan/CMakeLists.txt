@@ -33,8 +33,7 @@ set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(ON UBSAN_CXXFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
-add_custom_target(ubsan)
-set_target_properties(ubsan PROPERTIES FOLDER "Compiler-RT Misc")
+add_compiler_rt_component(ubsan)
 
 if(APPLE)
   set(UBSAN_COMMON_SOURCES ${UBSAN_SOURCES})
@@ -125,5 +124,3 @@ else()
     endif()
   endif()
 endif()
-
-add_dependencies(compiler-rt ubsan)

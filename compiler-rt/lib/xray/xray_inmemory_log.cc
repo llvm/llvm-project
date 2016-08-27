@@ -53,9 +53,6 @@ static void retryingWriteAll(int Fd, char *Begin, char *End) {
       Report("Failed to write; errno = %d", errno);
       return;
     }
-
-    // FIXME: Figure out whether/how to assert properly.
-    assert(static_cast<uint64_t>(Written) <= TotalBytes);
     TotalBytes -= Written;
     if (TotalBytes == 0)
       break;

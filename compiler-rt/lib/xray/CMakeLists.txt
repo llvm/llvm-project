@@ -23,7 +23,8 @@ add_compiler_rt_object_libraries(RTXray
     SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS})
 
-add_custom_target(xray)
+add_compiler_rt_component(xray)
+
 set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
 		RTSanitizerCommon
 		RTSanitizerCommonLibc)
@@ -40,5 +41,3 @@ foreach (arch ${XRAY_SUPPORTED_ARCH})
 						PARENT_TARGET xray)
 		endif ()
 endforeach()
-
-add_dependencies(compiler-rt xray)

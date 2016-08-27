@@ -100,7 +100,7 @@ bool MprotectReadOnly(uptr addr, uptr size);
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
-void FlushUnneededShadowMemory(uptr addr, uptr size);
+void ReleaseMemoryToOS(uptr addr, uptr size);
 void IncreaseTotalMmap(uptr size);
 void DecreaseTotalMmap(uptr size);
 uptr GetRSS();
@@ -330,6 +330,7 @@ void SleepForMillis(int millis);
 u64 NanoTime();
 int Atexit(void (*function)(void));
 void SortArray(uptr *array, uptr size);
+void SortArray(u32 *array, uptr size);
 bool TemplateMatch(const char *templ, const char *str);
 
 // Exit
@@ -370,6 +371,12 @@ void SetCheckFailedCallback(CheckFailedCallbackType callback);
 // (exceeded==false).
 // The callback should be registered once at the tool init time.
 void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
+
+// Callback to be called when we want to try releasing unused allocator memory
+// back to the OS.
+typedef void (*AllocatorReleaseToOSCallback)();
+// The callback should be registered once at the tool init time.
+void SetAllocatorReleaseToOSCallback(AllocatorReleaseToOSCallback Callback);
 
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
