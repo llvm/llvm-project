@@ -198,6 +198,7 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::SELECT_CC);
   setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
+  setTargetDAGCombine(ISD::LOAD);
 }
 
 const R600Subtarget *R600TargetLowering::getSubtarget() const {

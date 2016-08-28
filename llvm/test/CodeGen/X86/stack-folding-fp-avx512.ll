@@ -78,7 +78,7 @@ define <8 x double> @stack_fold_andnpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 
 define <16 x float> @stack_fold_andnps_zmm(<16 x float> %a0, <16 x float> %a1) {
   ;CHECK-LABEL: stack_fold_andnps_zmm
-  ;CHECK:       vpandnd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  ;CHECK:       vpandnq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = bitcast <16 x float> %a0 to <16 x i32>
   %3 = bitcast <16 x float> %a1 to <16 x i32>
@@ -105,7 +105,7 @@ define <8 x double> @stack_fold_andpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 
 define <16 x float> @stack_fold_andps_zmm(<16 x float> %a0, <16 x float> %a1) {
   ;CHECK-LABEL: stack_fold_andps_zmm
-  ;CHECK:       vpandd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  ;CHECK:       vpandq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = bitcast <16 x float> %a0 to <16 x i32>
   %3 = bitcast <16 x float> %a1 to <16 x i32>
@@ -295,7 +295,7 @@ define <8 x double> @stack_fold_orpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 
 define <16 x float> @stack_fold_orps_zmm(<16 x float> %a0, <16 x float> %a1) {
   ;CHECK-LABEL: stack_fold_orps_zmm
-  ;CHECK:       vpord {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  ;CHECK:       vporq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = bitcast <16 x float> %a0 to <16 x i32>
   %3 = bitcast <16 x float> %a1 to <16 x i32>
@@ -375,7 +375,7 @@ define <8 x double> @stack_fold_xorpd_zmm(<8 x double> %a0, <8 x double> %a1) {
 
 define <16 x float> @stack_fold_xorps_zmm(<16 x float> %a0, <16 x float> %a1) {
   ;CHECK-LABEL: stack_fold_xorps_zmm
-  ;CHECK:       vpxord {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  ;CHECK:       vpxorq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = bitcast <16 x float> %a0 to <16 x i32>
   %3 = bitcast <16 x float> %a1 to <16 x i32>
