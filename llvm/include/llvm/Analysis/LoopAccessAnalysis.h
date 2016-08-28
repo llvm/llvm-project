@@ -335,9 +335,11 @@ public:
   struct PointerInfo {
     /// Holds the pointer value that we need to check.
     TrackingVH<Value> PointerValue;
-    /// Holds the pointer value at the beginning of the loop.
+    /// Holds the smallest byte address accessed by the pointer throughout all
+    /// iterations of the loop.
     const SCEV *Start;
-    /// Holds the pointer value at the end of the loop.
+    /// Holds the largest byte address accessed by the pointer throughout all
+    /// iterations of the loop, plus 1.
     const SCEV *End;
     /// Holds the information if this pointer is used for writing to memory.
     bool IsWritePtr;

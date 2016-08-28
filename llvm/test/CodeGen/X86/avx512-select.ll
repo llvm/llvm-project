@@ -10,7 +10,7 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; CHECK-NEXT:  ## BB#1:
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; CHECK-NEXT:  LBB0_2:
-; CHECK-NEXT:    vpxord %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
   %selres = select i1 %cmpres, <16 x i32> zeroinitializer, <16 x i32> %b

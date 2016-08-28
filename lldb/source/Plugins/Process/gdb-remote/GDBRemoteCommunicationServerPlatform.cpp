@@ -217,7 +217,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer (StringExtractorGD
         response.PutChar(';');
     }
 
-    PacketResult packet_result = SendPacketNoLock(response.GetData(), response.GetSize());
+    PacketResult packet_result = SendPacketNoLock(response.GetString());
     if (packet_result != PacketResult::Success)
     {
         if (debugserver_pid != LLDB_INVALID_PROCESS_ID)

@@ -1111,14 +1111,15 @@ public:
     void clear() _NOEXCEPT;
 
     void swap(__tree& __t)
+#if _LIBCPP_STD_VER <= 11
         _NOEXCEPT_(
             __is_nothrow_swappable<value_compare>::value
-#if _LIBCPP_STD_VER <= 11
             && (!__node_traits::propagate_on_container_swap::value ||
                  __is_nothrow_swappable<__node_allocator>::value)
-#endif
             );
-
+#else
+        _NOEXCEPT_(__is_nothrow_swappable<value_compare>::value);
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Key, class ..._Args>
@@ -1797,13 +1798,15 @@ __tree<_Tp, _Compare, _Allocator>::destroy(__node_pointer __nd) _NOEXCEPT
 template <class _Tp, class _Compare, class _Allocator>
 void
 __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
+#if _LIBCPP_STD_VER <= 11
         _NOEXCEPT_(
             __is_nothrow_swappable<value_compare>::value
-#if _LIBCPP_STD_VER <= 11
             && (!__node_traits::propagate_on_container_swap::value ||
                  __is_nothrow_swappable<__node_allocator>::value)
-#endif
             )
+#else
+        _NOEXCEPT_(__is_nothrow_swappable<value_compare>::value)
+#endif
 {
     using _VSTD::swap;
     swap(__begin_node_, __t.__begin_node_);

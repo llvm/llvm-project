@@ -418,7 +418,7 @@ GDBRemoteCommunicationServerCommon::Handle_qUserName (StringExtractorGDBRemote &
         {
             StreamString response;
             response.PutCStringAsRawHex8 (name.c_str());
-            return SendPacketNoLock (response.GetData(), response.GetSize());
+            return SendPacketNoLock (response.GetString());
         }
     }
     if (log)
@@ -442,7 +442,7 @@ GDBRemoteCommunicationServerCommon::Handle_qGroupName (StringExtractorGDBRemote 
         {
             StreamString response;
             response.PutCStringAsRawHex8 (name.c_str());
-            return SendPacketNoLock (response.GetData(), response.GetSize());
+            return SendPacketNoLock (response.GetString());
         }
     }
 #endif
@@ -561,7 +561,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead (StringExtractorGDBRemote
             if (count == UINT64_MAX)
             {
                 response.Printf("F-1:%i", EINVAL);
-                return SendPacketNoLock(response.GetData(), response.GetSize());
+                return SendPacketNoLock(response.GetString());
             }
 
             std::string buffer(count, 0);
@@ -576,7 +576,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead (StringExtractorGDBRemote
                 response.PutChar(';');
                 response.PutEscapedBytes(&buffer[0], bytes_read);
             }
-            return SendPacketNoLock(response.GetData(), response.GetSize());
+            return SendPacketNoLock(response.GetString());
         }
     }
     return SendErrorResponse(21);
@@ -614,7 +614,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite (StringExtractorGDBRemot
             {
                 response.Printf ("-1,%i", EINVAL);
             }
-            return SendPacketNoLock(response.GetData(), response.GetSize());
+            return SendPacketNoLock(response.GetString());
         }
     }
     return SendErrorResponse(27);

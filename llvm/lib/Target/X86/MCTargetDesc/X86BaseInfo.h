@@ -730,12 +730,9 @@ namespace X86II {
   /// isX86_64ExtendedReg - Is the MachineOperand a x86-64 extended (r8 or
   /// higher) register?  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
-    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
-        (RegNo >= X86::XMM24 && RegNo <= X86::XMM31) ||
-        (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
-        (RegNo >= X86::YMM24 && RegNo <= X86::YMM31) ||
-        (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM15) ||
-        (RegNo >= X86::ZMM24 && RegNo <= X86::ZMM31))
+    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM31) ||
+        (RegNo >= X86::YMM8 && RegNo <= X86::YMM31) ||
+        (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
       return true;
 
     switch (RegNo) {
@@ -750,6 +747,8 @@ namespace X86II {
     case X86::R12B:  case X86::R13B:  case X86::R14B:  case X86::R15B:
     case X86::CR8:   case X86::CR9:   case X86::CR10:  case X86::CR11:
     case X86::CR12:  case X86::CR13:  case X86::CR14:  case X86::CR15:
+    case X86::DR8:   case X86::DR9:   case X86::DR10:  case X86::DR11:
+    case X86::DR12:  case X86::DR13:  case X86::DR14:  case X86::DR15:
       return true;
     }
     return false;
