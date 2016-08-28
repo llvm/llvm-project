@@ -893,8 +893,11 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                        static_cast<void *>(context), regclass, discriminator,
                        representation);
   switch (regclass) {
-    case _UVRSC_CORE:
-    case _UVRSC_WMMXC: {
+    case _UVRSC_WMMXC:
+#if !defined(__ARM_WMMX)
+      break;
+#endif
+    case _UVRSC_CORE: {
       if (representation != _UVRSD_UINT32)
         return _UVRSR_FAILED;
       // When popping SP from the stack, we don't want to override it from the
@@ -922,8 +925,11 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
       }
       return _UVRSR_OK;
     }
-    case _UVRSC_VFP:
-    case _UVRSC_WMMXD: {
+    case _UVRSC_WMMXD:
+#if !defined(__ARM_WMMX)
+      break;
+#endif
+    case _UVRSC_VFP: {
       if (representation != _UVRSD_VFPX && representation != _UVRSD_DOUBLE)
         return _UVRSR_FAILED;
       uint32_t first = discriminator >> 16;

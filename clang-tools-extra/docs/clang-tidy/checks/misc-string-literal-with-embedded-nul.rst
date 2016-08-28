@@ -3,7 +3,7 @@
 misc-string-literal-with-embedded-nul
 =====================================
 
-Finds occurences of string literal with embedded NUL character and validates
+Finds occurrences of string literal with embedded NUL character and validates
 their usage.
 
 Invalid escaping
