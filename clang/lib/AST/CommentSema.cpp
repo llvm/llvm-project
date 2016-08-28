@@ -950,20 +950,19 @@ unsigned Sema::resolveParmVarReference(StringRef Name,
 
 namespace {
 class SimpleTypoCorrector {
+  const NamedDecl *BestDecl;
+
   StringRef Typo;
   const unsigned MaxEditDistance;
 
-  const NamedDecl *BestDecl;
   unsigned BestEditDistance;
   unsigned BestIndex;
   unsigned NextIndex;
 
 public:
-  SimpleTypoCorrector(StringRef Typo) :
-      Typo(Typo), MaxEditDistance((Typo.size() + 2) / 3),
-      BestDecl(nullptr), BestEditDistance(MaxEditDistance + 1),
-      BestIndex(0), NextIndex(0)
-  { }
+  explicit SimpleTypoCorrector(StringRef Typo)
+      : BestDecl(nullptr), Typo(Typo), MaxEditDistance((Typo.size() + 2) / 3),
+        BestEditDistance(MaxEditDistance + 1), BestIndex(0), NextIndex(0) {}
 
   void addDecl(const NamedDecl *ND);
 
