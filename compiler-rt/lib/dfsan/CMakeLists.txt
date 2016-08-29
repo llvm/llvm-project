@@ -11,8 +11,7 @@ append_rtti_flag(OFF DFSAN_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding DFSAN_COMMON_CFLAGS)
 
 # Static runtime library.
-add_custom_target(dfsan)
-set_target_properties(dfsan PROPERTIES FOLDER "Compiler-RT Misc")
+add_compiler_rt_component(dfsan)
 
 foreach(arch ${DFSAN_SUPPORTED_ARCH})
   set(DFSAN_CFLAGS ${DFSAN_COMMON_CFLAGS})
@@ -46,5 +45,3 @@ add_custom_command(OUTPUT ${dfsan_abilist_filename}
 add_dependencies(dfsan dfsan_abilist)
 install(FILES ${dfsan_abilist_filename}
         DESTINATION ${COMPILER_RT_INSTALL_PATH})
-
-add_dependencies(compiler-rt dfsan)

@@ -103,6 +103,25 @@ class PseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
   let isCodeGenOnly = 1;
 }
 
+class SPseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
+  : PseudoInstSI<outs, ins, pattern> {
+  let SALU = 1;
+}
+
+class VPseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
+  : PseudoInstSI<outs, ins, pattern> {
+  let VALU = 1;
+  let Uses = [EXEC];
+}
+
+class CFPseudoInstSI<dag outs, dag ins, list<dag> pattern = [],
+  bit UseExec = 0, bit DefExec = 0> :
+  SPseudoInstSI<outs, ins, pattern> {
+
+  let Uses = !if(UseExec, [EXEC], []);
+  let Defs = !if(DefExec, [EXEC, SCC], [SCC]);
+}
+
 class Enc32 {
   field bits<32> Inst;
   int Size = 4;

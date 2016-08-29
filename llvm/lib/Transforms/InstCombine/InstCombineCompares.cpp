@@ -1389,65 +1389,29 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
-/// Fold icmp (and X, C2), C1.
-Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
-                                                 BinaryOperator *And,
-                                                 const APInt *C1) {
+/// Fold icmp (and (sh X, Y), C2), C1.
+Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
+                                            const APInt *C1) {
   // FIXME: This check restricts all folds under here to scalar types.
   ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
   if (!RHS)
     return nullptr;
 
+  // FIXME: This could be passed in as APInt.
   auto *C2 = dyn_cast<ConstantInt>(And->getOperand(1));
   if (!C2)
     return nullptr;
-
-  if (!And->hasOneUse() || !And->getOperand(0)->hasOneUse())
-    return nullptr;
-
-  // If the LHS is an AND of a truncating cast, we can widen the and/compare to
-  // be the input width without changing the value produced, eliminating a cast.
-  if (TruncInst *Cast = dyn_cast<TruncInst>(And->getOperand(0))) {
-    // We can do this transformation if either the AND constant does not have
-    // its sign bit set or if it is an equality comparison. Extending a
-    // relational comparison when we're checking the sign bit would not work.
-    if (Cmp.isEquality() || (!C2->isNegative() && C1->isNonNegative())) {
-      Value *NewAnd = Builder->CreateAnd(
-          Cast->getOperand(0), ConstantExpr::getZExt(C2, Cast->getSrcTy()));
-      NewAnd->takeName(And);
-      return new ICmpInst(Cmp.getPredicate(), NewAnd,
-                          ConstantExpr::getZExt(RHS, Cast->getSrcTy()));
-    }
-  }
-
-  // If the LHS is an AND of a zext, and we have an equality compare, we can
-  // shrink the and/compare to the smaller type, eliminating the cast.
-  if (ZExtInst *Cast = dyn_cast<ZExtInst>(And->getOperand(0))) {
-    IntegerType *Ty = cast<IntegerType>(Cast->getSrcTy());
-    // Make sure we don't compare the upper bits, SimplifyDemandedBits
-    // should fold the icmp to true/false in that case.
-    if (Cmp.isEquality() && C1->getActiveBits() <= Ty->getBitWidth()) {
-      Value *NewAnd = Builder->CreateAnd(Cast->getOperand(0),
-                                         ConstantExpr::getTrunc(C2, Ty));
-      NewAnd->takeName(And);
-      return new ICmpInst(Cmp.getPredicate(), NewAnd,
-                          ConstantExpr::getTrunc(RHS, Ty));
-    }
-  }
 
   // If this is: (X >> C3) & C2 != C1 (where any shift and any compare could
   // exist), turn it into (X & (C2 << C3)) != (C1 << C3). This happens a LOT in
   // code produced by the clang front-end, for bitfield access.
   BinaryOperator *Shift = dyn_cast<BinaryOperator>(And->getOperand(0));
-  if (Shift && !Shift->isShift())
-    Shift = nullptr;
-
-  ConstantInt *ShAmt;
-  ShAmt = Shift ? dyn_cast<ConstantInt>(Shift->getOperand(1)) : nullptr;
+  if (!Shift || !Shift->isShift())
+    return nullptr;
 
   // This seemingly simple opportunity to fold away a shift turns out to be
   // rather complicated. See PR17827 for details.
-  if (ShAmt) {
+  if (auto *ShAmt = dyn_cast<ConstantInt>(Shift->getOperand(1))) {
     bool CanFold = false;
     unsigned ShiftOpcode = Shift->getOpcode();
     if (ShiftOpcode == Instruction::AShr) {
@@ -1513,7 +1477,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
   // Turn ((X >> Y) & C2) == 0  into  (X & (C2 << Y)) == 0.  The latter is
   // preferable because it allows the C2 << Y expression to be hoisted out of a
   // loop if Y is invariant and X is not.
-  if (Shift && Shift->hasOneUse() && *C1 == 0 && Cmp.isEquality() &&
+  if (Shift->hasOneUse() && *C1 == 0 && Cmp.isEquality() &&
       !Shift->isArithmeticShift() && !isa<Constant>(Shift->getOperand(0))) {
     // Compute C2 << Y.
     Value *NS;
@@ -1531,6 +1495,59 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
     Cmp.setOperand(0, NewAnd);
     return &Cmp;
   }
+
+  return nullptr;
+}
+
+/// Fold icmp (and X, C2), C1.
+Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
+                                                 BinaryOperator *And,
+                                                 const APInt *C1) {
+  // FIXME: This check restricts all folds under here to scalar types.
+  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
+  if (!RHS)
+    return nullptr;
+
+  // FIXME: Use m_APInt.
+  auto *C2 = dyn_cast<ConstantInt>(And->getOperand(1));
+  if (!C2)
+    return nullptr;
+
+  if (!And->hasOneUse() || !And->getOperand(0)->hasOneUse())
+    return nullptr;
+
+  // If the LHS is an AND of a truncating cast, we can widen the and/compare to
+  // be the input width without changing the value produced, eliminating a cast.
+  if (TruncInst *Cast = dyn_cast<TruncInst>(And->getOperand(0))) {
+    // We can do this transformation if either the AND constant does not have
+    // its sign bit set or if it is an equality comparison. Extending a
+    // relational comparison when we're checking the sign bit would not work.
+    if (Cmp.isEquality() || (!C2->isNegative() && C1->isNonNegative())) {
+      Value *NewAnd = Builder->CreateAnd(
+          Cast->getOperand(0), ConstantExpr::getZExt(C2, Cast->getSrcTy()));
+      NewAnd->takeName(And);
+      return new ICmpInst(Cmp.getPredicate(), NewAnd,
+                          ConstantExpr::getZExt(RHS, Cast->getSrcTy()));
+    }
+  }
+
+  // If the LHS is an AND of a zext, and we have an equality compare, we can
+  // shrink the and/compare to the smaller type, eliminating the cast.
+  if (ZExtInst *Cast = dyn_cast<ZExtInst>(And->getOperand(0))) {
+    IntegerType *Ty = cast<IntegerType>(Cast->getSrcTy());
+    // Make sure we don't compare the upper bits, SimplifyDemandedBits
+    // should fold the icmp to true/false in that case.
+    if (Cmp.isEquality() && C1->getActiveBits() <= Ty->getBitWidth()) {
+      Value *NewAnd = Builder->CreateAnd(Cast->getOperand(0),
+                                         ConstantExpr::getTrunc(C2, Ty));
+      NewAnd->takeName(And);
+      return new ICmpInst(Cmp.getPredicate(), NewAnd,
+                          ConstantExpr::getTrunc(RHS, Ty));
+    }
+  }
+
+  if (Instruction *I = foldICmpAndShift(Cmp, And, C1))
+    return I;
 
   // (icmp pred (and (or (lshr A, B), A), 1), 0) -->
   //    (icmp pred (and A, (or (shl 1, B), 1), 0))
@@ -1593,48 +1610,50 @@ Instruction *InstCombiner::foldICmpAndConstant(ICmpInst &Cmp,
   if (Instruction *I = foldICmpAndConstConst(Cmp, And, C))
     return I;
 
-  // FIXME: This check restricts all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!RHS)
-    return nullptr;
+  // TODO: These all require that Y is constant too, so refactor with the above.
 
-  // Try to optimize things like "A[i]&42 == 0" to index computations.
-  if (LoadInst *LI = dyn_cast<LoadInst>(And->getOperand(0))) {
-    if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
-      if (GlobalVariable *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0)))
+  // Try to optimize things like "A[i] & 42 == 0" to index computations.
+  Value *X = And->getOperand(0);
+  Value *Y = And->getOperand(1);
+  if (auto *LI = dyn_cast<LoadInst>(X))
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
+      if (auto *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0)))
         if (GV->isConstant() && GV->hasDefinitiveInitializer() &&
-            !LI->isVolatile() && isa<ConstantInt>(And->getOperand(1))) {
-          ConstantInt *C = cast<ConstantInt>(And->getOperand(1));
-          if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, Cmp, C))
+            !LI->isVolatile() && isa<ConstantInt>(Y)) {
+          ConstantInt *C2 = cast<ConstantInt>(Y);
+          if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, Cmp, C2))
             return Res;
         }
-  }
+
+  if (!Cmp.isEquality())
+    return nullptr;
 
   // X & -C == -C -> X >  u ~C
   // X & -C != -C -> X <= u ~C
   //   iff C is a power of 2
-  if (Cmp.isEquality() && RHS == And->getOperand(1) && (-(*C)).isPowerOf2())
-    return new ICmpInst(Cmp.getPredicate() == ICmpInst::ICMP_EQ
-                            ? ICmpInst::ICMP_UGT
-                            : ICmpInst::ICMP_ULE,
-                        And->getOperand(0), SubOne(RHS));
+  if (Cmp.getOperand(1) == Y && (-(*C)).isPowerOf2()) {
+    auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT
+                                                          : CmpInst::ICMP_ULE;
+    return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
+  }
 
-  // (icmp eq (and %A, C), 0) -> (icmp sgt (trunc %A), -1)
-  //   iff C is a power of 2
-  if (Cmp.isEquality() && And->hasOneUse() && match(RHS, m_Zero())) {
-    if (auto *CI = dyn_cast<ConstantInt>(And->getOperand(1))) {
-      const APInt &AI = CI->getValue();
-      int32_t ExactLogBase2 = AI.exactLogBase2();
-      if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
-        Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
-        Value *Trunc = Builder->CreateTrunc(And->getOperand(0), NTy);
-        return new ICmpInst(Cmp.getPredicate() == ICmpInst::ICMP_EQ
-                                ? ICmpInst::ICMP_SGE
-                                : ICmpInst::ICMP_SLT,
-                            Trunc, Constant::getNullValue(NTy));
-      }
+  // (X & C2) == 0 -> (trunc X) >= 0
+  // (X & C2) != 0 -> (trunc X) <  0
+  //   iff C2 is a power of 2 and it masks the sign bit of a legal integer type.
+  const APInt *C2;
+  if (And->hasOneUse() && *C == 0 && match(Y, m_APInt(C2))) {
+    int32_t ExactLogBase2 = C2->exactLogBase2();
+    if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
+      Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
+      if (And->getType()->isVectorTy())
+        NTy = VectorType::get(NTy, And->getType()->getVectorNumElements());
+      Value *Trunc = Builder->CreateTrunc(X, NTy);
+      auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE
+                                                            : CmpInst::ICMP_SLT;
+      return new ICmpInst(NewPred, Trunc, Constant::getNullValue(NTy));
     }
   }
+
   return nullptr;
 }
 

@@ -87,6 +87,10 @@ public:
     /// the first two results.
     MoreElements,
 
+    /// The operation itself must be expressed in terms of simpler actions on
+    /// this target. E.g. a SREM replaced by an SDIV and subtraction.
+    Lower,
+
     /// The operation should be implemented as a call to some kind of runtime
     /// support library. For example this usually happens on machines that don't
     /// support floating-point operations natively.

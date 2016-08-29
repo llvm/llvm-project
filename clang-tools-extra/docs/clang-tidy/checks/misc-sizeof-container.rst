@@ -12,7 +12,7 @@ method are considered containers, with the exception of ``std::bitset`` and
 
 Examples:
 
-.. code:: c++
+.. code-block:: c++
 
   std::string s;
   int a = 47 + sizeof(s); // warning: sizeof() doesn't return the size of the container. Did you mean .size()?
@@ -24,4 +24,3 @@ Examples:
 
   std::array<int, 3> std_array;
   int d = sizeof(std_array); // no warning, probably intended.
-

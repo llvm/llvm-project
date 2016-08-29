@@ -37,6 +37,9 @@ def MULLO_INT_cm : MULLO_INT_Common<0x8F>;
 def MULHI_INT_cm : MULHI_INT_Common<0x90>;
 def MULLO_UINT_cm : MULLO_UINT_Common<0x91>;
 def MULHI_UINT_cm : MULHI_UINT_Common<0x92>;
+def MULHI_INT_cm24 : MULHI_INT24_Common<0x5c>;
+def MULHI_UINT_cm24 : MULHI_UINT24_Common<0xb2>;
+
 def RECIPSQRT_CLAMPED_cm : RECIPSQRT_CLAMPED_Common<0x87>;
 def EXP_IEEE_cm : EXP_IEEE_Common<0x81>;
 def LOG_IEEE_cm : LOG_IEEE_Common<0x83>;

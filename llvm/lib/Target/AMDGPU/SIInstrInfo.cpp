@@ -880,29 +880,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
-
-  case AMDGPU::V_CNDMASK_B64_PSEUDO: {
-    unsigned Dst = MI.getOperand(0).getReg();
-    unsigned DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
-    unsigned DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
-    unsigned Src0 = MI.getOperand(1).getReg();
-    unsigned Src1 = MI.getOperand(2).getReg();
-    const MachineOperand &SrcCond = MI.getOperand(3);
-
-    BuildMI(MBB, MI, DL, get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
-      .addReg(RI.getSubReg(Src0, AMDGPU::sub0))
-      .addReg(RI.getSubReg(Src1, AMDGPU::sub0))
-      .addReg(SrcCond.getReg())
-      .addReg(Dst, RegState::Implicit | RegState::Define);
-    BuildMI(MBB, MI, DL, get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
-      .addReg(RI.getSubReg(Src0, AMDGPU::sub1))
-      .addReg(RI.getSubReg(Src1, AMDGPU::sub1))
-      .addReg(SrcCond.getReg(), getKillRegState(SrcCond.isKill()))
-      .addReg(Dst, RegState::Implicit | RegState::Define);
-    MI.eraseFromParent();
-    break;
-  }
-
   case AMDGPU::SI_PC_ADD_REL_OFFSET: {
     MachineFunction &MF = *MBB.getParent();
     unsigned Reg = MI.getOperand(0).getReg();

@@ -69,7 +69,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
     uptr page_size = GetPageSizeCached();
     uptr shadow_beg = RoundUpTo(MemToShadow(p), page_size);
     uptr shadow_end = RoundDownTo(MemToShadow(p + size), page_size);
-    FlushUnneededShadowMemory(shadow_beg, shadow_end - shadow_beg);
+    ReleaseMemoryToOS(shadow_beg, shadow_end - shadow_beg);
 }
 
 void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {

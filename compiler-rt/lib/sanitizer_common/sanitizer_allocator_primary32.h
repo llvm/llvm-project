@@ -231,6 +231,10 @@ class SizeClassAllocator32 {
     return 0;
   }
 
+  // This is empty here. Currently only implemented in 64-bit allocator.
+  void ReleaseToOS() { }
+
+
   typedef SizeClassMap SizeClassMapT;
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
 

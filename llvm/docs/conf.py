@@ -249,5 +249,5 @@ for name in os.listdir(command_guide_path):
 # If true, show URL addresses after external links.
 #man_show_urls = False
 
-# FIXME: Define intersphinx configration.
+# FIXME: Define intersphinx configuration.
 intersphinx_mapping = {}

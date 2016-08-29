@@ -122,7 +122,7 @@ define void @local_f64_store_0_offset(double addrspace(3)* %out) nounwind {
 
 ; BOTH-LABEL: {{^}}local_v2i64_store:
 ; BOTH-NOT: ADD
-; BOTH: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:15 offset1:14
+; BOTH: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:14 offset1:15
 ; BOTH: s_endpgm
 define void @local_v2i64_store(<2 x i64> addrspace(3)* %out) nounwind {
   %gep = getelementptr <2 x i64>, <2 x i64> addrspace(3)* %out, i32 7
@@ -132,7 +132,7 @@ define void @local_v2i64_store(<2 x i64> addrspace(3)* %out) nounwind {
 
 ; BOTH-LABEL: {{^}}local_v2i64_store_0_offset:
 ; BOTH-NOT: ADD
-; BOTH: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:1
+; BOTH: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset1:1
 ; BOTH: s_endpgm
 define void @local_v2i64_store_0_offset(<2 x i64> addrspace(3)* %out) nounwind {
   store <2 x i64> <i64 1234, i64 1234>, <2 x i64> addrspace(3)* %out, align 16
@@ -141,8 +141,8 @@ define void @local_v2i64_store_0_offset(<2 x i64> addrspace(3)* %out) nounwind {
 
 ; BOTH-LABEL: {{^}}local_v4i64_store:
 ; BOTH-NOT: ADD
-; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:31 offset1:30
-; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:29 offset1:28
+; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:30 offset1:31
+; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:28 offset1:29
 ; BOTH: s_endpgm
 define void @local_v4i64_store(<4 x i64> addrspace(3)* %out) nounwind {
   %gep = getelementptr <4 x i64>, <4 x i64> addrspace(3)* %out, i32 7
@@ -152,8 +152,8 @@ define void @local_v4i64_store(<4 x i64> addrspace(3)* %out) nounwind {
 
 ; BOTH-LABEL: {{^}}local_v4i64_store_0_offset:
 ; BOTH-NOT: ADD
-; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:3 offset1:2
-; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:1
+; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset0:2 offset1:3
+; BOTH-DAG: ds_write2_b64 v{{[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset1:1
 ; BOTH: s_endpgm
 define void @local_v4i64_store_0_offset(<4 x i64> addrspace(3)* %out) nounwind {
   store <4 x i64> <i64 1234, i64 1234, i64 1234, i64 1234>, <4 x i64> addrspace(3)* %out, align 16

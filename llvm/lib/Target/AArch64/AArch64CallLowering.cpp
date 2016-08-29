@@ -70,19 +70,22 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
   for (unsigned i = 0; i != NumArgs; ++i, ++CurVT) {
     bool Res = AssignFn(i, *CurVT, *CurVT, CCValAssign::Full, ISD::ArgFlagsTy(),
                         CCInfo);
-    assert(!Res && "Call operand has unhandled type");
-    (void)Res;
+    if (Res)
+      return false;
   }
   assert(ArgLocs.size() == ArgTypes.size() &&
          "We have a different number of location and args?!");
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
 
-    assert(VA.isRegLoc() && "Not yet implemented");
+    // FIXME: Support non-register argument.
+    if (!VA.isRegLoc())
+      return false;
 
     switch (VA.getLocInfo()) {
     default:
-      llvm_unreachable("Unknown loc info!");
+      //  Unknown loc info!
+      return false;
     case CCValAssign::Full:
       break;
     case CCValAssign::BCvt:
@@ -94,8 +97,8 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
     case CCValAssign::SExt:
     case CCValAssign::ZExt:
       // Zero/Sign extend the register.
-      assert(0 && "Not yet implemented");
-      break;
+      // FIXME: Not yet implemented
+      return false;
     }
 
     // Everything checks out, tell the caller where we've decided this

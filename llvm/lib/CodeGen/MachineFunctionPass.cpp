@@ -62,7 +62,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   bool RV = runOnMachineFunction(MF);
 
   MFProps.set(SetProperties);
-  MFProps.clear(ClearedProperties);
+  MFProps.reset(ClearedProperties);
   return RV;
 }
 

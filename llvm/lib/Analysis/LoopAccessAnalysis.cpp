@@ -149,6 +149,19 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
   return OrigSCEV;
 }
 
+/// Calculate Start and End points of memory access.
+/// Let's assume A is the first access and B is a memory access on N-th loop
+/// iteration. Then B is calculated as:  
+///   B = A + Step*N . 
+/// Step value may be positive or negative.
+/// N is a calculated back-edge taken count:
+///     N = (TripCount > 0) ? RoundDown(TripCount -1 , VF) : 0
+/// Start and End points are calculated in the following way:
+/// Start = UMIN(A, B) ; End = UMAX(A, B) + SizeOfElt,
+/// where SizeOfElt is the size of single memory access in bytes.
+///
+/// There is no conflict when the intervals are disjoint:
+/// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
 void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
                                     unsigned DepSetId, unsigned ASId,
                                     const ValueToValueMap &Strides,
@@ -177,12 +190,17 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
       if (CStep->getValue()->isNegative())
         std::swap(ScStart, ScEnd);
     } else {
-      // Fallback case: the step is not constant, but the we can still
+      // Fallback case: the step is not constant, but we can still
       // get the upper and lower bounds of the interval by using min/max
       // expressions.
       ScStart = SE->getUMinExpr(ScStart, ScEnd);
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
+    // Add the size of the pointed element to ScEnd.
+    unsigned EltSize =
+      Ptr->getType()->getPointerElementType()->getScalarSizeInBits() / 8;
+    const SCEV *EltSizeSCEV = SE->getConstant(ScEnd->getType(), EltSize);
+    ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
   }
 
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, Sc);
@@ -1870,9 +1888,17 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
     Value *End0 =   ChkBuilder.CreateBitCast(A.End,   PtrArithTy1, "bc");
     Value *End1 =   ChkBuilder.CreateBitCast(B.End,   PtrArithTy0, "bc");
 
-    Value *Cmp0 = ChkBuilder.CreateICmpULE(Start0, End1, "bound0");
+    // [A|B].Start points to the first accessed byte under base [A|B].
+    // [A|B].End points to the last accessed byte, plus one.
+    // There is no conflict when the intervals are disjoint:
+    // NoConflict = (B.Start >= A.End) || (A.Start >= B.End)
+    //
+    // bound0 = (B.Start < A.End)
+    // bound1 = (A.Start < B.End)
+    //  IsConflict = bound0 & bound1
+    Value *Cmp0 = ChkBuilder.CreateICmpULT(Start0, End1, "bound0");
     FirstInst = getFirstInst(FirstInst, Cmp0, Loc);
-    Value *Cmp1 = ChkBuilder.CreateICmpULE(Start1, End0, "bound1");
+    Value *Cmp1 = ChkBuilder.CreateICmpULT(Start1, End0, "bound1");
     FirstInst = getFirstInst(FirstInst, Cmp1, Loc);
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     FirstInst = getFirstInst(FirstInst, IsConflict, Loc);

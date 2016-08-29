@@ -580,7 +580,9 @@ private:
   Instruction *foldICmpAddConstant(ICmpInst &Cmp, BinaryOperator *Add,
                                    const APInt *C);
   Instruction *foldICmpAndConstConst(ICmpInst &Cmp, BinaryOperator *And,
-                                     const APInt *C);
+                                     const APInt *C1);
+  Instruction *foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
+                                const APInt *C1);
 
   Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI);
   Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI);

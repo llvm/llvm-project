@@ -69,9 +69,16 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
   SoftRssLimitExceededCallback = Callback;
 }
 
+static AllocatorReleaseToOSCallback ReleseCallback;
+void SetAllocatorReleaseToOSCallback(AllocatorReleaseToOSCallback Callback) {
+  CHECK_EQ(ReleseCallback, nullptr);
+  ReleseCallback = Callback;
+}
+
 void BackgroundThread(void *arg) {
   uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
   uptr soft_rss_limit_mb = common_flags()->soft_rss_limit_mb;
+  bool allocator_release_to_os = common_flags()->allocator_release_to_os;
   uptr prev_reported_rss = 0;
   uptr prev_reported_stack_depot_size = 0;
   bool reached_soft_rss_limit = false;
@@ -116,6 +123,7 @@ void BackgroundThread(void *arg) {
           SoftRssLimitExceededCallback(false);
       }
     }
+    if (allocator_release_to_os && ReleseCallback) ReleseCallback();
   }
 }
 
@@ -142,7 +150,8 @@ void MaybeStartBackgroudThread() {
     !SANITIZER_GO  // Need to implement/test on other platforms.
   // Start the background thread if one of the rss limits is given.
   if (!common_flags()->hard_rss_limit_mb &&
-      !common_flags()->soft_rss_limit_mb) return;
+      !common_flags()->soft_rss_limit_mb &&
+      !common_flags()->allocator_release_to_os) return;
   if (!&real_pthread_create) return;  // Can't spawn the thread anyway.
   internal_start_thread(BackgroundThread, nullptr);
 #endif

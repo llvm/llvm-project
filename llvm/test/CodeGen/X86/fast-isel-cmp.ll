@@ -285,8 +285,8 @@ define zeroext i1 @fcmp_oeq2(float %x) {
 define zeroext i1 @fcmp_oeq3(float %x) {
 ; SDAG-LABEL: fcmp_oeq3
 ; SDAG:       xorps    %xmm1, %xmm1
-; SDAG-NEXT:  cmpeqss  %xmm1, %xmm0
-; SDAG-NEXT:  movd     %xmm0, %eax
+; SDAG-NEXT:  cmpeqss  %xmm0, %xmm1
+; SDAG-NEXT:  movd     %xmm1, %eax
 ; SDAG-NEXT:  andl     $1, %eax
 ; FAST-LABEL: fcmp_oeq3
 ; FAST:       xorps    %xmm1, %xmm1
@@ -584,8 +584,8 @@ define zeroext i1 @fcmp_une2(float %x) {
 define zeroext i1 @fcmp_une3(float %x) {
 ; SDAG-LABEL: fcmp_une3
 ; SDAG:       xorps    %xmm1, %xmm1
-; SDAG-NEXT:  cmpneqss %xmm1, %xmm0
-; SDAG-NEXT:  movd     %xmm0, %eax
+; SDAG-NEXT:  cmpneqss %xmm0, %xmm1
+; SDAG-NEXT:  movd     %xmm1, %eax
 ; SDAG-NEXT:  andl     $1, %eax
 ; FAST-LABEL: fcmp_une3
 ; FAST:       xorps    %xmm1, %xmm1

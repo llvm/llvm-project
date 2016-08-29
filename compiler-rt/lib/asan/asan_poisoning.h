@@ -86,7 +86,7 @@ ALWAYS_INLINE void FastPoisonShadowPartialRightRedzone(
   }
 }
 
-// Calls __sanitizer::FlushUnneededShadowMemory() on
+// Calls __sanitizer::ReleaseMemoryToOS() on
 // [MemToShadow(p), MemToShadow(p+size)] with proper rounding.
 void FlushUnneededASanShadowMemory(uptr p, uptr size);
 

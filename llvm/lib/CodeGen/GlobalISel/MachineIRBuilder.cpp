@@ -99,6 +99,22 @@ MachineInstrBuilder MachineIRBuilder::buildAdd(LLT Ty, unsigned Res,
       .addUse(Op1);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildSub(LLT Ty, unsigned Res,
+                                                unsigned Op0, unsigned Op1) {
+  return buildInstr(TargetOpcode::G_SUB, Ty)
+      .addDef(Res)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildMul(LLT Ty, unsigned Res,
+                                                unsigned Op0, unsigned Op1) {
+  return buildInstr(TargetOpcode::G_MUL, Ty)
+      .addDef(Res)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
   return buildInstr(TargetOpcode::G_BR, LLT::unsized()).addMBB(&Dest);
 }

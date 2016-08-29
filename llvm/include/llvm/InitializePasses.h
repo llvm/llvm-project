@@ -292,6 +292,7 @@ void initializeRegionPrinterPass(PassRegistry&);
 void initializeRegionViewerPass(PassRegistry&);
 void initializeRegisterCoalescerPass(PassRegistry&);
 void initializeRenameIndependentSubregsPass(PassRegistry&);
+void initializeResetMachineFunctionPass(PassRegistry &);
 void initializeReversePostOrderFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeRewriteStatepointsForGCPass(PassRegistry&);
 void initializeRewriteSymbolsLegacyPassPass(PassRegistry&);

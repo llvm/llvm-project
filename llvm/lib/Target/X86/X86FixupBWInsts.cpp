@@ -66,8 +66,6 @@ using namespace llvm;
 #define DEBUG_TYPE FIXUPBW_NAME
 
 // Option to allow this optimization pass to have fine-grained control.
-// This is turned off by default so as not to affect a large number of
-// existing lit tests.
 static cl::opt<bool>
     FixupBWInsts("fixup-byte-word-insts",
                  cl::desc("Change byte and word instructions to larger sizes"),

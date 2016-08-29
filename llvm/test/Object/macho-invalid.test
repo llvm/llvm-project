@@ -142,3 +142,24 @@ INVALID-SECTION-RELOFF: macho-invalid-section-reloff': truncated or malformed ob
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-reloff-nrelocs 2>&1 | FileCheck -check-prefix INVALID-SECTION-RELOFF-NRELOCS %s
 INVALID-SECTION-RELOFF-NRELOCS: macho-invalid-section-reloff-nrelocs': truncated or malformed object (reloff field plus nreloc field times sizeof(struct relocation_info) of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-small 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-SMALL %s
+INVALID-SYMTAB-SMALL: macho-invalid-symtab-small': truncated or malformed object (load command 0 LC_SYMTAB cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-more-than-one 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-MORE-THAN-ONE %s
+INVALID-SYMTAB-MORE-THAN-ONE: macho-invalid-symtab-more-than-one': truncated or malformed object (more than one LC_SYMTAB command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-bad-size 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-BAD-SIZE %s
+INVALID-SYMTAB-BAD-SIZE: macho-invalid-symtab-bad-size': truncated or malformed object (LC_SYMTAB command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-symoff 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-SYMOFF %s
+INVALID-SYMTAB-SYMOFF: macho-invalid-symtab-symoff': truncated or malformed object (symoff field of LC_SYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-symoff-nsyms 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-SYMOFF-NSYMS %s
+INVALID-SYMTAB-SYMOFF-NSYMS: macho-invalid-symtab-symoff-nsyms': truncated or malformed object (symoff field plus nsyms field times sizeof(struct nlist) of LC_SYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-stroff 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-STROFF %s
+INVALID-SYMTAB-STROFF: macho-invalid-symtab-stroff': truncated or malformed object (stroff field of LC_SYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-stroff-strsize 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-STROFF-STRSIZE %s
+INVALID-SYMTAB-STROFF-STRSIZE: macho-invalid-symtab-stroff-strsize': truncated or malformed object (stroff field plus strsize field of LC_SYMTAB command 0 extends past the end of the file)
