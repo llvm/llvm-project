@@ -42,11 +42,10 @@ define i1 @test2(i64 %A) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test2vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test2vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> %A, <i64 128, i64 128>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> %A to <2 x i8>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %and = and <2 x i64> %A, <i64 128, i64 128>
@@ -65,11 +64,10 @@ define i1 @test3(i64 %A) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test3vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> %A, <i64 128, i64 128>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i64> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> %A to <2 x i8>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %and = and <2 x i64> %A, <i64 128, i64 128>

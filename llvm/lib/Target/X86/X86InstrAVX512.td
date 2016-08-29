@@ -2476,6 +2476,10 @@ multiclass avx512_mask_testop_w<bits<8> opc, string OpcodeStr, SDNode OpNode,
 defm KORTEST : avx512_mask_testop_w<0x98, "kortest", X86kortest>;
 defm KTEST   : avx512_mask_testop_w<0x99, "ktest", X86ktest, HasDQI>;
 
+def : Pat<(X86cmp VK1:$src, 0),
+          (KORTESTWrr (COPY_TO_REGCLASS VK1:$src, VK16),
+                      (COPY_TO_REGCLASS VK1:$src, VK16))>, Requires<[HasAVX512]>;
+
 // Mask shift
 multiclass avx512_mask_shiftop<bits<8> opc, string OpcodeStr, RegisterClass KRC,
                              SDNode OpNode> {
@@ -7235,8 +7239,14 @@ defm VSCATTERPF1QPD: avx512_gather_scatter_prefetch<0xC7, MRM6m, "vscatterpf1qpd
                      VK8WM, vz512mem>, EVEX_V512, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 // Helper fragments to match sext vXi1 to vXiY.
-def v16i1sextv16i32  : PatLeaf<(v16i32 (X86vsrai VR512:$src, (i8 31)))>;
-def v8i1sextv8i64  : PatLeaf<(v8i64 (X86vsrai VR512:$src, (i8 63)))>;
+def v64i1sextv64i8 : PatLeaf<(v64i8
+                              (X86vsext
+                               (v64i1 (X86pcmpgtm
+                                (bc_v64i8 (v16i32 immAllZerosV)),
+                                VR512:$src))))>;
+def v32i1sextv32i16 : PatLeaf<(v32i16 (X86vsrai VR512:$src, (i8 15)))>;
+def v16i1sextv16i32 : PatLeaf<(v16i32 (X86vsrai VR512:$src, (i8 31)))>;
+def v8i1sextv8i64   : PatLeaf<(v8i64 (X86vsrai VR512:$src, (i8 63)))>;
 
 multiclass cvt_by_vec_width<bits<8> opc, X86VectorVTInfo Vec, string OpcodeStr > {
 def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
@@ -7824,6 +7834,36 @@ multiclass avx512_unary_rm_vl_all<bits<8> opc_b, bits<8> opc_w,
 
 defm VPABS : avx512_unary_rm_vl_all<0x1C, 0x1D, 0x1E, 0x1F, "vpabs", X86Abs>;
 
+let Predicates = [HasBWI, HasVLX] in {
+  def : Pat<(xor
+            (bc_v2i64 (v16i1sextv16i8)),
+            (bc_v2i64 (add (v16i8 VR128:$src), (v16i1sextv16i8)))),
+            (VPABSBZ128rr VR128:$src)>;
+  def : Pat<(xor
+            (bc_v2i64 (v8i1sextv8i16)),
+            (bc_v2i64 (add (v8i16 VR128:$src), (v8i1sextv8i16)))),
+            (VPABSWZ128rr VR128:$src)>;
+  def : Pat<(xor
+            (bc_v4i64 (v32i1sextv32i8)),
+            (bc_v4i64 (add (v32i8 VR256:$src), (v32i1sextv32i8)))),
+            (VPABSBZ256rr VR256:$src)>;
+  def : Pat<(xor
+            (bc_v4i64 (v16i1sextv16i16)),
+            (bc_v4i64 (add (v16i16 VR256:$src), (v16i1sextv16i16)))),
+            (VPABSWZ256rr VR256:$src)>;
+}
+let Predicates = [HasAVX512, HasVLX] in {
+  def : Pat<(xor
+            (bc_v2i64 (v4i1sextv4i32)),
+            (bc_v2i64 (add (v4i32 VR128:$src), (v4i1sextv4i32)))),
+            (VPABSDZ128rr VR128:$src)>;
+  def : Pat<(xor
+            (bc_v4i64 (v8i1sextv8i32)),
+            (bc_v4i64 (add (v8i32 VR256:$src), (v8i1sextv8i32)))),
+            (VPABSDZ256rr VR256:$src)>;
+}
+
+let Predicates = [HasAVX512] in {
 def : Pat<(xor
           (bc_v8i64 (v16i1sextv16i32)),
           (bc_v8i64 (add (v16i32 VR512:$src), (v16i1sextv16i32)))),
@@ -7832,6 +7872,17 @@ def : Pat<(xor
           (bc_v8i64 (v8i1sextv8i64)),
           (bc_v8i64 (add (v8i64 VR512:$src), (v8i1sextv8i64)))),
           (VPABSQZrr VR512:$src)>;
+}
+let Predicates = [HasBWI] in {
+def : Pat<(xor
+          (bc_v8i64 (v64i1sextv64i8)),
+          (bc_v8i64 (add (v64i8 VR512:$src), (v64i1sextv64i8)))),
+          (VPABSBZrr VR512:$src)>;
+def : Pat<(xor
+          (bc_v8i64 (v32i1sextv32i16)),
+          (bc_v8i64 (add (v32i16 VR512:$src), (v32i1sextv32i16)))),
+          (VPABSWZrr VR512:$src)>;
+}
 
 multiclass avx512_ctlz<bits<8> opc, string OpcodeStr, Predicate prd>{
 

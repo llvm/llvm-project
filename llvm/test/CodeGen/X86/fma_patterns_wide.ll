@@ -787,7 +787,7 @@ define <8 x double> @test_v8f64_fneg_fmul_no_nsz(<8 x double> %x, <8 x double> %
 ; FMA:       # BB#0:
 ; FMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
 ; FMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
-; FMA-NEXT:    vmovapd {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; FMA-NEXT:    vmovapd {{.*#+}} ymm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
 ; FMA-NEXT:    vxorpd %ymm2, %ymm0, %ymm0
 ; FMA-NEXT:    vxorpd %ymm2, %ymm1, %ymm1
 ; FMA-NEXT:    retq
@@ -796,7 +796,7 @@ define <8 x double> @test_v8f64_fneg_fmul_no_nsz(<8 x double> %x, <8 x double> %
 ; FMA4:       # BB#0:
 ; FMA4-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
 ; FMA4-NEXT:    vxorpd %ymm2, %ymm0, %ymm0
 ; FMA4-NEXT:    vxorpd %ymm2, %ymm1, %ymm1
 ; FMA4-NEXT:    retq
@@ -804,7 +804,7 @@ define <8 x double> @test_v8f64_fneg_fmul_no_nsz(<8 x double> %x, <8 x double> %
 ; AVX512-LABEL: test_v8f64_fneg_fmul_no_nsz:
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vmulpd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vxorpd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vxorpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %m = fmul <8 x double> %x, %y
   %n = fsub <8 x double> <double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0, double -0.0>, %m
