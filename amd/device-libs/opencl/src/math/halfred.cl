@@ -7,7 +7,7 @@
 
 // Trigonometric reduction for half_cos,sin,tan
 
-__attribute__((always_inline, const)) int
+__attribute__((always_inline)) int
 __half_red(float x, __private float *r)
 {
     const float twobypi = 0x1.45f306p-1f;
