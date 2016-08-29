@@ -21,10 +21,11 @@ MATH_MANGLE(ilogb)(float x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        r = x == 0.0f | ux > PINFBITPATT_SP32 ? (int)0x80000000 : r;
-        r = ux == PINFBITPATT_SP32 ? 0x7fffffff : r;
+        r = ux > PINFBITPATT_SP32 ? FP_ILOGBNAN : r;
+        r = ux == PINFBITPATT_SP32 ? INT_MAX : r;
+        r = x == 0.0f ? FP_ILOGB0 : r;
     } else {
-	r = x == 0.0f ? (int)0x80000000 : r;
+	r = x == 0.0f ? FP_ILOGB0 : r;
     }
 
     return r;

@@ -22,10 +22,11 @@ MATH_MANGLE(ilogb)(half x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        r = (x == 0.0h) | BUILTIN_CLASS_F16(x, CLASS_QNAN|CLASS_SNAN) ? (int)0x80000000 : r;
-        r = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) ? 0x7fffffff : r;
+        r = BUILTIN_CLASS_F16(x, CLASS_QNAN|CLASS_SNAN) ? FP_ILOGBNAN : r;
+        r = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) ? INT_MAX : r;
+        r = x == 0.0h ? FP_ILOGB0 : r;
     } else {
-	r = x == 0.0h ? 0x80000000 : r;
+	r = x == 0.0h ? FP_ILOGB0 : r;
     }
 
     return r;
