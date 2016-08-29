@@ -21,6 +21,7 @@ trace_function(struct _Unwind_Context* context, void* ntraced) {
   return _URC_NO_REASON;
 }
 
+__attribute__ ((__noinline__))
 void call3_throw(size_t* ntraced) {
   try {
     _Unwind_Backtrace(trace_function, ntraced);
@@ -29,10 +30,12 @@ void call3_throw(size_t* ntraced) {
   }
 }
 
+__attribute__ ((__noinline__, __disable_tail_calls__))
 void call3_nothrow(size_t* ntraced) {
   _Unwind_Backtrace(trace_function, ntraced);
 }
 
+__attribute__ ((__noinline__, __disable_tail_calls__))
 void call2(size_t* ntraced, bool do_throw) {
   if (do_throw) {
     call3_throw(ntraced);
@@ -41,6 +44,7 @@ void call2(size_t* ntraced, bool do_throw) {
   }
 }
 
+__attribute__ ((__noinline__, __disable_tail_calls__))
 void call1(size_t* ntraced, bool do_throw) {
   call2(ntraced, do_throw);
 }

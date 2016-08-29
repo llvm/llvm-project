@@ -72,6 +72,8 @@ def MULLO_INT_eg : MULLO_INT_Common<0x8F>;
 def MULHI_INT_eg : MULHI_INT_Common<0x90>;
 def MULLO_UINT_eg : MULLO_UINT_Common<0x91>;
 def MULHI_UINT_eg : MULHI_UINT_Common<0x92>;
+def MULHI_UINT24_eg : MULHI_UINT24_Common<0xb2>;
+
 def RECIP_UINT_eg : RECIP_UINT_Common<0x94>;
 def RECIPSQRT_CLAMPED_eg : RECIPSQRT_CLAMPED_Common<0x87>;
 def EXP_IEEE_eg : EXP_IEEE_Common<0x81>;

@@ -1163,11 +1163,23 @@ define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) #0 {
 }
 
 define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %y) #0 {
-; ALL-LABEL: test_v4f64_fneg_fmul_no_nsz:
-; ALL:       # BB#0:
-; ALL-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; ALL-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
-; ALL-NEXT:    retq
+; FMA-LABEL: test_v4f64_fneg_fmul_no_nsz:
+; FMA:       # BB#0:
+; FMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; FMA-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v4f64_fneg_fmul_no_nsz:
+; FMA4:       # BB#0:
+; FMA4-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; FMA4-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v4f64_fneg_fmul_no_nsz:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vxorpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %m = fmul <4 x double> %x, %y
   %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %n

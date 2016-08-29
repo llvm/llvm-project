@@ -42,7 +42,7 @@ class my_input_iterator
 {
     It it_;
 
-    template <class U> friend class input_iterator;
+    template <class U> friend class my_input_iterator;
 public:
     typedef          my_input_iterator_tag                     iterator_category;
     typedef typename std::iterator_traits<It>::value_type      value_type;
@@ -55,7 +55,7 @@ public:
     my_input_iterator() : it_() {}
     explicit my_input_iterator(It it) : it_(it) {}
     template <class U>
-        my_input_iterator(const input_iterator<U>& u) :it_(u.it_) {}
+        my_input_iterator(const my_input_iterator<U>& u) :it_(u.it_) {}
 
     reference operator*() const {return *it_;}
     pointer operator->() const {return it_;}

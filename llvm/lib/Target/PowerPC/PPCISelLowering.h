@@ -589,11 +589,15 @@ namespace llvm {
     MachineBasicBlock *EmitAtomicBinary(MachineInstr &MI,
                                         MachineBasicBlock *MBB,
                                         unsigned AtomicSize,
-                                        unsigned BinOpcode) const;
+                                        unsigned BinOpcode,
+                                        unsigned CmpOpcode = 0,
+                                        unsigned CmpPred = 0) const;
     MachineBasicBlock *EmitPartwordAtomicBinary(MachineInstr &MI,
                                                 MachineBasicBlock *MBB,
                                                 bool is8bit,
-                                                unsigned Opcode) const;
+                                                unsigned Opcode,
+                                                unsigned CmpOpcode = 0,
+                                                unsigned CmpPred = 0) const;
 
     MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;

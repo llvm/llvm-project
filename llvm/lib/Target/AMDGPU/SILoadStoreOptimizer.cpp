@@ -226,6 +226,15 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
     Opc = (EltSize == 4) ? AMDGPU::DS_READ2ST64_B32 : AMDGPU::DS_READ2ST64_B64;
   }
 
+  unsigned SubRegIdx0 = (EltSize == 4) ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
+  unsigned SubRegIdx1 = (EltSize == 4) ? AMDGPU::sub1 : AMDGPU::sub2_sub3;
+
+  if (NewOffset0 > NewOffset1) {
+    // Canonicalize the merged instruction so the smaller offset comes first.
+    std::swap(NewOffset0, NewOffset1);
+    std::swap(SubRegIdx0, SubRegIdx1);
+  }
+
   assert((isUInt<8>(NewOffset0) && isUInt<8>(NewOffset1)) &&
          (NewOffset0 != NewOffset1) &&
          "Computed offset doesn't fit");
@@ -245,9 +254,6 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
     .addImm(0) // gds
     .addMemOperand(*I->memoperands_begin())
     .addMemOperand(*Paired->memoperands_begin());
-
-  unsigned SubRegIdx0 = (EltSize == 4) ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
-  unsigned SubRegIdx1 = (EltSize == 4) ? AMDGPU::sub1 : AMDGPU::sub2_sub3;
 
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
 
@@ -320,6 +326,12 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
     NewOffset0 /= 64;
     NewOffset1 /= 64;
     Opc = (EltSize == 4) ? AMDGPU::DS_WRITE2ST64_B32 : AMDGPU::DS_WRITE2ST64_B64;
+  }
+
+  if (NewOffset0 > NewOffset1) {
+    // Canonicalize the merged instruction so the smaller offset comes first.
+    std::swap(NewOffset0, NewOffset1);
+    std::swap(Data0, Data1);
   }
 
   assert((isUInt<8>(NewOffset0) && isUInt<8>(NewOffset1)) &&

@@ -1610,48 +1610,50 @@ Instruction *InstCombiner::foldICmpAndConstant(ICmpInst &Cmp,
   if (Instruction *I = foldICmpAndConstConst(Cmp, And, C))
     return I;
 
-  // FIXME: This check restricts all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!RHS)
-    return nullptr;
+  // TODO: These all require that Y is constant too, so refactor with the above.
 
-  // Try to optimize things like "A[i]&42 == 0" to index computations.
-  if (LoadInst *LI = dyn_cast<LoadInst>(And->getOperand(0))) {
-    if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
-      if (GlobalVariable *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0)))
+  // Try to optimize things like "A[i] & 42 == 0" to index computations.
+  Value *X = And->getOperand(0);
+  Value *Y = And->getOperand(1);
+  if (auto *LI = dyn_cast<LoadInst>(X))
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
+      if (auto *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0)))
         if (GV->isConstant() && GV->hasDefinitiveInitializer() &&
-            !LI->isVolatile() && isa<ConstantInt>(And->getOperand(1))) {
-          ConstantInt *C = cast<ConstantInt>(And->getOperand(1));
-          if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, Cmp, C))
+            !LI->isVolatile() && isa<ConstantInt>(Y)) {
+          ConstantInt *C2 = cast<ConstantInt>(Y);
+          if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, Cmp, C2))
             return Res;
         }
-  }
+
+  if (!Cmp.isEquality())
+    return nullptr;
 
   // X & -C == -C -> X >  u ~C
   // X & -C != -C -> X <= u ~C
   //   iff C is a power of 2
-  if (Cmp.isEquality() && RHS == And->getOperand(1) && (-(*C)).isPowerOf2())
-    return new ICmpInst(Cmp.getPredicate() == ICmpInst::ICMP_EQ
-                            ? ICmpInst::ICMP_UGT
-                            : ICmpInst::ICMP_ULE,
-                        And->getOperand(0), SubOne(RHS));
+  if (Cmp.getOperand(1) == Y && (-(*C)).isPowerOf2()) {
+    auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT
+                                                          : CmpInst::ICMP_ULE;
+    return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
+  }
 
-  // (icmp eq (and %A, C), 0) -> (icmp sgt (trunc %A), -1)
-  //   iff C is a power of 2
-  if (Cmp.isEquality() && And->hasOneUse() && match(RHS, m_Zero())) {
-    if (auto *CI = dyn_cast<ConstantInt>(And->getOperand(1))) {
-      const APInt &AI = CI->getValue();
-      int32_t ExactLogBase2 = AI.exactLogBase2();
-      if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
-        Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
-        Value *Trunc = Builder->CreateTrunc(And->getOperand(0), NTy);
-        return new ICmpInst(Cmp.getPredicate() == ICmpInst::ICMP_EQ
-                                ? ICmpInst::ICMP_SGE
-                                : ICmpInst::ICMP_SLT,
-                            Trunc, Constant::getNullValue(NTy));
-      }
+  // (X & C2) == 0 -> (trunc X) >= 0
+  // (X & C2) != 0 -> (trunc X) <  0
+  //   iff C2 is a power of 2 and it masks the sign bit of a legal integer type.
+  const APInt *C2;
+  if (And->hasOneUse() && *C == 0 && match(Y, m_APInt(C2))) {
+    int32_t ExactLogBase2 = C2->exactLogBase2();
+    if (ExactLogBase2 != -1 && DL.isLegalInteger(ExactLogBase2 + 1)) {
+      Type *NTy = IntegerType::get(Cmp.getContext(), ExactLogBase2 + 1);
+      if (And->getType()->isVectorTy())
+        NTy = VectorType::get(NTy, And->getType()->getVectorNumElements());
+      Value *Trunc = Builder->CreateTrunc(X, NTy);
+      auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE
+                                                            : CmpInst::ICMP_SLT;
+      return new ICmpInst(NewPred, Trunc, Constant::getNullValue(NTy));
     }
   }
+
   return nullptr;
 }
 

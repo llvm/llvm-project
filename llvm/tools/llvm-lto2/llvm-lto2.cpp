@@ -198,8 +198,14 @@ int main(int argc, char **argv) {
       return llvm::make_unique<LTOOutput>(std::move(Path));
 
     return llvm::make_unique<CacheObjectOutput>(
-        CacheDir, [Path](std::unique_ptr<MemoryBuffer> Buffer) {
-          *LTOOutput(Path).getStream() << Buffer->getBuffer();
+        CacheDir, [Path](std::string EntryPath) {
+          // Load the entry from the cache now.
+          auto ReloadedBufferOrErr = MemoryBuffer::getFile(EntryPath);
+          if (auto EC = ReloadedBufferOrErr.getError())
+            report_fatal_error(Twine("Can't reload cached file '") + EntryPath +
+                               "': " + EC.message() + "\n");
+
+          *LTOOutput(Path).getStream() << (*ReloadedBufferOrErr)->getBuffer();
         });
   };
 

@@ -1345,12 +1345,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SRL, VT, Custom);
       setOperationAction(ISD::SHL, VT, Custom);
       setOperationAction(ISD::SRA, VT, Custom);
-      setOperationAction(ISD::AND, VT, Legal);
-      setOperationAction(ISD::OR,  VT, Legal);
-      setOperationAction(ISD::XOR, VT, Legal);
       setOperationAction(ISD::CTPOP, VT, Custom);
       setOperationAction(ISD::CTTZ, VT, Custom);
     }
+
+    // Need to promote to 64-bit even though we have 32-bit masked instructions
+    // because the IR optimizers rearrange bitcasts around logic ops leaving
+    // too many variations to handle if we don't promote them.
+    setOperationPromotedToType(ISD::AND, MVT::v16i32, MVT::v8i64);
+    setOperationPromotedToType(ISD::OR,  MVT::v16i32, MVT::v8i64);
+    setOperationPromotedToType(ISD::XOR, MVT::v16i32, MVT::v8i64);
 
     if (Subtarget.hasCDI()) {
       setOperationAction(ISD::CTLZ,             MVT::v8i64,  Legal);
@@ -1560,12 +1564,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CONCAT_VECTORS,     MVT::v4i1, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v8i1, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v4i1, Custom);
-
-    for (auto VT : { MVT::v4i32, MVT::v8i32 }) {
-      setOperationAction(ISD::AND, VT, Legal);
-      setOperationAction(ISD::OR,  VT, Legal);
-      setOperationAction(ISD::XOR, VT, Legal);
-    }
 
     for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
       setOperationAction(ISD::SMAX, VT, Legal);
@@ -14641,18 +14639,13 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   }
 
   unsigned EltBits = EltVT.getSizeInBits();
-  LLVMContext *Context = DAG.getContext();
   // For FABS, mask is 0x7f...; for FNEG, mask is 0x80...
   APInt MaskElt =
     IsFABS ? APInt::getSignedMaxValue(EltBits) : APInt::getSignBit(EltBits);
-  Constant *C = ConstantInt::get(*Context, MaskElt);
-  C = ConstantVector::getSplat(NumElts, C);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue CPIdx = DAG.getConstantPool(C, TLI.getPointerTy(DAG.getDataLayout()));
-  unsigned Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlignment();
-  SDValue Mask = DAG.getLoad(
-      LogicVT, dl, DAG.getEntryNode(), CPIdx,
-      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), Alignment);
+  const fltSemantics &Sem =
+      EltVT == MVT::f64 ? APFloat::IEEEdouble :
+          (IsF128 ? APFloat::IEEEquad : APFloat::IEEEsingle);
+  SDValue Mask = DAG.getConstantFP(APFloat(Sem, MaskElt), dl, LogicVT);
 
   SDValue Op0 = Op.getOperand(0);
   bool IsFNABS = !IsFABS && (Op0.getOpcode() == ISD::FABS);
@@ -14907,15 +14900,29 @@ static SDValue EmitKTEST(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Emit nodes that will be selected as "test Op0,Op0", or something
-/// equivalent.
-SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
-                                    SelectionDAG &DAG) const {
-  if (Op.getValueType() == MVT::i1) {
+static SDValue EmitTEST_i1(SDValue Op, SelectionDAG &DAG, const SDLoc &dl) {
+
+  // Most probably the value is in GPR, use ZEXT + CMP.
+  if(Op.getOpcode() == ISD::TRUNCATE ||
+     Op.getOpcode() == ISD::LOAD ||
+     Op.getOpcode() == ISD::CopyFromReg) {
     SDValue ExtOp = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, Op);
     return DAG.getNode(X86ISD::CMP, dl, MVT::i32, ExtOp,
                        DAG.getConstant(0, dl, MVT::i8));
   }
+
+  // Create cmp i1 that should be mapped to KORTEST.
+  return DAG.getNode(X86ISD::CMP, dl, MVT::i1, Op,
+                     DAG.getConstant(0, dl, MVT::i8));
+}
+
+/// Emit nodes that will be selected as "test Op0,Op0", or something
+/// equivalent.
+SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
+                                    SelectionDAG &DAG) const {
+  if (Op.getValueType() == MVT::i1)
+    return EmitTEST_i1(Op, DAG, dl);
+
   // CF and OF aren't always set the way we want. Determine which
   // of these we need.
   bool NeedCF = false;
@@ -25289,6 +25296,7 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   }
 
   unsigned RootSizeInBits = RootVT.getSizeInBits();
+  unsigned NumRootElts = RootVT.getVectorNumElements();
   unsigned BaseMaskEltSizeInBits = RootSizeInBits / NumBaseMaskElts;
   bool FloatDomain = VT1.isFloatingPoint() || VT2.isFloatingPoint() ||
                      (RootVT.is256BitVector() && !Subtarget.hasAVX2());
@@ -25299,11 +25307,10 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // TODO - this currently prevents all lane shuffles from occurring.
   // TODO - check for writemasks usage instead of always preventing combining.
   // TODO - attempt to narrow Mask back to writemask size.
-  if (RootVT.getScalarSizeInBits() != BaseMaskEltSizeInBits &&
-      (RootSizeInBits == 512 ||
-       (Subtarget.hasVLX() && RootSizeInBits >= 128))) {
+  bool IsEVEXShuffle =
+      RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128);
+  if (IsEVEXShuffle && (RootVT.getScalarSizeInBits() != BaseMaskEltSizeInBits))
     return false;
-  }
 
   // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
 
@@ -25372,6 +25379,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if (matchUnaryVectorShuffle(MaskVT, Mask, Subtarget, Shuffle, ShuffleVT)) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
+      if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
+        return false; // AVX512 Writemask clash.
       Res = DAG.getBitcast(ShuffleVT, V1);
       DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
@@ -25385,6 +25394,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                        ShuffleVT, PermuteImm)) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
+      if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
+        return false; // AVX512 Writemask clash.
       Res = DAG.getBitcast(ShuffleVT, V1);
       DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res,
@@ -25400,6 +25411,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                ShuffleVT)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
+    if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
+      return false; // AVX512 Writemask clash.
     V1 = DAG.getBitcast(ShuffleVT, V1);
     DCI.AddToWorklist(V1.getNode());
     V2 = DAG.getBitcast(ShuffleVT, V2);
@@ -25415,6 +25428,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                                       Shuffle, ShuffleVT, PermuteImm)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
+    if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
+      return false; // AVX512 Writemask clash.
     V1 = DAG.getBitcast(ShuffleVT, V1);
     DCI.AddToWorklist(V1.getNode());
     V2 = DAG.getBitcast(ShuffleVT, V2);
@@ -28479,9 +28494,7 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   SDLoc DL(N);
 
-  if (VT != MVT::v2i64 && VT != MVT::v4i64 &&
-      VT != MVT::v8i64 && VT != MVT::v16i32 &&
-      VT != MVT::v4i32 && VT != MVT::v8i32) // Legal with VLX
+  if (VT != MVT::v2i64 && VT != MVT::v4i64 && VT != MVT::v8i64)
     return SDValue();
 
   // Canonicalize XOR to the left.
@@ -30361,11 +30374,9 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
     // VXORPS, VORPS, VANDPS, VANDNPS are supported only under DQ extention.
     // These logic operations may be executed in the integer domain.
     SDLoc dl(N);
-    MVT IntScalar = MVT::getIntegerVT(VT.getScalarSizeInBits());
-    MVT IntVT = MVT::getVectorVT(IntScalar, VT.getVectorNumElements());
 
-    SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
-    SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
+    SDValue Op0 = DAG.getBitcast(MVT::v8i64, N->getOperand(0));
+    SDValue Op1 = DAG.getBitcast(MVT::v8i64, N->getOperand(1));
     unsigned IntOpcode = 0;
     switch (N->getOpcode()) {
       default: llvm_unreachable("Unexpected FP logic op");
@@ -30374,7 +30385,7 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
       case X86ISD::FAND: IntOpcode = ISD::AND; break;
       case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
     }
-    SDValue IntOp = DAG.getNode(IntOpcode, dl, IntVT, Op0, Op1);
+    SDValue IntOp = DAG.getNode(IntOpcode, dl, MVT::v8i64, Op0, Op1);
     return DAG.getBitcast(VT, IntOp);
   }
   return SDValue();

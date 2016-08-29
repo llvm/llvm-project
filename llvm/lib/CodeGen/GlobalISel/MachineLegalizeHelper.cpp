@@ -92,7 +92,9 @@ void MachineLegalizeHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,
 MachineLegalizeHelper::LegalizeResult
 MachineLegalizeHelper::narrowScalar(MachineInstr &MI, unsigned TypeIdx,
                                     LLT NarrowTy) {
-  assert(TypeIdx == 0 && "don't know how to handle secondary types yet");
+  // FIXME: Don't know how to handle secondary types yet.
+  if (TypeIdx != 0)
+    return UnableToLegalize;
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
@@ -290,7 +292,9 @@ MachineLegalizeHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 MachineLegalizeHelper::LegalizeResult
 MachineLegalizeHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                            LLT NarrowTy) {
-  assert(TypeIdx == 0 && "don't know how to handle secondary types yet");
+  // FIXME: Don't know how to handle secondary types yet.
+  if (TypeIdx != 0)
+    return UnableToLegalize;
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;

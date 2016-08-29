@@ -945,27 +945,30 @@ define <8 x double> @test_maskz_broadcast_vaddpd(<8 x double> %i, double* %j,
 define <16 x float>  @test_fxor(<16 x float> %a) {
 ; AVX512F-LABEL: test_fxor:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpxord {{.*}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; AVX512F-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_fxor:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpxord {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; AVX512VL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_fxor:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpxord {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; AVX512BW-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fxor:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vxorps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: test_fxor:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vxorps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 
   %res = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
@@ -973,10 +976,34 @@ define <16 x float>  @test_fxor(<16 x float> %a) {
 }
 
 define <8 x float>  @test_fxor_8f32(<8 x float> %a) {
-; CHECK-LABEL: test_fxor_8f32:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
-; CHECK-NEXT:    retq
+; AVX512F-LABEL: test_fxor_8f32:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
+; AVX512F-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_fxor_8f32:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
+; AVX512VL-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: test_fxor_8f32:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
+; AVX512BW-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_fxor_8f32:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
+; AVX512DQ-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: test_fxor_8f32:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; SKX-NEXT:    retq
   %res = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
   ret <8 x float>%res
 }
@@ -984,27 +1011,30 @@ define <8 x float>  @test_fxor_8f32(<8 x float> %a) {
 define <8 x double> @fabs_v8f64(<8 x double> %p)
 ; AVX512F-LABEL: fabs_v8f64:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm1
+; AVX512F-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: fabs_v8f64:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm1
+; AVX512VL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: fabs_v8f64:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm1
+; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: fabs_v8f64:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: fabs_v8f64:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vandpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 {
   %t = call <8 x double> @llvm.fabs.v8f64(<8 x double> %p)
@@ -1015,27 +1045,30 @@ declare <8 x double> @llvm.fabs.v8f64(<8 x double> %p)
 define <16 x float> @fabs_v16f32(<16 x float> %p)
 ; AVX512F-LABEL: fabs_v16f32:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; AVX512F-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: fabs_v16f32:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; AVX512VL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: fabs_v16f32:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
+; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: fabs_v16f32:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: fabs_v16f32:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vandps {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 {
   %t = call <16 x float> @llvm.fabs.v16f32(<16 x float> %p)

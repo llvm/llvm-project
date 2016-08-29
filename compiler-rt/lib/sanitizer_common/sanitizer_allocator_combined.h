@@ -190,6 +190,8 @@ class CombinedAllocator {
     primary_.ForceUnlock();
   }
 
+  void ReleaseToOS() { primary_.ReleaseToOS(); }
+
   // Iterate over all existing chunks.
   // The allocator must be locked when calling this function.
   void ForEachChunk(ForEachChunkCallback callback, void *arg) {

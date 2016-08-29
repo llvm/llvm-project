@@ -2396,7 +2396,7 @@ the following exceptions.  Callee saved registers are spilled after the frame is
 created.  This allows the llvm epilog/prolog support to be common with other
 targets.  The base pointer callee saved register r31 is saved in the TOC slot of
 linkage area.  This simplifies allocation of space for the base pointer and
-makes it convenient to locate programatically and during debugging.
+makes it convenient to locate programmatically and during debugging.
 
 Dynamic Allocation
 ^^^^^^^^^^^^^^^^^^

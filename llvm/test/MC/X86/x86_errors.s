@@ -68,3 +68,9 @@ jrcxz 1
 
 // 64: error: instruction requires: Not 64-bit mode
 jcxz 1
+
+// 32: error: register %cr8 is only available in 64-bit mode
+movl %edx, %cr8
+
+// 32: error: register %dr8 is only available in 64-bit mode
+movl %edx, %dr8

@@ -846,6 +846,8 @@ private:
           Repl->intersectOptionalDataWith(I);
           combineKnownMetadata(Repl, I);
           I->replaceAllUsesWith(Repl);
+          // Also invalidate the Alias Analysis cache.
+          MD->removeInstruction(I);
           I->eraseFromParent();
         }
 

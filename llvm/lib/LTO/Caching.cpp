@@ -64,14 +64,8 @@ CacheObjectOutput::~CacheObjectOutput() {
       // We commit the tempfile into the cache now, by moving it to EntryPath.
       commitEntry(TempFilename, EntryPath);
   }
-  // Load the entry from the cache now.
-  auto ReloadedBufferOrErr = MemoryBuffer::getFile(EntryPath);
-  if (auto EC = ReloadedBufferOrErr.getError())
-    report_fatal_error(Twine("Can't reload cached file '") + EntryPath + "': " +
-                       EC.message() + "\n");
-
-  // Supply the resulting buffer to the user.
-  AddBuffer(std::move(*ReloadedBufferOrErr));
+  // Supply the cache path to the user.
+  AddBuffer(EntryPath.str());
 }
 
 // Return an allocated stream for the output, or null in case of failure.

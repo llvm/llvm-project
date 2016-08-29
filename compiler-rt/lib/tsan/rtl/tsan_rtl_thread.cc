@@ -68,8 +68,8 @@ void ThreadContext::OnCreated(void *arg) {
 
 void ThreadContext::OnReset() {
   CHECK_EQ(sync.size(), 0);
-  FlushUnneededShadowMemory(GetThreadTrace(tid), TraceSize() * sizeof(Event));
-  //!!! FlushUnneededShadowMemory(GetThreadTraceHeader(tid), sizeof(Trace));
+  ReleaseMemoryToOS(GetThreadTrace(tid), TraceSize() * sizeof(Event));
+  //!!! ReleaseMemoryToOS(GetThreadTraceHeader(tid), sizeof(Trace));
 }
 
 void ThreadContext::OnDetached(void *arg) {

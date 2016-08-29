@@ -328,6 +328,55 @@ static Error parseSegmentLoadCommand(
   return Error::success();
 }
 
+static Error checkSymtabCommand(const MachOObjectFile *Obj,
+                                const MachOObjectFile::LoadCommandInfo &Load,
+                                uint32_t LoadCommandIndex,
+                                const char **SymtabLoadCmd) {
+  if (Load.C.cmdsize < sizeof(MachO::symtab_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_SYMTAB cmdsize too small");
+  if (*SymtabLoadCmd != nullptr)
+    return malformedError("more than one LC_SYMTAB command");
+  MachO::symtab_command Symtab =
+    getStruct<MachO::symtab_command>(Obj, Load.Ptr);
+  if (Symtab.cmdsize != sizeof(MachO::symtab_command))
+    return malformedError("LC_SYMTAB command " + Twine(LoadCommandIndex) +
+                          " has incorrect cmdsize");
+  uint64_t FileSize = Obj->getData().size();
+  if (Symtab.symoff > FileSize)
+    return malformedError("symoff field of LC_SYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end "
+                          "of the file");
+  uint64_t BigSize = Symtab.nsyms;
+  const char *struct_nlist_name;
+  if (Obj->is64Bit()) {
+    BigSize *= sizeof(MachO::nlist_64);
+    struct_nlist_name = "struct nlist_64";
+  } else {
+    BigSize *= sizeof(MachO::nlist);
+    struct_nlist_name = "struct nlist";
+  }
+  BigSize += Symtab.symoff;
+  if (BigSize > FileSize)
+    return malformedError("symoff field plus nsyms field times sizeof(" +
+                          Twine(struct_nlist_name) + ") of LC_SYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end "
+                          "of the file");
+  if (Symtab.stroff > FileSize)
+    return malformedError("stroff field of LC_SYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end "
+                          "of the file");
+  BigSize = Symtab.stroff;
+  BigSize += Symtab.strsize;
+  if (BigSize > FileSize)
+    return malformedError("stroff field plus strsize field of LC_SYMTAB "
+                          "command " + Twine(LoadCommandIndex) + " extends "
+                          "past the end of the file");
+
+  *SymtabLoadCmd = Load.Ptr;
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -398,12 +447,8 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     }
     LoadCommands.push_back(Load);
     if (Load.C.cmd == MachO::LC_SYMTAB) {
-      // Multiple symbol tables
-      if (SymtabLoadCmd) {
-        Err = malformedError("Multiple symbol tables");
+      if ((Err = checkSymtabCommand(this, Load, I, &SymtabLoadCmd)))
         return;
-      }
-      SymtabLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_DYSYMTAB) {
       // Multiple dynamic symbol tables
       if (DysymtabLoadCmd) {

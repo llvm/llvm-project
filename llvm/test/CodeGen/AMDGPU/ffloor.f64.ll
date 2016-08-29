@@ -14,9 +14,9 @@ declare <16 x double> @llvm.floor.v16f64(<16 x double>) nounwind readnone
 ; CI: v_floor_f64_e32
 ; SI: v_fract_f64_e32
 ; SI-DAG: v_min_f64
-; SI-DAG: v_cmp_class_f64_e64
-; SI: v_cndmask_b32_e64
-; SI: v_cndmask_b32_e64
+; SI-DAG: v_cmp_class_f64_e64 vcc
+; SI: v_cndmask_b32_e32
+; SI: v_cndmask_b32_e32
 ; SI: v_add_f64
 ; SI: s_endpgm
 define void @ffloor_f64(double addrspace(1)* %out, double %x) {
@@ -29,9 +29,9 @@ define void @ffloor_f64(double addrspace(1)* %out, double %x) {
 ; CI: v_floor_f64_e64
 ; SI: v_fract_f64_e64 {{v[[0-9]+:[0-9]+]}}, -[[INPUT:s[[0-9]+:[0-9]+]]]
 ; SI-DAG: v_min_f64
-; SI-DAG: v_cmp_class_f64_e64
-; SI: v_cndmask_b32_e64
-; SI: v_cndmask_b32_e64
+; SI-DAG: v_cmp_class_f64_e64 vcc
+; SI: v_cndmask_b32_e32
+; SI: v_cndmask_b32_e32
 ; SI: v_add_f64 {{v[[0-9]+:[0-9]+]}}, -[[INPUT]]
 ; SI: s_endpgm
 define void @ffloor_f64_neg(double addrspace(1)* %out, double %x) {
@@ -45,9 +45,9 @@ define void @ffloor_f64_neg(double addrspace(1)* %out, double %x) {
 ; CI: v_floor_f64_e64
 ; SI: v_fract_f64_e64 {{v[[0-9]+:[0-9]+]}}, -|[[INPUT:s[[0-9]+:[0-9]+]]]|
 ; SI-DAG: v_min_f64
-; SI-DAG: v_cmp_class_f64_e64
-; SI: v_cndmask_b32_e64
-; SI: v_cndmask_b32_e64
+; SI-DAG: v_cmp_class_f64_e64 vcc
+; SI: v_cndmask_b32_e32
+; SI: v_cndmask_b32_e32
 ; SI: v_add_f64 {{v[[0-9]+:[0-9]+]}}, -|[[INPUT]]|
 ; SI: s_endpgm
 define void @ffloor_f64_neg_abs(double addrspace(1)* %out, double %x) {

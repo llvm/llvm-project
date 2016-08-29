@@ -98,6 +98,12 @@ PrintMachineInstrs("print-machineinstrs", cl::ValueOptional,
                    cl::desc("Print machine instrs"),
                    cl::value_desc("pass-name"), cl::init("option-unspecified"));
 
+static cl::opt<bool> EnableGlobalISelAbort(
+    "global-isel-abort", cl::Hidden,
+    cl::desc("Enable abort calls when \"global\" instruction selection "
+             "fails to lower/select an instruction"),
+    cl::init(true));
+
 // Temporary option to allow experimenting with MachineScheduler as a post-RA
 // scheduler. Targets can "properly" enable this with
 // substitutePass(&PostRASchedulerID, &PostMachineSchedulerID).
@@ -887,4 +893,11 @@ void TargetPassConfig::addBlockPlacement() {
     if (EnableBlockPlacementStats)
       addPass(&MachineBlockPlacementStatsID);
   }
+}
+
+//===---------------------------------------------------------------------===//
+/// GlobalISel Configuration
+//===---------------------------------------------------------------------===//
+bool TargetPassConfig::isGlobalISelAbortEnabled() const {
+  return EnableGlobalISelAbort;
 }

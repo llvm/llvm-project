@@ -452,9 +452,10 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
   for (CallGraphNode *Node : SCC) {
     Function *F = Node->getFunction();
-    if (!F)
+    if (!F || F->isDeclaration())
       continue;
 
+    OptimizationRemarkEmitter ORE(F);
     for (BasicBlock &BB : *F)
       for (Instruction &I : BB) {
         CallSite CS(cast<Value>(&I));
@@ -467,8 +468,16 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         // it.  If it is an indirect call, inlining may resolve it to be a
         // direct call, so we keep it.
         if (Function *Callee = CS.getCalledFunction())
-          if (Callee->isDeclaration())
+          if (Callee->isDeclaration()) {
+            ORE.emitOptimizationRemarkMissedAndAnalysis(
+                DEBUG_TYPE, &I,
+                Twine(Callee->getName()) + " will not be inlined into " +
+                    CS.getCaller()->getName(),
+                Twine("definition of ") + Callee->getName() +
+                    " is not available",
+                /*Verbose=*/true);
             continue;
+          }
 
         CallSites.push_back(std::make_pair(CS, -1));
       }

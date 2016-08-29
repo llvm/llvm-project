@@ -43,6 +43,8 @@ public:
     return "MachineLegalizePass";
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);

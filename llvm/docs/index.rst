@@ -179,6 +179,7 @@ For developers of applications which use LLVM as a library.
    Extensions
    LibFuzzer
    ScudoHardenedAllocator
+   OptBisect
 
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
@@ -225,6 +226,9 @@ For developers of applications which use LLVM as a library.
 
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
+
+:doc:`OptBisect`
+  A command line option for debugging optimization-induced failures.
 
 Subsystem Documentation
 =======================

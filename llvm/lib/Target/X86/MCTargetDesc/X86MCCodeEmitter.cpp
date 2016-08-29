@@ -81,7 +81,8 @@ public:
                                                  MI.getOperand(OpNum).getReg());
   }
 
-  bool isX86_64ExtendedReg(const MCInst &MI, unsigned OpNum) const {
+  // Does this register require a bit to be set in REX prefix.
+  bool isREXExtendedReg(const MCInst &MI, unsigned OpNum) const {
     return (getX86RegEncoding(MI, OpNum) >> 3) & 1;
   }
 
@@ -1017,52 +1018,51 @@ uint8_t X86MCCodeEmitter::DetermineREXPrefix(const MCInst &MI, uint64_t TSFlags,
     unsigned Reg = MO.getReg();
     if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
       UsesHighByteReg = true;
-    if (!X86II::isX86_64NonExtLowByteReg(Reg)) continue;
-    // FIXME: The caller of DetermineREXPrefix slaps this prefix onto anything
-    // that returns non-zero.
-    REX |= 0x40; // REX fixed encoding prefix
-    break;
+    if (X86II::isX86_64NonExtLowByteReg(Reg))
+      // FIXME: The caller of DetermineREXPrefix slaps this prefix onto anything
+      // that returns non-zero.
+      REX |= 0x40; // REX fixed encoding prefix
   }
 
   switch (TSFlags & X86II::FormMask) {
   case X86II::AddRegFrm:
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
     break;
   case X86II::MRMSrcReg:
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 2; // REX.R
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
+    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
     break;
   case X86II::MRMSrcMem: {
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 2; // REX.R
-    REX |= isX86_64ExtendedReg(MI, MemOperand+X86::AddrBaseReg) << 0; // REX.B
-    REX |= isX86_64ExtendedReg(MI, MemOperand+X86::AddrIndexReg) << 1; // REX.X
+    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
+    REX |= isREXExtendedReg(MI, MemOperand+X86::AddrBaseReg) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, MemOperand+X86::AddrIndexReg) << 1; // REX.X
     CurOp += X86::AddrNumOperands;
     break;
   }
   case X86II::MRMDestReg:
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 0; // REX.B
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 2; // REX.R
+    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
     break;
   case X86II::MRMDestMem:
-    REX |= isX86_64ExtendedReg(MI, MemOperand+X86::AddrBaseReg) << 0; // REX.B
-    REX |= isX86_64ExtendedReg(MI, MemOperand+X86::AddrIndexReg) << 1; // REX.X
+    REX |= isREXExtendedReg(MI, MemOperand+X86::AddrBaseReg) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, MemOperand+X86::AddrIndexReg) << 1; // REX.X
     CurOp += X86::AddrNumOperands;
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 2; // REX.R
+    REX |= isREXExtendedReg(MI, CurOp++) << 2; // REX.R
     break;
   case X86II::MRMXm:
   case X86II::MRM0m: case X86II::MRM1m:
   case X86II::MRM2m: case X86II::MRM3m:
   case X86II::MRM4m: case X86II::MRM5m:
   case X86II::MRM6m: case X86II::MRM7m:
-    REX |= isX86_64ExtendedReg(MI, MemOperand+X86::AddrBaseReg) << 0; // REX.B
-    REX |= isX86_64ExtendedReg(MI, MemOperand+X86::AddrIndexReg) << 1; // REX.X
+    REX |= isREXExtendedReg(MI, MemOperand+X86::AddrBaseReg) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, MemOperand+X86::AddrIndexReg) << 1; // REX.X
     break;
   case X86II::MRMXr:
   case X86II::MRM0r: case X86II::MRM1r:
   case X86II::MRM2r: case X86II::MRM3r:
   case X86II::MRM4r: case X86II::MRM5r:
   case X86II::MRM6r: case X86II::MRM7r:
-    REX |= isX86_64ExtendedReg(MI, CurOp++) << 0; // REX.B
+    REX |= isREXExtendedReg(MI, CurOp++) << 0; // REX.B
     break;
   }
   if (REX && UsesHighByteReg)

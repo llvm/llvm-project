@@ -86,29 +86,31 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
       DEPENDS ${RUNTIMES_LIT_DEPENDS}
       ARGS ${RUNTIMES_LIT_EXTRA_ARGS}
       )
-    add_custom_target(test-depends-runtimes DEPENDS ${RUNTIMES_LIT_DEPENDS})
+    add_custom_target(runtimes-test-depends DEPENDS ${RUNTIMES_LIT_DEPENDS})
   endif()
 
   get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)
-  list(REMOVE_DUPLICATES SUB_COMPONENTS)
-  foreach(component ${SUB_COMPONENTS})
-    if(NOT TARGET ${component})
-      message(SEND_ERROR "Missing target for runtime component ${component}!")
-      continue()
-    endif()
-    if(LLVM_INCLUDE_TESTS AND NOT TARGET check-${component})
-      message(SEND_ERROR "Missing check target for runtime component ${component}!")
-      continue()
-    endif()
+  if(SUB_COMPONENTS)
+    list(REMOVE_DUPLICATES SUB_COMPONENTS)
+    foreach(component ${SUB_COMPONENTS})
+      if(NOT TARGET ${component})
+        message(SEND_ERROR "Missing target for runtime component ${component}!")
+        continue()
+      endif()
+      if(LLVM_INCLUDE_TESTS AND NOT TARGET check-${component})
+        message(SEND_ERROR "Missing check target for runtime component ${component}!")
+        continue()
+      endif()
 
-    if(TARGET install-${component})
-      list(APPEND SUB_INSTALL_TARGETS install-${component})
-    endif()
-  endforeach()
+      if(TARGET install-${component})
+        list(APPEND SUB_INSTALL_TARGETS install-${component})
+      endif()
+    endforeach()
 
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-    ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
+  endif()
 
 else() # if this is included from LLVM's CMake
   include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
@@ -151,6 +153,13 @@ else() # if this is included from LLVM's CMake
         check-${runtime_name})
     endforeach()
 
+    if(LLVM_INCLUDE_TESTS)
+      set(test_targets runtimes-test-depends check-runtimes)
+      foreach(component ${SUB_COMPONENTS})
+        list(APPEND SUB_COMPONENT_CHECK_TARGETS check-${component})
+      endforeach()
+    endif()
+
     # Create a runtimes target that uses this file as its top-level CMake file.
     # The runtimes target is a configuration of all the runtime libraries
     # together in a single CMake invocaiton.
@@ -159,14 +168,16 @@ else() # if this is included from LLVM's CMake
                              DEPENDS ${deps}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
+                                        -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                              PASSTHROUGH_PREFIXES ${prefixes}
                              EXTRA_TARGETS ${extra_targets}
-                                            test-depends-runtimes
-                                            check-runtimes
+                                            ${test_targets}
                                             ${SUB_COMPONENTS}
+                                            ${SUB_COMPONENT_CHECK_TARGETS}
                                             ${SUB_INSTALL_TARGETS}
                              USE_TOOLCHAIN)
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS test-depends-runtimes)
-
+    if(LLVM_INCLUDE_TESTS)
+      set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS runtimes-test-depends)
+    endif()
   endif()
 endif()

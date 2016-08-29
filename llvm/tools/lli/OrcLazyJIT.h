@@ -68,14 +68,28 @@ public:
       if (M->getDataLayout().isDefault())
         M->setDataLayout(DL);
 
-    // Record the static constructors and destructors. We have to do this before
-    // we hand over ownership of the module to the JIT.
+    // Rename, bump linkage and record static constructors and destructors.
+    // We have to do this before we hand over ownership of the module to the
+    // JIT.
     std::vector<std::string> CtorNames, DtorNames;
-    for (auto &M : Ms) {
-      for (auto Ctor : orc::getConstructors(*M))
-        CtorNames.push_back(mangle(Ctor.Func->getName()));
-      for (auto Dtor : orc::getDestructors(*M))
-        DtorNames.push_back(mangle(Dtor.Func->getName()));
+    {
+      unsigned CtorId = 0, DtorId = 0;
+      for (auto &M : Ms) {
+        for (auto Ctor : orc::getConstructors(*M)) {
+          std::string NewCtorName = ("$static_ctor." + Twine(CtorId++)).str();
+          Ctor.Func->setName(NewCtorName);
+          Ctor.Func->setLinkage(GlobalValue::ExternalLinkage);
+          Ctor.Func->setVisibility(GlobalValue::HiddenVisibility);
+          CtorNames.push_back(mangle(NewCtorName));
+        }
+        for (auto Dtor : orc::getDestructors(*M)) {
+          std::string NewDtorName = ("$static_dtor." + Twine(DtorId++)).str();
+          Dtor.Func->setLinkage(GlobalValue::ExternalLinkage);
+          Dtor.Func->setVisibility(GlobalValue::HiddenVisibility);
+          DtorNames.push_back(mangle(Dtor.Func->getName()));
+          Dtor.Func->setName(NewDtorName);
+        }
+      }
     }
 
     // Symbol resolution order:

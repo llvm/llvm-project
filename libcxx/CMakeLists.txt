@@ -34,7 +34,7 @@ endif()
 if (LIBCXX_STANDALONE_BUILD AND NOT LLVM_FOUND)
   message(WARNING "UNSUPPORTED LIBCXX CONFIGURATION DETECTED: "
                   "llvm-config not found and LLVM_PATH not defined.\n"
-                  "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
+                  "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config "
                   "or -DLLVM_PATH=path/to/llvm-source-root.")
 endif()
 

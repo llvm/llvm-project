@@ -37,7 +37,7 @@ struct MockServer : public GDBRemoteCommunicationServer
     PacketResult
     SendPacket(llvm::StringRef payload)
     {
-        return GDBRemoteCommunicationServer::SendPacketNoLock(payload.data(), payload.size());
+        return GDBRemoteCommunicationServer::SendPacketNoLock(payload);
     }
 
     PacketResult

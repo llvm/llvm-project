@@ -49,7 +49,7 @@ The basic steps needed to build libc++ are:
    For more information about configuring libc++ see :ref:`CMake Options`.
 
    * ``make cxx`` --- will build libc++ and libc++abi.
-   * ``make check-libcxx check-libcxxabi`` --- will run the test suites.
+   * ``make check-cxx check-cxxabi`` --- will run the test suites.
 
    Shared libraries for libc++ and libc++ abi should now be present in llvm/build/lib.
    See :ref:`using an alternate libc++ installation <alternate libcxx>`
@@ -60,7 +60,7 @@ The basic steps needed to build libc++ are:
    careful not to replace it. Remember Use the CMake option ``CMAKE_INSTALL_PREFIX`` to
    select a safe place to install libc++.
 
-   * ``make install-libcxx install-libcxxabi`` --- Will install the libraries and the headers
+   * ``make install-cxx install-cxxabi`` --- Will install the libraries and the headers
 
    .. warning::
      * Replacing your systems libc++ installation could render the system non-functional.

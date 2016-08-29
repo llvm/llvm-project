@@ -1073,18 +1073,27 @@ class LSHL_Common <bits<11> inst> : R600_2OP_Helper <inst, "LSHL", shl>;
 class LSHR_Common <bits<11> inst> : R600_2OP_Helper <inst, "LSHR", srl>;
 class ASHR_Common <bits<11> inst> : R600_2OP_Helper <inst, "ASHR", sra>;
 class MULHI_INT_Common <bits<11> inst> : R600_2OP_Helper <
-  inst, "MULHI_INT", mulhs
-> {
+  inst, "MULHI_INT", mulhs> {
   let Itinerary = TransALU;
 }
+
+class MULHI_INT24_Common <bits<11> inst> : R600_2OP_Helper <
+  inst, "MULHI_INT24", AMDGPUmulhi_i24> {
+  let Itinerary = VecALU;
+}
+
 class MULHI_UINT_Common <bits<11> inst> : R600_2OP_Helper <
-  inst, "MULHI", mulhu
-> {
+  inst, "MULHI", mulhu> {
   let Itinerary = TransALU;
 }
+
+class MULHI_UINT24_Common <bits<11> inst> : R600_2OP_Helper <
+  inst, "MULHI_UINT24", AMDGPUmulhi_u24> {
+  let Itinerary = VecALU;
+}
+
 class MULLO_INT_Common <bits<11> inst> : R600_2OP_Helper <
-  inst, "MULLO_INT", mul
-> {
+  inst, "MULLO_INT", mul> {
   let Itinerary = TransALU;
 }
 class MULLO_UINT_Common <bits<11> inst> : R600_2OP <inst, "MULLO_UINT", []> {

@@ -46,8 +46,8 @@ template <>
 struct TestExpectations<std::input_iterator_tag>
     : public ReservoirSampleExpectations {};
 
-template <template<class> class PopulationIteratorType, class PopulationItem,
-          template<class> class SampleIteratorType, class SampleItem>
+template <template<class...> class PopulationIteratorType, class PopulationItem,
+          template<class...> class SampleIteratorType, class SampleItem>
 void test() {
   typedef PopulationIteratorType<PopulationItem *> PopulationIterator;
   typedef SampleIteratorType<SampleItem *> SampleIterator;
@@ -68,13 +68,13 @@ void test() {
   assert(std::equal(oa, oa + os, oa1));
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
-                                  SampleIterator(oa), os, g);
+                                  SampleIterator(oa), os, std::move(g));
   assert(end.base() - oa == std::min(os, is));
   assert(std::equal(oa, oa + os, oa2));
 }
 
-template <template<class> class PopulationIteratorType, class PopulationItem,
-          template<class> class SampleIteratorType, class SampleItem>
+template <template<class...> class PopulationIteratorType, class PopulationItem,
+          template<class...> class SampleIteratorType, class SampleItem>
 void test_empty_population() {
   typedef PopulationIteratorType<PopulationItem *> PopulationIterator;
   typedef SampleIteratorType<SampleItem *> SampleIterator;
@@ -88,8 +88,8 @@ void test_empty_population() {
   assert(end.base() == oa);
 }
 
-template <template<class> class PopulationIteratorType, class PopulationItem,
-          template<class> class SampleIteratorType, class SampleItem>
+template <template<class...> class PopulationIteratorType, class PopulationItem,
+          template<class...> class SampleIteratorType, class SampleItem>
 void test_empty_sample() {
   typedef PopulationIteratorType<PopulationItem *> PopulationIterator;
   typedef SampleIteratorType<SampleItem *> SampleIterator;
@@ -103,8 +103,8 @@ void test_empty_sample() {
   assert(end.base() == oa);
 }
 
-template <template<class> class PopulationIteratorType, class PopulationItem,
-          template<class> class SampleIteratorType, class SampleItem>
+template <template<class...> class PopulationIteratorType, class PopulationItem,
+          template<class...> class SampleIteratorType, class SampleItem>
 void test_small_population() {
   // The population size is less than the sample size.
   typedef PopulationIteratorType<PopulationItem *> PopulationIterator;
