@@ -1,4 +1,4 @@
-; REQUIRES: X86
+; XFAIL: *
 ; RUN: llvm-as < %s > %t1.bc
 ; RUN: llvm-as < %p/Inputs/common.ll > %t2.bc
 
