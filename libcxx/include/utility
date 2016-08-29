@@ -515,7 +515,7 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
     }
 
     template <class _Tuple, _EnableB<
-            _CheckTLC<_Tuple>::template __enable_assign()
+            _CheckTLC<_Tuple>::template __enable_assign<_Tuple>()
      > = false>
     _LIBCPP_INLINE_VISIBILITY
     pair& operator=(_Tuple&& __p) {

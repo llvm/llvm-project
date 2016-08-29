@@ -32,7 +32,7 @@ User-defined Operators: the Idea
 
 The "operator overloading" that we will add to Kaleidoscope is more
 general than languages like C++. In C++, you are only allowed to
-redefine existing operators: you can't programatically change the
+redefine existing operators: you can't programmatically change the
 grammar, introduce new operators, change precedence levels, etc. In this
 chapter, we will add this capability to Kaleidoscope, which will let the
 user round out the set of operators that are supported.

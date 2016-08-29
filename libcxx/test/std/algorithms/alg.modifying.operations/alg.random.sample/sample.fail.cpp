@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // <algorithm>
 
@@ -17,7 +17,7 @@
 //                       SampleIterator out, Distance n,
 //                       UniformRandomNumberGenerator &&g);
 
-#include <experimental/algorithm>
+#include <algorithm>
 #include <random>
 #include <cassert>
 
@@ -29,7 +29,7 @@ template <class PopulationIterator, class SampleIterator> void test() {
   const unsigned os = 4;
   int oa[os];
   std::minstd_rand g;
-  std::experimental::sample(PopulationIterator(ia), PopulationIterator(ia + is),
+  std::sample(PopulationIterator(ia), PopulationIterator(ia + is),
                             SampleIterator(oa), os, g);
 }
 

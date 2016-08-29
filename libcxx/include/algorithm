@@ -288,6 +288,12 @@ template <class RandomAccessIterator, class RandomNumberGenerator>
     random_shuffle(RandomAccessIterator first, RandomAccessIterator last,
                    RandomNumberGenerator& rand);  // deprecated in C++14
 
+template<class PopulationIterator, class SampleIterator,
+         class Distance, class UniformRandomBitGenerator>
+    SampleIterator sample(PopulationIterator first, PopulationIterator last,
+                          SampleIterator out, Distance n,
+                          UniformRandomBitGenerator&& g); // C++17
+
 template<class RandomAccessIterator, class UniformRandomNumberGenerator>
     void shuffle(RandomAccessIterator first, RandomAccessIterator last,
                  UniformRandomNumberGenerator&& g);
@@ -3141,6 +3147,78 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
         }
     }
 }
+
+template <class _PopulationIterator, class _SampleIterator, class _Distance,
+          class _UniformRandomNumberGenerator>
+_LIBCPP_INLINE_VISIBILITY
+_SampleIterator __sample(_PopulationIterator __first,
+                         _PopulationIterator __last, _SampleIterator __out,
+                         _Distance __n,
+                         _UniformRandomNumberGenerator & __g,
+                         input_iterator_tag) {
+
+  _Distance __k = 0;
+  for (; __first != __last && __k < __n; ++__first, (void)++__k)
+    __out[__k] = *__first;
+  _Distance __sz = __k;
+  for (; __first != __last; ++__first, (void)++__k) {
+    _Distance __r = _VSTD::uniform_int_distribution<_Distance>(0, __k)(__g);
+    if (__r < __sz)
+      __out[__r] = *__first;
+  }
+  return __out + _VSTD::min(__n, __k);
+}
+
+template <class _PopulationIterator, class _SampleIterator, class _Distance,
+          class _UniformRandomNumberGenerator>
+_LIBCPP_INLINE_VISIBILITY
+_SampleIterator __sample(_PopulationIterator __first,
+                         _PopulationIterator __last, _SampleIterator __out,
+                         _Distance __n,
+                         _UniformRandomNumberGenerator& __g,
+                         forward_iterator_tag) {
+  _Distance __unsampled_sz = _VSTD::distance(__first, __last);
+  for (__n = _VSTD::min(__n, __unsampled_sz); __n != 0; ++__first) {
+    _Distance __r =
+        _VSTD::uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
+    if (__r < __n) {
+      *__out++ = *__first;
+      --__n;
+    }
+  }
+  return __out;
+}
+
+template <class _PopulationIterator, class _SampleIterator, class _Distance,
+          class _UniformRandomNumberGenerator>
+_LIBCPP_INLINE_VISIBILITY
+_SampleIterator __sample(_PopulationIterator __first,
+                         _PopulationIterator __last, _SampleIterator __out,
+                         _Distance __n, _UniformRandomNumberGenerator& __g) {
+  typedef typename iterator_traits<_PopulationIterator>::iterator_category
+        _PopCategory;
+  typedef typename iterator_traits<_PopulationIterator>::difference_type
+        _Difference;
+  static_assert(__is_forward_iterator<_PopulationIterator>::value ||
+                __is_random_access_iterator<_SampleIterator>::value,
+                "SampleIterator must meet the requirements of RandomAccessIterator");
+  typedef typename common_type<_Distance, _Difference>::type _CommonType;
+  _LIBCPP_ASSERT(__n >= 0, "N must be a positive number.");
+  return _VSTD::__sample(
+      __first, __last, __out, _CommonType(__n),
+      __g, _PopCategory());
+}
+
+#if _LIBCPP_STD_VER > 14
+template <class _PopulationIterator, class _SampleIterator, class _Distance,
+          class _UniformRandomNumberGenerator>
+inline _LIBCPP_INLINE_VISIBILITY
+_SampleIterator sample(_PopulationIterator __first,
+                       _PopulationIterator __last, _SampleIterator __out,
+                       _Distance __n, _UniformRandomNumberGenerator&& __g) {
+    return _VSTD::__sample(__first, __last, __out, __n, __g);
+}
+#endif // _LIBCPP_STD_VER > 14
 
 template<class _RandomAccessIterator, class _UniformRandomNumberGenerator>
     void shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,

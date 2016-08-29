@@ -82,7 +82,7 @@ h2+div, h2+p {text-align: left; padding-left: 20pt; padding-right: 10pt;}
 h3+div, h3+p {text-align: left; padding-left: 20pt; padding-right: 10pt;}
 h4+div, h4+p {text-align: left; padding-left: 20pt; padding-right: 10pt;}
 
-/* It is preferrable to use <pre class="doc_code"> everywhere instead of the
+/* It is preferable to use <pre class="doc_code"> everywhere instead of the
  * <div class="doc_code"><pre>...</ptr></div> construct.
  *
  * Once all docs use <pre> for code regions, this style can  be merged with the

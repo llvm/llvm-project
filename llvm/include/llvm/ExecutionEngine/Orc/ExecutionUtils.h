@@ -43,12 +43,12 @@ public:
   ///   This class provides a read-only view of the element with any casts on
   /// the function stripped away.
   struct Element {
-    Element(unsigned Priority, const Function *Func, const Value *Data)
+    Element(unsigned Priority, Function *Func, Value *Data)
       : Priority(Priority), Func(Func), Data(Data) {}
 
     unsigned Priority;
-    const Function *Func;
-    const Value *Data;
+    Function *Func;
+    Value *Data;
   };
 
   /// @brief Construct an iterator instance. If End is true then this iterator

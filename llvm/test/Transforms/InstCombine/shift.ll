@@ -373,11 +373,9 @@ define i1 @test19a(i32 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test19a_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test19a_vec(
-; CHECK-NEXT:    [[B_MASK:%.*]] = and <2 x i32> %A, <i32 -4, i32 -4>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[B_MASK]], <i32 -4, i32 -4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> %A, <i32 -5, i32 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = ashr <2 x i32> %A, <i32 2, i32 2>

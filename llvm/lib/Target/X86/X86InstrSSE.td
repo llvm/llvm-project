@@ -5441,7 +5441,7 @@ let Predicates = [HasAVX, NoVLX] in {
   defm VPABSD  : SS3I_unop_rm<0x1E, "vpabsd", v4i32, X86Abs, loadv2i64>, VEX;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   def : Pat<(xor
             (bc_v2i64 (v16i1sextv16i8)),
             (bc_v2i64 (add (v16i8 VR128:$src), (v16i1sextv16i8)))),
@@ -5450,6 +5450,8 @@ let Predicates = [HasAVX] in {
             (bc_v2i64 (v8i1sextv8i16)),
             (bc_v2i64 (add (v8i16 VR128:$src), (v8i1sextv8i16)))),
             (VPABSWrr VR128:$src)>;
+}
+let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(xor
             (bc_v2i64 (v4i1sextv4i32)),
             (bc_v2i64 (add (v4i32 VR128:$src), (v4i1sextv4i32)))),
@@ -5464,7 +5466,7 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm VPABSD  : SS3I_unop_rm_y<0x1E, "vpabsd", v8i32, X86Abs>, VEX, VEX_L;
 }
 
-let Predicates = [HasAVX2] in {
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   def : Pat<(xor
             (bc_v4i64 (v32i1sextv32i8)),
             (bc_v4i64 (add (v32i8 VR256:$src), (v32i1sextv32i8)))),
@@ -5473,6 +5475,8 @@ let Predicates = [HasAVX2] in {
             (bc_v4i64 (v16i1sextv16i16)),
             (bc_v4i64 (add (v16i16 VR256:$src), (v16i1sextv16i16)))),
             (VPABSWYrr VR256:$src)>;
+}
+let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(xor
             (bc_v4i64 (v8i1sextv8i32)),
             (bc_v4i64 (add (v8i32 VR256:$src), (v8i1sextv8i32)))),

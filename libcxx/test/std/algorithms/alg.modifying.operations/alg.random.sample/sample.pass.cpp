@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // <algorithm>
 
 // template <class PopulationIterator, class SampleIterator, class Distance,
@@ -15,7 +17,7 @@
 //                       SampleIterator out, Distance n,
 //                       UniformRandomNumberGenerator &&g);
 
-#include <experimental/algorithm>
+#include <algorithm>
 #include <random>
 #include <cassert>
 
@@ -61,12 +63,12 @@ void test() {
   const int *oa2 = Expectations::oa2;
   std::minstd_rand g;
   SampleIterator end;
-  end = std::experimental::sample(PopulationIterator(ia),
+  end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
   assert(end.base() - oa == std::min(os, is));
   assert(std::equal(oa, oa + os, oa1));
-  end = std::experimental::sample(PopulationIterator(ia),
+  end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, std::move(g));
   assert(end.base() - oa == std::min(os, is));
@@ -83,7 +85,7 @@ void test_empty_population() {
   SampleItem oa[os];
   std::minstd_rand g;
   SampleIterator end =
-      std::experimental::sample(PopulationIterator(ia), PopulationIterator(ia),
+      std::sample(PopulationIterator(ia), PopulationIterator(ia),
                                 SampleIterator(oa), os, g);
   assert(end.base() == oa);
 }
@@ -98,7 +100,7 @@ void test_empty_sample() {
   SampleItem oa[1];
   std::minstd_rand g;
   SampleIterator end =
-      std::experimental::sample(PopulationIterator(ia), PopulationIterator(ia + is),
+      std::sample(PopulationIterator(ia), PopulationIterator(ia + is),
                                 SampleIterator(oa), 0, g);
   assert(end.base() == oa);
 }
@@ -116,7 +118,7 @@ void test_small_population() {
   const SampleItem oa1[] = {1, 2, 3, 4, 5};
   std::minstd_rand g;
   SampleIterator end;
-  end = std::experimental::sample(PopulationIterator(ia),
+  end = std::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
   assert(end.base() - oa == std::min(os, is));
