@@ -59,9 +59,24 @@
 #define BUILTIN_FLOOR_F64 __llvm_floor_f64
 #define BUILTIN_FLOOR_F16 __llvm_floor_f16
 
-#define BUILTIN_FRACTION_F32 __llvm_amdgcn_fract_f32
-#define BUILTIN_FRACTION_F64 __llvm_amdgcn_fract_f64
-#define BUILTIN_FRACTION_F16 __llvm_amdgcn_fract_f16
+#define BUILTIN_FRACTION_F32(X) ({ \
+    float _fract_x = X; \
+    float _fract_r = __llvm_amdgcn_fract_f32(_fract_x); \
+    _fract_r = __llvm_amdgcn_class_f32(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0f : _fract_r; \
+    _fract_r; \
+})
+#define BUILTIN_FRACTION_F64(X) ({ \
+    double _fract_x = X; \
+    double _fract_r = __llvm_amdgcn_fract_f64(_fract_x); \
+    _fract_r = __llvm_amdgcn_class_f64(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0 : _fract_r; \
+    _fract_r; \
+})
+#define BUILTIN_FRACTION_F16(X) ({ \
+    half _fract_x = X; \
+    half _fract_r = __llvm_amdgcn_fract_f16(_fract_x); \
+    _fract_r = __llvm_amdgcn_class_f16(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0h : _fract_r; \
+    _fract_r; \
+})
 
 #define BUILTIN_MAD_U32(A,B,C) ((A)*(B)+(C))
 
