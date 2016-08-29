@@ -474,7 +474,7 @@ TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO()
 void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
                                                const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
-  if (!TM.isPositionIndependent()) {
+  if (TM.getRelocationModel() == Reloc::Static) {
     StaticCtorSection = Ctx.getMachOSection("__TEXT", "__constructor", 0,
                                             SectionKind::getData());
     StaticDtorSection = Ctx.getMachOSection("__TEXT", "__destructor", 0,
