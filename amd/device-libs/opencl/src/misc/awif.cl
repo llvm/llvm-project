@@ -8,6 +8,24 @@
 #include "irif.h"
 #pragma OPENCL EXTENSIOM cl_khr_subgroups : enable
 
+__attribute__((overloadable, always_inline)) void
+mem_fence(cl_mem_fence_flags flags)
+{
+    atomic_work_item_fence(flags, memory_order_acq_rel, memory_scope_work_group);
+}
+
+__attribute__((overloadable, always_inline)) void
+read_mem_fence(cl_mem_fence_flags flags)
+{
+    atomic_work_item_fence(flags, memory_order_acquire, memory_scope_work_group);
+}
+
+__attribute__((overloadable, always_inline)) void
+write_mem_fence(cl_mem_fence_flags flags)
+{
+    atomic_work_item_fence(flags, memory_order_release, memory_scope_work_group);
+}
+
 #if !defined LOW_LEVEL_APPROACH
 __attribute__((overloadable, always_inline)) void
 atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scope scope)
@@ -103,3 +121,4 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
     }
 }
 #endif // LOW_LEVEL_APPROACH
+
