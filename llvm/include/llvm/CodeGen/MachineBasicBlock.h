@@ -46,9 +46,9 @@ private:
 public:
   void addNodeToList(MachineInstr *N);
   void removeNodeFromList(MachineInstr *N);
-  template <class Iterator>
-  void transferNodesFromList(ilist_traits &OldList, Iterator First,
-                             Iterator Last);
+  void transferNodesFromList(ilist_traits &OldList,
+                             simple_ilist<MachineInstr>::iterator First,
+                             simple_ilist<MachineInstr>::iterator Last);
 
   void deleteNode(MachineInstr *MI);
   // Leave out createNode...
