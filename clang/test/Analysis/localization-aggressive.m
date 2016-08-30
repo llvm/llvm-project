@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -analyze -fblocks -analyzer-store=region  -analyzer-checker=optin.osx.cocoa.localizability.NonLocalizedStringChecker -analyzer-checker=optin.osx.cocoa.localizability.EmptyLocalizationContextChecker -verify  -analyzer-config AggressiveReport=true %s
+// RUN: %clang_cc1 -fblocks -x objective-c-header -emit-pch -o %t.pch %S/Inputs/localization-pch.h
+
+// RUN: %clang_cc1 -analyze -fblocks -analyzer-store=region  -analyzer-checker=optin.osx.cocoa.localizability.NonLocalizedStringChecker -analyzer-checker=optin.osx.cocoa.localizability.EmptyLocalizationContextChecker -include-pch %t.pch -verify  -analyzer-config AggressiveReport=true %s
 
 // These declarations were reduced using Delta-Debugging from Foundation.h
 // on Mac OS X.
@@ -247,6 +249,10 @@ NSString *ForceLocalized(NSString *str) { return str; }
   NSString *string = YOLOC(@"Hello"); // expected-warning {{Localized string macro should include a non-empty comment for translators}}
   NSString *string2 = HOM(@"Hello");  // expected-warning {{Localized string macro should include a non-empty comment for translators}}
   NSString *string3 = NSLocalizedString((0 ? @"Critical" : @"Current"),nil); // expected-warning {{Localized string macro should include a non-empty comment for translators}}
+}
+
+- (void)testMacroExpansionDefinedInPCH {
+  NSString *string = MyLocalizedStringInPCH(@"Hello"); // expected-warning {{Localized string macro should include a non-empty comment for translators}}
 }
 
 #define KCLocalizedString(x,comment) NSLocalizedString(x, comment)
