@@ -36,8 +36,20 @@ void func3() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+3]]:2 = #0
 // CHECK-NEXT: File 1, 4:17 -> 4:22 = #0
 // CHECK-NEXT: File 2, 4:17 -> 4:22 = #0
 
+// CHECK-NEXT: func4
+void func4() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+6]]:2 = #0
+  int i = 0;
+  while (i++ < 10) // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:18 = (#0 + #1)
+    if (i < 5) // CHECK-NEXT: File 0, [[@LINE]]:5 -> [[@LINE+2]]:14 = #1
+               // CHECK-NEXT: File 0, [[@LINE-1]]:9 -> [[@LINE-1]]:14 = #1
+      MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:7 -> [[@LINE]]:14 = #2
+}
+// CHECK-NEXT: File 1, 4:17 -> 4:22 = #2
+// CHECK-NOT: File 1
+
 int main(int argc, const char *argv[]) {
   func();
   func2();
   func3();
+  func4();
 }

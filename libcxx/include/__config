@@ -691,6 +691,12 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
+#ifdef __GNUC__
+#define _LIBCPP_MAY_ALIAS __attribute__((__may_alias__))
+#else
+#define _LIBCPP_MAY_ALIAS
+#endif
+
 #if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__)
 #   define _LIBCPP_EXPLICIT explicit
 #else

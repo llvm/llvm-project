@@ -319,7 +319,7 @@ JSONArray::GetNumElements ()
 
 
 JSONParser::JSONParser (const char *cstr) :
-    StringExtractor(cstr)
+    StdStringExtractor(cstr)
 {
 }
 

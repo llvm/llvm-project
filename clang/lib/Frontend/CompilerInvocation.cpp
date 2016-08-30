@@ -717,6 +717,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fsanitize_coverage_indirect_calls);
   Opts.SanitizeCoverageTraceBB = Args.hasArg(OPT_fsanitize_coverage_trace_bb);
   Opts.SanitizeCoverageTraceCmp = Args.hasArg(OPT_fsanitize_coverage_trace_cmp);
+  Opts.SanitizeCoverageTraceDiv = Args.hasArg(OPT_fsanitize_coverage_trace_div);
+  Opts.SanitizeCoverageTraceGep = Args.hasArg(OPT_fsanitize_coverage_trace_gep);
   Opts.SanitizeCoverage8bitCounters =
       Args.hasArg(OPT_fsanitize_coverage_8bit_counters);
   Opts.SanitizeCoverageTracePC = Args.hasArg(OPT_fsanitize_coverage_trace_pc);
@@ -1298,11 +1300,13 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       .Case("cl", IK_OpenCL)
       .Case("cuda", IK_CUDA)
       .Case("c++", IK_CXX)
+      .Case("c++-module", IK_CXX)
       .Case("objective-c", IK_ObjC)
       .Case("objective-c++", IK_ObjCXX)
       .Case("cpp-output", IK_PreprocessedC)
       .Case("assembler-with-cpp", IK_Asm)
       .Case("c++-cpp-output", IK_PreprocessedCXX)
+      .Case("c++-module-cpp-output", IK_PreprocessedCXX)
       .Case("cuda-cpp-output", IK_PreprocessedCuda)
       .Case("objective-c-cpp-output", IK_PreprocessedObjC)
       .Case("objc-cpp-output", IK_PreprocessedObjC)

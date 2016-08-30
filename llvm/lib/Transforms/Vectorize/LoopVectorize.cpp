@@ -2377,6 +2377,16 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
       return VectorLoopValueMap.initVector(V, Entry);
     }
 
+    // Get the last scalarized instruction. This corresponds to the instruction
+    // we created for the last vector lane on the last unroll iteration.
+    auto *LastInst = cast<Instruction>(getScalarValue(V, UF - 1, VF - 1));
+
+    // Set the insert point after the last scalarized instruction. This ensures
+    // the insertelement sequence will directly follow the scalar definitions.
+    auto OldIP = Builder.saveIP();
+    auto NewIP = std::next(BasicBlock::iterator(LastInst));
+    Builder.SetInsertPoint(&*NewIP);
+
     // However, if we are vectorizing, we need to construct the vector values
     // using insertelement instructions. Since the resulting vectors are stored
     // in VectorLoopValueMap, we will only generate the insertelements once.
@@ -2387,6 +2397,7 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
             Insert, getScalarValue(V, Part, Width), Builder.getInt32(Width));
       Entry[Part] = Insert;
     }
+    Builder.restoreIP(OldIP);
     return VectorLoopValueMap.initVector(V, Entry);
   }
 

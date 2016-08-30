@@ -403,7 +403,7 @@ class SizeClassAllocator64 {
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
     if (end_idx + size > region->mapped_user) {
       if (!kUsingConstantSpaceBeg && region->mapped_user == 0)
-        region->rand_state = region_beg;  // Comes from ASLR.
+        region->rand_state = static_cast<u32>(region_beg >> 12);  // From ASLR.
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
       while (end_idx + size > region->mapped_user + map_size)

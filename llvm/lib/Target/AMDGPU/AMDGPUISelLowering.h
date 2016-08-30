@@ -31,9 +31,6 @@ protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
-  /// \brief Lower vector stores by merging the vector elements into an integer
-  /// of the same bitwidth.
-  SDValue MergeVectorStore(const SDValue &Op, SelectionDAG &DAG) const;
   /// \brief Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 

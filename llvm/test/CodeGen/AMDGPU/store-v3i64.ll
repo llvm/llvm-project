@@ -46,8 +46,7 @@ define void @global_store_v3i64_unaligned(<3 x i64> addrspace(1)* %out, <3 x i64
 }
 
 ; GCN-LABEL: {{^}}local_store_v3i64:
-; GCN: ds_write_b64
-; GCN: ds_write_b64
+; GCN: ds_write2_b64
 ; GCN: ds_write_b64
 define void @local_store_v3i64(<3 x i64> addrspace(3)* %out, <3 x i64> %x) {
   store <3 x i64> %x, <3 x i64> addrspace(3)* %out, align 32

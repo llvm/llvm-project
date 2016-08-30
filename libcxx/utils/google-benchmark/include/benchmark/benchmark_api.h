@@ -214,6 +214,10 @@ void UseCharPointer(char const volatile*);
 // registered benchmark.
 Benchmark* RegisterBenchmarkInternal(Benchmark*);
 
+// Ensure that the standard streams are properly initialized in every TU.
+int InitializeStreams();
+BENCHMARK_UNUSED static int stream_init_anchor = InitializeStreams();
+
 } // end namespace internal
 
 
@@ -425,10 +429,16 @@ public:
 
   // Range arguments for this run. CHECKs if the argument has been set.
   BENCHMARK_ALWAYS_INLINE
-  int range(std::size_t pos) const {
+  int range(std::size_t pos = 0) const {
       assert(range_.size() > pos);
       return range_[pos];
   }
+
+  BENCHMARK_DEPRECATED_MSG("use 'range(0)' instead")
+  int range_x() const { return range(0); }
+
+  BENCHMARK_DEPRECATED_MSG("use 'range(1)' instead")
+  int range_y() const { return range(1); }
 
   BENCHMARK_ALWAYS_INLINE
   size_t iterations() const { return total_iterations_; }
@@ -498,10 +508,30 @@ public:
   // REQUIRES: The function passed to the constructor must accept arg1, arg2 ...
   Benchmark* Args(const std::vector<int>& args);
 
+  // Equivalent to Args({x, y})
+  // NOTE: This is a legacy C++03 interface provided for compatibility only.
+  //   New code should use 'Args'.
+  Benchmark* ArgPair(int x, int y) {
+      std::vector<int> args;
+      args.push_back(x);
+      args.push_back(y);
+      return Args(args);
+  }
+
   // Run this benchmark once for a number of values picked from the
   // ranges [start..limit].  (starts and limits are always picked.)
   // REQUIRES: The function passed to the constructor must accept arg1, arg2 ...
   Benchmark* Ranges(const std::vector<std::pair<int, int> >& ranges);
+
+  // Equivalent to Ranges({{lo1, hi1}, {lo2, hi2}}).
+  // NOTE: This is a legacy C++03 interface provided for compatibility only.
+  //   New code should use 'Ranges'.
+  Benchmark* RangePair(int lo1, int hi1, int lo2, int hi2) {
+      std::vector<std::pair<int, int> > ranges;
+      ranges.push_back(std::make_pair(lo1, hi1));
+      ranges.push_back(std::make_pair(lo2, hi2));
+      return Ranges(ranges);
+  }
 
   // Pass this benchmark object to *func, which can customize
   // the benchmark by calling various methods like Arg, Args,
@@ -521,6 +551,11 @@ public:
   // the `benchmark_repetitions` flag.
   // REQUIRES: `n > 0`
   Benchmark* Repetitions(int n);
+
+  // Specify if each repetition of the benchmark should be reported separately
+  // or if only the final statistics should be reported. If the benchmark
+  // is not repeated then the single result is always reported.
+  Benchmark* ReportAggregatesOnly(bool v = true);
 
   // If a particular benchmark is I/O bound, runs multiple threads internally or
   // if for some reason CPU timings are not representative, call this method. If

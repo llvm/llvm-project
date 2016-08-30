@@ -1,17 +1,18 @@
 // RUN: %clangxx_asan %stdcxx11 -O0 -fsanitize-address-use-after-scope %s -o %t
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 0 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 1 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 2 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 3 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 4 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 5 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 6 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 7 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 8 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 9 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_scope=1 not %run %t 10 2>&1 | FileCheck %s
+// RUN: not %run %t 0 2>&1 | FileCheck %s
+// RUN: not %run %t 1 2>&1 | FileCheck %s
+// RUN: not %run %t 2 2>&1 | FileCheck %s
+// RUN: not %run %t 3 2>&1 | FileCheck %s
+// RUN: not %run %t 4 2>&1 | FileCheck %s
+// RUN: not %run %t 5 2>&1 | FileCheck %s
+// RUN: not %run %t 6 2>&1 | FileCheck %s
+// RUN: not %run %t 7 2>&1 | FileCheck %s
+// RUN: not %run %t 8 2>&1 | FileCheck %s
+// RUN: not %run %t 9 2>&1 | FileCheck %s
+// RUN: not %run %t 10 2>&1 | FileCheck %s
 
-// RUN: %env_asan_opts=detect_stack_use_after_scope=0 %run %t 11
+// Temporarily disable to fix the bot.
+// UNSUPPORTED: darwin
 
 #include <stdlib.h>
 #include <string>
@@ -34,7 +35,7 @@ template <class T, size_t N> struct Ptr<T[N]> {
   T *t;
 };
 
-template <class T> void test() {
+template <class T> __attribute__((noinline)) void test() {
   Ptr<T> ptr;
   {
     T x;

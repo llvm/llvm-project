@@ -13,6 +13,7 @@
 #include <stdlib.h>
 
 // C++ Includes
+#include <tuple>
 // Other libraries and framework includes
 // Project includes
 
@@ -37,6 +38,10 @@ StringExtractor::StringExtractor() :
 {
 }
 
+StringExtractor::StringExtractor(llvm::StringRef packet_str) : m_packet(), m_index(0)
+{
+    m_packet.assign(packet_str.begin(), packet_str.end());
+}
 
 StringExtractor::StringExtractor(const char *packet_cstr) :
     m_packet(),
@@ -468,28 +473,37 @@ StringExtractor::GetHexByteStringTerminatedBy (std::string &str,
 }
 
 bool
-StringExtractor::GetNameColonValue (std::string &name, std::string &value)
+StringExtractor::GetNameColonValue(llvm::StringRef &name, llvm::StringRef &value)
 {
     // Read something in the form of NNNN:VVVV; where NNNN is any character
     // that is not a colon, followed by a ':' character, then a value (one or
     // more ';' chars), followed by a ';'
-    if (m_index < m_packet.size())
+    if (m_index >= m_packet.size())
+        return fail();
+
+    llvm::StringRef view(m_packet);
+    if (view.empty())
+        return fail();
+
+    llvm::StringRef a, b, c, d;
+    view = view.substr(m_index);
+    std::tie(a, b) = view.split(':');
+    if (a.empty() || b.empty())
+        return fail();
+    std::tie(c, d) = b.split(';');
+    if (b == c && d.empty())
+        return fail();
+
+    name = a;
+    value = c;
+    if (d.empty())
+        m_index = m_packet.size();
+    else
     {
-        const size_t colon_idx = m_packet.find (':', m_index);
-        if (colon_idx != std::string::npos)
-        {
-            const size_t semicolon_idx = m_packet.find (';', colon_idx);
-            if (semicolon_idx != std::string::npos)
-            {
-                name.assign (m_packet, m_index, colon_idx - m_index);
-                value.assign (m_packet, colon_idx + 1, semicolon_idx - (colon_idx + 1));
-                m_index = semicolon_idx + 1;
-                return true;
-            }
-        }
+        size_t bytes_consumed = d.data() - view.data();
+        m_index += bytes_consumed;
     }
-    m_index = UINT64_MAX;
-    return false;
+    return true;
 }
 
 void

@@ -127,6 +127,27 @@ bool coro::declaresIntrinsics(Module &M,
   return false;
 }
 
+// Replace all coro.frees associated with the provided CoroId either with 'null'
+// if Elide is true and with its frame parameter otherwise.
+void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
+  SmallVector<CoroFreeInst *, 4> CoroFrees;
+  for (User *U : CoroId->users())
+    if (auto CF = dyn_cast<CoroFreeInst>(U))
+      CoroFrees.push_back(CF);
+
+  if (CoroFrees.empty())
+    return;
+
+  Value *Replacement =
+      Elide ? ConstantPointerNull::get(Type::getInt8PtrTy(CoroId->getContext()))
+            : CoroFrees.front()->getFrame();
+
+  for (CoroFreeInst *CF : CoroFrees) {
+    CF->replaceAllUsesWith(Replacement);
+    CF->eraseFromParent();
+  }
+}
+
 // FIXME: This code is stolen from CallGraph::addToCallGraph(Function *F), which
 // happens to be private. It is better for this functionality exposed by the
 // CallGraph.
@@ -286,5 +307,5 @@ void coro::Shape::buildFrom(Function &F) {
   // Canonicalize coro.suspend by inserting a coro.save if needed.
   for (CoroSuspendInst *CS : CoroSuspends)
     if (!CS->getCoroSave())
-      createCoroSave(CoroBegin, CoroSuspends.back());
+      createCoroSave(CoroBegin, CS);
 }

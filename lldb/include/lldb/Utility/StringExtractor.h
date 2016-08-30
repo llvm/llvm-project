@@ -17,6 +17,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "llvm/ADT/StringRef.h"
 
 class StringExtractor
 {
@@ -30,6 +31,7 @@ public:
     // Constructors and Destructors
     //------------------------------------------------------------------
     StringExtractor();
+    StringExtractor(llvm::StringRef packet_str);
     StringExtractor(const char *packet_cstr);
     StringExtractor(const StringExtractor& rhs);
     virtual ~StringExtractor();
@@ -118,7 +120,7 @@ public:
     GetHexU8Ex (uint8_t& ch, bool set_eof_on_fail = true);
 
     bool
-    GetNameColonValue (std::string &name, std::string &value);
+    GetNameColonValue(llvm::StringRef &name, llvm::StringRef &value);
 
     int32_t
     GetS32 (int32_t fail_value, int base = 0);
@@ -166,6 +168,12 @@ public:
     }
 
 protected:
+    bool
+    fail()
+    {
+        m_index = UINT64_MAX;
+        return false;
+    }
     //------------------------------------------------------------------
     // For StringExtractor only
     //------------------------------------------------------------------

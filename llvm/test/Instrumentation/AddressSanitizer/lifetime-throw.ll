@@ -19,8 +19,12 @@ define void @Throw() sanitize_address personality i8* bitcast (i32 (...)* @__gxx
 entry:
   %x = alloca %struct.ABC, align 4
   %0 = bitcast %struct.ABC* %x to i8*
+
+  ; Poison memory in prologue: F1F1F1F1F8F3F3F3
+  ; CHECK: store i64 -868082052615769615, i64* %{{[0-9]+}}
+
   call void @llvm.lifetime.start(i64 4, i8* %0)
-  ; CHECK: call void @__asan_unpoison_stack_memory
+  ; CHECK: store i8 4, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.start
 
   %exception = call i8* @__cxa_allocate_exception(i64 4)
@@ -34,11 +38,11 @@ lpad:
           cleanup
   call void @_ZN3ABCD2Ev(%struct.ABC* nonnull %x)
   call void @llvm.lifetime.end(i64 4, i8* %0)
-  ; CHECK: call void @__asan_poison_stack_memory
+  ; CHECK: store i8 -8, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.end
 
   resume { i8*, i32 } %1
-  ; CHECK: call void @__asan_unpoison_stack_memory
+  ; CHECK: store i64 0, i64* %{{[0-9]+}}
   ; CHECK-NEXT: resume
 
 unreachable:
@@ -69,8 +73,12 @@ entry:
   %x = alloca %struct.ABC, align 4
   %tmp = alloca %struct.ABC, align 4
   %0 = bitcast %struct.ABC* %x to i8*
+
+  ; Poison memory in prologue: F1F1F1F1F8F304F2
+  ; CHECK: store i64 -935355671561244175, i64* %{{[0-9]+}}
+
   call void @llvm.lifetime.start(i64 4, i8* %0)
-  ; CHECK: call void @__asan_unpoison_stack_memory
+  ; CHECK: store i8 4, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.start
 
   %1 = bitcast %struct.ABC* %tmp to i8*
@@ -83,11 +91,11 @@ ehcleanup:
   %2 = cleanuppad within none []
   call void @"\01??1ABC@@QEAA@XZ"(%struct.ABC* nonnull %x) [ "funclet"(token %2) ]
   call void @llvm.lifetime.end(i64 4, i8* %0)
-  ; CHECK: call void @__asan_poison_stack_memory
+  ; CHECK: store i8 -8, i8* %{{[0-9]+}}
   ; CHECK-NEXT: @llvm.lifetime.end
 
   cleanupret from %2 unwind to caller
-  ; CHECK: call void @__asan_unpoison_stack_memory
+  ; CHECK: store i64 0, i64* %{{[0-9]+}}
   ; CHECK-NEXT: cleanupret
 
 unreachable:

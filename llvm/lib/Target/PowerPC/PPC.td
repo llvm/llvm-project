@@ -136,6 +136,8 @@ def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
                    "Assume function descriptors are invariant">;
+def FeatureLongCall : SubtargetFeature<"longcall", "UseLongCalls", "true",
+                                       "Always use indirect calls">;
 def FeatureHTM : SubtargetFeature<"htm", "HasHTM", "true",
                                   "Enable Hardware Transactional Memory instructions">;
 def FeatureMFTB   : SubtargetFeature<"", "FeatureMFTB", "true",

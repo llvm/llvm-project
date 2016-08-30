@@ -17,10 +17,11 @@ set(ADTSources
   FoldingSet.cpp
   FunctionRefTest.cpp
   HashingTest.cpp
-  ilistTestTemp.cpp
   IListBaseTest.cpp
+  IListIteratorTest.cpp
   IListNodeBaseTest.cpp
   IListSentinelTest.cpp
+  IListTest.cpp
   ImmutableMapTest.cpp
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp

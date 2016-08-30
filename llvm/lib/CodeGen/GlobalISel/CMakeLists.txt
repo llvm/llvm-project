@@ -1,5 +1,6 @@
 # List of all GlobalISel files.
 set(GLOBAL_ISEL_FILES
+      CallLowering.cpp
       IRTranslator.cpp
       InstructionSelect.cpp
       InstructionSelector.cpp

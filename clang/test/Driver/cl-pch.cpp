@@ -10,7 +10,7 @@
 // CHECK-YC: -o
 // CHECK-YC: pchfile.pch
 // CHECK-YC: -x
-// CHECK-YC: "c++"
+// CHECK-YC: "c++-header"
 // 2. Use .pch file.
 // CHECK-YC: cc1
 // CHECK-YC: -emit-obj
@@ -158,7 +158,7 @@
 // CHECK-YCFIFIFI: -o
 // CHECK-YCFIFIFI: foo2.pch
 // CHECK-YCFIFIFI: -x
-// CHECK-YCFIFIFI: "c++"
+// CHECK-YCFIFIFI: "c++-header"
 // CHECK-YCFIFIFI: foo2.h
 // 2. Use .pch file: Inlucdes foo2.pch and foo3.h
 // CHECK-YCFIFIFI: cc1

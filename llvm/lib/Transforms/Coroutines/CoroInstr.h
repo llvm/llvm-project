@@ -11,7 +11,7 @@
 // allows you to do things like:
 //
 //     if (auto *SF = dyn_cast<CoroSubFnInst>(Inst))
-//        ... SF->getFrame() ... 
+//        ... SF->getFrame() ...
 //
 // All intrinsic function calls are instances of the call instruction, so these
 // are all subclasses of the CallInst class.  Note that none of these classes
@@ -37,6 +37,7 @@ public:
     RestartTrigger = -1,
     ResumeIndex,
     DestroyIndex,
+    CleanupIndex,
     IndexLast,
     IndexFirst = RestartTrigger
   };
@@ -76,7 +77,8 @@ public:
 
 /// This represents the llvm.coro.alloc instruction.
 class LLVM_LIBRARY_VISIBILITY CoroIdInst : public IntrinsicInst {
-  enum { AlignArg, PromiseArg, InfoArg };
+  enum { AlignArg, PromiseArg, CoroutineArg, InfoArg };
+
 public:
   // Info argument of coro.id is
   //   fresh out of the frontend: null ;
@@ -118,6 +120,16 @@ public:
 
   void setInfo(Constant *C) { setArgOperand(InfoArg, C); }
 
+  Function *getCoroutine() const {
+    return cast<Function>(getArgOperand(CoroutineArg)->stripPointerCasts());
+  }
+  void setCoroutineSelf() {
+    assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
+           "Coroutine argument is already assigned");
+    auto *const Int8PtrTy = Type::getInt8PtrTy(getContext());
+    setArgOperand(CoroutineArg,
+                  ConstantExpr::getBitCast(getFunction(), Int8PtrTy));
+  }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const IntrinsicInst *I) {
@@ -142,7 +154,11 @@ public:
 
 /// This represents the llvm.coro.free instruction.
 class LLVM_LIBRARY_VISIBILITY CoroFreeInst : public IntrinsicInst {
+  enum { IdArg, FrameArg };
+
 public:
+  Value *getFrame() const { return getArgOperand(FrameArg); }
+
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_free;
@@ -157,9 +173,7 @@ class LLVM_LIBRARY_VISIBILITY CoroBeginInst : public IntrinsicInst {
   enum { IdArg, MemArg };
 
 public:
-  CoroIdInst *getId() const {
-    return cast<CoroIdInst>(getArgOperand(IdArg));
-  }
+  CoroIdInst *getId() const { return cast<CoroIdInst>(getArgOperand(IdArg)); }
 
   Value *getMem() const { return getArgOperand(MemArg); }
 

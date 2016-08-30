@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o %t.obj %s
-// RUN: llvm-rtdyld -triple thumbv7-windows -dummy-extern OutputDebugStringA=0x78563412 -dummy-extern ExitProcess=0x54769890 -dummy-extern unnamed_addr=0x00001024 -verify -check %s %t.obj
+// RUN: llvm-rtdyld -triple thumbv7-windows -dummy-extern OutputDebugStringW=0x01310060 -dummy-extern OutputDebugStringA=0x78563412 -dummy-extern ExitProcess=0x54769890 -dummy-extern unnamed_addr=0x00001024 -verify -check %s %t.obj
 
 	.text
 	.syntax unified
@@ -104,4 +104,20 @@ rel10:
 rel11:
 	.secrel32 relocations				@ IMAGE_REL_ARM_SECREL
 # rtdyld-check: *{4}rel11 = relocations - section_addr(COFF_Thumb.s.tmp.obj, .data)
+rel12:							@ IMAGE_REL_ARM_MOV32T
+	movw r0, :lower16:__imp_OutputDebugStringW
+# rtdyld-check: decode_operand(rel12, 1) = (__imp_OutputDebugStringW&0x0000ffff)
+	movt r0, :upper16:__imp_OutputDebugStringW
+# TODO rtdyld-check: decode_operand(rel12, 1) = (__imp_OutputDebugStringW&0xffff0000>>16)
+	bx r0
+	trap
 
+	.data
+
+	.p2align 2
+__imp_OutputDebugStringW:
+@ rel13:
+	.long OutputDebugStringW			@ IMAGE_REL_ARM_ADDR32
+# rtdyld-check: *{4}__imp_OutputDebugStringW = 0x01310060
+
+	.p2align 2

@@ -134,8 +134,8 @@ define void @v_sad_u32_multi_use_sub_pat2(i32 addrspace(1)* %out, i32 %a, i32 %b
 
 ; GCN-LABEL: {{^}}v_sad_u32_multi_use_select_pat2:
 ; GCN: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: v_cmp_gt_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define void @v_sad_u32_multi_use_select_pat2(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
   %icmp0 = icmp ugt i32 %a, %b
   %sub0 = sub i32 %a, %b

@@ -10,9 +10,9 @@
 ; GCN-DAG: buffer_load_dwordx2 v{{\[}}[[LDPTRLO:[0-9]+]]:[[LDPTRHI:[0-9]+]]{{\]}}
 
 ; GCN-NOT: v_mov_b32
-; GCN: v_mov_b32_e32 v[[VARG1HI:[0-9]+]], s[[ARG1HI]]
-; GCN-NOT: v_mov_b32
 ; GCN: v_mov_b32_e32 v[[VARG1LO:[0-9]+]], s[[ARG1LO]]
+; GCN-NOT: v_mov_b32
+; GCN: v_mov_b32_e32 v[[VARG1HI:[0-9]+]], s[[ARG1HI]]
 ; GCN-NOT: v_mov_b32
 
 ; GCN: v_add_i32_e32 v[[PTRLO:[0-9]+]], vcc, v[[LDPTRLO]], v[[VARG1LO]]

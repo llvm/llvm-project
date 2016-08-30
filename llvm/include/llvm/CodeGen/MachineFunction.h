@@ -445,8 +445,8 @@ public:
   // Provide accessors for the MachineBasicBlock list...
   typedef BasicBlockListType::iterator iterator;
   typedef BasicBlockListType::const_iterator const_iterator;
-  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-  typedef std::reverse_iterator<iterator>             reverse_iterator;
+  typedef BasicBlockListType::const_reverse_iterator const_reverse_iterator;
+  typedef BasicBlockListType::reverse_iterator reverse_iterator;
 
   /// Support for MachineBasicBlock::getNextNode().
   static BasicBlockListType MachineFunction::*

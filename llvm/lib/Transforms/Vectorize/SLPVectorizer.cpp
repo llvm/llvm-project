@@ -115,22 +115,22 @@ static bool isValidElementType(Type *Ty) {
          !Ty->isPPC_FP128Ty();
 }
 
-/// \returns the parent basic block if all of the instructions in \p VL
-/// are in the same block or null otherwise.
-static BasicBlock *getSameBlock(ArrayRef<Value *> VL) {
+/// \returns true if all of the instructions in \p VL are in the same block or
+/// false otherwise.
+static bool allSameBlock(ArrayRef<Value *> VL) {
   Instruction *I0 = dyn_cast<Instruction>(VL[0]);
   if (!I0)
-    return nullptr;
+    return false;
   BasicBlock *BB = I0->getParent();
   for (int i = 1, e = VL.size(); i < e; i++) {
     Instruction *I = dyn_cast<Instruction>(VL[i]);
     if (!I)
-      return nullptr;
+      return false;
 
     if (BB != I->getParent())
-      return nullptr;
+      return false;
   }
-  return BB;
+  return true;
 }
 
 /// \returns True if all of the values in \p VL are constants.
@@ -224,15 +224,15 @@ static void propagateIRFlags(Value *I, ArrayRef<Value *> VL) {
   }
 }
 
-/// \returns The type that all of the values in \p VL have or null if there
-/// are different types.
-static Type* getSameType(ArrayRef<Value *> VL) {
+/// \returns true if all of the values in \p VL have the same type or false
+/// otherwise.
+static bool allSameType(ArrayRef<Value *> VL) {
   Type *Ty = VL[0]->getType();
   for (int i = 1, e = VL.size(); i < e; i++)
     if (VL[i]->getType() != Ty)
-      return nullptr;
+      return false;
 
-  return Ty;
+  return true;
 }
 
 /// \returns True if Extract{Value,Element} instruction extracts element Idx.
@@ -921,7 +921,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ArrayRef<Value *> UserIgnoreLst) {
   deleteTree();
   UserIgnoreList = UserIgnoreLst;
-  if (!getSameType(Roots))
+  if (!allSameType(Roots))
     return;
   buildTree_rec(Roots, 0);
 
@@ -975,9 +975,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
-  bool SameTy = allConstant(VL) || getSameType(VL); (void)SameTy;
   bool isAltShuffle = false;
-  assert(SameTy && "Invalid types!");
+  assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   if (Depth == RecursionMaxDepth) {
     DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
@@ -1010,7 +1009,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
   }
 
   // If all of the operands are identical or constant we have a simple solution.
-  if (allConstant(VL) || isSplat(VL) || !getSameBlock(VL) || !Opcode) {
+  if (allConstant(VL) || isSplat(VL) || !allSameBlock(VL) || !Opcode) {
     DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O. \n");
     newTreeEntry(VL, false);
     return;
@@ -1585,7 +1584,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     return getGatherCost(E->Scalars);
   }
   unsigned Opcode = getSameOpcode(VL);
-  assert(Opcode && getSameType(VL) && getSameBlock(VL) && "Invalid VL");
+  assert(Opcode && allSameType(VL) && allSameBlock(VL) && "Invalid VL");
   Instruction *VL0 = cast<Instruction>(VL[0]);
   switch (Opcode) {
     case Instruction::PHI: {
@@ -1869,9 +1868,9 @@ int BoUpSLP::getSpillCost() {
       );
 
     // Now find the sequence of instructions between PrevInst and Inst.
-    BasicBlock::reverse_iterator InstIt(Inst->getIterator()),
-        PrevInstIt(PrevInst->getIterator());
-    --PrevInstIt;
+    BasicBlock::reverse_iterator InstIt = ++Inst->getIterator().getReverse(),
+                                 PrevInstIt =
+                                     PrevInst->getIterator().getReverse();
     while (InstIt != PrevInstIt) {
       if (PrevInstIt == PrevInst->getParent()->rend()) {
         PrevInstIt = Inst->getParent()->rbegin();
@@ -3037,9 +3036,10 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V) {
   }
   // Search up and down at the same time, because we don't know if the new
   // instruction is above or below the existing scheduling region.
-  BasicBlock::reverse_iterator UpIter(ScheduleStart->getIterator());
+  BasicBlock::reverse_iterator UpIter =
+      ++ScheduleStart->getIterator().getReverse();
   BasicBlock::reverse_iterator UpperEnd = BB->rend();
-  BasicBlock::iterator DownIter(ScheduleEnd);
+  BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
   BasicBlock::iterator LowerEnd = BB->end();
   for (;;) {
     if (++ScheduleRegionSize > ScheduleRegionSizeLimit) {

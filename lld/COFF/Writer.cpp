@@ -21,6 +21,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdio>
@@ -42,6 +43,61 @@ static const int DOSStubSize = 64;
 static const int NumberfOfDataDirectory = 16;
 
 namespace {
+
+class DebugDirectoryChunk : public Chunk {
+public:
+  DebugDirectoryChunk(const std::vector<std::unique_ptr<Chunk>> &R)
+      : Records(R) {}
+
+  size_t getSize() const override {
+    return Records.size() * sizeof(debug_directory);
+  }
+
+  void writeTo(uint8_t *B) const override {
+    auto *D = reinterpret_cast<debug_directory *>(B + OutputSectionOff);
+
+    for (const std::unique_ptr<Chunk> &Record : Records) {
+      D->Characteristics = 0;
+      D->TimeDateStamp = 0;
+      D->MajorVersion = 0;
+      D->MinorVersion = 0;
+      D->Type = COFF::IMAGE_DEBUG_TYPE_CODEVIEW;
+      D->SizeOfData = Record->getSize();
+      D->AddressOfRawData = Record->getRVA();
+      // TODO(compnerd) get the file offset
+      D->PointerToRawData = 0;
+
+      ++D;
+    }
+  }
+
+private:
+  const std::vector<std::unique_ptr<Chunk>> &Records;
+};
+
+class CVDebugRecordChunk : public Chunk {
+  size_t getSize() const override {
+    return sizeof(codeview::DebugInfo) + Config->PDBPath.size() + 1;
+  }
+
+  void writeTo(uint8_t *B) const override {
+    auto *R = reinterpret_cast<codeview::DebugInfo *>(B + OutputSectionOff);
+
+    R->Signature.CVSignature = OMF::Signature::PDB70;
+    // TODO(compnerd) fill in a GUID by hashing the contents of the binary to
+    // get a reproducible build
+    if (getRandomBytes(R->PDB70.Signature, sizeof(R->PDB70.Signature)))
+      fatal("entropy source failure");
+    // TODO(compnerd) track the Age
+    R->PDB70.Age = 1;
+
+    // variable sized field (PDB Path)
+    auto *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*R));
+    memcpy(P, Config->PDBPath.data(), Config->PDBPath.size());
+    P[Config->PDBPath.size()] = '\0';
+  }
+};
+
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
@@ -86,6 +142,9 @@ private:
   DelayLoadContents DelayIdata;
   EdataContents Edata;
   std::unique_ptr<SEHTableChunk> SEHTable;
+
+  std::unique_ptr<Chunk> DebugDirectory;
+  std::vector<std::unique_ptr<Chunk>> DebugRecords;
 
   uint64_t FileSize;
   uint32_t PointerToSymbolTable = 0;
@@ -292,6 +351,19 @@ void Writer::createMiscChunks() {
   if (!Symtab->LocalImportChunks.empty()) {
     for (Chunk *C : Symtab->LocalImportChunks)
       RData->addChunk(C);
+  }
+
+  // Create Debug Information Chunks
+  if (Config->Debug) {
+    DebugDirectory = llvm::make_unique<DebugDirectoryChunk>(DebugRecords);
+
+    // TODO(compnerd) create a coffgrp entry if DebugType::CV is not enabled
+    if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
+      DebugRecords.push_back(llvm::make_unique<CVDebugRecordChunk>());
+
+    RData->addChunk(DebugDirectory.get());
+    for (const std::unique_ptr<Chunk> &C : DebugRecords)
+      RData->addChunk(C.get());
   }
 
   // Create SEH table. x86-only.
@@ -607,6 +679,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
                                 ? sizeof(object::coff_tls_directory64)
                                 : sizeof(object::coff_tls_directory32);
     }
+  }
+  if (Config->Debug) {
+    Dir[DEBUG_DIRECTORY].RelativeVirtualAddress = DebugDirectory->getRVA();
+    Dir[DEBUG_DIRECTORY].Size = DebugDirectory->getSize();
   }
   if (Symbol *Sym = Symtab->findUnderscore("_load_config_used")) {
     if (auto *B = dyn_cast<DefinedRegular>(Sym->Body)) {

@@ -408,8 +408,8 @@ TEST_F(StringExtractorTest, GetNameColonValueSuccess)
     const char kNameColonPairs[] = "key1:value1;key2:value2;";
     StringExtractor ex(kNameColonPairs);
 
-    std::string name;
-    std::string value;
+    llvm::StringRef name;
+    llvm::StringRef value;
     EXPECT_TRUE(ex.GetNameColonValue(name, value));
     EXPECT_EQ("key1", name);
     EXPECT_EQ("value1", value);
@@ -425,8 +425,8 @@ TEST_F(StringExtractorTest, GetNameColonValueContainsColon)
     const char kNameColonPairs[] = "key1:value1:value2;key2:value3;";
     StringExtractor ex(kNameColonPairs);
 
-    std::string name;
-    std::string value;
+    llvm::StringRef name;
+    llvm::StringRef value;
     EXPECT_TRUE(ex.GetNameColonValue(name, value));
     EXPECT_EQ("key1", name);
     EXPECT_EQ("value1:value2", value);
@@ -441,8 +441,8 @@ TEST_F(StringExtractorTest, GetNameColonValueNoSemicolon)
     const char kNameColonPairs[] = "key1:value1";
     StringExtractor ex(kNameColonPairs);
 
-    std::string name;
-    std::string value;
+    llvm::StringRef name;
+    llvm::StringRef value;
     EXPECT_FALSE(ex.GetNameColonValue(name, value));
     EXPECT_EQ(0, ex.GetBytesLeft());
 }
@@ -452,8 +452,8 @@ TEST_F(StringExtractorTest, GetNameColonValueNoColon)
     const char kNameColonPairs[] = "key1value1;";
     StringExtractor ex(kNameColonPairs);
 
-    std::string name;
-    std::string value;
+    llvm::StringRef name;
+    llvm::StringRef value;
     EXPECT_FALSE(ex.GetNameColonValue(name, value));
     EXPECT_EQ(0, ex.GetBytesLeft());
 }

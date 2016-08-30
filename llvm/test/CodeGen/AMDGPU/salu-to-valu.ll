@@ -170,14 +170,12 @@ entry:
 ; CI.
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x8:
+; GCN-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
 ; GCN-NOHSA-NOT: v_add
 ; GCN-NOHSA: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x9a40{{$}}
 ; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x9a50{{$}}
-; GCN-NOHSA-NOT: v_add
 ; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
 
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}

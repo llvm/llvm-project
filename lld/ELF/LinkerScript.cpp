@@ -956,24 +956,24 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   return Cmd;
 }
 
+// Read "=<number>" where <number> is an octal/decimal/hexadecimal number.
+// https://sourceware.org/binutils/docs/ld/Output-Section-Fill.html
+//
+// ld.gold is not fully compatible with ld.bfd. ld.bfd handles
+// hexstrings as blobs of arbitrary sizes, while ld.gold handles them
+// as 32-bit big-endian values. We will do the same as ld.gold does
+// because it's simpler than what ld.bfd does.
 std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
-  StringRef Tok = peek();
-  if (!Tok.startswith("="))
+  if (!peek().startswith("="))
     return {};
-  next();
 
-  // Read a hexstring of arbitrary length.
-  if (Tok.startswith("=0x"))
-    return parseHex(Tok.substr(3));
-
-  // Read a decimal or octal value as a big-endian 32 bit value.
-  // Why do this? I don't know, but that's what gold does.
+  StringRef Tok = next();
   uint32_t V;
   if (Tok.substr(1).getAsInteger(0, V)) {
     setError("invalid filler expression: " + Tok);
     return {};
   }
-  return { uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V) };
+  return {uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V)};
 }
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {

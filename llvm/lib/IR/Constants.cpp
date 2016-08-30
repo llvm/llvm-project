@@ -347,10 +347,8 @@ static bool canTrapImpl(const Constant *C,
     return false;
   case Instruction::UDiv:
   case Instruction::SDiv:
-  case Instruction::FDiv:
   case Instruction::URem:
   case Instruction::SRem:
-  case Instruction::FRem:
     // Div and rem can trap if the RHS is not known to be non-zero.
     if (!isa<ConstantInt>(CE->getOperand(1)) ||CE->getOperand(1)->isNullValue())
       return true;

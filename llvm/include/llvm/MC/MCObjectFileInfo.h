@@ -65,12 +65,6 @@ protected:
   /// constants.
   MCSection *ReadOnlySection;
 
-  /// This section contains the static constructor pointer list.
-  MCSection *StaticCtorSection;
-
-  /// This section contains the static destructor pointer list.
-  MCSection *StaticDtorSection;
-
   /// If exception handling is supported by the target, this is the section the
   /// Language Specific Data Area information is emitted to.
   MCSection *LSDASection;

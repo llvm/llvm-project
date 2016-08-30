@@ -28,6 +28,8 @@ public:
     {
     }
 
+    StringExtractorGDBRemote(llvm::StringRef str) : StringExtractor(str), m_validator(nullptr) {}
+
     StringExtractorGDBRemote(const char *cstr) :
         StringExtractor(cstr),
         m_validator(nullptr)

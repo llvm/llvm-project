@@ -86,6 +86,7 @@ struct Configuration {
   bool Debug = false;
   bool WriteSymtab = true;
   unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
+  StringRef PDBPath;
 
   // Symbols in this set are considered as live by the garbage collector.
   std::set<Undefined *> GCRoot;

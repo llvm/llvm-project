@@ -47,15 +47,14 @@ static size_t VarAndRedzoneSize(size_t Size, size_t Alignment) {
   return alignTo(Res, Alignment);
 }
 
-void
+ASanStackFrameLayout
 ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
-                            size_t Granularity, size_t MinHeaderSize,
-                            ASanStackFrameLayout *Layout) {
+                            size_t Granularity, size_t MinHeaderSize) {
   assert(Granularity >= 8 && Granularity <= 64 &&
          (Granularity & (Granularity - 1)) == 0);
   assert(MinHeaderSize >= 16 && (MinHeaderSize & (MinHeaderSize - 1)) == 0 &&
          MinHeaderSize >= Granularity);
-  size_t NumVars = Vars.size();
+  const size_t NumVars = Vars.size();
   assert(NumVars > 0);
   for (size_t i = 0; i < NumVars; i++)
     Vars[i].Alignment = std::max(Vars[i].Alignment, kMinAlignment);
@@ -64,13 +63,13 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
   SmallString<2048> StackDescriptionStorage;
   raw_svector_ostream StackDescription(StackDescriptionStorage);
   StackDescription << NumVars;
-  Layout->FrameAlignment = std::max(Granularity, Vars[0].Alignment);
-  SmallVector<uint8_t, 64> &SB(Layout->ShadowBytes);
-  SB.clear();
+
+  ASanStackFrameLayout Layout;
+  Layout.Granularity = Granularity;
+  Layout.FrameAlignment = std::max(Granularity, Vars[0].Alignment);
   size_t Offset = std::max(std::max(MinHeaderSize, Granularity),
      Vars[0].Alignment);
   assert((Offset % Granularity) == 0);
-  SB.insert(SB.end(), Offset / Granularity, kAsanStackLeftRedzoneMagic);
   for (size_t i = 0; i < NumVars; i++) {
     bool IsLast = i == NumVars - 1;
     size_t Alignment = std::max(Granularity, Vars[i].Alignment);
@@ -78,7 +77,7 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
     size_t Size = Vars[i].Size;
     const char *Name = Vars[i].Name;
     assert((Alignment & (Alignment - 1)) == 0);
-    assert(Layout->FrameAlignment >= Alignment);
+    assert(Layout.FrameAlignment >= Alignment);
     assert((Offset % Alignment) == 0);
     assert(Size > 0);
     assert(Vars[i].LifetimeSize <= Size);
@@ -87,31 +86,53 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
     size_t NextAlignment = IsLast ? Granularity
                    : std::max(Granularity, Vars[i + 1].Alignment);
     size_t SizeWithRedzone = VarAndRedzoneSize(Vars[i].Size, NextAlignment);
-    size_t LifetimeShadowSize =
-        (Vars[i].LifetimeSize + Granularity - 1) / Granularity;
-    SB.insert(SB.end(), LifetimeShadowSize, kAsanStackUseAfterScopeMagic);
-    if (Size / Granularity >= LifetimeShadowSize) {
-      SB.insert(SB.end(), Size / Granularity - LifetimeShadowSize, 0);
-      if (Size % Granularity)
-        SB.insert(SB.end(), Size % Granularity);
-    }
-    SB.insert(SB.end(), (SizeWithRedzone - Size) / Granularity,
-        IsLast ? kAsanStackRightRedzoneMagic
-        : kAsanStackMidRedzoneMagic);
     Vars[i].Offset = Offset;
     Offset += SizeWithRedzone;
-    assert(Offset == SB.size() * Granularity);
   }
   if (Offset % MinHeaderSize) {
-    size_t ExtraRedzone = MinHeaderSize - (Offset % MinHeaderSize);
-    SB.insert(SB.end(), ExtraRedzone / Granularity,
-              kAsanStackRightRedzoneMagic);
-    Offset += ExtraRedzone;
+    Offset += MinHeaderSize - (Offset % MinHeaderSize);
   }
-  Layout->DescriptionString = StackDescription.str();
-  Layout->FrameSize = Offset;
-  assert((Layout->FrameSize % MinHeaderSize) == 0);
-  assert(Layout->FrameSize / Granularity == Layout->ShadowBytes.size());
+  Layout.DescriptionString = StackDescription.str();
+  Layout.FrameSize = Offset;
+  assert((Layout.FrameSize % MinHeaderSize) == 0);
+
+  return Layout;
+}
+
+SmallVector<uint8_t, 64>
+GetShadowBytes(const SmallVectorImpl<ASanStackVariableDescription> &Vars,
+               const ASanStackFrameLayout &Layout) {
+  assert(Vars.size() > 0);
+  SmallVector<uint8_t, 64> SB;
+  SB.clear();
+  const size_t Granularity = Layout.Granularity;
+  SB.resize(Vars[0].Offset / Granularity, kAsanStackLeftRedzoneMagic);
+  for (const auto &Var : Vars) {
+    SB.resize(Var.Offset / Granularity, kAsanStackMidRedzoneMagic);
+
+    SB.resize(SB.size() + Var.Size / Granularity, 0);
+    if (Var.Size % Granularity)
+      SB.push_back(Var.Size % Granularity);
+  }
+  SB.resize(Layout.FrameSize / Granularity, kAsanStackRightRedzoneMagic);
+  return SB;
+}
+
+SmallVector<uint8_t, 64> GetShadowBytesAfterScope(
+    const SmallVectorImpl<ASanStackVariableDescription> &Vars,
+    const ASanStackFrameLayout &Layout) {
+  SmallVector<uint8_t, 64> SB = GetShadowBytes(Vars, Layout);
+  const size_t Granularity = Layout.Granularity;
+
+  for (const auto &Var : Vars) {
+    const size_t LifetimeShadowSize =
+        (Var.LifetimeSize + Granularity - 1) / Granularity;
+    const size_t Offset = Var.Offset / Granularity;
+    std::fill(SB.begin() + Offset, SB.begin() + Offset + LifetimeShadowSize,
+              kAsanStackUseAfterScopeMagic);
+  }
+
+  return SB;
 }
 
 } // llvm namespace

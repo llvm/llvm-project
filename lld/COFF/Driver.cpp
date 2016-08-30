@@ -372,6 +372,12 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
             : getDefaultDebugType(Args);
   }
 
+  // Create a dummy PDB file to satisfy build sytem rules.
+  if (auto *Arg = Args.getLastArg(OPT_pdb)) {
+    Config->PDBPath = Arg->getValue();
+    createPDB(Config->PDBPath);
+  }
+
   // Handle /noentry
   if (Args.hasArg(OPT_noentry)) {
     if (!Args.hasArg(OPT_dll))
@@ -742,10 +748,6 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
   // Windows specific -- Create a side-by-side manifest file.
   if (Config->Manifest == Configuration::SideBySide)
     createSideBySideManifest();
-
-  // Create a dummy PDB file to satisfy build sytem rules.
-  if (auto *Arg = Args.getLastArg(OPT_pdb))
-    createPDB(Arg->getValue());
 
   // Identify unreferenced COMDAT sections.
   if (Config->DoGC)

@@ -37,12 +37,6 @@ int __asan_should_detect_stack_use_after_return() {
   return __asan_option_detect_stack_use_after_return;
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE
-int __asan_should_detect_stack_use_after_scope() {
-  __asan_init();
-  return __asan_option_detect_stack_use_after_scope;
-}
-
 // -------------------- A workaround for the absence of weak symbols ----- {{{
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can
 // use the /alternatename directive to tell the linker to default a specific

@@ -235,7 +235,7 @@ Address::operator= (const Address& rhs)
     if (this != &rhs)
     {
         m_section_wp = rhs.m_section_wp;
-        m_offset = rhs.m_offset.load();
+        m_offset = rhs.m_offset;
     }
     return *this;
 }
@@ -429,7 +429,7 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
         if (section_sp)
         {
             section_sp->DumpName(s);
-            s->Printf (" + %" PRIu64, m_offset.load());
+            s->Printf (" + %" PRIu64, m_offset);
         }
         else
         {
