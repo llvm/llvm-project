@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_base.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
