@@ -1,4 +1,4 @@
-//===-- StringExtractor.cpp -------------------------------------*- C++ -*-===//
+//===-- StdStringExtractor.cpp ----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/StringExtractor.h"
+#include "lldb/Utility/StdStringExtractor.h"
 
 // C Includes
 #include <stdlib.h>
 
 // C++ Includes
-#include <tuple>
 // Other libraries and framework includes
 // Project includes
 
@@ -30,20 +29,16 @@ xdigit_to_sint (char ch)
 }
 
 //----------------------------------------------------------------------
-// StringExtractor constructor
+// StdStringExtractor constructor
 //----------------------------------------------------------------------
-StringExtractor::StringExtractor() :
+StdStringExtractor::StdStringExtractor() :
     m_packet(),
     m_index (0)
 {
 }
 
-StringExtractor::StringExtractor(llvm::StringRef packet_str) : m_packet(), m_index(0)
-{
-    m_packet.assign(packet_str.begin(), packet_str.end());
-}
 
-StringExtractor::StringExtractor(const char *packet_cstr) :
+StdStringExtractor::StdStringExtractor(const char *packet_cstr) :
     m_packet(),
     m_index (0)
 {
@@ -53,9 +48,9 @@ StringExtractor::StringExtractor(const char *packet_cstr) :
 
 
 //----------------------------------------------------------------------
-// StringExtractor copy constructor
+// StdStringExtractor copy constructor
 //----------------------------------------------------------------------
-StringExtractor::StringExtractor(const StringExtractor& rhs) :
+StdStringExtractor::StdStringExtractor(const StdStringExtractor& rhs) :
     m_packet (rhs.m_packet),
     m_index (rhs.m_index)
 {
@@ -63,10 +58,10 @@ StringExtractor::StringExtractor(const StringExtractor& rhs) :
 }
 
 //----------------------------------------------------------------------
-// StringExtractor assignment operator
+// StdStringExtractor assignment operator
 //----------------------------------------------------------------------
-const StringExtractor&
-StringExtractor::operator=(const StringExtractor& rhs)
+const StdStringExtractor&
+StdStringExtractor::operator=(const StdStringExtractor& rhs)
 {
     if (this != &rhs)
     {
@@ -80,13 +75,13 @@ StringExtractor::operator=(const StringExtractor& rhs)
 //----------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------
-StringExtractor::~StringExtractor()
+StdStringExtractor::~StdStringExtractor()
 {
 }
 
 
 char
-StringExtractor::GetChar (char fail_value)
+StdStringExtractor::GetChar (char fail_value)
 {
     if (m_index < m_packet.size())
     {
@@ -100,14 +95,14 @@ StringExtractor::GetChar (char fail_value)
 
 //----------------------------------------------------------------------
 // If a pair of valid hex digits exist at the head of the
-// StringExtractor they are decoded into an unsigned byte and returned
+// StdStringExtractor they are decoded into an unsigned byte and returned
 // by this function
 //
 // If there is not a pair of valid hex digits at the head of the
-// StringExtractor, it is left unchanged and -1 is returned
+// StdStringExtractor, it is left unchanged and -1 is returned
 //----------------------------------------------------------------------
 int
-StringExtractor::DecodeHexU8()
+StdStringExtractor::DecodeHexU8()
 {
     SkipSpaces();
     if (GetBytesLeft() < 2)
@@ -129,7 +124,7 @@ StringExtractor::DecodeHexU8()
 // string, or return fail_value on failure
 //----------------------------------------------------------------------
 uint8_t
-StringExtractor::GetHexU8 (uint8_t fail_value, bool set_eof_on_fail)
+StdStringExtractor::GetHexU8 (uint8_t fail_value, bool set_eof_on_fail)
 {
     // On success, fail_value will be overwritten with the next
     // character in the stream
@@ -138,7 +133,7 @@ StringExtractor::GetHexU8 (uint8_t fail_value, bool set_eof_on_fail)
 }
 
 bool
-StringExtractor::GetHexU8Ex (uint8_t& ch, bool set_eof_on_fail)
+StdStringExtractor::GetHexU8Ex (uint8_t& ch, bool set_eof_on_fail)
 {
     int byte = DecodeHexU8();
     if (byte == -1)
@@ -153,7 +148,7 @@ StringExtractor::GetHexU8Ex (uint8_t& ch, bool set_eof_on_fail)
 }
 
 uint32_t
-StringExtractor::GetU32 (uint32_t fail_value, int base)
+StdStringExtractor::GetU32 (uint32_t fail_value, int base)
 {
     if (m_index < m_packet.size())
     {
@@ -172,7 +167,7 @@ StringExtractor::GetU32 (uint32_t fail_value, int base)
 }
 
 int32_t
-StringExtractor::GetS32 (int32_t fail_value, int base)
+StdStringExtractor::GetS32 (int32_t fail_value, int base)
 {
     if (m_index < m_packet.size())
     {
@@ -192,7 +187,7 @@ StringExtractor::GetS32 (int32_t fail_value, int base)
 
 
 uint64_t
-StringExtractor::GetU64 (uint64_t fail_value, int base)
+StdStringExtractor::GetU64 (uint64_t fail_value, int base)
 {
     if (m_index < m_packet.size())
     {
@@ -211,7 +206,7 @@ StringExtractor::GetU64 (uint64_t fail_value, int base)
 }
 
 int64_t
-StringExtractor::GetS64 (int64_t fail_value, int base)
+StdStringExtractor::GetS64 (int64_t fail_value, int base)
 {
     if (m_index < m_packet.size())
     {
@@ -231,7 +226,7 @@ StringExtractor::GetS64 (int64_t fail_value, int base)
 
 
 uint32_t
-StringExtractor::GetHexMaxU32 (bool little_endian, uint32_t fail_value)
+StdStringExtractor::GetHexMaxU32 (bool little_endian, uint32_t fail_value)
 {
     uint32_t result = 0;
     uint32_t nibble_count = 0;
@@ -294,7 +289,7 @@ StringExtractor::GetHexMaxU32 (bool little_endian, uint32_t fail_value)
 }
 
 uint64_t
-StringExtractor::GetHexMaxU64 (bool little_endian, uint64_t fail_value)
+StdStringExtractor::GetHexMaxU64 (bool little_endian, uint64_t fail_value)
 {
     uint64_t result = 0;
     uint32_t nibble_count = 0;
@@ -357,7 +352,7 @@ StringExtractor::GetHexMaxU64 (bool little_endian, uint64_t fail_value)
 }
 
 size_t
-StringExtractor::GetHexBytes (void *dst_void, size_t dst_len, uint8_t fail_fill_value)
+StdStringExtractor::GetHexBytes (void *dst_void, size_t dst_len, uint8_t fail_fill_value)
 {
     uint8_t *dst = (uint8_t*)dst_void;
     size_t bytes_extracted = 0;
@@ -378,12 +373,12 @@ StringExtractor::GetHexBytes (void *dst_void, size_t dst_len, uint8_t fail_fill_
 
 //----------------------------------------------------------------------
 // Decodes all valid hex encoded bytes at the head of the
-// StringExtractor, limited by dst_len.
+// StdStringExtractor, limited by dst_len.
 //
 // Returns the number of bytes successfully decoded
 //----------------------------------------------------------------------
 size_t
-StringExtractor::GetHexBytesAvail (void *dst_void, size_t dst_len)
+StdStringExtractor::GetHexBytesAvail (void *dst_void, size_t dst_len)
 {
     uint8_t *dst = (uint8_t*)dst_void;
     size_t bytes_extracted = 0;
@@ -403,7 +398,7 @@ StringExtractor::GetHexBytesAvail (void *dst_void, size_t dst_len)
 // bytes of data.
 
 uint64_t
-StringExtractor::GetHexWithFixedSize (uint32_t byte_size, bool little_endian, uint64_t fail_value)
+StdStringExtractor::GetHexWithFixedSize (uint32_t byte_size, bool little_endian, uint64_t fail_value)
 {
     if (byte_size <= 8 && GetBytesLeft() >= byte_size * 2)
     {
@@ -435,7 +430,7 @@ StringExtractor::GetHexWithFixedSize (uint32_t byte_size, bool little_endian, ui
 }
 
 size_t
-StringExtractor::GetHexByteString (std::string &str)
+StdStringExtractor::GetHexByteString (std::string &str)
 {
     str.clear();
     str.reserve(GetBytesLeft() / 2);
@@ -446,7 +441,7 @@ StringExtractor::GetHexByteString (std::string &str)
 }
 
 size_t
-StringExtractor::GetHexByteStringFixedLength (std::string &str, uint32_t nibble_length)
+StdStringExtractor::GetHexByteStringFixedLength (std::string &str, uint32_t nibble_length)
 {
     str.clear();
 
@@ -458,7 +453,7 @@ StringExtractor::GetHexByteStringFixedLength (std::string &str, uint32_t nibble_
 }
 
 size_t
-StringExtractor::GetHexByteStringTerminatedBy (std::string &str,
+StdStringExtractor::GetHexByteStringTerminatedBy (std::string &str,
                                                char terminator)
 {
     str.clear();
@@ -473,41 +468,32 @@ StringExtractor::GetHexByteStringTerminatedBy (std::string &str,
 }
 
 bool
-StringExtractor::GetNameColonValue(llvm::StringRef &name, llvm::StringRef &value)
+StdStringExtractor::GetNameColonValue (std::string &name, std::string &value)
 {
     // Read something in the form of NNNN:VVVV; where NNNN is any character
     // that is not a colon, followed by a ':' character, then a value (one or
     // more ';' chars), followed by a ';'
-    if (m_index >= m_packet.size())
-        return fail();
-
-    llvm::StringRef view(m_packet);
-    if (view.empty())
-        return fail();
-
-    llvm::StringRef a, b, c, d;
-    view = view.substr(m_index);
-    std::tie(a, b) = view.split(':');
-    if (a.empty() || b.empty())
-        return fail();
-    std::tie(c, d) = b.split(';');
-    if (b == c && d.empty())
-        return fail();
-
-    name = a;
-    value = c;
-    if (d.empty())
-        m_index = m_packet.size();
-    else
+    if (m_index < m_packet.size())
     {
-        size_t bytes_consumed = d.data() - view.data();
-        m_index += bytes_consumed;
+        const size_t colon_idx = m_packet.find (':', m_index);
+        if (colon_idx != std::string::npos)
+        {
+            const size_t semicolon_idx = m_packet.find (';', colon_idx);
+            if (semicolon_idx != std::string::npos)
+            {
+                name.assign (m_packet, m_index, colon_idx - m_index);
+                value.assign (m_packet, colon_idx + 1, semicolon_idx - (colon_idx + 1));
+                m_index = semicolon_idx + 1;
+                return true;
+            }
+        }
     }
-    return true;
+    m_index = UINT64_MAX;
+    return false;
 }
 
 void
-StringExtractor::SkipSpaces ()
+StdStringExtractor::SkipSpaces ()
 {
     const size_t n = m_packet.size();
     while (m_index < n && isspace(m_packet[m_index]))

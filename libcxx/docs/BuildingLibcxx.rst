@@ -251,7 +251,7 @@ libc++ Feature Options
 
 .. option:: LIBCXX_INCLUDE_BENCHMARKS:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Build the libc++ benchmark tests and the Google Benchmark library needed
   to support them.

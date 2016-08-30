@@ -33,7 +33,6 @@
 #include "ubsan/ubsan_platform.h"
 
 int __asan_option_detect_stack_use_after_return;  // Global interface symbol.
-int __asan_option_detect_stack_use_after_scope;  // Global interface symbol.
 uptr *__asan_test_only_reported_buggy_pointer;  // Used only for testing asan.
 
 namespace __asan {
@@ -445,9 +444,6 @@ static void AsanInitInternal() {
 
   __asan_option_detect_stack_use_after_return =
       flags()->detect_stack_use_after_return;
-
-  __asan_option_detect_stack_use_after_scope =
-      flags()->detect_stack_use_after_scope;
 
   // Re-exec ourselves if we need to set additional env or command line args.
   MaybeReexec();

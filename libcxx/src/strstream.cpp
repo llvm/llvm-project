@@ -11,6 +11,7 @@
 #include "algorithm"
 #include "climits"
 #include "cstring"
+#include "cstdlib"
 #include "__debug"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -266,6 +267,8 @@ strstreambuf::seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmod
         case ios::end:
             newoff = seekhigh - eback();
             break;
+        default:
+            _LIBCPP_UNREACHABLE();
         }
         newoff += __off;
         if (0 <= newoff && newoff <= seekhigh - eback())

@@ -10,9 +10,9 @@
 #ifndef utility_JSON_h_
 #define utility_JSON_h_
 
-// This cross-project usage is fine as StringExtractor.h is entirely
+// This cross-project usage is fine as StdStringExtractor.h is entirely
 // self-contained.
-#include "lldb/Utility/StringExtractor.h"
+#include "lldb/Utility/StdStringExtractor.h"
 
 // C includes
 #include <inttypes.h>
@@ -338,7 +338,7 @@ public:
     Vector m_elements;
 };
 
-class JSONParser : public StringExtractor
+class JSONParser : public StdStringExtractor
 {
 public:
     enum Token

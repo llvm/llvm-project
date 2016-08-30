@@ -15,7 +15,6 @@
 //
 // This includes:
 //  - forwarding the detect_stack_use_after_return runtime option
-//  - forwarding the detect_stack_use_after_scope runtime option
 //  - working around deficiencies of the MD runtime
 //  - installing a custom SEH handler
 //
@@ -49,23 +48,6 @@ extern "C" {
 __declspec(dllimport) int __asan_should_detect_stack_use_after_return();
 int __asan_option_detect_stack_use_after_return =
     __asan_should_detect_stack_use_after_return();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Define a copy of __asan_option_detect_stack_use_after_scope that should be
-// used when linking an MD runtime with a set of object files on Windows.
-//
-// The ASan MD runtime dllexports '__asan_option_detect_stack_use_after_scope',
-// so normally we would just dllimport it.  Unfortunately, the dllimport
-// attribute adds __imp_ prefix to the symbol name of a variable.
-// Since in general we don't know if a given TU is going to be used
-// with a MT or MD runtime and we don't want to use ugly __imp_ names on Windows
-// just to work around this issue, let's clone the variable that is constant
-// after initialization anyways.
-extern "C" {
-__declspec(dllimport) int __asan_should_detect_stack_use_after_scope();
-int __asan_option_detect_stack_use_after_scope =
-    __asan_should_detect_stack_use_after_scope();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

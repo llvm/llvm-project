@@ -12,7 +12,6 @@
 
 // C Includes
 // C++ Includes
-#include <atomic>
 
 // Other libraries and framework includes
 // Project includes
@@ -119,7 +118,7 @@ public:
     //------------------------------------------------------------------
     Address (const Address& rhs) :
         m_section_wp (rhs.m_section_wp),
-        m_offset(rhs.m_offset.load())
+        m_offset(rhs.m_offset)
     {
     }
 
@@ -556,7 +555,7 @@ protected:
     // Member variables.
     //------------------------------------------------------------------
     lldb::SectionWP m_section_wp;   ///< The section for the address, can be NULL.
-    std::atomic<lldb::addr_t> m_offset;      ///< Offset into section if \a m_section_wp is valid...
+    lldb::addr_t m_offset;          ///< Offset into section if \a m_section_wp is valid...
     
     //------------------------------------------------------------------
     // Returns true if the m_section_wp once had a reference to a valid

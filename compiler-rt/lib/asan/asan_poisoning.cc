@@ -339,13 +339,11 @@ void __asan_set_shadow_f8(uptr addr, uptr size) {
 }
 
 void __asan_poison_stack_memory(uptr addr, uptr size) {
-  if (!__asan_option_detect_stack_use_after_scope) return;
   VReport(1, "poisoning: %p %zx\n", (void *)addr, size);
   PoisonAlignedStackMemory(addr, size, true);
 }
 
 void __asan_unpoison_stack_memory(uptr addr, uptr size) {
-  if (!__asan_option_detect_stack_use_after_scope) return;
   VReport(1, "unpoisoning: %p %zx\n", (void *)addr, size);
   PoisonAlignedStackMemory(addr, size, false);
 }
