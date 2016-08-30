@@ -30,10 +30,6 @@
 namespace llvm {
 class ValueSymbolTable;
 
-template <typename NodeTy> class ilist_iterator;
-template <typename NodeTy, typename Traits> class iplist;
-template <typename Ty> struct ilist_traits;
-
 /// Template metafunction to get the parent type for a symbol table list.
 ///
 /// Implementations create a typedef called \c type so that we only need a
@@ -66,6 +62,7 @@ template <typename NodeTy> class SymbolTableList;
 template <typename ValueSubClass>
 class SymbolTableListTraits : public ilist_node_traits<ValueSubClass> {
   typedef SymbolTableList<ValueSubClass> ListTy;
+  typedef ilist_iterator<ValueSubClass, false> iterator;
   typedef
       typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;
 
@@ -94,10 +91,9 @@ private:
 public:
   void addNodeToList(ValueSubClass *V);
   void removeNodeFromList(ValueSubClass *V);
-  void transferNodesFromList(SymbolTableListTraits &L2,
-                             ilist_iterator<ValueSubClass> first,
-                             ilist_iterator<ValueSubClass> last);
-//private:
+  void transferNodesFromList(SymbolTableListTraits &L2, iterator first,
+                             iterator last);
+  // private:
   template<typename TPtr>
   void setSymTabObject(TPtr *, TPtr);
   static ValueSymbolTable *toPtr(ValueSymbolTable *P) { return P; }

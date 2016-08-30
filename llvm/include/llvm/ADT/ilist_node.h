@@ -51,7 +51,7 @@ public:
 };
 
 struct ilist_node_access;
-template <typename NodeTy> class ilist_iterator;
+template <typename NodeTy, bool IsReverse = false> class ilist_iterator;
 template <typename NodeTy> class ilist_sentinel;
 
 /// Templated wrapper class.
@@ -59,7 +59,8 @@ template <typename NodeTy> class ilist_node : ilist_node_base {
   friend class ilist_base;
   friend struct ilist_node_access;
   friend struct ilist_traits<NodeTy>;
-  friend class ilist_iterator<NodeTy>;
+  friend class ilist_iterator<NodeTy, false>;
+  friend class ilist_iterator<NodeTy, true>;
   friend class ilist_sentinel<NodeTy>;
 
 protected:

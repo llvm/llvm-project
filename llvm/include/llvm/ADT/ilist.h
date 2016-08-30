@@ -35,7 +35,7 @@
 namespace llvm {
 
 template<typename NodeTy, typename Traits> class iplist;
-template<typename NodeTy> class ilist_iterator;
+template <typename NodeTy, bool IsReverse> class ilist_iterator;
 
 /// An access class for ilist_node private API.
 ///
@@ -146,12 +146,30 @@ template <class NodeTy> struct ConstCorrectNodeType {
 template <class NodeTy> struct ConstCorrectNodeType<const NodeTy> {
   typedef const ilist_node<NodeTy> type;
 };
+
+template <bool IsReverse = false> struct IteratorHelper {
+  template <class T> static void increment(T *&I) {
+    I = ilist_node_access::getNext(*I);
+  }
+  template <class T> static void decrement(T *&I) {
+    I = ilist_node_access::getPrev(*I);
+  }
+};
+template <> struct IteratorHelper<true> {
+  template <class T> static void increment(T *&I) {
+    IteratorHelper<false>::decrement(I);
+  }
+  template <class T> static void decrement(T *&I) {
+    IteratorHelper<false>::increment(I);
+  }
+};
+
 } // end namespace ilist_detail
 
 //===----------------------------------------------------------------------===//
 // Iterator for intrusive list.
 //
-template <typename NodeTy>
+template <typename NodeTy, bool IsReverse>
 class ilist_iterator
     : public std::iterator<std::bidirectional_iterator_tag, NodeTy, ptrdiff_t> {
 public:
@@ -185,7 +203,7 @@ public:
   // a nonconst iterator...
   template <class node_ty>
   ilist_iterator(
-      const ilist_iterator<node_ty> &RHS,
+      const ilist_iterator<node_ty, IsReverse> &RHS,
       typename std::enable_if<std::is_convertible<node_ty *, NodeTy *>::value,
                               void *>::type = nullptr)
       : NodePtr(RHS.getNodePtr()) {}
@@ -193,9 +211,20 @@ public:
   // This is templated so that we can allow assigning to a const iterator from
   // a nonconst iterator...
   template <class node_ty>
-  const ilist_iterator &operator=(const ilist_iterator<node_ty> &RHS) {
+  const ilist_iterator &
+  operator=(const ilist_iterator<node_ty, IsReverse> &RHS) {
     NodePtr = RHS.getNodePtr();
     return *this;
+  }
+
+  /// Convert from an iterator to its reverse.
+  ///
+  /// TODO: Roll this into the implicit constructor once we're sure that no one
+  /// is relying on the std::reverse_iterator off-by-one semantics.
+  ilist_iterator<NodeTy, !IsReverse> getReverse() const {
+    if (NodePtr)
+      return ilist_iterator<NodeTy, !IsReverse>(*NodePtr);
+    return ilist_iterator<NodeTy, !IsReverse>();
   }
 
   void reset(pointer NP) { NodePtr = NP; }
@@ -217,12 +246,11 @@ public:
 
   // Increment and decrement operators...
   ilist_iterator &operator--() {
-    NodePtr = ilist_node_access::getPrev(*NodePtr);
-    assert(NodePtr && "--'d off the beginning of an ilist!");
+    ilist_detail::IteratorHelper<IsReverse>::decrement(NodePtr);
     return *this;
   }
   ilist_iterator &operator++() {
-    NodePtr = ilist_node_access::getNext(*NodePtr);
+    ilist_detail::IteratorHelper<IsReverse>::increment(NodePtr);
     return *this;
   }
   ilist_iterator operator--(int) {
@@ -356,8 +384,8 @@ public:
   typedef ilist_iterator<const NodeTy> const_iterator;
   typedef size_t size_type;
   typedef ptrdiff_t difference_type;
-  typedef std::reverse_iterator<const_iterator>  const_reverse_iterator;
-  typedef std::reverse_iterator<iterator>  reverse_iterator;
+  typedef ilist_iterator<const NodeTy, true> const_reverse_iterator;
+  typedef ilist_iterator<NodeTy, true> reverse_iterator;
 
   iplist() = default;
   ~iplist() { clear(); }
@@ -369,11 +397,10 @@ public:
   const_iterator end() const { return const_iterator(Sentinel); }
 
   // reverse iterator creation methods.
-  reverse_iterator rbegin()            { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
-  reverse_iterator rend()              { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(begin());}
-
+  reverse_iterator rbegin()            { return ++reverse_iterator(Sentinel); }
+  const_reverse_iterator rbegin() const{ return ++const_reverse_iterator(Sentinel); }
+  reverse_iterator rend()              { return reverse_iterator(Sentinel); }
+  const_reverse_iterator rend() const { return const_reverse_iterator(Sentinel); }
 
   // Miscellaneous inspection routines.
   size_type max_size() const { return size_type(-1); }
