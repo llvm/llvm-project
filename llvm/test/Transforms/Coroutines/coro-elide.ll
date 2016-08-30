@@ -23,6 +23,7 @@ define fastcc void @f.destroy(i8*) {
 define i8* @f() {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null,
+                          i8* bitcast (i8*()* @f to i8*),
                           i8* bitcast ([2 x void (i8*)*]* @f.resumers to i8*))
   %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
   ret i8* %hdl
@@ -31,10 +32,9 @@ entry:
 ; CHECK-LABEL: @callResume(
 define void @callResume() {
 entry:
-; CHECK: call i8* @llvm.coro.begin
   %hdl = call i8* @f()
 
-; CHECK-NEXT: call void @print(i32 0)
+; CHECK: call void @print(i32 0)
   %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
   %1 = bitcast i8* %0 to void (i8*)*
   call fastcc void %1(i8* %hdl)
@@ -51,10 +51,9 @@ entry:
 ; CHECK-LABEL: @eh(
 define void @eh() personality i8* null {
 entry:
-; CHECK: call i8* @llvm.coro.begin
   %hdl = call i8* @f()
 
-; CHECK-NEXT: call void @print(i32 0)
+; CHECK: call void @print(i32 0)
   %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
   %1 = bitcast i8* %0 to void (i8*)*
   invoke void %1(i8* %hdl)
@@ -71,7 +70,7 @@ ehcleanup:
 ; no devirtualization here, since coro.begin info parameter is null
 define void @no_devirt_info_null() {
 entry:
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null)
+  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
 
 ; CHECK: call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
@@ -107,7 +106,7 @@ entry:
   ret void
 }
 
-declare token @llvm.coro.id(i32, i8*, i8*)
+declare token @llvm.coro.id(i32, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i8* @llvm.coro.frame()
 declare i8* @llvm.coro.subfn.addr(i8*, i8)

@@ -22,16 +22,16 @@ entry:
 
 ; XXX: Could do v_or_b32 directly
 ; CHECK-LABEL: {{^}}extract_w_offset_salu_use_vector:
-; CHECK-DAG: s_or_b32
-; CHECK-DAG: s_or_b32
-; CHECK-DAG: s_or_b32
-; CHECK-DAG: s_or_b32
-; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; CHECK: s_mov_b32 m0
-; CHECK-NEXT: v_movrels_b32_e32
+; CHECK-DAG: s_or_b32
+; CHECK-DAG: s_or_b32
+; CHECK-DAG: s_or_b32
+; CHECK-DAG: s_or_b32
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; CHECK: v_movrels_b32_e32
 define void @extract_w_offset_salu_use_vector(i32 addrspace(1)* %out, i32 %in, <4 x i32> %or.val) {
 entry:
   %idx = add i32 %in, 1
@@ -242,13 +242,13 @@ entry:
 ; FIXME: Why is vector copied in between?
 
 ; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
-; CHECK-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
 ; CHECK-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
+; CHECK-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
 ; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
 ; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], [[S_ELT1]]
 
 ; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK: s_waitcnt vmcnt(0)
 
 ; CHECK: [[LOOP0:BB[0-9]+_[0-9]+]]:
 ; CHECK-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
@@ -303,8 +303,10 @@ bb2:
 ; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
 ; CHECK-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
 
-; CHECK-DAG: v_mov_b32_e32 v[[VEC_ELT0:[0-9]+]], s[[S_ELT0]]
 ; CHECK-DAG: v_mov_b32_e32 v[[VEC_ELT3:[0-9]+]], s[[S_ELT3]]
+; CHECK: v_mov_b32_e32 v[[VEC_ELT2:[0-9]+]], s{{[0-9]+}}
+; CHECK: v_mov_b32_e32 v[[VEC_ELT1:[0-9]+]], s{{[0-9]+}}
+; CHECK: v_mov_b32_e32 v[[VEC_ELT0:[0-9]+]], s[[S_ELT0]]
 
 ; CHECK: [[LOOP0:BB[0-9]+_[0-9]+]]:
 ; CHECK-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
@@ -324,7 +326,7 @@ bb2:
 ; CHECK: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
 ; CHECK: s_mov_b32 m0, [[READLANE]]
 ; CHECK: s_and_saveexec_b64 vcc, vcc
-; CHECK-NEXT: v_movreld_b32_e32 [[VEC_ELT1]], 63
+; CHECK-NEXT: v_movreld_b32_e32 v[[VEC_ELT1]], 63
 ; CHECK-NEXT: s_xor_b64 exec, exec, vcc
 ; CHECK: s_cbranch_execnz [[LOOP1]]
 

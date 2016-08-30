@@ -200,6 +200,8 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
   Opts.IndirectCalls = CGOpts.SanitizeCoverageIndirectCalls;
   Opts.TraceBB = CGOpts.SanitizeCoverageTraceBB;
   Opts.TraceCmp = CGOpts.SanitizeCoverageTraceCmp;
+  Opts.TraceDiv = CGOpts.SanitizeCoverageTraceDiv;
+  Opts.TraceGep = CGOpts.SanitizeCoverageTraceGep;
   Opts.Use8bitCounters = CGOpts.SanitizeCoverage8bitCounters;
   Opts.TracePC = CGOpts.SanitizeCoverageTracePC;
   PM.add(createSanitizerCoverageModulePass(Opts));

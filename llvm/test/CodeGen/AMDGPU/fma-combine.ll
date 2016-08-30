@@ -548,7 +548,7 @@ define void @test_f32_interp(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f64_interp:
 ; SI: v_fma_f64 [[VR:v\[[0-9]+:[0-9]+\]]], -[[VT:v\[[0-9]+:[0-9]+\]]], [[VY:v\[[0-9]+:[0-9]+\]]], [[VY]]
-; SI: v_fma_f64 [[VR:v\[[0-9]+:[0-9]+\]]], [[VX:v\[[0-9]+:[0-9]+\]]], [[VT]], [[VR]]
+; SI: v_fma_f64 v{{\[[0-9]+:[0-9]+\]}}, [[VX:v\[[0-9]+:[0-9]+\]]], [[VT]], [[VR]]
 define void @test_f64_interp(double addrspace(1)* %out,
                              double addrspace(1)* %in1,
                              double addrspace(1)* %in2,

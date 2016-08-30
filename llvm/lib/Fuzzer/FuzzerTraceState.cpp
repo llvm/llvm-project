@@ -584,6 +584,14 @@ static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
   VP.AddValue(Idx);
 }
 
+static void AddValueForSingleVal(void *PCptr, uintptr_t Val) {
+  if (!Val) return;
+  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
+  uint64_t ArgDistance = __builtin_popcountl(Val) - 1; // [0,63]
+  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
+  VP.AddValue(Idx);
+}
+
 }  // namespace fuzzer
 
 using fuzzer::TS;
@@ -778,6 +786,19 @@ void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
   if (!RecordingTraces) return;
   uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
   TS->TraceSwitchCallback(PC, Cases[1], Val, Cases[0], Cases + 2);
+}
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_div4(uint32_t Val) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_div8(uint64_t Val) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_gep(uintptr_t Idx) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Idx);
 }
 
 }  // extern "C"

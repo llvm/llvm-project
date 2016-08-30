@@ -37,6 +37,11 @@ check_cxx_compiler_flag(/EHsc                 LIBCXXABI_HAS_EHSC_FLAG)
 check_cxx_compiler_flag(/EHs-                 LIBCXXABI_HAS_NO_EHS_FLAG)
 check_cxx_compiler_flag(/EHa-                 LIBCXXABI_HAS_NO_EHA_FLAG)
 check_cxx_compiler_flag(/GR-                  LIBCXXABI_HAS_NO_GR_FLAG)
+check_cxx_compiler_flag(-std=c++11            LIBCXXABI_HAS_STD_CXX11)
+
+if(LIBCXXABI_HAS_STD_CXX11)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
 
 # Check libraries
 check_library_exists(c fopen "" LIBCXXABI_HAS_C_LIB)

@@ -1,4 +1,4 @@
-//===- unittests/ADT/ilistTestTemp.cpp - ilist unit tests -----------------===//
+//===- unittests/ADT/IListTest.cpp - ilist unit tests ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,9 +6,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-// FIXME: Rename this file to IListTest.cpp once incremental checkouts on bots
-// have found this file.
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/STLExtras.h"
@@ -29,7 +26,7 @@ struct Node : ilist_node<Node> {
   ~Node() { Value = -1; }
 };
 
-TEST(ilistTest, Basic) {
+TEST(IListTest, Basic) {
   ilist<Node> List;
   List.push_back(Node(1));
   EXPECT_EQ(1, List.back().Value);
@@ -47,7 +44,7 @@ TEST(ilistTest, Basic) {
   EXPECT_EQ(1, ConstList.getPrevNode(ConstList.back())->Value);
 }
 
-TEST(ilistTest, SpliceOne) {
+TEST(IListTest, SpliceOne) {
   ilist<Node> List;
   List.push_back(1);
 
@@ -67,7 +64,7 @@ TEST(ilistTest, SpliceOne) {
   EXPECT_EQ(3, List.back().Value);
 }
 
-TEST(ilistTest, SpliceSwap) {
+TEST(IListTest, SpliceSwap) {
   ilist<Node> L;
   Node N0(0);
   Node N1(1);
@@ -83,7 +80,7 @@ TEST(ilistTest, SpliceSwap) {
   L.clearAndLeakNodesUnsafely();
 }
 
-TEST(ilistTest, SpliceSwapOtherWay) {
+TEST(IListTest, SpliceSwapOtherWay) {
   ilist<Node> L;
   Node N0(0);
   Node N1(1);
@@ -99,7 +96,7 @@ TEST(ilistTest, SpliceSwapOtherWay) {
   L.clearAndLeakNodesUnsafely();
 }
 
-TEST(ilistTest, UnsafeClear) {
+TEST(IListTest, UnsafeClear) {
   ilist<Node> List;
 
   // Before even allocating a sentinel.
@@ -132,7 +129,7 @@ TEST(ilistTest, UnsafeClear) {
 }
 
 struct Empty {};
-TEST(ilistTest, HasObsoleteCustomizationTrait) {
+TEST(IListTest, HasObsoleteCustomizationTrait) {
   // Negative test for HasObsoleteCustomization.
   static_assert(!ilist_detail::HasObsoleteCustomization<Empty, Node>::value,
                 "Empty has no customizations");
@@ -141,7 +138,7 @@ TEST(ilistTest, HasObsoleteCustomizationTrait) {
 struct GetNext {
   Node *getNext(Node *);
 };
-TEST(ilistTest, HasGetNextTrait) {
+TEST(IListTest, HasGetNextTrait) {
   static_assert(ilist_detail::HasGetNext<GetNext, Node>::value,
                 "GetNext has a getNext(Node*)");
   static_assert(ilist_detail::HasObsoleteCustomization<GetNext, Node>::value,
@@ -155,7 +152,7 @@ TEST(ilistTest, HasGetNextTrait) {
 struct CreateSentinel {
   Node *createSentinel();
 };
-TEST(ilistTest, HasCreateSentinelTrait) {
+TEST(IListTest, HasCreateSentinelTrait) {
   static_assert(ilist_detail::HasCreateSentinel<CreateSentinel>::value,
                 "CreateSentinel has a getNext(Node*)");
   static_assert(
@@ -189,7 +186,7 @@ struct ilist_traits<NodeWithCallback>
 
 namespace {
 
-TEST(ilistTest, addNodeToList) {
+TEST(IListTest, addNodeToList) {
   ilist<NodeWithCallback> L;
   NodeWithCallback N(7);
   ASSERT_FALSE(N.IsInList);
@@ -214,7 +211,7 @@ struct PrivateNode : private ilist_node<PrivateNode> {
   PrivateNode(const PrivateNode &) = delete;
 };
 
-TEST(ilistTest, privateNode) {
+TEST(IListTest, privateNode) {
   // Instantiate various APIs to be sure they're callable when ilist_node is
   // inherited privately.
   ilist<NodeWithCallback> L;

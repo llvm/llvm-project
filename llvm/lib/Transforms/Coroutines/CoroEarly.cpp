@@ -81,6 +81,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
           if (CII->getInfo().isPreSplit()) {
             F.addFnAttr(CORO_PRESPLIT_ATTR, UNPREPARED_FOR_SPLIT);
             setCannotDuplicate(CII);
+            CII->setCoroutineSelf();
           }
         }
         break;

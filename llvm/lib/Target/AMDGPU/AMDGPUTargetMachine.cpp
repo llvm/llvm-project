@@ -18,6 +18,7 @@
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
+#include "GCNSchedStrategy.h"
 #include "R600ISelLowering.h"
 #include "R600InstrInfo.h"
 #include "R600MachineScheduler.h"
@@ -96,6 +97,14 @@ static ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C) {
   return new SIScheduleDAGMI(C);
 }
 
+static ScheduleDAGInstrs *
+createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new ScheduleDAGMILive(C, make_unique<GCNMaxOccupancySchedStrategy>(C));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  return DAG;
+}
+
 static MachineSchedRegistry
 R600SchedRegistry("r600", "Run R600's custom scheduler",
                    createR600MachineScheduler);
@@ -103,6 +112,11 @@ R600SchedRegistry("r600", "Run R600's custom scheduler",
 static MachineSchedRegistry
 SISchedRegistry("si", "Run SI's custom scheduler",
                 createSIMachineScheduler);
+
+static MachineSchedRegistry
+GCNMaxOccupancySchedRegistry("gcn-max-occupancy",
+                             "Run GCN scheduler to maximize occupancy",
+                             createGCNMaxOccupancyMachineScheduler);
 
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {
@@ -467,7 +481,7 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
   const SISubtarget &ST = C->MF->getSubtarget<SISubtarget>();
   if (ST.enableSIScheduler())
     return createSIMachineScheduler(C);
-  return nullptr;
+  return createGCNMaxOccupancyMachineScheduler(C);
 }
 
 bool GCNPassConfig::addPreISel() {
@@ -497,6 +511,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
   // XXX - Can we get away without running DeadMachineInstructionElim again?
   addPass(&SIFoldOperandsID);
   addPass(&DeadMachineInstructionElimID);
+  addPass(&SILoadStoreOptimizerID);
 }
 
 void GCNPassConfig::addIRPasses() {
@@ -533,17 +548,6 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 #endif
 
 void GCNPassConfig::addPreRegAlloc() {
-  if (getOptLevel() > CodeGenOpt::None) {
-    // Don't do this with no optimizations since it throws away debug info by
-    // merging nonadjacent loads.
-
-    // This should be run after scheduling, but before register allocation. It
-    // also need extra copies to the address operand to be eliminated.
-
-    // FIXME: Move pre-RA and remove extra reg coalescer run.
-    insertPass(&MachineSchedulerID, &SILoadStoreOptimizerID);
-    insertPass(&MachineSchedulerID, &RegisterCoalescerID);
-  }
 
   addPass(createSIShrinkInstructionsPass());
   addPass(createSIWholeQuadModePass());

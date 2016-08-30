@@ -151,6 +151,10 @@ CODEGENOPT(SanitizeCoverageTraceBB, 1, 0) ///< Enable basic block tracing in
                                           ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageTraceCmp, 1, 0) ///< Enable cmp instruction tracing
                                            ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceDiv, 1, 0) ///< Enable div instruction tracing
+                                           ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceGep, 1, 0) ///< Enable GEP instruction tracing
+                                           ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0) ///< Use 8-bit frequency counters
                                                ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageTracePC, 1, 0) ///< Enable PC tracing

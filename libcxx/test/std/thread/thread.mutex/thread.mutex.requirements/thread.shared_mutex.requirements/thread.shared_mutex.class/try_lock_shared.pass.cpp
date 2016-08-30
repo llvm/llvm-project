@@ -10,6 +10,8 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03, c++98, c++11, c++14
 
+// FLAKY_TEST
+
 // <shared_mutex>
 
 // class shared_mutex;

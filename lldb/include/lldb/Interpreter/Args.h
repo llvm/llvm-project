@@ -397,6 +397,9 @@ public:
     static bool
     StringToBoolean (const char *s, bool fail_value, bool *success_ptr);
 
+    static bool
+    StringToBoolean(llvm::StringRef s, bool fail_value, bool *success_ptr);
+
     static char StringToChar(const char *s, char fail_value, bool *success_ptr);
 
     static int64_t
@@ -405,6 +408,7 @@ public:
     static lldb::ScriptLanguage
     StringToScriptLanguage (const char *s, lldb::ScriptLanguage fail_value, bool *success_ptr);
 
+    // TODO: Use StringRef
     static Error
     StringToFormat (const char *s,
                     lldb::Format &format,
@@ -414,9 +418,16 @@ public:
     StringToEncoding (const char *s,
                       lldb::Encoding fail_value = lldb::eEncodingInvalid);
 
+    static lldb::Encoding
+    StringToEncoding(llvm::StringRef s, lldb::Encoding fail_value = lldb::eEncodingInvalid);
+
     static uint32_t
     StringToGenericRegister (const char *s);
-    
+
+    static uint32_t
+    StringToGenericRegister(llvm::StringRef s);
+
+    // TODO: Update to take a StringRef
     static const char *
     StringToVersion (const char *s, uint32_t &major, uint32_t &minor, uint32_t &update);
 

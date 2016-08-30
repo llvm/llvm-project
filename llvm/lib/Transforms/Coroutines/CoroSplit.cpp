@@ -64,7 +64,7 @@ static BasicBlock *createResumeEntryBlock(Function &F, coro::Shape &Shape) {
 
   uint32_t SuspendIndex = 0;
   for (auto S : Shape.CoroSuspends) {
-    ConstantInt *IndexVal = Builder.getInt32(SuspendIndex);
+    ConstantInt *IndexVal = Shape.getIndex(SuspendIndex);
 
     // Replace CoroSave with a store to Index:
     //    %index.addr = getelementptr %f.frame... (index field number)
@@ -140,7 +140,6 @@ static void replaceFallthroughCoroEnd(IntrinsicInst *End,
 // resume or cleanup pass for every suspend point.
 static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
                              BasicBlock *ResumeEntry, int8_t FnIndex) {
-
   Module *M = F.getParent();
   auto *FrameTy = Shape.FrameTy;
   auto *FnPtrTy = cast<PointerType>(FrameTy->getElementType(0));
@@ -207,7 +206,11 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   OldVFrame->replaceAllUsesWith(NewVFrame);
 
   // Replace coro suspend with the appropriate resume index.
-  auto *NewValue = Builder.getInt8(FnIndex);
+  // Replacing coro.suspend with (0) will result in control flow proceeding to
+  // a resume label associated with a suspend point, replacing it with (1) will
+  // result in control flow proceeding to a cleanup label associated with this
+  // suspend point.
+  auto *NewValue = Builder.getInt8(FnIndex ? 1 : 0);
   for (CoroSuspendInst *CS : Shape.CoroSuspends) {
     auto *MappedCS = cast<CoroSuspendInst>(VMap[CS]);
     MappedCS->replaceAllUsesWith(NewValue);
@@ -219,11 +222,23 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   // FIXME: coming in upcoming patches:
   // replaceUnwindCoroEnds(Shape.CoroEnds, VMap);
 
-  // Store the address of this clone in the coroutine frame.
-  Builder.SetInsertPoint(Shape.FramePtr->getNextNode());
-  auto *G = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, Shape.FramePtr, 0,
-                                               FnIndex, "fn.addr");
-  Builder.CreateStore(NewF, G);
+  // We only store resume(0) and destroy(1) addresses in the coroutine frame.
+  // The cleanup(2) clone is only used during devirtualization when coroutine is
+  // eligible for heap elision and thus does not participate in indirect calls
+  // and does not need its address to be stored in the coroutine frame.
+  if (FnIndex < 2) {
+    // Store the address of this clone in the coroutine frame.
+    Builder.SetInsertPoint(Shape.FramePtr->getNextNode());
+    auto *G = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, Shape.FramePtr,
+                                                 0, FnIndex, "fn.addr");
+    Builder.CreateStore(NewF, G);
+  }
+
+  // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
+  // to suppress deallocation code.
+  coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
+                        /*Elide=*/FnIndex == 2);
+
   NewF->setCallingConv(CallingConv::Fast);
 
   return NewF;
@@ -303,10 +318,12 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
     return;
 
   buildCoroutineFrame(F, Shape);
+  replaceFrameSize(Shape);
 
   auto *ResumeEntry = createResumeEntryBlock(F, Shape);
-  auto *ResumeClone = createClone(F, ".resume", Shape, ResumeEntry, 0);
-  auto *DestroyClone = createClone(F, ".destroy", Shape, ResumeEntry, 1);
+  auto ResumeClone = createClone(F, ".resume", Shape, ResumeEntry, 0);
+  auto DestroyClone = createClone(F, ".destroy", Shape, ResumeEntry, 1);
+  auto CleanupClone = createClone(F, ".cleanup", Shape, ResumeEntry, 2);
 
   // We no longer need coro.end in F.
   removeCoroEnds(Shape);
@@ -314,11 +331,10 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
   postSplitCleanup(F);
   postSplitCleanup(*ResumeClone);
   postSplitCleanup(*DestroyClone);
+  postSplitCleanup(*CleanupClone);
 
-  replaceFrameSize(Shape);
-
-  setCoroInfo(F, Shape.CoroBegin, {ResumeClone, DestroyClone});
-  coro::updateCallGraph(F, {ResumeClone, DestroyClone}, CG, SCC);
+  setCoroInfo(F, Shape.CoroBegin, {ResumeClone, DestroyClone, CleanupClone});
+  coro::updateCallGraph(F, {ResumeClone, DestroyClone, CleanupClone}, CG, SCC);
 }
 
 // When we see the coroutine the first time, we insert an indirect call to a

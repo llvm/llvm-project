@@ -87,6 +87,9 @@ def : Proc<"tsc701",          []>;
 def : Proc<"myriad2",         []>;
 def : Proc<"myriad2.1",       []>;
 def : Proc<"myriad2.2",       []>;
+def : Proc<"ma2100",          []>;
+def : Proc<"ma2150",          []>;
+def : Proc<"ma2450",          []>;
 def : Proc<"v9",              [FeatureV9]>;
 def : Proc<"ultrasparc",      [FeatureV9, FeatureV8Deprecated, FeatureVIS]>;
 def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,

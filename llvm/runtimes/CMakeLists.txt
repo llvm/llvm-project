@@ -123,6 +123,8 @@ else() # if this is included from LLVM's CMake
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt)
     llvm_ExternalProject_Add(builtins
                              ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/lib/builtins
+                             CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
+                                        -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                              PASSTHROUGH_PREFIXES COMPILER_RT
                              USE_TOOLCHAIN)
     set(deps builtins)

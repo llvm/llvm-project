@@ -57,7 +57,7 @@ template <class It,
     class ItTraits = It>
 class input_iterator
 {
-    using Traits = std::iterator_traits<ItTraits>;
+    typedef std::iterator_traits<ItTraits> Traits;
     It it_;
 
     template <class U, class T> friend class input_iterator;

@@ -1146,10 +1146,12 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
          E = TOC.end(); I != E; ++I) {
       OutStreamer->EmitLabel(I->second);
       MCSymbol *S = I->first;
-      if (isPPC64)
+      if (isPPC64) {
         TS.emitTCEntry(*S);
-      else
+      } else {
+        OutStreamer->EmitValueToAlignment(4);
         OutStreamer->EmitSymbolValue(S, 4);
+      }
     }
   }
 

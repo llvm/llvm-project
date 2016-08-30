@@ -15,7 +15,7 @@ define void @foo(%struct.anon* byval %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:         movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
 ; CHECK-NEXT:    xorps %xmm2, %xmm0
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-NEXT:    xorps %xmm2, %xmm1

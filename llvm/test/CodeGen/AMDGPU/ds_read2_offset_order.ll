@@ -8,9 +8,9 @@
 
 ; SI-LABEL: {{^}}offset_order:
 
-; SI: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:2 offset1:3
-; SI: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:12 offset1:14
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:44
+; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:2 offset1:3
+; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:12 offset1:14
+; SI-DAG: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:44
 
 define void @offset_order(float addrspace(1)* %out) {
 entry:

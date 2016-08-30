@@ -35,6 +35,7 @@ struct Lowerer : coro::LowererBase {
   Lowerer(Module &M) : LowererBase(M) {}
 
   void elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA);
+  bool shouldElide() const;
   bool processCoroId(CoroIdInst *, AAResults &AA);
 };
 } // end anonymous namespace
@@ -122,14 +123,6 @@ void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
     CA->eraseFromParent();
   }
 
-  // To suppress deallocation code, we replace all llvm.coro.free intrinsics
-  // associated with this coro.begin with null constant.
-  auto *NullPtr = ConstantPointerNull::get(Type::getInt8PtrTy(C));
-  for (auto *CF : CoroFrees) {
-    CF->replaceAllUsesWith(NullPtr);
-    CF->eraseFromParent();
-  }
-
   // FIXME: Design how to transmit alignment information for every alloca that
   // is spilled into the coroutine frame and recreate the alignment information
   // here. Possibly we will need to do a mini SROA here and break the coroutine
@@ -148,9 +141,36 @@ void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
   removeTailCallAttribute(Frame, AA);
 }
 
+bool Lowerer::shouldElide() const {
+  // If no CoroAllocs, we cannot suppress allocation, so elision is not
+  // possible.
+  if (CoroAllocs.empty())
+    return false;
+
+  // Check that for every coro.begin there is a coro.destroy directly
+  // referencing the SSA value of that coro.begin. If the value escaped, then
+  // coro.destroy would have been referencing a memory location storing that
+  // value and not the virtual register.
+
+  SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
+
+  for (CoroSubFnInst *DA : DestroyAddr) {
+    if (auto *CB = dyn_cast<CoroBeginInst>(DA->getFrame()))
+      ReferencedCoroBegins.insert(CB);
+    else
+      return false;
+  }
+
+  // If size of the set is the same as total number of CoroBegins, means we
+  // found a coro.free or coro.destroy mentioning a coro.begin and we can
+  // perform heap elision.
+  return ReferencedCoroBegins.size() == CoroBegins.size();
+}
+
 bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA) {
   CoroBegins.clear();
   CoroAllocs.clear();
+  CoroFrees.clear();
   ResumeAddr.clear();
   DestroyAddr.clear();
 
@@ -160,6 +180,8 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA) {
       CoroBegins.push_back(CB);
     else if (auto *CA = dyn_cast<CoroAllocInst>(U))
       CoroAllocs.push_back(CA);
+    else if (auto *CF = dyn_cast<CoroFreeInst>(U))
+      CoroFrees.push_back(CF);
   }
 
   // Collect all coro.subfn.addrs associated with coro.begin.
@@ -191,27 +213,20 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA) {
 
   replaceWithConstant(ResumeAddrConstant, ResumeAddr);
 
-  if (DestroyAddr.empty())
-    return true;
+  bool ShouldElide = shouldElide();
 
-  auto *DestroyAddrConstant =
-      ConstantExpr::getExtractValue(Resumers, CoroSubFnInst::DestroyIndex);
+  auto *DestroyAddrConstant = ConstantExpr::getExtractValue(
+      Resumers,
+      ShouldElide ? CoroSubFnInst::CleanupIndex : CoroSubFnInst::DestroyIndex);
 
   replaceWithConstant(DestroyAddrConstant, DestroyAddr);
 
-  // If there is a coro.alloc that llvm.coro.id refers to, we have the ability
-  // to suppress dynamic allocation.
-  if (!CoroAllocs.empty()) {
-    // FIXME: The check above is overly lax. It only checks for whether we have
-    // an ability to elide heap allocations, not whether it is safe to do so.
-    // We need to do something like:
-    // If for every exit from the function where coro.begin is
-    // live, there is a coro.free or coro.destroy dominating that exit block,
-    // then it is safe to elide heap allocation, since the lifetime of coroutine
-    // is fully enclosed in its caller.
+  if (ShouldElide) {
     auto *FrameTy = getFrameType(cast<Function>(ResumeAddrConstant));
     elideHeapAllocations(CoroId->getFunction(), FrameTy, AA);
+    coro::replaceCoroFree(CoroId, /*Elide=*/true);
   }
+
   return true;
 }
 
@@ -262,21 +277,21 @@ struct CoroElide : FunctionPass {
       Changed = replaceDevirtTrigger(F);
 
     L->CoroIds.clear();
-    L->CoroFrees.clear();
 
-    // Collect all PostSplit coro.ids and all coro.free.
+    // Collect all PostSplit coro.ids.
     for (auto &I : instructions(F))
-      if (auto *CF = dyn_cast<CoroFreeInst>(&I))
-        L->CoroFrees.push_back(CF);
-      else if (auto *CII = dyn_cast<CoroIdInst>(&I))
+      if (auto *CII = dyn_cast<CoroIdInst>(&I))
         if (CII->getInfo().isPostSplit())
-          L->CoroIds.push_back(CII);
+          // If it is the coroutine itself, don't touch it.
+          if (CII->getCoroutine() != CII->getFunction())
+            L->CoroIds.push_back(CII);
 
     // If we did not find any coro.id, there is nothing to do.
     if (L->CoroIds.empty())
       return Changed;
 
     AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+
     for (auto *CII : L->CoroIds)
       Changed |= L->processCoroId(CII, AA);
 
@@ -284,7 +299,6 @@ struct CoroElide : FunctionPass {
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
-    AU.setPreservesCFG();
   }
 };
 }

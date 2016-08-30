@@ -61,6 +61,9 @@ public:
   LegalizeResult legalizeInstr(MachineInstr &MI,
                                const MachineLegalizer &Legalizer);
 
+  /// Legalize an instruction by emiting a runtime library call instead.
+  LegalizeResult libcall(MachineInstr &MI);
+
   /// Legalize an instruction by reducing the width of the underlying scalar
   /// type.
   LegalizeResult narrowScalar(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);

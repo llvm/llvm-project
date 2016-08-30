@@ -43,6 +43,8 @@
 #include "lldb/Host/android/HostInfoAndroid.h"
 #endif
 
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -296,77 +298,80 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo (StringExtractorGDBRemo
     packet.SetFilePos(::strlen ("qfProcessInfo"));
     if (packet.GetChar() == ':')
     {
-
-        std::string key;
-        std::string value;
+        llvm::StringRef key;
+        llvm::StringRef value;
         while (packet.GetNameColonValue(key, value))
         {
             bool success = true;
-            if (key.compare("name") == 0)
+            if (key.equals("name"))
             {
-                StringExtractor extractor;
-                extractor.GetStringRef().swap(value);
-                extractor.GetHexByteString (value);
-                match_info.GetProcessInfo().GetExecutableFile().SetFile(value.c_str(), false);
+                StringExtractor extractor(value);
+                std::string file;
+                extractor.GetHexByteString(file);
+                match_info.GetProcessInfo().GetExecutableFile().SetFile(file.c_str(), false);
             }
-            else if (key.compare("name_match") == 0)
+            else if (key.equals("name_match"))
             {
-                if (value.compare("equals") == 0)
-                {
-                    match_info.SetNameMatchType (eNameMatchEquals);
-                }
-                else if (value.compare("starts_with") == 0)
-                {
-                    match_info.SetNameMatchType (eNameMatchStartsWith);
-                }
-                else if (value.compare("ends_with") == 0)
-                {
-                    match_info.SetNameMatchType (eNameMatchEndsWith);
-                }
-                else if (value.compare("contains") == 0)
-                {
-                    match_info.SetNameMatchType (eNameMatchContains);
-                }
-                else if (value.compare("regex") == 0)
-                {
-                    match_info.SetNameMatchType (eNameMatchRegularExpression);
-                }
-                else
-                {
-                    success = false;
-                }
+                NameMatchType name_match = llvm::StringSwitch<NameMatchType>(value)
+                                               .Case("equals", eNameMatchEquals)
+                                               .Case("starts_with", eNameMatchStartsWith)
+                                               .Case("ends_with", eNameMatchEndsWith)
+                                               .Case("contains", eNameMatchContains)
+                                               .Case("regex", eNameMatchRegularExpression)
+                                               .Default(eNameMatchIgnore);
+                match_info.SetNameMatchType(name_match);
+                if (name_match == eNameMatchIgnore)
+                    return SendErrorResponse(2);
             }
-            else if (key.compare("pid") == 0)
+            else if (key.equals("pid"))
             {
-                match_info.GetProcessInfo().SetProcessID (StringConvert::ToUInt32(value.c_str(), LLDB_INVALID_PROCESS_ID, 0, &success));
+                lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+                if (value.getAsInteger(0, pid))
+                    return SendErrorResponse(2);
+                match_info.GetProcessInfo().SetProcessID(pid);
             }
-            else if (key.compare("parent_pid") == 0)
+            else if (key.equals("parent_pid"))
             {
-                match_info.GetProcessInfo().SetParentProcessID (StringConvert::ToUInt32(value.c_str(), LLDB_INVALID_PROCESS_ID, 0, &success));
+                lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+                if (value.getAsInteger(0, pid))
+                    return SendErrorResponse(2);
+                match_info.GetProcessInfo().SetParentProcessID(pid);
             }
-            else if (key.compare("uid") == 0)
+            else if (key.equals("uid"))
             {
-                match_info.GetProcessInfo().SetUserID (StringConvert::ToUInt32(value.c_str(), UINT32_MAX, 0, &success));
+                uint32_t uid = UINT32_MAX;
+                if (value.getAsInteger(0, uid))
+                    return SendErrorResponse(2);
+                match_info.GetProcessInfo().SetUserID(uid);
             }
-            else if (key.compare("gid") == 0)
+            else if (key.equals("gid"))
             {
-                match_info.GetProcessInfo().SetGroupID (StringConvert::ToUInt32(value.c_str(), UINT32_MAX, 0, &success));
+                uint32_t gid = UINT32_MAX;
+                if (value.getAsInteger(0, gid))
+                    return SendErrorResponse(2);
+                match_info.GetProcessInfo().SetGroupID(gid);
             }
-            else if (key.compare("euid") == 0)
+            else if (key.equals("euid"))
             {
-                match_info.GetProcessInfo().SetEffectiveUserID (StringConvert::ToUInt32(value.c_str(), UINT32_MAX, 0, &success));
+                uint32_t uid = UINT32_MAX;
+                if (value.getAsInteger(0, uid))
+                    return SendErrorResponse(2);
+                match_info.GetProcessInfo().SetEffectiveUserID(uid);
             }
-            else if (key.compare("egid") == 0)
+            else if (key.equals("egid"))
             {
-                match_info.GetProcessInfo().SetEffectiveGroupID (StringConvert::ToUInt32(value.c_str(), UINT32_MAX, 0, &success));
+                uint32_t gid = UINT32_MAX;
+                if (value.getAsInteger(0, gid))
+                    return SendErrorResponse(2);
+                match_info.GetProcessInfo().SetEffectiveGroupID(gid);
             }
-            else if (key.compare("all_users") == 0)
+            else if (key.equals("all_users"))
             {
-                match_info.SetMatchAllUsers(Args::StringToBoolean(value.c_str(), false, &success));
+                match_info.SetMatchAllUsers(Args::StringToBoolean(value, false, &success));
             }
-            else if (key.compare("triple") == 0)
+            else if (key.equals("triple"))
             {
-                match_info.GetProcessInfo().GetArchitecture().SetTriple (value.c_str(), NULL);
+                match_info.GetProcessInfo().GetArchitecture().SetTriple(value.str().c_str(), NULL);
             }
             else
             {
@@ -454,13 +459,13 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest (StringExtractorGDBRemote 
 {
     packet.SetFilePos(::strlen ("qSpeedTest:"));
 
-    std::string key;
-    std::string value;
+    llvm::StringRef key;
+    llvm::StringRef value;
     bool success = packet.GetNameColonValue(key, value);
-    if (success && key.compare("response_size") == 0)
+    if (success && key.equals("response_size"))
     {
-        uint32_t response_size = StringConvert::ToUInt32(value.c_str(), 0, 0, &success);
-        if (success)
+        uint32_t response_size = 0;
+        if (!value.getAsInteger(0, response_size))
         {
             if (response_size == 0)
                 return SendOKResponse();

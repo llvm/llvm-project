@@ -344,7 +344,7 @@ endif:
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
 
-; GCN: s_mov_b32 m0, [[SCALEDIDX]]
+; GCN-DAG: s_mov_b32 m0, [[SCALEDIDX]]
 ; GCN: v_movreld_b32_e32 v{{[0-9]+}}, 0
 
 ; Increment to next element folded into base register, but FileCheck

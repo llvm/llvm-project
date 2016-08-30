@@ -184,15 +184,15 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer (StringExtractorGD
     ConnectionFileDescriptor file_conn;
     std::string hostname;
     packet.SetFilePos(::strlen ("qLaunchGDBServer;"));
-    std::string name;
-    std::string value;
+    llvm::StringRef name;
+    llvm::StringRef value;
     uint16_t port = UINT16_MAX;
     while (packet.GetNameColonValue(name, value))
     {
-        if (name.compare ("host") == 0)
-            hostname.swap(value);
-        else if (name.compare ("port") == 0)
-            port = StringConvert::ToUInt32(value.c_str(), 0, 0);
+        if (name.equals("host"))
+            hostname = value;
+        else if (name.equals("port"))
+            value.getAsInteger(0, port);
     }
 
     lldb::pid_t debugserver_pid = LLDB_INVALID_PROCESS_ID;

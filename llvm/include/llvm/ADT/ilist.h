@@ -24,6 +24,8 @@
 #ifndef LLVM_ADT_ILIST_H
 #define LLVM_ADT_ILIST_H
 
+#include "llvm/ADT/ilist_base.h"
+#include "llvm/ADT/ilist_iterator.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
@@ -35,36 +37,6 @@
 namespace llvm {
 
 template<typename NodeTy, typename Traits> class iplist;
-template<typename NodeTy> class ilist_iterator;
-
-/// An access class for ilist_node private API.
-///
-/// This gives access to the private parts of ilist nodes.  Nodes for an ilist
-/// should friend this class if they inherit privately from ilist_node.
-///
-/// It's strongly discouraged to *use* this class outside of the ilist
-/// implementation.
-struct ilist_node_access {
-  template <typename T> static ilist_node<T> *getNodePtr(T *N) { return N; }
-  template <typename T> static const ilist_node<T> *getNodePtr(const T *N) {
-    return N;
-  }
-
-  template <typename T> static ilist_node<T> *getPrev(ilist_node<T> &N) {
-    return N.getPrev();
-  }
-  template <typename T> static ilist_node<T> *getNext(ilist_node<T> &N) {
-    return N.getNext();
-  }
-  template <typename T>
-  static const ilist_node<T> *getPrev(const ilist_node<T> &N) {
-    return N.getPrev();
-  }
-  template <typename T>
-  static const ilist_node<T> *getNext(const ilist_node<T> &N) {
-    return N.getNext();
-  }
-};
 
 namespace ilist_detail {
 
@@ -139,186 +111,6 @@ struct ilist_traits : public ilist_default_traits<NodeTy> {};
 template<typename Ty>
 struct ilist_traits<const Ty> : public ilist_traits<Ty> {};
 
-namespace ilist_detail {
-template <class NodeTy> struct ConstCorrectNodeType {
-  typedef ilist_node<NodeTy> type;
-};
-template <class NodeTy> struct ConstCorrectNodeType<const NodeTy> {
-  typedef const ilist_node<NodeTy> type;
-};
-} // end namespace ilist_detail
-
-//===----------------------------------------------------------------------===//
-// Iterator for intrusive list.
-//
-template <typename NodeTy>
-class ilist_iterator
-    : public std::iterator<std::bidirectional_iterator_tag, NodeTy, ptrdiff_t> {
-public:
-  typedef std::iterator<std::bidirectional_iterator_tag, NodeTy, ptrdiff_t>
-      super;
-
-  typedef typename super::value_type value_type;
-  typedef typename super::difference_type difference_type;
-  typedef typename super::pointer pointer;
-  typedef typename super::reference reference;
-
-  typedef typename std::add_const<value_type>::type *const_pointer;
-  typedef typename std::add_const<value_type>::type &const_reference;
-
-  typedef typename ilist_detail::ConstCorrectNodeType<NodeTy>::type node_type;
-  typedef node_type *node_pointer;
-  typedef node_type &node_reference;
-
-private:
-  node_pointer NodePtr;
-
-public:
-  /// Create from an ilist_node.
-  explicit ilist_iterator(node_reference N) : NodePtr(&N) {}
-
-  explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
-  explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
-  ilist_iterator() : NodePtr(nullptr) {}
-
-  // This is templated so that we can allow constructing a const iterator from
-  // a nonconst iterator...
-  template <class node_ty>
-  ilist_iterator(
-      const ilist_iterator<node_ty> &RHS,
-      typename std::enable_if<std::is_convertible<node_ty *, NodeTy *>::value,
-                              void *>::type = nullptr)
-      : NodePtr(RHS.getNodePtr()) {}
-
-  // This is templated so that we can allow assigning to a const iterator from
-  // a nonconst iterator...
-  template <class node_ty>
-  const ilist_iterator &operator=(const ilist_iterator<node_ty> &RHS) {
-    NodePtr = RHS.getNodePtr();
-    return *this;
-  }
-
-  void reset(pointer NP) { NodePtr = NP; }
-
-  // Accessors...
-  reference operator*() const {
-    assert(!NodePtr->isKnownSentinel());
-    return static_cast<NodeTy &>(*getNodePtr());
-  }
-  pointer operator->() const { return &operator*(); }
-
-  // Comparison operators
-  friend bool operator==(const ilist_iterator &LHS, const ilist_iterator &RHS) {
-    return LHS.NodePtr == RHS.NodePtr;
-  }
-  friend bool operator!=(const ilist_iterator &LHS, const ilist_iterator &RHS) {
-    return LHS.NodePtr != RHS.NodePtr;
-  }
-
-  // Increment and decrement operators...
-  ilist_iterator &operator--() {
-    NodePtr = ilist_node_access::getPrev(*NodePtr);
-    assert(NodePtr && "--'d off the beginning of an ilist!");
-    return *this;
-  }
-  ilist_iterator &operator++() {
-    NodePtr = ilist_node_access::getNext(*NodePtr);
-    return *this;
-  }
-  ilist_iterator operator--(int) {
-    ilist_iterator tmp = *this;
-    --*this;
-    return tmp;
-  }
-  ilist_iterator operator++(int) {
-    ilist_iterator tmp = *this;
-    ++*this;
-    return tmp;
-  }
-
-  /// Get the underlying ilist_node.
-  node_pointer getNodePtr() const { return static_cast<node_pointer>(NodePtr); }
-};
-
-// Allow ilist_iterators to convert into pointers to a node automatically when
-// used by the dyn_cast, cast, isa mechanisms...
-
-template<typename From> struct simplify_type;
-
-template<typename NodeTy> struct simplify_type<ilist_iterator<NodeTy> > {
-  typedef NodeTy* SimpleType;
-
-  static SimpleType getSimplifiedValue(ilist_iterator<NodeTy> &Node) {
-    return &*Node;
-  }
-};
-template<typename NodeTy> struct simplify_type<const ilist_iterator<NodeTy> > {
-  typedef /*const*/ NodeTy* SimpleType;
-
-  static SimpleType getSimplifiedValue(const ilist_iterator<NodeTy> &Node) {
-    return &*Node;
-  }
-};
-
-/// Implementations of list algorithms using ilist_node_base.
-class ilist_base {
-public:
-  static void insertBeforeImpl(ilist_node_base &Next, ilist_node_base &N) {
-    ilist_node_base &Prev = *Next.getPrev();
-    N.setNext(&Next);
-    N.setPrev(&Prev);
-    Prev.setNext(&N);
-    Next.setPrev(&N);
-  }
-
-  static void removeImpl(ilist_node_base &N) {
-    ilist_node_base *Prev = N.getPrev();
-    ilist_node_base *Next = N.getNext();
-    Next->setPrev(Prev);
-    Prev->setNext(Next);
-
-    // Not strictly necessary, but helps catch a class of bugs.
-    N.setPrev(nullptr);
-    N.setNext(nullptr);
-  }
-
-  static void transferBeforeImpl(ilist_node_base &Next, ilist_node_base &First,
-                                 ilist_node_base &Last) {
-    assert(&Next != &Last && "Should be checked by callers");
-    assert(&First != &Last && "Should be checked by callers");
-    // Position cannot be contained in the range to be transferred.
-    assert(&Next != &First &&
-           // Check for the most common mistake.
-           "Insertion point can't be one of the transferred nodes");
-
-    ilist_node_base &Final = *Last.getPrev();
-
-    // Detach from old list/position.
-    First.getPrev()->setNext(&Last);
-    Last.setPrev(First.getPrev());
-
-    // Splice [First, Final] into its new list/position.
-    ilist_node_base &Prev = *Next.getPrev();
-    Final.setNext(&Next);
-    First.setPrev(&Prev);
-    Prev.setNext(&First);
-    Next.setPrev(&Final);
-  }
-
-  template <class T>
-  static void insertBefore(ilist_node<T> &Next, ilist_node<T> &N) {
-    insertBeforeImpl(Next, N);
-  }
-
-  template <class T> static void remove(ilist_node<T> &N) { removeImpl(N); }
-
-  template <class T>
-  static void transferBefore(ilist_node<T> &Next, ilist_node<T> &First,
-                             ilist_node<T> &Last) {
-    transferBeforeImpl(Next, First, Last);
-  }
-};
-
 //===----------------------------------------------------------------------===//
 //
 /// The subset of list functionality that can safely be used on nodes of
@@ -356,8 +148,8 @@ public:
   typedef ilist_iterator<const NodeTy> const_iterator;
   typedef size_t size_type;
   typedef ptrdiff_t difference_type;
-  typedef std::reverse_iterator<const_iterator>  const_reverse_iterator;
-  typedef std::reverse_iterator<iterator>  reverse_iterator;
+  typedef ilist_iterator<const NodeTy, true> const_reverse_iterator;
+  typedef ilist_iterator<NodeTy, true> reverse_iterator;
 
   iplist() = default;
   ~iplist() { clear(); }
@@ -369,11 +161,10 @@ public:
   const_iterator end() const { return const_iterator(Sentinel); }
 
   // reverse iterator creation methods.
-  reverse_iterator rbegin()            { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
-  reverse_iterator rend()              { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(begin());}
-
+  reverse_iterator rbegin()            { return ++reverse_iterator(Sentinel); }
+  const_reverse_iterator rbegin() const{ return ++const_reverse_iterator(Sentinel); }
+  reverse_iterator rend()              { return reverse_iterator(Sentinel); }
+  const_reverse_iterator rend() const { return const_reverse_iterator(Sentinel); }
 
   // Miscellaneous inspection routines.
   size_type max_size() const { return size_type(-1); }

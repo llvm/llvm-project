@@ -98,6 +98,8 @@ public:
   ~TargetLoweringObjectFileMachO() override {}
   TargetLoweringObjectFileMachO();
 
+  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+
   /// Emit the module flags that specify the garbage collection information.
   void emitModuleFlags(MCStreamer &Streamer,
                        ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
@@ -145,6 +147,7 @@ class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
 public:
   ~TargetLoweringObjectFileCOFF() override {}
 
+  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
   MCSection *getExplicitSectionGlobal(const GlobalValue *GV, SectionKind Kind,
                                       Mangler &Mang,
                                       const TargetMachine &TM) const override;

@@ -93,7 +93,7 @@ define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 define <16 x float> @fneg(<16 x float> %a) nounwind {
 ; CHECK-LABEL: fneg:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
 ; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
 ; CHECK-NEXT:    retq

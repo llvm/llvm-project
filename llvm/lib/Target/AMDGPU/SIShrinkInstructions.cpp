@@ -282,6 +282,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         if (TargetRegisterInfo::isVirtualRegister(Dest.getReg()) &&
             Src0.isReg()) {
           MRI.setRegAllocationHint(Dest.getReg(), 0, Src0.getReg());
+          MRI.setRegAllocationHint(Src0.getReg(), 0, Dest.getReg());
           continue;
         }
 

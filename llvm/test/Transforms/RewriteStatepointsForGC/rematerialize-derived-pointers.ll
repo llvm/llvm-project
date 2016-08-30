@@ -259,3 +259,40 @@ entry:
   call void @use_obj32(i32 addrspace(1)* %ptr.gep11)
   ret void
 }
+
+
+declare i32 addrspace(1)* @new_instance() nounwind "gc-leaf-function"
+
+; remat the gep in presence of base pointer which is a phi node.
+; FIXME: We should remove the extra basephi.base as well.
+define void @contains_basephi(i1 %cond) gc "statepoint-example" {
+; CHECK-LABEL: contains_basephi
+entry:
+  %base1 = call i32 addrspace(1)* @new_instance()
+  %base2 = call i32 addrspace(1)* @new_instance()
+  br i1 %cond, label %here, label %there
+
+here:
+  br label %merge
+
+there:
+  br label %merge
+
+merge:
+  ; CHECK: %basephi.base = phi i32 addrspace(1)* [ %base1, %here ], [ %base2, %there ], !is_base_value !0
+  ; CHECK: %basephi = phi i32 addrspace(1)* [ %base1, %here ], [ %base2, %there ]
+  ; CHECK: %ptr.gep = getelementptr i32, i32 addrspace(1)* %basephi, i32 15
+  ; CHECK: %statepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint
+  ; CHECK: %basephi.base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7) ; (%basephi.base, %basephi.base)
+  ; CHECK: %basephi.base.relocated.casted = bitcast i8 addrspace(1)* %basephi.base.relocated to i32 addrspace(1)*
+  ; CHECK: %ptr.gep.remat = getelementptr i32, i32 addrspace(1)* %basephi, i32 15
+  ; CHECK: call void @use_obj32(i32 addrspace(1)* %ptr.gep.remat)
+
+
+
+  %basephi = phi i32 addrspace(1)* [ %base1, %here ], [ %base2, %there ]
+  %ptr.gep = getelementptr i32, i32 addrspace(1)* %basephi, i32 15
+  call void @do_safepoint() ["deopt"() ]
+  call void @use_obj32(i32 addrspace(1)* %ptr.gep)
+  ret void
+}

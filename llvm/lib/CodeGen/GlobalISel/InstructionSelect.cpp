@@ -81,10 +81,10 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI))
           reportSelectionError(MI, "Instruction is not legal");
 
+#endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
   // Until then, keep track of the number of blocks to assert that we don't.
   const size_t NumBlocks = MF.size();
-#endif
 
   bool Failed = false;
   for (MachineBasicBlock *MBB : post_order(&MF)) {

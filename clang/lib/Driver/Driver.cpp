@@ -177,6 +177,10 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
       (PhaseArg = DAL.getLastArg(options::OPT__SLASH_P))) {
     FinalPhase = phases::Preprocess;
 
+    // --precompile only runs up to precompilation.
+  } else if ((PhaseArg = DAL.getLastArg(options::OPT__precompile))) {
+    FinalPhase = phases::Precompile;
+
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
@@ -1685,12 +1689,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (YcArg) {
       // Add a separate precompile phase for the compile phase.
       if (FinalPhase >= phases::Compile) {
+        const types::ID HeaderInputType = types::TY_CXXHeader;
         llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
-        types::getCompilationPhases(types::TY_CXXHeader, PCHPL);
+        types::getCompilationPhases(HeaderInputType, PCHPL);
         Arg *PchInputArg = MakeInputArg(Args, Opts, YcArg->getValue());
 
         // Build the pipeline for the pch file.
-        Action *ClangClPch = C.MakeAction<InputAction>(*PchInputArg, InputType);
+        Action *ClangClPch =
+            C.MakeAction<InputAction>(*PchInputArg, HeaderInputType);
         for (phases::ID Phase : PCHPL)
           ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
         assert(ClangClPch);
@@ -1812,7 +1818,9 @@ Action *Driver::ConstructPhaseAction(Compilation &C, const ArgList &Args,
     return C.MakeAction<PreprocessJobAction>(Input, OutputTy);
   }
   case phases::Precompile: {
-    types::ID OutputTy = types::TY_PCH;
+    types::ID OutputTy = getPrecompiledType(Input->getType());
+    assert(OutputTy != types::TY_INVALID &&
+           "Cannot precompile this input type!");
     if (Args.hasArg(options::OPT_fsyntax_only)) {
       // Syntax checks should not emit a PCH file
       OutputTy = types::TY_Nothing;

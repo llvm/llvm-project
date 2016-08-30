@@ -24,6 +24,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -182,8 +183,9 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   }
 
   // Iterate propagating consumes and kills until they stop changing
-  int Iteration = 0; (void)Iteration;
-  
+  int Iteration = 0;
+  (void)Iteration;
+
   bool Changed;
   do {
     DEBUG(dbgs() << "iteration " << ++Iteration);
@@ -307,10 +309,10 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
                                  /*IsVarArgs=*/false);
   auto *FnPtrTy = FnTy->getPointerTo();
 
-  if (Shape.CoroSuspends.size() > UINT32_MAX)
-    report_fatal_error("Cannot handle coroutine with this many suspend points");
+  // Figure out how wide should be an integer type storing the suspend index.
+  unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
 
-  SmallVector<Type *, 8> Types{FnPtrTy, FnPtrTy, Type::getInt32Ty(C)};
+  SmallVector<Type *, 8> Types{FnPtrTy, FnPtrTy, Type::getIntNTy(C, IndexBits)};
   Value *CurrentDef = nullptr;
 
   // Create an entry for every spilled value.
@@ -331,13 +333,6 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   FrameTy->setBody(Types);
 
   return FrameTy;
-}
-
-// Returns the index of the last non-spill field in the coroutine frame.
-//  2 - if there is no coroutine promise specified or 3, if there is.
-static unsigned getLastNonSpillIndex(coro::Shape &Shape) {
-  // TODO: Add support for coroutine promise.
-  return 2;
 }
 
 // Replace all alloca and SSA values that are accessed across suspend points
@@ -373,7 +368,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
   Value *CurrentReload = nullptr;
-  unsigned Index = getLastNonSpillIndex(Shape);
+  unsigned Index = coro::Shape::LastKnownField;
 
   // We need to keep track of any allocas that need "spilling"
   // since they will live in the coroutine frame now, all access to them
@@ -621,6 +616,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     // parameter to .resume and .cleanup parts and should not go into coroutine
     // frame.
     if (isa<CoroBeginInst>(&I))
+      continue;
+    // A token returned CoroIdInst is used to tie together structural intrinsics
+    // in a coroutine. It should not be saved to the coroutine frame.
+    if (isa<CoroIdInst>(&I))
       continue;
 
     for (User *U : I.users())

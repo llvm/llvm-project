@@ -57,7 +57,7 @@ option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
 option(LIBCXX_ENABLE_FILESYSTEM
         "Build filesystem as part of libc++experimental.a" ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependancies" OFF)
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependancies" ON)
 option(LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB "Build the benchmarks against the native STL" OFF)
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -322,10 +322,19 @@ add_compile_flags_if_supported(-nostdinc++)
 # Warning flags ===============================================================
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
-    -Wall -W -Wwrite-strings
-    -Wno-unused-parameter -Wno-long-long -Wno-user-defined-literals
-    -Wno-covered-switch-default
+    -Wall -Wextra -W -Wwrite-strings
+    -Wno-unused-parameter -Wno-long-long
     -Werror=return-type)
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    add_compile_flags_if_supported(
+        -Wno-user-defined-literals
+        -Wno-covered-switch-default)
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    add_compile_flags_if_supported(
+        -Wno-attributes # FIXME: Fix -Wattribute warnings.
+        -Wno-literal-suffix
+        -Wno-c++14-compat)
+endif()
 if (LIBCXX_ENABLE_WERROR)
   add_compile_flags_if_supported(-Werror)
   add_compile_flags_if_supported(-WX)

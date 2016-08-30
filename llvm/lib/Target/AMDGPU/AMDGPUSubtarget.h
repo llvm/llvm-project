@@ -429,6 +429,12 @@ public:
   bool hasSGPRInitBug() const {
     return SGPRInitBug;
   }
+
+  /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs
+  unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
+
+  /// Return the maximum number of waves per SIMD for kernels using \p VGPRs VGPRs
+  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
 };
 
 } // End namespace llvm

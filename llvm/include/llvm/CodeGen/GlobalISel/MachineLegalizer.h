@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/Target/TargetOpcodes.h"
 
 #include <cstdint>
 #include <functional>
@@ -41,21 +42,6 @@ struct InstrAspect {
 
   bool operator==(const InstrAspect &RHS) const {
     return Opcode == RHS.Opcode && Idx == RHS.Idx && Type == RHS.Type;
-  }
-};
-
-template <> struct DenseMapInfo<InstrAspect> {
-  static inline InstrAspect getEmptyKey() { return {-1u, 0, LLT{}}; }
-
-  static inline InstrAspect getTombstoneKey() { return {-2u, 0, LLT{}}; }
-
-  static unsigned getHashValue(const InstrAspect &Val) {
-    return DenseMapInfo<std::pair<uint64_t, LLT>>::getHashValue(
-        {(uint64_t)Val.Opcode << 32 | Val.Idx, Val.Type});
-  }
-
-  static bool isEqual(const InstrAspect &LHS, const InstrAspect &RHS) {
-    return LHS == RHS;
   }
 };
 
@@ -103,6 +89,9 @@ public:
     /// This operation is completely unsupported on the target. A programming
     /// error has occurred.
     Unsupported,
+
+    /// Sentinel value for when no action was found in the specified table.
+    NotFound,
   };
 
   MachineLegalizer();
@@ -116,7 +105,10 @@ public:
   /// representation.
   void setAction(const InstrAspect &Aspect, LegalizeAction Action) {
     TablesInitialized = false;
-    Actions[Aspect] = Action;
+    unsigned Opcode = Aspect.Opcode - FirstOp;
+    if (Actions[Opcode].size() <= Aspect.Idx)
+      Actions[Opcode].resize(Aspect.Idx + 1);
+    Actions[Aspect.Opcode - FirstOp][Aspect.Idx][Aspect.Type] = Action;
   }
 
   /// If an operation on a given vector type (say <M x iN>) isn't explicitly
@@ -152,11 +144,12 @@ public:
   LLT findLegalType(const InstrAspect &Aspect,
                     std::function<LLT(LLT)> NextType) const {
     LegalizeAction Action;
+    const TypeMap &Map = Actions[Aspect.Opcode - FirstOp][Aspect.Idx];
     LLT Ty = Aspect.Type;
     do {
       Ty = NextType(Ty);
-      auto ActionIt = Actions.find({Aspect.Opcode, Aspect.Idx, Ty});
-      if (ActionIt == Actions.end())
+      auto ActionIt = Map.find(Ty);
+      if (ActionIt == Map.end())
         Action = DefaultActions.find(Aspect.Opcode)->second;
       else
         Action = ActionIt->second;
@@ -173,13 +166,32 @@ public:
     return std::make_pair(Action, findLegalType(Aspect, Action));
   }
 
+  /// Find the specified \p Aspect in the primary (explicitly set) Actions
+  /// table. Returns either the action the target requested or NotFound if there
+  /// was no setAction call.
+  LegalizeAction findInActions(const InstrAspect &Aspect) const {
+    if (Aspect.Opcode < FirstOp || Aspect.Opcode > LastOp)
+      return NotFound;
+    if (Aspect.Idx >= Actions[Aspect.Opcode - FirstOp].size())
+      return NotFound;
+    const TypeMap &Map = Actions[Aspect.Opcode - FirstOp][Aspect.Idx];
+    auto ActionIt =  Map.find(Aspect.Type);
+    if (ActionIt == Map.end())
+      return NotFound;
+
+    return ActionIt->second;
+  }
+
   bool isLegal(const MachineInstr &MI) const;
 
 private:
-  typedef DenseMap<InstrAspect, LegalizeAction> ActionMap;
+  static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;
+  static const int LastOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
+
+  typedef DenseMap<LLT, LegalizeAction> TypeMap;
   typedef DenseMap<std::pair<unsigned, LLT>, LegalizeAction> SIVActionMap;
 
-  ActionMap Actions;
+  SmallVector<TypeMap, 1> Actions[LastOp - FirstOp + 1];
   SIVActionMap ScalarInVectorActions;
   DenseMap<std::pair<unsigned, LLT>, uint16_t> MaxLegalVectorElts;
   DenseMap<unsigned, LegalizeAction> DefaultActions;
