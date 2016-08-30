@@ -10,7 +10,7 @@
 #define char_mask ((char)1 << 7)
 #define short_mask ((short)1 << 15)
 #define int_mask ((int)1 << 31)
-#define long_mask ((long)1 << 6)
+#define long_mask ((long)1 << 63)
 
 #define any_op |
 #define all_op &
