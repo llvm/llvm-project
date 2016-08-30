@@ -342,7 +342,7 @@ namespace llvm {
     MutableArrayRef<T> keep_front(size_t N = 1) const {
       if (N >= this->size())
         return *this;
-      return drop_back(size() - N);
+      return drop_back(this->size() - N);
     }
 
     /// \brief Drop everything but the last \p N elements of the array.
@@ -350,7 +350,7 @@ namespace llvm {
     MutableArrayRef<T> keep_back(size_t N = 1) const {
       if (N >= this->size())
         return *this;
-      return drop_front(size() - N);
+      return drop_front(this->size() - N);
     }
 
     /// @}
