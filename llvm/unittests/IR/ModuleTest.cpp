@@ -25,7 +25,7 @@ bool sortByNameReverse(const GlobalVariable &L, const GlobalVariable &R) {
 
 TEST(ModuleTest, sortGlobalsByName) {
   LLVMContext Context;
-  for (auto compare : {sortByName, sortByNameReverse}) {
+  for (auto compare : {&sortByName, &sortByNameReverse}) {
     Module M("M", Context);
     Type *T = Type::getInt8Ty(Context);
     GlobalValue::LinkageTypes L = GlobalValue::ExternalLinkage;
