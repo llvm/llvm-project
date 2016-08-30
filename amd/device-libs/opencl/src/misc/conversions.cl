@@ -834,7 +834,7 @@ convert_##TO##16##S##R(TI##16 x) \
 #define G_int_rte_float(TO,TI,S,R)	ECAST(TO,TI,S,R)
 #define G_int_rtn_float(TO,TI,S,R)      NCAST(TO,TI,S,R)
 #define G_int_rtp_float(TO,TI,S,R)      PCAST(TO,TI,S,R)
-#define G_int_rtz_float(TO,TI,S,R)      NCAST(TO,TI,S,R)
+#define G_int_rtz_float(TO,TI,S,R)      CAST(TO,TI,S,R)
 #define G_int_double(TO,TI,S,R)	CAST(TO,TI,S,R)
 #define G_int_sat_double(TO,TI,S,R)     CLAMP(TO,TI,S,R)
 #define G_int_sat_rte_double(TO,TI,S,R) ECLAMP(TO,TI,S,R)
