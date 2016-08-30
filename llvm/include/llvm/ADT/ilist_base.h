@@ -39,10 +39,22 @@ public:
     N.setNext(nullptr);
   }
 
+  static void removeRangeImpl(ilist_node_base &First, ilist_node_base &Last) {
+    ilist_node_base *Prev = First.getPrev();
+    ilist_node_base *Final = Last.getPrev();
+    Last.setPrev(Prev);
+    Prev->setNext(&Last);
+
+    // Not strictly necessary, but helps catch a class of bugs.
+    First.setPrev(nullptr);
+    Final->setNext(nullptr);
+  }
+
   static void transferBeforeImpl(ilist_node_base &Next, ilist_node_base &First,
                                  ilist_node_base &Last) {
-    assert(&Next != &Last && "Should be checked by callers");
-    assert(&First != &Last && "Should be checked by callers");
+    if (&Next == &Last || &First == &Last)
+      return;
+
     // Position cannot be contained in the range to be transferred.
     assert(&Next != &First &&
            // Check for the most common mistake.
@@ -67,6 +79,9 @@ public:
   }
 
   template <class T> static void remove(T &N) { removeImpl(N); }
+  template <class T> static void removeRange(T &First, T &Last) {
+    removeRangeImpl(First, Last);
+  }
 
   template <class T> static void transferBefore(T &Next, T &First, T &Last) {
     transferBeforeImpl(Next, First, Last);
