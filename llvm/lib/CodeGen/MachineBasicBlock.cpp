@@ -122,9 +122,8 @@ transferNodesFromList(ilist_traits<MachineInstr> &FromList,
                       ilist_iterator<MachineInstr> Last) {
   assert(Parent->getParent() == FromList.Parent->getParent() &&
         "MachineInstr parent mismatch!");
-
-  // Splice within the same MBB -> no change.
-  if (Parent == FromList.Parent) return;
+  assert(this != &FromList && "Called without a real transfer...");
+  assert(Parent != FromList.Parent && "Two lists have the same parent?");
 
   // If splicing between two blocks within the same function, just update the
   // parent pointers.

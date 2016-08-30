@@ -43,9 +43,15 @@ template <typename NodeTy> struct ilist_node_traits {
 
   void addNodeToList(NodeTy *) {}
   void removeNodeFromList(NodeTy *) {}
-  void transferNodesFromList(ilist_node_traits & /*SrcTraits*/,
+
+  /// Callback before transferring nodes to this list.
+  ///
+  /// \pre \c this!=&OldList
+  void transferNodesFromList(ilist_node_traits &OldList,
                              ilist_iterator<NodeTy> /*first*/,
-                             ilist_iterator<NodeTy> /*last*/) {}
+                             ilist_iterator<NodeTy> /*last*/) {
+    (void)OldList;
+  }
 };
 
 /// Default template traits for intrusive list.
@@ -165,9 +171,8 @@ public:
   }
 
   iterator insert(iterator where, NodeTy *New) {
-    auto I = base_list_type::insert(where, *New);
-    this->addNodeToList(New);  // Notify traits that we added a node...
-    return I;
+    this->addNodeToList(New); // Notify traits that we added a node...
+    return base_list_type::insert(where, *New);
   }
 
   iterator insert(iterator where, const NodeTy &New) {
@@ -182,9 +187,9 @@ public:
   }
 
   NodeTy *remove(iterator &IT) {
-    NodeTy *Node = &*IT;
-    base_list_type::erase(IT++);
-    this->removeNodeFromList(Node);  // Notify traits that we removed a node...
+    NodeTy *Node = &*IT++;
+    this->removeNodeFromList(Node); // Notify traits that we removed a node...
+    base_list_type::remove(*Node);
     return Node;
   }
 
@@ -220,11 +225,10 @@ private:
     if (position == last)
       return;
 
-    base_list_type::splice(position, L2, first, last);
+    if (this != &L2) // Notify traits we moved the nodes...
+      this->transferNodesFromList(L2, first, last);
 
-    // Callback.  Note that the nodes have moved from before-last to
-    // before-position.
-    this->transferNodesFromList(L2, first, position);
+    base_list_type::splice(position, L2, first, last);
   }
 
 public:
