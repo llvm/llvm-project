@@ -81,37 +81,40 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   SmallPtrSet<const User *, 8> Visited;
   for (const BasicBlock &BB : F)
     for (const Instruction &I : BB) {
-      if (!isa<DbgInfoIntrinsic>(I))
-        ++NumInsts;
-
-      if (auto CS = ImmutableCallSite(&I)) {
-        auto *CalledFunction = CS.getCalledFunction();
-        // Check if this is a direct call to a known function.
-        if (CalledFunction) {
-          if (CalledFunction->hasName() && !CalledFunction->isIntrinsic()) {
-            auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
-            auto *CalleeId =
-                M.getValueSymbolTable().lookup(CalledFunction->getName());
-            CallGraphEdges[CalleeId] +=
-                (ScaledCount ? ScaledCount.getValue() : 0);
-          }
-        } else {
-          // Otherwise, check for an indirect call (call to a non-const value
-          // that isn't an inline assembly call).
-          const CallInst *CI = dyn_cast<CallInst>(&I);
-          if (CS.getCalledValue() && !isa<Constant>(CS.getCalledValue()) &&
-              !(CI && CI->isInlineAsm())) {
-            uint32_t NumVals, NumCandidates;
-            uint64_t TotalCount;
-            auto CandidateProfileData =
-                ICallAnalysis.getPromotionCandidatesForInstruction(
-                    &I, NumVals, TotalCount, NumCandidates);
-            for (auto &Candidate : CandidateProfileData)
-              IndirectCallEdges[Candidate.Value] += Candidate.Count;
-          }
-        }
-      }
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
+      ++NumInsts;
       findRefEdges(&I, RefEdges, Visited);
+      auto CS = ImmutableCallSite(&I);
+      if (!CS)
+        continue;
+      auto *CalledFunction = CS.getCalledFunction();
+      // Check if this is a direct call to a known function.
+      if (CalledFunction) {
+        // Skip nameless and intrinsics.
+        if (!CalledFunction->hasName() || CalledFunction->isIntrinsic())
+          continue;
+        auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
+        auto *CalleeId =
+            M.getValueSymbolTable().lookup(CalledFunction->getName());
+        CallGraphEdges[CalleeId] += (ScaledCount ? ScaledCount.getValue() : 0);
+      } else {
+        const auto *CI = dyn_cast<CallInst>(&I);
+        // Skip inline assembly calls.
+        if (CI && CI->isInlineAsm())
+          continue;
+        // Skip direct calls.
+        if (!CS.getCalledValue() || isa<Constant>(CS.getCalledValue()))
+          continue;
+
+        uint32_t NumVals, NumCandidates;
+        uint64_t TotalCount;
+        auto CandidateProfileData =
+            ICallAnalysis.getPromotionCandidatesForInstruction(
+                &I, NumVals, TotalCount, NumCandidates);
+        for (auto &Candidate : CandidateProfileData)
+          IndirectCallEdges[Candidate.Value] += Candidate.Count;
+      }
     }
 
   GlobalValueSummary::GVFlags Flags(F);
