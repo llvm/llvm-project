@@ -256,6 +256,8 @@ extern ulong __llvm_amdgcn_read_exec(void);
 extern uint __llvm_amdgcn_read_exec_lo(void);
 extern uint __llvm_amdgcn_read_exec_hi(void);
 
+extern uint __llvm_amdgcn_s_getreg(uint) __asm("llvm.amdgcn.s.getreg");
+
 extern uint __llvm_amdgcn_readfirstlane(uint) __asm("llvm.amdgcn.readfirstlane");
 extern uint __llvm_amdgcn_readlane(uint, uint) __asm("llvm.amdgcn.readlane");
 
