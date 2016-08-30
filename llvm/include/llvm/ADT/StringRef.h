@@ -428,6 +428,28 @@ namespace llvm {
       return StringRef(Data + Start, std::min(N, Length - Start));
     }
 
+    /// Return a StringRef equal to 'this' but with only the first \p N
+    /// elements remaining.  If \p N is greater than the length of the
+    /// string, the entire string is returned.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    StringRef take_front(size_t N = 1) const {
+      if (N >= size())
+        return *this;
+      return drop_back(size() - N);
+    }
+
+    /// Return a StringRef equal to 'this' but with only the first \p N
+    /// elements remaining.  If \p N is greater than the length of the
+    /// string, the entire string is returned.
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    StringRef take_back(size_t N = 1) const {
+      if (N >= size())
+        return *this;
+      return drop_front(size() - N);
+    }
+
     /// Return a StringRef equal to 'this' but with the first \p N elements
     /// dropped.
     LLVM_ATTRIBUTE_ALWAYS_INLINE

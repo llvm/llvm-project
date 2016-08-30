@@ -640,5 +640,48 @@ TEST(StringRefTest, AllocatorCopy) {
   EXPECT_NE(Str2.data(), Str2c.data());
 }
 
+TEST(StringRefTest, Drop) {
+  StringRef Test("StringRefTest::Drop");
+
+  StringRef Dropped = Test.drop_front(5);
+  EXPECT_EQ(Dropped, "gRefTest::Drop");
+
+  Dropped = Test.drop_back(5);
+  EXPECT_EQ(Dropped, "StringRefTest:");
+
+  Dropped = Test.drop_front(0);
+  EXPECT_EQ(Dropped, Test);
+
+  Dropped = Test.drop_back(0);
+  EXPECT_EQ(Dropped, Test);
+
+  Dropped = Test.drop_front(Test.size());
+  EXPECT_TRUE(Dropped.empty());
+
+  Dropped = Test.drop_back(Test.size());
+  EXPECT_TRUE(Dropped.empty());
+}
+
+TEST(StringRefTest, Take) {
+  StringRef Test("StringRefTest::Take");
+
+  StringRef Taken = Test.take_front(5);
+  EXPECT_EQ(Taken, "Strin");
+
+  Taken = Test.take_back(5);
+  EXPECT_EQ(Taken, ":Take");
+
+  Taken = Test.take_front(Test.size());
+  EXPECT_EQ(Taken, Test);
+
+  Taken = Test.take_back(Test.size());
+  EXPECT_EQ(Taken, Test);
+
+  Taken = Test.take_front(0);
+  EXPECT_TRUE(Taken.empty());
+
+  Taken = Test.take_back(0);
+  EXPECT_TRUE(Taken.empty());
+}
 
 } // end anonymous namespace

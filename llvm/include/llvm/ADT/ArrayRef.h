@@ -195,6 +195,22 @@ namespace llvm {
       return slice(0, size() - N);
     }
 
+    /// \brief Keep the first \p N elements of the array.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    ArrayRef<T> keep_front(size_t N = 1) const {
+      if (N >= size())
+        return *this;
+      return drop_back(size() - N);
+    }
+
+    /// \brief Keep the last \p N elements of the array.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    ArrayRef<T> keep_back(size_t N = 1) const {
+      if (N >= size())
+        return *this;
+      return drop_front(size() - N);
+    }
+
     /// @}
     /// @name Operator Overloads
     /// @{
@@ -319,6 +335,22 @@ namespace llvm {
     MutableArrayRef<T> drop_back(size_t N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(0, this->size() - N);
+    }
+
+    /// \brief Drop everything but the first \p N elements of the array.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    MutableArrayRef<T> keep_front(size_t N = 1) const {
+      if (N >= this->size())
+        return *this;
+      return drop_back(size() - N);
+    }
+
+    /// \brief Drop everything but the last \p N elements of the array.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
+    MutableArrayRef<T> keep_back(size_t N = 1) const {
+      if (N >= this->size())
+        return *this;
+      return drop_front(size() - N);
     }
 
     /// @}
