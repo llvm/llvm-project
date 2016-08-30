@@ -33,7 +33,39 @@
 
 namespace llvm {
 
-template<typename NodeTy, typename Traits> class iplist;
+/// A fragment for template traits for intrusive list that provides default
+/// node related operations.
+///
+/// TODO: Split up (alloc vs. callback) and delete.
+template <typename NodeTy> struct ilist_node_traits {
+  static NodeTy *createNode(const NodeTy &V) { return new NodeTy(V); }
+  static void deleteNode(NodeTy *V) { delete V; }
+
+  void addNodeToList(NodeTy *) {}
+  void removeNodeFromList(NodeTy *) {}
+  void transferNodesFromList(ilist_node_traits & /*SrcTraits*/,
+                             ilist_iterator<NodeTy> /*first*/,
+                             ilist_iterator<NodeTy> /*last*/) {}
+};
+
+/// Default template traits for intrusive list.
+///
+/// By inheriting from this, you can easily use default implementations for all
+/// common operations.
+///
+/// TODO: Remove this customization point.  Specializing ilist_traits is
+/// already fully general.
+template <typename NodeTy>
+struct ilist_default_traits : public ilist_node_traits<NodeTy> {};
+
+/// Template traits for intrusive list.
+///
+/// Customize callbacks and allocation semantics.
+template <typename NodeTy>
+struct ilist_traits : public ilist_default_traits<NodeTy> {};
+
+/// Const traits should never be instantiated.
+template <typename Ty> struct ilist_traits<const Ty> {};
 
 namespace ilist_detail {
 
@@ -74,39 +106,6 @@ template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
 };
 
 } // end namespace ilist_detail
-
-template <typename NodeTy> struct ilist_traits;
-
-/// ilist_node_traits - A fragment for template traits for intrusive list
-/// that provides default node related operations.
-///
-template<typename NodeTy>
-struct ilist_node_traits {
-  static NodeTy *createNode(const NodeTy &V) { return new NodeTy(V); }
-  static void deleteNode(NodeTy *V) { delete V; }
-
-  void addNodeToList(NodeTy *) {}
-  void removeNodeFromList(NodeTy *) {}
-  void transferNodesFromList(ilist_node_traits &    /*SrcTraits*/,
-                             ilist_iterator<NodeTy> /*first*/,
-                             ilist_iterator<NodeTy> /*last*/) {}
-};
-
-/// ilist_default_traits - Default template traits for intrusive list.
-/// By inheriting from this, you can easily use default implementations
-/// for all common operations.
-///
-template <typename NodeTy>
-struct ilist_default_traits : public ilist_node_traits<NodeTy> {};
-
-// Template traits for intrusive list.  By specializing this template class, you
-// can change what next/prev fields are used to store the links...
-template<typename NodeTy>
-struct ilist_traits : public ilist_default_traits<NodeTy> {};
-
-// Const traits are the same as nonconst traits...
-template<typename Ty>
-struct ilist_traits<const Ty> : public ilist_traits<Ty> {};
 
 //===----------------------------------------------------------------------===//
 //
