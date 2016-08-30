@@ -115,7 +115,7 @@ ATTR double
 length(double4 p)
 {
     double l2 = dot(p, p);
-    float r;
+    double r;
 
     if (l2 < DBL_MIN) {
         p *= 0x1.0p+563;
