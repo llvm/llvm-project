@@ -81,12 +81,11 @@ template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTLis
   }
 };
 
-template <> struct ilist_traits<SDNode> : public ilist_default_traits<SDNode> {
+template <> struct ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
   }
-private:
-  static void createNode(const SDNode &);
+  // Don't implement createNode...
 };
 
 /// Keeps track of dbg_value information through SDISel.  We do

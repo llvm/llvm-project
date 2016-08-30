@@ -33,26 +33,56 @@
 
 namespace llvm {
 
-/// A fragment for template traits for intrusive list that provides default
-/// node related operations.
+/// Use new/delete by default for iplist and ilist.
 ///
-/// TODO: Split up (alloc vs. callback) and delete.
-template <typename NodeTy> struct ilist_node_traits {
+/// Specialize this to get different behaviour for allocation-related API.  (If
+/// you really want new/delete, consider just using std::list.)
+///
+/// \see ilist_noalloc_traits
+template <typename NodeTy> struct ilist_alloc_traits {
   static NodeTy *createNode(const NodeTy &V) { return new NodeTy(V); }
   static void deleteNode(NodeTy *V) { delete V; }
+};
 
+/// Custom traits to disable node creation and do nothing on deletion.
+///
+/// Specialize ilist_alloc_traits to inherit from this to disable the
+/// non-intrusive parts of iplist and/or ilist.  It has no createNode function,
+/// and deleteNode does nothing.
+///
+/// \code
+/// template <>
+/// struct ilist_alloc_traits<MyType> : ilist_noalloc_traits<MyType> {};
+/// \endcode
+template <typename NodeTy> struct ilist_noalloc_traits {
+  static void deleteNode(NodeTy *V) {}
+};
+
+/// Callbacks do nothing by default in iplist and ilist.
+///
+/// Specialize this for to use callbacks for when nodes change their list
+/// membership.
+template <typename NodeTy> struct ilist_callback_traits {
   void addNodeToList(NodeTy *) {}
   void removeNodeFromList(NodeTy *) {}
 
   /// Callback before transferring nodes to this list.
   ///
   /// \pre \c this!=&OldList
-  void transferNodesFromList(ilist_node_traits &OldList,
-                             ilist_iterator<NodeTy> /*first*/,
-                             ilist_iterator<NodeTy> /*last*/) {
+  template <class Iterator>
+  void transferNodesFromList(ilist_callback_traits &OldList, Iterator /*first*/,
+                             Iterator /*last*/) {
     (void)OldList;
   }
 };
+
+/// A fragment for template traits for intrusive list that provides default
+/// node related operations.
+///
+/// TODO: Remove this layer of indirection.  It's not necessary.
+template <typename NodeTy>
+struct ilist_node_traits : ilist_alloc_traits<NodeTy>,
+                           ilist_callback_traits<NodeTy> {};
 
 /// Default template traits for intrusive list.
 ///

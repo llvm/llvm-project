@@ -149,22 +149,15 @@ struct Token : ilist_node<Token> {
 }
 
 namespace llvm {
-template<>
-struct ilist_node_traits<Token> {
+template <> struct ilist_alloc_traits<Token> {
   Token *createNode(const Token &V) {
     return new (Alloc.Allocate<Token>()) Token(V);
   }
   static void deleteNode(Token *V) { V->~Token(); }
 
-  void addNodeToList(Token *) {}
-  void removeNodeFromList(Token *) {}
-  void transferNodesFromList(ilist_node_traits &    /*SrcTraits*/,
-                             ilist_iterator<Token> /*first*/,
-                             ilist_iterator<Token> /*last*/) {}
-
   BumpPtrAllocator Alloc;
 };
-}
+} // end namespace llvm
 
 typedef ilist<Token> TokenQueueT;
 

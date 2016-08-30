@@ -48,14 +48,19 @@ class TargetRegisterClass;
 struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
-template <>
-struct ilist_traits<MachineBasicBlock>
-    : public ilist_default_traits<MachineBasicBlock> {
+template <> struct ilist_alloc_traits<MachineBasicBlock> {
+  void deleteNode(MachineBasicBlock *MBB);
+  // Disallow createNode...
+};
+
+template <> struct ilist_callback_traits<MachineBasicBlock> {
   void addNodeToList(MachineBasicBlock* MBB);
   void removeNodeFromList(MachineBasicBlock* MBB);
-  void deleteNode(MachineBasicBlock *MBB);
-private:
-  void createNode(const MachineBasicBlock &);
+
+  template <class Iterator>
+  void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
+    llvm_unreachable("Never transfer between lists");
+  }
 };
 
 /// MachineFunctionInfo - This class can be derived from and used by targets to

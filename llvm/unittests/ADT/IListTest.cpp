@@ -167,6 +167,7 @@ TEST(IListTest, HasCreateSentinelTrait) {
 struct NodeWithCallback : ilist_node<NodeWithCallback> {
   int Value = 0;
   bool IsInList = false;
+  bool WasTransferred = false;
 
   NodeWithCallback() = default;
   NodeWithCallback(int Value) : Value(Value) {}
@@ -176,29 +177,44 @@ struct NodeWithCallback : ilist_node<NodeWithCallback> {
 } // end namespace
 
 namespace llvm {
-template <>
-struct ilist_traits<NodeWithCallback>
-    : public ilist_node_traits<NodeWithCallback> {
+template <> struct ilist_callback_traits<NodeWithCallback> {
   void addNodeToList(NodeWithCallback *N) { N->IsInList = true; }
   void removeNodeFromList(NodeWithCallback *N) { N->IsInList = false; }
+  template <class Iterator>
+  void transferNodesFromList(ilist_callback_traits &Other, Iterator First,
+                             Iterator Last) {
+    for (; First != Last; ++First) {
+      First->WasTransferred = true;
+      Other.removeNodeFromList(&*First);
+      addNodeToList(&*First);
+    }
+  }
 };
 } // end namespace llvm
 
 namespace {
 
 TEST(IListTest, addNodeToList) {
-  ilist<NodeWithCallback> L;
+  ilist<NodeWithCallback> L1, L2;
   NodeWithCallback N(7);
   ASSERT_FALSE(N.IsInList);
+  ASSERT_FALSE(N.WasTransferred);
 
-  L.insert(L.begin(), &N);
-  ASSERT_EQ(1u, L.size());
-  ASSERT_EQ(&N, &*L.begin());
+  L1.insert(L1.begin(), &N);
+  ASSERT_EQ(1u, L1.size());
+  ASSERT_EQ(&N, &L1.front());
   ASSERT_TRUE(N.IsInList);
+  ASSERT_FALSE(N.WasTransferred);
 
-  L.remove(&N);
-  ASSERT_EQ(0u, L.size());
+  L2.splice(L2.end(), L1);
+  ASSERT_EQ(&N, &L2.front());
+  ASSERT_TRUE(N.IsInList);
+  ASSERT_TRUE(N.WasTransferred);
+
+  L1.remove(&N);
+  ASSERT_EQ(0u, L1.size());
   ASSERT_FALSE(N.IsInList);
+  ASSERT_TRUE(N.WasTransferred);
 }
 
 struct PrivateNode : private ilist_node<PrivateNode> {

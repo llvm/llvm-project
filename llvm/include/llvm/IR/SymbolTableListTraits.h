@@ -60,7 +60,7 @@ template <typename NodeTy> class SymbolTableList;
 // ItemParentClass - The type of object that owns the list, e.g. BasicBlock.
 //
 template <typename ValueSubClass>
-class SymbolTableListTraits : public ilist_node_traits<ValueSubClass> {
+class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
   typedef SymbolTableList<ValueSubClass> ListTy;
   typedef ilist_iterator<ValueSubClass, false> iterator;
   typedef
