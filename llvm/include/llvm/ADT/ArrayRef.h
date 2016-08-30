@@ -195,17 +195,17 @@ namespace llvm {
       return slice(0, size() - N);
     }
 
-    /// \brief Keep the first \p N elements of the array.
+    /// \brief Return a copy of *this with only the first \p N elements.
     LLVM_ATTRIBUTE_UNUSED_RESULT
-    ArrayRef<T> keep_front(size_t N = 1) const {
+    ArrayRef<T> take_front(size_t N = 1) const {
       if (N >= size())
         return *this;
       return drop_back(size() - N);
     }
 
-    /// \brief Keep the last \p N elements of the array.
+    /// \brief Return a copy of *this with only the last \p N elements.
     LLVM_ATTRIBUTE_UNUSED_RESULT
-    ArrayRef<T> keep_back(size_t N = 1) const {
+    ArrayRef<T> take_back(size_t N = 1) const {
       if (N >= size())
         return *this;
       return drop_front(size() - N);
@@ -337,17 +337,17 @@ namespace llvm {
       return slice(0, this->size() - N);
     }
 
-    /// \brief Drop everything but the first \p N elements of the array.
+    /// \brief Return a copy of *this with only the first \p N elements.
     LLVM_ATTRIBUTE_UNUSED_RESULT
-    MutableArrayRef<T> keep_front(size_t N = 1) const {
+    MutableArrayRef<T> take_front(size_t N = 1) const {
       if (N >= this->size())
         return *this;
       return drop_back(this->size() - N);
     }
 
-    /// \brief Drop everything but the last \p N elements of the array.
+    /// \brief Return a copy of *this with only the last \p N elements.
     LLVM_ATTRIBUTE_UNUSED_RESULT
-    MutableArrayRef<T> keep_back(size_t N = 1) const {
+    MutableArrayRef<T> take_back(size_t N = 1) const {
       if (N >= this->size())
         return *this;
       return drop_front(this->size() - N);
