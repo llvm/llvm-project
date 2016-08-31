@@ -108,8 +108,16 @@ static void writeCounter(ArrayRef<CounterExpression> Expressions, Counter C,
 
 void CoverageMappingWriter::write(raw_ostream &OS) {
   // Sort the regions in an ascending order by the file id and the starting
-  // location.
-  std::stable_sort(MappingRegions.begin(), MappingRegions.end());
+  // location. Sort by region kinds to ensure stable order for tests.
+  std::stable_sort(
+      MappingRegions.begin(), MappingRegions.end(),
+      [](const CounterMappingRegion &LHS, const CounterMappingRegion &RHS) {
+        if (LHS.FileID != RHS.FileID)
+          return LHS.FileID < RHS.FileID;
+        if (LHS.startLoc() != RHS.startLoc())
+          return LHS.startLoc() < RHS.startLoc();
+        return LHS.Kind < RHS.Kind;
+      });
 
   // Write out the fileid -> filename mapping.
   encodeULEB128(VirtualFileMapping.size(), OS);

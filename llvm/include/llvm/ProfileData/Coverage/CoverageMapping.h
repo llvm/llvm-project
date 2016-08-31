@@ -245,12 +245,6 @@ struct CounterMappingRegion {
     return std::pair<unsigned, unsigned>(LineEnd, ColumnEnd);
   }
 
-  bool operator<(const CounterMappingRegion &Other) const {
-    if (FileID != Other.FileID)
-      return FileID < Other.FileID;
-    return startLoc() < Other.startLoc();
-  }
-
   bool contains(const CounterMappingRegion &Other) const {
     if (FileID != Other.FileID)
       return false;
