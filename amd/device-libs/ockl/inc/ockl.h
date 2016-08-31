@@ -362,6 +362,20 @@ extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Dad)(TSHARP i);
 extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Dd)(TSHARP i);
 extern __attribute__((const)) int OCKL_MANGLE_T(image_width,3D)(TSHARP i);
 
+extern __attribute__((const)) size_t __ockl_get_global_offset(uint);
+extern __attribute__((const)) size_t __ockl_get_global_id(uint);
+extern __attribute__((const)) size_t __ockl_get_local_id(uint);
+extern __attribute__((const)) size_t __ockl_get_group_id(uint);
+extern __attribute__((const)) size_t __ockl_get_global_size(uint);
+extern __attribute__((const)) size_t __ockl_get_local_size(uint);
+extern __attribute__((const)) size_t __ockl_get_num_groups(uint);
+extern __attribute__((const)) uint __ockl_get_work_dim(void);
+extern __attribute__((const)) size_t __ockl_get_enqueued_local_size(uint);
+extern __attribute__((const)) size_t __ockl_get_global_linear_id(void);
+extern __attribute__((const)) size_t __ockl_get_local_linear_id(void);
+
+extern void __ockl_barrier(cl_mem_fence_flags flags);
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCKL_H
