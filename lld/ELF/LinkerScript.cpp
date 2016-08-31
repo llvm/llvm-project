@@ -259,6 +259,16 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
 }
 
 template <class ELFT>
+void LinkerScript<ELFT>::createAssignments() {
+  for (const std::unique_ptr<SymbolAssignment> &Cmd : Opt.Assignments) {
+    if (shouldDefine<ELFT>(Cmd.get()))
+      addRegular<ELFT>(Cmd.get());
+    if (Cmd->Sym)
+      cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(0);
+  }
+}
+
+template <class ELFT>
 void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   for (const std::unique_ptr<BaseCommand> &Base1 : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
@@ -643,6 +653,8 @@ private:
   void readPhdrs();
   void readSearchDir();
   void readSections();
+  void readVersion();
+  void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
@@ -666,7 +678,7 @@ private:
 
   // For parsing version script.
   void readExtern(std::vector<SymbolVersion> *Globals);
-  void readVersion(StringRef VerStr);
+  void readVersionDeclaration(StringRef VerStr);
   void readGlobal(StringRef VerStr);
   void readLocal();
 
@@ -688,38 +700,52 @@ const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
     {"PHDRS", &ScriptParser::readPhdrs},
     {"SEARCH_DIR", &ScriptParser::readSearchDir},
     {"SECTIONS", &ScriptParser::readSections},
+    {"VERSION", &ScriptParser::readVersion},
     {";", &ScriptParser::readNothing}};
 
 void ScriptParser::readVersionScript() {
-  StringRef Msg = "anonymous version definition is used in "
-                  "combination with other version definitions";
+  readVersionScriptCommand();
+  if (!atEOF())
+    setError("EOF expected, but got " + next());
+}
+
+void ScriptParser::readVersionScriptCommand() {
   if (skip("{")) {
-    readVersion("");
-    if (!atEOF())
-      setError(Msg);
+    readVersionDeclaration("");
     return;
   }
 
-  while (!atEOF() && !Error) {
+  while (!atEOF() && !Error && peek() != "}") {
     StringRef VerStr = next();
     if (VerStr == "{") {
-      setError(Msg);
+      setError("anonymous version definition is used in "
+               "combination with other version definitions");
       return;
     }
     expect("{");
-    readVersion(VerStr);
+    readVersionDeclaration(VerStr);
   }
+}
+
+void ScriptParser::readVersion() {
+  expect("{");
+  readVersionScriptCommand();
+  expect("}");
 }
 
 void ScriptParser::readLinkerScript() {
   while (!atEOF()) {
     StringRef Tok = next();
-    if (Handler Fn = Cmd.lookup(Tok))
+    if (Handler Fn = Cmd.lookup(Tok)) {
       (this->*Fn)();
-    else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok))
-      Opt.Commands.emplace_back(Cmd);
-    else
+    } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok)) {
+      if (Opt.HasContents)
+        Opt.Commands.emplace_back(Cmd);
+      else
+        Opt.Assignments.emplace_back(Cmd);
+    } else {
       setError("unknown directive: " + Tok);
+    }
   }
 }
 
@@ -1363,7 +1389,7 @@ unsigned ScriptParser::readPhdrType() {
   return Ret;
 }
 
-void ScriptParser::readVersion(StringRef VerStr) {
+void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
   size_t VersionId = Config->VersionDefinitions.size() + 2;

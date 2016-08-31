@@ -93,7 +93,8 @@ class CVDebugRecordChunk : public Chunk {
 
     // variable sized field (PDB Path)
     auto *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*R));
-    memcpy(P, Config->PDBPath.data(), Config->PDBPath.size());
+    if (!Config->PDBPath.empty())
+      memcpy(P, Config->PDBPath.data(), Config->PDBPath.size());
     P[Config->PDBPath.size()] = '\0';
   }
 };

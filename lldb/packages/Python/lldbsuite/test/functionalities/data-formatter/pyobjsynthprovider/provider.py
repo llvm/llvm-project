@@ -1,5 +1,6 @@
 import lldb
 import lldb.formatters
+import lldb.formatters.synth
 
 class SyntheticChildrenProvider(lldb.formatters.synth.PythonObjectSyntheticChildProvider):
     def __init__(self, value, internal_dict):

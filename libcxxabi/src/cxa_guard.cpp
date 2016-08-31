@@ -34,34 +34,38 @@ namespace
 {
 
 #ifdef __arm__
-
 // A 32-bit, 4-byte-aligned static data value. The least significant 2 bits must
 // be statically initialized to 0.
 typedef uint32_t guard_type;
+
+inline void set_initialized(guard_type* guard_object) {
+    *guard_object |= 1;
+}
+#else
+typedef uint64_t guard_type;
+
+void set_initialized(guard_type* guard_object) {
+    char* initialized = (char*)guard_object;
+    *initialized = 1;
+}
+#endif
+
+#if LIBCXXABI_HAS_NO_THREADS || (defined(__APPLE__) && !defined(__arm__))
+#ifdef __arm__
 
 // Test the lowest bit.
 inline bool is_initialized(guard_type* guard_object) {
     return (*guard_object) & 1;
 }
 
-inline void set_initialized(guard_type* guard_object) {
-    *guard_object |= 1;
-}
-
 #else
-
-typedef uint64_t guard_type;
 
 bool is_initialized(guard_type* guard_object) {
     char* initialized = (char*)guard_object;
     return *initialized;
 }
 
-void set_initialized(guard_type* guard_object) {
-    char* initialized = (char*)guard_object;
-    *initialized = 1;
-}
-
+#endif
 #endif
 
 #if !LIBCXXABI_HAS_NO_THREADS

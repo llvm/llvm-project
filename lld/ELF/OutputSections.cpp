@@ -1474,8 +1474,6 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:
     break;
-  case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("should have been replaced");
   }
   return nullptr;
 }

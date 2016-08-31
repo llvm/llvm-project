@@ -638,17 +638,15 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
   uint32_t Binding = (Flags & BasicSymbolRef::SF_Weak) ? STB_WEAK : STB_GLOBAL;
 
   uint8_t Type = STT_NOTYPE;
+  uint8_t Visibility;
   bool CanOmitFromDynSym = false;
+  bool HasUnnamedAddr = false;
+
   // FIXME: Expose a thread-local flag for module asm symbols.
   if (GV) {
     if (GV->isThreadLocal())
       Type = STT_TLS;
     CanOmitFromDynSym = canBeOmittedFromSymbolTable(GV);
-  }
-
-  uint8_t Visibility;
-  bool HasUnnamedAddr = false;
-  if (GV) {
     Visibility = getGvVisibility(GV);
     HasUnnamedAddr =
         GV->getUnnamedAddr() == llvm::GlobalValue::UnnamedAddr::Global;

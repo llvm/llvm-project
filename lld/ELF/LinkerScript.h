@@ -20,12 +20,12 @@
 
 namespace lld {
 namespace elf {
+class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
-template <class ELFT> class DefinedCommon;
 template <class ELFT> class LayoutInputSection;
 
 typedef std::function<uint64_t(uint64_t)> Expr;
@@ -118,6 +118,8 @@ struct PhdrsCommand {
 
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
+  // Used to create symbol assignments outside SECTIONS command.
+  std::vector<std::unique_ptr<SymbolAssignment>> Assignments;
   // Used to assign addresses to sections.
   std::vector<std::unique_ptr<BaseCommand>> Commands;
 
@@ -142,6 +144,7 @@ template <class ELFT> class LinkerScript {
 public:
   LinkerScript();
   ~LinkerScript();
+  void createAssignments();
   void createSections(OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();

@@ -73,3 +73,19 @@ from multiple translation units.
    // OK: member function definition of a class template is allowed.
    template <typename T>
    void B<T>::f1() {}
+
+Options
+-------
+
+.. option:: HeaderFileExtensions
+
+   A comma-separated list of filename extensions of header files (the filename
+   extensions should not include "." prefix). Default is "h,hh,hpp,hxx".
+   For header files without an extension, use an empty string (if there are no
+   other desired extensions) or leave an empty element in the list. e.g.,
+   "h,hh,hpp,hxx," (note the trailing comma).
+
+.. option:: UseHeaderFileExtension
+
+   When non-zero, the check will use the file extension to distinguish header
+   files. Default is `1`.

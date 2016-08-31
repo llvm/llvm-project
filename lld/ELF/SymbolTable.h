@@ -95,8 +95,7 @@ private:
   std::pair<Symbol *, bool> insert(StringRef &Name);
   std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
-                                   bool HasUnnamedAddr, bool IsUsedInRegularObj,
-                                   InputFile *File);
+                                   bool HasUnnamedAddr, InputFile *File);
 
   std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile);
   void reportDuplicate(SymbolBody *Existing, InputFile *NewFile);

@@ -45,7 +45,6 @@ public:
     DefinedRegularKind = DefinedFirst,
     SharedKind,
     DefinedCommonKind,
-    DefinedBitcodeKind,
     DefinedSyntheticKind,
     DefinedLast = DefinedSyntheticKind,
     UndefinedKind,
@@ -159,15 +158,7 @@ public:
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
-// The defined symbol in LLVM bitcode files.
-class DefinedBitcode : public Defined {
-public:
-  DefinedBitcode(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F);
-  static bool classof(const SymbolBody *S);
-  BitcodeFile *file() { return (BitcodeFile *)this->File; }
-};
-
-template <class ELFT> class DefinedCommon : public Defined {
+class DefinedCommon : public Defined {
 public:
   DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t StOther,
                 uint8_t Type, InputFile *File);
@@ -216,6 +207,12 @@ public:
       : Defined(SymbolBody::DefinedRegularKind, Name, StOther,
                 llvm::ELF::STT_NOTYPE),
         Value(0), Size(0), Section(NullInputSection) {}
+
+  DefinedRegular(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F)
+      : Defined(SymbolBody::DefinedRegularKind, Name, StOther, Type), Value(0),
+        Size(0), Section(NullInputSection) {
+    this->File = F;
+  }
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
@@ -440,8 +437,7 @@ struct Symbol {
   // assume that the size and alignment of ELF64LE symbols is sufficient for any
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
-      DefinedBitcode, DefinedCommon<llvm::object::ELF64LE>,
-      DefinedRegular<llvm::object::ELF64LE>,
+      DefinedCommon, DefinedRegular<llvm::object::ELF64LE>,
       DefinedSynthetic<llvm::object::ELF64LE>, Undefined,
       SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
       Body;

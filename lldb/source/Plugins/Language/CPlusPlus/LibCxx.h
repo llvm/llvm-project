@@ -134,6 +134,8 @@ namespace lldb_private {
         SyntheticChildrenFrontEnd* LibcxxStdUnorderedMapSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
         
         SyntheticChildrenFrontEnd* LibcxxInitializerListSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
+        
+        SyntheticChildrenFrontEnd* LibcxxFunctionFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
 
     } // namespace formatters
 } // namespace lldb_private

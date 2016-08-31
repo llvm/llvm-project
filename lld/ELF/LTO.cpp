@@ -194,18 +194,15 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (BitcodeFile::shouldSkip(Flags))
       continue;
     Symbol *S = Syms[BodyIndex++];
-    if (GV) {
-      if (S->HasUnnamedAddr)
-        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-      else
-        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-    }
+    if (GV)
+      GV->setUnnamedAddr(S->HasUnnamedAddr ? GlobalValue::UnnamedAddr::Global
+                                           : GlobalValue::UnnamedAddr::None);
     if (Flags & BasicSymbolRef::SF_Undefined) {
       handleUndefinedAsmRefs(Sym, GV, AsmUndefinedRefs);
       continue;
     }
-    auto *B = dyn_cast<DefinedBitcode>(S->body());
-    if (!B || B->file() != &F)
+    SymbolBody *B = S->body();
+    if (B->File != &F)
       continue;
 
     // We collect the set of symbols we want to internalize here
@@ -222,7 +219,12 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // needs to be able to replace the original definition without conflicting.
     // In the latter case, we need to allow the combined LTO object to provide a
     // definition with the same name, for example when doing parallel codegen.
-    undefine(S);
+    if (auto *C = dyn_cast<DefinedCommon>(B)) {
+      if (auto *GO = dyn_cast<GlobalObject>(GV))
+        GO->setAlignment(C->Alignment);
+    } else {
+      undefine(S);
+    }
 
     if (!GV)
       // Module asm symbol.

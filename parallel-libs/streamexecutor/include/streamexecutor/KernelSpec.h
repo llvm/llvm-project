@@ -115,8 +115,9 @@ public:
   /// Adds each item in SpecList to this object.
   ///
   /// Does not take ownership of the PTXCode pointers in the SpecList elements.
-  CUDAPTXInMemorySpec(llvm::StringRef KernelName,
-                      const llvm::ArrayRef<PTXSpec> SpecList);
+  CUDAPTXInMemorySpec(
+      llvm::StringRef KernelName,
+      const llvm::ArrayRef<CUDAPTXInMemorySpec::PTXSpec> SpecList);
 
   /// Returns a pointer to the PTX code for the requested compute capability.
   ///

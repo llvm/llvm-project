@@ -229,11 +229,10 @@ template <class ELFT> void elf::writeResult() {
   Out<ELFT>::Pool.clear();
 }
 
-template <class ELFT>
-static std::vector<DefinedCommon<ELFT> *> getCommonSymbols() {
-  std::vector<DefinedCommon<ELFT> *> V;
+template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
+  std::vector<DefinedCommon *> V;
   for (Symbol *S : Symtab<ELFT>::X->getSymbols())
-    if (auto *B = dyn_cast<DefinedCommon<ELFT>>(S->body()))
+    if (auto *B = dyn_cast<DefinedCommon>(S->body()))
       V.push_back(B);
   return V;
 }
@@ -249,6 +248,8 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
   CommonInputSection<ELFT>::X = &Common;
+
+  Script<ELFT>::X->createAssignments();
 
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasContents)

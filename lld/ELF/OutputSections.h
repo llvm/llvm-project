@@ -135,7 +135,6 @@ public:
   uintX_t getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const;
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
-  uintX_t getNumEntries() const { return Entries.size(); }
   typename Base::Kind getKind() const override { return Base::Got; }
   static bool classof(const Base *B) { return B->getKind() == Base::Got; }
 
