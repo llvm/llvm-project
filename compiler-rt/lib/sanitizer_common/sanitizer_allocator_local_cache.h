@@ -196,21 +196,7 @@ struct SizeClassAllocator32LocalCache {
   // For small size classes we allocate batches separately.
   // For large size classes we may use one of the chunks to store the batch.
   // sizeof(TransferBatch) must be a power of 2 for more efficient allocation.
-
-  // If kUseSeparateSizeClassForBatch is true,
-  // all TransferBatch objects are allocated from kBatchClassID
-  // size class (except for those that are needed for kBatchClassID itself).
-  // The goal is to have TransferBatches in a totally different region of RAM
-  // to improve security and allow more efficient RAM reclamation.
-  // This is experimental and may currently increase memory usage by up to 3%
-  // in extreme cases.
-  static const bool kUseSeparateSizeClassForBatch = false;
-
   static uptr SizeClassForTransferBatch(uptr class_id) {
-    if (kUseSeparateSizeClassForBatch)
-      return class_id == SizeClassMap::kBatchClassID
-                 ? 0
-                 : SizeClassMap::kBatchClassID;
     if (Allocator::ClassIdToSize(class_id) <
         TransferBatch::AllocationSizeRequiredForNElements(
             TransferBatch::MaxCached(class_id)))
