@@ -214,3 +214,48 @@ void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
+
+unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
+  if (getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
+    if (SGPRs <= 80)
+      return 10;
+    if (SGPRs <= 88)
+      return 9;
+    if (SGPRs <= 100)
+      return 8;
+    return 7;
+  }
+  if (SGPRs <= 48)
+    return 10;
+  if (SGPRs <= 56)
+    return 9;
+  if (SGPRs <= 64)
+    return 8;
+  if (SGPRs <= 72)
+    return 7;
+  if (SGPRs <= 80)
+    return 6;
+  return 5;
+}
+
+unsigned SISubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
+  if (VGPRs <= 24)
+    return 10;
+  if (VGPRs <= 28)
+    return 9;
+  if (VGPRs <= 32)
+    return 8;
+  if (VGPRs <= 36)
+    return 7;
+  if (VGPRs <= 40)
+    return 6;
+  if (VGPRs <= 48)
+    return 5;
+  if (VGPRs <= 64)
+    return 4;
+  if (VGPRs <= 84)
+    return 3;
+  if (VGPRs <= 128)
+    return 2;
+  return 1;
+}

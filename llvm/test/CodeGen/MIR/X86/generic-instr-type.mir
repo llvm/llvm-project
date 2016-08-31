@@ -30,21 +30,23 @@ registers:
   - { id: 2, class: _ }
   - { id: 3, class: _ }
   - { id: 4, class: _ }
+  - { id: 5, class: _ }
 body: |
   bb.0:
     liveins: %edi
-    ; CHECK:      %0(32) = G_ADD s32 %edi
-    %0(32) = G_ADD s32 %edi, %edi
-    ; CHECK:      %1(64) = G_ADD <2 x s32> %edi
-    %1(64) = G_ADD <2 x s32> %edi, %edi
-    ; CHECK:      %2(64) = G_ADD s64 %edi
-    %2(64) = G_ADD s64 %edi, %edi
+    ; CHECK:      %1(32) = G_ADD s32 %0
+    %0(32) = COPY %edi
+    %1(32) = G_ADD s32 %0, %0
+    ; CHECK:      %2(64) = G_ADD <2 x s32> %0
+    %2(64) = G_ADD <2 x s32> %0, %0
+    ; CHECK:      %3(64) = G_ADD s64 %0
+    %3(64) = G_ADD s64 %0, %0
     ; G_ADD is actually not a valid operand for structure type,
     ; but that is the only one we have for now for testing.
-    ; CHECK:      %3(64) = G_ADD s64 %edi
-    %3(64) = G_ADD s64 %edi, %edi
-    ; CHECK:      %4(48) = G_ADD s48 %edi
-    %4(48) = G_ADD s48 %edi, %edi
+    ; CHECK:      %4(64) = G_ADD s64 %0
+    %4(64) = G_ADD s64 %0, %0
+    ; CHECK:      %5(48) = G_ADD s48 %0
+    %5(48) = G_ADD s48 %0, %0
 ...
 
 ---

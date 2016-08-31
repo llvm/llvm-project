@@ -15,43 +15,15 @@
 #ifndef LLVM_ADT_ILIST_NODE_H
 #define LLVM_ADT_ILIST_NODE_H
 
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/ilist_node_base.h"
 
 namespace llvm {
 
 template<typename NodeTy>
 struct ilist_traits;
 
-/// Base class for ilist nodes.
-class ilist_node_base {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
-#else
-  ilist_node_base *Prev = nullptr;
-#endif
-  ilist_node_base *Next = nullptr;
-
-public:
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  void setPrev(ilist_node_base *Prev) { PrevAndSentinel.setPointer(Prev); }
-  ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
-
-  bool isKnownSentinel() const { return PrevAndSentinel.getInt(); }
-  void initializeSentinel() { PrevAndSentinel.setInt(true); }
-#else
-  void setPrev(ilist_node_base *Prev) { this->Prev = Prev; }
-  ilist_node_base *getPrev() const { return Prev; }
-
-  bool isKnownSentinel() const { return false; }
-  void initializeSentinel() {}
-#endif
-
-  void setNext(ilist_node_base *Next) { this->Next = Next; }
-  ilist_node_base *getNext() const { return Next; }
-};
-
 struct ilist_node_access;
-template <typename NodeTy> class ilist_iterator;
+template <typename NodeTy, bool IsReverse = false> class ilist_iterator;
 template <typename NodeTy> class ilist_sentinel;
 
 /// Templated wrapper class.
@@ -59,7 +31,8 @@ template <typename NodeTy> class ilist_node : ilist_node_base {
   friend class ilist_base;
   friend struct ilist_node_access;
   friend struct ilist_traits<NodeTy>;
-  friend class ilist_iterator<NodeTy>;
+  friend class ilist_iterator<NodeTy, false>;
+  friend class ilist_iterator<NodeTy, true>;
   friend class ilist_sentinel<NodeTy>;
 
 protected:
@@ -90,6 +63,34 @@ public:
   }
 
   using ilist_node_base::isKnownSentinel;
+};
+
+/// An access class for ilist_node private API.
+///
+/// This gives access to the private parts of ilist nodes.  Nodes for an ilist
+/// should friend this class if they inherit privately from ilist_node.
+///
+/// Using this class outside of the ilist implementation is unsupported.
+struct ilist_node_access {
+  template <typename T> static ilist_node<T> *getNodePtr(T *N) { return N; }
+  template <typename T> static const ilist_node<T> *getNodePtr(const T *N) {
+    return N;
+  }
+
+  template <typename T> static ilist_node<T> *getPrev(ilist_node<T> &N) {
+    return N.getPrev();
+  }
+  template <typename T> static ilist_node<T> *getNext(ilist_node<T> &N) {
+    return N.getNext();
+  }
+  template <typename T>
+  static const ilist_node<T> *getPrev(const ilist_node<T> &N) {
+    return N.getPrev();
+  }
+  template <typename T>
+  static const ilist_node<T> *getNext(const ilist_node<T> &N) {
+    return N.getNext();
+  }
 };
 
 template <typename NodeTy> class ilist_sentinel : public ilist_node<NodeTy> {

@@ -179,8 +179,8 @@ define void @simple_write2_two_val_too_far_f32(float addrspace(1)* %C, float add
 }
 
 ; SI-LABEL: @simple_write2_two_val_f32_x2
-; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL0:v[0-9]+]], [[VAL0]] offset1:11
-; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL1:v[0-9]+]], [[VAL1]] offset0:8 offset1:27
+; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL0:v[0-9]+]], [[VAL1:v[0-9]+]] offset1:8
+; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL0]], [[VAL1]] offset0:11 offset1:27
 ; SI: s_endpgm
 define void @simple_write2_two_val_f32_x2(float addrspace(1)* %C, float addrspace(1)* %in0, float addrspace(1)* %in1) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -209,8 +209,8 @@ define void @simple_write2_two_val_f32_x2(float addrspace(1)* %C, float addrspac
 }
 
 ; SI-LABEL: @simple_write2_two_val_f32_x2_nonzero_base
-; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL0:v[0-9]+]], [[VAL0]] offset0:3 offset1:11
-; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL1:v[0-9]+]], [[VAL1]] offset0:8 offset1:27
+; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL0:v[0-9]+]], [[VAL1:v[0-9]+]] offset0:3 offset1:8
+; SI: ds_write2_b32 [[BASEADDR:v[0-9]+]], [[VAL0]], [[VAL1]] offset0:11 offset1:27
 ; SI: s_endpgm
 define void @simple_write2_two_val_f32_x2_nonzero_base(float addrspace(1)* %C, float addrspace(1)* %in0, float addrspace(1)* %in1) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1

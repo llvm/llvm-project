@@ -11,7 +11,7 @@
 // allows you to do things like:
 //
 //     if (auto *SF = dyn_cast<CoroSubFnInst>(Inst))
-//        ... SF->getFrame() ... 
+//        ... SF->getFrame() ...
 //
 // All intrinsic function calls are instances of the call instruction, so these
 // are all subclasses of the CallInst class.  Note that none of these classes
@@ -37,6 +37,7 @@ public:
     RestartTrigger = -1,
     ResumeIndex,
     DestroyIndex,
+    CleanupIndex,
     IndexLast,
     IndexFirst = RestartTrigger
   };
@@ -76,8 +77,42 @@ public:
 
 /// This represents the llvm.coro.alloc instruction.
 class LLVM_LIBRARY_VISIBILITY CoroIdInst : public IntrinsicInst {
-  enum { AlignArg, PromiseArg, InfoArg };
+  enum { AlignArg, PromiseArg, CoroutineArg, InfoArg };
+
 public:
+  IntrinsicInst *getCoroBegin() {
+    for (User *U : users())
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        if (II->getIntrinsicID() == Intrinsic::coro_begin)
+          return II;
+    llvm_unreachable("no coro.begin associated with coro.id");
+  }
+
+  AllocaInst *getPromise() const {
+    Value *Arg = getArgOperand(PromiseArg);
+    return isa<ConstantPointerNull>(Arg)
+               ? nullptr
+               : cast<AllocaInst>(Arg->stripPointerCasts());
+  }
+
+  void clearPromise() {
+    Value *Arg = getArgOperand(PromiseArg);
+    setArgOperand(PromiseArg,
+                  ConstantPointerNull::get(Type::getInt8PtrTy(getContext())));
+    if (isa<AllocaInst>(Arg))
+      return;
+    assert((isa<BitCastInst>(Arg) || isa<GetElementPtrInst>(Arg)) &&
+           "unexpected instruction designating the promise");
+    // TODO: Add a check that any remaining users of Inst are after coro.begin
+    // or add code to move the users after coro.begin.
+    auto *Inst = cast<Instruction>(Arg);
+    if (Inst->use_empty()) {
+      Inst->eraseFromParent();
+      return;
+    }
+    Inst->moveBefore(getCoroBegin()->getNextNode());
+  }
+
   // Info argument of coro.id is
   //   fresh out of the frontend: null ;
   //   outlined                 : {Init, Return, Susp1, Susp2, ...} ;
@@ -118,6 +153,16 @@ public:
 
   void setInfo(Constant *C) { setArgOperand(InfoArg, C); }
 
+  Function *getCoroutine() const {
+    return cast<Function>(getArgOperand(CoroutineArg)->stripPointerCasts());
+  }
+  void setCoroutineSelf() {
+    assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
+           "Coroutine argument is already assigned");
+    auto *const Int8PtrTy = Type::getInt8PtrTy(getContext());
+    setArgOperand(CoroutineArg,
+                  ConstantExpr::getBitCast(getFunction(), Int8PtrTy));
+  }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const IntrinsicInst *I) {
@@ -142,7 +187,11 @@ public:
 
 /// This represents the llvm.coro.free instruction.
 class LLVM_LIBRARY_VISIBILITY CoroFreeInst : public IntrinsicInst {
+  enum { IdArg, FrameArg };
+
 public:
+  Value *getFrame() const { return getArgOperand(FrameArg); }
+
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_free;
@@ -157,9 +206,7 @@ class LLVM_LIBRARY_VISIBILITY CoroBeginInst : public IntrinsicInst {
   enum { IdArg, MemArg };
 
 public:
-  CoroIdInst *getId() const {
-    return cast<CoroIdInst>(getArgOperand(IdArg));
-  }
+  CoroIdInst *getId() const { return cast<CoroIdInst>(getArgOperand(IdArg)); }
 
   Value *getMem() const { return getArgOperand(MemArg); }
 
@@ -178,6 +225,27 @@ public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_save;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.promise instruction.
+class LLVM_LIBRARY_VISIBILITY CoroPromiseInst : public IntrinsicInst {
+  enum { FrameArg, AlignArg, FromArg };
+
+public:
+  bool isFromPromise() const {
+    return cast<Constant>(getArgOperand(FromArg))->isOneValue();
+  }
+  unsigned getAlignment() const {
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getZExtValue();
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_promise;
   }
   static inline bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

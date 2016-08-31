@@ -66,9 +66,8 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
 
     unsigned SubReg = MO.getSubReg();
     if (LI.hasSubRanges() || (SubReg != 0 && TrackSubRegs)) {
-      LaneBitmask WholeMask = MRI->getMaxLaneMaskForVReg(Reg);
       LaneBitmask SubMask = SubReg != 0 ? TRI.getSubRegIndexLaneMask(SubReg)
-                                        : WholeMask;
+                                        : MRI->getMaxLaneMaskForVReg(Reg);
       // If this is the first time we see a subregister def, initialize
       // subranges by creating a copy of the main range.
       if (!LI.hasSubRanges() && !LI.empty()) {
@@ -177,8 +176,8 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
     if (SubReg != 0) {
       LaneBitmask SLM = TRI.getSubRegIndexLaneMask(SubReg);
       if (MO.isDef())
-        SLM = MRI->getMaxLaneMaskForVReg(Reg) & ~SLM;
-      // Ignore uses not covering the current subrange.
+        SLM = ~SLM;
+      // Ignore uses not reading the current (sub)range.
       if ((SLM & Mask) == 0)
         continue;
     }

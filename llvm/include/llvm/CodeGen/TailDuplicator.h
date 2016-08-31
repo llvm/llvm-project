@@ -26,6 +26,8 @@
 
 namespace llvm {
 
+extern cl::opt<unsigned> TailDupIndirectBranchSize;
+
 /// Utility class to perform tail duplication.
 class TailDuplicator {
   const TargetInstrInfo *TII;

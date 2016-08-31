@@ -93,13 +93,13 @@ define void @select_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> %a, <8 x i32> 
 ; SI-DAG: s_load_dwordx2 s{{\[}}[[ALO:[0-9]+]]:[[AHI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 ; SI-DAG: s_load_dwordx2 s{{\[}}[[BLO:[0-9]+]]:[[BHI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xd|0x34}}
 
-; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[ALO]]
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[AHI]]
-; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BLO]]
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BHI]]
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[ALO]]
 ; SI-DAG: v_cmp_eq_i32_e64 vcc, 0, s{{[0-9]+}}
 
 ; SI: v_cndmask_b32_e32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, s[[BLO]]
 ; SI: v_cndmask_b32_e32
 ; SI: buffer_store_dwordx2
 define void @s_select_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b, i32 %c) nounwind {

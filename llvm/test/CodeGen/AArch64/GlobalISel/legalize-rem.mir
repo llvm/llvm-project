@@ -21,6 +21,8 @@ registers:
   - { id: 6, class: _ }
   - { id: 7, class: _ }
   - { id: 8, class: _ }
+  - { id: 9, class: _ }
+  - { id: 10, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -48,5 +50,17 @@ body: |
     %6(8) = G_TRUNC { s8, s64 } %0
     %7(8) = G_TRUNC { s8, s64 } %1
     %8(8) = G_SREM s8 %6, %7
+
+    ; CHECK: %d0 = COPY %0
+    ; CHECK: %d1 = COPY %1
+    ; CHECK: BL $fmod, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
+    ; CHECK: %9(64) = COPY %d0
+    %9(64) = G_FREM s64 %0, %1
+
+    ; CHECK: %s0 = COPY %3
+    ; CHECK: %s1 = COPY %4
+    ; CHECK: BL $fmodf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
+    ; CHECK: %10(32) = COPY %s0
+    %10(32) = G_FREM s32 %3, %4
 
 ...

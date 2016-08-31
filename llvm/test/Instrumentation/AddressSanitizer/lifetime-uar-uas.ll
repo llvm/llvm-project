@@ -16,20 +16,22 @@ entry:
   %retval = alloca i32, align 4
   %c = alloca i8, align 1
 
+  ; Memory is poisoned in prologue: F1F1F1F104F3F8F2
+  ; CHECK-UAS: store i64 -866676825215864335, i64* %{{[0-9]+}}
+
   call void @llvm.lifetime.start(i64 1, i8* %c)
-  ; Memory is unpoisoned at llvm.lifetime.start
-  ; CHECK-UAS: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 1)
+  ; Memory is unpoisoned at llvm.lifetime.start: 01
+  ; CHECK-UAS: store i8 1, i8* %{{[0-9]+}}
 
   store volatile i32 0, i32* %retval
   store volatile i8 0, i8* %c, align 1
 
   call void @llvm.lifetime.end(i64 1, i8* %c)
-  ; Memory is poisoned at llvm.lifetime.end
-  ; CHECK-UAS: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 1)
+  ; Memory is poisoned at llvm.lifetime.end: F8
+  ; CHECK-UAS: store i8 -8, i8* %{{[0-9]+}}
 
   ; Unpoison memory at function exit in UAS mode.
-  ; CHECK-UAS: store i64 0
-  ; CHECK-UAS-NEXT: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 64)
+  ; CHECK-UAS: store i64 0, i64* %{{[0-9]+}}
   ; CHECK-UAS: ret i32 0
   ret i32 0
 }

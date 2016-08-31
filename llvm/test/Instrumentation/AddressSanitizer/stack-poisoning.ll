@@ -28,25 +28,8 @@ entry:
 ; If LocalStackBase != OrigStackBase
 ; CHECK-UAR: label
 ; Then Block: poison the entire frame.
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
-  ; CHECK-UAR: store i64 -723401728380766731
+  ; CHECK-UAR: call void @__asan_set_shadow_f5(i64 %{{[0-9]+}}, i64 128)
   ; CHECK-UAR-NOT: store i64
-  ; CHECK-UAR: store i8 0
-  ; CHECK-UAR-NOT: store
   ; CHECK-UAR: label
 ; Else Block: no UAR frame. Only unpoison the redzones.
   ; CHECK-UAR: store i64 0

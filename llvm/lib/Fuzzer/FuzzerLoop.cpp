@@ -33,7 +33,6 @@
 
 namespace fuzzer {
 static const size_t kMaxUnitSizeToPrint = 256;
-static const size_t TruncateMaxRuns = 1000;
 
 thread_local bool Fuzzer::IsMyThread;
 
@@ -371,39 +370,22 @@ void Fuzzer::ShuffleCorpus(UnitVector *V) {
 }
 
 // Tries random prefixes of corpus items.
-// Prefix length is chosen according to exponential distribution
-// to sample short lengths much more heavily.
 void Fuzzer::TruncateUnits(std::vector<Unit> *NewCorpus) {
-  size_t MaxCorpusLen = 0;
-  for (const auto &U : Corpus)
-    MaxCorpusLen = std::max(MaxCorpusLen, U.size());
+  std::vector<double> Fractions = {0.25, 0.5, 0.75, 1.0};
 
-  if (MaxCorpusLen <= 1)
-    return;
-
-  // 50% of exponential distribution is Log[2]/lambda.
-  // Choose lambda so that median is MaxCorpusLen / 2.
-  double Lambda = 2.0 * log(2.0) / static_cast<double>(MaxCorpusLen);
-  std::exponential_distribution<> Dist(Lambda);
-  std::vector<double> Sizes;
-  size_t TruncatePoints = std::max(1ul, TruncateMaxRuns / Corpus.size());
-  Sizes.reserve(TruncatePoints);
-  for (size_t I = 0; I < TruncatePoints; ++I) {
-    Sizes.push_back(Dist(MD.GetRand().Get_mt19937()) + 1);
-  }
-  std::sort(Sizes.begin(), Sizes.end());
-
-  for (size_t S : Sizes) {
+  size_t TruncInputs = 0;
+  for (double Fraction : Fractions) {
     for (const auto &U : Corpus) {
-      if (S < U.size() && RunOne(U.data(), S)) {
-        Unit U1(U.begin(), U.begin() + S);
-        NewCorpus->push_back(U1);
-        WriteToOutputCorpus(U1);
-        PrintStatusForNewUnit(U1);
-      }
+      uint64_t S = MD.GetRand()(U.size() * Fraction);
+      if (!S || !RunOne(U.data(), S))
+        continue;
+      TruncInputs++;
+      Unit U1(U.begin(), U.begin() + S);
+      NewCorpus->push_back(U1);
     }
   }
-  PrintStats("TRUNC  ");
+  if (TruncInputs)
+    Printf("\tINFO   TRUNC %zd units added to in-memory corpus\n", TruncInputs);
 }
 
 void Fuzzer::ShuffleAndMinimize() {

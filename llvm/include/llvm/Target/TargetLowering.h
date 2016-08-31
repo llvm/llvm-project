@@ -592,7 +592,7 @@ public:
   /// Returns true if the operation can trap for the value type.
   ///
   /// VT must be a legal type. By default, we optimistically assume most
-  /// operations don't trap except for divide and remainder.
+  /// operations don't trap except for integer divide and remainder.
   virtual bool canOpTrap(unsigned Op, EVT VT) const;
 
   /// Similar to isShuffleMaskLegal. This is used by Targets can use this to

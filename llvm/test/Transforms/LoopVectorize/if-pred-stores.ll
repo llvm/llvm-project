@@ -18,7 +18,8 @@ entry:
 ; VEC:   %[[v8:.+]] = icmp sgt <2 x i32> %{{.*}}, <i32 100, i32 100>
 ; VEC:   %[[v9:.+]] = add nsw <2 x i32> %{{.*}}, <i32 20, i32 20>
 ; VEC:   %[[v10:.+]] = and <2 x i1> %[[v8]], <i1 true, i1 true>
-; VEC:   %[[v11:.+]] = extractelement <2 x i1> %[[v10]], i32 0
+; VEC:   %[[o1:.+]] = or <2 x i1> zeroinitializer, %[[v10]]
+; VEC:   %[[v11:.+]] = extractelement <2 x i1> %[[o1]], i32 0
 ; VEC:   %[[v12:.+]] = icmp eq i1 %[[v11]], true
 ; VEC:   br i1 %[[v12]], label %[[cond:.+]], label %[[else:.+]]
 ;
@@ -28,7 +29,7 @@ entry:
 ; VEC:   br label %[[else:.+]]
 ;
 ; VEC: [[else]]:
-; VEC:   %[[v15:.+]] = extractelement <2 x i1> %[[v10]], i32 1
+; VEC:   %[[v15:.+]] = extractelement <2 x i1> %[[o1]], i32 1
 ; VEC:   %[[v16:.+]] = icmp eq i1 %[[v15]], true
 ; VEC:   br i1 %[[v16]], label %[[cond2:.+]], label %[[else2:.+]]
 ;
@@ -51,7 +52,9 @@ entry:
 ; UNROLL:   %[[v5:[a-zA-Z0-9]+]] = icmp sgt i32 %[[v3]], 100
 ; UNROLL:   %[[v6:[a-zA-Z0-9]+]] = add nsw i32 %[[v2]], 20
 ; UNROLL:   %[[v7:[a-zA-Z0-9]+]] = add nsw i32 %[[v3]], 20
-; UNROLL:   %[[v8:[a-zA-Z0-9]+]] = icmp eq i1 %[[v4]], true
+; UNROLL:   %[[o1:[a-zA-Z0-9]+]] = or i1 false, %[[v4]]
+; UNROLL:   %[[o2:[a-zA-Z0-9]+]] = or i1 false, %[[v5]]
+; UNROLL:   %[[v8:[a-zA-Z0-9]+]] = icmp eq i1 %[[o1]], true
 ; UNROLL:   br i1 %[[v8]], label %[[cond:[a-zA-Z0-9.]+]], label %[[else:[a-zA-Z0-9.]+]]
 ;
 ; UNROLL: [[cond]]:
@@ -59,7 +62,7 @@ entry:
 ; UNROLL:   br label %[[else]]
 ;
 ; UNROLL: [[else]]:
-; UNROLL:   %[[v9:[a-zA-Z0-9]+]] = icmp eq i1 %[[v5]], true
+; UNROLL:   %[[v9:[a-zA-Z0-9]+]] = icmp eq i1 %[[o2]], true
 ; UNROLL:   br i1 %[[v9]], label %[[cond2:[a-zA-Z0-9.]+]], label %[[else2:[a-zA-Z0-9.]+]]
 ;
 ; UNROLL: [[cond2]]:

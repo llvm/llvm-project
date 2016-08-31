@@ -1247,7 +1247,6 @@ public:
 ///
 /// TODO: Inherit from Metadata.
 class NamedMDNode : public ilist_node<NamedMDNode> {
-  friend struct ilist_traits<NamedMDNode>;
   friend class LLVMContextImpl;
   friend class Module;
   NamedMDNode(const NamedMDNode &) = delete;

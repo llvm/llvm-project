@@ -13,8 +13,10 @@ declare <16 x double> @llvm.ceil.v16f64(<16 x double>) nounwind readnone
 ; CI: v_ceil_f64_e32
 ; SI: s_bfe_u32 [[SEXP:s[0-9]+]], {{s[0-9]+}}, 0xb0014
 ; SI-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
-; SI-DAG: s_add_i32 [[SEXP1:s[0-9]+]], [[SEXP]], 0xfffffc01
-; SI-DAG: s_lshr_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], [[SEXP1]]
+; FIXME: We should be using s_addk_i32 here, but the reg allocation hints
+;        are not always followed.
+; SI-DAG: s_add_i32 [[SEXP0:s[0-9]+]], [[SEXP]], 0xfffffc01
+; SI-DAG: s_lshr_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], [[SEXP0]]
 ; SI-DAG: s_not_b64
 ; SI-DAG: s_and_b64
 ; SI-DAG: cmp_gt_i32

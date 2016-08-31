@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_base.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -60,6 +60,46 @@ TEST(IListBaseTest, removeImpl) {
   EXPECT_EQ(&S, S.getPrev());
   EXPECT_EQ(&S, S.getNext());
   EXPECT_EQ(nullptr, B.getPrev());
+  EXPECT_EQ(nullptr, B.getNext());
+}
+
+TEST(IListBaseTest, removeRangeImpl) {
+  ilist_node_base S, A, B, C, D;
+
+  // [S] <-> A <-> B <-> C <-> D <-> [S]
+  S.setPrev(&S);
+  S.setNext(&S);
+  ilist_base::insertBeforeImpl(S, A);
+  ilist_base::insertBeforeImpl(S, B);
+  ilist_base::insertBeforeImpl(S, C);
+  ilist_base::insertBeforeImpl(S, D);
+
+  // [S] <-> A <-> D <-> [S]
+  ilist_base::removeRangeImpl(B, D);
+  EXPECT_EQ(&D, S.getPrev());
+  EXPECT_EQ(&A, D.getPrev());
+  EXPECT_EQ(&S, A.getPrev());
+  EXPECT_EQ(&A, S.getNext());
+  EXPECT_EQ(&D, A.getNext());
+  EXPECT_EQ(&S, D.getNext());
+  EXPECT_EQ(nullptr, B.getPrev());
+  EXPECT_EQ(nullptr, C.getNext());
+}
+
+TEST(IListBaseTest, removeRangeImplAllButSentinel) {
+  ilist_node_base S, A, B;
+
+  // [S] <-> A <-> B <-> [S]
+  S.setPrev(&S);
+  S.setNext(&S);
+  ilist_base::insertBeforeImpl(S, A);
+  ilist_base::insertBeforeImpl(S, B);
+
+  // [S] <-> [S]
+  ilist_base::removeRangeImpl(A, S);
+  EXPECT_EQ(&S, S.getPrev());
+  EXPECT_EQ(&S, S.getNext());
+  EXPECT_EQ(nullptr, A.getPrev());
   EXPECT_EQ(nullptr, B.getNext());
 }
 

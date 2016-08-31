@@ -38,22 +38,20 @@ class MachineBranchProbabilityInfo;
 // Forward declaration to avoid circular include problem with TargetRegisterInfo
 typedef unsigned LaneBitmask;
 
-template <>
-struct ilist_traits<MachineInstr> : public ilist_default_traits<MachineInstr> {
+template <> struct ilist_traits<MachineInstr> {
 private:
-  // this is only set by the MachineBasicBlock owning the LiveList
-  friend class MachineBasicBlock;
-  MachineBasicBlock* Parent;
+  friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
+  MachineBasicBlock *Parent;
 
 public:
-  void addNodeToList(MachineInstr* N);
-  void removeNodeFromList(MachineInstr* N);
-  void transferNodesFromList(ilist_traits &SrcTraits,
-                             ilist_iterator<MachineInstr> First,
-                             ilist_iterator<MachineInstr> Last);
-  void deleteNode(MachineInstr *N);
-private:
-  void createNode(const MachineInstr &);
+  void addNodeToList(MachineInstr *N);
+  void removeNodeFromList(MachineInstr *N);
+  void transferNodesFromList(ilist_traits &OldList,
+                             simple_ilist<MachineInstr>::iterator First,
+                             simple_ilist<MachineInstr>::iterator Last);
+
+  void deleteNode(MachineInstr *MI);
+  // Leave out createNode...
 };
 
 class MachineBasicBlock
@@ -150,9 +148,8 @@ public:
 
   typedef Instructions::iterator                                 instr_iterator;
   typedef Instructions::const_iterator                     const_instr_iterator;
-  typedef std::reverse_iterator<instr_iterator>          reverse_instr_iterator;
-  typedef
-  std::reverse_iterator<const_instr_iterator>      const_reverse_instr_iterator;
+  typedef Instructions::reverse_iterator reverse_instr_iterator;
+  typedef Instructions::const_reverse_iterator const_reverse_instr_iterator;
 
   typedef MachineInstrBundleIterator<MachineInstr> iterator;
   typedef MachineInstrBundleIterator<const MachineInstr> const_iterator;
@@ -193,10 +190,14 @@ public:
   const_iterator          begin() const { return instr_begin();  }
   iterator                end  ()       { return instr_end();    }
   const_iterator          end  () const { return instr_end();    }
-  reverse_iterator       rbegin()       { return instr_rbegin(); }
-  const_reverse_iterator rbegin() const { return instr_rbegin(); }
-  reverse_iterator       rend  ()       { return instr_rend();   }
-  const_reverse_iterator rend  () const { return instr_rend();   }
+  reverse_iterator rbegin() { return reverse_iterator(end()); }
+  const_reverse_iterator rbegin() const {
+    return const_reverse_iterator(end());
+  }
+  reverse_iterator rend() { return reverse_iterator(begin()); }
+  const_reverse_iterator rend() const {
+    return const_reverse_iterator(begin());
+  }
 
   /// Support for MachineInstr::getNextNode().
   static Instructions MachineBasicBlock::*getSublistAccess(MachineInstr *) {
@@ -694,7 +695,7 @@ private:
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
   // Methods used to maintain doubly linked list of blocks...
-  friend struct ilist_traits<MachineBasicBlock>;
+  friend struct ilist_callback_traits<MachineBasicBlock>;
 
   // Machine-CFG mutators
 

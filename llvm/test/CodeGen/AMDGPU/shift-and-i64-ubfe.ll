@@ -341,11 +341,12 @@ define void @v_uextract_bit_27_29_multi_use_shift_i64(i64 addrspace(1)* %out, i6
 
 ; GCN-LABEL: {{^}}v_uextract_bit_34_37_multi_use_shift_i64:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO_SHR:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO_BFE:[0-9]+]], v[[ZERO_SHR]]
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHR:[0-9]+]], 2, [[VAL]]
 ; GCN-DAG: v_bfe_u32 v[[BFE:[0-9]+]], [[VAL]], 2, 3
-; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[SHR]]:[[ZERO]]{{\]}}
-; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
+; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[SHR]]:[[ZERO_SHR]]{{\]}}
+; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO_BFE]]{{\]}}
 define void @v_uextract_bit_34_37_multi_use_shift_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %id.x

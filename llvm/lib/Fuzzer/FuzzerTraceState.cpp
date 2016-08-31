@@ -552,26 +552,34 @@ static void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                               size_t n) {
   if (!n) return;
   size_t Len = std::min(n, (size_t)32);
-  const char *A1 = reinterpret_cast<const char *>(s1);
-  const char *A2 = reinterpret_cast<const char *>(s2);
-  size_t LastSameByte = 0;
-  for (; LastSameByte < Len; LastSameByte++)
-    if (A1[LastSameByte] != A2[LastSameByte])
+  const uint8_t *A1 = reinterpret_cast<const uint8_t *>(s1);
+  const uint8_t *A2 = reinterpret_cast<const uint8_t *>(s2);
+  size_t I = 0;
+  for (; I < Len; I++)
+    if (A1[I] != A2[I])
       break;
   size_t PC = reinterpret_cast<size_t>(caller_pc);
-  VP.AddValue((PC & 4095) | (LastSameByte << 12));
+  size_t Idx = I;
+  // if (I < Len)
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  VP.AddValue((PC & 4095) | (Idx << 12));
 }
 
 static void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
                               size_t n) {
   if (!n) return;
   size_t Len = std::min(n, (size_t)32);
-  size_t LastSameByte = 0;
-  for (; LastSameByte < Len; LastSameByte++)
-    if (s1[LastSameByte] != s2[LastSameByte] || s1[LastSameByte] == 0)
+  const uint8_t *A1 = reinterpret_cast<const uint8_t *>(s1);
+  const uint8_t *A2 = reinterpret_cast<const uint8_t *>(s2);
+  size_t I = 0;
+  for (; I < Len; I++)
+    if (A1[I] != A2[I] || A1[I] == 0)
       break;
   size_t PC = reinterpret_cast<size_t>(caller_pc);
-  VP.AddValue((PC & 4095) | (LastSameByte << 12));
+  size_t Idx = I;
+  // if (I < Len && A1[I])
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  VP.AddValue((PC & 4095) | (Idx << 12));
 }
 
 ATTRIBUTE_TARGET_POPCNT
@@ -580,6 +588,14 @@ static void AddValueForCmp(void *PCptr, uint64_t Arg1, uint64_t Arg2) {
     return;
   uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
   uint64_t ArgDistance = __builtin_popcountl(Arg1 ^ Arg2) - 1; // [0,63]
+  uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
+  VP.AddValue(Idx);
+}
+
+static void AddValueForSingleVal(void *PCptr, uintptr_t Val) {
+  if (!Val) return;
+  uintptr_t PC = reinterpret_cast<uintptr_t>(PCptr);
+  uint64_t ArgDistance = __builtin_popcountl(Val) - 1; // [0,63]
   uintptr_t Idx = (PC & 4095) | (ArgDistance << 12);
   VP.AddValue(Idx);
 }
@@ -778,6 +794,19 @@ void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
   if (!RecordingTraces) return;
   uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
   TS->TraceSwitchCallback(PC, Cases[1], Val, Cases[0], Cases + 2);
+}
+
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_div4(uint32_t Val) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_div8(uint64_t Val) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Val);
+}
+__attribute__((visibility("default")))
+void __sanitizer_cov_trace_gep(uintptr_t Idx) {
+  fuzzer::AddValueForSingleVal(__builtin_return_address(0), Idx);
 }
 
 }  // extern "C"

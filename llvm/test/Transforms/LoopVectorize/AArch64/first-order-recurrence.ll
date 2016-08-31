@@ -1,5 +1,6 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -dce -instcombine -S | FileCheck %s
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -dce -instcombine -S | FileCheck %s --check-prefix=UNROLL
+; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S | FileCheck %s --check-prefix=UNROLL-NO-IC
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
@@ -296,4 +297,45 @@ for.cond.cleanup3:
   %inc = add nuw nsw i32 %i.016, 1
   %exitcond = icmp eq i32 %inc, 49
   br i1 %exitcond, label %for.cond.cleanup, label %for.cond1.preheader
+}
+
+; CHECK-LABEL: @PR29559
+;
+; UNROLL-NO-IC: vector.ph:
+; UNROLL-NO-IC:   br label %vector.body
+;
+; UNROLL-NO-IC: vector.body:
+; UNROLL-NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; UNROLL-NO-IC:   %vector.recur = phi <4 x float*> [ undef, %vector.ph ], [ %[[I4:.+]], %vector.body ]
+; UNROLL-NO-IC:   %[[G1:.+]] = getelementptr inbounds [3 x float], [3 x float]* undef, i64 0, i64 0
+; UNROLL-NO-IC:   %[[I1:.+]] = insertelement <4 x float*> undef, float* %[[G1]], i32 0
+; UNROLL-NO-IC:   %[[I2:.+]] = insertelement <4 x float*> %[[I1]], float* %[[G1]], i32 1
+; UNROLL-NO-IC:   %[[I3:.+]] = insertelement <4 x float*> %[[I2]], float* %[[G1]], i32 2
+; UNROLL-NO-IC:   %[[I4]] = insertelement <4 x float*> %[[I3]], float* %[[G1]], i32 3
+; UNROLL-NO-IC:   {{.*}} = shufflevector <4 x float*> %vector.recur, <4 x float*> %[[I4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; UNROLL-NO-IC:   {{.*}} = shufflevector <4 x float*> %[[I4]], <4 x float*> %[[I4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+;
+; UNROLL-NO-IC: middle.block:
+; UNROLL-NO-IC:   %vector.recur.extract = extractelement <4 x float*> %[[I4]], i32 3
+;
+; UNROLL-NO-IC: scalar.ph:
+; UNROLL-NO-IC:   %scalar.recur.init = phi float* [ %vector.recur.extract, %middle.block ], [ undef, %min.iters.checked ], [ undef, %entry ]
+;
+; UNROLL-NO-IC: scalar.body:
+; UNROLL-NO-IC:   %scalar.recur = phi float* [ %scalar.recur.init, %scalar.ph ], [ {{.*}}, %scalar.body ]
+;
+define void @PR29559() {
+entry:
+  br label %scalar.body
+
+scalar.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %scalar.body ]
+  %tmp2 = phi float* [ undef, %entry ], [ %tmp3, %scalar.body ]
+  %tmp3 = getelementptr inbounds [3 x float], [3 x float]* undef, i64 0, i64 0
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp eq i64 %i.next, undef
+  br i1 %cond, label %for.end, label %scalar.body
+
+for.end:
+  ret void
 }

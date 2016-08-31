@@ -126,6 +126,8 @@ public:
 
   void printHashHistogram() override;
 
+  void printNotes() override;
+
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
   typedef ELFFile<ELFT> ELFO;
@@ -292,6 +294,7 @@ public:
                            bool IsDynamic) = 0;
   virtual void printProgramHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
 private:
   const ELFDumper<ELFT> *Dumper;
@@ -314,6 +317,7 @@ public:
                                   size_t Offset) override;
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
+  void printNotes(const ELFFile<ELFT> *Obj) override;
 
 private:
   struct Field {
@@ -367,6 +371,7 @@ public:
   void printDynamicRelocations(const ELFO *Obj) override;
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
+  void printNotes(const ELFFile<ELFT> *Obj) override;
 
 private:
   void printRelocation(const ELFO *Obj, Elf_Rela Rel, const Elf_Shdr *SymTab);
@@ -1491,6 +1496,11 @@ void ELFDumper<ELFT>::printDynamicSymbols() {
 template <class ELFT> void ELFDumper<ELFT>::printHashHistogram() {
   ELFDumperStyle->printHashHistogram(Obj);
 }
+
+template <class ELFT> void ELFDumper<ELFT>::printNotes() {
+  ELFDumperStyle->printNotes(Obj);
+}
+
 #define LLVM_READOBJ_TYPE_CASE(name) \
   case DT_##name: return #name
 
@@ -3161,6 +3171,127 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
   }
 }
 
+static std::string getGNUNoteTypeName(const uint32_t NT) {
+  static const struct {
+    uint32_t ID;
+    const char *Name;
+  } Notes[] = {
+      {ELF::NT_GNU_ABI_TAG, "NT_GNU_ABI_TAG (ABI version tag)"},
+      {ELF::NT_GNU_HWCAP, "NT_GNU_HWCAP (DSO-supplied software HWCAP info)"},
+      {ELF::NT_GNU_BUILD_ID, "NT_GNU_BUILD_ID (unique build ID bitstring)"},
+      {ELF::NT_GNU_GOLD_VERSION, "NT_GNU_GOLD_VERSION (gold version)"},
+  };
+
+  for (const auto &Note : Notes)
+    if (Note.ID == NT)
+      return std::string(Note.Name);
+
+  std::string string;
+  raw_string_ostream OS(string);
+  OS << format("Unknown note type (0x%08x)", NT);
+  return string;
+}
+
+template <typename ELFT>
+static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
+                         ArrayRef<typename ELFFile<ELFT>::Elf_Word> Words) {
+  switch (NoteType) {
+  default:
+    return;
+  case ELF::NT_GNU_ABI_TAG: {
+    static const char *OSNames[] = {
+        "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
+    };
+
+    StringRef OSName = "Unknown";
+    if (Words[0] < array_lengthof(OSNames))
+      OSName = OSNames[Words[0]];
+    uint32_t Major = Words[1], Minor = Words[2], Patch = Words[3];
+
+    if (Words.size() < 4)
+      OS << "    <corrupt GNU_ABI_TAG>";
+    else
+      OS << "    OS: " << OSName << ", ABI: " << Major << "." << Minor << "."
+         << Patch;
+    break;
+  }
+  case ELF::NT_GNU_BUILD_ID: {
+    OS << "    Build ID: ";
+    ArrayRef<uint8_t> ID(reinterpret_cast<const uint8_t *>(Words.data()),
+                         Words.size() * 4);
+    for (const auto &B : ID)
+      OS << format_hex_no_prefix(B, 2);
+    break;
+  }
+  case ELF::NT_GNU_GOLD_VERSION:
+    OS << "    Version: "
+       << StringRef(reinterpret_cast<const char *>(Words.data()),
+                    Words.size() * 4);
+    break;
+  }
+
+  OS << '\n';
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
+  const Elf_Ehdr *e = Obj->getHeader();
+  bool IsCore = e->e_type == ELF::ET_CORE;
+
+  auto process = [&](const typename ELFFile<ELFT>::Elf_Off Offset,
+                     const typename ELFFile<ELFT>::Elf_Addr Size) {
+    typedef typename ELFFile<ELFT>::Elf_Word Word;
+
+    if (Size <= 0)
+      return;
+
+    const auto *P = static_cast<const uint8_t *>(Obj->base() + Offset);
+    const auto *E = P + Size;
+
+    OS << "Displaying notes found at file offset " << format_hex(Offset, 10)
+       << " with length " << format_hex(Size, 10) << ":\n"
+       << "  Owner                 Data size\tDescription\n";
+
+    while (P < E) {
+      const Word *Words = reinterpret_cast<const Word *>(&P[0]);
+
+      uint32_t NameSize = Words[0];
+      uint32_t DescriptorSize = Words[1];
+      uint32_t Type = Words[2];
+
+      ArrayRef<Word> Descriptor(&Words[3 + (alignTo<4>(NameSize) / 4)],
+                                alignTo<4>(DescriptorSize) / 4);
+
+      StringRef Name;
+      if (NameSize)
+        Name =
+            StringRef(reinterpret_cast<const char *>(&Words[3]), NameSize - 1);
+
+      OS << "  " << Name << std::string(22 - NameSize, ' ')
+         << format_hex(DescriptorSize, 10) << '\t';
+
+      if (Name == "GNU") {
+        OS << getGNUNoteTypeName(Type) << '\n';
+        printGNUNote<ELFT>(OS, Type, Descriptor);
+      }
+      OS << '\n';
+
+      P = P + 3 * sizeof(Word) * alignTo<4>(NameSize) +
+          alignTo<4>(DescriptorSize);
+    }
+  };
+
+  if (IsCore) {
+    for (const auto &P : Obj->program_headers())
+      if (P.p_type == PT_NOTE)
+        process(P.p_offset, P.p_filesz);
+  } else {
+    for (const auto &S : Obj->sections())
+      if (S.sh_type == SHT_NOTE)
+        process(S.sh_offset, S.sh_size);
+  }
+}
+
 template <class ELFT> void LLVMStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
   {
@@ -3526,7 +3657,14 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
     W.printNumber("Alignment", Phdr.p_align);
   }
 }
+
 template <class ELFT>
 void LLVMStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
   W.startLine() << "Hash Histogram not implemented!\n";
 }
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
+  W.startLine() << "printNotes not implemented!\n";
+}
+

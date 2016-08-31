@@ -93,7 +93,7 @@ The LLVM IR for this coroutine looks like this:
 
   define i8* @f(i32 %n) {
   entry:
-    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null)
+    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
     %size = call i32 @llvm.coro.size.i32()
     %alloc = call i8* @malloc(i32 %size)
     %hdl = call noalias i8* @llvm.coro.begin(token %id, i8* %alloc)
@@ -106,7 +106,7 @@ The LLVM IR for this coroutine looks like this:
     switch i8 %0, label %suspend [i8 0, label %loop
                                   i8 1, label %cleanup]
   cleanup:
-    %mem = call i8* @llvm.coro.free(i8* %hdl)
+    %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
     call void @free(i8* %mem)
     br label %suspend
   suspend:
@@ -168,7 +168,7 @@ execution of the coroutine until a suspend point is reached:
 
   define i8* @f(i32 %n) {
   entry:
-    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null)
+    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
     %alloc = call noalias i8* @malloc(i32 24)
     %0 = call noalias i8* @llvm.coro.begin(token %id, i8* %alloc)
     %frame = bitcast i8* %0 to %f.frame*
@@ -227,7 +227,7 @@ elided.
 .. code-block:: none
 
   entry:
-    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null)
+    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
     %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
   dyn.alloc:
@@ -245,7 +245,7 @@ thus skipping the deallocation code:
 .. code-block:: llvm
 
   cleanup:
-    %mem = call i8* @llvm.coro.free(i8* %hdl)
+    %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
     %need.dyn.free = icmp ne i8* %mem, null
     br i1 %need.dyn.free, label %dyn.free, label %if.end
   dyn.free:
@@ -417,7 +417,7 @@ store the current value produced by a coroutine.
   entry:
     %promise = alloca i32
     %pv = bitcast i32* %promise to i8*
-    %id = call token @llvm.coro.id(i32 0, i8* %pv, i8* null)
+    %id = call token @llvm.coro.id(i32 0, i8* %pv, i8* null, i8* null)
     %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
   dyn.alloc:
@@ -436,7 +436,7 @@ store the current value produced by a coroutine.
     switch i8 %0, label %suspend [i8 0, label %loop
                                   i8 1, label %cleanup]
   cleanup:
-    %mem = call i8* @llvm.coro.free(i8* %hdl)
+    %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
     call void @free(i8* %mem)
     br label %suspend
   suspend:
@@ -699,7 +699,7 @@ Example:
     %promise = alloca i32
     %pv = bitcast i32* %promise to i8*
     ; the second argument to coro.id points to the coroutine promise.
-    %id = call token @llvm.coro.id(i32 0, i8* %pv, i8* null)
+    %id = call token @llvm.coro.id(i32 0, i8* %pv, i8* null, i8* null)
     ...
     %hdl = call noalias i8* @llvm.coro.begin(token %id, i8* %alloc)
     ...
@@ -791,7 +791,7 @@ A frontend should emit exactly one `coro.begin` intrinsic per coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i8* @llvm.coro.free(i8* <frame>)
+  declare i8* @llvm.coro.free(token %id, i8* <frame>)
 
 Overview:
 """""""""
@@ -803,8 +803,11 @@ dynamically allocated memory for its coroutine frame.
 Arguments:
 """"""""""
 
-A pointer to the coroutine frame. This should be the same pointer that was 
-returned by prior `coro.begin` call.
+The first argument is a token returned by a call to '``llvm.coro.id``' 
+identifying the coroutine.
+
+The second argument is a pointer to the coroutine frame. This should be the same
+pointer that was returned by prior `coro.begin` call.
 
 Example (custom deallocation function):
 """""""""""""""""""""""""""""""""""""""
@@ -812,7 +815,7 @@ Example (custom deallocation function):
 .. code-block:: llvm
 
   cleanup:
-    %mem = call i8* @llvm.coro.free(i8* %frame)
+    %mem = call i8* @llvm.coro.free(token %id, i8* %frame)
     %mem_not_null = icmp ne i8* %mem, null
     br i1 %mem_not_null, label %if.then, label %if.end
   if.then:
@@ -827,7 +830,7 @@ Example (standard deallocation functions):
 .. code-block:: llvm
 
   cleanup:
-    %mem = call i8* @llvm.coro.free(i8* %frame)
+    %mem = call i8* @llvm.coro.free(token %id, i8* %frame)
     call void @free(i8* %mem)
     ret void
 
@@ -864,7 +867,7 @@ Example:
 .. code-block:: text
 
   entry:
-    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null)
+    %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
     %dyn.alloc.required = call i1 @llvm.coro.alloc(token %id)
     br i1 %dyn.alloc.required, label %coro.alloc, label %coro.begin
 
@@ -909,7 +912,8 @@ coroutine frame.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare token @llvm.coro.id(i32 <align>, i8* <promise>, i8* <fnaddr>)
+  declare token @llvm.coro.id(i32 <align>, i8* <promise>, i8* <coroaddr>, 
+                                                          i8* <fnaddrs>)
 
 Overview:
 """""""""
@@ -927,7 +931,10 @@ This argument only accepts constants.
 The second argument, if not `null`, designates a particular alloca instruction
 to be a `coroutine promise`_.
 
-The third argument is `null` before coroutine is split, and later is replaced 
+The third argument is `null` coming out of the frontend. The CoroEarly pass sets
+this argument to point to the function this coro.id belongs to. 
+
+The fourth argument is `null` before coroutine is split, and later is replaced 
 to point to a private global constant array containing function pointers to 
 outlined resume and destroy parts of the coroutine.
 
@@ -1209,19 +1216,6 @@ CoroCleanup
 -----------
 This pass runs late to lower all coroutine related intrinsics not replaced by
 earlier passes.
-
-Upstreaming sequence (rough plan)
-=================================
-#. Add documentation.
-#. Add coroutine intrinsics.
-#. Add empty coroutine passes.
-#. Add coroutine devirtualization + tests.
-#. Add CGSCC restart trigger + tests.
-#. Add coroutine heap elision + tests.
-#. Add custom allocation heap elision + tests. <== we are here
-#. Add coroutine splitting logic + tests.
-#. Add simple coroutine frame builder + tests.
-#. Add the rest of the logic + tests. (Maybe split further as needed).
 
 Areas Requiring Attention
 =========================

@@ -163,3 +163,48 @@ INVALID-SYMTAB-STROFF: macho-invalid-symtab-stroff': truncated or malformed obje
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-symtab-stroff-strsize 2>&1 | FileCheck -check-prefix INVALID-SYMTAB-STROFF-STRSIZE %s
 INVALID-SYMTAB-STROFF-STRSIZE: macho-invalid-symtab-stroff-strsize': truncated or malformed object (stroff field plus strsize field of LC_SYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-small 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-SMALL %s
+INVALID-DYSYMTAB-SMALL: macho-invalid-dysymtab-small': truncated or malformed object (load command 0 LC_DYSYMTAB cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-more-than-one 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-MORE-THAN-ONE %s
+INVALID-DYSYMTAB-MORE-THAN-ONE: macho-invalid-dysymtab-more-than-one': truncated or malformed object (more than one LC_DYSYMTAB command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-bad-size 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-BAD-SIZE %s
+INVALID-DYSYMTAB-BAD-SIZE: macho-invalid-dysymtab-bad-size': truncated or malformed object (LC_DYSYMTAB command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-tocoff 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF %s
+INVALID-DYSYMTAB-TOCOFF: macho-invalid-dysymtab-tocoff': truncated or malformed object (tocoff field of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-tocoff-ntoc 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-NTOC %s
+INVALID-DYSYMTAB-TOCOFF-NTOC: macho-invalid-dysymtab-tocoff-ntoc': truncated or malformed object (tocoff field plus ntoc field times sizeof(struct dylib_table_of_contents) of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-modtaboff 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-MODTABOFF %s
+INVALID-DYSYMTAB-TOCOFF-MODTABOFF: macho-invalid-dysymtab-modtaboff': truncated or malformed object (modtaboff field of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-modtaboff-nmodtab 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-MODTABOFF-NMODTAB %s
+INVALID-DYSYMTAB-TOCOFF-MODTABOFF-NMODTAB: macho-invalid-dysymtab-modtaboff-nmodtab': truncated or malformed object (modtaboff field plus nmodtab field times sizeof(struct dylib_module) of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-extrefsymoff 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-EXTREFSYMOFF %s
+INVALID-DYSYMTAB-TOCOFF-EXTREFSYMOFF: macho-invalid-dysymtab-extrefsymoff': truncated or malformed object (extrefsymoff field of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-extrefsymoff-nextrefsyms 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-EXTREFSYMOFF-NEXTREFSYMS %s
+INVALID-DYSYMTAB-TOCOFF-EXTREFSYMOFF-NEXTREFSYMS: macho-invalid-dysymtab-extrefsymoff-nextrefsyms': truncated or malformed object (extrefsymoff field plus nextrefsyms field times sizeof(struct dylib_reference) of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-indirectsymoff 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-INDIRECTSYMOFF %s
+INVALID-DYSYMTAB-TOCOFF-INDIRECTSYMOFF: macho-invalid-dysymtab-indirectsymoff': truncated or malformed object (indirectsymoff field of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-indirectsymoff-nindirectsyms 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-INDIRECTSYMOFF-NINDIRECTSYMS %s
+INVALID-DYSYMTAB-TOCOFF-INDIRECTSYMOFF-NINDIRECTSYMS: macho-invalid-dysymtab-indirectsymoff-nindirectsyms': truncated or malformed object (indirectsymoff field plus nindirectsyms field times sizeof(uint32_t) of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-extreloff 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-EXTRELOFF %s
+INVALID-DYSYMTAB-TOCOFF-EXTRELOFF: macho-invalid-dysymtab-extreloff': truncated or malformed object (extreloff field of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-extreloff-nextrel 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-EXTRELOFF-NEXTREL %s
+INVALID-DYSYMTAB-TOCOFF-EXTRELOFF-NEXTREL: macho-invalid-dysymtab-extreloff-nextrel': truncated or malformed object (extreloff field plus nextrel field times sizeof(struct relocation_info) of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-locreloff 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-LOCRELOFF %s
+INVALID-DYSYMTAB-TOCOFF-LOCRELOFF: macho-invalid-dysymtab-locreloff': truncated or malformed object (locreloff field of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-locreloff-nlocrel 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-LOCRELOFF-NLOCREL %s
+INVALID-DYSYMTAB-TOCOFF-LOCRELOFF-NLOCREL: macho-invalid-dysymtab-locreloff-nlocrel': truncated or malformed object (locreloff field plus nlocrel field times sizeof(struct relocation_info) of LC_DYSYMTAB command 0 extends past the end of the file)

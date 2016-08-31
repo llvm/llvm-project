@@ -79,8 +79,10 @@ public:
   }
 
   const AsmToken &Lex() { return getParser().Lex(); }
-
   const AsmToken &getTok() { return getParser().getTok(); }
+  bool parseToken(AsmToken::TokenKind T, const Twine &Msg) {
+    return getParser().parseToken(T, Msg);
+  }
 
   bool HasBracketExpressions() const { return BracketExpressionsSupported; }
 

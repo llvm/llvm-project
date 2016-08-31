@@ -27,7 +27,7 @@ class MachineRegisterInfo;
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // FIXME: This should be removed and getPreloadedValue moved here.
-  friend struct SIRegisterInfo;
+  friend class SIRegisterInfo;
 
   unsigned TIDReg;
 

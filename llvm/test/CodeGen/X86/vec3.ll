@@ -19,16 +19,8 @@ define <3 x float> @fadd(<3 x float> %v, float %d) {
 define <3 x float> @fdiv(<3 x float> %v, float %d) {
 ; CHECK-LABEL: fdiv:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movaps %xmm1, %xmm2
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    movaps %xmm1, %xmm4
-; CHECK-NEXT:    divss %xmm0, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; CHECK-NEXT:    divss %xmm0, %xmm2
-; CHECK-NEXT:    movhlps {{.*#+}} xmm3 = xmm3[1,1]
-; CHECK-NEXT:    divss %xmm3, %xmm4
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,3]
+; CHECK-NEXT:    divps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;

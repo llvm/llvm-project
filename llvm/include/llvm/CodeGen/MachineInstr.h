@@ -118,7 +118,7 @@ private:
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
-  friend struct ilist_traits<MachineBasicBlock>;
+  friend struct ilist_callback_traits<MachineBasicBlock>;
   void setParent(MachineBasicBlock *P) { Parent = P; }
 
   /// This constructor creates a copy of the given

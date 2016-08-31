@@ -79,7 +79,6 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
         for (auto &MO : T.operands())
           MIB.addOperand(MO);
         Terminators.push_back(&T);
-        break;
       }
     }
   }

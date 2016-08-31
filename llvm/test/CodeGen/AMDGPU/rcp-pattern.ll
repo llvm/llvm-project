@@ -103,9 +103,8 @@ define void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float %src) #0 {
 ; FUNC-LABEL: {{^}}rcp_fabs_fneg_pat_multi_use_f32:
 ; GCN: s_load_dword [[SRC:s[0-9]+]]
 ; GCN: v_rcp_f32_e64 [[RCP:v[0-9]+]], -|[[SRC]]|
-; GCN: buffer_store_dword [[RCP]]
-
 ; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], [[SRC]], -|[[SRC]]|
+; GCN: buffer_store_dword [[RCP]]
 ; GCN: buffer_store_dword [[MUL]]
 define void @rcp_fabs_fneg_pat_multi_use_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
