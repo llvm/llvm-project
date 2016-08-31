@@ -167,7 +167,7 @@
 // RUN:            -fmodule-file=%t/nonexistent.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FILE %s
 //
-// CHECK-NO-FILE: fatal error: module file '{{.*}}nonexistent.pcm' not found
+// CHECK-NO-FILE: fatal error: module file '{{.*}}nonexistent.pcm' not found: module file not found
 
 // RUN: mv %t/a.pcm %t/a-tmp.pcm
 // RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
@@ -199,6 +199,6 @@
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-MISMATCHED-B %s
 //
-// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt
+// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt: module file out of date
 // CHECK-MISMATCHED-B-NEXT: note: imported by module 'c'
 // CHECK-MISMATCHED-B-NOT:  note:

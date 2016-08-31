@@ -44,6 +44,14 @@ types::ID types::getPreprocessedType(ID Id) {
   return getInfo(Id).PreprocessedType;
 }
 
+types::ID types::getPrecompiledType(ID Id) {
+  if (strchr(getInfo(Id).Flags, 'm'))
+    return TY_ModuleFile;
+  if (onlyPrecompileType(Id))
+    return TY_PCH;
+  return TY_INVALID;
+}
+
 const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
   if (Id == TY_Object && CLMode)
     return "obj";
@@ -95,6 +103,7 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_ObjCHeader: case TY_PP_ObjCHeader:
   case TY_CXXHeader: case TY_PP_CXXHeader:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
+  case TY_CXXModule: case TY_PP_CXXModule:
   case TY_AST: case TY_ModuleFile:
   case TY_LLVM_IR: case TY_LLVM_BC:
     return true;
@@ -123,6 +132,7 @@ bool types::isCXX(ID Id) {
   case TY_ObjCXX: case TY_PP_ObjCXX: case TY_PP_ObjCXX_Alias:
   case TY_CXXHeader: case TY_PP_CXXHeader:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
+  case TY_CXXModule: case TY_PP_CXXModule:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
     return true;
   }
@@ -183,6 +193,7 @@ types::ID types::lookupTypeForExtension(const char *Ext) {
            .Case("ads", TY_Ada)
            .Case("asm", TY_PP_Asm)
            .Case("ast", TY_AST)
+           .Case("ccm", TY_CXXModule)
            .Case("cpp", TY_CXX)
            .Case("CPP", TY_CXX)
            .Case("c++", TY_CXX)
@@ -200,11 +211,15 @@ types::ID types::lookupTypeForExtension(const char *Ext) {
            .Case("FPP", TY_Fortran)
            .Case("gch", TY_PCH)
            .Case("hpp", TY_CXXHeader)
+           .Case("iim", TY_PP_CXXModule)
            .Case("lib", TY_Object)
            .Case("mii", TY_PP_ObjCXX)
            .Case("obj", TY_Object)
            .Case("pch", TY_PCH)
            .Case("pcm", TY_ModuleFile)
+           .Case("c++m", TY_CXXModule)
+           .Case("cppm", TY_CXXModule)
+           .Case("cxxm", TY_CXXModule)
            .Default(TY_INVALID);
 }
 
@@ -226,9 +241,11 @@ void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
       P.push_back(phases::Preprocess);
     }
 
-    if (onlyPrecompileType(Id)) {
+    if (getPrecompiledType(Id) != TY_INVALID) {
       P.push_back(phases::Precompile);
-    } else {
+    }
+
+    if (!onlyPrecompileType(Id)) {
       if (!onlyAssembleType(Id)) {
         P.push_back(phases::Compile);
         P.push_back(phases::Backend);
@@ -257,5 +274,23 @@ ID types::lookupCXXTypeForCType(ID Id) {
     return types::TY_CXXHeader;
   case types::TY_PP_CHeader:
     return types::TY_PP_CXXHeader;
+  }
+}
+
+ID types::lookupHeaderTypeForSourceType(ID Id) {
+  switch (Id) {
+  default:
+    return Id;
+
+  case types::TY_C:
+    return types::TY_CHeader;
+  case types::TY_CXX:
+    return types::TY_CXXHeader;
+  case types::TY_ObjC:
+    return types::TY_ObjCHeader;
+  case types::TY_ObjCXX:
+    return types::TY_ObjCXXHeader;
+  case types::TY_CL:
+    return types::TY_CLHeader;
   }
 }

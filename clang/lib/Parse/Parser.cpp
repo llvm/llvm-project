@@ -546,7 +546,13 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
     return false;
   } else if (getLangOpts().getCompilingModule() ==
              LangOptions::CMK_ModuleInterface) {
-    Diag(Tok, diag::err_expected_module_interface_decl);
+    // FIXME: We avoid providing this diagnostic when generating an object file
+    // from an existing PCM file. This is not a good way to detect this
+    // condition; we should provide a mechanism to indicate whether we've
+    // already parsed a declaration in this translation unit and avoid calling
+    // ParseFirstTopLevelDecl in that case.
+    if (Actions.TUKind == TU_Module)
+      Diag(Tok, diag::err_expected_module_interface_decl);
   }
 
   // C11 6.9p1 says translation units must have at least one top-level

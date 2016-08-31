@@ -34,6 +34,7 @@
 //  a - The type should only be assembled.
 //  p - The type should only be precompiled.
 //  u - The type can be user specified (with -x).
+//  m - Precompiling this type produces a module file.
 //  A - The type's temporary suffix should be appended when generating
 //      outputs of this type.
 
@@ -65,6 +66,8 @@ TYPE("c++-header-cpp-output",    PP_CXXHeader, INVALID,         "ii",    "p")
 TYPE("c++-header",               CXXHeader,    PP_CXXHeader,    "hh",    "pu")
 TYPE("objective-c++-header-cpp-output", PP_ObjCXXHeader, INVALID, "mii", "p")
 TYPE("objective-c++-header",     ObjCXXHeader, PP_ObjCXXHeader, "h",     "pu")
+TYPE("c++-module",               CXXModule,    PP_CXXModule,    "cppm",  "mu")
+TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",   "m")
 
 // Other languages.
 TYPE("ada",                      Ada,          INVALID,         nullptr, "u")

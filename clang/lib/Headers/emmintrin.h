@@ -141,25 +141,25 @@ _mm_max_pd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_and_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)((__v4su)__a & (__v4su)__b);
+  return (__m128d)((__v2du)__a & (__v2du)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_andnot_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)(~(__v4su)__a & (__v4su)__b);
+  return (__m128d)(~(__v2du)__a & (__v2du)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_or_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)((__v4su)__a | (__v4su)__b);
+  return (__m128d)((__v2du)__a | (__v2du)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_xor_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)((__v4su)__a ^ (__v4su)__b);
+  return (__m128d)((__v2du)__a ^ (__v2du)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS

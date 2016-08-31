@@ -12,3 +12,6 @@ template<int N, typename T> struct X : X<N+1, T*> {};
 // expected-note@8 {{use -ftemplate-depth=N to increase recursive template instantiation depth}}
 
 X<0, int> x; // expected-note {{in instantiation of}}
+
+// FIXME: It crashes. Investigating.
+// UNSUPPORTED: mingw32

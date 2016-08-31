@@ -121,6 +121,9 @@ public:
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
 
+  /// The floating-point denormal mode to use.
+  std::string FPDenormalMode;
+
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;
 

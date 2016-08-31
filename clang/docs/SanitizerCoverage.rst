@@ -324,11 +324,14 @@ and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
 Tracing data flow
 =================
 
-An *experimental* feature to support data-flow-guided fuzzing.
+Support for data-flow-guided fuzzing.
 With ``-fsanitize-coverage=trace-cmp`` the compiler will insert extra instrumentation
 around comparison instructions and switch statements.
-The fuzzer will need to define the following functions,
-they will be called by the instrumented code.
+Similarly, with ``-fsanitize-coverage=trace-div`` the compiler will instrument
+integer division instructions (to capture the right argument of division)
+and with  ``-fsanitize-coverage=trace-gep`` --
+the `LLVM GEP instructions <http://llvm.org/docs/GetElementPtr.html>`_
+(to capture array indices).
 
 .. code-block:: c++
 
@@ -345,6 +348,16 @@ they will be called by the instrumented code.
   // Cases[1] is the size of Val in bits.
   // Cases[2:] are the case constants.
   void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases);
+
+  // Called before a division statement.
+  // Val is the second argument of division.
+  void __sanitizer_cov_trace_div4(uint32_t Val);
+  void __sanitizer_cov_trace_div8(uint64_t Val);
+
+  // Called before a GetElemementPtr (GEP) instruction
+  // for every non-constant array index.
+  void __sanitizer_cov_trace_gep(uintptr_t Idx);
+
 
 This interface is a subject to change.
 The current implementation is not thread-safe and thus can be safely used only for single-threaded targets.

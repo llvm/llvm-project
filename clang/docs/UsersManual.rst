@@ -1075,6 +1075,15 @@ are listed below.
      ``Inf``, and
    * ``+0`` and ``-0`` are interchangeable.
 
+.. option:: -fdenormal-fp-math=[values]
+
+   Select which denormal numbers the code is permitted to require.
+
+   Valid values are: ``ieee``, ``preserve-sign``, and ``positive-zero``,
+   which correspond to IEEE 754 denormal numbers, the sign of a
+   flushed-to-zero number is preserved in the sign of 0, denormals are
+   flushed to positive zero, respectively.
+
 .. option:: -fwhole-program-vtables
 
    Enable whole-program vtable optimizations, such as single-implementation
