@@ -19,7 +19,8 @@ Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 ## BUILDING
 
 To build it, use RadeonOpenCompute LLVM/LLD/Clang. Default branch on these
-repositories is "amd-common", which contains AMD-specific codes yet upstreamed.
+repositories is "amd-common", which may contain AMD-specific codes yet
+upstreamed.
 
     git clone git@github.com:RadeonOpenCompute/llvm.git llvm_amd-common
     cd llvm_amd-common/tools
