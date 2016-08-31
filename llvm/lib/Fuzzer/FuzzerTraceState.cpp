@@ -552,26 +552,34 @@ static void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                               size_t n) {
   if (!n) return;
   size_t Len = std::min(n, (size_t)32);
-  const char *A1 = reinterpret_cast<const char *>(s1);
-  const char *A2 = reinterpret_cast<const char *>(s2);
-  size_t LastSameByte = 0;
-  for (; LastSameByte < Len; LastSameByte++)
-    if (A1[LastSameByte] != A2[LastSameByte])
+  const uint8_t *A1 = reinterpret_cast<const uint8_t *>(s1);
+  const uint8_t *A2 = reinterpret_cast<const uint8_t *>(s2);
+  size_t I = 0;
+  for (; I < Len; I++)
+    if (A1[I] != A2[I])
       break;
   size_t PC = reinterpret_cast<size_t>(caller_pc);
-  VP.AddValue((PC & 4095) | (LastSameByte << 12));
+  size_t Idx = I;
+  // if (I < Len)
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  VP.AddValue((PC & 4095) | (Idx << 12));
 }
 
 static void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
                               size_t n) {
   if (!n) return;
   size_t Len = std::min(n, (size_t)32);
-  size_t LastSameByte = 0;
-  for (; LastSameByte < Len; LastSameByte++)
-    if (s1[LastSameByte] != s2[LastSameByte] || s1[LastSameByte] == 0)
+  const uint8_t *A1 = reinterpret_cast<const uint8_t *>(s1);
+  const uint8_t *A2 = reinterpret_cast<const uint8_t *>(s2);
+  size_t I = 0;
+  for (; I < Len; I++)
+    if (A1[I] != A2[I] || A1[I] == 0)
       break;
   size_t PC = reinterpret_cast<size_t>(caller_pc);
-  VP.AddValue((PC & 4095) | (LastSameByte << 12));
+  size_t Idx = I;
+  // if (I < Len && A1[I])
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  VP.AddValue((PC & 4095) | (Idx << 12));
 }
 
 ATTRIBUTE_TARGET_POPCNT

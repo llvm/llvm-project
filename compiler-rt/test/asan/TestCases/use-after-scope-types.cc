@@ -12,7 +12,7 @@
 // RUN: not %run %t 10 2>&1 | FileCheck %s
 
 // Temporarily disable to fix the bot.
-// XFAIL: darwin
+// UNSUPPORTED: darwin
 
 #include <stdlib.h>
 #include <string>

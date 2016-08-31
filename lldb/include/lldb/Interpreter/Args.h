@@ -202,7 +202,10 @@ public:
     ///     The NULL terminated C string of the copy of \a arg_cstr.
     //------------------------------------------------------------------
     const char *
-    AppendArgument (const char *arg_cstr, char quote_char = '\0');
+    AppendArgument(llvm::StringRef arg_str, char quote_char = '\0');
+
+    const char *
+    AppendArgument(const char *arg_cstr, char quote_char = '\0');
 
     void
     AppendArguments (const Args &rhs);
@@ -227,6 +230,8 @@ public:
     //------------------------------------------------------------------
     const char *
     InsertArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char = '\0');
+    const char *
+    InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str, char quote_char = '\0');
 
     //------------------------------------------------------------------
     /// Replaces the argument value at index \a idx to \a arg_cstr

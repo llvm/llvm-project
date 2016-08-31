@@ -33,9 +33,6 @@
 //    The actual number is computed in TransferBatch.
 //  - (1 << kMaxBytesCachedLog) is the maximal number of bytes per size class.
 //
-// There is one extra size class kBatchClassID that is used for allocating
-// objects of TransferBatch type when kUseSeparateSizeClassForBatch is true.
-//
 // Part of output of SizeClassMap::Print():
 // c00 => s: 0 diff: +0 00% l 0 cached: 0 0; id 0
 // c01 => s: 16 diff: +16 00% l 4 cached: 256 4096; id 1
@@ -97,8 +94,7 @@ class SizeClassMap {
 
   static const uptr kMaxSize = 1UL << kMaxSizeLog;
   static const uptr kNumClasses =
-      kMidClass + ((kMaxSizeLog - kMidSizeLog) << S) + 1 + 1;
-  static const uptr kBatchClassID = kNumClasses - 1;
+      kMidClass + ((kMaxSizeLog - kMidSizeLog) << S) + 1;
   static const uptr kLargestClassID = kNumClasses - 2;
   COMPILER_CHECK(kNumClasses >= 32 && kNumClasses <= 256);
   static const uptr kNumClassesRounded =
@@ -109,8 +105,6 @@ class SizeClassMap {
   static uptr Size(uptr class_id) {
     if (class_id <= kMidClass)
       return kMinSize * class_id;
-    // Should not pass kBatchClassID here, but we should avoid a CHECK.
-    if (class_id == kBatchClassID) return 0;
     class_id -= kMidClass;
     uptr t = kMidSize << (class_id >> S);
     return t + (t >> S) * (class_id & M);
@@ -129,11 +123,6 @@ class SizeClassMap {
 
   static uptr MaxCachedHint(uptr class_id) {
     if (class_id == 0) return 0;
-    // Estimate the result for kBatchClassID because this class
-    // does not know the exact size of TransferBatch.
-    // Moreover, we need to cache fewer batches than user chunks,
-    // so this number could be small.
-    if (class_id == kBatchClassID) return 8;
     uptr n = (1UL << kMaxBytesCachedLog) / Size(class_id);
     return Max<uptr>(1, Min(kMaxNumCachedHint, n));
   }
@@ -149,8 +138,6 @@ class SizeClassMap {
       uptr p = prev_s ? (d * 100 / prev_s) : 0;
       uptr l = s ? MostSignificantSetBitIndex(s) : 0;
       uptr cached = MaxCachedHint(i) * s;
-      if (i == kBatchClassID)
-        d = l = p = 0;
       Printf("c%02zd => s: %zd diff: +%zd %02zd%% l %zd "
              "cached: %zd %zd; id %zd\n",
              i, Size(i), d, p, l, MaxCachedHint(i), cached, ClassID(s));
@@ -162,12 +149,11 @@ class SizeClassMap {
 
   static void Validate() {
     for (uptr c = 1; c < kNumClasses; c++) {
-      if (c == kBatchClassID) continue;
       // Printf("Validate: c%zd\n", c);
       uptr s = Size(c);
       CHECK_NE(s, 0U);
       CHECK_EQ(ClassID(s), c);
-      if (c != kBatchClassID - 1 && c != kNumClasses - 1)
+      if (c != kNumClasses - 1)
         CHECK_EQ(ClassID(s + 1), c + 1);
       CHECK_EQ(ClassID(s - 1), c);
       if (c)

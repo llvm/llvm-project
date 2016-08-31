@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //
-// Compatible with libuwind API documented at:
+// Compatible with libunwind API documented at:
 //   http://www.nongnu.org/libunwind/man/libunwind(3).html
 //
 //===----------------------------------------------------------------------===//
@@ -120,7 +120,7 @@ extern int unw_init_remote_thread(unw_cursor_t *, unw_addr_space_t, thread_t *);
 #endif /* UNW_REMOTE */
 
 /*
- * traditional libuwind "remote" API
+ * traditional libunwind "remote" API
  *   NOT IMPLEMENTED on Mac OS X
  *
  * extern int               unw_init_remote(unw_cursor_t*, unw_addr_space_t,
@@ -151,8 +151,13 @@ enum {
   UNW_X86_ECX = 1,
   UNW_X86_EDX = 2,
   UNW_X86_EBX = 3,
+#ifdef __FreeBSD__
+  UNW_X86_ESP = 4,
+  UNW_X86_EBP = 5,
+#else
   UNW_X86_EBP = 4,
   UNW_X86_ESP = 5,
+#endif
   UNW_X86_ESI = 6,
   UNW_X86_EDI = 7
 };

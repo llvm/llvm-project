@@ -29,13 +29,19 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return;
 
+  // Calling make_smart_ptr from within a member function of a type with a
+  // private or protected constructor would be ill-formed.
+  auto CanCallCtor = unless(has(ignoringImpCasts(cxxConstructExpr(
+      hasDeclaration(decl(unless(isPublic())))))));
+
   Finder->addMatcher(
       cxxBindTemporaryExpr(has(ignoringParenImpCasts(
           cxxConstructExpr(
               hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
               hasArgument(0,
                           cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
-                                         equalsBoundNode(PointerType))))))
+                                         equalsBoundNode(PointerType))))),
+                                     CanCallCtor)
                               .bind(NewExpression)))
               .bind(ConstructorCall)))),
       this);

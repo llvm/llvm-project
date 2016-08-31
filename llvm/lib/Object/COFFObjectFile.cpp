@@ -729,8 +729,12 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
 
   // Initialize the pointer to the symbol table.
   if (getPointerToSymbolTable() != 0) {
-    if ((EC = initSymbolTablePtr()))
-      return;
+    if ((EC = initSymbolTablePtr())) {
+      SymbolTable16 = nullptr;
+      SymbolTable32 = nullptr;
+      StringTable = nullptr;
+      StringTableSize = 0;
+    }
   } else {
     // We had better not have any symbols if we don't have a symbol table.
     if (getNumberOfSymbols() != 0) {

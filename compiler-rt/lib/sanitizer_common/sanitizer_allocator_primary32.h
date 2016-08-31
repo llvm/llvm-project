@@ -83,9 +83,7 @@ class SizeClassAllocator32 {
                  SizeClassMap::kMaxNumCachedHint * sizeof(uptr));
 
   static uptr ClassIdToSize(uptr class_id) {
-    return class_id == SizeClassMap::kBatchClassID
-               ? sizeof(TransferBatch)
-               : SizeClassMap::Size(class_id);
+    return SizeClassMap::Size(class_id);
   }
 
   typedef SizeClassAllocator32<kSpaceBeg, kSpaceSize, kMetadataSize,

@@ -1689,14 +1689,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (YcArg) {
       // Add a separate precompile phase for the compile phase.
       if (FinalPhase >= phases::Compile) {
-        const types::ID HeaderInputType = types::TY_CXXHeader;
+        const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
         llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
-        types::getCompilationPhases(HeaderInputType, PCHPL);
+        types::getCompilationPhases(HeaderType, PCHPL);
         Arg *PchInputArg = MakeInputArg(Args, Opts, YcArg->getValue());
 
         // Build the pipeline for the pch file.
         Action *ClangClPch =
-            C.MakeAction<InputAction>(*PchInputArg, HeaderInputType);
+            C.MakeAction<InputAction>(*PchInputArg, HeaderType);
         for (phases::ID Phase : PCHPL)
           ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
         assert(ClangClPch);

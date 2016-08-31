@@ -1,0 +1,76 @@
+# RUN: yaml2obj %s > %t.so
+# RUN: llvm-readobj -elf-output-style GNU --notes %t.so | FileCheck %s
+
+# CHECK: Displaying notes found at file offset 0x00000300 with length 0x00000020:
+# CHECK:   Owner                 Data size       Description
+# CHECK:   GNU                  0x00000010       NT_GNU_BUILD_ID (unique build ID bitstring)
+# CHECK:     Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+
+# CHECK: Displaying notes found at file offset 0x0000036c with length 0x0000001c:
+# CHECK:   Owner                 Data size       Description
+# CHECK:   GNU                  0x00000009       NT_GNU_GOLD_VERSION (gold version)
+# CHECK:     Version: gold 1.11
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400120
+    AddressAlign:    0x0000000000000004
+    Content:         040000001000000003000000474E55004FCB712AA6387724A9F465A32CD8C14B
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400140
+    AddressAlign:    0x0000000000000001
+    Content:         31C0C3
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400148
+    AddressAlign:    0x0000000000000008
+    Content:         1400000000000000017A5200017810011B0C070890010000140000001C000000D8FFFFFF030000000000000000000000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000401000
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x0000000000401000
+    AddressAlign:    0x0000000000000001
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Content:         004743433A2028474E552920352E342E3000
+  - Name:            .note.gnu.gold-version
+    Type:            SHT_NOTE
+    AddressAlign:    0x0000000000000004
+    Content:         040000000900000004000000474E5500676F6C6420312E3131000000
+Symbols:
+  Local:
+    - Name:            reduced.c
+      Type:            STT_FILE
+    - Type:            STT_FILE
+  Global:
+    - Name:            main
+      Type:            STT_FUNC
+      Section:         .text
+      Value:           0x0000000000400140
+      Size:            0x0000000000000003
+    - Name:            _edata
+      Value:           0x0000000000401000
+    - Name:            __bss_start
+      Value:           0x0000000000401000
+    - Name:            _end
+      Value:           0x0000000000401000
+...

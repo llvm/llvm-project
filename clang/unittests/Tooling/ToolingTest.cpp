@@ -332,6 +332,44 @@ TEST(runToolOnCodeWithArgs, TestNoDepFile) {
   EXPECT_FALSE(llvm::sys::fs::remove(DepFilePath.str()));
 }
 
+struct CheckColoredDiagnosticsAction : public clang::ASTFrontendAction {
+  CheckColoredDiagnosticsAction(bool ShouldShowColor)
+      : ShouldShowColor(ShouldShowColor) {}
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
+                                                 StringRef) override {
+    if (Compiler.getDiagnosticOpts().ShowColors != ShouldShowColor)
+      Compiler.getDiagnostics().Report(
+          Compiler.getDiagnostics().getCustomDiagID(
+              DiagnosticsEngine::Fatal,
+              "getDiagnosticOpts().ShowColors != ShouldShowColor"));
+    return llvm::make_unique<ASTConsumer>();
+  }
+
+private:
+  bool ShouldShowColor = true;
+};
+
+TEST(runToolOnCodeWithArgs, DiagnosticsColor) {
+
+  EXPECT_TRUE(runToolOnCodeWithArgs(new CheckColoredDiagnosticsAction(true), "",
+                                    {"-fcolor-diagnostics"}));
+  EXPECT_TRUE(runToolOnCodeWithArgs(new CheckColoredDiagnosticsAction(false),
+                                    "", {"-fno-color-diagnostics"}));
+  EXPECT_TRUE(
+      runToolOnCodeWithArgs(new CheckColoredDiagnosticsAction(true), "",
+                            {"-fno-color-diagnostics", "-fcolor-diagnostics"}));
+  EXPECT_TRUE(
+      runToolOnCodeWithArgs(new CheckColoredDiagnosticsAction(false), "",
+                            {"-fcolor-diagnostics", "-fno-color-diagnostics"}));
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      new CheckColoredDiagnosticsAction(true), "",
+      {"-fno-color-diagnostics", "-fdiagnostics-color=always"}));
+
+  // Check that this test would fail if ShowColors is not what it should.
+  EXPECT_FALSE(runToolOnCodeWithArgs(new CheckColoredDiagnosticsAction(false),
+                                     "", {"-fcolor-diagnostics"}));
+}
+
 TEST(ClangToolTest, ArgumentAdjusters) {
   FixedCompilationDatabase Compilations("/", std::vector<std::string>());
 

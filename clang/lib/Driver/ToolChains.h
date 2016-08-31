@@ -190,7 +190,7 @@ protected:
     /// \brief Print information about the detected CUDA installation.
     void print(raw_ostream &OS) const;
 
-    /// \brief Get the deteced Cuda install's version.
+    /// \brief Get the detected Cuda install's version.
     CudaVersion version() const { return Version; }
     /// \brief Get the detected Cuda installation path.
     StringRef getInstallPath() const { return InstallPath; }

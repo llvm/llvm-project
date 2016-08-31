@@ -9645,7 +9645,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init,
   }
 
   VarDecl *Def;
-  if ((Def = VDecl->getDefinition()) && Def != VDecl) {
+  if ((Def = VDecl->getDefinition()) && Def != VDecl &&
+      (!VDecl->isStaticDataMember() || VDecl->isOutOfLine())) {
     NamedDecl *Hidden = nullptr;
     if (!hasVisibleDefinition(Def, &Hidden) &&
         (VDecl->getFormalLinkage() == InternalLinkage ||

@@ -3385,6 +3385,9 @@ constraints, e.g. "``~{eax}``". The one exception is that a clobber string of
 memory locations -- not only the memory pointed to by a declared indirect
 output.
 
+Note that clobbering named registers that are also present in output
+constraints is not legal.
+
 
 Constraint Codes
 """"""""""""""""

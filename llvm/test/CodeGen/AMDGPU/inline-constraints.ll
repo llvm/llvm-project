@@ -21,3 +21,13 @@ entry:
   %s256 =  tail call <8 x i32> asm sideeffect "s_load_dwordx8 $0, $1", "=s,s"(i32 addrspace(1)* %ptr)
   ret void
 }
+
+; GCN-LABEL: {{^}}inline_sreg_constraint_m0:
+; GCN: s_mov_b32 m0, -1
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, m0
+; GCN: ; use m0
+define void @inline_sreg_constraint_m0(i32 addrspace(1)* %ptr) {
+  %m0 = tail call i32 asm sideeffect "s_mov_b32 m0, -1", "={M0}"()
+  tail call void asm sideeffect "; use $0", "s"(i32 %m0)
+  ret void
+}

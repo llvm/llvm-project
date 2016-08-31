@@ -82,6 +82,20 @@ TEST(ArrayRefTest, DropFront) {
   EXPECT_EQ(1U, AR3.drop_front(AR3.size() - 1).size());
 }
 
+TEST(ArrayRefTest, TakeBack) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(AR1.end() - 1, 1);
+  EXPECT_TRUE(AR1.take_back().equals(AR2));
+}
+
+TEST(ArrayRefTest, TakeFront) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(AR1.data(), 2);
+  EXPECT_TRUE(AR1.take_front(2).equals(AR2));
+}
+
 TEST(ArrayRefTest, Equals) {
   static const int A1[] = {1, 2, 3, 4, 5, 6, 7, 8};
   ArrayRef<int> AR1(A1);

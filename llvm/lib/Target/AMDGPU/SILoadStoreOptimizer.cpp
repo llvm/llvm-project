@@ -336,6 +336,7 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
     .addImm(0) // gds
     .addMemOperand(*I->memoperands_begin())
     .addMemOperand(*Paired->memoperands_begin());
+  (void)Read2;
 
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
 

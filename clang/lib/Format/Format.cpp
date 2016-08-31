@@ -1263,10 +1263,10 @@ static void sortCppIncludes(const FormatStyle &Style,
                             ArrayRef<tooling::Range> Ranges, StringRef FileName,
                             tooling::Replacements &Replaces, unsigned *Cursor) {
   unsigned IncludesBeginOffset = Includes.front().Offset;
-  unsigned IncludesBlockSize = Includes.back().Offset +
-                               Includes.back().Text.size() -
-                               IncludesBeginOffset;
-  if (!affectsRange(Ranges, IncludesBeginOffset, IncludesBlockSize))
+  unsigned IncludesEndOffset =
+      Includes.back().Offset + Includes.back().Text.size();
+  unsigned IncludesBlockSize = IncludesEndOffset - IncludesBeginOffset;
+  if (!affectsRange(Ranges, IncludesBeginOffset, IncludesEndOffset))
     return;
   SmallVector<unsigned, 16> Indices;
   for (unsigned i = 0, e = Includes.size(); i != e; ++i)

@@ -76,8 +76,7 @@ public:
   bool VisitTypeLoc(const TypeLoc Loc) {
     const SourceLocation TypeBeginLoc = Loc.getBeginLoc();
     const SourceLocation TypeEndLoc = Lexer::getLocForEndOfToken(
-                             TypeBeginLoc, 0, Context.getSourceManager(),
-                             Context.getLangOpts());
+        TypeBeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
     if (const auto *TemplateTypeParm =
             dyn_cast<TemplateTypeParmType>(Loc.getType())) {
       return setResult(TemplateTypeParm->getDecl(), TypeBeginLoc, TypeEndLoc);

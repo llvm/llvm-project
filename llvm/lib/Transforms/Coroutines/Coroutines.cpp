@@ -198,6 +198,7 @@ static void clear(coro::Shape &Shape) {
   Shape.FramePtr = nullptr;
   Shape.AllocaSpillBlock = nullptr;
   Shape.ResumeSwitch = nullptr;
+  Shape.PromiseAlloca = nullptr;
   Shape.HasFinalSuspend = false;
 }
 

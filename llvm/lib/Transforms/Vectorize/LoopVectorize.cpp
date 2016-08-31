@@ -2930,12 +2930,8 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   ScalarParts Entry(UF);
 
   VectorParts Cond;
-  if (IfPredicateInstr) {
-    assert(Instr->getParent()->getSinglePredecessor() &&
-           "Only support single predecessor blocks");
-    Cond = createEdgeMask(Instr->getParent()->getSinglePredecessor(),
-                          Instr->getParent());
-  }
+  if (IfPredicateInstr)
+    Cond = createBlockInMask(Instr->getParent());
 
   // For each vector unroll 'part':
   for (unsigned Part = 0; Part < UF; ++Part) {
@@ -6697,12 +6693,8 @@ void InnerLoopUnroller::scalarizeInstruction(Instruction *Instr,
   ScalarParts Entry(UF);
 
   VectorParts Cond;
-  if (IfPredicateInstr) {
-    assert(Instr->getParent()->getSinglePredecessor() &&
-           "Only support single predecessor blocks");
-    Cond = createEdgeMask(Instr->getParent()->getSinglePredecessor(),
-                          Instr->getParent());
-  }
+  if (IfPredicateInstr)
+    Cond = createBlockInMask(Instr->getParent());
 
   // For each vector unroll 'part':
   for (unsigned Part = 0; Part < UF; ++Part) {

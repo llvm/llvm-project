@@ -33,6 +33,24 @@
 # RUN: ld.lld -o %t4 --script %t4.script %tfirst.o %tsecond.o
 # RUN: llvm-objdump -s %t4 | FileCheck --check-prefix=SECONDFIRST %s
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %T/linkerscript-filename-spec1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
+# RUN:   %p/Inputs/linkerscript-filename-spec.s -o %T/linkerscript-filename-spec2.o
+
+# RUN: echo "SECTIONS { .foo : { \
+# RUN:   linkerscript-filename-spec2.o(.foo) \
+# RUN:   linkerscript-filename-spec1.o(.foo) } }" > %t5.script
+# RUN: ld.lld -o %t5 --script %t5.script \
+# RUN:   %T/linkerscript-filename-spec1.o %T/linkerscript-filename-spec2.o
+# RUN: llvm-objdump -s %t5 | FileCheck --check-prefix=SECONDFIRST %s
+
+# RUN: echo "SECTIONS { .foo : { \
+# RUN:   linkerscript-filename-spec1.o(.foo) \
+# RUN:   linkerscript-filename-spec2.o(.foo) } }" > %t6.script
+# RUN: ld.lld -o %t6 --script %t6.script \
+# RUN:   %T/linkerscript-filename-spec1.o %T/linkerscript-filename-spec2.o
+# RUN: llvm-objdump -s %t6 | FileCheck --check-prefix=FIRSTSECOND %s
+
 .global _start
 _start:
  nop

@@ -16729,11 +16729,11 @@ void __ovld retain_event(clk_event_t);
 
 void __ovld release_event(clk_event_t);
 
-clk_event_t create_user_event(void);
+clk_event_t __ovld create_user_event(void);
 
 void __ovld set_user_event_status(clk_event_t e, int state);
 
-bool is_valid_event (clk_event_t event);
+bool __ovld is_valid_event (clk_event_t event);
 
 void __ovld capture_event_profiling_info(clk_event_t, clk_profiling_info, __global void* value);
 

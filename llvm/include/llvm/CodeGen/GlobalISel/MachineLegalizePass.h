@@ -26,6 +26,8 @@
 
 namespace llvm {
 
+class MachineRegisterInfo;
+
 class MachineLegalizePass : public MachineFunctionPass {
 public:
   static char ID;
@@ -54,6 +56,9 @@ public:
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::Legalized);
   }
+
+  bool combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       const TargetInstrInfo &TII);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };

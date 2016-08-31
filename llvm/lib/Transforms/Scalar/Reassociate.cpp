@@ -1863,6 +1863,8 @@ void ReassociatePass::RecursivelyEraseDeadInsts(
 /// Zap the given instruction, adding interesting operands to the work list.
 void ReassociatePass::EraseInst(Instruction *I) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
+  DEBUG(dbgs() << "Erasing dead inst: "; I->dump());
+
   SmallVector<Value*, 8> Ops(I->op_begin(), I->op_end());
   // Erase the dead instruction.
   ValueRankMap.erase(I);

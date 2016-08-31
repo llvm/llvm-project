@@ -100,6 +100,38 @@ void basic() {
   std::shared_ptr<int> Placement = std::shared_ptr<int>(new (PInt) int{3});
 }
 
+// Calling make_smart_ptr from within a member function of a type with a
+// private or protected constructor would be ill-formed.
+class Private {
+private:
+  Private(int z) {}
+
+public:
+  Private() {}
+  void create() {
+    auto callsPublic = std::shared_ptr<Private>(new Private);
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_shared instead
+    // CHECK-FIXES: auto callsPublic = std::make_shared<Private>();
+    auto ptr = std::shared_ptr<Private>(new Private(42));
+  }
+
+  virtual ~Private();
+};
+
+class Protected {
+protected:
+  Protected() {}
+
+public:
+  Protected(int, int) {}
+  void create() {
+    auto callsPublic = std::shared_ptr<Protected>(new Protected(1, 2));
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_shared instead
+    // CHECK-FIXES: auto callsPublic = std::make_shared<Protected>(1, 2);
+    auto ptr = std::shared_ptr<Protected>(new Protected);
+  }
+};
+
 void initialization(int T, Base b) {
   // Test different kinds of initialization of the pointee.
 

@@ -12,6 +12,7 @@
 // This file contains error reporting code.
 //===----------------------------------------------------------------------===//
 
+#include "asan_errors.h"
 #include "asan_flags.h"
 #include "asan_descriptions.h"
 #include "asan_internal.h"
@@ -267,6 +268,8 @@ class ScopedInErrorReport {
   }
 
   ~ScopedInErrorReport() {
+    if (current_error_.IsValid()) current_error_.Print();
+
     // Make sure the current thread is announced.
     DescribeThread(GetCurrentThread());
     // We may want to grab this lock again when printing stats.
@@ -301,6 +304,12 @@ class ScopedInErrorReport {
     }
   }
 
+  void ReportError(const ErrorDescription &description) {
+    // Can only report one error per ScopedInErrorReport.
+    CHECK_EQ(current_error_.kind, kErrorKindInvalid);
+    current_error_ = description;
+  }
+
  private:
   void StartReporting(ReportData *report) {
     if (report) report_data = *report;
@@ -319,26 +328,20 @@ class ScopedInErrorReport {
 
   static StaticSpinMutex lock_;
   static u32 reporting_thread_tid_;
+  // Error currently being reported. This enables the destructor to interact
+  // with the debugger and point it to an error description.
+  static ErrorDescription current_error_;
   bool halt_on_error_;
 };
 
 StaticSpinMutex ScopedInErrorReport::lock_;
 u32 ScopedInErrorReport::reporting_thread_tid_ = kInvalidTid;
+ErrorDescription ScopedInErrorReport::current_error_;
 
 void ReportStackOverflow(const SignalContext &sig) {
   ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report(
-      "ERROR: AddressSanitizer: stack-overflow on address %p"
-      " (pc %p bp %p sp %p T%d)\n",
-      (void *)sig.addr, (void *)sig.pc, (void *)sig.bp, (void *)sig.sp,
-      GetCurrentTidOrInvalid());
-  Printf("%s", d.EndWarning());
-  ScarinessScore::PrintSimple(10, "stack-overflow");
-  GET_STACK_TRACE_SIGNAL(sig);
-  stack.Print();
-  ReportErrorSummary("stack-overflow", &stack);
+  ErrorStackOverflow error{sig, GetCurrentTidOrInvalid()};  // NOLINT
+  in_report.ReportError(error);
 }
 
 void ReportDeadlySignal(const char *description, const SignalContext &sig) {

@@ -193,6 +193,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<LLT> ResTys,
   assert(ResTys.size() == Results.size() && Results.size() == Indices.size() &&
          "inconsistent number of regs");
   assert(!Results.empty() && "invalid trivial extract");
+  assert(std::is_sorted(Indices.begin(), Indices.end()) &&
+         "extract offsets must be in ascending order");
 
   auto MIB = BuildMI(getMF(), DL, getTII().get(TargetOpcode::G_EXTRACT));
   for (unsigned i = 0; i < ResTys.size(); ++i)
@@ -222,6 +224,8 @@ MachineIRBuilder::buildSequence(LLT ResTy, unsigned Res,
   assert(OpTys.size() == Ops.size() && Ops.size() == Indices.size() &&
          "incompatible args");
   assert(!Ops.empty() && "invalid trivial sequence");
+  assert(std::is_sorted(Indices.begin(), Indices.end()) &&
+         "sequence offsets must be in ascending order");
 
   MachineInstrBuilder MIB =
       buildInstr(TargetOpcode::G_SEQUENCE, LLT::scalar(ResTy.getSizeInBits()));

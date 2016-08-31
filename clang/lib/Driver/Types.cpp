@@ -276,3 +276,21 @@ ID types::lookupCXXTypeForCType(ID Id) {
     return types::TY_PP_CXXHeader;
   }
 }
+
+ID types::lookupHeaderTypeForSourceType(ID Id) {
+  switch (Id) {
+  default:
+    return Id;
+
+  case types::TY_C:
+    return types::TY_CHeader;
+  case types::TY_CXX:
+    return types::TY_CXXHeader;
+  case types::TY_ObjC:
+    return types::TY_ObjCHeader;
+  case types::TY_ObjCXX:
+    return types::TY_ObjCXXHeader;
+  case types::TY_CL:
+    return types::TY_CLHeader;
+  }
+}

@@ -231,3 +231,13 @@
 // CHECK-NO-UNSAFE-MATH: "-cc1"
 // CHECK-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
 // CHECK-NO-UNSAFE-MATH: "-o"
+//
+// RUN: %clang -### -fdenormal-fp-math=ieee -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FP-DENORMAL-IEEE %s
+// RUN: %clang -### -fdenormal-fp-math=preserve-sign -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FP-DENORMAL-PS %s
+// RUN: %clang -### -fdenormal-fp-math=positive-zero -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FP-DENORMAL-PZ %s
+// CHECK-FP-DENORMAL-IEEE: "-fdenormal-fp-math=ieee"
+// CHECK-FP-DENORMAL-PS: "-fdenormal-fp-math=preserve-sign"
+// CHECK-FP-DENORMAL-PZ: "-fdenormal-fp-math=positive-zero"

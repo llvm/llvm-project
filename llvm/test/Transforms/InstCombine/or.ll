@@ -189,9 +189,22 @@ define i1 @test18(i32 %A) {
 ;
   %B = icmp sge i32 %A, 100
   %C = icmp slt i32 %A, 50
-  ;; (A-50) >u 50
   %D = or i1 %B, %C
   ret i1 %D
+}
+
+; FIXME: Vectors should fold too.
+define <2 x i1> @test18vec(<2 x i32> %A) {
+; CHECK-LABEL: @test18vec(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i32> %A, <i32 99, i32 99>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %A, <i32 50, i32 50>
+; CHECK-NEXT:    [[D:%.*]] = or <2 x i1> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %B = icmp sge <2 x i32> %A, <i32 100, i32 100>
+  %C = icmp slt <2 x i32> %A, <i32 50, i32 50>
+  %D = or <2 x i1> %B, %C
+  ret <2 x i1> %D
 }
 
 define i1 @test19(i32 %A) {

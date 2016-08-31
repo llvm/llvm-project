@@ -576,6 +576,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CorrectlyRoundedDivSqrt =
       Args.hasArg(OPT_cl_fp32_correctly_rounded_divide_sqrt);
   Opts.ReciprocalMath = Args.hasArg(OPT_freciprocal_math);
+  Opts.NoTrappingMath = Args.hasArg(OPT_fno_trapping_math);
   Opts.NoZeroInitializedInBSS = Args.hasArg(OPT_mno_zero_initialized_in_bss);
   Opts.BackendOptions = Args.getAllArgValues(OPT_backend_option);
   Opts.NumRegisterParameters = getLastArgIntValue(Args, OPT_mregparm, 0, Diags);
@@ -790,6 +791,18 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setFPContractMode(CodeGenOptions::FPC_On);
     else if (Val == "off")
       Opts.setFPContractMode(CodeGenOptions::FPC_Off);
+    else
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+  }
+
+  if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "ieee")
+      Opts.FPDenormalMode = "ieee";
+    else if (Val == "preserve-sign")
+      Opts.FPDenormalMode = "preserve-sign";
+    else if (Val == "positive-zero")
+      Opts.FPDenormalMode = "positive-zero";
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }

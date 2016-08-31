@@ -711,13 +711,12 @@ def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
                                  [LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
                                   LLVMVectorSameWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
-                                 [IntrReadMem, IntrArgMemOnly]>;
+				  [IntrReadMem]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
                                    LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
-                                   LLVMVectorSameWidth<0, llvm_i1_ty>],
-                                  [IntrArgMemOnly]>;
+                                   LLVMVectorSameWidth<0, llvm_i1_ty>]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],

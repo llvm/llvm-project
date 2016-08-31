@@ -85,6 +85,20 @@ define i1 @test8(i32 %i) {
   ret i1 %cond
 }
 
+; FIXME: Vectors should fold too.
+define <2 x i1> @test8vec(<2 x i32> %i) {
+; CHECK-LABEL: @test8vec(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> %i, zeroinitializer
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i32> %i, <i32 14, i32 14>
+; CHECK-NEXT:    [[COND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[COND]]
+;
+  %cmp1 = icmp ne <2 x i32> %i, zeroinitializer
+  %cmp2 = icmp ult <2 x i32> %i, <i32 14, i32 14>
+  %cond = and <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %cond
+}
+
 ; combine -x & 1 into x & 1
 define i64 @test9(i64 %x) {
 ; CHECK-LABEL: @test9(

@@ -413,6 +413,9 @@ cplusplus
 cplusplus11
   C++11 support is available.
 
+gnuinlineasm
+  GNU inline ASM is available.
+
 objc
   Objective-C support is available.
 

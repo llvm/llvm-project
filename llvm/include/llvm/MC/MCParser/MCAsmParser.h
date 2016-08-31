@@ -148,6 +148,17 @@ public:
   /// \brief Report an error at the current lexer location.
   bool TokError(const Twine &Msg, ArrayRef<SMRange> Ranges = None);
 
+  bool parseTokenLoc(SMLoc &Loc);
+  bool parseToken(AsmToken::TokenKind T, const Twine &Msg);
+  bool parseOptionalToken(AsmToken::TokenKind T, bool &Present);
+
+  bool parseEOL(const Twine &ErrMsg);
+
+  bool parseIntToken(int64_t &V, const Twine &ErrMsg);
+
+  bool check(bool P, const llvm::Twine &Msg);
+  bool check(bool P, SMLoc Loc, const llvm::Twine &Msg);
+
   /// \brief Parse an identifier or string (as a quoted identifier) and set \p
   /// Res to the identifier contents.
   virtual bool parseIdentifier(StringRef &Res) = 0;

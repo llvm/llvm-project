@@ -229,6 +229,14 @@ SBType::GetArrayElementType()
 }
 
 SBType
+SBType::GetArrayType (uint64_t size)
+{
+    if (!IsValid())
+        return SBType();
+    return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetCompilerType(true).GetArrayType(size))));
+}
+
+SBType
 SBType::GetVectorElementType ()
 {
     SBType type_sb;

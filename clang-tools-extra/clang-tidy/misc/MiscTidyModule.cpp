@@ -27,6 +27,7 @@
 #include "MisplacedWideningCastCheck.h"
 #include "MoveConstantArgumentCheck.h"
 #include "MoveConstructorInitCheck.h"
+#include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
@@ -92,6 +93,8 @@ public:
         "misc-move-const-arg");
     CheckFactories.registerCheck<MoveConstructorInitCheck>(
         "misc-move-constructor-init");
+    CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
+        "misc-move-forwarding-reference");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "misc-multiple-statement-macro");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(

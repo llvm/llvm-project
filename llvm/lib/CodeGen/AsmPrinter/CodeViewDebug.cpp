@@ -1137,13 +1137,6 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
 TypeIndex CodeViewDebug::lowerTypePointer(const DIDerivedType *Ty) {
   TypeIndex PointeeTI = getTypeIndex(Ty->getBaseType());
 
-  // While processing the type being pointed to it is possible we already
-  // created this pointer type.  If so, we check here and return the existing
-  // pointer type.
-  auto I = TypeIndices.find({Ty, nullptr});
-  if (I != TypeIndices.end())
-    return I->second;
-
   // Pointers to simple types can use SimpleTypeMode, rather than having a
   // dedicated pointer type record.
   if (PointeeTI.isSimple() &&
@@ -1264,16 +1257,7 @@ TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
       BaseTy = cast<DIDerivedType>(BaseTy)->getBaseType().resolve();
   }
   TypeIndex ModifiedTI = getTypeIndex(BaseTy);
-
-  // While processing the type being pointed to, it is possible we already
-  // created this modifier type.  If so, we check here and return the existing
-  // modifier type.
-  auto I = TypeIndices.find({Ty, nullptr});
-  if (I != TypeIndices.end())
-    return I->second;
-
-  ModifierRecord MR(ModifiedTI, Mods);
-  return TypeTable.writeKnownType(MR);
+  return TypeTable.writeKnownType(ModifierRecord(ModifiedTI, Mods));
 }
 
 TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {

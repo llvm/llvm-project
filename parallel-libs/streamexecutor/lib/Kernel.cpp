@@ -20,26 +20,8 @@
 
 namespace streamexecutor {
 
-KernelBase::KernelBase(Device *Dev, const std::string &Name,
-                       const std::string &DemangledName,
-                       std::unique_ptr<KernelInterface> Implementation)
-    : TheDevice(Dev), Name(Name), DemangledName(DemangledName),
-      Implementation(std::move(Implementation)) {}
-
-KernelBase::~KernelBase() = default;
-
-Expected<KernelBase> KernelBase::create(Device *Dev,
-                                        const MultiKernelLoaderSpec &Spec) {
-  auto MaybeImplementation = Dev->getKernelImplementation(Spec);
-  if (!MaybeImplementation) {
-    return MaybeImplementation.takeError();
-  }
-  std::string Name = Spec.getKernelName();
-  std::string DemangledName =
-      llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr);
-  KernelBase Instance(Dev, Name, DemangledName,
-                      std::move(*MaybeImplementation));
-  return std::move(Instance);
-}
+KernelBase::KernelBase(llvm::StringRef Name)
+    : Name(Name), DemangledName(llvm::symbolize::LLVMSymbolizer::DemangleName(
+                      Name, nullptr)) {}
 
 } // namespace streamexecutor

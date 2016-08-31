@@ -11,8 +11,8 @@
 ; We could add one extra bit for ODR so that we know that preemption is not
 ; necessary, but that is probably not worth it.
 
-; CHECK: @foo = internal unnamed_addr constant i8 42
-; CHECK: @bar = weak_odr unnamed_addr constant i8 42
+; CHECK: @foo = internal constant i8 42
+; CHECK: @bar = weak_odr constant i8 42
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

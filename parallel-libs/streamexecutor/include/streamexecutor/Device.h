@@ -15,13 +15,14 @@
 #ifndef STREAMEXECUTOR_DEVICE_H
 #define STREAMEXECUTOR_DEVICE_H
 
+#include <type_traits>
+
 #include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/PlatformInterfaces.h"
 #include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 
-class KernelInterface;
 class Stream;
 
 class Device {
@@ -29,11 +30,24 @@ public:
   explicit Device(PlatformDevice *PDevice);
   virtual ~Device();
 
-  /// Gets the kernel implementation for the underlying platform.
-  virtual Expected<std::unique_ptr<KernelInterface>>
-  getKernelImplementation(const MultiKernelLoaderSpec &Spec) {
-    // TODO(jhen): Implement this.
-    return nullptr;
+  /// Creates a kernel object for this device.
+  ///
+  /// If the return value is not an error, the returned pointer will never be
+  /// null.
+  ///
+  /// See \ref CompilerGeneratedKernelExample "Kernel.h" for an example of how
+  /// this method is used.
+  template <typename KernelT>
+  Expected<std::unique_ptr<typename std::enable_if<
+      std::is_base_of<KernelBase, KernelT>::value, KernelT>::type>>
+  createKernel(const MultiKernelLoaderSpec &Spec) {
+    Expected<std::unique_ptr<PlatformKernelHandle>> MaybeKernelHandle =
+        PDevice->createKernel(Spec);
+    if (!MaybeKernelHandle) {
+      return MaybeKernelHandle.takeError();
+    }
+    return llvm::make_unique<KernelT>(Spec.getKernelName(),
+                                      std::move(*MaybeKernelHandle));
   }
 
   Expected<std::unique_ptr<Stream>> createStream();

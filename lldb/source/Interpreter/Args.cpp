@@ -430,13 +430,19 @@ Args::AppendArguments (const char **argv)
 }
 
 const char *
-Args::AppendArgument (const char *arg_cstr, char quote_char)
+Args::AppendArgument(llvm::StringRef arg_str, char quote_char)
+{
+    return InsertArgumentAtIndex(GetArgumentCount(), arg_str, quote_char);
+}
+
+const char *
+Args::AppendArgument(const char *arg_cstr, char quote_char)
 {
     return InsertArgumentAtIndex (GetArgumentCount(), arg_cstr, quote_char);
 }
 
 const char *
-Args::InsertArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char)
+Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str, char quote_char)
 {
     // Since we are using a std::list to hold onto the copied C string and
     // we don't have direct access to the elements, we have to iterate to
@@ -446,8 +452,8 @@ Args::InsertArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char)
     for (pos = m_args.begin(); i > 0 && pos != end; ++pos)
         --i;
 
-    pos = m_args.insert(pos, arg_cstr);
-    
+    pos = m_args.insert(pos, std::string(arg_str.data(), arg_str.size()));
+
     if (idx >= m_args_quote_char.size())
     {
         m_args_quote_char.resize(idx + 1);
@@ -455,13 +461,19 @@ Args::InsertArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char)
     }
     else
         m_args_quote_char.insert(m_args_quote_char.begin() + idx, quote_char);
-    
+
     UpdateArgvFromArgs();
     return GetArgumentAtIndex(idx);
 }
 
 const char *
-Args::ReplaceArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char)
+Args::InsertArgumentAtIndex(size_t idx, const char *arg_cstr, char quote_char)
+{
+    return InsertArgumentAtIndex(idx, llvm::StringRef(arg_cstr), quote_char);
+}
+
+const char *
+Args::ReplaceArgumentAtIndex(size_t idx, const char *arg_cstr, char quote_char)
 {
     // Since we are using a std::list to hold onto the copied C string and
     // we don't have direct access to the elements, we have to iterate to
@@ -848,6 +860,7 @@ Args::StringToBoolean (const char *s, bool fail_value, bool *success_ptr)
 bool
 Args::StringToBoolean(llvm::StringRef ref, bool fail_value, bool *success_ptr)
 {
+    ref = ref.trim();
     if (ref.equals_lower("false") ||
         ref.equals_lower("off") ||
         ref.equals_lower("no") ||
@@ -1125,14 +1138,14 @@ Args::StringToGenericRegister(llvm::StringRef s)
                           .Case("fp", LLDB_REGNUM_GENERIC_FP)
                           .Cases("ra", "lr", LLDB_REGNUM_GENERIC_RA)
                           .Case("flags", LLDB_REGNUM_GENERIC_FLAGS)
-                          .Case("arg1\0", LLDB_REGNUM_GENERIC_ARG1)
-                          .Case("arg2\0", LLDB_REGNUM_GENERIC_ARG2)
-                          .Case("arg3\0", LLDB_REGNUM_GENERIC_ARG3)
-                          .Case("arg4\0", LLDB_REGNUM_GENERIC_ARG4)
-                          .Case("arg5\0", LLDB_REGNUM_GENERIC_ARG5)
-                          .Case("arg6\0", LLDB_REGNUM_GENERIC_ARG6)
-                          .Case("arg7\0", LLDB_REGNUM_GENERIC_ARG7)
-                          .Case("arg8\0", LLDB_REGNUM_GENERIC_ARG8)
+                          .Case("arg1", LLDB_REGNUM_GENERIC_ARG1)
+                          .Case("arg2", LLDB_REGNUM_GENERIC_ARG2)
+                          .Case("arg3", LLDB_REGNUM_GENERIC_ARG3)
+                          .Case("arg4", LLDB_REGNUM_GENERIC_ARG4)
+                          .Case("arg5", LLDB_REGNUM_GENERIC_ARG5)
+                          .Case("arg6", LLDB_REGNUM_GENERIC_ARG6)
+                          .Case("arg7", LLDB_REGNUM_GENERIC_ARG7)
+                          .Case("arg8", LLDB_REGNUM_GENERIC_ARG8)
                           .Default(LLDB_INVALID_REGNUM);
     return result;
 }

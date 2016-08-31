@@ -250,11 +250,11 @@ static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
   T.detach();
 }
 
-int RunOneTest(Fuzzer *F, const char *InputFilePath) {
+int RunOneTest(Fuzzer *F, const char *InputFilePath, size_t MaxLen) {
   Unit U = FileToVector(InputFilePath);
-  Unit PreciseSizedU(U);
-  assert(PreciseSizedU.size() == PreciseSizedU.capacity());
-  F->RunOne(PreciseSizedU.data(), PreciseSizedU.size());
+  if (MaxLen && MaxLen < U.size())
+    U.resize(MaxLen);
+  F->RunOne(U.data(), U.size());
   return 0;
 }
 
@@ -380,7 +380,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       auto StartTime = system_clock::now();
       Printf("Running: %s\n", Path.c_str());
       for (int Iter = 0; Iter < Runs; Iter++)
-        RunOneTest(&F, Path.c_str());
+        RunOneTest(&F, Path.c_str(), Options.MaxLen);
       auto StopTime = system_clock::now();
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
       Printf("Executed %s in %zd ms\n", Path.c_str(), (long)MS);

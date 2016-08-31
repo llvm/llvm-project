@@ -282,42 +282,6 @@ public:
 
   void checkForValidSection() override;
 
-  bool getTokenLoc(SMLoc &Loc) {
-    Loc = getTok().getLoc();
-    return false;
-  }
-
-  bool parseEOL(const Twine &ErrMsg) {
-    if (getTok().getKind() == AsmToken::Hash) {
-      StringRef CommentStr = parseStringToEndOfStatement();
-      Lexer.Lex();
-      Lexer.UnLex(AsmToken(AsmToken::EndOfStatement, CommentStr));
-    }
-    if (getTok().getKind() != AsmToken::EndOfStatement)
-      return TokError(ErrMsg);
-    Lex();
-    return false;
-  }
-
-  /// parseToken - If current token has the specified kind, eat it and
-  /// return success.  Otherwise, emit the specified error and return failure.
-  bool parseToken(AsmToken::TokenKind T, const Twine &ErrMsg) {
-    if (T == AsmToken::EndOfStatement)
-      return parseEOL(ErrMsg);
-    if (getTok().getKind() != T)
-      return TokError(ErrMsg);
-    Lex();
-    return false;
-  }
-
-  bool parseIntToken(int64_t &V, const Twine &ErrMsg) {
-    if (getTok().getKind() != AsmToken::Integer)
-      return TokError(ErrMsg);
-    V = getTok().getIntVal();
-    Lex();
-    return false;
-  }
-
   /// }
 
 private:
@@ -374,18 +338,6 @@ private:
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
   static void DiagHandler(const SMDiagnostic &Diag, void *Context);
-
-  bool check(bool P, SMLoc Loc, const Twine &Msg) {
-    if (P)
-      return Error(Loc, Msg);
-    return false;
-  }
-
-  bool check(bool P, const Twine &Msg) {
-    if (P)
-      return TokError(Msg);
-    return false;
-  }
 
   /// \brief Enter the specified file. This returns true on failure.
   bool enterIncludeFile(const std::string &Filename);
@@ -2932,13 +2884,13 @@ bool AsmParser::parseDirectiveFill() {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
 
     if (parseToken(AsmToken::Comma, "unexpected token in '.fill' directive") ||
-        getTokenLoc(SizeLoc) || parseAbsoluteExpression(FillSize))
+        parseTokenLoc(SizeLoc) || parseAbsoluteExpression(FillSize))
       return true;
 
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       if (parseToken(AsmToken::Comma,
                      "unexpected token in '.fill' directive") ||
-          getTokenLoc(ExprLoc) || parseAbsoluteExpression(FillExpr) ||
+          parseTokenLoc(ExprLoc) || parseAbsoluteExpression(FillExpr) ||
           parseToken(AsmToken::EndOfStatement,
                      "unexpected token in '.fill' directive"))
         return true;
@@ -3016,7 +2968,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
 
     if (getTok().isNot(AsmToken::EndOfStatement)) {
       if (parseToken(AsmToken::Comma, "unexpected token in directive") ||
-          getTokenLoc(MaxBytesLoc) || parseAbsoluteExpression(MaxBytesToFill))
+          parseTokenLoc(MaxBytesLoc) || parseAbsoluteExpression(MaxBytesToFill))
         return true;
     }
   }
@@ -3295,11 +3247,11 @@ bool AsmParser::parseDirectiveCVFile() {
 bool AsmParser::parseDirectiveCVLoc() {
   SMLoc Loc;
   int64_t FunctionId, FileNumber;
-  if (getTokenLoc(Loc) ||
+  if (parseTokenLoc(Loc) ||
       parseIntToken(FunctionId, "unexpected token in '.cv_loc' directive") ||
       check(FunctionId < 0, Loc,
             "function id less than zero in '.cv_loc' directive") ||
-      getTokenLoc(Loc) ||
+      parseTokenLoc(Loc) ||
       parseIntToken(FileNumber, "expected integer in '.cv_loc' directive") ||
       check(FileNumber < 1, Loc,
             "file number less than one in '.cv_loc' directive") ||
@@ -3368,12 +3320,12 @@ bool AsmParser::parseDirectiveCVLinetable() {
             "function id less than zero in '.cv_linetable' directive") ||
       parseToken(AsmToken::Comma,
                  "unexpected token in '.cv_linetable' directive") ||
-      getTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
-                                "expected identifier in directive") ||
+      parseTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
+                                  "expected identifier in directive") ||
       parseToken(AsmToken::Comma,
                  "unexpected token in '.cv_linetable' directive") ||
-      getTokenLoc(Loc) || check(parseIdentifier(FnEndName), Loc,
-                                "expected identifier in directive"))
+      parseTokenLoc(Loc) || check(parseIdentifier(FnEndName), Loc,
+                                  "expected identifier in directive"))
     return true;
 
   MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
@@ -3395,22 +3347,22 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
           "expected PrimaryFunctionId in '.cv_inline_linetable' directive") ||
       check(PrimaryFunctionId < 0, Loc,
             "function id less than zero in '.cv_inline_linetable' directive") ||
-      getTokenLoc(Loc) ||
+      parseTokenLoc(Loc) ||
       parseIntToken(
           SourceFileId,
           "expected SourceField in '.cv_inline_linetable' directive") ||
       check(SourceFileId <= 0, Loc,
             "File id less than zero in '.cv_inline_linetable' directive") ||
-      getTokenLoc(Loc) ||
+      parseTokenLoc(Loc) ||
       parseIntToken(
           SourceLineNum,
           "expected SourceLineNum in '.cv_inline_linetable' directive") ||
       check(SourceLineNum < 0, Loc,
             "Line number less than zero in '.cv_inline_linetable' directive") ||
-      getTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
-                                "expected identifier in directive") ||
-      getTokenLoc(Loc) || check(parseIdentifier(FnEndName), Loc,
-                                "expected identifier in directive"))
+      parseTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
+                                  "expected identifier in directive") ||
+      parseTokenLoc(Loc) || check(parseIdentifier(FnEndName), Loc,
+                                  "expected identifier in directive"))
     return true;
 
   SmallVector<unsigned, 8> SecondaryFunctionIds;
@@ -4057,8 +4009,9 @@ bool AsmParser::parseDirectiveEndMacro(StringRef Directive) {
 bool AsmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
   StringRef Name;
   SMLoc Loc;
-  if (getTokenLoc(Loc) || check(parseIdentifier(Name), Loc,
-                                "expected identifier in '.purgem' directive") ||
+  if (parseTokenLoc(Loc) ||
+      check(parseIdentifier(Name), Loc,
+            "expected identifier in '.purgem' directive") ||
       parseToken(AsmToken::EndOfStatement,
                  "unexpected token in '.purgem' directive"))
     return true;

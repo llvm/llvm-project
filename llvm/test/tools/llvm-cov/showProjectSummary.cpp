@@ -42,5 +42,5 @@ int main(int argc, char ** argv) {
 // HTML-FILE: showProjectSummary.covmapping</pre>
 // HTML-FUNCTION: <pre>Function: main</pre>
 // HTML-HEADER: <tr><td><span><pre>Line No.</pre></span></td>
-// HTML-HEADER: <td><span><pre>Count No.</pre></span></td>
+// HTML-HEADER: <td><span><pre>Count</pre></span></td>
 // HTML-HEADER: <td><span><pre>Source</pre></span></td>
