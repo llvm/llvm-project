@@ -1,6 +1,6 @@
 ## OVERVIEW
 
-ROCm Device libraries are currently in early development and considered experimental and incomplete.
+ROCm Device libraries are currently in early development and considered experimental.
 
 This repository contains the following libraries:
 
