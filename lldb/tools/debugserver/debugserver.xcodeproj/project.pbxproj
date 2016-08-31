@@ -30,7 +30,6 @@
 		23D1B0291D497E8B00FF831B /* OsLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D1B0271D497E8B00FF831B /* OsLogger.cpp */; };
 		23D1B02A1D497E8B00FF831B /* OsLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D1B0271D497E8B00FF831B /* OsLogger.cpp */; };
 		264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 264D5D571293835600ED4C01 /* DNBArch.cpp */; };
-		2660D9CE1192280900958FBD /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9CC1192280900958FBD /* StringExtractor.cpp */; };
 		266B5ED11460A68200E43F0A /* DNBArchImplARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */; };
 		26CE05A7115C360D0022F371 /* DNBError.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C637DE0C71334A0024798E /* DNBError.cpp */; };
 		26CE05A8115C36170022F371 /* DNBThreadResumeActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260E7331114BFFE600D1DFB3 /* DNBThreadResumeActions.cpp */; };
@@ -94,12 +93,13 @@
 		456F67621AD46CE9002850C2 /* CFString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2695DD9B0D3EC160007E4CA2 /* CFString.cpp */; };
 		456F67641AD46CE9002850C2 /* CFBundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2695DD910D3EBFF6007E4CA2 /* CFBundle.cpp */; };
 		456F67651AD46CE9002850C2 /* PseudoTerminal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF67ABFF0D34604D0022D128 /* PseudoTerminal.cpp */; };
-		456F67661AD46CE9002850C2 /* StringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660D9CC1192280900958FBD /* StringExtractor.cpp */; };
 		456F67671AD46CE9002850C2 /* DNBArch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 264D5D571293835600ED4C01 /* DNBArch.cpp */; };
 		456F67681AD46CE9002850C2 /* HasAVX.s in Sources */ = {isa = PBXBuildFile; fileRef = 4971AE7113D10F4F00649E37 /* HasAVX.s */; };
 		456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */; };
 		456F676B1AD46CE9002850C2 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26ACA3340D3E956300A2120B /* CoreFoundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		4971AE7213D10F4F00649E37 /* HasAVX.s in Sources */ = {isa = PBXBuildFile; fileRef = 4971AE7113D10F4F00649E37 /* HasAVX.s */; };
+		AF48558C1D75126800D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
+		AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
 		AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */; };
 /* End PBXBuildFile section */
 
@@ -141,7 +141,6 @@
 		264D5D571293835600ED4C01 /* DNBArch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNBArch.cpp; sourceTree = "<group>"; };
 		264F679A1B2F9EB200140093 /* JSONGenerator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JSONGenerator.h; sourceTree = "<group>"; };
 		26593A060D4931CC001C9FE3 /* ChangeLog */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
-		2660D9CC1192280900958FBD /* StringExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringExtractor.cpp; path = ../../source/Utility/StringExtractor.cpp; sourceTree = SOURCE_ROOT; };
 		266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNBArchImplARM64.cpp; sourceTree = "<group>"; };
 		266B5ED01460A68200E43F0A /* DNBArchImplARM64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBArchImplARM64.h; sourceTree = "<group>"; };
 		2672DBEE0EEF446700E92059 /* PThreadMutex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PThreadMutex.cpp; sourceTree = "<group>"; };
@@ -216,6 +215,7 @@
 		9457ECF61419864100DFE7D8 /* stack_logging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stack_logging.h; sourceTree = "<group>"; };
 		AF0934BA18E12B92005A11FD /* Genealogy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Genealogy.h; sourceTree = "<group>"; };
 		AF0934BB18E12B92005A11FD /* GenealogySPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GenealogySPI.h; sourceTree = "<group>"; };
+		AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StdStringExtractor.cpp; path = ../../../source/Utility/StdStringExtractor.cpp; sourceTree = "<group>"; };
 		AF61C60418F75ABC00B48D9D /* debugserver-macosx-entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "debugserver-macosx-entitlements.plist"; sourceTree = "<group>"; };
 		AF67ABFF0D34604D0022D128 /* PseudoTerminal.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PseudoTerminal.cpp; sourceTree = "<group>"; };
 		AF67AC000D34604D0022D128 /* PseudoTerminal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PseudoTerminal.h; sourceTree = "<group>"; };
@@ -477,7 +477,7 @@
 				26A68FD50D10574500665A9E /* RNBRemote.h */,
 				26A68FD60D10574500665A9E /* RNBRemote.cpp */,
 				26E6B9DA0D1329010037ECDD /* RNBDefs.h */,
-				2660D9CC1192280900958FBD /* StringExtractor.cpp */,
+				AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */,
 			);
 			name = debugserver;
 			sourceTree = "<group>";
@@ -572,6 +572,7 @@
 				26CE05A7115C360D0022F371 /* DNBError.cpp in Sources */,
 				26CE05A8115C36170022F371 /* DNBThreadResumeActions.cpp in Sources */,
 				26CE05A9115C36250022F371 /* debugserver.cpp in Sources */,
+				AF48558C1D75126800D19C07 /* StdStringExtractor.cpp in Sources */,
 				26CE05AA115C36260022F371 /* RNBContext.cpp in Sources */,
 				26CE05AB115C36270022F371 /* RNBServices.cpp in Sources */,
 				23D1B0291D497E8B00FF831B /* OsLogger.cpp in Sources */,
@@ -608,10 +609,8 @@
 				26CE05C2115C36550022F371 /* DNBArchImpl.cpp in Sources */,
 				26CE05C5115C36590022F371 /* CFBundle.cpp in Sources */,
 				26CE05C3115C36580022F371 /* CFString.cpp in Sources */,
-				26CE05C4115C36590022F371 /* CFData.cpp in Sources */,
 				23562ED91D342B0000AB2BD4 /* LogMessage.cpp in Sources */,
 				26CE05F1115C387C0022F371 /* PseudoTerminal.cpp in Sources */,
-				2660D9CE1192280900958FBD /* StringExtractor.cpp in Sources */,
 				264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */,
 				4971AE7213D10F4F00649E37 /* HasAVX.s in Sources */,
 				237821B01D4917D20028B7A1 /* LogFilterExactMatch.cpp in Sources */,
@@ -661,11 +660,10 @@
 				23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */,
 				456F67611AD46CE9002850C2 /* DNBArchImpl.cpp in Sources */,
 				456F67621AD46CE9002850C2 /* CFString.cpp in Sources */,
-				456F67631AD46CE9002850C2 /* CFData.cpp in Sources */,
 				23AC04CB1D2F42250072351D /* LogFilterChain.cpp in Sources */,
+				AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */,
 				456F67641AD46CE9002850C2 /* CFBundle.cpp in Sources */,
 				456F67651AD46CE9002850C2 /* PseudoTerminal.cpp in Sources */,
-				456F67661AD46CE9002850C2 /* StringExtractor.cpp in Sources */,
 				456F67671AD46CE9002850C2 /* DNBArch.cpp in Sources */,
 				456F67681AD46CE9002850C2 /* HasAVX.s in Sources */,
 				23AC04D01D2F58AF0072351D /* LogFilterRegex.cpp in Sources */,

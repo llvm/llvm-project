@@ -41,6 +41,8 @@
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
 
+#include "llvm/ADT/StringSwitch.h"
+
 #if defined (HAVE_LIBCOMPRESSION)
 #include <compression.h>
 #endif
@@ -516,27 +518,21 @@ GDBRemoteCommunicationClient::GetRemoteQSupported ()
     }
 }
 
-void
-GDBRemoteCommunicationClient::ComputeThreadSuffixSupport()
-{
-    if (m_supports_thread_suffix != eLazyBoolCalculate)
-        return;
-
-    StringExtractorGDBRemote response;
-    m_supports_thread_suffix = eLazyBoolNo;
-    if (SendPacketAndWaitForResponse("QThreadSuffixSupported", response, false) == PacketResult::Success)
-    {
-        if (response.IsOKResponse())
-            m_supports_thread_suffix = eLazyBoolYes;
-    }
-}
-
 bool
-GDBRemoteCommunicationClient::GetThreadSuffixSupported()
+GDBRemoteCommunicationClient::GetThreadSuffixSupported ()
 {
-    return m_supports_thread_suffix == eLazyBoolYes;
+    if (m_supports_thread_suffix == eLazyBoolCalculate)
+    {
+        StringExtractorGDBRemote response;
+        m_supports_thread_suffix = eLazyBoolNo;
+        if (SendPacketAndWaitForResponse("QThreadSuffixSupported", response, false) == PacketResult::Success)
+        {
+            if (response.IsOKResponse())
+                m_supports_thread_suffix = eLazyBoolYes;
+        }
+    }
+    return m_supports_thread_suffix;
 }
-
 bool
 GDBRemoteCommunicationClient::GetVContSupported (char flavor)
 {
@@ -598,17 +594,26 @@ GDBRemoteCommunicationClient::GetVContSupported (char flavor)
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationClient::SendThreadSpecificPacketAndWaitForResponse(lldb::tid_t tid, StreamString &&payload,
                                                                          StringExtractorGDBRemote &response,
-                                                                         const Lock &lock)
+                                                                         bool send_async)
 {
+    Lock lock(*this, send_async);
+    if (!lock)
+    {
+        if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
+            log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex for %s packet.", __FUNCTION__,
+                        payload.GetString().c_str());
+        return PacketResult::ErrorNoSequenceLock;
+    }
+
     if (GetThreadSuffixSupported())
         payload.Printf(";thread:%4.4" PRIx64 ";", tid);
     else
     {
-        if (!SetCurrentThread(tid, lock))
+        if (!SetCurrentThread(tid))
             return PacketResult::ErrorSendFailed;
     }
 
-    return SendPacketAndWaitForResponse(payload.GetString(), response, lock);
+    return SendPacketAndWaitForResponseNoLock(payload.GetString(), response);
 }
 
 // Check if the target supports 'p' packet. It sends out a 'p'
@@ -621,20 +626,11 @@ GDBRemoteCommunicationClient::GetpPacketSupported (lldb::tid_t tid)
 {
     if (m_supports_p == eLazyBoolCalculate)
     {
-        Lock lock(*this, false);
-        if (!lock)
-        {
-            Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
-            if (log)
-                log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
-            return false;
-        }
-
         m_supports_p = eLazyBoolNo;
         StreamString payload;
         payload.PutCString("p0");
         StringExtractorGDBRemote response;
-        if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
+        if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
                 PacketResult::Success &&
             response.IsNormalResponse())
         {
@@ -772,7 +768,7 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
         // Construct payload
         char sizeDescriptor[128];
         snprintf(sizeDescriptor, sizeof(sizeDescriptor), "%x,%x", offset, response_size);
-        PacketResult result = SendPacketAndWaitForResponse(payload_prefix_str + sizeDescriptor, this_response, lock);
+        PacketResult result = SendPacketAndWaitForResponseNoLock(payload_prefix_str + sizeDescriptor, this_response);
         if (result != PacketResult::Success)
             return result;
 
@@ -1144,27 +1140,21 @@ GDBRemoteCommunicationClient::GetGDBServerVersion()
         {
             if (response.IsNormalResponse())
             {
-                std::string name;
-                std::string value;
+                llvm::StringRef name, value;
                 bool success = false;
                 while (response.GetNameColonValue(name, value))
                 {
-                    if (name.compare("name") == 0)
+                    if (name.equals("name"))
                     {
                         success = true;
-                        m_gdb_server_name.swap(value);
+                        m_gdb_server_name = value;
                     }
-                    else if (name.compare("version") == 0)
+                    else if (name.equals("version"))
                     {
-                        size_t dot_pos = value.find('.');
-                        if (dot_pos != std::string::npos)
-                            value[dot_pos] = '\0';
-                        const uint32_t version = StringConvert::ToUInt32(value.c_str(), UINT32_MAX, 0);
-                        if (version != UINT32_MAX)
-                        {
+                        llvm::StringRef major, minor;
+                        std::tie(major, minor) = value.split('.');
+                        if (!major.getAsInteger(0, m_gdb_server_version))
                             success = true;
-                            m_gdb_server_version = version;
-                        }
                     }
                 }
                 if (success)
@@ -1322,8 +1312,8 @@ GDBRemoteCommunicationClient::GetHostInfo (bool force)
         {
             if (response.IsNormalResponse())
             {
-                std::string name;
-                std::string value;
+                llvm::StringRef name;
+                llvm::StringRef value;
                 uint32_t cpu = LLDB_INVALID_CPUTYPE;
                 uint32_t sub = 0;
                 std::string arch_name;
@@ -1332,117 +1322,103 @@ GDBRemoteCommunicationClient::GetHostInfo (bool force)
                 std::string triple;
                 std::string distribution_id;
                 uint32_t pointer_byte_size = 0;
-                StringExtractor extractor;
                 ByteOrder byte_order = eByteOrderInvalid;
                 uint32_t num_keys_decoded = 0;
                 while (response.GetNameColonValue(name, value))
                 {
-                    if (name.compare("cputype") == 0)
+                    if (name.equals("cputype"))
                     {
                         // exception type in big endian hex
-                        cpu = StringConvert::ToUInt32 (value.c_str(), LLDB_INVALID_CPUTYPE, 0);
-                        if (cpu != LLDB_INVALID_CPUTYPE)
+                        if (!value.getAsInteger(0, cpu))
                             ++num_keys_decoded;
                     }
-                    else if (name.compare("cpusubtype") == 0)
+                    else if (name.equals("cpusubtype"))
                     {
                         // exception count in big endian hex
-                        sub = StringConvert::ToUInt32 (value.c_str(), 0, 0);
-                        if (sub != 0)
+                        if (!value.getAsInteger(0, sub))
                             ++num_keys_decoded;
                     }
-                    else if (name.compare("arch") == 0)
+                    else if (name.equals("arch"))
                     {
-                        arch_name.swap (value);
+                        arch_name = value;
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("triple") == 0)
+                    else if (name.equals("triple"))
                     {
-                        extractor.GetStringRef ().swap (value);
-                        extractor.SetFilePos(0);
+                        StringExtractor extractor(value);
                         extractor.GetHexByteString (triple);
                         ++num_keys_decoded;
                     }
-                    else if (name.compare ("distribution_id") == 0)
+                    else if (name.equals("distribution_id"))
                     {
-                        extractor.GetStringRef ().swap (value);
-                        extractor.SetFilePos (0);
+                        StringExtractor extractor(value);
                         extractor.GetHexByteString (distribution_id);
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("os_build") == 0)
+                    else if (name.equals("os_build"))
                     {
-                        extractor.GetStringRef().swap(value);
-                        extractor.SetFilePos(0);
+                        StringExtractor extractor(value);
                         extractor.GetHexByteString (m_os_build);
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("hostname") == 0)
+                    else if (name.equals("hostname"))
                     {
-                        extractor.GetStringRef().swap(value);
-                        extractor.SetFilePos(0);
+                        StringExtractor extractor(value);
                         extractor.GetHexByteString (m_hostname);
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("os_kernel") == 0)
+                    else if (name.equals("os_kernel"))
                     {
-                        extractor.GetStringRef().swap(value);
-                        extractor.SetFilePos(0);
+                        StringExtractor extractor(value);
                         extractor.GetHexByteString (m_os_kernel);
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("ostype") == 0)
+                    else if (name.equals("ostype"))
                     {
-                        os_name.swap (value);
+                        os_name = value;
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("vendor") == 0)
+                    else if (name.equals("vendor"))
                     {
-                        vendor_name.swap(value);
+                        vendor_name = value;
                         ++num_keys_decoded;
                     }
-                    else if (name.compare("endian") == 0)
+                    else if (name.equals("endian"))
                     {
-                        ++num_keys_decoded;
-                        if (value.compare("little") == 0)
-                            byte_order = eByteOrderLittle;
-                        else if (value.compare("big") == 0)
-                            byte_order = eByteOrderBig;
-                        else if (value.compare("pdp") == 0)
-                            byte_order = eByteOrderPDP;
-                        else
-                            --num_keys_decoded;
-                    }
-                    else if (name.compare("ptrsize") == 0)
-                    {
-                        pointer_byte_size = StringConvert::ToUInt32 (value.c_str(), 0, 0);
-                        if (pointer_byte_size != 0)
+                        byte_order = llvm::StringSwitch<lldb::ByteOrder>(value)
+                                         .Case("little", eByteOrderLittle)
+                                         .Case("big", eByteOrderBig)
+                                         .Case("pdp", eByteOrderPDP)
+                                         .Default(eByteOrderInvalid);
+                        if (byte_order != eByteOrderInvalid)
                             ++num_keys_decoded;
                     }
-                    else if ((name.compare("os_version") == 0) ||
-                             (name.compare("version") == 0)) // Older debugserver binaries used the "version" key instead of "os_version"...
+                    else if (name.equals("ptrsize"))
                     {
-                        Args::StringToVersion (value.c_str(), 
-                                               m_os_version_major,
-                                               m_os_version_minor,
-                                               m_os_version_update);
+                        if (!value.getAsInteger(0, pointer_byte_size))
+                            ++num_keys_decoded;
+                    }
+                    else if (name.equals("os_version") || name.equals("version")) // Older debugserver binaries used the
+                                                                                  // "version" key instead of
+                                                                                  // "os_version"...
+                    {
+                        Args::StringToVersion(value.str().c_str(), m_os_version_major, m_os_version_minor,
+                                              m_os_version_update);
                         if (m_os_version_major != UINT32_MAX)
                             ++num_keys_decoded;
                     }
-                    else if (name.compare("watchpoint_exceptions_received") == 0)
+                    else if (name.equals("watchpoint_exceptions_received"))
                     {
-                        ++num_keys_decoded;
-                        if (strcmp(value.c_str(),"before") == 0)
-                            m_watchpoints_trigger_after_instruction = eLazyBoolNo;
-                        else if (strcmp(value.c_str(),"after") == 0)
-                            m_watchpoints_trigger_after_instruction = eLazyBoolYes;
-                        else
-                            --num_keys_decoded;
+                        m_watchpoints_trigger_after_instruction = llvm::StringSwitch<LazyBool>(value)
+                                                                      .Case("before", eLazyBoolNo)
+                                                                      .Case("after", eLazyBoolYes)
+                                                                      .Default(eLazyBoolCalculate);
+                        if (m_watchpoints_trigger_after_instruction != eLazyBoolCalculate)
+                            ++num_keys_decoded;
                     }
-                    else if (name.compare("default_packet_timeout") == 0)
+                    else if (name.equals("default_packet_timeout"))
                     {
-                        m_default_packet_timeout = StringConvert::ToUInt32(value.c_str(), 0);
-                        if (m_default_packet_timeout > 0)
+                        if (!value.getAsInteger(0, m_default_packet_timeout))
                         {
                             SetPacketTimeout(m_default_packet_timeout);
                             ++num_keys_decoded;
@@ -1715,41 +1691,39 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
         StringExtractorGDBRemote response;
         if (SendPacketAndWaitForResponse (packet, packet_len, response, false) == PacketResult::Success)
         {
-            std::string name;
-            std::string value;
-            addr_t addr_value;
+            llvm::StringRef name;
+            llvm::StringRef value;
+            addr_t addr_value = LLDB_INVALID_ADDRESS;
             bool success = true;
             bool saw_permissions = false;
             while (success && response.GetNameColonValue(name, value))
             {
-                if (name.compare ("start") == 0)
+                if (name.equals("start"))
                 {
-                    addr_value = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_ADDRESS, 16, &success);
-                    if (success)
+                    if (!value.getAsInteger(16, addr_value))
                         region_info.GetRange().SetRangeBase(addr_value);
                 }
-                else if (name.compare ("size") == 0)
+                else if (name.equals("size"))
                 {
-                    addr_value = StringConvert::ToUInt64(value.c_str(), 0, 16, &success);
-                    if (success)
-                        region_info.GetRange().SetByteSize (addr_value);
+                    if (!value.getAsInteger(16, addr_value))
+                        region_info.GetRange().SetByteSize(addr_value);
                 }
-                else if (name.compare ("permissions") == 0 && region_info.GetRange().IsValid())
+                else if (name.equals("permissions") && region_info.GetRange().IsValid())
                 {
                     saw_permissions = true;
                     if (region_info.GetRange().Contains (addr))
                     {
-                        if (value.find('r') != std::string::npos)
+                        if (value.find('r') != llvm::StringRef::npos)
                             region_info.SetReadable (MemoryRegionInfo::eYes);
                         else
                             region_info.SetReadable (MemoryRegionInfo::eNo);
 
-                        if (value.find('w') != std::string::npos)
+                        if (value.find('w') != llvm::StringRef::npos)
                             region_info.SetWritable (MemoryRegionInfo::eYes);
                         else
                             region_info.SetWritable (MemoryRegionInfo::eNo);
 
-                        if (value.find('x') != std::string::npos)
+                        if (value.find('x') != llvm::StringRef::npos)
                             region_info.SetExecutable (MemoryRegionInfo::eYes);
                         else
                             region_info.SetExecutable (MemoryRegionInfo::eNo);
@@ -1765,21 +1739,20 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
                         region_info.SetMapped(MemoryRegionInfo::eNo);
                     }
                 }
-                else if (name.compare ("name") == 0)
+                else if (name.equals("name"))
                 {
-                    StringExtractorGDBRemote name_extractor;
-                    name_extractor.GetStringRef().swap(value);
-                    name_extractor.GetHexByteString(value);
-                    region_info.SetName(value.c_str());
+                    StringExtractorGDBRemote name_extractor(value);
+                    std::string name;
+                    name_extractor.GetHexByteString(name);
+                    region_info.SetName(name.c_str());
                 }
-                else if (name.compare ("error") == 0)
+                else if (name.equals("error"))
                 {
-                    StringExtractorGDBRemote name_extractor;
-                    // Swap "value" over into "name_extractor"
-                    name_extractor.GetStringRef().swap(value);
+                    StringExtractorGDBRemote error_extractor(value);
+                    std::string error_string;
                     // Now convert the HEX bytes into a string value
-                    name_extractor.GetHexByteString (value);
-                    error.SetErrorString(value.c_str());
+                    error_extractor.GetHexByteString(error_string);
+                    error.SetErrorString(error_string.c_str());
                 }
             }
 
@@ -1829,15 +1802,15 @@ GDBRemoteCommunicationClient::GetWatchpointSupportInfo (uint32_t &num)
         StringExtractorGDBRemote response;
         if (SendPacketAndWaitForResponse (packet, packet_len, response, false) == PacketResult::Success)
         {
-            m_supports_watchpoint_support_info = eLazyBoolYes;        
-            std::string name;
-            std::string value;
+            m_supports_watchpoint_support_info = eLazyBoolYes;
+            llvm::StringRef name;
+            llvm::StringRef value;
             while (response.GetNameColonValue(name, value))
             {
-                if (name.compare ("num") == 0)
+                if (name.equals("num"))
                 {
-                    num = StringConvert::ToUInt32(value.c_str(), 0, 0);
-                    m_num_supported_hardware_watchpoints = num;
+                    value.getAsInteger(0, m_num_supported_hardware_watchpoints);
+                    num = m_num_supported_hardware_watchpoints;
                 }
             }
         }
@@ -2050,72 +2023,82 @@ GDBRemoteCommunicationClient::DecodeProcessInfoResponse (StringExtractorGDBRemot
 {
     if (response.IsNormalResponse())
     {
-        std::string name;
-        std::string value;
+        llvm::StringRef name;
+        llvm::StringRef value;
         StringExtractor extractor;
 
         uint32_t cpu = LLDB_INVALID_CPUTYPE;
         uint32_t sub = 0;
         std::string vendor;
         std::string os_type;
-        
+
         while (response.GetNameColonValue(name, value))
         {
-            if (name.compare("pid") == 0)
+            if (name.equals("pid"))
             {
-                process_info.SetProcessID (StringConvert::ToUInt32 (value.c_str(), LLDB_INVALID_PROCESS_ID, 0));
+                lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+                value.getAsInteger(0, pid);
+                process_info.SetProcessID(pid);
             }
-            else if (name.compare("ppid") == 0)
+            else if (name.equals("ppid"))
             {
-                process_info.SetParentProcessID (StringConvert::ToUInt32 (value.c_str(), LLDB_INVALID_PROCESS_ID, 0));
+                lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+                value.getAsInteger(0, pid);
+                process_info.SetParentProcessID(pid);
             }
-            else if (name.compare("uid") == 0)
+            else if (name.equals("uid"))
             {
-                process_info.SetUserID (StringConvert::ToUInt32 (value.c_str(), UINT32_MAX, 0));
+                uint32_t uid = UINT32_MAX;
+                value.getAsInteger(0, uid);
+                process_info.SetUserID(uid);
             }
-            else if (name.compare("euid") == 0)
+            else if (name.equals("euid"))
             {
-                process_info.SetEffectiveUserID (StringConvert::ToUInt32 (value.c_str(), UINT32_MAX, 0));
+                uint32_t uid = UINT32_MAX;
+                value.getAsInteger(0, uid);
+                process_info.SetEffectiveGroupID(uid);
             }
-            else if (name.compare("gid") == 0)
+            else if (name.equals("gid"))
             {
-                process_info.SetGroupID (StringConvert::ToUInt32 (value.c_str(), UINT32_MAX, 0));
+                uint32_t gid = UINT32_MAX;
+                value.getAsInteger(0, gid);
+                process_info.SetGroupID(gid);
             }
-            else if (name.compare("egid") == 0)
+            else if (name.equals("egid"))
             {
-                process_info.SetEffectiveGroupID (StringConvert::ToUInt32 (value.c_str(), UINT32_MAX, 0));
+                uint32_t gid = UINT32_MAX;
+                value.getAsInteger(0, gid);
+                process_info.SetEffectiveGroupID(gid);
             }
-            else if (name.compare("triple") == 0)
+            else if (name.equals("triple"))
             {
-                StringExtractor extractor;
-                extractor.GetStringRef().swap(value);
-                extractor.SetFilePos(0);
-                extractor.GetHexByteString (value);
-                process_info.GetArchitecture ().SetTriple (value.c_str());
+                StringExtractor extractor(value);
+                std::string triple;
+                extractor.GetHexByteString(triple);
+                process_info.GetArchitecture().SetTriple(triple.c_str());
             }
-            else if (name.compare("name") == 0)
+            else if (name.equals("name"))
             {
-                StringExtractor extractor;
+                StringExtractor extractor(value);
                 // The process name from ASCII hex bytes since we can't 
                 // control the characters in a process name
-                extractor.GetStringRef().swap(value);
-                extractor.SetFilePos(0);
-                extractor.GetHexByteString (value);
-                process_info.GetExecutableFile().SetFile (value.c_str(), false);
+                std::string name;
+                extractor.GetHexByteString(name);
+                process_info.GetExecutableFile().SetFile(name.c_str(), false);
             }
-            else if (name.compare("cputype") == 0)
+            else if (name.equals("cputype"))
             {
-                cpu = StringConvert::ToUInt32 (value.c_str(), LLDB_INVALID_CPUTYPE, 16);
+                value.getAsInteger(0, cpu);
             }
-            else if (name.compare("cpusubtype") == 0)
+            else if (name.equals("cpusubtype"))
             {
-                sub = StringConvert::ToUInt32 (value.c_str(), 0, 16);
+                value.getAsInteger(0, sub);
             }
-            else if (name.compare("vendor") == 0)
+            else if (name.equals("vendor"))
             {
                 vendor = value;
             }
-            else if (name.compare("ostype") == 0)
+            else if (name.equals("ostype"))
             {
                 os_type = value;
             }
@@ -2181,8 +2164,8 @@ GDBRemoteCommunicationClient::GetCurrentProcessInfo (bool allow_lazy)
     {
         if (response.IsNormalResponse())
         {
-            std::string name;
-            std::string value;
+            llvm::StringRef name;
+            llvm::StringRef value;
             uint32_t cpu = LLDB_INVALID_CPUTYPE;
             uint32_t sub = 0;
             std::string arch_name;
@@ -2196,58 +2179,50 @@ GDBRemoteCommunicationClient::GetCurrentProcessInfo (bool allow_lazy)
             lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
             while (response.GetNameColonValue(name, value))
             {
-                if (name.compare("cputype") == 0)
+                if (name.equals("cputype"))
                 {
-                    cpu = StringConvert::ToUInt32 (value.c_str(), LLDB_INVALID_CPUTYPE, 16);
-                    if (cpu != LLDB_INVALID_CPUTYPE)
+                    if (!value.getAsInteger(16, cpu))
                         ++num_keys_decoded;
                 }
-                else if (name.compare("cpusubtype") == 0)
+                else if (name.equals("cpusubtype"))
                 {
-                    sub = StringConvert::ToUInt32 (value.c_str(), 0, 16);
-                    if (sub != 0)
+                    if (!value.getAsInteger(16, sub))
                         ++num_keys_decoded;
                 }
-                else if (name.compare("triple") == 0)
+                else if (name.equals("triple"))
                 {
-                    StringExtractor extractor;
-                    extractor.GetStringRef().swap(value);
-                    extractor.SetFilePos(0);
+                    StringExtractor extractor(value);
                     extractor.GetHexByteString (triple);
                     ++num_keys_decoded;
                 }
-                else if (name.compare("ostype") == 0)
+                else if (name.equals("ostype"))
                 {
-                    os_name.swap (value);
+                    os_name = value;
                     ++num_keys_decoded;
                 }
-                else if (name.compare("vendor") == 0)
+                else if (name.equals("vendor"))
                 {
-                    vendor_name.swap(value);
+                    vendor_name = value;
                     ++num_keys_decoded;
                 }
-                else if (name.compare("endian") == 0)
+                else if (name.equals("endian"))
                 {
-                    ++num_keys_decoded;
-                    if (value.compare("little") == 0)
-                        byte_order = eByteOrderLittle;
-                    else if (value.compare("big") == 0)
-                        byte_order = eByteOrderBig;
-                    else if (value.compare("pdp") == 0)
-                        byte_order = eByteOrderPDP;
-                    else
-                        --num_keys_decoded;
-                }
-                else if (name.compare("ptrsize") == 0)
-                {
-                    pointer_byte_size = StringConvert::ToUInt32 (value.c_str(), 0, 16);
-                    if (pointer_byte_size != 0)
+                    byte_order = llvm::StringSwitch<lldb::ByteOrder>(value)
+                                     .Case("little", eByteOrderLittle)
+                                     .Case("big", eByteOrderBig)
+                                     .Case("pdp", eByteOrderPDP)
+                                     .Default(eByteOrderInvalid);
+                    if (byte_order != eByteOrderInvalid)
                         ++num_keys_decoded;
                 }
-                else if (name.compare("pid") == 0)
+                else if (name.equals("ptrsize"))
                 {
-                    pid = StringConvert::ToUInt64(value.c_str(), 0, 16);
-                    if (pid != LLDB_INVALID_PROCESS_ID)
+                    if (!value.getAsInteger(16, pointer_byte_size))
+                        ++num_keys_decoded;
+                }
+                else if (name.equals("pid"))
+                {
+                    if (!value.getAsInteger(16, pid))
                         ++num_keys_decoded;
                 }
             }
@@ -2709,30 +2684,23 @@ GDBRemoteCommunicationClient::LaunchGDBServer (const char *remote_accept_hostnam
             stream.Printf("host:*;");
         }
     }
-    const char *packet = stream.GetData();
-    int packet_len = stream.GetSize();
-
     // give the process a few seconds to startup
     GDBRemoteCommunication::ScopedTimeout timeout (*this, 10);
 
-    if (SendPacketAndWaitForResponse(packet, packet_len, response, false) == PacketResult::Success)
+    if (SendPacketAndWaitForResponse(stream.GetString(), response, false) == PacketResult::Success)
     {
-        std::string name;
-        std::string value;
-        StringExtractor extractor;
+        llvm::StringRef name;
+        llvm::StringRef value;
         while (response.GetNameColonValue(name, value))
         {
-            if (name.compare("port") == 0)
-                port = StringConvert::ToUInt32(value.c_str(), 0, 0);
-            else if (name.compare("pid") == 0)
-                pid = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_PROCESS_ID, 0);
+            if (name.equals("port"))
+                value.getAsInteger(0, port);
+            else if (name.equals("pid"))
+                value.getAsInteger(0, pid);
             else if (name.compare("socket_name") == 0)
             {
-                extractor.GetStringRef().swap(value);
-                extractor.SetFilePos(0);
-                extractor.GetHexByteString(value);
-
-                socket_name = value;
+                StringExtractor extractor(value);
+                extractor.GetHexByteString(socket_name);
             }
         }
         return true;
@@ -2795,7 +2763,7 @@ GDBRemoteCommunicationClient::KillSpawnedProcess (lldb::pid_t pid)
 }
 
 bool
-GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid, const Lock &lock)
+GDBRemoteCommunicationClient::SetCurrentThread (uint64_t tid)
 {
     if (m_curr_tid == tid)
         return true;
@@ -2808,7 +2776,7 @@ GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid, const Lock &lock)
         packet_len = ::snprintf (packet, sizeof(packet), "Hg%" PRIx64, tid);
     assert (packet_len + 1 < (int)sizeof(packet));
     StringExtractorGDBRemote response;
-    if (SendPacketAndWaitForResponse(llvm::StringRef(packet, packet_len), response, lock) == PacketResult::Success)
+    if (SendPacketAndWaitForResponse(packet, packet_len, response, false) == PacketResult::Success)
     {
         if (response.IsOKResponse())
         {
@@ -2969,9 +2937,9 @@ GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thr
         StringExtractorGDBRemote response;
         
         PacketResult packet_result;
-        for (packet_result = SendPacketAndWaitForResponse("qfThreadInfo", response, lock);
+        for (packet_result = SendPacketAndWaitForResponseNoLock("qfThreadInfo", response);
              packet_result == PacketResult::Success && response.IsNormalResponse();
-             packet_result = SendPacketAndWaitForResponse("qsThreadInfo", response, lock))
+             packet_result = SendPacketAndWaitForResponseNoLock("qsThreadInfo", response))
         {
             char ch = response.GetChar();
             if (ch == 'l')
@@ -3502,56 +3470,55 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
 }
 
 DataBufferSP
-GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, const Lock &lock)
+GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg)
 {
     StreamString payload;
     payload.Printf("p%x", reg);
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success ||
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success ||
         !response.IsNormalResponse())
         return nullptr;
 
     DataBufferSP buffer_sp(new DataBufferHeap(response.GetStringRef().size() / 2, 0));
-    response.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+    response.GetHexBytes(buffer_sp->GetData(), '\xcc');
     return buffer_sp;
 }
 
 DataBufferSP
-GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid, const Lock &lock)
+GDBRemoteCommunicationClient::ReadAllRegisters(lldb::tid_t tid)
 {
     StreamString payload;
     payload.PutChar('g');
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success ||
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success ||
         !response.IsNormalResponse())
         return nullptr;
 
     DataBufferSP buffer_sp(new DataBufferHeap(response.GetStringRef().size() / 2, 0));
-    response.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
+    response.GetHexBytes(buffer_sp->GetData(), '\xcc');
     return buffer_sp;
 }
 
 bool
-GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::ArrayRef<uint8_t> data,
-                                            const Lock &lock)
+GDBRemoteCommunicationClient::WriteRegister(lldb::tid_t tid, uint32_t reg_num, llvm::ArrayRef<uint8_t> data)
 {
     StreamString payload;
     payload.Printf("P%x=", reg_num);
     payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
-    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
                PacketResult::Success &&
            response.IsOKResponse();
 }
 
 bool
-GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data, const Lock &lock)
+GDBRemoteCommunicationClient::WriteAllRegisters(lldb::tid_t tid, llvm::ArrayRef<uint8_t> data)
 {
     StreamString payload;
     payload.PutChar('G');
     payload.PutBytesAsRawHex8(data.data(), data.size(), endian::InlHostByteOrder(), endian::InlHostByteOrder());
     StringExtractorGDBRemote response;
-    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) ==
+    return SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) ==
                PacketResult::Success &&
            response.IsOKResponse();
 }
@@ -3562,21 +3529,12 @@ GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save
     save_id = 0; // Set to invalid save ID
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
-
-    Lock lock(*this, false);
-    if (!lock)
-    {
-        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
-        if (log)
-            log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
-        return false;
-    }
-
+    
     m_supports_QSaveRegisterState = eLazyBoolYes;
     StreamString payload;
     payload.PutCString("QSaveRegisterState");
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success)
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success)
         return false;
 
     if (response.IsUnsupportedResponse())
@@ -3599,19 +3557,10 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
 
-    Lock lock(*this, false);
-    if (!lock)
-    {
-        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
-        if (log)
-            log->Printf("GDBRemoteCommunicationClient::%s failed to get sequence mutex", __FUNCTION__);
-        return false;
-    }
-
     StreamString payload;
     payload.Printf("QRestoreRegisterState:%u", save_id);
     StringExtractorGDBRemote response;
-    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, lock) != PacketResult::Success)
+    if (SendThreadSpecificPacketAndWaitForResponse(tid, std::move(payload), response, false) != PacketResult::Success)
         return false;
 
     if (response.IsOKResponse())
@@ -3667,10 +3616,8 @@ GDBRemoteCommunicationClient::GetModuleInfo(const FileSpec &module_file_spec, co
         return false;
     }
 
-    std::string name;
-    std::string value;
-    bool success;
-    StringExtractor extractor;
+    llvm::StringRef name;
+    llvm::StringRef value;
 
     module_spec.Clear ();
     module_spec.GetFileSpec () = module_file_spec;
@@ -3679,36 +3626,36 @@ GDBRemoteCommunicationClient::GetModuleInfo(const FileSpec &module_file_spec, co
     {
         if (name == "uuid" || name == "md5")
         {
-            extractor.GetStringRef ().swap (value);
-            extractor.SetFilePos (0);
-            extractor.GetHexByteString (value);
-            module_spec.GetUUID().SetFromCString (value.c_str(), value.size() / 2);
+            StringExtractor extractor(value);
+            std::string uuid;
+            extractor.GetHexByteString(uuid);
+            module_spec.GetUUID().SetFromCString(uuid.c_str(), uuid.size() / 2);
         }
         else if (name == "triple")
         {
-            extractor.GetStringRef ().swap (value);
-            extractor.SetFilePos (0);
-            extractor.GetHexByteString (value);
-            module_spec.GetArchitecture().SetTriple (value.c_str ());
+            StringExtractor extractor(value);
+            std::string triple;
+            extractor.GetHexByteString(triple);
+            module_spec.GetArchitecture().SetTriple(triple.c_str());
         }
         else if (name == "file_offset")
         {
-            const auto ival = StringConvert::ToUInt64 (value.c_str (), 0, 16, &success);
-            if (success)
+            uint64_t ival = 0;
+            if (!value.getAsInteger(16, ival))
                 module_spec.SetObjectOffset (ival);
         }
         else if (name == "file_size")
         {
-            const auto ival = StringConvert::ToUInt64 (value.c_str (), 0, 16, &success);
-            if (success)
+            uint64_t ival = 0;
+            if (!value.getAsInteger(16, ival))
                 module_spec.SetObjectSize (ival);
         }
         else if (name == "file_path")
         {
-            extractor.GetStringRef ().swap (value);
-            extractor.SetFilePos (0);
-            extractor.GetHexByteString (value);
-            module_spec.GetFileSpec() = FileSpec(value.c_str(), false, arch_spec);
+            StringExtractor extractor(value);
+            std::string path;
+            extractor.GetHexByteString(path);
+            module_spec.GetFileSpec() = FileSpec(path.c_str(), false, arch_spec);
         }
     }
 
@@ -3840,7 +3787,7 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
             StreamString packet;
             packet.PutCString ("qSymbol::");
             StringExtractorGDBRemote response;
-            while (SendPacketAndWaitForResponse(packet.GetString(), response, lock) == PacketResult::Success)
+            while (SendPacketAndWaitForResponseNoLock(packet.GetString(), response) == PacketResult::Success)
             {
                 if (response.IsOKResponse())
                 {

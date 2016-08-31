@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <algorithm>
 
 // template <class PopulationIterator, class SampleIterator, class Distance,
@@ -32,5 +34,8 @@ template <class PopulationIterator, class SampleIterator> void test() {
 }
 
 int main() {
+  // expected-error@algorithm:* {{static_assert failed "SampleIterator must meet the requirements of RandomAccessIterator"}}
+  // expected-error@algorithm:* 2 {{does not provide a subscript operator}}
+  // expected-error@algorithm:* {{invalid operands}}
   test<input_iterator<int *>, output_iterator<int *> >();
 }

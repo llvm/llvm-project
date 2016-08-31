@@ -391,6 +391,13 @@ The number of runs of each benchmark is specified globally by the
 `Repetitions` on the registered benchmark object. When a benchmark is run
 more than once the mean and standard deviation of the runs will be reported.
 
+Additionally the `--benchmark_report_aggregates_only={true|false}` flag or
+`ReportAggregatesOnly(bool)` function can be used to change how repeated tests
+are reported. By default the result of each repeated run is reported. When this
+option is 'true' only the mean and standard deviation of the runs is reported.
+Calling `ReportAggregatesOnly(bool)` on a registered benchmark object overrides
+the value of the flag for that benchmark.
+
 ## Fixtures
 Fixture tests are created by
 first defining a type that derives from ::benchmark::Fixture and then

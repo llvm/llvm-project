@@ -310,10 +310,43 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   }
 }
 
-template <class ELFT> void assignOffsets(OutputSectionBase<ELFT> *Sec) {
+// Linker script may define start and end symbols for special section types,
+// like .got, .eh_frame_hdr, .eh_frame and others. Those sections are not a list
+// of regular input input sections, therefore our way of defining symbols for
+// regular sections will not work. The approach we use for special section types
+// is not perfect - it handles only start and end symbols.
+template <class ELFT>
+void addStartEndSymbols(OutputSectionCommand *Cmd,
+                        OutputSectionBase<ELFT> *Sec) {
+  bool Start = true;
+  BaseCommand *PrevCmd = nullptr;
+
+  for (std::unique_ptr<BaseCommand> &Base : Cmd->Commands) {
+    if (auto *AssignCmd = dyn_cast<SymbolAssignment>(Base.get())) {
+      if (auto *Sym = cast_or_null<DefinedSynthetic<ELFT>>(AssignCmd->Sym)) {
+        Sym->Section = Sec;
+        Sym->Value =
+            AssignCmd->Expression(Sec->getVA() + (Start ? 0 : Sec->getSize())) -
+            Sec->getVA();
+      }
+    } else {
+      if (!Start && isa<SymbolAssignment>(PrevCmd))
+        error("section '" + Sec->getName() +
+              "' supports only start and end symbols");
+      Start = false;
+    }
+    PrevCmd = Base.get();
+  }
+}
+
+template <class ELFT>
+void assignOffsets(OutputSectionCommand *Cmd, OutputSectionBase<ELFT> *Sec) {
   auto *OutSec = dyn_cast<OutputSection<ELFT>>(Sec);
   if (!OutSec) {
     Sec->assignOffsets();
+    // This section is not regular output section. However linker script may
+    // have defined start/end symbols for it. This case is handled below.
+    addStartEndSymbols(Cmd, Sec);
     return;
   }
 
@@ -404,19 +437,19 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
       uintX_t TVA = Dot + ThreadBssOffset;
       TVA = alignTo(TVA, Sec->getAlignment());
       Sec->setVA(TVA);
-      assignOffsets(Sec);
+      assignOffsets(Cmd, Sec);
       ThreadBssOffset = TVA - Dot + Sec->getSize();
       continue;
     }
 
     if (!(Sec->getFlags() & SHF_ALLOC)) {
-      Sec->assignOffsets();
+      assignOffsets(Cmd, Sec);
       continue;
     }
 
     Dot = alignTo(Dot, Sec->getAlignment());
     Sec->setVA(Dot);
-    assignOffsets(Sec);
+    assignOffsets(Cmd, Sec);
     MinVA = std::min(MinVA, Dot);
     Dot += Sec->getSize();
   }
@@ -533,6 +566,16 @@ template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
 }
 
 template <class ELFT>
+typename ELFT::uint
+LinkerScript<ELFT>::getOutputSectionAddress(StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->getVA();
+  error("undefined section " + Name);
+  return 0;
+}
+
+template <class ELFT>
 typename ELFT::uint LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
   for (OutputSectionBase<ELFT> *Sec : *OutputSections)
     if (Sec->getName() == Name)
@@ -604,9 +647,9 @@ private:
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
   std::vector<uint8_t> readOutputSectionFiller();
   std::vector<StringRef> readOutputSectionPhdrs();
-  InputSectionDescription *readInputSectionDescription();
+  InputSectionDescription *readInputSectionDescription(StringRef Tok);
   std::vector<StringRef> readInputFilePatterns();
-  InputSectionDescription *readInputSectionRules();
+  InputSectionDescription *readInputSectionRules(StringRef FilePattern);
   unsigned readPhdrType();
   SortKind readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
@@ -845,9 +888,10 @@ SortKind ScriptParser::readSortKind() {
   return SortNone;
 }
 
-InputSectionDescription *ScriptParser::readInputSectionRules() {
+InputSectionDescription *
+ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription;
-  Cmd->FilePattern = next();
+  Cmd->FilePattern = FilePattern;
   expect("(");
 
   // Read EXCLUDE_FILE().
@@ -877,19 +921,21 @@ InputSectionDescription *ScriptParser::readInputSectionRules() {
   return Cmd;
 }
 
-InputSectionDescription *ScriptParser::readInputSectionDescription() {
+InputSectionDescription *
+ScriptParser::readInputSectionDescription(StringRef Tok) {
   // Input section wildcard can be surrounded by KEEP.
   // https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html#Input-Section-Keep
-  if (skip("KEEP")) {
+  if (Tok == "KEEP") {
     expect("(");
-    InputSectionDescription *Cmd = readInputSectionRules();
+    StringRef FilePattern = next();
+    InputSectionDescription *Cmd = readInputSectionRules(FilePattern);
     expect(")");
     Opt.KeptSections.insert(Opt.KeptSections.end(),
                             Cmd->SectionPatterns.begin(),
                             Cmd->SectionPatterns.end());
     return Cmd;
   }
-  return readInputSectionRules();
+  return readInputSectionRules(Tok);
 }
 
 void ScriptParser::readSort() {
@@ -938,16 +984,13 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect("{");
 
   while (!Error && !skip("}")) {
-    if (peek().startswith("*") || peek() == "KEEP") {
-      Cmd->Commands.emplace_back(readInputSectionDescription());
-      continue;
-    }
-
     StringRef Tok = next();
     if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
       Cmd->Commands.emplace_back(Assignment);
     else if (Tok == "SORT")
       readSort();
+    else if (peek() == "(")
+      Cmd->Commands.emplace_back(readInputSectionDescription(Tok));
     else
       setError("unknown command " + Tok);
   }
@@ -956,24 +999,24 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   return Cmd;
 }
 
+// Read "=<number>" where <number> is an octal/decimal/hexadecimal number.
+// https://sourceware.org/binutils/docs/ld/Output-Section-Fill.html
+//
+// ld.gold is not fully compatible with ld.bfd. ld.bfd handles
+// hexstrings as blobs of arbitrary sizes, while ld.gold handles them
+// as 32-bit big-endian values. We will do the same as ld.gold does
+// because it's simpler than what ld.bfd does.
 std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
-  StringRef Tok = peek();
-  if (!Tok.startswith("="))
+  if (!peek().startswith("="))
     return {};
-  next();
 
-  // Read a hexstring of arbitrary length.
-  if (Tok.startswith("=0x"))
-    return parseHex(Tok.substr(3));
-
-  // Read a decimal or octal value as a big-endian 32 bit value.
-  // Why do this? I don't know, but that's what gold does.
+  StringRef Tok = next();
   uint32_t V;
   if (Tok.substr(1).getAsInteger(0, V)) {
     setError("invalid filler expression: " + Tok);
     return {};
   }
-  return { uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V) };
+  return {uint8_t(V >> 24), uint8_t(V >> 16), uint8_t(V >> 8), uint8_t(V)};
 }
 
 SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {
@@ -1039,6 +1082,21 @@ static uint64_t getSectionSize(StringRef Name) {
     return Script<ELF64LE>::X->getOutputSectionSize(Name);
   case ELF64BEKind:
     return Script<ELF64BE>::X->getOutputSectionSize(Name);
+  default:
+    llvm_unreachable("unsupported target");
+  }
+}
+
+static uint64_t getSectionAddress(StringRef Name) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return Script<ELF32LE>::X->getOutputSectionAddress(Name);
+  case ELF32BEKind:
+    return Script<ELF32BE>::X->getOutputSectionAddress(Name);
+  case ELF64LEKind:
+    return Script<ELF64LE>::X->getOutputSectionAddress(Name);
+  case ELF64BEKind:
+    return Script<ELF64BE>::X->getOutputSectionAddress(Name);
   default:
     llvm_unreachable("unsupported target");
   }
@@ -1154,6 +1212,12 @@ Expr ScriptParser::readPrimary() {
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
+  if (Tok == "ADDR") {
+    expect("(");
+    StringRef Name = next();
+    expect(")");
+    return [=](uint64_t Dot) { return getSectionAddress(Name); };
+  }
   if (Tok == "ASSERT")
     return readAssert();
   if (Tok == "ALIGN") {

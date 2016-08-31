@@ -68,6 +68,7 @@ Clang-Tidy Checks
    misc-misplaced-widening-cast
    misc-move-const-arg
    misc-move-constructor-init
+   misc-move-forwarding-reference
    misc-multiple-statement-macro
    misc-new-delete-overloads
    misc-noexcept-move-constructor

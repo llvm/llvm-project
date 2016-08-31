@@ -170,6 +170,49 @@ void RunTestCase(MultiStringType const& MS) {
   }
 }
 
+template <class It, class = decltype(fs::path{}.assign(std::declval<It>()))>
+constexpr bool has_assign(int) { return true; }
+template <class It>
+constexpr bool has_assign(long) { return false; }
+template <class It>
+constexpr bool has_assign() { return has_assign<It>(0); }
+
+void test_sfinae() {
+  using namespace fs;
+  {
+    using It = const char* const;
+    static_assert(std::is_assignable<path, It>::value, "");
+    static_assert(has_assign<It>(), "");
+  }
+  {
+    using It = input_iterator<const char*>;
+    static_assert(std::is_assignable<path, It>::value, "");
+    static_assert(has_assign<It>(), "");
+  }
+  {
+    struct Traits {
+      using iterator_category = std::input_iterator_tag;
+      using value_type = const char;
+      using pointer = const char*;
+      using reference = const char&;
+      using difference_type = std::ptrdiff_t;
+    };
+    using It = input_iterator<const char*, Traits>;
+    static_assert(std::is_assignable<path, It>::value, "");
+    static_assert(has_assign<It>(), "");
+  }
+  {
+    using It = output_iterator<const char*>;
+    static_assert(!std::is_assignable<path, It>::value, "");
+    static_assert(!has_assign<It>(), "");
+
+  }
+  {
+    static_assert(!std::is_assignable<path, int*>::value, "");
+    static_assert(!has_assign<int*>(), "");
+  }
+}
+
 int main() {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
@@ -177,4 +220,5 @@ int main() {
     RunTestCase<char16_t>(MS);
     RunTestCase<char32_t>(MS);
   }
+  test_sfinae();
 }

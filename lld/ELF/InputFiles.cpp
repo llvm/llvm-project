@@ -323,7 +323,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return &InputSection<ELFT>::Discarded;
   }
 
-  if (Config->StripDebug && Name.startswith(".debug"))
+  if (Config->Strip != StripPolicy::None && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
 
   // The linker merges EH (exception handling) frames and creates a
@@ -382,12 +382,13 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case SHN_UNDEF:
     return elf::Symtab<ELFT>::X
         ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
-                       /*CanOmitFromDynSym*/ false, this)
+                       /*CanOmitFromDynSym*/ false, /*HasUnnamedAddr*/ false,
+                       this)
         ->body();
   case SHN_COMMON:
     return elf::Symtab<ELFT>::X
         ->addCommon(Name, Sym->st_size, Sym->st_value, Binding, Sym->st_other,
-                    Sym->getType(), this)
+                    Sym->getType(), /*HasUnnamedAddr*/ false, this)
         ->body();
   }
 
@@ -400,7 +401,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
     if (Sec == &InputSection<ELFT>::Discarded)
       return elf::Symtab<ELFT>::X
           ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
-                         /*CanOmitFromDynSym*/ false, this)
+                         /*CanOmitFromDynSym*/ false,
+                         /*HasUnnamedAddr*/ false, this)
           ->body();
     return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec)->body();
   }
@@ -633,8 +635,7 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
   StringRef NameRef = Saver.save(StringRef(Name));
 
   uint32_t Flags = Sym.getFlags();
-  bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
-  uint32_t Binding = IsWeak ? STB_WEAK : STB_GLOBAL;
+  uint32_t Binding = (Flags & BasicSymbolRef::SF_Weak) ? STB_WEAK : STB_GLOBAL;
 
   uint8_t Type = STT_NOTYPE;
   bool CanOmitFromDynSym = false;
@@ -646,23 +647,29 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
   }
 
   uint8_t Visibility;
-  if (GV)
+  bool HasUnnamedAddr = false;
+  if (GV) {
     Visibility = getGvVisibility(GV);
-  else
+    HasUnnamedAddr =
+        GV->getUnnamedAddr() == llvm::GlobalValue::UnnamedAddr::Global;
+  } else {
     // FIXME: Set SF_Hidden flag correctly for module asm symbols, and expose
     // protected visibility.
     Visibility = STV_DEFAULT;
+  }
 
   if (GV)
     if (const Comdat *C = GV->getComdat())
       if (!KeptComdats.count(C))
         return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                             CanOmitFromDynSym, this);
+                                             CanOmitFromDynSym, HasUnnamedAddr,
+                                             this);
 
   const Module &M = Obj.getModule();
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                         CanOmitFromDynSym, this);
+                                         CanOmitFromDynSym, HasUnnamedAddr,
+                                         this);
   if (Flags & BasicSymbolRef::SF_Common) {
     // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
     // size and alignment.
@@ -670,10 +677,11 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Symtab<ELFT>::X->addCommon(NameRef, Size, GV->getAlignment(),
-                                      Binding, Visibility, STT_OBJECT, this);
+                                      Binding, Visibility, STT_OBJECT,
+                                      HasUnnamedAddr, this);
   }
-  return Symtab<ELFT>::X->addBitcode(NameRef, IsWeak, Visibility, Type,
-                                     CanOmitFromDynSym, this);
+  return Symtab<ELFT>::X->addBitcode(NameRef, Binding, Visibility, Type,
+                                     CanOmitFromDynSym, HasUnnamedAddr, this);
 }
 
 bool BitcodeFile::shouldSkip(uint32_t Flags) {

@@ -157,12 +157,15 @@ struct NamedDeclFindingConsumer : public ASTConsumer {
       FoundDecl = getNamedDeclFor(Context, OldName);
     }
     if (FoundDecl == nullptr) {
-      FullSourceLoc FullLoc(Point, SourceMgr);
-      errs() << "clang-rename: could not find symbol at "
-             << SourceMgr.getFilename(Point) << ":"
-             << FullLoc.getSpellingLineNumber() << ":"
-             << FullLoc.getSpellingColumnNumber() << " (offset " << SymbolOffset
-             << ").\n";
+      if (OldName.empty()) {
+        FullSourceLoc FullLoc(Point, SourceMgr);
+        errs() << "clang-rename: could not find symbol at "
+               << SourceMgr.getFilename(Point) << ":"
+               << FullLoc.getSpellingLineNumber() << ":"
+               << FullLoc.getSpellingColumnNumber() << " (offset "
+               << SymbolOffset << ").\n";
+      } else
+        errs() << "clang-rename: could not find symbol " << OldName << ".\n";
       return;
     }
 

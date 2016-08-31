@@ -80,6 +80,9 @@
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
 
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/raw_ostream.h"
+
 #define DEBUGSERVER_BASENAME    "debugserver"
 using namespace lldb;
 using namespace lldb_private;
@@ -535,8 +538,8 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
             response_type = response.GetResponseType();
             if (response_type == StringExtractorGDBRemote::eResponse)
             {
-                std::string name;
-                std::string value;
+                llvm::StringRef name;
+                llvm::StringRef value;
                 ConstString reg_name;
                 ConstString alt_name;
                 ConstString set_name;
@@ -564,102 +567,92 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
 
                 while (response.GetNameColonValue(name, value))
                 {
-                    if (name.compare("name") == 0)
+                    if (name.equals("name"))
                     {
-                        reg_name.SetCString(value.c_str());
+                        reg_name.SetString(value);
                     }
-                    else if (name.compare("alt-name") == 0)
+                    else if (name.equals("alt-name"))
                     {
-                        alt_name.SetCString(value.c_str());
+                        alt_name.SetString(value);
                     }
-                    else if (name.compare("bitsize") == 0)
+                    else if (name.equals("bitsize"))
                     {
-                        reg_info.byte_size = StringConvert::ToUInt32(value.c_str(), 0, 0) / CHAR_BIT;
+                        value.getAsInteger(0, reg_info.byte_size);
+                        reg_info.byte_size /= CHAR_BIT;
                     }
-                    else if (name.compare("offset") == 0)
+                    else if (name.equals("offset"))
                     {
-                        uint32_t offset = StringConvert::ToUInt32(value.c_str(), UINT32_MAX, 0);
-                        if (reg_offset != offset)
-                        {
-                            reg_offset = offset;
-                        }
+                        if (value.getAsInteger(0, reg_offset))
+                            reg_offset = UINT32_MAX;
                     }
-                    else if (name.compare("encoding") == 0)
+                    else if (name.equals("encoding"))
                     {
-                        const Encoding encoding = Args::StringToEncoding (value.c_str());
+                        const Encoding encoding = Args::StringToEncoding(value);
                         if (encoding != eEncodingInvalid)
                             reg_info.encoding = encoding;
                     }
-                    else if (name.compare("format") == 0)
+                    else if (name.equals("format"))
                     {
                         Format format = eFormatInvalid;
-                        if (Args::StringToFormat (value.c_str(), format, NULL).Success())
+                        if (Args::StringToFormat(value.str().c_str(), format, NULL).Success())
                             reg_info.format = format;
-                        else if (value.compare("binary") == 0)
-                            reg_info.format = eFormatBinary;
-                        else if (value.compare("decimal") == 0)
-                            reg_info.format = eFormatDecimal;
-                        else if (value.compare("hex") == 0)
-                            reg_info.format = eFormatHex;
-                        else if (value.compare("float") == 0)
-                            reg_info.format = eFormatFloat;
-                        else if (value.compare("vector-sint8") == 0)
-                            reg_info.format = eFormatVectorOfSInt8;
-                        else if (value.compare("vector-uint8") == 0)
-                            reg_info.format = eFormatVectorOfUInt8;
-                        else if (value.compare("vector-sint16") == 0)
-                            reg_info.format = eFormatVectorOfSInt16;
-                        else if (value.compare("vector-uint16") == 0)
-                            reg_info.format = eFormatVectorOfUInt16;
-                        else if (value.compare("vector-sint32") == 0)
-                            reg_info.format = eFormatVectorOfSInt32;
-                        else if (value.compare("vector-uint32") == 0)
-                            reg_info.format = eFormatVectorOfUInt32;
-                        else if (value.compare("vector-float32") == 0)
-                            reg_info.format = eFormatVectorOfFloat32;
-                        else if (value.compare("vector-uint128") == 0)
-                            reg_info.format = eFormatVectorOfUInt128;
+                        else
+                        {
+                            reg_info.format = llvm::StringSwitch<Format>(value)
+                                                  .Case("binary", eFormatBinary)
+                                                  .Case("decimal", eFormatDecimal)
+                                                  .Case("hex", eFormatHex)
+                                                  .Case("float", eFormatFloat)
+                                                  .Case("vector-sint8", eFormatVectorOfSInt8)
+                                                  .Case("vector-uint8", eFormatVectorOfUInt8)
+                                                  .Case("vector-sint16", eFormatVectorOfSInt16)
+                                                  .Case("vector-uint16", eFormatVectorOfUInt16)
+                                                  .Case("vector-sint32", eFormatVectorOfSInt32)
+                                                  .Case("vector-uint32", eFormatVectorOfUInt32)
+                                                  .Case("vector-float32", eFormatVectorOfFloat32)
+                                                  .Case("vector-uint128", eFormatVectorOfUInt128)
+                                                  .Default(eFormatInvalid);
+                        }
                     }
-                    else if (name.compare("set") == 0)
+                    else if (name.equals("set"))
                     {
-                        set_name.SetCString(value.c_str());
+                        set_name.SetString(value);
                     }
-                    else if (name.compare("gcc") == 0 || name.compare("ehframe") == 0)
+                    else if (name.equals("gcc") || name.equals("ehframe"))
                     {
-                        reg_info.kinds[eRegisterKindEHFrame] = StringConvert::ToUInt32(value.c_str(), LLDB_INVALID_REGNUM, 0);
+                        if (value.getAsInteger(0, reg_info.kinds[eRegisterKindEHFrame]))
+                            reg_info.kinds[eRegisterKindEHFrame] = LLDB_INVALID_REGNUM;
                     }
-                    else if (name.compare("dwarf") == 0)
+                    else if (name.equals("dwarf"))
                     {
-                        reg_info.kinds[eRegisterKindDWARF] = StringConvert::ToUInt32(value.c_str(), LLDB_INVALID_REGNUM, 0);
+                        if (value.getAsInteger(0, reg_info.kinds[eRegisterKindDWARF]))
+                            reg_info.kinds[eRegisterKindDWARF] = LLDB_INVALID_REGNUM;
                     }
-                    else if (name.compare("generic") == 0)
+                    else if (name.equals("generic"))
                     {
-                        reg_info.kinds[eRegisterKindGeneric] = Args::StringToGenericRegister (value.c_str());
+                        reg_info.kinds[eRegisterKindGeneric] = Args::StringToGenericRegister(value);
                     }
-                    else if (name.compare("container-regs") == 0)
+                    else if (name.equals("container-regs"))
                     {
                         SplitCommaSeparatedRegisterNumberString(value, value_regs, 16);
                     }
-                    else if (name.compare("invalidate-regs") == 0)
+                    else if (name.equals("invalidate-regs"))
                     {
                         SplitCommaSeparatedRegisterNumberString(value, invalidate_regs, 16);
                     }
-                    else if (name.compare("dynamic_size_dwarf_expr_bytes") == 0)
+                    else if (name.equals("dynamic_size_dwarf_expr_bytes"))
                     {
-                       size_t dwarf_opcode_len = value.length () / 2;
-                       assert (dwarf_opcode_len > 0);
+                        size_t dwarf_opcode_len = value.size() / 2;
+                        assert(dwarf_opcode_len > 0);
 
-                       dwarf_opcode_bytes.resize (dwarf_opcode_len);
-                       StringExtractor opcode_extractor;
-                       reg_info.dynamic_size_dwarf_len = dwarf_opcode_len; 
+                        dwarf_opcode_bytes.resize(dwarf_opcode_len);
+                        reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
 
-                       // Swap "value" over into "opcode_extractor"
-                       opcode_extractor.GetStringRef ().swap (value);
-                       uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
-                                                                           dwarf_opcode_len);
-                       assert (dwarf_opcode_len == ret_val);
+                        StringExtractor opcode_extractor(value);
+                        uint32_t ret_val = opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
+                        assert(dwarf_opcode_len == ret_val);
 
-                       reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data ();
+                        reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data();
                     }
                 }
 
@@ -1150,7 +1143,7 @@ ProcessGDBRemote::ConnectToDebugserver (const char *connect_url)
         GetTarget().SetNonStopModeEnabled (m_gdb_comm.SetNonStopMode(true));
 
     m_gdb_comm.GetEchoSupported ();
-    m_gdb_comm.ComputeThreadSuffixSupport();
+    m_gdb_comm.GetThreadSuffixSupported ();
     m_gdb_comm.GetListThreadsInStopReplySupported ();
     m_gdb_comm.GetHostInfo ();
     m_gdb_comm.GetVContSupported ('c');
@@ -1992,9 +1985,8 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                 StringExtractor reg_value_extractor;
                 reg_value_extractor.GetStringRef() = pair.second;
                 DataBufferSP buffer_sp(new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
-                reg_value_extractor.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
-                gdb_thread->PrivateSetRegisterValue(
-                    pair.first, llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
+                reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
+                gdb_thread->PrivateSetRegisterValue(pair.first, buffer_sp->GetData());
             }
 
             thread_sp->SetName (thread_name.empty() ? NULL : thread_name.c_str());
@@ -2372,7 +2364,7 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
 
                                     const size_t byte_size = bytes.GetStringRef().size()/2;
                                     DataBufferSP data_buffer_sp(new DataBufferHeap(byte_size, 0));
-                                    const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetBytes(), byte_size, 0);
+                                    const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetData(), 0);
                                     if (bytes_copied == byte_size)
                                         m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
                                 }
@@ -2437,8 +2429,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
             // Stop with signal and thread info
             lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
             const uint8_t signo = stop_packet.GetHexU8();
-            std::string key;
-            std::string value;
+            llvm::StringRef key;
+            llvm::StringRef value;
             std::string thread_name;
             std::string reason;
             std::string description;
@@ -2457,17 +2449,20 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 if (key.compare("metype") == 0)
                 {
                     // exception type in big endian hex
-                    exc_type = StringConvert::ToUInt32 (value.c_str(), 0, 16);
+                    value.getAsInteger(16, exc_type);
                 }
                 else if (key.compare("medata") == 0)
                 {
                     // exception data in big endian hex
-                    exc_data.push_back(StringConvert::ToUInt64 (value.c_str(), 0, 16));
+                    uint64_t x;
+                    value.getAsInteger(16, x);
+                    exc_data.push_back(x);
                 }
                 else if (key.compare("thread") == 0)
                 {
                     // thread in big endian hex
-                    tid = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_THREAD_ID, 16);
+                    if (value.getAsInteger(16, tid))
+                        tid = LLDB_INVALID_THREAD_ID;
                 }
                 else if (key.compare("threads") == 0)
                 {
@@ -2477,20 +2472,15 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                     // A comma separated list of all threads in the current
                     // process that includes the thread for this stop reply
                     // packet
-                    size_t comma_pos;
                     lldb::tid_t tid;
-                    while ((comma_pos = value.find(',')) != std::string::npos)
+                    while (!value.empty())
                     {
-                        value[comma_pos] = '\0';
-                        // thread in big endian hex
-                        tid = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_THREAD_ID, 16);
-                        if (tid != LLDB_INVALID_THREAD_ID)
-                            m_thread_ids.push_back (tid);
-                        value.erase(0, comma_pos + 1);
+                        llvm::StringRef tid_str;
+                        std::tie(tid_str, value) = value.split(',');
+                        if (tid_str.getAsInteger(16, tid))
+                            tid = LLDB_INVALID_THREAD_ID;
+                        m_thread_ids.push_back(tid);
                     }
-                    tid = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_THREAD_ID, 16);
-                    if (tid != LLDB_INVALID_THREAD_ID)
-                        m_thread_ids.push_back (tid);
                 }
                 else if (key.compare("thread-pcs") == 0)
                 {
@@ -2498,96 +2488,76 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                     // A comma separated list of all threads in the current
                     // process that includes the thread for this stop reply
                     // packet
-                    size_t comma_pos;
                     lldb::addr_t pc;
-                    while ((comma_pos = value.find(',')) != std::string::npos)
+                    while (!value.empty())
                     {
-                        value[comma_pos] = '\0';
-                        // thread in big endian hex
-                        pc = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
-                        if (pc != LLDB_INVALID_ADDRESS)
-                            m_thread_pcs.push_back (pc);
-                        value.erase(0, comma_pos + 1);
+                        llvm::StringRef pc_str;
+                        std::tie(pc_str, value) = value.split(',');
+                        if (pc_str.getAsInteger(16, pc))
+                            pc = LLDB_INVALID_ADDRESS;
+                        m_thread_pcs.push_back(pc);
                     }
-                    pc = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
-                    if (pc != LLDB_INVALID_ADDRESS)
-                        m_thread_pcs.push_back (pc);
                 }
                 else if (key.compare("jstopinfo") == 0)
                 {
-                    StringExtractor json_extractor;
-                    // Swap "value" over into "name_extractor"
-                    json_extractor.GetStringRef().swap(value);
+                    StringExtractor json_extractor(value);
+                    std::string json;
                     // Now convert the HEX bytes into a string value
-                    json_extractor.GetHexByteString (value);
+                    json_extractor.GetHexByteString(json);
 
                     // This JSON contains thread IDs and thread stop info for all threads.
                     // It doesn't contain expedited registers, memory or queue info.
-                    m_jstopinfo_sp = StructuredData::ParseJSON (value);
+                    m_jstopinfo_sp = StructuredData::ParseJSON(json);
                 }
                 else if (key.compare("hexname") == 0)
                 {
-                    StringExtractor name_extractor;
-                    // Swap "value" over into "name_extractor"
-                    name_extractor.GetStringRef().swap(value);
+                    StringExtractor name_extractor(value);
+                    std::string name;
                     // Now convert the HEX bytes into a string value
-                    name_extractor.GetHexByteString (value);
-                    thread_name.swap (value);
+                    name_extractor.GetHexByteString(thread_name);
                 }
                 else if (key.compare("name") == 0)
                 {
-                    thread_name.swap (value);
+                    thread_name = value;
                 }
                 else if (key.compare("qaddr") == 0)
                 {
-                    thread_dispatch_qaddr = StringConvert::ToUInt64 (value.c_str(), 0, 16);
+                    value.getAsInteger(16, thread_dispatch_qaddr);
                 }
                 else if (key.compare("dispatch_queue_t") == 0)
                 {
                     queue_vars_valid = true;
-                    dispatch_queue_t = StringConvert::ToUInt64 (value.c_str(), 0, 16);
+                    value.getAsInteger(16, dispatch_queue_t);
                 }
                 else if (key.compare("qname") == 0)
                 {
                     queue_vars_valid = true;
-                    StringExtractor name_extractor;
-                    // Swap "value" over into "name_extractor"
-                    name_extractor.GetStringRef().swap(value);
+                    StringExtractor name_extractor(value);
                     // Now convert the HEX bytes into a string value
-                    name_extractor.GetHexByteString (value);
-                    queue_name.swap (value);
+                    name_extractor.GetHexByteString(queue_name);
                 }
                 else if (key.compare("qkind") == 0)
                 {
-                    if (value == "serial")
-                    {
-                        queue_vars_valid = true;
-                        queue_kind = eQueueKindSerial;
-                    }
-                    else if (value == "concurrent")
-                    {
-                        queue_vars_valid = true;
-                        queue_kind = eQueueKindConcurrent;
-                    }
+                    queue_kind = llvm::StringSwitch<QueueKind>(value)
+                                     .Case("serial", eQueueKindSerial)
+                                     .Case("concurrent", eQueueKindConcurrent)
+                                     .Default(eQueueKindUnknown);
+                    queue_vars_valid = queue_kind != eQueueKindUnknown;
                 }
                 else if (key.compare("qserialnum") == 0)
                 {
-                    queue_serial_number = StringConvert::ToUInt64 (value.c_str(), 0, 0);
-                    if (queue_serial_number != 0)
+                    if (!value.getAsInteger(0, queue_serial_number))
                         queue_vars_valid = true;
                 }
                 else if (key.compare("reason") == 0)
                 {
-                    reason.swap(value);
+                    reason = value;
                 }
                 else if (key.compare("description") == 0)
                 {
-                    StringExtractor desc_extractor;
-                    // Swap "value" over into "name_extractor"
-                    desc_extractor.GetStringRef().swap(value);
+                    StringExtractor desc_extractor(value);
                     // Now convert the HEX bytes into a string value
-                    desc_extractor.GetHexByteString (value);
-                    description.swap(value);
+                    desc_extractor.GetHexByteString(description);
                 }
                 else if (key.compare("memory") == 0)
                 {
@@ -2603,20 +2573,17 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                     //      "0[0-7]+" for octal
                     //      "[1-9]+" for decimal
                     // <bytes> is native endian ASCII hex bytes just like the register values
-                    llvm::StringRef value_ref(value);
-                    std::pair<llvm::StringRef, llvm::StringRef> pair;
-                    pair = value_ref.split('=');
-                    if (!pair.first.empty() && !pair.second.empty())
+                    llvm::StringRef addr_str, bytes_str;
+                    std::tie(addr_str, bytes_str) = value.split('=');
+                    if (!addr_str.empty() && !bytes_str.empty())
                     {
-                        std::string addr_str(pair.first.str());
-                        const lldb::addr_t mem_cache_addr = StringConvert::ToUInt64(addr_str.c_str(), LLDB_INVALID_ADDRESS, 0);
-                        if (mem_cache_addr != LLDB_INVALID_ADDRESS)
+                        lldb::addr_t mem_cache_addr = LLDB_INVALID_ADDRESS;
+                        if (!addr_str.getAsInteger(0, mem_cache_addr))
                         {
-                            StringExtractor bytes;
-                            bytes.GetStringRef() = pair.second.str();
-                            const size_t byte_size = bytes.GetStringRef().size()/2;
+                            StringExtractor bytes(bytes_str);
+                            const size_t byte_size = bytes.GetBytesLeft() / 2;
                             DataBufferSP data_buffer_sp(new DataBufferHeap(byte_size, 0));
-                            const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetBytes(), byte_size, 0);
+                            const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetData(), 0);
                             if (bytes_copied == byte_size)
                                 m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
                         }
@@ -2625,7 +2592,9 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 || key.compare("awatch") == 0)
                 {
                     // Support standard GDB remote stop reply packet 'TAAwatch:addr'
-                    lldb::addr_t wp_addr = StringConvert::ToUInt64 (value.c_str(), LLDB_INVALID_ADDRESS, 16);
+                    lldb::addr_t wp_addr = LLDB_INVALID_ADDRESS;
+                    value.getAsInteger(16, wp_addr);
+
                     WatchpointSP wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
                     uint32_t wp_index = LLDB_INVALID_INDEX32;
 
@@ -2643,8 +2612,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 }
                 else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1]))
                 {
-                    uint32_t reg = StringConvert::ToUInt32 (key.c_str(), UINT32_MAX, 16);
-                    if (reg != UINT32_MAX)
+                    uint32_t reg = UINT32_MAX;
+                    if (!key.getAsInteger(16, reg))
                         expedited_register_map[reg] = std::move(value);
                 }
             }
@@ -3115,7 +3084,7 @@ ProcessGDBRemote::DoReadMemory (addr_t addr, void *buf, size_t size, Error &erro
             }
             else
             {
-                return response.GetHexBytes(buf, size, '\xdd');
+                return response.GetHexBytes(llvm::MutableArrayRef<uint8_t>((uint8_t*)buf, size), '\xdd');
             }
         }
         else if (response.IsErrorResponse())
@@ -3969,24 +3938,20 @@ ProcessGDBRemote::AsyncThread (void *arg)
                                         response.SetFilePos(1);
 
                                         int exit_status = response.GetHexU8();
-                                        const char *desc_cstr = NULL;
-                                        StringExtractor extractor;
                                         std::string desc_string;
                                         if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';')
                                         {
-                                            std::string desc_token;
-                                            while (response.GetNameColonValue (desc_token, desc_string))
+                                            llvm::StringRef desc_str;
+                                            llvm::StringRef desc_token;
+                                            while (response.GetNameColonValue(desc_token, desc_str))
                                             {
-                                                if (desc_token == "description")
-                                                {
-                                                    extractor.GetStringRef().swap(desc_string);
-                                                    extractor.SetFilePos(0);
-                                                    extractor.GetHexByteString (desc_string);
-                                                    desc_cstr = desc_string.c_str();
-                                                }
+                                                if (desc_token != "description")
+                                                    continue;
+                                                StringExtractor extractor(desc_str);
+                                                extractor.GetHexByteString(desc_string);
                                             }
                                         }
-                                        process->SetExitStatus(exit_status, desc_cstr);
+                                        process->SetExitStatus(exit_status, desc_string.c_str());
                                         done = true;
                                         break;
                                     }
@@ -4620,8 +4585,7 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
                 dwarf_opcode_bytes.resize (dwarf_opcode_len);
                 reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
                 opcode_extractor.GetStringRef ().swap (opcode_string);
-                uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
-                                                                    dwarf_opcode_len);
+                uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes);
                 assert (dwarf_opcode_len == ret_val);
 
                 reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data ();
@@ -5154,27 +5118,28 @@ std::string
 ProcessGDBRemote::HarmonizeThreadIdsForProfileData(StringExtractorGDBRemote &profileDataExtractor)
 {
     std::map<uint64_t, uint32_t> new_thread_id_to_used_usec_map;
-    std::stringstream final_output;
-    std::string name, value;
+    std::string output;
+    llvm::raw_string_ostream output_stream(output);
+    llvm::StringRef name, value;
 
     // Going to assuming thread_used_usec comes first, else bail out.
     while (profileDataExtractor.GetNameColonValue(name, value))
     {
         if (name.compare("thread_used_id") == 0)
         {
-            StringExtractor threadIDHexExtractor(value.c_str());
+            StringExtractor threadIDHexExtractor(value);
             uint64_t thread_id = threadIDHexExtractor.GetHexMaxU64(false, 0);
 
             bool has_used_usec = false;
             uint32_t curr_used_usec = 0;
-            std::string usec_name, usec_value;
+            llvm::StringRef usec_name, usec_value;
             uint32_t input_file_pos = profileDataExtractor.GetFilePos();
             if (profileDataExtractor.GetNameColonValue(usec_name, usec_value))
             {
-                if (usec_name.compare("thread_used_usec") == 0)
+                if (usec_name.equals("thread_used_usec"))
                 {
                     has_used_usec = true;
-                    curr_used_usec = strtoull(usec_value.c_str(), NULL, 0);
+                    usec_value.getAsInteger(0, curr_used_usec);
                 }
                 else
                 {
@@ -5204,16 +5169,16 @@ ProcessGDBRemote::HarmonizeThreadIdsForProfileData(StringExtractorGDBRemote &pro
                     // We try to avoid doing too many index id reservation,
                     // resulting in fast increase of index ids.
 
-                    final_output << name << ":";
+                    output_stream << name << ":";
                     int32_t index_id = AssignIndexIDToThread(thread_id);
-                    final_output << index_id << ";";
+                    output_stream << index_id << ";";
 
-                    final_output << usec_name << ":" << usec_value << ";";
+                    output_stream << usec_name << ":" << usec_value << ";";
                 }
                 else
                 {
                     // Skip past 'thread_used_name'.
-                    std::string local_name, local_value;
+                    llvm::StringRef local_name, local_value;
                     profileDataExtractor.GetNameColonValue(local_name, local_value);
                 }
 
@@ -5223,18 +5188,18 @@ ProcessGDBRemote::HarmonizeThreadIdsForProfileData(StringExtractorGDBRemote &pro
             else
             {
                 // Bail out and use old string.
-                final_output << name << ":" << value << ";";
+                output_stream << name << ":" << value << ";";
             }
         }
         else
         {
-            final_output << name << ":" << value << ";";
+            output_stream << name << ":" << value << ";";
         }
     }
-    final_output << end_delimiter;
+    output_stream << end_delimiter;
     m_thread_id_to_used_usec_map = new_thread_id_to_used_usec_map;
 
-    return final_output.str();
+    return output_stream.str();
 }
 
 void

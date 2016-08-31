@@ -74,7 +74,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: __imp_ExitProcess
 # CHECK-NEXT:     Value: 64
-# CHECK-NEXT:     Section: .idata (4)
+# CHECK-NEXT:     Section: .idata (5)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)
@@ -92,7 +92,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: __imp_MessageBoxA
 # CHECK-NEXT:     Value: 72
-# CHECK-NEXT:     Section: .idata (4)
+# CHECK-NEXT:     Section: .idata (5)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)

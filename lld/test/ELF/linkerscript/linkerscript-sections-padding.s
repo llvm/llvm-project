@@ -2,16 +2,16 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 
 ## Check that padding value works:
-# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x112233445566778899 }" > %t.script
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1122 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
-# YES: 0120  66223344 55667788 99112233 44556677
+# YES: 0120  66001122 00001122 00001122 00001122
 
 ## Confirming that address was correct:
-# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x998877665544332211 }" > %t.script
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99887766 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES2 %s
-# YES2: 0120  66887766 55443322 11998877 66554433
+# YES2: 0120  66887766 99887766 99887766 99887766
 
 ## Default padding value is 0x00:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } }" > %t.script
@@ -29,7 +29,7 @@
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
 # RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR2 %s
-# ERR2: not a hexadecimal value: XX
+# ERR2: invalid filler expression: =0x99XX
 
 .section        .mysec.1,"a"
 .align  16

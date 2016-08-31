@@ -1794,7 +1794,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P (StringExtractorGDBRemote &packet)
 
     // Parse out the value.
     uint8_t reg_bytes[32]; // big enough to support up to 256 bit ymmN register
-    size_t reg_size = packet.GetHexBytesAvail (reg_bytes, sizeof(reg_bytes));
+    size_t reg_size = packet.GetHexBytesAvail (reg_bytes);
 
     // Get the thread to use.
     NativeThreadProtocolSP thread_sp = GetThreadFromSuffix (packet);
@@ -1939,10 +1939,10 @@ GDBRemoteCommunicationServerLLGS::Handle_I (StringExtractorGDBRemote &packet)
     }
 
     packet.SetFilePos (::strlen("I"));
-    char tmp[4096];
+    uint8_t tmp[4096];
     for (;;)
     {
-        size_t read = packet.GetHexBytesAvail(tmp, sizeof(tmp));
+        size_t read = packet.GetHexBytesAvail(tmp);
         if (read == 0)
         {
             break;
@@ -2118,7 +2118,7 @@ GDBRemoteCommunicationServerLLGS::Handle_M (StringExtractorGDBRemote &packet)
 
     // Convert the hex memory write contents to bytes.
     StreamGDBRemote response;
-    const uint64_t convert_count = packet.GetHexBytes(&buf[0], byte_count, 0);
+    const uint64_t convert_count = packet.GetHexBytes(buf, 0);
     if (convert_count != byte_count)
     {
         if (log)

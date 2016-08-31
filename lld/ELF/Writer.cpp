@@ -176,7 +176,7 @@ template <class ELFT> void elf::writeResult() {
   StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
   GotPlt.reset(new GotPltSection<ELFT>);
   RelaPlt.reset(new RelocationSection<ELFT>(S, false /*Sort*/));
-  if (!Config->StripAll) {
+  if (Config->Strip != StripPolicy::All) {
     StrTab.reset(new StringTableSection<ELFT>(".strtab", false));
     SymTabSec.reset(new SymbolTableSection<ELFT>(*StrTab));
   }
@@ -1306,8 +1306,13 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   }
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd)
+    if (Sec != Out<ELFT>::Opd && Sec != Out<ELFT>::EhFrameHdr)
       Sec->writeTo(Buf + Sec->getFileOff());
+
+  // The .eh_frame_hdr depends on .eh_frame section contents, therefore
+  // it should be written after .eh_frame is written.
+  if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr)
+    Out<ELFT>::EhFrameHdr->writeTo(Buf + Out<ELFT>::EhFrameHdr->getFileOff());
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {

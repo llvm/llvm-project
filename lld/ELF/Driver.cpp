@@ -344,6 +344,15 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
   return false;
 }
 
+static StripPolicy getStripOption(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_strip_all, OPT_strip_debug)) {
+    if (Arg->getOption().getID() == OPT_strip_all)
+      return StripPolicy::All;
+    return StripPolicy::Debug;
+  }
+  return StripPolicy::None;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -383,8 +392,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->Shared = Args.hasArg(OPT_shared);
-  Config->StripAll = Args.hasArg(OPT_strip_all);
-  Config->StripDebug = Args.hasArg(OPT_strip_debug);
   Config->Target1Rel = Args.hasArg(OPT_target1_rel);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Trace = Args.hasArg(OPT_trace);
@@ -416,16 +423,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
 
+  if (!Config->Relocatable)
+    Config->Strip = getStripOption(Args);
+
   if (Optional<StringRef> Value = getZOptionValue(Args, "stack-size"))
     if (Value->getAsInteger(0, Config->ZStackSize))
       error("invalid stack size: " + *Value);
-
-  if (Config->Relocatable)
-    Config->StripAll = false;
-
-  // --strip-all implies --strip-debug.
-  if (Config->StripAll)
-    Config->StripDebug = true;
 
   // Config->Pic is true if we are generating position-independent code.
   Config->Pic = Config->Pie || Config->Shared;

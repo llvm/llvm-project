@@ -14,7 +14,7 @@ IMPORT-NEXT:   Name: std32.dll
 IMPORT-NEXT:   Attributes: 0x1
 IMPORT-NEXT:   ModuleHandle: 0x1018
 IMPORT-NEXT:   ImportAddressTable: 0x1020
-IMPORT-NEXT:   ImportNameTable: 0x3040
+IMPORT-NEXT:   ImportNameTable: 0x4040
 IMPORT-NEXT:   BoundDelayImportTable: 0x0
 IMPORT-NEXT:   UnloadDelayImportTable: 0x0
 IMPORT-NEXT:   Import {
@@ -71,7 +71,7 @@ BASEREL-NEXT:   }
 BASEREL-NEXT: ]
 
 DISASM:      202b:      68 20 10 40 00  pushl   $4198432
-DISASM-NEXT: 2030:      68 00 30 40 00  pushl   $4206592
+DISASM-NEXT: 2030:      68 00 40 40 00  pushl   $4210688
 DISASM-NEXT: 2035:      e8 c6 ff ff ff  calll   -58 <_main@0>
 DISASM-NEXT: 203a:      5a      popl    %edx
 DISASM-NEXT: 203b:      59      popl    %ecx
@@ -79,7 +79,7 @@ DISASM-NEXT: 203c:      ff e0   jmpl    *%eax
 DISASM-NEXT: 203e:      51      pushl   %ecx
 DISASM-NEXT: 203f:      52      pushl   %edx
 DISASM-NEXT: 2040:      68 24 10 40 00  pushl   $4198436
-DISASM-NEXT: 2045:      68 00 30 40 00  pushl   $4206592
+DISASM-NEXT: 2045:      68 00 40 40 00  pushl   $4210688
 DISASM-NEXT: 204a:      e8 b1 ff ff ff  calll   -79 <_main@0>
 DISASM-NEXT: 204f:      5a      popl    %edx
 DISASM-NEXT: 2050:      59      popl    %ecx

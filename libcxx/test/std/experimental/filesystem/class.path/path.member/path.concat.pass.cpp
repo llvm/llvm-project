@@ -265,6 +265,68 @@ void doConcatECharTest(ConcatOperatorTestcase const& TC)
   }
 }
 
+
+template <class It, class = decltype(fs::path{}.concat(std::declval<It>()))>
+constexpr bool has_concat(int) { return true; }
+template <class It>
+constexpr bool has_concat(long) { return false; }
+
+template <class It, class = decltype(fs::path{}.operator+=(std::declval<It>()))>
+constexpr bool has_concat_op(int) { return true; }
+template <class It>
+constexpr bool has_concat_op(long) { return false; }
+template <class It>
+constexpr bool has_concat_op() { return has_concat_op<It>(0); }
+
+template <class It>
+constexpr bool has_concat() {
+  static_assert(has_concat<It>(0) == has_concat_op<It>(0), "must be same");
+  return has_concat<It>(0) && has_concat_op<It>(0);
+}
+
+void test_sfinae() {
+  using namespace fs;
+  {
+    static_assert(has_concat_op<char>(), "");
+    static_assert(has_concat_op<const char>(), "");
+    static_assert(has_concat_op<char16_t>(), "");
+    static_assert(has_concat_op<const char16_t>(), "");
+  }
+  {
+    using It = const char* const;
+    static_assert(has_concat<It>(), "");
+  }
+  {
+    using It = input_iterator<const char*>;
+    static_assert(has_concat<It>(), "");
+  }
+  {
+    struct Traits {
+      using iterator_category = std::input_iterator_tag;
+      using value_type = const char;
+      using pointer = const char*;
+      using reference = const char&;
+      using difference_type = std::ptrdiff_t;
+    };
+    using It = input_iterator<const char*, Traits>;
+    static_assert(has_concat<It>(), "");
+  }
+  {
+    using It = output_iterator<const char*>;
+    static_assert(!has_concat<It>(), "");
+  }
+  {
+    static_assert(!has_concat<int>(0), "");
+    // operator+=(int) is well formed since it converts to operator+=(value_type)
+    // but concat(int) isn't valid because there is no concat(value_type).
+    // This should probably be addressed by a LWG issue.
+    static_assert(has_concat_op<int>(), "");
+  }
+  {
+    static_assert(!has_concat<int*>(), "");
+  }
+}
+
 int main()
 {
   using namespace fs;
@@ -323,4 +385,5 @@ int main()
     doConcatECharTest<char16_t>(TC);
     doConcatECharTest<char32_t>(TC);
   }
+  test_sfinae();
 }

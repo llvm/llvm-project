@@ -69,6 +69,12 @@ Improvements to clang-tidy
 
   Flags classes where some, but not all, special member functions are user-defined.
 
+- New `misc-move-forwarding-reference
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-move-forwarding-reference.html>`_ check
+
+  Warns when ``std::move`` is applied to a forwarding reference instead of
+  ``std::forward``.
+
 - New `mpi-buffer-deref
   <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
 
@@ -90,6 +96,14 @@ Improvements to clang-tidy
 
   Flags function parameters of a pointer type that could be changed to point to
   a constant type instead.
+
+Fixed bugs:
+- `modernize-make-unique
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
+  and `modernize-make-shared
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_
+  Calling ``make_{unique|shared}`` from within a member function of a type
+  with a private or protected constructor would be ill-formed.
 
 Improvements to include-fixer
 -----------------------------
