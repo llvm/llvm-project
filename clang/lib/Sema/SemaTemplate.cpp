@@ -3330,7 +3330,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   // on the previously-computed template arguments.
   if (ArgType->getType()->isDependentType()) {
     Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc,
-                                     Template, Converted,
+                                     Param, Template, Converted,
                                      SourceRange(TemplateLoc, RAngleLoc));
     if (Inst.isInvalid())
       return nullptr;
@@ -3382,7 +3382,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                              NonTypeTemplateParmDecl *Param,
                         SmallVectorImpl<TemplateArgument> &Converted) {
   Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc,
-                                   Template, Converted,
+                                   Param, Template, Converted,
                                    SourceRange(TemplateLoc, RAngleLoc));
   if (Inst.isInvalid())
     return ExprError();
@@ -3433,8 +3433,9 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                              TemplateTemplateParmDecl *Param,
                        SmallVectorImpl<TemplateArgument> &Converted,
                              NestedNameSpecifierLoc &QualifierLoc) {
-  Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc, Template, Converted,
-                                   SourceRange(TemplateLoc, RAngleLoc));
+  Sema::InstantiatingTemplate Inst(
+      SemaRef, TemplateLoc, TemplateParameter(Param), Template, Converted,
+      SourceRange(TemplateLoc, RAngleLoc));
   if (Inst.isInvalid())
     return TemplateName();
 
@@ -4055,7 +4056,9 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
     }
 
     // Introduce an instantiation record that describes where we are using
-    // the default template argument.
+    // the default template argument. We're not actually instantiating a
+    // template here, we just create this object to put a note into the
+    // context stack.
     InstantiatingTemplate Inst(*this, RAngleLoc, Template, *Param, Converted,
                                SourceRange(TemplateLoc, RAngleLoc));
     if (Inst.isInvalid())
