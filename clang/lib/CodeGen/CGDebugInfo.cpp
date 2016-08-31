@@ -1554,6 +1554,14 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   if (!RD->isDynamicClass())
     return;
 
+  // Don't emit any vtable shape or vptr info if this class doesn't have an
+  // extendable vfptr. This can happen if the class doesn't have virtual
+  // methods, or in the MS ABI if those virtual methods only come from virtually
+  // inherited bases.
+  const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
+  if (!RL.hasExtendableVFPtr())
+    return;
+
   // CodeView needs to know how large the vtable of every dynamic class is, so
   // emit a special named pointer type into the element list. The vptr type
   // points to this type as well.
@@ -1579,7 +1587,6 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   }
 
   // If there is a primary base then the artificial vptr member lives there.
-  const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
   if (RL.getPrimaryBase())
     return;
 
