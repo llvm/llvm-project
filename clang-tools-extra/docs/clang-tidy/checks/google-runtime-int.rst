@@ -10,3 +10,18 @@ The corresponding style guide rule:
 https://google.github.io/styleguide/cppguide.html#Integer_Types.
 
 Correspondig cpplint.py check: `runtime/int`.
+
+Options
+-------
+
+.. option:: UnsignedTypePrefix
+
+   A string specifying the unsigned type prefix. Default is `uint`.
+
+.. option:: SignedTypePrefix
+
+   A string specifying the signed type prefix. Default is `int`.
+
+.. option:: TypeSuffix
+
+   A string specifying the type suffix. Default is an empty string.

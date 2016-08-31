@@ -1273,6 +1273,24 @@ public:
 };
 }
 
+static StringRef getDeoptLowering(CallSite CS) {
+  const char *DeoptLowering = "deopt-lowering";
+  if (CS.hasFnAttr(DeoptLowering)) {
+    // FIXME: CallSite has a *really* confusing interface around attributes
+    // with values.  
+    const AttributeSet &CSAS = CS.getAttributes();
+    if (CSAS.hasAttribute(AttributeSet::FunctionIndex,
+                          DeoptLowering))
+      return CSAS.getAttribute(AttributeSet::FunctionIndex,
+                               DeoptLowering).getValueAsString();
+    Function *F = CS.getCalledFunction();
+    assert(F && F->hasFnAttribute(DeoptLowering));
+    return F->getFnAttribute(DeoptLowering).getValueAsString();
+  }
+  return "live-through";
+}
+    
+
 static void
 makeStatepointExplicitImpl(const CallSite CS, /* to replace */
                            const SmallVectorImpl<Value *> &BasePtrs,
@@ -1313,6 +1331,14 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     NumPatchBytes = *SD.NumPatchBytes;
   if (SD.StatepointID)
     StatepointID = *SD.StatepointID;
+
+  // Pass through the requested lowering if any.  The default is live-through.
+  StringRef DeoptLowering = getDeoptLowering(CS);
+  if (DeoptLowering.equals("live-in"))
+    Flags |= uint32_t(StatepointFlags::DeoptLiveIn);
+  else {
+    assert(DeoptLowering.equals("live-through") && "Unsupported value!");
+  }
 
   Value *CallTarget = CS.getCalledValue();
   if (Function *F = dyn_cast<Function>(CallTarget)) {

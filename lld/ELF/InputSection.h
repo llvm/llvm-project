@@ -21,11 +21,11 @@
 namespace lld {
 namespace elf {
 
+class DefinedCommon;
 class SymbolBody;
 
 template <class ELFT> class ICF;
 template <class ELFT> class DefinedRegular;
-template <class ELFT> class DefinedCommon;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
@@ -287,7 +287,7 @@ template <class ELFT> class CommonInputSection : public InputSection<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  CommonInputSection(std::vector<DefinedCommon<ELFT> *> Syms);
+  CommonInputSection(std::vector<DefinedCommon *> Syms);
 
   // The singleton instance of this class.
   static CommonInputSection<ELFT> *X;

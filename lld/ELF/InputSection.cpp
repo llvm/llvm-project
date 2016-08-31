@@ -698,8 +698,7 @@ bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-CommonInputSection<ELFT>::CommonInputSection(
-    std::vector<DefinedCommon<ELFT> *> Syms)
+CommonInputSection<ELFT>::CommonInputSection(std::vector<DefinedCommon *> Syms)
     : InputSection<ELFT>(nullptr, &Hdr) {
   Hdr.sh_size = 0;
   Hdr.sh_type = SHT_NOBITS;
@@ -707,12 +706,12 @@ CommonInputSection<ELFT>::CommonInputSection(
   this->Live = true;
 
   // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(Syms.begin(), Syms.end(), [](const DefinedCommon<ELFT> *A,
-                                                const DefinedCommon<ELFT> *B) {
-    return A->Alignment > B->Alignment;
-  });
+  std::stable_sort(Syms.begin(), Syms.end(),
+                   [](const DefinedCommon *A, const DefinedCommon *B) {
+                     return A->Alignment > B->Alignment;
+                   });
 
-  for (DefinedCommon<ELFT> *Sym : Syms) {
+  for (DefinedCommon *Sym : Syms) {
     this->Alignment = std::max<uintX_t>(this->Alignment, Sym->Alignment);
     Hdr.sh_size = alignTo(Hdr.sh_size, Sym->Alignment);
 

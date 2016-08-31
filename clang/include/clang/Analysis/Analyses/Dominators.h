@@ -171,8 +171,8 @@ template <> struct GraphTraits< ::clang::DomTreeNode* > {
   typedef ::clang::DomTreeNode::iterator ChildIteratorType;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 
   typedef llvm::pointer_iterator<df_iterator<::clang::DomTreeNode *>>
       nodes_iterator;

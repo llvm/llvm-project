@@ -26,7 +26,7 @@
 # DISASM-NEXT:    11038:  49 f7 c7 00 20 01 00  testq $73728, %r15
 
 # RUN: ld.lld -shared %t.o -o %t2
-# RUN: llvm-readobj -s %t2 | FileCheck --check-prefix=SEC-PIC    %s
+# RUN: llvm-readobj -s -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s
 # RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=DISASM-PIC %s
 # SEC-PIC:      Section {
 # SEC-PIC:        Index:
@@ -36,29 +36,35 @@
 # SEC-PIC-NEXT:     SHF_ALLOC
 # SEC-PIC-NEXT:     SHF_WRITE
 # SEC-PIC-NEXT:   ]
-# SEC-PIC-NEXT:   Address: 0x2090
-# SEC-PIC-NEXT:   Offset: 0x2090
+# SEC-PIC-NEXT:   Address: 0x20A0
+# SEC-PIC-NEXT:   Offset: 0x20A0
 # SEC-PIC-NEXT:   Size: 8
 # SEC-PIC-NEXT:   Link:
 # SEC-PIC-NEXT:   Info:
 # SEC-PIC-NEXT:   AddressAlignment:
 # SEC-PIC-NEXT:   EntrySize:
 # SEC-PIC-NEXT: }
+# SEC-PIC:      Relocations [
+# SEC-PIC-NEXT:   Section ({{.*}}) .rela.dyn {
+# SEC-PIC-NEXT:     0x20A0 R_X86_64_RELATIVE - 0x3000
+# SEC-PIC-NEXT:   }
+# SEC-PIC-NEXT: ]
+# SEC-PIC:      0x000000006FFFFFF9 RELACOUNT            1 
 
 ## Check that there was no relaxation performed. All values refer to got entry.
-## Ex: 0x1000 + 4233 + 7 = 0x2090
-##     0x102a + 4191 + 7 = 0x2090
+## Ex: 0x1000 + 4249 + 7 = 0x20A0
+##     0x102a + 4207 + 7 = 0x20A0
 # DISASM-PIC:      Disassembly of section .text:
 # DISASM-PIC-NEXT: _start:
-# DISASM-PIC-NEXT:  1000: 48 13 05 89 10 00 00 adcq  4233(%rip), %rax
-# DISASM-PIC-NEXT:  1007: 48 03 1d 82 10 00 00 addq  4226(%rip), %rbx
-# DISASM-PIC-NEXT:  100e: 48 23 0d 7b 10 00 00 andq  4219(%rip), %rcx
-# DISASM-PIC-NEXT:  1015: 48 3b 15 74 10 00 00 cmpq  4212(%rip), %rdx
-# DISASM-PIC-NEXT:  101c: 48 0b 3d 6d 10 00 00 orq   4205(%rip), %rdi
-# DISASM-PIC-NEXT:  1023: 48 1b 35 66 10 00 00 sbbq  4198(%rip), %rsi
-# DISASM-PIC-NEXT:  102a: 48 2b 2d 5f 10 00 00 subq  4191(%rip), %rbp
-# DISASM-PIC-NEXT:  1031: 4c 33 05 58 10 00 00 xorq  4184(%rip), %r8
-# DISASM-PIC-NEXT:  1038: 4c 85 3d 51 10 00 00 testq 4177(%rip), %r15
+# DISASM-PIC-NEXT: 1000: 48 13 05 99 10 00 00  adcq  4249(%rip), %rax
+# DISASM-PIC-NEXT: 1007: 48 03 1d 92 10 00 00  addq  4242(%rip), %rbx
+# DISASM-PIC-NEXT: 100e: 48 23 0d 8b 10 00 00  andq  4235(%rip), %rcx
+# DISASM-PIC-NEXT: 1015: 48 3b 15 84 10 00 00  cmpq  4228(%rip), %rdx
+# DISASM-PIC-NEXT: 101c: 48 0b 3d 7d 10 00 00  orq 4221(%rip), %rdi
+# DISASM-PIC-NEXT: 1023: 48 1b 35 76 10 00 00  sbbq  4214(%rip), %rsi
+# DISASM-PIC-NEXT: 102a: 48 2b 2d 6f 10 00 00  subq  4207(%rip), %rbp
+# DISASM-PIC-NEXT: 1031: 4c 33 05 68 10 00 00  xorq  4200(%rip), %r8
+# DISASM-PIC-NEXT: 1038: 4c 85 3d 61 10 00 00  testq 4193(%rip), %r15
 
 .data
 .type   bar, @object

@@ -3240,7 +3240,7 @@ GDBRemoteCommunicationClient::ReadFile (lldb::user_id_t fd,
         uint32_t retcode = response.GetHexMaxU32(false, UINT32_MAX);
         if (retcode == UINT32_MAX)
             return retcode;
-        const char next = (response.GetBytesLeft() ? response.PeekChar() : 0);
+        const char next = (response.Peek() ? *response.Peek() : 0);
         if (next == ',')
             return 0;
         if (next == ';')
@@ -3428,7 +3428,7 @@ GDBRemoteCommunicationClient::CalculateMD5 (const lldb_private::FileSpec& file_s
             return false;
         if (response.GetChar() != ',')
             return false;
-        if (response.GetBytesLeft() && response.PeekChar() == 'x')
+        if (response.Peek() && *response.Peek() == 'x')
             return false;
         low = response.GetHexMaxU64(false, UINT64_MAX);
         high = response.GetHexMaxU64(false, UINT64_MAX);

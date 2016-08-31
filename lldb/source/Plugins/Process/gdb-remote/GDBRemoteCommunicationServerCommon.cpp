@@ -966,7 +966,7 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironmentHexEncoded (StringExtract
     {
         std::string str;
         packet.GetHexByteString(str);
-        m_process_launch_info.GetEnvironmentEntries().AppendArgument(str);
+        m_process_launch_info.GetEnvironmentEntries().AppendArgument(str.c_str());
         return SendOKResponse();
     }
     return SendErrorResponse(12);
@@ -979,7 +979,8 @@ GDBRemoteCommunicationServerCommon::Handle_QLaunchArch (StringExtractorGDBRemote
     const uint32_t bytes_left = packet.GetBytesLeft();
     if (bytes_left > 0)
     {
-        ArchSpec arch_spec(packet.Peek(), nullptr);
+        const char* arch_triple = packet.Peek();
+        ArchSpec arch_spec(arch_triple,NULL);
         m_process_launch_info.SetArchitecture(arch_spec);
         return SendOKResponse();
     }

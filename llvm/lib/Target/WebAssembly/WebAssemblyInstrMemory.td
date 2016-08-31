@@ -41,15 +41,13 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
 }]>;
 
 // GlobalAddresses are conceptually unsigned values, so we can also fold them
-// into immediate values as long as their offsets are non-negative.
+// into immediate values as long as the add is 'nuw'.
+// TODO: We'd like to also match GA offsets but there are cases where the
+// register can have a negative value. Find out what more we can do.
 def regPlusGA : PatFrag<(ops node:$addr, node:$off),
                         (add node:$addr, node:$off),
                         [{
-  return N->getFlags()->hasNoUnsignedWrap() ||
-         (N->getOperand(1)->getOpcode() == WebAssemblyISD::Wrapper &&
-          isa<GlobalAddressSDNode>(N->getOperand(1)->getOperand(0)) &&
-          cast<GlobalAddressSDNode>(N->getOperand(1)->getOperand(0))
-             ->getOffset() >= 0);
+  return N->getFlags()->hasNoUnsignedWrap();
 }]>;
 
 // We don't need a regPlusES because external symbols never have constant

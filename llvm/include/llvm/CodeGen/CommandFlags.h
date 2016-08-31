@@ -150,6 +150,26 @@ EnableNoNaNsFPMath("enable-no-nans-fp-math",
                    cl::init(false));
 
 cl::opt<bool>
+EnableNoTrappingFPMath("enable-no-trapping-fp-math",
+                       cl::desc("Enable setting the FP exceptions build "
+                                "attribute not to use exceptions"),
+                       cl::init(false));
+
+cl::opt<llvm::FPDenormal::DenormalType>
+DenormalType("denormal-fp-math",
+          cl::desc("Select which denormal numbers the code is permitted to require"),
+          cl::init(FPDenormal::IEEE),
+          cl::values(
+              clEnumValN(FPDenormal::IEEE, "ieee",
+                         "IEEE 754 denormal numbers"),
+              clEnumValN(FPDenormal::PreserveSign, "preserve-sign",
+                         "the sign of a  flushed-to-zero number is preserved "
+                         "in the sign of 0"),
+              clEnumValN(FPDenormal::PositiveZero, "positive-zero",
+                         "denormals are flushed to positive zero"),
+              clEnumValEnd));
+
+cl::opt<bool>
 EnableHonorSignDependentRoundingFPMath("enable-sign-dependent-rounding-fp-math",
       cl::Hidden,
       cl::desc("Force codegen to assume rounding mode can change dynamically"),
@@ -289,6 +309,8 @@ static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.UnsafeFPMath = EnableUnsafeFPMath;
   Options.NoInfsFPMath = EnableNoInfsFPMath;
   Options.NoNaNsFPMath = EnableNoNaNsFPMath;
+  Options.NoTrappingFPMath = EnableNoTrappingFPMath;
+  Options.FPDenormalType = DenormalType;
   Options.HonorSignDependentRoundingFPMathOption =
       EnableHonorSignDependentRoundingFPMath;
   if (FloatABIForCalls != FloatABI::Default)

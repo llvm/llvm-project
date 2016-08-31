@@ -2107,8 +2107,10 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
       if (LoOverflow)
         return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SLT :
                             ICmpInst::ICMP_ULT, X, HiBound);
-      return replaceInstUsesWith(Cmp, InsertRangeTest(X, LoBound, HiBound,
-                                                      DivIsSigned, true));
+      return replaceInstUsesWith(
+          Cmp, insertRangeTest(X, cast<ConstantInt>(LoBound)->getValue(),
+                               cast<ConstantInt>(HiBound)->getValue(),
+                               DivIsSigned, true));
     case ICmpInst::ICMP_NE:
       if (LoOverflow && HiOverflow)
         return replaceInstUsesWith(Cmp, Builder->getTrue());
@@ -2118,8 +2120,10 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
       if (LoOverflow)
         return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SGE :
                             ICmpInst::ICMP_UGE, X, HiBound);
-      return replaceInstUsesWith(Cmp, InsertRangeTest(X, LoBound, HiBound,
-                                                      DivIsSigned, false));
+      return replaceInstUsesWith(
+          Cmp, insertRangeTest(X, cast<ConstantInt>(LoBound)->getValue(),
+                               cast<ConstantInt>(HiBound)->getValue(),
+                               DivIsSigned, false));
     case ICmpInst::ICMP_ULT:
     case ICmpInst::ICMP_SLT:
       if (LoOverflow == +1)   // Low bound is greater than input range.

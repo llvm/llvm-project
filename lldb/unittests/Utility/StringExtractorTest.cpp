@@ -20,6 +20,7 @@ TEST_F (StringExtractorTest, InitEmpty)
     ASSERT_STREQ (kEmptyString, ex.GetStringRef().c_str());
     ASSERT_EQ (true, ex.Empty());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, InitMisc)
@@ -32,7 +33,7 @@ TEST_F (StringExtractorTest, InitMisc)
     ASSERT_STREQ (kInitMiscString, ex.GetStringRef().c_str());
     ASSERT_EQ (false, ex.Empty());
     ASSERT_EQ (sizeof(kInitMiscString)-1, ex.GetBytesLeft());
-    ASSERT_EQ(kInitMiscString[0], ex.PeekChar());
+    ASSERT_EQ (kInitMiscString[0], *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, DecodeHexU8_Underflow)
@@ -45,6 +46,7 @@ TEST_F (StringExtractorTest, DecodeHexU8_Underflow)
     ASSERT_EQ (0u, ex.GetFilePos());
     ASSERT_EQ (true, ex.Empty());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, DecodeHexU8_Underflow2)
@@ -56,7 +58,7 @@ TEST_F (StringExtractorTest, DecodeHexU8_Underflow2)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (0u, ex.GetFilePos());
     ASSERT_EQ (1u, ex.GetBytesLeft());
-    ASSERT_EQ('1', ex.PeekChar());
+    ASSERT_EQ ('1', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, DecodeHexU8_InvalidHex)
@@ -68,7 +70,7 @@ TEST_F (StringExtractorTest, DecodeHexU8_InvalidHex)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (0u, ex.GetFilePos());
     ASSERT_EQ (2u, ex.GetBytesLeft());
-    ASSERT_EQ('x', ex.PeekChar());
+    ASSERT_EQ ('x', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, DecodeHexU8_InvalidHex2)
@@ -80,7 +82,7 @@ TEST_F (StringExtractorTest, DecodeHexU8_InvalidHex2)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (0u, ex.GetFilePos());
     ASSERT_EQ (2u, ex.GetBytesLeft());
-    ASSERT_EQ('a', ex.PeekChar());
+    ASSERT_EQ ('a', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, DecodeHexU8_Exact)
@@ -92,6 +94,7 @@ TEST_F (StringExtractorTest, DecodeHexU8_Exact)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (2u, ex.GetFilePos());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, DecodeHexU8_Extra)
@@ -103,7 +106,7 @@ TEST_F (StringExtractorTest, DecodeHexU8_Extra)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (2u, ex.GetFilePos());
     ASSERT_EQ (2u, ex.GetBytesLeft());
-    ASSERT_EQ('3', ex.PeekChar());
+    ASSERT_EQ ('3', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Underflow)
@@ -116,6 +119,7 @@ TEST_F (StringExtractorTest, GetHexU8_Underflow)
     ASSERT_EQ (UINT64_MAX, ex.GetFilePos());
     ASSERT_EQ (true, ex.Empty());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Underflow2)
@@ -127,6 +131,7 @@ TEST_F (StringExtractorTest, GetHexU8_Underflow2)
     ASSERT_EQ (false, ex.IsGood());
     ASSERT_EQ (UINT64_MAX, ex.GetFilePos());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_InvalidHex)
@@ -138,6 +143,7 @@ TEST_F (StringExtractorTest, GetHexU8_InvalidHex)
     ASSERT_EQ (false, ex.IsGood());
     ASSERT_EQ (UINT64_MAX, ex.GetFilePos());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Exact)
@@ -149,6 +155,7 @@ TEST_F (StringExtractorTest, GetHexU8_Exact)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (2u, ex.GetFilePos());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Extra)
@@ -160,7 +167,7 @@ TEST_F (StringExtractorTest, GetHexU8_Extra)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (2u, ex.GetFilePos());
     ASSERT_EQ (2u, ex.GetBytesLeft());
-    ASSERT_EQ('3', ex.PeekChar());
+    ASSERT_EQ ('3', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Underflow_NoEof)
@@ -174,6 +181,7 @@ TEST_F (StringExtractorTest, GetHexU8_Underflow_NoEof)
     ASSERT_EQ (UINT64_MAX, ex.GetFilePos());
     ASSERT_EQ (true, ex.Empty());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Underflow2_NoEof)
@@ -186,7 +194,7 @@ TEST_F (StringExtractorTest, GetHexU8_Underflow2_NoEof)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (0u, ex.GetFilePos());
     ASSERT_EQ (1u, ex.GetBytesLeft());
-    ASSERT_EQ('1', ex.PeekChar());
+    ASSERT_EQ ('1', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_InvalidHex_NoEof)
@@ -199,7 +207,7 @@ TEST_F (StringExtractorTest, GetHexU8_InvalidHex_NoEof)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (0u, ex.GetFilePos());
     ASSERT_EQ (2u, ex.GetBytesLeft());
-    ASSERT_EQ('x', ex.PeekChar());
+    ASSERT_EQ ('x', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Exact_NoEof)
@@ -212,6 +220,7 @@ TEST_F (StringExtractorTest, GetHexU8_Exact_NoEof)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (2u, ex.GetFilePos());
     ASSERT_EQ (0u, ex.GetBytesLeft());
+    ASSERT_EQ (nullptr, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexU8_Extra_NoEof)
@@ -224,7 +233,7 @@ TEST_F (StringExtractorTest, GetHexU8_Extra_NoEof)
     ASSERT_EQ (true, ex.IsGood());
     ASSERT_EQ (2u, ex.GetFilePos());
     ASSERT_EQ (2u, ex.GetBytesLeft());
-    ASSERT_EQ('3', ex.PeekChar());
+    ASSERT_EQ ('3', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexBytes)
@@ -248,7 +257,7 @@ TEST_F (StringExtractorTest, GetHexBytes)
     ASSERT_EQ(2*kValidHexPairs, ex.GetFilePos());
     ASSERT_EQ(false, ex.Empty());
     ASSERT_EQ(4u, ex.GetBytesLeft());
-    ASSERT_EQ('x', ex.PeekChar());
+    ASSERT_EQ('x', *ex.Peek());
 }
 
 TEST_F(StringExtractorTest, GetHexBytes_FullString)
@@ -335,6 +344,7 @@ TEST_F (StringExtractorTest, GetHexBytes_Underflow)
     ASSERT_EQ(UINT64_MAX, ex.GetFilePos());
     ASSERT_EQ(false, ex.Empty());
     ASSERT_EQ(0u, ex.GetBytesLeft());
+    ASSERT_EQ(0, ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexBytes_Partial)
@@ -364,7 +374,7 @@ TEST_F (StringExtractorTest, GetHexBytes_Partial)
     ASSERT_EQ(kReadBytes*2, ex.GetFilePos());
     ASSERT_EQ(false, ex.Empty());
     ASSERT_EQ(12u, ex.GetBytesLeft());
-    ASSERT_EQ('2', ex.PeekChar());
+    ASSERT_EQ('2', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexBytesAvail)
@@ -388,7 +398,7 @@ TEST_F (StringExtractorTest, GetHexBytesAvail)
     ASSERT_EQ(2*kValidHexPairs, ex.GetFilePos());
     ASSERT_EQ(false, ex.Empty());
     ASSERT_EQ(4u, ex.GetBytesLeft());
-    ASSERT_EQ('x', ex.PeekChar());
+    ASSERT_EQ('x', *ex.Peek());
 }
 
 TEST_F(StringExtractorTest, GetHexBytesAvail_FullString)
@@ -471,7 +481,7 @@ TEST_F (StringExtractorTest, GetHexBytesAvail_Underflow)
     ASSERT_EQ(kValidHexPairs*2, ex.GetFilePos());
     ASSERT_EQ(false, ex.Empty());
     ASSERT_EQ(4u, ex.GetBytesLeft());
-    ASSERT_EQ('x', ex.PeekChar());
+    ASSERT_EQ('x', *ex.Peek());
 }
 
 TEST_F (StringExtractorTest, GetHexBytesAvail_Partial)
@@ -501,7 +511,7 @@ TEST_F (StringExtractorTest, GetHexBytesAvail_Partial)
     ASSERT_EQ(kReadBytes*2, ex.GetFilePos());
     ASSERT_EQ(false, ex.Empty());
     ASSERT_EQ(12u, ex.GetBytesLeft());
-    ASSERT_EQ('2', ex.PeekChar());
+    ASSERT_EQ('2', *ex.Peek());
 }
 
 TEST_F(StringExtractorTest, GetNameColonValueSuccess)
@@ -561,50 +571,164 @@ TEST_F(StringExtractorTest, GetNameColonValueNoColon)
 
 TEST_F(StringExtractorTest, GetU32LittleEndian)
 {
-    StringExtractor ex("ABCD");
-    EXPECT_EQ(0xCDAB, ex.GetHexMaxU32(true, 0));
+    StringExtractor ex("");
+    EXPECT_EQ(0x0, ex.GetHexMaxU32(true, 0));
 
-    ex.Reset("89ABCDEF");
-    EXPECT_EQ(0xEFCDAB89, ex.GetHexMaxU32(true, 0));
+    ex.Reset("0");
+    EXPECT_EQ(0x0, ex.GetHexMaxU32(true, 1));
 
-    ex.Reset("123456789ABCDEF");
+    ex.Reset("1");
+    EXPECT_EQ(0x1, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("01");
+    EXPECT_EQ(0x1, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("001");
+    EXPECT_EQ(0x100, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("12");
+    EXPECT_EQ(0x12, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("123");
+    EXPECT_EQ(0x312, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("1203");
+    EXPECT_EQ(0x312, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("1234");
+    EXPECT_EQ(0x3412, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("12340");
+    EXPECT_EQ(0x3412, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("123400");
+    EXPECT_EQ(0x3412, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("12345670");
+    EXPECT_EQ(0x70563412, ex.GetHexMaxU32(true, 0));
+
+    ex.Reset("123456701");
     EXPECT_EQ(0, ex.GetHexMaxU32(true, 0));
 }
 
 TEST_F(StringExtractorTest, GetU32BigEndian)
 {
-    StringExtractor ex("ABCD");
-    EXPECT_EQ(0xABCD, ex.GetHexMaxU32(false, 0));
+    StringExtractor ex("");
+    EXPECT_EQ(0x0, ex.GetHexMaxU32(false, 0));
 
-    ex.Reset("89ABCDEF");
-    EXPECT_EQ(0x89ABCDEF, ex.GetHexMaxU32(false, 0));
+    ex.Reset("0");
+    EXPECT_EQ(0x0, ex.GetHexMaxU32(false, 1));
 
-    ex.Reset("123456789ABCDEF");
+    ex.Reset("1");
+    EXPECT_EQ(0x1, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("01");
+    EXPECT_EQ(0x1, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("001");
+    EXPECT_EQ(0x1, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("12");
+    EXPECT_EQ(0x12, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("123");
+    EXPECT_EQ(0x123, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("1203");
+    EXPECT_EQ(0x1203, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("1234");
+    EXPECT_EQ(0x1234, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("12340");
+    EXPECT_EQ(0x12340, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("123400");
+    EXPECT_EQ(0x123400, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("12345670");
+    EXPECT_EQ(0x12345670, ex.GetHexMaxU32(false, 0));
+
+    ex.Reset("123456700");
     EXPECT_EQ(0, ex.GetHexMaxU32(false, 0));
 }
 
 TEST_F(StringExtractorTest, GetU64LittleEndian)
 {
-    StringExtractor ex("ABCD");
-    EXPECT_EQ(0xCDAB, ex.GetHexMaxU64(true, 0));
+    StringExtractor ex("");
+    EXPECT_EQ(0x0, ex.GetHexMaxU64(true, 0));
 
-    ex.Reset("89ABCDEF");
-    EXPECT_EQ(0xEFCDAB89, ex.GetHexMaxU64(true, 0));
+    ex.Reset("0");
+    EXPECT_EQ(0x0, ex.GetHexMaxU64(true, 1));
+
+    ex.Reset("1");
+    EXPECT_EQ(0x1, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("01");
+    EXPECT_EQ(0x1, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("001");
+    EXPECT_EQ(0x100, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("12");
+    EXPECT_EQ(0x12, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("123");
+    EXPECT_EQ(0x312, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("1203");
+    EXPECT_EQ(0x312, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("1234");
+    EXPECT_EQ(0x3412, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("12340");
+    EXPECT_EQ(0x3412, ex.GetHexMaxU64(true, 0));
+
+    ex.Reset("123400");
+    EXPECT_EQ(0x3412, ex.GetHexMaxU64(true, 0));
 
     ex.Reset("123456789ABCDEF0");
     EXPECT_EQ(0xF0DEBC9A78563412ULL, ex.GetHexMaxU64(true, 0));
 
-    ex.Reset("123456789ABCDEF000");
+    ex.Reset("123456789ABCDEF01");
     EXPECT_EQ(0, ex.GetHexMaxU64(true, 0));
 }
 
 TEST_F(StringExtractorTest, GetU64BigEndian)
 {
-    StringExtractor ex("ABCD");
-    EXPECT_EQ(0xABCDULL, ex.GetHexMaxU64(false, 0));
+    StringExtractor ex("");
+    EXPECT_EQ(0x0, ex.GetHexMaxU64(false, 0));
 
-    ex.Reset("89ABCDEF");
-    EXPECT_EQ(0x89ABCDEFULL, ex.GetHexMaxU64(false, 0));
+    ex.Reset("0");
+    EXPECT_EQ(0x0, ex.GetHexMaxU64(false, 1));
+
+    ex.Reset("1");
+    EXPECT_EQ(0x1, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("01");
+    EXPECT_EQ(0x1, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("001");
+    EXPECT_EQ(0x1, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("12");
+    EXPECT_EQ(0x12, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("123");
+    EXPECT_EQ(0x123, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("1203");
+    EXPECT_EQ(0x1203, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("1234");
+    EXPECT_EQ(0x1234, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("12340");
+    EXPECT_EQ(0x12340, ex.GetHexMaxU64(false, 0));
+
+    ex.Reset("123400");
+    EXPECT_EQ(0x123400, ex.GetHexMaxU64(false, 0));
 
     ex.Reset("123456789ABCDEF0");
     EXPECT_EQ(0x123456789ABCDEF0ULL, ex.GetHexMaxU64(false, 0));

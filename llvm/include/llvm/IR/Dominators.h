@@ -160,8 +160,8 @@ template <class Node, class ChildIterator> struct DomTreeGraphTraitsBase {
   typedef df_iterator<Node *, SmallPtrSet<NodeRef, 8>> nodes_iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 
   static nodes_iterator nodes_begin(NodeRef N) {
     return df_begin(getEntryNode(N));

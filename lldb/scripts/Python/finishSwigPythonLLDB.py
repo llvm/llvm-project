@@ -793,6 +793,7 @@ def main(vDictArgs):
         # Having these files copied here ensure that lldb/formatters is a
         # valid package itself
         listPkgFiles = [os.path.join(strRoot, "examples", "summaries", "cocoa", "cache.py"),
+                        os.path.join(strRoot, "examples", "summaries", "synth.py"),
                         os.path.join(strRoot, "examples", "summaries", "cocoa", "metrics.py"),
                         os.path.join(strRoot, "examples", "summaries", "cocoa", "attrib_fromdict.py"),
                         os.path.join(strRoot, "examples", "summaries", "cocoa", "Logger.py")]

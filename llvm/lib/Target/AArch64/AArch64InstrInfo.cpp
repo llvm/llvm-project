@@ -73,7 +73,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 16;
   }
 
-  llvm_unreachable("getInstSizeInBytes()- Unable to determin insn size");
+  llvm_unreachable("getInstSizeInBytes()- Unable to determine insn size");
 }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,

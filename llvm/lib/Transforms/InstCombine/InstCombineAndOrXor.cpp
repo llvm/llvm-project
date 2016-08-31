@@ -285,28 +285,28 @@ Instruction *InstCombiner::OptAndOp(Instruction *Op,
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
 /// (V < Lo || V >= Hi). This method expects that Lo <= Hi. IsSigned indicates
 /// whether to treat V, Lo, and Hi as signed or not.
-Value *InstCombiner::InsertRangeTest(Value *V, Constant *Lo, Constant *Hi,
+Value *InstCombiner::insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                                      bool isSigned, bool Inside) {
-  // FIXME: This could use APInt and work with vector splat constants.
-  assert(cast<ConstantInt>(ConstantExpr::getICmp((isSigned ?
-            ICmpInst::ICMP_SLE:ICmpInst::ICMP_ULE), Lo, Hi))->getZExtValue() &&
+  assert((isSigned ? Lo.sle(Hi) : Lo.ule(Hi)) &&
          "Lo is not <= Hi in range emission code!");
 
+  Type *Ty = V->getType();
   if (Lo == Hi)
-    return Inside ? Builder->getFalse() : Builder->getTrue();
+    return Inside ? ConstantInt::getFalse(Ty) : ConstantInt::getTrue(Ty);
 
   // V >= Min && V <  Hi --> V <  Hi
   // V <  Min || V >= Hi --> V >= Hi
   ICmpInst::Predicate Pred = Inside ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
-  if (cast<ConstantInt>(Lo)->isMinValue(isSigned)) {
+  if (isSigned ? Lo.isMinSignedValue() : Lo.isMinValue()) {
     Pred = isSigned ? ICmpInst::getSignedPredicate(Pred) : Pred;
-    return Builder->CreateICmp(Pred, V, Hi);
+    return Builder->CreateICmp(Pred, V, ConstantInt::get(Ty, Hi));
   }
 
   // V >= Lo && V <  Hi --> V - Lo u<  Hi - Lo
   // V <  Lo || V >= Hi --> V - Lo u>= Hi - Lo
-  Value *VMinusLo = Builder->CreateSub(V, Lo, V->getName() + ".off");
-  Constant *HiMinusLo = ConstantExpr::getSub(Hi, Lo);
+  Value *VMinusLo =
+      Builder->CreateSub(V, ConstantInt::get(Ty, Lo), V->getName() + ".off");
+  Constant *HiMinusLo = ConstantInt::get(Ty, Hi - Lo);
   return Builder->CreateICmp(Pred, VMinusLo, HiMinusLo);
 }
 
@@ -934,7 +934,8 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
       if (LHSCst == SubOne(RHSCst)) // (X != 13 & X u< 14) -> X < 13
         return Builder->CreateICmpULT(Val, LHSCst);
       if (LHSCst->isNullValue())    // (X !=  0 & X u< 14) -> X-1 u< 13
-        return InsertRangeTest(Val, AddOne(LHSCst), RHSCst, false, true);
+        return insertRangeTest(Val, LHSCst->getValue() + 1, RHSCst->getValue(),
+                               false, true);
       break;                        // (X != 13 & X u< 15) -> no change
     case ICmpInst::ICMP_SLT:
       if (LHSCst == SubOne(RHSCst)) // (X != 13 & X s< 14) -> X < 13
@@ -998,7 +999,8 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
         return Builder->CreateICmp(LHSCC, Val, RHSCst);
       break;                        // (X u> 13 & X != 15) -> no change
     case ICmpInst::ICMP_ULT:        // (X u> 13 & X u< 15) -> (X-14) <u 1
-      return InsertRangeTest(Val, AddOne(LHSCst), RHSCst, false, true);
+      return insertRangeTest(Val, LHSCst->getValue() + 1, RHSCst->getValue(),
+                             false, true);
     case ICmpInst::ICMP_SLT:        // (X u> 13 & X s< 15) -> no change
       break;
     }
@@ -1016,7 +1018,8 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
         return Builder->CreateICmp(LHSCC, Val, RHSCst);
       break;                        // (X s> 13 & X != 15) -> no change
     case ICmpInst::ICMP_SLT:        // (X s> 13 & X s< 15) -> (X-14) s< 1
-      return InsertRangeTest(Val, AddOne(LHSCst), RHSCst, true, true);
+      return insertRangeTest(Val, LHSCst->getValue() + 1, RHSCst->getValue(),
+                             true, true);
     case ICmpInst::ICMP_ULT:        // (X s> 13 & X u< 15) -> no change
       break;
     }
@@ -1890,7 +1893,8 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       // this can cause overflow.
       if (RHSCst->isMaxValue(false))
         return LHS;
-      return InsertRangeTest(Val, LHSCst, AddOne(RHSCst), false, false);
+      return insertRangeTest(Val, LHSCst->getValue(), RHSCst->getValue() + 1,
+                             false, false);
     case ICmpInst::ICMP_SGT:        // (X u< 13 | X s> 15) -> no change
       break;
     case ICmpInst::ICMP_NE:         // (X u< 13 | X != 15) -> X != 15
@@ -1910,7 +1914,8 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       // this can cause overflow.
       if (RHSCst->isMaxValue(true))
         return LHS;
-      return InsertRangeTest(Val, LHSCst, AddOne(RHSCst), true, false);
+      return insertRangeTest(Val, LHSCst->getValue(), RHSCst->getValue() + 1,
+                             true, false);
     case ICmpInst::ICMP_UGT:        // (X s< 13 | X u> 15) -> no change
       break;
     case ICmpInst::ICMP_NE:         // (X s< 13 | X != 15) -> X != 15

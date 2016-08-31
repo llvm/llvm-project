@@ -237,13 +237,11 @@ struct GraphTraits<Graph<N> > {
   typedef typename Graph<N>::NodeType *NodeRef;
   typedef typename Graph<N>::ChildIterator ChildIteratorType;
 
-  static inline NodeRef getEntryNode(const Graph<N> &G) {
-    return G.AccessNode(0);
-  }
-  static inline ChildIteratorType child_begin(NodeRef Node) {
+  static NodeRef getEntryNode(const Graph<N> &G) { return G.AccessNode(0); }
+  static ChildIteratorType child_begin(NodeRef Node) {
     return Graph<N>::child_begin(Node);
   }
-  static inline ChildIteratorType child_end(NodeRef Node) {
+  static ChildIteratorType child_end(NodeRef Node) {
     return Graph<N>::child_end(Node);
   }
 };

@@ -232,12 +232,15 @@
 // CHECK-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
 // CHECK-NO-UNSAFE-MATH: "-o"
 //
+// RUN: %clang -### -ftrapping-math -fno-trapping-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-TRAPPING-MATH %s
 // RUN: %clang -### -fdenormal-fp-math=ieee -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FP-DENORMAL-IEEE %s
 // RUN: %clang -### -fdenormal-fp-math=preserve-sign -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FP-DENORMAL-PS %s
 // RUN: %clang -### -fdenormal-fp-math=positive-zero -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FP-DENORMAL-PZ %s
+// CHECK-NO-TRAPPING-MATH: "-fno-trapping-math"
 // CHECK-FP-DENORMAL-IEEE: "-fdenormal-fp-math=ieee"
 // CHECK-FP-DENORMAL-PS: "-fdenormal-fp-math=preserve-sign"
 // CHECK-FP-DENORMAL-PZ: "-fdenormal-fp-math=positive-zero"

@@ -98,6 +98,7 @@ Improvements to clang-tidy
   a constant type instead.
 
 Fixed bugs:
+
 - `modernize-make-unique
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
   and `modernize-make-shared

@@ -34,8 +34,15 @@ enum class StatepointFlags {
   None = 0,
   GCTransition = 1, ///< Indicates that this statepoint is a transition from
                     ///< GC-aware code to code that is not GC-aware.
+  /// Mark the deopt arguments associated with the statepoint as only being
+  /// "live-in". By default, deopt arguments are "live-through".  "live-through"
+  /// requires that they the value be live on entry, on exit, and at any point
+  /// during the call.  "live-in" only requires the value be available at the
+  /// start of the call.  In particular, "live-in" values can be placed in
+  /// unused argument registers or other non-callee saved registers.
+  DeoptLiveIn = 2,
 
-  MaskAll = GCTransition ///< A bitmask that includes all valid flags.
+  MaskAll = 3 ///< A bitmask that includes all valid flags.
 };
 
 class GCRelocateInst;
