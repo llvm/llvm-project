@@ -115,7 +115,7 @@ static bool readFullStringValue(HKEY hkey, const char *valueName,
     std::wstring WideValue(reinterpret_cast<const wchar_t *>(buffer.data()),
                            valueSize / sizeof(wchar_t));
     if (valueSize && WideValue.back() == L'\0') {
-        WideValue.pop_back();
+      WideValue.pop_back();
     }
     // The destination buffer must be empty as an invariant of the conversion
     // function; but this function is sometimes called in a loop that passes in

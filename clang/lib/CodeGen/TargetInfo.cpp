@@ -4413,14 +4413,17 @@ PPC64_initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
   // 32-63: fp0-31, the 8-byte floating-point registers
   AssignToArrayRange(Builder, Address, Eight8, 32, 63);
 
-  // 64-76 are various 4-byte special-purpose registers:
+  // 64-67 are various 8-byte special-purpose registers:
   // 64: mq
   // 65: lr
   // 66: ctr
   // 67: ap
+  AssignToArrayRange(Builder, Address, Eight8, 64, 67);
+
+  // 68-76 are various 4-byte special-purpose registers:
   // 68-75 cr0-7
   // 76: xer
-  AssignToArrayRange(Builder, Address, Four8, 64, 76);
+  AssignToArrayRange(Builder, Address, Four8, 68, 76);
 
   // 77-108: v0-31, the 16-byte vector registers
   AssignToArrayRange(Builder, Address, Sixteen8, 77, 108);
@@ -4430,7 +4433,10 @@ PPC64_initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
   // 111: spe_acc
   // 112: spefscr
   // 113: sfp
-  AssignToArrayRange(Builder, Address, Four8, 109, 113);
+  // 114: tfhar
+  // 115: tfiar
+  // 116: texasr
+  AssignToArrayRange(Builder, Address, Eight8, 109, 116);
 
   return false;
 }

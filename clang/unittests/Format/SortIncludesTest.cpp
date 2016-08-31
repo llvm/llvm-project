@@ -24,8 +24,8 @@ protected:
     return std::vector<tooling::Range>(1, tooling::Range(0, Code.size()));
   }
 
-  std::string sort(StringRef Code, StringRef FileName = "input.cpp") {
-    auto Ranges = GetCodeRange(Code);
+  std::string sort(StringRef Code, std::vector<tooling::Range> Ranges,
+                   StringRef FileName = "input.cc") {
     auto Replaces = sortIncludes(Style, Code, Ranges, FileName);
     Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
     auto Sorted = applyAllReplacements(Code, Replaces);
@@ -34,6 +34,10 @@ protected:
         *Sorted, reformat(Style, *Sorted, Ranges, FileName));
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;
+  }
+
+  std::string sort(StringRef Code, StringRef FileName = "input.cpp") {
+    return sort(Code, GetCodeRange(Code), FileName);
   }
 
   unsigned newCursor(llvm::StringRef Code, unsigned Cursor) {
@@ -52,6 +56,14 @@ TEST_F(SortIncludesTest, BasicSorting) {
             sort("#include \"a.h\"\n"
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n"));
+
+  EXPECT_EQ("// comment\n"
+            "#include <a>\n"
+            "#include <b>\n",
+            sort("// comment\n"
+                 "#include <b>\n"
+                 "#include <a>\n",
+                 {tooling::Range(25, 1)}));
 }
 
 TEST_F(SortIncludesTest, NoReplacementsForValidIncludes) {

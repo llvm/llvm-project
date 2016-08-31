@@ -49,8 +49,10 @@ enum CoverageFeature {
   CoverageIndirCall = 1 << 3,
   CoverageTraceBB = 1 << 4,
   CoverageTraceCmp = 1 << 5,
-  Coverage8bitCounters = 1 << 6,
-  CoverageTracePC = 1 << 7,
+  CoverageTraceDiv = 1 << 6,
+  CoverageTraceGep = 1 << 7,
+  Coverage8bitCounters = 1 << 8,
+  CoverageTracePC = 1 << 9,
 };
 
 /// Parse a -fsanitize= or -fno-sanitize= argument's values, diagnosing any
@@ -615,6 +617,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     std::make_pair(CoverageIndirCall, "-fsanitize-coverage-indirect-calls"),
     std::make_pair(CoverageTraceBB, "-fsanitize-coverage-trace-bb"),
     std::make_pair(CoverageTraceCmp, "-fsanitize-coverage-trace-cmp"),
+    std::make_pair(CoverageTraceDiv, "-fsanitize-coverage-trace-div"),
+    std::make_pair(CoverageTraceGep, "-fsanitize-coverage-trace-gep"),
     std::make_pair(Coverage8bitCounters, "-fsanitize-coverage-8bit-counters"),
     std::make_pair(CoverageTracePC, "-fsanitize-coverage-trace-pc")};
   for (auto F : CoverageFlags) {
@@ -752,6 +756,8 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A) {
         .Case("indirect-calls", CoverageIndirCall)
         .Case("trace-bb", CoverageTraceBB)
         .Case("trace-cmp", CoverageTraceCmp)
+        .Case("trace-div", CoverageTraceDiv)
+        .Case("trace-gep", CoverageTraceGep)
         .Case("8bit-counters", Coverage8bitCounters)
         .Case("trace-pc", CoverageTracePC)
         .Default(0);

@@ -107,6 +107,7 @@ CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enable
 CODEGENOPT(NoInfsFPMath      , 1, 0) ///< Assume FP arguments, results not +-Inf.
 CODEGENOPT(NoSignedZeros     , 1, 0) ///< Allow ignoring the signedness of FP zero
 CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
+CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled.
 CODEGENOPT(NoInline          , 1, 0) ///< Set when -fno-inline is enabled.
                                      ///< Disables use of the inline keyword.
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
@@ -150,6 +151,10 @@ CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
 CODEGENOPT(SanitizeCoverageTraceBB, 1, 0) ///< Enable basic block tracing in
                                           ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverageTraceCmp, 1, 0) ///< Enable cmp instruction tracing
+                                           ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceDiv, 1, 0) ///< Enable div instruction tracing
+                                           ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTraceGep, 1, 0) ///< Enable GEP instruction tracing
                                            ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0) ///< Use 8-bit frequency counters
                                                ///< in sanitizer coverage.

@@ -4545,6 +4545,11 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
                                MutiLevelArgList.getInnermost());
     if (Inst.isInvalid())
       return ExprError();
+    if (Inst.isAlreadyInstantiating()) {
+      Diag(Param->getLocStart(), diag::err_recursive_default_argument) << FD;
+      Param->setInvalidDecl();
+      return ExprError();
+    }
 
     ExprResult Result;
     {

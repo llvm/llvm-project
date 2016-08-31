@@ -1722,6 +1722,13 @@ void CodeGenModule::ConstructAttributeList(
 
     FuncAttrs.addAttribute("less-precise-fpmad",
                            llvm::toStringRef(CodeGenOpts.LessPreciseFPMAD));
+
+    if (!CodeGenOpts.FPDenormalMode.empty())
+      FuncAttrs.addAttribute("denormal-fp-math",
+                             CodeGenOpts.FPDenormalMode);
+
+    FuncAttrs.addAttribute("no-trapping-math",
+                           llvm::toStringRef(CodeGenOpts.NoTrappingMath));
     FuncAttrs.addAttribute("no-infs-fp-math",
                            llvm::toStringRef(CodeGenOpts.NoInfsFPMath));
     FuncAttrs.addAttribute("no-nans-fp-math",

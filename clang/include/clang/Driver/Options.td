@@ -634,6 +634,7 @@ def : Flag<["-"], "fno-defer-pop">, Group<clang_ignored_gcc_optimization_f_Group
 def : Flag<["-"], "fextended-identifiers">, Group<clang_ignored_f_Group>;
 def : Flag<["-"], "fno-extended-identifiers">, Group<f_Group>, Flags<[Unsupported]>;
 def fhosted : Flag<["-"], "fhosted">, Group<f_Group>;
+def fdenormal_fp_math_EQ : Joined<["-"], "fdenormal-fp-math=">, Group<f_Group>, Flags<[CC1Option]>;
 def ffast_math : Flag<["-"], "ffast-math">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Allow aggressive, lossy floating-point optimizations">;
 def fno_fast_math : Flag<["-"], "fno-fast-math">, Group<f_Group>;
@@ -748,8 +749,8 @@ def fno_honor_infinities : Flag<["-"], "fno-honor-infinities">, Group<f_Group>;
 // This option was originally misspelt "infinites" [sic].
 def : Flag<["-"], "fhonor-infinites">, Alias<fhonor_infinities>;
 def : Flag<["-"], "fno-honor-infinites">, Alias<fno_honor_infinities>;
-def ftrapping_math : Flag<["-"], "ftrapping-math">, Group<f_Group>;
-def fno_trapping_math : Flag<["-"], "fno-trapping-math">, Group<f_Group>;
+def ftrapping_math : Flag<["-"], "ftrapping-math">, Group<f_Group>, Flags<[CC1Option]>;
+def fno_trapping_math : Flag<["-"], "fno-trapping-math">, Group<f_Group>, Flags<[CC1Option]>;
 def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Form fused FP ops (e.g. FMAs): fast (everywhere)"
   " | on (according to FP_CONTRACT pragma, default) | off (never fuse)">;
@@ -882,6 +883,8 @@ def fmodules : Flag <["-"], "fmodules">, Group<f_Group>,
 def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group>,
   Flags<[DriverOption, CC1Option]>,
   HelpText<"Implicitly search the file system for module map files.">;
+def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable support for the C++ Modules TS">;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Alias<fimplicit_module_maps>;
 def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
   Flags<[DriverOption,CC1Option]>, MetaVarName<"<name>">,
@@ -1395,6 +1398,10 @@ def malign_functions_EQ : Joined<["-"], "malign-functions=">, Group<clang_ignore
 def malign_loops_EQ : Joined<["-"], "malign-loops=">, Group<clang_ignored_m_Group>;
 def malign_jumps_EQ : Joined<["-"], "malign-jumps=">, Group<clang_ignored_m_Group>;
 def mfancy_math_387 : Flag<["-"], "mfancy-math-387">, Group<clang_ignored_m_Group>;
+def mlong_calls : Flag<["-"], "mlong-calls">, Group<m_Group>,
+  HelpText<"Generate branches with extended addressability, usually via indirect jumps.">;
+def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
+  HelpText<"Restore the default behaviour of not generating long calls">;
 def mtvos_version_min_EQ : Joined<["-"], "mtvos-version-min=">, Group<m_Group>;
 def mappletvos_version_min_EQ : Joined<["-"], "mappletvos-version-min=">, Alias<mtvos_version_min_EQ>;
 def mtvos_simulator_version_min_EQ : Joined<["-"], "mtvos-simulator-version-min=">, Alias<mtvos_version_min_EQ>;
@@ -1539,10 +1546,6 @@ def mcrc : Flag<["-"], "mcrc">, Group<m_arm_Features_Group>,
   HelpText<"Allow use of CRC instructions (ARM only)">;
 def mnocrc : Flag<["-"], "mnocrc">, Group<m_arm_Features_Group>,
   HelpText<"Disallow use of CRC instructions (ARM only)">;
-def mlong_calls : Flag<["-"], "mlong-calls">, Group<m_arm_Features_Group>,
-  HelpText<"Generate an indirect jump to enable jumps further than 64M">;
-def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_arm_Features_Group>,
-  HelpText<"Restore the default behaviour of not generating long calls">;
 
 def mgeneral_regs_only : Flag<["-"], "mgeneral-regs-only">, Group<m_aarch64_Features_Group>,
   HelpText<"Generate code which only uses the general purpose registers (AArch64 only)">;
@@ -1605,6 +1608,10 @@ def mno_invariant_function_descriptors :
 def mfloat128: Flag<["-"], "mfloat128">,
     Group<m_ppc_Features_Group>;
 def mno_float128 : Flag<["-"], "mno-float128">,
+    Group<m_ppc_Features_Group>;
+def mlongcall: Flag<["-"], "mlongcall">,
+    Group<m_ppc_Features_Group>;
+def mno_longcall : Flag<["-"], "mno-longcall">,
     Group<m_ppc_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[CC1Option]>,
@@ -2036,6 +2043,8 @@ def _output_EQ : Joined<["--"], "output=">, Alias<o>;
 def _output : Separate<["--"], "output">, Alias<o>;
 def _param : Separate<["--"], "param">, Group<CompileOnly_Group>;
 def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
+def _precompile : Flag<["--"], "precompile">, Flags<[DriverOption]>,
+  Group<Action_Group>, HelpText<"Only precompile the input">;
 def _prefix_EQ : Joined<["--"], "prefix=">, Alias<B>;
 def _prefix : Separate<["--"], "prefix">, Alias<B>;
 def _preprocess : Flag<["--"], "preprocess">, Alias<E>;

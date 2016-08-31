@@ -163,6 +163,12 @@
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-crbits -mcrbits -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-CRBITS %s
 // CHECK-CRBITS: "-target-feature" "+crbits"
 
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-longcall -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOLONGCALL %s
+// CHECK-NOLONGCALL: "-target-feature" "-longcall"
+
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-longcall -mlongcall -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-LONGCALL %s
+// CHECK-LONGCALL: "-target-feature" "+longcall"
+
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-invariant-function-descriptors -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOINVFUNCDESC %s
 // CHECK-NOINVFUNCDESC: "-target-feature" "-invariant-function-descriptors"
 

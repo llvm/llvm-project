@@ -3757,7 +3757,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
     // Otherwise, return an error.
     Diag(diag::err_module_file_not_found) << moduleKindForDiagnostic(Type)
-                                          << FileName << ErrorStr.empty()
+                                          << FileName << !ErrorStr.empty()
                                           << ErrorStr;
     return Failure;
 
@@ -3769,7 +3769,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
     // Otherwise, return an error.
     Diag(diag::err_module_file_out_of_date) << moduleKindForDiagnostic(Type)
-                                            << FileName << ErrorStr.empty()
+                                            << FileName << !ErrorStr.empty()
                                             << ErrorStr;
     return Failure;
   }
