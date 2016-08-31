@@ -55,6 +55,10 @@ static bool isDereferenceableAndAlignedPointer(
     const Value *V, unsigned Align, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI, const DominatorTree *DT,
     SmallPtrSetImpl<const Value *> &Visited) {
+  // Already visited?  Bail out, we've likely hit unreachable code.
+  if (!Visited.insert(V).second)
+    return false;
+
   // Note that it is not safe to speculate into a malloc'd region because
   // malloc may return null.
 
@@ -87,8 +91,7 @@ static bool isDereferenceableAndAlignedPointer(
     // then the GEP (== Base + Offset == k_0 * Align + k_1 * Align) is also
     // aligned to Align bytes.
 
-    return Visited.insert(Base).second &&
-           isDereferenceableAndAlignedPointer(Base, Align, Offset + Size, DL,
+    return isDereferenceableAndAlignedPointer(Base, Align, Offset + Size, DL,
                                               CtxI, DT, Visited);
   }
 
