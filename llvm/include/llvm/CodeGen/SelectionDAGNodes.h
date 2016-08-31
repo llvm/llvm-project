@@ -49,7 +49,6 @@ class Value;
 class MCSymbol;
 template <typename T> struct DenseMapInfo;
 template <typename T> struct simplify_type;
-template <typename T> struct ilist_traits;
 
 void checkForCycles(const SDNode *N, const SelectionDAG *DAG = nullptr,
                     bool force = false);
@@ -502,7 +501,6 @@ private:
   static const EVT *getValueTypeList(EVT VT);
 
   friend class SelectionDAG;
-  friend struct ilist_traits<SDNode>;
   // TODO: unfriend HandleSDNode once we fix its operand handling.
   friend class HandleSDNode;
 

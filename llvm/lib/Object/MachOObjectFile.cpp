@@ -372,8 +372,105 @@ static Error checkSymtabCommand(const MachOObjectFile *Obj,
     return malformedError("stroff field plus strsize field of LC_SYMTAB "
                           "command " + Twine(LoadCommandIndex) + " extends "
                           "past the end of the file");
-
   *SymtabLoadCmd = Load.Ptr;
+  return Error::success();
+}
+
+static Error checkDysymtabCommand(const MachOObjectFile *Obj,
+                                 const MachOObjectFile::LoadCommandInfo &Load,
+                                 uint32_t LoadCommandIndex,
+                                 const char **DysymtabLoadCmd) {
+  if (Load.C.cmdsize < sizeof(MachO::dysymtab_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_DYSYMTAB cmdsize too small");
+  if (*DysymtabLoadCmd != nullptr)
+    return malformedError("more than one LC_DYSYMTAB command");
+  MachO::dysymtab_command Dysymtab =
+    getStruct<MachO::dysymtab_command>(Obj, Load.Ptr);
+  if (Dysymtab.cmdsize != sizeof(MachO::dysymtab_command))
+    return malformedError("LC_DYSYMTAB command " + Twine(LoadCommandIndex) +
+                          " has incorrect cmdsize");
+  uint64_t FileSize = Obj->getData().size();
+  if (Dysymtab.tocoff > FileSize)
+    return malformedError("tocoff field of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  uint64_t BigSize = Dysymtab.ntoc;
+  BigSize *= sizeof(MachO::dylib_table_of_contents);
+  BigSize += Dysymtab.tocoff;
+  if (BigSize > FileSize)
+    return malformedError("tocoff field plus ntoc field times sizeof(struct "
+                          "dylib_table_of_contents) of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  if (Dysymtab.modtaboff > FileSize)
+    return malformedError("modtaboff field of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  BigSize = Dysymtab.nmodtab;
+  const char *struct_dylib_module_name;
+  if (Obj->is64Bit()) {
+    BigSize *= sizeof(MachO::dylib_module_64);
+    struct_dylib_module_name = "struct dylib_module_64";
+  } else {
+    BigSize *= sizeof(MachO::dylib_module);
+    struct_dylib_module_name = "struct dylib_module";
+  }
+  BigSize += Dysymtab.modtaboff;
+  if (BigSize > FileSize)
+    return malformedError("modtaboff field plus nmodtab field times sizeof(" +
+                          Twine(struct_dylib_module_name) + ") of LC_DYSYMTAB "
+                          "command " + Twine(LoadCommandIndex) + " extends "
+                          "past the end of the file");
+  if (Dysymtab.extrefsymoff > FileSize)
+    return malformedError("extrefsymoff field of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  BigSize = Dysymtab.nextrefsyms;
+  BigSize *= sizeof(MachO::dylib_reference);
+  BigSize += Dysymtab.extrefsymoff;
+  if (BigSize > FileSize)
+    return malformedError("extrefsymoff field plus nextrefsyms field times "
+                          "sizeof(struct dylib_reference) of LC_DYSYMTAB "
+                          "command " + Twine(LoadCommandIndex) + " extends "
+                          "past the end of the file");
+  if (Dysymtab.indirectsymoff > FileSize)
+    return malformedError("indirectsymoff field of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  BigSize = Dysymtab.nindirectsyms;
+  BigSize *= sizeof(uint32_t);
+  BigSize += Dysymtab.indirectsymoff;
+  if (BigSize > FileSize)
+    return malformedError("indirectsymoff field plus nindirectsyms field times "
+                          "sizeof(uint32_t) of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  if (Dysymtab.extreloff > FileSize)
+    return malformedError("extreloff field of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  BigSize = Dysymtab.nextrel;
+  BigSize *= sizeof(MachO::relocation_info);
+  BigSize += Dysymtab.extreloff;
+  if (BigSize > FileSize)
+    return malformedError("extreloff field plus nextrel field times sizeof"
+                          "(struct relocation_info) of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  if (Dysymtab.locreloff > FileSize)
+    return malformedError("locreloff field of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  BigSize = Dysymtab.nlocrel;
+  BigSize *= sizeof(MachO::relocation_info);
+  BigSize += Dysymtab.locreloff;
+  if (BigSize > FileSize)
+    return malformedError("locreloff field plus nlocrel field times sizeof"
+                          "(struct relocation_info) of LC_DYSYMTAB command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  *DysymtabLoadCmd = Load.Ptr;
   return Error::success();
 }
 
@@ -450,12 +547,8 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       if ((Err = checkSymtabCommand(this, Load, I, &SymtabLoadCmd)))
         return;
     } else if (Load.C.cmd == MachO::LC_DYSYMTAB) {
-      // Multiple dynamic symbol tables
-      if (DysymtabLoadCmd) {
-        Err = malformedError("Multiple dynamic symbol tables");
+      if ((Err = checkDysymtabCommand(this, Load, I, &DysymtabLoadCmd)))
         return;
-      }
-      DysymtabLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_DATA_IN_CODE) {
       // Multiple data in code tables
       if (DataInCodeLoadCmd) {

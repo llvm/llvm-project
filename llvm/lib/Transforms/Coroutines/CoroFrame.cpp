@@ -311,8 +311,11 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
   // Figure out how wide should be an integer type storing the suspend index.
   unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
-
-  SmallVector<Type *, 8> Types{FnPtrTy, FnPtrTy, Type::getIntNTy(C, IndexBits)};
+  Type *PromiseType = Shape.PromiseAlloca
+                          ? Shape.PromiseAlloca->getType()->getElementType()
+                          : Type::getInt1Ty(C);
+  SmallVector<Type *, 8> Types{FnPtrTy, FnPtrTy, PromiseType,
+                               Type::getIntNTy(C, IndexBits)};
   Value *CurrentDef = nullptr;
 
   // Create an entry for every spilled value.
@@ -321,6 +324,9 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
       continue;
 
     CurrentDef = S.def();
+    // PromiseAlloca was already added to Types array earlier.
+    if (CurrentDef == Shape.PromiseAlloca)
+      continue;
 
     Type *Ty = nullptr;
     if (auto *AI = dyn_cast<AllocaInst>(CurrentDef))
@@ -376,6 +382,9 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   // we remember allocas and their indices to be handled once we processed
   // all the spills.
   SmallVector<std::pair<AllocaInst *, unsigned>, 4> Allocas;
+  // Promise alloca (if present) has a fixed field number (Shape::PromiseField)
+  if (Shape.PromiseAlloca)
+    Allocas.emplace_back(Shape.PromiseAlloca, coro::Shape::PromiseField);
 
   // Create a load instruction to reload the spilled value from the coroutine
   // frame.
@@ -400,7 +409,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
       ++Index;
 
       if (auto *AI = dyn_cast<AllocaInst>(CurrentValue)) {
-        // Spiled AllocaInst will be replaced with GEP from the coroutine frame
+        // Spilled AllocaInst will be replaced with GEP from the coroutine frame
         // there is no spill required.
         Allocas.emplace_back(AI, Index);
         if (!AI->isStaticAlloca())
@@ -444,7 +453,11 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   for (auto &P : Allocas) {
     auto *G =
         Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, P.second);
-    ReplaceInstWithInst(P.first, cast<Instruction>(G));
+    // We are not using ReplaceInstWithInst(P.first, cast<Instruction>(G)) here,
+    // as we are changing location of the instruction.
+    G->takeName(P.first);
+    P.first->replaceAllUsesWith(G);
+    P.first->eraseFromParent();
   }
   return FramePtr;
 }
@@ -568,6 +581,10 @@ static void splitAround(Instruction *I, const Twine &Name) {
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
+  Shape.PromiseAlloca = Shape.CoroBegin->getId()->getPromise();
+  if (Shape.PromiseAlloca) {
+    Shape.CoroBegin->getId()->clearPromise();
+  }
 
   // Make sure that all coro.saves and the fallthrough coro.end are in their
   // own block to simplify the logic of building up SuspendCrossing data.
@@ -620,6 +637,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     // A token returned CoroIdInst is used to tie together structural intrinsics
     // in a coroutine. It should not be saved to the coroutine frame.
     if (isa<CoroIdInst>(&I))
+      continue;
+    // The Coroutine Promise always included into coroutine frame, no need to
+    // check for suspend crossing.
+    if (Shape.PromiseAlloca == &I)
       continue;
 
     for (User *U : I.users())

@@ -1186,7 +1186,7 @@ GDBRemoteCommunicationServerLLGS::Handle_C (StringExtractorGDBRemote &packet)
     if (packet.GetBytesLeft () > 0)
     {
         // FIXME add continue at address support for $C{signo}[;{continue-address}].
-        if (*packet.Peek () == ';')
+        if (packet.PeekChar() == ';')
             return SendUnimplementedResponse (packet.GetStringRef().c_str());
         else
             return SendIllFormedResponse (packet, "unexpected content after $C{signal-number}");
@@ -1318,13 +1318,13 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
     }
 
     // Check if this is all continue (no options or ";c").
-    if (::strcmp (packet.Peek (), ";c") == 0)
+    if (packet.Peek() == ";c")
     {
         // Move past the ';', then do a simple 'c'.
         packet.SetFilePos (packet.GetFilePos () + 1);
         return Handle_c (packet);
     }
-    else if (::strcmp (packet.Peek (), ";s") == 0)
+    else if (packet.Peek() == ";s")
     {
         // Move past the ';', then do a simple 's'.
         packet.SetFilePos (packet.GetFilePos () + 1);
@@ -1341,7 +1341,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
 
     ResumeActionList thread_actions;
 
-    while (packet.GetBytesLeft () && *packet.Peek () == ';')
+    while (packet.GetBytesLeft() && packet.PeekChar() == ';')
     {
         // Skip the semi-colon.
         packet.GetChar ();
@@ -1383,7 +1383,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
         }
 
         // Parse out optional :{thread-id} value.
-        if (packet.GetBytesLeft () && (*packet.Peek () == ':'))
+        if (packet.GetBytesLeft() && packet.PeekChar() == ':')
         {
             // Consume the separator.
             packet.GetChar ();
@@ -1794,7 +1794,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P (StringExtractorGDBRemote &packet)
 
     // Parse out the value.
     uint8_t reg_bytes[32]; // big enough to support up to 256 bit ymmN register
-    size_t reg_size = packet.GetHexBytesAvail (reg_bytes, sizeof(reg_bytes));
+    size_t reg_size = packet.GetHexBytesAvail (reg_bytes);
 
     // Get the thread to use.
     NativeThreadProtocolSP thread_sp = GetThreadFromSuffix (packet);
@@ -1939,10 +1939,10 @@ GDBRemoteCommunicationServerLLGS::Handle_I (StringExtractorGDBRemote &packet)
     }
 
     packet.SetFilePos (::strlen("I"));
-    char tmp[4096];
+    uint8_t tmp[4096];
     for (;;)
     {
-        size_t read = packet.GetHexBytesAvail(tmp, sizeof(tmp));
+        size_t read = packet.GetHexBytesAvail(tmp);
         if (read == 0)
         {
             break;
@@ -2118,7 +2118,7 @@ GDBRemoteCommunicationServerLLGS::Handle_M (StringExtractorGDBRemote &packet)
 
     // Convert the hex memory write contents to bytes.
     StreamGDBRemote response;
-    const uint64_t convert_count = packet.GetHexBytes(&buf[0], byte_count, 0);
+    const uint64_t convert_count = packet.GetHexBytes(buf, 0);
     if (convert_count != byte_count)
     {
         if (log)
@@ -2926,7 +2926,7 @@ GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix (StringExtractorGDBRemote 
         return thread_sp;
 
     // Parse out thread: portion.
-    if (strncmp (packet.Peek (), "thread:", strlen("thread:")) != 0)
+    if (packet.Peek().startswith("thread:"))
     {
         if (log)
             log->Printf ("GDBRemoteCommunicationServerLLGS::%s gdb-remote parse error: expected 'thread:' but not found, packet contents = '%s'", __FUNCTION__, packet.GetStringRef ().c_str ());

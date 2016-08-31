@@ -2110,21 +2110,23 @@ public:
 
   static GPUKind parseAMDGCNName(StringRef Name) {
     return llvm::StringSwitch<GPUKind>(Name)
-      .Case("tahiti",   GK_SOUTHERN_ISLANDS)
-      .Case("pitcairn", GK_SOUTHERN_ISLANDS)
-      .Case("verde",    GK_SOUTHERN_ISLANDS)
-      .Case("oland",    GK_SOUTHERN_ISLANDS)
-      .Case("hainan",   GK_SOUTHERN_ISLANDS)
-      .Case("bonaire",  GK_SEA_ISLANDS)
-      .Case("kabini",   GK_SEA_ISLANDS)
-      .Case("kaveri",   GK_SEA_ISLANDS)
-      .Case("hawaii",   GK_SEA_ISLANDS)
-      .Case("mullins",  GK_SEA_ISLANDS)
-      .Case("tonga",    GK_VOLCANIC_ISLANDS)
-      .Case("iceland",  GK_VOLCANIC_ISLANDS)
-      .Case("carrizo",  GK_VOLCANIC_ISLANDS)
-      .Case("fiji",     GK_VOLCANIC_ISLANDS)
-      .Case("stoney",   GK_VOLCANIC_ISLANDS)
+      .Case("tahiti",    GK_SOUTHERN_ISLANDS)
+      .Case("pitcairn",  GK_SOUTHERN_ISLANDS)
+      .Case("verde",     GK_SOUTHERN_ISLANDS)
+      .Case("oland",     GK_SOUTHERN_ISLANDS)
+      .Case("hainan",    GK_SOUTHERN_ISLANDS)
+      .Case("bonaire",   GK_SEA_ISLANDS)
+      .Case("kabini",    GK_SEA_ISLANDS)
+      .Case("kaveri",    GK_SEA_ISLANDS)
+      .Case("hawaii",    GK_SEA_ISLANDS)
+      .Case("mullins",   GK_SEA_ISLANDS)
+      .Case("tonga",     GK_VOLCANIC_ISLANDS)
+      .Case("iceland",   GK_VOLCANIC_ISLANDS)
+      .Case("carrizo",   GK_VOLCANIC_ISLANDS)
+      .Case("fiji",      GK_VOLCANIC_ISLANDS)
+      .Case("stoney",    GK_VOLCANIC_ISLANDS)
+      .Case("polaris10", GK_VOLCANIC_ISLANDS)
+      .Case("polaris11", GK_VOLCANIC_ISLANDS)
       .Default(GK_NONE);
   }
 
@@ -6109,6 +6111,7 @@ class HexagonTargetInfo : public TargetInfo {
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::string CPU;
   bool HasHVX, HasHVXDouble;
+  bool UseLongCalls;
 
 public:
   HexagonTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -6133,6 +6136,7 @@ public:
     UseBitFieldTypeAlignment = true;
     ZeroLengthBitfieldBoundary = 32;
     HasHVX = HasHVXDouble = false;
+    UseLongCalls = false;
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
@@ -6167,6 +6171,7 @@ public:
       .Case("hexagon", true)
       .Case("hvx", HasHVX)
       .Case("hvx-double", HasHVXDouble)
+      .Case("long-calls", UseLongCalls)
       .Default(false);
   }
 
@@ -6176,6 +6181,9 @@ public:
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
+
+  void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
+                         bool Enabled) const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
@@ -6245,6 +6253,17 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
+bool HexagonTargetInfo::initFeatureMap(llvm::StringMap<bool> &Features,
+      DiagnosticsEngine &Diags, StringRef CPU,
+      const std::vector<std::string> &FeaturesVec) const {
+  // Default for v60: -hvx, -hvx-double.
+  Features["hvx"] = false;
+  Features["hvx-double"] = false;
+  Features["long-calls"] = false;
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
 bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   for (auto &F : Features) {
@@ -6256,20 +6275,26 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasHVX = HasHVXDouble = true;
     else if (F == "-hvx-double")
       HasHVXDouble = false;
+
+    if (F == "+long-calls")
+      UseLongCalls = true;
+    else if (F == "-long-calls")
+      UseLongCalls = false;
   }
   return true;
 }
 
-bool HexagonTargetInfo::initFeatureMap(llvm::StringMap<bool> &Features,
-      DiagnosticsEngine &Diags, StringRef CPU,
-      const std::vector<std::string> &FeaturesVec) const {
-  // Default for v60: -hvx, -hvx-double.
-  Features["hvx"] = false;
-  Features["hvx-double"] = false;
-
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+void HexagonTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
+      StringRef Name, bool Enabled) const {
+  if (Enabled) {
+    if (Name == "hvx-double")
+      Features["hvx"] = true;
+  } else {
+    if (Name == "hvx")
+      Features["hvx-double"] = false;
+  }
+  Features[Name] = Enabled;
 }
-
 
 const char *const HexagonTargetInfo::GCCRegNames[] = {
   "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",

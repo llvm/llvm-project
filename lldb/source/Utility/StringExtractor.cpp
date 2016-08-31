@@ -16,6 +16,8 @@
 #include <tuple>
 // Other libraries and framework includes
 // Project includes
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/Endian.h"
 
 static inline int
 xdigit_to_sint (char ch)
@@ -98,6 +100,16 @@ StringExtractor::GetChar (char fail_value)
     return fail_value;
 }
 
+static llvm::Optional<uint8_t>
+translateHexChar(char ch1, char ch2)
+{
+    const int hi_nibble = xdigit_to_sint(ch1);
+    const int lo_nibble = xdigit_to_sint(ch2);
+    if (hi_nibble == -1 || lo_nibble == -1)
+        return llvm::None;
+    return (uint8_t)((hi_nibble << 4) + lo_nibble);
+}
+
 //----------------------------------------------------------------------
 // If a pair of valid hex digits exist at the head of the
 // StringExtractor they are decoded into an unsigned byte and returned
@@ -111,17 +123,12 @@ StringExtractor::DecodeHexU8()
 {
     SkipSpaces();
     if (GetBytesLeft() < 2)
-    {
         return -1;
-    }
-    const int hi_nibble = xdigit_to_sint(m_packet[m_index]);
-    const int lo_nibble = xdigit_to_sint(m_packet[m_index+1]);
-    if (hi_nibble == -1 || lo_nibble == -1)
-    {
+    auto result = translateHexChar(m_packet[m_index], m_packet[m_index + 1]);
+    if (!result.hasValue())
         return -1;
-    }
     m_index += 2;
-    return (uint8_t)((hi_nibble << 4) + lo_nibble);
+    return *result;
 }
 
 //----------------------------------------------------------------------
@@ -229,149 +236,77 @@ StringExtractor::GetS64 (int64_t fail_value, int base)
     return fail_value;
 }
 
-
 uint32_t
 StringExtractor::GetHexMaxU32 (bool little_endian, uint32_t fail_value)
 {
-    uint32_t result = 0;
-    uint32_t nibble_count = 0;
-
     SkipSpaces();
+
+    // Allocate enough space for 2 uint32's.  In big endian, if the user writes
+    // "AB" then this should be treated as 0xAB, not 0xAB000000.  In order to
+    // do this, we decode into the second half of the array, and then shift the
+    // starting point of the big endian translation left by however many bytes
+    // of a uint32 were missing from the input.  We're essentially padding left
+    // with 0's.
+    uint8_t bytes[2 * sizeof(uint32_t) - 1] = {0};
+    llvm::MutableArrayRef<uint8_t> byte_array(bytes);
+    llvm::MutableArrayRef<uint8_t> decode_loc = byte_array.take_back(sizeof(uint32_t));
+    uint32_t bytes_decoded = GetHexBytesAvail(decode_loc);
+    if (bytes_decoded == sizeof(uint32_t) && ::isxdigit(PeekChar()))
+        return fail();
+
+    using namespace llvm::support;
     if (little_endian)
-    {
-        uint32_t shift_amount = 0;
-        while (m_index < m_packet.size() && ::isxdigit (m_packet[m_index]))
-        {
-            // Make sure we don't exceed the size of a uint32_t...
-            if (nibble_count >= (sizeof(uint32_t) * 2))
-            {
-                m_index = UINT64_MAX;
-                return fail_value;
-            }
-
-            uint8_t nibble_lo;
-            uint8_t nibble_hi = xdigit_to_sint (m_packet[m_index]);
-            ++m_index;
-            if (m_index < m_packet.size() && ::isxdigit (m_packet[m_index]))
-            {
-                nibble_lo = xdigit_to_sint (m_packet[m_index]);
-                ++m_index;
-                result |= ((uint32_t)nibble_hi << (shift_amount + 4));
-                result |= ((uint32_t)nibble_lo << shift_amount);
-                nibble_count += 2;
-                shift_amount += 8;
-            }
-            else
-            {
-                result |= ((uint32_t)nibble_hi << shift_amount);
-                nibble_count += 1;
-                shift_amount += 4;
-            }
-
-        }
-    }
+        return endian::read<uint32_t, endianness::little>(decode_loc.data());
     else
     {
-        while (m_index < m_packet.size() && ::isxdigit (m_packet[m_index]))
-        {
-            // Make sure we don't exceed the size of a uint32_t...
-            if (nibble_count >= (sizeof(uint32_t) * 2))
-            {
-                m_index = UINT64_MAX;
-                return fail_value;
-            }
-
-            uint8_t nibble = xdigit_to_sint (m_packet[m_index]);
-            // Big Endian
-            result <<= 4;
-            result |= nibble;
-
-            ++m_index;
-            ++nibble_count;
-        }
+        decode_loc = byte_array.drop_front(bytes_decoded - 1).take_front(sizeof(uint32_t));
+        return endian::read<uint32_t, endianness::big>(decode_loc.data());
     }
-    return result;
 }
 
 uint64_t
 StringExtractor::GetHexMaxU64 (bool little_endian, uint64_t fail_value)
 {
-    uint64_t result = 0;
-    uint32_t nibble_count = 0;
-
     SkipSpaces();
+
+    // Allocate enough space for 2 uint64's.  In big endian, if the user writes
+    // "AB" then this should be treated as 0x000000AB, not 0xAB000000.  In order
+    // to do this, we decode into the second half of the array, and then shift
+    // the starting point of the big endian translation left by however many bytes
+    // of a uint32 were missing from the input.  We're essentially padding left
+    // with 0's.
+    uint8_t bytes[2 * sizeof(uint64_t) - 1] = {0};
+    llvm::MutableArrayRef<uint8_t> byte_array(bytes);
+    llvm::MutableArrayRef<uint8_t> decode_loc = byte_array.take_back(sizeof(uint64_t));
+    uint32_t bytes_decoded = GetHexBytesAvail(decode_loc);
+    if (bytes_decoded == sizeof(uint64_t) && ::isxdigit(PeekChar()))
+        return fail();
+
+    using namespace llvm::support;
     if (little_endian)
-    {
-        uint32_t shift_amount = 0;
-        while (m_index < m_packet.size() && ::isxdigit (m_packet[m_index]))
-        {
-            // Make sure we don't exceed the size of a uint64_t...
-            if (nibble_count >= (sizeof(uint64_t) * 2))
-            {
-                m_index = UINT64_MAX;
-                return fail_value;
-            }
-
-            uint8_t nibble_lo;
-            uint8_t nibble_hi = xdigit_to_sint (m_packet[m_index]);
-            ++m_index;
-            if (m_index < m_packet.size() && ::isxdigit (m_packet[m_index]))
-            {
-                nibble_lo = xdigit_to_sint (m_packet[m_index]);
-                ++m_index;
-                result |= ((uint64_t)nibble_hi << (shift_amount + 4));
-                result |= ((uint64_t)nibble_lo << shift_amount);
-                nibble_count += 2;
-                shift_amount += 8;
-            }
-            else
-            {
-                result |= ((uint64_t)nibble_hi << shift_amount);
-                nibble_count += 1;
-                shift_amount += 4;
-            }
-
-        }
-    }
+        return endian::read<uint64_t, endianness::little>(decode_loc.data());
     else
     {
-        while (m_index < m_packet.size() && ::isxdigit (m_packet[m_index]))
-        {
-            // Make sure we don't exceed the size of a uint64_t...
-            if (nibble_count >= (sizeof(uint64_t) * 2))
-            {
-                m_index = UINT64_MAX;
-                return fail_value;
-            }
-
-            uint8_t nibble = xdigit_to_sint (m_packet[m_index]);
-            // Big Endian
-            result <<= 4;
-            result |= nibble;
-
-            ++m_index;
-            ++nibble_count;
-        }
+        decode_loc = byte_array.drop_front(bytes_decoded - 1).take_front(sizeof(uint64_t));
+        return endian::read<uint64_t, endianness::big>(decode_loc.data());
     }
-    return result;
 }
 
 size_t
-StringExtractor::GetHexBytes (void *dst_void, size_t dst_len, uint8_t fail_fill_value)
+StringExtractor::GetHexBytes (llvm::MutableArrayRef<uint8_t> dest, uint8_t fail_fill_value)
 {
-    uint8_t *dst = (uint8_t*)dst_void;
     size_t bytes_extracted = 0;
-    while (bytes_extracted < dst_len && GetBytesLeft ())
+    while (!dest.empty() && GetBytesLeft() > 0)
     {
-        dst[bytes_extracted] = GetHexU8 (fail_fill_value);
-        if (IsGood())
-            ++bytes_extracted;
-        else
+        dest[0] = GetHexU8 (fail_fill_value);
+        if (!IsGood())
             break;
+        ++bytes_extracted;
+        dest = dest.drop_front();
     }
 
-    for (size_t i = bytes_extracted; i < dst_len; ++i)
-        dst[i] = fail_fill_value;
+    if (!dest.empty())
+        ::memset(dest.data(), fail_fill_value, dest.size());
 
     return bytes_extracted;
 }
@@ -383,55 +318,19 @@ StringExtractor::GetHexBytes (void *dst_void, size_t dst_len, uint8_t fail_fill_
 // Returns the number of bytes successfully decoded
 //----------------------------------------------------------------------
 size_t
-StringExtractor::GetHexBytesAvail (void *dst_void, size_t dst_len)
+StringExtractor::GetHexBytesAvail (llvm::MutableArrayRef<uint8_t> dest)
 {
-    uint8_t *dst = (uint8_t*)dst_void;
     size_t bytes_extracted = 0;
-    while (bytes_extracted < dst_len)
+    while (!dest.empty())
     {
         int decode = DecodeHexU8();
         if (decode == -1)
-        {
             break;
-        }
-        dst[bytes_extracted++] = (uint8_t)decode;
+        dest[0] = (uint8_t)decode;
+        dest = dest.drop_front();
+        ++bytes_extracted;
     }
     return bytes_extracted;
-}
-
-// Consume ASCII hex nibble character pairs until we have decoded byte_size
-// bytes of data.
-
-uint64_t
-StringExtractor::GetHexWithFixedSize (uint32_t byte_size, bool little_endian, uint64_t fail_value)
-{
-    if (byte_size <= 8 && GetBytesLeft() >= byte_size * 2)
-    {
-        uint64_t result = 0;
-        uint32_t i;
-        if (little_endian)
-        {
-            // Little Endian
-            uint32_t shift_amount;
-            for (i = 0, shift_amount = 0;
-                 i < byte_size && IsGood();
-                 ++i, shift_amount += 8)
-            {
-                result |= ((uint64_t)GetHexU8() << shift_amount);
-            }
-        }
-        else
-        {
-            // Big Endian
-            for (i = 0; i < byte_size && IsGood(); ++i)
-            {
-                result <<= 8;
-                result |= GetHexU8();
-            }
-        }
-    }
-    m_index = UINT64_MAX;
-    return fail_value;
 }
 
 size_t
@@ -449,11 +348,16 @@ size_t
 StringExtractor::GetHexByteStringFixedLength (std::string &str, uint32_t nibble_length)
 {
     str.clear();
-
-    uint32_t nibble_count = 0;
-    for (const char *pch = Peek(); (nibble_count < nibble_length) && (pch != nullptr); str.append(1, GetHexU8(0, false)), pch = Peek (), nibble_count += 2)
-    {}
-
+    llvm::StringRef nibs = Peek().take_front(nibble_length);
+    while (nibs.size() >= 2)
+    {
+        auto ch = translateHexChar(nibs[0], nibs[1]);
+        if (!ch.hasValue())
+            break;
+        str.push_back(*ch);
+        nibs = nibs.drop_front(2);
+    }
+    m_index += str.size() * 2;
     return str.size();
 }
 
@@ -465,7 +369,7 @@ StringExtractor::GetHexByteStringTerminatedBy (std::string &str,
     char ch;
     while ((ch = GetHexU8(0,false)) != '\0')
         str.append(1, ch);
-    if (Peek() && *Peek() == terminator)
+    if (GetBytesLeft() > 0 && PeekChar() == terminator)
         return str.size();
 
     str.clear();

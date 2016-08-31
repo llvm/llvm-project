@@ -59,7 +59,8 @@ public:
 
   Symbol *addUndefined(StringRef Name);
   Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
-                       uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
+                       uint8_t Type, bool CanOmitFromDynSym,
+                       bool HasUnnamedAddr, InputFile *File);
 
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
                      InputSectionBase<ELFT> *Section);
@@ -71,12 +72,13 @@ public:
 
   void addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
   void addLazyObject(StringRef Name, LazyObjectFile &Obj);
-  Symbol *addBitcode(StringRef Name, bool IsWeak, uint8_t StOther, uint8_t Type,
-                     bool CanOmitFromDynSym, BitcodeFile *File);
+  Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
+                     uint8_t Type, bool CanOmitFromDynSym, bool HasUnnamedAddr,
+                     BitcodeFile *File);
 
   Symbol *addCommon(StringRef N, uint64_t Size, uint64_t Alignment,
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
-                    InputFile *File);
+                    bool HasUnnamedAddr, InputFile *File);
 
   void scanUndefinedFlags();
   void scanShlibUndefined();
@@ -93,7 +95,8 @@ private:
   std::pair<Symbol *, bool> insert(StringRef &Name);
   std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
-                                   bool IsUsedInRegularObj, InputFile *File);
+                                   bool HasUnnamedAddr, bool IsUsedInRegularObj,
+                                   InputFile *File);
 
   std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile);
   void reportDuplicate(SymbolBody *Existing, InputFile *NewFile);

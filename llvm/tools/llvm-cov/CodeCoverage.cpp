@@ -468,6 +468,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       error(EC.message(), this->ObjectFilename);
       return 1;
     }
+    sys::path::native(ObjectFilePath);
     ViewOpts.ObjectFilename = ObjectFilePath.c_str();
     switch (ViewOpts.Format) {
     case CoverageViewOptions::OutputFormat::Text:

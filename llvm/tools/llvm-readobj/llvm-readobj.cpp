@@ -92,6 +92,10 @@ namespace opts {
     cl::desc("Alias for --relocations"),
     cl::aliasopt(Relocations));
 
+  // -notes, -n
+  cl::opt<bool> Notes("notes", cl::desc("Display the ELF notes in the file"));
+  cl::alias NotesShort("n", cl::desc("Alias for --notes"), cl::aliasopt(Notes));
+
   // -dyn-relocations
   cl::opt<bool> DynRelocs("dyn-relocations",
     cl::desc("Display the dynamic relocation entries in the file"));
@@ -408,6 +412,8 @@ static void dumpObject(const ObjectFile *Obj) {
       Dumper->printGroupSections();
     if (opts::HashHistogram)
       Dumper->printHashHistogram();
+    if (opts::Notes)
+      Dumper->printNotes();
   }
   if (Obj->isCOFF()) {
     if (opts::COFFImports)

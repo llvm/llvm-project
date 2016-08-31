@@ -17,6 +17,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 class StringExtractor
@@ -41,6 +42,13 @@ public:
     //------------------------------------------------------------------
     const StringExtractor&
     operator=(const StringExtractor& rhs);
+
+    void
+    Reset(llvm::StringRef str)
+    {
+        m_packet = str;
+        m_index = 0;
+    }
 
     // Returns true if the file position is still valid for the data
     // contained in this string extractor object.
@@ -104,10 +112,10 @@ public:
     char
     PeekChar (char fail_value = '\0')
     {
-        const char *cstr = Peek();
-        if (cstr)
-            return cstr[0];
-        return fail_value;
+        llvm::StringRef str = Peek();
+        if (str.empty())
+            return fail_value;
+        return str[0];
     }
 
     int
@@ -141,13 +149,10 @@ public:
     GetHexMaxU64 (bool little_endian, uint64_t fail_value);
 
     size_t
-    GetHexBytes (void *dst, size_t dst_len, uint8_t fail_fill_value);
+    GetHexBytes (llvm::MutableArrayRef<uint8_t> dest, uint8_t fail_fill_value);
 
     size_t
-    GetHexBytesAvail (void *dst, size_t dst_len);
-
-    uint64_t
-    GetHexWithFixedSize (uint32_t byte_size, bool little_endian, uint64_t fail_value);
+    GetHexBytesAvail (llvm::MutableArrayRef<uint8_t> dest);
 
     size_t
     GetHexByteString (std::string &str);
@@ -158,13 +163,13 @@ public:
     size_t
     GetHexByteStringTerminatedBy (std::string &str,
                                   char terminator);
-    
-    const char *
-    Peek ()
+
+    llvm::StringRef
+    Peek() const
     {
-        if (m_index < m_packet.size())
-            return m_packet.c_str() + m_index;
-        return nullptr;
+        if (!IsGood())
+            return llvm::StringRef();
+        return llvm::StringRef(m_packet).drop_front(m_index);
     }
 
 protected:

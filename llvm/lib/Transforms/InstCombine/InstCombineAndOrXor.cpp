@@ -283,51 +283,31 @@ Instruction *InstCombiner::OptAndOp(Instruction *Op,
 }
 
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
-/// (V < Lo || V >= Hi).  In practice, we emit the more efficient
-/// (V-Lo) \<u Hi-Lo.  This method expects that Lo <= Hi. isSigned indicates
-/// whether to treat the V, Lo and HI as signed or not. IB is the location to
-/// insert new instructions.
+/// (V < Lo || V >= Hi). This method expects that Lo <= Hi. IsSigned indicates
+/// whether to treat V, Lo, and Hi as signed or not.
 Value *InstCombiner::InsertRangeTest(Value *V, Constant *Lo, Constant *Hi,
                                      bool isSigned, bool Inside) {
+  // FIXME: This could use APInt and work with vector splat constants.
   assert(cast<ConstantInt>(ConstantExpr::getICmp((isSigned ?
             ICmpInst::ICMP_SLE:ICmpInst::ICMP_ULE), Lo, Hi))->getZExtValue() &&
          "Lo is not <= Hi in range emission code!");
 
-  if (Inside) {
-    if (Lo == Hi)  // Trivially false.
-      return Builder->getFalse();
+  if (Lo == Hi)
+    return Inside ? Builder->getFalse() : Builder->getTrue();
 
-    // V >= Min && V < Hi --> V < Hi
-    if (cast<ConstantInt>(Lo)->isMinValue(isSigned)) {
-      ICmpInst::Predicate pred = (isSigned ?
-        ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT);
-      return Builder->CreateICmp(pred, V, Hi);
-    }
-
-    // Emit V-Lo <u Hi-Lo
-    Constant *NegLo = ConstantExpr::getNeg(Lo);
-    Value *Add = Builder->CreateAdd(V, NegLo, V->getName()+".off");
-    Constant *UpperBound = ConstantExpr::getAdd(NegLo, Hi);
-    return Builder->CreateICmpULT(Add, UpperBound);
-  }
-
-  if (Lo == Hi)  // Trivially true.
-    return Builder->getTrue();
-
-  // V < Min || V >= Hi -> V > Hi-1
-  Hi = SubOne(cast<ConstantInt>(Hi));
+  // V >= Min && V <  Hi --> V <  Hi
+  // V <  Min || V >= Hi --> V >= Hi
+  ICmpInst::Predicate Pred = Inside ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
   if (cast<ConstantInt>(Lo)->isMinValue(isSigned)) {
-    ICmpInst::Predicate pred = (isSigned ?
-        ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT);
-    return Builder->CreateICmp(pred, V, Hi);
+    Pred = isSigned ? ICmpInst::getSignedPredicate(Pred) : Pred;
+    return Builder->CreateICmp(Pred, V, Hi);
   }
 
-  // Emit V-Lo >u Hi-1-Lo
-  // Note that Hi has already had one subtracted from it, above.
-  ConstantInt *NegLo = cast<ConstantInt>(ConstantExpr::getNeg(Lo));
-  Value *Add = Builder->CreateAdd(V, NegLo, V->getName()+".off");
-  Constant *LowerBound = ConstantExpr::getAdd(NegLo, Hi);
-  return Builder->CreateICmpUGT(Add, LowerBound);
+  // V >= Lo && V <  Hi --> V - Lo u<  Hi - Lo
+  // V <  Lo || V >= Hi --> V - Lo u>= Hi - Lo
+  Value *VMinusLo = Builder->CreateSub(V, Lo, V->getName() + ".off");
+  Constant *HiMinusLo = ConstantExpr::getSub(Hi, Lo);
+  return Builder->CreateICmp(Pred, VMinusLo, HiMinusLo);
 }
 
 /// Returns true iff Val consists of one contiguous run of 1s with any number

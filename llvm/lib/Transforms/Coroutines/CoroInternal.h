@@ -74,17 +74,19 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   enum {
     ResumeField,
     DestroyField,
+    PromiseField,
     IndexField,
     LastKnownField = IndexField
   };
 
   StructType *FrameTy;
   Instruction *FramePtr;
-  BasicBlock* AllocaSpillBlock;
-  SwitchInst* ResumeSwitch;
+  BasicBlock *AllocaSpillBlock;
+  SwitchInst *ResumeSwitch;
+  AllocaInst *PromiseAlloca;
   bool HasFinalSuspend;
 
-  IntegerType* getIndexType() const {
+  IntegerType *getIndexType() const {
     assert(FrameTy && "frame type not assigned");
     return cast<IntegerType>(FrameTy->getElementType(IndexField));
   }
@@ -97,7 +99,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void buildFrom(Function &F);
 };
 
-void buildCoroutineFrame(Function& F, Shape& Shape);
+void buildCoroutineFrame(Function &F, Shape &Shape);
 
 } // End namespace coro.
 } // End namespace llvm

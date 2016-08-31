@@ -255,9 +255,22 @@ define i1 @test23(i32 %A) {
 ;
   %B = icmp sgt i32 %A, 1
   %C = icmp sle i32 %A, 2
-  ;; A == 2
   %D = and i1 %B, %C
   ret i1 %D
+}
+
+; FIXME: Vectors should fold too.
+define <2 x i1> @test23vec(<2 x i32> %A) {
+; CHECK-LABEL: @test23vec(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i32> %A, <i32 1, i32 1>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %A, <i32 3, i32 3>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %B = icmp sgt <2 x i32> %A, <i32 1, i32 1>
+  %C = icmp sle <2 x i32> %A, <i32 2, i32 2>
+  %D = and <2 x i1> %B, %C
+  ret <2 x i1> %D
 }
 
 define i1 @test24(i32 %A) {
@@ -280,9 +293,22 @@ define i1 @test25(i32 %A) {
 ;
   %B = icmp sge i32 %A, 50
   %C = icmp slt i32 %A, 100
-  ;; (A-50) <u 50
   %D = and i1 %B, %C
   ret i1 %D
+}
+
+; FIXME: Vectors should fold too.
+define <2 x i1> @test25vec(<2 x i32> %A) {
+; CHECK-LABEL: @test25vec(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i32> %A, <i32 49, i32 49>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %A, <i32 100, i32 100>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i1> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %B = icmp sge <2 x i32> %A, <i32 50, i32 50>
+  %C = icmp slt <2 x i32> %A, <i32 100, i32 100>
+  %D = and <2 x i1> %B, %C
+  ret <2 x i1> %D
 }
 
 define i1 @test26(i32 %A) {

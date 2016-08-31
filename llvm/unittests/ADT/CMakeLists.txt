@@ -44,6 +44,7 @@ set(ADTSources
   ScopeExitTest.cpp
   SequenceTest.cpp
   SetVectorTest.cpp
+  SimpleIListTest.cpp
   SmallPtrSetTest.cpp
   SmallStringTest.cpp
   SmallVectorTest.cpp

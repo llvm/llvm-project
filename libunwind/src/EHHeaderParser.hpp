@@ -85,7 +85,7 @@ bool EHHeaderParser<A>::decodeTableEntry(
   const char *message =
       CFI_Parser<A>::decodeFDE(addressSpace, fde, fdeInfo, cieInfo);
   if (message != NULL) {
-    _LIBUNWIND_DEBUG_LOG("EHHeaderParser::decodeTableEntry: bad fde: %s\n",
+    _LIBUNWIND_DEBUG_LOG("EHHeaderParser::decodeTableEntry: bad fde: %s",
                          message);
     return false;
   }

@@ -64,15 +64,19 @@
 # Based on the type i32, this should be gpr.
 name:            defaultMapping
 legalized:       true
+# CHECK-LABEL: name: defaultMapping
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr }
+# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 1, class: gpr }
 registers:
   - { id: 0, class: _ }
+  - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0
-    ; CHECK:      %0(32) = G_ADD s32 %w0
-    %0(32) = G_ADD s32 %w0, %w0
+    ; CHECK:      %1(32) = G_ADD s32 %0
+    %0(32) = COPY %w0
+    %1(32) = G_ADD s32 %0, %0
 ...
 
 ---
@@ -81,15 +85,20 @@ body: |
 # FPR is used for both floating point and vector registers.
 name:            defaultMappingVector
 legalized:       true
+# CHECK-LABEL: name: defaultMappingVector
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: fpr }
+# CHECK:   - { id: 0, class: fpr }
+# CHECK:   - { id: 1, class: fpr }
 registers:
   - { id: 0, class: _ }
+  - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %d0
-    ; CHECK:      %0(64) = G_ADD <2 x s32> %d0
-    %0(64) = G_ADD <2 x s32> %d0, %d0
+    ; CHECK:      %0(64) = COPY %d0
+    ; CHECK:      %1(64) = G_ADD <2 x s32> %0
+    %0(64) = COPY %d0
+    %1(64) = G_ADD <2 x s32> %0, %0
 ...
 
 ---
@@ -98,26 +107,32 @@ body: |
 # in FPR, but at the use, it should be GPR.
 name:            defaultMapping1Repair
 legalized:       true
+# CHECK-LABEL: name: defaultMapping1Repair
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
 # CHECK-NEXT:   - { id: 2, class: gpr }
+# CHECK-NEXT:   - { id: 3, class: gpr }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
+  - { id: 2, class: _ }
 body: |
   bb.0.entry:
     liveins: %s0, %x0
     ; CHECK:           %0(32) = COPY %s0
-    ; CHECK-NEXT:      %2(32) = COPY %0
-    ; CHECK-NEXT:      %1(32) = G_ADD s32 %2, %w0
+    ; CHECK-NEXT:      %1(32) = COPY %w0
+    ; CHECK-NEXT:      %3(32) = COPY %0
+    ; CHECK-NEXT:      %2(32) = G_ADD s32 %3, %1
     %0(32) = COPY %s0
-    %1(32) = G_ADD s32 %0, %w0
+    %1(32) = COPY %w0
+    %2(32) = G_ADD s32 %0, %1
 ...
 
 # Check that we repair the assignment for %0 differently for both uses.
 name:            defaultMapping2Repairs
 legalized:       true
+# CHECK-LABEL: name: defaultMapping2Repairs
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: fpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
@@ -144,6 +159,7 @@ body: |
 # fixes that.
 name:            defaultMappingDefRepair
 legalized:       true
+# CHECK-LABEL: name: defaultMappingDefRepair
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
 # CHECK-NEXT:   - { id: 1, class: fpr }
@@ -155,10 +171,10 @@ body: |
   bb.0.entry:
     liveins: %w0
     ; CHECK:           %0(32) = COPY %w0
-    ; CHECK-NEXT:      %2(32) = G_ADD s32 %0, %w0
+    ; CHECK-NEXT:      %2(32) = G_ADD s32 %0, %0
     ; CHECK-NEXT:      %1(32) = COPY %2
     %0(32) = COPY %w0
-    %1(32) = G_ADD s32 %0, %w0
+    %1(32) = G_ADD s32 %0, %0
 ...
 
 ---
@@ -182,16 +198,16 @@ body: |
   bb.0.entry:
     successors: %bb.2.end, %bb.1.then
     liveins: %x0, %x1, %w2
-  
+
     %0 = LDRWui killed %x0, 0 :: (load 4 from %ir.src)
     %1 = COPY %x1
     %2 = COPY %w2
     TBNZW killed %2, 0, %bb.2.end
-  
+
   bb.1.then:
     successors: %bb.2.end
     %3(32) = G_ADD s32 %0, %0
-  
+
   bb.2.end:
     %4(32) = PHI %0, %bb.0.entry, %3, %bb.1.then
     STRWui killed %4, killed %1, 0 :: (store 4 into %ir.dst)
@@ -202,32 +218,39 @@ body: |
 # Make sure we can repair physical register uses as well.
 name:            defaultMappingUseRepairPhysReg
 legalized:       true
+# CHECK-LABEL: name: defaultMappingUseRepairPhysReg
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
-# CHECK-NEXT:   - { id: 1, class: gpr }
+# CHECK-NEXT:   - { id: 1, class: fpr }
 # CHECK-NEXT:   - { id: 2, class: gpr }
+# CHECK-NEXT:   - { id: 3, class: gpr }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
+  - { id: 2, class: _ }
 body: |
   bb.0.entry:
     liveins: %w0, %s0
     ; CHECK:           %0(32) = COPY %w0
-    ; CHECK-NEXT:      %2(32) = COPY %s0
-    ; CHECK-NEXT:      %1(32) = G_ADD s32 %0, %2
+    ; CHECK-NEXT:      %1(32) = COPY %s0
+    ; CHECK-NEXT:      %3(32) = COPY %1
+    ; CHECK-NEXT:      %2(32) = G_ADD s32 %0, %3
     %0(32) = COPY %w0
-    %1(32) = G_ADD s32 %0, %s0
+    %1(32) = COPY %s0
+    %2(32) = G_ADD s32 %0, %1
 ...
 
 ---
 # Make sure we can repair physical register defs.
 name:            defaultMappingDefRepairPhysReg
 legalized:       true
+# CHECK-LABEL: name: defaultMappingDefRepairPhysReg
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: gpr }
 # CHECK-NEXT:   - { id: 1, class: gpr }
 registers:
   - { id: 0, class: _ }
+  - { id: 1, class: _ }
 body: |
   bb.0.entry:
     liveins: %w0
@@ -235,7 +258,8 @@ body: |
     ; CHECK-NEXT:      %1(32) = G_ADD s32 %0, %0
     ; CHECK-NEXT:      %s0 = COPY %1
     %0(32) = COPY %w0
-    %s0 = G_ADD s32 %0, %0
+    %1(32) = G_ADD s32 %0, %0
+    %s0 = COPY %1
 ...
 
 ---
@@ -243,6 +267,7 @@ body: |
 # G_OR instruction from fpr to gpr.
 name:            greedyMappingOr
 legalized:       true
+# CHECK-LABEL: name: greedyMappingOr
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr }
 # CHECK-NEXT:  - { id: 1, class: gpr }
@@ -289,6 +314,7 @@ body: |
 # %2 constraint.
 name:            greedyMappingOrWithConstraints
 legalized:       true
+# CHECK-LABEL: name: greedyMappingOrWithConstraints
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr }
 # CHECK-NEXT:  - { id: 1, class: gpr }

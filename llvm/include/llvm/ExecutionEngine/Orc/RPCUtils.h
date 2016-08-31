@@ -61,6 +61,70 @@ public:
 class RPCBase {
 protected:
 
+  // FIXME: Remove MSVCPError/MSVCPExpected once MSVC's future implementation
+  //        supports classes without default constructors.
+#ifdef _MSC_VER
+
+  // Work around MSVC's future implementation's use of default constructors:
+  // A default constructed value in the promise will be overwritten when the
+  // real error is set - so the default constructed Error has to be checked
+  // already.
+  class MSVCPError : public Error {
+  public:
+
+    MSVCPError() {
+      (void)!!*this;
+    }
+
+    MSVCPError(MSVCPError &&Other) : Error(std::move(Other)) {}
+
+    MSVCPError& operator=(MSVCPError Other) {
+      Error::operator=(std::move(Other));
+      return *this;
+    }
+
+    MSVCPError(Error Err) : Error(std::move(Err)) {}
+  };
+
+  // Likewise for Expected:
+  template <typename T>
+  class MSVCPExpected : public Expected<T> {
+  public:
+
+    MSVCPExpected()
+        : Expected<T>(make_error<StringError>("", inconvertibleErrorCode())) {
+      consumeError(this->takeError());
+    }
+
+    MSVCPExpected(MSVCPExpected &&Other) : Expected<T>(std::move(Other)) {}
+
+    MSVCPExpected& operator=(MSVCPExpected &&Other) {
+      Expected<T>::operator=(std::move(Other));
+      return *this;
+    }
+
+    MSVCPExpected(Error Err) : Expected<T>(std::move(Err)) {}
+
+    template <typename OtherT>
+    MSVCPExpected(OtherT &&Val,
+                  typename std::enable_if<std::is_convertible<OtherT, T>::value>::type
+                  * = nullptr) : Expected<T>(std::move(Val)) {}
+
+    template <class OtherT>
+    MSVCPExpected(
+        Expected<OtherT> &&Other,
+        typename std::enable_if<std::is_convertible<OtherT, T>::value>::type * =
+        nullptr) : Expected<T>(std::move(Other)) {}
+
+    template <class OtherT>
+    explicit MSVCPExpected(
+        Expected<OtherT> &&Other,
+        typename std::enable_if<!std::is_convertible<OtherT, T>::value>::type * =
+        nullptr) : Expected<T>(std::move(Other)) {}
+  };
+
+#endif // _MSC_VER
+
   // RPC Function description type.
   //
   // This class provides the information and operations needed to support the
@@ -90,8 +154,17 @@ protected:
 
     typedef Expected<RetT> ErrorReturn;
 
+    // FIXME: Ditch PErrorReturn (replace it with plain ErrorReturn) once MSVC's
+    //        std::future implementation supports types without default
+    //        constructors.
+#ifdef _MSC_VER
+    typedef MSVCPExpected<RetT> PErrorReturn;
+#else
+    typedef Expected<RetT> PErrorReturn;
+#endif
+
     template <typename ChannelT>
-    static Error readResult(ChannelT &C, std::promise<ErrorReturn> &P) {
+    static Error readResult(ChannelT &C, std::promise<PErrorReturn> &P) {
       RetT Val;
       auto Err = deserialize(C, Val);
       auto Err2 = endReceiveMessage(C);
@@ -103,13 +176,13 @@ protected:
       return Error::success();
     }
 
-    static void abandon(std::promise<ErrorReturn> &P) {
+    static void abandon(std::promise<PErrorReturn> &P) {
       P.set_value(
         make_error<StringError>("RPC function call failed to return",
                                 inconvertibleErrorCode()));
     }
 
-    static void consumeAbandoned(std::future<ErrorReturn> &P) {
+    static void consumeAbandoned(std::future<PErrorReturn> &P) {
       consumeError(P.get().takeError());
     }
 
@@ -144,20 +217,29 @@ protected:
 
     typedef Error ErrorReturn;
 
+    // FIXME: Ditch PErrorReturn (replace it with plain ErrorReturn) once MSVC's
+    //        std::future implementation supports types without default
+    //        constructors.
+#ifdef _MSC_VER
+    typedef MSVCPError PErrorReturn;
+#else
+    typedef Error PErrorReturn;
+#endif
+
     template <typename ChannelT>
-    static Error readResult(ChannelT &C, std::promise<ErrorReturn> &P) {
+    static Error readResult(ChannelT &C, std::promise<PErrorReturn> &P) {
       // Void functions don't have anything to deserialize, so we're good.
       P.set_value(Error::success());
       return endReceiveMessage(C);
     }
 
-    static void abandon(std::promise<ErrorReturn> &P) {
+    static void abandon(std::promise<PErrorReturn> &P) {
       P.set_value(
         make_error<StringError>("RPC function call failed to return",
                                 inconvertibleErrorCode()));
     }
 
-    static void consumeAbandoned(std::future<ErrorReturn> &P) {
+    static void consumeAbandoned(std::future<PErrorReturn> &P) {
       consumeError(P.get());
     }
 
@@ -376,7 +458,7 @@ public:
 
   /// Return type for non-blocking call primitives.
   template <typename Func>
-  using NonBlockingCallResult = std::future<typename Func::ErrorReturn>;
+  using NonBlockingCallResult = std::future<typename Func::PErrorReturn>;
 
   /// Return type for non-blocking call-with-seq primitives.
   template <typename Func>
@@ -394,7 +476,7 @@ public:
   Expected<NonBlockingCallWithSeqResult<Func>>
   appendCallNBWithSeq(ChannelT &C, const ArgTs &... Args) {
     auto SeqNo = SequenceNumberMgr.getSequenceNumber();
-    std::promise<typename Func::ErrorReturn> Promise;
+    std::promise<typename Func::PErrorReturn> Promise;
     auto Result = Promise.get_future();
     OutstandingResults[SeqNo] =
         createOutstandingResult<Func>(std::move(Promise));
@@ -433,7 +515,7 @@ public:
     auto FutureResAndSeqOrErr = appendCallNBWithSeq<Func>(C, Args...);
     if (FutureResAndSeqOrErr)
       return std::move(FutureResAndSeqOrErr->first);
-    return FutureResAndSeqOrErr.getError();
+    return FutureResAndSeqOrErr.takeError();
   }
 
   /// The same as appendCallNB, except that it calls C.send to flush the
@@ -444,7 +526,7 @@ public:
     auto FutureResAndSeqOrErr = callNBWithSeq<Func>(C, Args...);
     if (FutureResAndSeqOrErr)
       return std::move(FutureResAndSeqOrErr->first);
-    return FutureResAndSeqOrErr.getError();
+    return FutureResAndSeqOrErr.takeError();
   }
 
   /// Call Func on Channel C. Blocks waiting for a result. Returns an Error
@@ -454,13 +536,13 @@ public:
   /// handling responses and incoming calls.
   template <typename Func, typename... ArgTs>
   typename Func::ErrorReturn callB(ChannelT &C, const ArgTs &... Args) {
-    if (auto FutureResOrErr = callNBWithSeq(C, Args...)) {
+    if (auto FutureResOrErr = callNBWithSeq<Func>(C, Args...)) {
       if (auto Err = C.send()) {
         abandonOutstandingResults();
-        Func::consumeAbandoned(*FutureResOrErr);
+        Func::consumeAbandoned(FutureResOrErr->first);
         return std::move(Err);
       }
-      return FutureResOrErr->get();
+      return FutureResOrErr->first.get();
     } else
       return FutureResOrErr.takeError();
   }
@@ -676,7 +758,7 @@ private:
   class OutstandingResultImpl : public OutstandingResult {
   private:
   public:
-    OutstandingResultImpl(std::promise<typename Func::ErrorReturn> &&P)
+    OutstandingResultImpl(std::promise<typename Func::PErrorReturn> &&P)
         : P(std::move(P)) {}
 
     Error readResult(ChannelT &C) override { return Func::readResult(C, P); }
@@ -684,13 +766,13 @@ private:
     void abandon() override { Func::abandon(P); }
 
   private:
-    std::promise<typename Func::ErrorReturn> P;
+    std::promise<typename Func::PErrorReturn> P;
   };
 
   // Create an outstanding result for the given function.
   template <typename Func>
   std::unique_ptr<OutstandingResult>
-  createOutstandingResult(std::promise<typename Func::ErrorReturn> &&P) {
+  createOutstandingResult(std::promise<typename Func::PErrorReturn> &&P) {
     return llvm::make_unique<OutstandingResultImpl<Func>>(std::move(P));
   }
 

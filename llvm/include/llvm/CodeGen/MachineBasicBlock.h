@@ -38,22 +38,20 @@ class MachineBranchProbabilityInfo;
 // Forward declaration to avoid circular include problem with TargetRegisterInfo
 typedef unsigned LaneBitmask;
 
-template <>
-struct ilist_traits<MachineInstr> : public ilist_default_traits<MachineInstr> {
+template <> struct ilist_traits<MachineInstr> {
 private:
-  // this is only set by the MachineBasicBlock owning the LiveList
-  friend class MachineBasicBlock;
-  MachineBasicBlock* Parent;
+  friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
+  MachineBasicBlock *Parent;
 
 public:
-  void addNodeToList(MachineInstr* N);
-  void removeNodeFromList(MachineInstr* N);
-  void transferNodesFromList(ilist_traits &SrcTraits,
-                             ilist_iterator<MachineInstr> First,
-                             ilist_iterator<MachineInstr> Last);
-  void deleteNode(MachineInstr *N);
-private:
-  void createNode(const MachineInstr &);
+  void addNodeToList(MachineInstr *N);
+  void removeNodeFromList(MachineInstr *N);
+  void transferNodesFromList(ilist_traits &OldList,
+                             simple_ilist<MachineInstr>::iterator First,
+                             simple_ilist<MachineInstr>::iterator Last);
+
+  void deleteNode(MachineInstr *MI);
+  // Leave out createNode...
 };
 
 class MachineBasicBlock
@@ -697,7 +695,7 @@ private:
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
   // Methods used to maintain doubly linked list of blocks...
-  friend struct ilist_traits<MachineBasicBlock>;
+  friend struct ilist_callback_traits<MachineBasicBlock>;
 
   // Machine-CFG mutators
 

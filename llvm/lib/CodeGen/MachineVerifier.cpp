@@ -902,6 +902,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Non-generic instruction cannot have a type", MI);
   }
 
+  // Generic opcodes must not have physical register operands.
+  if (isPreISelGenericOpcode(MCID.getOpcode())) {
+    for (auto &Op : MI->operands()) {
+      if (Op.isReg() && TargetRegisterInfo::isPhysicalRegister(Op.getReg()))
+        report("Generic instruction cannot have physical register", MI);
+    }
+  }
+
   StringRef ErrorInfo;
   if (!TII->verifyInstruction(*MI, ErrorInfo))
     report(ErrorInfo.data(), MI);

@@ -313,7 +313,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-NoSource %s
 // CHECK-NoSource: file.prof:{{.*}}input unused
 
-// ...but if an explicit file turns the file into a source file, handle it:
+// ...but if an explicit flag turns the file into a source file, handle it:
 // RUN: %clang_cl /TP -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %S/Inputs/file.prof 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NoSourceTP %s
 // CHECK-NoSourceTP: cc1

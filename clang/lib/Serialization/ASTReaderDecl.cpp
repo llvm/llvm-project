@@ -2887,7 +2887,7 @@ static NamedDecl *getDeclForMerging(NamedDecl *Found,
     return nullptr;
 
   if (auto *TND = dyn_cast<TypedefNameDecl>(Found))
-    return TND->getAnonDeclWithTypedefName();
+    return TND->getAnonDeclWithTypedefName(/*AnyRedecl*/true);
 
   return nullptr;
 }

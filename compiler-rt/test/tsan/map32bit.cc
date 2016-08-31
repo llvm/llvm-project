@@ -8,7 +8,7 @@
 // https://github.com/google/sanitizers/issues/412
 
 // MAP_32BIT flag for mmap is supported only for x86_64.
-// XFAIL: target-is-mips64
+// XFAIL: mips
 // XFAIL: aarch64
 // XFAIL: powerpc64
 

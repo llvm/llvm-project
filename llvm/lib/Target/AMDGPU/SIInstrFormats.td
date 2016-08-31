@@ -203,69 +203,6 @@ class VOP3Common <dag outs, dag ins, string asm = "",
 // Scalar operations
 //===----------------------------------------------------------------------===//
 
-class SOP1e <bits<8> op> : Enc32 {
-  bits<7> sdst;
-  bits<8> src0;
-
-  let Inst{7-0} = src0;
-  let Inst{15-8} = op;
-  let Inst{22-16} = sdst;
-  let Inst{31-23} = 0x17d; //encoding;
-}
-
-class SOP2e <bits<7> op> : Enc32 {
-  bits<7> sdst;
-  bits<8> src0;
-  bits<8> src1;
-
-  let Inst{7-0} = src0;
-  let Inst{15-8} = src1;
-  let Inst{22-16} = sdst;
-  let Inst{29-23} = op;
-  let Inst{31-30} = 0x2; // encoding
-}
-
-class SOPCe <bits<7> op> : Enc32 {
-  bits<8> src0;
-  bits<8> src1;
-
-  let Inst{7-0} = src0;
-  let Inst{15-8} = src1;
-  let Inst{22-16} = op;
-  let Inst{31-23} = 0x17e;
-}
-
-class SOPKe <bits<5> op> : Enc32 {
-  bits <7> sdst;
-  bits <16> simm16;
-
-  let Inst{15-0} = simm16;
-  let Inst{22-16} = sdst;
-  let Inst{27-23} = op;
-  let Inst{31-28} = 0xb; //encoding
-}
-
-class SOPK64e <bits<5> op> : Enc64 {
-  bits <7> sdst = 0;
-  bits <16> simm16;
-  bits <32> imm;
-
-  let Inst{15-0} = simm16;
-  let Inst{22-16} = sdst;
-  let Inst{27-23} = op;
-  let Inst{31-28} = 0xb;
-
-  let Inst{63-32} = imm;
-}
-
-class SOPPe <bits<7> op> : Enc32 {
-  bits <16> simm16;
-
-  let Inst{15-0} = simm16;
-  let Inst{22-16} = op;
-  let Inst{31-23} = 0x17f; // encoding
-}
-
 class SMRDe <bits<5> op, bits<1> imm> : Enc32 {
   bits<7> sdst;
   bits<7> sbase;
@@ -303,69 +240,6 @@ class SMRD_IMMe_ci <bits<5> op> : Enc64 {
   let Inst{63-32} = offset;
 }
 
-let SchedRW = [WriteSALU] in {
-class SOP1 <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI<outs, ins, asm, pattern> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let isCodeGenOnly = 0;
-  let SALU = 1;
-  let SOP1 = 1;
-}
-
-class SOP2 <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI <outs, ins, asm, pattern> {
-
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let isCodeGenOnly = 0;
-  let SALU = 1;
-  let SOP2 = 1;
-
-  let UseNamedOperandTable = 1;
-}
-
-class SOPC <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
-  InstSI<outs, ins, asm, pattern>, SOPCe <op> {
-
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let SALU = 1;
-  let SOPC = 1;
-  let isCodeGenOnly = 0;
-  let Defs = [SCC];
-
-  let UseNamedOperandTable = 1;
-}
-
-class SOPK <dag outs, dag ins, string asm, list<dag> pattern> :
-   InstSI <outs, ins , asm, pattern> {
-
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let SALU = 1;
-  let SOPK = 1;
-
-  let UseNamedOperandTable = 1;
-}
-
-class SOPP <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
-		InstSI <(outs), ins, asm, pattern >, SOPPe <op> {
-
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let SALU = 1;
-  let SOPP = 1;
-
-  let UseNamedOperandTable = 1;
-}
-
-} // let SchedRW = [WriteSALU]
 
 class SMRD <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI<outs, ins, asm, pattern> {

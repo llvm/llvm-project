@@ -649,8 +649,7 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
                         reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
 
                         StringExtractor opcode_extractor(value);
-                        uint32_t ret_val =
-                            opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes.data(), dwarf_opcode_len);
+                        uint32_t ret_val = opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
                         assert(dwarf_opcode_len == ret_val);
 
                         reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data();
@@ -1144,7 +1143,7 @@ ProcessGDBRemote::ConnectToDebugserver (const char *connect_url)
         GetTarget().SetNonStopModeEnabled (m_gdb_comm.SetNonStopMode(true));
 
     m_gdb_comm.GetEchoSupported ();
-    m_gdb_comm.ComputeThreadSuffixSupport();
+    m_gdb_comm.GetThreadSuffixSupported ();
     m_gdb_comm.GetListThreadsInStopReplySupported ();
     m_gdb_comm.GetHostInfo ();
     m_gdb_comm.GetVContSupported ('c');
@@ -1986,9 +1985,8 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                 StringExtractor reg_value_extractor;
                 reg_value_extractor.GetStringRef() = pair.second;
                 DataBufferSP buffer_sp(new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
-                reg_value_extractor.GetHexBytes(buffer_sp->GetBytes(), buffer_sp->GetByteSize(), '\xcc');
-                gdb_thread->PrivateSetRegisterValue(
-                    pair.first, llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(), buffer_sp->GetByteSize()));
+                reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
+                gdb_thread->PrivateSetRegisterValue(pair.first, buffer_sp->GetData());
             }
 
             thread_sp->SetName (thread_name.empty() ? NULL : thread_name.c_str());
@@ -2366,7 +2364,7 @@ ProcessGDBRemote::SetThreadStopInfo (StructuredData::Dictionary *thread_dict)
 
                                     const size_t byte_size = bytes.GetStringRef().size()/2;
                                     DataBufferSP data_buffer_sp(new DataBufferHeap(byte_size, 0));
-                                    const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetBytes(), byte_size, 0);
+                                    const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetData(), 0);
                                     if (bytes_copied == byte_size)
                                         m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
                                 }
@@ -2585,7 +2583,7 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                             StringExtractor bytes(bytes_str);
                             const size_t byte_size = bytes.GetBytesLeft() / 2;
                             DataBufferSP data_buffer_sp(new DataBufferHeap(byte_size, 0));
-                            const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetBytes(), byte_size, 0);
+                            const size_t bytes_copied = bytes.GetHexBytes (data_buffer_sp->GetData(), 0);
                             if (bytes_copied == byte_size)
                                 m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
                         }
@@ -3086,7 +3084,7 @@ ProcessGDBRemote::DoReadMemory (addr_t addr, void *buf, size_t size, Error &erro
             }
             else
             {
-                return response.GetHexBytes(buf, size, '\xdd');
+                return response.GetHexBytes(llvm::MutableArrayRef<uint8_t>((uint8_t*)buf, size), '\xdd');
             }
         }
         else if (response.IsErrorResponse())
@@ -4587,8 +4585,7 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
                 dwarf_opcode_bytes.resize (dwarf_opcode_len);
                 reg_info.dynamic_size_dwarf_len = dwarf_opcode_len;
                 opcode_extractor.GetStringRef ().swap (opcode_string);
-                uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
-                                                                    dwarf_opcode_len);
+                uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes);
                 assert (dwarf_opcode_len == ret_val);
 
                 reg_info.dynamic_size_dwarf_expr_bytes = dwarf_opcode_bytes.data ();

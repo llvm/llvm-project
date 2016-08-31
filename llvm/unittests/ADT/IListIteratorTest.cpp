@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -17,10 +17,10 @@ namespace {
 struct Node : ilist_node<Node> {};
 
 TEST(IListIteratorTest, DefaultConstructor) {
-  iplist<Node>::iterator I;
-  iplist<Node>::reverse_iterator RI;
-  iplist<Node>::const_iterator CI;
-  iplist<Node>::const_reverse_iterator CRI;
+  simple_ilist<Node>::iterator I;
+  simple_ilist<Node>::reverse_iterator RI;
+  simple_ilist<Node>::const_iterator CI;
+  simple_ilist<Node>::const_reverse_iterator CRI;
   EXPECT_EQ(nullptr, I.getNodePtr());
   EXPECT_EQ(nullptr, CI.getNodePtr());
   EXPECT_EQ(nullptr, RI.getNodePtr());
@@ -38,7 +38,7 @@ TEST(IListIteratorTest, DefaultConstructor) {
 }
 
 TEST(IListIteratorTest, Empty) {
-  iplist<Node> L;
+  simple_ilist<Node> L;
 
   // Check iterators of L.
   EXPECT_EQ(L.begin(), L.end());
@@ -49,21 +49,18 @@ TEST(IListIteratorTest, Empty) {
   EXPECT_EQ(L.rend(), L.end().getReverse());
 
   // Iterators shouldn't match default constructors.
-  iplist<Node>::iterator I;
-  iplist<Node>::reverse_iterator RI;
+  simple_ilist<Node>::iterator I;
+  simple_ilist<Node>::reverse_iterator RI;
   EXPECT_NE(I, L.begin());
   EXPECT_NE(I, L.end());
   EXPECT_NE(RI, L.rbegin());
   EXPECT_NE(RI, L.rend());
-
-  // Don't delete nodes.
-  L.clearAndLeakNodesUnsafely();
 }
 
 TEST(IListIteratorTest, OneNodeList) {
-  iplist<Node> L;
+  simple_ilist<Node> L;
   Node A;
-  L.insert(L.end(), &A);
+  L.insert(L.end(), A);
 
   // Check address of reference.
   EXPECT_EQ(&A, &*L.begin());
@@ -81,16 +78,13 @@ TEST(IListIteratorTest, OneNodeList) {
   // Check conversions.
   EXPECT_EQ(L.rbegin(), L.begin().getReverse());
   EXPECT_EQ(L.begin(), L.rbegin().getReverse());
-
-  // Don't delete nodes.
-  L.clearAndLeakNodesUnsafely();
 }
 
 TEST(IListIteratorTest, TwoNodeList) {
-  iplist<Node> L;
+  simple_ilist<Node> L;
   Node A, B;
-  L.insert(L.end(), &A);
-  L.insert(L.end(), &B);
+  L.insert(L.end(), A);
+  L.insert(L.end(), B);
 
   // Check order.
   EXPECT_EQ(&A, &*L.begin());
@@ -105,45 +99,36 @@ TEST(IListIteratorTest, TwoNodeList) {
   EXPECT_EQ(L.rbegin(), (++L.begin()).getReverse());
   EXPECT_EQ(++L.begin(), L.rbegin().getReverse());
   EXPECT_EQ(L.begin(), (++L.rbegin()).getReverse());
-
-  // Don't delete nodes.
-  L.clearAndLeakNodesUnsafely();
 }
 
 TEST(IListIteratorTest, CheckEraseForward) {
-  iplist<Node> L;
+  simple_ilist<Node> L;
   Node A, B;
-  L.insert(L.end(), &A);
-  L.insert(L.end(), &B);
+  L.insert(L.end(), A);
+  L.insert(L.end(), B);
 
   // Erase nodes.
   auto I = L.begin();
   EXPECT_EQ(&A, &*I);
-  EXPECT_EQ(&A, L.remove(I++));
+  L.remove(*I++);
   EXPECT_EQ(&B, &*I);
-  EXPECT_EQ(&B, L.remove(I++));
+  L.remove(*I++);
   EXPECT_EQ(L.end(), I);
-
-  // Don't delete nodes.
-  L.clearAndLeakNodesUnsafely();
 }
 
 TEST(IListIteratorTest, CheckEraseReverse) {
-  iplist<Node> L;
+  simple_ilist<Node> L;
   Node A, B;
-  L.insert(L.end(), &A);
-  L.insert(L.end(), &B);
+  L.insert(L.end(), A);
+  L.insert(L.end(), B);
 
   // Erase nodes.
   auto RI = L.rbegin();
   EXPECT_EQ(&B, &*RI);
-  EXPECT_EQ(&B, L.remove(&*RI++));
+  L.remove(*RI++);
   EXPECT_EQ(&A, &*RI);
-  EXPECT_EQ(&A, L.remove(&*RI++));
+  L.remove(*RI++);
   EXPECT_EQ(L.rend(), RI);
-
-  // Don't delete nodes.
-  L.clearAndLeakNodesUnsafely();
 }
 
 } // end namespace

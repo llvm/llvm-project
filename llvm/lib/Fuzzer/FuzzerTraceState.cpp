@@ -559,9 +559,9 @@ static void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
     if (A1[I] != A2[I])
       break;
   size_t PC = reinterpret_cast<size_t>(caller_pc);
-  size_t Idx = I * 8;
-  if (I < Len)
-    Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  size_t Idx = I;
+  // if (I < Len)
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
   VP.AddValue((PC & 4095) | (Idx << 12));
 }
 
@@ -576,9 +576,9 @@ static void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
     if (A1[I] != A2[I] || A1[I] == 0)
       break;
   size_t PC = reinterpret_cast<size_t>(caller_pc);
-  size_t Idx = I * 8;
-  if (I < Len && A1[I])
-    Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
+  size_t Idx = I;
+  // if (I < Len && A1[I])
+  //  Idx += __builtin_popcountl((A1[I] ^ A2[I])) - 1;
   VP.AddValue((PC & 4095) | (Idx << 12));
 }
 

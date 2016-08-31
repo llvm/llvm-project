@@ -232,9 +232,7 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 
 /* *** */
 
-void ilist_node_traits<MCFragment>::deleteNode(MCFragment *V) {
-  V->destroy();
-}
+void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 
 MCFragment::~MCFragment() { }
 

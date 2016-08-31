@@ -33,9 +33,17 @@ namespace streamexecutor {
 
 class PlatformDevice;
 
-/// Methods supported by device kernel function objects on all platforms.
-class KernelInterface {
-  // TODO(jhen): Add methods.
+/// Platform-specific kernel handle.
+class PlatformKernelHandle {
+public:
+  explicit PlatformKernelHandle(PlatformDevice *PDevice) : PDevice(PDevice) {}
+
+  virtual ~PlatformKernelHandle();
+
+  PlatformDevice *getDevice() { return PDevice; }
+
+private:
+  PlatformDevice *PDevice;
 };
 
 /// Platform-specific stream handle.
@@ -64,12 +72,20 @@ public:
 
   virtual std::string getName() const = 0;
 
+  /// Creates a platform-specific kernel.
+  virtual Expected<std::unique_ptr<PlatformKernelHandle>>
+  createKernel(const MultiKernelLoaderSpec &Spec) {
+    return make_error("createKernel not implemented for platform " + getName());
+  }
+
   /// Creates a platform-specific stream.
-  virtual Expected<std::unique_ptr<PlatformStreamHandle>> createStream() = 0;
+  virtual Expected<std::unique_ptr<PlatformStreamHandle>> createStream() {
+    return make_error("createStream not implemented for platform " + getName());
+  }
 
   /// Launches a kernel on the given stream.
   virtual Error launch(PlatformStreamHandle *S, BlockDimensions BlockSize,
-                       GridDimensions GridSize, const KernelBase &Kernel,
+                       GridDimensions GridSize, PlatformKernelHandle *K,
                        const PackedKernelArgumentArrayBase &ArgumentArray) {
     return make_error("launch not implemented for platform " + getName());
   }

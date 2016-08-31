@@ -23,8 +23,7 @@
 // CHECK-USE: -cc1
 // CHECK-USE-SAME: -emit-obj
 // CHECK-USE-SAME: -fmodule-file={{.*}}.pcm
-// CHECK-USE-SAME: -o {{.*}}.o
-// CHECK-USE-SAME: -x c++
+// CHECK-USE-SAME: -o {{.*}}.o{{"?}} {{.*}}-x c++
 // CHECK-USE-SAME: modules-ts.cpp
 
 // Check combining precompile and compile steps works.

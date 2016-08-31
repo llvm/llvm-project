@@ -269,6 +269,9 @@ public:
     GetArrayElementType(uint64_t *stride = nullptr) const;
     
     CompilerType
+    GetArrayType (uint64_t size) const;
+    
+    CompilerType
     GetCanonicalType () const;
     
     CompilerType

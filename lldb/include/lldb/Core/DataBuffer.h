@@ -16,6 +16,8 @@
 
 #include "lldb/lldb-types.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -88,6 +90,16 @@ public:
     //------------------------------------------------------------------
     virtual lldb::offset_t
     GetByteSize() const = 0;
+
+    llvm::ArrayRef<uint8_t> GetData() const
+    {
+        return llvm::ArrayRef<uint8_t>(GetBytes(), GetByteSize());
+    }
+
+    llvm::MutableArrayRef<uint8_t> GetData()
+    {
+        return llvm::MutableArrayRef<uint8_t>(GetBytes(), GetByteSize());
+    }
 };
 
 } // namespace lldb_private
