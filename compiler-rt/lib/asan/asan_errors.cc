@@ -44,6 +44,7 @@ void ErrorDoubleFree::Print() {
       addr_description.addr, tid,
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s", d.EndWarning());
+  scariness.Print();
   GET_STACK_TRACE_FATAL(second_free_stack->trace[0],
                         second_free_stack->top_frame_bp);
   stack.Print();
