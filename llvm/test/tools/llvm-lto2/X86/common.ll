@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: llvm-as < %s > %t1.bc
 ; RUN: llvm-as < %p/Inputs/common.ll > %t2.bc
 
@@ -10,7 +9,7 @@
 ; RUN:  -r %t2.bc,v,px \
 ; RUN:  -r %t1.bc,foo,px \
 ; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s
+; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=LARGE-PREVAILED
 
 ; Same as before, but reversing the order of the inputs
 ; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
@@ -18,7 +17,7 @@
 ; RUN:  -r %t2.bc,v,px \
 ; RUN:  -r %t1.bc,foo,px \
 ; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s
+; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=LARGE-PREVAILED
 
 
 ; Client marked the "small with large alignment" one as prevailing
@@ -27,7 +26,7 @@
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
 ; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s
+; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=SMALL-PREVAILED
 
 ; Same as before, but reversing the order of the inputs
 ; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
@@ -35,7 +34,7 @@
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
 ; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s
+; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s --check-prefix=SMALL-PREVAILED
 
 
 ; Client didn't mark any as prevailing, we keep the first one we see as "external"
@@ -44,7 +43,7 @@
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
 ; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s
+; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s --check-prefix=NONE-PREVAILED1
 
 ; Same as before, but reversing the order of the inputs
 ; RUN: llvm-lto2 %t2.bc %t1.bc -o %t.o -save-temps \
@@ -52,14 +51,18 @@
 ; RUN:  -r %t2.bc,v,x \
 ; RUN:  -r %t1.bc,foo,px \
 ; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s
+; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s --check-prefix=NONE-PREVAILED2
 
 target triple = "x86_64-apple-macosx10.11.0"
 
 @v = common global i8 0, align 8
 
-
-; CHECK: @v = common global [2 x i8] zeroinitializer, align 8
+; LARGE-PREVAILED: @v = common global i16 0, align 8
+; SMALL-PREVAILED: @v = common global [2 x i8] zeroinitializer, align 8
+; In this case the first was kept as external, but we created a new merged
+; common due to the second requiring a larger size:
+; NONE-PREVAILED1: @v = common global [2 x i8] zeroinitializer, align 8
+; NONE-PREVAILED2: @v = external global i16, align 8
 
 define i8 *@foo() {
  ret i8 *@v
