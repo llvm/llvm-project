@@ -17,7 +17,6 @@ namespace lld {
 namespace elf {
 
 void parseDynamicList(MemoryBufferRef MB);
-void parseVersionScript(MemoryBufferRef MB);
 
 } // namespace elf
 } // namespace lld

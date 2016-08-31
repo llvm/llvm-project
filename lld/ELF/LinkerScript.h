@@ -34,6 +34,8 @@ typedef std::function<uint64_t(uint64_t)> Expr;
 // Config and ScriptConfig.
 void readLinkerScript(MemoryBufferRef MB);
 
+void readVersionScript(MemoryBufferRef MB);
+
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
 enum SectionsCommandKind {

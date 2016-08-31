@@ -265,9 +265,8 @@ public:
     ArchSpec (const llvm::Triple &triple);
     explicit 
     ArchSpec (const char *triple_cstr);
-    explicit ArchSpec(llvm::StringRef triple_str);
-    explicit ArchSpec(const char *triple_cstr, Platform *platform);
-    ArchSpec(llvm::StringRef triple_str, Platform *platform);
+    explicit 
+    ArchSpec (const char *triple_cstr, Platform *platform);
     //------------------------------------------------------------------
     /// Constructor over architecture name.
     ///

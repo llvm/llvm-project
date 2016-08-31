@@ -17,6 +17,7 @@ class PyObjectSynthProviderTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(oslist=["linux"])
     def test_print_array(self):
         """Test that expr -Z works"""
         self.build()

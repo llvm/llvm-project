@@ -323,7 +323,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return &InputSection<ELFT>::Discarded;
   }
 
-  if (Config->StripDebug && Name.startswith(".debug"))
+  if (Config->Strip != StripPolicy::None && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
 
   // The linker merges EH (exception handling) frames and creates a
