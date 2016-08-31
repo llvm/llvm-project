@@ -1797,6 +1797,42 @@ static bool findRematerializableChainToBasePointer(
     return true;
   }
 
+  // Check for same values, when both BaseValue and CurrentValue are phi nodes.
+  // PHI nodes that have the same incoming values, and belonging to the same
+  // basic blocks are essentially the same SSA value.  Such an example of same
+  // BaseValue, CurrentValue phis is created by findBasePointer, when a phi has
+  // incoming values with different base pointers. This phi is marked as
+  // conflict, and hence an additional phi with the same incoming values get
+  // generated. We need to identify the BaseValue (.base version of phi) and
+  // CurrentValue (the phi node itself) as the same, so that we can
+  // rematerialize the gep and casts below. This is a workaround for the
+  // deficieny in the findBasePointer algorithm.
+  if (PHINode *CurrentPhi = dyn_cast<PHINode>(CurrentValue))
+    if (PHINode *BasePhi = dyn_cast<PHINode>(BaseValue)) {
+      auto PhiNum = CurrentPhi->getNumIncomingValues();
+      if (PhiNum != BasePhi->getNumIncomingValues() ||
+          CurrentPhi->getParent() != BasePhi->getParent())
+        return false;
+      // Map of incoming values and their corresponding basic blocks of
+      // CurrentPhi.
+      SmallDenseMap<Value *, BasicBlock *, 8> CurrentIncomingValues;
+      for (unsigned i = 0; i < PhiNum; i++)
+        CurrentIncomingValues[CurrentPhi->getIncomingValue(i)] =
+            CurrentPhi->getIncomingBlock(i);
+
+      // Both current and base PHIs should have same incoming values and
+      // the same basic blocks corresponding to the incoming values.
+      for (unsigned i = 0; i < PhiNum; i++) {
+        auto CIVI = CurrentIncomingValues.find(BasePhi->getIncomingValue(i));
+        if (CIVI == CurrentIncomingValues.end())
+          return false;
+        BasicBlock *CurrentIncomingBB = CIVI->second;
+        if (CurrentIncomingBB != BasePhi->getIncomingBlock(i))
+          return false;
+      }
+      return true;
+    }
+
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurrentValue)) {
     ChainToBase.push_back(GEP);
     return findRematerializableChainToBasePointer(ChainToBase,
@@ -2543,8 +2579,8 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   // call result is not live (normal), nor are it's arguments
   // (unless they're used again later).  This adjustment is
   // specifically what we need to relocate
-  BasicBlock::reverse_iterator rend(Inst->getIterator());
-  computeLiveInValues(BB->rbegin(), rend, LiveOut);
+  computeLiveInValues(BB->rbegin(), ++Inst->getIterator().getReverse(),
+                      LiveOut);
   LiveOut.remove(Inst);
   Out.insert(LiveOut.begin(), LiveOut.end());
 }

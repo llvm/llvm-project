@@ -248,8 +248,7 @@ namespace {
     bool IfConvertDiamondCommon(BBInfo &BBI, BBInfo &TrueBBI, BBInfo &FalseBBI,
                                 unsigned NumDups1, unsigned NumDups2,
                                 bool TClobbersPred, bool FClobbersPred,
-                                bool RemoveTrueBranch, bool RemoveFalseBranch,
-                                bool MergeAddEdges);
+                                bool RemoveBranch, bool MergeAddEdges);
     bool IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
                           unsigned NumDups1, unsigned NumDups2,
                           bool TClobbers, bool FClobbers);
@@ -759,6 +758,41 @@ bool IfConverter::RescanInstructions(
     return false;
   return true;
 }
+
+#ifndef NDEBUG
+static void verifySameBranchInstructions(
+    MachineBasicBlock *MBB1,
+    MachineBasicBlock *MBB2) {
+  MachineBasicBlock::iterator B1 = MBB1->begin();
+  MachineBasicBlock::iterator B2 = MBB2->begin();
+  MachineBasicBlock::iterator E1 = std::prev(MBB1->end());
+  MachineBasicBlock::iterator E2 = std::prev(MBB2->end());
+  bool Empty1 = false, Empty2 = false;
+  while (!Empty1 && !Empty2) {
+    skipDebugInstructionsBackward(B1, E1, Empty1);
+    skipDebugInstructionsBackward(B2, E2, Empty2);
+    if (Empty1 && Empty2)
+      break;
+
+    if (Empty1) {
+      assert(!E2->isBranch() && "Branch mis-match, one block is empty.");
+      break;
+    }
+    if (Empty2) {
+      assert(!E1->isBranch() && "Branch mis-match, one block is empty.");
+      break;
+    }
+
+    if (E1->isBranch() || E2->isBranch())
+      assert(E1->isIdenticalTo(*E2) &&
+             "Branch mis-match, branch instructions don't match.");
+    else
+      break;
+    shrinkInclusiveRange(B1, E1, Empty1);
+    shrinkInclusiveRange(B2, E2, Empty2);
+  }
+}
+#endif
 
 /// ValidForkedDiamond - Returns true if the 'true' and 'false' blocks (along
 /// with their common predecessor) form a diamond if a common tail block is
@@ -1678,19 +1712,16 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
 ///               and FalseBBI
 /// \p NumDups2 - number of shared instructions at the end of \p TrueBBI
 ///               and \p FalseBBI
-/// \p RemoveTrueBranch - Remove the branch of the true block before predicating
-///                       Only false for unanalyzable fallthrough cases.
-/// \p RemoveFalseBranch - Remove the branch of the false block before
-///                        predicating Only false for unanalyzable fallthrough
-///                        cases.
+/// \p RemoveBranch - Remove the common branch of the two blocks before
+///                   predicating. Only false for unanalyzable fallthrough
+///                   cases. The caller will replace the branch if necessary.
 /// \p MergeAddEdges - Add successor edges when merging blocks. Only false for
 ///                    unanalyzable fallthrough
 bool IfConverter::IfConvertDiamondCommon(
     BBInfo &BBI, BBInfo &TrueBBI, BBInfo &FalseBBI,
     unsigned NumDups1, unsigned NumDups2,
     bool TClobbersPred, bool FClobbersPred,
-    bool RemoveTrueBranch, bool RemoveFalseBranch,
-    bool MergeAddEdges) {
+    bool RemoveBranch, bool MergeAddEdges) {
 
   if (TrueBBI.IsDone || FalseBBI.IsDone ||
       TrueBBI.BB->pred_size() > 1 || FalseBBI.BB->pred_size() > 1) {
@@ -1727,7 +1758,6 @@ bool IfConverter::IfConvertDiamondCommon(
   if (DoSwap) {
     std::swap(BBI1, BBI2);
     std::swap(Cond1, Cond2);
-    std::swap(RemoveTrueBranch, RemoveFalseBranch);
   }
 
   // Remove the conditional branch from entry to the blocks.
@@ -1780,8 +1810,14 @@ bool IfConverter::IfConvertDiamondCommon(
   BBI.BB->splice(BBI.BB->end(), &MBB1, MBB1.begin(), DI1);
   MBB2.erase(MBB2.begin(), DI2);
 
-  if (RemoveTrueBranch)
-    BBI1->NonPredSize -= TII->RemoveBranch(*BBI1->BB);
+  // The branches have been checked to match, so it is safe to remove the branch
+  // in BB1 and rely on the copy in BB2
+#ifndef NDEBUG
+  // Unanalyzable branches must match exactly. Check that now.
+  if (!BBI1->IsBrAnalyzable)
+    verifySameBranchInstructions(&MBB1, &MBB2);
+#endif
+  BBI1->NonPredSize -= TII->RemoveBranch(*BBI1->BB);
   // Remove duplicated instructions.
   DI1 = MBB1.end();
   for (unsigned i = 0; i != NumDups2; ) {
@@ -1799,11 +1835,18 @@ bool IfConverter::IfConvertDiamondCommon(
   // must be removed.
   RemoveKills(MBB1.begin(), MBB1.end(), DontKill, *TRI);
 
-  // Remove 'false' block branch, and find the last instruction to predicate.
-  // Save the debug location.
-  if (RemoveFalseBranch)
-    BBI2->NonPredSize -= TII->RemoveBranch(*BBI2->BB);
   DI2 = BBI2->BB->end();
+  // The branches have been checked to match. Skip over the branch in the false
+  // block so that we don't try to predicate it.
+  if (RemoveBranch)
+    BBI2->NonPredSize -= TII->RemoveBranch(*BBI2->BB);
+  else {
+    do {
+      assert(DI2 != MBB2.begin());
+      DI2--;
+    } while (DI2->isBranch() || DI2->isDebugValue());
+    DI2++;
+  }
   while (NumDups2 != 0) {
     // NumDups2 only counted non-dbg_value instructions, so this won't
     // run off the head of the list.
@@ -1901,8 +1944,7 @@ bool IfConverter::IfConvertForkedDiamond(
       BBI, TrueBBI, FalseBBI,
       NumDups1, NumDups2,
       TClobbersPred, FClobbersPred,
-      /* RemoveTrueBranch */ true, /* RemoveFalseBranch */ true,
-      /* MergeAddEdges */ true))
+      /* RemoveBranch */ true, /* MergeAddEdges */ true))
     return false;
 
   // Add back the branch.
@@ -1939,8 +1981,7 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
       BBI, TrueBBI, FalseBBI,
       NumDups1, NumDups2,
       TrueBBI.ClobbersPred, FalseBBI.ClobbersPred,
-      /* RemoveTrueBranch */ TrueBBI.IsBrAnalyzable,
-      /* RemoveFalseBranch */ FalseBBI.IsBrAnalyzable,
+      /* RemoveBranch */ TrueBBI.IsBrAnalyzable,
       /* MergeAddEdges */ TailBB == nullptr))
     return false;
 

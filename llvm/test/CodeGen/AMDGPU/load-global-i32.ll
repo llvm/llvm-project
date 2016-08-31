@@ -360,7 +360,7 @@ define void @global_zextload_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16
 ; GCN-NOHSA: buffer_load_dwordx4
 ; GCN-NOHSA: buffer_load_dwordx4
 ; GCN-NOHSA: buffer_load_dwordx4
-; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA-DAG: buffer_load_dwordx4
 
 ; GCN-HSA: flat_load_dwordx4
 ; GCN-HSA: flat_load_dwordx4

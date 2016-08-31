@@ -11582,7 +11582,7 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Rotate;
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
-  // the results into the target lanes.
+  // results into the target lanes.
   if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
           DL, MVT::v8i32, V1, V2, Mask, Subtarget, DAG))
     return V;
@@ -14617,17 +14617,14 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
 
   MVT LogicVT;
   MVT EltVT;
-  unsigned NumElts;
 
   if (VT.isVector()) {
     LogicVT = VT;
     EltVT = VT.getVectorElementType();
-    NumElts = VT.getVectorNumElements();
   } else if (IsF128) {
     // SSE instructions are used for optimized f128 logical operations.
     LogicVT = MVT::f128;
     EltVT = VT;
-    NumElts = 1;
   } else {
     // There are no scalar bitwise logical SSE/AVX instructions, so we
     // generate a 16-byte vector constant and logic op even for the scalar case.
@@ -14635,7 +14632,6 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
     // the logic op, so it can save (~4 bytes) on code size.
     LogicVT = (VT == MVT::f64) ? MVT::v2f64 : MVT::v4f32;
     EltVT = VT;
-    NumElts = (VT == MVT::f64) ? 2 : 4;
   }
 
   unsigned EltBits = EltVT.getSizeInBits();

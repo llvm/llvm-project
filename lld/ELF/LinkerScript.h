@@ -151,6 +151,7 @@ public:
   void assignAddresses();
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
+  uintX_t getOutputSectionAddress(StringRef Name);
   uintX_t getOutputSectionSize(StringRef Name);
   uintX_t getHeaderSize();
 

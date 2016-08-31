@@ -249,6 +249,12 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   return VGPRLimit;
 }
 
+unsigned
+SIRegisterInfo::getDefaultRegPressureSetLimit(const MachineFunction &MF,
+                                              unsigned Idx) const {
+  return AMDGPURegisterInfo::getRegPressureSetLimit(MF, Idx);
+}
+
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {
   return Fn.getFrameInfo().hasStackObjects();
 }

@@ -1350,6 +1350,17 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (AA && MIa.hasOneMemOperand() && MIb.hasOneMemOperand()) {
+    const MachineMemOperand *MMOa = *MIa.memoperands_begin();
+    const MachineMemOperand *MMOb = *MIb.memoperands_begin();
+    if (MMOa->getValue() && MMOb->getValue()) {
+      MemoryLocation LocA(MMOa->getValue(), MMOa->getSize(), MMOa->getAAInfo());
+      MemoryLocation LocB(MMOb->getValue(), MMOb->getSize(), MMOb->getAAInfo());
+      if (!AA->alias(LocA, LocB))
+        return true;
+    }
+  }
+
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
   // underlying address space, even if it was lowered to a different one,

@@ -82,10 +82,10 @@ The rules for generating fix-it hints are:
   is proposed to make it clear what exaclty is being compared:
 
   - ``bool boolean = floating;`` is changed to
-  ``bool boolean = floating == 0.0f;``,
+    ``bool boolean = floating == 0.0f;``,
 
   - for other types, appropriate literals are used (``0``, ``0u``, ``0.0f``,
-  ``0.0``, ``nullptr``),
+    ``0.0``, ``nullptr``),
 
 - in case of negated expressions cast to bool, the proposed replacement with
   comparison is simplified:
@@ -96,7 +96,7 @@ The rules for generating fix-it hints are:
   is proposed to make it clear that a cast is taking place:
 
   - ``int integer = boolean;`` is changed to
-  ``int integer = static_cast<int>(boolean);``,
+    ``int integer = static_cast<int>(boolean);``,
 
 - if the cast is performed on type literals, an equivalent literal is proposed,
   according to what type is actually expected, for example:

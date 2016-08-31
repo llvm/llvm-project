@@ -533,6 +533,16 @@ template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
 }
 
 template <class ELFT>
+typename ELFT::uint
+LinkerScript<ELFT>::getOutputSectionAddress(StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->getVA();
+  error("undefined section " + Name);
+  return 0;
+}
+
+template <class ELFT>
 typename ELFT::uint LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
   for (OutputSectionBase<ELFT> *Sec : *OutputSections)
     if (Sec->getName() == Name)
@@ -604,9 +614,9 @@ private:
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
   std::vector<uint8_t> readOutputSectionFiller();
   std::vector<StringRef> readOutputSectionPhdrs();
-  InputSectionDescription *readInputSectionDescription();
+  InputSectionDescription *readInputSectionDescription(StringRef Tok);
   std::vector<StringRef> readInputFilePatterns();
-  InputSectionDescription *readInputSectionRules();
+  InputSectionDescription *readInputSectionRules(StringRef FilePattern);
   unsigned readPhdrType();
   SortKind readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
@@ -845,9 +855,10 @@ SortKind ScriptParser::readSortKind() {
   return SortNone;
 }
 
-InputSectionDescription *ScriptParser::readInputSectionRules() {
+InputSectionDescription *
+ScriptParser::readInputSectionRules(StringRef FilePattern) {
   auto *Cmd = new InputSectionDescription;
-  Cmd->FilePattern = next();
+  Cmd->FilePattern = FilePattern;
   expect("(");
 
   // Read EXCLUDE_FILE().
@@ -877,19 +888,21 @@ InputSectionDescription *ScriptParser::readInputSectionRules() {
   return Cmd;
 }
 
-InputSectionDescription *ScriptParser::readInputSectionDescription() {
+InputSectionDescription *
+ScriptParser::readInputSectionDescription(StringRef Tok) {
   // Input section wildcard can be surrounded by KEEP.
   // https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html#Input-Section-Keep
-  if (skip("KEEP")) {
+  if (Tok == "KEEP") {
     expect("(");
-    InputSectionDescription *Cmd = readInputSectionRules();
+    StringRef FilePattern = next();
+    InputSectionDescription *Cmd = readInputSectionRules(FilePattern);
     expect(")");
     Opt.KeptSections.insert(Opt.KeptSections.end(),
                             Cmd->SectionPatterns.begin(),
                             Cmd->SectionPatterns.end());
     return Cmd;
   }
-  return readInputSectionRules();
+  return readInputSectionRules(Tok);
 }
 
 void ScriptParser::readSort() {
@@ -938,16 +951,13 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect("{");
 
   while (!Error && !skip("}")) {
-    if (peek().startswith("*") || peek() == "KEEP") {
-      Cmd->Commands.emplace_back(readInputSectionDescription());
-      continue;
-    }
-
     StringRef Tok = next();
     if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
       Cmd->Commands.emplace_back(Assignment);
     else if (Tok == "SORT")
       readSort();
+    else if (peek() == "(")
+      Cmd->Commands.emplace_back(readInputSectionDescription(Tok));
     else
       setError("unknown command " + Tok);
   }
@@ -1039,6 +1049,21 @@ static uint64_t getSectionSize(StringRef Name) {
     return Script<ELF64LE>::X->getOutputSectionSize(Name);
   case ELF64BEKind:
     return Script<ELF64BE>::X->getOutputSectionSize(Name);
+  default:
+    llvm_unreachable("unsupported target");
+  }
+}
+
+static uint64_t getSectionAddress(StringRef Name) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return Script<ELF32LE>::X->getOutputSectionAddress(Name);
+  case ELF32BEKind:
+    return Script<ELF32BE>::X->getOutputSectionAddress(Name);
+  case ELF64LEKind:
+    return Script<ELF64LE>::X->getOutputSectionAddress(Name);
+  case ELF64BEKind:
+    return Script<ELF64BE>::X->getOutputSectionAddress(Name);
   default:
     llvm_unreachable("unsupported target");
   }
@@ -1154,6 +1179,12 @@ Expr ScriptParser::readPrimary() {
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
+  if (Tok == "ADDR") {
+    expect("(");
+    StringRef Name = next();
+    expect(")");
+    return [=](uint64_t Dot) { return getSectionAddress(Name); };
+  }
   if (Tok == "ASSERT")
     return readAssert();
   if (Tok == "ALIGN") {

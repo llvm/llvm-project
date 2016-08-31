@@ -434,6 +434,12 @@ ArchSpec::ArchSpec (const char *triple_cstr, Platform *platform) :
         SetTriple(triple_cstr, platform);
 }
 
+ArchSpec::ArchSpec(llvm::StringRef triple_str, Platform *platform)
+    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid), m_flags(0), m_distribution_id()
+{
+    if (!triple_str.empty())
+        SetTriple(triple_str.str().c_str(), platform);
+}
 
 ArchSpec::ArchSpec (const char *triple_cstr) :
     m_triple (),
@@ -444,6 +450,13 @@ ArchSpec::ArchSpec (const char *triple_cstr) :
 {
     if (triple_cstr)
         SetTriple(triple_cstr);
+}
+
+ArchSpec::ArchSpec(llvm::StringRef triple_str)
+    : m_triple(), m_core(kCore_invalid), m_byte_order(eByteOrderInvalid), m_flags(0), m_distribution_id()
+{
+    if (!triple_str.empty())
+        SetTriple(triple_str.str().c_str());
 }
 
 ArchSpec::ArchSpec(const llvm::Triple &triple) :

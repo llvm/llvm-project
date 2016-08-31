@@ -151,7 +151,6 @@ static AddOutputFn getUncachedOutputWrapper(AddOutputFn &AddOutput,
     auto Output = AddOutput(Task);
     if (Output->isCachingEnabled() && Output->tryLoadFromCache(""))
       report_fatal_error("Cache hit without a valid key?");
-    errs() << Task << " == " << TaskId << "\n";
     assert(Task == TaskId && "Unexpexted TaskId mismatch");
     return Output;
   };

@@ -194,6 +194,12 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (BitcodeFile::shouldSkip(Flags))
       continue;
     Symbol *S = Syms[BodyIndex++];
+    if (GV) {
+      if (S->HasUnnamedAddr)
+        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+      else
+        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+    }
     if (Flags & BasicSymbolRef::SF_Undefined) {
       handleUndefinedAsmRefs(Sym, GV, AsmUndefinedRefs);
       continue;

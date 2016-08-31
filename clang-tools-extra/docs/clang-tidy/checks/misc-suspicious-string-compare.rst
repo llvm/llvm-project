@@ -17,7 +17,7 @@ Checks for calls with implicit comparator and proposed to explicitly add it.
 Checks that compare function results (i,e, ``strcmp``) are compared to valid
 constant. The resulting value is
 
-.. code-block::
+.. code::
 
     <  0    when lower than,
     >  0    when greater than,

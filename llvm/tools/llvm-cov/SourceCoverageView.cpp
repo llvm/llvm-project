@@ -46,6 +46,7 @@ std::string CoveragePrinter::getOutputPath(StringRef Path, StringRef Extension,
 
   auto PathFilename = (sys::path::filename(Path) + "." + Extension).str();
   sys::path::append(FullPath, PathFilename);
+  sys::path::native(FullPath);
 
   return FullPath.str();
 }

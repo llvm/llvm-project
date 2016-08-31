@@ -308,7 +308,10 @@ Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
   OSRef << BeginCenteredDiv << BeginTable;
   OSRef << BeginSourceNameDiv << "Index" << EndSourceNameDiv;
   for (StringRef SF : SourceFiles) {
-    std::string LinkText = escape(sys::path::relative_path(SF), Opts);
+    SmallString<128> LinkTextStr(sys::path::relative_path(SF));
+    sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
+    sys::path::native(LinkTextStr);
+    std::string LinkText = escape(sys::path::relative_path(LinkTextStr), Opts);
     std::string LinkTarget =
         escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
     OSRef << tag("tr", tag("td", tag("pre", a(LinkTarget, LinkText), "code")));
@@ -340,7 +343,10 @@ void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
   // Render the source name for the view.
   std::string SourceFile = isFunctionView() ? "Function: " : "Source: ";
   SourceFile += getSourceName().str();
-  OS << tag("pre", escape(SourceFile, getOptions()));
+  SmallString<128> SourceText(SourceFile);
+  sys::path::remove_dots(SourceText, /*remove_dot_dots=*/true);
+  sys::path::native(SourceText);
+  OS << tag("pre", escape(SourceText, getOptions()));
   // Render the object file name for the view.
   if (WholeFile)
     OS << tag("pre",
@@ -562,7 +568,7 @@ void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
                                                unsigned ViewDepth) {
   renderLinePrefix(OS, ViewDepth);
   OS << tag("td", tag("span", tag("pre", escape("Line No.", getOptions()))))
-     << tag("td", tag("span", tag("pre", escape("Count No.", getOptions()))))
+     << tag("td", tag("span", tag("pre", escape("Count", getOptions()))))
      << tag("td", tag("span", tag("pre", escape("Source", getOptions()))));
   renderLineSuffix(OS, ViewDepth);
 }

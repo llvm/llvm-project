@@ -1971,55 +1971,56 @@ Instruction *InstCombiner::foldICmpUDivConstant(ICmpInst &Cmp,
 Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
                                                BinaryOperator *Div,
                                                const APInt *C) {
-  // FIXME: This check restricts all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!RHS)
-    return nullptr;
-
-  // Fold: icmp pred ([us]div X, C1), C2 -> range test
+  // Fold: icmp pred ([us]div X, C2), C -> range test
   // Fold this div into the comparison, producing a range check.
   // Determine, based on the divide type, what the range is being
   // checked.  If there is an overflow on the low or high side, remember
   // it, otherwise compute the range [low, hi) bounding the new value.
   // See: InsertRangeTest above for the kinds of replacements possible.
-  ConstantInt *DivRHS = dyn_cast<ConstantInt>(Div->getOperand(1));
-  if (!DivRHS)
+  const APInt *C2;
+  if (!match(Div->getOperand(1), m_APInt(C2)))
     return nullptr;
-
-  ConstantInt *CmpRHS = cast<ConstantInt>(Cmp.getOperand(1));
 
   // FIXME: If the operand types don't match the type of the divide
   // then don't attempt this transform. The code below doesn't have the
   // logic to deal with a signed divide and an unsigned compare (and
-  // vice versa). This is because (x /s C1) <s C2  produces different
-  // results than (x /s C1) <u C2 or (x /u C1) <s C2 or even
-  // (x /u C1) <u C2.  Simply casting the operands and result won't
+  // vice versa). This is because (x /s C2) <s C  produces different
+  // results than (x /s C2) <u C or (x /u C2) <s C or even
+  // (x /u C2) <u C.  Simply casting the operands and result won't
   // work. :(  The if statement below tests that condition and bails
   // if it finds it.
   bool DivIsSigned = Div->getOpcode() == Instruction::SDiv;
   if (!Cmp.isEquality() && DivIsSigned != Cmp.isSigned())
     return nullptr;
-  if (DivRHS->isZero())
-    return nullptr; // The ProdOV computation fails on divide by zero.
-  if (DivIsSigned && DivRHS->isAllOnesValue())
-    return nullptr; // The overflow computation also screws up here
-  if (DivRHS->isOne()) {
-    // This eliminates some funny cases with INT_MIN.
-    Cmp.setOperand(0, Div->getOperand(0));   // X/1 == X.
-    return &Cmp;
-  }
+
+  // These constant divides should already be folded in InstSimplify.
+  assert(*C2 != 0 && "The ProdOV computation fails on divide by zero.");
+  assert(*C2 != 1 && "Funny cases with INT_MIN will fail.");
+
+  // This constant divide should already be folded in InstCombine.
+  assert(!(DivIsSigned && C2->isAllOnesValue()) &&
+         "The overflow computation will fail.");
+
+  // FIXME: These checks restrict all folds under here to scalar types.
+  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
+  if (!RHS)
+    return nullptr;
+
+  ConstantInt *DivRHS = dyn_cast<ConstantInt>(Div->getOperand(1));
+  if (!DivRHS)
+    return nullptr;
 
   // Compute Prod = CI * DivRHS. We are essentially solving an equation
-  // of form X/C1=C2. We solve for X by multiplying C1 (DivRHS) and
-  // C2 (CI). By solving for X we can turn this into a range check
+  // of form X/C2=C. We solve for X by multiplying C2 (DivRHS) and
+  // C (CI). By solving for X we can turn this into a range check
   // instead of computing a divide.
-  Constant *Prod = ConstantExpr::getMul(CmpRHS, DivRHS);
+  Constant *Prod = ConstantExpr::getMul(RHS, DivRHS);
 
   // Determine if the product overflows by seeing if the product is
   // not equal to the divide. Make sure we do the same kind of divide
   // as in the LHS instruction that we're folding.
   bool ProdOV = (DivIsSigned ? ConstantExpr::getSDiv(Prod, DivRHS) :
-                 ConstantExpr::getUDiv(Prod, DivRHS)) != CmpRHS;
+                 ConstantExpr::getUDiv(Prod, DivRHS)) != RHS;
 
   // Get the ICmp opcode
   ICmpInst::Predicate Pred = Cmp.getPredicate();

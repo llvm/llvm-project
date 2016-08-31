@@ -413,6 +413,9 @@ struct Symbol {
   // observed non-DSO symbols.
   unsigned Visibility : 2;
 
+  // True if the symbol has unnamed_addr.
+  unsigned HasUnnamedAddr : 1;
+
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for
   // unreferenced DSO symbols and bitcode symbols that are unreferenced except

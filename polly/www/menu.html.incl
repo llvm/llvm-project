@@ -8,13 +8,12 @@ Optimizations</span></h2>
 
 </div>
 <div id="menu">
-  <div class="submenu">
-    <label>LLVM</label>
-    <a href="http://llvm.org">llvm.org</a>
-  </div>
+  <a href="http://llvm.org">llvm.org</a>
   <div class="submenu">
     <label>Information</label>
-    <a href="/index.html">About Polly</a>
+    <a href="/index.html">Overview and News</a>
+    <a href="/get_started.html">Get and Install</a>
+    </a>
     <a href="/docs">Documentation</a>
     <a href="/performance.html">Performance</a>
     <a href="/publications.html">Publications</a>
@@ -35,15 +34,18 @@ Optimizations</span></h2>
     <a href="http://buildd-clang.debian.net/coverage/">Code Coverage</a>
     <a href="http://buildd-clang.debian.net/scan-build/">Static analysis</a>
     <a href="/doxygen/">Doxygen</a>
+    <a href="https://github.com/llvm-mirror/polly">Source @ GitHub</a>
   </div>
 
   <div class="submenu">
-    <label>The Code</label>
-    <a href="/get_started.html">Get and Install</a>
-    <a href="http://llvm.org/viewvc/llvm-project/polly/trunk/">
-      Browse (ViewVC)
-    </a>
-    <a href="http://repo.or.cz/w/polly-mirror.git">Browse (GitWeb)</a>
+    <label>Resources</label>
+    <br>
+    <a href="https://www.pollylabs.org">Polly Labs Research Laboratory<a><br>
+    <a href="https://www.pollylabs.org"><img style="padding-left: 3.5em;
+    padding-right: 1em; width:10em" src="/images/pollylabs.png" /></a>
+    <br>
+    <a href="https://www.polyhedral.info">polyhedral.info Community</a>
+    <a href="http://impact.gforge.inria.fr/impact2017/">IMPACT Polyhedral Workshop<a><br>
   </div>
 </div>
 

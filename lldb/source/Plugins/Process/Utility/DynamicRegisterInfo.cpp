@@ -306,8 +306,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict, con
             StringExtractor opcode_extractor;
             // Swap "dwarf_opcode_string" over into "opcode_extractor"
             opcode_extractor.GetStringRef ().swap (dwarf_opcode_string);
-            uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes.data (),
-                                                                  reg_info.dynamic_size_dwarf_len);
+            uint32_t ret_val = opcode_extractor.GetHexBytesAvail (dwarf_opcode_bytes);
             assert (ret_val == reg_info.dynamic_size_dwarf_len);
 
             for (j = 0; j < reg_info.dynamic_size_dwarf_len; ++j)

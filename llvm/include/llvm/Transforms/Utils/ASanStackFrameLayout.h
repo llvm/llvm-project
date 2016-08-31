@@ -42,16 +42,14 @@ struct ASanStackVariableDescription {
 
 // Output data struct for ComputeASanStackFrameLayout.
 struct ASanStackFrameLayout {
+  size_t Granularity;
   // Frame description, see DescribeAddressIfStack in ASan runtime.
   SmallString<64> DescriptionString;
-  // The contents of the shadow memory for the stack frame that we need
-  // to set at function entry.
-  SmallVector<uint8_t, 64> ShadowBytes;
   size_t FrameAlignment;  // Alignment for the entire frame.
   size_t FrameSize;       // Size of the frame in bytes.
 };
 
-void ComputeASanStackFrameLayout(
+ASanStackFrameLayout ComputeASanStackFrameLayout(
     // The array of stack variables. The elements may get reordered and changed.
     SmallVectorImpl<ASanStackVariableDescription> &Vars,
     // AddressSanitizer's shadow granularity. Usually 8, may also be 16, 32, 64.
@@ -59,9 +57,21 @@ void ComputeASanStackFrameLayout(
     // The minimal size of the left-most redzone (header).
     // At least 4 pointer sizes, power of 2, and >= Granularity.
     // The resulting FrameSize should be multiple of MinHeaderSize.
-    size_t MinHeaderSize,
-    // The result is put here.
-    ASanStackFrameLayout *Layout);
+    size_t MinHeaderSize);
+
+// Returns shadow bytes with marked red zones. This shadow represents the state
+// if the stack frame when all local variables are inside of the own scope.
+SmallVector<uint8_t, 64>
+GetShadowBytes(const SmallVectorImpl<ASanStackVariableDescription> &Vars,
+               const ASanStackFrameLayout &Layout);
+
+// Returns shadow bytes with marked red zones and after scope. This shadow
+// represents the state if the stack frame when all local variables are outside
+// of the own scope.
+SmallVector<uint8_t, 64> GetShadowBytesAfterScope(
+    // The array of stack variables. The elements may get reordered and changed.
+    const SmallVectorImpl<ASanStackVariableDescription> &Vars,
+    const ASanStackFrameLayout &Layout);
 
 } // llvm namespace
 

@@ -1419,6 +1419,17 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
     FI->setPICBasePointerSaveIndex(PBPSI);
   }
 
+  // Make sure we don't explicitly spill r31, because, for example, we have
+  // some inline asm which explicity clobbers it, when we otherwise have a
+  // frame pointer and are using r31's spill slot for the prologue/epilogue
+  // code. Same goes for the base pointer and the PIC base register.
+  if (needsFP(MF))
+    SavedRegs.reset(isPPC64 ? PPC::X31 : PPC::R31);
+  if (RegInfo->hasBasePointer(MF))
+    SavedRegs.reset(RegInfo->getBaseRegister(MF));
+  if (FI->usesPICBase())
+    SavedRegs.reset(PPC::R30);
+
   // Reserve stack space to move the linkage area to in case of a tail call.
   int TCSPDelta = 0;
   if (MF.getTarget().Options.GuaranteedTailCallOpt &&

@@ -33,6 +33,21 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     "${LLVM_BINARY_DIR}/lib/cmake/llvm"
   )
 
+  # Some of the runtimes will conditionally use the compiler-rt sanitizers
+  # to make this work smoothly we ensure that compiler-rt is added first in
+  # the list of sub-projects. This allows other sub-projects to have checks
+  # like `if(TARGET asan)` to enable building with asan.
+  foreach(entry ${runtimes})
+    if("${entry}" MATCHES "compiler-rt")
+      set(compiler_rt_path ${entry})
+      break()
+    endif()
+  endforeach()
+  if(compiler_rt_path)
+    list(REMOVE_ITEM runtimes ${compiler_rt_path})
+    list(INSERT runtimes 0 ${compiler_rt_path})
+  endif()
+
   # LLVMConfig.cmake contains a bunch of CMake variables from the LLVM build.
   # This file is installed as part of LLVM distributions, so this can be used
   # either from a build directory or an installed LLVM.
@@ -123,6 +138,8 @@ else() # if this is included from LLVM's CMake
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt)
     llvm_ExternalProject_Add(builtins
                              ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/lib/builtins
+                             CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
+                                        -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                              PASSTHROUGH_PREFIXES COMPILER_RT
                              USE_TOOLCHAIN)
     set(deps builtins)

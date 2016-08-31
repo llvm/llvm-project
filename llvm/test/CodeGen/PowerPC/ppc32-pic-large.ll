@@ -26,4 +26,5 @@ entry:
 ; LARGE-BSS-DAG:     stw {{[0-9]+}}, 8(1)
 ; LARGE-BSS:         lwz 30, -8(1)
 ; LARGE-BSS:       [[VREF]]:
+; LARGE-BSS-NEXT:     .p2align 2
 ; LARGE-BSS-NEXT:    .long bar

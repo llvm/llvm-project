@@ -147,8 +147,8 @@ extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 typedef InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>
     CGSCCAnalysisManagerModuleProxy;
 
-extern template class OuterAnalysisManagerProxy<
-    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+                                                LazyCallGraph::SCC>;
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC,
                                   LazyCallGraph &>
@@ -394,8 +394,8 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass, bool DebugLogging = fal
   return ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>(std::move(Pass), DebugLogging);
 }
 
-extern template class InnerAnalysisManagerProxy<
-    FunctionAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
+                                                LazyCallGraph::SCC>;
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
 typedef InnerAnalysisManagerProxy<FunctionAnalysisManager, LazyCallGraph::SCC,
                                   LazyCallGraph &>

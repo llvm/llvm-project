@@ -1224,7 +1224,8 @@ ValueObject::ReadPointedString (lldb::DataBufferSP& buffer_sp,
         
         size_t cstr_len = 0;
         bool capped_data = false;
-        if (type_flags.Test (eTypeIsArray))
+        const bool is_array = type_flags.Test (eTypeIsArray);
+        if (is_array)
         {
             // We have an array
             uint64_t array_size = 0;
@@ -1247,10 +1248,20 @@ ValueObject::ReadPointedString (lldb::DataBufferSP& buffer_sp,
         
         if (cstr_address == 0 || cstr_address == LLDB_INVALID_ADDRESS)
         {
-            s << "<invalid address>";
-            error.SetErrorString("invalid address");
-            CopyStringDataToBufferSP(s, buffer_sp);
-            return {0,was_capped};
+            if (cstr_address_type == eAddressTypeHost && is_array)
+            {
+                const char* cstr = GetDataExtractor().PeekCStr(0);
+                buffer_sp.reset(new DataBufferHeap(cstr_len, 0));
+                memcpy(buffer_sp->GetBytes(), cstr, cstr_len);
+                return {cstr_len,was_capped};
+            }
+            else
+            {
+                s << "<invalid address>";
+                error.SetErrorString("invalid address");
+                CopyStringDataToBufferSP(s, buffer_sp);
+                return {0,was_capped};
+            }
         }
         
         Address cstr_so_addr (cstr_address);

@@ -1323,7 +1323,20 @@ enum {
 
 // SHT_NOTE section types
 enum {
-  NT_GNU_BUILD_ID = 3
+  NT_GNU_ABI_TAG = 1,
+  NT_GNU_HWCAP = 2,
+  NT_GNU_BUILD_ID = 3,
+  NT_GNU_GOLD_VERSION = 4,
+};
+
+enum {
+  GNU_ABI_TAG_LINUX = 0,
+  GNU_ABI_TAG_HURD = 1,
+  GNU_ABI_TAG_SOLARIS = 2,
+  GNU_ABI_TAG_FREEBSD = 3,
+  GNU_ABI_TAG_NETBSD = 4,
+  GNU_ABI_TAG_SYLLABLE = 5,
+  GNU_ABI_TAG_NACL = 6,
 };
 
 // Compressed section header for ELF32.

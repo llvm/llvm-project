@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //
-// C++ interface to lower levels of libuwind
+// C++ interface to lower levels of libunwind
 //===----------------------------------------------------------------------===//
 
 #ifndef __UNWINDCURSOR_HPP__
@@ -929,7 +929,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
       return true;
     }
   }
-  //_LIBUNWIND_DEBUG_LOG("can't find/use FDE for pc=0x%llX\n", (uint64_t)pc);
+  //_LIBUNWIND_DEBUG_LOG("can't find/use FDE for pc=0x%llX", (uint64_t)pc);
   return false;
 }
 #endif // _LIBUNWIND_SUPPORT_DWARF_UNWIND
@@ -1086,13 +1086,13 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
       funcEnd = firstLevelNextPageFunctionOffset + sects.dso_base;
     if (pc < funcStart) {
       _LIBUNWIND_DEBUG_LOG("malformed __unwind_info, pc=0x%llX not in second  "
-                           "level compressed unwind table. funcStart=0x%llX\n",
+                           "level compressed unwind table. funcStart=0x%llX",
                             (uint64_t) pc, (uint64_t) funcStart);
       return false;
     }
     if (pc > funcEnd) {
       _LIBUNWIND_DEBUG_LOG("malformed __unwind_info, pc=0x%llX not in second  "
-                          "level compressed unwind table. funcEnd=0x%llX\n",
+                          "level compressed unwind table. funcEnd=0x%llX",
                            (uint64_t) pc, (uint64_t) funcEnd);
       return false;
     }
@@ -1113,7 +1113,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     }
   } else {
     _LIBUNWIND_DEBUG_LOG("malformed __unwind_info at 0x%0llX bad second "
-                         "level page\n",
+                         "level page",
                           (uint64_t) sects.compact_unwind_section);
     return false;
   }
@@ -1143,7 +1143,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     }
     if (lsda == 0) {
       _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with HAS_LSDA bit set for "
-                    "pc=0x%0llX, but lsda table has no entry\n",
+                    "pc=0x%0llX, but lsda table has no entry",
                     encoding, (uint64_t) pc);
       return false;
     }
@@ -1156,7 +1156,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     --personalityIndex; // change 1-based to zero-based index
     if (personalityIndex > sectionHeader.personalityArrayCount()) {
       _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
-                            "but personality table has only %d entires\n",
+                            "but personality table has only %d entires",
                             encoding, personalityIndex,
                             sectionHeader.personalityArrayCount());
       return false;

@@ -23,7 +23,7 @@ namespace llvm {
 class SISubtarget;
 class MachineRegisterInfo;
 
-struct SIRegisterInfo final : public AMDGPURegisterInfo {
+class SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
   unsigned SGPRSetID;
   unsigned VGPRSetID;
@@ -51,6 +51,8 @@ public:
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override;
 
+  unsigned getDefaultRegPressureSetLimit(const MachineFunction &MF,
+                                         unsigned Idx) const;
 
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 

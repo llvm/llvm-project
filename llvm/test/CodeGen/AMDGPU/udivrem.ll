@@ -38,16 +38,16 @@
 ; SI: v_cndmask_b32_e64
 ; SI: v_mul_hi_u32 [[Quotient:v[0-9]+]]
 ; SI: v_mul_lo_i32 [[Num_S_Remainder:v[0-9]+]]
+; SI-DAG: v_add_i32_e32 [[Quotient_A_One:v[0-9]+]], vcc, 1, [[Quotient]]
 ; SI-DAG: v_sub_i32_e32 [[Remainder:v[0-9]+]], vcc, {{[vs][0-9]+}}, [[Num_S_Remainder]]
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
-; SI: v_and_b32_e32 [[Tmp1:v[0-9]+]]
-; SI-DAG: v_add_i32_e32 [[Quotient_A_One:v[0-9]+]], vcc, 1, [[Quotient]]
 ; SI-DAG: v_subrev_i32_e32 [[Quotient_S_One:v[0-9]+]],
+; SI-DAG: v_subrev_i32_e32 [[Remainder_S_Den:v[0-9]+]],
+; SI: v_and_b32_e32 [[Tmp1:v[0-9]+]]
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_add_i32_e32 [[Remainder_A_Den:v[0-9]+]],
-; SI-DAG: v_subrev_i32_e32 [[Remainder_S_Den:v[0-9]+]],
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
 ; SI: s_endpgm
