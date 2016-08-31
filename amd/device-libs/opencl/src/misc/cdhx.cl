@@ -7,6 +7,69 @@
 
 #define ATTR __attribute__((always_inline, const))
 
+
+// TODO - remove these when these conversions are ordinary LLVM conversions
+
+ATTR uint
+__cvt_f16_rtn_f32(float a)
+{
+    uint u = as_uint(a);
+    uint um = u & 0x7fffffU;
+    int e = (int)((u >> 23) & 0xff) - 127 + 15;
+    int ds = max(0, min(19, 1 - e));
+    uint t = (um | (e > -112 ? 0x800000 : 0)) << (19 - ds);
+    uint s = (u >> 16) & 0x8000;
+    uint m = (u >> 13) & 0x3ff;
+    uint i = 0x7c00 | m | (um ? 0x0200 : 0);
+    uint n = ((uint)e << 10) | m;
+    uint d = (0x400 | m) >> ds;
+    uint v = e < 1 ? d : n;
+    v += (s >> 15) & (t > 0U);
+    uint j = 0x7bff + (s >> 15);
+    v = e > 30 ? j : v;
+    v = e == 143 ? i : v;
+    return s | v;
+}
+
+ATTR uint
+__cvt_f16_rtp_f32(float a)
+{
+    uint u = as_uint(a);
+    uint um = u & 0x7fffffU;
+    int e = (int)((u >> 23) & 0xff) - 127 + 15;
+    int ds = max(0, min(19, 1 - e));
+    uint t = (um | (e > -112 ? 0x800000 : 0)) << (19 - ds);
+    uint s = (u >> 16) & 0x8000;
+    uint m = (u >> 13) & 0x3ff;
+    uint i = 0x7c00 | m | (um ? 0x0200 : 0);
+    uint n = ((uint)e << 10) | m;
+    uint d = (0x400 | m) >> ds;
+    uint v = e < 1 ? d : n;
+    v += ~(s >> 15) & (t > 0U);
+    uint j = 0x7c00 - (s >> 15);
+    v = e > 30 ? j : v;
+    v = e == 143 ? i : v;
+    return s | v;
+}
+
+ATTR uint
+__cvt_f16_rtz_f32(float a)
+{
+    uint u = as_uint(a);
+    uint um = u & 0x7fffffU;
+    int e = (int)((u >> 23) & 0xff) - 127 + 15;
+    uint s = (u >> 16) & 0x8000;
+    uint m = (u >> 13) & 0x3ff;
+    uint i = 0x7c00 | m | (um ? 0x0200 : 0);
+    uint n = ((uint)e << 10) | m;
+    uint d = (0x400 | m) >> (1 - e);
+    uint v = e > 30 ? 0x7bff : n;
+    v = e == 143 ? i : v;
+    v = e < 1 ? d : v;
+    v = e < -10 ? 0 : v;
+    return s | v;
+}
+
 ATTR uint
 __cvt_f16_rte_f64(double a)
 {
