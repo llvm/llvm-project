@@ -15,7 +15,18 @@
 #endif
 
 // SizeClassMap maps allocation sizes into size classes and back.
-// Class 0 corresponds to size 0.
+// Class 0 always corresponds to size 0.
+// The other sizes are controlled by the template parameters:
+//   kMinSizeLog: defines the class 1    as 2^kMinSizeLog.
+//   kMaxSizeLog: defines the last class as 2^kMaxSizeLog.
+//   kMidSizeLog: the classes starting from 1 increase with step
+//                2^kMinSizeLog until 2^kMidSizeLog.
+//   kNumBits: the number of non-zero bits in sizes after 2^kMidSizeLog.
+//             E.g. with kNumBits==3 all size classes after 2^kMidSizeLog
+//             look like 0b1xx0..0, where x is either 0 or 1.
+//
+// Example: kNumBits=3, kMidSizeLog=4, kMidSizeLog=8, kMaxSizeLog=17:
+//
 // Classes 1 - 16 correspond to sizes 16 to 256 (size = class_id * 16).
 // Next 4 classes: 256 + i * 64  (i = 1 to 4).
 // Next 4 classes: 512 + i * 128 (i = 1 to 4).
@@ -25,7 +36,7 @@
 //
 // This structure of the size class map gives us:
 //   - Efficient table-free class-to-size and size-to-class functions.
-//   - Difference between two consequent size classes is betweed 14% and 25%
+//   - Difference between two consequent size classes is between 14% and 25%
 //
 // This class also gives a hint to a thread-caching allocator about the amount
 // of chunks that need to be cached per-thread:
@@ -75,15 +86,44 @@
 // c51 => s: 114688 diff: +16384 16% l 16 cached: 1 114688; id 51
 //
 // c52 => s: 131072 diff: +16384 14% l 17 cached: 1 131072; id 52
+//
+//
+// Another example (kNumBits=2):
+// c00 => s: 0 diff: +0 00% l 0 cached: 0 0; id 0
+// c01 => s: 32 diff: +32 00% l 5 cached: 64 2048; id 1
+// c02 => s: 64 diff: +32 100% l 6 cached: 64 4096; id 2
+// c03 => s: 96 diff: +32 50% l 6 cached: 64 6144; id 3
+// c04 => s: 128 diff: +32 33% l 7 cached: 64 8192; id 4
+// c05 => s: 160 diff: +32 25% l 7 cached: 64 10240; id 5
+// c06 => s: 192 diff: +32 20% l 7 cached: 64 12288; id 6
+// c07 => s: 224 diff: +32 16% l 7 cached: 64 14336; id 7
+// c08 => s: 256 diff: +32 14% l 8 cached: 64 16384; id 8
+// c09 => s: 384 diff: +128 50% l 8 cached: 42 16128; id 9
+// c10 => s: 512 diff: +128 33% l 9 cached: 32 16384; id 10
+// c11 => s: 768 diff: +256 50% l 9 cached: 21 16128; id 11
+// c12 => s: 1024 diff: +256 33% l 10 cached: 16 16384; id 12
+// c13 => s: 1536 diff: +512 50% l 10 cached: 10 15360; id 13
+// c14 => s: 2048 diff: +512 33% l 11 cached: 8 16384; id 14
+// c15 => s: 3072 diff: +1024 50% l 11 cached: 5 15360; id 15
+// c16 => s: 4096 diff: +1024 33% l 12 cached: 4 16384; id 16
+// c17 => s: 6144 diff: +2048 50% l 12 cached: 2 12288; id 17
+// c18 => s: 8192 diff: +2048 33% l 13 cached: 2 16384; id 18
+// c19 => s: 12288 diff: +4096 50% l 13 cached: 1 12288; id 19
+// c20 => s: 16384 diff: +4096 33% l 14 cached: 1 16384; id 20
+// c21 => s: 24576 diff: +8192 50% l 14 cached: 1 24576; id 21
+// c22 => s: 32768 diff: +8192 33% l 15 cached: 1 32768; id 22
+// c23 => s: 49152 diff: +16384 50% l 15 cached: 1 49152; id 23
+// c24 => s: 65536 diff: +16384 33% l 16 cached: 1 65536; id 24
+// c25 => s: 98304 diff: +32768 50% l 16 cached: 1 98304; id 25
+// c26 => s: 131072 diff: +32768 33% l 17 cached: 1 131072; id 26
 
-template <uptr kMaxSizeLog, uptr kMaxNumCachedHintT, uptr kMaxBytesCachedLog>
+template <uptr kNumBits, uptr kMinSizeLog, uptr kMidSizeLog, uptr kMaxSizeLog,
+          uptr kMaxNumCachedHintT, uptr kMaxBytesCachedLog>
 class SizeClassMap {
-  static const uptr kMinSizeLog = 4;
-  static const uptr kMidSizeLog = kMinSizeLog + 4;
   static const uptr kMinSize = 1 << kMinSizeLog;
   static const uptr kMidSize = 1 << kMidSizeLog;
   static const uptr kMidClass = kMidSize / kMinSize;
-  static const uptr S = 2;
+  static const uptr S = kNumBits - 1;
   static const uptr M = (1 << S) - 1;
 
  public:
@@ -96,9 +136,9 @@ class SizeClassMap {
   static const uptr kNumClasses =
       kMidClass + ((kMaxSizeLog - kMidSizeLog) << S) + 1;
   static const uptr kLargestClassID = kNumClasses - 2;
-  COMPILER_CHECK(kNumClasses >= 32 && kNumClasses <= 256);
+  COMPILER_CHECK(kNumClasses >= 16 && kNumClasses <= 256);
   static const uptr kNumClassesRounded =
-      kNumClasses == 32  ? 32 :
+      kNumClasses <= 32  ? 32 :
       kNumClasses <= 64  ? 64 :
       kNumClasses <= 128 ? 128 : 256;
 
@@ -172,5 +212,6 @@ class SizeClassMap {
   }
 };
 
-typedef SizeClassMap<17, 128, 16> DefaultSizeClassMap;
-typedef SizeClassMap<17, 64,  14> CompactSizeClassMap;
+typedef SizeClassMap<3, 4, 8, 17, 128, 16> DefaultSizeClassMap;
+typedef SizeClassMap<3, 4, 8, 17, 64, 14> CompactSizeClassMap;
+typedef SizeClassMap<2, 5, 9, 16, 64, 14> VeryCompactSizeClassMap;

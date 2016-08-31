@@ -56,6 +56,7 @@ struct ErrorDoubleFree : ErrorBase {
       : tid(tid_), second_free_stack(stack) {
     CHECK_GT(second_free_stack->size, 0);
     GetHeapAddressInformation(addr, 1, &addr_description);
+    scariness.Clear();
     scariness.Scare(42, "double-free");
   }
   void Print();
