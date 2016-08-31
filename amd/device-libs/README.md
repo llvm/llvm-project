@@ -18,7 +18,24 @@ Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 
 ## BUILDING
 
-This project requires reasonably recent LLVM/Clang build (April 2016 trunk). Testing also requires amdhsacod utility from ROCm Runtime.
+To build it, use RadeonOpenCompute LLVM/LLD/Clang. Default branch on these
+repositories is "amd-common", which may contain AMD-specific codes yet
+upstreamed.
+
+    git clone git@github.com:RadeonOpenCompute/llvm.git llvm_amd-common
+    cd llvm_amd-common/tools
+    git clone git@github.com:RadeonOpenCompute/lld.git lld
+    git clone git@github.com:RadeonOpenCompute/clang.git clang
+    cd ..
+    mkdir -p build
+    cd build
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
+        -DLLVM_TARGET_TO_BUILD="AMDGPU;X86" \
+        ..
+
+Testing also requires amdhsacod utility from ROCm Runtime.
 
 Use out-of-source CMake build and create separate directory to run CMake.
 
