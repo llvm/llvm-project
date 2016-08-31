@@ -3,6 +3,7 @@
 #define MACRO return; bar()
 #define MACRO_2 bar()
 #define MACRO_1 return; MACRO_2
+#define MACRO_3 MACRO_2
 
 void bar() {}
 
@@ -24,7 +25,6 @@ void func2() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+5]]:2 = #0
   i = 2;
 }
 // CHECK-NEXT: File 1, 5:17 -> 5:32 = #0
-// CHECK-NEXT: File 1, 5:25 -> 5:32 = 0
 // CHECK-NEXT: Expansion,File 1, 5:25 -> 5:32 = 0
 // CHECK-NEXT: File 2, 4:17 -> 4:22 = 0
 
@@ -46,6 +46,15 @@ void func4() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+6]]:2 = #0
 }
 // CHECK-NEXT: File 1, 4:17 -> 4:22 = #2
 // CHECK-NOT: File 1
+
+// CHECK-NEXT: func5
+void func5() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+4]]:2 = #0
+  int i = 0;
+  if (i > 5) // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:12 = #0
+    MACRO_3; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:12 = #1
+}
+// CHECK-NEXT: Expansion,File 1, 6:17 -> 6:24 = #1
+// CHECK-NEXT: File 2, 4:17 -> 4:22 = #1
 
 int main(int argc, const char *argv[]) {
   func();
