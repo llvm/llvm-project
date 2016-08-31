@@ -44,9 +44,27 @@ struct ErrorStackOverflow : ErrorBase {
   void Print();
 };
 
+struct ErrorDoubleFree : ErrorBase {
+  u32 tid;
+  HeapAddressDescription addr_description;
+  // ErrorDoubleFree doesn't own the stack trace.
+  BufferedStackTrace *second_free_stack;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorDoubleFree() = default;
+  ErrorDoubleFree(uptr addr, u32 tid_, BufferedStackTrace *stack)
+      : tid(tid_), second_free_stack(stack) {
+    CHECK_GT(second_free_stack->size, 0);
+    GetHeapAddressInformation(addr, 1, &addr_description);
+    scariness.Scare(42, "double-free");
+  }
+  void Print();
+};
+
 enum ErrorKind {
   kErrorKindInvalid = 0,
   kErrorKindStackOverflow,
+  kErrorKindDoubleFree,
 };
 
 struct ErrorDescription {
@@ -58,17 +76,24 @@ struct ErrorDescription {
   // add a lot of code and the benefit wouldn't be that big.
   union {
     ErrorStackOverflow stack_overflow;
+    ErrorDoubleFree double_free;
   };
   ErrorDescription() { internal_memset(this, 0, sizeof(*this)); }
   ErrorDescription(const ErrorStackOverflow &e)  // NOLINT
       : kind(kErrorKindStackOverflow),
         stack_overflow(e) {}
+  ErrorDescription(const ErrorDoubleFree &e)  // NOLINT
+      : kind(kErrorKindDoubleFree),
+        double_free(e) {}
 
   bool IsValid() { return kind != kErrorKindInvalid; }
   void Print() {
     switch (kind) {
       case kErrorKindStackOverflow:
         stack_overflow.Print();
+        return;
+      case kErrorKindDoubleFree:
+        double_free.Print();
         return;
       case kErrorKindInvalid:
         CHECK(0);
