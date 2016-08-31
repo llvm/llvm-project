@@ -17,3 +17,11 @@ following heuristic is employed:
 2. The loop variable is not const, but only const methods or operators are
    invoked on it, or it is used as const reference or value argument in
    constructors or function calls.
+
+Options
+-------
+
+.. option:: WarnOnAllAutoCopies
+
+   When non-zero, warns on any use of `auto` as the type of the range-based for
+   loop variable. Default is `0`.

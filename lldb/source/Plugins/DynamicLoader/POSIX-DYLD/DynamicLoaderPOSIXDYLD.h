@@ -172,6 +172,9 @@ protected:
     void
     ResolveExecutableModule(lldb::ModuleSP &module_sp);
 
+    bool
+    AlwaysRelyOnEHUnwindInfo(lldb_private::SymbolContext &sym_ctx) override;
+
 private:
     DISALLOW_COPY_AND_ASSIGN(DynamicLoaderPOSIXDYLD);
 };

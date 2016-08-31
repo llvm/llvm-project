@@ -55,7 +55,7 @@
 /// function as follows:
 /// \code
 ///     namespace ccn = compiler_cuda_namespace;
-///     using KernelPtr = std::unique_ptr<cnn::SaxpyKernel>;
+///     using KernelPtr = std::unique_ptr<ccn::SaxpyKernel>;
 ///     // Assumes Device is a pointer to the Device on which to launch the
 ///     // kernel.
 ///     //

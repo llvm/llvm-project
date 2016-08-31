@@ -494,3 +494,360 @@ entry:
   %4 = bitcast <16 x i32> %3 to <8 x i64>
   ret <8 x i64> %4
 }
+
+define <8 x double> @test_mm512_mask_xor_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_mask_xor_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpxorq %zmm2, %zmm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_xor_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vxorpd %zmm2, %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %xor.i.i = xor <8 x i64> %0, %1
+  %2 = bitcast <8 x i64> %xor.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> %__W
+  ret <8 x double> %4
+}
+
+define <8 x double> @test_mm512_maskz_xor_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_maskz_xor_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_xor_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vxorpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %xor.i.i = xor <8 x i64> %0, %1
+  %2 = bitcast <8 x i64> %xor.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> zeroinitializer
+  ret <8 x double> %4
+}
+
+define <16 x float> @test_mm512_mask_xor_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_mask_xor_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpxord %zmm2, %zmm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_xor_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vxorps %zmm2, %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %xor.i.i = xor <16 x i32> %0, %1
+  %2 = bitcast <16 x i32> %xor.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> %__W
+  ret <16 x float> %4
+}
+
+define <16 x float> @test_mm512_maskz_xor_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_maskz_xor_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpxord %zmm1, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_xor_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vxorps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %xor.i.i = xor <16 x i32> %0, %1
+  %2 = bitcast <16 x i32> %xor.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> zeroinitializer
+  ret <16 x float> %4
+}
+
+define <8 x double> @test_mm512_mask_or_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_mask_or_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vporq %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_or_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vorpd %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %or.i.i = or <8 x i64> %1, %0
+  %2 = bitcast <8 x i64> %or.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> %__W
+  ret <8 x double> %4
+}
+
+define <8 x double> @test_mm512_maskz_or_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_maskz_or_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vporq %zmm0, %zmm1, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_or_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vorpd %zmm0, %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %or.i.i = or <8 x i64> %1, %0
+  %2 = bitcast <8 x i64> %or.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> zeroinitializer
+  ret <8 x double> %4
+}
+
+define <16 x float> @test_mm512_mask_or_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_mask_or_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpord %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_or_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vorps %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %or.i.i = or <16 x i32> %1, %0
+  %2 = bitcast <16 x i32> %or.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> %__W
+  ret <16 x float> %4
+}
+
+define <16 x float> @test_mm512_maskz_or_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_maskz_or_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpord %zmm0, %zmm1, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_or_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vorps %zmm0, %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %or.i.i = or <16 x i32> %1, %0
+  %2 = bitcast <16 x i32> %or.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> zeroinitializer
+  ret <16 x float> %4
+}
+
+define <8 x double> @test_mm512_mask_and_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_mask_and_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandq %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_and_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vandpd %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %and.i.i = and <8 x i64> %1, %0
+  %2 = bitcast <8 x i64> %and.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> %__W
+  ret <8 x double> %4
+}
+
+define <8 x double> @test_mm512_maskz_and_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_maskz_and_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandq %zmm0, %zmm1, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_and_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vandpd %zmm0, %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %and.i.i = and <8 x i64> %1, %0
+  %2 = bitcast <8 x i64> %and.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> zeroinitializer
+  ret <8 x double> %4
+}
+
+define <16 x float> @test_mm512_mask_and_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_mask_and_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandd %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_and_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vandps %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %and.i.i = and <16 x i32> %1, %0
+  %2 = bitcast <16 x i32> %and.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> %__W
+  ret <16 x float> %4
+}
+
+define <16 x float> @test_mm512_maskz_and_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_maskz_and_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandd %zmm0, %zmm1, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_and_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vandps %zmm0, %zmm1, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %and.i.i = and <16 x i32> %1, %0
+  %2 = bitcast <16 x i32> %and.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> zeroinitializer
+  ret <16 x float> %4
+}
+
+define <8 x double> @test_mm512_mask_andnot_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_mask_andnot_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandnq %zmm2, %zmm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_andnot_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vandnpd %zmm2, %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %neg.i.i = xor <8 x i64> %0, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %and.i.i = and <8 x i64> %1, %neg.i.i
+  %2 = bitcast <8 x i64> %and.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> %__W
+  ret <8 x double> %4
+}
+
+define <8 x double> @test_mm512_maskz_andnot_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; KNL-LABEL: test_mm512_maskz_andnot_pd:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandnq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_andnot_pd:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovb %edi, %k1
+; SKX-NEXT:    vandnpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <8 x double> %__A to <8 x i64>
+  %neg.i.i = xor <8 x i64> %0, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  %1 = bitcast <8 x double> %__B to <8 x i64>
+  %and.i.i = and <8 x i64> %1, %neg.i.i
+  %2 = bitcast <8 x i64> %and.i.i to <8 x double>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %2, <8 x double> zeroinitializer
+  ret <8 x double> %4
+}
+
+define <16 x float> @test_mm512_mask_andnot_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_mask_andnot_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandnd %zmm2, %zmm1, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_mask_andnot_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vandnps %zmm2, %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %neg.i.i = xor <16 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %and.i.i = and <16 x i32> %1, %neg.i.i
+  %2 = bitcast <16 x i32> %and.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> %__W
+  ret <16 x float> %4
+}
+
+define <16 x float> @test_mm512_maskz_andnot_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; KNL-LABEL: test_mm512_maskz_andnot_ps:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpandnd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mm512_maskz_andnot_ps:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    kmovw %edi, %k1
+; SKX-NEXT:    vandnps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+entry:
+  %0 = bitcast <16 x float> %__A to <16 x i32>
+  %neg.i.i = xor <16 x i32> %0, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %1 = bitcast <16 x float> %__B to <16 x i32>
+  %and.i.i = and <16 x i32> %1, %neg.i.i
+  %2 = bitcast <16 x i32> %and.i.i to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %2, <16 x float> zeroinitializer
+  ret <16 x float> %4
+}
+

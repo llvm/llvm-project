@@ -101,6 +101,14 @@
 # MAIN-NEXT: SHT_GNU_verdef {
 # MAIN-NEXT: }
 
+# RUN: echo "VERSION { \
+# RUN:       LIBSAMPLE_1.0 { global: a; local: *; }; \
+# RUN:       LIBSAMPLE_2.0 { global: b; local: *; }; \
+# RUN:       LIBSAMPLE_3.0 { global: c; local: *; }; \
+# RUN:       }" > %t.script
+# RUN: ld.lld --script %t.script -shared -soname shared %t.o -o %t2.so
+# RUN: llvm-readobj -V -dyn-symbols %t2.so | FileCheck --check-prefix=DSO %s
+
 .globl a
 .type  a,@function
 a:

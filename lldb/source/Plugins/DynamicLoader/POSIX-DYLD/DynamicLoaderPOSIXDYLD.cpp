@@ -7,8 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
+// Main header include
+#include "DynamicLoaderPOSIXDYLD.h"
+
+// Project includes
+#include "AuxVector.h"
+
 // Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Log.h"
@@ -22,9 +26,10 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Symbol/Function.h"
 
-#include "AuxVector.h"
-#include "DynamicLoaderPOSIXDYLD.h"
+// C++ Includes
+// C Includes
 
 using namespace lldb;
 using namespace lldb_private;
@@ -690,4 +695,18 @@ DynamicLoaderPOSIXDYLD::ResolveExecutableModule (lldb::ModuleSP &module_sp)
     }
 
     target.SetExecutableModule (module_sp, false);
+}
+
+bool
+DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(lldb_private::SymbolContext &sym_ctx)
+{
+    ModuleSP module_sp;
+    if (sym_ctx.symbol)
+        module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
+    if (!module_sp && sym_ctx.function)
+        module_sp = sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
+    if (!module_sp)
+        return false;
+
+    return module_sp->GetFileSpec().GetPath() == "[vdso]";
 }

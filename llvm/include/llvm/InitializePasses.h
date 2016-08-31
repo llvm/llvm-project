@@ -119,6 +119,7 @@ void initializeDominanceFrontierWrapperPassPass(PassRegistry&);
 void initializeDominatorTreeWrapperPassPass(PassRegistry&);
 void initializeDwarfEHPreparePass(PassRegistry&);
 void initializeEarlyCSELegacyPassPass(PassRegistry &);
+void initializeEarlyCSEMemSSALegacyPassPass(PassRegistry &);
 void initializeEarlyIfConverterPass(PassRegistry&);
 void initializeEdgeBundlesPass(PassRegistry&);
 void initializeEfficiencySanitizerPass(PassRegistry&);

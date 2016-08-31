@@ -73,7 +73,7 @@ __m128i test_mm_adds_epu16(__m128i A, __m128i B) {
 
 __m128d test_mm_and_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_and_pd
-  // CHECK: and <4 x i32>
+  // CHECK: and <2 x i64>
   return _mm_and_pd(A, B);
 }
 
@@ -85,8 +85,8 @@ __m128i test_mm_and_si128(__m128i A, __m128i B) {
 
 __m128d test_mm_andnot_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_andnot_pd
-  // CHECK: xor <4 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1>
-  // CHECK: and <4 x i32>
+  // CHECK: xor <2 x i64> %{{.*}}, <i64 -1, i64 -1>
+  // CHECK: and <2 x i64>
   return _mm_andnot_pd(A, B);
 }
 
@@ -845,7 +845,7 @@ __m128i test_mm_mullo_epi16(__m128i A, __m128i B) {
 
 __m128d test_mm_or_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_or_pd
-  // CHECK: or <4 x i32> %{{.*}}, %{{.*}}
+  // CHECK: or <2 x i64> %{{.*}}, %{{.*}}
   return _mm_or_pd(A, B);
 }
 
@@ -1529,7 +1529,7 @@ __m128d test_mm_unpacklo_pd(__m128d A, __m128d B) {
 
 __m128d test_mm_xor_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_xor_pd
-  // CHECK: xor <4 x i32> %{{.*}}, %{{.*}}
+  // CHECK: xor <2 x i64> %{{.*}}, %{{.*}}
   return _mm_xor_pd(A, B);
 }
 

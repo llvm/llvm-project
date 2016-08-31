@@ -420,10 +420,10 @@ template <> struct GraphTraits<CallGraphNode *> {
   typedef mapped_iterator<CallGraphNode::iterator, decltype(&CGNGetValue)>
       ChildIteratorType;
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
+  static ChildIteratorType child_begin(NodeRef N) {
     return ChildIteratorType(N->begin(), &CGNGetValue);
   }
-  static inline ChildIteratorType child_end(NodeRef N) {
+  static ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType(N->end(), &CGNGetValue);
   }
 };
@@ -440,10 +440,10 @@ template <> struct GraphTraits<const CallGraphNode *> {
   typedef mapped_iterator<CallGraphNode::const_iterator, decltype(&CGNGetValue)>
       ChildIteratorType;
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
+  static ChildIteratorType child_begin(NodeRef N) {
     return ChildIteratorType(N->begin(), &CGNGetValue);
   }
-  static inline ChildIteratorType child_end(NodeRef N) {
+  static ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType(N->end(), &CGNGetValue);
   }
 };

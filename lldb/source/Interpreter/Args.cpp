@@ -430,19 +430,13 @@ Args::AppendArguments (const char **argv)
 }
 
 const char *
-Args::AppendArgument(llvm::StringRef arg_str, char quote_char)
-{
-    return InsertArgumentAtIndex(GetArgumentCount(), arg_str, quote_char);
-}
-
-const char *
-Args::AppendArgument(const char *arg_cstr, char quote_char)
+Args::AppendArgument (const char *arg_cstr, char quote_char)
 {
     return InsertArgumentAtIndex (GetArgumentCount(), arg_cstr, quote_char);
 }
 
 const char *
-Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str, char quote_char)
+Args::InsertArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char)
 {
     // Since we are using a std::list to hold onto the copied C string and
     // we don't have direct access to the elements, we have to iterate to
@@ -452,8 +446,8 @@ Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str, char quote_char
     for (pos = m_args.begin(); i > 0 && pos != end; ++pos)
         --i;
 
-    pos = m_args.insert(pos, std::string(arg_str.data(), arg_str.size()));
-
+    pos = m_args.insert(pos, arg_cstr);
+    
     if (idx >= m_args_quote_char.size())
     {
         m_args_quote_char.resize(idx + 1);
@@ -461,19 +455,13 @@ Args::InsertArgumentAtIndex(size_t idx, llvm::StringRef arg_str, char quote_char
     }
     else
         m_args_quote_char.insert(m_args_quote_char.begin() + idx, quote_char);
-
+    
     UpdateArgvFromArgs();
     return GetArgumentAtIndex(idx);
 }
 
 const char *
-Args::InsertArgumentAtIndex(size_t idx, const char *arg_cstr, char quote_char)
-{
-    return InsertArgumentAtIndex(idx, llvm::StringRef(arg_cstr), quote_char);
-}
-
-const char *
-Args::ReplaceArgumentAtIndex(size_t idx, const char *arg_cstr, char quote_char)
+Args::ReplaceArgumentAtIndex (size_t idx, const char *arg_cstr, char quote_char)
 {
     // Since we are using a std::list to hold onto the copied C string and
     // we don't have direct access to the elements, we have to iterate to

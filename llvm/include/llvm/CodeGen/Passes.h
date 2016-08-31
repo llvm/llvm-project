@@ -53,7 +53,11 @@ namespace llvm {
   /// using the MIR serialization format.
   MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 
-  MachineFunctionPass *createResetMachineFunctionPass();
+  /// This pass resets a MachineFunction when it has the FailedISel property
+  /// as if it was just created.
+  /// If EmitFallbackDiag is true, the pass will emit a
+  /// DiagnosticInfoISelFallback for every MachineFunction it resets.
+  MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag);
 
   /// createCodeGenPreparePass - Transform the code to expose more pattern
   /// matching during instruction selection.

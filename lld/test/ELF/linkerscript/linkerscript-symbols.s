@@ -67,6 +67,15 @@
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN5 %s
 # HIDDEN5: 0000000000000000         *ABS*    00000000 somesym
 
+# Simple symbol assignment. All three symbols should have the
+# same value.
+# RUN: echo "foo = 0x100; SECTIONS { bar = foo; } baz = bar;" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=SIMPLE2 %s
+# SIMPLE2: 0000000000000100         *ABS*    00000000 foo
+# SIMPLE2: 0000000000000100         *ABS*    00000000 bar
+# SIMPLE2: 0000000000000100         *ABS*    00000000 baz
+
 .global _start
 _start:
  nop

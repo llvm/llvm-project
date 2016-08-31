@@ -168,6 +168,11 @@ MachineIRBuilder::buildUAdde(ArrayRef<LLT> Tys, unsigned Res, unsigned CarryOut,
       .addUse(CarryIn);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildType(LLT Ty,
+                                                unsigned Res, unsigned Op) {
+  return buildInstr(TargetOpcode::G_TYPE, Ty).addDef(Res).addUse(Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildAnyExt(ArrayRef<LLT> Tys,
                                                   unsigned Res, unsigned Op) {
   validateTruncExt(Tys, true);

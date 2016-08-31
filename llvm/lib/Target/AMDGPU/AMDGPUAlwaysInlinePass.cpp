@@ -35,7 +35,19 @@ public:
 char AMDGPUAlwaysInline::ID = 0;
 
 bool AMDGPUAlwaysInline::runOnModule(Module &M) {
+  std::vector<GlobalAlias*> AliasesToRemove;
   std::vector<Function *> FuncsToClone;
+
+  for (GlobalAlias &A : M.aliases()) {
+    if (Function* F = dyn_cast<Function>(A.getAliasee())) {
+      A.replaceAllUsesWith(F);
+      AliasesToRemove.push_back(&A);
+    }
+  }
+
+  for (GlobalAlias* A : AliasesToRemove) {
+    A->eraseFromParent();
+  }
 
   for (Function &F : M) {
     if (!F.hasLocalLinkage() && !F.isDeclaration() && !F.use_empty() &&

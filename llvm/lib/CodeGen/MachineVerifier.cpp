@@ -903,7 +903,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   }
 
   // Generic opcodes must not have physical register operands.
-  if (isPreISelGenericOpcode(MCID.getOpcode())) {
+  if (isPreISelGenericOpcode(MCID.getOpcode()) &&
+      MCID.getOpcode() != TargetOpcode::G_TYPE) {
     for (auto &Op : MI->operands()) {
       if (Op.isReg() && TargetRegisterInfo::isPhysicalRegister(Op.getReg()))
         report("Generic instruction cannot have physical register", MI);

@@ -1433,11 +1433,6 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
         I->getType()->isTokenTy())
       return false;
-    // Apart from loads and stores, we won't move anything that could
-    // change memory or have sideeffects.
-    if (!isa<StoreInst>(I) && !isa<LoadInst>(I) &&
-        (I->mayHaveSideEffects() || I->mayHaveSideEffects()))
-      return false;
     // Everything must have only one use too, apart from stores which
     // have no uses.
     if (!isa<StoreInst>(I) && !I->hasOneUse())
@@ -1472,10 +1467,11 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
       if (!canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
-      if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OI != 0)
-        // Don't create indirect calls!
+      // Don't create indirect calls! The called value is the final operand.
+      if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OI == OE - 1) {
         // FIXME: if the call was *already* indirect, we should do this.
         return false;
+      }
       ++NumPHIsRequired;
     }
   }

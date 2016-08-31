@@ -66,7 +66,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   case SymbolBody::DefinedCommonKind:
     return CommonInputSection<ELFT>::X->OutSec->getVA() +
            CommonInputSection<ELFT>::X->OutSecOff +
-           cast<DefinedCommon<ELFT>>(Body).Offset;
+           cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(Body);
     if (!SS.NeedsCopyOrPltAddr)
@@ -81,8 +81,6 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   case SymbolBody::LazyObjectKind:
     assert(Body.symbol()->IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
-  case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("should have been replaced");
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -177,7 +175,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
-  if (const auto *C = dyn_cast<DefinedCommon<ELFT>>(this))
+  if (const auto *C = dyn_cast<DefinedCommon>(this))
     return C->Size;
   if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
     return DR->Size;
@@ -191,16 +189,6 @@ Defined::Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
 
 Defined::Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type)
     : SymbolBody(K, NameOffset, StOther, Type) {}
-
-DefinedBitcode::DefinedBitcode(StringRef Name, uint8_t StOther, uint8_t Type,
-                               BitcodeFile *F)
-    : Defined(DefinedBitcodeKind, Name, StOther, Type) {
-  this->File = F;
-}
-
-bool DefinedBitcode::classof(const SymbolBody *S) {
-  return S->kind() == DefinedBitcodeKind;
-}
 
 Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type,
                      InputFile *File)
@@ -220,10 +208,8 @@ DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
     : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
-template <class ELFT>
-DefinedCommon<ELFT>::DefinedCommon(StringRef N, uint64_t Size,
-                                   uint64_t Alignment, uint8_t StOther,
-                                   uint8_t Type, InputFile *File)
+DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
+                             uint8_t StOther, uint8_t Type, InputFile *File)
     : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
       Alignment(Alignment), Size(Size) {
   this->File = File;
@@ -333,8 +319,3 @@ template class elf::DefinedSynthetic<ELF32LE>;
 template class elf::DefinedSynthetic<ELF32BE>;
 template class elf::DefinedSynthetic<ELF64LE>;
 template class elf::DefinedSynthetic<ELF64BE>;
-
-template class elf::DefinedCommon<ELF32LE>;
-template class elf::DefinedCommon<ELF32BE>;
-template class elf::DefinedCommon<ELF64LE>;
-template class elf::DefinedCommon<ELF64BE>;

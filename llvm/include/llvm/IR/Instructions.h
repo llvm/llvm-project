@@ -3297,10 +3297,8 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(SwitchInst, Value)
 class IndirectBrInst : public TerminatorInst {
   void *operator new(size_t, unsigned) = delete;
   unsigned ReservedSpace;
-  // Operand[0]    = Value to switch on
-  // Operand[1]    = Default basic block destination
-  // Operand[2n  ] = Value to match
-  // Operand[2n+1] = BasicBlock to go to on match
+  // Operand[0]   = Address to jump to
+  // Operand[n+1] = n-th destination
   IndirectBrInst(const IndirectBrInst &IBI);
   void init(Value *Address, unsigned NumDests);
   void growOperands();

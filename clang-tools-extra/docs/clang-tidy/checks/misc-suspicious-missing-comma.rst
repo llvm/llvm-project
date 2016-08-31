@@ -39,3 +39,21 @@ This check may warn incorrectly on cases like:
     "Code " PRIu64,   // May warn here.
     "Warning %s",
   };
+
+Options
+-------
+
+.. option::  SizeThreshold
+
+   An unsigned integer specifying the minimum size of a string literal to be
+   considered by the check. Default is `5U`.
+
+.. option::  RatioThreshold
+
+   A string specifying the maximum threshold ratio [0, 1.0] of suspicious string
+   literals to be considered. Default is `".2"`.
+
+.. option::  MaxConcatenatedTokens
+
+   An unsigned integer specifying the maximum number of concatenated tokens.
+   Default is `5U`.

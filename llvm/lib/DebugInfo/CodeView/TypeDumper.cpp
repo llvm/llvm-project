@@ -518,6 +518,7 @@ Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
 Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
                                      VFTableShapeRecord &Shape) {
   W->printNumber("VFEntryCount", Shape.getEntryCount());
+  Name = saveName("<vftable " + utostr(Shape.getEntryCount()) + " methods>");
   return Error::success();
 }
 

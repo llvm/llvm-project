@@ -2683,7 +2683,7 @@ SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const AMDGPUMachineFunction *MFI, const ImplicitParameter Param) const {
-  uint64_t ArgOffset = MFI->getABIArgOffset();
+  uint64_t ArgOffset = alignTo(MFI->getABIArgOffset(), 4);
   switch (Param) {
   case GRID_DIM:
     return ArgOffset;

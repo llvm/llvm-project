@@ -208,3 +208,19 @@ INVALID-DYSYMTAB-TOCOFF-LOCRELOFF: macho-invalid-dysymtab-locreloff': truncated 
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dysymtab-locreloff-nlocrel 2>&1 | FileCheck -check-prefix INVALID-DYSYMTAB-TOCOFF-LOCRELOFF-NLOCREL %s
 INVALID-DYSYMTAB-TOCOFF-LOCRELOFF-NLOCREL: macho-invalid-dysymtab-locreloff-nlocrel': truncated or malformed object (locreloff field plus nlocrel field times sizeof(struct relocation_info) of LC_DYSYMTAB command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dataincode-more-than-one 2>&1 | FileCheck -check-prefix INVALID-DATAINCODE-MORE-THAN-ONE %s
+INVALID-DATAINCODE-MORE-THAN-ONE: macho-invalid-dataincode-more-than-one': truncated or malformed object (more than one LC_DATA_IN_CODE command)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-linkopthint-small 2>&1 | FileCheck -check-prefix INVALID-LINKOPTHINT-SMALL %s
+INVALID-LINKOPTHINT-SMALL: macho-invalid-linkopthint-small': truncated or malformed object (load command 0 LC_LINKER_OPTIMIZATION_HINT cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dataincode-bad-size 2>&1 | FileCheck -check-prefix INVALID-DATAINCODE-BAD-SIZE %s
+INVALID-DATAINCODE-BAD-SIZE: macho-invalid-dataincode-bad-size': truncated or malformed object (LC_DATA_IN_CODE command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-linkopthint-dataoff 2>&1 | FileCheck -check-prefix INVALID-LINKOPTHINT-DATAOFF %s
+INVALID-LINKOPTHINT-DATAOFF: macho-invalid-linkopthint-dataoff': truncated or malformed object (dataoff field of LC_LINKER_OPTIMIZATION_HINT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dataincode-dataoff-datasize 2>&1 | FileCheck -check-prefix INVALID-DATAINCODE-DATAOFF-DATASIZE %s
+INVALID-DATAINCODE-DATAOFF-DATASIZE: macho-invalid-dataincode-dataoff-datasize': truncated or malformed object (dataoff field plus datasize field of LC_DATA_IN_CODE command 0 extends past the end of the file)
+

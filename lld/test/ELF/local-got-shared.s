@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t -shared
-// RUN: llvm-readobj -s -r %t | FileCheck %s
+// RUN: llvm-readobj -s -r -d %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 
 bar:
@@ -11,9 +11,9 @@ bar:
 foo:
         nop
 
-// 0x2090 - 0x1000 - 5 = 4235
+// 0x20A0 - 0x1000 - 5 = 4251
 // DISASM:      bar:
-// DISASM-NEXT:   1000: {{.*}} callq 4235
+// DISASM-NEXT:   1000: {{.*}} callq 4251
 
 // DISASM:      foo:
 // DISASM-NEXT:   1005: {{.*}} nop
@@ -24,12 +24,13 @@ foo:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x2090
+// CHECK-NEXT: Address: 0x20A0
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 8
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x2090 R_X86_64_RELATIVE - 0x1005
+// CHECK-NEXT:     0x20A0 R_X86_64_RELATIVE - 0x1005
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
+// CHECK:      0x000000006FFFFFF9 RELACOUNT            1

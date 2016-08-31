@@ -448,6 +448,11 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
     StartIdx = PatchPointOpers(&MI).getVarIdx();
     break;
   }
+  case TargetOpcode::STATEPOINT: {
+    // For statepoints, fold deopt and gc arguments, but not call arguments.
+    StartIdx = StatepointOpers(&MI).getVarIdx();
+    break;
+  }
   default:
     llvm_unreachable("unexpected stackmap opcode");
   }
@@ -513,7 +518,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   MachineInstr *NewMI = nullptr;
 
   if (MI.getOpcode() == TargetOpcode::STACKMAP ||
-      MI.getOpcode() == TargetOpcode::PATCHPOINT) {
+      MI.getOpcode() == TargetOpcode::PATCHPOINT ||
+      MI.getOpcode() == TargetOpcode::STATEPOINT) {
     // Fold stackmap/patchpoint.
     NewMI = foldPatchpoint(MF, MI, Ops, FI, *this);
     if (NewMI)
@@ -794,7 +800,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   int FrameIndex = 0;
 
   if ((MI.getOpcode() == TargetOpcode::STACKMAP ||
-       MI.getOpcode() == TargetOpcode::PATCHPOINT) &&
+       MI.getOpcode() == TargetOpcode::PATCHPOINT ||
+       MI.getOpcode() == TargetOpcode::STATEPOINT) &&
       isLoadFromStackSlot(LoadMI, FrameIndex)) {
     // Fold stackmap/patchpoint.
     NewMI = foldPatchpoint(MF, MI, Ops, FrameIndex, *this);

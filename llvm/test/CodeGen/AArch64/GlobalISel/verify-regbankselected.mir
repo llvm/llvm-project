@@ -9,7 +9,7 @@
 ...
 ---
 # CHECK: *** Bad machine code: Generic virtual register must have a bank in a RegBankSelected function ***
-# CHECK: instruction: %vreg0<def>(64) = COPY
+# CHECK: instruction: %vreg0<def>(64) = G_TYPE
 # CHECK: operand 0: %vreg0<def>
 name:            test
 regBankSelected: true
@@ -18,5 +18,5 @@ registers:
 body: |
   bb.0:
    liveins: %x0
-   %0(64) = COPY %x0
+   %0(64) = G_TYPE s64 %x0
 ...

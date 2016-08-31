@@ -44,10 +44,10 @@ body: |
     ; CHECK: %x0 = COPY [[RES_LO]]
     ; CHECK: %x1 = COPY [[RES_HI]]
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
-    %2(64) = COPY %x2
-    %3(64) = COPY %x3
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
+    %2(64) = G_TYPE s64 %x2
+    %3(64) = G_TYPE s64 %x3
     %4(128) = G_SEQUENCE { s128, s64, s64 } %0, 0, %1, 64
     %5(128) = G_SEQUENCE { s128, s64, s64 } %2, 0, %3, 64
     %6(128) = G_ADD s128 %4, %5
@@ -71,8 +71,8 @@ body: |
     ; CHECK-LABEL: name: test_scalar_add_small
     ; CHECK: [[RES:%.*]](8) = G_ADD s8 %2, %3
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(8) = G_TRUNC { s8, s64 } %0
     %3(8) = G_TRUNC { s8, s64 } %1
     %4(8) = G_ADD s8 %2, %3
@@ -105,10 +105,10 @@ body: |
     ; CHECK: %q0 = COPY [[RES_LO]]
     ; CHECK: %q1 = COPY [[RES_HI]]
 
-    %0(128) = COPY %q0
-    %1(128) = COPY %q1
-    %2(128) = COPY %q2
-    %3(128) = COPY %q3
+    %0(128) = G_TYPE s128 %q0
+    %1(128) = G_TYPE s128 %q1
+    %2(128) = G_TYPE s128 %q2
+    %3(128) = G_TYPE s128 %q3
     %4(256) = G_SEQUENCE { s256, s128, s128 } %0, 0, %1, 128
     %5(256) = G_SEQUENCE { s256, s128, s128 } %2, 0, %3, 128
     %6(256) = G_ADD <4 x s64> %4, %5

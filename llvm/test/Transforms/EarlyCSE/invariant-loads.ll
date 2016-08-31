@@ -1,4 +1,5 @@
 ; RUN: opt -S -early-cse < %s | FileCheck %s
+; RUN: opt -S -basicaa -early-cse-memssa < %s | FileCheck %s
 
 declare void @clobber_and_use(i32)
 
@@ -20,9 +21,7 @@ define void @f_0(i32* %ptr) {
 }
 
 define void @f_1(i32* %ptr) {
-; We can forward invariant loads to non-invariant loads, since once an
-; invariant load has executed, the location loaded from is known to be
-; unchanging.
+; We can forward invariant loads to non-invariant loads.
 
 ; CHECK-LABEL: @f_1(
 ; CHECK:   %val0 = load i32, i32* %ptr, !invariant.load !0
@@ -37,14 +36,12 @@ define void @f_1(i32* %ptr) {
 }
 
 define void @f_2(i32* %ptr) {
-; Negative test -- we can't forward a non-invariant load into an
-; invariant load.
+; We can forward a non-invariant load into an invariant load.
 
 ; CHECK-LABEL: @f_2(
 ; CHECK:   %val0 = load i32, i32* %ptr
 ; CHECK:   call void @clobber_and_use(i32 %val0)
-; CHECK:   %val1 = load i32, i32* %ptr, !invariant.load !0
-; CHECK:   call void @clobber_and_use(i32 %val1)
+; CHECK:   call void @clobber_and_use(i32 %val0)
 
   %val0 = load i32, i32* %ptr
   call void @clobber_and_use(i32 %val0)

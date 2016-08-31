@@ -388,21 +388,8 @@ void ReportDeadlySignal(const char *description, const SignalContext &sig) {
 
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  char tname[128];
-  u32 curr_tid = GetCurrentTidOrInvalid();
-  Report("ERROR: AddressSanitizer: attempting double-free on %p in "
-         "thread T%d%s:\n",
-         addr, curr_tid,
-         ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
-  Printf("%s", d.EndWarning());
-  CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(42, "double-free");
-  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
-  stack.Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("double-free", &stack);
+  ErrorDoubleFree error{addr, GetCurrentTidOrInvalid(), free_stack};  // NOLINT
+  in_report.ReportError(error);
 }
 
 void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,

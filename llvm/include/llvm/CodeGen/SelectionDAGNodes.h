@@ -2115,11 +2115,11 @@ public:
 template <> struct GraphTraits<SDNode*> {
   typedef SDNode *NodeRef;
   typedef SDNodeIterator ChildIteratorType;
-  static inline NodeRef getEntryNode(SDNode *N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
+  static NodeRef getEntryNode(SDNode *N) { return N; }
+  static ChildIteratorType child_begin(NodeRef N) {
     return SDNodeIterator::begin(N);
   }
-  static inline ChildIteratorType child_end(NodeRef N) {
+  static ChildIteratorType child_end(NodeRef N) {
     return SDNodeIterator::end(N);
   }
 };

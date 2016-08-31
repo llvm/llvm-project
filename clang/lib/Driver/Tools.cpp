@@ -4602,8 +4602,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool splitDwarfInlining =
       Args.hasFlag(options::OPT_fsplit_dwarf_inlining,
                    options::OPT_fno_split_dwarf_inlining, true);
-  if (!splitDwarfInlining)
-    CmdArgs.push_back("-fno-split-dwarf-inlining");
 
   Args.ClaimAllArgs(options::OPT_g_Group);
   Arg *SplitDwarfArg = Args.getLastArg(options::OPT_gsplit_dwarf);
@@ -4619,11 +4617,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // split-dwarf and line-tables-only, so let those compose naturally in
       // that case.
       // And if you just turned off debug info, (-gsplit-dwarf -g0) - do that.
-      if (SplitDwarfArg && A->getIndex() > SplitDwarfArg->getIndex() &&
-          ((DebugInfoKind == codegenoptions::DebugLineTablesOnly &&
-            splitDwarfInlining) ||
-           DebugInfoKind == codegenoptions::NoDebugInfo))
-        SplitDwarfArg = nullptr;
+      if (SplitDwarfArg) {
+        if (A->getIndex() > SplitDwarfArg->getIndex()) {
+          if (DebugInfoKind == codegenoptions::NoDebugInfo ||
+              (DebugInfoKind == codegenoptions::DebugLineTablesOnly &&
+               splitDwarfInlining))
+            SplitDwarfArg = nullptr;
+        } else if (splitDwarfInlining)
+          DebugInfoKind = codegenoptions::NoDebugInfo;
+      }
     } else
       // For any other 'g' option, use Limited.
       DebugInfoKind = codegenoptions::LimitedDebugInfo;
@@ -4678,7 +4680,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // splitting and extraction.
   // FIXME: Currently only works on Linux.
   if (getToolChain().getTriple().isOSLinux() && SplitDwarfArg) {
-    if (splitDwarfInlining)
+    if (!splitDwarfInlining)
+      CmdArgs.push_back("-fno-split-dwarf-inlining");
+    if (DebugInfoKind == codegenoptions::NoDebugInfo)
       DebugInfoKind = codegenoptions::LimitedDebugInfo;
     CmdArgs.push_back("-backend-option");
     CmdArgs.push_back("-split-dwarf=Enable");

@@ -286,6 +286,11 @@ public:
   /// erroring out.
   virtual bool isGlobalISelAbortEnabled() const;
 
+  /// Check whether or not a diagnostic should be emitted when GlobalISel
+  /// uses the fallback path. In other words, it will emit a diagnostic
+  /// when GlobalISel failed and isGlobalISelAbortEnabled is false.
+  virtual bool reportDiagnosticWhenGlobalISelFallback() const;
+
 protected:
   // Helper to verify the analysis is really immutable.
   void setOpt(bool &Opt, bool Val);

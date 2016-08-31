@@ -394,7 +394,6 @@ TypeCategoryMap::ForEach(ForEachCallback callback)
             {
                 if (pos->second->IsEnabled())
                     continue;
-                KeyType type = pos->first;
                 if (!callback(pos->second))
                     break;
             }

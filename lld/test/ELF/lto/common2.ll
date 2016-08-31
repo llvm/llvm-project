@@ -7,15 +7,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @a = common global i8 0, align 8
+; CHECK-DAG: @a = common global i8 0, align 8
 
-; Shared library case, we ensure that the bitcode generated file
-; has not the a symbol but is appears in the final shared library
-; produced.
-; CHECK-NOT: @a = common global i8 0, align 8
+@b = common hidden global i32 0, align 4
+define i32 @f() {
+  %t = load i32, i32* @b, align 4
+  ret i32 %t
+}
+; CHECK-DAG: @b = internal global i32 0, align 4
 
 ; SHARED: Symbol {
 ; SHARED:   Name: a
-; SHARED-NEXT:   Value: 0x2000
+; SHARED-NEXT:   Value:
 ; SHARED-NEXT:   Size: 1
 ; SHARED-NEXT:   Binding: Global
 ; SHARED-NEXT:   Type: Object

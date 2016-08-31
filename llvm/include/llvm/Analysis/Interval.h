@@ -127,20 +127,16 @@ template <> struct GraphTraits<Interval*> {
   static NodeRef getEntryNode(Interval *I) { return I; }
 
   /// nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return succ_begin(N);
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
+  static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
+  static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 };
 
 template <> struct GraphTraits<Inverse<Interval*> > {
   typedef Interval *NodeRef;
   typedef Interval::pred_iterator ChildIteratorType;
   static NodeRef getEntryNode(Inverse<Interval *> G) { return G.Graph; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return pred_begin(N);
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
+  static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
+  static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
 } // End llvm namespace

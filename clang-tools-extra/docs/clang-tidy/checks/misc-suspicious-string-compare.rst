@@ -36,3 +36,29 @@ a wrong context.
 .. code-block:: c++
 
     if (strcmp(...) < 0.)  // Incorrect usage of the returned value.
+
+Options
+-------
+
+.. option:: WarnOnImplicitComparison
+
+   When non-zero, the check will warn on implicit comparison. `1` by default.
+
+.. option:: WarnOnLogicalNotComparison
+
+   When non-zero, the check will warn on logical not comparison. `0` by default.
+
+.. option:: StringCompareLikeFunctions
+
+   A string specifying the comma-separated names of the extra string comparison
+   functions. Default is an empty string.
+   The check will detect the following string comparison functions:
+   `__builtin_memcmp`, `__builtin_strcasecmp`, `__builtin_strcmp`,
+   `__builtin_strncasecmp`, `__builtin_strncmp`, `_mbscmp`, `_mbscmp_l`,
+   `_mbsicmp`, `_mbsicmp_l`, `_mbsnbcmp`, `_mbsnbcmp_l`, `_mbsnbicmp`,
+   `_mbsnbicmp_l`, `_mbsncmp`, `_mbsncmp_l`, `_mbsnicmp`, `_mbsnicmp_l`,
+   `_memicmp`, `_memicmp_l`, `_stricmp`, `_stricmp_l`, `_strnicmp`,
+   `_strnicmp_l`, `_wcsicmp`, `_wcsicmp_l`, `_wcsnicmp`, `_wcsnicmp_l`,
+   `lstrcmp`, `lstrcmpi`, `memcmp`, `memicmp`, `strcasecmp`, `strcmp`,
+   `strcmpi`, `stricmp`, `strncasecmp`, `strncmp`, `strnicmp`, `wcscasecmp`,
+   `wcscmp`, `wcsicmp`, `wcsncmp`, `wcsnicmp`, `wmemcmp`.

@@ -27,8 +27,12 @@ namespace llvm {
 /// cases so that instcombine and other passes are more effective. It is
 /// expected that a later pass of GVN will catch the interesting/hard cases.
 struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
+  EarlyCSEPass(bool UseMemorySSA = false) : UseMemorySSA(UseMemorySSA) {}
+
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  bool UseMemorySSA;
 };
 
 }

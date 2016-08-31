@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
+#include "asan_descriptions.h"
 #include "asan_stack.h"
 
 namespace __asan {
@@ -31,6 +32,24 @@ void ErrorStackOverflow::Print() {
                                   common_flags()->fast_unwind_on_fatal);
   stack.Print();
   ReportErrorSummary("stack-overflow", &stack);
+}
+
+void ErrorDoubleFree::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: attempting double-free on %p in "
+      "thread T%d%s:\n",
+      addr_description.addr, tid,
+      ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.EndWarning());
+  scariness.Print();
+  GET_STACK_TRACE_FATAL(second_free_stack->trace[0],
+                        second_free_stack->top_frame_bp);
+  stack.Print();
+  addr_description.Print();
+  ReportErrorSummary("double-free", &stack);
 }
 
 }  // namespace __asan

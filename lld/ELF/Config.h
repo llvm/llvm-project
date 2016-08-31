@@ -30,8 +30,16 @@ enum ELFKind {
   ELF64BEKind
 };
 
+// For --build-id.
 enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring, Uuid };
 
+// For --discard-{all,locals,none}.
+enum class DiscardPolicy { Default, All, Locals, None };
+
+// For --strip-{all,debug}.
+enum class StripPolicy { None, All, Debug };
+
+// For --unresolved-symbols.
 enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
 
 struct SymbolVersion {
@@ -79,9 +87,6 @@ struct Configuration {
   bool BsymbolicFunctions;
   bool Demangle = true;
   bool DisableVerify;
-  bool DiscardAll;
-  bool DiscardLocals;
-  bool DiscardNone;
   bool EhFrameHdr;
   bool EnableNewDtags;
   bool ExportDynamic;
@@ -101,8 +106,6 @@ struct Configuration {
   bool SaveTemps;
   bool Shared;
   bool Static = false;
-  bool StripAll;
-  bool StripDebug;
   bool SysvHash = true;
   bool Target1Rel;
   bool Threads;
@@ -115,6 +118,8 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  DiscardPolicy Discard;
+  StripPolicy Strip = StripPolicy::None;
   UnresolvedPolicy UnresolvedSymbols;
   BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;

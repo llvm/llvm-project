@@ -25,9 +25,9 @@ bool CallLowering::lowerCall(
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
   // we'll pass to the assigner function.
-  SmallVector<MVT, 8> ArgTys;
+  SmallVector<Type *, 8> ArgTys;
   for (auto &Arg : CI.arg_operands())
-    ArgTys.push_back(MVT::getVT(Arg->getType()));
+    ArgTys.push_back(Arg->getType());
 
   MachineOperand Callee = MachineOperand::CreateImm(0);
   if (Function *F = CI.getCalledFunction())
@@ -35,6 +35,6 @@ bool CallLowering::lowerCall(
   else
     Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  return lowerCall(MIRBuilder, Callee, MVT::getVT(CI.getType()),
+  return lowerCall(MIRBuilder, Callee, CI.getType(),
                    ResReg ? ResReg : ArrayRef<unsigned>(), ArgTys, ArgRegs);
 }

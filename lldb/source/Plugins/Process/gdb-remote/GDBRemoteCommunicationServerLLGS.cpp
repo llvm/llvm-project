@@ -1186,7 +1186,7 @@ GDBRemoteCommunicationServerLLGS::Handle_C (StringExtractorGDBRemote &packet)
     if (packet.GetBytesLeft () > 0)
     {
         // FIXME add continue at address support for $C{signo}[;{continue-address}].
-        if (packet.PeekChar() == ';')
+        if (*packet.Peek () == ';')
             return SendUnimplementedResponse (packet.GetStringRef().c_str());
         else
             return SendIllFormedResponse (packet, "unexpected content after $C{signal-number}");
@@ -1318,13 +1318,13 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
     }
 
     // Check if this is all continue (no options or ";c").
-    if (packet.Peek() == ";c")
+    if (::strcmp (packet.Peek (), ";c") == 0)
     {
         // Move past the ';', then do a simple 'c'.
         packet.SetFilePos (packet.GetFilePos () + 1);
         return Handle_c (packet);
     }
-    else if (packet.Peek() == ";s")
+    else if (::strcmp (packet.Peek (), ";s") == 0)
     {
         // Move past the ';', then do a simple 's'.
         packet.SetFilePos (packet.GetFilePos () + 1);
@@ -1341,7 +1341,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
 
     ResumeActionList thread_actions;
 
-    while (packet.GetBytesLeft() && packet.PeekChar() == ';')
+    while (packet.GetBytesLeft () && *packet.Peek () == ';')
     {
         // Skip the semi-colon.
         packet.GetChar ();
@@ -1383,7 +1383,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
         }
 
         // Parse out optional :{thread-id} value.
-        if (packet.GetBytesLeft() && packet.PeekChar() == ':')
+        if (packet.GetBytesLeft () && (*packet.Peek () == ':'))
         {
             // Consume the separator.
             packet.GetChar ();
@@ -2926,7 +2926,7 @@ GDBRemoteCommunicationServerLLGS::GetThreadFromSuffix (StringExtractorGDBRemote 
         return thread_sp;
 
     // Parse out thread: portion.
-    if (packet.Peek().startswith("thread:"))
+    if (strncmp (packet.Peek (), "thread:", strlen("thread:")) != 0)
     {
         if (log)
             log->Printf ("GDBRemoteCommunicationServerLLGS::%s gdb-remote parse error: expected 'thread:' but not found, packet contents = '%s'", __FUNCTION__, packet.GetStringRef ().c_str ());

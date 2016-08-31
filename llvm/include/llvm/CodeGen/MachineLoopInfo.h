@@ -166,8 +166,8 @@ template <> struct GraphTraits<const MachineLoop*> {
   typedef MachineLoopInfo::iterator ChildIteratorType;
 
   static NodeRef getEntryNode(const MachineLoop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <> struct GraphTraits<MachineLoop*> {
@@ -175,8 +175,8 @@ template <> struct GraphTraits<MachineLoop*> {
   typedef MachineLoopInfo::iterator ChildIteratorType;
 
   static NodeRef getEntryNode(MachineLoop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 } // End llvm namespace

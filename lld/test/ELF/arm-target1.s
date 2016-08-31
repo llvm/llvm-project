@@ -7,6 +7,12 @@
 // RUN: not ld.lld -shared %t.o -o %t3.so 2>&1 | FileCheck %s \
 // RUN:   --check-prefix=ABS
 
+// RUN: ld.lld -shared %t.o -o %t2.so --target1-abs --target1-rel
+// RUN: llvm-objdump -t -d %t2.so | FileCheck %s \
+// RUN:   --check-prefix=RELATIVE
+// RUN: not ld.lld -shared %t.o -o %t3.so --target1-rel --target1-abs 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ABS
+
 // RELOC: Relocations [
 // RELOC:   .rel.text {
 // RELOC:     0x0 R_ARM_TARGET1 patatino 0x0

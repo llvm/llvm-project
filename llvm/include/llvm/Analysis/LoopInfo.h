@@ -635,7 +635,7 @@ public:
   // Debugging
   void print(raw_ostream &OS) const;
 
-  void verify() const;
+  void verify(const DominatorTreeBase<BlockT> &DomTree) const;
 };
 
 // Implementation in LoopInfoImpl.h
@@ -765,8 +765,8 @@ template <> struct GraphTraits<const Loop*> {
   typedef LoopInfo::iterator ChildIteratorType;
 
   static NodeRef getEntryNode(const Loop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <> struct GraphTraits<Loop*> {
@@ -774,8 +774,8 @@ template <> struct GraphTraits<Loop*> {
   typedef LoopInfo::iterator ChildIteratorType;
 
   static NodeRef getEntryNode(Loop *L) { return L; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 /// \brief Analysis pass that exposes the \c LoopInfo for a function.
