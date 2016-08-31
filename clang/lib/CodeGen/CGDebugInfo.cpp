@@ -1548,22 +1548,49 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 }
 
 void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
-                                    SmallVectorImpl<llvm::Metadata *> &EltTys) {
-  const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
-
-  // If there is a primary base then it will hold vtable info.
-  if (RL.getPrimaryBase())
-    return;
-
+                                    SmallVectorImpl<llvm::Metadata *> &EltTys,
+                                    llvm::DICompositeType *RecordTy) {
   // If this class is not dynamic then there is not any vtable info to collect.
   if (!RD->isDynamicClass())
     return;
 
+  // CodeView needs to know how large the vtable of every dynamic class is, so
+  // emit a special named pointer type into the element list. The vptr type
+  // points to this type as well.
+  llvm::DIType *VPtrTy = nullptr;
+  bool NeedVTableShape = CGM.getCodeGenOpts().EmitCodeView &&
+                         CGM.getTarget().getCXXABI().isMicrosoft();
+  if (NeedVTableShape) {
+    uint64_t PtrWidth =
+        CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
+    const VTableLayout &VFTLayout =
+        CGM.getMicrosoftVTableContext().getVFTableLayout(RD, CharUnits::Zero());
+    unsigned VSlotCount =
+        VFTLayout.getNumVTableComponents() - CGM.getLangOpts().RTTIData;
+    unsigned VTableWidth = PtrWidth * VSlotCount;
+
+    // Create a very wide void* type and insert it directly in the element list.
+    llvm::DIType *VTableType =
+        DBuilder.createPointerType(nullptr, VTableWidth, 0, "__vtbl_ptr_type");
+    EltTys.push_back(VTableType);
+
+    // The vptr is a pointer to this special vtable type.
+    VPtrTy = DBuilder.createPointerType(VTableType, PtrWidth);
+  }
+
+  // If there is a primary base then the artificial vptr member lives there.
+  const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
+  if (RL.getPrimaryBase())
+    return;
+
+  if (!VPtrTy)
+    VPtrTy = getOrCreateVTablePtrType(Unit);
+
   unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
-  llvm::DIType *VPTR = DBuilder.createMemberType(
+  llvm::DIType *VPtrMember = DBuilder.createMemberType(
       Unit, getVTableName(RD), Unit, 0, Size, 0, 0,
-      llvm::DINode::FlagArtificial, getOrCreateVTablePtrType(Unit));
-  EltTys.push_back(VPTR);
+      llvm::DINode::FlagArtificial, VPtrTy);
+  EltTys.push_back(VPtrMember);
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateRecordType(QualType RTy,
@@ -1760,7 +1787,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
   if (CXXDecl) {
     CollectCXXBases(CXXDecl, DefUnit, EltTys, FwdDecl);
-    CollectVTableInfo(CXXDecl, DefUnit, EltTys);
+    CollectVTableInfo(CXXDecl, DefUnit, EltTys, FwdDecl);
   }
 
   // Collect data fields (including static variables and any initializers).
