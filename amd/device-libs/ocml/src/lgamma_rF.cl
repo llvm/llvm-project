@@ -164,7 +164,7 @@ MATH_MANGLE(lgamma_r)(float x, __private int *signp)
     float ax = AS_FLOAT(uax);
     float ret;
 
-    if (ax < 0x1.0p-8) {
+    if (ax < 0x1.0p-6f) {
         ret = MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, z4, z3), z2), z1),
                        -MATH_MANGLE(log)(ax));
     } else if (ax < 2.0) {
@@ -257,7 +257,7 @@ MATH_MANGLE(lgamma_r)(float x, __private int *signp)
 
     int s = 0;
     if (x >= 0.0f) {
-        ret = x == 1.0f | x == 2.0f ? 0.0f : ret;
+        ret = (x == 1.0f) | (x == 2.0f) ? 0.0f : ret;
         s = x == 0.0f ? 0 : 1;
     } else if (uax < 0x4b000000) { // x > -0x1.0p+23
         float t = MATH_MANGLE(sinpi)(x);
@@ -270,8 +270,7 @@ MATH_MANGLE(lgamma_r)(float x, __private int *signp)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        // Handle negative integer, Inf, NaN
-        ret = (uax == PINFBITPATT_SP32) | (x < 0.0f & uax >= 0x4b000000) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = (uax == 0) | (uax == PINFBITPATT_SP32) | ((x < 0.0f) & (uax >= 0x4b000000)) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = uax > PINFBITPATT_SP32 ? x : ret;
     }
 

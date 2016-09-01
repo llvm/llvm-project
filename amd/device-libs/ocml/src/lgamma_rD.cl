@@ -278,7 +278,7 @@ MATH_MANGLE(lgamma_r)(double x, __private int *signp)
 
     if (!FINITE_ONLY_OPT()) {
         // Handle negative integer, Inf, NaN
-        ret = BUILTIN_CLASS_F64(ax, CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = BUILTIN_CLASS_F64(ax, CLASS_NZER|CLASS|PZER|CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) ? x : ret;
     }
 
