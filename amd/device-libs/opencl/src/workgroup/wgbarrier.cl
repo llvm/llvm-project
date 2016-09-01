@@ -5,12 +5,12 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
+#include "ockl.h"
 
 __attribute__((overloadable, always_inline)) void
 barrier(cl_mem_fence_flags flags)
 {
-    work_group_barrier(flags);
+    __ockl_barrier(flags);
 }
 
 __attribute__((overloadable, always_inline)) void
@@ -22,15 +22,6 @@ work_group_barrier(cl_mem_fence_flags flags)
 __attribute__((overloadable, always_inline)) void
 work_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
 {
-#if 0
-    atomic_work_item_fence(flags, memory_order_release, scope);
-    __llvm_amdgcn_s_barrier();
-    atomic_work_item_fence(flags, memory_order_acquire, scope);
-#else
-    // Work around LIGHTNING-287
-    __llvm_amdgcn_s_waitcnt(0);
-    __llvm_amdgcn_s_dcache_wb();
-    __llvm_amdgcn_s_barrier();
-#endif
+    __ockl_work_group_barrier(flags, scope);
 }
 
