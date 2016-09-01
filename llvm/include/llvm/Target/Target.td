@@ -961,6 +961,14 @@ def PATCHABLE_RET : Instruction {
   let hasSideEffects = 1;
   let isReturn = 1;
 }
+def PATCHABLE_TAIL_CALL : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "# XRay Tail Call Exit.";
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+  let isReturn = 1;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"

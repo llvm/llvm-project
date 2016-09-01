@@ -28,4 +28,4 @@ X2& get_X2() {
   return X0<X2>::value; // expected-note{{instantiation}}
 }
 
-template<typename T> T x; // expected-warning{{variable templates are a C++14 extension}}
+template<typename T> T x; // expected-warning 0-1{{variable templates are a C++14 extension}}

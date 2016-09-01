@@ -60,4 +60,12 @@ std::string consumeAndGetMessage(Error &&E) {
   return Message;
 }
 
+void dieIfError(Error &&E) {
+  if (E) {
+    std::fprintf(stderr, "Error encountered: %s.\n",
+                 streamexecutor::consumeAndGetMessage(std::move(E)).c_str());
+    std::exit(EXIT_FAILURE);
+  }
+}
+
 } // namespace streamexecutor

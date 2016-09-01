@@ -2645,7 +2645,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
       CollectMultipleMethodsInGlobalPool(Sel, Methods, true/*InstanceFirst*/,
                                          true/*CheckTheOther*/, typeBound);
       if (!Methods.empty()) {
-        // We chose the first method as the initial condidate, then try to
+        // We choose the first method as the initial candidate, then try to
         // select a better one.
         Method = Methods[0];
 
@@ -2701,7 +2701,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
                                                false/*InstanceFirst*/,
                                                true/*CheckTheOther*/);
             if (!Methods.empty()) {
-              // We chose the first method as the initial condidate, then try
+              // We choose the first method as the initial candidate, then try
               // to select a better one.
               Method = Methods[0];
 
@@ -2789,7 +2789,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
                                                  true/*InstanceFirst*/,
                                                  false/*CheckTheOther*/);
               if (!Methods.empty()) {
-                // We chose the first method as the initial condidate, then try
+                // We choose the first method as the initial candidate, then try
                 // to select a better one.
                 Method = Methods[0];
 

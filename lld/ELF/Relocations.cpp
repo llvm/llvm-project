@@ -574,7 +574,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // This relocation does not require got entry, but it is relative to got and
     // needs it to be created. Here we request for that.
-    if (Expr == R_GOTONLY_PC || Expr == R_GOTREL || Expr == R_PPC_TOC)
+    if (Expr == R_GOTONLY_PC || Expr == R_GOTONLY_PC_FROM_END ||
+        Expr == R_GOTREL || Expr == R_GOTREL_FROM_END || Expr == R_PPC_TOC)
       Out<ELFT>::Got->HasGotOffRel = true;
 
     uintX_t Addend = computeAddend(File, Buf, E, RI, Expr, Body);

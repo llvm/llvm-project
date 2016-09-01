@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -69,7 +70,8 @@ public:
 
   Error visitUnknownType(const CVRecord<TypeLeafKind> &Record) override;
 
-  Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
+  Expected<TypeLeafKind>
+  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
   Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override;
 
   bool mergeStream(const CVTypeArray &Types);
@@ -84,8 +86,13 @@ private:
 
   Error visitKnownRecordImpl(FieldListRecord &Record) {
     // Don't do anything, this will get written in the call to visitTypeEnd().
-    TypeDeserializer Deserializer(*this);
-    CVTypeVisitor Visitor(Deserializer);
+    TypeVisitorCallbackPipeline Pipeline;
+    TypeDeserializer Deserializer;
+
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(*this);
+
+    CVTypeVisitor Visitor(Pipeline);
 
     if (auto EC = Visitor.visitFieldListMemberStream(Record.Data))
       return EC;
@@ -117,13 +124,14 @@ private:
 
 } // end anonymous namespace
 
-Error TypeStreamMerger::visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) {
+Expected<TypeLeafKind>
+TypeStreamMerger::visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) {
   if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
     assert(!IsInFieldList);
     IsInFieldList = true;
   } else
     BeginIndexMapSize = IndexMap.size();
-  return Error::success();
+  return Rec.Type;
 }
 
 Error TypeStreamMerger::visitTypeEnd(const CVRecord<TypeLeafKind> &Rec) {
@@ -160,8 +168,13 @@ Error TypeStreamMerger::visitUnknownType(const CVRecord<TypeLeafKind> &Rec) {
 
 bool TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   assert(IndexMap.empty());
-  TypeDeserializer Deserializer(*this);
-  CVTypeVisitor Visitor(Deserializer);
+  TypeVisitorCallbackPipeline Pipeline;
+
+  TypeDeserializer Deserializer;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(*this);
+
+  CVTypeVisitor Visitor(Pipeline);
 
   if (auto EC = Visitor.visitTypeStream(Types)) {
     consumeError(std::move(EC));

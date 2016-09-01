@@ -68,7 +68,8 @@ public:
 
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.
-  Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
+  Expected<TypeLeafKind>
+  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
   Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \

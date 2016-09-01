@@ -26,10 +26,10 @@ namespace out_of_line {
     template<typename T, typename T0> static CONST T right = T(100);
     template<typename T> static CONST T right<T,int> = T(5);
   };
-  template<> CONST int B0::right<int,int> = 7;
-  template CONST int B0::right<int,int>;
-  template<> CONST int B0::right<int,float>;
-  template CONST int B0::right<int,float>;
+  template<> CONST int B0::right<int,int> = 7; // expected-note {{previous}}
+  template CONST int B0::right<int,int>; // expected-warning {{has no effect}}
+  template<> CONST int B0::right<int,float>; // expected-note {{previous}}
+  template CONST int B0::right<int,float>; // expected-warning {{has no effect}}
 
   class B1 {
     template<typename T, typename T0> static CONST T right;

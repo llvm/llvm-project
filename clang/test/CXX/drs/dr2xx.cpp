@@ -679,17 +679,13 @@ namespace dr258 { // dr258: yes
   } f; // expected-error {{abstract}}
 }
 
-namespace dr259 { // dr259: yes c++11
+namespace dr259 { // dr259: 4.0
   template<typename T> struct A {};
   template struct A<int>; // expected-note {{previous}}
   template struct A<int>; // expected-error {{duplicate explicit instantiation}}
 
-  // FIXME: We only apply this DR in C++11 mode.
-  template<> struct A<float>;
-  template struct A<float>;
-#if __cplusplus < 201103L
-  // expected-error@-2 {{extension}} expected-note@-3 {{here}}
-#endif
+  template<> struct A<float>; // expected-note {{previous}}
+  template struct A<float>; // expected-warning {{has no effect}}
 
   template struct A<char>; // expected-note {{here}}
   template<> struct A<char>; // expected-error {{explicit specialization of 'dr259::A<char>' after instantiation}}
@@ -702,11 +698,8 @@ namespace dr259 { // dr259: yes c++11
   template<typename T> struct B; // expected-note {{here}}
   template struct B<int>; // expected-error {{undefined}}
 
-  template<> struct B<float>;
-  template struct B<float>;
-#if __cplusplus < 201103L
-  // expected-error@-2 {{extension}} expected-note@-3 {{here}}
-#endif
+  template<> struct B<float>; // expected-note {{previous}}
+  template struct B<float>; // expected-warning {{has no effect}}
 }
 
 // FIXME: When dr260 is resolved, also add tests for DR507.

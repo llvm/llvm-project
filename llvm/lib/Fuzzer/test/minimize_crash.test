@@ -1,0 +1,6 @@
+CHECK: CRASH_MIN: failed to minimize beyond minimized-from-{{.*}} (3 bytes), exiting
+RUN: echo 'Hi!rv349f34t3gg' > not_minimal_crash
+RUN: LLVMFuzzer-NullDerefTest -minimize_crash=1 not_minimal_crash -max_total_time=2 2>&1 | FileCheck %s
+RUN: rm not_minimal_crash minimized-from-*
+
+
