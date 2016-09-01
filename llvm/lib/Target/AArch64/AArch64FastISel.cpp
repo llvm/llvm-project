@@ -2860,7 +2860,7 @@ bool AArch64FastISel::fastLowerArguments() {
     return false;
 
   CallingConv::ID CC = F->getCallingConv();
-  if (CC != CallingConv::C)
+  if (CC != CallingConv::C && CC != CallingConv::Swift)
     return false;
 
   // Only handle simple cases of up to 8 GPR and FPR each.
