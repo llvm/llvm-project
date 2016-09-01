@@ -288,13 +288,13 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
                                      bool Shared) const {
   const llvm::Triple &TT = getTriple();
   const char *Env = TT.isAndroid() ? "-android" : "";
-  bool IsWindowsIAMSVC =
+  bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
 
   StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
-  const char *Prefix = (IsWindowsIAMSVC && Shared) ? "" : "lib";
+  const char *Prefix = IsITANMSVCWindows ? "" : "lib";
   const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
-                              : (IsWindowsIAMSVC ? ".lib" : ".a");
+                              : (IsITANMSVCWindows ? ".lib" : ".a");
 
   SmallString<128> Path(getDriver().ResourceDir);
   StringRef OSLibName = Triple.isOSFreeBSD() ? "freebsd" : getOS();

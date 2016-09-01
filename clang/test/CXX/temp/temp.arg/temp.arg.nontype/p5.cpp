@@ -1,3 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // C++0x [temp.arg.nontype] p5:
@@ -45,15 +49,23 @@ namespace pointer_to_object_parameters {
     operator int() const;
   };
   
-  template<X const *Ptr> struct A2; // expected-note{{template parameter is declared here}}
+  template<X const *Ptr> struct A2; // expected-note 0-1{{template parameter is declared here}}
   
-  X *X_ptr;
+  X *X_ptr; // expected-note 0-1{{declared here}}
   X an_X;
   X array_of_Xs[10];
-  A2<X_ptr> *a12; // expected-error{{must have its address taken}}
+  A2<X_ptr> *a12;
+#if __cplusplus < 201103L
+  // expected-error@-2 {{must have its address taken}}
+#else
+  // expected-error@-4 {{not a constant expression}} expected-note@-4 {{read of non-constexpr variable}}
+#endif
   A2<array_of_Xs> *a13;
   A2<&an_X> *a13_2;
-  A2<(&an_X)> *a13_3; // expected-warning{{address non-type template argument cannot be surrounded by parentheses}}
+  A2<(&an_X)> *a13_3;
+#if __cplusplus < 201103L
+  // expected-warning@-2 {{address non-type template argument cannot be surrounded by parentheses}}
+#endif
 
   // PR6244
   struct X1 {} X1v;
@@ -62,12 +74,24 @@ namespace pointer_to_object_parameters {
   struct X4 : X3<&X1v> { };
 
   // PR6563
-  int *bar;
-  template <int *> struct zed {}; // expected-note 2{{template parameter is declared here}}
-  void g(zed<bar>*); // expected-error{{must have its address taken}}
+  int *bar; // expected-note 0-1{{declared here}}
+  template <int *> struct zed {}; // expected-note 0-2{{template parameter is declared here}}
+  void g(zed<bar>*);
+#if __cplusplus < 201103L
+  // expected-error@-2 {{must have its address taken}}
+#else
+  // expected-error@-4 {{not a constant expression}} expected-note@-4 {{read of non-constexpr variable}}
+#endif
 
-  int baz;
-  void g2(zed<baz>*); // expected-error{{must have its address taken}}
+  int baz; // expected-note 0-1{{declared here}}
+  void g2(zed<baz>*);
+#if __cplusplus < 201103L
+  // expected-error@-2 {{must have its address taken}}
+#elif __cplusplus <= 201402L
+  // expected-error@-4 {{not a constant expression}} expected-note@-4 {{read of non-const variable}}
+#else
+  // expected-error@-6 {{not implicitly convertible to 'int *'}}
+#endif
 
   void g3(zed<&baz>*); // okay
 }
@@ -78,9 +102,9 @@ namespace pointer_to_object_parameters {
 //        template-argument. The template-parameter is bound directly to the
 //        template-argument, which shall be an lvalue.
 namespace reference_parameters {
-  template <int& N> struct S0 { }; // expected-note 3 {{template parameter is declared here}}
-  template <const int& N> struct S1 { }; // expected-note 2 {{template parameter is declared here}}
-  template <volatile int& N> struct S2 { }; // expected-note 2 {{template parameter is declared here}}
+  template <int& N> struct S0 { }; // expected-note 0-3{{template parameter is declared here}}
+  template <const int& N> struct S1 { }; // expected-note 0-2{{template parameter is declared here}}
+  template <volatile int& N> struct S2 { }; // expected-note 0-2{{template parameter is declared here}}
   template <const volatile int& N> struct S3 { };
   int i;
   extern const int ci;
@@ -88,19 +112,19 @@ namespace reference_parameters {
   extern const volatile int cvi;
   void test() {
     S0<i> s0;
-    S0<ci> s0c; // expected-error{{reference binding of non-type template parameter of type 'int &' to template argument of type 'const int' ignores qualifiers}}
-    S0<vi> s0v; // expected-error{{reference binding of non-type template parameter of type 'int &' to template argument of type 'volatile int' ignores qualifiers}}
-    S0<cvi> s0cv; // expected-error{{reference binding of non-type template parameter of type 'int &' to template argument of type 'const volatile int' ignores qualifiers}}
+    S0<ci> s0c; // expected-error{{type 'const int'}}
+    S0<vi> s0v; // expected-error{{type 'volatile int'}}
+    S0<cvi> s0cv; // expected-error{{type 'const volatile int'}}
 
     S1<i> s1;
     S1<ci> s1c;
-    S1<vi> s1v; // expected-error{{reference binding of non-type template parameter of type 'const int &' to template argument of type 'volatile int' ignores qualifiers}}
-    S1<cvi> s1cv; // expected-error{{reference binding of non-type template parameter of type 'const int &' to template argument of type 'const volatile int' ignores qualifiers}}
+    S1<vi> s1v; // expected-error{{type 'volatile int'}}
+    S1<cvi> s1cv; // expected-error{{type 'const volatile int'}}
 
     S2<i> s2;
-    S2<ci> s2c; // expected-error{{reference binding of non-type template parameter of type 'volatile int &' to template argument of type 'const int' ignores qualifiers}}
+    S2<ci> s2c; // expected-error{{type 'const int'}}
     S2<vi> s2v;
-    S2<cvi> s2cv; // expected-error{{reference binding of non-type template parameter of type 'volatile int &' to template argument of type 'const volatile int' ignores qualifiers}}
+    S2<cvi> s2cv; // expected-error{{type 'const volatile int'}}
 
     S3<i> s3;
     S3<ci> s3c;
@@ -125,9 +149,12 @@ namespace reference_parameters {
   }
 
   namespace PR6749 {
-    template <int& i> struct foo {}; // expected-note{{template parameter is declared here}}
+    template <int& i> struct foo {}; // expected-note 0-1{{template parameter is declared here}}
     int x, &y = x;
-    foo<y> f; // expected-error{{is not an object}}
+    foo<y> f;
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{is not an object}}
+#endif
   }
 }
 
@@ -138,16 +165,21 @@ namespace reference_parameters {
 //        a set of overloaded functions (or a pointer to such), the matching
 //        function is selected from the set (13.4).
 namespace pointer_to_function {
-  template<int (*)(int)> struct X0 { }; // expected-note 3{{template parameter is declared here}}
+  template<int (*)(int)> struct X0 { }; // expected-note 0-3{{template parameter is declared here}}
   int f(int);
   int f(float);
   int g(float);
-  int (*funcptr)(int);
+  int (*funcptr)(int); // expected-note 0-1{{declared here}}
   void x0a(X0<f>);
   void x0b(X0<&f>);
-  void x0c(X0<g>); // expected-error{{non-type template argument of type 'int (float)' cannot be converted to a value of type 'int (*)(int)'}}
-  void x0d(X0<&g>); // expected-error{{non-type template argument of type 'int (*)(float)' cannot be converted to a value of type 'int (*)(int)'}}
-  void x0e(X0<funcptr>); // expected-error{{must have its address taken}}
+  void x0c(X0<g>); // expected-error-re{{type 'int (float)' {{.*}}convert{{.*}} 'int (*)(int)'}}
+  void x0d(X0<&g>); // expected-error-re{{type 'int (*)(float)' {{.*}}convert{{.*}} 'int (*)(int)'}}
+  void x0e(X0<funcptr>);
+#if __cplusplus < 201103L
+  // expected-error@-2 {{must have its address taken}}
+#else
+  // expected-error@-4 {{not a constant expression}} expected-note@-4 {{read of non-constexpr variable}}
+#endif
 }
 
 //     -- For a non-type template-parameter of type reference to function, no
@@ -155,16 +187,23 @@ namespace pointer_to_function {
 //        overloaded functions, the matching function is selected from the set
 //        (13.4).
 namespace reference_to_function {
-  template<int (&)(int)> struct X0 { }; // expected-note 4{{template parameter is declared here}}
+  template<int (&)(int)> struct X0 { }; // expected-note 0-4{{template parameter is declared here}}
   int f(int);
   int f(float);
   int g(float);
   int (*funcptr)(int);
   void x0a(X0<f>);
+#if __cplusplus <= 201402L
   void x0b(X0<&f>); // expected-error{{address taken in non-type template argument for template parameter of reference type 'int (&)(int)'}}
   void x0c(X0<g>); // expected-error{{non-type template parameter of reference type 'int (&)(int)' cannot bind to template argument of type 'int (float)'}}
   void x0d(X0<&g>); // expected-error{{address taken in non-type template argument for template parameter of reference type 'int (&)(int)'}}
   void x0e(X0<funcptr>); // expected-error{{non-type template parameter of reference type 'int (&)(int)' cannot bind to template argument of type 'int (*)(int)'}}
+#else
+  void x0b(X0<&f>); // expected-error{{value of type '<overloaded function type>' is not implicitly convertible to 'int (&)(int)'}}
+  void x0c(X0<g>); // expected-error{{value of type 'int (float)' is not implicitly convertible to 'int (&)(int)'}}
+  void x0d(X0<&g>); // expected-error{{value of type 'int (*)(float)' is not implicitly convertible to 'int (&)(int)'}}
+  void x0e(X0<funcptr>); // expected-error{{value of type 'int (*)(int)' is not implicitly convertible to 'int (&)(int)'}}
+#endif
 }
 //     -- For a non-type template-parameter of type pointer to member function,
 //        if the template-argument is of type std::nullptr_t, the null member
@@ -181,10 +220,10 @@ namespace pointer_to_member_function {
     float h(float);
   };
 
-  template<int (Y::*)(int)> struct X0 {}; // expected-note{{template parameter is declared here}}
+  template<int (Y::*)(int)> struct X0 {}; // expected-note 0-1{{template parameter is declared here}}
   X0<&Y::f> x0a;
   X0<&Y::g> x0b;
-  X0<&Y::h> x0c; // expected-error-re{{non-type template argument of type 'float (pointer_to_member_function::Y::*)(float){{( __attribute__\(\(thiscall\)\))?}}' cannot be converted to a value of type 'int (pointer_to_member_function::Y::*)(int){{( __attribute__\(\(thiscall\)\))?}}'}}
+  X0<&Y::h> x0c; // expected-error-re{{type 'float (pointer_to_member_function::Y::*)(float){{( __attribute__\(\(thiscall\)\))?}}' {{.*}} convert{{.*}} 'int (pointer_to_member_function::Y::*)(int){{( __attribute__\(\(thiscall\)\))?}}'}}
 }
 
 //     -- For a non-type template-parameter of type pointer to data member,
@@ -195,9 +234,14 @@ namespace pointer_to_member_data {
   struct X { int x; };
   struct Y : X { int y; };
 
-  template<int Y::*> struct X0 {}; // expected-note{{template parameter is declared here}}
+  template<int Y::*> struct X0 {}; // expected-note 0-1{{template parameter is declared here}}
   X0<&Y::y> x0a;
-  X0<&Y::x> x0b;  // expected-error{{non-type template argument of type 'int pointer_to_member_data::X::*' cannot be converted to a value of type 'int pointer_to_member_data::Y::*'}}
+  X0<&Y::x> x0b;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{non-type template argument of type 'int pointer_to_member_data::X::*' cannot be converted to a value of type 'int pointer_to_member_data::Y::*'}}
+#else
+  // expected-error@-4 {{conversion from 'int pointer_to_member_data::X::*' to 'int pointer_to_member_data::Y::*' is not allowed in a converted constant expression}}
+#endif
 
   // Test qualification conversions
   template<const int Y::*> struct X1 {};

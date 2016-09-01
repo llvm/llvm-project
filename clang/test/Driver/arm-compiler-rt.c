@@ -11,7 +11,7 @@
 // ARM-GNUEABIHF-ABI: "{{.*[/\\]}}libclang_rt.builtins-arm.a"
 
 // RUN: %clang -target arm-windows-itanium -rtlib=compiler-rt -### %s 2>&1 | FileCheck %s -check-prefix ARM-WINDOWS
-// ARM-WINDOWS: "{{.*[/\\]}}libclang_rt.builtins-arm.lib"
+// ARM-WINDOWS: "{{.*[/\\]}}clang_rt.builtins-arm.lib"
 
 // RUN: %clang -target arm-linux-androideabi -rtlib=compiler-rt -### %s 2>&1 | FileCheck %s -check-prefix ARM-ANDROID
 // ARM-ANDROID: "{{.*[/\\]}}libclang_rt.builtins-arm-android.a"

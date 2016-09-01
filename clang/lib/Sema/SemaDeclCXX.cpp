@@ -6765,13 +6765,14 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
   SpecialMemberDeletionInfo SMI(*this, MD, CSM, ICI, Diagnose);
 
   for (auto &BI : RD->bases())
-    if (!BI.isVirtual() &&
+    if ((SMI.IsAssignment || !BI.isVirtual()) &&
         SMI.shouldDeleteForBase(&BI))
       return true;
 
   // Per DR1611, do not consider virtual bases of constructors of abstract
-  // classes, since we are not going to construct them.
-  if (!RD->isAbstract() || !SMI.IsConstructor) {
+  // classes, since we are not going to construct them. For assignment
+  // operators, we only assign (and thus only consider) direct bases.
+  if ((!RD->isAbstract() || !SMI.IsConstructor) && !SMI.IsAssignment) {
     for (auto &BI : RD->vbases())
       if (SMI.shouldDeleteForBase(&BI))
         return true;

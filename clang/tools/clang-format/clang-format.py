@@ -25,6 +25,7 @@
 #
 # It operates on the current, potentially unsaved buffer and does not create
 # or save any files. To revert a formatting, just undo.
+from __future__ import print_function
 
 import difflib
 import json
@@ -49,6 +50,7 @@ if vim.eval('exists("g:clang_format_fallback_style")') == "1":
 
 def main():
   # Get the current text.
+  encoding = vim.eval("&encoding")
   buf = vim.current.buffer
   text = '\n'.join(buf)
 
@@ -61,7 +63,7 @@ def main():
   # Determine the cursor position.
   cursor = int(vim.eval('line2byte(line("."))+col(".")')) - 2
   if cursor < 0:
-    print 'Couldn\'t determine cursor position. Is your file empty?'
+    print('Couldn\'t determine cursor position. Is your file empty?')
     return
 
   # Avoid flashing an ugly, ugly cmd prompt on Windows when invoking clang-format.
@@ -82,17 +84,19 @@ def main():
   p = subprocess.Popen(command,
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        stdin=subprocess.PIPE, startupinfo=startupinfo)
-  stdout, stderr = p.communicate(input=text)
+  stdout, stderr = p.communicate(input=text.encode(encoding))
 
   # If successful, replace buffer contents.
   if stderr:
-    print stderr
+    print(stderr)
 
   if not stdout:
-    print ('No output from clang-format (crashed?).\n' +
-        'Please report to bugs.llvm.org.')
+    print(
+        'No output from clang-format (crashed?).\n'
+        'Please report to bugs.llvm.org.'
+    )
   else:
-    lines = stdout.split('\n')
+    lines = stdout.decode(encoding).split('\n')
     output = json.loads(lines[0])
     lines = lines[1:]
     sequence = difflib.SequenceMatcher(None, vim.current.buffer, lines)
@@ -100,7 +104,7 @@ def main():
       if op[0] is not 'equal':
         vim.current.buffer[op[1]:op[2]] = lines[op[3]:op[4]]
     if output.get('IncompleteFormat'):
-      print 'clang-format: incomplete (syntax errors)'
+      print('clang-format: incomplete (syntax errors)')
     vim.command('goto %d' % (output['Cursor'] + 1))
 
 main()

@@ -950,11 +950,9 @@ template <> struct GraphTraits< ::clang::CFGBlock *> {
 
   static NodeRef getEntryNode(::clang::CFGBlock *BB) { return BB; }
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return N->succ_begin();
-  }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
 
-  static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
 template <> struct GraphTraits< const ::clang::CFGBlock *> {
@@ -963,11 +961,9 @@ template <> struct GraphTraits< const ::clang::CFGBlock *> {
 
   static NodeRef getEntryNode(const clang::CFGBlock *BB) { return BB; }
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return N->succ_begin();
-  }
+  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
 
-  static inline ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 };
 
 template <> struct GraphTraits<Inverse< ::clang::CFGBlock*> > {
@@ -978,11 +974,9 @@ template <> struct GraphTraits<Inverse< ::clang::CFGBlock*> > {
     return G.Graph;
   }
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return N->pred_begin();
-  }
+  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
 
-  static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 };
 
 template <> struct GraphTraits<Inverse<const ::clang::CFGBlock*> > {
@@ -993,11 +987,9 @@ template <> struct GraphTraits<Inverse<const ::clang::CFGBlock*> > {
     return G.Graph;
   }
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return N->pred_begin();
-  }
+  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
 
-  static inline ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 };
 
 // Traits for: CFG

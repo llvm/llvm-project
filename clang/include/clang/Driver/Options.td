@@ -2127,7 +2127,7 @@ multiclass BooleanFFlag<string name> {
 
 defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimization_f_Group>;
 
-def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<clang_ignored_gcc_optimization_f_Group>;
+def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<f_Group>;
 
 def fuse_ld_EQ : Joined<["-"], "fuse-ld=">, Group<f_Group>;
 

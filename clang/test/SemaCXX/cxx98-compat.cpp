@@ -361,7 +361,7 @@ template<typename T> T var = T(10);
 // diagnosed the primary template.
 template<typename T> T* var<T*> = new T();
 template<> int var<int> = 10;
-template int var<int>;
+template char var<char>;
 float fvar = var<float>;
 
 class A {
@@ -391,7 +391,7 @@ template<typename T> T B::v = T();
 
 template<typename T> T* B::v<T*> = new T();
 template<> int B::v<int> = 10;
-template int B::v<int>;
+template char B::v<char>;
 float fsvar = B::v<float>;
 
 #ifdef CXX14COMPAT
