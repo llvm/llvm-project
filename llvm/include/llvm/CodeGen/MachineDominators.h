@@ -275,8 +275,8 @@ struct MachineDomTreeGraphTraitsBase {
   typedef ChildIterator ChildIteratorType;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
 template <class T> struct GraphTraits;

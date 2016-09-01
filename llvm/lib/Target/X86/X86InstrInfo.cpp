@@ -8061,6 +8061,29 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
+bool X86InstrInfo::isTailCall(const MachineInstr &Inst) const {
+  switch (Inst.getOpcode()) {
+    case X86::TCRETURNdi:
+    case X86::TCRETURNmi:
+    case X86::TCRETURNri:
+    case X86::TCRETURNdi64:
+    case X86::TCRETURNmi64:
+    case X86::TCRETURNri64:
+    case X86::TAILJMPd:
+    case X86::TAILJMPm:
+    case X86::TAILJMPr:
+    case X86::TAILJMPd64:
+    case X86::TAILJMPm64:
+    case X86::TAILJMPr64:
+    case X86::TAILJMPd64_REX:
+    case X86::TAILJMPm64_REX:
+    case X86::TAILJMPr64_REX:
+      return true;
+    default:
+      return false;
+  }
+}
+
 namespace {
   /// Create Global Base Reg pass. This initializes the PIC
   /// global base register for x86-32.

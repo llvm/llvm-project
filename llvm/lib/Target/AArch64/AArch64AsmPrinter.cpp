@@ -354,7 +354,7 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NumNOPBytes = MI.getOperand(1).getImm();
+  unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
 
   SM.recordStackMap(MI);
   assert(NumNOPBytes % 4 == 0 && "Invalid number of NOP bytes requested!");

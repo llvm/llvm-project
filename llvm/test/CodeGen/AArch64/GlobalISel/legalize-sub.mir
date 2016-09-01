@@ -24,8 +24,8 @@ body: |
     ; CHECK-LABEL: name: test_scalar_sub_small
     ; CHECK: [[RES:%.*]](8) = G_SUB s8 %0, %1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(8) = G_TRUNC { s8, s64 } %0
     %3(8) = G_TRUNC { s8, s64 } %1
     %4(8) = G_SUB s8 %0, %1

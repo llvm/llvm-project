@@ -1,4 +1,5 @@
 ; RUN: opt -early-cse -S < %s | FileCheck %s
+; RUN: opt -basicaa -early-cse-memssa -S < %s | FileCheck %s
 
 declare void @use(i1)
 

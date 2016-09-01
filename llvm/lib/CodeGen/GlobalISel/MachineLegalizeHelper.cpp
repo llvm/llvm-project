@@ -104,7 +104,8 @@ MachineLegalizeHelper::libcall(MachineInstr &MI) {
   default:
     return UnableToLegalize;
   case TargetOpcode::G_FREM: {
-    MVT Ty = MVT::getFloatingPointVT(MI.getType().getSizeInBits());
+    auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    Type *Ty = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
     auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
     auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
     const char *Name =

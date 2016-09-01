@@ -7072,12 +7072,10 @@ as the ``MOVNT`` instruction on x86.
 
 The optional ``!invariant.load`` metadata must reference a single
 metadata name ``<index>`` corresponding to a metadata node with no
-entries. The existence of the ``!invariant.load`` metadata on the
-instruction tells the optimizer and code generator that the address
-operand to this load points to memory which can be assumed unchanged.
-Being invariant does not imply that a location is dereferenceable,
-but it does imply that once the location is known dereferenceable
-its value is henceforth unchanging.
+entries. If a load instruction tagged with the ``!invariant.load``
+metadata is executed, the optimizer may assume the memory location
+referenced by the load contains the same value at all points in the
+program where the memory location is known to be dereferenceable.
 
 The optional ``!invariant.group`` metadata must reference a single metadata name
  ``<index>`` corresponding to a metadata node. See ``invariant.group`` metadata.

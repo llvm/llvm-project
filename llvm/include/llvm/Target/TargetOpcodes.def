@@ -155,6 +155,11 @@ HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_ENTER)
 /// instrumentation instructions at runtime.
 HANDLE_TARGET_OPCODE(PATCHABLE_RET)
 
+/// Wraps a tail call instruction and its operands to enable adding nop sleds
+/// either before or after the tail exit. We use this as a disambiguation from
+/// PATCHABLE_RET which specifically only works for return instructions.
+HANDLE_TARGET_OPCODE(PATCHABLE_TAIL_CALL)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
@@ -327,6 +332,9 @@ HANDLE_TARGET_OPCODE(G_SITOFP)
 
 /// Generic unsigned-int to float conversion
 HANDLE_TARGET_OPCODE(G_UITOFP)
+
+/// Generic type specifier for untyped registers.
+HANDLE_TARGET_OPCODE(G_TYPE)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)

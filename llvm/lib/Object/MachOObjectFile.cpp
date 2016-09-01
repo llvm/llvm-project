@@ -184,7 +184,7 @@ static Expected<MachOObjectFile::LoadCommandInfo>
 getFirstLoadCommandInfo(const MachOObjectFile *Obj) {
   unsigned HeaderSize = Obj->is64Bit() ? sizeof(MachO::mach_header_64)
                                        : sizeof(MachO::mach_header);
-  if (sizeof(MachOObjectFile::LoadCommandInfo) > Obj->getHeader().sizeofcmds)
+  if (sizeof(MachO::load_command) > Obj->getHeader().sizeofcmds)
     return malformedError("load command 0 extends past the end all load "
                           "commands in the file");
   return getLoadCommandInfo(Obj, getPtr(Obj, HeaderSize), 0);
@@ -195,7 +195,7 @@ getNextLoadCommandInfo(const MachOObjectFile *Obj, uint32_t LoadCommandIndex,
                        const MachOObjectFile::LoadCommandInfo &L) {
   unsigned HeaderSize = Obj->is64Bit() ? sizeof(MachO::mach_header_64)
                                        : sizeof(MachO::mach_header);
-  if (L.Ptr + L.C.cmdsize + sizeof(MachOObjectFile::LoadCommandInfo) >
+  if (L.Ptr + L.C.cmdsize + sizeof(MachO::load_command) >
       Obj->getData().data() + HeaderSize + Obj->getHeader().sizeofcmds)
     return malformedError("load command " + Twine(LoadCommandIndex + 1) +
                           " extends past the end all load commands in the file");
@@ -474,6 +474,36 @@ static Error checkDysymtabCommand(const MachOObjectFile *Obj,
   return Error::success();
 }
 
+static Error checkLinkeditDataCommand(const MachOObjectFile *Obj,
+                                 const MachOObjectFile::LoadCommandInfo &Load,
+                                 uint32_t LoadCommandIndex,
+                                 const char **LoadCmd, const char *CmdName) {
+  if (Load.C.cmdsize < sizeof(MachO::linkedit_data_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) + " " +
+                          CmdName + " cmdsize too small");
+  if (*LoadCmd != nullptr)
+    return malformedError("more than one " + Twine(CmdName) + " command");
+  MachO::linkedit_data_command LinkData =
+    getStruct<MachO::linkedit_data_command>(Obj, Load.Ptr);
+  if (LinkData.cmdsize != sizeof(MachO::linkedit_data_command))
+    return malformedError(Twine(CmdName) + " command " +
+                          Twine(LoadCommandIndex) + " has incorrect cmdsize");
+  uint64_t FileSize = Obj->getData().size();
+  if (LinkData.dataoff > FileSize)
+    return malformedError("dataoff field of " + Twine(CmdName) + " command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  uint64_t BigSize = LinkData.dataoff;
+  BigSize += LinkData.datasize;
+  if (BigSize > FileSize)
+    return malformedError("dataoff field plus datasize field of " +
+                          Twine(CmdName) + " command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  *LoadCmd = Load.Ptr;
+  return Error::success();
+}
+
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOObjectFile::create(MemoryBufferRef Object, bool IsLittleEndian,
                         bool Is64Bits) {
@@ -550,19 +580,13 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       if ((Err = checkDysymtabCommand(this, Load, I, &DysymtabLoadCmd)))
         return;
     } else if (Load.C.cmd == MachO::LC_DATA_IN_CODE) {
-      // Multiple data in code tables
-      if (DataInCodeLoadCmd) {
-        Err = malformedError("Multiple data-in-code tables");
+      if ((Err = checkLinkeditDataCommand(this, Load, I, &DataInCodeLoadCmd,
+                                          "LC_DATA_IN_CODE")))
         return;
-      }
-      DataInCodeLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT) {
-      // Multiple linker optimization hint tables
-      if (LinkOptHintsLoadCmd) {
-        Err = malformedError("Multiple linker optimization hint tables");
+      if ((Err = checkLinkeditDataCommand(this, Load, I, &LinkOptHintsLoadCmd,
+                                          "LC_LINKER_OPTIMIZATION_HINT")))
         return;
-      }
-      LinkOptHintsLoadCmd = Load.Ptr;
     } else if (Load.C.cmd == MachO::LC_DYLD_INFO ||
                Load.C.cmd == MachO::LC_DYLD_INFO_ONLY) {
       // Multiple dyldinfo load commands

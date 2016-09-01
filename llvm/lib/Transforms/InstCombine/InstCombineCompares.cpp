@@ -35,11 +35,6 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
-// Initialization Routines
-
-static ConstantInt *getOne(Constant *C) {
-  return ConstantInt::get(cast<IntegerType>(C->getType()), 1);
-}
 
 static ConstantInt *ExtractElement(Constant *V, Constant *Idx) {
   return cast<ConstantInt>(ConstantExpr::getExtractElement(V, Idx));
@@ -1881,11 +1876,6 @@ Instruction *InstCombiner::foldICmpShrConstant(ICmpInst &Cmp,
     if (IsAShr && (!Shr->isExact() || ShAmtVal == TypeBits - 1))
       return nullptr;
 
-    // FIXME: This check restricts this fold to scalar types.
-    ConstantInt *ShAmt = dyn_cast<ConstantInt>(Shr->getOperand(1));
-    if (!ShAmt)
-      return nullptr;
-
     // Revisit the shift (to delete it).
     Worklist.Add(Shr);
 
@@ -2001,33 +1991,28 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
   assert(!(DivIsSigned && C2->isAllOnesValue()) &&
          "The overflow computation will fail.");
 
-  // FIXME: These checks restrict all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!RHS)
-    return nullptr;
+  // TODO: We could do all of the computations below using APInt.
+  Constant *CmpRHS = cast<Constant>(Cmp.getOperand(1));
+  Constant *DivRHS = cast<Constant>(Div->getOperand(1));
 
-  ConstantInt *DivRHS = dyn_cast<ConstantInt>(Div->getOperand(1));
-  if (!DivRHS)
-    return nullptr;
+  // Compute Prod = CmpRHS * DivRHS. We are essentially solving an equation of
+  // form X / C2 = C. We solve for X by multiplying C2 (DivRHS) and C (CmpRHS).
+  // By solving for X, we can turn this into a range check instead of computing
+  // a divide.
+  Constant *Prod = ConstantExpr::getMul(CmpRHS, DivRHS);
 
-  // Compute Prod = CI * DivRHS. We are essentially solving an equation
-  // of form X/C2=C. We solve for X by multiplying C2 (DivRHS) and
-  // C (CI). By solving for X we can turn this into a range check
-  // instead of computing a divide.
-  Constant *Prod = ConstantExpr::getMul(RHS, DivRHS);
+  // Determine if the product overflows by seeing if the product is not equal to
+  // the divide. Make sure we do the same kind of divide as in the LHS
+  // instruction that we're folding.
+  bool ProdOV = (DivIsSigned ? ConstantExpr::getSDiv(Prod, DivRHS)
+                             : ConstantExpr::getUDiv(Prod, DivRHS)) != CmpRHS;
 
-  // Determine if the product overflows by seeing if the product is
-  // not equal to the divide. Make sure we do the same kind of divide
-  // as in the LHS instruction that we're folding.
-  bool ProdOV = (DivIsSigned ? ConstantExpr::getSDiv(Prod, DivRHS) :
-                 ConstantExpr::getUDiv(Prod, DivRHS)) != RHS;
-
-  // Get the ICmp opcode
   ICmpInst::Predicate Pred = Cmp.getPredicate();
 
   // If the division is known to be exact, then there is no remainder from the
   // divide, so the covered range size is unit, otherwise it is the divisor.
-  ConstantInt *RangeSize = Div->isExact() ? getOne(Prod) : DivRHS;
+  Constant *RangeSize =
+      Div->isExact() ? ConstantInt::get(Div->getType(), 1) : DivRHS;
 
   // Figure out the interval that is being checked.  For example, a comparison
   // like "X /u 5 == 0" is really checking that X is in the interval [0, 5).
@@ -2048,7 +2033,7 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
       // to the same result value.
       HiOverflow = AddWithOverflow(HiBound, LoBound, RangeSize, false);
     }
-  } else if (DivRHS->getValue().isStrictlyPositive()) { // Divisor is > 0.
+  } else if (C2->isStrictlyPositive()) { // Divisor is > 0.
     if (*C == 0) {       // (X / pos) op 0
       // Can't overflow.  e.g.  X/2 op 0 --> [-1, 2)
       LoBound = ConstantExpr::getNeg(SubOne(RangeSize));
@@ -2063,17 +2048,17 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
       HiBound = AddOne(Prod);
       LoOverflow = HiOverflow = ProdOV ? -1 : 0;
       if (!LoOverflow) {
-        ConstantInt *DivNeg =cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
+        Constant *DivNeg = ConstantExpr::getNeg(RangeSize);
         LoOverflow = AddWithOverflow(LoBound, HiBound, DivNeg, true) ? -1 : 0;
       }
     }
-  } else if (DivRHS->isNegative()) { // Divisor is < 0.
+  } else if (C2->isNegative()) { // Divisor is < 0.
     if (Div->isExact())
-      RangeSize = cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
+      RangeSize = ConstantExpr::getNeg(RangeSize);
     if (*C == 0) {       // (X / neg) op 0
       // e.g. X/-5 op 0  --> [-4, 5)
       LoBound = AddOne(RangeSize);
-      HiBound = cast<ConstantInt>(ConstantExpr::getNeg(RangeSize));
+      HiBound = ConstantExpr::getNeg(RangeSize);
       if (HiBound == DivRHS) {     // -INTMIN = INTMIN
         HiOverflow = 1;            // [INTMIN+1, overflow)
         HiBound = nullptr;         // e.g. X/INTMIN = 0 --> X > INTMIN
@@ -2107,8 +2092,9 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
       if (LoOverflow)
         return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SLT :
                             ICmpInst::ICMP_ULT, X, HiBound);
-      return replaceInstUsesWith(Cmp, InsertRangeTest(X, LoBound, HiBound,
-                                                      DivIsSigned, true));
+      return replaceInstUsesWith(
+          Cmp, insertRangeTest(X, LoBound->getUniqueInteger(),
+                               HiBound->getUniqueInteger(), DivIsSigned, true));
     case ICmpInst::ICMP_NE:
       if (LoOverflow && HiOverflow)
         return replaceInstUsesWith(Cmp, Builder->getTrue());
@@ -2118,8 +2104,10 @@ Instruction *InstCombiner::foldICmpDivConstant(ICmpInst &Cmp,
       if (LoOverflow)
         return new ICmpInst(DivIsSigned ? ICmpInst::ICMP_SGE :
                             ICmpInst::ICMP_UGE, X, HiBound);
-      return replaceInstUsesWith(Cmp, InsertRangeTest(X, LoBound, HiBound,
-                                                      DivIsSigned, false));
+      return replaceInstUsesWith(Cmp,
+                                 insertRangeTest(X, LoBound->getUniqueInteger(),
+                                                 HiBound->getUniqueInteger(),
+                                                 DivIsSigned, false));
     case ICmpInst::ICMP_ULT:
     case ICmpInst::ICMP_SLT:
       if (LoOverflow == +1)   // Low bound is greater than input range.

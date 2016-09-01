@@ -344,6 +344,29 @@ if.end:
 ; CHECK-NOT: load
 ; CHECK-NOT: store
 
+; The call should be commoned.
+define i32 @test13a(i1 zeroext %flag, i32 %w, i32 %x, i32 %y) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %sv1 = call i32 @bar(i32 %x)
+  br label %if.end
+
+if.else:
+  %sv2 = call i32 @bar(i32 %y)
+  br label %if.end
+
+if.end:
+  %p = phi i32 [ %sv1, %if.then ], [ %sv2, %if.else ]
+  ret i32 1
+}
+declare i32 @bar(i32)
+
+; CHECK-LABEL: test13a
+; CHECK: %[[x:.*]] = select i1 %flag
+; CHECK: call i32 @bar(i32 %[[x]])
+
 ; CHECK: !0 = !{!1, !1, i64 0}
 ; CHECK: !1 = !{!"float", !2}
 ; CHECK: !2 = !{!"an example type tree"}

@@ -742,7 +742,7 @@ public:
     DEBUG(Partitions.printBlocks());
 
     if (LDistVerify) {
-      LI->verify();
+      LI->verify(*DT);
       DT->verifyDomTree();
     }
 

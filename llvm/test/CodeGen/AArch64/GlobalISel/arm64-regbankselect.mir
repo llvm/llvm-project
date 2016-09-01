@@ -75,7 +75,7 @@ body: |
   bb.0.entry:
     liveins: %x0
     ; CHECK:      %1(32) = G_ADD s32 %0
-    %0(32) = COPY %w0
+    %0(32) = G_TYPE s32 %w0
     %1(32) = G_ADD s32 %0, %0
 ...
 
@@ -95,9 +95,9 @@ registers:
 body: |
   bb.0.entry:
     liveins: %d0
-    ; CHECK:      %0(64) = COPY %d0
+    ; CHECK:      %0(64) = G_TYPE s64 %d0
     ; CHECK:      %1(64) = G_ADD <2 x s32> %0
-    %0(64) = COPY %d0
+    %0(64) = G_TYPE s64 %d0
     %1(64) = G_ADD <2 x s32> %0, %0
 ...
 
@@ -120,12 +120,12 @@ registers:
 body: |
   bb.0.entry:
     liveins: %s0, %x0
-    ; CHECK:           %0(32) = COPY %s0
-    ; CHECK-NEXT:      %1(32) = COPY %w0
+    ; CHECK:           %0(32) = G_TYPE s32 %s0
+    ; CHECK-NEXT:      %1(32) = G_TYPE s32 %w0
     ; CHECK-NEXT:      %3(32) = COPY %0
     ; CHECK-NEXT:      %2(32) = G_ADD s32 %3, %1
-    %0(32) = COPY %s0
-    %1(32) = COPY %w0
+    %0(32) = G_TYPE s32 %s0
+    %1(32) = G_TYPE s32 %w0
     %2(32) = G_ADD s32 %0, %1
 ...
 
@@ -144,11 +144,11 @@ registers:
 body: |
   bb.0.entry:
     liveins: %s0, %x0
-    ; CHECK:           %0(32) = COPY %s0
+    ; CHECK:           %0(32) = G_TYPE s32 %s0
     ; CHECK-NEXT:      %2(32) = COPY %0
     ; CHECK-NEXT:      %3(32) = COPY %0
     ; CHECK-NEXT:      %1(32) = G_ADD s32 %2, %3
-    %0(32) = COPY %s0
+    %0(32) = G_TYPE s32 %s0
     %1(32) = G_ADD s32 %0, %0
 ...
 
@@ -170,10 +170,10 @@ registers:
 body: |
   bb.0.entry:
     liveins: %w0
-    ; CHECK:           %0(32) = COPY %w0
+    ; CHECK:           %0(32) = G_TYPE s32 %w0
     ; CHECK-NEXT:      %2(32) = G_ADD s32 %0, %0
     ; CHECK-NEXT:      %1(32) = COPY %2
-    %0(32) = COPY %w0
+    %0(32) = G_TYPE s32 %w0
     %1(32) = G_ADD s32 %0, %0
 ...
 
@@ -200,8 +200,8 @@ body: |
     liveins: %x0, %x1, %w2
 
     %0 = LDRWui killed %x0, 0 :: (load 4 from %ir.src)
-    %1 = COPY %x1
-    %2 = COPY %w2
+    %1 = G_TYPE s64 %x1
+    %2 = G_TYPE s32 %w2
     TBNZW killed %2, 0, %bb.2.end
 
   bb.1.then:
@@ -231,12 +231,12 @@ registers:
 body: |
   bb.0.entry:
     liveins: %w0, %s0
-    ; CHECK:           %0(32) = COPY %w0
-    ; CHECK-NEXT:      %1(32) = COPY %s0
+    ; CHECK:           %0(32) = G_TYPE s32 %w0
+    ; CHECK-NEXT:      %1(32) = G_TYPE s32 %s0
     ; CHECK-NEXT:      %3(32) = COPY %1
     ; CHECK-NEXT:      %2(32) = G_ADD s32 %0, %3
-    %0(32) = COPY %w0
-    %1(32) = COPY %s0
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %s0
     %2(32) = G_ADD s32 %0, %1
 ...
 
@@ -254,10 +254,10 @@ registers:
 body: |
   bb.0.entry:
     liveins: %w0
-    ; CHECK:           %0(32) = COPY %w0
+    ; CHECK:           %0(32) = G_TYPE s32 %w0
     ; CHECK-NEXT:      %1(32) = G_ADD s32 %0, %0
     ; CHECK-NEXT:      %s0 = COPY %1
-    %0(32) = COPY %w0
+    %0(32) = G_TYPE s32 %w0
     %1(32) = G_ADD s32 %0, %0
     %s0 = COPY %1
 ...
@@ -289,8 +289,8 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1
-    ; CHECK: %0(64) = COPY %x0
-    ; CHECK-NEXT: %1(64) = COPY %x1
+    ; CHECK: %0(64) = G_TYPE s64 %x0
+    ; CHECK-NEXT: %1(64) = G_TYPE s64 %x1
 
 
     ; Fast mode tries to reuse the source of the copy for the destination.
@@ -303,8 +303,8 @@ body: |
 
     ; Greedy mode remapped the instruction on the GPR bank.
     ; GREEDY-NEXT: %2(64) = G_OR <2 x s32> %0, %1
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_OR <2 x s32> %0, %1
 ...
 
@@ -336,8 +336,8 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1
-    ; CHECK: %0(64) = COPY %x0
-    ; CHECK-NEXT: %1(64) = COPY %x1
+    ; CHECK: %0(64) = G_TYPE s64 %x0
+    ; CHECK-NEXT: %1(64) = G_TYPE s64 %x1
 
 
     ; Fast mode tries to reuse the source of the copy for the destination.
@@ -352,8 +352,8 @@ body: |
     ; GREEDY-NEXT: %3(64) = G_OR <2 x s32> %0, %1
     ; We need to keep %2 into FPR because we do not know anything about it.
     ; GREEDY-NEXT: %2(64) = COPY %3
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_OR <2 x s32> %0, %1
 ...
 
@@ -371,12 +371,12 @@ body: |
   bb.0:
     liveins: %x0
 
-    ; CHECK: %0 = COPY %x0
+    ; CHECK: %0 = G_TYPE s64 %x0
     ; CHECK-NEXT: %1 = ADDXrr %0, %0
     ; CHECK-NEXT: %x0 = COPY %1
     ; CHECK-NEXT: RET_ReallyLR implicit %x0
 
-    %0 = COPY %x0
+    %0 = G_TYPE s64 %x0
     %1 = ADDXrr %0, %0
     %x0 = COPY %1
     RET_ReallyLR implicit %x0

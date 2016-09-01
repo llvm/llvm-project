@@ -642,11 +642,11 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
 /// Create a spill slot at a fixed location on the stack.
 /// Returns an index with a negative value.
 int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size,
-                                                  int64_t SPOffset) {
+                                                  int64_t SPOffset,
+                                                  bool Immutable) {
   unsigned Align = MinAlign(SPOffset, ForcedRealign ? 1 : StackAlignment);
   Align = clampStackAlignment(!StackRealignable, Align, StackAlignment);
-  Objects.insert(Objects.begin(), StackObject(Size, Align, SPOffset,
-                                              /*Immutable*/ true,
+  Objects.insert(Objects.begin(), StackObject(Size, Align, SPOffset, Immutable,
                                               /*isSS*/ true,
                                               /*Alloca*/ nullptr,
                                               /*isAliased*/ false));

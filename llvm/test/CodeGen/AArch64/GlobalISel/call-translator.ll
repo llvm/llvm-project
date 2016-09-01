@@ -10,7 +10,7 @@ define void @test_trivial_call() {
 
 ; CHECK-LABEL: name: test_simple_return
 ; CHECK: BL @simple_return_callee, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit-def %x0
-; CHECK: [[RES:%[0-9]+]](64) = COPY %x0
+; CHECK: [[RES:%[0-9]+]](64) = G_TYPE s64 %x0
 ; CHECK: %x0 = COPY [[RES]]
 ; CHECK: RET_ReallyLR implicit %x0
 declare i64 @simple_return_callee()
@@ -20,7 +20,7 @@ define i64 @test_simple_return() {
 }
 
 ; CHECK-LABEL: name: test_simple_arg
-; CHECK: [[IN:%[0-9]+]](32) = COPY %w0
+; CHECK: [[IN:%[0-9]+]](32) = G_TYPE s32 %w0
 ; CHECK: %w0 = COPY [[IN]]
 ; CHECK: BL @simple_arg_callee, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0
 ; CHECK: RET_ReallyLR
@@ -31,7 +31,7 @@ define void @test_simple_arg(i32 %in) {
 }
 
 ; CHECK-LABEL: name: test_indirect_call
-; CHECK: [[FUNC:%[0-9]+]](64) = COPY %x0
+; CHECK: [[FUNC:%[0-9]+]](64) = G_TYPE p0 %x0
 ; CHECK: BLR [[FUNC]], csr_aarch64_aapcs, implicit-def %lr, implicit %sp
 ; CHECK: RET_ReallyLR
 define void @test_indirect_call(void()* %func) {
@@ -40,7 +40,7 @@ define void @test_indirect_call(void()* %func) {
 }
 
 ; CHECK-LABEL: name: test_multiple_args
-; CHECK: [[IN:%[0-9]+]](64) = COPY %x0
+; CHECK: [[IN:%[0-9]+]](64) = G_TYPE s64 %x0
 ; CHECK: [[ANSWER:%[0-9]+]](32) = G_CONSTANT s32 42
 ; CHECK: %w0 = COPY [[ANSWER]]
 ; CHECK: %x1 = COPY [[IN]]

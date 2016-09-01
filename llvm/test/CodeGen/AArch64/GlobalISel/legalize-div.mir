@@ -21,8 +21,8 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(32) = G_TRUNC { s8, s64 } %0
     %3(32) = G_TRUNC { s8, s64 } %1
 

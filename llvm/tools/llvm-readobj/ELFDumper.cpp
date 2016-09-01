@@ -3240,8 +3240,6 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
 
   auto process = [&](const typename ELFFile<ELFT>::Elf_Off Offset,
                      const typename ELFFile<ELFT>::Elf_Addr Size) {
-    typedef typename ELFFile<ELFT>::Elf_Word Word;
-
     if (Size <= 0)
       return;
 
@@ -3253,14 +3251,14 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
        << "  Owner                 Data size\tDescription\n";
 
     while (P < E) {
-      const Word *Words = reinterpret_cast<const Word *>(&P[0]);
+      const Elf_Word *Words = reinterpret_cast<const Elf_Word *>(&P[0]);
 
       uint32_t NameSize = Words[0];
       uint32_t DescriptorSize = Words[1];
       uint32_t Type = Words[2];
 
-      ArrayRef<Word> Descriptor(&Words[3 + (alignTo<4>(NameSize) / 4)],
-                                alignTo<4>(DescriptorSize) / 4);
+      ArrayRef<Elf_Word> Descriptor(&Words[3 + (alignTo<4>(NameSize) / 4)],
+                                    alignTo<4>(DescriptorSize) / 4);
 
       StringRef Name;
       if (NameSize)
@@ -3276,7 +3274,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       }
       OS << '\n';
 
-      P = P + 3 * sizeof(Word) * alignTo<4>(NameSize) +
+      P = P + 3 * sizeof(Elf_Word) * alignTo<4>(NameSize) +
           alignTo<4>(DescriptorSize);
     }
   };

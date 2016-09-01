@@ -224,7 +224,8 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   bool CompleteMapping = true;
   // For copies we want to walk over the operands and try to find one
   // that has a register bank.
-  bool isCopyLike = MI.isCopy() || MI.isPHI();
+  bool isCopyLike =
+      MI.isCopy() || MI.isPHI() || MI.getOpcode() == TargetOpcode::G_TYPE;
   // Remember the register bank for reuse for copy-like instructions.
   const RegisterBank *RegBank = nullptr;
   // Remember the size of the register for reuse for copy-like instructions.

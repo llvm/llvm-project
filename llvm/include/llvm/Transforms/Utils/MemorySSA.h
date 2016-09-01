@@ -880,10 +880,8 @@ template <> struct GraphTraits<MemoryAccess *> {
   using ChildIteratorType = memoryaccess_def_iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return N->defs_begin();
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->defs_end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->defs_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->defs_end(); }
 };
 
 template <> struct GraphTraits<Inverse<MemoryAccess *>> {
@@ -891,10 +889,8 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
   using ChildIteratorType = MemoryAccess::iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return N->user_begin();
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->user_end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->user_begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->user_end(); }
 };
 
 /// \brief Provide an iterator that walks defs, giving both the memory access,

@@ -89,8 +89,8 @@ class CallLowering {
   ///
   /// \return true if the lowering succeeded, false otherwise.
   virtual bool lowerCall(MachineIRBuilder &MIRBuilder,
-                         const MachineOperand &Callee, ArrayRef<MVT> ResTys,
-                         ArrayRef<unsigned> ResRegs, ArrayRef<MVT> ArgTys,
+                         const MachineOperand &Callee, ArrayRef<Type *> ResTys,
+                         ArrayRef<unsigned> ResRegs, ArrayRef<Type *> ArgTys,
                          ArrayRef<unsigned> ArgRegs) const {
     return false;
   }

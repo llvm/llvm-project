@@ -229,6 +229,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return true;
   }
 
+  case TargetOpcode::G_TYPE: {
+    I.setDesc(TII.get(TargetOpcode::COPY));
+    I.removeTypes();
+    return true;
+  }
+
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
     if (I.getType() != LLT::pointer(0)) {
@@ -246,7 +252,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
-
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
     LLT MemTy = I.getType(0);

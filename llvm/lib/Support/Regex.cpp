@@ -19,6 +19,8 @@
 #include <string>
 using namespace llvm;
 
+Regex::Regex() : preg(nullptr), error(REG_BADPAT) {}
+
 Regex::Regex(StringRef regex, unsigned Flags) {
   unsigned flags = 0;
   preg = new llvm_regex();
