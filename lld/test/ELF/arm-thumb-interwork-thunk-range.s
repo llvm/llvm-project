@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -o %t -image-base=0x80000000
 

@@ -54,7 +54,6 @@ struct ErrorDoubleFree : ErrorBase {
   ErrorDoubleFree() = default;
   ErrorDoubleFree(uptr addr, u32 tid_, BufferedStackTrace *stack)
       : tid(tid_), second_free_stack(stack) {
-    scariness.Clear();
     CHECK_GT(second_free_stack->size, 0);
     GetHeapAddressInformation(addr, 1, &addr_description);
     scariness.Clear();

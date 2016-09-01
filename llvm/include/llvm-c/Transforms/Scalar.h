@@ -133,7 +133,10 @@ void LLVMAddVerifierPass(LLVMPassManagerRef PM);
 void LLVMAddCorrelatedValuePropagationPass(LLVMPassManagerRef PM);
 
 /** See llvm::createEarlyCSEPass function */
-void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM, int UseMemorySSA);
+void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM);
+
+/** See llvm::createEarlyCSEPass function */
+void LLVMAddEarlyCSEMemSSAPass(LLVMPassManagerRef PM);
 
 /** See llvm::createLowerExpectIntrinsicPass function */
 void LLVMAddLowerExpectIntrinsicPass(LLVMPassManagerRef PM);

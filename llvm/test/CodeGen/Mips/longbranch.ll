@@ -102,8 +102,8 @@ end:
 
 ; N64:   [[BB0]]:
 ; N64:        daddiu  $[[GP:[0-9]+]], $[[R1]], %lo(%neg(%gp_rel(test1)))
-; N64:        ld      $[[R2:[0-9]+]], %got_disp(x)($[[GP]])
 ; N64:        addiu   $[[R3:[0-9]+]], $zero, 1
+; N64:        ld      $[[R2:[0-9]+]], %got_disp(x)($[[GP]])
 ; N64:        sw      $[[R3]], 0($[[R2]])
 ; N64:   [[BB2]]:
 ; N64:        jr      $ra

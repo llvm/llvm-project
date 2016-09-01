@@ -408,7 +408,7 @@ else()
   set(OS_NAME "${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(ALL_SANITIZERS asan;dfsan;msan;profile;tsan;safestack;cfi;esan;scudo)
+set(ALL_SANITIZERS asan;dfsan;msan;tsan;safestack;cfi;esan;scudo)
 set(COMPILER_RT_SANITIZERS_TO_BUILD ${ALL_SANITIZERS} CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")

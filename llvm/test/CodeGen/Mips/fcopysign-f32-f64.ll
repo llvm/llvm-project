@@ -36,14 +36,14 @@ define double @func3(double %d, float %f) nounwind readnone {
 entry:
 ; ALL-LABEL: func3:
 
-; 64-DAG: mfc1    $[[MFC:[0-9]+]], $f13
-; 64-DAG: srl     $[[SRL:[0-9]+]], $[[MFC:[0-9]+]], 31
-; 64:     dsll    $[[DSLL:[0-9]+]], $[[SRL]], 63
-; 64-DAG: daddiu  $[[R1:[0-9]+]], $zero, 1
-; 64-DAG: dsll    $[[R2:[0-9]+]], $[[R1]], 63
-; 64-DAG: daddiu  $[[R3:[0-9]+]], $[[R2]], -1
-; 64-DAG: dmfc1   $[[R0:[0-9]+]], ${{.*}}
+; 64:     dmfc1   $[[R0:[0-9]+]], ${{.*}}
+; 64:     daddiu  $[[R1:[0-9]+]], $zero, 1
+; 64:     dsll    $[[R2:[0-9]+]], $[[R1]], 63
+; 64:     daddiu  $[[R3:[0-9]+]], $[[R2]], -1
 ; 64:     and     $[[AND0:[0-9]+]], $[[R0]], $[[R3]]
+; 64:     mfc1    $[[MFC:[0-9]+]], $f13
+; 64:     srl     $[[SRL:[0-9]+]], $[[MFC:[0-9]+]], 31
+; 64:     dsll    $[[DSLL:[0-9]+]], $[[SRL]], 63
 ; 64:     or      $[[OR:[0-9]+]], $[[AND0]], $[[DSLL]]
 ; 64:     dmtc1   $[[OR]], $f0
 
