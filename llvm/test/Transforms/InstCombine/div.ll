@@ -72,12 +72,11 @@ define i1 @test7(i32 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test7vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test7vec(
-; CHECK-NEXT:    [[B:%.*]] = udiv <2 x i32> %A, <i32 10, i32 10>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[B]], <i32 2, i32 2>
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    [[A_OFF:%.*]] = add <2 x i32> %A, <i32 -20, i32 -20>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A_OFF]], <i32 10, i32 10>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %B = udiv <2 x i32> %A, <i32 10, i32 10>
   %C = icmp eq <2 x i32> %B, <i32 2, i32 2>
@@ -95,11 +94,9 @@ define i1 @test8(i8 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test8vec(<2 x i8> %A) {
 ; CHECK-LABEL: @test8vec(
-; CHECK-NEXT:    [[B:%.*]] = udiv <2 x i8> %A, <i8 123, i8 123>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[B]], <i8 2, i8 2>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i8> %A, <i8 -11, i8 -11>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = udiv <2 x i8> %A, <i8 123, i8 123>
@@ -118,11 +115,9 @@ define i1 @test9(i8 %A) {
   ret i1 %C
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test9vec(<2 x i8> %A) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[B:%.*]] = udiv <2 x i8> %A, <i8 123, i8 123>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[B]], <i8 2, i8 2>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i8> %A, <i8 -10, i8 -10>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = udiv <2 x i8> %A, <i8 123, i8 123>

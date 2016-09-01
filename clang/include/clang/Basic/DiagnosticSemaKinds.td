@@ -4076,14 +4076,10 @@ def ext_explicit_instantiation_duplicate : ExtWarn<
     InGroup<MicrosoftTemplate>;
 def note_previous_explicit_instantiation : Note<
     "previous explicit instantiation is here">;
-def ext_explicit_instantiation_after_specialization : Extension<
-    "explicit instantiation of %0 that occurs after an explicit "
-    "specialization will be ignored (C++11 extension)">,
-    InGroup<CXX11>;
-def warn_cxx98_compat_explicit_instantiation_after_specialization : Warning<
-    "explicit instantiation of %0 that occurs after an explicit "
-    "specialization is incompatible with C++98">,
-    InGroup<CXX98CompatPedantic>, DefaultIgnore;
+def warn_explicit_instantiation_after_specialization : Warning<
+  "explicit instantiation of %0 that occurs after an explicit "
+  "specialization has no effect">,
+  InGroup<DiagGroup<"instantiation-after-specialization">>;
 def note_previous_template_specialization : Note<
     "previous template specialization is here">;
 def err_explicit_instantiation_nontemplate_type : Error<

@@ -29,5 +29,5 @@ has_disassembler = 1
 type = Library
 name = WebAssemblyCodeGen
 parent = WebAssembly
-required_libraries = Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target WebAssemblyAsmPrinter WebAssemblyDesc WebAssemblyInfo
+required_libraries = Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target TransformUtils WebAssemblyAsmPrinter WebAssemblyDesc WebAssemblyInfo
 add_to_library_groups = WebAssembly

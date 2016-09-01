@@ -23,15 +23,12 @@
 ///
 /// \snippet examples/Example.cpp Example saxpy host main
 ///
-/// In the example, a couple of handler functions are used to handle error
-/// return values in the StreamExecutor API:
-///
-/// \snippet examples/Example.cpp Example saxpy host helper functions
-///
-/// These are just example handler functions. A real application will likely
-/// want to define similar handlers of its own that log errors in an
-/// application-specific way, convert errors to the application's own
-/// error-handling framework, or try to recover from errors as appropriate.
+/// In the example, a couple of handler functions, \c getOrDie and \c
+/// dieIfError, are used to handle error return values in the StreamExecutor
+/// API. These functions are provided by StreamExecutor for quick-and-dirty
+/// error handling, but real applications will likely want to define their own
+/// versions of these handlers so that errors are handled more gracefully than
+/// just exiting the program.
 ///
 /// The example also references some symbols from a compiler-generated
 /// namespace:

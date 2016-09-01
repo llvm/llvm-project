@@ -235,6 +235,10 @@
 /// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
 #if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
 #define LLVM_FALLTHROUGH [[fallthrough]]
+#elif !__cplusplus
+// Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
+// error when __has_cpp_attribute is given a scoped attribute in C mode.
+#define LLVM_FALLTHROUGH
 #elif __has_cpp_attribute(clang::fallthrough)
 #define LLVM_FALLTHROUGH [[clang::fallthrough]]
 #else

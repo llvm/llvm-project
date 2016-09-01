@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -202,7 +203,8 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
   return "UnknownLeaf";
 }
 
-Error CVTypeDumper::visitTypeBegin(const CVRecord<TypeLeafKind> &Record) {
+Expected<TypeLeafKind>
+CVTypeDumper::visitTypeBegin(const CVRecord<TypeLeafKind> &Record) {
   // Reset Name to the empty string. If the visitor sets it, we know it.
   Name = "";
 
@@ -222,7 +224,7 @@ Error CVTypeDumper::visitTypeBegin(const CVRecord<TypeLeafKind> &Record) {
     assert(!IsInFieldList);
     IsInFieldList = true;
   }
-  return Error::success();
+  return Record.Type;
 }
 
 Error CVTypeDumper::visitTypeEnd(const CVRecord<TypeLeafKind> &Record) {
@@ -249,8 +251,12 @@ Error CVTypeDumper::visitTypeEnd(const CVRecord<TypeLeafKind> &Record) {
 
 Error CVTypeDumper::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
                                      FieldListRecord &FieldList) {
-  TypeDeserializer Deserializer(*this);
-  CVTypeVisitor Visitor(Deserializer);
+  TypeDeserializer Deserializer;
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(*this);
+
+  CVTypeVisitor Visitor(Pipeline);
   if (auto EC = Visitor.visitFieldListMemberStream(FieldList.Data))
     return EC;
 
@@ -711,8 +717,12 @@ void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
 
 Error CVTypeDumper::dump(const CVRecord<TypeLeafKind> &Record) {
   assert(W && "printer should not be null");
-  TypeDeserializer Deserializer(*this);
-  CVTypeVisitor Visitor(Deserializer);
+  TypeDeserializer Deserializer;
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(*this);
+
+  CVTypeVisitor Visitor(Pipeline);
 
   if (auto EC = Visitor.visitTypeRecord(Record))
     return EC;
@@ -721,8 +731,12 @@ Error CVTypeDumper::dump(const CVRecord<TypeLeafKind> &Record) {
 
 Error CVTypeDumper::dump(const CVTypeArray &Types) {
   assert(W && "printer should not be null");
-  TypeDeserializer Deserializer(*this);
-  CVTypeVisitor Visitor(Deserializer);
+  TypeDeserializer Deserializer;
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(*this);
+
+  CVTypeVisitor Visitor(Pipeline);
 
   if (auto EC = Visitor.visitTypeStream(Types))
     return EC;

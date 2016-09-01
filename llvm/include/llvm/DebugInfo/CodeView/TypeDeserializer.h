@@ -17,16 +17,7 @@ namespace llvm {
 namespace codeview {
 class TypeDeserializer : public TypeVisitorCallbacks {
 public:
-  explicit TypeDeserializer(TypeVisitorCallbacks &Recipient)
-      : Recipient(Recipient) {}
-
-  Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override {
-    return Recipient.visitTypeBegin(Record);
-  }
-
-  Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override {
-    return Recipient.visitTypeEnd(Record);
-  }
+  TypeDeserializer() {}
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
@@ -40,7 +31,6 @@ public:
 #include "TypeRecords.def"
 
 protected:
-  TypeVisitorCallbacks &Recipient;
 
   template <typename T>
   Error deserializeRecord(ArrayRef<uint8_t> &Data, TypeLeafKind Kind,
@@ -59,7 +49,7 @@ private:
     ArrayRef<uint8_t> RD = CVR.Data;
     if (auto EC = deserializeRecord(RD, CVR.Type, Record))
       return EC;
-    return Recipient.visitKnownRecord(CVR, Record);
+    return Error::success();
   }
 };
 }

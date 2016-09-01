@@ -33,9 +33,11 @@ public:
   }
 
   /// Paired begin/end actions for all types. Receives all record data,
-  /// including the fixed-length record prefix.
-  virtual Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) {
-    return Error::success();
+  /// including the fixed-length record prefix.  visitTypeBegin() should return
+  /// the type of the Record, or an error if it cannot be determined.
+  virtual Expected<TypeLeafKind>
+  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) {
+    return Record.Type;
   }
   virtual Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) {
     return Error::success();

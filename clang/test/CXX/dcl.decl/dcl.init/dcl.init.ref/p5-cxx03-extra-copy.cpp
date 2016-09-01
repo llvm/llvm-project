@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -Wbind-to-temporary-copy -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++03 -fdiagnostics-show-option -Wbind-to-temporary-copy -verify %s
 
 // C++03 requires that we check for a copy constructor when binding a
 // reference to a temporary, since we are allowed to make a copy, Even

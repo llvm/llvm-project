@@ -44,19 +44,19 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
 
-    handleAssignments(
-        MIRBuilder, AssignFn, MVT::getVT(Val->getType()), VReg,
-        [&](MachineIRBuilder &MIRBuilder, unsigned ValReg, unsigned PhysReg) {
-          MIRBuilder.buildCopy(PhysReg, ValReg);
-          MIB.addUse(PhysReg, RegState::Implicit);
-        });
+    handleAssignments(MIRBuilder, AssignFn, Val->getType(), VReg,
+                      [&](MachineIRBuilder &MIRBuilder, Type *Ty,
+                          unsigned ValReg, unsigned PhysReg) {
+                        MIRBuilder.buildCopy(PhysReg, ValReg);
+                        MIB.addUse(PhysReg, RegState::Implicit);
+                      });
   }
   return true;
 }
 
 bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                             CCAssignFn *AssignFn,
-                                            ArrayRef<MVT> ArgTypes,
+                                            ArrayRef<Type *> ArgTypes,
                                             ArrayRef<unsigned> ArgRegs,
                                             AssignFnTy AssignValToReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
@@ -66,11 +66,10 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
 
   unsigned NumArgs = ArgTypes.size();
-  auto CurVT = ArgTypes.begin();
-  for (unsigned i = 0; i != NumArgs; ++i, ++CurVT) {
-    bool Res = AssignFn(i, *CurVT, *CurVT, CCValAssign::Full, ISD::ArgFlagsTy(),
-                        CCInfo);
-    if (Res)
+  auto CurTy = ArgTypes.begin();
+  for (unsigned i = 0; i != NumArgs; ++i, ++CurTy) {
+    MVT CurVT = MVT::getVT(*CurTy);
+    if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, ISD::ArgFlagsTy(), CCInfo))
       return false;
   }
   assert(ArgLocs.size() == ArgTypes.size() &&
@@ -103,7 +102,7 @@ bool AArch64CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
 
     // Everything checks out, tell the caller where we've decided this
     // parameter/return value should go.
-    AssignValToReg(MIRBuilder, ArgRegs[i], VA.getLocReg());
+    AssignValToReg(MIRBuilder, ArgTypes[i], ArgRegs[i], VA.getLocReg());
   }
   return true;
 }
@@ -114,27 +113,27 @@ bool AArch64CallLowering::lowerFormalArguments(
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
 
-  SmallVector<MVT, 8> ArgTys;
+  SmallVector<Type *, 8> ArgTys;
   for (auto &Arg : Args)
-    ArgTys.push_back(MVT::getVT(Arg.getType()));
+    ArgTys.push_back(Arg.getType());
 
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
-  return handleAssignments(
-      MIRBuilder, AssignFn, ArgTys, VRegs,
-      [](MachineIRBuilder &MIRBuilder, unsigned ValReg, unsigned PhysReg) {
-        MIRBuilder.getMBB().addLiveIn(PhysReg);
-        MIRBuilder.buildCopy(ValReg, PhysReg);
-      });
+  return handleAssignments(MIRBuilder, AssignFn, ArgTys, VRegs,
+                           [](MachineIRBuilder &MIRBuilder, Type *Ty,
+                              unsigned ValReg, unsigned PhysReg) {
+                             MIRBuilder.getMBB().addLiveIn(PhysReg);
+                             MIRBuilder.buildType(LLT{*Ty}, ValReg, PhysReg);
+                           });
 }
 
 bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     const MachineOperand &Callee,
-                                    ArrayRef<MVT> ResTys,
+                                    ArrayRef<Type *> ResTys,
                                     ArrayRef<unsigned> ResRegs,
-                                    ArrayRef<MVT> ArgTys,
+                                    ArrayRef<Type *> ArgTys,
                                     ArrayRef<unsigned> ArgRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
@@ -147,12 +146,12 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // And finally we can do the actual assignments. For a call we need to keep
   // track of the registers used because they'll be implicit uses of the BL.
   SmallVector<unsigned, 8> PhysRegs;
-  handleAssignments(
-      MIRBuilder, CallAssignFn, ArgTys, ArgRegs,
-      [&](MachineIRBuilder &MIRBuilder, unsigned ValReg, unsigned PhysReg) {
-        MIRBuilder.buildCopy(PhysReg, ValReg);
-        PhysRegs.push_back(PhysReg);
-      });
+  handleAssignments(MIRBuilder, CallAssignFn, ArgTys, ArgRegs,
+                    [&](MachineIRBuilder &MIRBuilder, Type *Ty, unsigned ValReg,
+                        unsigned PhysReg) {
+                      MIRBuilder.buildCopy(PhysReg, ValReg);
+                      PhysRegs.push_back(PhysReg);
+                    });
 
   // Now we can build the actual call instruction.
   auto MIB = MIRBuilder.buildInstr(Callee.isReg() ? AArch64::BLR : AArch64::BL);
@@ -170,12 +169,12 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // implicit-define of the call instruction.
   CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
   if (!ResRegs.empty())
-    handleAssignments(
-        MIRBuilder, RetAssignFn, ResTys, ResRegs,
-        [&](MachineIRBuilder &MIRBuilder, unsigned ValReg, unsigned PhysReg) {
-          MIRBuilder.buildCopy(ValReg, PhysReg);
-          MIB.addDef(PhysReg, RegState::Implicit);
-        });
+    handleAssignments(MIRBuilder, RetAssignFn, ResTys, ResRegs,
+                      [&](MachineIRBuilder &MIRBuilder, Type *Ty,
+                          unsigned ValReg, unsigned PhysReg) {
+                        MIRBuilder.buildType(LLT{*Ty}, ValReg, PhysReg);
+                        MIB.addDef(PhysReg, RegState::Implicit);
+                      });
 
   return true;
 }

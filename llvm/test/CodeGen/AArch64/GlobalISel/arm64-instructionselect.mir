@@ -94,8 +94,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_ADD s32 %0, %1
 ...
 
@@ -123,8 +123,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_ADD s64 %0, %1
 ...
 
@@ -152,8 +152,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_SUB s32 %0, %1
 ...
 
@@ -181,8 +181,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_SUB s64 %0, %1
 ...
 
@@ -210,8 +210,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_OR s32 %0, %1
 ...
 
@@ -239,8 +239,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_OR s64 %0, %1
 ...
 
@@ -268,8 +268,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_XOR s32 %0, %1
 ...
 
@@ -297,8 +297,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_XOR s64 %0, %1
 ...
 
@@ -326,8 +326,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_AND s32 %0, %1
 ...
 
@@ -355,8 +355,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_AND s64 %0, %1
 ...
 
@@ -384,8 +384,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_SHL s32 %0, %1
 ...
 
@@ -413,8 +413,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_SHL s64 %0, %1
 ...
 
@@ -442,8 +442,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_LSHR s32 %0, %1
 ...
 
@@ -471,8 +471,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_LSHR s64 %0, %1
 ...
 
@@ -500,8 +500,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_ASHR s32 %0, %1
 ...
 
@@ -529,8 +529,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_ASHR s64 %0, %1
 ...
 
@@ -558,8 +558,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_MUL s32 %0, %1
 ...
 
@@ -587,8 +587,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_MUL s64 %0, %1
 ...
 
@@ -616,8 +616,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_SDIV s32 %0, %1
 ...
 
@@ -645,8 +645,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_SDIV s64 %0, %1
 ...
 
@@ -674,8 +674,8 @@ body:             |
   bb.0:
     liveins: %w0, %w1
 
-    %0(32) = COPY %w0
-    %1(32) = COPY %w1
+    %0(32) = G_TYPE s32 %w0
+    %1(32) = G_TYPE s32 %w1
     %2(32) = G_UDIV s32 %0, %1
 ...
 
@@ -703,8 +703,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     %2(64) = G_UDIV s64 %0, %1
 ...
 
@@ -732,8 +732,8 @@ body:             |
   bb.0:
     liveins: %s0, %s1
 
-    %0(32) = COPY %s0
-    %1(32) = COPY %s1
+    %0(32) = G_TYPE s32 %s0
+    %1(32) = G_TYPE s32 %s1
     %2(32) = G_FADD s32 %0, %1
 ...
 
@@ -760,8 +760,8 @@ body:             |
   bb.0:
     liveins: %d0, %d1
 
-    %0(64) = COPY %d0
-    %1(64) = COPY %d1
+    %0(64) = G_TYPE s64 %d0
+    %1(64) = G_TYPE s64 %d1
     %2(64) = G_FADD s64 %0, %1
 ...
 
@@ -788,8 +788,8 @@ body:             |
   bb.0:
     liveins: %s0, %s1
 
-    %0(32) = COPY %s0
-    %1(32) = COPY %s1
+    %0(32) = G_TYPE s32 %s0
+    %1(32) = G_TYPE s32 %s1
     %2(32) = G_FSUB s32 %0, %1
 ...
 
@@ -816,8 +816,8 @@ body:             |
   bb.0:
     liveins: %d0, %d1
 
-    %0(64) = COPY %d0
-    %1(64) = COPY %d1
+    %0(64) = G_TYPE s64 %d0
+    %1(64) = G_TYPE s64 %d1
     %2(64) = G_FSUB s64 %0, %1
 ...
 
@@ -844,8 +844,8 @@ body:             |
   bb.0:
     liveins: %s0, %s1
 
-    %0(32) = COPY %s0
-    %1(32) = COPY %s1
+    %0(32) = G_TYPE s32 %s0
+    %1(32) = G_TYPE s32 %s1
     %2(32) = G_FMUL s32 %0, %1
 ...
 
@@ -872,8 +872,8 @@ body:             |
   bb.0:
     liveins: %d0, %d1
 
-    %0(64) = COPY %d0
-    %1(64) = COPY %d1
+    %0(64) = G_TYPE s64 %d0
+    %1(64) = G_TYPE s64 %d1
     %2(64) = G_FMUL s64 %0, %1
 ...
 
@@ -900,8 +900,8 @@ body:             |
   bb.0:
     liveins: %s0, %s1
 
-    %0(32) = COPY %s0
-    %1(32) = COPY %s1
+    %0(32) = G_TYPE s32 %s0
+    %1(32) = G_TYPE s32 %s1
     %2(32) = G_FDIV s32 %0, %1
 ...
 
@@ -928,8 +928,8 @@ body:             |
   bb.0:
     liveins: %d0, %d1
 
-    %0(64) = COPY %d0
-    %1(64) = COPY %d1
+    %0(64) = G_TYPE s64 %d0
+    %1(64) = G_TYPE s64 %d1
     %2(64) = G_FDIV s64 %0, %1
 ...
 
@@ -970,7 +970,7 @@ body:             |
   bb.0:
     liveins: %x0
 
-    %0(64) = COPY %x0
+    %0(64) = G_TYPE s64 %x0
     %1(64) = G_LOAD { s64, p0 }  %0 :: (load 8 from %ir.addr)
 
 ...
@@ -995,7 +995,7 @@ body:             |
   bb.0:
     liveins: %x0
 
-    %0(64) = COPY %x0
+    %0(64) = G_TYPE s64 %x0
     %1(32) = G_LOAD { s32, p0 }  %0 :: (load 4 from %ir.addr)
 
 ...
@@ -1021,8 +1021,8 @@ body:             |
   bb.0:
     liveins: %x0, %x1
 
-    %0(64) = COPY %x0
-    %1(64) = COPY %x1
+    %0(64) = G_TYPE s64 %x0
+    %1(64) = G_TYPE s64 %x1
     G_STORE { s64, p0 }  %1, %0 :: (store 8 into %ir.addr)
 
 ...
@@ -1048,8 +1048,8 @@ body:             |
   bb.0:
     liveins: %x0, %w1
 
-    %0(64) = COPY %x0
-    %1(32) = COPY %w1
+    %0(64) = G_TYPE s64 %x0
+    %1(32) = G_TYPE s32 %w1
     G_STORE { s32, p0 }  %1, %0 :: (store 4 into %ir.addr)
 
 ...

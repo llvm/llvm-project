@@ -1481,6 +1481,11 @@ public:
     return None;
   }
 
+  /// Determines whether |Inst| is a tail call instruction.
+  virtual bool isTailCall(const MachineInstr &Inst) const {
+    return false;
+  }
+
 private:
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
   unsigned CatchRetOpcode;

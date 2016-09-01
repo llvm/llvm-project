@@ -215,16 +215,27 @@ static void WorkerThread(const std::string &Cmd, std::atomic<int> *Counter,
   }
 }
 
+static std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
+                                     const char *X1, const char *X2) {
+  std::string Cmd;
+  for (auto &S : Args) {
+    if (FlagValue(S.c_str(), X1) || FlagValue(S.c_str(), X2))
+      continue;
+    Cmd += S + " ";
+  }
+  return Cmd;
+}
+
+static std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
+                                     const char *X) {
+  return CloneArgsWithoutX(Args, X, X);
+}
+
 static int RunInMultipleProcesses(const std::vector<std::string> &Args,
                                   int NumWorkers, int NumJobs) {
   std::atomic<int> Counter(0);
   std::atomic<bool> HasErrors(false);
-  std::string Cmd;
-  for (auto &S : Args) {
-    if (FlagValue(S.c_str(), "jobs") || FlagValue(S.c_str(), "workers"))
-      continue;
-    Cmd += S + " ";
-  }
+  std::string Cmd = CloneArgsWithoutX(Args, "jobs", "workers");
   std::vector<std::thread> V;
   std::thread Pulse(PulseThread);
   Pulse.detach();
@@ -266,6 +277,80 @@ static bool AllInputsAreFiles() {
   return true;
 }
 
+int MinimizeCrashInput(const std::vector<std::string> &Args) {
+  if (Inputs->size() != 1) {
+    Printf("ERROR: -minimize_crash should be given one input file\n");
+    exit(1);
+  }
+  if (Flags.runs <= 0 && Flags.max_total_time == 0) {
+    Printf("ERROR: you need to use -runs=N or "
+           "-max_total_time=N with -minimize_crash=1\n" );
+    exit(1);
+  }
+  std::string InputFilePath = Inputs->at(0);
+  std::string BaseCmd = CloneArgsWithoutX(Args, "minimize_crash");
+  auto InputPos = BaseCmd.find(" " + InputFilePath + " ");
+  assert(InputPos != std::string::npos);
+  BaseCmd.erase(InputPos, InputFilePath.size() + 1);
+  // BaseCmd += " >  /dev/null 2>&1 ";
+
+  std::string CurrentFilePath = InputFilePath;
+  while (true) {
+    Unit U = FileToVector(CurrentFilePath);
+    if (U.size() < 2) {
+      Printf("CRASH_MIN: '%s' is small enough\n", CurrentFilePath.c_str());
+      return 0;
+    }
+    Printf("CRASH_MIN: minimizing crash input: '%s' (%zd bytes)\n",
+           CurrentFilePath.c_str(), U.size());
+
+    auto Cmd = BaseCmd + " " + CurrentFilePath;
+
+    Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
+    int ExitCode = ExecuteCommand(Cmd);
+    if (ExitCode == 0) {
+      Printf("ERROR: the input %s did not crash\n", CurrentFilePath.c_str());
+      exit(1);
+    }
+    Printf("CRASH_MIN: '%s' (%zd bytes) caused a crash. Will try to minimize "
+           "it further\n",
+           CurrentFilePath.c_str(), U.size());
+
+    std::string ArtifactPath = "minimized-from-" + Hash(U);
+    Cmd += " -minimize_crash_internal_step=1 -exact_artifact_path=" +
+        ArtifactPath;
+    Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
+    ExitCode = ExecuteCommand(Cmd);
+    if (ExitCode == 0) {
+      Printf("CRASH_MIN: failed to minimize beyond %s (%d bytes), exiting\n",
+             CurrentFilePath.c_str(), U.size());
+      return 0;
+    }
+    CurrentFilePath = ArtifactPath;
+    Printf("\n\n\n\n\n\n*********************************\n");
+  }
+  return 0;
+}
+
+int MinimizeCrashInputInternalStep(Fuzzer *F) {
+  assert(Inputs->size() == 1);
+  std::string InputFilePath = Inputs->at(0);
+  Unit U = FileToVector(InputFilePath);
+  assert(U.size() > 2);
+  Printf("INFO: Starting MinimizeCrashInputInternalStep: %zd\n", U.size());
+  Unit X(U.size() - 1);
+  for (size_t I = 0; I < U.size(); I++) {
+    std::copy(U.begin(), U.begin() + I, X.begin());
+    std::copy(U.begin() + I + 1, U.end(), X.begin() + I);
+    F->AddToCorpus(X);
+  }
+  F->SetMaxLen(U.size() - 1);
+  F->Loop();
+  Printf("INFO: Done MinimizeCrashInputInternalStep, no crashes found\n");
+  exit(0);
+  return 0;
+}
+
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
@@ -280,6 +365,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     PrintHelp();
     return 0;
   }
+
+  if (Flags.minimize_crash)
+    return MinimizeCrashInput(Args);
 
   if (Flags.close_fd_mask & 2)
     DupAndCloseStderr();
@@ -319,7 +407,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.RssLimitMb = Flags.rss_limit_mb;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
-  if (!Inputs->empty())
+  if (!Inputs->empty() && !Flags.minimize_crash_internal_step)
     Options.OutputCorpus = (*Inputs)[0];
   Options.ReportSlowUnits = Flags.report_slow_units;
   if (Flags.artifact_prefix)
@@ -333,7 +421,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.verbosity > 0 && !Dictionary.empty())
     Printf("Dictionary: %zd entries\n", Dictionary.size());
   bool DoPlainRun = AllInputsAreFiles();
-  Options.SaveArtifacts = !DoPlainRun;
+  Options.SaveArtifacts =
+      !DoPlainRun || Flags.minimize_crash_internal_step;
   Options.PrintNewCovPcs = Flags.print_pcs;
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.TruncateUnits = Flags.truncate_units;
@@ -371,6 +460,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.handle_int) SetSigIntHandler();
   if (Flags.handle_term) SetSigTermHandler();
 
+  if (Flags.minimize_crash_internal_step)
+    return MinimizeCrashInputInternalStep(&F);
+
   if (DoPlainRun) {
     Options.SaveArtifacts = false;
     int Runs = std::max(1, Flags.runs);
@@ -392,7 +484,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     F.PrintFinalStats();
     exit(0);
   }
-
 
   if (Flags.merge) {
     if (Options.MaxLen == 0)

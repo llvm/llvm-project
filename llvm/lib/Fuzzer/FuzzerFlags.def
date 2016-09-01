@@ -37,6 +37,10 @@ FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")
+FUZZER_FLAG_INT(minimize_crash, 0, "If 1, minimizes the provided"
+  " crash input. Use with -runs=N or -max_total_time=N to limit "
+  "the number attempts")
+FUZZER_FLAG_INT(minimize_crash_internal_step, 0, "internal flag")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_indir_calls, 1, "Use indirect caller-callee counters")
 FUZZER_FLAG_INT(use_traces, 0, "Experimental: use instruction traces")

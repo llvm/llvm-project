@@ -138,7 +138,7 @@ void pr7675_test() {
   pr7675(10.0);
   pr7675(10);
   pr7675('c');
-  pr7675_i(4.0i);
+  pr7675_i(4.0j);
 
   // Add check to ensure we are analyzing the code up to this point.
   clang_analyzer_warnIfReached();  // expected-warning{{REACHABLE}}

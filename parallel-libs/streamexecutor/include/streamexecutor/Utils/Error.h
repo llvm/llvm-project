@@ -65,6 +65,8 @@
 /// There is also a function consumeError that consumes an error value without
 /// fetching the error message. This is useful when we want to ignore an error.
 ///
+/// The dieIfError function is also provided for quick-and-dirty error handling.
+///
 ///
 /// \section expected The Expected Class
 ///
@@ -137,6 +139,8 @@
 /// }
 /// \endcode
 ///
+/// The getOrDie function is also available for quick-and-dirty error handling.
+///
 ///
 /// \section llvm Relation to llvm::Error and llvm::Expected
 ///
@@ -159,6 +163,8 @@
 #ifndef STREAMEXECUTOR_UTILS_ERROR_H
 #define STREAMEXECUTOR_UTILS_ERROR_H
 
+#include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <string>
 
@@ -171,13 +177,38 @@ using llvm::Error;
 using llvm::Expected;
 using llvm::Twine;
 
-// Makes an Error object from an error message.
+/// Makes an Error object from an error message.
 Error make_error(Twine Message);
 
-// Consumes the input error and returns its error message.
-//
-// Assumes the input was created by the make_error function above.
+/// Consumes the input error and returns its error message.
+///
+/// Assumes the input was created by the make_error function above.
 std::string consumeAndGetMessage(Error &&E);
+
+/// Extracts the T value from an Expected<T> or prints an error message to
+/// stderr and exits the program with code EXIT_FAILURE if the Expected<T> is an
+/// error.
+///
+/// This function and the dieIfError function are provided for applications that
+/// are OK with aborting the program if an error occurs, and which don't have
+/// any special error logging needs. Applications with different error handling
+/// needs will likely want to declare their own functions with similar
+/// signatures but which log error messages in a different way or attempt to
+/// recover from errors instead of aborting the program.
+template <typename T> T getOrDie(Expected<T> &&E) {
+  if (!E) {
+    std::fprintf(stderr, "Error extracting an expected value: %s.\n",
+                 consumeAndGetMessage(E.takeError()).c_str());
+    std::exit(EXIT_FAILURE);
+  }
+  return std::move(*E);
+}
+
+/// Prints an error message to stderr and exits the program with code
+/// EXIT_FAILURE if the input is an error.
+///
+/// \sa getOrDie
+void dieIfError(Error &&E);
 
 } // namespace streamexecutor
 

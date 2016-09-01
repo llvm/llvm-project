@@ -566,6 +566,8 @@ LoadLibCxxFormatters (lldb::TypeCategoryImplSP cpp_category_sp)
     
     AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider, "libc++ std::vector<bool> summary provider", ConstString("std::__(ndk)?1::vector<bool, std::__(ndk)?1::allocator<bool> >"), stl_summary_flags);
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEndCreator, "std::map iterator synthetic children", ConstString("^std::__(ndk)?1::__map_iterator<.+>$"), stl_synth_flags, true);
+
+    AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibcxxFunctionFrontEndCreator, "std::function synthetic value provider", ConstString("^std::__1::function<.+>$"), stl_synth_flags, true);
 #endif
 }
 

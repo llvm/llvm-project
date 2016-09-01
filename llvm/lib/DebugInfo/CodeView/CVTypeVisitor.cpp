@@ -75,10 +75,13 @@ static Error visitKnownRecord(const CVRecord<TypeLeafKind> &Record,
 }
 
 Error CVTypeVisitor::visitTypeRecord(const CVRecord<TypeLeafKind> &Record) {
-  if (auto EC = Callbacks.visitTypeBegin(Record))
-    return EC;
+  TypeLeafKind Kind;
+  if (auto ExpectedKind = Callbacks.visitTypeBegin(Record))
+    Kind = *ExpectedKind;
+  else
+    return ExpectedKind.takeError();
 
-  switch (Record.Type) {
+  switch (Kind) {
   default:
     if (auto EC = Callbacks.visitUnknownType(Record))
       return EC;
@@ -133,8 +136,9 @@ Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
     if (!ExpectedRecord)                                                       \
       return ExpectedRecord.takeError();                                       \
     auto &Record = *ExpectedRecord;                                            \
-    if (auto EC = Callbacks.visitTypeBegin(Record))                            \
-      return EC;                                                               \
+    auto ExpectedKind = Callbacks.visitTypeBegin(Record);                      \
+    if (!ExpectedKind || *ExpectedKind != Leaf)                                \
+      return ExpectedKind.takeError();                                         \
     if (auto EC = visitKnownRecord<Name##Record>(Record, Callbacks))           \
       return EC;                                                               \
     if (auto EC = Callbacks.visitTypeEnd(Record))                              \
