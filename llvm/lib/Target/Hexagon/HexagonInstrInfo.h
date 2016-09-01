@@ -280,6 +280,8 @@ public:
   /// If the instruction is an increment of a constant value, return the amount.
   bool getIncrementValue(const MachineInstr &MI, int &Value) const override;
 
+  bool isTailCall(const MachineInstr &MI) const override;
+
   /// HexagonInstrInfo specifics.
   ///
 
@@ -340,7 +342,6 @@ public:
   bool isSignExtendingLoad(const MachineInstr &MI) const;
   bool isSolo(const MachineInstr &MI) const;
   bool isSpillPredRegOp(const MachineInstr &MI) const;
-  bool isTailCall(const MachineInstr &MI) const;
   bool isTC1(const MachineInstr &MI) const;
   bool isTC2(const MachineInstr &MI) const;
   bool isTC2Early(const MachineInstr &MI) const;

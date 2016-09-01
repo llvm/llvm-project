@@ -544,7 +544,8 @@ public:
 
   /// Create a spill slot at a fixed location on the stack.
   /// Returns an index with a negative value.
-  int CreateFixedSpillStackObject(uint64_t Size, int64_t SPOffset);
+  int CreateFixedSpillStackObject(uint64_t Size, int64_t SPOffset,
+                                  bool Immutable = false);
 
   /// Returns true if the specified index corresponds to a fixed stack object.
   bool isFixedObjectIndex(int ObjectIdx) const {

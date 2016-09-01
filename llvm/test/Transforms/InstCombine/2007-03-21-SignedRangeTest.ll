@@ -14,11 +14,10 @@ define i1 @test(i32 %tmp6) {
   ret i1 %1
 }
 
-; FIXME: Vectors should fold the same way.
 define <2 x i1> @test_vec(<2 x i32> %tmp6) {
 ; CHECK-LABEL: @test_vec(
-; CHECK-NEXT:    [[TMP7:%.*]] = sdiv <2 x i32> %tmp6, <i32 12, i32 12>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[TMP7]], <i32 -6, i32 -6>
+; CHECK-NEXT:    [[TMP6_OFF:%.*]] = add <2 x i32> %tmp6, <i32 83, i32 83>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i32> [[TMP6_OFF]], <i32 11, i32 11>
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %tmp7 = sdiv <2 x i32> %tmp6, <i32 12, i32 12>

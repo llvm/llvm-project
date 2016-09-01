@@ -133,11 +133,6 @@ macro(add_tablegen target project)
     endif()
   endif()
 
-  if( MINGW )
-    if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-      set_target_properties(${target} PROPERTIES LINK_FLAGS -Wl,--stack,16777216)
-    endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
-  endif( MINGW )
   if (${project} STREQUAL LLVM AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     install(TARGETS ${target}
             EXPORT LLVMExports

@@ -224,6 +224,17 @@ if( MSVC_IDE )
   endif()
 endif()
 
+# set stack reserved size to ~10MB
+if(MSVC)
+  # CMake previously automatically set this value for MSVC builds, but the
+  # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
+  # value (1 MB) which is not enough for us in tasks such as parsing recursive
+  # C++ templates in Clang.
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
+elseif(MINGW) # FIXME: Also cygwin?
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
+endif()
+
 if( MSVC )
   if( CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0 )
     # For MSVC 2013, disable iterator null pointer checking in debug mode,
@@ -232,13 +243,6 @@ if( MSVC )
   endif()
   
   include(ChooseMSVCCRT)
-
-  # set stack reserved size to ~10MB
-  # CMake previously automatically set this value for MSVC builds, but the
-  # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
-  # value (1 MB) which is not enough for us in tasks such as parsing recursive
-  # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
 
   if( MSVC11 )
     add_llvm_definitions(-D_VARIADIC_MAX=10)

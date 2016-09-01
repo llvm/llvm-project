@@ -138,26 +138,22 @@ define <4 x float> @fptrunc_frommem2_zext(<2 x double> * %ld) {
 ; X32-SSE:       # BB#0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE-NEXT:    cvtpd2ps (%eax), %xmm0
-; X32-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: fptrunc_frommem2_zext:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vcvtpd2psx (%eax), %xmm0
-; X32-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fptrunc_frommem2_zext:
 ; X64-SSE:       # BB#0:
 ; X64-SSE-NEXT:    cvtpd2ps (%rdi), %xmm0
-; X64-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fptrunc_frommem2_zext:
 ; X64-AVX:       # BB#0:
 ; X64-AVX-NEXT:    vcvtpd2psx (%rdi), %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX-NEXT:    retq
   %arg = load <2 x double>, <2 x double> * %ld, align 16
   %cvt = fptrunc <2 x double> %arg to <2 x float>
@@ -169,25 +165,21 @@ define <4 x float> @fptrunc_fromreg2_zext(<2 x double> %arg) {
 ; X32-SSE-LABEL: fptrunc_fromreg2_zext:
 ; X32-SSE:       # BB#0:
 ; X32-SSE-NEXT:    cvtpd2ps %xmm0, %xmm0
-; X32-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: fptrunc_fromreg2_zext:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
-; X32-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fptrunc_fromreg2_zext:
 ; X64-SSE:       # BB#0:
 ; X64-SSE-NEXT:    cvtpd2ps %xmm0, %xmm0
-; X64-SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: fptrunc_fromreg2_zext:
 ; X64-AVX:       # BB#0:
 ; X64-AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
-; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX-NEXT:    retq
   %cvt = fptrunc <2 x double> %arg to <2 x float>
   %ret = shufflevector <2 x float> %cvt, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 2>

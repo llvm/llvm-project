@@ -61,6 +61,11 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17 -mattr=-vfp2 | FileCheck %s --check-prefix=CORTEX-A17-NOFPU
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a17 -mattr=-vfp2  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A17-NOFPU-FAST
 
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -enable-no-trapping-fp-math | FileCheck %s --check-prefix=NO-TRAPPING-MATH
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -denormal-fp-math=ieee | FileCheck %s --check-prefix=DENORMAL-IEEE
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -denormal-fp-math=preserve-sign | FileCheck %s --check-prefix=DENORMAL-PRESERVE-SIGN
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 -denormal-fp-math=positive-zero | FileCheck %s --check-prefix=DENORMAL-POSITIVE-ZERO
+
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mattr=-neon,+vfp3,+fp16 | FileCheck %s --check-prefix=GENERIC-FPU-VFPV3-FP16
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mattr=-neon,+vfp3,+d16,+fp16 | FileCheck %s --check-prefix=GENERIC-FPU-VFPV3-D16-FP16
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mattr=-neon,+vfp3,+fp-only-sp,+d16 | FileCheck %s --check-prefix=GENERIC-FPU-VFPV3XD
@@ -845,6 +850,12 @@
 ; CORTEX-A17-NOFPU-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A17-NOFPU-FAST-NOT:  .eabi_attribute 22
 ; CORTEX-A17-NOFPU-FAST:  .eabi_attribute 23, 1
+
+; Test flags -enable-no-trapping-fp-math and -denormal-fp-math:
+; NO-TRAPPING-MATH:  .eabi_attribute 21, 0
+; DENORMAL-IEEE:  .eabi_attribute 20, 1
+; DENORMAL-PRESERVE-SIGN:  .eabi_attribute 20, 2
+; DENORMAL-POSITIVE-ZERO:  .eabi_attribute 20, 0
 
 ; CORTEX-M0:  .cpu cortex-m0
 ; CORTEX-M0:  .eabi_attribute 6, 12

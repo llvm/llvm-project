@@ -26,7 +26,7 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_load
-    %0(64) = COPY %x0
+    %0(64) = G_TYPE s64 %x0
 
     ; CHECK: [[BIT8:%[0-9]+]](8) = G_LOAD { s8, p0 } %0 :: (load 1 from %ir.addr)
     ; CHECK: %1(1) = G_TRUNC { s1, s8 } [[BIT8]]
@@ -58,8 +58,8 @@ body: |
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_store
 
-    %0(64) = COPY %x0
-    %1(32) = COPY %w1
+    %0(64) = G_TYPE s64 %x0
+    %1(32) = G_TYPE s32 %w1
 
     ; CHECK: [[BIT8:%[0-9]+]](8) = G_ANYEXT { s8, s1 } %2
     ; CHECK: G_STORE { s8, p0 } [[BIT8]], %0 :: (store 1 into %ir.addr)

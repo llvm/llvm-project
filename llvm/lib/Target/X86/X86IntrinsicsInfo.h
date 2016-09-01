@@ -1884,6 +1884,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(sse2_comile_sd,    COMI, X86ISD::COMI, ISD::SETLE),
   X86_INTRINSIC_DATA(sse2_comilt_sd,    COMI, X86ISD::COMI, ISD::SETLT),
   X86_INTRINSIC_DATA(sse2_comineq_sd,   COMI, X86ISD::COMI, ISD::SETNE),
+  X86_INTRINSIC_DATA(sse2_cvtpd2ps,     INTR_TYPE_1OP, X86ISD::VFPROUND, 0),
   X86_INTRINSIC_DATA(sse2_max_pd,       INTR_TYPE_2OP, X86ISD::FMAX, 0),
   X86_INTRINSIC_DATA(sse2_min_pd,       INTR_TYPE_2OP, X86ISD::FMIN, 0),
   X86_INTRINSIC_DATA(sse2_movmsk_pd,    INTR_TYPE_1OP, X86ISD::MOVMSK, 0),

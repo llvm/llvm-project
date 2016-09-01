@@ -3851,11 +3851,12 @@ bool SLPVectorizerPass::tryToVectorizePair(Value *A, Value *B, BoUpSLP &R) {
 
 bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
                                            ArrayRef<Value *> BuildVector,
-                                           bool allowReorder) {
+                                           bool AllowReorder) {
   if (VL.size() < 2)
     return false;
 
-  DEBUG(dbgs() << "SLP: Vectorizing a list of length = " << VL.size() << ".\n");
+  DEBUG(dbgs() << "SLP: Trying to vectorize a list of length = " << VL.size()
+               << ".\n");
 
   // Check that all of the parts are scalar instructions of the same type.
   Instruction *I0 = dyn_cast<Instruction>(VL[0]);
@@ -3908,7 +3909,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
     R.buildTree(Ops, BuildVectorSlice);
     // TODO: check if we can allow reordering for more cases.
-    if (allowReorder && R.shouldReorder()) {
+    if (AllowReorder && R.shouldReorder()) {
       // Conceptually, there is nothing actually preventing us from trying to
       // reorder a larger list. In fact, we do exactly this when vectorizing
       // reductions. However, at this point, we only expect to get here from

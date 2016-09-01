@@ -19,7 +19,7 @@ registers:
 body: |
   bb.0:
    liveins: %x0
-   %0 = COPY %x0
+   %0 = G_TYPE s64 %x0
 
    ; CHECK: *** Bad machine code: Unexpected generic instruction in a Selected function ***
    ; CHECK: instruction: %vreg1<def> = G_ADD { s32 }

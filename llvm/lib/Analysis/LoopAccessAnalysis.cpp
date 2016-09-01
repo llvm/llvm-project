@@ -1029,8 +1029,8 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
     return false;
 
   // Make sure that A and B have the same type if required.
-  if(CheckType && PtrA->getType() != PtrB->getType())
-      return false;
+  if (CheckType && PtrA->getType() != PtrB->getType())
+    return false;
 
   unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
   Type *Ty = cast<PointerType>(PtrA->getType())->getElementType();

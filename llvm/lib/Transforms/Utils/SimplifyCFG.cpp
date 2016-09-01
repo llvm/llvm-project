@@ -174,7 +174,9 @@ public:
 
 /// Return true if it is safe to merge these two
 /// terminator instructions together.
-static bool SafeToMergeTerminators(TerminatorInst *SI1, TerminatorInst *SI2) {
+static bool
+SafeToMergeTerminators(TerminatorInst *SI1, TerminatorInst *SI2,
+                       SmallSetVector<BasicBlock *, 4> *FailBlocks = nullptr) {
   if (SI1 == SI2)
     return false; // Can't merge with self!
 
@@ -183,18 +185,22 @@ static bool SafeToMergeTerminators(TerminatorInst *SI1, TerminatorInst *SI2) {
   // conflicting incoming values from the two switch blocks.
   BasicBlock *SI1BB = SI1->getParent();
   BasicBlock *SI2BB = SI2->getParent();
-  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
 
+  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
+  bool Fail = false;
   for (BasicBlock *Succ : successors(SI2BB))
     if (SI1Succs.count(Succ))
       for (BasicBlock::iterator BBI = Succ->begin(); isa<PHINode>(BBI); ++BBI) {
         PHINode *PN = cast<PHINode>(BBI);
         if (PN->getIncomingValueForBlock(SI1BB) !=
-            PN->getIncomingValueForBlock(SI2BB))
-          return false;
+            PN->getIncomingValueForBlock(SI2BB)) {
+          if (FailBlocks)
+            FailBlocks->insert(Succ);
+          Fail = true;
+        }
       }
 
-  return true;
+  return !Fail;
 }
 
 /// Return true if it is safe and profitable to merge these two terminator
@@ -954,7 +960,16 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(TerminatorInst *TI,
     TerminatorInst *PTI = Pred->getTerminator();
     Value *PCV = isValueEqualityComparison(PTI); // PredCondVal
 
-    if (PCV == CV && SafeToMergeTerminators(TI, PTI)) {
+    if (PCV == CV && TI != PTI) {
+      SmallSetVector<BasicBlock*, 4> FailBlocks;
+      if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
+        for (auto *Succ : FailBlocks) {
+          std::vector<BasicBlock*> Blocks = { TI->getParent() };
+          if (!SplitBlockPredecessors(Succ, Blocks, ".fold.split"))
+            return false;
+        }
+      }
+
       // Figure out which 'cases' to copy from SI to PSI.
       std::vector<ValueEqualityComparisonCase> BBCases;
       BasicBlock *BBDefault = GetValueEqualityComparisonCases(TI, BBCases);
@@ -1433,11 +1448,6 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
         I->getType()->isTokenTy())
       return false;
-    // Apart from loads and stores, we won't move anything that could
-    // change memory or have sideeffects.
-    if (!isa<StoreInst>(I) && !isa<LoadInst>(I) &&
-        (I->mayHaveSideEffects() || I->mayHaveSideEffects()))
-      return false;
     // Everything must have only one use too, apart from stores which
     // have no uses.
     if (!isa<StoreInst>(I) && !I->hasOneUse())
@@ -1472,10 +1482,11 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
       if (!canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
-      if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OI != 0)
-        // Don't create indirect calls!
+      // Don't create indirect calls! The called value is the final operand.
+      if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OI == OE - 1) {
         // FIXME: if the call was *already* indirect, we should do this.
         return false;
+      }
       ++NumPHIsRequired;
     }
   }

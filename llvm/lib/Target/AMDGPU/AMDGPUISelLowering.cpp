@@ -2012,6 +2012,9 @@ SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
     // problems during legalization, the emitted instructions to pack and unpack
     // the bytes again are not eliminated in the case of an unaligned copy.
     if (!allowsMisalignedMemoryAccesses(VT, AS, Align, &IsFast)) {
+      if (VT.isVector())
+        return scalarizeVectorLoad(LN, DAG);
+
       SDValue Ops[2];
       std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(LN, DAG);
       return DAG.getMergeValues(Ops, SDLoc(N));
@@ -2060,8 +2063,12 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
     // order problems during legalization, the emitted instructions to pack and
     // unpack the bytes again are not eliminated in the case of an unaligned
     // copy.
-    if (!allowsMisalignedMemoryAccesses(VT, AS, Align, &IsFast))
+    if (!allowsMisalignedMemoryAccesses(VT, AS, Align, &IsFast)) {
+      if (VT.isVector())
+        return scalarizeVectorStore(SN, DAG);
+
       return expandUnalignedStore(SN, DAG);
+    }
 
     if (!IsFast)
       return SDValue();
@@ -2683,7 +2690,7 @@ SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const AMDGPUMachineFunction *MFI, const ImplicitParameter Param) const {
-  uint64_t ArgOffset = MFI->getABIArgOffset();
+  uint64_t ArgOffset = alignTo(MFI->getABIArgOffset(), 4);
   switch (Param) {
   case GRID_DIM:
     return ArgOffset;

@@ -114,10 +114,8 @@ createTargetMachine(Config &C, StringRef TheTriple, const Target *TheTarget) {
       C.CodeModel, C.CGOptLevel));
 }
 
-bool opt(Config &C, TargetMachine *TM, unsigned Task, Module &M,
-         bool IsThinLto) {
-  M.setDataLayout(TM->createDataLayout());
-
+static void runOldPMPasses(Config &C, Module &M, TargetMachine *TM,
+                           bool IsThinLto) {
   legacy::PassManager passes;
   passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
 
@@ -136,7 +134,12 @@ bool opt(Config &C, TargetMachine *TM, unsigned Task, Module &M,
   else
     PMB.populateLTOPassManager(passes);
   passes.run(M);
+}
 
+bool opt(Config &C, TargetMachine *TM, unsigned Task, Module &M,
+         bool IsThinLto) {
+  M.setDataLayout(TM->createDataLayout());
+  runOldPMPasses(C, M, TM, IsThinLto);
   if (C.PostOptModuleHook && !C.PostOptModuleHook(Task, M))
     return false;
 

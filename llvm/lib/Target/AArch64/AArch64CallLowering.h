@@ -35,16 +35,16 @@ class AArch64CallLowering: public CallLowering {
                             ArrayRef<unsigned> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, const MachineOperand &Callee,
-                 ArrayRef<MVT> ResTys, ArrayRef<unsigned> ResRegs,
-                 ArrayRef<MVT> ArgTys,
+                 ArrayRef<Type *> ResTys, ArrayRef<unsigned> ResRegs,
+                 ArrayRef<Type *> ArgTys,
                  ArrayRef<unsigned> ArgRegs) const override;
 
 private:
-  typedef std::function<void(MachineIRBuilder &, unsigned, unsigned)>
+  typedef std::function<void(MachineIRBuilder &, Type *, unsigned, unsigned)>
       AssignFnTy;
 
   bool handleAssignments(MachineIRBuilder &MIRBuilder, CCAssignFn *AssignFn,
-                         ArrayRef<MVT> ArgsTypes, ArrayRef<unsigned> ArgRegs,
+                         ArrayRef<Type *> ArgsTypes, ArrayRef<unsigned> ArgRegs,
                          AssignFnTy AssignValToReg) const;
 };
 } // End of namespace llvm;

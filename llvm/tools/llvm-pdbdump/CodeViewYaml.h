@@ -21,7 +21,8 @@ class YamlTypeDumperCallbacks : public TypeVisitorCallbacks {
 public:
   YamlTypeDumperCallbacks(llvm::yaml::IO &IO) : YamlIO(IO) {}
 
-  virtual Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
+  virtual Expected<TypeLeafKind>
+  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \

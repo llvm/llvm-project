@@ -1580,10 +1580,9 @@ private:
   /// @param LI     The LoopInfo for the current function.
   ///
   /// @returns The domain under which @p BB is executed.
-  __isl_give isl_set *getPredecessorDomainConstraints(BasicBlock *BB,
-                                                      isl_set *Domain,
-                                                      DominatorTree &DT,
-                                                      LoopInfo &LI);
+  __isl_give isl_set *
+  getPredecessorDomainConstraints(BasicBlock *BB, __isl_keep isl_set *Domain,
+                                  DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Add loop carried constraints to the header block of the loop @p L.
   ///
@@ -1888,7 +1887,7 @@ public:
   /// @param Parameter A SCEV that was recognized as a Parameter.
   ///
   /// @return The corresponding isl_id or NULL otherwise.
-  isl_id *getIdForParam(const SCEV *Parameter);
+  __isl_give isl_id *getIdForParam(const SCEV *Parameter);
 
   /// @brief Get the maximum region of this static control part.
   ///
@@ -2186,7 +2185,7 @@ public:
     ScopArrayInfoMap.erase(It);
   }
 
-  void setContext(isl_set *NewContext);
+  void setContext(__isl_take isl_set *NewContext);
 
   /// @brief Align the parameters in the statement to the scop context
   void realignParams();

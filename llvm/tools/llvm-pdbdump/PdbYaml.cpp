@@ -8,10 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "PdbYaml.h"
+
 #include "CodeViewYaml.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
@@ -200,11 +202,14 @@ void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
 void MappingTraits<PdbTpiRecord>::mapping(IO &IO,
                                           pdb::yaml::PdbTpiRecord &Obj) {
   if (IO.outputting()) {
-    // If we're going from Pdb To Yaml, deserialize the Pdb record
+    codeview::TypeDeserializer Deserializer;
     codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
-    codeview::TypeDeserializer Deserializer(Callbacks);
 
-    codeview::CVTypeVisitor Visitor(Deserializer);
+    codeview::TypeVisitorCallbackPipeline Pipeline;
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(Callbacks);
+
+    codeview::CVTypeVisitor Visitor(Pipeline);
     consumeError(Visitor.visitTypeRecord(Obj.Record));
   } else {
     codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);

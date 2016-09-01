@@ -2288,6 +2288,9 @@ let Predicates = [HasAVX] in {
 
 let Predicates = [HasAVX, NoVLX] in {
   // Match fpround and fpextend for 128/256-bit conversions
+  def : Pat<(v4f32 (bitconvert (X86vzmovl (v2f64 (bitconvert
+                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))))),
+            (VCVTPD2PSrr VR128:$src)>;
   def : Pat<(v4f32 (X86vfpround (v2f64 VR128:$src))),
             (VCVTPD2PSrr VR128:$src)>;
   def : Pat<(v4f32 (X86vfpround (loadv2f64 addr:$src))),
@@ -2307,6 +2310,9 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let Predicates = [UseSSE2] in {
   // Match fpround and fpextend for 128 conversions
+  def : Pat<(v4f32 (bitconvert (X86vzmovl (v2f64 (bitconvert
+                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))))),
+            (CVTPD2PSrr VR128:$src)>;
   def : Pat<(v4f32 (X86vfpround (v2f64 VR128:$src))),
             (CVTPD2PSrr VR128:$src)>;
   def : Pat<(v4f32 (X86vfpround (memopv2f64 addr:$src))),

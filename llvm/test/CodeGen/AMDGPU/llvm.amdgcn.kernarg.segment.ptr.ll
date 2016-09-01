@@ -27,6 +27,20 @@ define void @test_implicit(i32 addrspace(1)* %out) #1 {
   ret void
 }
 
+; ALL-LABEL: {{^}}test_implicit_alignment
+; MESA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xc
+; HSA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x3
+; ALL: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[VAL]]
+; MESA: buffer_store_dword [[V_VAL]]
+; HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
+define void @test_implicit_alignment(i32 addrspace(1)* %out, <2 x i8> %in) #1 {
+  %implicitarg.ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
+  %arg.ptr = bitcast i8 addrspace(2)* %implicitarg.ptr to i32 addrspace(2)*
+  %val = load i32, i32 addrspace(2)* %arg.ptr
+  store i32 %val, i32 addrspace(1)* %out
+  ret void
+}
+
 declare i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr() #0
 

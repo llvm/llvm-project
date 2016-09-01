@@ -384,6 +384,7 @@ int main(int argc, char **argv) {
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeGlobalMergePass(Registry);
   initializeInterleavedAccessPass(Registry);
+  initializeCountingFunctionInserterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
 
 #ifdef LINK_POLLY_INTO_TOOLS

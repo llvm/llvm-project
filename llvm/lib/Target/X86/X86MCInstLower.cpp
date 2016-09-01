@@ -1093,6 +1093,39 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   recordSled(CurSled, MI, SledKind::FUNCTION_EXIT);
 }
 
+void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI, X86MCInstLower &MCIL) {
+  // Like PATCHABLE_RET, we have the actual instruction in the operands to this
+  // instruction so we lower that particular instruction and its operands.
+  // Unlike PATCHABLE_RET though, we put the sled before the JMP, much like how
+  // we do it for PATCHABLE_FUNCTION_ENTER. The sled should be very similar to
+  // the PATCHABLE_FUNCTION_ENTER case, followed by the lowering of the actual
+  // tail call much like how we have it in PATCHABLE_RET.
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitCodeAlignment(2);
+  OutStreamer->EmitLabel(CurSled);
+  auto Target = OutContext.createTempSymbol();
+
+  // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
+  // an operand (computed as an offset from the jmp instruction).
+  // FIXME: Find another less hacky way do force the relative jump.
+  OutStreamer->EmitBytes("\xeb\x09");
+  EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
+  OutStreamer->EmitLabel(Target);
+  recordSled(CurSled, MI, SledKind::TAIL_CALL);
+
+  unsigned OpCode = MI.getOperand(0).getImm();
+  MCInst TC;
+  TC.setOpcode(OpCode);
+
+  // Before emitting the instruction, add a comment to indicate that this is
+  // indeed a tail call.
+  OutStreamer->AddComment("TAILCALL");
+  for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
+    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
+      TC.addOperand(MaybeOperand.getValue());
+  OutStreamer->EmitInstruction(TC, getSubtargetInfo());
+}
+
 void X86AsmPrinter::EmitXRayTable() {
   if (Sleds.empty())
     return;
@@ -1382,6 +1415,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHABLE_RET:
     return LowerPATCHABLE_RET(*MI, MCInstLowering);
+
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    return LowerPATCHABLE_TAIL_CALL(*MI, MCInstLowering);
 
   case X86::MORESTACK_RET:
     EmitAndCountInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));

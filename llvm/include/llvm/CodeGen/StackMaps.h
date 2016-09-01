@@ -24,7 +24,7 @@ class MCStreamer;
 
 /// \brief MI-level stackmap operands.
 ///
-/// MI slackmap operations take the form:
+/// MI stackmap operations take the form:
 /// <id>, <numBytes>, live args...
 class StackMapOpers {
 public:

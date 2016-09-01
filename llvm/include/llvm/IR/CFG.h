@@ -158,10 +158,8 @@ template <> struct GraphTraits<BasicBlock*> {
   typedef succ_iterator ChildIteratorType;
 
   static NodeRef getEntryNode(BasicBlock *BB) { return BB; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return succ_begin(N);
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
+  static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
+  static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 };
 
 template <> struct GraphTraits<const BasicBlock*> {
@@ -170,10 +168,8 @@ template <> struct GraphTraits<const BasicBlock*> {
 
   static NodeRef getEntryNode(const BasicBlock *BB) { return BB; }
 
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return succ_begin(N);
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
+  static ChildIteratorType child_begin(NodeRef N) { return succ_begin(N); }
+  static ChildIteratorType child_end(NodeRef N) { return succ_end(N); }
 };
 
 // Provide specializations of GraphTraits to be able to treat a function as a
@@ -185,20 +181,16 @@ template <> struct GraphTraits<Inverse<BasicBlock*> > {
   typedef BasicBlock *NodeRef;
   typedef pred_iterator ChildIteratorType;
   static NodeRef getEntryNode(Inverse<BasicBlock *> G) { return G.Graph; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return pred_begin(N);
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
+  static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
+  static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
 template <> struct GraphTraits<Inverse<const BasicBlock*> > {
   typedef const BasicBlock *NodeRef;
   typedef const_pred_iterator ChildIteratorType;
   static NodeRef getEntryNode(Inverse<const BasicBlock *> G) { return G.Graph; }
-  static inline ChildIteratorType child_begin(NodeRef N) {
-    return pred_begin(N);
-  }
-  static inline ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
+  static ChildIteratorType child_begin(NodeRef N) { return pred_begin(N); }
+  static ChildIteratorType child_end(NodeRef N) { return pred_end(N); }
 };
 
 

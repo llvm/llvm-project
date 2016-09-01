@@ -552,4 +552,53 @@ define void @constant_align4_merge_load_2_i32(i32 addrspace(2)* %p, i32 addrspac
   ret void
 }
 
+; SI-LABEL: {{^}}local_load_align1_v16i8:
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+
+; SI: ScratchSize: 0{{$}}
+define void @local_load_align1_v16i8(<16 x i8> addrspace(1)* %out, <16 x i8> addrspace(3)* %in) #0 {
+  %ld = load <16 x i8>, <16 x i8> addrspace(3)* %in, align 1
+  store <16 x i8> %ld, <16 x i8> addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}local_store_align1_v16i8:
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+; SI: ds_write_b8
+
+; SI: ScratchSize: 0{{$}}
+define void @local_store_align1_v16i8(<16 x i8> addrspace(3)* %out) #0 {
+  store <16 x i8> zeroinitializer, <16 x i8> addrspace(3)* %out, align 1
+  ret void
+}
+
 attributes #0 = { nounwind }

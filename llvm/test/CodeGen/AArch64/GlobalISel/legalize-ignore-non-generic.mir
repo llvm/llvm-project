@@ -15,10 +15,10 @@ body: |
   bb.0:
     liveins: %x0
     ; CHECK-LABEL: name: test_copy
-    ; CHECK: %0(64) = COPY %x0
+    ; CHECK: %0(64) = G_TYPE s64 %x0
     ; CHECK-NEXT: %x0 = COPY %0
 
-    %0(64) = COPY %x0
+    %0(64) = G_TYPE s64 %x0
     %x0 = COPY %0
 ...
 
