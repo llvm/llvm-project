@@ -1,3 +1,6 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // C++'0x [class.friend] p1:
@@ -216,9 +219,17 @@ namespace test6 {
   struct A {};
 
   struct B {
-    friend A::A();
+    friend
+#if __cplusplus >= 201103L
+      constexpr
+#endif
+      A::A();
     friend A::~A();
-    friend A &A::operator=(const A&);
+    friend
+#if __cplusplus >= 201402L
+      constexpr
+#endif
+      A &A::operator=(const A&);
   };
 }
 
@@ -233,7 +244,11 @@ namespace test7 {
   class A {
     friend void X<int>::foo();
     friend X<int>::X();
-    friend X<int>::X(const X&);
+    friend
+#if __cplusplus >= 201103L
+      constexpr
+#endif
+      X<int>::X(const X&);
 
   private:
     A(); // expected-note 2 {{declared private here}}

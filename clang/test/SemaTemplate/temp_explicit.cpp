@@ -26,7 +26,7 @@ template class X0<double> { }; // expected-error{{explicit specialization}}
 template class X0<int, int>; // expected-error{{duplicate}}
 
 template<> class X0<char> { }; // expected-note{{previous}}
-template class X0<char>; // expected-warning{{ignored}}
+template class X0<char>; // expected-warning{{has no effect}}
 
 void foo(X0<short>) { }
 template class X0<short>;

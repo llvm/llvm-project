@@ -454,19 +454,15 @@ namespace llvm {
     typedef clang::ento::ExplodedNode::succ_iterator ChildIteratorType;
     typedef llvm::df_iterator<NodeRef> nodes_iterator;
 
-    static inline NodeRef getEntryNode(NodeRef N) { return N; }
+    static NodeRef getEntryNode(NodeRef N) { return N; }
 
-    static inline ChildIteratorType child_begin(NodeRef N) {
-      return N->succ_begin();
-    }
+    static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
 
-    static inline ChildIteratorType child_end(NodeRef N) {
-      return N->succ_end();
-    }
+    static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
-    static inline nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
+    static nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
 
-    static inline nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
+    static nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
   };
 
   template<> struct GraphTraits<const clang::ento::ExplodedNode*> {
@@ -474,19 +470,15 @@ namespace llvm {
     typedef clang::ento::ExplodedNode::const_succ_iterator ChildIteratorType;
     typedef llvm::df_iterator<NodeRef> nodes_iterator;
 
-    static inline NodeRef getEntryNode(NodeRef N) { return N; }
+    static NodeRef getEntryNode(NodeRef N) { return N; }
 
-    static inline ChildIteratorType child_begin(NodeRef N) {
-      return N->succ_begin();
-    }
+    static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
 
-    static inline ChildIteratorType child_end(NodeRef N) {
-      return N->succ_end();
-    }
+    static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
 
-    static inline nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
+    static nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
 
-    static inline nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
+    static nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
   };
 
 } // end llvm namespace

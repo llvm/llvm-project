@@ -264,9 +264,9 @@ namespace explicit_specialization {
     template<typename T> 
     T pi0 = T(3.1415926535897932385);   // expected-note {{variable template 'pi0' declared here}}
 
-    template<> int pi0<int> = 10;
-    template int pi0<int>;
-    template float pi0<int>;    // expected-error {{type 'float' of explicit instantiation of 'pi0' does not match expected type}}
+    template<> int pi0<int> = 10; // expected-note 2{{previous template specialization is here}}
+    template int pi0<int>;        // expected-warning {{has no effect}}
+    template float pi0<int>;      // expected-error {{type 'float' of explicit instantiation of 'pi0' does not match expected type}} expected-warning {{has no effect}}
 
     template<typename T1, typename T2>
     CONST int pi2 = 1;

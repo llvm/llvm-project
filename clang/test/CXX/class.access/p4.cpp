@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
 
 // C++0x [class.access]p4:
@@ -88,7 +90,7 @@ namespace test1 {
 namespace test2 {
   class A {
   private:
-    A(); // expected-note 3 {{declared private here}}
+    A(); // expected-note 1+{{declared private here}}
 
     static A foo;
   };
@@ -96,6 +98,7 @@ namespace test2 {
   A a; // expected-error {{calling a private constructor}}
   A A::foo; // okay
   
+#if __cplusplus < 201103L
   class B : A { }; // expected-error {{base class 'test2::A' has private default constructor}}
   B b; // expected-note{{implicit default constructor}}
   
@@ -106,6 +109,19 @@ namespace test2 {
 
   class D : C { }; // expected-error {{inherited virtual base class 'test2::A' has private default constructor}}
   D d; // expected-note{{implicit default constructor}}
+#else
+  class B : A { }; // expected-note {{base class 'test2::A' has an inaccessible default constructor}}
+  B b; // expected-error {{call to implicitly-deleted default constructor}}
+  
+  // FIXME: Do a better job of explaining how we get here from class D.
+  class C : virtual A { // expected-note {{default constructor of 'D' is implicitly deleted because base class 'test2::A' has an inaccessible default constructor}}
+  public:
+    C();
+  };
+
+  class D : C { };
+  D d; // expected-error {{call to implicitly-deleted default constructor}}
+#endif
 }
 
 // Implicit destructor calls.
@@ -123,6 +139,7 @@ namespace test3 {
     A local; // expected-error {{variable of type 'test3::A' has private destructor}}
   }
 
+#if __cplusplus < 201103L
   template <unsigned N> class Base { ~Base(); }; // expected-note 14 {{declared private here}}
   class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 3 {{declared private here}} \
                                                // expected-error {{base class 'Base<2>' has private destructor}}
@@ -152,6 +169,33 @@ namespace test3 {
   {}; 
   Derived3 d3; // expected-note {{implicit default constructor}}\
                // expected-note{{implicit destructor}}}
+#else
+  template <unsigned N> class Base { ~Base(); }; // expected-note 4{{declared private here}}
+  class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 1{{declared private here}}
+  class Base3 : virtual Base<3> { public: ~Base3(); };
+
+  // These don't cause diagnostics because we don't need the destructor.
+  class Derived0 : Base<0> { ~Derived0(); };
+  class Derived1 : Base<1> { };
+
+  class Derived2 : // expected-error {{inherited virtual base class 'Base<2>' has private destructor}} \
+                   // expected-error {{inherited virtual base class 'Base<3>' has private destructor}}
+    Base<0>,  // expected-error {{base class 'Base<0>' has private destructor}}
+    virtual Base<1>, // expected-error {{base class 'Base<1>' has private destructor}}
+    Base2, // expected-error {{base class 'test3::Base2' has private destructor}}
+    virtual Base3
+  {
+    ~Derived2() {}
+  };
+
+  class Derived3 :
+    Base<0>, // expected-note {{deleted because base class 'Base<0>' has an inaccessible destructor}}
+    virtual Base<1>,
+    Base2,
+    virtual Base3
+  {}; 
+  Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
+#endif
 }
 
 // Conversion functions.
@@ -201,9 +245,13 @@ namespace test4 {
 // Implicit copy assignment operator uses.
 namespace test5 {
   class A {
-    void operator=(const A &); // expected-note 2 {{implicitly declared private here}}
+    void operator=(const A &);
+#if __cplusplus < 201103L
+    // expected-note@-2 2{{implicitly declared private here}}
+#endif
   };
 
+#if __cplusplus < 201103L
   class Test1 { A a; }; // expected-error {{private member}}
   void test1() {
     Test1 a; 
@@ -215,15 +263,32 @@ namespace test5 {
     Test2 a;
     a = Test2(); // expected-note{{implicit copy}}
   }
+#else
+  class Test1 { A a; }; // expected-note {{because field 'a' has an inaccessible copy assignment operator}}
+  void test1() {
+    Test1 a; 
+    a = Test1(); // expected-error {{copy assignment operator is implicitly deleted}}
+  }
+
+  class Test2 : A {}; // expected-note {{because base class 'test5::A' has an inaccessible copy assignment operator}}
+  void test2() {
+    Test2 a;
+    a = Test2(); // expected-error {{copy assignment operator is implicitly deleted}}
+  }
+#endif
 }
 
 // Implicit copy constructor uses.
 namespace test6 {
   class A {
     public: A();
-    private: A(const A &); // expected-note 2 {{declared private here}}
+    private: A(const A &);
+#if __cplusplus < 201103L
+    // expected-note@-2 2{{declared private here}}
+#endif
   };
 
+#if __cplusplus < 201103L
   class Test1 { A a; }; // expected-error {{field of type 'test6::A' has private copy constructor}}
   void test1(const Test1 &t) {
     Test1 a = t; // expected-note{{implicit copy}}
@@ -233,6 +298,17 @@ namespace test6 {
   void test2(const Test2 &t) {
     Test2 a = t; // expected-note{{implicit copy}}
   }
+#else
+  class Test1 { A a; }; // expected-note {{field 'a' has an inaccessible copy constructor}}
+  void test1(const Test1 &t) {
+    Test1 a = t; // expected-error{{implicitly-deleted}}
+  }
+
+  class Test2 : A {}; // expected-note {{base class 'test6::A' has an inaccessible copy constructor}}
+  void test2(const Test2 &t) {
+    Test2 a = t; // expected-error{{implicitly-deleted}}
+  }
+#endif
 }
 
 // Redeclaration lookups are not accesses.
