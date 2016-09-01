@@ -578,9 +578,9 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
   const MemRegion *R = svalBuilder.getRegionManager().getCXXTempObjectRegion(
       LE, LocCtxt);
   SVal V = loc::MemRegionVal(R);
-  
+
   ProgramStateRef State = Pred->getState();
-  
+
   // If we created a new MemRegion for the lambda, we should explicitly bind
   // the captures.
   CXXRecordDecl::field_iterator CurField = LE->getLambdaClass()->field_begin();
