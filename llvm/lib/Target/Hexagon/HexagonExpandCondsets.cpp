@@ -424,7 +424,7 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     if (Dominate(Defs, BB))
       ExtTo.push_back(SI);
   }
-  LIS->extendToIndices(Range, ExtTo);
+  LIS->extendToIndices(Range, ExtTo, Undefs);
 
   // Remove <dead> flags from all defs that are not dead after live range
   // extension, and collect all def operands. They will be used to generate

@@ -153,4 +153,13 @@ TEST_F(RegexTest, MoveAssign) {
   EXPECT_TRUE(r2.match("916"));
 }
 
+TEST_F(RegexTest, NoArgConstructor) {
+  std::string Error;
+  Regex r1;
+  EXPECT_FALSE(r1.isValid(Error));
+  EXPECT_EQ("invalid regular expression", Error);
+  r1 = Regex("abc");
+  EXPECT_TRUE(r1.isValid(Error));
+}
+
 }

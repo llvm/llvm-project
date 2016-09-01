@@ -30,8 +30,33 @@ template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
 
+// We need non-template input section class to store symbol layout
+// in linker script parser structures, where we do not have ELFT
+// template parameter. For each scripted output section symbol we
+// store pointer to preceding InputSectionData object or nullptr,
+// if symbol should be placed at the very beginning of the output
+// section
+class InputSectionData {
+public:
+  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions, MipsAbiFlags };
+
+  // The garbage collector sets sections' Live bits.
+  // If GC is disabled, all sections are considered live by default.
+  InputSectionData(Kind SectionKind, bool Compressed, bool Live)
+      : SectionKind(SectionKind), Live(Live), Compressed(Compressed) {}
+
+  Kind SectionKind;
+  uint32_t Alignment;
+  // Used for garbage collection.
+  bool Live;
+
+  bool Compressed;
+  // If a section is compressed, this vector has uncompressed section data.
+  SmallVector<char, 0> Uncompressed;
+};
+
 // This corresponds to a section of an input file.
-template <class ELFT> class InputSectionBase {
+template <class ELFT> class InputSectionBase : public InputSectionData {
 protected:
   typedef typename ELFT::Chdr Elf_Chdr;
   typedef typename ELFT::Rel Elf_Rel;
@@ -44,30 +69,12 @@ protected:
   // The file this section is from.
   ObjectFile<ELFT> *File;
 
-  // If a section is compressed, this vector has uncompressed section data.
-  SmallVector<char, 0> Uncompressed;
-
 public:
-  enum Kind {
-    Regular,
-    EHFrame,
-    Merge,
-    MipsReginfo,
-    MipsOptions,
-    MipsAbiFlags,
-    Layout
-  };
-  Kind SectionKind;
-
-  InputSectionBase() : Repl(this) {}
+  InputSectionBase() : InputSectionData(Regular, false, false), Repl(this) {}
 
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    Kind SectionKind);
   OutputSectionBase<ELFT> *OutSec = nullptr;
-  uint32_t Alignment;
-
-  // Used for garbage collection.
-  bool Live;
 
   // This pointer points to the "real" instance of this instance.
   // Usually Repl == this. However, if ICF merges two sections,
@@ -96,8 +103,6 @@ public:
 
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
   std::vector<Relocation<ELFT>> Relocations;
-
-  bool Compressed;
 };
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;

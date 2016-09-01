@@ -174,7 +174,9 @@ public:
 
 /// Return true if it is safe to merge these two
 /// terminator instructions together.
-static bool SafeToMergeTerminators(TerminatorInst *SI1, TerminatorInst *SI2) {
+static bool
+SafeToMergeTerminators(TerminatorInst *SI1, TerminatorInst *SI2,
+                       SmallSetVector<BasicBlock *, 4> *FailBlocks = nullptr) {
   if (SI1 == SI2)
     return false; // Can't merge with self!
 
@@ -183,18 +185,22 @@ static bool SafeToMergeTerminators(TerminatorInst *SI1, TerminatorInst *SI2) {
   // conflicting incoming values from the two switch blocks.
   BasicBlock *SI1BB = SI1->getParent();
   BasicBlock *SI2BB = SI2->getParent();
-  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
 
+  SmallPtrSet<BasicBlock *, 16> SI1Succs(succ_begin(SI1BB), succ_end(SI1BB));
+  bool Fail = false;
   for (BasicBlock *Succ : successors(SI2BB))
     if (SI1Succs.count(Succ))
       for (BasicBlock::iterator BBI = Succ->begin(); isa<PHINode>(BBI); ++BBI) {
         PHINode *PN = cast<PHINode>(BBI);
         if (PN->getIncomingValueForBlock(SI1BB) !=
-            PN->getIncomingValueForBlock(SI2BB))
-          return false;
+            PN->getIncomingValueForBlock(SI2BB)) {
+          if (FailBlocks)
+            FailBlocks->insert(Succ);
+          Fail = true;
+        }
       }
 
-  return true;
+  return !Fail;
 }
 
 /// Return true if it is safe and profitable to merge these two terminator
@@ -954,7 +960,16 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(TerminatorInst *TI,
     TerminatorInst *PTI = Pred->getTerminator();
     Value *PCV = isValueEqualityComparison(PTI); // PredCondVal
 
-    if (PCV == CV && SafeToMergeTerminators(TI, PTI)) {
+    if (PCV == CV && TI != PTI) {
+      SmallSetVector<BasicBlock*, 4> FailBlocks;
+      if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
+        for (auto *Succ : FailBlocks) {
+          std::vector<BasicBlock*> Blocks = { TI->getParent() };
+          if (!SplitBlockPredecessors(Succ, Blocks, ".fold.split"))
+            return false;
+        }
+      }
+
       // Figure out which 'cases' to copy from SI to PSI.
       std::vector<ValueEqualityComparisonCase> BBCases;
       BasicBlock *BBDefault = GetValueEqualityComparisonCases(TI, BBCases);
@@ -1319,63 +1334,6 @@ HoistTerminator:
   return true;
 }
 
-// Return true if V0 and V1 are equivalent. This handles the obvious cases
-// where V0 == V1 and V0 and V1 are both identical instructions, but also
-// handles loads and stores with identical operands.
-//
-// Because determining if two memory instructions are equivalent
-// depends on control flow, the \c At0 and \c At1 parameters specify a
-// location for the query. This function is essentially answering the
-// query "If V0 were moved to At0, and V1 were moved to At1, are V0 and V1
-// equivalent?". In practice this means checking that moving V0 to At0
-// doesn't cross any other memory instructions.
-static bool areValuesTriviallySame(Value *V0, BasicBlock::const_iterator At0,
-                                   Value *V1, BasicBlock::const_iterator At1) {
-  if (V0 == V1)
-    return true;
-  
-  // Also check for instructions that are identical but not pointer-identical.
-  // This can include load instructions that haven't been CSE'd.
-  if (!isa<Instruction>(V0) || !isa<Instruction>(V1))
-    return false;
-  const auto *I0 = cast<Instruction>(V0);
-  const auto *I1 = cast<Instruction>(V1);
-  if (!I0->isIdenticalToWhenDefined(I1))
-    return false;
-
-  if (!I0->mayReadOrWriteMemory())
-    return true;
-
-  // Instructions that may read or write memory have extra restrictions. We
-  // must ensure we don't treat %a and %b as equivalent in code such as:
-  //
-  //  %a = load %x
-  //  store %x, 1
-  //  if (%c) {
-  //    %b = load %x
-  //    %d = add %b, 1
-  //  } else {
-  //    %d = add %a, 1
-  //  }
-
-  // Be conservative. We don't want to search the entire CFG between def
-  // and use; if the def isn't in the same block as the use just bail.
-  if (I0->getParent() != At0->getParent() ||
-      I1->getParent() != At1->getParent())
-    return false;
-
-  // Again, be super conservative. Ideally we'd be able to query AliasAnalysis
-  // but we currently don't have that available.
-  auto WritesMemory = [](const Instruction &I) {
-    return I.mayReadOrWriteMemory();
-  };
-  if (std::any_of(std::next(I0->getIterator()), At0, WritesMemory))
-    return false;
-  if (std::any_of(std::next(I1->getIterator()), At1, WritesMemory))
-    return false;
-  return true;
-}
-
 // Is it legal to place a variable in operand \c OpIdx of \c I?
 // FIXME: This should be promoted to Instruction.
 static bool canReplaceOperandWithVariable(const Instruction *I,
@@ -1410,21 +1368,14 @@ static bool canReplaceOperandWithVariable(const Instruction *I,
   }
 }
 
-// All blocks in Blocks unconditionally jump to a common successor. Analyze
-// the last non-terminator instruction in each block and return true if it would
-// be possible to sink them into their successor, creating one common
-// instruction instead. Set NumPHIsRequired to the number of PHI nodes that
-// would need to be created during sinking.
-static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
-                                   unsigned &NumPHIsRequired) {
-  SmallVector<Instruction*,4> Insts;
-  for (auto *BB : Blocks) {
-    if (BB->getTerminator() == &BB->front())
-      // Block was empty.
-      return false;
-    Insts.push_back(BB->getTerminator()->getPrevNode());
-  }
-
+// All instructions in Insts belong to different blocks that all unconditionally
+// branch to a common successor. Analyze each instruction and return true if it
+// would be possible to sink them into their successor, creating one common
+// instruction instead. For every value that would be required to be provided by
+// PHI node (because an operand varies in each input block), add to PHIOperands.
+static bool canSinkInstructions(
+    ArrayRef<Instruction *> Insts,
+    DenseMap<Instruction *, SmallVector<Value *, 4>> &PHIOperands) {
   // Prune out obviously bad instructions to move. Any non-store instruction
   // must have exactly one use, and we check later that use is by a single,
   // common PHI instruction in the successor.
@@ -1444,24 +1395,26 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
     if (!I->isSameOperationAs(I0))
       return false;
 
-  // If this isn't a store, check the only user is a single PHI.
+  // All instructions in Insts are known to be the same opcode. If they aren't
+  // stores, check the only user of each is a PHI or in the same block as the
+  // instruction, because if a user is in the same block as an instruction
+  // we're contemplating sinking, it must already be determined to be sinkable.
   if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    if (!PNUse ||
-        !all_of(Insts, [&PNUse](const Instruction *I) {
-          return *I->user_begin() == PNUse;
+    if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
+          auto *U = cast<Instruction>(*I->user_begin());
+          return U == PNUse || U->getParent() == I->getParent();
         }))
       return false;
   }
 
-  NumPHIsRequired = 0;
   for (unsigned OI = 0, OE = I0->getNumOperands(); OI != OE; ++OI) {
     if (I0->getOperand(OI)->getType()->isTokenTy())
       // Don't touch any operand of token type.
       return false;
     auto SameAsI0 = [&I0, OI](const Instruction *I) {
-      return areValuesTriviallySame(I->getOperand(OI), I->getIterator(),
-                                    I0->getOperand(OI), I0->getIterator());
+      assert(I->getNumOperands() == I0->getNumOperands());
+      return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
       if (!canReplaceOperandWithVariable(I0, OI))
@@ -1472,7 +1425,8 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
         // FIXME: if the call was *already* indirect, we should do this.
         return false;
       }
-      ++NumPHIsRequired;
+      for (auto *I : Insts)
+        PHIOperands[I].push_back(I->getOperand(OI));
     }
   }
   return true;
@@ -1481,11 +1435,7 @@ static bool canSinkLastInstruction(ArrayRef<BasicBlock*> Blocks,
 // Assuming canSinkLastInstruction(Blocks) has returned true, sink the last
 // instruction of every block in Blocks to their common successor, commoning
 // into one instruction.
-static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
-  unsigned Dummy;
-  (void)Dummy;
-  assert(canSinkLastInstruction(Blocks, Dummy) &&
-         "Must analyze before transforming!");
+static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
 
   // canSinkLastInstruction returning true guarantees that every block has at
@@ -1494,9 +1444,22 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   for (auto *BB : Blocks)
     Insts.push_back(BB->getTerminator()->getPrevNode());
 
-  // We don't need to do any checking here; canSinkLastInstruction should have
-  // done it all for us.
+  // The only checking we need to do now is that all users of all instructions
+  // are the same PHI node. canSinkLastInstruction should have checked this but
+  // it is slightly over-aggressive - it gets confused by commutative instructions
+  // so double-check it here.
   Instruction *I0 = Insts.front();
+  if (!isa<StoreInst>(I0)) {
+    auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
+    if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
+          auto *U = cast<Instruction>(*I->user_begin());
+          return U == PNUse;
+        }))
+      return false;
+  }
+  
+  // We don't need to do any more checking here; canSinkLastInstruction should
+  // have done it all for us.
   SmallVector<Value*, 4> NewOperands;
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O) {
     // This check is different to that in canSinkLastInstruction. There, we
@@ -1548,6 +1511,62 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   for (auto *I : Insts)
     if (I != I0)
       I->eraseFromParent();
+
+  return true;
+}
+
+namespace {
+  // LockstepReverseIterator - Iterates through instructions
+  // in a set of blocks in reverse order from the first non-terminator.
+  // For example (assume all blocks have size n):
+  //   LockstepReverseIterator I([B1, B2, B3]);
+  //   *I-- = [B1[n], B2[n], B3[n]];
+  //   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
+  //   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
+  //   ...
+  class LockstepReverseIterator {
+    ArrayRef<BasicBlock*> Blocks;
+    SmallVector<Instruction*,4> Insts;
+    bool Fail;
+  public:
+    LockstepReverseIterator(ArrayRef<BasicBlock*> Blocks) :
+      Blocks(Blocks) {
+      reset();
+    }
+
+    void reset() {
+      Fail = false;
+      Insts.clear();
+      for (auto *BB : Blocks) {
+        if (BB->size() <= 1) {
+          // Block wasn't big enough
+          Fail = true;
+          return;
+        }
+        Insts.push_back(BB->getTerminator()->getPrevNode());
+      }
+    }
+
+    bool isValid() const {
+      return !Fail;
+    }
+    
+    void operator -- () {
+      if (Fail)
+        return;
+      for (auto *&Inst : Insts) {
+        if (Inst == &Inst->getParent()->front()) {
+          Fail = true;
+          return;
+        }
+        Inst = Inst->getPrevNode();
+      }
+    }
+
+    ArrayRef<Instruction*> operator * () const {
+      return Insts;
+    }
+  };
 }
 
 /// Given an unconditional branch that goes to BBEnd,
@@ -1558,20 +1577,137 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   assert(BI1->isUnconditional());
   BasicBlock *BBEnd = BI1->getSuccessor(0);
 
-  SmallVector<BasicBlock*,4> Blocks;
-  for (auto *BB : predecessors(BBEnd))
-    Blocks.push_back(BB);
-  if (Blocks.size() != 2 ||
-      !all_of(Blocks, [](const BasicBlock *BB) {
-        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-        return BI && BI->isUnconditional();
-      }))
+  // We support two situations:
+  //   (1) all incoming arcs are unconditional
+  //   (2) one incoming arc is conditional
+  //
+  // (2) is very common in switch defaults and
+  // else-if patterns;
+  //
+  //   if (a) f(1);
+  //   else if (b) f(2);
+  //
+  // produces:
+  //
+  //       [if]
+  //      /    \
+  //    [f(1)] [if]
+  //      |     | \
+  //      |     |  \
+  //      |  [f(2)]|
+  //       \    | /
+  //        [ end ]
+  //
+  // [end] has two unconditional predecessor arcs and one conditional. The
+  // conditional refers to the implicit empty 'else' arc. This conditional
+  // arc can also be caused by an empty default block in a switch.
+  //
+  // In this case, we attempt to sink code from all *unconditional* arcs.
+  // If we can sink instructions from these arcs (determined during the scan
+  // phase below) we insert a common successor for all unconditional arcs and
+  // connect that to [end], to enable sinking:
+  //
+  //       [if]
+  //      /    \
+  //    [x(1)] [if]
+  //      |     | \
+  //      |     |  \
+  //      |  [x(2)] |
+  //       \   /    |
+  //   [sink.split] |
+  //         \     /
+  //         [ end ]
+  //
+  SmallVector<BasicBlock*,4> UnconditionalPreds;
+  Instruction *Cond = nullptr;
+  for (auto *B : predecessors(BBEnd)) {
+    auto *T = B->getTerminator();
+    if (isa<BranchInst>(T) && cast<BranchInst>(T)->isUnconditional())
+      UnconditionalPreds.push_back(B);
+    else if ((isa<BranchInst>(T) || isa<SwitchInst>(T)) && !Cond)
+      Cond = T;
+    else
+      return false;
+  }
+  if (UnconditionalPreds.size() < 2)
     return false;
-
+  
   bool Changed = false;
-  unsigned NumPHIsToInsert;
-  while (canSinkLastInstruction(Blocks, NumPHIsToInsert) && NumPHIsToInsert <= 1) {
-    sinkLastInstruction(Blocks);
+  // We take a two-step approach to tail sinking. First we scan from the end of
+  // each block upwards in lockstep. If the n'th instruction from the end of each
+  // block can be sunk, those instructions are added to ValuesToSink and we
+  // carry on. If we can sink an instruction but need to PHI-merge some operands
+  // (because they're not identical in each instruction) we add these to
+  // PHIOperands.
+  unsigned ScanIdx = 0;
+  SmallPtrSet<Value*,4> InstructionsToSink;
+  DenseMap<Instruction*, SmallVector<Value*,4>> PHIOperands;
+  LockstepReverseIterator LRI(UnconditionalPreds);
+  while (LRI.isValid() &&
+         canSinkInstructions(*LRI, PHIOperands)) {
+    DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0] << "\n");
+    InstructionsToSink.insert((*LRI).begin(), (*LRI).end());
+    ++ScanIdx;
+    --LRI;
+  }
+
+  auto ProfitableToSinkLastInstruction = [&]() {
+    LRI.reset();
+    unsigned NumPHIdValues = 0;
+    for (auto *I : *LRI)
+      for (auto *V : PHIOperands[I])
+        if (InstructionsToSink.count(V) == 0)
+          ++NumPHIdValues;
+    DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
+    unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
+    if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
+        NumPHIInsts++;
+    
+    return NumPHIInsts <= 1;
+  };
+
+  if (ScanIdx > 0 && Cond) {
+    // Check if we would actually sink anything first!
+    if (!ProfitableToSinkLastInstruction())
+      return false;
+    
+    DEBUG(dbgs() << "SINK: Splitting edge\n");
+    // We have a conditional edge and we're going to sink some instructions.
+    // Insert a new block postdominating all blocks we're going to sink from.
+    if (!SplitBlockPredecessors(BI1->getSuccessor(0), UnconditionalPreds,
+                                ".sink.split"))
+      // Edges couldn't be split.
+      return false;
+    Changed = true;
+  }
+  
+  // Now that we've analyzed all potential sinking candidates, perform the
+  // actual sink. We iteratively sink the last non-terminator of the source
+  // blocks into their common successor unless doing so would require too
+  // many PHI instructions to be generated (currently only one PHI is allowed
+  // per sunk instruction).
+  //
+  // We can use InstructionsToSink to discount values needing PHI-merging that will
+  // actually be sunk in a later iteration. This allows us to be more
+  // aggressive in what we sink. This does allow a false positive where we
+  // sink presuming a later value will also be sunk, but stop half way through
+  // and never actually sink it which means we produce more PHIs than intended.
+  // This is unlikely in practice though.
+  for (unsigned SinkIdx = 0; SinkIdx != ScanIdx; ++SinkIdx) {
+    DEBUG(dbgs() << "SINK: Sink: "
+                 << *UnconditionalPreds[0]->getTerminator()->getPrevNode()
+                 << "\n");
+
+    // Because we've sunk every instruction in turn, the current instruction to
+    // sink is always at index 0.
+    if (!ProfitableToSinkLastInstruction()) {
+      // Too many PHIs would be created.
+      DEBUG(dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
+      break;
+    }
+    
+    if (!sinkLastInstruction(UnconditionalPreds))
+      return Changed;
     NumSinkCommons++;
     Changed = true;
   }

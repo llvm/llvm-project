@@ -305,9 +305,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SRL_PARTS,          MVT::i32,   Custom);
   }
 
-  setOperationAction(ISD::ADD,                MVT::i32,   Custom);
+  setOperationAction(ISD::EH_DWARF_CFA,         MVT::i32,   Custom);
   if (Subtarget.isGP64bit())
-    setOperationAction(ISD::ADD,                MVT::i64,   Custom);
+    setOperationAction(ISD::EH_DWARF_CFA,       MVT::i64,   Custom);
 
   setOperationAction(ISD::SDIV, MVT::i32, Expand);
   setOperationAction(ISD::SREM, MVT::i32, Expand);
@@ -914,7 +914,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::SRL_PARTS:          return lowerShiftRightParts(Op, DAG, false);
   case ISD::LOAD:               return lowerLOAD(Op, DAG);
   case ISD::STORE:              return lowerSTORE(Op, DAG);
-  case ISD::ADD:                return lowerADD(Op, DAG);
+  case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   }
   return SDValue();
@@ -2393,26 +2393,15 @@ SDValue MipsTargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   return lowerFP_TO_SINT_STORE(SD, DAG);
 }
 
-SDValue MipsTargetLowering::lowerADD(SDValue Op, SelectionDAG &DAG) const {
-  if (Op->getOperand(0).getOpcode() != ISD::FRAMEADDR
-      || cast<ConstantSDNode>
-        (Op->getOperand(0).getOperand(0))->getZExtValue() != 0
-      || Op->getOperand(1).getOpcode() != ISD::FRAME_TO_ARGS_OFFSET)
-    return SDValue();
+SDValue MipsTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
+                                              SelectionDAG &DAG) const {
 
-  // The pattern
-  //   (add (frameaddr 0), (frame_to_args_offset))
-  // results from lowering llvm.eh.dwarf.cfa intrinsic. Transform it to
-  //   (add FrameObject, 0)
-  // where FrameObject is a fixed StackObject with offset 0 which points to
-  // the old stack pointer.
+  // Return a fixed StackObject with offset 0 which points to the old stack
+  // pointer.
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   EVT ValTy = Op->getValueType(0);
   int FI = MFI.CreateFixedObject(Op.getValueSizeInBits() / 8, 0, false);
-  SDValue InArgsAddr = DAG.getFrameIndex(FI, ValTy);
-  SDLoc DL(Op);
-  return DAG.getNode(ISD::ADD, DL, ValTy, InArgsAddr,
-                     DAG.getConstant(0, DL, ValTy));
+  return DAG.getFrameIndex(FI, ValTy);
 }
 
 SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,

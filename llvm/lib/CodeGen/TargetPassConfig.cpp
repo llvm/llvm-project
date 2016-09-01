@@ -477,6 +477,9 @@ void TargetPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOpt::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
+
+  // Insert calls to mcount-like functions.
+  addPass(createCountingFunctionInserterPass());
 }
 
 /// Turn exception handling constructs into something the code generators can

@@ -254,6 +254,7 @@ int main(int argc, char **argv) {
   initializeCodeGen(*Registry);
   initializeLoopStrengthReducePass(*Registry);
   initializeLowerIntrinsicsPass(*Registry);
+  initializeCountingFunctionInserterPass(*Registry);
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
 
   // Register the target printer for --version.

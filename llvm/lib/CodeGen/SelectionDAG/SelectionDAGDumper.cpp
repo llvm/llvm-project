@@ -105,6 +105,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::READ_REGISTER:              return "READ_REGISTER";
   case ISD::WRITE_REGISTER:             return "WRITE_REGISTER";
   case ISD::FRAME_TO_ARGS_OFFSET:       return "FRAME_TO_ARGS_OFFSET";
+  case ISD::EH_DWARF_CFA:               return "EH_DWARF_CFA";
   case ISD::EH_RETURN:                  return "EH_RETURN";
   case ISD::EH_SJLJ_SETJMP:             return "EH_SJLJ_SETJMP";
   case ISD::EH_SJLJ_LONGJMP:            return "EH_SJLJ_LONGJMP";

@@ -344,6 +344,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64  , Custom);
   setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i32, Custom);
   setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i64, Custom);
+  setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
+  setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -6188,6 +6190,17 @@ SDValue PPCTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getNode(PPCISD::DYNALLOC, dl, VTs, Ops);
 }
 
+SDValue PPCTargetLowering::LowerEH_DWARF_CFA(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  bool isPPC64 = Subtarget.isPPC64();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  int FI = MF.getFrameInfo().CreateFixedObject(isPPC64 ? 8 : 4, 0, false);
+  return DAG.getFrameIndex(FI, PtrVT);
+}
+
 SDValue PPCTargetLowering::lowerEH_SJLJ_SETJMP(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -8245,6 +8258,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::GET_DYNAMIC_AREA_OFFSET:
     return LowerGET_DYNAMIC_AREA_OFFSET(Op, DAG);
+
+  case ISD::EH_DWARF_CFA:
+    return LowerEH_DWARF_CFA(Op, DAG);
 
   case ISD::EH_SJLJ_SETJMP:     return lowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP:    return lowerEH_SJLJ_LONGJMP(Op, DAG);

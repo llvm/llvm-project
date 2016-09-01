@@ -54,14 +54,6 @@ class vop3 <bits<9> si, bits<10> vi = {0, si}> : vop {
   let VI3 = vi;
 }
 
-// Specify an SMRD opcode for SI and SMEM opcode for VI
-
-// FIXME: This should really be bits<5> si, Tablegen crashes if
-// parameter default value is other parameter with different bit size
-class smrd<bits<8> si, bits<8> vi = si> {
-  field bits<5> SI = si{4-0};
-  field bits<8> VI = vi;
-}
 
 // Execpt for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in AMDGPUInstrInfo.cpp
@@ -172,13 +164,6 @@ def mubuf_az_extloadi16 : MubufLoad <az_extloadi16>;
 def mubuf_sextloadi16 : MubufLoad <sextloadi16>;
 
 def mubuf_load_atomic : MubufLoad <atomic_load>;
-
-def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
-  auto Ld = cast<LoadSDNode>(N);
-  return Ld->getAlignment() >= 4  &&
-    Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
-    static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N);
-}]>;
 
 //===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
@@ -477,8 +462,6 @@ def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
 def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
 def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
 
-def smrd_offset : NamedOperandU32<"SMRDOffset", NamedMatchClass<"SMRDOffset">>;
-def smrd_literal_offset : NamedOperandU32<"SMRDLiteralOffset", NamedMatchClass<"SMRDLiteralOffset">>;
 
 def glc : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
 def slc : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
@@ -546,13 +529,6 @@ def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
 def MUBUFIntrinsicOffset : ComplexPattern<i32, 2, "SelectMUBUFIntrinsicOffset">;
 def MUBUFIntrinsicVOffset : ComplexPattern<i32, 3, "SelectMUBUFIntrinsicVOffset">;
-
-def SMRDImm   : ComplexPattern<i64, 2, "SelectSMRDImm">;
-def SMRDImm32 : ComplexPattern<i64, 2, "SelectSMRDImm32">;
-def SMRDSgpr  : ComplexPattern<i64, 2, "SelectSMRDSgpr">;
-def SMRDBufferImm   : ComplexPattern<i32, 1, "SelectSMRDBufferImm">;
-def SMRDBufferImm32 : ComplexPattern<i32, 1, "SelectSMRDBufferImm32">;
-def SMRDBufferSgpr  : ComplexPattern<i32, 1, "SelectSMRDBufferSgpr">;
 
 def MOVRELOffset : ComplexPattern<i32, 2, "SelectMOVRELOffset">;
 
@@ -638,159 +614,6 @@ multiclass EXP_m {
     let DecoderNamespace="VI";
     let DisableDecoder = DisableVIDecoder;
   }
-}
-
-//===----------------------------------------------------------------------===//
-// Scalar classes
-//===----------------------------------------------------------------------===//
-
-
-//===----------------------------------------------------------------------===//
-// SMRD classes
-//===----------------------------------------------------------------------===//
-
-class SMRD_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
-  SMRD <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
-
-class SMRD_IMM_Real_si <bits<5> op, string opName, dag outs, dag ins,
-                        string asm> :
-  SMRD <outs, ins, asm, []>,
-  SMRD_IMMe <op>,
-  SIMCInstr<opName, SIEncodingFamily.SI> {
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class SMRD_SOFF_Real_si <bits<5> op, string opName, dag outs, dag ins,
-                         string asm> :
-  SMRD <outs, ins, asm, []>,
-  SMRD_SOFFe <op>,
-  SIMCInstr<opName, SIEncodingFamily.SI> {
-  let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-
-class SMRD_IMM_Real_vi <bits<8> op, string opName, dag outs, dag ins,
-                        string asm, list<dag> pattern = []> :
-  SMRD <outs, ins, asm, pattern>,
-  SMEM_IMMe_vi <op>,
-  SIMCInstr<opName, SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-class SMRD_SOFF_Real_vi <bits<8> op, string opName, dag outs, dag ins,
-                         string asm, list<dag> pattern = []> :
-  SMRD <outs, ins, asm, pattern>,
-  SMEM_SOFFe_vi <op>,
-  SIMCInstr<opName, SIEncodingFamily.VI> {
-  let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-
-multiclass SMRD_IMM_m <smrd op, string opName, dag outs, dag ins,
-                   string asm, list<dag> pattern> {
-
-  def "" : SMRD_Pseudo <opName, outs, ins, pattern>;
-
-  def _si : SMRD_IMM_Real_si <op.SI, opName, outs, ins, asm>;
-
-  // glc is only applicable to scalar stores, which are not yet
-  // implemented.
-  let glc = 0 in {
-    def _vi : SMRD_IMM_Real_vi <op.VI, opName, outs, ins, asm>;
-  }
-}
-
-multiclass SMRD_SOFF_m <smrd op, string opName, dag outs, dag ins,
-                        string asm, list<dag> pattern> {
-
-  def "" : SMRD_Pseudo <opName, outs, ins, pattern>;
-
-  def _si : SMRD_SOFF_Real_si <op.SI, opName, outs, ins, asm>;
-
-  // glc is only applicable to scalar stores, which are not yet
-  // implemented.
-  let glc = 0 in {
-    def _vi : SMRD_SOFF_Real_vi <op.VI, opName, outs, ins, asm>;
-  }
-}
-
-multiclass SMRD_Special <smrd op, string opName, dag outs,
-                       int sdst_ = ?,
-                       string opStr = "",
-                       list<dag> pattern = []> {
-  let hasSideEffects = 1 in {
-    def "" : SMRD_Pseudo <opName, outs, (ins), pattern>;
-
-    let sbase = 0, soff = 0, sdst = sdst_ in {
-      def _si : SMRD_SOFF_Real_si <op.SI, opName, outs, (ins), opName#opStr>;
-
-      let glc = 0 in {
-        def _vi : SMRD_SOFF_Real_vi <op.VI, opName, outs, (ins), opName#opStr>;
-      }
-    }
-  }
-}
-
-multiclass SMRD_Inval <smrd op, string opName,
-                     SDPatternOperator node> {
-  let mayStore = 1 in {
-    defm : SMRD_Special<op, opName, (outs), 0, "", [(node)]>;
-  }
-}
-
-class SMEM_Inval <bits<8> op, string opName, SDPatternOperator node> :
-  SMRD_SOFF_Real_vi<op, opName, (outs), (ins), opName, [(node)]> {
-  let hasSideEffects = 1;
-  let mayStore = 1;
-  let sbase = 0;
-  let sdst = 0;
-  let glc = 0;
-  let soff = 0;
-}
-
-class SMEM_Ret <bits<8> op, string opName, SDPatternOperator node> :
-  SMRD_SOFF_Real_vi<op, opName, (outs SReg_64:$sdst), (ins),
-  opName#" $sdst", [(set i64:$sdst, (node))]> {
-  let hasSideEffects = 1;
-  let mayStore = ?;
-  let mayLoad = ?;
-  let sbase = 0;
-  let glc = 0;
-  let soff = 0;
-}
-
-multiclass SMRD_Helper <smrd op, string opName, RegisterClass baseClass,
-                        RegisterClass dstClass> {
-  defm _IMM : SMRD_IMM_m <
-    op, opName#"_IMM", (outs dstClass:$sdst),
-    (ins baseClass:$sbase, smrd_offset:$offset),
-    opName#" $sdst, $sbase, $offset", []
-  >;
-
-  def _IMM_ci : SMRD <
-    (outs dstClass:$sdst), (ins baseClass:$sbase, smrd_literal_offset:$offset),
-    opName#" $sdst, $sbase, $offset", []>, SMRD_IMMe_ci <op.SI> {
-    let AssemblerPredicates = [isCIOnly];
-    let DecoderNamespace = "CI";
-  }
-
-  defm _SGPR : SMRD_SOFF_m <
-    op, opName#"_SGPR", (outs dstClass:$sdst),
-    (ins baseClass:$sbase, SReg_32:$soff),
-    opName#" $sdst, $sbase, $soff", []
-  >;
 }
 
 //===----------------------------------------------------------------------===//

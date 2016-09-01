@@ -289,7 +289,7 @@ ScopArrayInfo::getFromAccessFunction(__isl_keep isl_pw_multi_aff *PMA) {
   return getFromId(Id);
 }
 
-const ScopArrayInfo *ScopArrayInfo::getFromId(isl_id *Id) {
+const ScopArrayInfo *ScopArrayInfo::getFromId(__isl_take isl_id *Id) {
   void *User = isl_id_get_user(Id);
   const ScopArrayInfo *SAI = static_cast<ScopArrayInfo *>(User);
   isl_id_free(Id);
@@ -954,15 +954,15 @@ bool MemoryAccess::isStrideX(__isl_take const isl_map *Schedule,
   return IsStrideX;
 }
 
-bool MemoryAccess::isStrideZero(const isl_map *Schedule) const {
+bool MemoryAccess::isStrideZero(__isl_take const isl_map *Schedule) const {
   return isStrideX(Schedule, 0);
 }
 
-bool MemoryAccess::isStrideOne(const isl_map *Schedule) const {
+bool MemoryAccess::isStrideOne(__isl_take const isl_map *Schedule) const {
   return isStrideX(Schedule, 1);
 }
 
-void MemoryAccess::setNewAccessRelation(isl_map *NewAccess) {
+void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
   isl_map_free(NewAccessRelation);
   NewAccessRelation = NewAccess;
 }
@@ -1806,7 +1806,8 @@ __isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
   return isl_id_copy(ParameterIds.lookup(Parameter));
 }
 
-__isl_give isl_set *Scop::addNonEmptyDomainConstraints(isl_set *C) const {
+__isl_give isl_set *
+Scop::addNonEmptyDomainConstraints(__isl_take isl_set *C) const {
   isl_set *DomainContext = isl_union_set_params(getDomains());
   return isl_set_intersect_params(C, DomainContext);
 }
@@ -2580,10 +2581,10 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
   return true;
 }
 
-__isl_give isl_set *Scop::getPredecessorDomainConstraints(BasicBlock *BB,
-                                                          isl_set *Domain,
-                                                          DominatorTree &DT,
-                                                          LoopInfo &LI) {
+__isl_give isl_set *
+Scop::getPredecessorDomainConstraints(BasicBlock *BB,
+                                      __isl_keep isl_set *Domain,
+                                      DominatorTree &DT, LoopInfo &LI) {
   // If @p BB is the ScopEntry we are done
   if (R.getEntry() == BB)
     return isl_set_universe(isl_set_get_space(Domain));

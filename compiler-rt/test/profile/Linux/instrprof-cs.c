@@ -11,7 +11,7 @@
 // Check context insenstive profile
 // RUN: %clang_profuse=%t.cis.profdata  -O2 -emit-llvm -S %s -o - | FileCheck %s --check-prefix=CIS
 int g1 = 1;
-int g2 = 2;
+int volatile g2 = 2;
 static void toggle(int t) {
   if (t & 1)
     g1 *= t;
