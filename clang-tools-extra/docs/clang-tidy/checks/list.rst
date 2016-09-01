@@ -1,7 +1,7 @@
 .. title:: clang-tidy - Clang-Tidy Checks
 
 Clang-Tidy Checks
-=========================
+=================
 
 .. toctree::
    boost-use-to-string

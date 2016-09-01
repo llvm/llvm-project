@@ -33,6 +33,9 @@ enum ELFKind {
 // For --build-id.
 enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring, Uuid };
 
+// For --discard-{all,locals,none}.
+enum class DiscardPolicy { Default, All, Locals, None };
+
 // For --strip-{all,debug}.
 enum class StripPolicy { None, All, Debug };
 
@@ -84,9 +87,6 @@ struct Configuration {
   bool BsymbolicFunctions;
   bool Demangle = true;
   bool DisableVerify;
-  bool DiscardAll;
-  bool DiscardLocals;
-  bool DiscardNone;
   bool EhFrameHdr;
   bool EnableNewDtags;
   bool ExportDynamic;
@@ -118,6 +118,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  DiscardPolicy Discard;
   StripPolicy Strip = StripPolicy::None;
   UnresolvedPolicy UnresolvedSymbols;
   BuildIdKind BuildId = BuildIdKind::None;

@@ -121,14 +121,15 @@ TypeFormatImpl_Format::FormatObject (ValueObject *valobj,
                 }
                 
                 StreamString sstr;
-                compiler_type.DumpTypeValue (&sstr,                         // The stream to use for display
-                                          GetFormat(),                  // Format to display this type with
-                                          data,                         // Data to extract from
-                                          0,                             // Byte offset into "m_data"
-                                          valobj->GetByteSize(),                 // Byte size of item in "m_data"
-                                          valobj->GetBitfieldBitSize(),          // Bitfield bit size
-                                          valobj->GetBitfieldBitOffset(),        // Bitfield bit offset
-                                          exe_ctx.GetBestExecutionContextScope());
+                ExecutionContextScope *exe_scope(exe_ctx.GetBestExecutionContextScope());
+                compiler_type.DumpTypeValue (&sstr,                                 // The stream to use for display
+                                             GetFormat(),                           // Format to display this type with
+                                             data,                                  // Data to extract from
+                                             0,                                     // Byte offset into "m_data"
+                                             compiler_type.GetByteSize(exe_scope),  // Byte size of item in "m_data"
+                                             valobj->GetBitfieldBitSize(),          // Bitfield bit size
+                                             valobj->GetBitfieldBitOffset(),        // Bitfield bit offset
+                                             exe_scope);
                 // Given that we do not want to set the ValueObject's m_error
                 // for a formatting error (or else we wouldn't be able to reformat
                 // until a next update), an empty string is treated as a "false"

@@ -18,3 +18,8 @@ Options
 
    The check can generate fixes after this option has been set to the name of
    the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.

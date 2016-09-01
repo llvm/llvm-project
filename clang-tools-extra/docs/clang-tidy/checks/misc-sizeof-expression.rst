@@ -133,3 +133,22 @@ hidden through macros.
   void getInt(int* dst) {
     memcpy(dst, buf, sizeof(INT_SZ));  // sizeof(sizeof(int)) is suspicious.
   }
+
+Options
+-------
+
+.. option:: WarnOnSizeOfConstant
+
+   When non-zero, the check will warn on an expression like
+   ``sizeof(CONSTANT)``.  Default is `1`.
+
+.. option:: WarnOnSizeOfThis
+
+   When non-zero, the check will warn on an expression like ``sizeof(this)``.
+   Default is `1`.
+
+.. option:: WarnOnSizeOfCompareToConstant
+
+   When non-zero, the check will warn on an expression like
+   ``sizeof(epxr) <= k`` for a suspicious constant `k` while `k` is `0` or
+   greater than `0x8000`. Default is `1`.

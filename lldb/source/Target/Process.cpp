@@ -6602,7 +6602,6 @@ Process::GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>& region_list)
 
     Error error;
 
-    lldb::addr_t range_base = 0;
     lldb::addr_t range_end = 0;
 
     region_list.clear();
@@ -6617,7 +6616,6 @@ Process::GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>& region_list)
             break;
         }
 
-        range_base = region_info->GetRange().GetRangeBase();
         range_end = region_info->GetRange().GetRangeEnd();
         if( region_info->GetMapped() == MemoryRegionInfo::eYes )
         {

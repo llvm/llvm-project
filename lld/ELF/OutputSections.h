@@ -135,7 +135,6 @@ public:
   uintX_t getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const;
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
-  uintX_t getNumEntries() const { return Entries.size(); }
   typename Base::Kind getKind() const override { return Base::Got; }
   static bool classof(const Base *B) { return B->getKind() == Base::Got; }
 
@@ -377,10 +376,12 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool hasRelocs() const { return !Relocs.empty(); }
   typename Base::Kind getKind() const override { return Base::Reloc; }
+  size_t getRelativeRelocCount() const { return NumRelativeRelocs; }
   static bool classof(const Base *B) { return B->getKind() == Base::Reloc; }
 
 private:
   bool Sort;
+  size_t NumRelativeRelocs = 0;
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 

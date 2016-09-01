@@ -229,18 +229,17 @@ template <class ELFT> void elf::writeResult() {
   Out<ELFT>::Pool.clear();
 }
 
-template <class ELFT>
-static std::vector<DefinedCommon<ELFT> *> getCommonSymbols() {
-  std::vector<DefinedCommon<ELFT> *> V;
+template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
+  std::vector<DefinedCommon *> V;
   for (Symbol *S : Symtab<ELFT>::X->getSymbols())
-    if (auto *B = dyn_cast<DefinedCommon<ELFT>>(S->body()))
+    if (auto *B = dyn_cast<DefinedCommon>(S->body()))
       V.push_back(B);
   return V;
 }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  if (!Config->DiscardAll)
+  if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
   addReservedSymbols();
 
@@ -249,6 +248,8 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
   CommonInputSection<ELFT>::X = &Common;
+
+  Script<ELFT>::X->createAssignments();
 
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasContents)
@@ -329,7 +330,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (Sec == &InputSection<ELFT>::Discarded)
     return false;
 
-  if (Config->DiscardNone)
+  if (Config->Discard == DiscardPolicy::None)
     return true;
 
   // In ELF assembly .L symbols are normally discarded by the assembler.
@@ -340,7 +341,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (!SymName.startswith(".L") && !SymName.empty())
     return true;
 
-  if (Config->DiscardLocals)
+  if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
   return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);

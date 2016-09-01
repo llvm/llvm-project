@@ -645,3 +645,26 @@ lldb_private::formatters::LibcxxStringSummaryProvider (ValueObject& valobj, Stre
     
     return true;
 }
+
+class LibcxxFunctionFrontEnd : public SyntheticValueProviderFrontEnd
+{
+public:
+    LibcxxFunctionFrontEnd (ValueObject &backend) :
+    SyntheticValueProviderFrontEnd(backend)
+    {}
+    
+    lldb::ValueObjectSP
+    GetSyntheticValue() override
+    {
+        static ConstString g___f_("__f_");
+        return m_backend.GetChildMemberWithName(g___f_, true);
+    }
+};
+
+SyntheticChildrenFrontEnd*
+lldb_private::formatters::LibcxxFunctionFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
+{
+    if (valobj_sp)
+        return new LibcxxFunctionFrontEnd(*valobj_sp);
+    return nullptr;
+}

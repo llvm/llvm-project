@@ -16,8 +16,8 @@ from lldbsuite.test import lldbutil
 class PyObjectSynthProviderTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["linux"])
     def test_print_array(self):
         """Test that expr -Z works"""
         self.build()

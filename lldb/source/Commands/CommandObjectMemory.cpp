@@ -1088,6 +1088,45 @@ public:
   }
   
 protected:
+  class ProcessMemoryIterator
+  {
+  public:
+      ProcessMemoryIterator (ProcessSP process_sp,
+                             lldb::addr_t base) :
+      m_process_sp(process_sp),
+      m_base_addr(base),
+      m_is_valid(true)
+      {
+          lldbassert(process_sp.get() != nullptr);
+      }
+      
+      bool
+      IsValid ()
+      {
+          return m_is_valid;
+      }
+      
+      uint8_t
+      operator [](lldb::addr_t offset)
+      {
+          if (!IsValid())
+              return 0;
+
+          uint8_t retval = 0;
+          Error error;
+          if (0 == m_process_sp->ReadMemory(m_base_addr+offset, &retval, 1, error))
+          {
+              m_is_valid = false;
+              return 0;
+          }
+
+          return retval;
+      }
+  private:
+      ProcessSP m_process_sp;
+      lldb::addr_t m_base_addr;
+      bool m_is_valid;
+  };
   bool
   DoExecute (Args& command, CommandReturnObject &result) override
   {
@@ -1185,7 +1224,7 @@ protected:
       bool ever_found = false;
       while (count)
       {
-          found_location = Search(found_location, high_addr, buffer.GetBytes(), buffer.GetByteSize());
+          found_location = FastSearch(found_location, high_addr, buffer.GetBytes(), buffer.GetByteSize());
           if (found_location == LLDB_INVALID_ADDRESS)
           {
               if (!ever_found)
@@ -1218,24 +1257,40 @@ protected:
   }
     
     lldb::addr_t
-    Search (lldb::addr_t low,
-            lldb::addr_t high,
-            uint8_t* buffer,
-            size_t buffer_size)
+    FastSearch (lldb::addr_t low,
+                lldb::addr_t high,
+                uint8_t *buffer,
+                size_t buffer_size)
     {
-        Process *process = m_exe_ctx.GetProcessPtr();
-        DataBufferHeap heap(buffer_size, 0);
-        for (auto ptr = low;
-             ptr < high;
-             ptr++)
+        const size_t region_size = high-low;
+
+        if (region_size < buffer_size)
+            return LLDB_INVALID_ADDRESS;
+        
+        std::vector<size_t> bad_char_heuristic(256, buffer_size);
+        ProcessSP process_sp = m_exe_ctx.GetProcessSP();
+        ProcessMemoryIterator iterator(process_sp, low);
+        
+        for (size_t idx = 0;
+             idx < buffer_size-1;
+             idx++)
         {
-            Error error;
-            process->ReadMemory(ptr, heap.GetBytes(), buffer_size, error);
-            if (error.Fail())
-                return LLDB_INVALID_ADDRESS;
-            if (memcmp(heap.GetBytes(), buffer, buffer_size) == 0)
-                return ptr;
+            decltype(bad_char_heuristic)::size_type bcu_idx = buffer[idx];
+            bad_char_heuristic[bcu_idx] = buffer_size - idx - 1;
         }
+        for (size_t s = 0;
+             s <= (region_size - buffer_size);
+             )
+        {
+            int64_t j = buffer_size-1;
+            while (j >= 0 && buffer[j] == iterator[s + j])
+                j--;
+            if (j < 0)
+                return low+s;
+            else
+                s += bad_char_heuristic[iterator[s + buffer_size - 1]];
+        }
+        
         return LLDB_INVALID_ADDRESS;
     }
   

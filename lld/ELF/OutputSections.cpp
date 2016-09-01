@@ -354,11 +354,18 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
 
 template <class ELFT>
 void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
+  if (Reloc.Type == Target->RelativeRel)
+    ++NumRelativeRelocs;
   Relocs.push_back(Reloc);
 }
 
 template <class ELFT, class RelTy>
 static bool compRelocations(const RelTy &A, const RelTy &B) {
+  bool AIsRel = A.getType(Config->Mips64EL) == Target->RelativeRel;
+  bool BIsRel = B.getType(Config->Mips64EL) == Target->RelativeRel;
+  if (AIsRel != BIsRel)
+    return AIsRel;
+
   return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
 }
 
@@ -661,6 +668,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->getSize()});
     Add({IsRela ? DT_RELAENT : DT_RELENT,
          uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
+
+    size_t NumRelativeRels = Out<ELFT>::RelaDyn->getRelativeRelocCount();
+    if (Config->ZCombreloc && NumRelativeRels)
+      Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
   }
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
     Add({DT_JMPREL, Out<ELFT>::RelaPlt});
@@ -1373,7 +1384,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // All symbols with STB_LOCAL binding precede the weak and global symbols.
   // .dynsym only contains global symbols.
-  if (!Config->DiscardAll && !StrTabSec.isDynamic())
+  if (Config->Discard != DiscardPolicy::All && !StrTabSec.isDynamic())
     writeLocalSymbols(Buf);
 
   writeGlobalSymbols(Buf);
@@ -1463,8 +1474,6 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:
     break;
-  case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("should have been replaced");
   }
   return nullptr;
 }

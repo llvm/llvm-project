@@ -116,3 +116,15 @@ Some additional accommodations are made for pre-C++11 dialects:
 
 Occurrences of implicit casts inside macros and template instantiations are
 deliberately ignored, as it is not clear how to deal with such cases.
+
+Options
+-------
+
+.. option::  AllowConditionalIntegerCasts
+
+   When non-zero, the check will allow conditional integer casts. Default is
+   `0`.
+
+.. option::  AllowConditionalPointerCasts
+
+   When non-zero, the check will allow conditional pointer casts. Default is `0`.

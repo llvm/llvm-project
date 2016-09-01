@@ -259,6 +259,16 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
 }
 
 template <class ELFT>
+void LinkerScript<ELFT>::createAssignments() {
+  for (const std::unique_ptr<SymbolAssignment> &Cmd : Opt.Assignments) {
+    if (shouldDefine<ELFT>(Cmd.get()))
+      addRegular<ELFT>(Cmd.get());
+    if (Cmd->Sym)
+      cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(0);
+  }
+}
+
+template <class ELFT>
 void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   for (const std::unique_ptr<BaseCommand> &Base1 : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
@@ -625,7 +635,8 @@ class elf::ScriptParser : public ScriptParserBase {
 public:
   ScriptParser(StringRef S, bool B) : ScriptParserBase(S), IsUnderSysroot(B) {}
 
-  void run();
+  void readLinkerScript();
+  void readVersionScript();
 
 private:
   void addFile(StringRef Path);
@@ -642,6 +653,8 @@ private:
   void readPhdrs();
   void readSearchDir();
   void readSections();
+  void readVersion();
+  void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
@@ -663,6 +676,12 @@ private:
   Expr readTernary(Expr Cond);
   Expr readParenExpr();
 
+  // For parsing version script.
+  void readExtern(std::vector<SymbolVersion> *Globals);
+  void readVersionDeclaration(StringRef VerStr);
+  void readGlobal(StringRef VerStr);
+  void readLocal();
+
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
   StringSaver Saver = {ScriptConfig->Alloc};
@@ -681,17 +700,52 @@ const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
     {"PHDRS", &ScriptParser::readPhdrs},
     {"SEARCH_DIR", &ScriptParser::readSearchDir},
     {"SECTIONS", &ScriptParser::readSections},
+    {"VERSION", &ScriptParser::readVersion},
     {";", &ScriptParser::readNothing}};
 
-void ScriptParser::run() {
+void ScriptParser::readVersionScript() {
+  readVersionScriptCommand();
+  if (!atEOF())
+    setError("EOF expected, but got " + next());
+}
+
+void ScriptParser::readVersionScriptCommand() {
+  if (skip("{")) {
+    readVersionDeclaration("");
+    return;
+  }
+
+  while (!atEOF() && !Error && peek() != "}") {
+    StringRef VerStr = next();
+    if (VerStr == "{") {
+      setError("anonymous version definition is used in "
+               "combination with other version definitions");
+      return;
+    }
+    expect("{");
+    readVersionDeclaration(VerStr);
+  }
+}
+
+void ScriptParser::readVersion() {
+  expect("{");
+  readVersionScriptCommand();
+  expect("}");
+}
+
+void ScriptParser::readLinkerScript() {
   while (!atEOF()) {
     StringRef Tok = next();
-    if (Handler Fn = Cmd.lookup(Tok))
+    if (Handler Fn = Cmd.lookup(Tok)) {
       (this->*Fn)();
-    else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok))
-      Opt.Commands.emplace_back(Cmd);
-    else
+    } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok)) {
+      if (Opt.HasContents)
+        Opt.Commands.emplace_back(Cmd);
+      else
+        Opt.Assignments.emplace_back(Cmd);
+    } else {
       setError("unknown directive: " + Tok);
+    }
   }
 }
 
@@ -1335,6 +1389,68 @@ unsigned ScriptParser::readPhdrType() {
   return Ret;
 }
 
+void ScriptParser::readVersionDeclaration(StringRef VerStr) {
+  // Identifiers start at 2 because 0 and 1 are reserved
+  // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
+  size_t VersionId = Config->VersionDefinitions.size() + 2;
+  Config->VersionDefinitions.push_back({VerStr, VersionId});
+
+  if (skip("global:") || peek() != "local:")
+    readGlobal(VerStr);
+  if (skip("local:"))
+    readLocal();
+  expect("}");
+
+  // Each version may have a parent version. For example, "Ver2" defined as
+  // "Ver2 { global: foo; local: *; } Ver1;" has "Ver1" as a parent. This
+  // version hierarchy is, probably against your instinct, purely for human; the
+  // runtime doesn't care about them at all. In LLD, we simply skip the token.
+  if (!VerStr.empty() && peek() != ";")
+    next();
+  expect(";");
+}
+
+void ScriptParser::readLocal() {
+  Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+  expect("*");
+  expect(";");
+}
+
+void ScriptParser::readExtern(std::vector<SymbolVersion> *Globals) {
+  expect("C++");
+  expect("{");
+
+  for (;;) {
+    if (peek() == "}" || Error)
+      break;
+    Globals->push_back({next(), true});
+    expect(";");
+  }
+
+  expect("}");
+  expect(";");
+}
+
+void ScriptParser::readGlobal(StringRef VerStr) {
+  std::vector<SymbolVersion> *Globals;
+  if (VerStr.empty())
+    Globals = &Config->VersionScriptGlobals;
+  else
+    Globals = &Config->VersionDefinitions.back().Globals;
+
+  for (;;) {
+    if (skip("extern"))
+      readExtern(Globals);
+
+    StringRef Cur = peek();
+    if (Cur == "}" || Cur == "local:" || Error)
+      return;
+    next();
+    Globals->push_back({Cur, false});
+    expect(";");
+  }
+}
+
 static bool isUnderSysroot(StringRef Path) {
   if (Config->Sysroot == "")
     return false;
@@ -1344,10 +1460,13 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-// Entry point.
 void elf::readLinkerScript(MemoryBufferRef MB) {
   StringRef Path = MB.getBufferIdentifier();
-  ScriptParser(MB.getBuffer(), isUnderSysroot(Path)).run();
+  ScriptParser(MB.getBuffer(), isUnderSysroot(Path)).readLinkerScript();
+}
+
+void elf::readVersionScript(MemoryBufferRef MB) {
+  ScriptParser(MB.getBuffer(), false).readVersionScript();
 }
 
 template class elf::LinkerScript<ELF32LE>;
