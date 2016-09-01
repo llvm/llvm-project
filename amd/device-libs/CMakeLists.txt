@@ -19,14 +19,9 @@ else()
   message(WARNING "Specify amdhsacod executable with -DAMDHSACOD=<...>")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake_modules)
-
-find_package(LLVM REQUIRED PATHS ${LLVM_DIR} "/opt/rocm/llvm" NO_DEFAULT_PATH)
-
+find_package(LLVM REQUIRED CONFIG PATHS ${LLVM_DIR} NO_DEFAULT_PATH)
 list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
 include(AddLLVM)
-
-#include_directories(${CMAKE_SOURCE_DIR}/inc)
 
 list(APPEND CMAKE_OCL_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS .cl)

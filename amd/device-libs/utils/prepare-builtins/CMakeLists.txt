@@ -11,8 +11,7 @@ if(UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-rtti")
 endif()
 
-project(prepare-builtins)
-
+add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIR})
 
 add_executable(prepare-builtins prepare-builtins.cpp)
