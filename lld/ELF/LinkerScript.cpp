@@ -133,54 +133,6 @@ LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
   return Ret;
 }
 
-// You can define new symbols using linker scripts. For example,
-// ".text { abc.o(.text); foo = .; def.o(.text); }" defines symbol
-// foo just after abc.o's text section contents. This class is to
-// handle such symbol definitions.
-//
-// In order to handle scripts like the above one, we want to
-// keep symbol definitions in output sections. Because output sections
-// can contain only input sections, we wrap symbol definitions
-// with dummy input sections. This class serves that purpose.
-template <class ELFT>
-class elf::LayoutInputSection : public InputSectionBase<ELFT> {
-public:
-  explicit LayoutInputSection(SymbolAssignment *Cmd);
-  static bool classof(const InputSectionBase<ELFT> *S);
-  SymbolAssignment *Cmd;
-
-private:
-  typename ELFT::Shdr Hdr;
-};
-
-template <class ELFT>
-static InputSectionBase<ELFT> *
-getNonLayoutSection(std::vector<InputSectionBase<ELFT> *> &Vec) {
-  for (InputSectionBase<ELFT> *S : Vec)
-    if (!isa<LayoutInputSection<ELFT>>(S))
-      return S;
-  return nullptr;
-}
-
-template <class T> static T *zero(T *Val) {
-  memset(Val, 0, sizeof(*Val));
-  return Val;
-}
-
-template <class ELFT>
-LayoutInputSection<ELFT>::LayoutInputSection(SymbolAssignment *Cmd)
-    : InputSectionBase<ELFT>(nullptr, zero(&Hdr),
-                             InputSectionBase<ELFT>::Layout),
-      Cmd(Cmd) {
-  this->Live = true;
-  Hdr.sh_type = SHT_NOBITS;
-}
-
-template <class ELFT>
-bool LayoutInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
-  return S->SectionKind == InputSectionBase<ELFT>::Layout;
-}
-
 template <class ELFT>
 static bool compareName(InputSectionBase<ELFT> *A, InputSectionBase<ELFT> *B) {
   return A->getSectionName() < B->getSectionName();
@@ -236,12 +188,13 @@ template <class ELFT>
 std::vector<InputSectionBase<ELFT> *>
 LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
   std::vector<InputSectionBase<ELFT> *> Ret;
+  DenseSet<InputSectionBase<ELFT> *> SectionIndex;
 
   for (const std::unique_ptr<BaseCommand> &Base : OutCmd.Commands) {
     if (auto *OutCmd = dyn_cast<SymbolAssignment>(Base.get())) {
       if (shouldDefine<ELFT>(OutCmd))
         addSynthetic<ELFT>(OutCmd);
-      Ret.push_back(new (LAlloc.Allocate()) LayoutInputSection<ELFT>(OutCmd));
+      OutCmd->GoesAfter = Ret.empty() ? nullptr : Ret.back();
       continue;
     }
 
@@ -253,7 +206,12 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
       std::stable_sort(V.begin(), V.end(), getComparator<ELFT>(Cmd->SortInner));
     if (Cmd->SortOuter)
       std::stable_sort(V.begin(), V.end(), getComparator<ELFT>(Cmd->SortOuter));
-    Ret.insert(Ret.end(), V.begin(), V.end());
+
+    // Add all input sections corresponding to rule 'Cmd' to
+    // resulting vector. We do not add duplicate input sections.
+    for (InputSectionBase<ELFT> *S : V)
+      if (SectionIndex.insert(S).second)
+        Ret.push_back(S);
   }
   return Ret;
 }
@@ -284,13 +242,12 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
       }
 
       std::vector<InputSectionBase<ELFT> *> V = createInputSectionList(*Cmd);
-      InputSectionBase<ELFT> *Head = getNonLayoutSection<ELFT>(V);
-      if (!Head)
+      if (V.empty())
         continue;
 
       OutputSectionBase<ELFT> *OutSec;
       bool IsNew;
-      std::tie(OutSec, IsNew) = Factory.create(Head, Cmd->Name);
+      std::tie(OutSec, IsNew) = Factory.create(V.front(), Cmd->Name);
       if (IsNew)
         OutputSections->push_back(OutSec);
 
@@ -298,8 +255,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
       for (InputSectionBase<ELFT> *Sec : V) {
         if (Subalign)
           Sec->Alignment = Subalign;
-        if (!Sec->OutSec)
-          OutSec->addSection(Sec);
+        OutSec->addSection(Sec);
       }
     }
   }
@@ -359,31 +315,49 @@ void assignOffsets(OutputSectionCommand *Cmd, OutputSectionBase<ELFT> *Sec) {
     addStartEndSymbols(Cmd, Sec);
     return;
   }
-
   typedef typename ELFT::uint uintX_t;
   uintX_t Off = 0;
+  auto ItCmd = Cmd->Commands.begin();
 
-  for (InputSection<ELFT> *I : OutSec->Sections) {
-    if (auto *L = dyn_cast<LayoutInputSection<ELFT>>(I)) {
-      uintX_t Value = L->Cmd->Expression(Sec->getVA() + Off) - Sec->getVA();
-      if (L->Cmd->Name == ".") {
+  // Assigns values to all symbols following the given
+  // input section 'D' in output section 'Sec'. When symbols
+  // are in the beginning of output section the value of 'D'
+  // is nullptr.
+  auto AssignSuccessors = [&](InputSectionData *D) {
+    for (; ItCmd != Cmd->Commands.end(); ++ItCmd) {
+      auto *AssignCmd = dyn_cast<SymbolAssignment>(ItCmd->get());
+      if (!AssignCmd)
+        continue;
+      if (D != AssignCmd->GoesAfter)
+        break;
+
+      uintX_t Value = AssignCmd->Expression(Sec->getVA() + Off) - Sec->getVA();
+      if (AssignCmd->Name == ".") {
+        // Update to location counter means update to section size.
         Off = Value;
-      } else if (auto *Sym =
-                     cast_or_null<DefinedSynthetic<ELFT>>(L->Cmd->Sym)) {
-        // shouldDefine could have returned false, so we need to check Sym,
-        // for non-null value.
+        Sec->setSize(Off);
+        continue;
+      }
+
+      if (DefinedSynthetic<ELFT> *Sym =
+              cast_or_null<DefinedSynthetic<ELFT>>(AssignCmd->Sym)) {
         Sym->Section = OutSec;
         Sym->Value = Value;
       }
-    } else {
-      Off = alignTo(Off, I->Alignment);
-      I->OutSecOff = Off;
-      Off += I->getSize();
     }
+  };
+
+  AssignSuccessors(nullptr);
+  for (InputSection<ELFT> *I : OutSec->Sections) {
+    Off = alignTo(Off, I->Alignment);
+    I->OutSecOff = Off;
+    Off += I->getSize();
     // Update section size inside for-loop, so that SIZEOF
     // works correctly in the case below:
     // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
     Sec->setSize(Off);
+    // Add symbols following current input section.
+    AssignSuccessors(I);
   }
 }
 

@@ -428,14 +428,6 @@ void CodeGenFunction::EmitFunctionInstrumentation(const char *Fn) {
   EmitNounwindRuntimeCall(F, args);
 }
 
-void CodeGenFunction::EmitMCountInstrumentation() {
-  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
-
-  llvm::Constant *MCountFn =
-    CGM.CreateRuntimeFunction(FTy, getTarget().getMCountName());
-  EmitNounwindRuntimeCall(MCountFn);
-}
-
 // OpenCL v1.2 s5.6.4.6 allows the compiler to store kernel argument
 // information in the program executable. The argument information stored
 // includes the argument name, its type, the address and access qualifiers used.
@@ -761,7 +753,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
       if (FD->isMain())
         Fn->addFnAttr(llvm::Attribute::NoRecurse);
-  
+
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
   // Create a marker to make it easy to insert allocas into the entryblock
@@ -794,8 +786,12 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   if (ShouldInstrumentFunction())
     EmitFunctionInstrumentation("__cyg_profile_func_enter");
 
+  // Since emitting the mcount call here impacts optimizations such as function
+  // inlining, we just add an attribute to insert a mcount call in backend.
+  // The attribute "counting-function" is set to mcount function name which is
+  // architecture dependent.
   if (CGM.getCodeGenOpts().InstrumentForProfiling)
-    EmitMCountInstrumentation();
+    Fn->addFnAttr("counting-function", getTarget().getMCountName());
 
   if (RetTy->isVoidType()) {
     // Void type; nothing to return.

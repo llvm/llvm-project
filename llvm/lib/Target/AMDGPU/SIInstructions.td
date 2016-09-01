@@ -22,6 +22,7 @@ def has16BankLDS : Predicate<"Subtarget->getLDSBankCount() == 16">;
 def has32BankLDS : Predicate<"Subtarget->getLDSBankCount() == 32">;
 
 include "SOPInstructions.td"
+include "SMInstructions.td"
 
 let SubtargetPredicate = isGCN in {
 
@@ -32,53 +33,6 @@ let SubtargetPredicate = isGCN in {
 defm EXP : EXP_m;
 
 //===----------------------------------------------------------------------===//
-// SMRD Instructions
-//===----------------------------------------------------------------------===//
-
-// We are using the SReg_32_XM0 and not the SReg_32 register class for 32-bit
-// SMRD instructions, because the SReg_32_XM0 register class does not include M0
-// and writing to M0 from an SMRD instruction will hang the GPU.
-defm S_LOAD_DWORD : SMRD_Helper <smrd<0x00>, "s_load_dword", SReg_64, SReg_32_XM0>;
-defm S_LOAD_DWORDX2 : SMRD_Helper <smrd<0x01>, "s_load_dwordx2", SReg_64, SReg_64>;
-defm S_LOAD_DWORDX4 : SMRD_Helper <smrd<0x02>, "s_load_dwordx4", SReg_64, SReg_128>;
-defm S_LOAD_DWORDX8 : SMRD_Helper <smrd<0x03>, "s_load_dwordx8", SReg_64, SReg_256>;
-defm S_LOAD_DWORDX16 : SMRD_Helper <smrd<0x04>, "s_load_dwordx16", SReg_64, SReg_512>;
-
-defm S_BUFFER_LOAD_DWORD : SMRD_Helper <
-  smrd<0x08>, "s_buffer_load_dword", SReg_128, SReg_32_XM0
->;
-
-defm S_BUFFER_LOAD_DWORDX2 : SMRD_Helper <
-  smrd<0x09>, "s_buffer_load_dwordx2", SReg_128, SReg_64
->;
-
-defm S_BUFFER_LOAD_DWORDX4 : SMRD_Helper <
-  smrd<0x0a>, "s_buffer_load_dwordx4", SReg_128, SReg_128
->;
-
-defm S_BUFFER_LOAD_DWORDX8 : SMRD_Helper <
-  smrd<0x0b>, "s_buffer_load_dwordx8", SReg_128, SReg_256
->;
-
-defm S_BUFFER_LOAD_DWORDX16 : SMRD_Helper <
-  smrd<0x0c>, "s_buffer_load_dwordx16", SReg_128, SReg_512
->;
-
-let mayStore = ? in {
-// FIXME: mayStore = ? is a workaround for tablegen bug for different
-// inferred mayStore flags for the instruction pattern vs. standalone
-// Pat. Each considers the other contradictory.
-
-defm S_MEMTIME : SMRD_Special <smrd<0x1e, 0x24>, "s_memtime",
-  (outs SReg_64:$sdst), ?, " $sdst", [(set i64:$sdst, (int_amdgcn_s_memtime))]
->;
-}
-
-defm S_DCACHE_INV : SMRD_Inval <smrd<0x1f, 0x20>, "s_dcache_inv",
-  int_amdgcn_s_dcache_inv>;
-
-//===----------------------------------------------------------------------===//
-
 // VOPC Instructions
 //===----------------------------------------------------------------------===//
 
@@ -1826,64 +1780,6 @@ def : FCMP_Pattern <COND_UGT, V_CMP_NLE_F64_e64, f64>;
 def : FCMP_Pattern <COND_UGE, V_CMP_NLT_F64_e64, f64>;
 def : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
 def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
-// SMRD Patterns
-//===----------------------------------------------------------------------===//
-
-multiclass SMRD_Pattern <string Instr, ValueType vt> {
-
-  // 1. IMM offset
-  def : Pat <
-    (smrd_load (SMRDImm i64:$sbase, i32:$offset)),
-    (vt (!cast<SMRD>(Instr#"_IMM") $sbase, $offset))
-  >;
-
-  // 2. SGPR offset
-  def : Pat <
-    (smrd_load (SMRDSgpr i64:$sbase, i32:$offset)),
-    (vt (!cast<SMRD>(Instr#"_SGPR") $sbase, $offset))
-  >;
-
-  def : Pat <
-    (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
-    (vt (!cast<SMRD>(Instr#"_IMM_ci") $sbase, $offset))
-  > {
-    let Predicates = [isCIOnly];
-  }
-}
-
-// Global and constant loads can be selected to either MUBUF or SMRD
-// instructions, but SMRD instructions are faster so we want the instruction
-// selector to prefer those.
-let AddedComplexity = 100 in {
-
-defm : SMRD_Pattern <"S_LOAD_DWORD", i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX2", v2i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX4", v4i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX8", v8i32>;
-defm : SMRD_Pattern <"S_LOAD_DWORDX16", v16i32>;
-
-// 1. Offset as an immediate
-def : Pat <
-  (SIload_constant v4i32:$sbase, (SMRDBufferImm i32:$offset)),
-  (S_BUFFER_LOAD_DWORD_IMM $sbase, $offset)
->;
-
-// 2. Offset loaded in an 32bit SGPR
-def : Pat <
-  (SIload_constant v4i32:$sbase, (SMRDBufferSgpr i32:$offset)),
-  (S_BUFFER_LOAD_DWORD_SGPR $sbase, $offset)
->;
-
-let Predicates = [isCI] in {
-
-def : Pat <
-  (SIload_constant v4i32:$sbase, (SMRDBufferImm32 i32:$offset)),
-  (S_BUFFER_LOAD_DWORD_IMM_ci $sbase, $offset)
->;
-
-} // End Predicates = [isCI]
-
-} // End let AddedComplexity = 10000
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
@@ -2982,13 +2878,6 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 // FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
 
 def : BFEPattern <V_BFE_U32, S_MOV_B32>;
-
-let Predicates = [isSICI] in {
-def : Pat <
-  (i64 (readcyclecounter)),
-  (S_MEMTIME)
->;
-}
 
 def : Pat<
   (fcanonicalize f32:$src),

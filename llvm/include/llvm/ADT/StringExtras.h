@@ -19,6 +19,7 @@
 #include <iterator>
 
 namespace llvm {
+class raw_ostream;
 template<typename T> class SmallVectorImpl;
 
 /// hexdigit - Return the hexadecimal character for the
@@ -149,6 +150,10 @@ static inline StringRef getOrdinalSuffix(unsigned Val) {
     }
   }
 }
+
+/// PrintEscapedString - Print each character of the specified string, escaping
+/// it if it is not printable or if it is an escape char.
+void PrintEscapedString(StringRef Name, raw_ostream &Out);
 
 template <typename IteratorT>
 inline std::string join_impl(IteratorT Begin, IteratorT End,

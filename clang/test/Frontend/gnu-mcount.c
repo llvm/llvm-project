@@ -44,35 +44,35 @@ int f() {
 }
 
 // CHECK-LABEL: f
-// CHECK-ARM-IOS-NOT: call void @_mcount()
-// CHECK-ARM-IOS-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI: call void @"\01mcount"()
-// CHECK-ARM-EABI-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM64-EABI: call void @mcount()
-// CHECK-ARM64-EABI-MEABI-GNU: call void @"\01_mcount"()
-// CHECK-ARM64-EABI-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-FREEBSD: call void @__mcount()
-// CHECK-ARM-EABI-FREEBSD-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM64-EABI-FREEBSD: call void @.mcount()
-// CHECK-ARM64-EABI-FREEBSD-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-NETBSD: call void @_mcount()
-// CHECK-ARM-EABI-NETBSD-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-OPENBSD: call void @__mcount()
-// CHECK-ARM-EABI-OPENBSD-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM64-EABI-OPENBSD: call void @mcount()
-// CHECK-ARM64-EABI-OPENBSD-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-MEABI-GNU-NOT: call void @mcount()
-// CHECK-ARM-EABI-MEABI-GNU: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-BITRIG: call void @__mcount()
-// CHECK-ARM-EABI-BITRIG-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM54-EABI-BITRIG: call void @mcount()
-// CHECK-ARM54-EABI-BITRIG-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-RTEMS: call void @mcount()
-// CHECK-ARM-EABI-RTEMS-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM64-EABI-RTEMS: call void @mcount()
-// CHECK-ARM64-EABI-RTEMS-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM-EABI-CLOUDABI: call void @mcount()
-// CHECK-ARM-EABI-CLOUDABI-NOT: call void @"\01__gnu_mcount_nc"()
-// CHECK-ARM64-EABI-CLOUDABI: call void @mcount()
-// CHECK-ARM64-EABI-CLOUDABI-NOT: call void @"\01__gnu_mcount_nc"()
+// CHECK-ARM-IOS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="_mcount"{{.*}} }
+// CHECK-ARM-IOS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01mcount"{{.*}} }
+// CHECK-ARM-EABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-EABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM64-EABI-MEABI-GNU: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01_mcount"{{.*}} }
+// CHECK-ARM64-EABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-FREEBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="__mcount"{{.*}} }
+// CHECK-ARM-EABI-FREEBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-EABI-FREEBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"=".mcount"{{.*}} }
+// CHECK-ARM64-EABI-FREEBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-NETBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="_mcount"{{.*}} }
+// CHECK-ARM-EABI-NETBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-OPENBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="__mcount"{{.*}} }
+// CHECK-ARM-EABI-OPENBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-EABI-OPENBSD: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM64-EABI-OPENBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-MEABI-GNU-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM-EABI-MEABI-GNU: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-BITRIG: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="__mcount"{{.*}} }
+// CHECK-ARM-EABI-BITRIG-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM54-EABI-BITRIG: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM54-EABI-BITRIG-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-RTEMS: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM-EABI-RTEMS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-EABI-RTEMS: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM64-EABI-RTEMS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM-EABI-CLOUDABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM-EABI-CLOUDABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
+// CHECK-ARM64-EABI-CLOUDABI: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
+// CHECK-ARM64-EABI-CLOUDABI-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
 

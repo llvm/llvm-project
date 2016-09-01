@@ -5017,18 +5017,9 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     DAG.getMachineFunction().getMMI().setCallsUnwindInit(true);
     return nullptr;
   case Intrinsic::eh_dwarf_cfa: {
-    SDValue CfaArg = DAG.getSExtOrTrunc(getValue(I.getArgOperand(0)), sdl,
-                                        TLI.getPointerTy(DAG.getDataLayout()));
-    SDValue Offset = DAG.getNode(ISD::ADD, sdl,
-                                 CfaArg.getValueType(),
-                                 DAG.getNode(ISD::FRAME_TO_ARGS_OFFSET, sdl,
-                                             CfaArg.getValueType()),
-                                 CfaArg);
-    SDValue FA = DAG.getNode(
-        ISD::FRAMEADDR, sdl, TLI.getPointerTy(DAG.getDataLayout()),
-        DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout())));
-    setValue(&I, DAG.getNode(ISD::ADD, sdl, FA.getValueType(),
-                             FA, Offset));
+    setValue(&I, DAG.getNode(ISD::EH_DWARF_CFA, sdl,
+                             TLI.getPointerTy(DAG.getDataLayout()),
+                             getValue(I.getArgOperand(0))));
     return nullptr;
   }
   case Intrinsic::eh_sjlj_callsite: {

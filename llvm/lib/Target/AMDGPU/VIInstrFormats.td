@@ -69,29 +69,6 @@ class MTBUFe_vi <bits<4> op> : Enc64 {
   let Inst{63-56} = soffset;
 }
 
-class SMEMe_vi <bits<8> op, bit imm> : Enc64 {
-  bits<7>  sbase;
-  bits<7>  sdst;
-  bits<1>  glc;
-
-  let Inst{5-0}   = sbase{6-1};
-  let Inst{12-6}  = sdst;
-  let Inst{16}    = glc;
-  let Inst{17}    = imm;
-  let Inst{25-18} = op;
-  let Inst{31-26} = 0x30; //encoding
-}
-
-class SMEM_IMMe_vi <bits<8> op> : SMEMe_vi<op, 1> {
-  bits<20> offset;
-  let Inst{51-32} = offset;
-}
-
-class SMEM_SOFFe_vi <bits<8> op> : SMEMe_vi<op, 0> {
-  bits<20> soff;
-  let Inst{51-32} = soff;
-}
-
 class VOP3a_vi <bits<10> op> : Enc64 {
   bits<2> src0_modifiers;
   bits<9> src0;

@@ -100,7 +100,8 @@ public:
 
 // ARM Target Thunks
 template <class ELFT> static uint64_t getARMThunkDestVA(const SymbolBody &S) {
-  return S.isInPlt() ? S.getPltVA<ELFT>() : S.getVA<ELFT>();
+  uint64_t V = S.isInPlt() ? S.getPltVA<ELFT>() : S.getVA<ELFT>();
+  return SignExtend64<32>(V);
 }
 
 template <class ELFT>
