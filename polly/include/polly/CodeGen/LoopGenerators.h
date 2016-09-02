@@ -29,7 +29,7 @@ class BasicBlock;
 namespace polly {
 using namespace llvm;
 
-/// @brief Create a scalar do/for-style loop.
+/// Create a scalar do/for-style loop.
 ///
 /// @param LowerBound The starting value of the induction variable.
 /// @param UpperBound The upper bound of the induction variable.
@@ -56,7 +56,7 @@ Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
                   ScopAnnotator *Annotator = NULL, bool Parallel = false,
                   bool UseGuard = true);
 
-/// @brief The ParallelLoopGenerator allows to create parallelized loops
+/// The ParallelLoopGenerator allows to create parallelized loops
 ///
 /// To parallelize a loop, we perform the following steps:
 ///   o  Generate a subfunction which will hold the loop body.
@@ -98,7 +98,7 @@ Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
 ///   }
 class ParallelLoopGenerator {
 public:
-  /// @brief Create a parallel loop generator for the current function.
+  /// Create a parallel loop generator for the current function.
   ParallelLoopGenerator(PollyIRBuilder &Builder, Pass *P, LoopInfo &LI,
                         DominatorTree &DT, const DataLayout &DL)
       : Builder(Builder), P(P), LI(LI), DT(DT), DL(DL),
@@ -106,7 +106,7 @@ public:
             Type::getIntNTy(Builder.getContext(), DL.getPointerSizeInBits())),
         M(Builder.GetInsertBlock()->getParent()->getParent()) {}
 
-  /// @brief Create a parallel loop.
+  /// Create a parallel loop.
   ///
   /// This function is the main function to automatically generate a parallel
   /// loop with all its components.
@@ -128,25 +128,25 @@ public:
                             BasicBlock::iterator *LoopBody);
 
 private:
-  /// @brief The IR builder we use to create instructions.
+  /// The IR builder we use to create instructions.
   PollyIRBuilder &Builder;
 
-  /// @brief A pass pointer to update analysis information.
+  /// A pass pointer to update analysis information.
   Pass *P;
 
-  /// @brief The loop info of the current function we need to update.
+  /// The loop info of the current function we need to update.
   LoopInfo &LI;
 
-  /// @brief The dominance tree of the current function we need to update.
+  /// The dominance tree of the current function we need to update.
   DominatorTree &DT;
 
-  /// @brief The target layout to get the right size for types.
+  /// The target layout to get the right size for types.
   const DataLayout &DL;
 
-  /// @brief The type of a "long" on this hardware used for backend calls.
+  /// The type of a "long" on this hardware used for backend calls.
   Type *LongType;
 
-  /// @brief The current module
+  /// The current module
   Module *M;
 
 public:
@@ -154,7 +154,7 @@ public:
   /// specific OpenMP parallel loop, but generate individual parts of it
   /// (e.g., the subfunction definition).
 
-  /// @brief Create a runtime library call to spawn the worker threads.
+  /// Create a runtime library call to spawn the worker threads.
   ///
   /// @param SubFn      The subfunction which holds the loop body.
   /// @param SubFnParam The parameter for the subfunction (basically the struct
@@ -165,10 +165,10 @@ public:
   void createCallSpawnThreads(Value *SubFn, Value *SubFnParam, Value *LB,
                               Value *UB, Value *Stride);
 
-  /// @brief Create a runtime library call to join the worker threads.
+  /// Create a runtime library call to join the worker threads.
   void createCallJoinThreads();
 
-  /// @brief Create a runtime library call to get the next work item.
+  /// Create a runtime library call to get the next work item.
   ///
   /// @param LBPtr A pointer value to store the work item begin in.
   /// @param UBPtr A pointer value to store the work item end in.
@@ -176,20 +176,20 @@ public:
   /// @returns A true value if the work item is not empty.
   Value *createCallGetWorkItem(Value *LBPtr, Value *UBPtr);
 
-  /// @brief Create a runtime library call to allow cleanup of the thread.
+  /// Create a runtime library call to allow cleanup of the thread.
   ///
   /// @note This function is called right before the thread will exit the
   ///       subfunction and only if the runtime system depends depends on it.
   void createCallCleanupThread();
 
-  /// @brief Create a struct for all @p Values and store them in there.
+  /// Create a struct for all @p Values and store them in there.
   ///
   /// @param Values The values which should be stored in the struct.
   ///
   /// @return The created struct.
   AllocaInst *storeValuesIntoStruct(SetVector<Value *> &Values);
 
-  /// @brief Extract all values from the @p Struct and construct the mapping.
+  /// Extract all values from the @p Struct and construct the mapping.
   ///
   /// @param Values The values which were stored in the struct.
   /// @param Struct The struct holding all the values in @p Values.
@@ -198,10 +198,10 @@ public:
   void extractValuesFromStruct(SetVector<Value *> Values, Type *Ty,
                                Value *Struct, ValueMapT &VMap);
 
-  /// @brief Create the definition of the parallel subfunction.
+  /// Create the definition of the parallel subfunction.
   Function *createSubFnDefinition();
 
-  /// @brief Create the parallel subfunction.
+  /// Create the parallel subfunction.
   ///
   /// @param Stride The induction variable increment.
   /// @param Struct A struct holding all values in @p Values.

@@ -26,7 +26,7 @@ class SymbolBody;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
-template <class ELFT> class LayoutInputSection;
+class InputSectionData;
 
 typedef std::function<uint64_t(uint64_t)> Expr;
 
@@ -66,6 +66,7 @@ struct SymbolAssignment : BaseCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
   bool Hidden = false;
+  InputSectionData *GoesAfter = nullptr;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -177,8 +178,6 @@ private:
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
-
-  llvm::SpecificBumpPtrAllocator<LayoutInputSection<ELFT>> LAlloc;
 
   uintX_t Dot;
 };

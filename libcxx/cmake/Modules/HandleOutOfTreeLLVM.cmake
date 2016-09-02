@@ -61,8 +61,16 @@ macro(find_llvm_parts)
   set(LLVM_FOUND ON)
 endmacro(find_llvm_parts)
 
+# If this is a standalone build not running as an external project of LLVM
+# we need to later make some decisions differently.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  # The intent is that this doesn't necessarily mean the LLVM is installed (it
+  # could be a build directory), but it means we need to treat the LLVM
+  # directory as read-only.
+  set(LIBCXX_USING_INSTALLED_LLVM 1)
+endif()
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
+if (LIBCXX_USING_INSTALLED_LLVM OR LIBCXX_STANDALONE_BUILD)
   set(LIBCXX_STANDALONE_BUILD 1)
   message(STATUS "Configuring for standalone build.")
 

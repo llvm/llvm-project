@@ -149,6 +149,7 @@ def main():
     return
 
   try:
+    selected = unique_headers[0]
     inserted_header_infos = header_infos
     if len(unique_headers) > 1:
       selected = GetUserSelection(

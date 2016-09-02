@@ -490,6 +490,11 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   Config->OFormatBinary = isOutputFormatBinary(Args);
 
+  for (auto *Arg : Args.filtered(OPT_auxiliary))
+    Config->AuxiliaryList.push_back(Arg->getValue());
+  if (!Config->Shared && !Config->AuxiliaryList.empty())
+    error("-f may not be used without -shared");
+
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
 

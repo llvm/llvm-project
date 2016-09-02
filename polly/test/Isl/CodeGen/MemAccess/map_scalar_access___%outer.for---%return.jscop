@@ -1,0 +1,83 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_A",
+         "type" : "double"
+      }
+   ],
+   "context" : "{  :  }",
+   "name" : "%outer.for---%return",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_outer_for[i0] -> MemRef_phi__phi[] }"
+            }
+         ],
+         "domain" : "{ Stmt_outer_for[i0] : 0 <= i0 <= 1 }",
+         "name" : "Stmt_outer_for",
+         "schedule" : "{ Stmt_outer_for[i0] -> [i0, 0, 0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_reduction_for[i0, i1] -> MemRef_phi__phi[] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_reduction_for[i0, i1] -> MemRef_phi[] }"
+            }
+         ],
+         "domain" : "{ Stmt_reduction_for[0, i1] : 0 <= i1 <= 4 }",
+         "name" : "Stmt_reduction_for",
+         "schedule" : "{ Stmt_reduction_for[i0, i1] -> [0, 1, i1, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_body[i0, i1] -> MemRef_add[] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_body[i0, i1] -> MemRef_phi[] }"
+            }
+         ],
+         "domain" : "{ Stmt_body[0, i1] : 0 <= i1 <= 3 }",
+         "name" : "Stmt_body",
+         "schedule" : "{ Stmt_body[i0, i1] -> [0, 1, i1, 1] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_reduction_inc[i0, i1] -> MemRef_add[] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_reduction_inc[i0, i1] -> MemRef_phi__phi[] }"
+            }
+         ],
+         "domain" : "{ Stmt_reduction_inc[0, i1] : 0 <= i1 <= 3 }",
+         "name" : "Stmt_reduction_inc",
+         "schedule" : "{ Stmt_reduction_inc[i0, i1] -> [0, 1, i1, 2] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_reduction_exit[i0] -> MemRef_A[0] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_reduction_exit[i0] -> MemRef_phi[] }"
+            }
+         ],
+         "domain" : "{ Stmt_reduction_exit[0] }",
+         "name" : "Stmt_reduction_exit",
+         "schedule" : "{ Stmt_reduction_exit[i0] -> [0, 2, 0, 0] }"
+      }
+   ]
+}

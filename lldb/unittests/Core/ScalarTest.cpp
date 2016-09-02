@@ -19,6 +19,7 @@
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Host/Endian.h"
+#include "lldb/Core/StreamString.h"
 
 using namespace lldb_private;
 
@@ -102,4 +103,32 @@ TEST(ScalarTest, ExtractBitfield)
     ASSERT_EQ(0, memcmp(&a2, u_scalar.GetBytes(), sizeof(a2)));
     ASSERT_TRUE(u_scalar.ExtractBitfield(len - 4, 4));
     ASSERT_EQ(0, memcmp(&b2, u_scalar.GetBytes(), sizeof(b2)));
+}
+
+template <typename T>
+static std::string
+ScalarGetValue(T value)
+{
+    StreamString stream;
+    Scalar(value).GetValue(&stream, false);
+    return stream.GetString();
+}
+
+TEST(ScalarTest, GetValue)
+{
+    EXPECT_EQ("12345", ScalarGetValue<signed short>(12345));
+    EXPECT_EQ("-12345", ScalarGetValue<signed short>(-12345));
+    EXPECT_EQ("12345", ScalarGetValue<unsigned short>(12345));
+
+    EXPECT_EQ("12345", ScalarGetValue<signed int>(12345));
+    EXPECT_EQ("-12345", ScalarGetValue<signed int>(-12345));
+    EXPECT_EQ("12345", ScalarGetValue<unsigned int>(12345));
+
+    EXPECT_EQ("12345678", ScalarGetValue<signed long>(12345678L));
+    EXPECT_EQ("-12345678", ScalarGetValue<signed long>(-12345678L));
+    EXPECT_EQ("12345678", ScalarGetValue<unsigned long>(12345678UL));
+
+    EXPECT_EQ("1234567890123", ScalarGetValue<signed long long>(1234567890123LL));
+    EXPECT_EQ("-1234567890123", ScalarGetValue<signed long long>(-1234567890123LL));
+    EXPECT_EQ("1234567890123", ScalarGetValue<unsigned long long>(1234567890123ULL));
 }

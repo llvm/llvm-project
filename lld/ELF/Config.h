@@ -76,6 +76,7 @@ struct Configuration {
   llvm::StringRef Sysroot;
   std::string RPath;
   std::vector<VersionDefinition> VersionDefinitions;
+  std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> DynamicList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;

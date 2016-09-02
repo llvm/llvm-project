@@ -37,20 +37,20 @@ class GetElementPtrInst;
 namespace polly {
 class Scop;
 
-/// @brief Type to remap values.
+/// Type to remap values.
 using ValueMapT = llvm::DenseMap<llvm::AssertingVH<llvm::Value>,
                                  llvm::AssertingVH<llvm::Value>>;
 
-/// @brief Type for a set of invariant loads.
+/// Type for a set of invariant loads.
 using InvariantLoadsSetTy = llvm::SetVector<llvm::AssertingVH<llvm::LoadInst>>;
 
-/// @brief Set type for parameters.
+/// Set type for parameters.
 using ParameterSetTy = llvm::SetVector<const llvm::SCEV *>;
 
-/// @brief Set of loops (used to remember loops in non-affine subregions).
+/// Set of loops (used to remember loops in non-affine subregions).
 using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
 
-/// @brief Utility proxy to wrap the common members of LoadInst and StoreInst.
+/// Utility proxy to wrap the common members of LoadInst and StoreInst.
 ///
 /// This works like the LLVM utility class CallSite, ie. it forwards all calls
 /// to either a LoadInst, StoreInst, MemIntrinsic or MemTransferInst.
@@ -281,7 +281,7 @@ private:
 } // namespace polly
 
 namespace llvm {
-/// @brief Specialize simplify_type for MemAccInst to enable dyn_cast and cast
+/// Specialize simplify_type for MemAccInst to enable dyn_cast and cast
 ///        from a MemAccInst object.
 template <> struct simplify_type<polly::MemAccInst> {
   typedef Instruction *SimpleType;
@@ -293,7 +293,7 @@ template <> struct simplify_type<polly::MemAccInst> {
 
 namespace polly {
 
-/// @brief Check if the PHINode has any incoming Invoke edge.
+/// Check if the PHINode has any incoming Invoke edge.
 ///
 /// @param PN The PHINode to check.
 ///
@@ -302,7 +302,7 @@ namespace polly {
 ///         otherwise, return false.
 bool hasInvokeEdge(const llvm::PHINode *PN);
 
-/// @brief Simplify the region to have a single unconditional entry edge and a
+/// Simplify the region to have a single unconditional entry edge and a
 /// single exit edge.
 ///
 /// Although this function allows DT and RI to be null, regions only work
@@ -316,7 +316,7 @@ bool hasInvokeEdge(const llvm::PHINode *PN);
 void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
                     llvm::LoopInfo *LI, llvm::RegionInfo *RI);
 
-/// @brief Split the entry block of a function to store the newly inserted
+/// Split the entry block of a function to store the newly inserted
 ///        allocations outside of all Scops.
 ///
 /// @param EntryBlock The entry block of the current function.
@@ -324,7 +324,7 @@ void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
 ///
 void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
 
-/// @brief Wrapper for SCEVExpander extended to all Polly features.
+/// Wrapper for SCEVExpander extended to all Polly features.
 ///
 /// This wrapper will internally call the SCEVExpander but also makes sure that
 /// all additional features not represented in SCEV (e.g., SDiv/SRem are not
@@ -346,7 +346,7 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                            const llvm::SCEV *E, llvm::Type *Ty,
                            llvm::Instruction *IP, ValueMapT *VMap = nullptr);
 
-/// @brief Check if the block is a error block.
+/// Check if the block is a error block.
 ///
 /// A error block is currently any block that fullfills at least one of
 /// the following conditions:
@@ -367,7 +367,7 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
 bool isErrorBlock(llvm::BasicBlock &BB, const llvm::Region &R,
                   llvm::LoopInfo &LI, const llvm::DominatorTree &DT);
 
-/// @brief Return the condition for the terminator @p TI.
+/// Return the condition for the terminator @p TI.
 ///
 /// For unconditional branches the "i1 true" condition will be returned.
 ///
@@ -376,7 +376,7 @@ bool isErrorBlock(llvm::BasicBlock &BB, const llvm::Region &R,
 /// @return The condition of @p TI and nullptr if none could be extracted.
 llvm::Value *getConditionFromTerminator(llvm::TerminatorInst *TI);
 
-/// @brief Check if @p LInst can be hoisted in @p R.
+/// Check if @p LInst can be hoisted in @p R.
 ///
 /// @param LInst The load to check.
 /// @param R     The analyzed region.
@@ -387,11 +387,11 @@ llvm::Value *getConditionFromTerminator(llvm::TerminatorInst *TI);
 bool isHoistableLoad(llvm::LoadInst *LInst, llvm::Region &R, llvm::LoopInfo &LI,
                      llvm::ScalarEvolution &SE);
 
-/// @brief Return true iff @p V is an intrinsic that we ignore during code
+/// Return true iff @p V is an intrinsic that we ignore during code
 ///        generation.
 bool isIgnoredIntrinsic(const llvm::Value *V);
 
-/// @brief Check whether a value an be synthesized by the code generator.
+/// Check whether a value an be synthesized by the code generator.
 ///
 /// Some value will be recalculated only from information that is code generated
 /// from the polyhedral representation. For such instructions we do not need to
@@ -409,7 +409,7 @@ bool canSynthesize(const llvm::Value *V, const Scop &S,
                    const llvm::LoopInfo *LI, llvm::ScalarEvolution *SE,
                    llvm::Loop *Scope);
 
-/// @brief Return the block in which a value is used.
+/// Return the block in which a value is used.
 ///
 /// For normal instructions, this is the instruction's parent block. For PHI
 /// nodes, this is the incoming block of that use, because this is where the
@@ -418,7 +418,7 @@ bool canSynthesize(const llvm::Value *V, const Scop &S,
 /// case this function returns nullptr.
 llvm::BasicBlock *getUseBlock(llvm::Use &U);
 
-/// @brief Derive the individual index expressions from a GEP instruction.
+/// Derive the individual index expressions from a GEP instruction.
 ///
 /// This function optimistically assumes the GEP references into a fixed size
 /// array. If this is actually true, this function returns a list of array

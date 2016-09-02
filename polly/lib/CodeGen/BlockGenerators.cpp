@@ -172,8 +172,17 @@ BlockGenerator::generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
                                          ValueMapT &BBMap, LoopToScevMapT &LTS,
                                          isl_id_to_ast_expr *NewAccesses) {
   const MemoryAccess &MA = Stmt.getArrayAccessFor(Inst);
+  return generateLocationAccessed(
+      Stmt, getLoopForStmt(Stmt),
+      Inst.isNull() ? nullptr : Inst.getPointerOperand(), BBMap, LTS,
+      NewAccesses, MA.getId(), MA.getAccessValue()->getType());
+}
 
-  isl_ast_expr *AccessExpr = isl_id_to_ast_expr_get(NewAccesses, MA.getId());
+Value *BlockGenerator::generateLocationAccessed(
+    ScopStmt &Stmt, Loop *L, Value *Pointer, ValueMapT &BBMap,
+    LoopToScevMapT &LTS, isl_id_to_ast_expr *NewAccesses, __isl_take isl_id *Id,
+    Type *ExpectedType) {
+  isl_ast_expr *AccessExpr = isl_id_to_ast_expr_get(NewAccesses, Id);
 
   if (AccessExpr) {
     AccessExpr = isl_ast_expr_address_of(AccessExpr);
@@ -182,7 +191,7 @@ BlockGenerator::generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
     // Cast the address of this memory access to a pointer type that has the
     // same element type as the original access, but uses the address space of
     // the newly generated pointer.
-    auto OldPtrTy = MA.getAccessValue()->getType()->getPointerTo();
+    auto OldPtrTy = ExpectedType->getPointerTo();
     auto NewPtrTy = Address->getType();
     OldPtrTy = PointerType::get(OldPtrTy->getElementType(),
                                 NewPtrTy->getPointerAddressSpace());
@@ -191,9 +200,28 @@ BlockGenerator::generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
       Address = Builder.CreateBitOrPointerCast(Address, OldPtrTy);
     return Address;
   }
+  assert(
+      Pointer &&
+      "If expression was not generated, must use the original pointer value");
+  return getNewValue(Stmt, Pointer, BBMap, LTS, L);
+}
 
-  return getNewValue(Stmt, Inst.getPointerOperand(), BBMap, LTS,
-                     getLoopForStmt(Stmt));
+Value *
+BlockGenerator::getImplicitAddress(MemoryAccess &Access, Loop *L,
+                                   LoopToScevMapT &LTS, ValueMapT &BBMap,
+                                   __isl_keep isl_id_to_ast_expr *NewAccesses) {
+  if (Access.isLatestArrayKind())
+    return generateLocationAccessed(*Access.getStatement(), L, nullptr, BBMap,
+                                    LTS, NewAccesses, Access.getId(),
+                                    Access.getAccessValue()->getType());
+
+  if (Access.isLatestValueKind() || Access.isLatestExitPHIKind())
+    return getOrCreateScalarAlloca(Access.getBaseAddr());
+
+  if (Access.isLatestPHIKind())
+    return getOrCreatePHIAlloca(Access.getBaseAddr());
+
+  llvm_unreachable("Unknown access type");
 }
 
 Loop *BlockGenerator::getLoopForStmt(const ScopStmt &Stmt) const {
@@ -320,13 +348,13 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
                                    isl_id_to_ast_expr *NewAccesses) {
   BasicBlock *CopyBB = splitBB(BB);
   Builder.SetInsertPoint(&CopyBB->front());
-  generateScalarLoads(Stmt, BBMap);
+  generateScalarLoads(Stmt, LTS, BBMap, NewAccesses);
 
   copyBB(Stmt, BB, CopyBB, BBMap, LTS, NewAccesses);
 
   // After a basic block was copied store all scalars that escape this block in
   // their alloca.
-  generateScalarStores(Stmt, LTS, BBMap);
+  generateScalarStores(Stmt, LTS, BBMap, NewAccesses);
   return CopyBB;
 }
 
@@ -417,12 +445,15 @@ void BlockGenerator::handleOutsideUsers(const Scop &S, Instruction *Inst) {
   EscapeMap[Inst] = std::make_pair(ScalarAddr, std::move(EscapeUsers));
 }
 
-void BlockGenerator::generateScalarLoads(ScopStmt &Stmt, ValueMapT &BBMap) {
+void BlockGenerator::generateScalarLoads(
+    ScopStmt &Stmt, LoopToScevMapT &LTS, ValueMapT &BBMap,
+    __isl_keep isl_id_to_ast_expr *NewAccesses) {
   for (MemoryAccess *MA : Stmt) {
-    if (MA->isArrayKind() || MA->isWrite())
+    if (MA->isOriginalArrayKind() || MA->isWrite())
       continue;
 
-    auto *Address = getOrCreateAlloca(*MA);
+    auto *Address =
+        getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS, BBMap, NewAccesses);
     assert((!isa<Instruction>(Address) ||
             DT.dominates(cast<Instruction>(Address)->getParent(),
                          Builder.GetInsertBlock())) &&
@@ -432,8 +463,9 @@ void BlockGenerator::generateScalarLoads(ScopStmt &Stmt, ValueMapT &BBMap) {
   }
 }
 
-void BlockGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
-                                          ValueMapT &BBMap) {
+void BlockGenerator::generateScalarStores(
+    ScopStmt &Stmt, LoopToScevMapT &LTS, ValueMapT &BBMap,
+    __isl_keep isl_id_to_ast_expr *NewAccesses) {
   Loop *L = LI.getLoopFor(Stmt.getBasicBlock());
 
   assert(Stmt.isBlockStmt() && "Region statements need to use the "
@@ -441,7 +473,7 @@ void BlockGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
                                "RegionGenerator");
 
   for (MemoryAccess *MA : Stmt) {
-    if (MA->isArrayKind() || MA->isRead())
+    if (MA->isOriginalArrayKind() || MA->isRead())
       continue;
 
     Value *Val = MA->getAccessValue();
@@ -456,7 +488,8 @@ void BlockGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
              "Incoming block must be statement's block");
       Val = MA->getIncoming()[0].second;
     }
-    auto *Address = getOrCreateAlloca(*MA);
+    auto Address =
+        getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS, BBMap, NewAccesses);
 
     Val = getNewValue(Stmt, Val, BBMap, LTS, L);
     assert((!isa<Instruction>(Val) ||
@@ -1132,7 +1165,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   Builder.SetInsertPoint(&EntryBBCopy->front());
 
   ValueMapT &EntryBBMap = RegionMaps[EntryBBCopy];
-  generateScalarLoads(Stmt, EntryBBMap);
+  generateScalarLoads(Stmt, LTS, EntryBBMap, IdToAstExp);
 
   for (auto PI = pred_begin(EntryBB), PE = pred_end(EntryBB); PI != PE; ++PI)
     if (!R->contains(*PI))
@@ -1257,7 +1290,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   Builder.SetInsertPoint(&*ExitBBCopy->getFirstInsertionPt());
 
   // Write values visible to other statements.
-  generateScalarStores(Stmt, LTS, ValueMap);
+  generateScalarStores(Stmt, LTS, ValueMap, IdToAstExp);
   BlockMap.clear();
   RegionMaps.clear();
   IncompletePHINodeMap.clear();
@@ -1329,18 +1362,20 @@ Value *RegionGenerator::getExitScalar(MemoryAccess *MA, LoopToScevMapT &LTS,
   return getNewValue(*Stmt, OldVal, BBMap, LTS, L);
 }
 
-void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
-                                           ValueMapT &BBMap) {
+void RegionGenerator::generateScalarStores(
+    ScopStmt &Stmt, LoopToScevMapT &LTS, ValueMapT &BBMap,
+    __isl_keep isl_id_to_ast_expr *NewAccesses) {
   assert(Stmt.getRegion() &&
          "Block statements need to use the generateScalarStores() "
          "function in the BlockGenerator");
 
   for (MemoryAccess *MA : Stmt) {
-    if (MA->isArrayKind() || MA->isRead())
+    if (MA->isOriginalArrayKind() || MA->isRead())
       continue;
 
     Value *NewVal = getExitScalar(MA, LTS, BBMap);
-    Value *Address = getOrCreateAlloca(*MA);
+    Value *Address =
+        getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS, BBMap, NewAccesses);
     assert((!isa<Instruction>(NewVal) ||
             DT.dominates(cast<Instruction>(NewVal)->getParent(),
                          Builder.GetInsertBlock())) &&
