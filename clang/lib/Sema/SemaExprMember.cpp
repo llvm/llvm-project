@@ -269,20 +269,6 @@ Sema::BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
   llvm_unreachable("unexpected instance member access kind");
 }
 
-/// Determine whether input char is from rgba component set.
-static bool
-IsRGBA(char c) {
-  switch (c) {
-  case 'r':
-  case 'g':
-  case 'b':
-  case 'a':
-    return true;
-  default:
-    return false;
-  }
-}
-
 /// Check an ext-vector component access expression.
 ///
 /// VK should be set in advance to the value kind of the base
@@ -322,25 +308,11 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     HalvingSwizzle = true;
   } else if (!HexSwizzle &&
              (Idx = vecType->getPointAccessorIdx(*compStr)) != -1) {
-    bool HasRGBA = IsRGBA(*compStr);
     do {
-      // Ensure that xyzw and rgba components don't intermingle.
-      if (HasRGBA != IsRGBA(*compStr))
-        break;
       if (HasIndex[Idx]) HasRepeated = true;
       HasIndex[Idx] = true;
       compStr++;
     } while (*compStr && (Idx = vecType->getPointAccessorIdx(*compStr)) != -1);
-
-    // Emit a warning if an rgba selector is used earlier than OpenCL 2.2
-    if (HasRGBA || (*compStr && IsRGBA(*compStr))) {
-      if (S.getLangOpts().OpenCL && S.getLangOpts().OpenCLVersion < 220) {
-        const char *DiagBegin = HasRGBA ? CompName->getNameStart() : compStr;
-        S.Diag(OpLoc, diag::ext_opencl_ext_vector_type_rgba_selector)
-          << StringRef(DiagBegin, 1)
-          << S.getLangOpts().OpenCLVersion << SourceRange(CompLoc);
-      }
-    }
   } else {
     if (HexSwizzle) compStr++;
     while ((Idx = vecType->getNumericAccessorIdx(*compStr)) != -1) {

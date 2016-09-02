@@ -8134,11 +8134,6 @@ def err_opencl_enqueue_kernel_blocks_non_local_void_args : Error<
   "blocks used in device side enqueue are expected to have parameters of type 'local void*'">;
 def err_opencl_enqueue_kernel_blocks_no_args : Error<
   "blocks in this form of device side enqueue call are expected to have have no parameters">;
-
-// OpenCL v2.2 s2.1.2.3 - Vector Component Access
-def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
-  "vector component name '%0' is an OpenCL version 2.2 feature">,
-  InGroup<OpenCLUnsupportedRGBA>;
 } // end of sema category
 
 let CategoryName = "OpenMP Issue" in {
