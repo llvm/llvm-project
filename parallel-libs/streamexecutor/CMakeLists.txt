@@ -64,6 +64,8 @@ set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 add_subdirectory(lib)
 add_subdirectory(examples)
 
+install(DIRECTORY include/ DESTINATION include)
+
 if (STREAM_EXECUTOR_ENABLE_DOXYGEN)
     find_package(Doxygen REQUIRED)
     configure_file(Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)

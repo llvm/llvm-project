@@ -12984,6 +12984,31 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
                                     ICE->getValueKind());
   }
 
+  if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+    if (!GSE->isResultDependent()) {
+      Expr *SubExpr =
+          FixOverloadedFunctionReference(GSE->getResultExpr(), Found, Fn);
+      if (SubExpr == GSE->getResultExpr())
+        return GSE;
+
+      // Replace the resulting type information before rebuilding the generic
+      // selection expression.
+      SmallVector<Expr *, 4> AssocExprs(GSE->getAssocExprs().begin(),
+                                        GSE->getAssocExprs().end());
+      unsigned ResultIdx = GSE->getResultIndex();
+      AssocExprs[ResultIdx] = SubExpr;
+
+      return new (Context) GenericSelectionExpr(
+          Context, GSE->getGenericLoc(), GSE->getControllingExpr(),
+          GSE->getAssocTypeSourceInfos(), AssocExprs, GSE->getDefaultLoc(),
+          GSE->getRParenLoc(), GSE->containsUnexpandedParameterPack(),
+          ResultIdx);
+    }
+    // Rather than fall through to the unreachable, return the original generic
+    // selection expression.
+    return GSE;
+  }
+
   if (UnaryOperator *UnOp = dyn_cast<UnaryOperator>(E)) {
     assert(UnOp->getOpcode() == UO_AddrOf &&
            "Can only take the address of an overloaded function");

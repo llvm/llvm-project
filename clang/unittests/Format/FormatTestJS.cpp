@@ -1334,6 +1334,13 @@ TEST_F(FormatTestJS, RequoteStringsSingle) {
                "let x = \"single\";\n");
 }
 
+TEST_F(FormatTestJS, RequoteAndIndent) {
+  verifyFormat("let x = someVeryLongFunctionThatGoesOnAndOn(\n"
+               "    'double quoted string that needs wrapping');",
+               "let x = someVeryLongFunctionThatGoesOnAndOn("
+               "\"double quoted string that needs wrapping\");");
+}
+
 TEST_F(FormatTestJS, RequoteStringsDouble) {
   FormatStyle DoubleQuotes = getGoogleStyle(FormatStyle::LK_JavaScript);
   DoubleQuotes.JavaScriptQuotes = FormatStyle::JSQS_Double;

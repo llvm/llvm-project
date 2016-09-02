@@ -374,6 +374,7 @@ namespace {
     SDNode *MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
     SDValue ReduceLoadWidth(SDNode *N);
     SDValue ReduceLoadOpStoreWidth(SDNode *N);
+    SDValue splitMergedValStore(StoreSDNode *ST);
     SDValue TransformFPLoadStorePair(SDNode *N);
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
     SDValue reduceBuildVecConvertToConvertBuildVec(SDNode *N);
@@ -12200,7 +12201,109 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       return NewSt;
   }
 
+  if (SDValue NewSt = splitMergedValStore(ST))
+    return NewSt;
+
   return ReduceLoadOpStoreWidth(N);
+}
+
+/// For the instruction sequence of store below, F and I values
+/// are bundled together as an i64 value before being stored into memory.
+/// Sometimes it is more efficent to generate separate stores for F and I,
+/// which can remove the bitwise instructions or sink them to colder places.
+///
+///   (store (or (zext (bitcast F to i32) to i64),
+///              (shl (zext I to i64), 32)), addr)  -->
+///   (store F, addr) and (store I, addr+4)
+///
+/// Similarly, splitting for other merged store can also be beneficial, like:
+/// For pair of {i32, i32}, i64 store --> two i32 stores.
+/// For pair of {i32, i16}, i64 store --> two i32 stores.
+/// For pair of {i16, i16}, i32 store --> two i16 stores.
+/// For pair of {i16, i8},  i32 store --> two i16 stores.
+/// For pair of {i8, i8},   i16 store --> two i8 stores.
+///
+/// We allow each target to determine specifically which kind of splitting is
+/// supported.
+///
+/// The store patterns are commonly seen from the simple code snippet below
+/// if only std::make_pair(...) is sroa transformed before inlined into hoo.
+///   void goo(const std::pair<int, float> &);
+///   hoo() {
+///     ...
+///     goo(std::make_pair(tmp, ftmp));
+///     ...
+///   }
+///
+SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
+  if (OptLevel == CodeGenOpt::None)
+    return SDValue();
+
+  SDValue Val = ST->getValue();
+  SDLoc DL(ST);
+
+  // Match OR operand.
+  if (!Val.getValueType().isScalarInteger() || Val.getOpcode() != ISD::OR)
+    return SDValue();
+
+  // Match SHL operand and get Lower and Higher parts of Val.
+  SDValue Op1 = Val.getOperand(0);
+  SDValue Op2 = Val.getOperand(1);
+  SDValue Lo, Hi;
+  if (Op1.getOpcode() != ISD::SHL) {
+    std::swap(Op1, Op2);
+    if (Op1.getOpcode() != ISD::SHL)
+      return SDValue();
+  }
+  Lo = Op2;
+  Hi = Op1.getOperand(0);
+  if (!Op1.hasOneUse())
+    return SDValue();
+
+  // Match shift amount to HalfValBitSize.
+  unsigned HalfValBitSize = Val.getValueType().getSizeInBits() / 2;
+  ConstantSDNode *ShAmt = dyn_cast<ConstantSDNode>(Op1.getOperand(1));
+  if (!ShAmt || ShAmt->getAPIntValue() != HalfValBitSize)
+    return SDValue();
+
+  // Lo and Hi are zero-extended from int with size less equal than 32
+  // to i64.
+  if (Lo.getOpcode() != ISD::ZERO_EXTEND || !Lo.hasOneUse() ||
+      !Lo.getOperand(0).getValueType().isScalarInteger() ||
+      Lo.getOperand(0).getValueType().getSizeInBits() > HalfValBitSize ||
+      Hi.getOpcode() != ISD::ZERO_EXTEND || !Hi.hasOneUse() ||
+      !Hi.getOperand(0).getValueType().isScalarInteger() ||
+      Hi.getOperand(0).getValueType().getSizeInBits() > HalfValBitSize)
+    return SDValue();
+
+  if (!TLI.isMultiStoresCheaperThanBitsMerge(Lo.getOperand(0),
+                                             Hi.getOperand(0)))
+    return SDValue();
+
+  // Start to split store.
+  unsigned Alignment = ST->getAlignment();
+  MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
+  AAMDNodes AAInfo = ST->getAAInfo();
+
+  // Change the sizes of Lo and Hi's value types to HalfValBitSize.
+  EVT VT = EVT::getIntegerVT(*DAG.getContext(), HalfValBitSize);
+  Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Lo.getOperand(0));
+  Hi = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Hi.getOperand(0));
+
+  SDValue Chain = ST->getChain();
+  SDValue Ptr = ST->getBasePtr();
+  // Lower value store.
+  SDValue St0 = DAG.getStore(Chain, DL, Lo, Ptr, ST->getPointerInfo(),
+                             ST->getAlignment(), MMOFlags, AAInfo);
+  Ptr =
+      DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
+                  DAG.getConstant(HalfValBitSize / 8, DL, Ptr.getValueType()));
+  // Higher value store.
+  SDValue St1 =
+      DAG.getStore(Chain, DL, Hi, Ptr,
+                   ST->getPointerInfo().getWithOffset(HalfValBitSize / 8),
+                   Alignment / 2, MMOFlags, AAInfo);
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, St0, St1);
 }
 
 SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {

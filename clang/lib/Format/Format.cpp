@@ -801,14 +801,15 @@ public:
   tooling::Replacements
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-          FormatTokenLexer &Tokens, tooling::Replacements &Result) override {
+          FormatTokenLexer &Tokens) override {
+    tooling::Replacements RequoteReplaces;
     deriveLocalStyle(AnnotatedLines);
     AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
                                           AnnotatedLines.end());
 
     if (Style.Language == FormatStyle::LK_JavaScript &&
         Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
-      requoteJSStringLiteral(AnnotatedLines, Result);
+      requoteJSStringLiteral(AnnotatedLines, RequoteReplaces);
 
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       Annotator.calculateFormattingInformation(*AnnotatedLines[i]);
@@ -825,7 +826,7 @@ public:
     UnwrappedLineFormatter(&Indenter, &Whitespaces, Style, Tokens.getKeywords(),
                            IncompleteFormat)
         .format(AnnotatedLines);
-    return Whitespaces.generateReplacements();
+    return RequoteReplaces.merge(Whitespaces.generateReplacements());
   }
 
 private:
@@ -997,7 +998,7 @@ public:
   tooling::Replacements
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-          FormatTokenLexer &Tokens, tooling::Replacements &Result) override {
+          FormatTokenLexer &Tokens) override {
     // FIXME: in the current implementation the granularity of affected range
     // is an annotated line. However, this is not sufficient. Furthermore,
     // redundant code introduced by replacements does not necessarily
