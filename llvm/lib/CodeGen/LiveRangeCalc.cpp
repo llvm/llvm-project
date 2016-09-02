@@ -163,13 +163,18 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
     LI->computeSubRangeUndefs(Undefs, Mask, *MRI, *Indexes);
 
   // Visit all operands that read Reg. This may include partial defs.
+  bool IsSubRange = (Mask != ~0U);
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
     // Clear all kill flags. They will be reinserted after register allocation
     // by LiveIntervalAnalysis::addKillFlags().
     if (MO.isUse())
       MO.setIsKill(false);
-    if (!MO.readsReg())
+    // MO::readsReg returns "true" for subregister defs. This is for keeping
+    // liveness of the entire register (i.e. for the main range of the live
+    // interval). For subranges, definitions of non-overlapping subregisters
+    // do not count as uses.
+    if (!MO.readsReg() || (IsSubRange && MO.isDef()))
       continue;
 
     unsigned SubReg = MO.getSubReg();

@@ -160,6 +160,7 @@ class LiveRangeCalc {
   /// all uses must be jointly dominated by the definitions from @p LR
   /// together with definitions of other lanes where @p LR becomes undefined
   /// (via <def,read-undef> operands).
+  /// If @p LR is a main range, the @p LaneMask should be set to ~0.
   void extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask LaneMask,
                     LiveInterval *LI = nullptr);
 

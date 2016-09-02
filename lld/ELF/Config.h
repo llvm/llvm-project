@@ -40,7 +40,7 @@ enum class DiscardPolicy { Default, All, Locals, None };
 enum class StripPolicy { None, All, Debug };
 
 // For --unresolved-symbols.
-enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
+enum class UnresolvedPolicy { NoUndef, ReportError, Warn, Ignore };
 
 struct SymbolVersion {
   llvm::StringRef Name;
@@ -98,6 +98,7 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoGnuUnique;
   bool NoUndefinedVersion;
+  bool Nostdlib;
   bool OFormatBinary;
   bool Pic;
   bool Pie;

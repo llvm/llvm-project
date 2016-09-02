@@ -807,9 +807,9 @@ __kmp_affinity_determine_capable( const char *env_var )
     //
 
 #if KMP_GROUP_AFFINITY
-    KMP_AFFINITY_ENABLE(__kmp_num_proc_groups*sizeof(kmp_affin_mask_t));
+    KMP_AFFINITY_ENABLE(__kmp_num_proc_groups*sizeof(DWORD_PTR));
 #else
-    KMP_AFFINITY_ENABLE(sizeof(kmp_affin_mask_t));
+    KMP_AFFINITY_ENABLE(sizeof(DWORD_PTR));
 #endif
 
     KA_TRACE( 10, (

@@ -251,8 +251,8 @@ __kmp_affinity_determine_capable(const char *env_var)
 
     int gCode;
     int sCode;
-    kmp_affin_mask_t *buf;
-    buf = ( kmp_affin_mask_t * ) KMP_INTERNAL_MALLOC( KMP_CPU_SET_SIZE_LIMIT );
+    unsigned char *buf;
+    buf = ( unsigned char * ) KMP_INTERNAL_MALLOC( KMP_CPU_SET_SIZE_LIMIT );
 
     // If Linux* OS:
     // If the syscall fails or returns a suggestion for the size,

@@ -20,9 +20,7 @@ Introduction
 This document contains the release notes for the Extra Clang Tools, part of the
 Clang release 4.0.0.  Here we describe the status of the Extra Clang Tools in some
 detail, including major improvements from the previous release and new feature
-work. For the general Clang release notes, see `the Clang documentation
-<http://llvm.org/releases/3.8.0/tools/clang/docs/ReleaseNotes.html>`_.  All LLVM
-releases may be downloaded from the `LLVM releases web
+work.  All LLVM releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
 For more information about Clang or LLVM, including information about

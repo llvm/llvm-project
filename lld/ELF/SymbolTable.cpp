@@ -483,13 +483,14 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   return SymVector[V.Idx]->body();
 }
 
-// Returns a list of defined symbols that match with a given glob pattern.
+// Returns a list of defined symbols that match with a given regex.
 template <class ELFT>
-std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(StringRef Pattern) {
+std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(const Regex &Re) {
   std::vector<SymbolBody *> Res;
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
-    if (!B->isUndefined() && globMatch(Pattern, B->getName()))
+    StringRef Name = B->getName();
+    if (!B->isUndefined() && const_cast<Regex &>(Re).match(Name))
       Res.push_back(B);
   }
   return Res;
@@ -578,10 +579,6 @@ template <class ELFT> void SymbolTable<ELFT>::scanDynamicList() {
       B->symbol()->ExportDynamic = true;
 }
 
-static bool hasWildcard(StringRef S) {
-  return S.find_first_of("?*") != StringRef::npos;
-}
-
 static void setVersionId(SymbolBody *Body, StringRef VersionName,
                          StringRef Name, uint16_t Version) {
   if (!Body || Body->isUndefined()) {
@@ -625,11 +622,11 @@ static SymbolBody *findDemangled(const std::map<std::string, SymbolBody *> &D,
 
 static std::vector<SymbolBody *>
 findAllDemangled(const std::map<std::string, SymbolBody *> &D,
-                 StringRef Pattern) {
+                 const Regex &Re) {
   std::vector<SymbolBody *> Res;
   for (auto &P : D) {
     SymbolBody *Body = P.second;
-    if (!Body->isUndefined() && globMatch(Pattern, P.first))
+    if (!Body->isUndefined() && const_cast<Regex &>(Re).match(P.first))
       Res.push_back(Body);
   }
   return Res;
@@ -682,8 +679,9 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
       if (!hasWildcard(Sym.Name))
         continue;
       std::vector<SymbolBody *> All =
-          Sym.IsExternCpp ? findAllDemangled(Demangled, Sym.Name)
-                          : findAll(Sym.Name);
+          Sym.IsExternCpp
+              ? findAllDemangled(Demangled, compileGlobPatterns({Sym.Name}))
+              : findAll(compileGlobPatterns({Sym.Name}));
 
       for (SymbolBody *B : All)
         if (B->symbol()->VersionId == Config->DefaultSymbolVersion)

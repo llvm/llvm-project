@@ -1251,6 +1251,13 @@ ValueObject::ReadPointedString (lldb::DataBufferSP& buffer_sp,
             if (cstr_address_type == eAddressTypeHost && is_array)
             {
                 const char* cstr = GetDataExtractor().PeekCStr(0);
+                if (cstr == nullptr)
+                {
+                    s << "<invalid address>";
+                    error.SetErrorString("invalid address");
+                    CopyStringDataToBufferSP(s, buffer_sp);
+                    return {0,was_capped};
+                }
                 buffer_sp.reset(new DataBufferHeap(cstr_len, 0));
                 memcpy(buffer_sp->GetBytes(), cstr, cstr_len);
                 return {cstr_len,was_capped};

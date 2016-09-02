@@ -1,4 +1,4 @@
-//===-- Example.cpp - Example code for documentation ----------------------===//
+//===-- CUDASaxpy.cpp - Example of CUDA saxpy with StreamExecutor API -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -51,6 +52,7 @@ static streamexecutor::MultiKernelLoaderSpec SaxpyLoaderSpec = []() {
 /// [Example saxpy compiler-generated]
 
 /// [Example saxpy host PTX]
+// The PTX text for a saxpy kernel.
 const char *__compilergen::SaxpyPTX = R"(
   .version 4.3
   .target sm_20
@@ -130,12 +132,6 @@ int main() {
 
   // Process output data in HostX.
   std::vector<float> ExpectedX = {4, 47, 90, 133};
-  for (size_t I = 0; I < ArraySize; ++I) {
-    assert(HostX[I] == ExpectedX[I]);
-  }
-
-  // Free device memory.
-  se::dieIfError(Device->freeDeviceMemory(X));
-  se::dieIfError(Device->freeDeviceMemory(Y));
+  assert(std::equal(ExpectedX.begin(), ExpectedX.end(), HostX.begin()));
   /// [Example saxpy host main]
 }

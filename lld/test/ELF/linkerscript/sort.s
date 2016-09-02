@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
-# RUN:   %p/Inputs/linkerscript-sort.s -o %t2.o
+# RUN:   %p/Inputs/sort.s -o %t2.o
 
 # RUN: echo "SECTIONS { .aaa : { *(.aaa.*) } }" > %t1.script
 # RUN: ld.lld -o %t1 --script %t1.script %t2.o %t1.o

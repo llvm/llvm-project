@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
-# RUN:   %p/Inputs/linkerscript-sort-nested.s -o %t2.o
+# RUN:   %p/Inputs/sort-nested.s -o %t2.o
 
 ## Check sorting first by alignment and then by name.
 # RUN: echo "SECTIONS { .aaa : { *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.aaa.*))) } }" > %t1.script

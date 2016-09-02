@@ -12993,8 +12993,8 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
 
       // Replace the resulting type information before rebuilding the generic
       // selection expression.
-      SmallVector<Expr *, 4> AssocExprs(GSE->getAssocExprs().begin(),
-                                        GSE->getAssocExprs().end());
+      ArrayRef<Expr *> A = GSE->getAssocExprs();
+      SmallVector<Expr *, 4> AssocExprs(A.begin(), A.end());
       unsigned ResultIdx = GSE->getResultIndex();
       AssocExprs[ResultIdx] = SubExpr;
 
