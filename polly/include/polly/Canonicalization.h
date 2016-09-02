@@ -14,7 +14,7 @@
 
 namespace polly {
 
-/// @brief Schedule a set of canonicalization passes to prepare for Polly
+/// Schedule a set of canonicalization passes to prepare for Polly.
 ///
 /// The set of optimization passes was partially taken/copied from the
 /// set of default optimization passes in LLVM. It is used to bring the code

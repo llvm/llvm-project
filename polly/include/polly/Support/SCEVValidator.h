@@ -26,14 +26,14 @@ class LoadInst;
 } // namespace llvm
 
 namespace polly {
-/// @brief Find the loops referenced from a SCEV expression.
+/// Find the loops referenced from a SCEV expression.
 ///
 /// @param Expr The SCEV expression to scan for loops.
 /// @param Loops A vector into which the found loops are inserted.
 void findLoops(const llvm::SCEV *Expr,
                llvm::SetVector<const llvm::Loop *> &Loops);
 
-/// @brief Find the values referenced by SCEVUnknowns in a given SCEV
+/// Find the values referenced by SCEVUnknowns in a given SCEV
 /// expression.
 ///
 /// @param Expr   The SCEV expression to scan for SCEVUnknowns.
@@ -56,7 +56,7 @@ bool isAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                   const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
                   InvariantLoadsSetTy *ILS = nullptr);
 
-/// @brief Check if @p V describes an affine constraint in @p R.
+/// Check if @p V describes an affine constraint in @p R.
 bool isAffineConstraint(llvm::Value *V, const llvm::Region *R,
                         llvm::Loop *Scope, llvm::ScalarEvolution &SE,
                         ParameterSetTy &Params, bool OrExpr = false);
@@ -65,7 +65,7 @@ ParameterSetTy getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                                      const llvm::SCEV *Expression,
                                      llvm::ScalarEvolution &SE);
 
-/// @brief Extract the constant factors from the multiplication @p M.
+/// Extract the constant factors from the multiplication @p M.
 ///
 /// @param M  A potential SCEV multiplication.
 /// @param SE The ScalarEvolution analysis to create new SCEVs.

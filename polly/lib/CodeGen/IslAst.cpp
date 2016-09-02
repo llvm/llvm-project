@@ -72,24 +72,24 @@ static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",
                                     cl::cat(PollyCategory));
 
 namespace polly {
-/// @brief Temporary information used when building the ast.
+/// Temporary information used when building the ast.
 struct AstBuildUserInfo {
-  /// @brief Construct and initialize the helper struct for AST creation.
+  /// Construct and initialize the helper struct for AST creation.
   AstBuildUserInfo()
       : Deps(nullptr), InParallelFor(false), LastForNodeId(nullptr) {}
 
-  /// @brief The dependence information used for the parallelism check.
+  /// The dependence information used for the parallelism check.
   const Dependences *Deps;
 
-  /// @brief Flag to indicate that we are inside a parallel for node.
+  /// Flag to indicate that we are inside a parallel for node.
   bool InParallelFor;
 
-  /// @brief The last iterator id created for the current SCoP.
+  /// The last iterator id created for the current SCoP.
   isl_id *LastForNodeId;
 };
 } // namespace polly
 
-/// @brief Free an IslAstUserPayload object pointed to by @p Ptr
+/// Free an IslAstUserPayload object pointed to by @p Ptr.
 static void freeIslAstUserPayload(void *Ptr) {
   delete ((IslAstInfo::IslAstUserPayload *)Ptr);
 }
@@ -99,7 +99,7 @@ IslAstInfo::IslAstUserPayload::~IslAstUserPayload() {
   isl_pw_aff_free(MinimalDependenceDistance);
 }
 
-/// @brief Print a string @p str in a single line using @p Printer.
+/// Print a string @p str in a single line using @p Printer.
 static isl_printer *printLine(__isl_take isl_printer *Printer,
                               const std::string &str,
                               __isl_keep isl_pw_aff *PWA = nullptr) {
@@ -110,7 +110,7 @@ static isl_printer *printLine(__isl_take isl_printer *Printer,
   return isl_printer_end_line(Printer);
 }
 
-/// @brief Return all broken reductions as a string of clauses (OpenMP style).
+/// Return all broken reductions as a string of clauses (OpenMP style).
 static const std::string getBrokenReductionsStr(__isl_keep isl_ast_node *Node) {
   IslAstInfo::MemoryAccessSet *BrokenReductions;
   std::string str;
@@ -138,7 +138,7 @@ static const std::string getBrokenReductionsStr(__isl_keep isl_ast_node *Node) {
   return str;
 }
 
-/// @brief Callback executed for each for node in the ast in order to print it.
+/// Callback executed for each for node in the ast in order to print it.
 static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
                                __isl_take isl_ast_print_options *Options,
                                __isl_keep isl_ast_node *Node, void *) {
@@ -165,7 +165,7 @@ static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
   return isl_ast_node_for_print(Node, Printer, Options);
 }
 
-/// @brief Check if the current scheduling dimension is parallel
+/// Check if the current scheduling dimension is parallel.
 ///
 /// In case the dimension is parallel we also check if any reduction
 /// dependences is broken when we exploit this parallelism. If so,
@@ -371,7 +371,7 @@ IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
   return RunCondition;
 }
 
-/// @brief Simple cost analysis for a given SCoP
+/// Simple cost analysis for a given SCoP.
 ///
 /// TODO: Improve this analysis and extract it to make it usable in other
 ///       places too.

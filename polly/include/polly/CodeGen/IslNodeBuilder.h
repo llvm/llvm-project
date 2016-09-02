@@ -67,7 +67,7 @@ public:
 
   void addParameters(__isl_take isl_set *Context);
 
-  /// @brief Generate code that evaluates @p Condition at run-time.
+  /// Generate code that evaluates @p Condition at run-time.
   ///
   /// This function is typically called to generate the LLVM-IR for the
   /// run-time condition of the scop, that verifies that all the optimistic
@@ -82,25 +82,25 @@ public:
 
   void create(__isl_take isl_ast_node *Node);
 
-  /// @brief Allocate memory for all new arrays created by Polly.
+  /// Allocate memory for all new arrays created by Polly.
   void allocateNewArrays();
 
-  /// @brief Preload all memory loads that are invariant.
+  /// Preload all memory loads that are invariant.
   bool preloadInvariantLoads();
 
-  /// @brief Finalize code generation.
+  /// Finalize code generation.
   ///
   /// @see BlockGenerator::finalizeSCoP(Scop &S)
   virtual void finalize() { BlockGen.finalizeSCoP(S); }
 
   IslExprBuilder &getExprBuilder() { return ExprBuilder; }
 
-  /// @brief Get the associated block generator.
+  /// Get the associated block generator.
   ///
   /// @return A referecne to the associated block generator.
   BlockGenerator &getBlockGenerator() { return BlockGen; }
 
-  /// @brief Return the parallel subfunctions that have been created.
+  /// Return the parallel subfunctions that have been created.
   const ArrayRef<Function *> getParallelSubfunctions() const {
     return ParallelSubfunctions;
   }
@@ -112,25 +112,25 @@ protected:
 
   IslExprBuilder ExprBuilder;
 
-  /// @brief Maps used by the block and region generator to demote scalars.
+  /// Maps used by the block and region generator to demote scalars.
   ///
   ///@{
 
-  /// @brief See BlockGenerator::ScalarMap.
+  /// See BlockGenerator::ScalarMap.
   BlockGenerator::ScalarAllocaMapTy ScalarMap;
 
-  /// @brief See BlockGenerator::PhiOpMap.
+  /// See BlockGenerator::PhiOpMap.
   BlockGenerator::ScalarAllocaMapTy PHIOpMap;
 
-  /// @brief See BlockGenerator::EscapeMap.
+  /// See BlockGenerator::EscapeMap.
   BlockGenerator::EscapeUsersAllocaMapTy EscapeMap;
 
   ///@}
 
-  /// @brief The generator used to copy a basic block.
+  /// The generator used to copy a basic block.
   BlockGenerator BlockGen;
 
-  /// @brief The generator used to copy a non-affine region.
+  /// The generator used to copy a non-affine region.
   RegionGenerator RegionGen;
 
   Pass *const P;
@@ -139,7 +139,7 @@ protected:
   ScalarEvolution &SE;
   DominatorTree &DT;
 
-  /// @brief The current iteration of out-of-scop loops
+  /// The current iteration of out-of-scop loops
   ///
   /// This map provides for a given loop a llvm::Value that contains the current
   /// loop iteration.
@@ -150,7 +150,7 @@ protected:
   // ivs.
   IslExprBuilder::IDToValueTy IDToValue;
 
-  /// @brief A collection of all parallel subfunctions that have been created.
+  /// A collection of all parallel subfunctions that have been created.
   SmallVector<Function *, 8> ParallelSubfunctions;
 
   /// Generate code for a given SCEV*
@@ -168,12 +168,12 @@ protected:
   /// llvm::Values to new llvm::Values.
   ValueMapT ValueMap;
 
-  /// @brief Materialize code for @p Id if it was not done before.
+  /// Materialize code for @p Id if it was not done before.
   ///
   /// @returns False, iff a problem occured and the value was not materialized.
   bool materializeValue(__isl_take isl_id *Id);
 
-  /// @brief Materialize parameters of @p Set.
+  /// Materialize parameters of @p Set.
   ///
   /// @param All If not set only parameters referred to by the constraints in
   ///            @p Set will be materialized, otherwise all.
@@ -248,7 +248,7 @@ protected:
   /// @param NewValues A map that maps certain llvm::Values to new llvm::Values.
   void updateValues(ValueMapT &NewValues);
 
-  /// @brief Generate code for a marker now.
+  /// Generate code for a marker now.
   ///
   /// For mark nodes with an unknown name, we just forward the code generation
   /// to its child. This is currently the only behavior implemented, as there is
@@ -258,18 +258,18 @@ protected:
   virtual void createMark(__isl_take isl_ast_node *Marker);
   virtual void createFor(__isl_take isl_ast_node *For);
 
-  /// @brief Set to remember materialized invariant loads.
+  /// Set to remember materialized invariant loads.
   ///
   /// An invariant load is identified by its pointer (the SCEV) and its type.
   SmallSet<std::pair<const SCEV *, Type *>, 16> PreloadedPtrs;
 
-  /// @brief Preload the memory access at @p AccessRange with @p Build.
+  /// Preload the memory access at @p AccessRange with @p Build.
   ///
   /// @returns The preloaded value casted to type @p Ty
   Value *preloadUnconditionally(__isl_take isl_set *AccessRange,
                                 isl_ast_build *Build, Instruction *AccInst);
 
-  /// @brief Preload the memory load access @p MA.
+  /// Preload the memory load access @p MA.
   ///
   /// If @p MA is not always executed it will be conditionally loaded and
   /// merged with undef from the same type. Hence, if @p MA is executed only
@@ -282,7 +282,7 @@ protected:
   Value *preloadInvariantLoad(const MemoryAccess &MA,
                               __isl_take isl_set *Domain);
 
-  /// @brief Preload the invariant access equivalence class @p IAClass
+  /// Preload the invariant access equivalence class @p IAClass
   ///
   /// This function will preload the representing load from @p IAClass and
   /// map all members of @p IAClass to that preloaded value, potentially casted
@@ -299,7 +299,7 @@ protected:
   /// @param For The FOR isl_ast_node for which code is generated.
   void createForParallel(__isl_take isl_ast_node *For);
 
-  /// @brief Create new access functions for modified memory accesses.
+  /// Create new access functions for modified memory accesses.
   ///
   /// In case the access function of one of the memory references in the Stmt
   /// has been modified, we generate a new isl_ast_expr that reflects the
@@ -363,7 +363,7 @@ protected:
   virtual void createUser(__isl_take isl_ast_node *User);
   virtual void createBlock(__isl_take isl_ast_node *Block);
 
-  /// @brief Get the schedule for a given AST node.
+  /// Get the schedule for a given AST node.
   ///
   /// This information is used to reason about parallelism of loops or the
   /// locality of memory accesses under a given schedule.

@@ -136,9 +136,13 @@ static void reorderFieldsInConstructor(
     const ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(CtorDecl && "Constructor declaration is null");
-  assert(CtorDecl->isThisDeclarationADefinition() && "Not a definition");
   if (CtorDecl->isImplicit() || CtorDecl->getNumCtorInitializers() <= 1)
     return;
+
+  // The method FunctionDecl::isThisDeclarationADefinition returns false
+  // for a defaulted function unless that function has been implicitly defined.
+  // Thus this assert needs to be after the previous checks.
+  assert(CtorDecl->isThisDeclarationADefinition() && "Not a definition");
 
   SmallVector<unsigned, 10> NewFieldsPositions(NewFieldsOrder.size());
   for (unsigned i = 0, e = NewFieldsOrder.size(); i < e; ++i)

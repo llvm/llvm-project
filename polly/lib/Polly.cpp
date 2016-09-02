@@ -14,7 +14,7 @@
 
 namespace {
 
-/// @brief Initialize Polly passes when library is loaded.
+/// Initialize Polly passes when library is loaded.
 ///
 /// We use the constructor of a statically declared object to initialize the
 /// different Polly passes right after the Polly library is loaded. This ensures
