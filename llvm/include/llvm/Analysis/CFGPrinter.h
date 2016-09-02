@@ -142,9 +142,8 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
     if (!Weight)
       return "";
 
-    // Append a 'W' to indicate that these are weights rather than actual
-    // profile
-    // count (due to scaling).
+    // Prepend a 'W' to indicate that this is a weight rather than the actual
+    // profile count (due to scaling).
     Twine Attrs = "label=\"W:" + Twine(Weight->getZExtValue()) + "\"";
     return Attrs.str();
   }
