@@ -29,7 +29,7 @@ declare void @foo(i32*)
 ;
 ; x -> DW_OP_reg1(51)
 ; F0: [[LOC]]: Beginning address offset: 0x0000000000000028
-; F0:             Ending address offset: 0x0000000000000030
+; F0:             Ending address offset: 0x000000000000002c
 ; F0:              Location description: 51
 
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
@@ -65,7 +65,7 @@ entry:
 
 ; x -> DW_OP_reg1(51)
 ; F1: [[LOC]]: Beginning address offset: 0x0000000000000080
-; F1:             Ending address offset: 0x0000000000000088
+; F1:             Ending address offset: 0x0000000000000084
 ; F1:              Location description: 51
 
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {

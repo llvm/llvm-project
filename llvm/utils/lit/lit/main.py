@@ -132,10 +132,6 @@ def sort_by_incremental_cache(run):
     run.tests.sort(key = lambda t: sortIndex(t))
 
 def main(builtinParameters = {}):
-    # Use processes by default on Unix platforms.
-    isWindows = platform.system() == 'Windows'
-    useProcessesIsDefault = not isWindows
-
     global options
     from optparse import OptionParser, OptionGroup
     parser = OptionParser("usage: %prog [options] {file-or-path}")
@@ -243,10 +239,10 @@ def main(builtinParameters = {}):
                       action="store_true", default=False)
     group.add_option("", "--use-processes", dest="useProcesses",
                       help="Run tests in parallel with processes (not threads)",
-                      action="store_true", default=useProcessesIsDefault)
+                      action="store_true", default=True)
     group.add_option("", "--use-threads", dest="useProcesses",
                       help="Run tests in parallel with threads (not processes)",
-                      action="store_false", default=useProcessesIsDefault)
+                      action="store_false", default=True)
     parser.add_option_group(group)
 
     (opts, args) = parser.parse_args()
@@ -286,6 +282,7 @@ def main(builtinParameters = {}):
         # Default is zero
         maxIndividualTestTime = 0
 
+    isWindows = platform.system() == 'Windows'
 
     # Create the global config object.
     litConfig = lit.LitConfig.LitConfig(

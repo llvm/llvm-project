@@ -164,14 +164,23 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     void shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg);
 
     /// Extend the live range @p LR to reach all points in @p Indices. The
-    /// points in the @p Indices array must be jointly dominated by existing
-    /// defs in @p LR. PHI-defs are added as needed to maintain SSA form.
+    /// points in the @p Indices array must be jointly dominated by the union
+    /// of the existing defs in @p LR and points in @p Undefs.
+    ///
+    /// PHI-defs are added as needed to maintain SSA form.
     ///
     /// If a SlotIndex in @p Indices is the end index of a basic block, @p LR
     /// will be extended to be live out of the basic block.
+    /// If a SlotIndex in @p Indices is jointy dominated only by points in
+    /// @p Undefs, the live range will not be extended to that point.
     ///
     /// See also LiveRangeCalc::extend().
-    void extendToIndices(LiveRange &LR, ArrayRef<SlotIndex> Indices);
+    void extendToIndices(LiveRange &LR, ArrayRef<SlotIndex> Indices,
+                         ArrayRef<SlotIndex> Undefs);
+
+    void extendToIndices(LiveRange &LR, ArrayRef<SlotIndex> Indices) {
+      extendToIndices(LR, Indices, /*Undefs=*/{});
+    }
 
     /// If @p LR has a live value at @p Kill, prune its live range by removing
     /// any liveness reachable from Kill. Add live range end points to

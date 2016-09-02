@@ -4326,13 +4326,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     if (!Base.isMachineOpcode())
       continue;
 
-    // On targets with fusion, we don't want this to fire and remove a fusion
-    // opportunity, unless a) it results in another fusion opportunity or
-    // b) optimizing for size.
-    if (PPCSubTarget->hasFusion() &&
-        (!MF->getFunction()->optForSize() && !Base.hasOneUse()))
-      continue;
-
     unsigned Flags = 0;
     bool ReplaceFlags = true;
 
@@ -4377,10 +4370,15 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     }
 
     SDValue ImmOpnd = Base.getOperand(1);
-    int MaxDisplacement = 0;
+
+    // On PPC64, the TOC base pointer is guaranteed by the ABI only to have
+    // 8-byte alignment, and so we can only use offsets less than 8 (otherwise,
+    // we might have needed different @ha relocation values for the offset
+    // pointers).
+    int MaxDisplacement = 7;
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
       const GlobalValue *GV = GA->getGlobal();
-      MaxDisplacement = GV->getAlignment() - 1;
+      MaxDisplacement = std::min((int) GV->getAlignment() - 1, MaxDisplacement);
     }
 
     int Offset = N->getConstantOperandVal(FirstOp);

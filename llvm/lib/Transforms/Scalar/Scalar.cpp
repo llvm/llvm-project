@@ -234,8 +234,12 @@ void LLVMAddCorrelatedValuePropagationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createCorrelatedValuePropagationPass());
 }
 
-void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM, int UseMemorySSA) {
-  unwrap(PM)->add(createEarlyCSEPass(UseMemorySSA));
+void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createEarlyCSEPass(false/*=UseMemorySSA*/));
+}
+
+void LLVMAddEarlyCSEMemSSAPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createEarlyCSEPass(true/*=UseMemorySSA*/));
 }
 
 void LLVMAddGVNHoistLegacyPass(LLVMPassManagerRef PM) {

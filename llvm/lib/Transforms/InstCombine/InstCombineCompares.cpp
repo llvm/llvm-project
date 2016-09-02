@@ -1526,21 +1526,6 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
     }
   }
 
-  // If the LHS is an AND of a zext, and we have an equality compare, we can
-  // shrink the and/compare to the smaller type, eliminating the cast.
-  if (ZExtInst *Cast = dyn_cast<ZExtInst>(And->getOperand(0))) {
-    IntegerType *Ty = cast<IntegerType>(Cast->getSrcTy());
-    // Make sure we don't compare the upper bits, SimplifyDemandedBits
-    // should fold the icmp to true/false in that case.
-    if (Cmp.isEquality() && C1->getActiveBits() <= Ty->getBitWidth()) {
-      Value *NewAnd = Builder->CreateAnd(Cast->getOperand(0),
-                                         ConstantExpr::getTrunc(C2, Ty));
-      NewAnd->takeName(And);
-      return new ICmpInst(Cmp.getPredicate(), NewAnd,
-                          ConstantExpr::getTrunc(RHS, Ty));
-    }
-  }
-
   if (Instruction *I = foldICmpAndShift(Cmp, And, C1))
     return I;
 

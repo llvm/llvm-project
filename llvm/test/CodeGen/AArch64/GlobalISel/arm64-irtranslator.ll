@@ -325,7 +325,7 @@ define void @intrinsics(i32 %cur, i32 %bits) {
 ; CHECK: [[FALSE]]:
 ; CHECK:     [[RES2:%[0-9]+]](32) = G_LOAD { s32, p0 }
 
-; CHECK:     [[RES:%[0-9]+]](32) = PHI [[RES1]], %[[TRUE]], [[RES2]], %[[FALSE]]
+; CHECK:     [[RES:%[0-9]+]](32) = G_PHI s32 [[RES1]], %[[TRUE]], [[RES2]], %[[FALSE]]
 ; CHECK:     %w0 = COPY [[RES]]
 define i32 @test_phi(i32* %addr1, i32* %addr2, i1 %tst) {
   br i1 %tst, label %true, label %false

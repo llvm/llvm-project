@@ -140,10 +140,7 @@ bool opt(Config &C, TargetMachine *TM, unsigned Task, Module &M,
          bool IsThinLto) {
   M.setDataLayout(TM->createDataLayout());
   runOldPMPasses(C, M, TM, IsThinLto);
-  if (C.PostOptModuleHook && !C.PostOptModuleHook(Task, M))
-    return false;
-
-  return true;
+  return !C.PostOptModuleHook || C.PostOptModuleHook(Task, M);
 }
 
 /// Monolithic LTO does not support caching (yet), this is a convenient wrapper

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -71,6 +72,7 @@ TEST_F(MemoryBufferTest, NullTerminator4K) {
   SmallString<64> TestPath;
   sys::fs::createTemporaryFile("MemoryBufferTest_NullTerminator4K", "temp",
                                TestFD, TestPath);
+  FileRemover Cleanup(TestPath);
   raw_fd_ostream OF(TestFD, true, /*unbuffered=*/true);
   for (unsigned i = 0; i < 4096 / 16; ++i) {
     OF << "0123456789abcdef";
@@ -133,6 +135,7 @@ void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {
   SmallString<64> TestPath;
   // Create a temporary file and write data into it.
   sys::fs::createTemporaryFile("prefix", "temp", TestFD, TestPath);
+  FileRemover Cleanup(TestPath);
   // OF is responsible for closing the file; If the file is not
   // reopened, it will be unbuffered so that the results are
   // immediately visible through the fd.
@@ -182,6 +185,7 @@ TEST_F(MemoryBufferTest, slice) {
   int FD;
   SmallString<64> TestPath;
   sys::fs::createTemporaryFile("MemoryBufferTest_Slice", "temp", FD, TestPath);
+  FileRemover Cleanup(TestPath);
   raw_fd_ostream OF(FD, true, /*unbuffered=*/true);
   for (unsigned i = 0; i < 0x2000 / 8; ++i) {
     OF << "12345678";

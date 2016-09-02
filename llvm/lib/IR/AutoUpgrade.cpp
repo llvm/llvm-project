@@ -267,6 +267,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx512.mask.pandn.") ||
          Name.startswith("avx512.mask.por.") ||
          Name.startswith("avx512.mask.pxor.") ||
+         Name.startswith("avx512.mask.and.") ||
+         Name.startswith("avx512.mask.andn.") ||
+         Name.startswith("avx512.mask.or.") ||
+         Name.startswith("avx512.mask.xor.") ||
          Name.startswith("sse41.pmovsx") ||
          Name.startswith("sse41.pmovzx") ||
          Name.startswith("avx2.pmovsx") ||
@@ -1223,6 +1227,39 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.startswith("avx512.mask.pxor.")) {
       Rep = Builder.CreateXor(CI->getArgOperand(0), CI->getArgOperand(1));
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.and.")) {
+      VectorType *FTy = cast<VectorType>(CI->getType());
+      VectorType *ITy = VectorType::getInteger(FTy);
+      Rep = Builder.CreateAnd(Builder.CreateBitCast(CI->getArgOperand(0), ITy),
+                              Builder.CreateBitCast(CI->getArgOperand(1), ITy));
+      Rep = Builder.CreateBitCast(Rep, FTy);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.andn.")) {
+      VectorType *FTy = cast<VectorType>(CI->getType());
+      VectorType *ITy = VectorType::getInteger(FTy);
+      Rep = Builder.CreateNot(Builder.CreateBitCast(CI->getArgOperand(0), ITy));
+      Rep = Builder.CreateAnd(Rep,
+                              Builder.CreateBitCast(CI->getArgOperand(1), ITy));
+      Rep = Builder.CreateBitCast(Rep, FTy);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.or.")) {
+      VectorType *FTy = cast<VectorType>(CI->getType());
+      VectorType *ITy = VectorType::getInteger(FTy);
+      Rep = Builder.CreateOr(Builder.CreateBitCast(CI->getArgOperand(0), ITy),
+                             Builder.CreateBitCast(CI->getArgOperand(1), ITy));
+      Rep = Builder.CreateBitCast(Rep, FTy);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.xor.")) {
+      VectorType *FTy = cast<VectorType>(CI->getType());
+      VectorType *ITy = VectorType::getInteger(FTy);
+      Rep = Builder.CreateXor(Builder.CreateBitCast(CI->getArgOperand(0), ITy),
+                              Builder.CreateBitCast(CI->getArgOperand(1), ITy));
+      Rep = Builder.CreateBitCast(Rep, FTy);
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else {

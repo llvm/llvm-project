@@ -568,11 +568,12 @@ void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg) {
 }
 
 void LiveIntervals::extendToIndices(LiveRange &LR,
-                                    ArrayRef<SlotIndex> Indices) {
+                                    ArrayRef<SlotIndex> Indices,
+                                    ArrayRef<SlotIndex> Undefs) {
   assert(LRCalc && "LRCalc not initialized.");
   LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
   for (unsigned i = 0, e = Indices.size(); i != e; ++i)
-    LRCalc->extend(LR, Indices[i], /*PhysReg=*/0, /*Undefs=*/{});
+    LRCalc->extend(LR, Indices[i], /*PhysReg=*/0, Undefs);
 }
 
 void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,

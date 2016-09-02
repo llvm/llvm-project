@@ -7135,6 +7135,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     return N0.getOperand(0);
   }
 
+  // If this is anyext(trunc), don't fold it, allow ourselves to be folded.
+  if (N->hasOneUse() && (N->use_begin()->getOpcode() == ISD::ANY_EXTEND))
+    return SDValue();
+
   // Fold extract-and-trunc into a narrow extract. For example:
   //   i64 x = EXTRACT_VECTOR_ELT(v2i64 val, i32 1)
   //   i32 y = TRUNCATE(i64 x)

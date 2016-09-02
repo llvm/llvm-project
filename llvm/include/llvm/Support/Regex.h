@@ -52,11 +52,7 @@ namespace llvm {
       std::swap(error, regex.error);
       return *this;
     }
-    Regex(Regex &&regex) {
-      preg = regex.preg;
-      error = regex.error;
-      regex.preg = nullptr;
-    }
+    Regex(Regex &&regex);
     ~Regex();
 
     /// isValid - returns the error encountered during regex compilation, or

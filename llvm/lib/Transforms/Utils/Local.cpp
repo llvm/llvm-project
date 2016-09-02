@@ -1679,7 +1679,8 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
 
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
-                                        const BasicBlock *BB) {
+                                        const BasicBlock *BB,
+                                        bool IncludeSelf) {
   assert(From->getType() == To->getType());
 
   unsigned Count = 0;
@@ -1687,7 +1688,8 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
        UI != UE;) {
     Use &U = *UI++;
     auto *I = cast<Instruction>(U.getUser());
-    if (DT.properlyDominates(BB, I->getParent())) {
+    if ((IncludeSelf && BB == I->getParent()) ||
+        DT.properlyDominates(BB, I->getParent())) {
       U.set(To);
       DEBUG(dbgs() << "Replace dominated use of '" << From->getName() << "' as "
                    << *To << " in " << *U << "\n");

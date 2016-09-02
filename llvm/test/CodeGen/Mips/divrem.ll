@@ -152,20 +152,20 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sw $[[R0]], 0(${{[0-9]+}})
 
-; GPR32-DAG:     div $2, $4, $5
-; GPR32-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
 ; GPR32-DAG:     mod $[[R0:[0-9]+]], $4, $5
 ; GPR32-TRAP:    teq $5, $zero, 7
-; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
-
-; GPR64-DAG:     div $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
+; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
+; GPR32-DAG:     div $2, $4, $5
+; GPR32-TRAP:    teq $5, $zero, 7
+
 ; GPR64-DAG:     mod $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
 ; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
+; GPR64-DAG:     div $2, $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
 
 ; ALL: .end sdivrem1
 
@@ -193,21 +193,21 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sw $[[R0]], 0(${{[0-9]+}})
 
+; GPR32-DAG:     modu $[[R0:[0-9]+]], $4, $5
+; GPR32-TRAP:    teq $5, $zero, 7
+; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
+; NOCHECK-NOT:   teq
 ; GPR32-DAG:     divu $2, $4, $5
 ; GPR32-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
-; GPR32-DAG:     modu $[[R0:[0-9]+]], $4, $5
-; GPR32-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
-; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
 
-; GPR64-DAG:     divu $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
 ; GPR64-DAG:     modu $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
 ; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
+; GPR64-DAG:     divu $2, $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
 
 ; ALL: .end udivrem1
 
@@ -335,14 +335,14 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sd $[[R0]], 0(${{[0-9]+}})
 
-; GPR64-DAG:     ddiv $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
-
 ; GPR64-DAG:     dmod $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
 ; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
+
+; GPR64-DAG:     ddiv $2, $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
 
 ; ALL: .end sdivrem2
 
@@ -370,14 +370,14 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sd $[[R0]], 0(${{[0-9]+}})
 
-; GPR64-DAG:     ddivu $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
-
 ; GPR64:         dmodu $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
 ; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
+
+; GPR64-DAG:     ddivu $2, $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
 
 ; ALL: .end udivrem2
 

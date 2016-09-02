@@ -124,13 +124,13 @@ public:
   Expected<TypeLeafKind>
   visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) override {
     ++Index;
-    RawRecord = &Rec;
+    RawRecord = Rec;
     return Rec.Type;
   }
 
 private:
   template <typename T> Error verify(T &Rec) {
-    uint32_t Hash = getTpiHash(Rec, *RawRecord);
+    uint32_t Hash = getTpiHash(Rec, RawRecord);
     if (Hash % NumHashBuckets != HashValues[Index])
       return errorInvalidHash();
     return Error::success();
@@ -152,7 +152,7 @@ private:
   }
 
   FixedStreamArray<support::ulittle32_t> HashValues;
-  const CVRecord<TypeLeafKind> *RawRecord;
+  CVRecord<TypeLeafKind> RawRecord;
   uint32_t NumHashBuckets;
   uint32_t Index = -1;
 };
