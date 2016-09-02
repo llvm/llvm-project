@@ -1,3 +1,5 @@
+// clang -target x86_64-linux-gnu -shared -fPIC -lc dynamic-table.c \
+//       -o dynamic-table-so.x86 -Wl,-f,aux_val
 // clang -target mipsel-linux-gnu -shared -fPIC -lc dynamic-table.c \
 //       -o dynamic-table-so.mips
 // clang -target mipsel-linux-gnu -lc dynamic-table.c \

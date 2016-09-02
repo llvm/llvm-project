@@ -200,60 +200,6 @@ class VOP3Common <dag outs, dag ins, string asm = "",
 } // End Uses = [EXEC]
 
 //===----------------------------------------------------------------------===//
-// Scalar operations
-//===----------------------------------------------------------------------===//
-
-class SMRDe <bits<5> op, bits<1> imm> : Enc32 {
-  bits<7> sdst;
-  bits<7> sbase;
-
-  let Inst{8} = imm;
-  let Inst{14-9} = sbase{6-1};
-  let Inst{21-15} = sdst;
-  let Inst{26-22} = op;
-  let Inst{31-27} = 0x18; //encoding
-}
-
-class SMRD_IMMe <bits<5> op> : SMRDe<op, 1> {
-  bits<8> offset;
-  let Inst{7-0} = offset;
-}
-
-class SMRD_SOFFe <bits<5> op> : SMRDe<op, 0> {
-  bits<8> soff;
-  let Inst{7-0} = soff;
-}
-
-
-
-class SMRD_IMMe_ci <bits<5> op> : Enc64 {
-  bits<7> sdst;
-  bits<7> sbase;
-  bits<32> offset;
-
-  let Inst{7-0}   = 0xff;
-  let Inst{8}     = 0;
-  let Inst{14-9}  = sbase{6-1};
-  let Inst{21-15} = sdst;
-  let Inst{26-22} = op;
-  let Inst{31-27} = 0x18; //encoding
-  let Inst{63-32} = offset;
-}
-
-
-class SMRD <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI<outs, ins, asm, pattern> {
-
-  let LGKM_CNT = 1;
-  let SMRD = 1;
-  let mayStore = 0;
-  let mayLoad = 1;
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
-  let SchedRW = [WriteSMEM];
-}
-
-//===----------------------------------------------------------------------===//
 // Vector ALU operations
 //===----------------------------------------------------------------------===//
 

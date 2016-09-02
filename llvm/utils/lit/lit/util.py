@@ -65,10 +65,13 @@ def mkdir_p(path):
 
 def capture(args, env=None):
     """capture(command) - Run the given command (or argv list) in a shell and
-    return the standard output."""
+    return the standard output. Raises a CalledProcessError if the command
+    exits with a non-zero status."""
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          env=env)
     out,_ = p.communicate()
+    if p.returncode != 0:
+        raise subprocess.CalledProcessError(cmd=args, returncode=p.returncode)
     return convert_string(out)
 
 def which(command, paths = None):

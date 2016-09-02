@@ -793,7 +793,10 @@ public:
       && getOperand(1).isImm();
   }
 
-  bool isPHI() const { return getOpcode() == TargetOpcode::PHI; }
+  bool isPHI() const {
+    return getOpcode() == TargetOpcode::PHI ||
+           getOpcode() == TargetOpcode::G_PHI;
+  }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }

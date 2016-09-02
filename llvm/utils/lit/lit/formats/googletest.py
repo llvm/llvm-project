@@ -35,7 +35,8 @@ class GoogleTest(TestFormat):
               lines = lines.replace('\r', '')
             lines = lines.split('\n')
         except:
-            litConfig.error("unable to discover google-tests in %r" % path)
+            litConfig.error("unable to discover google-tests in %r: %s"
+                            % (path, sys.exc_info()[1]))
             raise StopIteration
 
         nested_tests = []

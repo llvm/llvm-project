@@ -90,6 +90,11 @@ namespace ISD {
     /// adjustment during unwind.
     FRAME_TO_ARGS_OFFSET,
 
+    /// EH_DWARF_CFA - This node represents the pointer to the DWARF Canonical
+    /// Frame Address (CFA), generally the value of the stack pointer at the
+    /// call site in the previous frame.
+    EH_DWARF_CFA,
+
     /// OUTCHAIN = EH_RETURN(INCHAIN, OFFSET, HANDLER) - This node represents
     /// 'eh_return' gcc dwarf builtin, which is used to return from
     /// exception. The general meaning is: adjust stack by OFFSET and pass

@@ -415,6 +415,13 @@ def G_INTRINSIC_W_SIDE_EFFECTS : Instruction {
   let mayStore = 1;
 }
 
+// PHI node bearing an LLT.
+def G_PHI : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Branches.
 //------------------------------------------------------------------------------

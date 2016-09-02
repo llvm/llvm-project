@@ -326,10 +326,12 @@ void combineMetadataForCSE(Instruction *K, const Instruction *J);
 /// the given edge.  Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlockEdge &Edge);
+
 /// Replace each use of 'From' with 'To' if that use is dominated by
-/// the end of the given BasicBlock. Returns the number of replacements made.
+/// the end of 'BB'. Returns the number of replacements made.
+/// Replace use of 'From' with 'To' in 'BB' if 'IncludeSelf' is true.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
-                                  const BasicBlock *BB);
+                                  const BasicBlock *BB, bool IncludeSelf);
 
 
 /// Return true if the CallSite CS calls a gc leaf function.

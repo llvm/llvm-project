@@ -886,13 +886,19 @@ void AMDGPUAsmPrinter::emitRuntimeMetadata(const Function &F) {
     unsigned I = Arg.getArgNo();
     OutStreamer->EmitIntValue(RuntimeMD::KeyArgBegin, 1);
 
-    // Emit KeyArgSize and KeyArgAlign.
+    // Emit KeyArgSize, KeyArgAlign and KeyArgPointeeAlign.
     Type *T = Arg.getType();
     const DataLayout &DL = F.getParent()->getDataLayout();
     emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgSize,
                           DL.getTypeAllocSize(T), 4);
     emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgAlign,
                           DL.getABITypeAlignment(T), 4);
+    if (auto PT = dyn_cast<PointerType>(T)) {
+      auto ET = PT->getElementType();
+      if (ET->isSized())
+        emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgPointeeAlign,
+                          DL.getABITypeAlignment(ET), 4);
+    }
 
     // Emit KeyArgTypeName.
     auto TypeName = dyn_cast<MDString>(F.getMetadata(

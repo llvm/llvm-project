@@ -32,6 +32,9 @@ FileOutputBuffer::FileOutputBuffer(std::unique_ptr<mapped_file_region> R,
     : Region(std::move(R)), FinalPath(Path), TempPath(TmpPath) {}
 
 FileOutputBuffer::~FileOutputBuffer() {
+  // Close the mapping before deleting the temp file, so that the removal
+  // succeeds.
+  Region.reset();
   sys::fs::remove(Twine(TempPath));
 }
 

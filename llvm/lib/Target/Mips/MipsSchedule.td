@@ -216,6 +216,7 @@ def II_MIN_S            : InstrItinClass;
 def II_MINA_D           : InstrItinClass;
 def II_MINA_S           : InstrItinClass;
 def II_MFC0             : InstrItinClass;
+def II_MFHC0            : InstrItinClass;
 def II_MFC1             : InstrItinClass;
 def II_MFHC1            : InstrItinClass;
 def II_MFC2             : InstrItinClass;
@@ -244,6 +245,7 @@ def II_MSUB_S           : InstrItinClass;
 def II_MSUBF_D          : InstrItinClass;
 def II_MSUBF_S          : InstrItinClass;
 def II_MTC0             : InstrItinClass;
+def II_MTHC0            : InstrItinClass;
 def II_MTC1             : InstrItinClass;
 def II_MTHC1            : InstrItinClass;
 def II_MTC2             : InstrItinClass;
@@ -640,9 +642,11 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_DMTC1           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_DMTC2           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MFC0            , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_MFHC0           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MFC1            , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MFC2            , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MTC0            , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_MTHC0           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MTC1            , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MTC2            , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_MFHC1           , [InstrStage<2,  [ALU]>]>,

@@ -1,4 +1,4 @@
-; RUN: echo '!10 = !{!"%T/aaa.gcno", !"%T/bbb.gcda", !0}' > %t1
+; RUN: echo '!10 = !{!"%/T/aaa.gcno", !"%/T/bbb.gcda", !0}' > %t1
 ; RUN: cat %s %t1 > %t2
 ; RUN: opt -insert-gcov-profiling -S -o %t3 < %t2
 ; RUN: grep _Z3foov %T/aaa.gcno

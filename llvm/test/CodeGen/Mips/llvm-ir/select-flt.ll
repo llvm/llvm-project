@@ -46,8 +46,8 @@ entry:
   ; M3:         mov.s   $f0, $f13
 
   ; CMOV-32:    mtc1    $6, $f0
-  ; CMOV-32:    mtc1    $5, $f1
   ; CMOV-32:    andi    $[[T0:[0-9]+]], $4, 1
+  ; CMOV-32:    mtc1    $5, $f1
   ; CMOV-32:    movn.s  $f0, $f1, $[[T0]]
 
   ; SEL-32:     mtc1    $5, $[[F0:f[0-9]+]]
@@ -63,8 +63,8 @@ entry:
   ; SEL-64:     sel.s   $f0, $f14, $f13
 
   ; MM32R3:     mtc1    $6, $[[F0:f[0-9]+]]
-  ; MM32R3:     mtc1    $5, $[[F1:f[0-9]+]]
   ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
+  ; MM32R3:     mtc1    $5, $[[F1:f[0-9]+]]
   ; MM32R3:     movn.s  $f0, $[[F1]], $[[T0]]
 
   %r = select i1 %s, float %x, float %y

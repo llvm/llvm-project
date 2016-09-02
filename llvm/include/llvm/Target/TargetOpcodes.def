@@ -336,6 +336,9 @@ HANDLE_TARGET_OPCODE(G_UITOFP)
 /// Generic type specifier for untyped registers.
 HANDLE_TARGET_OPCODE(G_TYPE)
 
+/// Generic PHI node (so that the type of the vreg can be set).
+HANDLE_TARGET_OPCODE(G_PHI)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 
