@@ -49,7 +49,8 @@ public:
         RemoteTrampolineSize(std::move(Other.RemoteTrampolineSize)),
         RemoteIndirectStubSize(std::move(Other.RemoteIndirectStubSize)),
         AllocatorIds(std::move(Other.AllocatorIds)),
-        IndirectStubOwnerIds(std::move(Other.IndirectStubOwnerIds)) {}
+        IndirectStubOwnerIds(std::move(Other.IndirectStubOwnerIds)),
+        CallbackManager(std::move(Other.CallbackManager)) {}
 
   OrcRemoteTargetClient &operator=(OrcRemoteTargetClient &&) = delete;
 

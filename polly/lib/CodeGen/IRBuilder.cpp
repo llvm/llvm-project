@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace polly;
 
-/// @brief Get a self referencing id metadata node.
+/// Get a self referencing id metadata node.
 ///
 /// The MDNode looks like this (if arg0/arg1 are not null):
 ///

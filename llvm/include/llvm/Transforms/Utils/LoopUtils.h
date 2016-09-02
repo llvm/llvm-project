@@ -21,14 +21,12 @@
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
-class AAResults;
 class AliasSet;
 class AliasSetTracker;
 class AssumptionCache;
 class BasicBlock;
 class DataLayout;
 class DominatorTree;
-class Instruction;
 class Loop;
 class LoopInfo;
 class Pass;
@@ -469,12 +467,6 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// All loop passes should call this as part of implementing their \c
 /// getAnalysisUsage.
 void getLoopAnalysisUsage(AnalysisUsage &AU);
-
-/// canSinkOrHoistInst - Return true if the hoister and sinker can handle this
-/// instruction. If SafetyInfo is not nullptr, check if the instruction can
-/// execute speculatively.
-bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
-                        Loop *CurLoop, AliasSetTracker *CurAST,
-                        LoopSafetyInfo *SafetyInfo);
 }
+
 #endif

@@ -106,8 +106,8 @@ IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
   return UB;
 }
 
-/// @brief Return true if a return value of Predicate is true for the value
-/// represented by passed isl_ast_expr_int.
+/// Return true if a return value of Predicate is true for the value represented
+/// by passed isl_ast_expr_int.
 static bool checkIslAstExprInt(__isl_take isl_ast_expr *Expr,
                                isl_bool (*Predicate)(__isl_keep isl_val *)) {
   if (isl_ast_expr_get_type(Expr) != isl_ast_expr_int) {
@@ -128,7 +128,7 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
   assert(isl_ast_node_get_type(For) == isl_ast_node_for);
   auto Body = isl_ast_node_for_get_body(For);
 
-  // First, check if we can actually handle this code
+  // First, check if we can actually handle this code.
   switch (isl_ast_node_get_type(Body)) {
   case isl_ast_node_user:
     break;
@@ -177,7 +177,7 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
     return NumberIterations + 1;
 }
 
-/// @brief Extract the values and SCEVs needed to generate code for a block.
+/// Extract the values and SCEVs needed to generate code for a block.
 static int findReferencesInBlock(struct SubtreeReferences &References,
                                  const ScopStmt *Stmt, const BasicBlock *BB) {
   for (const Instruction &Inst : *BB)
@@ -487,7 +487,7 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
   isl_id_free(IteratorID);
 }
 
-/// @brief Remove the BBs contained in a (sub)function from the dominator tree.
+/// Remove the BBs contained in a (sub)function from the dominator tree.
 ///
 /// This function removes the basic blocks that are part of a subfunction from
 /// the dominator tree. Specifically, when generating code it may happen that at
@@ -904,7 +904,7 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set, bool All) {
   return true;
 }
 
-/// @brief Add the number of dimensions in @p BS to @p U.
+/// Add the number of dimensions in @p BS to @p U.
 static isl_stat countTotalDims(isl_basic_set *BS, void *U) {
   unsigned *NumTotalDim = static_cast<unsigned *>(U);
   *NumTotalDim += isl_basic_set_total_dim(BS);

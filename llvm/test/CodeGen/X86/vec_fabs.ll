@@ -145,8 +145,7 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ;
 ; X32_AVX512VL-LABEL: fabs_v8f64:
 ; X32_AVX512VL:       # BB#0:
-; X32_AVX512VL-NEXT:    vbroadcastsd {{\.LCPI.*}}, %zmm1
-; X32_AVX512VL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; X32_AVX512VL-NEXT:    vpandq {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v8f64:
@@ -163,8 +162,7 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ;
 ; X64_AVX512VL-LABEL: fabs_v8f64:
 ; X64_AVX512VL:       # BB#0:
-; X64_AVX512VL-NEXT:    vbroadcastsd {{.*}}(%rip), %zmm1
-; X64_AVX512VL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; X64_AVX512VL-NEXT:    vpandq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v8f64:
@@ -186,8 +184,7 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ;
 ; X32_AVX512VL-LABEL: fabs_v16f32:
 ; X32_AVX512VL:       # BB#0:
-; X32_AVX512VL-NEXT:    vbroadcastss {{\.LCPI.*}}, %zmm1
-; X32_AVX512VL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; X32_AVX512VL-NEXT:    vpandd {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v16f32:
@@ -204,8 +201,7 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ;
 ; X64_AVX512VL-LABEL: fabs_v16f32:
 ; X64_AVX512VL:       # BB#0:
-; X64_AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %zmm1
-; X64_AVX512VL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; X64_AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v16f32:

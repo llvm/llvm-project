@@ -1654,6 +1654,7 @@ defm VPCMPGTQ : avx512_icmp_packed_rmb_vl<0x37, "vpcmpgtq", X86pcmpgtm,
                       avx512vl_i64_info, HasAVX512>,
                 T8PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
+let Predicates = [HasAVX512, NoVLX] in {
 def : Pat<(v8i1 (X86pcmpgtm (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
             (COPY_TO_REGCLASS (VPCMPGTDZrr
             (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
@@ -1663,6 +1664,7 @@ def : Pat<(v8i1 (X86pcmpeqm (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
             (COPY_TO_REGCLASS (VPCMPEQDZrr
             (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src1, sub_ymm)),
             (v16i32 (SUBREG_TO_REG (i32 0), VR256X:$src2, sub_ymm))), VK8)>;
+}
 
 multiclass avx512_icmp_cc<bits<8> opc, string Suffix, SDNode OpNode,
                           X86VectorVTInfo _> {
@@ -4236,214 +4238,71 @@ defm VXOR  : avx512_fp_binop_p<0x57, "vxor", X86fxor, HasDQI,
                                SSE_ALU_ITINS_P, 1>;
 
 // Patterns catch floating point selects with bitcasted integer logic ops.
-let Predicates = [HasVLX] in {
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (and VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPANDDZ128rrk VR128X:$src0, VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (or VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPORDZ128rrk VR128X:$src0, VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (xor VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPXORDZ128rrk VR128X:$src0, VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (X86andnp VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPANDNDZ128rrk VR128X:$src0, VK4WM:$mask, VR128X:$src1,
-            VR128X:$src2)>;
-
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (and VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPANDDZ128rrkz VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (or VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPORDZ128rrkz VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (xor VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPXORDZ128rrkz VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (vselect VK4WM:$mask,
-                    (bitconvert (v2i64 (X86andnp VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPANDNDZ128rrkz VK4WM:$mask, VR128X:$src1, VR128X:$src2)>;
-
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (and VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPANDQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (or VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPORQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (xor VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPXORQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (X86andnp VR128X:$src1, VR128X:$src2))),
-                    VR128X:$src0)),
-            (VPANDNQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (and VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPANDQZ128rrkz VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (or VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPORQZ128rrkz VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (xor VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPXORQZ128rrkz VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v2f64 (vselect VK2WM:$mask,
-                    (bitconvert (v2i64 (X86andnp VR128X:$src1, VR128X:$src2))),
-                    (bitconvert (v4i32 immAllZerosV)))),
-            (VPANDNQZ128rrkz VK2WM:$mask, VR128X:$src1, VR128X:$src2)>;
-
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (and VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPANDDZ256rrk VR256X:$src0, VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (or VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPORDZ256rrk VR256X:$src0, VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (xor VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPXORDZ256rrk VR256X:$src0, VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (X86andnp VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPANDNDZ256rrk VR256X:$src0, VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (and VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPANDDZ256rrkz VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (or VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPORDZ256rrkz VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (xor VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPXORDZ256rrkz VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v8f32 (vselect VK8WM:$mask,
-                    (bitconvert (v4i64 (X86andnp VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPANDNDZ256rrkz VK8WM:$mask, VR256X:$src1, VR256X:$src2)>;
-
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (and VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPANDQZ256rrk VR256X:$src0, VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (or VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPORQZ256rrk VR256X:$src0, VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (xor VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPXORQZ256rrk VR256X:$src0, VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (X86andnp VR256X:$src1, VR256X:$src2))),
-                    VR256X:$src0)),
-            (VPANDNQZ256rrk VR256X:$src0, VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (and VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPANDQZ256rrkz VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (or VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPORQZ256rrkz VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (xor VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPXORQZ256rrkz VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(v4f64 (vselect VK4WM:$mask,
-                    (bitconvert (v4i64 (X86andnp VR256X:$src1, VR256X:$src2))),
-                    (bitconvert (v8i32 immAllZerosV)))),
-            (VPANDNQZ256rrkz VK4WM:$mask, VR256X:$src1, VR256X:$src2)>;
+multiclass avx512_fp_logical_lowering<string InstrStr, SDNode OpNode,
+                                      X86VectorVTInfo _, Predicate prd> {
+let Predicates = [prd] in {
+  // Masked register-register logical operations.
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (bitconvert (_.i64VT (OpNode _.RC:$src1, _.RC:$src2))),
+                   _.RC:$src0)),
+            (!cast<Instruction>(InstrStr#rrk) _.RC:$src0, _.KRCWM:$mask,
+             _.RC:$src1, _.RC:$src2)>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (bitconvert (_.i64VT (OpNode _.RC:$src1, _.RC:$src2))),
+                   _.ImmAllZerosV)),
+            (!cast<Instruction>(InstrStr#rrkz) _.KRCWM:$mask, _.RC:$src1,
+             _.RC:$src2)>;
+  // Masked register-memory logical operations.
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (bitconvert (_.i64VT (OpNode _.RC:$src1,
+                                         (load addr:$src2)))),
+                   _.RC:$src0)),
+            (!cast<Instruction>(InstrStr#rmk) _.RC:$src0, _.KRCWM:$mask,
+             _.RC:$src1, addr:$src2)>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (bitconvert (_.i64VT (OpNode _.RC:$src1, (load addr:$src2)))),
+                   _.ImmAllZerosV)),
+            (!cast<Instruction>(InstrStr#rmkz) _.KRCWM:$mask, _.RC:$src1,
+             addr:$src2)>;
+  // Register-broadcast logical operations.
+  def : Pat<(_.i64VT (OpNode _.RC:$src1,
+                      (bitconvert (_.VT (X86VBroadcast
+                                         (_.ScalarLdFrag addr:$src2)))))),
+            (!cast<Instruction>(InstrStr#rmb) _.RC:$src1, addr:$src2)>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (bitconvert
+                    (_.i64VT (OpNode _.RC:$src1,
+                              (bitconvert (_.VT
+                                           (X86VBroadcast
+                                            (_.ScalarLdFrag addr:$src2))))))),
+                   _.RC:$src0)),
+            (!cast<Instruction>(InstrStr#rmbk) _.RC:$src0, _.KRCWM:$mask,
+             _.RC:$src1, addr:$src2)>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (bitconvert
+                    (_.i64VT (OpNode _.RC:$src1,
+                              (bitconvert (_.VT
+                                           (X86VBroadcast
+                                            (_.ScalarLdFrag addr:$src2))))))),
+                   _.ImmAllZerosV)),
+            (!cast<Instruction>(InstrStr#rmbkz)  _.KRCWM:$mask,
+             _.RC:$src1, addr:$src2)>;
+}
 }
 
-let Predicates = [HasAVX512] in {
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (and VR512:$src1, VR512:$src2))),
-                     VR512:$src0)),
-            (VPANDDZrrk VR512:$src0, VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (or VR512:$src1, VR512:$src2))),
-                     VR512:$src0)),
-            (VPORDZrrk VR512:$src0, VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (xor VR512:$src1, VR512:$src2))),
-                     VR512:$src0)),
-            (VPXORDZrrk VR512:$src0, VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (X86andnp VR512:$src1, VR512:$src2))),
-                     VR512:$src0)),
-            (VPANDNDZrrk VR512:$src0, VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (and VR512:$src1, VR512:$src2))),
-                     (bitconvert (v16i32 immAllZerosV)))),
-            (VPANDDZrrkz VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (or VR512:$src1, VR512:$src2))),
-                     (bitconvert (v16i32 immAllZerosV)))),
-            (VPORDZrrkz VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (xor VR512:$src1, VR512:$src2))),
-                     (bitconvert (v16i32 immAllZerosV)))),
-            (VPXORDZrrkz VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v16f32 (vselect VK16WM:$mask,
-                     (bitconvert (v8i64 (X86andnp VR512:$src1, VR512:$src2))),
-                     (bitconvert (v16i32 immAllZerosV)))),
-            (VPANDNDZrrkz VK16WM:$mask, VR512:$src1, VR512:$src2)>;
-
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (and VR512:$src1, VR512:$src2))),
-                    VR512:$src0)),
-            (VPANDQZrrk VR512:$src0, VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (or VR512:$src1, VR512:$src2))),
-                    VR512:$src0)),
-            (VPORQZrrk VR512:$src0, VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (xor VR512:$src1, VR512:$src2))),
-                    VR512:$src0)),
-            (VPXORQZrrk VR512:$src0, VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (X86andnp VR512:$src1, VR512:$src2))),
-                    VR512:$src0)),
-            (VPANDNQZrrk VR512:$src0, VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (and VR512:$src1, VR512:$src2))),
-                    (bitconvert (v16i32 immAllZerosV)))),
-            (VPANDQZrrkz VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (or VR512:$src1, VR512:$src2))),
-                    (bitconvert (v16i32 immAllZerosV)))),
-            (VPORQZrrkz VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (xor VR512:$src1, VR512:$src2))),
-                    (bitconvert (v16i32 immAllZerosV)))),
-            (VPXORQZrrkz VK8WM:$mask, VR512:$src1, VR512:$src2)>;
-  def : Pat<(v8f64 (vselect VK8WM:$mask,
-                    (bitconvert (v8i64 (X86andnp VR512:$src1, VR512:$src2))),
-                    (bitconvert (v16i32 immAllZerosV)))),
-            (VPANDNQZrrkz VK8WM:$mask, VR512:$src1, VR512:$src2)>;
+multiclass avx512_fp_logical_lowering_sizes<string InstrStr, SDNode OpNode> {
+  defm : avx512_fp_logical_lowering<InstrStr#DZ128, OpNode, v4f32x_info, HasVLX>;
+  defm : avx512_fp_logical_lowering<InstrStr#QZ128, OpNode, v2f64x_info, HasVLX>;
+  defm : avx512_fp_logical_lowering<InstrStr#DZ256, OpNode, v8f32x_info, HasVLX>;
+  defm : avx512_fp_logical_lowering<InstrStr#QZ256, OpNode, v4f64x_info, HasVLX>;
+  defm : avx512_fp_logical_lowering<InstrStr#DZ, OpNode, v16f32_info, HasAVX512>;
+  defm : avx512_fp_logical_lowering<InstrStr#QZ, OpNode, v8f64_info, HasAVX512>;
 }
+
+defm : avx512_fp_logical_lowering_sizes<"VPAND", and>;
+defm : avx512_fp_logical_lowering_sizes<"VPOR", or>;
+defm : avx512_fp_logical_lowering_sizes<"VPXOR", xor>;
+defm : avx512_fp_logical_lowering_sizes<"VPANDN", X86andnp>;
 
 multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             X86VectorVTInfo _> {

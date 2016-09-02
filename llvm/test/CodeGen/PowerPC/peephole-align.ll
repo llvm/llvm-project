@@ -1,10 +1,8 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck -check-prefix=POWER7 -check-prefix=CHECK %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -O1 -code-model=medium <%s | FileCheck -check-prefix=POWER8 -check-prefix=CHECK %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O1 -code-model=medium <%s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -O1 -code-model=medium <%s | FileCheck %s
 
 ; Test peephole optimization for medium code model (32-bit TOC offsets)
 ; for loading and storing small offsets within aligned values.
-; For power8, verify that the optimization doesn't fire, as it prevents fusion
-; opportunities.
 
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
@@ -30,34 +28,20 @@ target triple = "powerpc64-unknown-linux-gnu"
 @misalign_v = global %struct.misalign <{ i8 1, i64 2 }>, align 16
 
 ; CHECK-LABEL: test_b4:
-; POWER7: addis [[REGSTRUCT:[0-9]+]], 2, b4v@toc@ha
-; POWER7-DAG: lbz [[REG0_0:[0-9]+]], b4v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG1_0:[0-9]+]], b4v@toc@l+1([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG2_0:[0-9]+]], b4v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG3_0:[0-9]+]], b4v@toc@l+3([[REGSTRUCT]])
-; POWER7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER7-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
-; POWER7-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
-; POWER7-DAG: stb [[REG0_1]], b4v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG1_1]], b4v@toc@l+1([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG2_1]], b4v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG3_1]], b4v@toc@l+3([[REGSTRUCT]])
+; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, b4v@toc@ha
+; CHECK-DAG: lbz [[REG0_0:[0-9]+]], b4v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG1_0:[0-9]+]], b4v@toc@l+1([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG2_0:[0-9]+]], b4v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG3_0:[0-9]+]], b4v@toc@l+3([[REGSTRUCT]])
+; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; CHECK-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
+; CHECK-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
+; CHECK-DAG: stb [[REG0_1]], b4v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG1_1]], b4v@toc@l+1([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG2_1]], b4v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG3_1]], b4v@toc@l+3([[REGSTRUCT]])
 
-; POWER8: addis [[REGSTRUCT:[0-9]+]], 2, b4v@toc@ha
-; POWER8-NEXT: addi [[REGSTRUCT]], [[REGSTRUCT]], b4v@toc@l
-; POWER8-DAG: lbz [[REG0_0:[0-9]+]], 0([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG1_0:[0-9]+]], 1([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG2_0:[0-9]+]], 2([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG3_0:[0-9]+]], 3([[REGSTRUCT]])
-; POWER8-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER8-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER8-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
-; POWER8-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
-; POWER8-DAG: stb [[REG0_1]], 0([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG1_1]], 1([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG2_1]], 2([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG3_1]], 3([[REGSTRUCT]])
 define void @test_b4() nounwind {
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 0), align 1
@@ -76,22 +60,14 @@ entry:
 }
 
 ; CHECK-LABEL: test_h2:
-; POWER7: addis [[REGSTRUCT:[0-9]+]], 2, h2v@toc@ha
-; POWER7-DAG: lhz [[REG0_0:[0-9]+]], h2v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: lhz [[REG1_0:[0-9]+]], h2v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER7-DAG: sth [[REG0_1]], h2v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: sth [[REG1_1]], h2v@toc@l+2([[REGSTRUCT]])
+; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, h2v@toc@ha
+; CHECK-DAG: lhz [[REG0_0:[0-9]+]], h2v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: lhz [[REG1_0:[0-9]+]], h2v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; CHECK-DAG: sth [[REG0_1]], h2v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: sth [[REG1_1]], h2v@toc@l+2([[REGSTRUCT]])
 
-; POWER8: addis [[REGSTRUCT:[0-9]+]], 2, h2v@toc@ha
-; POWER8-NEXT: addi [[REGSTRUCT]], [[REGSTRUCT]], h2v@toc@l
-; POWER8-DAG: lhz [[REG0_0:[0-9]+]], 0([[REGSTRUCT]])
-; POWER8-DAG: lhz [[REG1_0:[0-9]+]], 2([[REGSTRUCT]])
-; POWER8-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER8-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER8-DAG: sth [[REG0_1]], 0([[REGSTRUCT]])
-; POWER8-DAG: sth [[REG1_1]], 2([[REGSTRUCT]])
 define void @test_h2() nounwind {
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
@@ -123,58 +99,32 @@ entry:
 }
 
 ; CHECK-LABEL: test_b8:
-; POWER7: addis [[REGSTRUCT:[0-9]+]], 2, b8v@toc@ha
-; POWER7-DAG: lbz [[REG0_0:[0-9]+]], b8v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG1_0:[0-9]+]], b8v@toc@l+1([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG2_0:[0-9]+]], b8v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG3_0:[0-9]+]], b8v@toc@l+3([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG4_0:[0-9]+]], b8v@toc@l+4([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG5_0:[0-9]+]], b8v@toc@l+5([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG6_0:[0-9]+]], b8v@toc@l+6([[REGSTRUCT]])
-; POWER7-DAG: lbz [[REG7_0:[0-9]+]], b8v@toc@l+7([[REGSTRUCT]])
-; POWER7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER7-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
-; POWER7-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
-; POWER7-DAG: addi [[REG4_1:[0-9]+]], [[REG4_0]], 5
-; POWER7-DAG: addi [[REG5_1:[0-9]+]], [[REG5_0]], 6
-; POWER7-DAG: addi [[REG6_1:[0-9]+]], [[REG6_0]], 7
-; POWER7-DAG: addi [[REG7_1:[0-9]+]], [[REG7_0]], 8
-; POWER7-DAG: stb [[REG0_1]], b8v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG1_1]], b8v@toc@l+1([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG2_1]], b8v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG3_1]], b8v@toc@l+3([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG4_1]], b8v@toc@l+4([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG5_1]], b8v@toc@l+5([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG6_1]], b8v@toc@l+6([[REGSTRUCT]])
-; POWER7-DAG: stb [[REG7_1]], b8v@toc@l+7([[REGSTRUCT]])
+; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, b8v@toc@ha
+; CHECK-DAG: lbz [[REG0_0:[0-9]+]], b8v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG1_0:[0-9]+]], b8v@toc@l+1([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG2_0:[0-9]+]], b8v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG3_0:[0-9]+]], b8v@toc@l+3([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG4_0:[0-9]+]], b8v@toc@l+4([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG5_0:[0-9]+]], b8v@toc@l+5([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG6_0:[0-9]+]], b8v@toc@l+6([[REGSTRUCT]])
+; CHECK-DAG: lbz [[REG7_0:[0-9]+]], b8v@toc@l+7([[REGSTRUCT]])
+; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; CHECK-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
+; CHECK-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
+; CHECK-DAG: addi [[REG4_1:[0-9]+]], [[REG4_0]], 5
+; CHECK-DAG: addi [[REG5_1:[0-9]+]], [[REG5_0]], 6
+; CHECK-DAG: addi [[REG6_1:[0-9]+]], [[REG6_0]], 7
+; CHECK-DAG: addi [[REG7_1:[0-9]+]], [[REG7_0]], 8
+; CHECK-DAG: stb [[REG0_1]], b8v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG1_1]], b8v@toc@l+1([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG2_1]], b8v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG3_1]], b8v@toc@l+3([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG4_1]], b8v@toc@l+4([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG5_1]], b8v@toc@l+5([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG6_1]], b8v@toc@l+6([[REGSTRUCT]])
+; CHECK-DAG: stb [[REG7_1]], b8v@toc@l+7([[REGSTRUCT]])
 
-; POWER8: addis [[REGSTRUCT:[0-9]+]], 2, b8v@toc@ha
-; POWER8-NEXT: addi [[REGSTRUCT]], [[REGSTRUCT]], b8v@toc@l
-; POWER8-DAG: lbz [[REG0_0:[0-9]+]], 0([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG1_0:[0-9]+]], 1([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG2_0:[0-9]+]], 2([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG3_0:[0-9]+]], 3([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG4_0:[0-9]+]], 4([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG5_0:[0-9]+]], 5([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG6_0:[0-9]+]], 6([[REGSTRUCT]])
-; POWER8-DAG: lbz [[REG7_0:[0-9]+]], 7([[REGSTRUCT]])
-; POWER8-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER8-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER8-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
-; POWER8-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
-; POWER8-DAG: addi [[REG4_1:[0-9]+]], [[REG4_0]], 5
-; POWER8-DAG: addi [[REG5_1:[0-9]+]], [[REG5_0]], 6
-; POWER8-DAG: addi [[REG6_1:[0-9]+]], [[REG6_0]], 7
-; POWER8-DAG: addi [[REG7_1:[0-9]+]], [[REG7_0]], 8
-; POWER8-DAG: stb [[REG0_1]], 0([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG1_1]], 1([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG2_1]], 2([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG3_1]], 3([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG4_1]], 4([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG5_1]], 5([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG6_1]], 6([[REGSTRUCT]])
-; POWER8-DAG: stb [[REG7_1]], 7([[REGSTRUCT]])
 define void @test_b8() nounwind {
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 0), align 1
@@ -205,34 +155,20 @@ entry:
 }
 
 ; CHECK-LABEL: test_h4:
-; POWER7: addis [[REGSTRUCT:[0-9]+]], 2, h4v@toc@ha
-; POWER7-DAG: lhz [[REG0_0:[0-9]+]], h4v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: lhz [[REG1_0:[0-9]+]], h4v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: lhz [[REG2_0:[0-9]+]], h4v@toc@l+4([[REGSTRUCT]])
-; POWER7-DAG: lhz [[REG3_0:[0-9]+]], h4v@toc@l+6([[REGSTRUCT]])
-; POWER7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER7-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
-; POWER7-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
-; POWER7-DAG: sth [[REG0_1]], h4v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: sth [[REG1_1]], h4v@toc@l+2([[REGSTRUCT]])
-; POWER7-DAG: sth [[REG2_1]], h4v@toc@l+4([[REGSTRUCT]])
-; POWER7-DAG: sth [[REG3_1]], h4v@toc@l+6([[REGSTRUCT]])
+; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, h4v@toc@ha
+; CHECK-DAG: lhz [[REG0_0:[0-9]+]], h4v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: lhz [[REG1_0:[0-9]+]], h4v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: lhz [[REG2_0:[0-9]+]], h4v@toc@l+4([[REGSTRUCT]])
+; CHECK-DAG: lhz [[REG3_0:[0-9]+]], h4v@toc@l+6([[REGSTRUCT]])
+; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; CHECK-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
+; CHECK-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
+; CHECK-DAG: sth [[REG0_1]], h4v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: sth [[REG1_1]], h4v@toc@l+2([[REGSTRUCT]])
+; CHECK-DAG: sth [[REG2_1]], h4v@toc@l+4([[REGSTRUCT]])
+; CHECK-DAG: sth [[REG3_1]], h4v@toc@l+6([[REGSTRUCT]])
 
-; POWER8: addis [[REGSTRUCT:[0-9]+]], 2, h4v@toc@ha
-; POWER8-NEXT: addi [[REGSTRUCT]], [[REGSTRUCT]], h4v@toc@l
-; POWER8-DAG: lhz [[REG0_0:[0-9]+]], 0([[REGSTRUCT]])
-; POWER8-DAG: lhz [[REG1_0:[0-9]+]], 2([[REGSTRUCT]])
-; POWER8-DAG: lhz [[REG2_0:[0-9]+]], 4([[REGSTRUCT]])
-; POWER8-DAG: lhz [[REG3_0:[0-9]+]], 6([[REGSTRUCT]])
-; POWER8-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER8-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER8-DAG: addi [[REG2_1:[0-9]+]], [[REG2_0]], 3
-; POWER8-DAG: addi [[REG3_1:[0-9]+]], [[REG3_0]], 4
-; POWER8-DAG: sth [[REG0_1]], 0([[REGSTRUCT]])
-; POWER8-DAG: sth [[REG1_1]], 2([[REGSTRUCT]])
-; POWER8-DAG: sth [[REG2_1]], 4([[REGSTRUCT]])
-; POWER8-DAG: sth [[REG3_1]], 6([[REGSTRUCT]])
 define void @test_h4() nounwind {
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 0), align 2
@@ -251,22 +187,14 @@ entry:
 }
 
 ; CHECK-LABEL: test_w2:
-; POWER7: addis [[REGSTRUCT:[0-9]+]], 2, w2v@toc@ha
-; POWER7-DAG: lwz [[REG0_0:[0-9]+]], w2v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: lwz [[REG1_0:[0-9]+]], w2v@toc@l+4([[REGSTRUCT]])
-; POWER7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER7-DAG: stw [[REG0_1]], w2v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: stw [[REG1_1]], w2v@toc@l+4([[REGSTRUCT]])
+; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, w2v@toc@ha
+; CHECK-DAG: lwz [[REG0_0:[0-9]+]], w2v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: lwz [[REG1_0:[0-9]+]], w2v@toc@l+4([[REGSTRUCT]])
+; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; CHECK-DAG: stw [[REG0_1]], w2v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: stw [[REG1_1]], w2v@toc@l+4([[REGSTRUCT]])
 
-; POWER8: addis [[REGSTRUCT:[0-9]+]], 2, w2v@toc@ha
-; POWER8-NEXT: addi [[REGSTRUCT]], [[REGSTRUCT]], w2v@toc@l
-; POWER8-DAG: lwz [[REG0_0:[0-9]+]], 0([[REGSTRUCT]])
-; POWER8-DAG: lwz [[REG1_0:[0-9]+]], 4([[REGSTRUCT]])
-; POWER8-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER8-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER8-DAG: stw [[REG0_1]], 0([[REGSTRUCT]])
-; POWER8-DAG: stw [[REG1_1]], 4([[REGSTRUCT]])
 define void @test_w2() nounwind {
 entry:
   %0 = load i32, i32* getelementptr inbounds (%struct.w2, %struct.w2* @w2v, i32 0, i32 0), align 4
@@ -279,22 +207,15 @@ entry:
 }
 
 ; CHECK-LABEL: test_d2:
-; POWER7: addis [[REGSTRUCT:[0-9]+]], 2, d2v@toc@ha
-; POWER7-DAG: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: ld [[REG1_0:[0-9]+]], d2v@toc@l+8([[REGSTRUCT]])
-; POWER7-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER7-DAG: std [[REG0_1]], d2v@toc@l([[REGSTRUCT]])
-; POWER7-DAG: std [[REG1_1]], d2v@toc@l+8([[REGSTRUCT]])
+; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, d2v@toc@ha
+; CHECK: addi [[BASEV:[0-9]+]], [[REGSTRUCT]], d2v@toc@l
+; CHECK-DAG: ld [[REG0_0:[0-9]+]], d2v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: ld [[REG1_0:[0-9]+]], 8([[BASEV]])
+; CHECK-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
+; CHECK-DAG: std [[REG0_1]], d2v@toc@l([[REGSTRUCT]])
+; CHECK-DAG: std [[REG1_1]], 8([[BASEV]])
 
-; POWER8: addis [[REGSTRUCT:[0-9]+]], 2, d2v@toc@ha
-; POWER8-NEXT: addi [[REGSTRUCT]], [[REGSTRUCT]], d2v@toc@l
-; POWER8-DAG: ld [[REG0_0:[0-9]+]], 0([[REGSTRUCT]])
-; POWER8-DAG: ld [[REG1_0:[0-9]+]], 8([[REGSTRUCT]])
-; POWER8-DAG: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER8-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
-; POWER8-DAG: std [[REG0_1]], 0([[REGSTRUCT]])
-; POWER8-DAG: std [[REG1_1]], 8([[REGSTRUCT]])
 define void @test_d2() nounwind {
 entry:
   %0 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 0), align 8
@@ -306,12 +227,11 @@ entry:
   ret void
 }
 
-; Make sure the optimization fires on power8 if there is a single use resulting
-; in a better fusion opportunity.
 ; register 3 is the return value, so it should be chosen
 ; CHECK-LABEL: test_singleuse:
 ; CHECK: addis 3, 2, d2v@toc@ha
-; CHECK: ld 3, d2v@toc@l+8(3)
+; CHECK: addi 3, 3, d2v@toc@l
+; CHECK: ld 3, 8(3)
 define i64 @test_singleuse() nounwind {
 entry:
   %0 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 1), align 8
@@ -320,12 +240,12 @@ entry:
 
 ; Make sure the optimization fails to fire if the symbol is aligned, but the offset is not.
 ; CHECK-LABEL: test_misalign
-; POWER7: addis [[REGSTRUCT_0:[0-9]+]], 2, misalign_v@toc@ha
-; POWER7: addi [[REGSTRUCT:[0-9]+]], [[REGSTRUCT_0]], misalign_v@toc@l
-; POWER7: li [[OFFSET_REG:[0-9]+]], 1
-; POWER7: ldx [[REG0_0:[0-9]+]], [[REGSTRUCT]], [[OFFSET_REG]]
-; POWER7: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
-; POWER7: stdx [[REG0_1]], [[REGSTRUCT]], [[OFFSET_REG]]
+; CHECK: addis [[REGSTRUCT_0:[0-9]+]], 2, misalign_v@toc@ha
+; CHECK: addi [[REGSTRUCT:[0-9]+]], [[REGSTRUCT_0]], misalign_v@toc@l
+; CHECK: li [[OFFSET_REG:[0-9]+]], 1
+; CHECK: ldx [[REG0_0:[0-9]+]], [[REGSTRUCT]], [[OFFSET_REG]]
+; CHECK: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
+; CHECK: stdx [[REG0_1]], [[REGSTRUCT]], [[OFFSET_REG]]
 define void @test_misalign() nounwind {
 entry:
   %0 = load i64, i64* getelementptr inbounds (%struct.misalign, %struct.misalign* @misalign_v, i32 0, i32 1), align 1

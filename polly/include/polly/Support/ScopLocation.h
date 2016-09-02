@@ -22,7 +22,7 @@ class Region;
 
 namespace polly {
 
-/// @brief Get the location of a region from the debug info.
+/// Get the location of a region from the debug info.
 ///
 /// @param R The region to get debug info for.
 /// @param LineBegin The first line in the region.

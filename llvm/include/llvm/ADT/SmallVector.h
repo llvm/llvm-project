@@ -856,7 +856,7 @@ public:
   }
 
   template <typename RangeTy>
-  explicit SmallVector(const llvm::iterator_range<RangeTy> R)
+  explicit SmallVector(const llvm::iterator_range<RangeTy> &R)
       : SmallVectorImpl<T>(N) {
     this->append(R.begin(), R.end());
   }

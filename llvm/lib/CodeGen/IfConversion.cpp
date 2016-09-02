@@ -671,7 +671,9 @@ bool IfConverter::CountDuplicatedInstructions(
     std::vector<MachineOperand> PredDefs;
     if (TII->DefinesPredicate(*TIB, PredDefs))
       return false;
-    ++Dups1;
+    // If we get all the way to the branch instructions, don't count them.
+    if (!TIB->isBranch())
+      ++Dups1;
     ++TIB;
     ++FIB;
   }

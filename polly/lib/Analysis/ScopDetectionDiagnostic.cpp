@@ -51,7 +51,7 @@ BADSCOP_STAT(Alias, "Found base address alias");
 BADSCOP_STAT(Other, "Others");
 
 namespace polly {
-/// @brief Small string conversion via raw_string_stream.
+/// Small string conversion via raw_string_stream.
 template <typename T> std::string operator+(Twine LHS, const T &RHS) {
   std::string Buf;
   raw_string_ostream fmt(Buf);
@@ -63,7 +63,7 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
 } // namespace polly
 
 namespace llvm {
-// @brief Lexicographic order on (line, col) of our debug locations.
+// Lexicographic order on (line, col) of our debug locations.
 static bool operator<(const llvm::DebugLoc &LHS, const llvm::DebugLoc &RHS) {
   return LHS.getLine() < RHS.getLine() ||
          (LHS.getLine() == RHS.getLine() && LHS.getCol() < RHS.getCol());

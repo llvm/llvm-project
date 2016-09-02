@@ -62,13 +62,13 @@ struct JSONExporter : public ScopPass {
   std::string getFileName(Scop &S) const;
   Json::Value getJSON(Scop &S) const;
 
-  /// @brief Export the SCoP @p S to a JSON file.
+  /// Export the SCoP @p S to a JSON file.
   bool runOnScop(Scop &S) override;
 
-  /// @brief Print the SCoP @p S as it is exported.
+  /// Print the SCoP @p S as it is exported.
   void printScop(raw_ostream &OS, Scop &S) const override;
 
-  /// @brief Register all analyses and transformation required.
+  /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
@@ -116,13 +116,13 @@ struct JSONImporter : public ScopPass {
 
   std::string getFileName(Scop &S) const;
 
-  /// @brief Import new access functions for SCoP @p S from a JSON file.
+  /// Import new access functions for SCoP @p S from a JSON file.
   bool runOnScop(Scop &S) override;
 
-  /// @brief Print the SCoP @p S and the imported access functions.
+  /// Print the SCoP @p S and the imported access functions.
   void printScop(raw_ostream &OS, Scop &S) const override;
 
-  /// @brief Register all analyses and transformation required.
+  /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
@@ -469,7 +469,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
   return true;
 }
 
-/// @brief Check whether @p SAI and @p Array represent the same array.
+/// Check whether @p SAI and @p Array represent the same array.
 bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
   std::string Buffer;
   llvm::raw_string_ostream RawStringOstream(Buffer);
@@ -494,7 +494,7 @@ bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
   return true;
 }
 
-/// @brief Get the accepted primitive type from its textual representation
+/// Get the accepted primitive type from its textual representation
 ///        @p TypeTextRepresentation.
 ///
 /// @param TypeTextRepresentation The textual representation of the type.

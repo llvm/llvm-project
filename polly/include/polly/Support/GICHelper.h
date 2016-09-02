@@ -38,7 +38,7 @@ class Value;
 
 namespace polly {
 
-/// @brief Translate an llvm::APInt to an isl_val.
+/// Translate an llvm::APInt to an isl_val.
 ///
 /// Translate the bitsequence without sign information as provided by APInt into
 /// a signed isl_val type. Depending on the value of @p IsSigned @p Int is
@@ -70,7 +70,7 @@ namespace polly {
 __isl_give isl_val *isl_valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,
                                      bool IsSigned);
 
-/// @brief Translate isl_val to llvm::APInt.
+/// Translate isl_val to llvm::APInt.
 ///
 /// This function can only be called on isl_val values which are integers.
 /// Calling this function with a non-integral rational, NaN or infinity value
@@ -99,7 +99,7 @@ __isl_give isl_val *isl_valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,
 /// @return The APInt value corresponding to @p Val.
 llvm::APInt APIntFromVal(__isl_take isl_val *Val);
 
-/// @brief Get c++ string from Isl objects.
+/// Get c++ string from Isl objects.
 //@{
 std::string stringFromIslObj(__isl_keep isl_map *map);
 std::string stringFromIslObj(__isl_keep isl_union_map *umap);
@@ -168,7 +168,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-/// @brief Return @p Prefix + @p Val->getName() + @p Suffix but Isl compatible.
+/// Return @p Prefix + @p Val->getName() + @p Suffix but Isl compatible.
 std::string getIslCompatibleName(const std::string &Prefix,
                                  const llvm::Value *Val,
                                  const std::string &Suffix);

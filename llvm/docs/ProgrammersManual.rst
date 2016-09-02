@@ -320,7 +320,7 @@ actually a lightweight wrapper for user-defined error types, allowing arbitrary
 information to be attached to describe the error. This is similar to the way C++
 exceptions allow throwing of user-defined types.
 
-Success values are created by calling ``Error::success()``:
+Success values are created by calling ``Error::success()``, E.g.:
 
 .. code-block:: c++
 
@@ -334,7 +334,7 @@ Success values are very cheap to construct and return - they have minimal
 impact on program performance.
 
 Failure values are constructed using ``make_error<T>``, where ``T`` is any class
-that inherits from the ErrorInfo utility:
+that inherits from the ErrorInfo utility, E.g.:
 
 .. code-block:: c++
 
@@ -374,7 +374,7 @@ success, enabling the following idiom:
 
 For functions that can fail but need to return a value the ``Expected<T>``
 utility can be used. Values of this type can be constructed with either a
-``T``, or a ``Error``. Expected<T> values are also implicitly convertible to
+``T``, or an ``Error``. Expected<T> values are also implicitly convertible to
 boolean, but with the opposite convention to Error: true for success, false for
 error. If success, the ``T`` value can be accessed via the dereference operator.
 If failure, the ``Error`` value can be extracted using the ``takeError()``
@@ -384,7 +384,7 @@ method. Idiomatic usage looks like:
 
   Expected<float> parseAndSquareRoot(IStream &IS) {
     float f;
-    OS >> f;
+    IS >> f;
     if (f < 0)
       return make_error<FloatingPointError>(...);
     return sqrt(f);
@@ -414,8 +414,8 @@ the boolean conversion operator):
 
   // Safe to continue: Err was checked.
 
-In contrast, the following code will always cause an abort, regardless of the
-return value of ``foo``:
+In contrast, the following code will always cause an abort, even if ``canFail``
+returns a success value:
 
 .. code-block:: c++
 
@@ -2054,7 +2054,7 @@ iterate over all predecessors of BB:
 
 .. code-block:: c++
 
-  #include "llvm/Support/CFG.h"
+  #include "llvm/IR/CFG.h"
   BasicBlock *BB = ...;
 
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {

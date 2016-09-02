@@ -164,20 +164,22 @@ public:
   }
 
   template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, llvm::MutableArrayRef<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src,
+                      llvm::MutableArrayRef<T> Dst, size_t ElementCount) {
     thenCopyD2H(Src.asSlice(), Dst, ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, llvm::MutableArrayRef<T> Dst) {
+  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src,
+                      llvm::MutableArrayRef<T> Dst) {
     thenCopyD2H(Src.asSlice(), Dst);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, T *Dst, size_t ElementCount) {
+  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src, T *Dst,
+                      size_t ElementCount) {
     thenCopyD2H(Src.asSlice(), Dst, ElementCount);
     return *this;
   }
@@ -221,20 +223,20 @@ public:
   }
 
   template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst,
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst,
                       size_t ElementCount) {
     thenCopyH2D(Src, Dst.asSlice(), ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst) {
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst) {
     thenCopyH2D(Src, Dst.asSlice());
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyH2D(T *Src, GlobalDeviceMemory<T> Dst, size_t ElementCount) {
+  Stream &thenCopyH2D(T *Src, GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     thenCopyH2D(Src, Dst.asSlice(), ElementCount);
     return *this;
   }
@@ -272,42 +274,43 @@ public:
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemorySlice<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
+                      GlobalDeviceMemorySlice<T> Dst, size_t ElementCount) {
     thenCopyD2D(Src.asSlice(), Dst, ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src,
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
                       GlobalDeviceMemorySlice<T> Dst) {
     thenCopyD2D(Src.asSlice(), Dst);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src, GlobalDeviceMemory<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
+                      GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     thenCopyD2D(Src, Dst.asSlice(), ElementCount);
     return *this;
   }
 
   template <typename T>
   Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                      GlobalDeviceMemory<T> Dst) {
+                      GlobalDeviceMemory<T> &Dst) {
     thenCopyD2D(Src, Dst.asSlice());
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
+                      GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     thenCopyD2D(Src.asSlice(), Dst.asSlice(), ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst) {
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
+                      GlobalDeviceMemory<T> &Dst) {
     thenCopyD2D(Src.asSlice(), Dst.asSlice());
     return *this;
   }

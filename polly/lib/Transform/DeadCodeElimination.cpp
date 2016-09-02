@@ -59,14 +59,14 @@ public:
   static char ID;
   explicit DeadCodeElim() : ScopPass(ID) {}
 
-  /// @brief Remove dead iterations from the schedule of @p S.
+  /// Remove dead iterations from the schedule of @p S.
   bool runOnScop(Scop &S) override;
 
-  /// @brief Register all analyses and transformation required.
+  /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  /// @brief Return the set of live iterations.
+  /// Return the set of live iterations.
   ///
   /// The set of live iterations are all iterations that write to memory and for
   /// which we can not prove that there will be a later write that _must_

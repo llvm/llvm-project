@@ -130,6 +130,8 @@ TEST_F(SpecialCaseListTest, MultipleBlacklists) {
   EXPECT_TRUE(SCL->inSection("src", "ban", "init"));
   EXPECT_TRUE(SCL->inSection("src", "tomfoolery"));
   EXPECT_TRUE(SCL->inSection("src", "tomfoglery"));
+  for (auto &Path : Files)
+    sys::fs::remove(Path);
 }
 
 }
