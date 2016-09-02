@@ -53,10 +53,10 @@ public:
 
   __isl_give isl_ast_node *getAst();
 
-  /// @brief Get the run-time conditions for the Scop.
+  /// Get the run-time conditions for the Scop.
   __isl_give isl_ast_expr *getRunCondition();
 
-  /// @brief Build run-time condition for scop.
+  /// Build run-time condition for scop.
   ///
   /// @param S     The scop to build the condition for.
   /// @param Build The isl_build object to use to build the condition.
@@ -79,36 +79,36 @@ class IslAstInfo : public ScopPass {
 public:
   using MemoryAccessSet = SmallPtrSet<MemoryAccess *, 4>;
 
-  /// @brief Payload information used to annotate an AST node.
+  /// Payload information used to annotate an AST node.
   struct IslAstUserPayload {
-    /// @brief Construct and initialize the payload.
+    /// Construct and initialize the payload.
     IslAstUserPayload()
         : IsInnermost(false), IsInnermostParallel(false),
           IsOutermostParallel(false), IsReductionParallel(false),
           MinimalDependenceDistance(nullptr), Build(nullptr) {}
 
-    /// @brief Cleanup all isl structs on destruction.
+    /// Cleanup all isl structs on destruction.
     ~IslAstUserPayload();
 
-    /// @brief Flag to mark innermost loops.
+    /// Flag to mark innermost loops.
     bool IsInnermost;
 
-    /// @brief Flag to mark innermost parallel loops.
+    /// Flag to mark innermost parallel loops.
     bool IsInnermostParallel;
 
-    /// @brief Flag to mark outermost parallel loops.
+    /// Flag to mark outermost parallel loops.
     bool IsOutermostParallel;
 
-    /// @brief Flag to mark parallel loops which break reductions.
+    /// Flag to mark parallel loops which break reductions.
     bool IsReductionParallel;
 
-    /// @brief The minimal dependence distance for non parallel loops.
+    /// The minimal dependence distance for non parallel loops.
     isl_pw_aff *MinimalDependenceDistance;
 
-    /// @brief The build environment at the time this node was constructed.
+    /// The build environment at the time this node was constructed.
     isl_ast_build *Build;
 
-    /// @brief Set of accesses which break reduction dependences.
+    /// Set of accesses which break reduction dependences.
     MemoryAccessSet BrokenReductions;
   };
 
@@ -120,22 +120,22 @@ public:
   static char ID;
   IslAstInfo() : ScopPass(ID), S(nullptr), Ast(nullptr) {}
 
-  /// @brief Build the AST for the given SCoP @p S.
+  /// Build the AST for the given SCoP @p S.
   bool runOnScop(Scop &S) override;
 
-  /// @brief Register all analyses and transformation required.
+  /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// @brief Release the internal memory.
+  /// Release the internal memory.
   void releaseMemory() override;
 
-  /// @brief Print a source code representation of the program.
+  /// Print a source code representation of the program.
   void printScop(llvm::raw_ostream &OS, Scop &S) const override;
 
-  /// @brief Return a copy of the AST root node.
+  /// Return a copy of the AST root node.
   __isl_give isl_ast_node *getAst() const;
 
-  /// @brief Get the run condition.
+  /// Get the run condition.
   ///
   /// Only if the run condition evaluates at run-time to a non-zero value, the
   /// assumptions that have been taken hold. If the run condition evaluates to
@@ -147,38 +147,38 @@ public:
   ///
   ///{
 
-  /// @brief Get the complete payload attached to @p Node.
+  /// Get the complete payload attached to @p Node.
   static IslAstUserPayload *getNodePayload(__isl_keep isl_ast_node *Node);
 
-  /// @brief Is this loop an innermost loop?
+  /// Is this loop an innermost loop?
   static bool isInnermost(__isl_keep isl_ast_node *Node);
 
-  /// @brief Is this loop a parallel loop?
+  /// Is this loop a parallel loop?
   static bool isParallel(__isl_keep isl_ast_node *Node);
 
-  /// @brief Is this loop an outermost parallel loop?
+  /// Is this loop an outermost parallel loop?
   static bool isOutermostParallel(__isl_keep isl_ast_node *Node);
 
-  /// @brief Is this loop an innermost parallel loop?
+  /// Is this loop an innermost parallel loop?
   static bool isInnermostParallel(__isl_keep isl_ast_node *Node);
 
-  /// @brief Is this loop a reduction parallel loop?
+  /// Is this loop a reduction parallel loop?
   static bool isReductionParallel(__isl_keep isl_ast_node *Node);
 
-  /// @brief Will the loop be run as thread parallel?
+  /// Will the loop be run as thread parallel?
   static bool isExecutedInParallel(__isl_keep isl_ast_node *Node);
 
-  /// @brief Get the nodes schedule or a nullptr if not available.
+  /// Get the nodes schedule or a nullptr if not available.
   static __isl_give isl_union_map *getSchedule(__isl_keep isl_ast_node *Node);
 
-  /// @brief Get minimal dependence distance or nullptr if not available.
+  /// Get minimal dependence distance or nullptr if not available.
   static __isl_give isl_pw_aff *
   getMinimalDependenceDistance(__isl_keep isl_ast_node *Node);
 
-  /// @brief Get the nodes broken reductions or a nullptr if not available.
+  /// Get the nodes broken reductions or a nullptr if not available.
   static MemoryAccessSet *getBrokenReductions(__isl_keep isl_ast_node *Node);
 
-  /// @brief Get the nodes build context or a nullptr if not available.
+  /// Get the nodes build context or a nullptr if not available.
   static __isl_give isl_ast_build *getBuild(__isl_keep isl_ast_node *Node);
 
   ///}

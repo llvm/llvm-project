@@ -20,7 +20,7 @@ struct isl_schedule;
 struct isl_schedule_node;
 struct isl_union_map;
 
-/// @brief Parameters of the micro kernel.
+/// Parameters of the micro kernel.
 ///
 /// Parameters, which determine sizes of rank-1 (i.e., outer product) update
 /// used in the optimized matrix multiplication.
@@ -30,7 +30,7 @@ struct MicroKernelParamsTy {
   int Nr;
 };
 
-/// @brief Parameters of the macro kernel.
+/// Parameters of the macro kernel.
 ///
 /// Parameters, which determine sizes of blocks of partitioned matrices
 /// used in the optimized matrix multiplication.
@@ -48,7 +48,7 @@ class Scop;
 
 class ScheduleTreeOptimizer {
 public:
-  /// @brief Apply schedule tree transformations.
+  /// Apply schedule tree transformations.
   ///
   /// This function takes an (possibly already optimized) schedule tree and
   /// applies a set of additional optimizations on the schedule tree. The
@@ -65,7 +65,7 @@ public:
   optimizeSchedule(__isl_take isl_schedule *Schedule,
                    const llvm::TargetTransformInfo *TTI = nullptr);
 
-  /// @brief Apply schedule tree transformations.
+  /// Apply schedule tree transformations.
   ///
   /// This function takes a node in an (possibly already optimized) schedule
   /// tree and applies a set of additional optimizations on this schedule tree
@@ -81,7 +81,7 @@ public:
   optimizeScheduleNode(__isl_take isl_schedule_node *Node,
                        const llvm::TargetTransformInfo *TTI = nullptr);
 
-  /// @brief Decide if the @p NewSchedule is profitable for @p S.
+  /// Decide if the @p NewSchedule is profitable for @p S.
   ///
   /// @param S           The SCoP we optimize.
   /// @param NewSchedule The new schedule we computed.
@@ -90,7 +90,7 @@ public:
   static bool isProfitableSchedule(polly::Scop &S,
                                    __isl_keep isl_union_map *NewSchedule);
 
-  /// @brief Isolate a set of partial tile prefixes.
+  /// Isolate a set of partial tile prefixes.
   ///
   /// This set should ensure that it contains only partial tile prefixes that
   /// have exactly VectorWidth iterations.
@@ -102,7 +102,7 @@ public:
   isolateFullPartialTiles(__isl_take isl_schedule_node *Node, int VectorWidth);
 
 private:
-  /// @brief Tile a schedule node.
+  /// Tile a schedule node.
   ///
   /// @param Node            The node to tile.
   /// @param Identifier      An name that identifies this kind of tiling and
@@ -116,7 +116,7 @@ private:
   tileNode(__isl_take isl_schedule_node *Node, const char *Identifier,
            llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
 
-  /// @brief Tile a schedule node and unroll point loops.
+  /// Tile a schedule node and unroll point loops.
   ///
   /// @param Node            The node to register tile.
   /// @param TileSizes       A vector of tile sizes that should be used for
@@ -126,7 +126,7 @@ private:
   applyRegisterTiling(__isl_take isl_schedule_node *Node,
                       llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
 
-  /// @brief Apply the BLIS matmul optimization pattern.
+  /// Apply the BLIS matmul optimization pattern.
   ///
   /// Apply the BLIS matmul optimization pattern. BLIS implements gemm as three
   /// nested loops around a macro-kernel, plus two packing routines.
@@ -158,7 +158,7 @@ private:
   optimizeMatMulPattern(__isl_take isl_schedule_node *Node,
                         const llvm::TargetTransformInfo *TTI);
 
-  /// @brief Check if this node is a band node we want to tile.
+  /// Check if this node is a band node we want to tile.
   ///
   /// We look for innermost band nodes where individual dimensions are marked as
   /// permutable.
@@ -166,7 +166,7 @@ private:
   /// @param Node The node to check.
   static bool isTileableBandNode(__isl_keep isl_schedule_node *Node);
 
-  /// @brief Pre-vectorizes one scheduling dimension of a schedule band.
+  /// Pre-vectorizes one scheduling dimension of a schedule band.
   ///
   /// prevectSchedBand splits out the dimension DimToVectorize, tiles it and
   /// sinks the resulting point loop.
@@ -201,7 +201,7 @@ private:
   prevectSchedBand(__isl_take isl_schedule_node *Node, unsigned DimToVectorize,
                    int VectorWidth);
 
-  /// @brief Apply additional optimizations on the bands in the schedule tree.
+  /// Apply additional optimizations on the bands in the schedule tree.
   ///
   /// We are looking for an innermost band node and apply the following
   /// transformations:
@@ -219,7 +219,7 @@ private:
   ///        (currently unused).
   static isl_schedule_node *optimizeBand(isl_schedule_node *Node, void *User);
 
-  /// @brief Apply additional optimizations on the bands in the schedule tree.
+  /// Apply additional optimizations on the bands in the schedule tree.
   ///
   /// We apply the following
   /// transformations:
@@ -235,7 +235,7 @@ private:
   static isl_schedule_node *standardBandOpts(__isl_take isl_schedule_node *Node,
                                              void *User);
 
-  /// @brief Check if this node contains a partial schedule that could
+  /// Check if this node contains a partial schedule that could
   ///        probably be optimized with analytical modeling.
   ///
   /// isMatrMultPattern tries to determine whether the following conditions
@@ -255,7 +255,7 @@ private:
   /// @param Node The node to check.
   static bool isMatrMultPattern(__isl_keep isl_schedule_node *Node);
 
-  /// @brief Create the BLIS macro-kernel.
+  /// Create the BLIS macro-kernel.
   ///
   /// We create the BLIS macro-kernel by applying a combination of tiling
   /// of dimensions of the band node and interchanging of two innermost
@@ -269,7 +269,7 @@ private:
   createMacroKernel(__isl_take isl_schedule_node *Node,
                     MacroKernelParamsTy MacroKernelParams);
 
-  /// @brief Create the BLIS macro-kernel.
+  /// Create the BLIS macro-kernel.
   ///
   /// We create the BLIS macro-kernel by applying a combination of tiling
   /// of dimensions of the band node and interchanging of two innermost

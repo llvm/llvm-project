@@ -192,7 +192,7 @@ public:
   size_t getElementCount() const { return getByteCount() / sizeof(ElemT); }
 
   /// Converts this memory object into a slice.
-  GlobalDeviceMemorySlice<ElemT> asSlice() {
+  GlobalDeviceMemorySlice<ElemT> asSlice() const {
     return GlobalDeviceMemorySlice<ElemT>(*this);
   }
 

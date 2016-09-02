@@ -181,7 +181,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeCodegenCleanupPass(Registry);
 }
 
-/// @brief Register Polly passes such that they form a polyhedral optimizer.
+/// Register Polly passes such that they form a polyhedral optimizer.
 ///
 /// The individual Polly passes are registered in the pass manager such that
 /// they form a full polyhedral optimizer. The flow of the optimizer starts with
@@ -328,7 +328,7 @@ registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
   PM.add(createCodegenCleanupPass());
 }
 
-/// @brief Register Polly to be available as an optimizer
+/// Register Polly to be available as an optimizer
 ///
 ///
 /// We can currently run Polly at three different points int the pass manager.

@@ -24,13 +24,13 @@ class Function;
 
 namespace polly {
 
-/// @brief Insert function calls that print certain LLVM values at run time.
+/// Insert function calls that print certain LLVM values at run time.
 ///
 /// This class inserts libc function calls to print certain LLVM values at
 /// run time.
 struct RuntimeDebugBuilder {
 
-  /// @brief Print a set of LLVM-IR Values or StringRefs via printf
+  /// Print a set of LLVM-IR Values or StringRefs via printf
   ///
   ///  This function emits a call to printf that will print the given arguments.
   ///  It is useful for debugging CPU programs. All arguments given in this list
@@ -46,7 +46,7 @@ struct RuntimeDebugBuilder {
     createPrinter(Builder, /* CPU */ false, Vector, args...);
   }
 
-  /// @brief Print a set of LLVM-IR Values or StringRefs on an NVIDIA GPU.
+  /// Print a set of LLVM-IR Values or StringRefs on an NVIDIA GPU.
   ///
   ///  This function emits a call to vprintf that will print the given
   ///  arguments from within a kernel thread. It is useful for debugging
@@ -64,7 +64,7 @@ struct RuntimeDebugBuilder {
   }
 
 private:
-  /// @brief Handle Values.
+  /// Handle Values.
   template <typename... Args>
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             std::vector<llvm::Value *> &Values,
@@ -73,7 +73,7 @@ private:
     createPrinter(Builder, UseGPU, Values, args...);
   }
 
-  /// @brief Handle StringRefs.
+  /// Handle StringRefs.
   template <typename... Args>
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             std::vector<llvm::Value *> &Values,
@@ -82,7 +82,7 @@ private:
     createPrinter(Builder, UseGPU, Values, args...);
   }
 
-  /// @brief Handle ArrayRefs.
+  /// Handle ArrayRefs.
   template <typename... Args>
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             std::vector<llvm::Value *> &Values,
@@ -97,25 +97,25 @@ private:
       createPrinter(Builder, UseGPU, Values, args...);
   }
 
-  /// @brief Print a list of Values.
+  /// Print a list of Values.
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             llvm::ArrayRef<llvm::Value *> Values);
 
-  /// @brief Print a list of Values on a GPU.
+  /// Print a list of Values on a GPU.
   static void createGPUPrinterT(PollyIRBuilder &Builder,
                                 llvm::ArrayRef<llvm::Value *> Values);
 
-  /// @brief Print a list of Values on a CPU.
+  /// Print a list of Values on a CPU.
   static void createCPUPrinterT(PollyIRBuilder &Builder,
                                 llvm::ArrayRef<llvm::Value *> Values);
 
-  /// @brief Get a reference to the 'printf' function.
+  /// Get a reference to the 'printf' function.
   ///
   /// If the current module does not yet contain a reference to printf, we
   /// insert a reference to it. Otherwise the existing reference is returned.
   static llvm::Function *getPrintF(PollyIRBuilder &Builder);
 
-  /// @brief Call printf
+  /// Call printf
   ///
   /// @param Builder The builder used to insert the code.
   /// @param Format  The format string.
@@ -123,21 +123,21 @@ private:
   static void createPrintF(PollyIRBuilder &Builder, std::string Format,
                            llvm::ArrayRef<llvm::Value *> Values);
 
-  /// @brief Get (and possibly insert) a vprintf declaration into the module.
+  /// Get (and possibly insert) a vprintf declaration into the module.
   static llvm::Function *getVPrintF(PollyIRBuilder &Builder);
 
-  /// @brief Call fflush
+  /// Call fflush
   ///
   /// @parma Builder The builder used to insert the code.
   static void createFlush(PollyIRBuilder &Builder);
 
-  /// @brief Get (and possibly insert) a NVIDIA address space cast call.
+  /// Get (and possibly insert) a NVIDIA address space cast call.
   static llvm::Function *getAddressSpaceCast(PollyIRBuilder &Builder,
                                              unsigned Src, unsigned Dst,
                                              unsigned SrcBits = 8,
                                              unsigned DstBits = 8);
 
-  /// @brief Get identifiers that describe the currently executed GPU thread.
+  /// Get identifiers that describe the currently executed GPU thread.
   ///
   /// The result will be a vector that if passed to the GPU printer will result
   /// into a string (initialized to values corresponding to the printing

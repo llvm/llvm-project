@@ -39,7 +39,7 @@ using namespace llvm;
 #define DEBUG_TYPE "bugpoint"
 
 namespace llvm {
-  extern cl::opt<std::string> OutputPrefix;
+extern cl::opt<std::string> OutputPrefix;
 }
 
 static cl::opt<bool> PreserveBitcodeUseListOrder(
@@ -48,12 +48,12 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     cl::init(true), cl::Hidden);
 
 namespace {
-  // ChildOutput - This option captures the name of the child output file that
-  // is set up by the parent bugpoint process
-  cl::opt<std::string> ChildOutput("child-output", cl::ReallyHidden);
-  cl::opt<std::string> OptCmd("opt-command", cl::init(""),
-                              cl::desc("Path to opt. (default: search path "
-                                       "for 'opt'.)"));
+// ChildOutput - This option captures the name of the child output file that
+// is set up by the parent bugpoint process
+cl::opt<std::string> ChildOutput("child-output", cl::ReallyHidden);
+cl::opt<std::string> OptCmd("opt-command", cl::init(""),
+                            cl::desc("Path to opt. (default: search path "
+                                     "for 'opt'.)"));
 }
 
 /// writeProgramToFile - This writes the current "Program" to the named bitcode
@@ -84,26 +84,26 @@ bool BugDriver::writeProgramToFile(const std::string &Filename,
   return true;
 }
 
-
 /// EmitProgressBitcode - This function is used to output the current Program
 /// to a file named "bugpoint-ID.bc".
 ///
-void BugDriver::EmitProgressBitcode(const Module *M,
-                                    const std::string &ID,
-                                    bool NoFlyer)  const {
+void BugDriver::EmitProgressBitcode(const Module *M, const std::string &ID,
+                                    bool NoFlyer) const {
   // Output the input to the current pass to a bitcode file, emit a message
   // telling the user how to reproduce it: opt -foo blah.bc
   //
   std::string Filename = OutputPrefix + "-" + ID + ".bc";
   if (writeProgramToFile(Filename, M)) {
-    errs() <<  "Error opening file '" << Filename << "' for writing!\n";
+    errs() << "Error opening file '" << Filename << "' for writing!\n";
     return;
   }
 
   outs() << "Emitted bitcode to '" << Filename << "'\n";
-  if (NoFlyer || PassesToRun.empty()) return;
+  if (NoFlyer || PassesToRun.empty())
+    return;
   outs() << "\n*** You can reproduce the problem with: ";
-  if (UseValgrind) outs() << "valgrind ";
+  if (UseValgrind)
+    outs() << "valgrind ";
   outs() << "opt " << Filename;
   for (unsigned i = 0, e = PluginLoader::getNumPlugins(); i != e; ++i) {
     outs() << " -load " << PluginLoader::getPlugin(i);
@@ -111,8 +111,9 @@ void BugDriver::EmitProgressBitcode(const Module *M,
   outs() << " " << getPassesString(PassesToRun) << "\n";
 }
 
-cl::opt<bool> SilencePasses("silence-passes",
-        cl::desc("Suppress output of running passes (both stdout and stderr)"));
+cl::opt<bool> SilencePasses(
+    "silence-passes",
+    cl::desc("Suppress output of running passes (both stdout and stderr)"));
 
 static cl::list<std::string> OptArgs("opt-args", cl::Positional,
                                      cl::desc("<opt arguments>..."),
@@ -130,15 +131,15 @@ bool BugDriver::runPasses(Module *Program,
                           const std::vector<std::string> &Passes,
                           std::string &OutputFilename, bool DeleteOutput,
                           bool Quiet, unsigned NumExtraArgs,
-                          const char * const *ExtraArgs) const {
+                          const char *const *ExtraArgs) const {
   // setup the output file name
   outs().flush();
   SmallString<128> UniqueFilename;
   std::error_code EC = sys::fs::createUniqueFile(
       OutputPrefix + "-output-%%%%%%%.bc", UniqueFilename);
   if (EC) {
-    errs() << getToolName() << ": Error making unique filename: "
-           << EC.message() << "\n";
+    errs() << getToolName()
+           << ": Error making unique filename: " << EC.message() << "\n";
     return 1;
   }
   OutputFilename = UniqueFilename.str();
@@ -149,8 +150,8 @@ bool BugDriver::runPasses(Module *Program,
   EC = sys::fs::createUniqueFile(OutputPrefix + "-input-%%%%%%%.bc", InputFD,
                                  InputFilename);
   if (EC) {
-    errs() << getToolName() << ": Error making unique filename: "
-           << EC.message() << "\n";
+    errs() << getToolName()
+           << ": Error making unique filename: " << EC.message() << "\n";
     return 1;
   }
 
@@ -193,7 +194,7 @@ bool BugDriver::runPasses(Module *Program,
   InFile.keep();
 
   // setup the child process' arguments
-  SmallVector<const char*, 8> Args;
+  SmallVector<const char *, 8> Args;
   if (UseValgrind) {
     Args.push_back("valgrind");
     Args.push_back("--error-exitcode=1");
@@ -208,14 +209,16 @@ bool BugDriver::runPasses(Module *Program,
     Args.push_back(OptArgs[i].c_str());
   std::vector<std::string> pass_args;
   for (unsigned i = 0, e = PluginLoader::getNumPlugins(); i != e; ++i) {
-    pass_args.push_back( std::string("-load"));
-    pass_args.push_back( PluginLoader::getPlugin(i));
+    pass_args.push_back(std::string("-load"));
+    pass_args.push_back(PluginLoader::getPlugin(i));
   }
   for (std::vector<std::string>::const_iterator I = Passes.begin(),
-       E = Passes.end(); I != E; ++I )
-    pass_args.push_back( std::string("-") + (*I) );
+                                                E = Passes.end();
+       I != E; ++I)
+    pass_args.push_back(std::string("-") + (*I));
   for (std::vector<std::string>::const_iterator I = pass_args.begin(),
-       E = pass_args.end(); I != E; ++I )
+                                                E = pass_args.end();
+       I != E; ++I)
     Args.push_back(I->c_str());
   Args.push_back(InputFilename.c_str());
   for (unsigned i = 0; i < NumExtraArgs; ++i)
@@ -223,10 +226,9 @@ bool BugDriver::runPasses(Module *Program,
   Args.push_back(nullptr);
 
   DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = Args.size()-1; i != e; ++i)
-          errs() << " " << Args[i];
-        errs() << "\n";
-        );
+        for (unsigned i = 0, e = Args.size() - 1; i != e; ++i) errs()
+        << " " << Args[i];
+        errs() << "\n";);
 
   // Redirect stdout and stderr to nowhere if SilencePasses is given
   StringRef Nowhere;
@@ -264,21 +266,19 @@ bool BugDriver::runPasses(Module *Program,
   return result != 0;
 }
 
-
 std::unique_ptr<Module>
 BugDriver::runPassesOn(Module *M, const std::vector<std::string> &Passes,
-                       unsigned NumExtraArgs,
-                       const char *const *ExtraArgs) {
+                       unsigned NumExtraArgs, const char *const *ExtraArgs) {
   std::string BitcodeResult;
-  if (runPasses(M, Passes, BitcodeResult, false/*delete*/, true/*quiet*/,
+  if (runPasses(M, Passes, BitcodeResult, false /*delete*/, true /*quiet*/,
                 NumExtraArgs, ExtraArgs)) {
     return nullptr;
   }
 
   std::unique_ptr<Module> Ret = parseInputFile(BitcodeResult, Context);
   if (!Ret) {
-    errs() << getToolName() << ": Error reading bitcode file '"
-           << BitcodeResult << "'!\n";
+    errs() << getToolName() << ": Error reading bitcode file '" << BitcodeResult
+           << "'!\n";
     exit(1);
   }
   sys::fs::remove(BitcodeResult);

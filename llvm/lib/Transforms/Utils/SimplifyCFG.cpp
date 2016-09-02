@@ -1425,6 +1425,16 @@ static bool canSinkInstructions(
         // FIXME: if the call was *already* indirect, we should do this.
         return false;
       }
+      // Because SROA can't handle speculating stores of selects, try not
+      // to sink stores of allocas when we'd have to create a PHI for the
+      // address operand.
+      // FIXME: This is a workaround for a deficiency in SROA - see
+      // https://llvm.org/bugs/show_bug.cgi?id=30188
+      if (OI == 1 && isa<StoreInst>(I0) &&
+          any_of(Insts, [](const Instruction *I) {
+            return isa<AllocaInst>(I->getOperand(1));
+          }))
+        return false;
       for (auto *I : Insts)
         PHIOperands[I].push_back(I->getOperand(OI));
     }

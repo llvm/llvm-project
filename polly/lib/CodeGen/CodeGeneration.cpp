@@ -53,7 +53,7 @@ public:
 
   CodeGeneration() : ScopPass(ID) {}
 
-  /// @brief The datalayout used
+  /// The datalayout used
   const DataLayout *DL;
 
   /// @name The analysis passes we need to generate code.
@@ -96,7 +96,7 @@ public:
     }
   }
 
-  /// @brief Mark a basic block unreachable.
+  /// Mark a basic block unreachable.
   ///
   /// Marks the basic block @p Block unreachable by equipping it with an
   /// UnreachableInst.
@@ -107,7 +107,7 @@ public:
     OrigTerminator->eraseFromParent();
   }
 
-  /// @brief Generate LLVM-IR for the SCoP @p S.
+  /// Generate LLVM-IR for the SCoP @p S.
   bool runOnScop(Scop &S) override {
     AI = &getAnalysis<IslAstInfo>();
 
@@ -198,7 +198,7 @@ public:
     return true;
   }
 
-  /// @brief Register all analyses and transformation required.
+  /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<IslAstInfo>();

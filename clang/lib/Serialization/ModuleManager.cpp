@@ -84,37 +84,31 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   }
 
   // Check whether we already loaded this module, before
-  ModuleFile *&ModuleEntry = Modules[Entry];
+  ModuleFile *ModuleEntry = Modules[Entry];
   bool NewModule = false;
   if (!ModuleEntry) {
     // Allocate a new module.
-    ModuleFile *New = new ModuleFile(Type, Generation);
-    New->Index = Chain.size();
-    New->FileName = FileName.str();
-    New->File = Entry;
-    New->ImportLoc = ImportLoc;
-    Chain.push_back(New);
-    if (!New->isModule())
-      PCHChain.push_back(New);
-    if (!ImportedBy)
-      Roots.push_back(New);
     NewModule = true;
-    ModuleEntry = New;
+    ModuleEntry = new ModuleFile(Type, Generation);
+    ModuleEntry->Index = Chain.size();
+    ModuleEntry->FileName = FileName.str();
+    ModuleEntry->File = Entry;
+    ModuleEntry->ImportLoc = ImportLoc;
+    ModuleEntry->InputFilesValidationTimestamp = 0;
 
-    New->InputFilesValidationTimestamp = 0;
-    if (New->Kind == MK_ImplicitModule) {
-      std::string TimestampFilename = New->getTimestampFilename();
+    if (ModuleEntry->Kind == MK_ImplicitModule) {
+      std::string TimestampFilename = ModuleEntry->getTimestampFilename();
       vfs::Status Status;
       // A cached stat value would be fine as well.
       if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
-        New->InputFilesValidationTimestamp =
+        ModuleEntry->InputFilesValidationTimestamp =
             Status.getLastModificationTime().toEpochTime();
     }
 
     // Load the contents of the module
     if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
       // The buffer was already provided for us.
-      New->Buffer = std::move(Buffer);
+      ModuleEntry->Buffer = std::move(Buffer);
     } else {
       // Open the AST file.
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf(
@@ -126,52 +120,41 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
         // ModuleManager it must be the same underlying file.
         // FIXME: Because FileManager::getFile() doesn't guarantee that it will
         // give us an open file, this may not be 100% reliable.
-        Buf = FileMgr.getBufferForFile(New->File,
+        Buf = FileMgr.getBufferForFile(ModuleEntry->File,
                                        /*IsVolatile=*/false,
                                        /*ShouldClose=*/false);
       }
 
       if (!Buf) {
         ErrorStr = Buf.getError().message();
+        delete ModuleEntry;
         return Missing;
       }
 
-      New->Buffer = std::move(*Buf);
+      ModuleEntry->Buffer = std::move(*Buf);
     }
 
     // Initialize the stream.
-    PCHContainerRdr.ExtractPCH(New->Buffer->getMemBufferRef(), New->StreamFile);
+    PCHContainerRdr.ExtractPCH(ModuleEntry->Buffer->getMemBufferRef(),
+                               ModuleEntry->StreamFile);
   }
 
   if (ExpectedSignature) {
-    if (NewModule)
+    // If we've not read the control block yet, read the signature eagerly now
+    // so that we can check it.
+    if (!ModuleEntry->Signature)
       ModuleEntry->Signature = ReadSignature(ModuleEntry->StreamFile);
-    else
-      assert(ModuleEntry->Signature == ReadSignature(ModuleEntry->StreamFile));
 
     if (ModuleEntry->Signature != ExpectedSignature) {
       ErrorStr = ModuleEntry->Signature ? "signature mismatch"
                                         : "could not read module signature";
 
-      if (NewModule) {
-        // Remove the module file immediately, since removeModules might try to
-        // invalidate the file cache for Entry, and that is not safe if this
-        // module is *itself* up to date, but has an out-of-date importer.
-        Modules.erase(Entry);
-        assert(Chain.back() == ModuleEntry);
-        Chain.pop_back();
-        if (!ModuleEntry->isModule())
-          PCHChain.pop_back();
-        if (Roots.back() == ModuleEntry)
-          Roots.pop_back();
-        else
-          assert(ImportedBy);
+      if (NewModule)
         delete ModuleEntry;
-      }
       return OutOfDate;
     }
   }
-  
+
   if (ImportedBy) {
     ModuleEntry->ImportedBy.insert(ImportedBy);
     ImportedBy->Imports.insert(ModuleEntry);
@@ -183,7 +166,20 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   }
 
   Module = ModuleEntry;
-  return NewModule? NewlyLoaded : AlreadyLoaded;
+
+  if (!NewModule)
+    return AlreadyLoaded;
+
+  assert(!Modules[Entry] && "module loaded twice");
+  Modules[Entry] = ModuleEntry;
+
+  Chain.push_back(ModuleEntry);
+  if (!ModuleEntry->isModule())
+    PCHChain.push_back(ModuleEntry);
+  if (!ImportedBy)
+    Roots.push_back(ModuleEntry);
+
+  return NewlyLoaded;
 }
 
 void ModuleManager::removeModules(
@@ -412,13 +408,16 @@ bool ModuleManager::lookupModuleFile(StringRef FileName,
                                      off_t ExpectedSize,
                                      time_t ExpectedModTime,
                                      const FileEntry *&File) {
+  if (FileName == "-") {
+    File = nullptr;
+    return false;
+  }
+
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
   File = FileMgr.getFile(FileName, /*openFile=*/true, /*cacheFailure=*/false);
-
-  if (!File && FileName != "-") {
+  if (!File)
     return false;
-  }
 
   if ((ExpectedSize && ExpectedSize != File->getSize()) ||
       (ExpectedModTime && ExpectedModTime != File->getModificationTime()))

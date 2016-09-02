@@ -116,10 +116,15 @@ entry:
 
 
 define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
-; ALL-LABEL: orq_broadcast:
-; ALL:       ## BB#0:
-; ALL-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; ALL-NEXT:    retq
+; KNL-LABEL: orq_broadcast:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: orq_broadcast:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vorpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; SKX-NEXT:    retq
   %b = or <8 x i64> %a, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   ret <8 x i64> %b
 }
@@ -141,10 +146,15 @@ entry:
 }
 
 define <8 x i64> @andqbrst(<8 x i64> %p1, i64* %ap) {
-; ALL-LABEL: andqbrst:
-; ALL:       ## BB#0: ## %entry
-; ALL-NEXT:    vpandq (%rdi){1to8}, %zmm0, %zmm0
-; ALL-NEXT:    retq
+; KNL-LABEL: andqbrst:
+; KNL:       ## BB#0: ## %entry
+; KNL-NEXT:    vpandq (%rdi){1to8}, %zmm0, %zmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: andqbrst:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    vandpd (%rdi){1to8}, %zmm0, %zmm0
+; SKX-NEXT:    retq
 entry:
   %a = load i64, i64* %ap, align 8
   %b = insertelement <8 x i64> undef, i64 %a, i32 0

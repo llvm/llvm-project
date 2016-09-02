@@ -26,7 +26,7 @@ class ScalarEvolution;
 namespace polly {
 class Scop;
 
-/// @brief Helper class to annotate newly generated SCoPs with metadata.
+/// Helper class to annotate newly generated SCoPs with metadata.
 ///
 /// The annotations are twofold:
 ///   1) Loops are stored in a stack-like structure in the order they are
@@ -44,23 +44,23 @@ class ScopAnnotator {
 public:
   ScopAnnotator();
 
-  /// @brief Build all alias scopes for the given SCoP.
+  /// Build all alias scopes for the given SCoP.
   void buildAliasScopes(Scop &S);
 
-  /// @brief Add a new loop @p L which is parallel if @p IsParallel is true.
+  /// Add a new loop @p L which is parallel if @p IsParallel is true.
   void pushLoop(llvm::Loop *L, bool IsParallel);
 
-  /// @brief Remove the last added loop.
+  /// Remove the last added loop.
   void popLoop(bool isParallel);
 
-  /// @brief Annotate the new instruction @p I for all parallel loops.
+  /// Annotate the new instruction @p I for all parallel loops.
   void annotate(llvm::Instruction *I);
 
-  /// @brief Annotate the loop latch @p B wrt. @p L.
+  /// Annotate the loop latch @p B wrt. @p L.
   void annotateLoopLatch(llvm::BranchInst *B, llvm::Loop *L,
                          bool IsParallel) const;
 
-  /// @brief Add alternative alias based pointers
+  /// Add alternative alias based pointers
   ///
   /// When annotating instructions with alias scope metadata, the right metadata
   /// is identified through the base pointer of the memory access. In some cases
@@ -77,26 +77,26 @@ public:
     AlternativeAliasBases.insert(NewMap.begin(), NewMap.end());
   }
 
-  /// @brief Delete the set of alternative alias bases
+  /// Delete the set of alternative alias bases
   void resetAlternativeAliasBases() { AlternativeAliasBases.clear(); }
 
 private:
-  /// @brief The ScalarEvolution analysis we use to find base pointers.
+  /// The ScalarEvolution analysis we use to find base pointers.
   llvm::ScalarEvolution *SE;
 
-  /// @brief All loops currently under construction.
+  /// All loops currently under construction.
   llvm::SmallVector<llvm::Loop *, 8> ActiveLoops;
 
-  /// @brief Metadata pointing to parallel loops currently under construction.
+  /// Metadata pointing to parallel loops currently under construction.
   llvm::SmallVector<llvm::MDNode *, 8> ParallelLoops;
 
-  /// @brief The alias scope domain for the current SCoP.
+  /// The alias scope domain for the current SCoP.
   llvm::MDNode *AliasScopeDomain;
 
-  /// @brief A map from base pointers to its alias scope.
+  /// A map from base pointers to its alias scope.
   llvm::DenseMap<llvm::AssertingVH<llvm::Value>, llvm::MDNode *> AliasScopeMap;
 
-  /// @brief A map from base pointers to an alias scope list of other pointers.
+  /// A map from base pointers to an alias scope list of other pointers.
   llvm::DenseMap<llvm::AssertingVH<llvm::Value>, llvm::MDNode *>
       OtherAliasScopeListMap;
 
@@ -104,7 +104,7 @@ private:
       AlternativeAliasBases;
 };
 
-/// @brief Add Polly specifics when running IRBuilder.
+/// Add Polly specifics when running IRBuilder.
 ///
 /// This is used to add additional items such as e.g. the llvm.loop.parallel
 /// metadata.
@@ -132,7 +132,7 @@ private:
 // matches for certain names.
 typedef llvm::IRBuilder<llvm::ConstantFolder, IRInserter> PollyIRBuilder;
 
-/// @brief Return an IR builder pointed before the @p BB terminator.
+/// Return an IR builder pointed before the @p BB terminator.
 static inline PollyIRBuilder createPollyIRBuilder(llvm::BasicBlock *BB,
                                                   ScopAnnotator &LA) {
   PollyIRBuilder Builder(BB->getContext(), llvm::ConstantFolder(),

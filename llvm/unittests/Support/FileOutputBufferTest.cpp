@@ -20,9 +20,12 @@ using namespace llvm::sys;
 
 #define ASSERT_NO_ERROR(x)                                                     \
   if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
-    errs() << #x ": did not return errc::success.\n"                           \
-           << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"           \
-           << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";       \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return errc::success.\n"                          \
+            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
+            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
   } else {                                                                     \
   }
 
@@ -57,9 +60,9 @@ TEST(FileOutputBuffer, Test) {
   ASSERT_EQ(File1Size, 8192ULL);
   ASSERT_NO_ERROR(fs::remove(File1.str()));
 
- 	// TEST 2: Verify abort case.
+  // TEST 2: Verify abort case.
   SmallString<128> File2(TestDirectory);
-	File2.append("/file2");
+  File2.append("/file2");
   {
     ErrorOr<std::unique_ptr<FileOutputBuffer>> Buffer2OrErr =
         FileOutputBuffer::create(File2, 8192);

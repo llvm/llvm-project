@@ -369,6 +369,7 @@ ValueObjectRegister::UpdateValue ()
 
     if (m_reg_ctx_sp)
     {
+        RegisterValue m_old_reg_value(m_reg_value);
         if (m_reg_ctx_sp->ReadRegister (&m_reg_info, m_reg_value))
         {
             if (m_reg_value.GetData (m_data))
@@ -380,6 +381,7 @@ ValueObjectRegister::UpdateValue ()
                 m_value.SetValueType(Value::eValueTypeHostAddress);
                 m_value.GetScalar() = (uintptr_t)m_data.GetDataStart();
                 SetValueIsValid (true);
+                SetValueDidChange(!(m_old_reg_value == m_reg_value));
                 return true;
             }
         }

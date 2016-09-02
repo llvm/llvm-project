@@ -1320,21 +1320,10 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   if (!Out<ELFT>::BuildId)
     return;
 
-  // Compute a hash of all sections except .debug_* sections.
-  // We skip debug sections because they tend to be very large
-  // and their contents are very likely to be the same as long as
-  // other sections are the same.
+  // Compute a hash of all sections of the output file.
   uint8_t *Start = Buffer->getBufferStart();
-  uint8_t *Last = Start;
-  std::vector<ArrayRef<uint8_t>> Regions;
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    uint8_t *End = Start + Sec->getFileOff();
-    if (!Sec->getName().startswith(".debug_"))
-      Regions.push_back({Last, End});
-    Last = End;
-  }
-  Regions.push_back({Last, Start + FileSize});
-  Out<ELFT>::BuildId->writeBuildId(Regions);
+  uint8_t *End = Start + FileSize;
+  Out<ELFT>::BuildId->writeBuildId({Start, End});
 }
 
 template void elf::writeResult<ELF32LE>();

@@ -29,20 +29,20 @@
 using namespace llvm;
 
 namespace llvm {
-  Triple TargetTriple;
+Triple TargetTriple;
 }
 
 // Anonymous namespace to define command line options for debugging.
 //
 namespace {
-  // Output - The user can specify a file containing the expected output of the
-  // program.  If this filename is set, it is used as the reference diff source,
-  // otherwise the raw input run through an interpreter is used as the reference
-  // source.
-  //
-  cl::opt<std::string>
-  OutputFile("output", cl::desc("Specify a reference program output "
-                                "(for miscompilation detection)"));
+// Output - The user can specify a file containing the expected output of the
+// program.  If this filename is set, it is used as the reference diff source,
+// otherwise the raw input run through an interpreter is used as the reference
+// source.
+//
+cl::opt<std::string> OutputFile("output",
+                                cl::desc("Specify a reference program output "
+                                         "(for miscompilation detection)"));
 }
 
 /// setNewProgram - If we reduce or update the program somehow, call this method
@@ -53,27 +53,26 @@ void BugDriver::setNewProgram(Module *M) {
   Program = M;
 }
 
-
 /// getPassesString - Turn a list of passes into a string which indicates the
 /// command line options that must be passed to add the passes.
 ///
 std::string llvm::getPassesString(const std::vector<std::string> &Passes) {
   std::string Result;
   for (unsigned i = 0, e = Passes.size(); i != e; ++i) {
-    if (i) Result += " ";
+    if (i)
+      Result += " ";
     Result += "-";
     Result += Passes[i];
   }
   return Result;
 }
 
-BugDriver::BugDriver(const char *toolname, bool find_bugs,
-                     unsigned timeout, unsigned memlimit, bool use_valgrind,
-                     LLVMContext& ctxt)
-  : Context(ctxt), ToolName(toolname), ReferenceOutputFile(OutputFile),
-    Program(nullptr), Interpreter(nullptr), SafeInterpreter(nullptr),
-    cc(nullptr), run_find_bugs(find_bugs), Timeout(timeout),
-    MemoryLimit(memlimit), UseValgrind(use_valgrind) {}
+BugDriver::BugDriver(const char *toolname, bool find_bugs, unsigned timeout,
+                     unsigned memlimit, bool use_valgrind, LLVMContext &ctxt)
+    : Context(ctxt), ToolName(toolname), ReferenceOutputFile(OutputFile),
+      Program(nullptr), Interpreter(nullptr), SafeInterpreter(nullptr),
+      cc(nullptr), run_find_bugs(find_bugs), Timeout(timeout),
+      MemoryLimit(memlimit), UseValgrind(use_valgrind) {}
 
 BugDriver::~BugDriver() {
   delete Program;
@@ -123,13 +122,15 @@ bool BugDriver::addSources(const std::vector<std::string> &Filenames) {
 
   // Load the first input file.
   Program = parseInputFile(Filenames[0], Context).release();
-  if (!Program) return true;
+  if (!Program)
+    return true;
 
   outs() << "Read input file      : '" << Filenames[0] << "'\n";
 
   for (unsigned i = 1, e = Filenames.size(); i != e; ++i) {
     std::unique_ptr<Module> M = parseInputFile(Filenames[i], Context);
-    if (!M.get()) return true;
+    if (!M.get())
+      return true;
 
     outs() << "Linking in input file: '" << Filenames[i] << "'\n";
     if (Linker::linkModules(*Program, std::move(M)))
@@ -141,8 +142,6 @@ bool BugDriver::addSources(const std::vector<std::string> &Filenames) {
   // All input files read successfully!
   return false;
 }
-
-
 
 /// run - The top level method that is invoked after all of the instance
 /// variables are set up from command line arguments.
@@ -168,7 +167,8 @@ bool BugDriver::run(std::string &ErrMsg) {
   }
 
   // Set up the execution environment, selecting a method to run LLVM bitcode.
-  if (initializeExecutionEnvironment()) return true;
+  if (initializeExecutionEnvironment())
+    return true;
 
   // Test to see if we have a code generator crash.
   outs() << "Running the code generator to test for a crash: ";
@@ -227,9 +227,10 @@ bool BugDriver::run(std::string &ErrMsg) {
   return Failure;
 }
 
-void llvm::PrintFunctionList(const std::vector<Function*> &Funcs) {
+void llvm::PrintFunctionList(const std::vector<Function *> &Funcs) {
   unsigned NumPrint = Funcs.size();
-  if (NumPrint > 10) NumPrint = 10;
+  if (NumPrint > 10)
+    NumPrint = 10;
   for (unsigned i = 0; i != NumPrint; ++i)
     outs() << " " << Funcs[i]->getName();
   if (NumPrint < Funcs.size())
@@ -237,9 +238,10 @@ void llvm::PrintFunctionList(const std::vector<Function*> &Funcs) {
   outs().flush();
 }
 
-void llvm::PrintGlobalVariableList(const std::vector<GlobalVariable*> &GVs) {
+void llvm::PrintGlobalVariableList(const std::vector<GlobalVariable *> &GVs) {
   unsigned NumPrint = GVs.size();
-  if (NumPrint > 10) NumPrint = 10;
+  if (NumPrint > 10)
+    NumPrint = 10;
   for (unsigned i = 0; i != NumPrint; ++i)
     outs() << " " << GVs[i]->getName();
   if (NumPrint < GVs.size())

@@ -17,7 +17,7 @@ endif()
 
 set(TSAN_RTL_CFLAGS ${TSAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_MSSE3_FLAG -msse3 TSAN_RTL_CFLAGS)
-append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=512
+append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
                TSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TSAN_RTL_CFLAGS)

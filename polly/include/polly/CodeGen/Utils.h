@@ -23,7 +23,7 @@ namespace polly {
 
 class Scop;
 
-/// @brief Execute a Scop conditionally wrt @p RTC.
+/// Execute a Scop conditionally wrt @p RTC.
 ///
 /// In the CFG the optimized code of the Scop is generated next to the
 /// original code. Both the new and the original version of the code remain

@@ -394,7 +394,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     const codeview::DebugInfo *DebugInfo;
     StringRef PDBFileName;
     auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
-    if (!EC && DebugInfo != nullptr) {
+    if (!EC && DebugInfo != nullptr && !PDBFileName.empty()) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
       if (auto Err = loadDataForEXE(PDB_ReaderType::DIA,

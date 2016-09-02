@@ -496,6 +496,10 @@ namespace llvm {
       return true;
     }
 
+    bool hasAndNotCompare(SDValue) const override {
+      return true;
+    }
+
     bool supportSplitCSR(MachineFunction *MF) const override {
       return
         MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&

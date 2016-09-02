@@ -18,7 +18,6 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
 #include <vector>
 
 #include "streamexecutor/StreamExecutor.h"
@@ -111,7 +110,7 @@ int main() {
   se::Device *Device = getOrDie(Platform->getDevice(0));
 
   // Load the kernel onto the device.
-  std::unique_ptr<cg::SaxpyKernel> Kernel =
+  cg::SaxpyKernel Kernel =
       getOrDie(Device->createKernel<cg::SaxpyKernel>(cg::SaxpyLoaderSpec));
 
   // Allocate memory on the device.
@@ -121,13 +120,13 @@ int main() {
       getOrDie(Device->allocateDeviceMemory<float>(ArraySize));
 
   // Run operations on a stream.
-  std::unique_ptr<se::Stream> Stream = getOrDie(Device->createStream());
-  Stream->thenCopyH2D<float>(HostX, X)
+  se::Stream Stream = getOrDie(Device->createStream());
+  Stream.thenCopyH2D<float>(HostX, X)
       .thenCopyH2D<float>(HostY, Y)
-      .thenLaunch(ArraySize, 1, *Kernel, A, X, Y)
+      .thenLaunch(ArraySize, 1, Kernel, A, X, Y)
       .thenCopyD2H<float>(X, HostX);
   // Wait for the stream to complete.
-  se::dieIfError(Stream->blockHostUntilDone());
+  se::dieIfError(Stream.blockHostUntilDone());
 
   // Process output data in HostX.
   std::vector<float> ExpectedX = {4, 47, 90, 133};

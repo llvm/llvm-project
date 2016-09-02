@@ -42,17 +42,17 @@ static unsigned const MaxZextSmallBitWidth = 7;
 // The maximal number of bits for which a truncate is modeled precisely.
 static unsigned const MaxTruncateSmallBitWidth = 31;
 
-/// @brief Return true if a zero-extend from @p Width bits is precisely modeled.
+/// Return true if a zero-extend from @p Width bits is precisely modeled.
 static bool isPreciseZeroExtend(unsigned Width) {
   return Width <= MaxZextSmallBitWidth;
 }
 
-/// @brief Return true if a truncate from @p Width bits is precisely modeled.
+/// Return true if a truncate from @p Width bits is precisely modeled.
 static bool isPreciseTruncate(unsigned Width) {
   return Width <= MaxTruncateSmallBitWidth;
 }
 
-/// @brief Add the number of basic sets in @p Domain to @p User
+/// Add the number of basic sets in @p Domain to @p User
 static isl_stat addNumBasicSets(isl_set *Domain, isl_aff *Aff, void *User) {
   auto *NumBasicSets = static_cast<unsigned *>(User);
   *NumBasicSets += isl_set_n_basic_set(Domain);
@@ -61,18 +61,18 @@ static isl_stat addNumBasicSets(isl_set *Domain, isl_aff *Aff, void *User) {
   return isl_stat_ok;
 }
 
-/// @brief Helper to free a PWACtx object.
+/// Helper to free a PWACtx object.
 static void freePWACtx(__isl_take PWACtx &PWAC) {
   isl_pw_aff_free(PWAC.first);
   isl_set_free(PWAC.second);
 }
 
-/// @brief Helper to copy a PWACtx object.
+/// Helper to copy a PWACtx object.
 static __isl_give PWACtx copyPWACtx(const __isl_keep PWACtx &PWAC) {
   return std::make_pair(isl_pw_aff_copy(PWAC.first), isl_set_copy(PWAC.second));
 }
 
-/// @brief Determine if @p PWAC is too complex to continue.
+/// Determine if @p PWAC is too complex to continue.
 ///
 /// Note that @p PWAC will be "free" (deallocated) if this function returns
 /// true, but not if this function returns false.
@@ -85,7 +85,7 @@ static bool isTooComplex(PWACtx &PWAC) {
   return true;
 }
 
-/// @brief Return the flag describing the possible wrapping of @p Expr.
+/// Return the flag describing the possible wrapping of @p Expr.
 static SCEV::NoWrapFlags getNoWrapFlags(const SCEV *Expr) {
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
     return NAry->getNoWrapFlags();
@@ -98,7 +98,7 @@ static void combine(__isl_keep PWACtx &PWAC0, const __isl_take PWACtx &PWAC1,
   PWAC0.second = isl_set_union(PWAC0.second, PWAC1.second);
 }
 
-/// @brief Set the possible wrapping of @p Expr to @p Flags.
+/// Set the possible wrapping of @p Expr to @p Flags.
 static const SCEV *setNoWrapFlags(ScalarEvolution &SE, const SCEV *Expr,
                                   SCEV::NoWrapFlags Flags) {
   auto *NAry = dyn_cast<SCEVNAryExpr>(Expr);

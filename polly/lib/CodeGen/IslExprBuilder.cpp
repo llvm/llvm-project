@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace polly;
 
-/// @brief Different overflow tracking modes.
+/// Different overflow tracking modes.
 enum OverflowTrackingChoice {
   OT_NEVER,   ///< Never tack potential overflows.
   OT_REQUEST, ///< Track potential overflows if requested.

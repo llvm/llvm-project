@@ -267,7 +267,7 @@ code can be distributed under and should not be modified in any way.
 
 The main body is a ``doxygen`` comment (identified by the ``///`` comment
 marker instead of the usual ``//``) describing the purpose of the file.  The
-first sentence or a passage beginning with ``\brief`` is used as an abstract.
+first sentence (or a passage beginning with ``\brief``) is used as an abstract.
 Any additional information should be separated by a blank line.  If an
 algorithm is being implemented or something tricky is going on, a reference
 to the paper where it is published should be included, as well as any notes or
@@ -322,8 +322,9 @@ comment.
 
 Include descriptive paragraphs for all public interfaces (public classes,
 member and non-member functions).  Don't just restate the information that can
-be inferred from the API name.  The first sentence or a paragraph beginning
-with ``\brief`` is used as an abstract. Put detailed discussion into separate
+be inferred from the API name.  The first sentence (or a paragraph beginning
+with ``\brief``) is used as an abstract. Try to use a single sentence as the
+``\brief`` adds visual clutter.  Put detailed discussion into separate
 paragraphs.
 
 To refer to parameter names inside a paragraph, use the ``\p name`` command.
@@ -351,7 +352,7 @@ A documentation comment that uses all Doxygen features in a preferred way:
 
 .. code-block:: c++
 
-  /// \brief Does foo and bar.
+  /// Does foo and bar.
   ///
   /// Does not do foo the usual way if \p Baz is true.
   ///
