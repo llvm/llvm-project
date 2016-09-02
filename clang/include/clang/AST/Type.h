@@ -2812,8 +2812,7 @@ public:
 /// __attribute__((ext_vector_type(n)), where "n" is the number of elements.
 /// Unlike vector_size, ext_vector_type is only allowed on typedef's. This
 /// class enables syntactic extensions, like Vector Components for accessing
-/// points (as .xyzw), colors (as .rgba), and textures (modeled after OpenGL
-/// Shading Language).
+/// points, colors, and textures (modeled after OpenGL Shading Language).
 class ExtVectorType : public VectorType {
   ExtVectorType(QualType vecType, unsigned nElements, QualType canonType) :
     VectorType(ExtVector, vecType, nElements, canonType, GenericVector) {}
@@ -2822,10 +2821,10 @@ public:
   static int getPointAccessorIdx(char c) {
     switch (c) {
     default: return -1;
-    case 'x': case 'r': return 0;
-    case 'y': case 'g': return 1;
-    case 'z': case 'b': return 2;
-    case 'w': case 'a': return 3;
+    case 'x': return 0;
+    case 'y': return 1;
+    case 'z': return 2;
+    case 'w': return 3;
     }
   }
   static int getNumericAccessorIdx(char c) {
