@@ -1,4 +1,5 @@
 #include "ockl.h"
+#include "irif.h"
 
 long amp_get_global_id(int dim)
 {
@@ -60,12 +61,14 @@ long hc_get_group_size(int dim)
   return __ockl_get_local_size(dim);
 }
 
-void amp_barrier(int n)
-{
-  __ockl_barrier(n);
-}
-
 void hc_barrier(int n)
 {
-  __ockl_barrier(n);
+  __llvm_amdgcn_s_waitcnt(0);
+  __llvm_amdgcn_s_dcache_wb();
+  __llvm_amdgcn_s_barrier();
+}
+
+void amp_barrier(int n)
+{
+  hc_barrier(n);
 }
