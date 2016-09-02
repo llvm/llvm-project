@@ -375,7 +375,6 @@ extern __attribute__((const)) size_t __ockl_get_global_linear_id(void);
 extern __attribute__((const)) size_t __ockl_get_local_linear_id(void);
 
 extern void __ockl_barrier(cl_mem_fence_flags flags);
-extern void __ockl_work_group_barrier(cl_mem_fence_flags flags, memory_scope scope);
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
