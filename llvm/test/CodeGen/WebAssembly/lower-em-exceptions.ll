@@ -1,10 +1,13 @@
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s
 
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target triple = "wasm32-unknown-unknown"
+
 @_ZTIi = external constant i8*
 @_ZTIc = external constant i8*
-; CHECK: @[[__THREW__:__THREW__.*]] = global i1 false
-; CHECK: @[[THREWVALUE:__threwValue.*]] = global i32 0
-; CHECK: @[[TEMPRET0:__tempRet0.*]] = global i32 0
+; CHECK-DAG: @[[__THREW__:__THREW__.*]] = global i32 0
+; CHECK-DAG: @[[THREWVALUE:__threwValue.*]] = global i32 0
+; CHECK-DAG: @[[TEMPRET0:__tempRet0.*]] = global i32 0
 
 ; Test invoke instruction with clauses (try-catch block)
 define void @clause() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -13,11 +16,12 @@ entry:
   invoke void @foo(i32 3)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i1 false, i1* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
 ; CHECK-NEXT: call void @__invoke_void_i32(void (i32)* @foo, i32 3)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i1, i1* @[[__THREW__]]
-; CHECK-NEXT: store i1 false, i1* @[[__THREW__]]
-; CHECK-NEXT: br i1 %[[__THREW__VAL]], label %lpad, label %invoke.cont
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
+; CHECK-NEXT: br i1 %cmp, label %lpad, label %invoke.cont
 
 invoke.cont:                                      ; preds = %entry
   br label %try.cont
@@ -68,11 +72,12 @@ entry:
   invoke void @foo(i32 3)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i1 false, i1* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
 ; CHECK-NEXT: call void @__invoke_void_i32(void (i32)* @foo, i32 3)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i1, i1* @[[__THREW__]]
-; CHECK-NEXT: store i1 false, i1* @[[__THREW__]]
-; CHECK-NEXT: br i1 %[[__THREW__VAL]], label %lpad, label %invoke.cont
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
+; CHECK-NEXT: br i1 %cmp, label %lpad, label %invoke.cont
 
 invoke.cont:                                      ; preds = %entry
   ret void
@@ -118,7 +123,7 @@ entry:
   %0 = invoke noalias i8* @bar(i8 signext 1, i8 zeroext 2)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i1 false, i1* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
 ; CHECK-NEXT: %0 = call noalias i8* @"__invoke_i8*_i8_i8"(i8* (i8, i8)* @bar, i8 signext 1, i8 zeroext 2)
 
 invoke.cont:                                      ; preds = %entry
@@ -162,19 +167,19 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__cxa_call_unexpected(i8*)
 
-; JS glue functions and invoke wrappers registration
-; CHECK: declare void @__resumeException(i8*)
-; CHECK: declare void @__invoke_void_i32(void (i32)*, i32)
-; CHECK: declare i8* @__cxa_find_matching_catch_4(i8*, i8*)
+; JS glue functions and invoke wrappers declaration
+; CHECK-DAG: declare void @__resumeException(i8*)
+; CHECK-DAG: declare void @__invoke_void_i32(void (i32)*, i32)
+; CHECK-DAG: declare i8* @__cxa_find_matching_catch_4(i8*, i8*)
 
 ; setThrew function creation
-; CHECK-LABEL: define void @setThrew(i1 %threw, i32 %value) {
+; CHECK-LABEL: define void @setThrew(i32 %threw, i32 %value) {
 ; CHECK: entry:
-; CHECK-NEXT: %[[__THREW__]].val = load i1, i1* @[[__THREW__]]
-; CHECK-NEXT: %cmp = icmp eq i1 %[[__THREW__]].val, false
+; CHECK-NEXT: %[[__THREW__]].val = load i32, i32* @[[__THREW__]]
+; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__]].val, 0
 ; CHECK-NEXT: br i1 %cmp, label %if.then, label %if.end
 ; CHECK: if.then:
-; CHECK-NEXT: store i1 %threw, i1* @[[__THREW__]]
+; CHECK-NEXT: store i32 %threw, i32* @[[__THREW__]]
 ; CHECK-NEXT: store i32 %value, i32* @[[THREWVALUE]]
 ; CHECK-NEXT: br label %if.end
 ; CHECK: if.end:

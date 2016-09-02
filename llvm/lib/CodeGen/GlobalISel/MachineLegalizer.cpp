@@ -30,8 +30,10 @@ MachineLegalizer::MachineLegalizer() : TablesInitialized(false) {
   DefaultActions[TargetOpcode::G_ANYEXT] = Legal;
   DefaultActions[TargetOpcode::G_TRUNC] = Legal;
 
-  // G_TYPE is essentially an annotated COPY so it's always legal.
+  // G_TYPE and G_PHI are essentially an annotated COPY/PHI instructions so
+  // they're always legal.
   DefaultActions[TargetOpcode::G_TYPE] = Legal;
+  DefaultActions[TargetOpcode::G_PHI] = Legal;
 
   DefaultActions[TargetOpcode::G_INTRINSIC] = Legal;
   DefaultActions[TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS] = Legal;

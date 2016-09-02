@@ -100,10 +100,6 @@ static Instruction *
 CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
                             const LoopSafetyInfo *SafetyInfo);
-static bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA,
-                               DominatorTree *DT, TargetLibraryInfo *TLI,
-                               Loop *CurLoop, AliasSetTracker *CurAST,
-                               LoopSafetyInfo *SafetyInfo);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -337,7 +333,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     // operands of the instruction are loop invariant.
     //
     if (isNotUsedInLoop(I, CurLoop, SafetyInfo) &&
-        canSinkOrHoistInst(I, AA, DT, TLI, CurLoop, CurAST, SafetyInfo)) {
+        canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo)) {
       ++II;
       Changed |= sink(I, LI, DT, CurLoop, CurAST, SafetyInfo);
     }
@@ -390,7 +386,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // is safe to hoist the instruction.
       //
       if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, TLI, CurLoop, CurAST, SafetyInfo) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo) &&
           isSafeToExecuteUnconditionally(
               I, DT, CurLoop, SafetyInfo,
               CurLoop->getLoopPreheader()->getTerminator()))
@@ -439,9 +435,17 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
 /// canSinkOrHoistInst - Return true if the hoister and sinker can handle this
 /// instruction.
 ///
-bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
-                        TargetLibraryInfo *TLI, Loop *CurLoop,
-                        AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo) {
+bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
+                              Loop *CurLoop, AliasSetTracker *CurAST,
+                              LoopSafetyInfo *SafetyInfo) {
+  if (!isa<LoadInst>(I) && !isa<CallInst>(I) &&
+      !isa<BinaryOperator>(I) && !isa<CastInst>(I) && !isa<SelectInst>(I) &&
+      !isa<GetElementPtrInst>(I) && !isa<CmpInst>(I) &&
+      !isa<InsertElementInst>(I) && !isa<ExtractElementInst>(I) &&
+      !isa<ShuffleVectorInst>(I) && !isa<ExtractValueInst>(I) &&
+      !isa<InsertValueInst>(I))
+    return false;
+
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (!LI->isUnordered())
@@ -457,7 +461,7 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
     // Don't hoist loads which have may-aliased stores in loop.
     uint64_t Size = 0;
     if (LI->getType()->isSized())
-      Size = I.getModule()->getDataLayout().getTypeStoreSize(LI->getType());
+      Size = LI->getModule()->getDataLayout().getTypeStoreSize(LI->getType());
 
     AAMDNodes AAInfo;
     LI->getAAMetadata(AAInfo);
@@ -465,7 +469,7 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
     return !pointerInvalidatedByLoop(LI->getOperand(0), Size, AAInfo, CurAST);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink or hoist dbg info; it's legal, but not useful.
-    if (isa<DbgInfoIntrinsic>(I))
+    if (isa<DbgInfoIntrinsic>(*CI))
       return false;
 
     // Don't sink calls which can throw.
@@ -503,22 +507,16 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
 
     // FIXME: This should use mod/ref information to see if we can hoist or
     // sink the call.
-
     return false;
   }
 
-  // Only these instructions are hoistable/sinkable.
-  if (!isa<BinaryOperator>(I) && !isa<CastInst>(I) && !isa<SelectInst>(I) &&
-      !isa<GetElementPtrInst>(I) && !isa<CmpInst>(I) &&
-      !isa<InsertElementInst>(I) && !isa<ExtractElementInst>(I) &&
-      !isa<ShuffleVectorInst>(I) && !isa<ExtractValueInst>(I) &&
-      !isa<InsertValueInst>(I))
-    return false;
-
-  // TODO: Plumb the context instruction through to make hoisting and sinking
-  // more powerful. Hoisting of loads already works due to the special casing
-  // above.
-  return isSafeToExecuteUnconditionally(I, DT, CurLoop, SafetyInfo, nullptr);
+  if (SafetyInfo)
+    // TODO: Plumb the context instruction through to make hoisting and sinking
+    // more powerful. Hoisting of loads already works due to the special casing
+    // above.
+    return isSafeToExecuteUnconditionally(I, DT, CurLoop, SafetyInfo, nullptr);
+  else
+    return true;
 }
 
 /// Returns true if a PHINode is a trivially replaceable with an

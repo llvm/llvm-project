@@ -9,5 +9,5 @@ struct FOO {
       }
   }
   int a;
-  int b;
+  int volatile b;
 };

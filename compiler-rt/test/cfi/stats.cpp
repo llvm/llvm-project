@@ -5,10 +5,6 @@
 // FIXME: We currently emit the wrong debug info under devirtualization.
 // UNSUPPORTED: devirt
 
-// FIXME: Currently failing on Windows with a DIA error, so we don't get any
-// symbols.
-// XFAIL: win32
-
 struct ABase {};
 
 struct A : ABase {

@@ -50,21 +50,23 @@ public:
                                       std::move(*MaybeKernelHandle));
   }
 
-  Expected<std::unique_ptr<Stream>> createStream();
+  /// Creates a stream object for this device.
+  Expected<Stream> createStream();
 
   /// Allocates an array of ElementCount entries of type T in device memory.
   template <typename T>
   Expected<GlobalDeviceMemory<T>> allocateDeviceMemory(size_t ElementCount) {
-    Expected<GlobalDeviceMemoryBase> MaybeBase =
+    Expected<void *> MaybeMemory =
         PDevice->allocateDeviceMemory(ElementCount * sizeof(T));
-    if (!MaybeBase)
-      return MaybeBase.takeError();
-    return GlobalDeviceMemory<T>(*MaybeBase);
+    if (!MaybeMemory)
+      return MaybeMemory.takeError();
+    return GlobalDeviceMemory<T>::makeFromElementCount(*MaybeMemory,
+                                                       ElementCount);
   }
 
   /// Frees memory previously allocated with allocateDeviceMemory.
   template <typename T> Error freeDeviceMemory(GlobalDeviceMemory<T> Memory) {
-    return PDevice->freeDeviceMemory(Memory);
+    return PDevice->freeDeviceMemory(Memory.getHandle());
   }
 
   /// Allocates an array of ElementCount entries of type T in host memory.
@@ -139,7 +141,7 @@ public:
       return make_error(
           "copying too many elements, " + llvm::Twine(ElementCount) +
           ", to a host array of element count " + llvm::Twine(Dst.size()));
-    return PDevice->synchronousCopyD2H(Src.getBaseMemory(),
+    return PDevice->synchronousCopyD2H(Src.getBaseMemory().getHandle(),
                                        Src.getElementOffset() * sizeof(T),
                                        Dst.data(), 0, ElementCount * sizeof(T));
   }
@@ -193,9 +195,9 @@ public:
                         llvm::Twine(ElementCount) +
                         ", to a device array of element count " +
                         llvm::Twine(Dst.getElementCount()));
-    return PDevice->synchronousCopyH2D(Src.data(), 0, Dst.getBaseMemory(),
-                                       Dst.getElementOffset() * sizeof(T),
-                                       ElementCount * sizeof(T));
+    return PDevice->synchronousCopyH2D(
+        Src.data(), 0, Dst.getBaseMemory().getHandle(),
+        Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T));
   }
 
   template <typename T>
@@ -249,8 +251,8 @@ public:
                         ", to a device array of element count " +
                         llvm::Twine(Dst.getElementCount()));
     return PDevice->synchronousCopyD2D(
-        Src.getBaseMemory(), Src.getElementOffset() * sizeof(T),
-        Dst.getBaseMemory(), Dst.getElementOffset() * sizeof(T),
+        Src.getBaseMemory().getHandle(), Src.getElementOffset() * sizeof(T),
+        Dst.getBaseMemory().getHandle(), Dst.getElementOffset() * sizeof(T),
         ElementCount * sizeof(T));
   }
 

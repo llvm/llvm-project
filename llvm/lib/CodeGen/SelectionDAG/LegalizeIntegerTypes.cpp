@@ -2838,51 +2838,51 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   case ISD::SETUGE: LowCC = ISD::SETUGE; break;
   }
 
-  // Tmp1 = lo(op1) < lo(op2)   // Always unsigned comparison
-  // Tmp2 = hi(op1) < hi(op2)   // Signedness depends on operands
-  // dest = hi(op1) == hi(op2) ? Tmp1 : Tmp2;
+  // LoCmp = lo(op1) < lo(op2)   // Always unsigned comparison
+  // HiCmp = hi(op1) < hi(op2)   // Signedness depends on operands
+  // dest  = hi(op1) == hi(op2) ? LoCmp : HiCmp;
 
   // NOTE: on targets without efficient SELECT of bools, we can always use
   // this identity: (B1 ? B2 : B3) --> (B1 & B2)|(!B1&B3)
   TargetLowering::DAGCombinerInfo DagCombineInfo(DAG, AfterLegalizeTypes, true,
                                                  nullptr);
-  SDValue Tmp1, Tmp2;
+  SDValue LoCmp, HiCmp;
   if (TLI.isTypeLegal(LHSLo.getValueType()) &&
       TLI.isTypeLegal(RHSLo.getValueType()))
-    Tmp1 = TLI.SimplifySetCC(getSetCCResultType(LHSLo.getValueType()),
-                             LHSLo, RHSLo, LowCC, false, DagCombineInfo, dl);
-  if (!Tmp1.getNode())
-    Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()),
-                        LHSLo, RHSLo, LowCC);
+    LoCmp = TLI.SimplifySetCC(getSetCCResultType(LHSLo.getValueType()), LHSLo,
+                              RHSLo, LowCC, false, DagCombineInfo, dl);
+  if (!LoCmp.getNode())
+    LoCmp = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()), LHSLo,
+                         RHSLo, LowCC);
   if (TLI.isTypeLegal(LHSHi.getValueType()) &&
       TLI.isTypeLegal(RHSHi.getValueType()))
-    Tmp2 = TLI.SimplifySetCC(getSetCCResultType(LHSHi.getValueType()),
-                             LHSHi, RHSHi, CCCode, false, DagCombineInfo, dl);
-  if (!Tmp2.getNode())
-    Tmp2 = DAG.getNode(ISD::SETCC, dl,
-                       getSetCCResultType(LHSHi.getValueType()),
-                       LHSHi, RHSHi, DAG.getCondCode(CCCode));
+    HiCmp = TLI.SimplifySetCC(getSetCCResultType(LHSHi.getValueType()), LHSHi,
+                              RHSHi, CCCode, false, DagCombineInfo, dl);
+  if (!HiCmp.getNode())
+    HiCmp =
+        DAG.getNode(ISD::SETCC, dl, getSetCCResultType(LHSHi.getValueType()),
+                    LHSHi, RHSHi, DAG.getCondCode(CCCode));
 
-  ConstantSDNode *Tmp1C = dyn_cast<ConstantSDNode>(Tmp1.getNode());
-  ConstantSDNode *Tmp2C = dyn_cast<ConstantSDNode>(Tmp2.getNode());
-  if ((Tmp1C && Tmp1C->isNullValue()) ||
-      (Tmp2C && Tmp2C->isNullValue() &&
-       (CCCode == ISD::SETLE || CCCode == ISD::SETGE ||
-        CCCode == ISD::SETUGE || CCCode == ISD::SETULE)) ||
-      (Tmp2C && Tmp2C->getAPIntValue() == 1 &&
-       (CCCode == ISD::SETLT || CCCode == ISD::SETGT ||
-        CCCode == ISD::SETUGT || CCCode == ISD::SETULT))) {
-    // low part is known false, returns high part.
+  ConstantSDNode *LoCmpC = dyn_cast<ConstantSDNode>(LoCmp.getNode());
+  ConstantSDNode *HiCmpC = dyn_cast<ConstantSDNode>(HiCmp.getNode());
+
+  bool EqAllowed = (CCCode == ISD::SETLE || CCCode == ISD::SETGE ||
+                    CCCode == ISD::SETUGE || CCCode == ISD::SETULE);
+
+  if ((EqAllowed && (HiCmpC && HiCmpC->isNullValue())) ||
+      (!EqAllowed && ((HiCmpC && (HiCmpC->getAPIntValue() == 1)) ||
+                      (LoCmpC && LoCmpC->isNullValue())))) {
     // For LE / GE, if high part is known false, ignore the low part.
-    // For LT / GT, if high part is known true, ignore the low part.
-    NewLHS = Tmp2;
+    // For LT / GT: if low part is known false, return the high part.
+    //              if high part is known true, ignore the low part.
+    NewLHS = HiCmp;
     NewRHS = SDValue();
     return;
   }
 
   if (LHSHi == RHSHi) {
     // Comparing the low bits is enough.
-    NewLHS = Tmp1;
+    NewLHS = LoCmp;
     NewRHS = SDValue();
     return;
   }
@@ -2927,8 +2927,8 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   if (!NewLHS.getNode())
     NewLHS = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()),
                           LHSHi, RHSHi, ISD::SETEQ);
-  NewLHS = DAG.getSelect(dl, Tmp1.getValueType(),
-                         NewLHS, Tmp1, Tmp2);
+  NewLHS = DAG.getSelect(dl, LoCmp.getValueType(),
+                         NewLHS, LoCmp, HiCmp);
   NewRHS = SDValue();
 }
 

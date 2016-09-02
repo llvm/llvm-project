@@ -19,6 +19,9 @@ entry:
   ;
   ; On the other hand, if odd single precision registers are not permitted, it
   ; will be forced to spill/reload either %a or %0.
+  ;
+  ; This is affected by scheduling as the new machine scheduler schedules the
+  ; two adds together, avoiding the spill+reload.
 
   %0 = fadd float %a, 1.0
   call void asm "# Clobber", "~{$f0},~{$f1},~{$f2},~{$f3},~{$f4},~{$f5},~{$f6},~{$f7},~{$f8},~{$f9},~{$f10},~{$f11},~{$f14},~{$f15},~{$f16},~{$f17},~{$f18},~{$f19},~{$f20},~{$f21},~{$f22},~{$f23},~{$f24},~{$f25},~{$f26},~{$f27},~{$f28},~{$f29},~{$f30},~{$f31}"()
@@ -27,15 +30,15 @@ entry:
 }
 
 ; ALL-LABEL:  two_floats:
-; ODDSPREG:       add.s $f13, $f12, ${{f[0-9]+}}
+; ODDSPREG:       add.s $f[[RES:[0-9]]], $f12, ${{f[0-9]+}}
+; ODDSPREG:       add.s ${{f[0-9]+}}, $f12, $f[[RES]]
 ; ODDSPREG-NOT:   swc1
 ; ODDSPREG-NOT:   lwc1
-; ODDSPREG:       add.s $f0, $f12, $f13
 
 ; NOODDSPREG:     add.s $[[T0:f[0-9]*[02468]]], $f12, ${{f[0-9]+}}
-; NOODDSPREG:     swc1 $[[T0]],
-; NOODDSPREG:     lwc1 $[[T1:f[0-9]*[02468]]],
-; NOODDSPREG:     add.s $f0, $f12, $[[T1]]
+; NOODDSPREG-NOT: swc1 $[[T0]],
+; NOODDSPREG-NOT: lwc1 $[[T1:f[0-9]*[02468]]],
+; NOODDSPREG:     add.s ${{f[0-9]+}}, $f12, $[[T0]]
 
 define double @two_doubles(double %a) {
 entry:
@@ -51,8 +54,8 @@ entry:
 }
 
 ; ALL-LABEL: two_doubles:
-; ALL:           add.d $[[T0:f[0-9]+]], $f12, ${{f[0-9]+}}
-; ALL:           add.d $f0, $f12, $[[T0]]
+; ALL-DAG:        add.d $[[T0:f[0-9]+]], $f12, ${{f[0-9]+}}
+; ALL-DAG:        add.d $f0, $f12, $[[T0]]
 
 
 ; INVALID: -mattr=+nooddspreg is not currently permitted for a 32-bit FPU register file (FR=0 mode).

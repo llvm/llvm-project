@@ -789,7 +789,7 @@ class MTC1_MMR6_DESC : MTC1_MMR6_DESC_BASE<"mtc1", FGR32Opnd, GPR32Opnd,
 class MTC2_MMR6_DESC : MTC2_MMR6_DESC_BASE<"mtc2", COP2Opnd, GPR32Opnd,
                                            II_MTC2>;
 class MTHC0_MMR6_DESC : MTC0_MMR6_DESC_BASE<"mthc0", COP0Opnd, GPR32Opnd,
-                                            II_MTC0>;
+                                            II_MTHC0>;
 class MTHC1_D32_MMR6_DESC : MTC1_64_MMR6_DESC_BASE<"mthc1", AFGR64Opnd,
                                                    GPR32Opnd, II_MTC1>,
                             HARDFLOAT, FGR_32;
@@ -838,7 +838,7 @@ class MFC1_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfc1", GPR32Opnd, FGR32Opnd,
 class MFC2_MMR6_DESC : MFC2_MMR6_DESC_BASE<"mfc2", GPR32Opnd, COP2Opnd,
                                            II_MFC2>;
 class MFHC0_MMR6_DESC : MFC0_MMR6_DESC_BASE<"mfhc0", GPR32Opnd, COP0Opnd,
-                                            II_MFC0>;
+                                            II_MFHC0>;
 class MFHC1_D32_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfhc1", GPR32Opnd, AFGR64Opnd,
                                                 II_MFHC1>, HARDFLOAT, FGR_32;
 class MFHC1_D64_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfhc1", GPR32Opnd, FGR64Opnd,

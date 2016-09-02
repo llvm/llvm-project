@@ -27,7 +27,7 @@ Device::Device(PlatformDevice *PDevice) : PDevice(PDevice) {}
 
 Device::~Device() = default;
 
-Expected<std::unique_ptr<Stream>> Device::createStream() {
+Expected<Stream> Device::createStream() {
   Expected<std::unique_ptr<PlatformStreamHandle>> MaybePlatformStream =
       PDevice->createStream();
   if (!MaybePlatformStream) {
@@ -35,7 +35,7 @@ Expected<std::unique_ptr<Stream>> Device::createStream() {
   }
   assert((*MaybePlatformStream)->getDevice() == PDevice &&
          "an executor created a stream with a different stored executor");
-  return llvm::make_unique<Stream>(std::move(*MaybePlatformStream));
+  return Stream(std::move(*MaybePlatformStream));
 }
 
 } // namespace streamexecutor

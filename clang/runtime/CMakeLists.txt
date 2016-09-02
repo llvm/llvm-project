@@ -143,6 +143,15 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       DEPENDS compiler-rt-build ${COMPILER_RT_TEST_DEPENDENCIES}
       WORKING_DIRECTORY ${BINARY_DIR}
       VERBATIM USES_TERMINAL)
-    set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS check-compiler-rt)
+
+    # Add special target to run all compiler-rt test suites.
+    get_ext_project_build_command(run_check_compiler_rt compiler-rt-test-depends)
+    add_custom_target(compiler-rt-test-depends
+      COMMAND ${run_check_compiler_rt}
+      DEPENDS compiler-rt-build ${COMPILER_RT_TEST_DEPENDENCIES}
+      WORKING_DIRECTORY ${BINARY_DIR}
+      VERBATIM USES_TERMINAL)
+    set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS compiler-rt-test-depends)
+    set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-compiler-rt)
   endif()
 endif()

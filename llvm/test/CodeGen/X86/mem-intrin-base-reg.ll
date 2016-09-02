@@ -8,15 +8,12 @@ target triple = "i686-pc-windows-msvc"
 ; for when this is necessary. Typically, we chose ESI for the base register,
 ; which all of the X86 string instructions use.
 
-; The pattern of vector icmp and extractelement is used in these tests because
-; it forces creation of an aligned stack temporary. Perhaps such temporaries
-; shouldn't be aligned.
-
 declare void @escape_vla_and_icmp(i8*, i1 zeroext)
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1)
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1)
 
 define i32 @memcpy_novla_vector(<4 x i32>* %vp0, i8* %a, i8* %b, i32 %n, i1 zeroext %cond) {
+  %foo = alloca <4 x i32>, align 16
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %b, i32 128, i32 4, i1 false)
   br i1 %cond, label %spill_vectors, label %no_vectors
 
@@ -42,6 +39,7 @@ spill_vectors:
 ; CHECK: rep;movsl
 
 define i32 @memcpy_vla_vector(<4 x i32>* %vp0, i8* %a, i8* %b, i32 %n, i1 zeroext %cond) {
+  %foo = alloca <4 x i32>, align 16
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %b, i32 128, i32 4, i1 false)
   br i1 %cond, label %spill_vectors, label %no_vectors
 
@@ -70,6 +68,7 @@ spill_vectors:
 ; stosd doesn't clobber esi, so we can use it.
 
 define i32 @memset_vla_vector(<4 x i32>* %vp0, i8* %a, i32 %n, i1 zeroext %cond) {
+  %foo = alloca <4 x i32>, align 16
   call void @llvm.memset.p0i8.i32(i8* %a, i8 42, i32 128, i32 4, i1 false)
   br i1 %cond, label %spill_vectors, label %no_vectors
 

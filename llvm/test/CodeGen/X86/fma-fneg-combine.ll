@@ -7,8 +7,7 @@
 define <16 x float> @test1(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm2, %zmm2
-; CHECK-NEXT:    vfmadd213ps %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmsub213ps %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -24,8 +23,7 @@ declare <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float>, <16 x fl
 define <16 x float> @test2(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfmadd213ps %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vfnmsub213ps %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
@@ -36,8 +34,7 @@ entry:
 define <16 x float> @test3(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-LABEL: test3:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfnmadd213ps %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vfmsub213ps %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
@@ -48,8 +45,7 @@ entry:
 define <16 x float> @test4(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfnmsub213ps %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vfmadd213ps %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
@@ -60,8 +56,7 @@ entry:
 define <16 x float> @test5(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm2, %zmm2
-; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmsub213ps {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -72,8 +67,7 @@ entry:
 define <16 x float> @test6(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfnmsub213ps {ru-sae}, %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vfmadd213ps {ru-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 2) #2
@@ -85,8 +79,7 @@ entry:
 define <8 x float> @test7(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
-; CHECK-NEXT:    vxorps {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float> %a, <8 x float> %b, <8 x float> %c) #2
@@ -107,4 +100,45 @@ entry:
 }
 
 declare <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float>, <8 x float>, <8 x float>)
+
+
+define <8 x double> @test9(<8 x double> %a, <8 x double> %b, <8 x double> %c) {
+; CHECK-LABEL: test9:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    vfnmsub213pd %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 -1, i32 4) #2
+  %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %0
+  ret <8 x double> %sub.i
+}
+
+declare <8 x double> @llvm.x86.avx512.mask.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8, i32)
+
+define <4 x double> @test10(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
+; CHECK-LABEL: test10:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call <4 x double> @llvm.x86.avx512.mask.vfmadd.pd.256(<4 x double> %a, <4 x double> %b, <4 x double> %c, i8 -1) #2
+  %sub.i = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %0
+  ret <4 x double> %sub.i
+}
+
+declare <4 x double> @llvm.x86.avx512.mask.vfmadd.pd.256(<4 x double> %a, <4 x double> %b, <4 x double> %c, i8)
+
+define <2 x double> @test11(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: test11:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    vfnmsub213sd %xmm2, %xmm0, %xmm1
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 -1, i32 4) #2
+  %sub.i = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %0
+  ret <2 x double> %sub.i
+}
+
+declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8, i32)
 

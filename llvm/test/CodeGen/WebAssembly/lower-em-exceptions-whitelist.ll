@@ -1,5 +1,8 @@
 ; RUN: opt < %s -wasm-lower-em-ehsjlj -emscripten-cxx-exceptions-whitelist=do_catch -S | FileCheck %s
 
+target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+target triple = "wasm32-unknown-unknown"
+
 define void @dont_catch() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @dont_catch(
 entry:
@@ -34,7 +37,7 @@ entry:
   invoke void @foo()
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i1 false, i1*
+; CHECK-NEXT: store i32 0, i32*
 ; CHECK-NEXT: call void @__invoke_void(void ()* @foo)
 
 invoke.cont:                                      ; preds = %entry

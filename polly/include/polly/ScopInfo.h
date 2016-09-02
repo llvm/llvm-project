@@ -317,6 +317,9 @@ public:
   /// @brief Return the isl id for the base pointer.
   __isl_give isl_id *getBasePtrId() const;
 
+  /// @brief Return what kind of memory this represents.
+  enum MemoryKind getKind() const { return Kind; }
+
   /// @brief Is this array info modeling an llvm::Value?
   bool isValueKind() const { return Kind == MK_Value; }
 
@@ -743,9 +746,14 @@ public:
   /// As 2) is by construction "newer" than 1) we return the new access
   /// relation if present.
   ///
-  __isl_give isl_map *getAccessRelation() const {
+  __isl_give isl_map *getLatestAccessRelation() const {
     return hasNewAccessRelation() ? getNewAccessRelation()
                                   : getOriginalAccessRelation();
+  }
+
+  /// @brief Old name of getLatestAccessRelation().
+  __isl_give isl_map *getAccessRelation() const {
+    return getLatestAccessRelation();
   }
 
   /// @brief Get an isl map describing the memory address accessed.
@@ -773,14 +781,44 @@ public:
   /// @brief Get an isl string representing a new access function, if available.
   std::string getNewAccessRelationStr() const;
 
-  /// @brief Get the base address of this access (e.g. A for A[i+j]).
-  Value *getBaseAddr() const { return BaseAddr; }
+  /// @brief Get the base address of this access (e.g. A for A[i+j]) when
+  /// detected.
+  Value *getOriginalBaseAddr() const {
+    assert(!getOriginalScopArrayInfo() /* may noy yet be initialized */ ||
+           getOriginalScopArrayInfo()->getBasePtr() == BaseAddr);
+    return BaseAddr;
+  }
 
-  /// @brief Get the base array isl_id for this access.
-  __isl_give isl_id *getArrayId() const;
+  /// @brief Get the base address of this access (e.g. A for A[i+j]) after a
+  /// potential change by setNewAccessRelation().
+  Value *getLatestBaseAddr() const {
+    return getLatestScopArrayInfo()->getBasePtr();
+  }
 
-  /// @brief Get the ScopArrayInfo object for the base address.
-  const ScopArrayInfo *getScopArrayInfo() const;
+  /// @brief Old name for getOriginalBaseAddr().
+  Value *getBaseAddr() const { return getOriginalBaseAddr(); }
+
+  /// @brief Get the detection-time base array isl_id for this access.
+  __isl_give isl_id *getOriginalArrayId() const;
+
+  /// @brief Get the base array isl_id for this access, modifiable through
+  /// setNewAccessRelation().
+  __isl_give isl_id *getLatestArrayId() const;
+
+  /// @brief Old name of getOriginalArrayId().
+  __isl_give isl_id *getArrayId() const { return getOriginalArrayId(); }
+
+  /// @brief Get the detection-time ScopArrayInfo object for the base address.
+  const ScopArrayInfo *getOriginalScopArrayInfo() const;
+
+  /// @brief Get the ScopArrayInfo object for the base address, or the one set
+  /// by setNewAccessRelation().
+  const ScopArrayInfo *getLatestScopArrayInfo() const;
+
+  /// @brief Legacy name of getOriginalScopArrayInfo().
+  const ScopArrayInfo *getScopArrayInfo() const {
+    return getOriginalScopArrayInfo();
+  }
 
   /// @brief Return a string representation of the access's reduction type.
   const std::string getReductionOperatorStr() const;
@@ -842,26 +880,105 @@ public:
   /// statement.
   bool isStrideZero(__isl_take const isl_map *Schedule) const;
 
-  /// @brief Whether this is an access of an explicit load or store in the IR.
-  bool isArrayKind() const { return Kind == ScopArrayInfo::MK_Array; }
+  /// @brief Return the kind when this access was first detected.
+  ScopArrayInfo::MemoryKind getOriginalKind() const {
+    assert(!getOriginalScopArrayInfo() /* not yet initialized */ ||
+           getOriginalScopArrayInfo()->getKind() == Kind);
+    return Kind;
+  }
 
-  /// @brief Whether this access is an array to a scalar memory object.
+  /// @brief Return the kind considering a potential setNewAccessRelation.
+  ScopArrayInfo::MemoryKind getLatestKind() const {
+    return getLatestScopArrayInfo()->getKind();
+  }
+
+  /// @brief Whether this is an access of an explicit load or store in the IR.
+  bool isOriginalArrayKind() const {
+    return getOriginalKind() == ScopArrayInfo::MK_Array;
+  }
+
+  /// @brief Whether storage memory is either an custom .s2a/.phiops alloca
+  /// (false) or an existing pointer into an array (true).
+  bool isLatestArrayKind() const {
+    return getLatestKind() == ScopArrayInfo::MK_Array;
+  }
+
+  /// @brief Old name of isOriginalArrayKind.
+  bool isArrayKind() const { return isOriginalArrayKind(); }
+
+  /// @brief Whether this access is an array to a scalar memory object, without
+  /// considering changes by setNewAccessRelation.
   ///
   /// Scalar accesses are accesses to MK_Value, MK_PHI or MK_ExitPHI.
-  bool isScalarKind() const { return !isArrayKind(); }
+  bool isOriginalScalarKind() const {
+    return getOriginalKind() != ScopArrayInfo::MK_Array;
+  }
 
-  /// @brief Is this MemoryAccess modeling scalar dependences?
-  bool isValueKind() const { return Kind == ScopArrayInfo::MK_Value; }
+  /// @brief Whether this access is an array to a scalar memory object, also
+  /// considering changes by setNewAccessRelation.
+  bool isLatestScalarKind() const {
+    return getLatestKind() != ScopArrayInfo::MK_Array;
+  }
 
-  /// @brief Is this MemoryAccess modeling special PHI node accesses?
-  bool isPHIKind() const { return Kind == ScopArrayInfo::MK_PHI; }
+  /// @brief Old name of isOriginalScalarKind.
+  bool isScalarKind() const { return isOriginalScalarKind(); }
+
+  /// @brief Was this MemoryAccess detected as a scalar dependences?
+  bool isOriginalValueKind() const {
+    return getOriginalKind() == ScopArrayInfo::MK_Value;
+  }
+
+  /// @brief Is this MemoryAccess currently modeling scalar dependences?
+  bool isLatestValueKind() const {
+    return getLatestKind() == ScopArrayInfo::MK_Value;
+  }
+
+  /// @brief Old name of isOriginalValueKind().
+  bool isValueKind() const { return isOriginalValueKind(); }
+
+  /// @brief Was this MemoryAccess detected as a special PHI node access?
+  bool isOriginalPHIKind() const {
+    return getOriginalKind() == ScopArrayInfo::MK_PHI;
+  }
+
+  /// @brief Is this MemoryAccess modeling special PHI node accesses, also
+  /// considering a potential change by setNewAccessRelation?
+  bool isLatestPHIKind() const {
+    return getLatestKind() == ScopArrayInfo::MK_PHI;
+  }
+
+  /// @brief Old name of isOriginalPHIKind.
+  bool isPHIKind() const { return isOriginalPHIKind(); }
+
+  /// @brief Was this MemoryAccess detected as the accesses of a PHI node in the
+  /// SCoP's exit block?
+  bool isOriginalExitPHIKind() const {
+    return getOriginalKind() == ScopArrayInfo::MK_ExitPHI;
+  }
 
   /// @brief Is this MemoryAccess modeling the accesses of a PHI node in the
-  /// SCoP's exit block?
-  bool isExitPHIKind() const { return Kind == ScopArrayInfo::MK_ExitPHI; }
+  /// SCoP's exit block? Can be changed to an array access using
+  /// setNewAccessRelation().
+  bool isLatestExitPHIKind() const {
+    return getLatestKind() == ScopArrayInfo::MK_ExitPHI;
+  }
 
-  /// @brief Does this access orginate from one of the two PHI types?
-  bool isAnyPHIKind() const { return isPHIKind() || isExitPHIKind(); }
+  /// @brief Old name of isOriginalExitPHIKind().
+  bool isExitPHIKind() const { return isOriginalExitPHIKind(); }
+
+  /// @brief Was this access detected as one of the two PHI types?
+  bool isOriginalAnyPHIKind() const {
+    return isOriginalPHIKind() || isOriginalExitPHIKind();
+  }
+
+  /// @brief Does this access orginate from one of the two PHI types? Can be
+  /// changed to an array access using setNewAccessRelation().
+  bool isLatestAnyPHIKind() const {
+    return isLatestPHIKind() || isLatestExitPHIKind();
+  }
+
+  /// @brief Old name of isOriginalAnyPHIKind().
+  bool isAnyPHIKind() const { return isOriginalAnyPHIKind(); }
 
   /// @brief Get the statement that contains this memory access.
   ScopStmt *getStatement() const { return Statement; }
