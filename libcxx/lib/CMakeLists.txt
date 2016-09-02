@@ -72,7 +72,9 @@ add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Setup flags.
-add_flags_if_supported(-fPIC)
+if (NOT WIN32)
+  add_flags_if_supported(-fPIC)
+endif()
 add_link_flags_if_supported(-nodefaultlibs)
 
 if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR

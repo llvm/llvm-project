@@ -17,7 +17,8 @@
 namespace streamexecutor {
 
 Stream::Stream(std::unique_ptr<PlatformStreamHandle> PStream)
-    : PDevice(PStream->getDevice()), ThePlatformStream(std::move(PStream)) {}
+    : PDevice(PStream->getDevice()), ThePlatformStream(std::move(PStream)),
+      ErrorMessageMutex(llvm::make_unique<llvm::sys::RWMutex>()) {}
 
 Stream::~Stream() = default;
 

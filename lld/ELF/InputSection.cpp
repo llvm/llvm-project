@@ -30,14 +30,10 @@ using namespace lld::elf;
 
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
-                                         const Elf_Shdr *Header,
-                                         Kind SectionKind)
-    : Header(Header), File(File), SectionKind(SectionKind), Repl(this),
-      Compressed(Header->sh_flags & SHF_COMPRESSED) {
-  // The garbage collector sets sections' Live bits.
-  // If GC is disabled, all sections are considered live by default.
-  Live = !Config->GcSections;
-
+                                         const Elf_Shdr *Hdr, Kind SectionKind)
+    : InputSectionData(SectionKind, Hdr->sh_flags & SHF_COMPRESSED,
+                       !Config->GcSections),
+      Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
   Alignment = std::max<uintX_t>(Header->sh_addralign, 1);
@@ -71,7 +67,6 @@ template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (SectionKind) {
   case Regular:
-  case Layout:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
@@ -131,7 +126,7 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
 
 template <class ELFT>
 bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
-  return S->SectionKind == Base::Regular || S->SectionKind == Base::Layout;
+  return S->SectionKind == Base::Regular;
 }
 
 template <class ELFT>

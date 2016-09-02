@@ -94,8 +94,7 @@ public:
   ///
   /// HostDst should have been allocated by allocateHostMemory or registered
   /// with registerHostMemory.
-  virtual Error copyD2H(PlatformStreamHandle *S,
-                        const GlobalDeviceMemoryBase &DeviceSrc,
+  virtual Error copyD2H(PlatformStreamHandle *S, const void *DeviceSrcHandle,
                         size_t SrcByteOffset, void *HostDst,
                         size_t DstByteOffset, size_t ByteCount) {
     return make_error("copyD2H not implemented for platform " + getName());
@@ -106,15 +105,14 @@ public:
   /// HostSrc should have been allocated by allocateHostMemory or registered
   /// with registerHostMemory.
   virtual Error copyH2D(PlatformStreamHandle *S, const void *HostSrc,
-                        size_t SrcByteOffset, GlobalDeviceMemoryBase DeviceDst,
+                        size_t SrcByteOffset, const void *DeviceDstHandle,
                         size_t DstByteOffset, size_t ByteCount) {
     return make_error("copyH2D not implemented for platform " + getName());
   }
 
   /// Copies data from one device location to another.
-  virtual Error copyD2D(PlatformStreamHandle *S,
-                        const GlobalDeviceMemoryBase &DeviceSrc,
-                        size_t SrcByteOffset, GlobalDeviceMemoryBase DeviceDst,
+  virtual Error copyD2D(PlatformStreamHandle *S, const void *DeviceSrcHandle,
+                        size_t SrcByteOffset, const void *DeviceDstHandle,
                         size_t DstByteOffset, size_t ByteCount) {
     return make_error("copyD2D not implemented for platform " + getName());
   }
@@ -127,14 +125,13 @@ public:
   }
 
   /// Allocates untyped device memory of a given size in bytes.
-  virtual Expected<GlobalDeviceMemoryBase>
-  allocateDeviceMemory(size_t ByteCount) {
+  virtual Expected<void *> allocateDeviceMemory(size_t ByteCount) {
     return make_error("allocateDeviceMemory not implemented for platform " +
                       getName());
   }
 
   /// Frees device memory previously allocated by allocateDeviceMemory.
-  virtual Error freeDeviceMemory(GlobalDeviceMemoryBase Memory) {
+  virtual Error freeDeviceMemory(const void *Handle) {
     return make_error("freeDeviceMemory not implemented for platform " +
                       getName());
   }
@@ -172,29 +169,29 @@ public:
   /// Blocks the calling host thread until the copy is completed. Can operate on
   /// any host memory, not just registered host memory or host memory allocated
   /// by allocateHostMemory. Does not block any ongoing device calls.
-  virtual Error synchronousCopyD2H(const GlobalDeviceMemoryBase &DeviceSrc,
+  virtual Error synchronousCopyD2H(const void *DeviceSrcHandle,
                                    size_t SrcByteOffset, void *HostDst,
                                    size_t DstByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyD2H not implemented for platform " +
                       getName());
   }
 
-  /// Similar to synchronousCopyD2H(const GlobalDeviceMemoryBase &, size_t, void
+  /// Similar to synchronousCopyD2H(const void *, size_t, void
   /// *, size_t, size_t), but copies memory from host to device rather than
   /// device to host.
   virtual Error synchronousCopyH2D(const void *HostSrc, size_t SrcByteOffset,
-                                   GlobalDeviceMemoryBase DeviceDst,
+                                   const void *DeviceDstHandle,
                                    size_t DstByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyH2D not implemented for platform " +
                       getName());
   }
 
-  /// Similar to synchronousCopyD2H(const GlobalDeviceMemoryBase &, size_t, void
+  /// Similar to synchronousCopyD2H(const void *, size_t, void
   /// *, size_t, size_t), but copies memory from one location in device memory
   /// to another rather than from device to host.
-  virtual Error synchronousCopyD2D(GlobalDeviceMemoryBase DeviceDst,
+  virtual Error synchronousCopyD2D(const void *DeviceDstHandle,
                                    size_t DstByteOffset,
-                                   const GlobalDeviceMemoryBase &DeviceSrc,
+                                   const void *DeviceSrcHandle,
                                    size_t SrcByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyD2D not implemented for platform " +
                       getName());

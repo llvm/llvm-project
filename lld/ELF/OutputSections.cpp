@@ -1657,40 +1657,36 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   const endianness E = ELFT::TargetEndianness;
 
   // 64-bit FNV-1 hash
   uint64_t Hash = 0xcbf29ce484222325;
-  for (ArrayRef<uint8_t> Buf : Bufs) {
-    for (uint8_t B : Buf) {
-      Hash *= 0x100000001b3;
-      Hash ^= B;
-    }
+  for (uint8_t B : Buf) {
+    Hash *= 0x100000001b3;
+    Hash ^= B;
   }
   write64<E>(this->HashBuf, Hash);
 }
 
 template <class ELFT>
-void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   MD5 Hash;
-  for (ArrayRef<uint8_t> Buf : Bufs)
-    Hash.update(Buf);
+  Hash.update(Buf);
   MD5::MD5Result Res;
   Hash.final(Res);
   memcpy(this->HashBuf, Res, 16);
 }
 
 template <class ELFT>
-void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   SHA1 Hash;
-  for (ArrayRef<uint8_t> Buf : Bufs)
-    Hash.update(Buf);
+  Hash.update(Buf);
   memcpy(this->HashBuf, Hash.final().data(), 20);
 }
 
 template <class ELFT>
-void BuildIdUuid<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdUuid<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   if (getRandomBytes(this->HashBuf, 16))
     error("entropy source failure");
 }
@@ -1700,7 +1696,7 @@ BuildIdHexstring<ELFT>::BuildIdHexstring()
     : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
 
 template <class ELFT>
-void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   memcpy(this->HashBuf, Config->BuildIdVector.data(),
          Config->BuildIdVector.size());
 }
@@ -1825,8 +1821,6 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   case InputSectionBase<ELFT>::MipsAbiFlags:
     Sec = new MipsAbiFlagsOutputSection<ELFT>();
     break;
-  case InputSectionBase<ELFT>::Layout:
-    llvm_unreachable("Invalid section type");
   }
   Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};

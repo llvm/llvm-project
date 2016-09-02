@@ -61,19 +61,22 @@ class Stream {
 public:
   explicit Stream(std::unique_ptr<PlatformStreamHandle> PStream);
 
+  Stream(Stream &&Other) = default;
+  Stream &operator=(Stream &&Other) = default;
+
   ~Stream();
 
   /// Returns whether any error has occurred while entraining work on this
   /// stream.
   bool isOK() const {
-    llvm::sys::ScopedReader ReaderLock(ErrorMessageMutex);
+    llvm::sys::ScopedReader ReaderLock(*ErrorMessageMutex);
     return !ErrorMessage;
   }
 
   /// Returns the status created by the first error that occurred while
   /// entraining work on this stream.
   Error getStatus() const {
-    llvm::sys::ScopedReader ReaderLock(ErrorMessageMutex);
+    llvm::sys::ScopedReader ReaderLock(*ErrorMessageMutex);
     if (ErrorMessage)
       return make_error(*ErrorMessage);
     else
@@ -133,7 +136,8 @@ public:
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", to a host array of element count " + llvm::Twine(Dst.size()));
     else
-      setError(PDevice->copyD2H(ThePlatformStream.get(), Src.getBaseMemory(),
+      setError(PDevice->copyD2H(ThePlatformStream.get(),
+                                Src.getBaseMemory().getHandle(),
                                 Src.getElementOffset() * sizeof(T), Dst.data(),
                                 0, ElementCount * sizeof(T)));
     return *this;
@@ -190,9 +194,10 @@ public:
                ", to a device array of element count " +
                llvm::Twine(Dst.getElementCount()));
     else
-      setError(PDevice->copyH2D(
-          ThePlatformStream.get(), Src.data(), 0, Dst.getBaseMemory(),
-          Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
+      setError(PDevice->copyH2D(ThePlatformStream.get(), Src.data(), 0,
+                                Dst.getBaseMemory().getHandle(),
+                                Dst.getElementOffset() * sizeof(T),
+                                ElementCount * sizeof(T)));
     return *this;
   }
 
@@ -247,8 +252,8 @@ public:
                llvm::Twine(Dst.getElementCount()));
     else
       setError(PDevice->copyD2D(
-          ThePlatformStream.get(), Src.getBaseMemory(),
-          Src.getElementOffset() * sizeof(T), Dst.getBaseMemory(),
+          ThePlatformStream.get(), Src.getBaseMemory().getHandle(),
+          Src.getElementOffset() * sizeof(T), Dst.getBaseMemory().getHandle(),
           Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
     return *this;
   }
@@ -315,7 +320,7 @@ private:
   /// Does not overwrite the error if it is already set.
   void setError(Error &&E) {
     if (E) {
-      llvm::sys::ScopedWriter WriterLock(ErrorMessageMutex);
+      llvm::sys::ScopedWriter WriterLock(*ErrorMessageMutex);
       if (!ErrorMessage)
         ErrorMessage = consumeAndGetMessage(std::move(E));
     }
@@ -325,7 +330,7 @@ private:
   ///
   /// Does not overwrite the error if it is already set.
   void setError(llvm::Twine Message) {
-    llvm::sys::ScopedWriter WriterLock(ErrorMessageMutex);
+    llvm::sys::ScopedWriter WriterLock(*ErrorMessageMutex);
     if (!ErrorMessage)
       ErrorMessage = Message.str();
   }
@@ -337,9 +342,7 @@ private:
   std::unique_ptr<PlatformStreamHandle> ThePlatformStream;
 
   /// Mutex that guards the error state flags.
-  ///
-  /// Mutable so that it can be obtained via const reader lock.
-  mutable llvm::sys::RWMutex ErrorMessageMutex;
+  std::unique_ptr<llvm::sys::RWMutex> ErrorMessageMutex;
 
   /// First error message for an operation in this stream or empty if there have
   /// been no errors.

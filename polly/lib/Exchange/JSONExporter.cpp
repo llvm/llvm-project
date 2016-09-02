@@ -348,7 +348,11 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
 
       isl_id *NewOutId;
 
-      if (MA->isArrayKind()) {
+      // If the NewAccessMap has zero dimensions, it is the scalar access; it
+      // must be the same as before.
+      // If it has at least one dimension, it's an array access; search for its
+      // ScopArrayInfo.
+      if (isl_map_dim(NewAccessMap, isl_dim_out) >= 1) {
         NewOutId = isl_map_get_tuple_id(NewAccessMap, isl_dim_out);
         auto *SAI = S.getArrayInfoByName(isl_id_get_name(NewOutId));
         isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
@@ -376,12 +380,14 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         bool SpecialAlignment = true;
         if (LoadInst *LoadI = dyn_cast<LoadInst>(MA->getAccessInstruction())) {
           SpecialAlignment =
+              LoadI->getAlignment() &&
               DL.getABITypeAlignment(LoadI->getType()) != LoadI->getAlignment();
         } else if (StoreInst *StoreI =
                        dyn_cast<StoreInst>(MA->getAccessInstruction())) {
           SpecialAlignment =
+              StoreI->getAlignment() &&
               DL.getABITypeAlignment(StoreI->getValueOperand()->getType()) !=
-              StoreI->getAlignment();
+                  StoreI->getAlignment();
         }
 
         if (SpecialAlignment) {

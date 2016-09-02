@@ -366,8 +366,13 @@ protected:
   /// @brief Generate reload of scalars demoted to memory and needed by @p Stmt.
   ///
   /// @param Stmt  The statement we generate code for.
+  /// @param LTS   A mapping from loops virtual canonical induction
+  ///              variable to their new values.
   /// @param BBMap A mapping from old values to their new values in this block.
-  void generateScalarLoads(ScopStmt &Stmt, ValueMapT &BBMap);
+  /// @param NewAccesses A map from memory access ids to new ast expressions.
+  void generateScalarLoads(ScopStmt &Stmt, LoopToScevMapT &LTS,
+                           ValueMapT &BBMap,
+                           __isl_keep isl_id_to_ast_expr *NewAccesses);
 
   /// @brief Generate the scalar stores for the given statement.
   ///
@@ -381,8 +386,10 @@ protected:
   ///              (for values recalculated in the new ScoP, but not
   ///               within this basic block)
   /// @param BBMap A mapping from old values to their new values in this block.
+  /// @param NewAccesses A map from memory access ids to new ast expressions.
   virtual void generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
-                                    ValueMapT &BBMap);
+                                    ValueMapT &BBMap,
+                                    __isl_keep isl_id_to_ast_expr *NewAccesses);
 
   /// @brief Handle users of @p Inst outside the SCoP.
   ///
@@ -492,6 +499,48 @@ protected:
   Value *generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
                                   ValueMapT &BBMap, LoopToScevMapT &LTS,
                                   isl_id_to_ast_expr *NewAccesses);
+
+  /// @brief Generate the operand address.
+  ///
+  /// @param Stmt         The statement to generate code for.
+  /// @param L            The innermost loop that surrounds the statement.
+  /// @param Pointer      If the access expression is not changed (ie. not found
+  ///                     in @p LTS), use this Pointer from the original code
+  ///                     instead.
+  /// @param BBMap        A mapping from old values to their new values.
+  /// @param LTS          A mapping from loops virtual canonical induction
+  ///                     variable to their new values.
+  /// @param NewAccesses  Ahead-of-time generated access expressions.
+  /// @param Id           Identifier of the MemoryAccess to generate.
+  /// @param ExpectedType The type the returned value should have.
+  ///
+  /// @return The generated address.
+  Value *generateLocationAccessed(ScopStmt &Stmt, Loop *L, Value *Pointer,
+                                  ValueMapT &BBMap, LoopToScevMapT &LTS,
+                                  isl_id_to_ast_expr *NewAccesses,
+                                  __isl_take isl_id *Id, Type *ExpectedType);
+
+  /// @brief Generate the pointer value that is accesses by @p Access.
+  ///
+  /// For write accesses, generate the target address. For read accesses,
+  /// generate the source address.
+  /// The access can be either an array access or a scalar access. In the first
+  /// case, the returned address will point to an element into that array. In
+  /// the scalar case, an alloca is used.
+  /// If a new AccessRelation is set for the MemoryAccess, the new relation will
+  /// be used.
+  ///
+  /// @param Access      The access to generate a pointer for.
+  /// @param L           The innermost loop that surrounds the statement.
+  /// @param LTS         A mapping from loops virtual canonical induction
+  ///                    variable to their new values.
+  /// @param BBMap       A mapping from old values to their new values.
+  /// @param NewAccesses A map from memory access ids to new ast expressions.
+  ///
+  /// @return The generated address.
+  Value *getImplicitAddress(MemoryAccess &Access, Loop *L, LoopToScevMapT &LTS,
+                            ValueMapT &BBMap,
+                            __isl_keep isl_id_to_ast_expr *NewAccesses);
 
   /// @param NewAccesses A map from memory access ids to new ast expressions,
   ///                    which may contain new access expressions for certain
@@ -834,8 +883,11 @@ private:
   ///              their new values (for values recalculated in the new ScoP,
   ///              but not within this basic block)
   /// @param BBMap A mapping from old values to their new values in this block.
-  virtual void generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
-                                    ValueMapT &BBMAp) override;
+  /// @param LTS   A mapping from loops virtual canonical induction variable to
+  /// their new values.
+  virtual void
+  generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS, ValueMapT &BBMAp,
+                       __isl_keep isl_id_to_ast_expr *NewAccesses) override;
 
   /// @brief Copy a single PHI instruction.
   ///
