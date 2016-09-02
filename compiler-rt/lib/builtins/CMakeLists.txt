@@ -164,7 +164,11 @@ set(GENERIC_SOURCES
   umodsi3.c
   umodti3.c)
 
-if(COMPILER_RT_HAS_ATOMIC_KEYWORD)
+option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
+  "Skip the atomic builtin (this may be needed if system headers are unavailable)"
+  Off)
+
+if(COMPILER_RT_HAS_ATOMIC_KEYWORD AND NOT COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN)
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
     atomic.c)
