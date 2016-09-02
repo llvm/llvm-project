@@ -128,6 +128,13 @@ char TestImmutableFunctionAnalysis::PassID;
 
 struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
   template <typename T> LambdaSCCPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
+  // We have to explicitly define all the special member functions because MSVC
+  // refuses to generate them.
+  LambdaSCCPass(LambdaSCCPass &&Arg) : Func(std::move(Arg.Func)) {}
+  LambdaSCCPass &operator=(LambdaSCCPass &&RHS) {
+    Func = std::move(RHS.Func);
+    return *this;
+  }
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR) {
@@ -141,6 +148,13 @@ struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
 
 struct LambdaFunctionPass : public PassInfoMixin<LambdaFunctionPass> {
   template <typename T> LambdaFunctionPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
+  // We have to explicitly define all the special member functions because MSVC
+  // refuses to generate them.
+  LambdaFunctionPass(LambdaFunctionPass &&Arg) : Func(std::move(Arg.Func)) {}
+  LambdaFunctionPass &operator=(LambdaFunctionPass &&RHS) {
+    Func = std::move(RHS.Func);
+    return *this;
+  }
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     return Func(F, AM);
