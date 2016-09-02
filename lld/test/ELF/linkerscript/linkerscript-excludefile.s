@@ -7,8 +7,7 @@
 
 # RUN: echo "SECTIONS {} " > %t.script
 # RUN: ld.lld -o %t --script %t.script %t1 %t2 %t3.notinclude
-# RUN: llvm-objdump -d %t | \
-# RUN:   FileCheck %s
+# RUN: llvm-objdump -d %t | FileCheck %s
 
 # CHECK: Disassembly of section .text:
 # CHECK: _start:
@@ -25,9 +24,8 @@
 # RUN: echo "SECTIONS { .patatino : \
 # RUN: { KEEP(*(EXCLUDE_FILE(*notinclude) .text)) } }" \
 # RUN:  > %t.script
-# RUN: ld.lld -o %t2 --script %t.script %t1 %t2 %t3.notinclude
-# RUN: llvm-objdump -d %t2 | \
-# RUN:   FileCheck %s --check-prefix=EXCLUDE
+# RUN: ld.lld -o %t4 --script %t.script %t1 %t2 %t3.notinclude
+# RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=EXCLUDE
 
 # EXCLUDE: Disassembly of section .patatino:
 # EXCLUDE: _start:

@@ -209,36 +209,12 @@ private:
     Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
   }
 
-  // Pack a SharedDeviceMemoryBase argument.
-  void PackOneArgument(size_t Index, const SharedDeviceMemoryBase &Argument) {
-    ++SharedCount;
-    Addresses[Index] = nullptr;
-    Sizes[Index] = Argument.getByteCount();
-    Types[Index] = KernelArgumentType::SHARED_DEVICE_MEMORY;
-  }
-
-  // Pack a SharedDeviceMemoryBase pointer argument.
-  void PackOneArgument(size_t Index, SharedDeviceMemoryBase *Argument) {
-    ++SharedCount;
-    Addresses[Index] = nullptr;
-    Sizes[Index] = Argument->getByteCount();
-    Types[Index] = KernelArgumentType::SHARED_DEVICE_MEMORY;
-  }
-
-  // Pack a const SharedDeviceMemoryBase pointer argument.
-  void PackOneArgument(size_t Index, const SharedDeviceMemoryBase *Argument) {
-    ++SharedCount;
-    Addresses[Index] = nullptr;
-    Sizes[Index] = Argument->getByteCount();
-    Types[Index] = KernelArgumentType::SHARED_DEVICE_MEMORY;
-  }
-
   // Pack a SharedDeviceMemory argument.
   template <typename T>
   void PackOneArgument(size_t Index, const SharedDeviceMemory<T> &Argument) {
     ++SharedCount;
     Addresses[Index] = nullptr;
-    Sizes[Index] = Argument.getByteCount();
+    Sizes[Index] = Argument.getElementCount() * sizeof(T);
     Types[Index] = KernelArgumentType::SHARED_DEVICE_MEMORY;
   }
 
@@ -247,7 +223,7 @@ private:
   void PackOneArgument(size_t Index, SharedDeviceMemory<T> *Argument) {
     ++SharedCount;
     Addresses[Index] = nullptr;
-    Sizes[Index] = Argument->getByteCount();
+    Sizes[Index] = Argument->getElementCount() * sizeof(T);
     Types[Index] = KernelArgumentType::SHARED_DEVICE_MEMORY;
   }
 
@@ -256,7 +232,7 @@ private:
   void PackOneArgument(size_t Index, const SharedDeviceMemory<T> *Argument) {
     ++SharedCount;
     Addresses[Index] = nullptr;
-    Sizes[Index] = Argument->getByteCount();
+    Sizes[Index] = Argument->getElementCount() * sizeof(T);
     Types[Index] = KernelArgumentType::SHARED_DEVICE_MEMORY;
   }
 

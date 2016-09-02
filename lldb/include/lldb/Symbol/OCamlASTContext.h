@@ -334,7 +334,6 @@ class OCamlASTContext : public TypeSystem
 
   private:
     int m_pointer_byte_size;
-    int m_int_byte_size;
     std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
     OCamlTypeMap m_base_type_map;
 

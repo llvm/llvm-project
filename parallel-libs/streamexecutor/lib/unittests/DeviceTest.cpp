@@ -78,7 +78,6 @@ TEST_F(DeviceTest, AllocateAndFreeDeviceMemory) {
   se::Expected<se::GlobalDeviceMemory<int>> MaybeMemory =
       Device.allocateDeviceMemory<int>(10);
   EXPECT_TRUE(static_cast<bool>(MaybeMemory));
-  EXPECT_NO_ERROR(Device.freeDeviceMemory(*MaybeMemory));
 }
 
 TEST_F(DeviceTest, AllocateAndFreeHostMemory) {

@@ -119,16 +119,24 @@ TEST(ScalarTest, GetValue)
     EXPECT_EQ("12345", ScalarGetValue<signed short>(12345));
     EXPECT_EQ("-12345", ScalarGetValue<signed short>(-12345));
     EXPECT_EQ("12345", ScalarGetValue<unsigned short>(12345));
+    EXPECT_EQ(std::to_string(std::numeric_limits<unsigned short>::max()),
+              ScalarGetValue(std::numeric_limits<unsigned short>::max()));
 
     EXPECT_EQ("12345", ScalarGetValue<signed int>(12345));
     EXPECT_EQ("-12345", ScalarGetValue<signed int>(-12345));
     EXPECT_EQ("12345", ScalarGetValue<unsigned int>(12345));
+    EXPECT_EQ(std::to_string(std::numeric_limits<unsigned int>::max()),
+              ScalarGetValue(std::numeric_limits<unsigned int>::max()));
 
     EXPECT_EQ("12345678", ScalarGetValue<signed long>(12345678L));
     EXPECT_EQ("-12345678", ScalarGetValue<signed long>(-12345678L));
     EXPECT_EQ("12345678", ScalarGetValue<unsigned long>(12345678UL));
+    EXPECT_EQ(std::to_string(std::numeric_limits<unsigned long>::max()),
+              ScalarGetValue(std::numeric_limits<unsigned long>::max()));
 
     EXPECT_EQ("1234567890123", ScalarGetValue<signed long long>(1234567890123LL));
     EXPECT_EQ("-1234567890123", ScalarGetValue<signed long long>(-1234567890123LL));
     EXPECT_EQ("1234567890123", ScalarGetValue<unsigned long long>(1234567890123ULL));
+    EXPECT_EQ(std::to_string(std::numeric_limits<unsigned long long>::max()),
+              ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
 }

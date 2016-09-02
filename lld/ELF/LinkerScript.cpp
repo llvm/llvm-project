@@ -1232,6 +1232,26 @@ uint64_t static getConstant(StringRef S) {
   return 0;
 }
 
+static bool readInteger(StringRef Tok, uint64_t &Result) {
+  if (Tok.startswith_lower("0x"))
+    return !Tok.substr(2).getAsInteger(16, Result);
+  if (Tok.endswith_lower("H"))
+    return !Tok.drop_back().getAsInteger(16, Result);
+
+  int Suffix = 1;
+  if (Tok.endswith_lower("K")) {
+    Suffix = 1024;
+    Tok = Tok.drop_back();
+  } else if (Tok.endswith_lower("M")) {
+    Suffix = 1024 * 1024;
+    Tok = Tok.drop_back();
+  }
+  if (Tok.getAsInteger(10, Result))
+    return false;
+  Result *= Suffix;
+  return true;
+}
+
 Expr ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
@@ -1301,14 +1321,15 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "SIZEOF_HEADERS")
     return [=](uint64_t Dot) { return getHeaderSize(); };
 
-  // Parse a symbol name or a number literal.
-  uint64_t V = 0;
-  if (Tok.getAsInteger(0, V)) {
-    if (Tok != "." && !isValidCIdentifier(Tok))
-      setError("malformed number: " + Tok);
-    return [=](uint64_t Dot) { return getSymbolValue(Tok, Dot); };
-  }
-  return [=](uint64_t Dot) { return V; };
+  // Tok is a literal number.
+  uint64_t V;
+  if (readInteger(Tok, V))
+    return [=](uint64_t Dot) { return V; };
+
+  // Tok is a symbol name.
+  if (Tok != "." && !isValidCIdentifier(Tok))
+    setError("malformed number: " + Tok);
+  return [=](uint64_t Dot) { return getSymbolValue(Tok, Dot); };
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
