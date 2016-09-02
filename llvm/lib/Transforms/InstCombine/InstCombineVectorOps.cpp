@@ -566,6 +566,79 @@ Instruction *InstCombiner::visitInsertValueInst(InsertValueInst &I) {
   return nullptr;
 }
 
+static bool isShuffleEquivalentToSelect(ShuffleVectorInst &Shuf) {
+  int MaskSize = Shuf.getMask()->getType()->getVectorNumElements();
+  int VecSize = Shuf.getOperand(0)->getType()->getVectorNumElements();
+
+  // A vector select does not change the size of the operands.
+  if (MaskSize != VecSize)
+    return false;
+
+  // Each mask element must be undefined or choose a vector element from one of
+  // the source operands without crossing vector lanes.
+  for (int i = 0; i != MaskSize; ++i) {
+    int Elt = Shuf.getMaskValue(i);
+    if (Elt != -1 && Elt != i && Elt != i + VecSize)
+      return false;
+  }
+
+  return true;
+}
+
+/// insertelt (shufflevector X, CVec, Mask), C, CIndex -->
+/// shufflevector X, CVec', Mask'
+static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
+  // Bail out if the shuffle has more than one use. In that case, we'd be
+  // replacing the insertelt with a shuffle, and that's not a clear win.
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
+  if (!Shuf || !Shuf->hasOneUse())
+    return nullptr;
+
+  // The shuffle must have a constant vector operand. The insertelt must have a
+  // constant scalar being inserted at a constant position in the vector.
+  Constant *ShufConstVec, *InsEltScalar;
+  uint64_t InsEltIndex;
+  if (!match(Shuf->getOperand(1), m_Constant(ShufConstVec)) ||
+      !match(InsElt.getOperand(1), m_Constant(InsEltScalar)) ||
+      !match(InsElt.getOperand(2), m_ConstantInt(InsEltIndex)))
+    return nullptr;
+
+  // Adding an element to an arbitrary shuffle could be expensive, but a shuffle
+  // that selects elements from vectors without crossing lanes is assumed cheap.
+  // If we're just adding a constant into that shuffle, it will still be cheap.
+  if (!isShuffleEquivalentToSelect(*Shuf))
+    return nullptr;
+
+  // From the above 'select' check, we know that the mask has the same number of
+  // elements as the vector input operands. We also know that each constant
+  // input element is used in its lane and can not be used more than once by the
+  // shuffle. Therefore, replace the constant in the shuffle's constant vector
+  // with the insertelt constant. Replace the constant in the shuffle's mask
+  // vector with the insertelt index plus the length of the vector (because the
+  // constant vector operand of a shuffle is always the 2nd operand).
+  Constant *Mask = Shuf->getMask();
+  unsigned NumElts = Mask->getType()->getVectorNumElements();
+  SmallVector<Constant*, 16> NewShufElts(NumElts);
+  SmallVector<Constant*, 16> NewMaskElts(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (i == InsEltIndex) {
+      NewShufElts[i] = InsEltScalar;
+      Type *Int32Ty = Type::getInt32Ty(Shuf->getContext());
+      NewMaskElts[i] = ConstantInt::get(Int32Ty, InsEltIndex + NumElts);
+    } else {
+      // Copy over the existing values.
+      NewShufElts[i] = ShufConstVec->getAggregateElement(i);
+      NewMaskElts[i] = Mask->getAggregateElement(i);
+    }
+  }
+
+  // Create new operands for a shuffle that includes the constant of the
+  // original insertelt. The old shuffle will be dead now.
+  Constant *NewShufVec = ConstantVector::get(NewShufElts);
+  Constant *NewMask = ConstantVector::get(NewMaskElts);
+  return new ShuffleVectorInst(Shuf->getOperand(0), NewShufVec, NewMask);
+}
+
 Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
@@ -624,6 +697,9 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
       return replaceInstUsesWith(IE, V);
     return &IE;
   }
+
+  if (Instruction *Shuf = foldConstantInsEltIntoShuffle(IE))
+    return Shuf;
 
   return nullptr;
 }

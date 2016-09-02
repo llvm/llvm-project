@@ -38,7 +38,7 @@ Language "English"
 Country  "USA"
 LangId   "1033"
 Version  "2"
-Revision "20160405"
+Revision "20160714"
 
 
 
@@ -410,6 +410,7 @@ AffIgnoringHwloc             "%1$s: Ignoring hwloc mechanism."
 AffHwlocErrorOccurred        "%1$s: Hwloc failed in %2$s. Relying on internal affinity mechanisms."
 EnvSerialWarn                "%1$s must be set prior to OpenMP runtime library initialization; ignored."
 EnvVarDeprecated             "%1$s variable deprecated, please use %2$s instead."
+RedMethodNotSupported        "KMP_FORCE_REDUCTION: %1$s method is not supported; using critical."
 
 
 # --------------------------------------------------------------------------------------------------

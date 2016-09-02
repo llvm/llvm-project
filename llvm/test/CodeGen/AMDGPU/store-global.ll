@@ -1,14 +1,11 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 
-;===------------------------------------------------------------------------===;
-; Global Address Space
-;===------------------------------------------------------------------------===;
 ; FUNC-LABEL: {{^}}store_i1:
 ; EG: MEM_RAT MSKOR
-; SI: buffer_store_byte
+; GCN: buffer_store_byte
 define void @store_i1(i1 addrspace(1)* %out) {
 entry:
   store i1 true, i1 addrspace(1)* %out
@@ -37,7 +34,7 @@ entry:
 ; EG: MOV T[[RW_GPR]].Y, 0.0
 ; EG: MOV * T[[RW_GPR]].Z, 0.0
 
-; SI: buffer_store_byte
+; GCN: buffer_store_byte
 
 define void @store_i8(i8 addrspace(1)* %out, i8 %in) {
 entry:
@@ -70,7 +67,7 @@ entry:
 ; EG: MOV T[[RW_GPR]].Y, 0.0
 ; EG: MOV * T[[RW_GPR]].Z, 0.0
 
-; SI: buffer_store_short
+; GCN: buffer_store_short
 define void @store_i16(i16 addrspace(1)* %out, i16 %in) {
 entry:
   store i16 %in, i16 addrspace(1)* %out
@@ -78,9 +75,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_i24:
-; SI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
-; SI-DAG: buffer_store_byte
-; SI-DAG: buffer_store_short
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; GCN-DAG: buffer_store_byte
+; GCN-DAG: buffer_store_short
 define void @store_i24(i24 addrspace(1)* %out, i24 %in) {
 entry:
   store i24 %in, i24 addrspace(1)* %out
@@ -88,9 +85,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_i25:
-; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 0x1ffffff{{$}}
-; SI: v_mov_b32_e32 [[VAND:v[0-9]+]], [[AND]]
-; SI: buffer_store_dword [[VAND]]
+; GCN: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 0x1ffffff{{$}}
+; GCN: v_mov_b32_e32 [[VAND:v[0-9]+]], [[AND]]
+; GCN: buffer_store_dword [[VAND]]
 define void @store_i25(i25 addrspace(1)* %out, i25 %in) {
 entry:
   store i25 %in, i25 addrspace(1)* %out
@@ -101,7 +98,7 @@ entry:
 ; EG: MEM_RAT MSKOR
 ; EG-NOT: MEM_RAT MSKOR
 
-; SI: buffer_store_short
+; GCN: buffer_store_short
 define void @store_v2i8(<2 x i8> addrspace(1)* %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i8>
@@ -115,7 +112,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_dword
+; GCN: buffer_store_dword
 define void @store_v2i16(<2 x i16> addrspace(1)* %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i16>
@@ -128,7 +125,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_dword
+; GCN: buffer_store_dword
 define void @store_v4i8(<4 x i8> addrspace(1)* %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i8>
@@ -142,7 +139,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD T{{[0-9]+\.X, T[0-9]+\.X}}
 
-; SI: buffer_store_dword
+; GCN: buffer_store_dword
 
 define void @store_f32(float addrspace(1)* %out, float %in) {
   store float %in, float addrspace(1)* %out
@@ -152,7 +149,7 @@ define void @store_f32(float addrspace(1)* %out, float %in) {
 ; FUNC-LABEL: {{^}}store_v4i16:
 ; MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW
 
-; SI: buffer_store_dwordx2
+; GCN: buffer_store_dwordx2
 define void @store_v4i16(<4 x i16> addrspace(1)* %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i16>
@@ -166,7 +163,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_dwordx2
+; GCN: buffer_store_dwordx2
 
 define void @store_v2f32(<2 x float> addrspace(1)* %out, float %a, float %b) {
 entry:
@@ -176,23 +173,49 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}store_v3i32:
+; GCN-DAG: buffer_store_dwordx2
+; GCN-DAG: buffer_store_dword
+
+; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}},
+; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XY}}, {{T[0-9]+\.[XYZW]}},
+define void @store_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a) nounwind {
+  store <3 x i32> %a, <3 x i32> addrspace(1)* %out, align 16
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}store_v4i32:
-; EG: MEM_RAT_CACHELESS STORE_RAW
+; EG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XYZW}}
 ; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 ; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @store_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %in) {
 entry:
   store <4 x i32> %in, <4 x i32> addrspace(1)* %out
   ret void
 }
 
+; v4f32 store
+; FUNC-LABEL: {{^}}store_v4f32:
+; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+\.XYZW, T[0-9]+\.X}}, 1
+; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
+
+; CM: MEM_RAT_CACHELESS STORE_DWORD
+; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
+
+; GCN: buffer_store_dwordx4
+define void @store_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in) {
+  %1 = load <4 x float>, <4 x float> addrspace(1) * %in
+  store <4 x float> %1, <4 x float> addrspace(1)* %out
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}store_i64_i8:
 ; EG: MEM_RAT MSKOR
-; SI: buffer_store_byte
+; GCN: buffer_store_byte
 define void @store_i64_i8(i8 addrspace(1)* %out, i64 %in) {
 entry:
   %0 = trunc i64 %in to i8
@@ -202,7 +225,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}store_i64_i16:
 ; EG: MEM_RAT MSKOR
-; SI: buffer_store_short
+; GCN: buffer_store_short
 define void @store_i64_i16(i16 addrspace(1)* %out, i64 %in) {
 entry:
   %0 = trunc i64 %in to i16
@@ -210,134 +233,8 @@ entry:
   ret void
 }
 
-;===------------------------------------------------------------------------===;
-; Local Address Space
-;===------------------------------------------------------------------------===;
-
-; FUNC-LABEL: {{^}}store_local_i1:
-; EG: LDS_BYTE_WRITE
-; SI: ds_write_b8
-define void @store_local_i1(i1 addrspace(3)* %out) {
-entry:
-  store i1 true, i1 addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_i8:
-; EG: LDS_BYTE_WRITE
-
-; SI: ds_write_b8
-define void @store_local_i8(i8 addrspace(3)* %out, i8 %in) {
-  store i8 %in, i8 addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_i16:
-; EG: LDS_SHORT_WRITE
-
-; SI: ds_write_b16
-define void @store_local_i16(i16 addrspace(3)* %out, i16 %in) {
-  store i16 %in, i16 addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_v2i16:
-; EG: LDS_WRITE
-
-; CM: LDS_WRITE
-
-; SI: ds_write_b32
-define void @store_local_v2i16(<2 x i16> addrspace(3)* %out, <2 x i16> %in) {
-entry:
-  store <2 x i16> %in, <2 x i16> addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_v4i8:
-; EG: LDS_WRITE
-
-; CM: LDS_WRITE
-
-; SI: ds_write_b32
-define void @store_local_v4i8(<4 x i8> addrspace(3)* %out, <4 x i8> %in) {
-entry:
-  store <4 x i8> %in, <4 x i8> addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_v2i32:
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-
-; SI: ds_write_b64
-define void @store_local_v2i32(<2 x i32> addrspace(3)* %out, <2 x i32> %in) {
-entry:
-  store <2 x i32> %in, <2 x i32> addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_v4i32:
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-
-; SI: ds_write2_b64
-define void @store_local_v4i32(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
-entry:
-  store <4 x i32> %in, <4 x i32> addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_v4i32_align4:
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-; EG: LDS_WRITE
-
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-; CM: LDS_WRITE
-
-; SI: ds_write2_b32
-; SI: ds_write2_b32
-define void @store_local_v4i32_align4(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
-entry:
-  store <4 x i32> %in, <4 x i32> addrspace(3)* %out, align 4
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_i64_i8:
-; EG: LDS_BYTE_WRITE
-; SI: ds_write_b8
-define void @store_local_i64_i8(i8 addrspace(3)* %out, i64 %in) {
-entry:
-  %0 = trunc i64 %in to i8
-  store i8 %0, i8 addrspace(3)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}store_local_i64_i16:
-; EG: LDS_SHORT_WRITE
-; SI: ds_write_b16
-define void @store_local_i64_i16(i16 addrspace(3)* %out, i64 %in) {
-entry:
-  %0 = trunc i64 %in to i16
-  store i16 %0, i16 addrspace(3)* %out
-  ret void
-}
-
 ; The stores in this function are combined by the optimizer to create a
-; 64-bit store with 32-bit alignment.  This is legal for SI and the legalizer
+; 64-bit store with 32-bit alignment.  This is legal for GCN and the legalizer
 ; should not try to split the 64-bit store back into 2 32-bit stores.
 ;
 ; Evergreen / Northern Islands don't support 64-bit stores yet, so there should
@@ -348,7 +245,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_dwordx2
+; GCN: buffer_store_dwordx2
 define void @vecload2(i32 addrspace(1)* nocapture %out, i32 addrspace(2)* nocapture %mem) #0 {
 entry:
   %0 = load i32, i32 addrspace(2)* %mem, align 4
@@ -367,7 +264,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD T{{[0-9]+}}, T{{[0-9]+}}.X
 
-; SI: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @i128-const-store(i32 addrspace(1)* %out) {
 entry:
   store i32 1, i32 addrspace(1)* %out, align 4
@@ -379,5 +276,6 @@ entry:
   store i32 2, i32 addrspace(1)* %arrayidx6, align 4
   ret void
 }
+
 
 attributes #0 = { nounwind }

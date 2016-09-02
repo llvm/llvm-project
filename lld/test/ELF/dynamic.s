@@ -34,8 +34,8 @@
 # CHECK-NEXT:     Section: .dynamic
 # CHECK-NEXT:   }
 
-# RUN: ld.lld %t.o -o %t.o
-# RUN: llvm-readobj -sections -symbols %t.o | FileCheck -check-prefix=NODYN %s
+# RUN: ld.lld %t.o -o %t2
+# RUN: llvm-readobj -sections -symbols %t2 | FileCheck -check-prefix=NODYN %s
 # NODYN:    Symbols [
 # NODYN-NOT: Name: _DYNAMIC
 # NODYN:    ]

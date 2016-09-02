@@ -620,7 +620,6 @@ private:
   void readExtern();
   void readGroup();
   void readInclude();
-  void readNothing() {}
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
@@ -656,26 +655,10 @@ private:
   void readGlobal(StringRef VerStr);
   void readLocal();
 
-  const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
   StringSaver Saver = {ScriptConfig->Alloc};
   bool IsUnderSysroot;
 };
-
-const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
-    {"ENTRY", &ScriptParser::readEntry},
-    {"EXTERN", &ScriptParser::readExtern},
-    {"GROUP", &ScriptParser::readGroup},
-    {"INCLUDE", &ScriptParser::readInclude},
-    {"INPUT", &ScriptParser::readGroup},
-    {"OUTPUT", &ScriptParser::readOutput},
-    {"OUTPUT_ARCH", &ScriptParser::readOutputArch},
-    {"OUTPUT_FORMAT", &ScriptParser::readOutputFormat},
-    {"PHDRS", &ScriptParser::readPhdrs},
-    {"SEARCH_DIR", &ScriptParser::readSearchDir},
-    {"SECTIONS", &ScriptParser::readSections},
-    {"VERSION", &ScriptParser::readVersion},
-    {";", &ScriptParser::readNothing}};
 
 void ScriptParser::readVersionScript() {
   readVersionScriptCommand();
@@ -710,8 +693,31 @@ void ScriptParser::readVersion() {
 void ScriptParser::readLinkerScript() {
   while (!atEOF()) {
     StringRef Tok = next();
-    if (Handler Fn = Cmd.lookup(Tok)) {
-      (this->*Fn)();
+    if (Tok == ";")
+      continue;
+
+    if (Tok == "ENTRY") {
+      readEntry();
+    } else if (Tok == "EXTERN") {
+      readExtern();
+    } else if (Tok == "GROUP" || Tok == "INPUT") {
+      readGroup();
+    } else if (Tok == "INCLUDE") {
+      readInclude();
+    } else if (Tok == "OUTPUT") {
+      readOutput();
+    } else if (Tok == "OUTPUT_ARCH") {
+      readOutputArch();
+    } else if (Tok == "OUTPUT_FORMAT") {
+      readOutputFormat();
+    } else if (Tok == "PHDRS") {
+      readPhdrs();
+    } else if (Tok == "SEARCH_DIR") {
+      readSearchDir();
+    } else if (Tok == "SECTIONS") {
+      readSections();
+    } else if (Tok == "VERSION") {
+      readVersion();
     } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok)) {
       if (Opt.HasContents)
         Opt.Commands.emplace_back(Cmd);
@@ -1232,6 +1238,30 @@ uint64_t static getConstant(StringRef S) {
   return 0;
 }
 
+// Parses Tok as an integer. Returns true if successful.
+// It recognizes hexadecimal (prefixed with "0x" or suffixed with "H")
+// and decimal numbers. Decimal numbers may have "K" (kilo) or
+// "M" (mega) prefixes.
+static bool readInteger(StringRef Tok, uint64_t &Result) {
+  if (Tok.startswith_lower("0x"))
+    return !Tok.substr(2).getAsInteger(16, Result);
+  if (Tok.endswith_lower("H"))
+    return !Tok.drop_back().getAsInteger(16, Result);
+
+  int Suffix = 1;
+  if (Tok.endswith_lower("K")) {
+    Suffix = 1024;
+    Tok = Tok.drop_back();
+  } else if (Tok.endswith_lower("M")) {
+    Suffix = 1024 * 1024;
+    Tok = Tok.drop_back();
+  }
+  if (Tok.getAsInteger(10, Result))
+    return false;
+  Result *= Suffix;
+  return true;
+}
+
 Expr ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
@@ -1301,14 +1331,15 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "SIZEOF_HEADERS")
     return [=](uint64_t Dot) { return getHeaderSize(); };
 
-  // Parse a symbol name or a number literal.
-  uint64_t V = 0;
-  if (Tok.getAsInteger(0, V)) {
-    if (Tok != "." && !isValidCIdentifier(Tok))
-      setError("malformed number: " + Tok);
-    return [=](uint64_t Dot) { return getSymbolValue(Tok, Dot); };
-  }
-  return [=](uint64_t Dot) { return V; };
+  // Tok is a literal number.
+  uint64_t V;
+  if (readInteger(Tok, V))
+    return [=](uint64_t Dot) { return V; };
+
+  // Tok is a symbol name.
+  if (Tok != "." && !isValidCIdentifier(Tok))
+    setError("malformed number: " + Tok);
+  return [=](uint64_t Dot) { return getSymbolValue(Tok, Dot); };
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
