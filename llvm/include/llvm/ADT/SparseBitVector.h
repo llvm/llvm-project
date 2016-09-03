@@ -15,14 +15,13 @@
 #ifndef LLVM_ADT_SPARSEBITVECTOR_H
 #define LLVM_ADT_SPARSEBITVECTOR_H
 
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
+#include <list>
 
 namespace llvm {
 
@@ -39,9 +38,7 @@ namespace llvm {
 /// etc) do not perform as well in practice as a linked list with this iterator
 /// kept up to date.  They are also significantly more memory intensive.
 
-template <unsigned ElementSize = 128>
-struct SparseBitVectorElement
-  : public ilist_node<SparseBitVectorElement<ElementSize> > {
+template <unsigned ElementSize = 128> struct SparseBitVectorElement {
 public:
   typedef unsigned long BitWord;
   typedef unsigned size_type;
@@ -244,7 +241,7 @@ public:
 
 template <unsigned ElementSize = 128>
 class SparseBitVector {
-  typedef ilist<SparseBitVectorElement<ElementSize> > ElementList;
+  typedef std::list<SparseBitVectorElement<ElementSize>> ElementList;
   typedef typename ElementList::iterator ElementListIter;
   typedef typename ElementList::const_iterator ElementListConstIter;
   enum {
@@ -492,26 +489,21 @@ public:
 
   void set(unsigned Idx) {
     unsigned ElementIndex = Idx / ElementSize;
-    SparseBitVectorElement<ElementSize> *Element;
     ElementListIter ElementIter;
     if (Elements.empty()) {
-      Element = new SparseBitVectorElement<ElementSize>(ElementIndex);
-      ElementIter = Elements.insert(Elements.end(), Element);
-
+      ElementIter = Elements.emplace(Elements.end(), ElementIndex);
     } else {
       ElementIter = FindLowerBound(ElementIndex);
 
       if (ElementIter == Elements.end() ||
           ElementIter->index() != ElementIndex) {
-        Element = new SparseBitVectorElement<ElementSize>(ElementIndex);
         // We may have hit the beginning of our SparseBitVector, in which case,
         // we may need to insert right after this element, which requires moving
         // the current iterator forward one, because insert does insert before.
         if (ElementIter != Elements.end() &&
             ElementIter->index() < ElementIndex)
-          ElementIter = Elements.insert(++ElementIter, Element);
-        else
-          ElementIter = Elements.insert(ElementIter, Element);
+          ++ElementIter;
+        ElementIter = Elements.emplace(ElementIter, ElementIndex);
       }
     }
     CurrElementIter = ElementIter;
@@ -559,8 +551,7 @@ public:
 
     while (Iter2 != RHS.Elements.end()) {
       if (Iter1 == Elements.end() || Iter1->index() > Iter2->index()) {
-        Elements.insert(Iter1,
-                        new SparseBitVectorElement<ElementSize>(*Iter2));
+        Elements.insert(Iter1, *Iter2);
         ++Iter2;
         changed = true;
       } else if (Iter1->index() == Iter2->index()) {
@@ -707,31 +698,19 @@ public:
         ++Iter2;
       } else if (Iter1->index() == Iter2->index()) {
         bool BecameZero = false;
-        SparseBitVectorElement<ElementSize> *NewElement =
-          new SparseBitVectorElement<ElementSize>(Iter1->index());
-        NewElement->intersectWithComplement(*Iter1, *Iter2, BecameZero);
-        if (!BecameZero) {
-          Elements.push_back(NewElement);
-        }
-        else
-          delete NewElement;
+        Elements.emplace_back(Iter1->index());
+        Elements.back().intersectWithComplement(*Iter1, *Iter2, BecameZero);
+        if (BecameZero)
+          Elements.pop_back();
         ++Iter1;
         ++Iter2;
       } else {
-        SparseBitVectorElement<ElementSize> *NewElement =
-          new SparseBitVectorElement<ElementSize>(*Iter1);
-        Elements.push_back(NewElement);
-        ++Iter1;
+        Elements.push_back(*Iter1++);
       }
     }
 
     // copy the remaining elements
-    while (Iter1 != RHS1.Elements.end()) {
-        SparseBitVectorElement<ElementSize> *NewElement =
-          new SparseBitVectorElement<ElementSize>(*Iter1);
-        Elements.push_back(NewElement);
-        ++Iter1;
-      }
+    std::copy(Iter1, RHS1.Elements.end(), std::back_inserter(Elements));
   }
 
   void intersectWithComplement(const SparseBitVector<ElementSize> *RHS1,
