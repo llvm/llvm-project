@@ -79,6 +79,12 @@ condition_variable::__do_timed_wait(unique_lock<mutex>& lk,
 void
 notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk)
 {
+    auto& tl_ptr = __thread_local_data();
+    // If this thread was not created using std::thread then it will not have
+    // previously allocated.
+    if (tl_ptr.get() == nullptr) {
+        tl_ptr.set_pointer(new __thread_struct);
+    }
     __thread_local_data()->notify_all_at_thread_exit(&cond, lk.release());
 }
 
