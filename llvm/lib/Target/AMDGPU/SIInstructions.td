@@ -1301,6 +1301,7 @@ def SI_RETURN : SPseudoInstSI <
   let isReturn = 1;
   let hasSideEffects = 1;
   let hasNoSchedulingInfo = 1;
+  let DisableWQM = 1;
 }
 
 let Defs = [M0, EXEC],
