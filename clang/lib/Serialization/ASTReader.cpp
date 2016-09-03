@@ -8710,8 +8710,7 @@ ASTReader::ASTReader(
   bool AllowConfigurationMismatch, bool ValidateSystemInputs,
   bool UseGlobalIndex,
   std::unique_ptr<llvm::Timer> ReadTimer)
-    : Listener(DisableValidation ? nullptr : new PCHValidator(PP, *this)),
-      DeserializationListener(nullptr),
+    : Listener(new PCHValidator(PP, *this)), DeserializationListener(nullptr),
       OwnsDeserializationListener(false), SourceMgr(PP.getSourceManager()),
       FileMgr(PP.getFileManager()), PCHContainerRdr(PCHContainerRdr),
       Diags(PP.getDiagnostics()), SemaObj(nullptr), PP(PP), Context(Context),
