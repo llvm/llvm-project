@@ -72,10 +72,8 @@ union ResourceInitHelper {
 // Only in C++11 is "init_priority" needed to ensure initialization order.
 #if _LIBCPP_STD_VER > 11
 _LIBCPP_SAFE_STATIC
-#else
- __attribute__((init_priority (101)))
 #endif
-ResourceInitHelper res_init;
+ResourceInitHelper res_init  __attribute__((init_priority (101)));
 
 } // end namespace
 

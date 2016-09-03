@@ -374,7 +374,8 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
     if (TargetRegisterInfo::isPhysicalRegister(PhysReg) &&
         !MBB->isLiveIn(PhysReg)) {
       MBB->getParent()->verify();
-      errs() << "The register " << PrintReg(PhysReg)
+      const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+      errs() << "The register " << PrintReg(PhysReg, TRI)
              << " needs to be live in to BB#" << MBB->getNumber()
              << ", but is missing from the live-in list.\n";
       llvm_unreachable("Invalid global physical register");
