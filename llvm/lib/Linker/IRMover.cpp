@@ -1342,6 +1342,12 @@ IRMover::IRMover(Module &M) : Composite(M) {
     else
       IdentifiedStructTypes.addNonOpaque(Ty);
   }
+  // Self-map metadatas in the destination module. This is needed when
+  // DebugTypeODRUniquing is enabled on the LLVMContext, since metadata in the
+  // destination module may be reached from the source module.
+  for (auto *MD : StructTypes.getVisitedMetadata()) {
+    SharedMDs[MD].reset(const_cast<MDNode *>(MD));
+  }
 }
 
 Error IRMover::move(
