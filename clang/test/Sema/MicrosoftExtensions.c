@@ -28,6 +28,8 @@ struct D {
 
 struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {}; /* expected-error {{'uuid' attribute is not supported in C}} */
 
+[uuid("00000000-0000-0000-C000-000000000046")] struct IUnknown2 {}; /* expected-error {{'uuid' attribute is not supported in C}} */
+
 typedef struct notnested {
   long bad1;
   long bad2;

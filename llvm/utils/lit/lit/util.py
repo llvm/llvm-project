@@ -76,7 +76,7 @@ def capture(args, env=None):
         raise subprocess.CalledProcessError(cmd=args,
                                             returncode=p.returncode,
                                             output="{}\n{}".format(out, err))
-    return convert_string(out)
+    return out
 
 def which(command, paths = None):
     """which(command, [paths]) - Look up the given command in the paths string

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
+// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -DBRACKET_ATTRIB -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-GUID
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-linux -fms-extensions | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-64
 // RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -DWRONG_GUID -triple=i386-pc-linux -fms-extensions | FileCheck %s --check-prefix=CHECK-DEFINE-WRONG-GUID
@@ -17,10 +18,17 @@ struct _GUID {
 #endif
 typedef struct _GUID GUID;
 
+#ifdef BRACKET_ATTRIB
+[uuid(12345678-1234-1234-1234-1234567890aB)] struct S1 { } s1;
+[uuid(87654321-4321-4321-4321-ba0987654321)] struct S2 { };
+[uuid({12345678-1234-1234-1234-1234567890ac})] struct Curly;
+[uuid({12345678-1234-1234-1234-1234567890ac})] struct Curly;
+#else
 struct __declspec(uuid("12345678-1234-1234-1234-1234567890aB")) S1 { } s1;
 struct __declspec(uuid("87654321-4321-4321-4321-ba0987654321")) S2 { };
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890ac}")) Curly;
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890ac}")) Curly;
+#endif
 
 #ifdef DEFINE_GUID
 // Make sure we can properly generate code when the UUID has curly braces on it.

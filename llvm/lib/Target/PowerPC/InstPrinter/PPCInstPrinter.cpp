@@ -258,6 +258,15 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo+1, O);
 }
 
+void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned Code = MI->getOperand(OpNo).getImm();
+  if (Code == 2)
+    O << "-";
+  else if (Code == 3)
+    O << "+";
+}
+
 void PPCInstPrinter::printU1ImmOperand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();

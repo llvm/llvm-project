@@ -105,8 +105,9 @@ public:
 /// When nodes are inserted into and removed from this list, the associated
 /// symbol table will be automatically updated.  Similarly, parent links get
 /// updated automatically.
-template <typename NodeTy>
-class SymbolTableList : public iplist<NodeTy, SymbolTableListTraits<NodeTy>> {};
+template <class T>
+class SymbolTableList
+    : public iplist_impl<simple_ilist<T>, SymbolTableListTraits<T>> {};
 
 } // End llvm namespace
 
