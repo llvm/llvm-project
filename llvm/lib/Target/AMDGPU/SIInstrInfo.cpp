@@ -3151,10 +3151,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.
-  if (DescSize == 8 || DescSize == 4)
+  if (DescSize != 0)
     return DescSize;
-
-  assert(DescSize == 0);
 
   // 4-byte instructions may have a 32-bit literal encoded after them. Check
   // operands that coud ever be literals.

@@ -859,6 +859,7 @@ between dialects and have subtle pitfalls it's important to fail fast instead
 of silently falling back on dynamic initialization.
 
 .. code-block:: c++
+
   // -std=c++14
   #define SAFE_STATIC __attribute__((require_constant_initialization)) static
   struct T {
