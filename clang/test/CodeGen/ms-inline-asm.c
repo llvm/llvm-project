@@ -47,7 +47,7 @@ void t6(void) {
 
 void t7() {
   __asm {
-    int 0x2c ; } asm comments are fun! }{
+    int 0x2cU ; } asm comments are fun! }{
   }
   __asm {
     {
@@ -56,7 +56,7 @@ void t7() {
   }
   __asm {}
 // CHECK: t7
-// CHECK: call void asm sideeffect inteldialect "int $$0x2c", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "int $$0x2cU", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void asm sideeffect inteldialect "", "~{dirflag},~{fpsr},~{flags}"()
 }
 
@@ -171,8 +171,8 @@ void t17() {
 // CHECK: t17
   __asm _emit 0x4A
 // CHECK: .byte 0x4A
-  __asm _emit 0x43
-// CHECK: .byte 0x43
+  __asm _emit 0x43L
+// CHECK: .byte 0x43L
   __asm _emit 0x4B
 // CHECK: .byte 0x4B
   __asm _EMIT 0x4B
@@ -219,11 +219,11 @@ void t20() {
 void t21() {
   __asm {
     __asm push ebx
-    __asm mov ebx, 0x07
+    __asm mov ebx, 07H
     __asm pop ebx
   }
 // CHECK: t21
-// CHECK: call void asm sideeffect inteldialect "push ebx\0A\09mov ebx, $$0x07\0A\09pop ebx", "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "push ebx\0A\09mov ebx, $$07H\0A\09pop ebx", "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
 
 extern void t22_helper(int x);
@@ -262,15 +262,15 @@ void t24() {
 void t25() {
 // CHECK: t25
   __asm mov eax, 0ffffffffh
-// CHECK: mov eax, $$4294967295
-  __asm mov eax, 0fh
+// CHECK: mov eax, $$0ffffffffh
+  __asm mov eax, 0fhU
 // CHECK: mov eax, $$15
   __asm mov eax, 0a2h
+// CHECK: mov eax, $$0a2h
+  __asm mov eax, 10100010b
+// CHECK: mov eax, $$10100010b
+  __asm mov eax, 10100010BU
 // CHECK: mov eax, $$162
-  __asm mov eax, 0xa2h
-// CHECK: mov eax, $$0xa2h
-  __asm mov eax, 0xa2
-// CHECK: mov eax, $$0xa2
 // CHECK: "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 

@@ -92,44 +92,35 @@ template <class ELFT> LinkerScript<ELFT>::~LinkerScript() {}
 
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
-  for (StringRef Pat : Opt.KeptSections)
-    if (globMatch(Pat, S->getSectionName()))
-      return true;
-  return false;
-}
-
-static bool match(ArrayRef<StringRef> Patterns, StringRef S) {
-  for (StringRef Pat : Patterns)
-    if (globMatch(Pat, S))
+  for (Regex *Re : Opt.KeptSections)
+    if (Re->match(S->getSectionName()))
       return true;
   return false;
 }
 
 static bool fileMatches(const InputSectionDescription *Desc,
                         StringRef Filename) {
-  if (!globMatch(Desc->FilePattern, Filename))
-    return false;
-  return Desc->ExcludedFiles.empty() || !match(Desc->ExcludedFiles, Filename);
+  return const_cast<Regex &>(Desc->FileRe).match(Filename) &&
+         !const_cast<Regex &>(Desc->ExcludedFileRe).match(Filename);
 }
 
 // Returns input sections filtered by given glob patterns.
 template <class ELFT>
 std::vector<InputSectionBase<ELFT> *>
 LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
-  ArrayRef<StringRef> Patterns = I->SectionPatterns;
+  const Regex &Re = I->SectionRe;
   std::vector<InputSectionBase<ELFT> *> Ret;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F :
        Symtab<ELFT>::X->getObjectFiles()) {
     if (fileMatches(I, sys::path::filename(F->getName())))
       for (InputSectionBase<ELFT> *S : F->getSections())
         if (!isDiscarded(S) && !S->OutSec &&
-            match(Patterns, S->getSectionName()))
+            const_cast<Regex &>(Re).match(S->getSectionName()))
           Ret.push_back(S);
   }
 
-  if (llvm::find(Patterns, "COMMON") != Patterns.end())
+  if (const_cast<Regex &>(Re).match("COMMON"))
     Ret.push_back(CommonInputSection<ELFT>::X);
-
   return Ret;
 }
 
@@ -634,7 +625,7 @@ private:
   std::vector<uint8_t> readOutputSectionFiller();
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
-  std::vector<StringRef> readInputFilePatterns();
+  Regex readFilePatterns();
   InputSectionDescription *readInputSectionRules(StringRef FilePattern);
   unsigned readPhdrType();
   SortKind readSortKind();
@@ -870,7 +861,8 @@ void ScriptParser::readPhdrs() {
 
 void ScriptParser::readSearchDir() {
   expect("(");
-  Config->SearchPaths.push_back(next());
+  if (!Config->Nostdlib)
+    Config->SearchPaths.push_back(next());
   expect(")");
 }
 
@@ -907,11 +899,11 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-std::vector<StringRef> ScriptParser::readInputFilePatterns() {
+Regex ScriptParser::readFilePatterns() {
   std::vector<StringRef> V;
   while (!Error && !skip(")"))
     V.push_back(next());
-  return V;
+  return compileGlobPatterns(V);
 }
 
 SortKind ScriptParser::readSortKind() {
@@ -924,15 +916,13 @@ SortKind ScriptParser::readSortKind() {
 
 InputSectionDescription *
 ScriptParser::readInputSectionRules(StringRef FilePattern) {
-  auto *Cmd = new InputSectionDescription;
-  Cmd->FilePattern = FilePattern;
+  auto *Cmd = new InputSectionDescription(FilePattern);
   expect("(");
 
   // Read EXCLUDE_FILE().
   if (skip("EXCLUDE_FILE")) {
     expect("(");
-    while (!Error && !skip(")"))
-      Cmd->ExcludedFiles.push_back(next());
+    Cmd->ExcludedFileRe = readFilePatterns();
   }
 
   // Read SORT().
@@ -942,16 +932,16 @@ ScriptParser::readInputSectionRules(StringRef FilePattern) {
     if (SortKind K2 = readSortKind()) {
       Cmd->SortInner = K2;
       expect("(");
-      Cmd->SectionPatterns = readInputFilePatterns();
+      Cmd->SectionRe = readFilePatterns();
       expect(")");
     } else {
-      Cmd->SectionPatterns = readInputFilePatterns();
+      Cmd->SectionRe = readFilePatterns();
     }
     expect(")");
     return Cmd;
   }
 
-  Cmd->SectionPatterns = readInputFilePatterns();
+  Cmd->SectionRe = readFilePatterns();
   return Cmd;
 }
 
@@ -964,9 +954,7 @@ ScriptParser::readInputSectionDescription(StringRef Tok) {
     StringRef FilePattern = next();
     InputSectionDescription *Cmd = readInputSectionRules(FilePattern);
     expect(")");
-    Opt.KeptSections.insert(Opt.KeptSections.end(),
-                            Cmd->SectionPatterns.begin(),
-                            Cmd->SectionPatterns.end());
+    Opt.KeptSections.push_back(&Cmd->SectionRe);
     return Cmd;
   }
   return readInputSectionRules(Tok);
@@ -1243,6 +1231,12 @@ uint64_t static getConstant(StringRef S) {
 // and decimal numbers. Decimal numbers may have "K" (kilo) or
 // "M" (mega) prefixes.
 static bool readInteger(StringRef Tok, uint64_t &Result) {
+  if (Tok.startswith("-")) {
+    if (!readInteger(Tok.substr(1), Result))
+      return false;
+    Result = -Result;
+    return true;
+  }
   if (Tok.startswith_lower("0x"))
     return !Tok.substr(2).getAsInteger(16, Result);
   if (Tok.endswith_lower("H"))
@@ -1267,6 +1261,15 @@ Expr ScriptParser::readPrimary() {
     return readParenExpr();
 
   StringRef Tok = next();
+
+  if (Tok == "~") {
+    Expr E = readPrimary();
+    return [=](uint64_t Dot) { return ~E(Dot); };
+  }
+  if (Tok == "-") {
+    Expr E = readPrimary();
+    return [=](uint64_t Dot) { return -E(Dot); };
+  }
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.

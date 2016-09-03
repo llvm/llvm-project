@@ -10,12 +10,14 @@
 #ifndef LLD_ELF_LINKER_SCRIPT_H
 #define LLD_ELF_LINKER_SCRIPT_H
 
+#include "Strings.h"
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace lld {
@@ -94,13 +96,15 @@ struct OutputSectionCommand : BaseCommand {
 enum SortKind { SortNone, SortByName, SortByAlignment };
 
 struct InputSectionDescription : BaseCommand {
-  InputSectionDescription() : BaseCommand(InputSectionKind) {}
+  InputSectionDescription(StringRef FilePattern)
+      : BaseCommand(InputSectionKind),
+        FileRe(compileGlobPatterns({FilePattern})) {}
   static bool classof(const BaseCommand *C);
-  StringRef FilePattern;
+  llvm::Regex FileRe;
   SortKind SortOuter = SortNone;
   SortKind SortInner = SortNone;
-  std::vector<StringRef> ExcludedFiles;
-  std::vector<StringRef> SectionPatterns;
+  llvm::Regex ExcludedFileRe;
+  llvm::Regex SectionRe;
 };
 
 struct AssertCommand : BaseCommand {
@@ -133,7 +137,7 @@ struct ScriptConfiguration {
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
-  std::vector<StringRef> KeptSections;
+  std::vector<llvm::Regex *> KeptSections;
 };
 
 extern ScriptConfiguration *ScriptConfig;

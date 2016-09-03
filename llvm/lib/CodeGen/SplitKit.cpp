@@ -1206,7 +1206,8 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
       // defining the register. This is because a <def,read-undef> operand
       // will create an "undef" point, and we cannot extend any subranges
       // until all of them have been accounted for.
-      ExtPoints.push_back(ExtPoint(MO, RegIdx, Next));
+      if (MO.isUse())
+        ExtPoints.push_back(ExtPoint(MO, RegIdx, Next));
     } else {
       LiveRangeCalc &LRC = getLRCalc(RegIdx);
       LRC.extend(LI, Next, 0, ArrayRef<SlotIndex>());
@@ -1221,10 +1222,6 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     unsigned Reg = EP.MO.getReg(), Sub = EP.MO.getSubReg();
     LaneBitmask LM = Sub != 0 ? TRI.getSubRegIndexLaneMask(Sub)
                               : MRI.getMaxLaneMaskForVReg(Reg);
-    // If this is a non-read-undef definition of a sub-register, extend
-    // subranges for everything except that sub-register.
-    if (Sub != 0 && EP.MO.isDef())
-      LM = MRI.getMaxLaneMaskForVReg(Reg) & ~LM;
     for (LiveInterval::SubRange &S : LI.subranges()) {
       if (!(S.LaneMask & LM))
         continue;

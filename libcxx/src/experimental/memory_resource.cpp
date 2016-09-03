@@ -70,7 +70,12 @@ union ResourceInitHelper {
 };
 // When compiled in C++14 this initialization should be a constant expression.
 // Only in C++11 is "init_priority" needed to ensure initialization order.
-ResourceInitHelper res_init __attribute__((init_priority (101)));
+#if _LIBCPP_STD_VER > 11
+_LIBCPP_SAFE_STATIC
+#else
+ __attribute__((init_priority (101)))
+#endif
+ResourceInitHelper res_init;
 
 } // end namespace
 
@@ -89,7 +94,7 @@ static memory_resource *
 __default_memory_resource(bool set = false, memory_resource * new_res = nullptr) _NOEXCEPT
 {
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
-    static atomic<memory_resource*> __res =
+    _LIBCPP_SAFE_STATIC static atomic<memory_resource*> __res =
         ATOMIC_VAR_INIT(&res_init.resources.new_delete_res);
     if (set) {
         new_res = new_res ? new_res : new_delete_resource();
@@ -102,7 +107,7 @@ __default_memory_resource(bool set = false, memory_resource * new_res = nullptr)
             &__res, memory_order::memory_order_acquire);
     }
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
-    static memory_resource * res = &res_init.resources.new_delete_res;
+    _LIBCPP_SAFE_STATIC static memory_resource * res = &res_init.resources.new_delete_res;
     static mutex res_lock;
     if (set) {
         new_res = new_res ? new_res : new_delete_resource();
@@ -115,7 +120,7 @@ __default_memory_resource(bool set = false, memory_resource * new_res = nullptr)
         return res;
     }
 #else
-    static memory_resource* res = &res_init.resources.new_delete_res;
+    _LIBCPP_SAFE_STATIC static memory_resource* res = &res_init.resources.new_delete_res;
     if (set) {
         new_res = new_res ? new_res : new_delete_resource();
         memory_resource * old_res = res;

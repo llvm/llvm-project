@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeViewYaml.h"
+#include "PdbYaml.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
@@ -25,6 +26,38 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(OneMethodRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(VFTableSlotKind)
 LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(CVType)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
+
+namespace {
+struct FieldListRecordSplitter : public TypeVisitorCallbacks {
+public:
+  explicit FieldListRecordSplitter(
+      std::vector<llvm::pdb::yaml::PdbTpiRecord> &Records)
+      : Records(Records) {}
+
+#define TYPE_RECORD(EnumName, EnumVal, Name)
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
+  Error visitKnownRecord(const CVType &CVT, Name##Record &Record) override {   \
+    visitKnownRecordImpl(CVT);                                                 \
+    return Error::success();                                                   \
+  }
+#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+
+private:
+  void visitKnownRecordImpl(const CVType &CVT) {
+    llvm::pdb::yaml::PdbTpiRecord R;
+    R.Record = CVT;
+    R.RecordData.assign(CVT.RawData.begin(), CVT.RawData.end());
+    R.Record.Data = R.RecordData;
+    R.Record.RawData = R.RecordData;
+    Records.push_back(std::move(R));
+  }
+
+  std::vector<llvm::pdb::yaml::PdbTpiRecord> &Records;
+};
+}
 
 namespace llvm {
 namespace yaml {
@@ -517,4 +550,16 @@ llvm::codeview::yaml::YamlTypeDumperCallbacks::visitTypeBegin(
   TypeLeafKind K = CVR.Type;
   YamlIO.mapRequired("Kind", K);
   return K;
+}
+
+void llvm::codeview::yaml::YamlTypeDumperCallbacks::visitKnownRecordImpl(
+    const char *Name, const CVType &Type, FieldListRecord &FieldList) {
+
+  std::vector<llvm::pdb::yaml::PdbTpiRecord> Records;
+  if (YamlIO.outputting()) {
+    FieldListRecordSplitter Splitter(Records);
+    CVTypeVisitor V(Splitter);
+    consumeError(V.visitFieldListMemberStream(FieldList.Data));
+  }
+  YamlIO.mapRequired(Name, Records);
 }

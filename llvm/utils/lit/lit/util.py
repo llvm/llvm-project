@@ -69,9 +69,13 @@ def capture(args, env=None):
     exits with a non-zero status."""
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          env=env)
-    out,_ = p.communicate()
+    out, err = p.communicate()
+    out = convert_string(out)
+    err = convert_string(err)
     if p.returncode != 0:
-        raise subprocess.CalledProcessError(cmd=args, returncode=p.returncode)
+        raise subprocess.CalledProcessError(cmd=args,
+                                            returncode=p.returncode,
+                                            output="{}\n{}".format(out, err))
     return convert_string(out)
 
 def which(command, paths = None):

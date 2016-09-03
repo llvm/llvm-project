@@ -233,38 +233,27 @@ void test_core(void) {
                                              // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 1}}
 
   vsc = vec_load_bndry(cptrsc, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vsc = vec_load_bndry(cptrsc, 200);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vsc = vec_load_bndry(cptrsc, 32);    // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vsc = vec_load_bndry(cptrsc, 8192);  // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vuc = vec_load_bndry(cptruc, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vss = vec_load_bndry(cptrss, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vus = vec_load_bndry(cptrus, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vsi = vec_load_bndry(cptrsi, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vui = vec_load_bndry(cptrui, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vsl = vec_load_bndry(cptrsl, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
   vul = vec_load_bndry(cptrul, idx);   // expected-error {{no matching function}}
-                                       // expected-note@vecintrin.h:* 8 {{candidate function not viable}}
-                                       // expected-note@vecintrin.h:* 1 {{must be a constant power of 2 from 64 to 4096}}
+                                       // expected-note@vecintrin.h:* 9 {{must be a constant power of 2 from 64 to 4096}}
 
   vuc = vec_genmask(idx);  // expected-error {{no matching function}}
                            // expected-note@vecintrin.h:* {{must be a constant integer}}

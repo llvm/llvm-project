@@ -5,6 +5,9 @@
 
 ; FUNC-LABEL: {{^}}store_local_i1:
 ; EG: LDS_BYTE_WRITE
+
+; CM: LDS_BYTE_WRITE
+
 ; GCN: ds_write_b8
 define void @store_local_i1(i1 addrspace(3)* %out) {
 entry:
@@ -15,6 +18,8 @@ entry:
 ; FUNC-LABEL: {{^}}store_local_i8:
 ; EG: LDS_BYTE_WRITE
 
+; CM: LDS_BYTE_WRITE
+
 ; GCN: ds_write_b8
 define void @store_local_i8(i8 addrspace(3)* %out, i8 %in) {
   store i8 %in, i8 addrspace(3)* %out
@@ -23,6 +28,8 @@ define void @store_local_i8(i8 addrspace(3)* %out, i8 %in) {
 
 ; FUNC-LABEL: {{^}}store_local_i16:
 ; EG: LDS_SHORT_WRITE
+
+; CM: LDS_SHORT_WRITE
 
 ; GCN: ds_write_b16
 define void @store_local_i16(i16 addrspace(3)* %out, i16 %in) {
@@ -54,12 +61,54 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}store_local_v4i8_unaligned:
+; EG: LDS_BYTE_WRITE
+; EG: LDS_BYTE_WRITE
+; EG: LDS_BYTE_WRITE
+; EG: LDS_BYTE_WRITE
+; EG-NOT: LDS_WRITE
+
+; CM: LDS_BYTE_WRITE
+; CM: LDS_BYTE_WRITE
+; CM: LDS_BYTE_WRITE
+; CM: LDS_BYTE_WRITE
+; CM-NOT: LDS_WRITE
+
+; GCN: ds_write_b8
+; GCN: ds_write_b8
+; GCN: ds_write_b8
+; GCN: ds_write_b8
+define void @store_local_v4i8_unaligned(<4 x i8> addrspace(3)* %out, <4 x i8> %in) {
+entry:
+  store <4 x i8> %in, <4 x i8> addrspace(3)* %out, align 1
+  ret void
+}
+
+; FUNC-LABEL: {{^}}store_local_v4i8_halfaligned:
+; EG: LDS_SHORT_WRITE
+; EG: LDS_SHORT_WRITE
+; EG-NOT: LDS_WRITE
+
+; CM: LDS_SHORT_WRITE
+; CM: LDS_SHORT_WRITE
+; CM-NOT: LDS_WRITE
+
+; GCN: ds_write_b16
+; GCN: ds_write_b16
+define void @store_local_v4i8_halfaligned(<4 x i8> addrspace(3)* %out, <4 x i8> %in) {
+entry:
+  store <4 x i8> %in, <4 x i8> addrspace(3)* %out, align 2
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}store_local_v2i32:
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
+; EG-NOT: LDS_WRITE
 
 ; CM: LDS_WRITE
 ; CM: LDS_WRITE
+; CM-NOT: LDS_WRITE
 
 ; GCN: ds_write_b64
 define void @store_local_v2i32(<2 x i32> addrspace(3)* %out, <2 x i32> %in) {

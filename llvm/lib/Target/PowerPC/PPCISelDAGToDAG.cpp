@@ -4381,9 +4381,30 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       MaxDisplacement = std::min((int) GV->getAlignment() - 1, MaxDisplacement);
     }
 
+    bool UpdateHBase = false;
+    SDValue HBase = Base.getOperand(0);
+
     int Offset = N->getConstantOperandVal(FirstOp);
-    if (Offset < 0 || Offset > MaxDisplacement)
-      continue;
+    if (Offset < 0 || Offset > MaxDisplacement) {
+      // If we have a addi(toc@l)/addis(toc@ha) pair, and the addis has only
+      // one use, then we can do this for any offset, we just need to also
+      // update the offset (i.e. the symbol addend) on the addis also.
+      if (Base.getMachineOpcode() != PPC::ADDItocL)
+        continue;
+
+      if (!HBase.isMachineOpcode() ||
+          HBase.getMachineOpcode() != PPC::ADDIStocHA)
+        continue;
+
+      if (!Base.hasOneUse() || !HBase.hasOneUse())
+        continue;
+
+      SDValue HImmOpnd = HBase.getOperand(1);
+      if (HImmOpnd != ImmOpnd)
+        continue;
+
+      UpdateHBase = true;
+    }
 
     // We found an opportunity.  Reverse the operands from the add
     // immediate and substitute them into the load or store.  If
@@ -4425,6 +4446,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     else // Load
       (void)CurDAG->UpdateNodeOperands(N, ImmOpnd, Base.getOperand(0),
                                        N->getOperand(2));
+
+    if (UpdateHBase)
+      (void)CurDAG->UpdateNodeOperands(HBase.getNode(), HBase.getOperand(0),
+                                       ImmOpnd);
 
     // The add-immediate may now be dead, in which case remove it.
     if (Base.getNode()->use_empty())

@@ -7,9 +7,9 @@
 #define M2 int
 
 void t1(void) { M }
-void t2(void) { __asm int 0x2c }
-void t3(void) { __asm M2 0x2c }
-void t4(void) { __asm mov eax, fs:[0x10] }
+void t2(void) { __asm int 2ch }
+void t3(void) { __asm M2 2ch }
+void t4(void) { __asm mov eax, fs:[10h] }
 void t5() {
   __asm {
     int 0x2c ; } asm comments are fun! }{
@@ -26,7 +26,7 @@ int t6() {
 void t7() {
   __asm {
     push ebx
-    mov ebx, 0x07
+    mov ebx, 07h
     pop ebx
   }
 }
