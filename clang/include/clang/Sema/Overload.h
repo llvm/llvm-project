@@ -84,6 +84,8 @@ namespace clang {
     ICK_Writeback_Conversion,  ///< Objective-C ARC writeback conversion
     ICK_Zero_Event_Conversion, ///< Zero constant to event (OpenCL1.2 6.12.10)
     ICK_C_Only_Conversion,     ///< Conversions allowed in C, but not C++
+    ICK_Incompatible_Pointer_Conversion, ///< C-only conversion between pointers
+                                         ///  with incompatible types
     ICK_Num_Conversion_Kinds,  ///< The number of conversion kinds
   };
 
@@ -97,8 +99,10 @@ namespace clang {
     ICR_Conversion,              ///< Conversion
     ICR_Complex_Real_Conversion, ///< Complex <-> Real conversion
     ICR_Writeback_Conversion,    ///< ObjC ARC writeback conversion
-    ICR_C_Conversion             ///< Conversion only allowed in the C standard.
+    ICR_C_Conversion,            ///< Conversion only allowed in the C standard.
                                  ///  (e.g. void* to char*)
+    ICR_C_Conversion_Extension   ///< Conversion not allowed by the C standard,
+                                 ///  but that we accept as an extension anyway.
   };
 
   ImplicitConversionRank GetConversionRank(ImplicitConversionKind Kind);

@@ -50,8 +50,8 @@ char f_i8() {
 
 bool f_i1() {
   __asm {
-    mov eax, 1
-    mov edx, 1
+    mov eax, 1L
+    mov edx, 1U
   }
 }
 // CHECK-LABEL: define zeroext i1 @f_i1()
@@ -80,12 +80,12 @@ struct EightChars {
 };
 EightChars f_s8() {
   __asm {
-    mov eax, 0x01010101
-    mov edx, 0x01010101
+    mov eax, 01010101h
+    mov edx, 01010101b
   }
 }
 // CHECK-LABEL: define i64 @f_s8()
-// CHECK: %[[r:[^ ]*]] = call i64 asm sideeffect inteldialect "mov eax, $$0x01010101\0A\09mov edx, $$0x01010101", "=A,~{eax},{{.*}}"
+// CHECK: %[[r:[^ ]*]] = call i64 asm sideeffect inteldialect "mov eax, $$01010101h\0A\09mov edx, $$01010101b", "=A,~{eax},{{.*}}"
 // CHECK: store i64 %[[r]], i64* %{{.*}}
 // CHECK: %[[r_i64:[^ ]*]] = load i64, i64* %{{.*}}
 // CHECK: ret i64 %[[r_i64]]

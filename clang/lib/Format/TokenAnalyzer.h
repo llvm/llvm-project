@@ -87,7 +87,7 @@ protected:
   virtual tooling::Replacements
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-          FormatTokenLexer &Tokens, tooling::Replacements &Result) = 0;
+          FormatTokenLexer &Tokens) = 0;
 
   void consumeUnwrappedLine(const UnwrappedLine &TheLine) override;
 
