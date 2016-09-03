@@ -145,14 +145,21 @@ template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
 
 //===----------------------------------------------------------------------===//
 //
-/// The subset of list functionality that can safely be used on nodes of
+/// A wrapper around an intrusive list with callbacks and non-intrusive
+/// ownership.
+///
+/// This wraps a purely intrusive list (like simple_ilist) with a configurable
+/// traits class.  The traits can implement callbacks and customize the
+/// ownership semantics.
+///
+/// This is a subset of ilist functionality that can safely be used on nodes of
 /// polymorphic types, i.e. a heterogeneous list with a common base class that
 /// holds the next/prev pointers.  The only state of the list itself is an
 /// ilist_sentinel, which holds pointers to the first and last nodes in the
 /// list.
-template <class T, class Traits = ilist_traits<T>>
-class iplist : public Traits, simple_ilist<T> {
-  typedef simple_ilist<T> base_list_type;
+template <class IntrusiveListT, class TraitsT>
+class iplist_impl : public TraitsT, IntrusiveListT {
+  typedef IntrusiveListT base_list_type;
 
 public:
   typedef typename base_list_type::pointer pointer;
@@ -172,19 +179,20 @@ private:
   // TODO: Drop this assertion and the transitive type traits anytime after
   // v4.0 is branched (i.e,. keep them for one release to help out-of-tree code
   // update).
-  static_assert(!ilist_detail::HasObsoleteCustomization<Traits, value_type>::value,
-                "ilist customization points have changed!");
+  static_assert(
+      !ilist_detail::HasObsoleteCustomization<TraitsT, value_type>::value,
+      "ilist customization points have changed!");
 
   static bool op_less(const_reference L, const_reference R) { return L < R; }
   static bool op_equal(const_reference L, const_reference R) { return L == R; }
 
   // Copying intrusively linked nodes doesn't make sense.
-  iplist(const iplist &) = delete;
-  void operator=(const iplist &) = delete;
+  iplist_impl(const iplist_impl &) = delete;
+  void operator=(const iplist_impl &) = delete;
 
 public:
-  iplist() = default;
-  ~iplist() { clear(); }
+  iplist_impl() = default;
+  ~iplist_impl() { clear(); }
 
   // Miscellaneous inspection routines.
   size_type max_size() const { return size_type(-1); }
@@ -197,7 +205,7 @@ public:
   using base_list_type::front;
   using base_list_type::back;
 
-  void swap(iplist &RHS) {
+  void swap(iplist_impl &RHS) {
     assert(0 && "Swap does not use list traits callback correctly yet!");
     base_list_type::swap(RHS);
   }
@@ -253,7 +261,7 @@ private:
   // transfer - The heart of the splice function.  Move linked list nodes from
   // [first, last) into position.
   //
-  void transfer(iterator position, iplist &L2, iterator first, iterator last) {
+  void transfer(iterator position, iplist_impl &L2, iterator first, iterator last) {
     if (position == last)
       return;
 
@@ -297,33 +305,33 @@ public:
   }
 
   // Splice members - defined in terms of transfer...
-  void splice(iterator where, iplist &L2) {
+  void splice(iterator where, iplist_impl &L2) {
     if (!L2.empty())
       transfer(where, L2, L2.begin(), L2.end());
   }
-  void splice(iterator where, iplist &L2, iterator first) {
+  void splice(iterator where, iplist_impl &L2, iterator first) {
     iterator last = first; ++last;
     if (where == first || where == last) return; // No change
     transfer(where, L2, first, last);
   }
-  void splice(iterator where, iplist &L2, iterator first, iterator last) {
+  void splice(iterator where, iplist_impl &L2, iterator first, iterator last) {
     if (first != last) transfer(where, L2, first, last);
   }
-  void splice(iterator where, iplist &L2, reference N) {
+  void splice(iterator where, iplist_impl &L2, reference N) {
     splice(where, L2, iterator(N));
   }
-  void splice(iterator where, iplist &L2, pointer N) {
+  void splice(iterator where, iplist_impl &L2, pointer N) {
     splice(where, L2, iterator(N));
   }
 
   template <class Compare>
-  void merge(iplist &Right, Compare comp) {
+  void merge(iplist_impl &Right, Compare comp) {
     if (this == &Right)
       return;
     this->transferNodesFromList(Right, Right.begin(), Right.end());
     base_list_type::merge(Right, comp);
   }
-  void merge(iplist &Right) { return merge(Right, op_less); }
+  void merge(iplist_impl &Right) { return merge(Right, op_less); }
 
   using base_list_type::sort;
 
@@ -352,6 +360,13 @@ public:
   }
 };
 
+/// An intrusive list with ownership and callbacks specified/controlled by
+/// ilist_traits, only with API safe for polymorphic types.
+template <class T>
+class iplist : public iplist_impl<simple_ilist<T>, ilist_traits<T>> {};
+
+/// An intrusive list with ownership and callbacks specified/controlled by
+/// ilist_traits, with API that is unsafe for polymorphic types.
 template <class T> class ilist : public iplist<T> {
   typedef iplist<T> base_list_type;
 
