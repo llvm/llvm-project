@@ -21,18 +21,16 @@ namespace llvm {
 
 /// MachineBasicBlock iterator that automatically skips over MIs that are
 /// inside bundles (i.e. walk top level MIs only).
-template <typename Ty>
-class MachineInstrBundleIterator
-    : public std::iterator<std::bidirectional_iterator_tag, Ty, ptrdiff_t> {
-  typedef std::iterator<std::bidirectional_iterator_tag, Ty, ptrdiff_t> super;
+template <typename Ty> class MachineInstrBundleIterator {
   typedef ilist_iterator<Ty> instr_iterator;
   instr_iterator MII;
 
 public:
-  typedef typename super::value_type value_type;
-  typedef typename super::difference_type difference_type;
-  typedef typename super::pointer pointer;
-  typedef typename super::reference reference;
+  typedef typename instr_iterator::value_type value_type;
+  typedef typename instr_iterator::difference_type difference_type;
+  typedef typename instr_iterator::pointer pointer;
+  typedef typename instr_iterator::reference reference;
+  typedef std::bidirectional_iterator_tag iterator_category;
 
   typedef typename instr_iterator::const_pointer const_pointer;
   typedef typename instr_iterator::const_reference const_reference;
