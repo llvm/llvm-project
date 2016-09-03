@@ -45,6 +45,7 @@ public:
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printPredicateOperand(const MCInst *MI, unsigned OpNo,
                              raw_ostream &O, const char *Modifier = nullptr);
+  void printATBitsAsHint(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printU1ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU2ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);

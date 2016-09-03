@@ -76,6 +76,12 @@ struct ilist_node_access {
   template <typename T> static const ilist_node<T> *getNodePtr(const T *N) {
     return N;
   }
+  template <typename T> static T *getValuePtr(ilist_node<T> *N) {
+    return static_cast<T *>(N);
+  }
+  template <typename T> static const T *getValuePtr(const ilist_node<T> *N) {
+    return static_cast<const T *>(N);
+  }
 
   template <typename T> static ilist_node<T> *getPrev(ilist_node<T> &N) {
     return N.getPrev();

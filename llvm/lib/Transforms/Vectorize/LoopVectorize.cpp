@@ -2600,8 +2600,18 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   setDebugLocFromInst(Builder, Ptr);
   SmallVector<Value *, 2> NewPtrs;
   unsigned Index = Group->getIndex(Instr);
+
+  // If the group is reverse, adjust the index to refer to the last vector lane
+  // instead of the first. We adjust the index from the first vector lane,
+  // rather than directly getting the pointer for lane VF - 1, because the
+  // pointer operand of the interleaved access is supposed to be uniform. For
+  // uniform instructions, we're only required to generate a value for the
+  // first vector lane in each unroll iteration.
+  if (Group->isReverse())
+    Index += (VF - 1) * Group->getFactor();
+
   for (unsigned Part = 0; Part < UF; Part++) {
-    Value *NewPtr = getScalarValue(Ptr, Part, Group->isReverse() ? VF - 1 : 0);
+    Value *NewPtr = getScalarValue(Ptr, Part, 0);
 
     // Notice current instruction could be any index. Need to adjust the address
     // to the member of index 0.

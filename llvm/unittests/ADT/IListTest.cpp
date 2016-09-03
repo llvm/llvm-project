@@ -230,14 +230,14 @@ struct PrivateNode : private ilist_node<PrivateNode> {
 TEST(IListTest, privateNode) {
   // Instantiate various APIs to be sure they're callable when ilist_node is
   // inherited privately.
-  ilist<NodeWithCallback> L;
-  NodeWithCallback N(7);
+  ilist<PrivateNode> L;
+  PrivateNode N(7);
   L.insert(L.begin(), &N);
   ++L.begin();
   (void)*L.begin();
   (void)(L.begin() == L.end());
 
-  ilist<NodeWithCallback> L2;
+  ilist<PrivateNode> L2;
   L2.splice(L2.end(), L);
   L2.remove(&N);
 }

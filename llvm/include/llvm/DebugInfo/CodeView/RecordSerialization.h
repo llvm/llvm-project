@@ -26,6 +26,10 @@ using llvm::support::little32_t;
 using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 
+/// Limit on the size of all codeview symbol and type records, including the
+/// RecordPrefix. MSVC does not emit any records larger than this.
+enum : unsigned { MaxRecordLength = 0xFF00 };
+
 struct RecordPrefix {
   ulittle16_t RecordLen;  // Record length, starting from &Leaf.
   ulittle16_t RecordKind; // Record kind enum (SymRecordKind or TypeRecordKind)

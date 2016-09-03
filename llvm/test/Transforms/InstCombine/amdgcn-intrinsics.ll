@@ -362,3 +362,240 @@ define i32 @test_constant_fold_frexp_exp_f64_min_num() nounwind {
   ret i32 %val
 }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.class
+; --------------------------------------------------------------------
+
+declare i1 @llvm.amdgcn.class.f32(float, i32) nounwind readnone
+declare i1 @llvm.amdgcn.class.f64(double, i32) nounwind readnone
+
+; CHECK-LABEL: @test_class_undef_mask_f32(
+; CHECK: ret i1 false
+define i1 @test_class_undef_mask_f32(float %x) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 undef)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_over_max_mask_f32(
+; CHECK: %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 1)
+define i1 @test_class_over_max_mask_f32(float %x) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 1025)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_no_mask_f32(
+; CHECK: ret i1 false
+define i1 @test_class_no_mask_f32(float %x) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 0)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_full_mask_f32(
+; CHECK: ret i1 true
+define i1 @test_class_full_mask_f32(float %x) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 1023)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_undef_no_mask_f32(
+; CHECK: ret i1 false
+define i1 @test_class_undef_no_mask_f32() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float undef, i32 0)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_undef_full_mask_f32(
+; CHECK: ret i1 true
+define i1 @test_class_undef_full_mask_f32() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float undef, i32 1023)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_undef_val_f32(
+; CHECK: ret i1 undef
+define i1 @test_class_undef_val_f32() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float undef, i32 4)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_undef_undef_f32(
+; CHECK: ret i1 undef
+define i1 @test_class_undef_undef_f32() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float undef, i32 undef)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_var_mask_f32(
+; CHECK: %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 %mask)
+define i1 @test_class_var_mask_f32(float %x, i32 %mask) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 %mask)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_class_isnan_f32(
+; CHECK: %val = fcmp uno float %x, 0.000000e+00
+define i1 @test_class_isnan_f32(float %x) nounwind {
+  %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 3)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_snan_test_snan_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_snan_test_snan_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000001, i32 1)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_qnan_test_qnan_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_qnan_test_qnan_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 2)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_qnan_test_snan_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_qnan_test_snan_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 1)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_ninf_test_ninf_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_ninf_test_ninf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0xFFF0000000000000, i32 4)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_pinf_test_ninf_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_pinf_test_ninf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000000, i32 4)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_qnan_test_ninf_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_qnan_test_ninf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 4)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_snan_test_ninf_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_snan_test_ninf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000001, i32 4)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_nnormal_test_nnormal_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_nnormal_test_nnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double -1.0, i32 8)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_pnormal_test_nnormal_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_pnormal_test_nnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 1.0, i32 8)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_nsubnormal_test_nsubnormal_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_nsubnormal_test_nsubnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x800fffffffffffff, i32 16)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_psubnormal_test_nsubnormal_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_psubnormal_test_nsubnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x000fffffffffffff, i32 16)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_nzero_test_nzero_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_nzero_test_nzero_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double -0.0, i32 32)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_pzero_test_nzero_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_pzero_test_nzero_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0.0, i32 32)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_pzero_test_pzero_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_pzero_test_pzero_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0.0, i32 64)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_nzero_test_pzero_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_nzero_test_pzero_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double -0.0, i32 64)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_psubnormal_test_psubnormal_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_psubnormal_test_psubnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x000fffffffffffff, i32 128)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_nsubnormal_test_psubnormal_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_nsubnormal_test_psubnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x800fffffffffffff, i32 128)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_pnormal_test_pnormal_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_pnormal_test_pnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 1.0, i32 256)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_nnormal_test_pnormal_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_nnormal_test_pnormal_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double -1.0, i32 256)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_pinf_test_pinf_f64(
+; CHECK: ret i1 true
+define i1 @test_constant_class_pinf_test_pinf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000000, i32 512)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_ninf_test_pinf_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_ninf_test_pinf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0xFFF0000000000000, i32 512)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_qnan_test_pinf_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_qnan_test_pinf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 512)
+  ret i1 %val
+}
+
+; CHECK-LABEL: @test_constant_class_snan_test_pinf_f64(
+; CHECK: ret i1 false
+define i1 @test_constant_class_snan_test_pinf_f64() nounwind {
+  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000001, i32 512)
+  ret i1 %val
+}

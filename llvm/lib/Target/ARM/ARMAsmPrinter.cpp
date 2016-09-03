@@ -451,16 +451,8 @@ void ARMAsmPrinter::EmitStartOfAsmFile(Module &M) {
   OutStreamer->EmitAssemblerFlag(MCAF_SyntaxUnified);
 
   // Emit ARM Build Attributes
-  if (TT.isOSBinFormatELF()) {
-    if (!M.empty()) {
-      // FIXME: this is a hack, but it is not more broken than
-      // resetTargetOptions already was. The purpose of reading the target
-      // options here is to read function attributes denormal and trapping-math
-      // that we want to map onto build attributes.
-      TM.resetTargetOptions(*M.begin());
-    }
+  if (TT.isOSBinFormatELF())
     emitAttributes();
-  }
 
   // Use the triple's architecture and subarchitecture to determine
   // if we're thumb for the purposes of the top level code16 assembler
@@ -622,6 +614,17 @@ static ARMBuildAttrs::CPUArch getArchForCPU(StringRef CPU,
     return ARMBuildAttrs::v4;
 }
 
+// Returns true if all functions have the same function attribute value
+static bool haveAllFunctionsAttribute(const Module &M, StringRef Attr,
+                                      StringRef Value) {
+  for (auto &F : M)
+    if (F.getFnAttribute(Attr).getValueAsString() != Value)
+      return false;
+
+  return true;
+}
+
+
 void ARMAsmPrinter::emitAttributes() {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -759,12 +762,16 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP Denormals.
-  if (TM.Options.FPDenormalType == FPDenormal::PreserveSign)
-      ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
-                        ARMBuildAttrs::PreserveFPSign);
-  else if (TM.Options.FPDenormalType == FPDenormal::PositiveZero)
-      ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
-                        ARMBuildAttrs::PositiveZero);
+  if (haveAllFunctionsAttribute(*MMI->getModule(), "denormal-fp-math",
+                                "preserve-sign") ||
+      TM.Options.FPDenormalType == FPDenormal::PreserveSign)
+    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
+                      ARMBuildAttrs::PreserveFPSign);
+  else if (haveAllFunctionsAttribute(*MMI->getModule(), "denormal-fp-math",
+                                     "positive-zero") ||
+           TM.Options.FPDenormalType == FPDenormal::PositiveZero)
+    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
+                      ARMBuildAttrs::PositiveZero);
   else if (!TM.Options.UnsafeFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
@@ -795,7 +802,8 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP exceptions and rounding
-  if (TM.Options.NoTrappingFPMath)
+  if (haveAllFunctionsAttribute(*MMI->getModule(), "no-trapping-math", "true") ||
+      TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
   else if (!TM.Options.UnsafeFPMath) {

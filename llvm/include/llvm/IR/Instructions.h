@@ -2160,19 +2160,22 @@ public:
     return cast<Constant>(getOperand(2));
   }
 
-  /// Return the index from the shuffle mask for the specified
-  /// output result.  This is either -1 if the element is undef or a number less
-  /// than 2*numelements.
-  static int getMaskValue(Constant *Mask, unsigned i);
+  /// Return the shuffle mask value for the specified element of the mask.
+  /// Return -1 if the element is undef.
+  static int getMaskValue(Constant *Mask, unsigned Elt);
 
-  int getMaskValue(unsigned i) const {
-    return getMaskValue(getMask(), i);
+  /// Return the shuffle mask value of this instruction for the given element
+  /// index. Return -1 if the element is undef.
+  int getMaskValue(unsigned Elt) const {
+    return getMaskValue(getMask(), Elt);
   }
 
-  /// Return the full mask for this instruction, where each
-  /// element is the element number and undef's are returned as -1.
+  /// Convert the input shuffle mask operand to a vector of integers. Undefined
+  /// elements of the mask are returned as -1.
   static void getShuffleMask(Constant *Mask, SmallVectorImpl<int> &Result);
 
+  /// Return the mask for this instruction as a vector of integers. Undefined
+  /// elements of the mask are returned as -1.
   void getShuffleMask(SmallVectorImpl<int> &Result) const {
     return getShuffleMask(getMask(), Result);
   }

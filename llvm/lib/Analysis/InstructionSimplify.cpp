@@ -3194,17 +3194,18 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   }
 
   // Fold trivial predicates.
+  Type *RetTy = GetCompareTy(LHS);
   if (Pred == FCmpInst::FCMP_FALSE)
-    return ConstantInt::get(GetCompareTy(LHS), 0);
+    return getFalse(RetTy);
   if (Pred == FCmpInst::FCMP_TRUE)
-    return ConstantInt::get(GetCompareTy(LHS), 1);
+    return getTrue(RetTy);
 
   // UNO/ORD predicates can be trivially folded if NaNs are ignored.
   if (FMF.noNaNs()) {
     if (Pred == FCmpInst::FCMP_UNO)
-      return ConstantInt::get(GetCompareTy(LHS), 0);
+      return getFalse(RetTy);
     if (Pred == FCmpInst::FCMP_ORD)
-      return ConstantInt::get(GetCompareTy(LHS), 1);
+      return getTrue(RetTy);
   }
 
   // fcmp pred x, undef  and  fcmp pred undef, x
@@ -3212,15 +3213,15 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (isa<UndefValue>(LHS) || isa<UndefValue>(RHS)) {
     // Choosing NaN for the undef will always make unordered comparison succeed
     // and ordered comparison fail.
-    return ConstantInt::get(GetCompareTy(LHS), CmpInst::isUnordered(Pred));
+    return ConstantInt::get(RetTy, CmpInst::isUnordered(Pred));
   }
 
   // fcmp x,x -> true/false.  Not all compares are foldable.
   if (LHS == RHS) {
     if (CmpInst::isTrueWhenEqual(Pred))
-      return ConstantInt::get(GetCompareTy(LHS), 1);
+      return getTrue(RetTy);
     if (CmpInst::isFalseWhenEqual(Pred))
-      return ConstantInt::get(GetCompareTy(LHS), 0);
+      return getFalse(RetTy);
   }
 
   // Handle fcmp with constant RHS
@@ -3235,11 +3236,11 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     // If the constant is a nan, see if we can fold the comparison based on it.
     if (CFP->getValueAPF().isNaN()) {
       if (FCmpInst::isOrdered(Pred)) // True "if ordered and foo"
-        return ConstantInt::getFalse(CFP->getContext());
+        return getFalse(RetTy);
       assert(FCmpInst::isUnordered(Pred) &&
              "Comparison must be either ordered or unordered!");
       // True if unordered.
-      return ConstantInt::get(GetCompareTy(LHS), 1);
+      return getTrue(RetTy);
     }
     // Check whether the constant is an infinity.
     if (CFP->getValueAPF().isInfinity()) {
@@ -3247,10 +3248,10 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         switch (Pred) {
         case FCmpInst::FCMP_OLT:
           // No value is ordered and less than negative infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 0);
+          return getFalse(RetTy);
         case FCmpInst::FCMP_UGE:
           // All values are unordered with or at least negative infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 1);
+          return getTrue(RetTy);
         default:
           break;
         }
@@ -3258,10 +3259,10 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         switch (Pred) {
         case FCmpInst::FCMP_OGT:
           // No value is ordered and greater than infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 0);
+          return getFalse(RetTy);
         case FCmpInst::FCMP_ULE:
           // All values are unordered with and at most infinity.
-          return ConstantInt::get(GetCompareTy(LHS), 1);
+          return getTrue(RetTy);
         default:
           break;
         }
@@ -3271,12 +3272,12 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       switch (Pred) {
       case FCmpInst::FCMP_UGE:
         if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return ConstantInt::get(GetCompareTy(LHS), 1);
+          return getTrue(RetTy);
         break;
       case FCmpInst::FCMP_OLT:
         // X < 0
         if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
-          return ConstantInt::get(GetCompareTy(LHS), 0);
+          return getFalse(RetTy);
         break;
       default:
         break;

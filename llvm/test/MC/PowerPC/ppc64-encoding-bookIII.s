@@ -1,6 +1,14 @@
 # RUN: llvm-mc -triple powerpc64-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-BE %s
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-LE %s
 
+# CHECK-BE: hrfid                            # encoding: [0x4c,0x00,0x02,0x24]
+# CHECK-LE: hrfid                            # encoding: [0x24,0x02,0x00,0x4c]
+            hrfid
+
+# CHECK-BE: nap                              # encoding: [0x4c,0x00,0x03,0x64]
+# CHECK-LE: nap                              # encoding: [0x64,0x03,0x00,0x4c]
+            nap   
+
 # CHECK-BE: mtmsr 4                          # encoding: [0x7c,0x80,0x01,0x24]
 # CHECK-LE: mtmsr 4                          # encoding: [0x24,0x01,0x80,0x7c]
             mtmsr %r4
@@ -133,6 +141,10 @@
 # CHECK-BE: slbmfee 4, 5                    # encoding: [0x7c,0x80,0x2f,0x26]
 # CHECK-LE: slbmfee 4, 5                    # encoding: [0x26,0x2f,0x80,0x7c]
             slbmfee %r4, %r5
+
+# CHECK-BE: slbmfev 2, 3                    # encoding: [0x7c,0x40,0x1e,0xa6]
+# CHECK-LE: slbmfev 2, 3                    # encoding: [0xa6,0x1e,0x40,0x7c]
+            slbmfev %r2, %r3
 
 # CHECK-BE: slbia                           # encoding: [0x7c,0x00,0x03,0xe4]
 # CHECK-LE: slbia                           # encoding: [0xe4,0x03,0x00,0x7c]

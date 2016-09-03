@@ -2226,7 +2226,7 @@ void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL) {
 
   // Set the insertion point after the last instruction in the bundle. Set the
   // debug location to Front.
-  Builder.SetInsertPoint(BB, next(BasicBlock::iterator(LastInst)));
+  Builder.SetInsertPoint(BB, ++LastInst->getIterator());
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
@@ -3685,8 +3685,7 @@ static bool hasValueBeenRAUWed(ArrayRef<Value *> VL, ArrayRef<WeakVH> VH,
   return !std::equal(VL.begin(), VL.end(), VH.begin());
 }
 
-bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain,
-                                            int CostThreshold, BoUpSLP &R,
+bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                             unsigned VecRegSize) {
   unsigned ChainLen = Chain.size();
   DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << ChainLen
@@ -3723,7 +3722,7 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain,
     int Cost = R.getTreeCost();
 
     DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF << "\n");
-    if (Cost < CostThreshold) {
+    if (Cost < -SLPCostThreshold) {
       DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
       R.vectorizeTree();
 
@@ -3737,7 +3736,7 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain,
 }
 
 bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
-                                        int costThreshold, BoUpSLP &R) {
+                                        BoUpSLP &R) {
   SetVector<StoreInst *> Heads, Tails;
   SmallDenseMap<StoreInst *, StoreInst *> ConsecutiveChain;
 
@@ -3792,8 +3791,9 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
 
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
-    for (unsigned Size = R.getMaxVecRegSize(); Size >= R.getMinVecRegSize(); Size /= 2) {
-      if (vectorizeStoreChain(Operands, costThreshold, R, Size)) {
+    for (unsigned Size = R.getMaxVecRegSize(); Size >= R.getMinVecRegSize();
+         Size /= 2) {
+      if (vectorizeStoreChain(Operands, R, Size)) {
         // Mark the vectorized stores so that we don't vectorize them again.
         VectorizedStores.insert(Operands.begin(), Operands.end());
         Changed = true;
@@ -4751,8 +4751,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     //       may cause a significant compile-time increase.
     for (unsigned CI = 0, CE = it->second.size(); CI < CE; CI+=16) {
       unsigned Len = std::min<unsigned>(CE - CI, 16);
-      Changed |= vectorizeStores(makeArrayRef(&it->second[CI], Len),
-                                 -SLPCostThreshold, R);
+      Changed |= vectorizeStores(makeArrayRef(&it->second[CI], Len), R);
     }
   }
   return Changed;
