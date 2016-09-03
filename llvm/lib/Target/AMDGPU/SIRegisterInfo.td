@@ -193,6 +193,7 @@ def TTMP_128Regs : RegisterTuples<[sub0, sub1, sub2, sub3],
 def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
                             (add (sequence "VGPR%u", 0, 255))> {
   let AllocationPriority = 1;
+  let Size = 32;
 }
 
 // VGPR 64-bit registers
@@ -306,6 +307,8 @@ def SReg_512 : RegisterClass<"AMDGPU", [v64i8, v16i32], 32, (add SGPR_512)> {
 
 // Register class for all vector registers (VGPRs + Interploation Registers)
 def VReg_64 : RegisterClass<"AMDGPU", [i64, f64, v2i32, v2f32], 32, (add VGPR_64)> {
+  let Size = 64;
+
   // Requires 2 v_mov_b32 to copy
   let CopyCost = 2;
   let AllocationPriority = 2;
@@ -320,17 +323,21 @@ def VReg_96 : RegisterClass<"AMDGPU", [untyped], 32, (add VGPR_96)> {
 }
 
 def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32, (add VGPR_128)> {
+  let Size = 128;
+
   // Requires 4 v_mov_b32 to copy
   let CopyCost = 4;
   let AllocationPriority = 4;
 }
 
 def VReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add VGPR_256)> {
+  let Size = 256;
   let CopyCost = 8;
   let AllocationPriority = 5;
 }
 
 def VReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32, (add VGPR_512)> {
+  let Size = 512;
   let CopyCost = 16;
   let AllocationPriority = 6;
 }
