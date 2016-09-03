@@ -73,8 +73,10 @@ public:
   /// Create from an ilist_node.
   explicit ilist_iterator(node_reference N) : NodePtr(&N) {}
 
-  explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
-  explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
+  explicit ilist_iterator(pointer NP)
+      : NodePtr(ilist_node_access::getNodePtr(NP)) {}
+  explicit ilist_iterator(reference NR)
+      : NodePtr(ilist_node_access::getNodePtr(&NR)) {}
   ilist_iterator() : NodePtr(nullptr) {}
 
   // This is templated so that we can allow constructing a const iterator from
@@ -110,7 +112,7 @@ public:
   // Accessors...
   reference operator*() const {
     assert(!NodePtr->isKnownSentinel());
-    return static_cast<NodeTy &>(*getNodePtr());
+    return *ilist_node_access::getValuePtr(NodePtr);
   }
   pointer operator->() const { return &operator*(); }
 
