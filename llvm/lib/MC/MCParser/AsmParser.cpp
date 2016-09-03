@@ -256,7 +256,10 @@ public:
 
   const AsmToken &Lex() override;
 
-  void setParsingInlineAsm(bool V) override { ParsingInlineAsm = V; }
+  void setParsingInlineAsm(bool V) override {
+    ParsingInlineAsm = V;
+    Lexer.setParsingMSInlineAsm(V);
+  }
   bool isParsingInlineAsm() override { return ParsingInlineAsm; }
 
   bool parseMSInlineAsm(void *AsmLoc, std::string &AsmString,

@@ -59,3 +59,18 @@ void foo() {
   // CHECK: @_Z13addrof_singlePc
   void *vp3 = &addrof_single;
 }
+
+
+void ovl_bar(char *) __attribute__((overloadable));
+void ovl_bar(int) __attribute__((overloadable));
+
+// CHECK-LABEL: define void @bar
+void bar() {
+  char charbuf[1];
+  unsigned char ucharbuf[1];
+
+  // CHECK: call void @_Z7ovl_barPc
+  ovl_bar(charbuf);
+  // CHECK: call void @_Z7ovl_barPc
+  ovl_bar(ucharbuf);
+}

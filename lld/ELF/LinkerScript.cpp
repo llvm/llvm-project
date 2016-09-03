@@ -1231,6 +1231,12 @@ uint64_t static getConstant(StringRef S) {
 // and decimal numbers. Decimal numbers may have "K" (kilo) or
 // "M" (mega) prefixes.
 static bool readInteger(StringRef Tok, uint64_t &Result) {
+  if (Tok.startswith("-")) {
+    if (!readInteger(Tok.substr(1), Result))
+      return false;
+    Result = -Result;
+    return true;
+  }
   if (Tok.startswith_lower("0x"))
     return !Tok.substr(2).getAsInteger(16, Result);
   if (Tok.endswith_lower("H"))
@@ -1255,6 +1261,15 @@ Expr ScriptParser::readPrimary() {
     return readParenExpr();
 
   StringRef Tok = next();
+
+  if (Tok == "~") {
+    Expr E = readPrimary();
+    return [=](uint64_t Dot) { return ~E(Dot); };
+  }
+  if (Tok == "-") {
+    Expr E = readPrimary();
+    return [=](uint64_t Dot) { return -E(Dot); };
+  }
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.

@@ -27,6 +27,7 @@ bool elf::hasWildcard(StringRef S) {
   return S.find_first_of("?*") != StringRef::npos;
 }
 
+// Converts a glob pattern to a regular expression.
 static std::string toRegex(StringRef S) {
   if (S.find_first_of("[]") != StringRef::npos)
     warning("unsupported wildcard: " + S);
@@ -47,7 +48,7 @@ static std::string toRegex(StringRef S) {
   return T;
 }
 
-// Takes multiple glob patterns and converts them into regex object.
+// Converts multiple glob patterns to a regular expression.
 Regex elf::compileGlobPatterns(ArrayRef<StringRef> V) {
   std::string T = "^(" + toRegex(V[0]);
   for (StringRef S : V.slice(1))

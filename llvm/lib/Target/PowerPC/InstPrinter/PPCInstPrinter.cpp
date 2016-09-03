@@ -135,6 +135,25 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     printAnnotation(O, Annot);
     return;
   }
+
+  if (MI->getOpcode() == PPC::DCBF) {
+    unsigned char L = MI->getOperand(0).getImm();
+    if (!L || L == 1 || L == 3) {
+      O << "\tdcbf";
+      if (L == 1 || L == 3)
+        O << "l";
+      if (L == 3)
+        O << "p";
+      O << " ";
+
+      printOperand(MI, 1, O);
+      O << ", ";
+      printOperand(MI, 2, O);
+
+      printAnnotation(O, Annot);
+      return;
+    }
+  }
   
   if (!printAliasInstr(MI, O))
     printInstruction(MI, O);

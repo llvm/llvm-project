@@ -1193,6 +1193,25 @@ class XLForm_1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = 0;
 }
 
+class XLForm_1_np<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                  InstrItinClass itin, list<dag> pattern>
+  : XLForm_1<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  let CRD = 0;
+  let CRA = 0;
+  let CRB = 0;
+}
+
+class XLForm_1_gen<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                   InstrItinClass itin, list<dag> pattern>
+  : XLForm_1<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  bits<5> RT;
+  bits<5> RB;
+
+  let CRD = RT;
+  let CRA = 0;
+  let CRB = RB;
+}
+
 class XLForm_1_ext<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, itin> {

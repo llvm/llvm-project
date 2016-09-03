@@ -874,6 +874,23 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     Inst = TmpInst;
     break;
   }
+  case PPC::DCBFx:
+  case PPC::DCBFL:
+  case PPC::DCBFLP: {
+    int L = 0;
+    if (Opcode == PPC::DCBFL)
+      L = 1;
+    else if (Opcode == PPC::DCBFLP)
+      L = 3;
+
+    MCInst TmpInst;
+    TmpInst.setOpcode(PPC::DCBF);
+    TmpInst.addOperand(MCOperand::createImm(L));
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    Inst = TmpInst;
+    break;
+  }
   case PPC::LAx: {
     MCInst TmpInst;
     TmpInst.setOpcode(PPC::LA);

@@ -150,22 +150,9 @@ template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
 /// holds the next/prev pointers.  The only state of the list itself is an
 /// ilist_sentinel, which holds pointers to the first and last nodes in the
 /// list.
-template <typename NodeTy, typename Traits = ilist_traits<NodeTy>>
-class iplist : public Traits, simple_ilist<NodeTy> {
-  // TODO: Drop this assertion and the transitive type traits anytime after
-  // v4.0 is branched (i.e,. keep them for one release to help out-of-tree code
-  // update).
-  static_assert(!ilist_detail::HasObsoleteCustomization<Traits, NodeTy>::value,
-                "ilist customization points have changed!");
-
-  typedef simple_ilist<NodeTy> base_list_type;
-
-  static bool op_less(NodeTy &L, NodeTy &R) { return L < R; }
-  static bool op_equal(NodeTy &L, NodeTy &R) { return L == R; }
-
-  // Copying intrusively linked nodes doesn't make sense.
-  iplist(const iplist &) = delete;
-  void operator=(const iplist &) = delete;
+template <class T, class Traits = ilist_traits<T>>
+class iplist : public Traits, simple_ilist<T> {
+  typedef simple_ilist<T> base_list_type;
 
 public:
   typedef typename base_list_type::pointer pointer;
@@ -181,6 +168,21 @@ public:
   typedef
       typename base_list_type::const_reverse_iterator const_reverse_iterator;
 
+private:
+  // TODO: Drop this assertion and the transitive type traits anytime after
+  // v4.0 is branched (i.e,. keep them for one release to help out-of-tree code
+  // update).
+  static_assert(!ilist_detail::HasObsoleteCustomization<Traits, value_type>::value,
+                "ilist customization points have changed!");
+
+  static bool op_less(const_reference L, const_reference R) { return L < R; }
+  static bool op_equal(const_reference L, const_reference R) { return L == R; }
+
+  // Copying intrusively linked nodes doesn't make sense.
+  iplist(const iplist &) = delete;
+  void operator=(const iplist &) = delete;
+
+public:
   iplist() = default;
   ~iplist() { clear(); }
 
@@ -200,36 +202,36 @@ public:
     base_list_type::swap(RHS);
   }
 
-  iterator insert(iterator where, NodeTy *New) {
+  iterator insert(iterator where, pointer New) {
     this->addNodeToList(New); // Notify traits that we added a node...
     return base_list_type::insert(where, *New);
   }
 
-  iterator insert(iterator where, const NodeTy &New) {
-    return this->insert(where, new NodeTy(New));
+  iterator insert(iterator where, const_reference New) {
+    return this->insert(where, new value_type(New));
   }
 
-  iterator insertAfter(iterator where, NodeTy *New) {
+  iterator insertAfter(iterator where, pointer New) {
     if (empty())
       return insert(begin(), New);
     else
       return insert(++where, New);
   }
 
-  NodeTy *remove(iterator &IT) {
-    NodeTy *Node = &*IT++;
+  pointer remove(iterator &IT) {
+    pointer Node = &*IT++;
     this->removeNodeFromList(Node); // Notify traits that we removed a node...
     base_list_type::remove(*Node);
     return Node;
   }
 
-  NodeTy *remove(const iterator &IT) {
+  pointer remove(const iterator &IT) {
     iterator MutIt = IT;
     return remove(MutIt);
   }
 
-  NodeTy *remove(NodeTy *IT) { return remove(iterator(IT)); }
-  NodeTy *remove(NodeTy &IT) { return remove(iterator(IT)); }
+  pointer remove(pointer IT) { return remove(iterator(IT)); }
+  pointer remove(reference IT) { return remove(iterator(IT)); }
 
   // erase - remove a node from the controlled sequence... and delete it.
   iterator erase(iterator where) {
@@ -237,8 +239,8 @@ public:
     return where;
   }
 
-  iterator erase(NodeTy *IT) { return erase(iterator(IT)); }
-  iterator erase(NodeTy &IT) { return erase(iterator(IT)); }
+  iterator erase(pointer IT) { return erase(iterator(IT)); }
+  iterator erase(reference IT) { return erase(iterator(IT)); }
 
   /// Remove all nodes from the list like clear(), but do not call
   /// removeNodeFromList() or deleteNode().
@@ -278,8 +280,8 @@ public:
   void clear() { erase(begin(), end()); }
 
   // Front and back inserters...
-  void push_front(NodeTy *val) { insert(begin(), val); }
-  void push_back(NodeTy *val) { insert(end(), val); }
+  void push_front(pointer val) { insert(begin(), val); }
+  void push_back(pointer val) { insert(end(), val); }
   void pop_front() {
     assert(!empty() && "pop_front() on empty list!");
     erase(begin());
@@ -307,10 +309,10 @@ public:
   void splice(iterator where, iplist &L2, iterator first, iterator last) {
     if (first != last) transfer(where, L2, first, last);
   }
-  void splice(iterator where, iplist &L2, NodeTy &N) {
+  void splice(iterator where, iplist &L2, reference N) {
     splice(where, L2, iterator(N));
   }
-  void splice(iterator where, iplist &L2, NodeTy *N) {
+  void splice(iterator where, iplist &L2, pointer N) {
     splice(where, L2, iterator(N));
   }
 
@@ -326,44 +328,47 @@ public:
   using base_list_type::sort;
 
   /// \brief Get the previous node, or \c nullptr for the list head.
-  NodeTy *getPrevNode(NodeTy &N) const {
+  pointer getPrevNode(reference N) const {
     auto I = N.getIterator();
     if (I == begin())
       return nullptr;
     return &*std::prev(I);
   }
   /// \brief Get the previous node, or \c nullptr for the list head.
-  const NodeTy *getPrevNode(const NodeTy &N) const {
-    return getPrevNode(const_cast<NodeTy &>(N));
+  const_pointer getPrevNode(const_reference N) const {
+    return getPrevNode(const_cast<reference >(N));
   }
 
   /// \brief Get the next node, or \c nullptr for the list tail.
-  NodeTy *getNextNode(NodeTy &N) const {
+  pointer getNextNode(reference N) const {
     auto Next = std::next(N.getIterator());
     if (Next == end())
       return nullptr;
     return &*Next;
   }
   /// \brief Get the next node, or \c nullptr for the list tail.
-  const NodeTy *getNextNode(const NodeTy &N) const {
-    return getNextNode(const_cast<NodeTy &>(N));
+  const_pointer getNextNode(const_reference N) const {
+    return getNextNode(const_cast<reference >(N));
   }
 };
 
+template <class T> class ilist : public iplist<T> {
+  typedef iplist<T> base_list_type;
 
-template<typename NodeTy>
-struct ilist : public iplist<NodeTy> {
-  typedef typename iplist<NodeTy>::size_type size_type;
-  typedef typename iplist<NodeTy>::iterator iterator;
+public:
+  typedef typename base_list_type::size_type size_type;
+  typedef typename base_list_type::iterator iterator;
+  typedef typename base_list_type::value_type value_type;
+  typedef typename base_list_type::const_reference const_reference;
 
   ilist() {}
-  ilist(const ilist &right) : iplist<NodeTy>() {
+  ilist(const ilist &right) : base_list_type() {
     insert(this->begin(), right.begin(), right.end());
   }
   explicit ilist(size_type count) {
-    insert(this->begin(), count, NodeTy());
+    insert(this->begin(), count, value_type());
   }
-  ilist(size_type count, const NodeTy &val) {
+  ilist(size_type count, const_reference val) {
     insert(this->begin(), count, val);
   }
   template<class InIt> ilist(InIt first, InIt last) {
@@ -371,26 +376,26 @@ struct ilist : public iplist<NodeTy> {
   }
 
   // bring hidden functions into scope
-  using iplist<NodeTy>::insert;
-  using iplist<NodeTy>::push_front;
-  using iplist<NodeTy>::push_back;
+  using base_list_type::insert;
+  using base_list_type::push_front;
+  using base_list_type::push_back;
 
   // Main implementation here - Insert for a node passed by value...
-  iterator insert(iterator where, const NodeTy &val) {
+  iterator insert(iterator where, const_reference val) {
     return insert(where, this->createNode(val));
   }
 
 
   // Front and back inserters...
-  void push_front(const NodeTy &val) { insert(this->begin(), val); }
-  void push_back(const NodeTy &val) { insert(this->end(), val); }
+  void push_front(const_reference val) { insert(this->begin(), val); }
+  void push_back(const_reference val) { insert(this->end(), val); }
 
-  void insert(iterator where, size_type count, const NodeTy &val) {
+  void insert(iterator where, size_type count, const_reference val) {
     for (; count != 0; --count) insert(where, val);
   }
 
   // Assign special forms...
-  void assign(size_type count, const NodeTy &val) {
+  void assign(size_type count, const_reference val) {
     iterator I = this->begin();
     for (; I != this->end() && count != 0; ++I, --count)
       *I = val;
@@ -411,7 +416,7 @@ struct ilist : public iplist<NodeTy> {
 
 
   // Resize members...
-  void resize(size_type newsize, NodeTy val) {
+  void resize(size_type newsize, value_type val) {
     iterator i = this->begin();
     size_type len = 0;
     for ( ; i != this->end() && len < newsize; ++i, ++len) /* empty*/ ;
@@ -421,7 +426,7 @@ struct ilist : public iplist<NodeTy> {
     else                                          // i == end()
       insert(this->end(), newsize - len, val);
   }
-  void resize(size_type newsize) { resize(newsize, NodeTy()); }
+  void resize(size_type newsize) { resize(newsize, value_type()); }
 };
 
 } // End llvm namespace

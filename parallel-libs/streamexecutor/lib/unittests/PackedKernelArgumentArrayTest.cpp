@@ -101,16 +101,16 @@ TEST_F(DeviceMemoryPackingTest, SingleConstTypedGlobalPointer) {
 
 TEST_F(DeviceMemoryPackingTest, SingleTypedShared) {
   auto Array = se::make_kernel_argument_pack(TypedShared);
-  ExpectEqual(nullptr, TypedShared.getElementCount() * sizeof(int),
-              Type::SHARED_DEVICE_MEMORY, Array, 0);
+  ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
+              Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(1u, Array.getSharedCount());
 }
 
 TEST_F(DeviceMemoryPackingTest, SingleTypedSharedPointer) {
   auto Array = se::make_kernel_argument_pack(&TypedShared);
-  ExpectEqual(nullptr, TypedShared.getElementCount() * sizeof(int),
-              Type::SHARED_DEVICE_MEMORY, Array, 0);
+  ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
+              Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(1u, Array.getSharedCount());
 }
@@ -118,8 +118,8 @@ TEST_F(DeviceMemoryPackingTest, SingleTypedSharedPointer) {
 TEST_F(DeviceMemoryPackingTest, SingleConstTypedSharedPointer) {
   const se::SharedDeviceMemory<int> *ArgumentPointer = &TypedShared;
   auto Array = se::make_kernel_argument_pack(ArgumentPointer);
-  ExpectEqual(nullptr, TypedShared.getElementCount() * sizeof(int),
-              Type::SHARED_DEVICE_MEMORY, Array, 0);
+  ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
+              Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(1u, Array.getSharedCount());
 }
@@ -137,12 +137,12 @@ TEST_F(DeviceMemoryPackingTest, PackSeveralArguments) {
               Type::GLOBAL_DEVICE_MEMORY, Array, 2);
   ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 3);
-  ExpectEqual(nullptr, TypedShared.getElementCount() * sizeof(int),
-              Type::SHARED_DEVICE_MEMORY, Array, 4);
-  ExpectEqual(nullptr, TypedShared.getElementCount() * sizeof(int),
-              Type::SHARED_DEVICE_MEMORY, Array, 5);
-  ExpectEqual(nullptr, TypedShared.getElementCount() * sizeof(int),
-              Type::SHARED_DEVICE_MEMORY, Array, 6);
+  ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
+              Array, 4);
+  ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
+              Array, 5);
+  ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
+              Array, 6);
   EXPECT_EQ(7u, Array.getArgumentCount());
   EXPECT_EQ(3u, Array.getSharedCount());
 }

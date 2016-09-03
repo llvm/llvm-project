@@ -62,7 +62,7 @@ template <typename NodeTy> class SymbolTableList;
 template <typename ValueSubClass>
 class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
   typedef SymbolTableList<ValueSubClass> ListTy;
-  typedef ilist_iterator<ValueSubClass, false> iterator;
+  typedef typename simple_ilist<ValueSubClass>::iterator iterator;
   typedef
       typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;
 

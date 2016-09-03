@@ -571,8 +571,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
           Sym->symbol()->ExportDynamic = true;
 }
 
-// This function process the dynamic list option by marking all the symbols
-// to be exported in the dynamic table.
+// This function processes --export-dynamic-symbol and --dynamic-list.
 template <class ELFT> void SymbolTable<ELFT>::scanDynamicList() {
   for (StringRef S : Config->DynamicList)
     if (SymbolBody *B = find(S))
@@ -632,12 +631,14 @@ findAllDemangled(const std::map<std::string, SymbolBody *> &D,
   return Res;
 }
 
-// This function processes the --version-script option by marking all global
-// symbols with the VersionScriptGlobal flag, which acts as a filter on the
-// dynamic symbol table.
+// This function processes version scripts by updating VersionId
+// member of symbols.
 template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
-  // If version script does not contain versions declarations,
-  // we just should mark global symbols.
+  // If there's only one anonymous version definition in a version
+  // script file, the script does not actullay define any symbol version,
+  // but just specifies symbols visibilities. We assume that the script was
+  // in the form of { global: foo; bar; local *; }. So, local is default.
+  // Here, we make specified symbols global.
   if (!Config->VersionScriptGlobals.empty()) {
     for (SymbolVersion &Sym : Config->VersionScriptGlobals)
       if (SymbolBody *B = find(Sym.Name))
@@ -648,20 +649,21 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   if (Config->VersionDefinitions.empty())
     return;
 
-  // If we have symbols version declarations, we should
-  // assign version references for each symbol.
-  // Current rules are:
-  // * If there is an exact match for the mangled name or we have extern C++
-  //   exact match, then we use it.
-  // * Otherwise, we look through the wildcard patterns. We look through the
-  //   version tags in reverse order. We use the first match we find (the last
-  //   matching version tag in the file).
-  // Handle exact matches and build a map of demangled externs for
-  // quick search during next step.
+  // Now we have version definitions, so we need to set version ids to symbols.
+  // Each version definition has a glob pattern, and all symbols that match
+  // with the pattern get that version.
+
+  // Users can use "extern C++ {}" directive to match against demangled
+  // C++ symbols. For example, you can write a pattern such as
+  // "llvm::*::foo(int, ?)". Obviously, there's no way to handle this
+  // other than trying to match a regexp against all demangled symbols.
+  // So, if "extern C++" feature is used, we demangle all known symbols.
   std::map<std::string, SymbolBody *> Demangled;
   if (hasExternCpp())
     Demangled = getDemangledSyms();
 
+  // First, we assign versions to exact matching symbols,
+  // i.e. version definitions not containing any glob meta-characters.
   for (VersionDefinition &V : Config->VersionDefinitions) {
     for (SymbolVersion Sym : V.Globals) {
       if (hasWildcard(Sym.Name))
@@ -672,18 +674,23 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
     }
   }
 
-  // Handle wildcards.
+  // Next, we assign versions to fuzzy matching symbols,
+  // i.e. version definitions containing glob meta-characters.
+  // Note that because the last match takes precedence over previous matches,
+  // we iterate over the definitions in the reverse order.
   for (size_t I = Config->VersionDefinitions.size() - 1; I != (size_t)-1; --I) {
     VersionDefinition &V = Config->VersionDefinitions[I];
     for (SymbolVersion &Sym : V.Globals) {
       if (!hasWildcard(Sym.Name))
         continue;
-      std::vector<SymbolBody *> All =
-          Sym.IsExternCpp
-              ? findAllDemangled(Demangled, compileGlobPatterns({Sym.Name}))
-              : findAll(compileGlobPatterns({Sym.Name}));
+      Regex Re = compileGlobPatterns({Sym.Name});
+      std::vector<SymbolBody *> Syms =
+          Sym.IsExternCpp ? findAllDemangled(Demangled, Re) : findAll(Re);
 
-      for (SymbolBody *B : All)
+      // Exact matching takes precendence over fuzzy matching,
+      // so we set a version to a symbol only if no version has been assigned
+      // to the symbol. This behavior is compatible with GNU.
+      for (SymbolBody *B : Syms)
         if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
           B->symbol()->VersionId = V.Id;
     }

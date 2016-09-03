@@ -79,13 +79,14 @@ static cl::opt<OptimizerChoice> Optimizer(
     cl::Hidden, cl::init(OPTIMIZER_ISL), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
-enum CodeGenChoice { CODEGEN_ISL, CODEGEN_NONE };
-static cl::opt<CodeGenChoice> CodeGenerator(
-    "polly-code-generator", cl::desc("Select the code generator"),
-    cl::values(clEnumValN(CODEGEN_ISL, "isl", "isl code generator"),
-               clEnumValN(CODEGEN_NONE, "none", "no code generation"),
+enum CodeGenChoice { CODEGEN_FULL, CODEGEN_AST, CODEGEN_NONE };
+static cl::opt<CodeGenChoice> CodeGeneration(
+    "polly-code-generation", cl::desc("How much code-generation to perform"),
+    cl::values(clEnumValN(CODEGEN_FULL, "full", "AST and IR generation"),
+               clEnumValN(CODEGEN_AST, "ast", "Only AST generation"),
+               clEnumValN(CODEGEN_NONE, "none", "No code generation"),
                clEnumValEnd),
-    cl::Hidden, cl::init(CODEGEN_ISL), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::Hidden, cl::init(CODEGEN_FULL), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 enum TargetChoice { TARGET_CPU, TARGET_GPU };
 static cl::opt<TargetChoice>
@@ -253,8 +254,11 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
     PM.add(polly::createPPCGCodeGenerationPass());
 #endif
   } else {
-    switch (CodeGenerator) {
-    case CODEGEN_ISL:
+    switch (CodeGeneration) {
+    case CODEGEN_AST:
+      PM.add(polly::createIslAstInfoPass());
+      break;
+    case CODEGEN_FULL:
       PM.add(polly::createCodeGenerationPass());
       break;
     case CODEGEN_NONE:
