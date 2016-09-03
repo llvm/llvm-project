@@ -2226,7 +2226,7 @@ void BoUpSLP::setInsertPointAfterBundle(ArrayRef<Value *> VL) {
 
   // Set the insertion point after the last instruction in the bundle. Set the
   // debug location to Front.
-  Builder.SetInsertPoint(BB, next(BasicBlock::iterator(LastInst)));
+  Builder.SetInsertPoint(BB, ++LastInst->getIterator());
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 

@@ -478,6 +478,15 @@ def u2imm   : Operand<i32> {
   let ParserMatchClass = PPCU2ImmAsmOperand;
 }
 
+def PPCATBitsAsHintAsmOperand : AsmOperandClass {
+  let Name = "ATBitsAsHint"; let PredicateMethod = "isATBitsAsHint";
+  let RenderMethod = "addImmOperands"; // Irrelevant, predicate always fails.
+}
+def atimm   : Operand<i32> {
+  let PrintMethod = "printATBitsAsHint";
+  let ParserMatchClass = PPCATBitsAsHintAsmOperand;
+}
+
 def PPCU3ImmAsmOperand : AsmOperandClass {
   let Name = "U3Imm"; let PredicateMethod = "isU3Imm";
   let RenderMethod = "addImmOperands";
@@ -4134,6 +4143,16 @@ let PPC970_Unit = 7 in {
     def gBCA : BForm_3<16, 1, 0, (outs),
                        (ins u5imm:$bo, crbitrc:$bi, abscondbrtarget:$dst),
                        "bca $bo, $bi, $dst">;
+    let isAsmParserOnly = 1 in {
+      def gBCat : BForm_3_at<16, 0, 0, (outs),
+                             (ins u5imm:$bo, atimm:$at, crbitrc:$bi,
+                                  condbrtarget:$dst),
+                                  "bc$at $bo, $bi, $dst">;
+      def gBCAat : BForm_3_at<16, 1, 0, (outs),
+                              (ins u5imm:$bo, atimm:$at, crbitrc:$bi,
+                                   abscondbrtarget:$dst),
+                                   "bca$at $bo, $bi, $dst">;
+    } // isAsmParserOnly = 1
   }
   let Defs = [LR, CTR], Uses = [CTR, RM] in {
     def gBCL : BForm_3<16, 0, 1, (outs),
@@ -4142,6 +4161,16 @@ let PPC970_Unit = 7 in {
     def gBCLA : BForm_3<16, 1, 1, (outs),
                         (ins u5imm:$bo, crbitrc:$bi, abscondbrtarget:$dst),
                         "bcla $bo, $bi, $dst">;
+    let isAsmParserOnly = 1 in {
+      def gBCLat : BForm_3_at<16, 0, 1, (outs),
+                         (ins u5imm:$bo, atimm:$at, crbitrc:$bi,
+                              condbrtarget:$dst),
+                              "bcl$at $bo, $bi, $dst">;
+      def gBCLAat : BForm_3_at<16, 1, 1, (outs),
+                          (ins u5imm:$bo, atimm:$at, crbitrc:$bi,
+                               abscondbrtarget:$dst),
+                               "bcla$at $bo, $bi, $dst">;
+    } // // isAsmParserOnly = 1
   }
   let Defs = [CTR], Uses = [CTR, LR, RM] in
     def gBCLR : XLForm_2<19, 16, 0, (outs),
@@ -4160,6 +4189,20 @@ let PPC970_Unit = 7 in {
                            (ins u5imm:$bo, crbitrc:$bi, i32imm:$bh),
                            "bcctrl $bo, $bi, $bh", IIC_BrB, []>;
 }
+
+multiclass BranchSimpleMnemonicAT<string pm, int at> {
+  def : InstAlias<"bc"#pm#" $bo, $bi, $dst", (gBCat u5imm:$bo, at, crbitrc:$bi,
+                                                    condbrtarget:$dst)>;
+  def : InstAlias<"bca"#pm#" $bo, $bi, $dst", (gBCAat u5imm:$bo, at, crbitrc:$bi,
+                                                      condbrtarget:$dst)>;
+  def : InstAlias<"bcl"#pm#" $bo, $bi, $dst", (gBCLat u5imm:$bo, at, crbitrc:$bi,
+                                                      condbrtarget:$dst)>;
+  def : InstAlias<"bcla"#pm#" $bo, $bi, $dst", (gBCLAat u5imm:$bo, at, crbitrc:$bi,
+                                                        condbrtarget:$dst)>;
+}
+defm : BranchSimpleMnemonicAT<"+", 3>;
+defm : BranchSimpleMnemonicAT<"-", 2>;
+
 def : InstAlias<"bclr $bo, $bi", (gBCLR u5imm:$bo, crbitrc:$bi, 0)>;
 def : InstAlias<"bclrl $bo, $bi", (gBCLRL u5imm:$bo, crbitrc:$bi, 0)>;
 def : InstAlias<"bcctr $bo, $bi", (gBCCTR u5imm:$bo, crbitrc:$bi, 0)>;

@@ -47,17 +47,13 @@ template <> struct IteratorHelper<true> {
 } // end namespace ilist_detail
 
 /// Iterator for intrusive lists  based on ilist_node.
-template <typename NodeTy, bool IsReverse>
-class ilist_iterator
-    : public std::iterator<std::bidirectional_iterator_tag, NodeTy, ptrdiff_t> {
+template <typename NodeTy, bool IsReverse> class ilist_iterator {
 public:
-  typedef std::iterator<std::bidirectional_iterator_tag, NodeTy, ptrdiff_t>
-      super;
-
-  typedef typename super::value_type value_type;
-  typedef typename super::difference_type difference_type;
-  typedef typename super::pointer pointer;
-  typedef typename super::reference reference;
+  typedef NodeTy value_type;
+  typedef value_type *pointer;
+  typedef value_type &reference;
+  typedef ptrdiff_t difference_type;
+  typedef std::bidirectional_iterator_tag iterator_category;
 
   typedef typename std::add_const<value_type>::type *const_pointer;
   typedef typename std::add_const<value_type>::type &const_reference;
@@ -73,8 +69,10 @@ public:
   /// Create from an ilist_node.
   explicit ilist_iterator(node_reference N) : NodePtr(&N) {}
 
-  explicit ilist_iterator(pointer NP) : NodePtr(NP) {}
-  explicit ilist_iterator(reference NR) : NodePtr(&NR) {}
+  explicit ilist_iterator(pointer NP)
+      : NodePtr(ilist_node_access::getNodePtr(NP)) {}
+  explicit ilist_iterator(reference NR)
+      : NodePtr(ilist_node_access::getNodePtr(&NR)) {}
   ilist_iterator() : NodePtr(nullptr) {}
 
   // This is templated so that we can allow constructing a const iterator from
@@ -110,7 +108,7 @@ public:
   // Accessors...
   reference operator*() const {
     assert(!NodePtr->isKnownSentinel());
-    return static_cast<NodeTy &>(*getNodePtr());
+    return *ilist_node_access::getValuePtr(NodePtr);
   }
   pointer operator->() const { return &operator*(); }
 

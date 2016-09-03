@@ -27,7 +27,7 @@ public:
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
                          Name##Record &Record) override {                      \
-    visitKnownRecordImpl(#Name, CVR, Record);                                  \
+    YamlIO.mapRequired(#Name, Record);                                         \
     return Error::success();                                                   \
   }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
@@ -37,14 +37,6 @@ public:
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
 private:
-  template <typename T>
-  void visitKnownRecordImpl(const char *Name, const CVType &Type, T &Record) {
-    YamlIO.mapRequired(Name, Record);
-  }
-
-  void visitKnownRecordImpl(const char *Name, const CVType &Type,
-                            FieldListRecord &FieldList);
-
   llvm::yaml::IO &YamlIO;
 };
 }

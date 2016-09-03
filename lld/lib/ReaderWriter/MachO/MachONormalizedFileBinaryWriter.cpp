@@ -66,14 +66,9 @@ struct TrieEdge : public llvm::ilist_node<TrieEdge> {
 
 
 namespace llvm {
-  using lld::mach_o::normalized::TrieEdge;
-  template <>
-  struct ilist_traits<TrieEdge> : public ilist_default_traits<TrieEdge> {
-    void deleteNode(TrieEdge *N) {}
-
-  private:
-    void createNode(const TrieEdge &);
-  };
+using lld::mach_o::normalized::TrieEdge;
+template <>
+struct ilist_alloc_traits<TrieEdge> : ilist_noalloc_traits<TrieEdge> {};
 } // namespace llvm
 
 
