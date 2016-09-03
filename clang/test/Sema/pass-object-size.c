@@ -52,5 +52,5 @@ void FunctionPtrs() {
 
   int P;
   (&NotOverloaded)(&P); //expected-error{{cannot take address of function 'NotOverloaded' because parameter 1 has pass_object_size attribute}}
-  (&IsOverloaded)(&P); //expected-error{{no matching function}} expected-note@35{{candidate address cannot be taken because parameter 1 has pass_object_size attribute}} expected-note@36{{candidate function not viable: no known conversion from 'int *' to 'char *' for 1st argument}}
+  (&IsOverloaded)(&P); //expected-warning{{incompatible pointer types passing 'int *' to parameter of type 'char *'}} expected-note@36{{passing argument to parameter 'p' here}}
 }

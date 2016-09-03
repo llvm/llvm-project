@@ -1474,11 +1474,16 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
   }
 }
 
+// Usually, `__attribute__((attrib)) class Foo {} var` means that attribute
+// applies to var, not the type Foo.
 // As an exception to the rule, __declspec(align(...)) before the
 // class-key affects the type instead of the variable.
-void Parser::handleDeclspecAlignBeforeClassKey(ParsedAttributesWithRange &Attrs,
-                                               DeclSpec &DS,
-                                               Sema::TagUseKind TUK) {
+// Also, Microsoft-style [attributes] seem to affect the type instead of the
+// variable.
+// This function moves attributes that should apply to the type off DS to Attrs.
+void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
+                                            DeclSpec &DS,
+                                            Sema::TagUseKind TUK) {
   if (TUK == Sema::TUK_Reference)
     return;
 
@@ -1488,10 +1493,9 @@ void Parser::handleDeclspecAlignBeforeClassKey(ParsedAttributesWithRange &Attrs,
   while (AL) {
     AttributeList *Next = AL->getNext();
 
-    // We only consider attributes using the appropriate '__declspec' spelling.
-    // This behavior doesn't extend to any other spellings.
-    if (AL->getKind() == AttributeList::AT_Aligned &&
-        AL->isDeclspecAttribute()) {
+    if ((AL->getKind() == AttributeList::AT_Aligned &&
+         AL->isDeclspecAttribute()) ||
+        AL->isMicrosoftAttribute()) {
       // Stitch the attribute into the tag's attribute list.
       AL->setNext(nullptr);
       Attrs.add(AL);
@@ -4122,7 +4126,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     return;
   }
 
-  handleDeclspecAlignBeforeClassKey(attrs, DS, TUK);
+  stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
 
   Sema::SkipBodyInfo SkipBody;
   if (!Name && TUK == Sema::TUK_Definition && Tok.is(tok::l_brace) &&

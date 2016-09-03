@@ -107,7 +107,7 @@ tooling::Replacements TokenAnalyzer::process() {
     }
 
     tooling::Replacements RunResult =
-        analyze(Annotator, AnnotatedLines, Tokens, Result);
+        analyze(Annotator, AnnotatedLines, Tokens);
 
     DEBUG({
       llvm::dbgs() << "Replacements for run " << Run << ":\n";

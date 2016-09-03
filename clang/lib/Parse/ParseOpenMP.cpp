@@ -610,7 +610,6 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       if (AS == AS_none) {
         assert(TagType == DeclSpec::TST_unspecified);
         MaybeParseCXX11Attributes(Attrs);
-        MaybeParseMicrosoftAttributes(Attrs);
         ParsingDeclSpec PDS(*this);
         Ptr = ParseExternalDeclaration(Attrs, &PDS);
       } else {
@@ -672,7 +671,6 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
            Tok.isNot(tok::eof) && Tok.isNot(tok::r_brace)) {
       ParsedAttributesWithRange attrs(AttrFactory);
       MaybeParseCXX11Attributes(attrs);
-      MaybeParseMicrosoftAttributes(attrs);
       ParseExternalDeclaration(attrs);
       if (Tok.isAnnotation() && Tok.is(tok::annot_pragma_openmp)) {
         TentativeParsingAction TPA(*this);
