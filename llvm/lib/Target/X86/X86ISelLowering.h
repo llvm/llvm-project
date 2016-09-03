@@ -764,6 +764,26 @@ namespace llvm {
       return VT == MVT::f32 || VT == MVT::f64 || VT.isVector();
     }
 
+    bool isMultiStoresCheaperThanBitsMerge(SDValue Lo,
+                                           SDValue Hi) const override {
+      // If the pair to store is a mixture of float and int values, we will
+      // save two bitwise instructions and one float-to-int instruction and
+      // increase one store instruction. There is potentially a more
+      // significant benefit because it avoids the float->int domain switch
+      // for input value. So It is more likely a win.
+      if (Lo.getOpcode() == ISD::BITCAST || Hi.getOpcode() == ISD::BITCAST) {
+        SDValue Opd = (Lo.getOpcode() == ISD::BITCAST) ? Lo.getOperand(0)
+                                                       : Hi.getOperand(0);
+        if (Opd.getValueType().isFloatingPoint())
+          return true;
+      }
+      // If the pair only contains int values, we will save two bitwise
+      // instructions and increase one store instruction (costing one more
+      // store buffer). Since the benefit is more blurred so we leave
+      // such pair out until we get testcase to prove it is a win.
+      return false;
+    }
+
     bool hasAndNotCompare(SDValue Y) const override;
 
     /// Return the value type to use for ISD::SETCC.

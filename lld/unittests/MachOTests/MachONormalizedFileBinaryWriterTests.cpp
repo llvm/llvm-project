@@ -219,6 +219,7 @@ TEST(BinaryWriterTest, obj_relocs_x86_64) {
   EXPECT_EQ(signed4.isExtern, true);
   EXPECT_EQ(signed4.symbol, 1U);
 
+  bufferOwner.reset(nullptr);
   std::error_code ec = llvm::sys::fs::remove(Twine(tmpFl));
   EXPECT_FALSE(ec);
 }
@@ -329,6 +330,7 @@ TEST(BinaryWriterTest, obj_relocs_x86) {
   EXPECT_EQ(tlv.symbol, 1U);
 
   //llvm::errs() << "temp = " << tmpFl << "\n";
+  bufferOwner.reset(nullptr);
   std::error_code ec = llvm::sys::fs::remove(Twine(tmpFl));
   EXPECT_FALSE(ec);
 }
@@ -458,6 +460,7 @@ TEST(BinaryWriterTest, obj_relocs_armv7) {
   EXPECT_EQ(absPointer.symbol, 2U);
 
   //llvm::errs() << "temp = " << tmpFl << "\n";
+  bufferOwner.reset(nullptr);
   std::error_code ec = llvm::sys::fs::remove(Twine(tmpFl));
   EXPECT_FALSE(ec);
 }
@@ -687,6 +690,7 @@ TEST(BinaryWriterTest, obj_relocs_ppc) {
   EXPECT_EQ(absloa2.length, 2);
   EXPECT_EQ(absloa2.symbol, 0U);
 
+  bufferOwner.reset(nullptr);
   std::error_code ec = llvm::sys::fs::remove(Twine(tmpFl));
   EXPECT_FALSE(ec);
 }

@@ -20,7 +20,7 @@ ListRecordBuilder::ListRecordBuilder(TypeRecordKind Kind)
 void ListRecordBuilder::writeMemberType(const ListContinuationRecord &R) {
   TypeRecordBuilder &Builder = getBuilder();
 
-  assert(getLastContinuationSize() < 65535 - 8 && "continuation won't fit");
+  assert(getLastContinuationSize() < MaxRecordLength - 8 && "continuation won't fit");
 
   Builder.writeTypeRecordKind(TypeRecordKind::ListContinuation);
   Builder.writeUInt16(0);
@@ -48,11 +48,12 @@ void ListRecordBuilder::finishSubRecord() {
   // space for a continuation record (8 bytes). If the segment does not fit,
   // back up and insert a continuation record, sliding the current subrecord
   // down.
-  if (getLastContinuationSize() > 65535 - 8) {
+  if (getLastContinuationSize() > MaxRecordLength - 8) {
     assert(SubrecordStart != 0 && "can't slide from the start!");
     SmallString<128> SubrecordCopy(
         Builder.str().slice(SubrecordStart, Builder.size()));
-    assert(SubrecordCopy.size() < 65530 && "subrecord is too large to slide!");
+    assert(SubrecordCopy.size() < MaxRecordLength - 8 &&
+           "subrecord is too large to slide!");
     Builder.truncate(SubrecordStart);
 
     // Write a placeholder continuation record.
@@ -61,7 +62,7 @@ void ListRecordBuilder::finishSubRecord() {
     Builder.writeUInt32(0);
     ContinuationOffsets.push_back(Builder.size());
     assert(Builder.size() == SubrecordStart + 8 && "wrong continuation size");
-    assert(getLastContinuationSize() < 65535 && "segment too big");
+    assert(getLastContinuationSize() < MaxRecordLength && "segment too big");
 
     // Start a new list record of the appropriate kind, and copy the previous
     // subrecord into place.

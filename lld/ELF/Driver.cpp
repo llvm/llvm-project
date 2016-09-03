@@ -328,10 +328,10 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
     if (S == "ignore-all" || S == "ignore-in-object-files")
       return UnresolvedPolicy::Ignore;
     if (S == "ignore-in-shared-libs" || S == "report-all")
-      return UnresolvedPolicy::Error;
+      return UnresolvedPolicy::ReportError;
     error("unknown --unresolved-symbols value: " + S);
   }
-  return UnresolvedPolicy::Error;
+  return UnresolvedPolicy::ReportError;
 }
 
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
@@ -356,17 +356,11 @@ static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
       Args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
   if (!Arg)
     return DiscardPolicy::Default;
-
-  switch (Arg->getOption().getID()) {
-  case OPT_discard_all:
+  if (Arg->getOption().getID() == OPT_discard_all)
     return DiscardPolicy::All;
-  case OPT_discard_locals:
+  if (Arg->getOption().getID() == OPT_discard_locals)
     return DiscardPolicy::Locals;
-  case OPT_discard_none:
-    return DiscardPolicy::None;
-  default:
-    llvm_unreachable("unknown discard option");
-  }
+  return DiscardPolicy::None;
 }
 
 static StripPolicy getStripOption(opt::InputArgList &Args) {
@@ -410,6 +404,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
+  Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->Pie = Args.hasArg(OPT_pie);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
@@ -489,6 +484,11 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   }
 
   Config->OFormatBinary = isOutputFormatBinary(Args);
+
+  for (auto *Arg : Args.filtered(OPT_auxiliary))
+    Config->AuxiliaryList.push_back(Arg->getValue());
+  if (!Config->Shared && !Config->AuxiliaryList.empty())
+    error("-f may not be used without -shared");
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());

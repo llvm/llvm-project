@@ -2237,6 +2237,85 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::amdgcn_class: {
+    enum  {
+      S_NAN = 1 << 0,        // Signaling NaN
+      Q_NAN = 1 << 1,        // Quiet NaN
+      N_INFINITY = 1 << 2,   // Negative infinity
+      N_NORMAL = 1 << 3,     // Negative normal
+      N_SUBNORMAL = 1 << 4,  // Negative subnormal
+      N_ZERO = 1 << 5,       // Negative zero
+      P_ZERO = 1 << 6,       // Positive zero
+      P_SUBNORMAL = 1 << 7,  // Positive subnormal
+      P_NORMAL = 1 << 8,     // Positive normal
+      P_INFINITY = 1 << 9    // Positive infinity
+    };
+
+    const uint32_t FullMask = S_NAN | Q_NAN | N_INFINITY | N_NORMAL |
+      N_SUBNORMAL | N_ZERO | P_ZERO | P_SUBNORMAL | P_NORMAL | P_INFINITY;
+
+    Value *Src0 = II->getArgOperand(0);
+    Value *Src1 = II->getArgOperand(1);
+    const ConstantInt *CMask = dyn_cast<ConstantInt>(Src1);
+    if (!CMask) {
+      if (isa<UndefValue>(Src0))
+        return replaceInstUsesWith(*II, UndefValue::get(II->getType()));
+
+      if (isa<UndefValue>(Src1))
+        return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), false));
+      break;
+    }
+
+    uint32_t Mask = CMask->getZExtValue();
+
+    // If all tests are made, it doesn't matter what the value is.
+    if ((Mask & FullMask) == FullMask)
+      return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), true));
+
+    if ((Mask & FullMask) == 0)
+      return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), false));
+
+    if (Mask == (S_NAN | Q_NAN)) {
+      // Equivalent of isnan. Replace with standard fcmp.
+      Value *FCmp = Builder->CreateFCmpUNO(Src0, Src0);
+      FCmp->takeName(II);
+      return replaceInstUsesWith(*II, FCmp);
+    }
+
+    const ConstantFP *CVal = dyn_cast<ConstantFP>(Src0);
+    if (!CVal) {
+      if (isa<UndefValue>(Src0))
+        return replaceInstUsesWith(*II, UndefValue::get(II->getType()));
+
+      // Clamp mask to used bits
+      if ((Mask & FullMask) != Mask) {
+        CallInst *NewCall = Builder->CreateCall(II->getCalledFunction(),
+          { Src0, ConstantInt::get(Src1->getType(), Mask & FullMask) }
+        );
+
+        NewCall->takeName(II);
+        return replaceInstUsesWith(*II, NewCall);
+      }
+
+      break;
+    }
+
+    const APFloat &Val = CVal->getValueAPF();
+
+    bool Result =
+      ((Mask & S_NAN) && Val.isNaN() && Val.isSignaling()) ||
+      ((Mask & Q_NAN) && Val.isNaN() && !Val.isSignaling()) ||
+      ((Mask & N_INFINITY) && Val.isInfinity() && Val.isNegative()) ||
+      ((Mask & N_NORMAL) && Val.isNormal() && Val.isNegative()) ||
+      ((Mask & N_SUBNORMAL) && Val.isDenormal() && Val.isNegative()) ||
+      ((Mask & N_ZERO) && Val.isZero() && Val.isNegative()) ||
+      ((Mask & P_ZERO) && Val.isZero() && !Val.isNegative()) ||
+      ((Mask & P_SUBNORMAL) && Val.isDenormal() && !Val.isNegative()) ||
+      ((Mask & P_NORMAL) && Val.isNormal() && !Val.isNegative()) ||
+      ((Mask & P_INFINITY) && Val.isInfinity() && !Val.isNegative());
+
+    return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), Result));
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.

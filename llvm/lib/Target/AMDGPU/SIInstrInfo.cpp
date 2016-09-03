@@ -587,17 +587,18 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   if (RI.isSGPRClass(RC)) {
     MFI->setHasSpilledSGPRs();
 
+    // We are only allowed to create one new instruction when spilling
+    // registers, so we need to use pseudo instruction for spilling SGPRs.
+    const MCInstrDesc &OpDesc = get(getSGPRSpillSaveOpcode(RC->getSize()));
+
+    // The SGPR spill/restore instructions only work on number sgprs, so we need
+    // to make sure we are using the correct register class.
     if (TargetRegisterInfo::isVirtualRegister(SrcReg) && RC->getSize() == 4) {
-      // m0 may not be allowed for readlane.
       MachineRegisterInfo &MRI = MF->getRegInfo();
       MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0RegClass);
     }
 
-    // We are only allowed to create one new instruction when spilling
-    // registers, so we need to use pseudo instruction for spilling
-    // SGPRs.
-    unsigned Opcode = getSGPRSpillSaveOpcode(RC->getSize());
-    BuildMI(MBB, MI, DL, get(Opcode))
+    BuildMI(MBB, MI, DL, OpDesc)
       .addReg(SrcReg, getKillRegState(isKill)) // src
       .addFrameIndex(FrameIndex) // frame_idx
       .addMemOperand(MMO);
@@ -621,10 +622,10 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MFI->setHasSpilledVGPRs();
   BuildMI(MBB, MI, DL, get(Opcode))
     .addReg(SrcReg, getKillRegState(isKill)) // src
-    .addFrameIndex(FrameIndex)        // frame_idx
-    .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
-    .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset
-    .addImm(0)                              // offset
+    .addFrameIndex(FrameIndex)               // frame_idx
+    .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
+    .addReg(MFI->getScratchWaveOffsetReg())  // scratch_offset
+    .addImm(0)                               // offset
     .addMemOperand(MMO);
 }
 
@@ -685,15 +686,13 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (RI.isSGPRClass(RC)) {
     // FIXME: Maybe this should not include a memoperand because it will be
     // lowered to non-memory instructions.
-    unsigned Opcode = getSGPRSpillRestoreOpcode(RC->getSize());
-
+    const MCInstrDesc &OpDesc = get(getSGPRSpillRestoreOpcode(RC->getSize()));
     if (TargetRegisterInfo::isVirtualRegister(DestReg) && RC->getSize() == 4) {
-      // m0 may not be allowed for readlane.
       MachineRegisterInfo &MRI = MF->getRegInfo();
       MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0RegClass);
     }
 
-    BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+    BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // frame_idx
       .addMemOperand(MMO);
 

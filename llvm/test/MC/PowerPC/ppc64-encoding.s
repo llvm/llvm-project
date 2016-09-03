@@ -48,6 +48,47 @@
 # CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
             bcla 4, 10, target
 
+# CHECK-BE: bc+ 12, 28, target              # encoding: [0x41,0xfc,A,0bAAAAAA00]
+# CHECK-LE: bc+ 12, 28, target              # encoding: [0bAAAAAA00,A,0xfc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+            bc+ 12, 28, target
+# CHECK-BE: bc- 12, 28, target              # encoding: [0x41,0xdc,A,0bAAAAAA00]
+# CHECK-LE: bc- 12, 28, target              # encoding: [0bAAAAAA00,A,0xdc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+            bc- 12, 28, target
+# CHECK-BE: bca+ 12, 28, target             # encoding: [0x41,0xfc,A,0bAAAAAA10]
+# CHECK-LE: bca+ 12, 28, target             # encoding: [0bAAAAAA10,A,0xfc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+            bca+ 12, 28, target
+# CHECK-BE: bca- 12, 28, target             # encoding: [0x41,0xdc,A,0bAAAAAA10]
+# CHECK-LE: bca- 12, 28, target             # encoding: [0bAAAAAA10,A,0xdc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+            bca- 12, 28, target
+# CHECK-BE: bcl+ 12, 28, target             # encoding: [0x41,0xfc,A,0bAAAAAA01]
+# CHECK-LE: bcl+ 12, 28, target             # encoding: [0bAAAAAA01,A,0xfc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+            bcl+ 12, 28, target
+# CHECK-BE: bcl- 12, 28, target             # encoding: [0x41,0xdc,A,0bAAAAAA01]
+# CHECK-LE: bcl- 12, 28, target             # encoding: [0bAAAAAA01,A,0xdc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14
+            bcl- 12, 28, target
+# CHECK-BE: bcla+ 12, 28, target            # encoding: [0x41,0xfc,A,0bAAAAAA11]
+# CHECK-LE: bcla+ 12, 28, target            # encoding: [0bAAAAAA11,A,0xfc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+            bcla+ 12, 28, target
+# CHECK-BE: bcla- 12, 28, target            # encoding: [0x41,0xdc,A,0bAAAAAA11]
+# CHECK-LE: bcla- 12, 28, target            # encoding: [0bAAAAAA11,A,0xdc,0x41]
+# CHECK-BE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+# CHECK-LE-NEXT:                            #   fixup A - offset: 0, value: target, kind: fixup_ppc_brcond14abs
+            bcla- 12, 28, target
+
 # CHECK-BE: bclr 4, 10, 3                   # encoding: [0x4c,0x8a,0x18,0x20]
 # CHECK-LE: bclr 4, 10, 3                   # encoding: [0x20,0x18,0x8a,0x4c]
             bclr 4, 10, 3

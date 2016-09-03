@@ -31,9 +31,6 @@ public:
   virtual ~Device();
 
   /// Creates a kernel object for this device.
-  ///
-  /// See \ref CompilerGeneratedKernelExample "Kernel.h" for an example of how
-  /// this method is used.
   template <typename KernelT>
   Expected<typename std::enable_if<std::is_base_of<KernelBase, KernelT>::value,
                                    KernelT>::type>
@@ -56,13 +53,7 @@ public:
         PDevice->allocateDeviceMemory(ElementCount * sizeof(T));
     if (!MaybeMemory)
       return MaybeMemory.takeError();
-    return GlobalDeviceMemory<T>::makeFromElementCount(*MaybeMemory,
-                                                       ElementCount);
-  }
-
-  /// Frees memory previously allocated with allocateDeviceMemory.
-  template <typename T> Error freeDeviceMemory(GlobalDeviceMemory<T> Memory) {
-    return PDevice->freeDeviceMemory(Memory.getHandle());
+    return GlobalDeviceMemory<T>(this, *MaybeMemory, ElementCount);
   }
 
   /// Allocates an array of ElementCount entries of type T in host memory.
@@ -304,6 +295,12 @@ public:
   ///@} End host-synchronous device memory copying functions
 
 private:
+  // Only a GlobalDeviceMemoryBase may free device memory.
+  friend GlobalDeviceMemoryBase;
+  Error freeDeviceMemory(const GlobalDeviceMemoryBase &Memory) {
+    return PDevice->freeDeviceMemory(Memory.getHandle());
+  }
+
   PlatformDevice *PDevice;
 };
 

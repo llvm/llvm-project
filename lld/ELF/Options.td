@@ -7,6 +7,8 @@ class J<string name>: Joined<["--", "-"], name>;
 class S<string name>: Separate<["--", "-"], name>;
 class JS<string name>: JoinedOrSeparate<["--", "-"], name>;
 
+def auxiliary: S<"auxiliary">, HelpText<"Set DT_AUXILIARY field to the specified name">;
+
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
@@ -94,6 +96,9 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
+
+def nostdlib: F<"nostdlib">,
+  HelpText<"Only search directories specified on the command line">;
 
 def no_as_needed: F<"no-as-needed">,
   HelpText<"Always DT_NEEDED for shared libraries">;
@@ -188,6 +193,7 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
 // Aliases
+def alias_auxiliary: Separate<["-"], "f">, Alias<auxiliary>;
 def alias_Bdynamic_call_shared: F<"call_shared">, Alias<Bdynamic>;
 def alias_Bdynamic_dy: F<"dy">, Alias<Bdynamic>;
 def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;

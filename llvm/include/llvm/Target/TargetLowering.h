@@ -335,6 +335,12 @@ public:
     return false;
   }
 
+  /// \brief Return true if it is cheaper to split the store of a merged int val
+  /// from a pair of smaller values into multiple stores.
+  virtual bool isMultiStoresCheaperThanBitsMerge(SDValue Lo, SDValue Hi) const {
+    return false;
+  }
+
   /// \brief Return if the target supports combining a
   /// chain like:
   /// \code

@@ -25,7 +25,8 @@ class TestingConfig:
         pass_vars = ['LIBRARY_PATH', 'LD_LIBRARY_PATH', 'SYSTEMROOT', 'TERM',
                      'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
                      'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
-                     'SANITIZER_IGNORE_CVE_2016_2143']
+                     'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
+                     'TEMPDIR']
         for var in pass_vars:
             val = os.environ.get(var, '')
             # Check for empty string as some variables such as LD_PRELOAD cannot be empty
@@ -40,16 +41,6 @@ class TestingConfig:
                     'PYTHONUNBUFFERED' : '1',
                     'TEMP' : os.environ.get('TEMP',''),
                     'TMP' : os.environ.get('TMP',''),
-                    })
-
-        # The option to preserve TEMP, TMP, and TMPDIR.
-        # This is intended to check how many temporary files would be generated
-        # (and be not cleaned up) in automated builders.
-        if 'LIT_PRESERVES_TMP' in os.environ:
-            environment.update({
-                    'TEMP' : os.environ.get('TEMP',''),
-                    'TMP' : os.environ.get('TMP',''),
-                    'TMPDIR' : os.environ.get('TMPDIR',''),
                     })
 
         # Set the default available features based on the LitConfig.

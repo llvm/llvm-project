@@ -9,6 +9,7 @@
 
 #include "Strings.h"
 #include "Error.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
@@ -22,28 +23,37 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf;
 
-// Returns true if S matches T. S can contain glob meta-characters.
-// The asterisk ('*') matches zero or more characters, and the question
-// mark ('?') matches one character.
-bool elf::globMatch(StringRef S, StringRef T) {
-  for (;;) {
-    if (S.empty())
-      return T.empty();
-    if (S[0] == '*') {
-      S = S.substr(1);
-      if (S.empty())
-        // Fast path. If a pattern is '*', it matches anything.
-        return true;
-      for (size_t I = 0, E = T.size(); I < E; ++I)
-        if (globMatch(S, T.substr(I)))
-          return true;
-      return false;
-    }
-    if (T.empty() || (S[0] != T[0] && S[0] != '?'))
-      return false;
+bool elf::hasWildcard(StringRef S) {
+  return S.find_first_of("?*") != StringRef::npos;
+}
+
+// Converts a glob pattern to a regular expression.
+static std::string toRegex(StringRef S) {
+  if (S.find_first_of("[]") != StringRef::npos)
+    warning("unsupported wildcard: " + S);
+
+  std::string T;
+  while (!S.empty()) {
+    char C = S.front();
+    if (C == '*')
+      T += ".*";
+    else if (C == '?')
+      T += '.';
+    else if (StringRef(".+^${}()|/\\[]").find_first_of(C) != StringRef::npos)
+      T += std::string("\\") + C;
+    else
+      T += C;
     S = S.substr(1);
-    T = T.substr(1);
   }
+  return T;
+}
+
+// Converts multiple glob patterns to a regular expression.
+Regex elf::compileGlobPatterns(ArrayRef<StringRef> V) {
+  std::string T = "^(" + toRegex(V[0]);
+  for (StringRef S : V.slice(1))
+    T += "|" + toRegex(S);
+  return Regex(T + ")$");
 }
 
 // Converts a hex string (e.g. "deadbeef") to a vector.

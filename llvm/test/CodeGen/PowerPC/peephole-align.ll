@@ -227,11 +227,9 @@ entry:
   ret void
 }
 
-; register 3 is the return value, so it should be chosen
 ; CHECK-LABEL: test_singleuse:
-; CHECK: addis 3, 2, d2v@toc@ha
-; CHECK: addi 3, 3, d2v@toc@l
-; CHECK: ld 3, 8(3)
+; CHECK: addis [[REG:[0-9]+]], 2, d2v@toc@ha+8
+; CHECK: ld 3, d2v@toc@l+8([[REG]])
 define i64 @test_singleuse() nounwind {
 entry:
   %0 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 1), align 8

@@ -2054,7 +2054,7 @@ iterate over all predecessors of BB:
 
 .. code-block:: c++
 
-  #include "llvm/Support/CFG.h"
+  #include "llvm/IR/CFG.h"
   BasicBlock *BB = ...;
 
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {

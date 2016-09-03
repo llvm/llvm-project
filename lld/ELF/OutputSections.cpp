@@ -650,6 +650,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   // Add strings. We know that these are the last strings to be added to
   // DynStrTab and doing this here allows this function to set DT_STRSZ.
+  for (StringRef S : Config->AuxiliaryList)
+    Add({DT_AUXILIARY, Out<ELFT>::DynStrTab->addString(S)});
   if (!Config->RPath.empty())
     Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          Out<ELFT>::DynStrTab->addString(Config->RPath)});

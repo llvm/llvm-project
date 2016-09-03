@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -979,6 +980,14 @@ void HexagonInstrInfo::loadRegFromStackSlot(
 }
 
 
+static void getLiveRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
+  const MachineBasicBlock &B = *MI.getParent();
+  Regs.addLiveOuts(B);
+  auto E = MachineBasicBlock::const_reverse_iterator(MI.getIterator());
+  for (auto I = B.rbegin(); I != E; ++I)
+    Regs.stepBackward(*I);
+}
+
 /// expandPostRAPseudo - This function is called for all pseudo instructions
 /// that remain after register allocation. Many pseudo instructions are
 /// created to help register allocation. This is the place to convert them
@@ -1254,14 +1263,26 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       const MachineOperand &Op1 = MI.getOperand(1);
       const MachineOperand &Op2 = MI.getOperand(2);
       const MachineOperand &Op3 = MI.getOperand(3);
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vcmov))
-        .addOperand(Op0)
-        .addOperand(Op1)
-        .addOperand(Op2);
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vncmov))
-        .addOperand(Op0)
-        .addOperand(Op1)
-        .addOperand(Op3);
+      LivePhysRegs LiveAtMI(&HRI);
+      getLiveRegsAt(LiveAtMI, MI);
+      bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
+      if (Op0.getReg() != Op2.getReg()) {
+        auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vcmov))
+                    .addOperand(Op0)
+                    .addOperand(Op1)
+                    .addOperand(Op2);
+        if (IsDestLive)
+          T.addReg(Op0.getReg(), RegState::Implicit);
+        IsDestLive = true;
+      }
+      if (Op0.getReg() != Op3.getReg()) {
+        auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vncmov))
+                    .addOperand(Op0)
+                    .addOperand(Op1)
+                    .addOperand(Op3);
+        if (IsDestLive)
+          T.addReg(Op0.getReg(), RegState::Implicit);
+      }
       MBB.erase(MI);
       return true;
     }
@@ -1271,20 +1292,33 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MachineOperand &Op1 = MI.getOperand(1);
       MachineOperand &Op2 = MI.getOperand(2);
       MachineOperand &Op3 = MI.getOperand(3);
-      unsigned SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::subreg_loreg);
-      unsigned SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::subreg_hireg);
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
-        .addOperand(Op0)
-        .addOperand(Op1)
-        .addReg(SrcHi)
-        .addReg(SrcLo);
-      SrcLo = HRI.getSubReg(Op3.getReg(), Hexagon::subreg_loreg);
-      SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::subreg_hireg);
-      BuildMI(MBB, MI, DL, get(Hexagon::V6_vnccombine))
-        .addOperand(Op0)
-        .addOperand(Op1)
-        .addReg(SrcHi)
-        .addReg(SrcLo);
+      LivePhysRegs LiveAtMI(&HRI);
+      getLiveRegsAt(LiveAtMI, MI);
+      bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
+
+      if (Op0.getReg() != Op2.getReg()) {
+        unsigned SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::subreg_loreg);
+        unsigned SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::subreg_hireg);
+        auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
+                    .addOperand(Op0)
+                    .addOperand(Op1)
+                    .addReg(SrcHi)
+                    .addReg(SrcLo);
+        if (IsDestLive)
+          T.addReg(Op0.getReg(), RegState::Implicit);
+        IsDestLive = true;
+      }
+      if (Op0.getReg() != Op3.getReg()) {
+        unsigned SrcLo = HRI.getSubReg(Op3.getReg(), Hexagon::subreg_loreg);
+        unsigned SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::subreg_hireg);
+        auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vnccombine))
+                    .addOperand(Op0)
+                    .addOperand(Op1)
+                    .addReg(SrcHi)
+                    .addReg(SrcLo);
+        if (IsDestLive)
+          T.addReg(Op0.getReg(), RegState::Implicit);
+      }
       MBB.erase(MI);
       return true;
     }

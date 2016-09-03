@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/linkerscript-merge-sections-reloc.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/merge-sections-reloc.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
 # RUN: echo "SECTIONS {}" > %t.script
 # RUN: ld.lld -o %t --script %t.script %t1.o %t2.o

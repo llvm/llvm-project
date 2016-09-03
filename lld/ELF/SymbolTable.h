@@ -13,6 +13,7 @@
 #include "InputFiles.h"
 #include "LTO.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Regex.h"
 
 namespace lld {
 namespace elf {
@@ -91,7 +92,7 @@ public:
   void wrap(StringRef Name);
 
 private:
-  std::vector<SymbolBody *> findAll(StringRef Pattern);
+  std::vector<SymbolBody *> findAll(const llvm::Regex &Re);
   std::pair<Symbol *, bool> insert(StringRef &Name);
   std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,

@@ -40,7 +40,7 @@ enum class DiscardPolicy { Default, All, Locals, None };
 enum class StripPolicy { None, All, Debug };
 
 // For --unresolved-symbols.
-enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
+enum class UnresolvedPolicy { NoUndef, ReportError, Warn, Ignore };
 
 struct SymbolVersion {
   llvm::StringRef Name;
@@ -76,6 +76,7 @@ struct Configuration {
   llvm::StringRef Sysroot;
   std::string RPath;
   std::vector<VersionDefinition> VersionDefinitions;
+  std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> DynamicList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
@@ -97,6 +98,7 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoGnuUnique;
   bool NoUndefinedVersion;
+  bool Nostdlib;
   bool OFormatBinary;
   bool Pic;
   bool Pie;

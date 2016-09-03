@@ -135,6 +135,25 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     printAnnotation(O, Annot);
     return;
   }
+
+  if (MI->getOpcode() == PPC::DCBF) {
+    unsigned char L = MI->getOperand(0).getImm();
+    if (!L || L == 1 || L == 3) {
+      O << "\tdcbf";
+      if (L == 1 || L == 3)
+        O << "l";
+      if (L == 3)
+        O << "p";
+      O << " ";
+
+      printOperand(MI, 1, O);
+      O << ", ";
+      printOperand(MI, 2, O);
+
+      printAnnotation(O, Annot);
+      return;
+    }
+  }
   
   if (!printAliasInstr(MI, O))
     printInstruction(MI, O);
@@ -237,6 +256,15 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
   assert(StringRef(Modifier) == "reg" &&
          "Need to specify 'cc', 'pm' or 'reg' as predicate op modifier!");
   printOperand(MI, OpNo+1, O);
+}
+
+void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned Code = MI->getOperand(OpNo).getImm();
+  if (Code == 2)
+    O << "-";
+  else if (Code == 3)
+    O << "+";
 }
 
 void PPCInstPrinter::printU1ImmOperand(const MCInst *MI, unsigned OpNo,

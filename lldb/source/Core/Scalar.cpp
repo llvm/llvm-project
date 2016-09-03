@@ -308,18 +308,18 @@ Scalar::GetValue (Stream *s, bool show_type) const
     case e_void:
         break;
     case e_sint:
-    case e_ulong:
+    case e_slong:
     case e_slonglong:
     case e_sint128:
     case e_sint256:
-        s->Printf("%s",m_integer.toString(10,true).c_str());
+        s->PutCString(m_integer.toString(10, true).c_str());
         break;
     case e_uint:
-    case e_slong:
+    case e_ulong:
     case e_ulonglong:
     case e_uint128:
     case e_uint256:
-        s->Printf("%s",m_integer.toString(16,false).c_str());
+        s->PutCString(m_integer.toString(10, false).c_str());
         break;
     case e_float:
     case e_double:

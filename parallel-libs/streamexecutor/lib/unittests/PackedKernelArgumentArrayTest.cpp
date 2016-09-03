@@ -12,8 +12,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "SimpleHostPlatformDevice.h"
+#include "streamexecutor/Device.h"
 #include "streamexecutor/DeviceMemory.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
+#include "streamexecutor/PlatformInterfaces.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -32,21 +35,19 @@ using Type = se::KernelArgumentType;
 class DeviceMemoryPackingTest : public ::testing::Test {
 public:
   DeviceMemoryPackingTest()
-      : Value(42), Handle(&Value), ByteCount(15), ElementCount(5),
-        UntypedGlobal(Handle, ByteCount),
-        TypedGlobal(se::GlobalDeviceMemory<int>::makeFromElementCount(
-            Handle, ElementCount)),
-        UntypedShared(ByteCount),
+      : Device(&PDevice), Value(42), Handle(&Value), ByteCount(15),
+        ElementCount(5),
+        TypedGlobal(getOrDie(Device.allocateDeviceMemory<int>(ElementCount))),
         TypedShared(
             se::SharedDeviceMemory<int>::makeFromElementCount(ElementCount)) {}
 
+  se::test::SimpleHostPlatformDevice PDevice;
+  se::Device Device;
   int Value;
   void *Handle;
   size_t ByteCount;
   size_t ElementCount;
-  se::GlobalDeviceMemoryBase UntypedGlobal;
   se::GlobalDeviceMemory<int> TypedGlobal;
-  se::SharedDeviceMemoryBase UntypedShared;
   se::SharedDeviceMemory<int> TypedShared;
 };
 
@@ -73,38 +74,18 @@ TEST_F(DeviceMemoryPackingTest, SingleValue) {
   EXPECT_EQ(0u, Array.getSharedCount());
 }
 
-TEST_F(DeviceMemoryPackingTest, SingleUntypedGlobal) {
-  auto Array = se::make_kernel_argument_pack(UntypedGlobal);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 0);
-  EXPECT_EQ(1u, Array.getArgumentCount());
-  EXPECT_EQ(0u, Array.getSharedCount());
-}
-
-TEST_F(DeviceMemoryPackingTest, SingleUntypedGlobalPointer) {
-  auto Array = se::make_kernel_argument_pack(&UntypedGlobal);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 0);
-  EXPECT_EQ(1u, Array.getArgumentCount());
-  EXPECT_EQ(0u, Array.getSharedCount());
-}
-
-TEST_F(DeviceMemoryPackingTest, SingleConstUntypedGlobalPointer) {
-  const se::GlobalDeviceMemoryBase *ConstPointer = &UntypedGlobal;
-  auto Array = se::make_kernel_argument_pack(ConstPointer);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 0);
-  EXPECT_EQ(1u, Array.getArgumentCount());
-  EXPECT_EQ(0u, Array.getSharedCount());
-}
-
 TEST_F(DeviceMemoryPackingTest, SingleTypedGlobal) {
   auto Array = se::make_kernel_argument_pack(TypedGlobal);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 0);
+  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+              Type::GLOBAL_DEVICE_MEMORY, Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(0u, Array.getSharedCount());
 }
 
 TEST_F(DeviceMemoryPackingTest, SingleTypedGlobalPointer) {
   auto Array = se::make_kernel_argument_pack(&TypedGlobal);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 0);
+  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+              Type::GLOBAL_DEVICE_MEMORY, Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(0u, Array.getSharedCount());
 }
@@ -112,34 +93,10 @@ TEST_F(DeviceMemoryPackingTest, SingleTypedGlobalPointer) {
 TEST_F(DeviceMemoryPackingTest, SingleConstTypedGlobalPointer) {
   const se::GlobalDeviceMemory<int> *ArgumentPointer = &TypedGlobal;
   auto Array = se::make_kernel_argument_pack(ArgumentPointer);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 0);
+  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+              Type::GLOBAL_DEVICE_MEMORY, Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(0u, Array.getSharedCount());
-}
-
-TEST_F(DeviceMemoryPackingTest, SingleUntypedShared) {
-  auto Array = se::make_kernel_argument_pack(UntypedShared);
-  ExpectEqual(nullptr, UntypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 0);
-  EXPECT_EQ(1u, Array.getArgumentCount());
-  EXPECT_EQ(1u, Array.getSharedCount());
-}
-
-TEST_F(DeviceMemoryPackingTest, SingleUntypedSharedPointer) {
-  auto Array = se::make_kernel_argument_pack(&UntypedShared);
-  ExpectEqual(nullptr, UntypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 0);
-  EXPECT_EQ(1u, Array.getArgumentCount());
-  EXPECT_EQ(1u, Array.getSharedCount());
-}
-
-TEST_F(DeviceMemoryPackingTest, SingleConstUntypedSharedPointer) {
-  const se::SharedDeviceMemoryBase *ArgumentPointer = &UntypedShared;
-  auto Array = se::make_kernel_argument_pack(ArgumentPointer);
-  ExpectEqual(nullptr, UntypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 0);
-  EXPECT_EQ(1u, Array.getArgumentCount());
-  EXPECT_EQ(1u, Array.getSharedCount());
 }
 
 TEST_F(DeviceMemoryPackingTest, SingleTypedShared) {
@@ -168,35 +125,26 @@ TEST_F(DeviceMemoryPackingTest, SingleConstTypedSharedPointer) {
 }
 
 TEST_F(DeviceMemoryPackingTest, PackSeveralArguments) {
-  const se::GlobalDeviceMemoryBase *UntypedGlobalPointer = &UntypedGlobal;
   const se::GlobalDeviceMemory<int> *TypedGlobalPointer = &TypedGlobal;
-  const se::SharedDeviceMemoryBase *UntypedSharedPointer = &UntypedShared;
   const se::SharedDeviceMemory<int> *TypedSharedPointer = &TypedShared;
-  auto Array = se::make_kernel_argument_pack(
-      Value, UntypedGlobal, &UntypedGlobal, UntypedGlobalPointer, TypedGlobal,
-      &TypedGlobal, TypedGlobalPointer, UntypedShared, &UntypedShared,
-      UntypedSharedPointer, TypedShared, &TypedShared, TypedSharedPointer);
+  auto Array = se::make_kernel_argument_pack(Value, TypedGlobal, &TypedGlobal,
+                                             TypedGlobalPointer, TypedShared,
+                                             &TypedShared, TypedSharedPointer);
   ExpectEqual(&Value, sizeof(Value), Type::VALUE, Array, 0);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 1);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 2);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 3);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 4);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 5);
-  ExpectEqual(Handle, sizeof(void *), Type::GLOBAL_DEVICE_MEMORY, Array, 6);
-  ExpectEqual(nullptr, UntypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 7);
-  ExpectEqual(nullptr, UntypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 8);
-  ExpectEqual(nullptr, UntypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 9);
+  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+              Type::GLOBAL_DEVICE_MEMORY, Array, 1);
+  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+              Type::GLOBAL_DEVICE_MEMORY, Array, 2);
+  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+              Type::GLOBAL_DEVICE_MEMORY, Array, 3);
   ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 10);
+              Array, 4);
   ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 11);
+              Array, 5);
   ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
-              Array, 12);
-  EXPECT_EQ(13u, Array.getArgumentCount());
-  EXPECT_EQ(6u, Array.getSharedCount());
+              Array, 6);
+  EXPECT_EQ(7u, Array.getArgumentCount());
+  EXPECT_EQ(3u, Array.getSharedCount());
 }
 
 } // namespace
