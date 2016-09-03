@@ -540,9 +540,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S32_SAVE: {
       unsigned NumSubRegs = getNumSubRegsForSpillOp(MI->getOpcode());
       unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-
       unsigned SuperReg = MI->getOperand(0).getReg();
       bool IsKill = MI->getOperand(0).isKill();
+
       // SubReg carries the "Kill" flag when SubReg == SuperReg.
       unsigned SubKillState = getKillRegState((NumSubRegs == 1) && IsKill);
       for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
@@ -551,8 +551,19 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         struct SIMachineFunctionInfo::SpilledReg Spill =
             MFI->getSpilledReg(MF, Index, i);
-
         if (Spill.hasReg()) {
+          if (SuperReg == AMDGPU::M0) {
+            assert(NumSubRegs == 1);
+            unsigned CopyM0
+              = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), CopyM0)
+              .addReg(SuperReg, getKillRegState(IsKill));
+
+            // The real spill now kills the temp copy.
+            SubReg = SuperReg = CopyM0;
+            IsKill = true;
+          }
+
           BuildMI(*MBB, MI, DL,
                   TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
                   Spill.VGPR)
@@ -611,6 +622,14 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       unsigned SuperReg = MI->getOperand(0).getReg();
 
+      // m0 is not allowed as with readlane/writelane, so a temporary SGPR and
+      // extra copy is needed.
+      bool IsM0 = (SuperReg == AMDGPU::M0);
+      if (IsM0) {
+        assert(NumSubRegs == 1);
+        SuperReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      }
+
       for (unsigned i = 0, e = NumSubRegs; i < e; ++i) {
         unsigned SubReg = NumSubRegs == 1 ?
           SuperReg : getSubReg(SuperReg, getSubRegFromChannel(i));
@@ -649,6 +668,11 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addReg(TmpReg, RegState::Kill)
                   .addReg(MI->getOperand(0).getReg(), RegState::ImplicitDefine);
         }
+      }
+
+      if (IsM0 && SuperReg != AMDGPU::M0) {
+        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+          .addReg(SuperReg);
       }
 
       MI->eraseFromParent();
