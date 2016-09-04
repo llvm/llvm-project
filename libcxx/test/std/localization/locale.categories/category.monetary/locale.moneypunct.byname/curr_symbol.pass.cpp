@@ -118,7 +118,7 @@ int main()
         // GLIBC >= 2.24 uses currency_symbol="<U20BD>"
         // See also: http://www.fileformat.info/info/unicode/char/20bd/index.htm
 #if defined(TEST_GLIBC_PREREQ) && TEST_GLIBC_PREREQ(2, 24)
-        assert(f.curr_symbol() == " \xE2\x82\xBD");
+        assert(f.curr_symbol() == " \u20BD");
 #else
         assert(f.curr_symbol() == " \xD1\x80\xD1\x83\xD0\xB1");
 #endif
@@ -129,8 +129,13 @@ int main()
     }
     {
         Fwf f(LOCALE_ru_RU_UTF_8, 1);
+#if defined(TEST_GLIBC_PREREQ) && TEST_GLIBC_PREREQ(2, 24)
+        assert(f.curr_symbol() == L" \u20BD");
+#else
         assert(f.curr_symbol() == L" \x440\x443\x431");
+#endif
     }
+
     {
         Fwt f(LOCALE_ru_RU_UTF_8, 1);
         assert(f.curr_symbol() == L" RUB");

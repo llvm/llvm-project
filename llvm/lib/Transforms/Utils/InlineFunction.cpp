@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -228,7 +229,7 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
             Instruction *ChildPad = cast<Instruction>(Child);
             auto Memo = MemoMap.find(ChildPad);
             if (Memo == MemoMap.end()) {
-              // Haven't figure out this child pad yet; queue it.
+              // Haven't figured out this child pad yet; queue it.
               Worklist.push_back(ChildPad);
               continue;
             }
@@ -366,6 +367,10 @@ static Value *getUnwindDestToken(Instruction *EHPad,
   // search up the chain to try to find a funclet with information.  Put
   // null entries in the memo map to avoid re-processing as we go up.
   MemoMap[EHPad] = nullptr;
+#ifndef NDEBUG
+  SmallPtrSet<Instruction *, 4> TempMemos;
+  TempMemos.insert(EHPad);
+#endif
   Instruction *LastUselessPad = EHPad;
   Value *AncestorToken;
   for (AncestorToken = getParentPad(EHPad);
@@ -374,6 +379,13 @@ static Value *getUnwindDestToken(Instruction *EHPad,
     // Skip over catchpads since they just follow their catchswitches.
     if (isa<CatchPadInst>(AncestorPad))
       continue;
+    // If the MemoMap had an entry mapping AncestorPad to nullptr, since we
+    // haven't yet called getUnwindDestTokenHelper for AncestorPad in this
+    // call to getUnwindDestToken, that would mean that AncestorPad had no
+    // information in itself, its descendants, or its ancestors.  If that
+    // were the case, then we should also have recorded the lack of information
+    // for the descendant that we're coming from.  So assert that we don't
+    // find a null entry in the MemoMap for AncestorPad.
     assert(!MemoMap.count(AncestorPad) || MemoMap[AncestorPad]);
     auto AncestorMemo = MemoMap.find(AncestorPad);
     if (AncestorMemo == MemoMap.end()) {
@@ -384,25 +396,85 @@ static Value *getUnwindDestToken(Instruction *EHPad,
     if (UnwindDestToken)
       break;
     LastUselessPad = AncestorPad;
+    MemoMap[LastUselessPad] = nullptr;
+#ifndef NDEBUG
+    TempMemos.insert(LastUselessPad);
+#endif
   }
 
-  // Since the whole tree under LastUselessPad has no information, it all must
-  // match UnwindDestToken; record that to avoid repeating the search.
+  // We know that getUnwindDestTokenHelper was called on LastUselessPad and
+  // returned nullptr (and likewise for EHPad and any of its ancestors up to
+  // LastUselessPad), so LastUselessPad has no information from below.  Since
+  // getUnwindDestTokenHelper must investigate all downward paths through
+  // no-information nodes to prove that a node has no information like this,
+  // and since any time it finds information it records it in the MemoMap for
+  // not just the immediately-containing funclet but also any ancestors also
+  // exited, it must be the case that, walking downward from LastUselessPad,
+  // visiting just those nodes which have not been mapped to an unwind dest
+  // by getUnwindDestTokenHelper (the nullptr TempMemos notwithstanding, since
+  // they are just used to keep getUnwindDestTokenHelper from repeating work),
+  // any node visited must have been exhaustively searched with no information
+  // for it found.
   SmallVector<Instruction *, 8> Worklist(1, LastUselessPad);
   while (!Worklist.empty()) {
     Instruction *UselessPad = Worklist.pop_back_val();
-    assert(!MemoMap.count(UselessPad) || MemoMap[UselessPad] == nullptr);
+    auto Memo = MemoMap.find(UselessPad);
+    if (Memo != MemoMap.end() && Memo->second) {
+      // Here the name 'UselessPad' is a bit of a misnomer, because we've found
+      // that it is a funclet that does have information about unwinding to
+      // a particular destination; its parent was a useless pad.
+      // Since its parent has no information, the unwind edge must not escape
+      // the parent, and must target a sibling of this pad.  This local unwind
+      // gives us no information about EHPad.  Leave it and the subtree rooted
+      // at it alone.
+      assert(getParentPad(Memo->second) == getParentPad(UselessPad));
+      continue;
+    }
+    // We know we don't have information for UselesPad.  If it has an entry in
+    // the MemoMap (mapping it to nullptr), it must be one of the TempMemos
+    // added on this invocation of getUnwindDestToken; if a previous invocation
+    // recorded nullptr, it would have had to prove that the ancestors of
+    // UselessPad, which include LastUselessPad, had no information, and that
+    // in turn would have required proving that the descendants of
+    // LastUselesPad, which include EHPad, have no information about
+    // LastUselessPad, which would imply that EHPad was mapped to nullptr in
+    // the MemoMap on that invocation, which isn't the case if we got here.
+    assert(!MemoMap.count(UselessPad) || TempMemos.count(UselessPad));
+    // Assert as we enumerate users that 'UselessPad' doesn't have any unwind
+    // information that we'd be contradicting by making a map entry for it
+    // (which is something that getUnwindDestTokenHelper must have proved for
+    // us to get here).  Just assert on is direct users here; the checks in
+    // this downward walk at its descendants will verify that they don't have
+    // any unwind edges that exit 'UselessPad' either (i.e. they either have no
+    // unwind edges or unwind to a sibling).
     MemoMap[UselessPad] = UnwindDestToken;
     if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UselessPad)) {
-      for (BasicBlock *HandlerBlock : CatchSwitch->handlers())
-        for (User *U : HandlerBlock->getFirstNonPHI()->users())
+      assert(CatchSwitch->getUnwindDest() == nullptr && "Expected useless pad");
+      for (BasicBlock *HandlerBlock : CatchSwitch->handlers()) {
+        auto *CatchPad = HandlerBlock->getFirstNonPHI();
+        for (User *U : CatchPad->users()) {
+          assert(
+              (!isa<InvokeInst>(U) ||
+               (getParentPad(
+                    cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHI()) ==
+                CatchPad)) &&
+              "Expected useless pad");
           if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
             Worklist.push_back(cast<Instruction>(U));
+        }
+      }
     } else {
       assert(isa<CleanupPadInst>(UselessPad));
-      for (User *U : UselessPad->users())
+      for (User *U : UselessPad->users()) {
+        assert(!isa<CleanupReturnInst>(U) && "Expected useless pad");
+        assert((!isa<InvokeInst>(U) ||
+                (getParentPad(
+                     cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHI()) ==
+                 UselessPad)) &&
+               "Expected useless pad");
         if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
           Worklist.push_back(cast<Instruction>(U));
+      }
     }
   }
 
