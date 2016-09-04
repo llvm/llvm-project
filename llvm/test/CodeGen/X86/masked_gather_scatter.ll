@@ -1648,32 +1648,38 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
 ; SKX-NEXT:    vpmovsxdq %xmm1, %ymm1
 ; SKX-NEXT:    vpsllq $2, %ymm1, %ymm1
-; SKX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
-; SKX-NEXT:    kortestw %k0, %k0
-; SKX-NEXT:    # implicit-def: %XMM0
+; SKX-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    # implicit-def: %XMM1
+; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    je .LBB29_2
 ; SKX-NEXT:  # BB#1: # %cond.load
-; SKX-NEXT:    vmovq %xmm1, %rax
-; SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovq %xmm0, %rax
+; SKX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SKX-NEXT:  .LBB29_2: # %else
 ; SKX-NEXT:    kshiftlw $14, %k1, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kortestw %k0, %k0
+; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    je .LBB29_4
 ; SKX-NEXT:  # BB#3: # %cond.load1
-; SKX-NEXT:    vpextrq $1, %xmm1, %rax
-; SKX-NEXT:    vpinsrd $1, (%rax), %xmm0, %xmm0
+; SKX-NEXT:    vpextrq $1, %xmm0, %rax
+; SKX-NEXT:    vpinsrd $1, (%rax), %xmm1, %xmm1
 ; SKX-NEXT:  .LBB29_4: # %else2
 ; SKX-NEXT:    kshiftlw $13, %k1, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kortestw %k0, %k0
+; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    je .LBB29_6
 ; SKX-NEXT:  # BB#5: # %cond.load4
-; SKX-NEXT:    vextracti64x2 $1, %ymm1, %xmm1
-; SKX-NEXT:    vmovq %xmm1, %rax
-; SKX-NEXT:    vpinsrd $2, (%rax), %xmm0, %xmm0
+; SKX-NEXT:    vextracti64x2 $1, %ymm0, %xmm0
+; SKX-NEXT:    vmovq %xmm0, %rax
+; SKX-NEXT:    vpinsrd $2, (%rax), %xmm1, %xmm1
 ; SKX-NEXT:  .LBB29_6: # %else5
-; SKX-NEXT:    vpblendmd %xmm0, %xmm3, %xmm0 {%k1}
+; SKX-NEXT:    vpblendmd %xmm1, %xmm3, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test30:
@@ -1686,32 +1692,38 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX_32-NEXT:    kshiftlw $15, %k1, %k0
 ; SKX_32-NEXT:    kshiftrw $15, %k0, %k0
 ; SKX_32-NEXT:    vpslld $2, %xmm1, %xmm1
-; SKX_32-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; SKX_32-NEXT:    kortestw %k0, %k0
-; SKX_32-NEXT:    # implicit-def: %XMM0
+; SKX_32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; SKX_32-NEXT:    kmovw %k0, %eax
+; SKX_32-NEXT:    andl $1, %eax
+; SKX_32-NEXT:    # implicit-def: %XMM1
+; SKX_32-NEXT:    testb %al, %al
 ; SKX_32-NEXT:    je .LBB29_2
 ; SKX_32-NEXT:  # BB#1: # %cond.load
-; SKX_32-NEXT:    vmovd %xmm1, %eax
-; SKX_32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SKX_32-NEXT:    vmovd %xmm0, %eax
+; SKX_32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SKX_32-NEXT:  .LBB29_2: # %else
 ; SKX_32-NEXT:    kshiftlw $14, %k1, %k0
 ; SKX_32-NEXT:    kshiftrw $15, %k0, %k0
-; SKX_32-NEXT:    kortestw %k0, %k0
+; SKX_32-NEXT:    kmovw %k0, %eax
+; SKX_32-NEXT:    andl $1, %eax
+; SKX_32-NEXT:    testb %al, %al
 ; SKX_32-NEXT:    je .LBB29_4
 ; SKX_32-NEXT:  # BB#3: # %cond.load1
-; SKX_32-NEXT:    vpextrd $1, %xmm1, %eax
-; SKX_32-NEXT:    vpinsrd $1, (%eax), %xmm0, %xmm0
+; SKX_32-NEXT:    vpextrd $1, %xmm0, %eax
+; SKX_32-NEXT:    vpinsrd $1, (%eax), %xmm1, %xmm1
 ; SKX_32-NEXT:  .LBB29_4: # %else2
 ; SKX_32-NEXT:    vmovdqa32 {{[0-9]+}}(%esp), %xmm2
 ; SKX_32-NEXT:    kshiftlw $13, %k1, %k0
 ; SKX_32-NEXT:    kshiftrw $15, %k0, %k0
-; SKX_32-NEXT:    kortestw %k0, %k0
+; SKX_32-NEXT:    kmovw %k0, %eax
+; SKX_32-NEXT:    andl $1, %eax
+; SKX_32-NEXT:    testb %al, %al
 ; SKX_32-NEXT:    je .LBB29_6
 ; SKX_32-NEXT:  # BB#5: # %cond.load4
-; SKX_32-NEXT:    vpextrd $2, %xmm1, %eax
-; SKX_32-NEXT:    vpinsrd $2, (%eax), %xmm0, %xmm0
+; SKX_32-NEXT:    vpextrd $2, %xmm0, %eax
+; SKX_32-NEXT:    vpinsrd $2, (%eax), %xmm1, %xmm1
 ; SKX_32-NEXT:  .LBB29_6: # %else5
-; SKX_32-NEXT:    vpblendmd %xmm0, %xmm2, %xmm0 {%k1}
+; SKX_32-NEXT:    vpblendmd %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX_32-NEXT:    addl $12, %esp
 ; SKX_32-NEXT:    retl
 

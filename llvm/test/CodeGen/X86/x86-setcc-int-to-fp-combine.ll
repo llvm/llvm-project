@@ -7,10 +7,10 @@ define <4 x float> @foo(<4 x float> %val, <4 x float> %test) nounwind {
 ; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-LABEL: foo:
-; CHECK: cmpeqps %xmm1, %xmm0
-; CHECK-NEXT: andps LCPI0_0(%rip), %xmm0
-; CHECK-NEXT: retq
-
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    cmpeqps %xmm1, %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
   %cmp = fcmp oeq <4 x float> %val, %test
   %ext = zext <4 x i1> %cmp to <4 x i32>
   %result = sitofp <4 x i32> %ext to <4 x float>
@@ -27,8 +27,15 @@ define void @foo1(<4 x float> %val, <4 x float> %test, <4 x double>* %p) nounwin
 ; CHECK-NEXT: .long 1                       ## 0x1
 ; CHECK-NEXT: .long 1                       ## 0x1
 ; CHECK-LABEL: foo1:
-; CHECK: cvtdq2pd
-; CHECK: cvtdq2pd
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    cmpeqps %xmm1, %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
+; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm0
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    movaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    retq
   %cmp = fcmp oeq <4 x float> %val, %test
   %ext = zext <4 x i1> %cmp to <4 x i32>
   %result = sitofp <4 x i32> %ext to <4 x double>
@@ -44,8 +51,10 @@ define void @foo2(<4 x float>* noalias %result) nounwind {
 ; CHECK-NEXT: .long 1086324736              ## float 6
 ; CHECK-NEXT: .long 1088421888              ## float 7
 ; CHECK-LABEL: foo2:
-; CHECK:  movaps LCPI2_0(%rip), %xmm0
-
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.000000e+00,5.000000e+00,6.000000e+00,7.000000e+00]
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
   %val = uitofp <4 x i32> <i32 4, i32 5, i32 6, i32 7> to <4 x float>
   store <4 x float> %val, <4 x float>* %result
   ret void
@@ -60,8 +69,10 @@ define <4 x float> @foo3(<4 x float> %val, <4 x float> %test) nounwind {
 ; CHECK-NEXT: .long 1065353216              ## 0x3f800000
 ; CHECK-NEXT: .long 0                       ## 0x0
 ; CHECK-LABEL: foo3:
-; CHECK: cmpeqps %xmm1, %xmm0
-; CHECK-NEXT: andps LCPI3_0(%rip), %xmm0
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    cmpeqps %xmm1, %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
   %cmp = fcmp oeq <4 x float> %val, %test
   %ext = zext <4 x i1> %cmp to <4 x i32>
   %and = and <4 x i32> %ext, <i32 255, i32 256, i32 257, i32 258>
@@ -77,8 +88,10 @@ define void @foo4(<4 x float>* noalias %result) nounwind {
 ; CHECK-NEXT: .long 1124073472              ## float 128
 ; CHECK-NEXT: .long 1132396544              ## float 255
 ; CHECK-LABEL: foo4:
-; CHECK:  movaps LCPI4_0(%rip), %xmm0
-
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.000000e+00,1.270000e+02,1.280000e+02,2.550000e+02]
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
   %val = uitofp <4 x i8> <i8 1, i8 127, i8 -128, i8 -1> to <4 x float>
   store <4 x float> %val, <4 x float>* %result
   ret void

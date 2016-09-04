@@ -167,7 +167,9 @@ define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-NEXT:    kmovw %eax, %k1
 ; ALL-NEXT:    korw %k1, %k0, %k1
 ; ALL-NEXT:    kxorw %k1, %k0, %k0
-; ALL-NEXT:    kortestw %k0, %k0
+; ALL-NEXT:    kmovw %k0, %eax
+; ALL-NEXT:    andl $1, %eax
+; ALL-NEXT:    testb %al, %al
 ; ALL-NEXT:    je LBB8_1
 ; ALL-NEXT:  ## BB#2: ## %if.end.i
 ; ALL-NEXT:    movl $6, %eax
