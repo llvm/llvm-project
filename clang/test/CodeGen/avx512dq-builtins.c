@@ -13,13 +13,15 @@ __m512i test_mm512_mullo_epi64 (__m512i __A, __m512i __B) {
 
 __m512i test_mm512_mask_mullo_epi64 (__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_mullo_epi64
-  // CHECK: @llvm.x86.avx512.mask.pmull.q.512
+  // CHECK: mul <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return (__m512i) _mm512_mask_mullo_epi64(__W, __U, __A, __B);
 }
 
 __m512i test_mm512_maskz_mullo_epi64 (__mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_mullo_epi64
-  // CHECK: @llvm.x86.avx512.mask.pmull.q.512
+  // CHECK: mul <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return (__m512i) _mm512_maskz_mullo_epi64(__U, __A, __B);
 }
 

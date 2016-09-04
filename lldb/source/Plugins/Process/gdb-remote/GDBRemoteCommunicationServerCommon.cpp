@@ -12,6 +12,11 @@
 #include <errno.h>
 
 // C Includes
+
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 // C++ Includes
 #include <cstring>
 #include <chrono>
@@ -169,8 +174,11 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo (StringExtractorGDBRemote &
         response.PutCString(";");
     }
 
-    // Only send out MachO info when lldb-platform/llgs is running on a MachO host.
 #if defined(__APPLE__)
+    // For parity with debugserver, we'll include the vendor key.
+    response.PutCString("vendor:apple;");
+
+    // Send out MachO info.
     uint32_t cpu = host_arch.GetMachOCPUType();
     uint32_t sub = host_arch.GetMachOCPUSubType();
     if (cpu != LLDB_INVALID_CPUTYPE)
@@ -179,9 +187,26 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo (StringExtractorGDBRemote &
         response.Printf ("cpusubtype:%u;", sub);
 
     if (cpu == ArchSpec::kCore_arm_any)
-        response.Printf("watchpoint_exceptions_received:before;");   // On armv7 we use "synchronous" watchpoints which means the exception is delivered before the instruction executes.
+    {
+        // Indicate the OS type.
+#if defined (TARGET_OS_TV) && TARGET_OS_TV == 1
+        response.PutCString("ostype:tvos;");
+#elif defined (TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
+        response.PutCString("ostype:watchos;");
+#else
+        response.PutCString("ostype:ios;");
+#endif
+
+        // On arm, we use "synchronous" watchpoints which means the exception is
+        // delivered before the instruction executes.
+        response.PutCString("watchpoint_exceptions_received:before;");
+    }
     else
+    {
+        response.PutCString("ostype:macosx;");
         response.Printf("watchpoint_exceptions_received:after;");
+    }
+
 #else
     if (host_arch.GetMachine() == llvm::Triple::aarch64 ||
         host_arch.GetMachine() == llvm::Triple::aarch64_be ||

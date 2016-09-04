@@ -1193,38 +1193,6 @@ private:
                                 llvm::SmallVectorImpl<MemoryAccess *> &Loads);
   //@}
 
-  /// Derive assumptions about parameter values from GetElementPtrInst
-  ///
-  /// In case a GEP instruction references into a fixed size array e.g., an
-  /// access A[i][j] into an array A[100x100], LLVM-IR does not guarantee that
-  /// the subscripts always compute values that are within array bounds. In this
-  /// function we derive the set of parameter values for which all accesses are
-  /// within bounds and add the assumption that the scop is only every executed
-  /// with this set of parameter values.
-  ///
-  /// Example:
-  ///
-  ///   void foo(float A[][20], long n, long m {
-  ///     for (long i = 0; i < n; i++)
-  ///       for (long j = 0; j < m; j++)
-  ///         A[i][j] = ...
-  ///
-  /// This loop yields out-of-bound accesses if m is at least 20 and at the same
-  /// time at least one iteration of the outer loop is executed. Hence, we
-  /// assume:
-  ///
-  ///   n <= 0 or m <= 20.
-  ///
-  /// TODO: The location where the GEP instruction is executed is not
-  /// necessarily the location where the memory is actually accessed. As a
-  /// result scanning for GEP[s] is imprecise. Even though this is not a
-  /// correctness problem, this imprecision may result in missed optimizations
-  /// or non-optimal run-time checks.
-  void deriveAssumptionsFromGEP(GetElementPtrInst *Inst, LoopInfo &LI);
-
-  /// Derive assumptions about parameter values.
-  void deriveAssumptions(LoopInfo &LI);
-
 public:
   ~ScopStmt();
 

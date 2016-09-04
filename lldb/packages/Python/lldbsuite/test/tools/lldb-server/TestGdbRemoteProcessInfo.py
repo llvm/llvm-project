@@ -155,6 +155,13 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build()
         self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
 
+    @skipUnlessDarwin
+    @llgs_test
+    def test_qProcessInfo_contains_cputype_cpusubtype_llgs_darwin(self):
+        self.init_llgs_test()
+        self.build()
+        self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
+
     @skipUnlessPlatform(["linux"])
     @llgs_test
     def test_qProcessInfo_contains_triple_llgs_linux(self):
@@ -166,6 +173,16 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     def test_qProcessInfo_does_not_contain_triple_debugserver_darwin(self):
         self.init_debugserver_test()
+        self.build()
+        # We don't expect to see triple on darwin.  If we do, we'll prefer triple
+        # to cputype/cpusubtype and skip some darwin-based ProcessGDBRemote ArchSpec setup
+        # for the remote Host and Process.
+        self.qProcessInfo_does_not_contain_keys(set(['triple']))
+
+    @skipUnlessDarwin
+    @llgs_test
+    def test_qProcessInfo_does_not_contain_triple_llgs_darwin(self):
+        self.init_llgs_test()
         self.build()
         # We don't expect to see triple on darwin.  If we do, we'll prefer triple
         # to cputype/cpusubtype and skip some darwin-based ProcessGDBRemote ArchSpec setup

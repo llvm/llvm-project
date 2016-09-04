@@ -65,6 +65,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("blocks", LangOpts.Blocks)
                         .Case("cplusplus", LangOpts.CPlusPlus)
                         .Case("cplusplus11", LangOpts.CPlusPlus11)
+                        .Case("freestanding", LangOpts.Freestanding)
                         .Case("gnuinlineasm", LangOpts.GNUAsm)
                         .Case("objc", LangOpts.ObjC1)
                         .Case("objc_arc", LangOpts.ObjCAutoRefCount)
