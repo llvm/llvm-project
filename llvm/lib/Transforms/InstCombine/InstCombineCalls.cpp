@@ -192,10 +192,17 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   L->setAlignment(SrcAlign);
   if (CopyMD)
     L->setMetadata(LLVMContext::MD_tbaa, CopyMD);
+  MDNode *LoopMemParallelMD =
+    MI->getMetadata(LLVMContext::MD_mem_parallel_loop_access);
+  if (LoopMemParallelMD)
+    L->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
+
   StoreInst *S = Builder->CreateStore(L, Dest, MI->isVolatile());
   S->setAlignment(DstAlign);
   if (CopyMD)
     S->setMetadata(LLVMContext::MD_tbaa, CopyMD);
+  if (LoopMemParallelMD)
+    S->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
 
   // Set the size of the copy to 0, it will be deleted on the next iteration.
   MI->setArgOperand(2, Constant::getNullValue(MemOpLength->getType()));

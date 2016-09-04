@@ -4676,15 +4676,20 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // of the condition, it means that side of the branch goes to the end block
   // directly and the path originates from the start block from the point of
   // view of the new PHI.
+  BasicBlock *TT, *FT;
   if (TrueBlock == nullptr) {
-    BranchInst::Create(EndBlock, FalseBlock, SI->getCondition(), SI);
+    TT = EndBlock;
+    FT = FalseBlock;
     TrueBlock = StartBlock;
   } else if (FalseBlock == nullptr) {
-    BranchInst::Create(TrueBlock, EndBlock, SI->getCondition(), SI);
+    TT = TrueBlock;
+    FT = EndBlock;
     FalseBlock = StartBlock;
   } else {
-    BranchInst::Create(TrueBlock, FalseBlock, SI->getCondition(), SI);
+    TT = TrueBlock;
+    FT = FalseBlock;
   }
+  IRBuilder<>(SI).CreateCondBr(SI->getCondition(), TT, FT, SI);
 
   // The select itself is replaced with a PHI Node.
   PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());

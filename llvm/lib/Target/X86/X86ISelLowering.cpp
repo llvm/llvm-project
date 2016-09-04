@@ -26480,8 +26480,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   if (SDValue LD = EltsFromConsecutiveLoads(VT, Elts, dl, DAG, true))
     return LD;
 
-  // For AVX2, we sometimes want to combine 
-  // (vector_shuffle <mask> (concat_vectors t1, undef) 
+  // For AVX2, we sometimes want to combine
+  // (vector_shuffle <mask> (concat_vectors t1, undef)
   //                        (concat_vectors t2, undef))
   // Into:
   // (vector_shuffle <mask> (concat_vectors t1, t2), undef)
