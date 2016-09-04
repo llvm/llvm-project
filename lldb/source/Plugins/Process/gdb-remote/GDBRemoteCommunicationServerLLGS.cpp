@@ -216,7 +216,8 @@ GDBRemoteCommunicationServerLLGS::LaunchProcess ()
     Error error;
     {
         std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
-        assert (!m_debugged_process_sp && "lldb-gdbserver creating debugged process but one already exists");
+        assert (!m_debugged_process_sp && "lldb-server creating debugged "
+                "process but one already exists");
         error = NativeProcessProtocol::Launch(
             m_process_launch_info,
             *this,

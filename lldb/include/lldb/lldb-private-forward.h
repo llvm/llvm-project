@@ -24,6 +24,7 @@ namespace lldb_private
     class NativeProcessProtocol;
     class NativeRegisterContext;
     class NativeThreadProtocol;
+    class ResumeActionList;
     class UnixSignals;
 
     // ---------------------------------------------------------------

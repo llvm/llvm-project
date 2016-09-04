@@ -763,15 +763,10 @@ void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
   }
 
   // Insert the new branch.
-  BranchInst *BI = BranchInst::Create(TrueDest, FalseDest, BranchVal, InsertPt);
-  if (TI) {
-    // FIXME: check why white list is needed here:
-    unsigned WL[3] = {LLVMContext::MD_dbg, LLVMContext::MD_prof,
-                      LLVMContext::MD_make_implicit};
-    BI->copyMetadata(*TI, makeArrayRef(&WL[0], 3));
-    if (Swapped)
-      BI->swapProfMetadata();
-  }
+  BranchInst *BI =
+      IRBuilder<>(InsertPt).CreateCondBr(BranchVal, TrueDest, FalseDest, TI);
+  if (Swapped)
+    BI->swapProfMetadata();
 
   // If either edge is critical, split it. This helps preserve LoopSimplify
   // form for enclosing loops.

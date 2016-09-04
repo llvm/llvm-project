@@ -133,7 +133,7 @@ class GdbRemoteTestCaseBase(TestBase):
             self.debug_monitor_extra_args.append("--log-file=" + log_file)
             self.debug_monitor_extra_args.append("--log-channels={}".format(":".join(lldbtest_config.channels)))
         else:
-            self.debug_monitor_extra_args = ["--log-file=" + self.log_file, "--log-flags=0x800000"]
+            self.debug_monitor_extra_args = ["--log-file=" + log_file, "--log-flags=0x800000"]
 
     def get_next_port(self):
         return 12000 + random.randint(0,3999)
@@ -1370,3 +1370,16 @@ class GdbRemoteTestCaseBase(TestBase):
     def maybe_strict_output_regex(self, regex):
         return '.*'+regex+'.*' if lldbplatformutil.hasChattyStderr(self) else '^'+regex+'$'
 
+    def install_and_create_launch_args(self):
+        exe_path = os.path.abspath('a.out')
+        if not lldb.remote_platform:
+            return [exe_path]
+        remote_path = lldbutil.append_to_process_working_directory(
+            os.path.basename(exe_path))
+        remote_file_spec = lldb.SBFileSpec(remote_path, False)
+        err = lldb.remote_platform.Install(lldb.SBFileSpec(exe_path, True),
+                                           remote_file_spec)
+        if err.Fail():
+            raise Exception("remote_platform.Install('%s', '%s') failed: %s" %
+                            (exe_path, remote_path, err))
+        return [remote_path]

@@ -24,6 +24,7 @@
 #include <limits>
 #include <cassert>
 
+#include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
 class Fnf
@@ -113,7 +114,14 @@ int main()
 
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
+        // GLIBC <= 2.23 uses currency_symbol="<U0440><U0443><U0431>"
+        // GLIBC >= 2.24 uses currency_symbol="<U20BD>"
+        // See also: http://www.fileformat.info/info/unicode/char/20bd/index.htm
+#if defined(TEST_GLIBC_PREREQ) && TEST_GLIBC_PREREQ(2, 24)
+        assert(f.curr_symbol() == " \xE2\x82\xBD");
+#else
         assert(f.curr_symbol() == " \xD1\x80\xD1\x83\xD0\xB1");
+#endif
     }
     {
         Fnt f(LOCALE_ru_RU_UTF_8, 1);

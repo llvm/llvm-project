@@ -201,7 +201,7 @@ namespace lldb_private {
             {
                 uint64_t type;
                 uint32_t data_count;
-                lldb::addr_t data[2];
+                lldb::addr_t data[8];
             } exception;
         } details;
     };

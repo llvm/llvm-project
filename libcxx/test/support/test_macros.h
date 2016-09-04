@@ -62,6 +62,13 @@
 #endif
 #endif
 
+// Attempt to deduce GCC version
+#if defined(_LIBCPP_VERSION) && __has_include(<features.h>)
+#include <features.h>
+#define TEST_HAS_GLIBC
+#define TEST_GLIBC_PREREQ(major, minor) __GLIBC_PREREQ(major, minor)
+#endif
+
 /* Features that were introduced in C++14 */
 #if TEST_STD_VER >= 14
 #define TEST_HAS_EXTENDED_CONSTEXPR

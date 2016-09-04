@@ -89,6 +89,8 @@ UnixSignals::Reset ()
     // This builds one standard set of Unix Signals.  If yours aren't quite in this
     // order, you can either subclass this class, and use Add & Remove to change them
     // or you can subclass and build them afresh in your constructor;
+    //
+    // Note: the signals below are the Darwin signals.  Do not change these!
     m_signals.clear();
     //        SIGNO  NAME          SUPPRESS STOP   NOTIFY DESCRIPTION
     //        ====== ============  ======== ====== ====== ===================================================
