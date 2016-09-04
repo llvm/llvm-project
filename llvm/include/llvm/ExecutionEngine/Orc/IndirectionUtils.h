@@ -415,6 +415,10 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
 GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
 
+/// @brief Clone module flags metadata into the destination module.
+void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
+                              ValueToValueMapTy &VMap);
+
 } // End namespace orc.
 } // End namespace llvm.
 

@@ -6297,12 +6297,18 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::MINSSrr_Int: case X86::VMINSSrr_Int: case X86::VMINSSZrr_Int:
     case X86::MULSSrr_Int: case X86::VMULSSrr_Int: case X86::VMULSSZrr_Int:
     case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int: case X86::VSUBSSZrr_Int:
-    case X86::VFMADD132SSr_Int: case X86::VFNMADD132SSr_Int:
-    case X86::VFMADD213SSr_Int: case X86::VFNMADD213SSr_Int:
-    case X86::VFMADD231SSr_Int: case X86::VFNMADD231SSr_Int:
-    case X86::VFMSUB132SSr_Int: case X86::VFNMSUB132SSr_Int:
-    case X86::VFMSUB213SSr_Int: case X86::VFNMSUB213SSr_Int:
-    case X86::VFMSUB231SSr_Int: case X86::VFNMSUB231SSr_Int:
+    case X86::VFMADD132SSr_Int:  case X86::VFNMADD132SSr_Int:
+    case X86::VFMADD213SSr_Int:  case X86::VFNMADD213SSr_Int:
+    case X86::VFMADD231SSr_Int:  case X86::VFNMADD231SSr_Int:
+    case X86::VFMSUB132SSr_Int:  case X86::VFNMSUB132SSr_Int:
+    case X86::VFMSUB213SSr_Int:  case X86::VFNMSUB213SSr_Int:
+    case X86::VFMSUB231SSr_Int:  case X86::VFNMSUB231SSr_Int:
+    case X86::VFMADD132SSZr_Int: case X86::VFNMADD132SSZr_Int:
+    case X86::VFMADD213SSZr_Int: case X86::VFNMADD213SSZr_Int:
+    case X86::VFMADD231SSZr_Int: case X86::VFNMADD231SSZr_Int:
+    case X86::VFMSUB132SSZr_Int: case X86::VFNMSUB132SSZr_Int:
+    case X86::VFMSUB213SSZr_Int: case X86::VFNMSUB213SSZr_Int:
+    case X86::VFMSUB231SSZr_Int: case X86::VFNMSUB231SSZr_Int:
       return false;
     default:
       return true;
@@ -6322,12 +6328,18 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::MINSDrr_Int: case X86::VMINSDrr_Int: case X86::VMINSDZrr_Int:
     case X86::MULSDrr_Int: case X86::VMULSDrr_Int: case X86::VMULSDZrr_Int:
     case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int: case X86::VSUBSDZrr_Int:
-    case X86::VFMADD132SDr_Int: case X86::VFNMADD132SDr_Int:
-    case X86::VFMADD213SDr_Int: case X86::VFNMADD213SDr_Int:
-    case X86::VFMADD231SDr_Int: case X86::VFNMADD231SDr_Int:
-    case X86::VFMSUB132SDr_Int: case X86::VFNMSUB132SDr_Int:
-    case X86::VFMSUB213SDr_Int: case X86::VFNMSUB213SDr_Int:
-    case X86::VFMSUB231SDr_Int: case X86::VFNMSUB231SDr_Int:
+    case X86::VFMADD132SDr_Int:  case X86::VFNMADD132SDr_Int:
+    case X86::VFMADD213SDr_Int:  case X86::VFNMADD213SDr_Int:
+    case X86::VFMADD231SDr_Int:  case X86::VFNMADD231SDr_Int:
+    case X86::VFMSUB132SDr_Int:  case X86::VFNMSUB132SDr_Int:
+    case X86::VFMSUB213SDr_Int:  case X86::VFNMSUB213SDr_Int:
+    case X86::VFMSUB231SDr_Int:  case X86::VFNMSUB231SDr_Int:
+    case X86::VFMADD132SDZr_Int: case X86::VFNMADD132SDZr_Int:
+    case X86::VFMADD213SDZr_Int: case X86::VFNMADD213SDZr_Int:
+    case X86::VFMADD231SDZr_Int: case X86::VFNMADD231SDZr_Int:
+    case X86::VFMSUB132SDZr_Int: case X86::VFNMSUB132SDZr_Int:
+    case X86::VFMSUB213SDZr_Int: case X86::VFNMSUB213SDZr_Int:
+    case X86::VFMSUB231SDZr_Int: case X86::VFNMSUB231SDZr_Int:
       return false;
     default:
       return true;

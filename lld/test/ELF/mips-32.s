@@ -52,10 +52,11 @@ v2:
 # REL-NEXT:   }
 # REL-NEXT: ]
 
-# REL: DynamicSection [
-# REL:   Tag        Type                 Name/Value
-# REL:   0x00000012 RELSZ                16 (bytes)
-# REL:   0x00000013 RELENT               8 (bytes)
+# REL:   DynamicSection [
+# REL:     Tag        Type                 Name/Value
+# REL:     0x00000012 RELSZ                16 (bytes)
+# REL:     0x00000013 RELENT               8 (bytes)
+# REL-NOT: 0x6FFFFFFA RELCOUNT
 
 # REL:      Primary GOT {
 # REL-NEXT:   Canonical gp value:
