@@ -59,6 +59,8 @@ public:
 
   StructType *&operator[](unsigned Idx) { return StructTypes[Idx]; }
 
+  DenseSet<const MDNode *> &getVisitedMetadata() { return VisitedMetadata; }
+
 private:
   /// incorporateType - This method adds the type to the list of used
   /// structures if it's not in there already.

@@ -703,6 +703,19 @@ public:
                                     BranchWeights, Unpredictable));
   }
 
+  /// \brief Create a conditional 'br Cond, TrueDest, FalseDest'
+  /// instruction. Copy branch meta data if available.
+  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+                           Instruction *MDSrc) {
+    BranchInst *Br = BranchInst::Create(True, False, Cond);
+    if (MDSrc) {
+      unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
+      Br->copyMetadata(*MDSrc, makeArrayRef(&WL[0], 4));
+    }
+    return Insert(Br);
+  }
+
   /// \brief Create a switch instruction with the specified value, default dest,
   /// and with a hint for the number of cases that will be added (for efficient
   /// allocation).

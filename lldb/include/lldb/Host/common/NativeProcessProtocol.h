@@ -37,12 +37,6 @@ namespace lldb_private
 
     public:
 
-        // lldb_private::Host calls should be used to launch a process for debugging, and
-        // then the process should be attached to. When attaching to a process
-        // lldb_private::Host calls should be used to locate the process to attach to,
-        // and then this function should be called.
-        NativeProcessProtocol (lldb::pid_t pid);
-
         virtual ~NativeProcessProtocol ()
         {
         }
@@ -379,6 +373,12 @@ namespace lldb_private
         int m_terminal_fd;
         uint32_t m_stop_id;
 
+        // lldb_private::Host calls should be used to launch a process for debugging, and
+        // then the process should be attached to. When attaching to a process
+        // lldb_private::Host calls should be used to locate the process to attach to,
+        // and then this function should be called.
+        NativeProcessProtocol (lldb::pid_t pid);
+
         // -----------------------------------------------------------
         // Internal interface for state handling
         // -----------------------------------------------------------
@@ -414,6 +414,12 @@ namespace lldb_private
 
         NativeThreadProtocolSP
         GetThreadByIDUnlocked (lldb::tid_t tid);
+
+        // -----------------------------------------------------------
+        // Static helper methods for derived classes.
+        // -----------------------------------------------------------
+        static Error
+        ResolveProcessArchitecture(lldb::pid_t pid, ArchSpec &arch);
 
     private:
 
