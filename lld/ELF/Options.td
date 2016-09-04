@@ -97,6 +97,9 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
+def nostdlib: F<"nostdlib">,
+  HelpText<"Only search directories specified on the command line">;
+
 def no_as_needed: F<"no-as-needed">,
   HelpText<"Always DT_NEEDED for shared libraries">;
 

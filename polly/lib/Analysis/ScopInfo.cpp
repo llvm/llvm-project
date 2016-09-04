@@ -1397,79 +1397,6 @@ void ScopStmt::buildDomain() {
   Domain = isl_set_set_tuple_id(Domain, Id);
 }
 
-void ScopStmt::deriveAssumptionsFromGEP(GetElementPtrInst *GEP, LoopInfo &LI) {
-  isl_ctx *Ctx = Parent.getIslCtx();
-  isl_local_space *LSpace = isl_local_space_from_space(getDomainSpace());
-  ScalarEvolution &SE = *Parent.getSE();
-
-  // The set of loads that are required to be invariant.
-  auto &ScopRIL = Parent.getRequiredInvariantLoads();
-
-  std::vector<const SCEV *> Subscripts;
-  std::vector<int> Sizes;
-
-  std::tie(Subscripts, Sizes) = getIndexExpressionsFromGEP(GEP, SE);
-
-  int IndexOffset = Subscripts.size() - Sizes.size();
-
-  assert(IndexOffset <= 1 && "Unexpected large index offset");
-
-  auto *NotExecuted = isl_set_complement(isl_set_params(getDomain()));
-  for (size_t i = 0; i < Sizes.size(); i++) {
-    auto *Expr = Subscripts[i + IndexOffset];
-    auto Size = Sizes[i];
-
-    auto *Scope = LI.getLoopFor(getEntryBlock());
-    InvariantLoadsSetTy AccessILS;
-    if (!isAffineExpr(&Parent.getRegion(), Scope, Expr, SE, &AccessILS))
-      continue;
-
-    bool NonAffine = false;
-    for (LoadInst *LInst : AccessILS)
-      if (!ScopRIL.count(LInst))
-        NonAffine = true;
-
-    if (NonAffine)
-      continue;
-
-    isl_pw_aff *AccessOffset = getPwAff(Expr);
-    AccessOffset =
-        isl_pw_aff_set_tuple_id(AccessOffset, isl_dim_in, getDomainId());
-
-    isl_pw_aff *DimSize = isl_pw_aff_from_aff(isl_aff_val_on_domain(
-        isl_local_space_copy(LSpace), isl_val_int_from_si(Ctx, Size)));
-
-    isl_set *OutOfBound = isl_pw_aff_ge_set(AccessOffset, DimSize);
-    OutOfBound = isl_set_intersect(getDomain(), OutOfBound);
-    OutOfBound = isl_set_params(OutOfBound);
-    isl_set *InBound = isl_set_complement(OutOfBound);
-
-    // A => B == !A or B
-    isl_set *InBoundIfExecuted =
-        isl_set_union(isl_set_copy(NotExecuted), InBound);
-
-    InBoundIfExecuted = isl_set_coalesce(InBoundIfExecuted);
-    Parent.recordAssumption(INBOUNDS, InBoundIfExecuted, GEP->getDebugLoc(),
-                            AS_ASSUMPTION);
-  }
-
-  isl_local_space_free(LSpace);
-  isl_set_free(NotExecuted);
-}
-
-void ScopStmt::deriveAssumptions(LoopInfo &LI) {
-  for (auto *MA : *this) {
-    if (!MA->isArrayKind())
-      continue;
-
-    MemAccInst Acc(MA->getAccessInstruction());
-    auto *GEP = dyn_cast_or_null<GetElementPtrInst>(Acc.getPointerOperand());
-
-    if (GEP)
-      deriveAssumptionsFromGEP(GEP, LI);
-  }
-}
-
 void ScopStmt::collectSurroundingLoops() {
   for (unsigned u = 0, e = isl_set_n_dim(Domain); u < e; u++) {
     isl_id *DimId = isl_set_get_dim_id(Domain, isl_dim_set, u);
@@ -1498,8 +1425,6 @@ void ScopStmt::init(LoopInfo &LI) {
   buildDomain();
   collectSurroundingLoops();
   buildAccessRelations();
-
-  deriveAssumptions(LI);
 
   if (DetectReductions)
     checkForReductions();

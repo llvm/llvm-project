@@ -7585,27 +7585,34 @@ __kmp_determine_reduction_method( ident_t *loc, kmp_int32 global_tid,
     // method and stay with the unsynchronized method (empty_reduce_block)
     if( __kmp_force_reduction_method != reduction_method_not_defined && team_size != 1) {
 
-        PACKED_REDUCTION_METHOD_T forced_retval;
+        PACKED_REDUCTION_METHOD_T forced_retval = critical_reduce_block;
 
         int atomic_available, tree_available;
 
         switch( ( forced_retval = __kmp_force_reduction_method ) )
         {
-            case critical_reduce_block:
+        case critical_reduce_block:
                 KMP_ASSERT( lck );              // lck should be != 0
                 break;
 
             case atomic_reduce_block:
                 atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
-                KMP_ASSERT( atomic_available ); // atomic_available should be != 0
+                if( ! atomic_available ) {
+                    KMP_WARNING(RedMethodNotSupported, "atomic");
+                    forced_retval = critical_reduce_block;
+                }
                 break;
 
             case tree_reduce_block:
                 tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
-                KMP_ASSERT( tree_available );   // tree_available should be != 0
-                #if KMP_FAST_REDUCTION_BARRIER
-                forced_retval = TREE_REDUCE_BLOCK_WITH_REDUCTION_BARRIER;
-                #endif
+                if( ! tree_available ) {
+                    KMP_WARNING(RedMethodNotSupported, "tree");
+                    forced_retval = critical_reduce_block;
+                } else {
+                    #if KMP_FAST_REDUCTION_BARRIER
+                    forced_retval = TREE_REDUCE_BLOCK_WITH_REDUCTION_BARRIER;
+                    #endif
+                }
                 break;
 
             default:

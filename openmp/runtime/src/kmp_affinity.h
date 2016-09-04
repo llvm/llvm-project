@@ -15,8 +15,6 @@
 #ifndef KMP_AFFINITY_H
 #define KMP_AFFINITY_H
 
-extern int __kmp_affinity_compact; /* Affinity 'compact' value */
-
 class Address {
 public:
     static const unsigned maxDepth = 32;
@@ -107,32 +105,6 @@ __kmp_affinity_cmp_Address_labels(const void *a, const void *b)
     for (i  = 0; i < depth; i++) {
         if (aa->labels[i] < bb->labels[i]) return -1;
         if (aa->labels[i] > bb->labels[i]) return 1;
-    }
-    return 0;
-}
-
-
-static int
-__kmp_affinity_cmp_Address_child_num(const void *a, const void *b)
-{
-    const Address *aa = (const Address *)&(((AddrUnsPair *)a)
-      ->first);
-    const Address *bb = (const Address *)&(((AddrUnsPair *)b)
-      ->first);
-    unsigned depth = aa->depth;
-    unsigned i;
-    KMP_DEBUG_ASSERT(depth == bb->depth);
-    KMP_DEBUG_ASSERT((unsigned)__kmp_affinity_compact <= depth);
-    KMP_DEBUG_ASSERT(__kmp_affinity_compact >= 0);
-    for (i = 0; i < (unsigned)__kmp_affinity_compact; i++) {
-        int j = depth - i - 1;
-        if (aa->childNums[j] < bb->childNums[j]) return -1;
-        if (aa->childNums[j] > bb->childNums[j]) return 1;
-    }
-    for (; i < depth; i++) {
-        int j = i - __kmp_affinity_compact;
-        if (aa->childNums[j] < bb->childNums[j]) return -1;
-        if (aa->childNums[j] > bb->childNums[j]) return 1;
     }
     return 0;
 }

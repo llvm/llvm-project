@@ -71,6 +71,9 @@ public:
   /// Gets the number of elements in this slice.
   size_t getElementCount() const { return ElementCount; }
 
+  /// Returns the number of bytes that can fit in this slice.
+  size_t getByteCount() const { return ElementCount * sizeof(ElemT); }
+
   /// Creates a slice of the memory with the first DropCount elements removed.
   GlobalDeviceMemorySlice<ElemT> drop_front(size_t DropCount) const {
     assert(DropCount <= ElementCount &&
@@ -175,6 +178,9 @@ public:
   /// allocation.
   size_t getElementCount() const { return ByteCount / sizeof(ElemT); }
 
+  /// Returns the number of bytes that can fit in this memory buffer.
+  size_t getByteCount() const { return ByteCount; }
+
   /// Converts this memory object into a slice.
   GlobalDeviceMemorySlice<ElemT> asSlice() const {
     return GlobalDeviceMemorySlice<ElemT>(*this);
@@ -224,9 +230,12 @@ public:
   /// Copy-assignable because it is just an array size.
   SharedDeviceMemory &operator=(const SharedDeviceMemory &) = default;
 
-  /// Returns the number of elements of type ElemT that can fit this memory
+  /// Returns the number of elements of type ElemT that can fit in this memory
   /// buffer.
   size_t getElementCount() const { return ElementCount; }
+
+  /// Returns the number of bytes that can fit in this memory buffer.
+  size_t getByteCount() const { return ElementCount * sizeof(ElemT); }
 
   /// Returns whether this is a single-element memory buffer.
   bool isScalar() const { return getElementCount() == 1; }

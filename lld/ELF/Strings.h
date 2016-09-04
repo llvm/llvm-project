@@ -11,11 +11,13 @@
 #define LLD_COFF_STRINGS_H
 
 #include "lld/Core/LLVM.h"
+#include "llvm/Support/Regex.h"
 #include <vector>
 
 namespace lld {
 namespace elf {
-bool globMatch(StringRef S, StringRef T);
+llvm::Regex compileGlobPatterns(ArrayRef<StringRef> V);
+bool hasWildcard(StringRef S);
 std::vector<uint8_t> parseHex(StringRef S);
 bool isValidCIdentifier(StringRef S);
 
