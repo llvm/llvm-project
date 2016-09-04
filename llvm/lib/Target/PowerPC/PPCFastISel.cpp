@@ -2157,7 +2157,12 @@ unsigned PPCFastISel::fastMaterializeConstant(const Constant *C) {
   else if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
     return PPCMaterializeGV(GV, VT);
   else if (const ConstantInt *CI = dyn_cast<ConstantInt>(C))
-    return PPCMaterializeInt(CI, VT, VT != MVT::i1);
+    // Note that the code in FunctionLoweringInfo::ComputePHILiveOutRegInfo
+    // assumes that constant PHI operands will be zero extended, and failure to
+    // match that assumption will cause problems if we sign extend here but
+    // some user of a PHI is in a block for which we fall back to full SDAG
+    // instruction selection.
+    return PPCMaterializeInt(CI, VT, false);
 
   return 0;
 }
