@@ -29,8 +29,6 @@
 
 using namespace llvm;
 
-void ObjectCache::anchor() {}
-
 namespace {
 
 static struct RegisterJIT {

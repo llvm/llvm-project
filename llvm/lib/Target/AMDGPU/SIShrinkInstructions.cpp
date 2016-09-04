@@ -194,6 +194,20 @@ static bool isKImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
   return isInt<16>(Src.getImm()) && !TII->isInlineConstant(Src, 4);
 }
 
+/// Copy implicit register operands from specified instruction to this
+/// instruction that are not part of the instruction definition.
+static void copyExtraImplicitOps(MachineInstr &NewMI, MachineFunction &MF,
+                                 const MachineInstr &MI) {
+  for (unsigned i = MI.getDesc().getNumOperands() +
+         MI.getDesc().getNumImplicitUses() +
+         MI.getDesc().getNumImplicitDefs(), e = MI.getNumOperands();
+       i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    if ((MO.isReg() && MO.isImplicit()) || MO.isRegMask())
+      NewMI.addOperand(MF, MO);
+  }
+}
+
 bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
@@ -401,7 +415,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       ++NumInstructionsShrunk;
 
       // Copy extra operands not present in the instruction definition.
-      Inst32->copyImplicitOps(MF, MI);
+      copyExtraImplicitOps(*Inst32, MF, MI);
 
       MI.eraseFromParent();
       foldImmediates(*Inst32, TII, MRI);
