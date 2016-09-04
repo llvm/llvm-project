@@ -2480,10 +2480,6 @@ multiclass avx512_mask_testop_w<bits<8> opc, string OpcodeStr, SDNode OpNode,
 defm KORTEST : avx512_mask_testop_w<0x98, "kortest", X86kortest>;
 defm KTEST   : avx512_mask_testop_w<0x99, "ktest", X86ktest, HasDQI>;
 
-def : Pat<(X86cmp VK1:$src, 0),
-          (KORTESTWrr (COPY_TO_REGCLASS VK1:$src, VK16),
-                      (COPY_TO_REGCLASS VK1:$src, VK16))>, Requires<[HasAVX512]>;
-
 // Mask shift
 multiclass avx512_mask_shiftop<bits<8> opc, string OpcodeStr, RegisterClass KRC,
                              SDNode OpNode> {

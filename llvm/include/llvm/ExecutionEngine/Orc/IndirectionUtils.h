@@ -411,9 +411,13 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
                                    ValueMaterializer *Materializer = nullptr,
                                    GlobalVariable *NewGV = nullptr);
 
-/// @brief Clone
+/// @brief Clone a global alias declaration into a new module.
 GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
+
+/// @brief Clone module flags metadata into the destination module.
+void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
+                              ValueToValueMapTy &VMap);
 
 } // End namespace orc.
 } // End namespace llvm.

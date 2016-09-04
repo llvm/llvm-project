@@ -364,10 +364,11 @@ private:
       assert(!EC && "Error generating stubs");
     }
 
-    // If this module doesn't contain any globals or aliases we can bail out
-    // early and avoid the overhead of creating and managing an empty globals
-    // module.
-    if (SrcM.global_empty() && SrcM.alias_empty())
+    // If this module doesn't contain any globals, aliases, or module flags then
+    // we can bail out early and avoid the overhead of creating and managing an
+    // empty globals module.
+    if (SrcM.global_empty() && SrcM.alias_empty() &&
+        !SrcM.getModuleFlagsMetadata())
       return;
 
     // Create the GlobalValues module.
@@ -386,6 +387,9 @@ private:
     for (auto &A : SrcM.aliases())
       if (!VMap.count(&A))
         cloneGlobalAliasDecl(*GVsM, A, VMap);
+
+    // Clone the module flags.
+    cloneModuleFlagsMetadata(*GVsM, SrcM, VMap);
 
     // Now we need to clone the GV and alias initializers.
 

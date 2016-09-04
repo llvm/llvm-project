@@ -14896,29 +14896,15 @@ static SDValue EmitKTEST(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue EmitTEST_i1(SDValue Op, SelectionDAG &DAG, const SDLoc &dl) {
-
-  // Most probably the value is in GPR, use ZEXT + CMP.
-  if(Op.getOpcode() == ISD::TRUNCATE ||
-     Op.getOpcode() == ISD::LOAD ||
-     Op.getOpcode() == ISD::CopyFromReg) {
-    SDValue ExtOp = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, Op);
-    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, ExtOp,
-                       DAG.getConstant(0, dl, MVT::i8));
-  }
-
-  // Create cmp i1 that should be mapped to KORTEST.
-  return DAG.getNode(X86ISD::CMP, dl, MVT::i1, Op,
-                     DAG.getConstant(0, dl, MVT::i8));
-}
-
 /// Emit nodes that will be selected as "test Op0,Op0", or something
 /// equivalent.
 SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
                                     SelectionDAG &DAG) const {
-  if (Op.getValueType() == MVT::i1)
-    return EmitTEST_i1(Op, DAG, dl);
-
+  if (Op.getValueType() == MVT::i1) {
+    SDValue ExtOp = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, Op);
+    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, ExtOp,
+                       DAG.getConstant(0, dl, MVT::i8));
+  }
   // CF and OF aren't always set the way we want. Determine which
   // of these we need.
   bool NeedCF = false;

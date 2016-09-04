@@ -18,7 +18,7 @@ using namespace llvm;
 
 namespace {
 
-  enum class DumpKind { NoDump, DumpFuncsToStdOut, DumpModsToStdErr,
+  enum class DumpKind { NoDump, DumpFuncsToStdOut, DumpModsToStdOut,
                         DumpModsToDisk };
 
   cl::opt<DumpKind> OrcDumpKind("orc-lazy-debug",
@@ -30,9 +30,9 @@ namespace {
                                   clEnumValN(DumpKind::DumpFuncsToStdOut,
                                              "funcs-to-stdout",
                                              "Dump function names to stdout."),
-                                  clEnumValN(DumpKind::DumpModsToStdErr,
-                                             "mods-to-stderr",
-                                             "Dump modules to stderr."),
+                                  clEnumValN(DumpKind::DumpModsToStdOut,
+                                             "mods-to-stdout",
+                                             "Dump modules to stdout."),
                                   clEnumValN(DumpKind::DumpModsToDisk,
                                              "mods-to-disk",
                                              "Dump modules to the current "
@@ -71,9 +71,9 @@ OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
       return M;
     };
 
-  case DumpKind::DumpModsToStdErr:
+  case DumpKind::DumpModsToStdOut:
     return [](std::unique_ptr<Module> M) {
-             dbgs() << "----- Module Start -----\n" << *M
+             outs() << "----- Module Start -----\n" << *M
                     << "----- Module End -----\n";
 
              return M;
