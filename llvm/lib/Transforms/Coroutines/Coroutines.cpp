@@ -215,6 +215,7 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::buildFrom(Function &F) {
+  size_t FinalSuspendIndex = 0;
   clear(*this);
   SmallVector<CoroFrameInst *, 8> CoroFrames;
   for (Instruction &I : instructions(F)) {
@@ -230,16 +231,12 @@ void coro::Shape::buildFrom(Function &F) {
         break;
       case Intrinsic::coro_suspend:
         CoroSuspends.push_back(cast<CoroSuspendInst>(II));
-        // Make sure that the final suspend is the first suspend point in the
-        // CoroSuspends vector.
         if (CoroSuspends.back()->isFinal()) {
+          if (HasFinalSuspend)
+            report_fatal_error(
+              "Only one suspend point can be marked as final");
           HasFinalSuspend = true;
-          if (CoroSuspends.size() > 1) {
-            if (CoroSuspends.front()->isFinal())
-              report_fatal_error(
-                  "Only one suspend point can be marked as final");
-            std::swap(CoroSuspends.front(), CoroSuspends.back());
-          }
+          FinalSuspendIndex = CoroSuspends.size() - 1;
         }
         break;
       case Intrinsic::coro_begin: {
@@ -309,4 +306,9 @@ void coro::Shape::buildFrom(Function &F) {
   for (CoroSuspendInst *CS : CoroSuspends)
     if (!CS->getCoroSave())
       createCoroSave(CoroBegin, CS);
+
+  // Move final suspend to be the last element in the CoroSuspends vector.
+  if (HasFinalSuspend &&
+      FinalSuspendIndex != CoroSuspends.size() - 1)
+    std::swap(CoroSuspends[FinalSuspendIndex], CoroSuspends.back());
 }

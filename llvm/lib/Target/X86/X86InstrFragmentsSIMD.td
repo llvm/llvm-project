@@ -677,11 +677,6 @@ def alignedload512 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   return cast<LoadSDNode>(N)->getAlignment() >= 64;
 }]>;
 
-def alignedloadfsf32 : PatFrag<(ops node:$ptr),
-                               (f32 (alignedload node:$ptr))>;
-def alignedloadfsf64 : PatFrag<(ops node:$ptr),
-                               (f64 (alignedload node:$ptr))>;
-
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64
 def alignedloadv4f32 : PatFrag<(ops node:$ptr),

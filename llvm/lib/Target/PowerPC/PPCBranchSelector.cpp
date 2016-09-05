@@ -41,8 +41,10 @@ namespace {
       initializePPCBSelPass(*PassRegistry::getPassRegistry());
     }
 
-    /// BlockSizes - The sizes of the basic blocks in the function.
-    std::vector<unsigned> BlockSizes;
+    // The sizes of the basic blocks in the function (the first
+    // element of the pair); the second element of the pair is the amount of the
+    // size that is due to potential padding.
+    std::vector<std::pair<unsigned, unsigned>> BlockSizes;
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -102,7 +104,11 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
     // alignment requirement.
     if (MBB->getNumber() > 0) {
       unsigned AlignExtra = GetAlignmentAdjustment(*MBB, FuncSize);
-      BlockSizes[MBB->getNumber()-1] += AlignExtra;
+
+      auto &BS = BlockSizes[MBB->getNumber()-1];
+      BS.first += AlignExtra;
+      BS.second = AlignExtra;
+
       FuncSize += AlignExtra;
     }
 
@@ -110,7 +116,7 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
     for (MachineInstr &MI : *MBB)
       BlockSize += TII->getInstSizeInBytes(MI);
 
-    BlockSizes[MBB->getNumber()] = BlockSize;
+    BlockSizes[MBB->getNumber()].first = BlockSize;
     FuncSize += BlockSize;
   }
   
@@ -169,14 +175,14 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
           BranchSize = MBBStartOffset;
           
           for (unsigned i = Dest->getNumber(), e = MBB.getNumber(); i != e; ++i)
-            BranchSize += BlockSizes[i];
+            BranchSize += BlockSizes[i].first;
         } else {
           // Otherwise, add the size of the blocks between this block and the
           // dest to the number of bytes left in this block.
           BranchSize = -MBBStartOffset;
 
           for (unsigned i = MBB.getNumber(), e = Dest->getNumber(); i != e; ++i)
-            BranchSize += BlockSizes[i];
+            BranchSize += BlockSizes[i].first;
         }
 
         // If this branch is in range, ignore it.
@@ -226,12 +232,38 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
 
         // Remember that this instruction is 8-bytes, increase the size of the
         // block by 4, remember to iterate.
-        BlockSizes[MBB.getNumber()] += 4;
+        BlockSizes[MBB.getNumber()].first += 4;
         MBBStartOffset += 8;
         ++NumExpanded;
         MadeChange = true;
       }
     }
+
+    if (MadeChange) {
+      // If we're going to iterate again, make sure we've updated our
+      // padding-based contributions to the block sizes.
+      unsigned Offset = 0;
+      for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
+           ++MFI) {
+        MachineBasicBlock *MBB = &*MFI;
+
+        if (MBB->getNumber() > 0) {
+          auto &BS = BlockSizes[MBB->getNumber()-1];
+          BS.first -= BS.second;
+          Offset -= BS.second;
+
+          unsigned AlignExtra = GetAlignmentAdjustment(*MBB, Offset);
+
+          BS.first += AlignExtra;
+          BS.second = AlignExtra;
+
+          Offset += AlignExtra;
+        }
+
+        Offset += BlockSizes[MBB->getNumber()].first;
+      }
+    }
+
     EverMadeChange |= MadeChange;
   }
   

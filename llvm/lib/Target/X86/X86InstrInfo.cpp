@@ -2595,10 +2595,6 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::VMOVDQUYrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
-  case X86::FsVMOVAPSrm:
-  case X86::FsVMOVAPDrm:
-  case X86::FsMOVAPSrm:
-  case X86::FsMOVAPDrm:
   // AVX-512
   case X86::VMOVSSZrm:
   case X86::VMOVSDZrm:
@@ -4503,22 +4499,6 @@ unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg,
   if (Subtarget.hasBWI())
     if (auto Opc = copyPhysRegOpcode_AVX512_BW(DestReg, SrcReg))
       return Opc;
-  if (X86::VR128XRegClass.contains(DestReg, SrcReg)) {
-    if (Subtarget.hasVLX())
-      return X86::VMOVAPSZ128rr;
-   DestReg = get512BitSuperRegister(DestReg);
-   SrcReg = get512BitSuperRegister(SrcReg);
-   return X86::VMOVAPSZrr;
-  }
-  if (X86::VR256XRegClass.contains(DestReg, SrcReg)) {
-    if (Subtarget.hasVLX())
-      return X86::VMOVAPSZ256rr;
-   DestReg = get512BitSuperRegister(DestReg);
-   SrcReg = get512BitSuperRegister(SrcReg);
-   return X86::VMOVAPSZrr;
-  }
-  if (X86::VR512RegClass.contains(DestReg, SrcReg))
-     return X86::VMOVAPSZrr;
   if (MaskRegClassContains(DestReg) && MaskRegClassContains(SrcReg))
     return X86::KMOVWkk;
   if (MaskRegClassContains(DestReg) && GRRegClassContains(SrcReg)) {
@@ -4539,6 +4519,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasVLX = Subtarget.hasVLX();
   unsigned Opc = 0;
   if (X86::GR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MOV64rr;
@@ -4560,12 +4541,14 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
   else if (X86::VR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MMX_MOVQ64rr;
+  else if (X86::VR128XRegClass.contains(DestReg, SrcReg))
+    Opc = HasVLX ? X86::VMOVAPSZ128rr : HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
+  else if (X86::VR256XRegClass.contains(DestReg, SrcReg))
+    Opc = HasVLX ? X86::VMOVAPSZ256rr : X86::VMOVAPSYrr;
+  else if (X86::VR512RegClass.contains(DestReg, SrcReg))
+    Opc = X86::VMOVAPSZrr;
   else if (HasAVX512)
     Opc = copyPhysRegOpcode_AVX512(DestReg, SrcReg, Subtarget);
-  else if (X86::VR128RegClass.contains(DestReg, SrcReg))
-    Opc = HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
-  else if (X86::VR256RegClass.contains(DestReg, SrcReg))
-    Opc = X86::VMOVAPSYrr;
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
 
@@ -6297,12 +6280,18 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::MINSSrr_Int: case X86::VMINSSrr_Int: case X86::VMINSSZrr_Int:
     case X86::MULSSrr_Int: case X86::VMULSSrr_Int: case X86::VMULSSZrr_Int:
     case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int: case X86::VSUBSSZrr_Int:
-    case X86::VFMADD132SSr_Int: case X86::VFNMADD132SSr_Int:
-    case X86::VFMADD213SSr_Int: case X86::VFNMADD213SSr_Int:
-    case X86::VFMADD231SSr_Int: case X86::VFNMADD231SSr_Int:
-    case X86::VFMSUB132SSr_Int: case X86::VFNMSUB132SSr_Int:
-    case X86::VFMSUB213SSr_Int: case X86::VFNMSUB213SSr_Int:
-    case X86::VFMSUB231SSr_Int: case X86::VFNMSUB231SSr_Int:
+    case X86::VFMADD132SSr_Int:  case X86::VFNMADD132SSr_Int:
+    case X86::VFMADD213SSr_Int:  case X86::VFNMADD213SSr_Int:
+    case X86::VFMADD231SSr_Int:  case X86::VFNMADD231SSr_Int:
+    case X86::VFMSUB132SSr_Int:  case X86::VFNMSUB132SSr_Int:
+    case X86::VFMSUB213SSr_Int:  case X86::VFNMSUB213SSr_Int:
+    case X86::VFMSUB231SSr_Int:  case X86::VFNMSUB231SSr_Int:
+    case X86::VFMADD132SSZr_Int: case X86::VFNMADD132SSZr_Int:
+    case X86::VFMADD213SSZr_Int: case X86::VFNMADD213SSZr_Int:
+    case X86::VFMADD231SSZr_Int: case X86::VFNMADD231SSZr_Int:
+    case X86::VFMSUB132SSZr_Int: case X86::VFNMSUB132SSZr_Int:
+    case X86::VFMSUB213SSZr_Int: case X86::VFNMSUB213SSZr_Int:
+    case X86::VFMSUB231SSZr_Int: case X86::VFNMSUB231SSZr_Int:
       return false;
     default:
       return true;
@@ -6322,12 +6311,18 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::MINSDrr_Int: case X86::VMINSDrr_Int: case X86::VMINSDZrr_Int:
     case X86::MULSDrr_Int: case X86::VMULSDrr_Int: case X86::VMULSDZrr_Int:
     case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int: case X86::VSUBSDZrr_Int:
-    case X86::VFMADD132SDr_Int: case X86::VFNMADD132SDr_Int:
-    case X86::VFMADD213SDr_Int: case X86::VFNMADD213SDr_Int:
-    case X86::VFMADD231SDr_Int: case X86::VFNMADD231SDr_Int:
-    case X86::VFMSUB132SDr_Int: case X86::VFNMSUB132SDr_Int:
-    case X86::VFMSUB213SDr_Int: case X86::VFNMSUB213SDr_Int:
-    case X86::VFMSUB231SDr_Int: case X86::VFNMSUB231SDr_Int:
+    case X86::VFMADD132SDr_Int:  case X86::VFNMADD132SDr_Int:
+    case X86::VFMADD213SDr_Int:  case X86::VFNMADD213SDr_Int:
+    case X86::VFMADD231SDr_Int:  case X86::VFNMADD231SDr_Int:
+    case X86::VFMSUB132SDr_Int:  case X86::VFNMSUB132SDr_Int:
+    case X86::VFMSUB213SDr_Int:  case X86::VFNMSUB213SDr_Int:
+    case X86::VFMSUB231SDr_Int:  case X86::VFNMSUB231SDr_Int:
+    case X86::VFMADD132SDZr_Int: case X86::VFNMADD132SDZr_Int:
+    case X86::VFMADD213SDZr_Int: case X86::VFNMADD213SDZr_Int:
+    case X86::VFMADD231SDZr_Int: case X86::VFNMADD231SDZr_Int:
+    case X86::VFMSUB132SDZr_Int: case X86::VFNMSUB132SDZr_Int:
+    case X86::VFMSUB213SDZr_Int: case X86::VFNMSUB213SDZr_Int:
+    case X86::VFMSUB231SDZr_Int: case X86::VFNMSUB231SDZr_Int:
       return false;
     default:
       return true;
@@ -6748,8 +6743,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVSDrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
-  case X86::FsMOVAPSrm:
-  case X86::FsMOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
@@ -6759,8 +6752,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   // AVX load instructions
   case X86::VMOVSSrm:
   case X86::VMOVSDrm:
-  case X86::FsVMOVAPSrm:
-  case X86::FsVMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
@@ -6825,8 +6816,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVSDrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
-  case X86::FsMOVAPSrm:
-  case X86::FsMOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
@@ -6836,8 +6825,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   // AVX load instructions
   case X86::VMOVSSrm:
   case X86::VMOVSDrm:
-  case X86::FsVMOVAPSrm:
-  case X86::FsVMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:

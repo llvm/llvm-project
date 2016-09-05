@@ -170,9 +170,13 @@ function(add_ocaml_library name)
     add_dependencies("ocaml_${name}" "ocaml_${ocaml_dep}")
   endforeach()
 
-  foreach( llvm_lib ${llvm_libs} )
-    add_dependencies("ocaml_${name}" "${llvm_lib}")
-  endforeach()
+  if( NOT LLVM_OCAML_OUT_OF_TREE )
+    foreach( llvm_lib ${llvm_libs} )
+      add_dependencies("ocaml_${name}" "${llvm_lib}")
+    endforeach()
+  endif()
+
+  add_dependencies("ocaml_all" "ocaml_${name}")
 
   set(install_files)
   set(install_shlibs)
@@ -205,3 +209,5 @@ function(add_ocaml_library name)
       VERBATIM)
   endforeach()
 endfunction()
+
+add_custom_target("ocaml_all")

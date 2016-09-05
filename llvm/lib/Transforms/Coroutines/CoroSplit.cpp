@@ -62,8 +62,8 @@ static BasicBlock *createResumeEntryBlock(Function &F, coro::Shape &Shape) {
       Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
   Shape.ResumeSwitch = Switch;
 
-  uint32_t SuspendIndex = 0;
-  for (auto S : Shape.CoroSuspends) {
+  size_t SuspendIndex = 0;
+  for (CoroSuspendInst *S : Shape.CoroSuspends) {
     ConstantInt *IndexVal = Shape.getIndex(SuspendIndex);
 
     // Replace CoroSave with a store to Index:
@@ -71,9 +71,18 @@ static BasicBlock *createResumeEntryBlock(Function &F, coro::Shape &Shape) {
     //    store i32 0, i32* %index.addr1
     auto *Save = S->getCoroSave();
     Builder.SetInsertPoint(Save);
-    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
-        FrameTy, FramePtr, 0, coro::Shape::IndexField, "index.addr");
-    Builder.CreateStore(IndexVal, GepIndex);
+    if (S->isFinal()) {
+      // Final suspend point is represented by storing zero in ResumeFnAddr.
+      auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0,
+                                                          0, "ResumeFn.addr");
+      auto *NullPtr = ConstantPointerNull::get(cast<PointerType>(
+          cast<PointerType>(GepIndex->getType())->getElementType()));
+      Builder.CreateStore(NullPtr, GepIndex);
+    } else {
+      auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
+          FrameTy, FramePtr, 0, coro::Shape::IndexField, "index.addr");
+      Builder.CreateStore(IndexVal, GepIndex);
+    }
     Save->replaceAllUsesWith(ConstantTokenNone::get(C));
     Save->eraseFromParent();
 
@@ -133,6 +142,37 @@ static void replaceFallthroughCoroEnd(IntrinsicInst *End,
   auto *BB = NewE->getParent();
   BB->splitBasicBlock(NewE);
   BB->getTerminator()->eraseFromParent();
+}
+
+// Rewrite final suspend point handling. We do not use suspend index to
+// represent the final suspend point. Instead we zero-out ResumeFnAddr in the
+// coroutine frame, since it is undefined behavior to resume a coroutine
+// suspended at the final suspend point. Thus, in the resume function, we can
+// simply remove the last case (when coro::Shape is built, the final suspend
+// point (if present) is always the last element of CoroSuspends array).
+// In the destroy function, we add a code sequence to check if ResumeFnAddress
+// is Null, and if so, jump to the appropriate label to handle cleanup from the
+// final suspend point.
+static void handleFinalSuspend(IRBuilder<> &Builder, Value *FramePtr,
+                               coro::Shape &Shape, SwitchInst *Switch,
+                               bool IsDestroy) {
+  assert(Shape.HasFinalSuspend);
+  auto FinalCase = --Switch->case_end();
+  BasicBlock *ResumeBB = FinalCase.getCaseSuccessor();
+  Switch->removeCase(FinalCase);
+  if (IsDestroy) {
+    BasicBlock *OldSwitchBB = Switch->getParent();
+    auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
+    Builder.SetInsertPoint(OldSwitchBB->getTerminator());
+    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, FramePtr,
+                                                        0, 0, "ResumeFn.addr");
+    auto *Load = Builder.CreateLoad(GepIndex);
+    auto *NullPtr =
+        ConstantPointerNull::get(cast<PointerType>(Load->getType()));
+    auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
+    Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+    OldSwitchBB->getTerminator()->eraseFromParent();
+  }
 }
 
 // Create a resume clone by cloning the body of the original function, setting
@@ -204,6 +244,15 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
       NewFramePtr, Type::getInt8PtrTy(Builder.getContext()), "vFrame");
   Value *OldVFrame = cast<Value>(VMap[Shape.CoroBegin]);
   OldVFrame->replaceAllUsesWith(NewVFrame);
+
+  // Rewrite final suspend handling as it is not done via switch (allows to
+  // remove final case from the switch, since it is undefined behavior to resume
+  // the coroutine suspended at the final suspend point.
+  if (Shape.HasFinalSuspend) {
+    auto *Switch = cast<SwitchInst>(VMap[Shape.ResumeSwitch]);
+    bool IsDestroy = FnIndex != 0;
+    handleFinalSuspend(Builder, NewFramePtr, Shape, Switch, IsDestroy);
+  }
 
   // Replace coro suspend with the appropriate resume index.
   // Replacing coro.suspend with (0) will result in control flow proceeding to

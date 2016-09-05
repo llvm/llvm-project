@@ -44,9 +44,8 @@ public:
         FileToReplaces(FileToReplaces), PrintLocations(PrintLocations) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
-    for (unsigned I = 0; I < NewNames.size(); ++I) {
+    for (unsigned I = 0; I < NewNames.size(); ++I)
       HandleOneRename(Context, NewNames[I], PrevNames[I], USRList[I]);
-    }
   }
 
   void HandleOneRename(ASTContext &Context, const std::string &NewName,

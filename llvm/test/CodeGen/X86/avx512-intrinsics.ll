@@ -198,7 +198,7 @@ define <4 x float> @test_sqrt_ss(<4 x float> %a0, <4 x float> %a1, <4 x float> %
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
 ; CHECK-NEXT:    vsqrtss %xmm1, %xmm0, %xmm3 {%k1}
 ; CHECK-NEXT:    vsqrtss {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vsqrtss {ru-sae}, %xmm1, %xmm0, %xmm4 {%k1} {z}
@@ -225,7 +225,7 @@ define <2 x double> @test_sqrt_sd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
 ; CHECK-NEXT:    vsqrtsd %xmm1, %xmm0, %xmm3 {%k1}
 ; CHECK-NEXT:    vsqrtsd {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vsqrtsd {ru-sae}, %xmm1, %xmm0, %xmm4 {%k1} {z}
@@ -2681,7 +2681,7 @@ define <4 x float> @test_mask_add_ss_rn(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddss {rn-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 0)
   ret <4 x float> %res
@@ -2693,7 +2693,7 @@ define <4 x float> @test_mask_add_ss_rd(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddss {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 1)
   ret <4 x float> %res
@@ -2705,7 +2705,7 @@ define <4 x float> @test_mask_add_ss_ru(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddss {ru-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 2)
   ret <4 x float> %res
@@ -2717,7 +2717,7 @@ define <4 x float> @test_mask_add_ss_rz(<4 x float> %a0, <4 x float> %a1, <4 x f
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddss {rz-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 3)
   ret <4 x float> %res
@@ -2729,7 +2729,7 @@ define <4 x float> @test_mask_add_ss_current(<4 x float> %a0, <4 x float> %a1, <
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 4)
   ret <4 x float> %res
@@ -2763,7 +2763,7 @@ define <2 x double> @test_mask_add_sd_rn(<2 x double> %a0, <2 x double> %a1, <2 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddsd {rn-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 0)
   ret <2 x double> %res
@@ -2775,7 +2775,7 @@ define <2 x double> @test_mask_add_sd_rd(<2 x double> %a0, <2 x double> %a1, <2 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddsd {rd-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 1)
   ret <2 x double> %res
@@ -2787,7 +2787,7 @@ define <2 x double> @test_mask_add_sd_ru(<2 x double> %a0, <2 x double> %a1, <2 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddsd {ru-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 2)
   ret <2 x double> %res
@@ -2799,7 +2799,7 @@ define <2 x double> @test_mask_add_sd_rz(<2 x double> %a0, <2 x double> %a1, <2 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddsd {rz-sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 3)
   ret <2 x double> %res
@@ -2811,7 +2811,7 @@ define <2 x double> @test_mask_add_sd_current(<2 x double> %a0, <2 x double> %a1
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.add.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 4)
   ret <2 x double> %res
@@ -2845,7 +2845,7 @@ define <4 x float> @test_mask_max_ss_sae(<4 x float> %a0, <4 x float> %a1, <4 x 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmaxss {sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.max.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 8)
   ret <4 x float> %res
@@ -2877,7 +2877,7 @@ define <4 x float> @test_mask_max_ss(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmaxss %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.max.ss.round(<4 x float>%a0, <4 x float> %a1, <4 x float> %a2, i8 %mask, i32 4)
   ret <4 x float> %res
@@ -2910,7 +2910,7 @@ define <2 x double> @test_mask_max_sd_sae(<2 x double> %a0, <2 x double> %a1, <2
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmaxsd {sae}, %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 8)
   ret <2 x double> %res
@@ -2942,7 +2942,7 @@ define <2 x double> @test_mask_max_sd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmaxsd %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.max.sd.round(<2 x double>%a0, <2 x double> %a1, <2 x double> %a2, i8 %mask, i32 4)
   ret <2 x double> %res
@@ -4191,7 +4191,7 @@ define <4 x float> @test_getexp_ss(<4 x float> %a0, <4 x float> %a1, <4 x float>
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
 ; CHECK-NEXT:    vgetexpss %xmm1, %xmm0, %xmm3 {%k1}
 ; CHECK-NEXT:    vgetexpss {sae}, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vgetexpss {sae}, %xmm1, %xmm0, %xmm4 {%k1} {z}
@@ -4218,7 +4218,7 @@ define <2 x double> @test_getexp_sd(<2 x double> %a0, <2 x double> %a1, <2 x dou
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
 ; CHECK-NEXT:    vgetexpsd %xmm1, %xmm0, %xmm3 {%k1}
 ; CHECK-NEXT:    vgetexpsd %xmm1, %xmm0, %xmm4
 ; CHECK-NEXT:    vgetexpsd {sae}, %xmm1, %xmm0, %xmm2 {%k1}
@@ -4438,7 +4438,7 @@ define <2 x double>@test_int_x86_avx512_mask_getmant_sd(<2 x double> %x0, <2 x d
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovapd %zmm2, %zmm3
+; CHECK-NEXT:    vmovapd %xmm2, %xmm3
 ; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm3 {%k1}
 ; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm4 {%k1} {z}
 ; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm5
@@ -4842,7 +4842,7 @@ define <4 x float>@test_int_x86_avx512_mask_move_ss_rrk(<4 x float> %x0, <4 x fl
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovss %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.move.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3)
   ret <4 x float> %res
@@ -4895,7 +4895,7 @@ define <2 x double>@test_int_x86_avx512_mask_move_sd_rrk(<2 x double> %x0, <2 x 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovapd %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.move.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x2, i8 %x3)
   ret <2 x double> %res
@@ -5523,10 +5523,10 @@ define <4 x float>@test_int_x86_avx512_mask_fixupimm_ss(<4 x float> %x0, <4 x fl
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovaps %xmm0, %xmm3
 ; CHECK-NEXT:    vfixupimmss $5, %xmm2, %xmm1, %xmm3 {%k1}
 ; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vmovaps %zmm0, %zmm5
+; CHECK-NEXT:    vmovaps %xmm0, %xmm5
 ; CHECK-NEXT:    vfixupimmss $5, %xmm4, %xmm1, %xmm5 {%k1}
 ; CHECK-NEXT:    vfixupimmss $5, {sae}, %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    vaddps %xmm5, %xmm3, %xmm1
@@ -5547,9 +5547,9 @@ define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ss(<4 x float> %x0, <4 x f
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovaps %xmm0, %xmm3
 ; CHECK-NEXT:    vfixupimmss $5, %xmm2, %xmm1, %xmm3 {%k1} {z}
-; CHECK-NEXT:    vmovaps %zmm0, %zmm4
+; CHECK-NEXT:    vmovaps %xmm0, %xmm4
 ; CHECK-NEXT:    vfixupimmss $5, %xmm2, %xmm1, %xmm4
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vfixupimmss $5, {sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
@@ -5617,9 +5617,9 @@ define <2 x double>@test_int_x86_avx512_mask_fixupimm_sd(<2 x double> %x0, <2 x 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovapd %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %xmm0, %xmm3
 ; CHECK-NEXT:    vfixupimmsd $5, %xmm2, %xmm1, %xmm3 {%k1}
-; CHECK-NEXT:    vmovapd %zmm0, %zmm4
+; CHECK-NEXT:    vmovapd %xmm0, %xmm4
 ; CHECK-NEXT:    vfixupimmsd $5, %xmm2, %xmm1, %xmm4
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vfixupimmsd $5, {sae}, %xmm2, %xmm1, %xmm0 {%k1}
@@ -5641,10 +5641,10 @@ define <2 x double>@test_int_x86_avx512_maskz_fixupimm_sd(<2 x double> %x0, <2 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovapd %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %xmm0, %xmm3
 ; CHECK-NEXT:    vfixupimmsd $5, %xmm2, %xmm1, %xmm3 {%k1} {z}
 ; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vmovapd %zmm0, %zmm5
+; CHECK-NEXT:    vmovapd %xmm0, %xmm5
 ; CHECK-NEXT:    vfixupimmsd $5, {sae}, %xmm4, %xmm1, %xmm5 {%k1} {z}
 ; CHECK-NEXT:    vfixupimmsd $5, {sae}, %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    vaddpd %xmm5, %xmm3, %xmm1
@@ -5741,11 +5741,11 @@ define <2 x double>@test_int_x86_avx512_mask_vfmadd_sd(<2 x double> %x0, <2 x do
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovaps %xmm0, %xmm3
 ; CHECK-NEXT:    vfmadd132sd %xmm1, %xmm2, %xmm3 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm4
+; CHECK-NEXT:    vmovaps %xmm1, %xmm4
 ; CHECK-NEXT:    vfmadd213sd %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vmovaps %zmm0, %zmm5
+; CHECK-NEXT:    vmovaps %xmm0, %xmm5
 ; CHECK-NEXT:    vfmadd132sd {rz-sae}, %xmm1, %xmm2, %xmm5 {%k1}
 ; CHECK-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm0, %xmm1
 ; CHECK-NEXT:    vaddpd %xmm3, %xmm4, %xmm0
@@ -5769,11 +5769,11 @@ define <4 x float>@test_int_x86_avx512_mask_vfmadd_ss(<4 x float> %x0, <4 x floa
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovaps %xmm0, %xmm3
 ; CHECK-NEXT:    vfmadd132ss %xmm1, %xmm2, %xmm3 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm4
+; CHECK-NEXT:    vmovaps %xmm1, %xmm4
 ; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vmovaps %zmm0, %zmm5
+; CHECK-NEXT:    vmovaps %xmm0, %xmm5
 ; CHECK-NEXT:    vfmadd132ss {rz-sae}, %xmm1, %xmm2, %xmm5 {%k1}
 ; CHECK-NEXT:    vfmadd213ss {rz-sae}, %xmm2, %xmm0, %xmm1
 ; CHECK-NEXT:    vaddps %xmm3, %xmm4, %xmm0
@@ -5797,7 +5797,7 @@ define <2 x double>@test_int_x86_avx512_maskz_vfmadd_sd(<2 x double> %x0, <2 x d
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm3
+; CHECK-NEXT:    vmovaps %xmm1, %xmm3
 ; CHECK-NEXT:    vfmadd213sd %xmm2, %xmm0, %xmm3 {%k1} {z}
 ; CHECK-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm0, %xmm1 {%k1} {z}
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm3, %xmm0
@@ -5816,7 +5816,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm0, %xmm1 {%k1} {z}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 4)
   %res1 = call <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3, i32 3)
@@ -5830,11 +5830,11 @@ define <2 x double>@test_int_x86_avx512_mask3_vfmadd_sd(<2 x double> %x0, <2 x d
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
 ; CHECK-NEXT:    vfmadd231sd %xmm1, %xmm0, %xmm3 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm4
+; CHECK-NEXT:    vmovaps %xmm1, %xmm4
 ; CHECK-NEXT:    vfmadd213sd %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vmovaps %zmm2, %zmm5
+; CHECK-NEXT:    vmovaps %xmm2, %xmm5
 ; CHECK-NEXT:    vfmadd231sd {rz-sae}, %xmm1, %xmm0, %xmm5 {%k1}
 ; CHECK-NEXT:    vfmadd213sd {rz-sae}, %xmm2, %xmm0, %xmm1
 ; CHECK-NEXT:    vaddpd %xmm3, %xmm4, %xmm0
@@ -5858,11 +5858,11 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss(<4 x float> %x0, <4 x flo
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovaps %xmm2, %xmm3
 ; CHECK-NEXT:    vfmadd231ss %xmm1, %xmm0, %xmm3 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm4
+; CHECK-NEXT:    vmovaps %xmm1, %xmm4
 ; CHECK-NEXT:    vfmadd213ss %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vmovaps %zmm2, %zmm5
+; CHECK-NEXT:    vmovaps %xmm2, %xmm5
 ; CHECK-NEXT:    vfmadd231ss {rz-sae}, %xmm1, %xmm0, %xmm5 {%k1}
 ; CHECK-NEXT:    vfmadd213ss {rz-sae}, %xmm2, %xmm0, %xmm1
 ; CHECK-NEXT:    vaddps %xmm3, %xmm4, %xmm0
@@ -5885,7 +5885,7 @@ define <4 x float>@test_int_x86_avx512_mask3_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vfmadd231ss (%rdi), %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %q = load float, float* %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
@@ -5912,7 +5912,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kxorw %k0, %k0, %k1
 ; CHECK-NEXT:    vfmadd213ss (%rdi), %xmm0, %xmm1 {%k1} {z}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %q = load float, float* %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0

@@ -26,10 +26,11 @@ namespace {
 // Created on demand if CoroEarly pass has work to do.
 class Lowerer : public coro::LowererBase {
   IRBuilder<> Builder;
-  PointerType *AnyResumeFnPtrTy;
+  PointerType *const AnyResumeFnPtrTy;
 
   void lowerResumeOrDestroy(CallSite CS, CoroSubFnInst::ResumeKind);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
+  void lowerCoroDone(IntrinsicInst *II);
 
 public:
   Lowerer(Module &M)
@@ -79,6 +80,27 @@ void Lowerer::lowerCoroPromise(CoroPromiseInst *Intrin) {
 
   Intrin->replaceAllUsesWith(Replacement);
   Intrin->eraseFromParent();
+}
+
+// When a coroutine reaches final suspend point, it zeros out ResumeFnAddr in
+// the coroutine frame (it is UB to resume from a final suspend point).
+// The llvm.coro.done intrinsic is used to check whether a coroutine is
+// suspended at the final suspend point or not.
+void Lowerer::lowerCoroDone(IntrinsicInst *II) {
+  Value *Operand = II->getArgOperand(0);
+
+  // ResumeFnAddr is the first pointer sized element of the coroutine frame.
+  auto *FrameTy = Int8Ptr;
+  PointerType *FramePtrTy = FrameTy->getPointerTo();
+
+  Builder.SetInsertPoint(II);
+  auto *BCI = Builder.CreateBitCast(Operand, FramePtrTy);
+  auto *Gep = Builder.CreateConstInBoundsGEP1_32(FrameTy, BCI, 0);
+  auto *Load = Builder.CreateLoad(Gep);
+  auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
+
+  II->replaceAllUsesWith(Cond);
+  II->eraseFromParent();
 }
 
 // Prior to CoroSplit, calls to coro.begin needs to be marked as NoDuplicate,
@@ -131,6 +153,9 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_promise:
         lowerCoroPromise(cast<CoroPromiseInst>(&I));
         break;
+      case Intrinsic::coro_done:
+        lowerCoroDone(cast<IntrinsicInst>(&I));
+        break;
       }
       Changed = true;
     }
@@ -153,9 +178,9 @@ struct CoroEarly : public FunctionPass {
   // This pass has work to do only if we find intrinsics we are going to lower
   // in the module.
   bool doInitialization(Module &M) override {
-    if (coro::declaresIntrinsics(M, {"llvm.coro.begin", "llvm.coro.resume",
-                                     "llvm.coro.destroy", "llvm.coro.suspend",
-                                     "llvm.coro.end"}))
+    if (coro::declaresIntrinsics(M, {"llvm.coro.begin", "llvm.coro.end",
+                                     "llvm.coro.resume", "llvm.coro.destroy",
+                                     "llvm.coro.done", "llvm.coro.suspend"}))
       L = llvm::make_unique<Lowerer>(M);
     return false;
   }

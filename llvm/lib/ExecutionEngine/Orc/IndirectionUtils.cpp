@@ -241,5 +241,14 @@ GlobalAlias* cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
   return NewA;
 }
 
+void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
+                              ValueToValueMapTy &VMap) {
+  auto *MFs = Src.getModuleFlagsMetadata();
+  if (!MFs)
+    return;
+  for (auto *MF : MFs->operands())
+    Dst.addModuleFlag(MapMetadata(MF, VMap));
+}
+
 } // End namespace orc.
 } // End namespace llvm.

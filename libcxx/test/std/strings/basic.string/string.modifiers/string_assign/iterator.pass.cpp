@@ -179,4 +179,21 @@ int main()
     test_exceptions(S(), TIter(s, s+10, 6, TIter::TAComparison), TIter());
 	}
 #endif
+
+	{ // test assigning to self
+    typedef std::string S;
+	S s_short = "123/";
+	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+	
+	s_short.assign(s_short.begin(), s_short.end());
+	assert(s_short == "123/");
+	s_short.assign(s_short.begin() + 2, s_short.end());
+	assert(s_short == "3/");
+	
+	s_long.assign(s_long.begin(), s_long.end());
+	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/");
+
+	s_long.assign(s_long.begin() + 30, s_long.end());
+	assert(s_long == "nsectetur/");
+	}
 }

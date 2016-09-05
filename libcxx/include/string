@@ -1998,7 +1998,7 @@ typename enable_if
 >::type
 basic_string<_CharT, _Traits, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
-    basic_string __temp(__first, __last, __alloc());
+    const basic_string __temp(__first, __last, __alloc());
     assign(__temp.data(), __temp.size());
     return *this;
 }
@@ -2151,9 +2151,15 @@ typename enable_if
 >::type
 basic_string<_CharT, _Traits, _Allocator>::append(_InputIterator __first, _InputIterator __last)
 {
-    basic_string __temp (__first, __last, __alloc());
+    const basic_string __temp (__first, __last, __alloc());
     append(__temp.data(), __temp.size());
     return *this;
+}
+
+template <typename _Tp>
+bool __ptr_in_range (const _Tp* __p, const _Tp* __first, const _Tp* __last)
+{
+    return __first <= __p && __p < __last;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2171,13 +2177,21 @@ basic_string<_CharT, _Traits, _Allocator>::append(_ForwardIterator __first, _For
     size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
     if (__n)
     {
-        if (__cap - __sz < __n)
-            __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
-        pointer __p = __get_pointer() + __sz;
-        for (; __first != __last; ++__p, ++__first)
-            traits_type::assign(*__p, *__first);
-        traits_type::assign(*__p, value_type());
-        __set_size(__sz + __n);
+        if ( __ptr_in_range(&*__first, data(), data() + size()))
+        {
+            const basic_string __temp (__first, __last, __alloc());
+            append(__temp.data(), __temp.size());
+        }
+        else 
+        {
+            if (__cap - __sz < __n)
+                __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
+            pointer __p = __get_pointer() + __sz;
+            for (; __first != __last; ++__p, ++__first)
+                traits_type::assign(*__p, *__first);
+            traits_type::assign(*__p, value_type());
+            __set_size(__sz + __n);
+        }
     }
     return *this;
 }
@@ -2299,7 +2313,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIt
         "string::insert(iterator, range) called with an iterator not"
         " referring to this string");
 #endif
-    basic_string __temp(__first, __last, __alloc());
+    const basic_string __temp(__first, __last, __alloc());
     return insert(__pos, __temp.data(), __temp.data() + __temp.size());
 }
 
@@ -2319,11 +2333,17 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
         " referring to this string");
 #endif
     size_type __ip = static_cast<size_type>(__pos - begin());
-    size_type __sz = size();
-    size_type __cap = capacity();
     size_type __n = static_cast<size_type>(_VSTD::distance(__first, __last));
     if (__n)
     {
+        if ( __ptr_in_range(&*__first, data(), data() + size()))
+        {
+            const basic_string __temp(__first, __last, __alloc());
+            return insert(__pos, __temp.data(), __temp.data() + __temp.size());
+        }
+
+        size_type __sz = size();
+        size_type __cap = capacity();
         value_type* __p;
         if (__cap - __sz >= __n)
         {
@@ -2523,7 +2543,7 @@ typename enable_if
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2,
                                                    _InputIterator __j1, _InputIterator __j2)
 {
-    basic_string __temp(__j1, __j2, __alloc());
+    const basic_string __temp(__j1, __j2, __alloc());
     return this->replace(__i1, __i2, __temp);
 }
 
