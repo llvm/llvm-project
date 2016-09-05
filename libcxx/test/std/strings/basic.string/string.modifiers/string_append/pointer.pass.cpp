@@ -61,4 +61,20 @@ int main()
          S("1234567890123456789012345678901234567890"));
     }
 #endif
+
+	{ // test appending to self
+    typedef std::string S;
+	S s_short = "123/";
+	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+	
+	s_short.append(s_short.c_str());
+	assert(s_short == "123/123/");
+	s_short.append(s_short.c_str());
+	assert(s_short == "123/123/123/123/");
+	s_short.append(s_short.c_str());
+	assert(s_short == "123/123/123/123/123/123/123/123/");
+	
+	s_long.append(s_long.c_str());
+	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+	}
 }

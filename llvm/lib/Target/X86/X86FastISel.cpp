@@ -1456,11 +1456,11 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
   }
 
   // FCMP_OEQ and FCMP_UNE cannot be checked with a single instruction.
-  static unsigned SETFOpcTable[2][3] = {
+  static const uint16_t SETFOpcTable[2][3] = {
     { X86::SETEr,  X86::SETNPr, X86::AND8rr },
     { X86::SETNEr, X86::SETPr,  X86::OR8rr  }
   };
-  unsigned *SETFOpc = nullptr;
+  const uint16_t *SETFOpc = nullptr;
   switch (Predicate) {
   default: break;
   case CmpInst::FCMP_OEQ: SETFOpc = &SETFOpcTable[0][0]; break;
@@ -1964,11 +1964,11 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
     CmpInst::Predicate Predicate = optimizeCmpPredicate(CI);
 
     // FCMP_OEQ and FCMP_UNE cannot be checked with a single instruction.
-    static unsigned SETFOpcTable[2][3] = {
+    static const uint16_t SETFOpcTable[2][3] = {
       { X86::SETNPr, X86::SETEr , X86::TEST8rr },
       { X86::SETPr,  X86::SETNEr, X86::OR8rr   }
     };
-    unsigned *SETFOpc = nullptr;
+    const uint16_t *SETFOpc = nullptr;
     switch (Predicate) {
     default: break;
     case CmpInst::FCMP_OEQ:
@@ -2106,12 +2106,12 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     std::swap(CmpLHS, CmpRHS);
 
   // Choose the SSE instruction sequence based on data type (float or double).
-  static unsigned OpcTable[2][4] = {
+  static const uint16_t OpcTable[2][4] = {
     { X86::CMPSSrr,  X86::FsANDPSrr,  X86::FsANDNPSrr,  X86::FsORPSrr  },
     { X86::CMPSDrr,  X86::FsANDPDrr,  X86::FsANDNPDrr,  X86::FsORPDrr  }
   };
 
-  unsigned *Opc = nullptr;
+  const uint16_t *Opc = nullptr;
   switch (RetVT.SimpleTy) {
   default: return false;
   case MVT::f32: Opc = &OpcTable[0][0]; break;

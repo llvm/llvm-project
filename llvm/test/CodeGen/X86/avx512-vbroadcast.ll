@@ -359,7 +359,7 @@ define <64 x i8> @_invec32xi8(<32 x i8>%a)  {
 ; AVX512F-LABEL: _invec32xi8:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpbroadcastb %xmm0, %ymm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
+; AVX512F-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: _invec32xi8:
@@ -374,7 +374,7 @@ define <32 x i16> @_invec16xi16(<16 x i16>%a)  {
 ; AVX512F-LABEL: _invec16xi16:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpbroadcastw %xmm0, %ymm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1
+; AVX512F-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: _invec16xi16:

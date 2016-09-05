@@ -61,4 +61,18 @@ int main()
          S("12345678901234567890"));
     }
 #endif
+
+	{ // test assignment to self
+    typedef std::string S;
+	S s_short = "123/";
+	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+	
+	s_short.assign(s_short.c_str());
+	assert(s_short == "123/");
+	s_short.assign(s_short.c_str() + 2);
+	assert(s_short == "3/");
+	
+	s_long.assign(s_long.c_str() + 30);
+	assert(s_long == "nsectetur/");
+	}
 }

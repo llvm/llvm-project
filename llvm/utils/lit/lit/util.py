@@ -20,6 +20,8 @@ def to_string(bytes):
 def convert_string(bytes):
     try:
         return to_string(bytes.decode('utf-8'))
+    except AttributeError: # 'str' object has no attribute 'decode'.
+        return str(bytes)
     except UnicodeError:
         return str(bytes)
 

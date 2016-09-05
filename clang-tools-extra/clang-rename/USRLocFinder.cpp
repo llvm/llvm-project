@@ -44,23 +44,20 @@ public:
 
   bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
     for (const auto *Initializer : ConstructorDecl->inits()) {
-      if (!Initializer->isWritten()) {
-        // Ignore implicit initializers.
+      // Ignore implicit initializers.
+      if (!Initializer->isWritten())
         continue;
-      }
       if (const clang::FieldDecl *FieldDecl = Initializer->getMember()) {
-        if (USRSet.find(getUSRForDecl(FieldDecl)) != USRSet.end()) {
+        if (USRSet.find(getUSRForDecl(FieldDecl)) != USRSet.end())
           LocationsFound.push_back(Initializer->getSourceLocation());
-        }
       }
     }
     return true;
   }
 
   bool VisitNamedDecl(const NamedDecl *Decl) {
-    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
+    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end())
       checkAndAddLocation(Decl->getLocation());
-    }
     return true;
   }
 
@@ -92,15 +89,13 @@ public:
 
   bool VisitTypeLoc(const TypeLoc Loc) {
     if (USRSet.find(getUSRForDecl(Loc.getType()->getAsCXXRecordDecl())) !=
-        USRSet.end()) {
+        USRSet.end())
       checkAndAddLocation(Loc.getBeginLoc());
-    }
     if (const auto *TemplateTypeParm =
             dyn_cast<TemplateTypeParmType>(Loc.getType())) {
       if (USRSet.find(getUSRForDecl(TemplateTypeParm->getDecl())) !=
-          USRSet.end()) {
+          USRSet.end())
         checkAndAddLocation(Loc.getBeginLoc());
-      }
     }
     return true;
   }
@@ -118,9 +113,8 @@ public:
     while (NameLoc) {
       const NamespaceDecl *Decl =
           NameLoc.getNestedNameSpecifier()->getAsNamespace();
-      if (Decl && USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
+      if (Decl && USRSet.find(getUSRForDecl(Decl)) != USRSet.end())
         checkAndAddLocation(NameLoc.getLocalBeginLoc());
-      }
       NameLoc = NameLoc.getPrefix();
     }
   }
@@ -134,11 +128,11 @@ private:
         Lexer::getSourceText(CharSourceRange::getTokenRange(BeginLoc, EndLoc),
                              Context.getSourceManager(), Context.getLangOpts());
     size_t Offset = TokenName.find(PrevName);
-    if (Offset != StringRef::npos) {
-      // The token of the source location we find actually has the old
-      // name.
+
+    // The token of the source location we find actually has the old
+    // name.
+    if (Offset != StringRef::npos)
       LocationsFound.push_back(BeginLoc.getLocWithOffset(Offset));
-    }
   }
 
   const std::set<std::string> USRSet;
@@ -154,9 +148,10 @@ getLocationsOfUSRs(const std::vector<std::string> &USRs, StringRef PrevName,
   USRLocFindingASTVisitor Visitor(USRs, PrevName, Decl->getASTContext());
   Visitor.TraverseDecl(Decl);
   NestedNameSpecifierLocFinder Finder(Decl->getASTContext());
-  for (const auto &Location : Finder.getNestedNameSpecifierLocations()) {
+
+  for (const auto &Location : Finder.getNestedNameSpecifierLocations())
     Visitor.handleNestedNameSpecifierLoc(Location);
-  }
+
   return Visitor.getLocationsFound();
 }
 
