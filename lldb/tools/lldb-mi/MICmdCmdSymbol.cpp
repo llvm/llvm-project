@@ -11,6 +11,9 @@
 
 // Third Party Headers:
 #include "lldb/API/SBCommandInterpreter.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Regex.h"
 
 // In-house headers:
 #include "MICmdArgValFile.h"
@@ -19,7 +22,6 @@
 #include "MICmnMIResultRecord.h"
 #include "MICmnMIValueList.h"
 #include "MICmnMIValueTuple.h"
-#include "MIUtilParse.h"
 
 //++ ------------------------------------------------------------------------------------
 // Details: CMICmdCmdSymbolListLines constructor.
@@ -105,15 +107,15 @@ static bool
 ParseLLDBLineAddressHeader(const char *input, CMIUtilString &file)
 {
     // Match LineEntry using regex.
-    static MIUtilParse::CRegexParser g_lineentry_header_regex( 
-        "^ *Lines found for file (.+) in compilation unit (.+) in `(.+)$");
-        //                       ^1=file                  ^2=cu    ^3=module
+    static llvm::Regex g_lineentry_header_regex(
+        llvm::StringRef("^ *Lines found for file (.+) in compilation unit (.+) in `(.+)$"));
+        //                                       ^1=file                  ^2=cu    ^3=module
 
-    MIUtilParse::CRegexParser::Match match(4);
+    llvm::SmallVector<llvm::StringRef, 4> match;
 
-    const bool ok = g_lineentry_header_regex.Execute(input, match);
+    const bool ok = g_lineentry_header_regex.match(input, &match);
     if (ok)
-        file = match.GetMatchAtIndex(1);
+        file = match[1];
     return ok;
 }
 
@@ -141,23 +143,23 @@ ParseLLDBLineAddressEntry(const char *input, CMIUtilString &addr,
     // is remains is assumed to be the filename.
 
     // Match LineEntry using regex.
-    static MIUtilParse::CRegexParser g_lineentry_nocol_regex( 
-        "^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+)$");
-    static MIUtilParse::CRegexParser g_lineentry_col_regex( 
-        "^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+):[0-9]+$");
-        //     ^1=start         ^2=end               ^3=f ^4=line ^5=:col(opt)
+    static llvm::Regex g_lineentry_nocol_regex(
+        llvm::StringRef("^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+)$"));
+    static llvm::Regex g_lineentry_col_regex(
+        llvm::StringRef("^ *\\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+):[0-9]+$"));
+        //                     ^1=start         ^2=end               ^3=f ^4=line ^5=:col(opt)
 
-    MIUtilParse::CRegexParser::Match match(6);
+    llvm::SmallVector<llvm::StringRef, 6> match;
 
     // First try matching the LineEntry with the column,
     // then try without the column.
-    const bool ok = g_lineentry_col_regex.Execute(input, match) ||
-                    g_lineentry_nocol_regex.Execute(input, match);
+    const bool ok = g_lineentry_col_regex.match(input, &match) ||
+                    g_lineentry_nocol_regex.match(input, &match);
     if (ok)
     {
-        addr = match.GetMatchAtIndex(1);
-        file = match.GetMatchAtIndex(3);
-        line = match.GetMatchAtIndex(4);
+        addr = match[1];
+        file = match[3];
+        line = match[4];
     }
     return ok;
 }

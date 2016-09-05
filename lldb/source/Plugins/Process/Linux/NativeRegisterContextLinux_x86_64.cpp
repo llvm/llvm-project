@@ -130,6 +130,21 @@ namespace
     static_assert((sizeof(g_avx_regnums_i386) / sizeof(g_avx_regnums_i386[0])) - 1 == k_num_avx_registers_i386,
                   " g_avx_regnums_i386 has wrong number of register infos");
 
+    // x64 32-bit MPX registers.
+    static const uint32_t
+    g_mpx_regnums_i386[] =
+    {
+        lldb_bnd0_i386,
+        lldb_bnd1_i386,
+        lldb_bnd2_i386,
+        lldb_bnd3_i386,
+        lldb_bndcfgu_i386,
+        lldb_bndstatus_i386,
+        LLDB_INVALID_REGNUM // register sets need to end with this flag
+    };
+    static_assert((sizeof(g_mpx_regnums_i386) / sizeof(g_mpx_regnums_i386[0])) - 1 == k_num_mpx_registers_i386,
+                  "g_mpx_regnums_x86_64 has wrong number of register infos");
+
     // x86 64-bit general purpose registers.
     static const
     uint32_t g_gpr_regnums_x86_64[] =
@@ -291,29 +306,47 @@ namespace
     static_assert((sizeof(g_avx_regnums_x86_64) / sizeof(g_avx_regnums_x86_64[0])) - 1 == k_num_avx_registers_x86_64,
                   "g_avx_regnums_x86_64 has wrong number of register infos");
 
+    // x86 64-bit MPX registers.
+    static const uint32_t
+    g_mpx_regnums_x86_64[] =
+    {
+        lldb_bnd0_x86_64,
+        lldb_bnd1_x86_64,
+        lldb_bnd2_x86_64,
+        lldb_bnd3_x86_64,
+        lldb_bndcfgu_x86_64,
+        lldb_bndstatus_x86_64,
+        LLDB_INVALID_REGNUM // register sets need to end with this flag
+    };
+    static_assert((sizeof(g_mpx_regnums_x86_64) / sizeof(g_mpx_regnums_x86_64[0])) - 1 == k_num_mpx_registers_x86_64,
+                  "g_mpx_regnums_x86_64 has wrong number of register infos");
+
     // Number of register sets provided by this context.
     enum
     {
         k_num_extended_register_sets = 1,
-        k_num_register_sets = 3
+        k_num_register_sets = 4
     };
 
     // Register sets for x86 32-bit.
     static const RegisterSet
     g_reg_sets_i386[k_num_register_sets] =
     {
-        { "General Purpose Registers",  "gpr", k_num_gpr_registers_i386, g_gpr_regnums_i386 },
-        { "Floating Point Registers",   "fpu", k_num_fpr_registers_i386, g_fpu_regnums_i386 },
-        { "Advanced Vector Extensions", "avx", k_num_avx_registers_i386, g_avx_regnums_i386 }
+        { "General Purpose Registers",   "gpr", k_num_gpr_registers_i386, g_gpr_regnums_i386 },
+        { "Floating Point Registers",    "fpu", k_num_fpr_registers_i386, g_fpu_regnums_i386 },
+        { "Advanced Vector Extensions",  "avx", k_num_avx_registers_i386, g_avx_regnums_i386 },
+        { "Memory Protection Extensions", "mpx", k_num_mpx_registers_i386, g_mpx_regnums_i386 }
     };
 
     // Register sets for x86 64-bit.
     static const RegisterSet
     g_reg_sets_x86_64[k_num_register_sets] =
     {
-        { "General Purpose Registers",  "gpr", k_num_gpr_registers_x86_64, g_gpr_regnums_x86_64 },
-        { "Floating Point Registers",   "fpu", k_num_fpr_registers_x86_64, g_fpu_regnums_x86_64 },
-        { "Advanced Vector Extensions", "avx", k_num_avx_registers_x86_64, g_avx_regnums_x86_64 }
+        { "General Purpose Registers",   "gpr", k_num_gpr_registers_x86_64, g_gpr_regnums_x86_64 },
+        { "Floating Point Registers",    "fpu", k_num_fpr_registers_x86_64, g_fpu_regnums_x86_64 },
+        { "Advanced Vector Extensions",  "avx", k_num_avx_registers_x86_64, g_avx_regnums_x86_64 },
+        { "Memory Protection Extensions", "mpx", k_num_mpx_registers_x86_64, g_mpx_regnums_x86_64 }
+
     };
 }
 
@@ -368,6 +401,7 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64 (const Arch
     m_fpr (),
     m_iovec (),
     m_ymm_set (),
+    m_mpx_set (),
     m_reg_info (),
     m_gpr_x86_64 ()
 {
@@ -379,6 +413,7 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64 (const Arch
             m_reg_info.num_gpr_registers    = k_num_gpr_registers_i386;
             m_reg_info.num_fpr_registers    = k_num_fpr_registers_i386;
             m_reg_info.num_avx_registers    = k_num_avx_registers_i386;
+            m_reg_info.num_mpx_registers    = k_num_mpx_registers_i386;
             m_reg_info.last_gpr             = k_last_gpr_i386;
             m_reg_info.first_fpr            = k_first_fpr_i386;
             m_reg_info.last_fpr             = k_last_fpr_i386;
@@ -390,6 +425,10 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64 (const Arch
             m_reg_info.last_xmm             = lldb_xmm7_i386;
             m_reg_info.first_ymm            = lldb_ymm0_i386;
             m_reg_info.last_ymm             = lldb_ymm7_i386;
+            m_reg_info.first_mpxr           = lldb_bnd0_i386;
+            m_reg_info.last_mpxr            = lldb_bnd3_i386;
+            m_reg_info.first_mpxc           = lldb_bndcfgu_i386;
+            m_reg_info.last_mpxc            = lldb_bndstatus_i386;
             m_reg_info.first_dr             = lldb_dr0_i386;
             m_reg_info.gpr_flags            = lldb_eflags_i386;
             break;
@@ -398,6 +437,7 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64 (const Arch
             m_reg_info.num_gpr_registers    = k_num_gpr_registers_x86_64;
             m_reg_info.num_fpr_registers    = k_num_fpr_registers_x86_64;
             m_reg_info.num_avx_registers    = k_num_avx_registers_x86_64;
+            m_reg_info.num_mpx_registers    = k_num_mpx_registers_x86_64;
             m_reg_info.last_gpr             = k_last_gpr_x86_64;
             m_reg_info.first_fpr            = k_first_fpr_x86_64;
             m_reg_info.last_fpr             = k_last_fpr_x86_64;
@@ -409,6 +449,10 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64 (const Arch
             m_reg_info.last_xmm             = lldb_xmm15_x86_64;
             m_reg_info.first_ymm            = lldb_ymm0_x86_64;
             m_reg_info.last_ymm             = lldb_ymm15_x86_64;
+            m_reg_info.first_mpxr           = lldb_bnd0_x86_64;
+            m_reg_info.last_mpxr            = lldb_bnd3_x86_64;
+            m_reg_info.first_mpxc           = lldb_bndcfgu_x86_64;
+            m_reg_info.last_mpxc            = lldb_bndstatus_x86_64;
             m_reg_info.first_dr             = lldb_dr0_x86_64;
             m_reg_info.gpr_flags            = lldb_rflags_x86_64;
             break;
@@ -554,7 +598,28 @@ NativeRegisterContextLinux_x86_64::ReadRegister (const RegisterInfo *reg_info, R
                     return error;
                 }
             }
-
+            if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr)
+            {
+                if (GetFPRType() == eFPRTypeXSAVE && CopyXSTATEtoMPX(reg))
+                    reg_value.SetBytes(m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes, reg_info->byte_size,
+                                       byte_order);
+                else
+                {
+                    error.SetErrorString("failed to copy mpx register value");
+                    return error;
+                }
+            }
+            if (reg >= m_reg_info.first_mpxc && reg <= m_reg_info.last_mpxc)
+            {
+                if (GetFPRType() == eFPRTypeXSAVE && CopyXSTATEtoMPX(reg))
+                    reg_value.SetBytes(m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes, reg_info->byte_size,
+                                       byte_order);
+                else
+                {
+                    error.SetErrorString("failed to copy mpx register value");
+                    return error;
+                }
+            }
             if (reg_value.GetType() != RegisterValue::eTypeBytes)
                 error.SetErrorString ("write failed - type was expected to be RegisterValue::eTypeBytes");
 
@@ -634,6 +699,26 @@ NativeRegisterContextLinux_x86_64::WriteRegister (const RegisterInfo *reg_info, 
                 if (!CopyYMMtoXSTATE(reg_index, GetByteOrder()))
                     return Error ("CopyYMMtoXSTATE() failed");
             }
+            if (reg_index >= m_reg_info.first_mpxr && reg_index <= m_reg_info.last_mpxr)
+            {
+                if (GetFPRType() != eFPRTypeXSAVE)
+                    return Error("target processor does not support MPX");
+
+                ::memcpy(m_mpx_set.mpxr[reg_index - m_reg_info.first_mpxr].bytes, reg_value.GetBytes(),
+                         reg_value.GetByteSize());
+                if (!CopyMPXtoXSTATE(reg_index))
+                    return Error("CopyMPXtoXSTATE() failed");
+            }
+            if (reg_index >= m_reg_info.first_mpxc && reg_index <= m_reg_info.last_mpxc)
+            {
+                if (GetFPRType() != eFPRTypeXSAVE)
+                    return Error("target processor does not support MPX");
+
+                ::memcpy(m_mpx_set.mpxc[reg_index - m_reg_info.first_mpxc].bytes, reg_value.GetBytes(),
+                         reg_value.GetByteSize());
+                if (!CopyMPXtoXSTATE(reg_index))
+                    return Error("CopyMPXtoXSTATE() failed");
+            }
         }
         else
         {
@@ -676,6 +761,12 @@ NativeRegisterContextLinux_x86_64::WriteRegister (const RegisterInfo *reg_info, 
         {
             if (!CopyYMMtoXSTATE(reg_index, GetByteOrder()))
                 return Error ("CopyYMMtoXSTATE() failed");
+        }
+
+        if (IsMPX(reg_index))
+        {
+            if (!CopyMPXtoXSTATE(reg_index))
+                return Error("CopyMPXtoXSTATE() failed");
         }
         return Error ();
     }
@@ -723,6 +814,17 @@ NativeRegisterContextLinux_x86_64::ReadAllRegisterValues (lldb::DataBufferSP &da
             if (!CopyXSTATEtoYMM (reg, byte_order))
             {
                 error.SetErrorStringWithFormat ("NativeRegisterContextLinux_x86_64::%s CopyXSTATEtoYMM() failed for reg num %" PRIu32, __FUNCTION__, reg);
+                return error;
+            }
+        }
+
+        for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc; ++reg)
+        {
+            if (!CopyXSTATEtoMPX(reg))
+            {
+                error.SetErrorStringWithFormat(
+                    "NativeRegisterContextLinux_x86_64::%s CopyXSTATEtoMPX() failed for reg num %" PRIu32, __FUNCTION__,
+                    reg);
                 return error;
             }
         }
@@ -806,6 +908,17 @@ NativeRegisterContextLinux_x86_64::WriteAllRegisterValues (const lldb::DataBuffe
                 return error;
             }
         }
+
+        for (uint32_t reg = m_reg_info.first_mpxr; reg <= m_reg_info.last_mpxc; ++reg)
+        {
+            if (!CopyMPXtoXSTATE(reg))
+            {
+                error.SetErrorStringWithFormat(
+                    "NativeRegisterContextLinux_x86_64::%s CopyMPXtoXSTATE() failed for reg num %" PRIu32, __FUNCTION__,
+                    reg);
+                return error;
+            }
+        }
     }
 
     return error;
@@ -820,7 +933,7 @@ NativeRegisterContextLinux_x86_64::IsRegisterSetAvailable (uint32_t set_index) c
     if (GetFPRType () == eFPRTypeXSAVE)
     {
         // AVX is the first extended register set.
-        ++num_sets;
+        num_sets += 2;
     }
     return (set_index < num_sets);
 }
@@ -870,7 +983,8 @@ NativeRegisterContextLinux_x86_64::IsFPR(uint32_t reg_index, FPRType fpr_type) c
     bool generic_fpr = IsFPR(reg_index);
 
     if (fpr_type == eFPRTypeXSAVE)
-        return generic_fpr || IsAVX(reg_index);
+        return generic_fpr || IsAVX(reg_index) || IsMPX(reg_index);
+
     return generic_fpr;
 }
 
@@ -1005,6 +1119,7 @@ NativeRegisterContextLinux_x86_64::ReadFPR ()
 {
     const FPRType fpr_type = GetFPRType ();
     const lldb_private::ArchSpec& target_arch = GetRegisterInfoInterface().GetTargetArchitecture();
+
     switch (fpr_type)
     {
     case FPRType::eFPRTypeFXSAVE:
@@ -1027,6 +1142,50 @@ NativeRegisterContextLinux_x86_64::ReadFPR ()
     default:
         return Error("Unrecognized FPR type");
     }
+}
+
+bool
+NativeRegisterContextLinux_x86_64::IsMPX(uint32_t reg_index) const
+{
+    return (m_reg_info.first_mpxr <= reg_index && reg_index <= m_reg_info.last_mpxc);
+}
+
+bool
+NativeRegisterContextLinux_x86_64::CopyXSTATEtoMPX(uint32_t reg)
+{
+    if (!IsMPX(reg))
+        return false;
+
+    if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr)
+    {
+        ::memcpy(m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes,
+                 m_fpr.xstate.xsave.mpxr[reg - m_reg_info.first_mpxr].bytes, sizeof(MPXReg));
+    }
+    else
+    {
+        ::memcpy(m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes,
+                 m_fpr.xstate.xsave.mpxc[reg - m_reg_info.first_mpxc].bytes, sizeof(MPXCsr));
+    }
+    return true;
+}
+
+bool
+NativeRegisterContextLinux_x86_64::CopyMPXtoXSTATE(uint32_t reg)
+{
+    if (!IsMPX(reg))
+        return false;
+
+    if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr)
+    {
+        ::memcpy(m_fpr.xstate.xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
+                 m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes, sizeof(MPXReg));
+    }
+    else
+    {
+        ::memcpy(m_fpr.xstate.xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
+                 m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes, sizeof(MPXCsr));
+    }
+    return true;
 }
 
 Error
