@@ -332,7 +332,7 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     return;
 
   assert(&MBB != &MF.front() && "Header blocks shouldn't have predecessors");
-  MachineBasicBlock *LayoutPred = &*prev(MachineFunction::iterator(&MBB));
+  MachineBasicBlock *LayoutPred = &*std::prev(MachineFunction::iterator(&MBB));
 
   // If the nearest common dominator is inside a more deeply nested context,
   // walk out to the nearest scope which isn't more deeply nested.
@@ -340,7 +340,7 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     if (MachineBasicBlock *ScopeTop = ScopeTops[I->getNumber()]) {
       if (ScopeTop->getNumber() > Header->getNumber()) {
         // Skip over an intervening scope.
-        I = next(MachineFunction::iterator(ScopeTop));
+        I = std::next(MachineFunction::iterator(ScopeTop));
       } else {
         // We found a scope level at an appropriate depth.
         Header = ScopeTop;
@@ -369,10 +369,11 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     // Otherwise, insert the BLOCK as late in Header as we can, but before the
     // beginning of the local expression tree and any nested BLOCKs.
     InsertPos = Header->getFirstTerminator();
-    while (InsertPos != Header->begin() && IsChild(*prev(InsertPos), MFI) &&
-           prev(InsertPos)->getOpcode() != WebAssembly::LOOP &&
-           prev(InsertPos)->getOpcode() != WebAssembly::END_BLOCK &&
-           prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)
+    while (InsertPos != Header->begin() &&
+           IsChild(*std::prev(InsertPos), MFI) &&
+           std::prev(InsertPos)->getOpcode() != WebAssembly::LOOP &&
+           std::prev(InsertPos)->getOpcode() != WebAssembly::END_BLOCK &&
+           std::prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)
       --InsertPos;
   }
 
@@ -406,13 +407,13 @@ static void PlaceLoopMarker(
   // The operand of a LOOP is the first block after the loop. If the loop is the
   // bottom of the function, insert a dummy block at the end.
   MachineBasicBlock *Bottom = LoopBottom(Loop);
-  auto Iter = next(MachineFunction::iterator(Bottom));
+  auto Iter = std::next(MachineFunction::iterator(Bottom));
   if (Iter == MF.end()) {
     MachineBasicBlock *Label = MF.CreateMachineBasicBlock();
     // Give it a fake predecessor so that AsmPrinter prints its label.
     Label->addSuccessor(Label);
     MF.push_back(Label);
-    Iter = next(MachineFunction::iterator(Bottom));
+    Iter = std::next(MachineFunction::iterator(Bottom));
   }
   MachineBasicBlock *AfterLoop = &*Iter;
 
