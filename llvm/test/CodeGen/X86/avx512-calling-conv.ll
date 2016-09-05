@@ -335,30 +335,21 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 }
 
 define <16 x i8> @test8(<16 x i8> %a1, <16 x i8> %a2, i1 %cond) {
-; KNL-LABEL: test8:
-; KNL:       ## BB#0:
-; KNL-NEXT:    testb $1, %dil
-; KNL-NEXT:    jne LBB8_2
-; KNL-NEXT:  ## BB#1:
-; KNL-NEXT:    vmovaps %zmm1, %zmm0
-; KNL-NEXT:  LBB8_2:
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test8:
-; SKX:       ## BB#0:
-; SKX-NEXT:    testb $1, %dil
-; SKX-NEXT:    jne LBB8_2
-; SKX-NEXT:  ## BB#1:
-; SKX-NEXT:    vmovaps %xmm1, %xmm0
-; SKX-NEXT:  LBB8_2:
-; SKX-NEXT:    retq
+; ALL_X64-LABEL: test8:
+; ALL_X64:       ## BB#0:
+; ALL_X64-NEXT:    testb $1, %dil
+; ALL_X64-NEXT:    jne LBB8_2
+; ALL_X64-NEXT:  ## BB#1:
+; ALL_X64-NEXT:    vmovaps %xmm1, %xmm0
+; ALL_X64-NEXT:  LBB8_2:
+; ALL_X64-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test8:
 ; KNL_X32:       ## BB#0:
 ; KNL_X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; KNL_X32-NEXT:    jne LBB8_2
 ; KNL_X32-NEXT:  ## BB#1:
-; KNL_X32-NEXT:    vmovaps %zmm1, %zmm0
+; KNL_X32-NEXT:    vmovaps %xmm1, %xmm0
 ; KNL_X32-NEXT:  LBB8_2:
 ; KNL_X32-NEXT:    retl
   %res = select i1 %cond, <16 x i8> %a1, <16 x i8> %a2

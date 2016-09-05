@@ -1498,31 +1498,34 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
 Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
                                                  BinaryOperator *And,
                                                  const APInt *C1) {
-  // FIXME: This check restricts all folds under here to scalar types.
-  ConstantInt *RHS = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!RHS)
-    return nullptr;
-
-  // FIXME: Use m_APInt.
-  auto *C2 = dyn_cast<ConstantInt>(And->getOperand(1));
-  if (!C2)
+  const APInt *C2;
+  if (!match(And->getOperand(1), m_APInt(C2)))
     return nullptr;
 
   if (!And->hasOneUse() || !And->getOperand(0)->hasOneUse())
     return nullptr;
 
-  // If the LHS is an AND of a truncating cast, we can widen the and/compare to
-  // be the input width without changing the value produced, eliminating a cast.
-  if (TruncInst *Cast = dyn_cast<TruncInst>(And->getOperand(0))) {
-    // We can do this transformation if either the AND constant does not have
-    // its sign bit set or if it is an equality comparison. Extending a
-    // relational comparison when we're checking the sign bit would not work.
-    if (Cmp.isEquality() || (!C2->isNegative() && C1->isNonNegative())) {
-      Value *NewAnd = Builder->CreateAnd(
-          Cast->getOperand(0), ConstantExpr::getZExt(C2, Cast->getSrcTy()));
-      NewAnd->takeName(And);
-      return new ICmpInst(Cmp.getPredicate(), NewAnd,
-                          ConstantExpr::getZExt(RHS, Cast->getSrcTy()));
+  // If the LHS is an 'and' of a truncate and we can widen the and/compare to
+  // the input width without changing the value produced, eliminate the cast:
+  //
+  // icmp (and (trunc W), C2), C1 -> icmp (and W, C2'), C1'
+  //
+  // We can do this transformation if the constants do not have their sign bits
+  // set or if it is an equality comparison. Extending a relational comparison
+  // when we're checking the sign bit would not work.
+  Value *W;
+  if (match(And->getOperand(0), m_Trunc(m_Value(W))) &&
+      (Cmp.isEquality() || (!C1->isNegative() && !C2->isNegative()))) {
+    // TODO: Is this a good transform for vectors? Wider types may reduce
+    // throughput. Should this transform be limited (even for scalars) by using
+    // ShouldChangeType()?
+    if (!Cmp.getType()->isVectorTy()) {
+      Type *WideType = W->getType();
+      unsigned WideScalarBits = WideType->getScalarSizeInBits();
+      Constant *ZextC1 = ConstantInt::get(WideType, C1->zext(WideScalarBits));
+      Constant *ZextC2 = ConstantInt::get(WideType, C2->zext(WideScalarBits));
+      Value *NewAnd = Builder->CreateAnd(W, ZextC2, And->getName());
+      return new ICmpInst(Cmp.getPredicate(), NewAnd, ZextC1);
     }
   }
 
@@ -1530,54 +1533,49 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
     return I;
 
   // (icmp pred (and (or (lshr A, B), A), 1), 0) -->
-  //    (icmp pred (and A, (or (shl 1, B), 1), 0))
+  // (icmp pred (and A, (or (shl 1, B), 1), 0))
   //
   // iff pred isn't signed
-  {
+  if (!Cmp.isSigned() && *C1 == 0 && match(And->getOperand(1), m_One())) {
+    Constant *One = cast<Constant>(And->getOperand(1));
+    Value *Or = And->getOperand(0);
     Value *A, *B, *LShr;
-    if (!Cmp.isSigned() && *C1 == 0) {
-      if (match(And->getOperand(1), m_One())) {
-        Constant *One = cast<Constant>(And->getOperand(1));
-        Value *Or = And->getOperand(0);
-        if (match(Or, m_Or(m_Value(LShr), m_Value(A))) &&
-            match(LShr, m_LShr(m_Specific(A), m_Value(B)))) {
-          unsigned UsesRemoved = 0;
-          if (And->hasOneUse())
-            ++UsesRemoved;
-          if (Or->hasOneUse())
-            ++UsesRemoved;
-          if (LShr->hasOneUse())
-            ++UsesRemoved;
-          Value *NewOr = nullptr;
-          // Compute A & ((1 << B) | 1)
-          if (auto *C = dyn_cast<Constant>(B)) {
-            if (UsesRemoved >= 1)
-              NewOr = ConstantExpr::getOr(ConstantExpr::getNUWShl(One, C), One);
-          } else {
-            if (UsesRemoved >= 3)
-              NewOr =
-                  Builder->CreateOr(Builder->CreateShl(One, B, LShr->getName(),
+    if (match(Or, m_Or(m_Value(LShr), m_Value(A))) &&
+        match(LShr, m_LShr(m_Specific(A), m_Value(B)))) {
+      unsigned UsesRemoved = 0;
+      if (And->hasOneUse())
+        ++UsesRemoved;
+      if (Or->hasOneUse())
+        ++UsesRemoved;
+      if (LShr->hasOneUse())
+        ++UsesRemoved;
+
+      // Compute A & ((1 << B) | 1)
+      Value *NewOr = nullptr;
+      if (auto *C = dyn_cast<Constant>(B)) {
+        if (UsesRemoved >= 1)
+          NewOr = ConstantExpr::getOr(ConstantExpr::getNUWShl(One, C), One);
+      } else {
+        if (UsesRemoved >= 3)
+          NewOr = Builder->CreateOr(Builder->CreateShl(One, B, LShr->getName(),
                                                        /*HasNUW=*/true),
                                     One, Or->getName());
-          }
-          if (NewOr) {
-            Value *NewAnd = Builder->CreateAnd(A, NewOr, And->getName());
-            Cmp.setOperand(0, NewAnd);
-            return &Cmp;
-          }
-        }
+      }
+      if (NewOr) {
+        Value *NewAnd = Builder->CreateAnd(A, NewOr, And->getName());
+        Cmp.setOperand(0, NewAnd);
+        return &Cmp;
       }
     }
   }
 
-  // Replace ((X & C2) > C1) with ((X & C2) != 0), if any bit set in (X & C2)
-  // will produce a result greater than C1.
-  if (Cmp.getPredicate() == ICmpInst::ICMP_UGT) {
-    unsigned NTZ = C2->getValue().countTrailingZeros();
-    if ((NTZ < C2->getBitWidth()) &&
-        APInt::getOneBitSet(C2->getBitWidth(), NTZ).ugt(*C1))
-      return new ICmpInst(ICmpInst::ICMP_NE, And,
-                          Constant::getNullValue(RHS->getType()));
+  // (X & C2) > C1 --> (X & C2) != 0, if any bit set in (X & C2) will produce a
+  // result greater than C1.
+  unsigned NumTZ = C2->countTrailingZeros();
+  if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && NumTZ < C2->getBitWidth() &&
+      APInt::getOneBitSet(C2->getBitWidth(), NumTZ).ugt(*C1)) {
+    Constant *Zero = Constant::getNullValue(And->getType());
+    return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
   }
 
   return nullptr;
