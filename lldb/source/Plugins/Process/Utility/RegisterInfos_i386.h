@@ -35,6 +35,16 @@
      LLVM_EXTENSION offsetof(FXSAVE, xmm[7]) + \
      sizeof(XMMReg) + (32 * reg_index))
 
+#define BNDR_OFFSET(reg_index) \
+    (LLVM_EXTENSION offsetof(UserArea, i387) + \
+     LLVM_EXTENSION offsetof(FPR, xstate) + \
+     LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]))
+
+#define BNDC_OFFSET(reg_index) \
+    (LLVM_EXTENSION offsetof(UserArea, i387) + \
+     LLVM_EXTENSION offsetof(FPR, xstate) + \
+     LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]))
+
 // Number of bytes needed to represent a FPR.
 #if !defined(FPR_SIZE)
 #define FPR_SIZE(reg) sizeof(((FXSAVE*)NULL)->reg)
@@ -48,6 +58,10 @@
 
 // Number of bytes needed to represent a YMM register.
 #define YMM_SIZE sizeof(YMMReg)
+
+// Number of bytes needed to represent MPX registers.
+#define BNDR_SIZE sizeof(MPXReg)
+#define BNDC_SIZE sizeof(MPXCsr)
 
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR(reg, alt, kind1, kind2, kind3, kind4)            \
@@ -84,6 +98,18 @@
       eEncodingVector, eFormatVectorOfUInt8,                       \
       { LLDB_INVALID_REGNUM, dwarf_xmm##i##_i386, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##reg##i##_i386 }, \
       NULL, NULL, NULL, 0}
+
+#define DEFINE_BNDR(reg, i)                                            \
+    { #reg#i, NULL, BNDR_SIZE, LLVM_EXTENSION BNDR_OFFSET(i),          \
+      eEncodingVector, eFormatVectorOfUInt64,                          \
+      { dwarf_##reg##i##_i386, dwarf_##reg##i##_i386, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##reg##i##_i386 }, \
+     NULL, NULL }
+
+#define DEFINE_BNDC(name, i)                                            \
+      { #name, NULL, BNDC_SIZE, LLVM_EXTENSION BNDC_OFFSET(i),          \
+        eEncodingVector, eFormatVectorOfUInt8,                          \
+        { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##name##_x86_64 }, \
+        NULL, NULL }
 
 #define DEFINE_DR(reg, i)                                               \
     { #reg#i, NULL, DR_SIZE, DR_OFFSET(i), eEncodingUint, eFormatHex,   \
@@ -187,6 +213,15 @@ g_register_infos_i386[] =
     DEFINE_YMM(ymm, 5),
     DEFINE_YMM(ymm, 6),
     DEFINE_YMM(ymm, 7),
+
+    // MPX registers
+    DEFINE_BNDR(bnd, 0),
+    DEFINE_BNDR(bnd, 1),
+    DEFINE_BNDR(bnd, 2),
+    DEFINE_BNDR(bnd, 3),
+
+    DEFINE_BNDC(bndcfgu, 0),
+    DEFINE_BNDC(bndstatus, 1),
 
     // Debug registers for lldb internal use
     DEFINE_DR(dr, 0),

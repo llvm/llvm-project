@@ -604,8 +604,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
-  // to avoid the undefined symbol error.
-  if (!Out<ELFT>::DynSymTab)
+  // to avoid the undefined symbol error. As usual as special case is MIPS -
+  // MIPS libc defines __tls_get_addr itself because there are no TLS
+  // optimizations for this target.
+  if (!Out<ELFT>::DynSymTab && Config->EMachine != EM_MIPS)
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.

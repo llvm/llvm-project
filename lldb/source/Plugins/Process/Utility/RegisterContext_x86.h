@@ -116,10 +116,13 @@ enum
     dwarf_ss_i386 = 42,
     dwarf_ds_i386 = 43,
     dwarf_fs_i386 = 44,
-    dwarf_gs_i386 = 45
-
+    dwarf_gs_i386 = 45,
     // I believe the ymm registers use the dwarf_xmm%_i386 register numbers and
     //  then differentiate based on size of the register.
+    dwarf_bnd0_i386 = 101,
+    dwarf_bnd1_i386,
+    dwarf_bnd2_i386,
+    dwarf_bnd3_i386,
 };
 
 //---------------------------------------------------------------------------
@@ -216,6 +219,11 @@ enum
     dwarf_ymm13h_x86_64,
     dwarf_ymm14h_x86_64,
     dwarf_ymm15h_x86_64,
+    // MPX registers
+    dwarf_bnd0_x86_64 = 126,
+    dwarf_bnd1_x86_64,
+    dwarf_bnd2_x86_64,
+    dwarf_bnd3_x86_64,
     // AVX2 Vector Mask Registers
     // dwarf_k0_x86_64 = 118,
     // dwarf_k1_x86_64,
@@ -291,19 +299,39 @@ struct YMM
     YMMReg   ymm[16];       // assembled from ymmh and xmm registers
 };
 
+struct MPXReg
+{
+    uint8_t bytes[16];      // MPX 128 bit bound registers
+};
+
+struct MPXCsr
+{
+    uint8_t bytes[8];       // MPX 64 bit bndcfgu and bndstatus registers (collectively BNDCSR state)
+};
+
+struct MPX
+{
+    MPXReg mpxr[4];
+    MPXCsr mpxc[2];
+};
+
 struct XSAVE_HDR
 {
     uint64_t  xstate_bv;    // OS enabled xstate mask to determine the extended states supported by the processor
-    uint64_t  reserved1[2];
+    uint64_t  xcomp_bv;     // Mask to indicate the format of the XSAVE area and of the XRSTOR instruction
+    uint64_t  reserved1[1];
     uint64_t  reserved2[5];
 } __attribute__((packed));
 
-// x86 extensions to FXSAVE (i.e. for AVX processors) 
-struct XSAVE 
+// x86 extensions to FXSAVE (i.e. for AVX and MPX processors)
+struct XSAVE
 {
     FXSAVE    i387;         // floating point registers typical in i387_fxsave_struct
     XSAVE_HDR header;       // The xsave_hdr_struct can be used to determine if the following extensions are usable
     YMMHReg   ymmh[16];     // High 16 bytes of each of 16 YMM registers (the low bytes are in FXSAVE.xmm for compatibility with SSE)
+    uint64_t  reserved3[16];
+    MPXReg    mpxr[4];      // MPX BNDREG state, containing 128-bit bound registers BND0-BND3
+    MPXCsr    mpxc[2];      // MPX BNDCSR state, containing 64-bit BNDCFGU and BNDSTATUS registers
     // Slot any extensions to the register file here
 } __attribute__((packed, aligned (64)));
 

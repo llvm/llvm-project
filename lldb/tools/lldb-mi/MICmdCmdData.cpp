@@ -25,6 +25,9 @@
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBStream.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Regex.h"
 
 // In-house headers:
 #include "MICmdCmdData.h"
@@ -42,7 +45,6 @@
 #include "MICmdArgValConsume.h"
 #include "MICmnLLDBDebugSessionInfoVarObj.h"
 #include "MICmnLLDBUtilSBValue.h"
-#include "MIUtilParse.h"
 
 //++ ------------------------------------------------------------------------------------
 // Details: CMICmdCmdDataEvaluateExpression constructor.
@@ -1651,24 +1653,24 @@ ParseLLDBLineEntry(const char *input, CMIUtilString &start, CMIUtilString &end,
     // is remains is assumed to be the filename.
 
     // Match LineEntry using regex.
-    static MIUtilParse::CRegexParser g_lineentry_nocol_regex( 
-        "^ *LineEntry: \\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+)$");
-    static MIUtilParse::CRegexParser g_lineentry_col_regex( 
-        "^ *LineEntry: \\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+):[0-9]+$");
-        //                ^1=start         ^2=end               ^3=f ^4=line ^5=:col(opt)
+    static llvm::Regex g_lineentry_nocol_regex(
+        llvm::StringRef("^ *LineEntry: \\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+)$"));
+    static llvm::Regex g_lineentry_col_regex(
+        llvm::StringRef("^ *LineEntry: \\[(0x[0-9a-fA-F]+)-(0x[0-9a-fA-F]+)\\): (.+):([0-9]+):[0-9]+$"));
+        //                                ^1=start         ^2=end               ^3=f ^4=line ^5=:col(opt)
 
-    MIUtilParse::CRegexParser::Match match(6);
+    llvm::SmallVector<llvm::StringRef, 6> match;
 
     // First try matching the LineEntry with the column,
     // then try without the column.
-    const bool ok = g_lineentry_col_regex.Execute(input, match) ||
-                    g_lineentry_nocol_regex.Execute(input, match);
+    const bool ok = g_lineentry_col_regex.match(input, &match) ||
+                    g_lineentry_nocol_regex.match(input, &match);
     if (ok)
     {
-        start = match.GetMatchAtIndex(1);
-        end   = match.GetMatchAtIndex(2);
-        file  = match.GetMatchAtIndex(3);
-        line  = match.GetMatchAtIndex(4);
+        start = match[1];
+        end   = match[2];
+        file  = match[3];
+        line  = match[4];
     }
     return ok;
 }
