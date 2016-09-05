@@ -140,6 +140,12 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     case ARM::fixup_t2_movw_lo16:
       Type = ELF::R_ARM_THM_MOVW_PREL_NC;
       break;
+    case ARM::fixup_arm_thumb_br:
+      Type = ELF::R_ARM_THM_JUMP11;
+      break;
+    case ARM::fixup_arm_thumb_bcc:
+      Type = ELF::R_ARM_THM_JUMP8;
+      break;
     case ARM::fixup_arm_thumb_bl:
     case ARM::fixup_arm_thumb_blx:
       switch (Modifier) {

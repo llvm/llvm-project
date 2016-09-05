@@ -454,7 +454,7 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm1 {%k1}
-; AVX512F-NEXT:    vmovaps %zmm1, %zmm0
+; AVX512F-NEXT:    vmovaps %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test11a:
@@ -501,7 +501,7 @@ define <8 x i32> @test11b(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %dst) {
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm1 {%k1}
-; AVX512F-NEXT:    vmovdqa64 %zmm1, %zmm0
+; AVX512F-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test11b:

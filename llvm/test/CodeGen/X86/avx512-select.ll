@@ -40,7 +40,7 @@ define float @select02(float %a, float %b, float %c, float %eps) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmpless %xmm0, %xmm3, %k1
 ; CHECK-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp oge float %a, %eps
   %cond = select i1 %cmp, float %c, float %b
@@ -52,7 +52,7 @@ define double @select03(double %a, double %b, double %c, double %eps) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmplesd %xmm0, %xmm3, %k1
 ; CHECK-NEXT:    vmovsd %xmm2, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovapd %zmm1, %zmm0
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp oge double %a, %eps
   %cond = select i1 %cmp, double %c, double %b

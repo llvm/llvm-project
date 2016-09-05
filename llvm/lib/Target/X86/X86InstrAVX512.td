@@ -2117,15 +2117,15 @@ def : Pat<(i8 (bitconvert (v8i1 VK8:$src))),
           (COPY_TO_REGCLASS VK8:$src, GR8)>;
 
 def : Pat<(i32 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
-          (i32 (SUBREG_TO_REG (i64 0),
-                (i16 (COPY_TO_REGCLASS VK16:$src, GR16)), sub_16bit))>;
+          (KMOVWrk VK16:$src)>;
 def : Pat<(i32 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
           (i32 (SUBREG_TO_REG (i64 0),
                 (i16 (COPY_TO_REGCLASS VK16:$src, GR16)), sub_16bit))>;
 
 def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
-          (i32 (SUBREG_TO_REG (i64 0),
-                (i8 (COPY_TO_REGCLASS VK8:$src, GR8)), sub_8bit))>;
+          (MOVZX32rr8 (COPY_TO_REGCLASS VK8:$src, GR8))>, Requires<[NoDQI]>;
+def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
+          (KMOVBrk VK8:$src)>, Requires<[HasDQI]>;
 def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
           (i32 (SUBREG_TO_REG (i64 0),
                 (i8 (COPY_TO_REGCLASS VK8:$src, GR8)), sub_8bit))>;

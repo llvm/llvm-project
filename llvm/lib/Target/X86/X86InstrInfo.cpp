@@ -4499,22 +4499,6 @@ unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg,
   if (Subtarget.hasBWI())
     if (auto Opc = copyPhysRegOpcode_AVX512_BW(DestReg, SrcReg))
       return Opc;
-  if (X86::VR128XRegClass.contains(DestReg, SrcReg)) {
-    if (Subtarget.hasVLX())
-      return X86::VMOVAPSZ128rr;
-   DestReg = get512BitSuperRegister(DestReg);
-   SrcReg = get512BitSuperRegister(SrcReg);
-   return X86::VMOVAPSZrr;
-  }
-  if (X86::VR256XRegClass.contains(DestReg, SrcReg)) {
-    if (Subtarget.hasVLX())
-      return X86::VMOVAPSZ256rr;
-   DestReg = get512BitSuperRegister(DestReg);
-   SrcReg = get512BitSuperRegister(SrcReg);
-   return X86::VMOVAPSZrr;
-  }
-  if (X86::VR512RegClass.contains(DestReg, SrcReg))
-     return X86::VMOVAPSZrr;
   if (MaskRegClassContains(DestReg) && MaskRegClassContains(SrcReg))
     return X86::KMOVWkk;
   if (MaskRegClassContains(DestReg) && GRRegClassContains(SrcReg)) {
@@ -4535,6 +4519,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasVLX = Subtarget.hasVLX();
   unsigned Opc = 0;
   if (X86::GR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MOV64rr;
@@ -4556,12 +4541,14 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
   else if (X86::VR64RegClass.contains(DestReg, SrcReg))
     Opc = X86::MMX_MOVQ64rr;
+  else if (X86::VR128XRegClass.contains(DestReg, SrcReg))
+    Opc = HasVLX ? X86::VMOVAPSZ128rr : HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
+  else if (X86::VR256XRegClass.contains(DestReg, SrcReg))
+    Opc = HasVLX ? X86::VMOVAPSZ256rr : X86::VMOVAPSYrr;
+  else if (X86::VR512RegClass.contains(DestReg, SrcReg))
+    Opc = X86::VMOVAPSZrr;
   else if (HasAVX512)
     Opc = copyPhysRegOpcode_AVX512(DestReg, SrcReg, Subtarget);
-  else if (X86::VR128RegClass.contains(DestReg, SrcReg))
-    Opc = HasAVX ? X86::VMOVAPSrr : X86::MOVAPSrr;
-  else if (X86::VR256RegClass.contains(DestReg, SrcReg))
-    Opc = X86::VMOVAPSYrr;
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
 
