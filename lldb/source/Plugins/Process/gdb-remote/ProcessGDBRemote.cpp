@@ -610,6 +610,7 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
                                                   .Case("vector-sint32", eFormatVectorOfSInt32)
                                                   .Case("vector-uint32", eFormatVectorOfUInt32)
                                                   .Case("vector-float32", eFormatVectorOfFloat32)
+                                                  .Case("vector-uint64", eFormatVectorOfUInt64)
                                                   .Case("vector-uint128", eFormatVectorOfUInt128)
                                                   .Default(eFormatInvalid);
                         }
@@ -4545,6 +4546,8 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
                     reg_info.format = eFormatVectorOfUInt32;
                 else if (value == "vector-float32")
                     reg_info.format = eFormatVectorOfFloat32;
+                else if (value == "vector-uint64")
+                    reg_info.format = eFormatVectorOfUInt64;
                 else if (value == "vector-uint128")
                     reg_info.format = eFormatVectorOfUInt128;
             }

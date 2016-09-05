@@ -41,11 +41,12 @@ class RegisterCommandsTestCase(TestBase):
         if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
             self.runCmd("register read xmm0")
             self.runCmd("register read ymm15") # may be available
+            self.runCmd("register read bnd0") # may be available
         elif self.getArchitecture() in ['arm']:
             self.runCmd("register read s0")
             self.runCmd("register read q15") # may be available
 
-        self.expect("register read -s 3", substrs = ['invalid register set index: 3'], error = True)
+        self.expect("register read -s 4", substrs = ['invalid register set index: 4'], error = True)
 
     @skipIfiOSSimulator
     @skipIfTargetAndroid(archs=["i386"]) # Writing of mxcsr register fails, presumably due to a kernel/hardware problem
@@ -289,12 +290,14 @@ class RegisterCommandsTestCase(TestBase):
             self.runCmd("register write " + st0regname + " \"{0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}\"")
             self.expect("register read " + st0regname + " --format f", substrs = [st0regname + ' = 0'])
 
-            has_avx = False 
+            has_avx = False
+            has_mpx = False
             registerSets = currentFrame.GetRegisters() # Returns an SBValueList.
             for registerSet in registerSets:
                 if 'advanced vector extensions' in registerSet.GetName().lower():
                     has_avx = True
-                    break
+                if 'memory protection extension' in registerSet.GetName().lower():
+                    has_mpx = True
 
             if has_avx:
                 new_value = "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x0c 0x0d 0x0e 0x0f}"
@@ -303,6 +306,21 @@ class RegisterCommandsTestCase(TestBase):
                 self.expect("expr $ymm0", substrs = ['vector_type'])
             else:
                 self.runCmd("register read ymm0")
+
+            if has_mpx:
+                # Test write and read for bnd0.
+                new_value_w = "{0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0a 0x0b 0x0c 0x0d 0x0e 0x0f 0x10}"
+                self.runCmd("register write bnd0 \'" + new_value_w + "\'")
+                new_value_r = "{0x0807060504030201 0x100f0e0d0c0b0a09}"
+                self.expect("register read bnd0", substrs = ['bnd0 = ', new_value_r])
+                self.expect("expr $bnd0", substrs = ['vector_type'])
+
+                # Test write and for bndstatus.
+                new_value = "{0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08}"
+                self.write_and_read(currentFrame, "bndstatus", new_value)
+                self.expect("expr $bndstatus", substrs = ['vector_type'])
+            else:
+                self.runCmd("register read bnd0")
 
     def convenience_registers(self):
         """Test convenience registers."""
