@@ -1083,29 +1083,6 @@ let Predicates = [UseSSE1] in {
             (MOVUPSmr addr:$dst, VR128:$src)>;
 }
 
-// Alias instruction to load FR32 or FR64 from f128mem using movaps. Upper
-// bits are disregarded. FIXME: Set encoding to pseudo!
-let canFoldAsLoad = 1, isReMaterializable = 1, SchedRW = [WriteLoad] in {
-let isCodeGenOnly = 1 in {
-  def FsVMOVAPSrm : VPSI<0x28, MRMSrcMem, (outs FR32:$dst), (ins f128mem:$src),
-                         "movaps\t{$src, $dst|$dst, $src}",
-                         [(set FR32:$dst, (alignedloadfsf32 addr:$src))],
-                         IIC_SSE_MOVA_P_RM>, VEX;
-  def FsVMOVAPDrm : VPDI<0x28, MRMSrcMem, (outs FR64:$dst), (ins f128mem:$src),
-                         "movapd\t{$src, $dst|$dst, $src}",
-                         [(set FR64:$dst, (alignedloadfsf64 addr:$src))],
-                         IIC_SSE_MOVA_P_RM>, VEX;
-  def FsMOVAPSrm : PSI<0x28, MRMSrcMem, (outs FR32:$dst), (ins f128mem:$src),
-                       "movaps\t{$src, $dst|$dst, $src}",
-                       [(set FR32:$dst, (alignedloadfsf32 addr:$src))],
-                       IIC_SSE_MOVA_P_RM>;
-  def FsMOVAPDrm : PDI<0x28, MRMSrcMem, (outs FR64:$dst), (ins f128mem:$src),
-                       "movapd\t{$src, $dst|$dst, $src}",
-                       [(set FR64:$dst, (alignedloadfsf64 addr:$src))],
-                       IIC_SSE_MOVA_P_RM>;
-}
-}
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Move Low packed FP Instructions
 //===----------------------------------------------------------------------===//

@@ -2595,10 +2595,6 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::VMOVDQUYrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
-  case X86::FsVMOVAPSrm:
-  case X86::FsVMOVAPDrm:
-  case X86::FsMOVAPSrm:
-  case X86::FsMOVAPDrm:
   // AVX-512
   case X86::VMOVSSZrm:
   case X86::VMOVSDZrm:
@@ -6760,8 +6756,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVSDrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
-  case X86::FsMOVAPSrm:
-  case X86::FsMOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
@@ -6771,8 +6765,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   // AVX load instructions
   case X86::VMOVSSrm:
   case X86::VMOVSDrm:
-  case X86::FsVMOVAPSrm:
-  case X86::FsVMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
@@ -6837,8 +6829,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVSDrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
-  case X86::FsMOVAPSrm:
-  case X86::FsMOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
@@ -6848,8 +6838,6 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   // AVX load instructions
   case X86::VMOVSSrm:
   case X86::VMOVSDrm:
-  case X86::FsVMOVAPSrm:
-  case X86::FsVMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
