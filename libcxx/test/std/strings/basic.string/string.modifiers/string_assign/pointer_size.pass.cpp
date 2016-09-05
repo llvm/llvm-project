@@ -70,4 +70,20 @@ int main()
          S("12345678901234567890"));
     }
 #endif
+	{ // test assign to self
+    typedef std::string S;
+	S s_short = "123/";
+	S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+	
+	s_short.assign(s_short.data(), s_short.size());
+	assert(s_short == "123/");
+	s_short.assign(s_short.data() + 2, s_short.size() - 2);
+	assert(s_short == "3/");
+	
+	s_long.assign(s_long.data(), s_long.size());
+	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/");
+
+	s_long.assign(s_long.data() + 2, 8 );
+	assert(s_long == "rem ipsu");
+	}
 }

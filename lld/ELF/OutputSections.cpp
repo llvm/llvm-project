@@ -671,9 +671,14 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({IsRela ? DT_RELAENT : DT_RELENT,
          uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
 
-    size_t NumRelativeRels = Out<ELFT>::RelaDyn->getRelativeRelocCount();
-    if (Config->ZCombreloc && NumRelativeRels)
-      Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
+    // MIPS dynamic loader does not support RELCOUNT tag.
+    // The problem is in the tight relation between dynamic
+    // relocations and GOT. So do not emit this tag on MIPS.
+    if (Config->EMachine != EM_MIPS) {
+      size_t NumRelativeRels = Out<ELFT>::RelaDyn->getRelativeRelocCount();
+      if (Config->ZCombreloc && NumRelativeRels)
+        Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
+    }
   }
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
     Add({DT_JMPREL, Out<ELFT>::RelaPlt});
