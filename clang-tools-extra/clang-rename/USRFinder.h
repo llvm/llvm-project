@@ -12,6 +12,7 @@
 /// code.
 ///
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDER_H
 
@@ -19,11 +20,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace clang::ast_matchers;
 
 namespace clang {
+
 class ASTContext;
 class Decl;
 class SourceLocation;
@@ -64,7 +67,7 @@ private:
     Finder.addMatcher(NestedNameSpecifierLocMatcher, this);
   }
 
-  virtual void run(const MatchFinder::MatchResult &Result) {
+  void run(const MatchFinder::MatchResult &Result) override {
     const auto *NNS = Result.Nodes.getNodeAs<NestedNameSpecifierLoc>(
         "nestedNameSpecifierLoc");
     Locations.push_back(*NNS);
@@ -74,7 +77,8 @@ private:
   std::vector<NestedNameSpecifierLoc> Locations;
   MatchFinder Finder;
 };
-}
-}
+
+} // namespace rename
+} // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDER_H
