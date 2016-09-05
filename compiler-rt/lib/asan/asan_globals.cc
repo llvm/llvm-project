@@ -368,10 +368,10 @@ void __asan_unregister_globals(__asan_global *globals, uptr n) {
 // initializer can only touch global variables in the same TU.
 void __asan_before_dynamic_init(const char *module_name) {
   if (!flags()->check_initialization_order ||
-      !CanPoisonMemory())
+      !CanPoisonMemory() ||
+      !dynamic_init_globals)
     return;
   bool strict_init_order = flags()->strict_init_order;
-  CHECK(dynamic_init_globals);
   CHECK(module_name);
   CHECK(asan_inited);
   BlockingMutexLock lock(&mu_for_globals);
@@ -394,7 +394,8 @@ void __asan_before_dynamic_init(const char *module_name) {
 // TU are poisoned.  It simply unpoisons all dynamically initialized globals.
 void __asan_after_dynamic_init() {
   if (!flags()->check_initialization_order ||
-      !CanPoisonMemory())
+      !CanPoisonMemory() ||
+      !dynamic_init_globals)
     return;
   CHECK(asan_inited);
   BlockingMutexLock lock(&mu_for_globals);

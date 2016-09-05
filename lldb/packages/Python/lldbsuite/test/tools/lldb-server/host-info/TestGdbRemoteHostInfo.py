@@ -26,7 +26,8 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
         "ptrsize",
         "triple",
         "vendor",
-        "watchpoint_exceptions_received"
+        "watchpoint_exceptions_received",
+        "default_packet_timeout",
     ])
 
     DARWIN_REQUIRED_HOST_INFO_KEYS = set([
