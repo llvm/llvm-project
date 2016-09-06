@@ -87,62 +87,6 @@ namespace std {
 
 } // std
 
-namespace dr1579 { // dr1579: 3.9
-template<class T>
-struct GenericMoveOnly {
-  GenericMoveOnly();
-  template<class U> GenericMoveOnly(const GenericMoveOnly<U> &) = delete; // expected-note 5 {{marked deleted here}}
-  GenericMoveOnly(const int &) = delete; // expected-note 2 {{marked deleted here}}
-  template<class U> GenericMoveOnly(GenericMoveOnly<U> &&);
-  GenericMoveOnly(int &&);
-};
-
-GenericMoveOnly<float> DR1579_Eligible(GenericMoveOnly<char> CharMO) {
-  int i;
-  GenericMoveOnly<char> GMO;
-
-  if (0)
-    return i;
-  else if (0)
-    return GMO;
-  else if (0)
-    return ((GMO));
-  else
-    return CharMO;
-}
-
-GenericMoveOnly<char> GlobalMO;
-
-GenericMoveOnly<float> DR1579_Ineligible(int &AnInt,
-                                          GenericMoveOnly<char> &CharMO) {
-  static GenericMoveOnly<char> StaticMove;
-  extern GenericMoveOnly<char> ExternMove;
-
-  if (0)
-    return AnInt; // expected-error{{invokes a deleted function}}
-  else if (0)
-    return GlobalMO; // expected-error{{invokes a deleted function}}
-  else if (0)
-    return StaticMove; // expected-error{{invokes a deleted function}}
-  else if (0)
-    return ExternMove; // expected-error{{invokes a deleted function}}
-  else if (0)
-    return AnInt; // expected-error{{invokes a deleted function}}
-  else
-    return CharMO; // expected-error{{invokes a deleted function}}
-}
-
-auto DR1579_lambda_valid = [](GenericMoveOnly<float> mo) ->
-  GenericMoveOnly<char> {
-  return mo;
-};
-
-auto DR1579_lambda_invalid = []() -> GenericMoveOnly<char> {
-  static GenericMoveOnly<float> mo;
-  return mo; // expected-error{{invokes a deleted function}}
-};
-} // end namespace dr1579
-
 namespace dr1589 {   // dr1589: 3.7 c++11
   // Ambiguous ranking of list-initialization sequences
 
