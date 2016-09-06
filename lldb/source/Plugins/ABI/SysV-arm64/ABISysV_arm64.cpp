@@ -204,6 +204,13 @@ ABISysV_arm64::GetRegisterInfoArray (uint32_t &count)
     return g_register_infos;
 }
 
+bool
+ABISysV_arm64::GetPointerReturnRegister (const char *&name)
+{
+    name = "x0";
+    return true;
+}
+
 size_t
 ABISysV_arm64::GetRedZoneSize () const
 {

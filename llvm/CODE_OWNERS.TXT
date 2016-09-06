@@ -200,7 +200,7 @@ N: Hans Wennborg
 E: hans@chromium.org
 D: Release management (x.y.0 releases)
 
-N: Peter Zotov
+N: whitequark
 E: whitequark@whitequark.org
 D: OCaml bindings
 

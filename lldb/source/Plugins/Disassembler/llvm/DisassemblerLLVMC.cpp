@@ -31,6 +31,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -56,6 +57,7 @@ public:
         m_disasm_wp (std::static_pointer_cast<DisassemblerLLVMC>(disasm.shared_from_this())),
         m_does_branch (eLazyBoolCalculate),
         m_has_delay_slot (eLazyBoolCalculate),
+        m_is_call (eLazyBoolCalculate),
         m_is_valid (false),
         m_using_file_addr (false)
     {
@@ -467,11 +469,569 @@ public:
     {
         return m_disasm_wp.lock();
     }
+    
+    static llvm::StringRef::const_iterator
+    ConsumeWhitespace(llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        while (osi != ose)
+        {
+            switch (*osi) {
+            default:
+                return osi;
+            case ' ': case '\t':
+                break;
+            }
+            ++osi;
+        }
+        
+        return osi;
+    }
+    
+    static std::pair<bool, llvm::StringRef::const_iterator>
+    ConsumeChar(llvm::StringRef::const_iterator osi, const char c, llvm::StringRef::const_iterator ose)
+    {
+        bool found = false;
+        
+        osi = ConsumeWhitespace(osi, ose);
+        if (osi != ose && *osi == c)
+        {
+            found = true;
+            ++osi;
+        }
+        
+        return std::make_pair(found, osi);
+    }
+    
+    static std::pair<Operand, llvm::StringRef::const_iterator>
+    ParseRegisterName(llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        Operand ret;
+        ret.m_type = Operand::Type::Register;
+        std::string str;
+        
+        osi = ConsumeWhitespace(osi, ose);
+        
+        while (osi != ose)
+        {
+            if (*osi >= '0' && *osi <= '9')
+            {
+                if (str.empty())
+                {
+                    return std::make_pair(Operand(), osi);
+                }
+                else
+                {
+                    str.push_back(*osi);
+                }
+            }
+            else if (*osi >= 'a' && *osi <= 'z')
+            {
+                str.push_back(*osi);
+            }
+            else
+            {
+                switch (*osi)
+                {
+                default:
+                    if (str.empty())
+                    {
+                        return std::make_pair(Operand(), osi);
+                    }
+                    else
+                    {
+                        ret.m_register = ConstString(str);
+                        return std::make_pair(ret, osi);
+                    }
+                case '%':
+                    if (!str.empty())
+                    {
+                        return std::make_pair(Operand(), osi);
+                    }
+                    break;
+                }
+            }
+            ++osi;
+        }
+    
+        ret.m_register = ConstString(str);
+        return std::make_pair(ret, osi);
+    }
+    
+    static std::pair<Operand, llvm::StringRef::const_iterator>
+    ParseImmediate(llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        Operand ret;
+        ret.m_type = Operand::Type::Immediate;
+        std::string str;
+        bool is_hex = false;
+        
+        osi = ConsumeWhitespace(osi, ose);
+        
+        while (osi != ose)
+        {
+            if (*osi >= '0' && *osi <= '9')
+            {
+                str.push_back(*osi);
+            }
+            else if (*osi >= 'a' && *osi <= 'f')
+            {
+                if (is_hex)
+                {
+                    str.push_back(*osi);
+                }
+                else
+                {
+                    return std::make_pair(Operand(), osi);
+                }
+            }
+            else
+            {
+                switch (*osi)
+                {
+                default:
+                    if (str.empty())
+                    {
+                        return std::make_pair(Operand(), osi);
+                    }
+                    else
+                    {
+                        ret.m_immediate = std::stoull(str, nullptr, 0);
+                        return std::make_pair(ret, osi);
+                    }
+                case 'x':
+                    if (!str.compare("0"))
+                    {
+                        is_hex = true;
+                        str.push_back(*osi);
+                    }
+                    else
+                    {
+                        return std::make_pair(Operand(), osi);
+                    }
+                    break;
+                case '#': case '$':
+                    if (!str.empty())
+                    {
+                        return std::make_pair(Operand(), osi);
+                    }
+                    break;
+                case '-':
+                    if (str.empty())
+                    {
+                        ret.m_negative = true;
+                    }
+                    else
+                    {
+                        return std::make_pair(Operand(), osi);
+                    }
+                }
+            }
+            ++osi;
+        }
+        
+        ret.m_immediate = std::stoull(str, nullptr, 0);
+        return std::make_pair(ret, osi);
+    }
+
+    // -0x5(%rax,%rax,2)
+    static std::pair<Operand, llvm::StringRef::const_iterator>
+    ParseIntelIndexedAccess (llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        std::pair<Operand, llvm::StringRef::const_iterator> offset_and_iterator = ParseImmediate(osi, ose);
+        if (offset_and_iterator.first.IsValid())
+        {
+            osi = offset_and_iterator.second;
+        }
+        
+        bool found = false;
+        std::tie(found, osi) = ConsumeChar(osi, '(', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::pair<Operand, llvm::StringRef::const_iterator> base_and_iterator = ParseRegisterName(osi, ose);
+        if (base_and_iterator.first.IsValid())
+        {
+            osi = base_and_iterator.second;
+        }
+        else
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ',', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::pair<Operand, llvm::StringRef::const_iterator> index_and_iterator = ParseRegisterName(osi, ose);
+        if (index_and_iterator.first.IsValid())
+        {
+            osi = index_and_iterator.second;
+        }
+        else
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ',', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+
+        std::pair<Operand, llvm::StringRef::const_iterator> multiplier_and_iterator = ParseImmediate(osi, ose);
+        if (index_and_iterator.first.IsValid())
+        {
+            osi = index_and_iterator.second;
+        }
+        else
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ')', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        Operand product;
+        product.m_type = Operand::Type::Product;
+        product.m_children.push_back(index_and_iterator.first);
+        product.m_children.push_back(multiplier_and_iterator.first);
+        
+        Operand index;
+        index.m_type = Operand::Type::Sum;
+        index.m_children.push_back(base_and_iterator.first);
+        index.m_children.push_back(product);
+        
+        if (offset_and_iterator.first.IsValid())
+        {
+            Operand offset;
+            offset.m_type = Operand::Type::Sum;
+            offset.m_children.push_back(offset_and_iterator.first);
+            offset.m_children.push_back(index);
+            
+            Operand deref;
+            deref.m_type = Operand::Type::Dereference;
+            deref.m_children.push_back(offset);
+            return std::make_pair(deref, osi);
+        }
+        else
+        {
+            Operand deref;
+            deref.m_type = Operand::Type::Dereference;
+            deref.m_children.push_back(index);
+            return std::make_pair(deref, osi);
+        }
+    }
+    
+    // -0x10(%rbp)
+    static std::pair<Operand, llvm::StringRef::const_iterator>
+    ParseIntelDerefAccess (llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        std::pair<Operand, llvm::StringRef::const_iterator> offset_and_iterator = ParseImmediate(osi, ose);
+        if (offset_and_iterator.first.IsValid())
+        {
+            osi = offset_and_iterator.second;
+        }
+        
+        bool found = false;
+        std::tie(found, osi) = ConsumeChar(osi, '(', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::pair<Operand, llvm::StringRef::const_iterator> base_and_iterator = ParseRegisterName(osi, ose);
+        if (base_and_iterator.first.IsValid())
+        {
+            osi = base_and_iterator.second;
+        }
+        else
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ')', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        if (offset_and_iterator.first.IsValid())
+        {
+            Operand offset;
+            offset.m_type = Operand::Type::Sum;
+            offset.m_children.push_back(offset_and_iterator.first);
+            offset.m_children.push_back(base_and_iterator.first);
+            
+            Operand deref;
+            deref.m_type = Operand::Type::Dereference;
+            deref.m_children.push_back(offset);
+            return std::make_pair(deref, osi);
+        }
+        else
+        {
+            Operand deref;
+            deref.m_type = Operand::Type::Dereference;
+            deref.m_children.push_back(base_and_iterator.first);
+            return std::make_pair(deref, osi);
+        }
+    }
+    
+    // [sp, #8]!
+    static std::pair<Operand, llvm::StringRef::const_iterator>
+    ParseARMOffsetAccess (llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        bool found = false;
+        std::tie(found, osi) = ConsumeChar(osi, '[', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::pair<Operand, llvm::StringRef::const_iterator> base_and_iterator = ParseRegisterName(osi, ose);
+        if (base_and_iterator.first.IsValid())
+        {
+            osi = base_and_iterator.second;
+        }
+        else
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ',', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::pair<Operand, llvm::StringRef::const_iterator> offset_and_iterator = ParseImmediate(osi, ose);
+        if (offset_and_iterator.first.IsValid())
+        {
+            osi = offset_and_iterator.second;
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ']', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        Operand offset;
+        offset.m_type = Operand::Type::Sum;
+        offset.m_children.push_back(offset_and_iterator.first);
+        offset.m_children.push_back(base_and_iterator.first);
+        
+        Operand deref;
+        deref.m_type = Operand::Type::Dereference;
+        deref.m_children.push_back(offset);
+        return std::make_pair(deref, osi);
+    }
+    
+    // [sp]
+    static std::pair<Operand, llvm::StringRef::const_iterator>
+    ParseARMDerefAccess (llvm::StringRef::const_iterator osi, llvm::StringRef::const_iterator ose)
+    {
+        bool found = false;
+        std::tie(found, osi) = ConsumeChar(osi, '[', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::pair<Operand, llvm::StringRef::const_iterator> base_and_iterator = ParseRegisterName(osi, ose);
+        if (base_and_iterator.first.IsValid())
+        {
+            osi = base_and_iterator.second;
+        }
+        else
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        std::tie(found, osi) = ConsumeChar(osi, ']', ose);
+        if (!found)
+        {
+            return std::make_pair(Operand(), osi);
+        }
+        
+        Operand deref;
+        deref.m_type = Operand::Type::Dereference;
+        deref.m_children.push_back(base_and_iterator.first);
+        return std::make_pair(deref, osi);
+    }
+    
+    static void
+    DumpOperand(const Operand &op, Stream &s)
+    {
+        switch (op.m_type)
+        {
+        case Operand::Type::Dereference:
+            s.PutCString("*");
+            DumpOperand(op.m_children[0], s);
+            break;
+        case Operand::Type::Immediate:
+            if (op.m_negative)
+            {
+                s.PutCString("-");
+            }
+            s.PutCString(std::to_string(op.m_immediate).c_str());
+            break;
+        case Operand::Type::Invalid:
+            s.PutCString("Invalid");
+            break;
+        case Operand::Type::Product:
+            s.PutCString("(");
+            DumpOperand(op.m_children[0], s);
+            s.PutCString("*");
+            DumpOperand(op.m_children[1], s);
+            s.PutCString(")");
+            break;
+        case Operand::Type::Register:
+            s.PutCString(op.m_register.AsCString());
+            break;
+        case Operand::Type::Sum:
+            s.PutCString("(");
+            DumpOperand(op.m_children[0], s);
+            s.PutCString("+");
+            DumpOperand(op.m_children[1], s);
+            s.PutCString(")");
+            break;
+        }
+    }
+    
+    bool
+    ParseOperands (llvm::SmallVectorImpl<Instruction::Operand> &operands) override
+    {
+        const char *operands_string = GetOperands(nullptr);
+        
+        if (!operands_string)
+        {
+            return false;
+        }
+        
+        llvm::StringRef operands_ref(operands_string);
+        
+        llvm::StringRef::const_iterator osi = operands_ref.begin();
+        llvm::StringRef::const_iterator ose = operands_ref.end();
+        
+        while (osi != ose)
+        {
+            Operand operand;
+            llvm::StringRef::const_iterator iter;
+            
+            if ((std::tie(operand, iter) = ParseIntelIndexedAccess(osi, ose), operand.IsValid()) ||
+                (std::tie(operand, iter) = ParseIntelDerefAccess(osi, ose), operand.IsValid()) ||
+                (std::tie(operand, iter) = ParseARMOffsetAccess(osi, ose), operand.IsValid()) ||
+                (std::tie(operand, iter) = ParseARMDerefAccess(osi, ose), operand.IsValid()) ||
+                (std::tie(operand, iter) = ParseRegisterName(osi, ose), operand.IsValid()) ||
+                (std::tie(operand, iter) = ParseImmediate(osi, ose), operand.IsValid()))
+            {
+                osi = iter;
+                operands.push_back(operand);
+            }
+            else
+            {
+                return false;
+            }
+            
+            std::pair<bool, llvm::StringRef::const_iterator> found_and_iter = ConsumeChar(osi, ',', ose);
+            if (found_and_iter.first)
+            {
+                osi = found_and_iter.second;
+            }
+            
+            osi = ConsumeWhitespace(osi, ose);
+        }
+        
+        DisassemblerSP disasm_sp = m_disasm_wp.lock();
+        
+        if (disasm_sp && operands.size() > 1)
+        {
+            // TODO tie this into the MC Disassembler's notion of clobbers.
+            switch (disasm_sp->GetArchitecture().GetMachine())
+            {
+            default:
+                break;
+            case llvm::Triple::x86:
+            case llvm::Triple::x86_64:
+                operands[operands.size() - 1].m_clobbered = true;
+                break;
+            case llvm::Triple::arm:
+                operands[0].m_clobbered = true;
+                break;
+            }
+        }
+        
+        if (Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS))
+        {
+            StreamString ss;
+            
+            ss.Printf("[%s] expands to %zu operands:\n", operands_string, operands.size());
+            for (const Operand &operand : operands) {
+                ss.PutCString("  ");
+                DumpOperand(operand, ss);
+                ss.PutCString("\n");
+            }
+            
+            log->PutCString(ss.GetData());
+        }
+        
+        return true;
+    }
+    
+    bool
+    IsCall () override
+    {
+        if (m_is_call == eLazyBoolCalculate)
+        {
+            std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
+            if (disasm_sp)
+            {
+                disasm_sp->Lock(this, NULL);
+                DataExtractor data;
+                if (m_opcode.GetData(data))
+                {
+                    bool is_alternate_isa;
+                    lldb::addr_t pc = m_address.GetFileAddress();
+                    
+                    DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
+                    const uint8_t *opcode_data = data.GetDataStart();
+                    const size_t opcode_data_len = data.GetByteSize();
+                    llvm::MCInst inst;
+                    const size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
+                                                                       opcode_data_len,
+                                                                       pc,
+                                                                       inst);
+                    if (inst_size == 0)
+                    {
+                        m_is_call = eLazyBoolNo;
+                    }
+                    else
+                    {
+                        if (mc_disasm_ptr->IsCall(inst))
+                            m_is_call = eLazyBoolYes;
+                        else
+                            m_is_call = eLazyBoolNo;
+                    }
+                }
+                disasm_sp->Unlock();
+            }
+        }
+        return m_is_call == eLazyBoolYes;
+    }
+    
 protected:
 
     std::weak_ptr<DisassemblerLLVMC> m_disasm_wp;
     LazyBool                m_does_branch;
     LazyBool                m_has_delay_slot;
+    LazyBool                m_is_call;
     bool                    m_is_valid;
     bool                    m_using_file_addr;
 };
@@ -609,6 +1169,12 @@ bool
 DisassemblerLLVMC::LLVMCDisassembler::HasDelaySlot (llvm::MCInst &mc_inst)
 {
     return m_instr_info_ap->get(mc_inst.getOpcode()).hasDelaySlot();
+}
+
+bool
+DisassemblerLLVMC::LLVMCDisassembler::IsCall (llvm::MCInst &mc_inst)
+{
+    return m_instr_info_ap->get(mc_inst.getOpcode()).isCall();
 }
 
 DisassemblerLLVMC::DisassemblerLLVMC (const ArchSpec &arch, const char *flavor_string) :

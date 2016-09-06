@@ -20,12 +20,14 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -1236,6 +1238,21 @@ StackFrame::GetFrameBaseValue (Scalar &frame_base, Error *error_ptr)
     return m_frame_base_error.Success();
 }
 
+DWARFExpression *
+StackFrame::GetFrameBaseExpression(Error *error_ptr)
+{
+    if (!m_sc.function)
+    {
+        if (error_ptr)
+        {
+            error_ptr->SetErrorString ("No function in symbol context.");
+        }
+        return nullptr;
+    }
+
+    return &m_sc.function->GetFrameBaseExpression();
+}
+
 RegisterContextSP
 StackFrame::GetRegisterContext ()
 {
@@ -1352,6 +1369,572 @@ StackFrame::GuessLanguage ()
     }
     
     return lang_type;
+}
+
+namespace
+{
+    std::pair<const Instruction::Operand *, int64_t>
+    GetBaseExplainingValue(const Instruction::Operand &operand,
+                           RegisterContext &register_context,
+                           lldb::addr_t value)
+    {
+        switch(operand.m_type)
+        {
+        case Instruction::Operand::Type::Dereference:
+        case Instruction::Operand::Type::Immediate:
+        case Instruction::Operand::Type::Invalid:
+        case Instruction::Operand::Type::Product:
+            // These are not currently interesting
+            return std::make_pair(nullptr, 0);
+        case Instruction::Operand::Type::Sum:
+            {
+                const Instruction::Operand *immediate_child = nullptr;
+                const Instruction::Operand *variable_child = nullptr;
+                if (operand.m_children[0].m_type == Instruction::Operand::Type::Immediate)
+                {
+                    immediate_child = &operand.m_children[0];
+                    variable_child = &operand.m_children[1];
+                }
+                else if (operand.m_children[1].m_type == Instruction::Operand::Type::Immediate)
+                {
+                    immediate_child = &operand.m_children[1];
+                    variable_child = &operand.m_children[0];
+                }
+                if (!immediate_child)
+                {
+                    return std::make_pair(nullptr, 0);
+                }
+                lldb::addr_t adjusted_value = value;
+                if (immediate_child->m_negative)
+                {
+                    adjusted_value += immediate_child->m_immediate;
+                }
+                else
+                {
+                    adjusted_value -= immediate_child->m_immediate;
+                }
+                std::pair<const Instruction::Operand *, int64_t> base_and_offset = GetBaseExplainingValue(*variable_child, register_context, adjusted_value);
+                if (!base_and_offset.first)
+                {
+                    return std::make_pair(nullptr, 0);
+                }
+                if (immediate_child->m_negative)
+                {
+                    base_and_offset.second -= immediate_child->m_immediate;
+                }
+                else
+                {
+                    base_and_offset.second += immediate_child->m_immediate;
+                }
+                return base_and_offset;
+            }
+        case Instruction::Operand::Type::Register:
+            {
+                const RegisterInfo *info = register_context.GetRegisterInfoByName(operand.m_register.AsCString());
+                if (!info)
+                {
+                    return std::make_pair(nullptr, 0);
+                }
+                RegisterValue reg_value;
+                if (!register_context.ReadRegister(info, reg_value))
+                {
+                    return std::make_pair(nullptr, 0);
+                }
+                if (reg_value.GetAsUInt64() == value)
+                {
+                    return std::make_pair(&operand, 0);
+                }
+                else
+                {
+                    return std::make_pair(nullptr, 0);
+                }
+            }
+        }
+    }
+    
+    std::pair<const Instruction::Operand *, int64_t>
+    GetBaseExplainingDereference(const Instruction::Operand &operand,
+                                 RegisterContext &register_context,
+                                 lldb::addr_t addr)
+    {
+        if (operand.m_type == Instruction::Operand::Type::Dereference)
+        {
+            return GetBaseExplainingValue(operand.m_children[0],
+                                          register_context,
+                                          addr);
+        }
+        return std::make_pair(nullptr, 0);
+    }
+};
+
+lldb::ValueObjectSP
+StackFrame::GuessValueForAddress(lldb::addr_t addr)
+{
+    TargetSP target_sp = CalculateTarget();
+    
+    const ArchSpec &target_arch = target_sp->GetArchitecture();
+    
+    AddressRange pc_range;
+    pc_range.GetBaseAddress() = GetFrameCodeAddress();
+    pc_range.SetByteSize(target_arch.GetMaximumOpcodeByteSize());
+    
+    ExecutionContext exe_ctx (shared_from_this());
+    
+    const char *plugin_name = nullptr;
+    const char *flavor = nullptr;
+    const bool prefer_file_cache = false;
+    
+    DisassemblerSP disassembler_sp = Disassembler::DisassembleRange (target_arch,
+                                                                     plugin_name,
+                                                                     flavor,
+                                                                     exe_ctx,
+                                                                     pc_range,
+                                                                     prefer_file_cache);
+    
+    if (!disassembler_sp->GetInstructionList().GetSize())
+    {
+        return ValueObjectSP();
+    }
+    
+    InstructionSP instruction_sp = disassembler_sp->GetInstructionList().GetInstructionAtIndex(0);
+    
+    llvm::SmallVector<Instruction::Operand, 3> operands;
+    
+    if (!instruction_sp->ParseOperands(operands))
+    {
+        return ValueObjectSP();
+    }
+    
+    RegisterContextSP register_context_sp = GetRegisterContext();
+    
+    if (!register_context_sp)
+    {
+        return ValueObjectSP();
+    }
+    
+    for (const Instruction::Operand &operand : operands)
+    {
+        std::pair<const Instruction::Operand *, int64_t>
+            base_and_offset = GetBaseExplainingDereference(operand, *register_context_sp, addr);
+        
+        if (!base_and_offset.first)
+        {
+            continue;
+        }
+        
+        switch (base_and_offset.first->m_type)
+        {
+        case Instruction::Operand::Type::Immediate:
+            {
+                lldb_private::Address addr;
+                if (target_sp->ResolveLoadAddress(base_and_offset.first->m_immediate + base_and_offset.second, addr))
+                {
+                    TypeSystem *c_type_system = target_sp->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC);
+                    if (!c_type_system)
+                    {
+                        return ValueObjectSP();
+                    }
+                    else
+                    {
+                        CompilerType void_ptr_type = c_type_system->GetBasicTypeFromAST(lldb::BasicType::eBasicTypeChar).GetPointerType();
+                        return ValueObjectMemory::Create(this, "", addr, void_ptr_type);
+                    }
+                }
+                else
+                {
+                    return ValueObjectSP();
+                }
+                break;
+            }
+        case Instruction::Operand::Type::Register:
+            {
+                return GuessValueForRegisterAndOffset(base_and_offset.first->m_register, base_and_offset.second);
+            }
+        default:
+            return ValueObjectSP();
+        }
+        
+    }
+
+    return ValueObjectSP();
+}
+
+namespace
+{
+    ValueObjectSP
+    GetValueForOffset(StackFrame &frame, ValueObjectSP &parent, int64_t offset)
+    {
+        if (offset < 0 || offset >= parent->GetByteSize())
+        {
+            return ValueObjectSP();
+        }
+        
+        if (parent->IsPointerOrReferenceType())
+        {
+            return parent;
+        }
+        
+        for (int ci = 0, ce = parent->GetNumChildren(); ci != ce; ++ci)
+        {
+            const bool can_create = true;
+            ValueObjectSP child_sp = parent->GetChildAtIndex(ci, can_create);
+            
+            if (!child_sp)
+            {
+                return ValueObjectSP();
+            }
+            
+            int64_t child_offset = child_sp->GetByteOffset();
+            int64_t child_size = child_sp->GetByteSize();
+            
+            if (offset >= child_offset &&
+                offset < (child_offset + child_size))
+            {
+                return GetValueForOffset(frame, child_sp, offset - child_offset);
+            }
+        }
+        
+        if (offset == 0)
+        {
+            return parent;
+        }
+        else
+        {
+            return ValueObjectSP();
+        }
+    }
+    
+    ValueObjectSP
+    GetValueForDereferincingOffset(StackFrame &frame, ValueObjectSP &base, int64_t offset)
+    {
+        // base is a pointer to something
+        // offset is the thing to add to the pointer
+        // We return the most sensible ValueObject for the result of *(base+offset)
+
+        if (!base->IsPointerOrReferenceType())
+        {
+            return ValueObjectSP();
+        }
+    
+        Error error;
+        ValueObjectSP pointee = base->Dereference(error);
+        
+        if (offset >= pointee->GetByteSize())
+        {
+            int64_t index = offset / pointee->GetByteSize();
+            offset = offset % pointee->GetByteSize();
+            const bool can_create = true;
+            pointee = base->GetSyntheticArrayMember(index, can_create);
+        }
+        
+        if (!pointee || error.Fail())
+        {
+            return ValueObjectSP();
+        }
+        
+        return GetValueForOffset(frame, pointee, offset);
+    }
+    
+    //------------------------------------------------------------------
+    /// Attempt to reconstruct the ValueObject for the address contained in a
+    /// given register plus an offset.
+    ///
+    /// @params [in] frame
+    ///   The current stack frame.
+    ///
+    /// @params [in] reg
+    ///   The register.
+    ///
+    /// @params [in] offset
+    ///   The offset from the register.
+    ///
+    /// @param [in] disassembler
+    ///   A disassembler containing instructions valid up to the current PC.
+    ///
+    /// @param [in] variables
+    ///   The variable list from the current frame,
+    ///
+    /// @param [in] pc
+    ///   The program counter for the instruction considered the 'user'.
+    ///
+    /// @return
+    ///   A string describing the base for the ExpressionPath.  This could be a
+    ///     variable, a register value, an argument, or a function return value.
+    ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
+    //------------------------------------------------------------------
+    lldb::ValueObjectSP
+    DoGuessValueAt(StackFrame &frame, ConstString reg, int64_t offset, Disassembler &disassembler, VariableList &variables, const Address &pc)
+    {
+        // Example of operation for Intel:
+        //
+        // +14: movq   -0x8(%rbp), %rdi
+        // +18: movq   0x8(%rdi), %rdi
+        // +22: addl   0x4(%rdi), %eax
+        //
+        // f, a pointer to a struct, is known to be at -0x8(%rbp).
+        //
+        // DoGuessValueAt(frame, rdi, 4, dis, vars, 0x22) finds the instruction at +18 that assigns to rdi, and calls itself recursively for that dereference
+        //   DoGuessValueAt(frame, rdi, 8, dis, vars, 0x18) finds the instruction at +14 that assigns to rdi, and calls itself recursively for that derefernece
+        //     DoGuessValueAt(frame, rbp, -8, dis, vars, 0x14) finds "f" in the variable list.
+        //     Returns a ValueObject for f.  (That's what was stored at rbp-8 at +14)
+        //   Returns a ValueObject for *(f+8) or f->b (That's what was stored at rdi+8 at +18)
+        // Returns a ValueObject for *(f->b+4) or f->b->a (That's what was stored at rdi+4 at +22)
+        
+        // First, check the variable list to see if anything is at the specified location.
+        for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
+        {
+            VariableSP var_sp = variables.GetVariableAtIndex(vi);
+            DWARFExpression &dwarf_expression = var_sp->LocationExpression();
+            
+            const RegisterInfo *expression_reg;
+            int64_t expression_offset;
+            ExecutionContext exe_ctx;
+            
+            if (dwarf_expression.IsDereferenceOfRegister(frame, expression_reg, expression_offset))
+            {
+                if ((reg == ConstString(expression_reg->name) ||
+                     reg == ConstString(expression_reg->alt_name)) &&
+                    expression_offset == offset)
+                {
+                    return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
+                }
+            }
+        }
+        
+        bool is_in_return_register = false;
+        ABISP abi_sp = frame.CalculateProcess()->GetABI();
+        RegisterInfo return_register_info;
+
+        if (abi_sp)
+        {
+            const char *return_register_name;
+            const RegisterInfo *reg_info = nullptr;
+            if (abi_sp->GetPointerReturnRegister(return_register_name) &&
+                reg == ConstString(return_register_name) &&
+                (reg_info = frame.GetRegisterContext()->GetRegisterInfoByName(return_register_name)))
+            {
+                is_in_return_register = true;
+                return_register_info = *reg_info;
+            }
+        }
+        
+        const uint32_t current_inst = disassembler.GetInstructionList().GetIndexOfInstructionAtAddress(pc);
+        if (current_inst == UINT32_MAX)
+        {
+            return ValueObjectSP();
+        }
+        
+        ValueObjectSP source_path;
+        
+        for (uint32_t ii = current_inst - 1; ii != (uint32_t)-1; --ii)
+        {
+            // This is not an exact algorithm, and it sacrifices accuracy for generality.
+            // Recognizing "mov" and "ld" instructions –– and which are their source and
+            // destination operands -- is something the disassembler should do for us.
+            InstructionSP instruction_sp = disassembler.GetInstructionList().GetInstructionAtIndex(ii);
+            
+            if (is_in_return_register && instruction_sp->IsCall())
+            {
+                llvm::SmallVector<Instruction::Operand, 1> operands;
+                if (!instruction_sp->ParseOperands(operands) || operands.size() != 1)
+                {
+                    continue;
+                }
+                
+                switch (operands[0].m_type)
+                {
+                default:
+                    break;
+                case Instruction::Operand::Type::Immediate:
+                    {
+                        SymbolContext sc;
+                        Address load_address;
+                        if (!frame.CalculateTarget()->ResolveLoadAddress(operands[0].m_immediate, load_address))
+                        {
+                            break;
+                        }
+                        frame.CalculateTarget()->GetImages().ResolveSymbolContextForAddress(load_address, eSymbolContextFunction, sc);
+                        if (!sc.function)
+                        {
+                            break;
+                        }
+                        CompilerType function_type = sc.function->GetCompilerType();
+                        if (!function_type.IsFunctionType())
+                        {
+                            break;
+                        }
+                        CompilerType return_type = function_type.GetFunctionReturnType();
+                        RegisterValue return_value;
+                        if (!frame.GetRegisterContext()->ReadRegister(&return_register_info, return_value))
+                        {
+                            break;
+                        }
+                        std::string name_str(sc.function->GetName().AsCString("<unknown function>"));
+                        name_str.append("()");
+                        Address return_value_address(return_value.GetAsUInt64());
+                        ValueObjectSP return_value_sp = ValueObjectMemory::Create(&frame, name_str.c_str(), return_value_address, return_type);
+                        return GetValueForDereferincingOffset(frame, return_value_sp, offset);
+                    }
+                }
+
+                continue;
+            }
+            
+            llvm::SmallVector<Instruction::Operand, 2> operands;
+            if (!instruction_sp->ParseOperands(operands) || operands.size() != 2)
+            {
+                continue;
+            }
+            
+            Instruction::Operand *register_operand = nullptr;
+            Instruction::Operand *origin_operand = nullptr;
+            if (operands[0].m_type == Instruction::Operand::Type::Register &&
+                operands[0].m_clobbered == true &&
+                operands[0].m_register == reg)
+            {
+                register_operand = &operands[0];
+                origin_operand = &operands[1];
+            }
+            else if (operands[1].m_type == Instruction::Operand::Type::Register &&
+                     operands[1].m_clobbered == true &&
+                     operands[1].m_register == reg)
+            {
+                register_operand = &operands[1];
+                origin_operand = &operands[0];
+            }
+            else
+            {
+                continue;
+            }
+            
+            // We have an origin operand.  Can we track its value down?
+            switch (origin_operand->m_type)
+            {
+            default:
+                break;
+            case Instruction::Operand::Type::Register:
+                source_path = DoGuessValueAt(frame, origin_operand->m_register, 0, disassembler, variables, instruction_sp->GetAddress());
+                break;
+            case Instruction::Operand::Type::Dereference:
+                {
+                    const Instruction::Operand &pointer = origin_operand->m_children[0];
+                    switch (pointer.m_type)
+                    {
+                    default:
+                        break;
+                    case Instruction::Operand::Type::Register:
+                        source_path = DoGuessValueAt(frame, pointer.m_register, 0, disassembler, variables, instruction_sp->GetAddress());
+                        if (source_path)
+                        {
+                            Error err;
+                            source_path = source_path->Dereference(err);
+                            if (!err.Success())
+                            {
+                                source_path.reset();
+                            }
+                        }
+                        break;
+                    case Instruction::Operand::Type::Sum:
+                        {
+                            const Instruction::Operand *origin_register = nullptr;
+                            const Instruction::Operand *origin_offset = nullptr;
+                            if (pointer.m_children.size() != 2)
+                            {
+                                break;
+                            }
+                            if (pointer.m_children[0].m_type == Instruction::Operand::Type::Register &&
+                                pointer.m_children[1].m_type == Instruction::Operand::Type::Immediate)
+                            {
+                                origin_register = &pointer.m_children[0];
+                                origin_offset = &pointer.m_children[1];
+                            }
+                            else if (pointer.m_children[1].m_type == Instruction::Operand::Type::Register &&
+                                     pointer.m_children[0].m_type == Instruction::Operand::Type::Immediate)
+                            {
+                                origin_register = &pointer.m_children[1];
+                                origin_offset = &pointer.m_children[0];
+                            }
+                            if (!origin_register)
+                            {
+                                break;
+                            }
+                            int64_t signed_origin_offset = origin_offset->m_negative ? -((int64_t)origin_offset->m_immediate) : origin_offset->m_immediate;
+                            source_path = DoGuessValueAt(frame, origin_register->m_register, signed_origin_offset, disassembler, variables, instruction_sp->GetAddress());
+                            if (!source_path)
+                            {
+                                break;
+                            }
+                            source_path = GetValueForDereferincingOffset(frame, source_path, offset);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (source_path)
+            {
+                return source_path;
+            }
+        }
+        
+        return ValueObjectSP();
+    }
+}
+
+lldb::ValueObjectSP
+StackFrame::GuessValueForRegisterAndOffset(ConstString reg, int64_t offset)
+{
+    TargetSP target_sp = CalculateTarget();
+    
+    const ArchSpec &target_arch = target_sp->GetArchitecture();
+
+    Block *frame_block = GetFrameBlock();
+    
+    if (!frame_block)
+    {
+        return ValueObjectSP();
+    }
+
+    Function *function = frame_block->CalculateSymbolContextFunction();
+    if (!function)
+    {
+        return ValueObjectSP();
+    }
+    
+    AddressRange pc_range = function->GetAddressRange();
+
+    if (GetFrameCodeAddress().GetFileAddress() < pc_range.GetBaseAddress().GetFileAddress() ||
+        GetFrameCodeAddress().GetFileAddress() - pc_range.GetBaseAddress().GetFileAddress() >= pc_range.GetByteSize())
+    {
+        return ValueObjectSP();
+    }
+    
+    ExecutionContext exe_ctx (shared_from_this());
+    
+    const char *plugin_name = nullptr;
+    const char *flavor = nullptr;
+    const bool prefer_file_cache = false;
+    DisassemblerSP disassembler_sp = Disassembler::DisassembleRange (target_arch,
+                                                                     plugin_name,
+                                                                     flavor,
+                                                                     exe_ctx,
+                                                                     pc_range,
+                                                                     prefer_file_cache);
+    
+    if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize())
+    {
+        return ValueObjectSP();
+    }
+    
+    const bool get_file_globals = false;
+    VariableList *variables = GetVariableList(get_file_globals);
+    
+    if (!variables)
+    {
+        return ValueObjectSP();
+    }
+    
+    return DoGuessValueAt(*this, reg, offset, *disassembler_sp, *variables, GetFrameCodeAddress());
 }
 
 TargetSP
