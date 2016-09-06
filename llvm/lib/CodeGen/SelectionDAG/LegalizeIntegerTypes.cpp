@@ -183,8 +183,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
   SDValue Res = DAG.getAtomic(N->getOpcode(), SDLoc(N),
                               N->getMemoryVT(), ResVT,
                               N->getChain(), N->getBasePtr(),
-                              N->getMemOperand(), N->getOrdering(),
-                              N->getSynchScope());
+                              N->getMemOperand());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -196,8 +195,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic1(AtomicSDNode *N) {
   SDValue Res = DAG.getAtomic(N->getOpcode(), SDLoc(N),
                               N->getMemoryVT(),
                               N->getChain(), N->getBasePtr(),
-                              Op2, N->getMemOperand(), N->getOrdering(),
-                              N->getSynchScope());
+                              Op2, N->getMemOperand());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -220,8 +218,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AtomicCmpSwap(AtomicSDNode *N,
     SDValue Res = DAG.getAtomicCmpSwap(
         ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, SDLoc(N), N->getMemoryVT(), VTs,
         N->getChain(), N->getBasePtr(), N->getOperand(2), N->getOperand(3),
-        N->getMemOperand(), N->getSuccessOrdering(), N->getFailureOrdering(),
-        N->getSynchScope());
+        N->getMemOperand());
     ReplaceValueWith(SDValue(N, 0), Res.getValue(0));
     ReplaceValueWith(SDValue(N, 2), Res.getValue(2));
     return Res.getValue(1);
@@ -233,8 +230,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AtomicCmpSwap(AtomicSDNode *N,
       DAG.getVTList(Op2.getValueType(), N->getValueType(1), MVT::Other);
   SDValue Res = DAG.getAtomicCmpSwap(
       N->getOpcode(), SDLoc(N), N->getMemoryVT(), VTs, N->getChain(),
-      N->getBasePtr(), Op2, Op3, N->getMemOperand(), N->getSuccessOrdering(),
-      N->getFailureOrdering(), N->getSynchScope());
+      N->getBasePtr(), Op2, Op3, N->getMemOperand());
   // Update the use to N with the newly created Res.
   for (unsigned i = 1, NumResults = N->getNumValues(); i < NumResults; ++i)
     ReplaceValueWith(SDValue(N, i), Res.getValue(i));
@@ -992,8 +988,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
   SDValue Op2 = GetPromotedInteger(N->getOperand(2));
   return DAG.getAtomic(N->getOpcode(), SDLoc(N), N->getMemoryVT(),
-                       N->getChain(), N->getBasePtr(), Op2, N->getMemOperand(),
-                       N->getOrdering(), N->getSynchScope());
+                       N->getChain(), N->getBasePtr(), Op2, N->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
@@ -1362,8 +1357,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     SDValue Tmp = DAG.getAtomicCmpSwap(
         ISD::ATOMIC_CMP_SWAP, SDLoc(N), AN->getMemoryVT(), VTs,
         N->getOperand(0), N->getOperand(1), N->getOperand(2), N->getOperand(3),
-        AN->getMemOperand(), AN->getSuccessOrdering(), AN->getFailureOrdering(),
-        AN->getSynchScope());
+        AN->getMemOperand());
 
     // Expanding to the strong ATOMIC_CMP_SWAP node means we can determine
     // success simply by comparing the loaded value against the ingoing
@@ -2712,10 +2706,7 @@ void DAGTypeLegalizer::ExpandIntRes_ATOMIC_LOAD(SDNode *N,
   SDValue Swap = DAG.getAtomicCmpSwap(
       ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, dl,
       cast<AtomicSDNode>(N)->getMemoryVT(), VTs, N->getOperand(0),
-      N->getOperand(1), Zero, Zero, cast<AtomicSDNode>(N)->getMemOperand(),
-      cast<AtomicSDNode>(N)->getOrdering(),
-      cast<AtomicSDNode>(N)->getOrdering(),
-      cast<AtomicSDNode>(N)->getSynchScope());
+      N->getOperand(1), Zero, Zero, cast<AtomicSDNode>(N)->getMemOperand());
 
   ReplaceValueWith(SDValue(N, 0), Swap.getValue(0));
   ReplaceValueWith(SDValue(N, 1), Swap.getValue(2));
@@ -3203,9 +3194,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
                                cast<AtomicSDNode>(N)->getMemoryVT(),
                                N->getOperand(0),
                                N->getOperand(1), N->getOperand(2),
-                               cast<AtomicSDNode>(N)->getMemOperand(),
-                               cast<AtomicSDNode>(N)->getOrdering(),
-                               cast<AtomicSDNode>(N)->getSynchScope());
+                               cast<AtomicSDNode>(N)->getMemOperand());
   return Swap.getValue(1);
 }
 

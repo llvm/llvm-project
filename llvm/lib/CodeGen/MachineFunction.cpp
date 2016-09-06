@@ -306,9 +306,12 @@ MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-    unsigned base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges) {
+    unsigned base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
+    SynchronizationScope SynchScope, AtomicOrdering Ordering,
+    AtomicOrdering FailureOrdering) {
   return new (Allocator)
-      MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges);
+      MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges,
+                        SynchScope, Ordering, FailureOrdering);
 }
 
 MachineMemOperand *
@@ -318,13 +321,15 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
     return new (Allocator)
                MachineMemOperand(MachinePointerInfo(MMO->getValue(),
                                                     MMO->getOffset()+Offset),
-                                 MMO->getFlags(), Size,
-                                 MMO->getBaseAlignment());
+                                 MMO->getFlags(), Size, MMO->getBaseAlignment(),
+                                 AAMDNodes(), nullptr, MMO->getSynchScope(),
+                                 MMO->getOrdering(), MMO->getFailureOrdering());
   return new (Allocator)
              MachineMemOperand(MachinePointerInfo(MMO->getPseudoValue(),
                                                   MMO->getOffset()+Offset),
-                               MMO->getFlags(), Size,
-                               MMO->getBaseAlignment());
+                               MMO->getFlags(), Size, MMO->getBaseAlignment(),
+                               AAMDNodes(), nullptr, MMO->getSynchScope(),
+                               MMO->getOrdering(), MMO->getFailureOrdering());
 }
 
 MachineInstr::mmo_iterator
@@ -355,7 +360,9 @@ MachineFunction::extractLoadMemRefs(MachineInstr::mmo_iterator Begin,
           getMachineMemOperand((*I)->getPointerInfo(),
                                (*I)->getFlags() & ~MachineMemOperand::MOStore,
                                (*I)->getSize(), (*I)->getBaseAlignment(),
-                               (*I)->getAAInfo());
+                               (*I)->getAAInfo(), nullptr,
+                               (*I)->getSynchScope(), (*I)->getOrdering(),
+                               (*I)->getFailureOrdering());
         Result[Index] = JustLoad;
       }
       ++Index;
@@ -387,7 +394,9 @@ MachineFunction::extractStoreMemRefs(MachineInstr::mmo_iterator Begin,
           getMachineMemOperand((*I)->getPointerInfo(),
                                (*I)->getFlags() & ~MachineMemOperand::MOLoad,
                                (*I)->getSize(), (*I)->getBaseAlignment(),
-                               (*I)->getAAInfo());
+                               (*I)->getAAInfo(), nullptr,
+                               (*I)->getSynchScope(), (*I)->getOrdering(),
+                               (*I)->getFailureOrdering());
         Result[Index] = JustStore;
       }
       ++Index;

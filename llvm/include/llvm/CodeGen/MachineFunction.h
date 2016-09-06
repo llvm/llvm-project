@@ -558,11 +558,13 @@ public:
   /// getMachineMemOperand - Allocate a new MachineMemOperand.
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
-  MachineMemOperand *getMachineMemOperand(MachinePointerInfo PtrInfo,
-                                          MachineMemOperand::Flags f,
-                                          uint64_t s, unsigned base_alignment,
-                                          const AAMDNodes &AAInfo = AAMDNodes(),
-                                          const MDNode *Ranges = nullptr);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
+      unsigned base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr,
+      SynchronizationScope SynchScope = CrossThread,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.

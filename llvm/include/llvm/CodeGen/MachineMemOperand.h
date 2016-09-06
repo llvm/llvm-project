@@ -19,8 +19,10 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"  // PointerLikeTypeTraits<Value*>
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -119,14 +121,23 @@ private:
   uint16_t BaseAlignLog2; // log_2(base_alignment) + 1
   AAMDNodes AAInfo;
   const MDNode *Ranges;
+  SynchronizationScope SynchScope;
+  AtomicOrdering Ordering;
+  AtomicOrdering FailureOrdering;
 
 public:
   /// Construct a MachineMemOperand object with the specified PtrInfo, flags,
-  /// size, and base alignment.
+  /// size, and base alignment. For atomic operations the synchronization scope
+  /// and atomic ordering requirements must also be specified. For cmpxchg
+  /// atomic operations the atomic ordering requirements when store does not
+  /// occur must also be specified.
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
                     unsigned base_alignment,
                     const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr);
+                    const MDNode *Ranges = nullptr,
+                    SynchronizationScope SynchScope = CrossThread,
+                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   const MachinePointerInfo &getPointerInfo() const { return PtrInfo; }
 
@@ -174,11 +185,29 @@ public:
   /// Return the range tag for the memory reference.
   const MDNode *getRanges() const { return Ranges; }
 
+  /// Return the synchronization scope for this memory operation.
+  SynchronizationScope getSynchScope() const { return SynchScope; }
+
+  /// Return the atomic ordering requirements for this memory operation.
+  AtomicOrdering getOrdering() const { return Ordering; }
+
+  /// For cmpxchg atomic operations, return the atomic ordering requirements
+  /// when store occurs.
+  AtomicOrdering getSuccessOrdering() const { return getOrdering(); }
+
+  /// For cmpxchg atomic operations, return the atomic ordering requirements
+  /// when store does not occur.
+  AtomicOrdering getFailureOrdering() const { return FailureOrdering; }
+
   bool isLoad() const { return FlagVals & MOLoad; }
   bool isStore() const { return FlagVals & MOStore; }
   bool isVolatile() const { return FlagVals & MOVolatile; }
   bool isNonTemporal() const { return FlagVals & MONonTemporal; }
   bool isInvariant() const { return FlagVals & MOInvariant; }
+
+  /// Returns true if this operation has an atomic ordering requirement of
+  /// unordered or higher, false otherwise.
+  bool isAtomic() const { return getOrdering() != AtomicOrdering::NotAtomic; }
 
   /// Returns true if this memory operation doesn't have any ordering
   /// constraints other than normal aliasing. Volatile and atomic memory
