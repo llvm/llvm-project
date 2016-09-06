@@ -106,3 +106,18 @@ id objc_getClass(const char *s);
 }
 @end
 
+@class C;
+@interface A // expected-note {{receiver is instance of class declared here}}
+- (instancetype)initWithCoder:(A *)coder;
+@end
+
+@interface B : A
+@end
+
+@implementation B
+- (instancetype)initWithCoder:(C *)coder {
+  if (0 != (self = [super initWithCode:code])) // expected-error {{use of undeclared identifier 'code'}} expected-warning {{instance method '-initWithCode:' not found}}
+    return (void *)0;
+  return (void *)0;
+}
+@end
