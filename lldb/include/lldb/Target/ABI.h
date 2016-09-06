@@ -147,6 +147,12 @@ public:
     GetRegisterInfoByKind (lldb::RegisterKind reg_kind, 
                            uint32_t reg_num, 
                            RegisterInfo &info);
+    
+    virtual bool
+    GetPointerReturnRegister (const char *&name)
+    {
+        return false;
+    }
 
     static lldb::ABISP
     FindPlugin (const ArchSpec &arch);
