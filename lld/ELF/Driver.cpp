@@ -400,7 +400,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->FatalWarnings = Args.hasArg(OPT_fatal_warnings);
-  Config->GcSections = Args.hasArg(OPT_gc_sections);
+  Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);

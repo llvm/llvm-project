@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 
 namespace streamexecutor {
 namespace test {

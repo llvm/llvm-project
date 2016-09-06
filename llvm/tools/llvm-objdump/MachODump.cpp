@@ -20,6 +20,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -47,10 +48,6 @@
 #include <algorithm>
 #include <cstring>
 #include <system_error>
-
-#if HAVE_CXXABI_H
-#include <cxxabi.h>
-#endif
 
 #ifdef HAVE_LIBXAR
 extern "C" {
@@ -6235,11 +6232,9 @@ static const char *GuessLiteralPointer(uint64_t ReferenceValue,
 // Out type and the ReferenceName will also be set which is added as a comment
 // to the disassembled instruction.
 //
-#if HAVE_CXXABI_H
 // If the symbol name is a C++ mangled name then the demangled name is
 // returned through ReferenceName and ReferenceType is set to
 // LLVMDisassembler_ReferenceType_DeMangled_Name .
-#endif
 //
 // When this is called to get a symbol name for a branch target then the
 // ReferenceType will be LLVMDisassembler_ReferenceType_In_Branch and then
@@ -6274,21 +6269,18 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       method_reference(info, ReferenceType, ReferenceName);
       if (*ReferenceType != LLVMDisassembler_ReferenceType_Out_Objc_Message)
         *ReferenceType = LLVMDisassembler_ReferenceType_Out_SymbolStub;
-    } else
-#if HAVE_CXXABI_H
-        if (SymbolName != nullptr && strncmp(SymbolName, "__Z", 3) == 0) {
+    } else if (SymbolName != nullptr && strncmp(SymbolName, "__Z", 3) == 0) {
       if (info->demangled_name != nullptr)
         free(info->demangled_name);
       int status;
       info->demangled_name =
-          abi::__cxa_demangle(SymbolName + 1, nullptr, nullptr, &status);
+          itaniumDemangle(SymbolName + 1, nullptr, nullptr, &status);
       if (info->demangled_name != nullptr) {
         *ReferenceName = info->demangled_name;
         *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
       } else
         *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
     } else
-#endif
       *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   } else if (*ReferenceType == LLVMDisassembler_ReferenceType_In_PCrel_Load) {
     *ReferenceName =
@@ -6377,20 +6369,17 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
         GuessLiteralPointer(ReferenceValue, ReferencePC, ReferenceType, info);
     if (*ReferenceName == nullptr)
       *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
-  }
-#if HAVE_CXXABI_H
-  else if (SymbolName != nullptr && strncmp(SymbolName, "__Z", 3) == 0) {
+  } else if (SymbolName != nullptr && strncmp(SymbolName, "__Z", 3) == 0) {
     if (info->demangled_name != nullptr)
       free(info->demangled_name);
     int status;
     info->demangled_name =
-        abi::__cxa_demangle(SymbolName + 1, nullptr, nullptr, &status);
+        itaniumDemangle(SymbolName + 1, nullptr, nullptr, &status);
     if (info->demangled_name != nullptr) {
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
   }
-#endif
   else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;

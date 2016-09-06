@@ -255,10 +255,10 @@ entry:
 }
 
 attributes #0 = { nounwind "amdgpu-max-work-group-size"="63" }
-attributes #1 = { nounwind "amdgpu-max-waves-per-eu"="3" "amdgpu-max-work-group-size"="256" }
-attributes #2 = { nounwind "amdgpu-max-waves-per-eu"="1" "amdgpu-max-work-group-size"="1600" }
-attributes #3 = { nounwind "amdgpu-max-waves-per-eu"="0" }
-attributes #4 = { nounwind "amdgpu-max-waves-per-eu"="-1" }
-attributes #5 = { nounwind "amdgpu-max-waves-per-eu"="6" "amdgpu-max-work-group-size"="64" }
-attributes #6 = { nounwind "amdgpu-max-waves-per-eu"="8" "amdgpu-max-work-group-size"="64" }
-attributes #7 = { nounwind "amdgpu-max-waves-per-eu"="9" "amdgpu-max-work-group-size"="64" }
+attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="256,256" }
+attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1600,1600" }
+attributes #3 = { nounwind "amdgpu-waves-per-eu"="1,10" }
+attributes #4 = { nounwind "amdgpu-waves-per-eu"="1,10" }
+attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" }
+attributes #6 = { nounwind "amdgpu-waves-per-eu"="1,8" "amdgpu-flat-work-group-size"="64,64" }
+attributes #7 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="64,64" }

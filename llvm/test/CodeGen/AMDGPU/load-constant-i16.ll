@@ -343,8 +343,8 @@ define void @constant_sextload_v16i16_to_v16i32(<16 x i32> addrspace(1)* %out, <
 ; FUNC-LABEL: {{^}}constant_zextload_v32i16_to_v32i32:
 ; GCN-DAG: s_load_dwordx16
 ; GCN-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
-; GCN-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[K]]
 ; GCN-DAG: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; GCN-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[K]]
 
 ; EG-DAG: VTX_READ_128 {{T[0-9]+\.XYZW}}, {{T[0-9]+\.[XYZW]}}, 0, #1
 ; EG-DAG: VTX_READ_128 {{T[0-9]+\.XYZW}}, {{T[0-9]+\.[XYZW]}}, 16, #1

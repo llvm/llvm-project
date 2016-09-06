@@ -19,3 +19,9 @@
 // HTML: tools\llvm-cov\Inputs\native_separators.covmapping</pre>
 
 int main() {}
+
+// Re-purpose this file to test that "Go to first unexecuted line" feature.
+
+// RUN: llvm-cov show %S/Inputs/native_separators.covmapping -instr-profile %t.profdata -filename-equivalence -format html -o %t.dir %s
+// RUN: FileCheck -input-file %t.dir/coverage/tmp/native_separators.c.html %s
+// CHECK-NOT: >Go to first unexecuted line<

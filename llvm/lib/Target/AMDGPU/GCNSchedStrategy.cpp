@@ -144,8 +144,8 @@ void GCNMaxOccupancySchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   unsigned VGPRExcessLimit =
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
   unsigned MaxWaves = getMaxWaves(SGPRPressure, VGPRPressure, DAG->MF);
-  unsigned SGPRCriticalLimit = SRI->getNumSGPRsAllowed(ST, MaxWaves);
-  unsigned VGPRCriticalLimit = SRI->getNumVGPRsAllowed(MaxWaves);
+  unsigned SGPRCriticalLimit = SRI->getMaxNumSGPRs(ST, MaxWaves);
+  unsigned VGPRCriticalLimit = SRI->getMaxNumVGPRs(MaxWaves);
 
   ReadyQueue &Q = Zone.Available;
   for (SUnit *SU : Q) {

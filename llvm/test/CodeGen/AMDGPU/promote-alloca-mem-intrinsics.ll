@@ -61,5 +61,5 @@ define void @promote_with_objectsize(i32 addrspace(1)* %out) #0 {
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-max-work-group-size"="64" "amdgpu-max-waves-per-eu"="3" }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,3" }
 attributes #1 = { nounwind readnone }

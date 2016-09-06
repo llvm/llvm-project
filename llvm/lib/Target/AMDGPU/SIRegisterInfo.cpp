@@ -24,53 +24,6 @@
 
 using namespace llvm;
 
-static unsigned getMaxWaveCountPerSIMD(const MachineFunction &MF) {
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  unsigned SIMDPerCU = 4;
-
-  unsigned MaxInvocationsPerWave = SIMDPerCU * ST.getWavefrontSize();
-  return alignTo(MFI.getMaximumWorkGroupSize(MF), MaxInvocationsPerWave) /
-           MaxInvocationsPerWave;
-}
-
-static unsigned getMaxWorkGroupSGPRCount(const MachineFunction &MF) {
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  unsigned MaxWaveCountPerSIMD = getMaxWaveCountPerSIMD(MF);
-
-  unsigned TotalSGPRCountPerSIMD, AddressableSGPRCount, SGPRUsageAlignment;
-  unsigned ReservedSGPRCount;
-
-  if (ST.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
-    TotalSGPRCountPerSIMD = 800;
-    AddressableSGPRCount = 102;
-    SGPRUsageAlignment = 16;
-    ReservedSGPRCount = 6; // VCC, FLAT_SCRATCH, XNACK
-  } else {
-    TotalSGPRCountPerSIMD = 512;
-    AddressableSGPRCount = 104;
-    SGPRUsageAlignment = 8;
-    ReservedSGPRCount = 2; // VCC
-  }
-
-  unsigned MaxSGPRCount = (TotalSGPRCountPerSIMD / MaxWaveCountPerSIMD);
-  MaxSGPRCount = alignDown(MaxSGPRCount, SGPRUsageAlignment);
-
-  if (ST.hasSGPRInitBug())
-    MaxSGPRCount = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
-
-  return std::min(MaxSGPRCount - ReservedSGPRCount, AddressableSGPRCount);
-}
-
-static unsigned getMaxWorkGroupVGPRCount(const MachineFunction &MF) {
-  unsigned MaxWaveCountPerSIMD = getMaxWaveCountPerSIMD(MF);
-  unsigned TotalVGPRCountPerSIMD = 256;
-  unsigned VGPRUsageAlignment = 4;
-
-  return alignDown(TotalVGPRCountPerSIMD / MaxWaveCountPerSIMD,
-                   VGPRUsageAlignment);
-}
-
 static bool hasPressureSet(const int *PSets, unsigned PSetID) {
   for (unsigned i = 0; PSets[i] != -1; ++i) {
     if (PSets[i] == (int)PSetID)
@@ -138,14 +91,14 @@ void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) co
 
 unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
   const MachineFunction &MF) const {
-  unsigned BaseIdx = alignDown(getMaxWorkGroupSGPRCount(MF), 4) - 4;
+  unsigned BaseIdx = alignDown(getMaxNumSGPRs(MF), 4) - 4;
   unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
   return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
 }
 
 unsigned SIRegisterInfo::reservedPrivateSegmentWaveByteOffsetReg(
   const MachineFunction &MF) const {
-  unsigned RegCount = getMaxWorkGroupSGPRCount(MF);
+  unsigned RegCount = getMaxNumSGPRs(MF);
   unsigned Reg;
 
   // Try to place it in a hole after PrivateSegmentbufferReg.
@@ -180,18 +133,16 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::TTMP8_TTMP9);
   reserveRegisterTuples(Reserved, AMDGPU::TTMP10_TTMP11);
 
-  unsigned MaxWorkGroupSGPRCount = getMaxWorkGroupSGPRCount(MF);
-  unsigned MaxWorkGroupVGPRCount = getMaxWorkGroupVGPRCount(MF);
-
-  unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
-  unsigned NumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
-  for (unsigned i = MaxWorkGroupSGPRCount; i < NumSGPRs; ++i) {
+  unsigned MaxNumSGPRs = getMaxNumSGPRs(MF);
+  unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
+  for (unsigned i = MaxNumSGPRs; i < TotalNumSGPRs; ++i) {
     unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
   }
 
-
-  for (unsigned i = MaxWorkGroupVGPRCount; i < NumVGPRs; ++i) {
+  unsigned MaxNumVGPRs = getMaxNumVGPRs(MF);
+  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
     unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
   }
@@ -213,46 +164,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, ScratchWaveOffsetReg));
   }
 
-  // Reserve registers for debugger usage if "amdgpu-debugger-reserve-trap-regs"
-  // attribute was specified.
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  if (ST.debuggerReserveRegs()) {
-    unsigned ReservedVGPRFirst =
-      MaxWorkGroupVGPRCount - MFI->getDebuggerReservedVGPRCount();
-    for (unsigned i = ReservedVGPRFirst; i < MaxWorkGroupVGPRCount; ++i) {
-      unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
-      reserveRegisterTuples(Reserved, Reg);
-    }
-  }
-
   return Reserved;
-}
-
-unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
-                                                unsigned Idx) const {
-  const SISubtarget &STI = MF.getSubtarget<SISubtarget>();
-  // FIXME: We should adjust the max number of waves based on LDS size.
-  unsigned SGPRLimit = getNumSGPRsAllowed(STI, STI.getMaxWavesPerCU());
-  unsigned VGPRLimit = getNumVGPRsAllowed(STI.getMaxWavesPerCU());
-
-  unsigned VSLimit = SGPRLimit + VGPRLimit;
-
-  if (SGPRPressureSets.test(Idx) && VGPRPressureSets.test(Idx)) {
-    // FIXME: This is a hack. We should never be considering the pressure of
-    // these since no virtual register should ever have this class.
-    return VSLimit;
-  }
-
-  if (SGPRPressureSets.test(Idx))
-    return SGPRLimit;
-
-  return VGPRLimit;
-}
-
-unsigned
-SIRegisterInfo::getDefaultRegPressureSetLimit(const MachineFunction &MF,
-                                              unsigned Idx) const {
-  return AMDGPURegisterInfo::getRegPressureSetLimit(MF, Idx);
 }
 
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {
@@ -956,43 +868,6 @@ SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
   return AMDGPU::NoRegister;
 }
 
-unsigned SIRegisterInfo::getNumVGPRsAllowed(unsigned WaveCount) const {
-  switch(WaveCount) {
-    case 10: return 24;
-    case 9:  return 28;
-    case 8:  return 32;
-    case 7:  return 36;
-    case 6:  return 40;
-    case 5:  return 48;
-    case 4:  return 64;
-    case 3:  return 84;
-    case 2:  return 128;
-    default: return 256;
-  }
-}
-
-unsigned SIRegisterInfo::getNumSGPRsAllowed(const SISubtarget &ST,
-                                            unsigned WaveCount) const {
-  if (ST.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
-    switch (WaveCount) {
-      case 10: return 80;
-      case 9:  return 80;
-      case 8:  return 96;
-      default: return 102;
-    }
-  } else {
-    switch(WaveCount) {
-      case 10: return 48;
-      case 9:  return 56;
-      case 8:  return 64;
-      case 7:  return 72;
-      case 6:  return 80;
-      case 5:  return 96;
-      default: return 103;
-    }
-  }
-}
-
 bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
                             unsigned Reg) const {
   const TargetRegisterClass *RC;
@@ -1002,4 +877,184 @@ bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
     RC = getPhysRegClass(Reg);
 
   return hasVGPRs(RC);
+}
+
+unsigned SIRegisterInfo::getTotalNumSGPRs(const SISubtarget &ST) const {
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return 800;
+  return 512;
+}
+
+unsigned SIRegisterInfo::getNumAddressableSGPRs(const SISubtarget &ST) const {
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return 102;
+  return 104;
+}
+
+unsigned SIRegisterInfo::getNumReservedSGPRs(const SISubtarget &ST) const {
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return 6; // VCC, FLAT_SCRATCH, XNACK.
+  return 2; // VCC.
+}
+
+unsigned SIRegisterInfo::getMinNumSGPRs(const SISubtarget &ST,
+                                        unsigned WavesPerEU) const {
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    switch (WavesPerEU) {
+      case 0:  return 0;
+      case 10: return 0;
+      case 9:  return 0;
+      case 8:  return 81;
+      default: return 97;
+    }
+  } else {
+    switch (WavesPerEU) {
+      case 0:  return 0;
+      case 10: return 0;
+      case 9:  return 49;
+      case 8:  return 57;
+      case 7:  return 65;
+      case 6:  return 73;
+      case 5:  return 81;
+      default: return 97;
+    }
+  }
+}
+
+unsigned SIRegisterInfo::getMaxNumSGPRs(const SISubtarget &ST,
+                                        unsigned WavesPerEU) const {
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    switch (WavesPerEU) {
+      case 0:  return 80;
+      case 10: return 80;
+      case 9:  return 80;
+      case 8:  return 96;
+      default: return getNumAddressableSGPRs(ST);
+    }
+  } else {
+    switch (WavesPerEU) {
+      case 0:  return 48;
+      case 10: return 48;
+      case 9:  return 56;
+      case 8:  return 64;
+      case 7:  return 72;
+      case 6:  return 80;
+      case 5:  return 96;
+      default: return getNumAddressableSGPRs(ST);
+    }
+  }
+}
+
+unsigned SIRegisterInfo::getMaxNumSGPRs(const MachineFunction &MF) const {
+  const Function &F = *MF.getFunction();
+
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+  // Compute maximum number of SGPRs function can use using default/requested
+  // minimum number of waves per execution unit.
+  std::pair<unsigned, unsigned> WavesPerEU = MFI.getWavesPerEU();
+  unsigned MaxNumSGPRs = getMaxNumSGPRs(ST, WavesPerEU.first);
+
+  // Check if maximum number of SGPRs was explicitly requested using
+  // "amdgpu-num-sgpr" attribute.
+  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
+    unsigned Requested = AMDGPU::getIntegerAttribute(
+      F, "amdgpu-num-sgpr", MaxNumSGPRs);
+
+    // Make sure requested value does not violate subtarget's specifications.
+    if (Requested && Requested <= getNumReservedSGPRs(ST))
+      Requested = 0;
+
+    // Make sure requested value is compatible with values implied by
+    // default/requested minimum/maximum number of waves per execution unit.
+    if (Requested && Requested > getMaxNumSGPRs(ST, WavesPerEU.first))
+      Requested = 0;
+    if (WavesPerEU.second &&
+        Requested && Requested < getMinNumSGPRs(ST, WavesPerEU.second))
+      Requested = 0;
+
+    if (Requested)
+      MaxNumSGPRs = Requested;
+  }
+
+  if (ST.hasSGPRInitBug())
+    MaxNumSGPRs = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+
+  return MaxNumSGPRs - getNumReservedSGPRs(ST);
+}
+
+unsigned SIRegisterInfo::getNumDebuggerReservedVGPRs(
+  const SISubtarget &ST) const {
+  if (ST.debuggerReserveRegs())
+    return 4;
+  return 0;
+}
+
+unsigned SIRegisterInfo::getMinNumVGPRs(unsigned WavesPerEU) const {
+  switch (WavesPerEU) {
+    case 0:  return 0;
+    case 10: return 0;
+    case 9:  return 25;
+    case 8:  return 29;
+    case 7:  return 33;
+    case 6:  return 37;
+    case 5:  return 41;
+    case 4:  return 49;
+    case 3:  return 65;
+    case 2:  return 85;
+    default: return 129;
+  }
+}
+
+unsigned SIRegisterInfo::getMaxNumVGPRs(unsigned WavesPerEU) const {
+  switch (WavesPerEU) {
+    case 0:  return 24;
+    case 10: return 24;
+    case 9:  return 28;
+    case 8:  return 32;
+    case 7:  return 36;
+    case 6:  return 40;
+    case 5:  return 48;
+    case 4:  return 64;
+    case 3:  return 84;
+    case 2:  return 128;
+    default: return getTotalNumVGPRs();
+  }
+}
+
+unsigned SIRegisterInfo::getMaxNumVGPRs(const MachineFunction &MF) const {
+  const Function &F = *MF.getFunction();
+
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+  // Compute maximum number of VGPRs function can use using default/requested
+  // minimum number of waves per execution unit.
+  std::pair<unsigned, unsigned> WavesPerEU = MFI.getWavesPerEU();
+  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+
+  // Check if maximum number of VGPRs was explicitly requested using
+  // "amdgpu-num-vgpr" attribute.
+  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
+    unsigned Requested = AMDGPU::getIntegerAttribute(
+      F, "amdgpu-num-vgpr", MaxNumVGPRs);
+
+    // Make sure requested value does not violate subtarget's specifications.
+    if (Requested && Requested <= getNumDebuggerReservedVGPRs(ST))
+      Requested = 0;
+
+    // Make sure requested value is compatible with values implied by
+    // default/requested minimum/maximum number of waves per execution unit.
+    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
+      Requested = 0;
+    if (WavesPerEU.second &&
+        Requested && Requested < getMinNumVGPRs(WavesPerEU.second))
+      Requested = 0;
+
+    if (Requested)
+      MaxNumVGPRs = Requested;
+  }
+
+  return MaxNumVGPRs - getNumDebuggerReservedVGPRs(ST);
 }

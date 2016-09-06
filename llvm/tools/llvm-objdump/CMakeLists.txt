@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   DebugInfoDWARF
   DebugInfoPDB
+  Demangle
   MC
   MCDisassembler
   Object

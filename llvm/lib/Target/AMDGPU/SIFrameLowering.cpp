@@ -27,14 +27,16 @@ static bool hasOnlySGPRSpills(const SIMachineFunctionInfo *FuncInfo,
     (!FuncInfo->hasSpilledVGPRs() && !FuncInfo->hasNonSpillStackObjects());
 }
 
-static ArrayRef<MCPhysReg> getAllSGPR128() {
+static ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF,
+                                         const SIRegisterInfo *TRI) {
   return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
-                      AMDGPU::SGPR_128RegClass.getNumRegs());
+                      TRI->getMaxNumSGPRs(MF) / 4);
 }
 
-static ArrayRef<MCPhysReg> getAllSGPRs() {
+static ArrayRef<MCPhysReg> getAllSGPRs(const MachineFunction &MF,
+                                       const SIRegisterInfo *TRI) {
   return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(),
-                      AMDGPU::SGPR_32RegClass.getNumRegs());
+                      TRI->getMaxNumSGPRs(MF));
 }
 
 void SIFrameLowering::emitFlatScratchInit(const SIInstrInfo *TII,
@@ -117,7 +119,7 @@ unsigned SIFrameLowering::getReservedPrivateSegmentBufferReg(
   unsigned NumPreloaded = MFI->getNumPreloadedSGPRs() / 4;
   // Skip the last 2 elements because the last one is reserved for VCC, and
   // this is the 2nd to last element already.
-  for (MCPhysReg Reg : getAllSGPR128().drop_back(2).slice(NumPreloaded)) {
+  for (MCPhysReg Reg : getAllSGPR128(MF, TRI).drop_back(2).slice(NumPreloaded)) {
     // Pick the first unallocated one. Make sure we don't clobber the other
     // reserved input we needed.
     if (!MRI.isPhysRegUsed(Reg)) {
@@ -159,7 +161,7 @@ unsigned SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
   //     are no other free SGPRs, then the value will stay in this register.
   // ----
   //  13
-  for (MCPhysReg Reg : getAllSGPRs().drop_back(13).slice(NumPreloaded)) {
+  for (MCPhysReg Reg : getAllSGPRs(MF, TRI).drop_back(13).slice(NumPreloaded)) {
     // Pick the first unallocated SGPR. Be careful not to pick an alias of the
     // scratch descriptor, since we haven’t added its uses yet.
     if (!MRI.isPhysRegUsed(Reg)) {

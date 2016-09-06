@@ -338,7 +338,8 @@ void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
   OS << EndTable << EndCenteredDiv;
 }
 
-void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
+void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile,
+                                              unsigned FirstUncoveredLineNo) {
   OS << BeginSourceNameDiv;
   // Render the source name for the view.
   std::string SourceFile = isFunctionView() ? "Function: " : "Source: ";
@@ -347,10 +348,18 @@ void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
   sys::path::remove_dots(SourceText, /*remove_dot_dots=*/true);
   sys::path::native(SourceText);
   OS << tag("pre", escape(SourceText, getOptions()));
-  // Render the object file name for the view.
-  if (WholeFile)
+  if (WholeFile) {
+    // Render the object file name for the view.
     OS << tag("pre",
               escape("Binary: " + getOptions().ObjectFilename, getOptions()));
+    // Render the "Go to first unexecuted line" link for the view.
+    if (FirstUncoveredLineNo != 0) { // The file is not fully covered
+      std::string LinkText =
+          escape("Go to first unexecuted line", getOptions());
+      std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
+      OS << tag("pre", a(LinkTarget, LinkText));
+    }
+  }
   OS << EndSourceNameDiv;
 }
 

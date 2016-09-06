@@ -270,14 +270,6 @@ public:
     return EnableXNACK;
   }
 
-  unsigned getMaxWavesPerCU() const {
-    if (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS)
-      return 10;
-
-    // FIXME: Not sure what this is for other subtagets.
-    return 8;
-  }
-
   /// \brief Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset() const {
@@ -296,6 +288,89 @@ public:
   bool enableSubRegLiveness() const override {
     return true;
   }
+
+  /// \returns Number of execution units per compute unit supported by the
+  /// subtarget.
+  unsigned getEUsPerCU() const {
+    return 4;
+  }
+
+  /// \returns Maximum number of work groups per compute unit supported by the
+  /// subtarget and limited by given flat work group size.
+  unsigned getMaxWorkGroupsPerCU(unsigned FlatWorkGroupSize) const {
+    if (getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS)
+      return 8;
+    return getWavesPerWorkGroup(FlatWorkGroupSize) == 1 ? 40 : 16;
+  }
+
+  /// \returns Maximum number of waves per compute unit supported by the
+  /// subtarget without any kind of limitation.
+  unsigned getMaxWavesPerCU() const {
+    return getMaxWavesPerEU() * getEUsPerCU();
+  }
+
+  /// \returns Maximum number of waves per compute unit supported by the
+  /// subtarget and limited by given flat work group size.
+  unsigned getMaxWavesPerCU(unsigned FlatWorkGroupSize) const {
+    return getWavesPerWorkGroup(FlatWorkGroupSize);
+  }
+
+  /// \returns Minimum number of waves per execution unit supported by the
+  /// subtarget.
+  unsigned getMinWavesPerEU() const {
+    return 1;
+  }
+
+  /// \returns Maximum number of waves per execution unit supported by the
+  /// subtarget without any kind of limitation.
+  unsigned getMaxWavesPerEU() const {
+    if (getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS)
+      return 8;
+    // FIXME: Need to take scratch memory into account.
+    return 10;
+  }
+
+  /// \returns Maximum number of waves per execution unit supported by the
+  /// subtarget and limited by given flat work group size.
+  unsigned getMaxWavesPerEU(unsigned FlatWorkGroupSize) const {
+    return alignTo(getMaxWavesPerCU(FlatWorkGroupSize), getEUsPerCU()) /
+      getEUsPerCU();
+  }
+
+  /// \returns Minimum flat work group size supported by the subtarget.
+  unsigned getMinFlatWorkGroupSize() const {
+    return 1;
+  }
+
+  /// \returns Maximum flat work group size supported by the subtarget.
+  unsigned getMaxFlatWorkGroupSize() const {
+    return 2048;
+  }
+
+  /// \returns Number of waves per work group given the flat work group size.
+  unsigned getWavesPerWorkGroup(unsigned FlatWorkGroupSize) const {
+    return alignTo(FlatWorkGroupSize, getWavefrontSize()) / getWavefrontSize();
+  }
+
+  /// \returns Subtarget's default pair of minimum/maximum flat work group sizes
+  /// for function \p F, or minimum/maximum flat work group sizes explicitly
+  /// requested using "amdgpu-flat-work-group-size" attribute attached to
+  /// function \p F.
+  ///
+  /// \returns Subtarget's default values if explicitly requested values cannot
+  /// be converted to integer, or violate subtarget's specifications.
+  std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
+
+  /// \returns Subtarget's default pair of minimum/maximum number of waves per
+  /// execution unit for function \p F, or minimum/maximum number of waves per
+  /// execution unit explicitly requested using "amdgpu-waves-per-eu" attribute
+  /// attached to function \p F.
+  ///
+  /// \returns Subtarget's default values if explicitly requested values cannot
+  /// be converted to integer, violate subtarget's specifications, or are not
+  /// compatible with minimum/maximum number of waves limited by flat work group
+  /// size, register usage, and/or lds usage.
+  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
 };
 
 class R600Subtarget final : public AMDGPUSubtarget {

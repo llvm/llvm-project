@@ -82,6 +82,25 @@ CoveragePrinter::create(const CoverageViewOptions &Opts) {
   llvm_unreachable("Unknown coverage output format!");
 }
 
+unsigned SourceCoverageView::getFirstUncoveredLineNo() {
+  auto CheckIfUncovered = [](const coverage::CoverageSegment &S) {
+    return S.HasCount && S.Count == 0;
+  };
+  // L is less than R if (1) it's an uncovered segment (has a 0 count), and (2)
+  // either R is not an uncovered segment, or L has a lower line number than R.
+  const auto MinSegIt =
+      std::min_element(CoverageInfo.begin(), CoverageInfo.end(),
+                       [CheckIfUncovered](const coverage::CoverageSegment &L,
+                                          const coverage::CoverageSegment &R) {
+                         return (CheckIfUncovered(L) &&
+                                 (!CheckIfUncovered(R) || (L.Line < R.Line)));
+                       });
+  if (CheckIfUncovered(*MinSegIt))
+    return (*MinSegIt).Line;
+  // There is no uncovered line, return zero.
+  return 0;
+}
+
 std::string SourceCoverageView::formatCount(uint64_t N) {
   std::string Number = utostr(N);
   int Len = Number.size();
@@ -142,8 +161,12 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
 
   renderViewHeader(OS);
 
+  unsigned FirstUncoveredLineNo = 0;
+  if (WholeFile)
+    FirstUncoveredLineNo = getFirstUncoveredLineNo();
+
   if (ShowSourceName)
-    renderSourceName(OS, WholeFile);
+    renderSourceName(OS, WholeFile, FirstUncoveredLineNo);
 
   renderTableHeader(OS, ViewDepth);
   // We need the expansions and instantiations sorted so we can go through them

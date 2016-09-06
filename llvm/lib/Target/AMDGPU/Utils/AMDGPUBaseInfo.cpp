@@ -124,8 +124,29 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
   return Result;
 }
 
-unsigned getMaximumWorkGroupSize(const Function &F) {
-  return getIntegerAttribute(F, "amdgpu-max-work-group-size", 256);
+std::pair<int, int> getIntegerPairAttribute(const Function &F,
+                                            StringRef Name,
+                                            std::pair<int, int> Default,
+                                            bool OnlyFirstRequired) {
+  Attribute A = F.getFnAttribute(Name);
+  if (!A.isStringAttribute())
+    return Default;
+
+  LLVMContext &Ctx = F.getContext();
+  std::pair<int, int> Ints = Default;
+  std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
+  if (Strs.first.trim().getAsInteger(0, Ints.first)) {
+    Ctx.emitError("can't parse first integer attribute " + Name);
+    return Default;
+  }
+  if (Strs.second.trim().getAsInteger(0, Ints.second)) {
+    if (!OnlyFirstRequired || Strs.second.trim().size()) {
+      Ctx.emitError("can't parse second integer attribute " + Name);
+      return Default;
+    }
+  }
+
+  return Ints;
 }
 
 unsigned getInitialPSInputAddr(const Function &F) {

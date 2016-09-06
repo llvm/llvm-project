@@ -18,7 +18,7 @@
 #include "streamexecutor/Device.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/KernelSpec.h"
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 #include "streamexecutor/Stream.h"
 
 #include "gtest/gtest.h"
