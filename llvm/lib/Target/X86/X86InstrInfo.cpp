@@ -4401,16 +4401,63 @@ static bool isHReg(unsigned Reg) {
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
-static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
+static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
                                         const X86Subtarget &Subtarget) {
+  bool HasAVX = Subtarget.hasAVX();
+  bool HasAVX512 = Subtarget.hasAVX512();
+
+  // SrcReg(MaskReg) -> DestReg(GR64)
+  // SrcReg(MaskReg) -> DestReg(GR32)
+  // SrcReg(MaskReg) -> DestReg(GR16)
+  // SrcReg(MaskReg) -> DestReg(GR8)
+
+  // All KMASK RegClasses hold the same k registers, can be tested against anyone.
+  if (X86::VK16RegClass.contains(SrcReg)) {
+    if (X86::GR64RegClass.contains(DestReg)) {
+      assert(Subtarget.hasBWI());
+      return X86::KMOVQrk;
+    }
+    if (X86::GR32RegClass.contains(DestReg))
+      return Subtarget.hasBWI() ? X86::KMOVDrk : X86::KMOVWrk;
+    if (X86::GR16RegClass.contains(DestReg)) {
+      DestReg = getX86SubSuperRegister(DestReg, 32);
+      return X86::KMOVWrk;
+    }
+    if (X86::GR8RegClass.contains(DestReg)) {
+      DestReg = getX86SubSuperRegister(DestReg, 32);
+      return Subtarget.hasDQI() ? X86::KMOVBrk : X86::KMOVWrk;
+    }
+  }
+
+  // SrcReg(GR64) -> DestReg(MaskReg)
+  // SrcReg(GR32) -> DestReg(MaskReg)
+  // SrcReg(GR16) -> DestReg(MaskReg)
+  // SrcReg(GR8)  -> DestReg(MaskReg)
+
+  // All KMASK RegClasses hold the same k registers, can be tested against anyone.
+  if (X86::VK16RegClass.contains(DestReg)) {
+    if (X86::GR64RegClass.contains(SrcReg)) {
+      assert(Subtarget.hasBWI());
+      return X86::KMOVQkr;
+    }
+    if (X86::GR32RegClass.contains(SrcReg))
+      return Subtarget.hasBWI() ? X86::KMOVDkr : X86::KMOVWkr;
+    if (X86::GR16RegClass.contains(SrcReg)) {
+      SrcReg = getX86SubSuperRegister(SrcReg, 32);
+      return X86::KMOVWkr;
+    }
+    if (X86::GR8RegClass.contains(SrcReg)) {
+      SrcReg = getX86SubSuperRegister(SrcReg, 32);
+      return Subtarget.hasDQI() ? X86::KMOVBkr : X86::KMOVWkr;
+    }
+  }
+
 
   // SrcReg(VR128) -> DestReg(GR64)
   // SrcReg(VR64)  -> DestReg(GR64)
   // SrcReg(GR64)  -> DestReg(VR128)
   // SrcReg(GR64)  -> DestReg(VR64)
 
-  bool HasAVX = Subtarget.hasAVX();
-  bool HasAVX512 = Subtarget.hasAVX512();
   if (X86::GR64RegClass.contains(DestReg)) {
     if (X86::VR128XRegClass.contains(SrcReg))
       // Copy from a VR128 register to a GR64 register.
@@ -4450,75 +4497,12 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   return 0;
 }
 
-static bool MaskRegClassContains(unsigned Reg) {
-  // All KMASK RegClasses hold the same k registers, can be tested against anyone.
-  return X86::VK16RegClass.contains(Reg);
-}
-
-static bool GRRegClassContains(unsigned Reg) {
-  return X86::GR64RegClass.contains(Reg) ||
-         X86::GR32RegClass.contains(Reg) ||
-         X86::GR16RegClass.contains(Reg) ||
-         X86::GR8RegClass.contains(Reg);
-}
-static
-unsigned copyPhysRegOpcode_AVX512_DQ(unsigned& DestReg, unsigned& SrcReg) {
-  if (MaskRegClassContains(SrcReg) && X86::GR8RegClass.contains(DestReg)) {
-    DestReg = getX86SubSuperRegister(DestReg, 32);
-    return X86::KMOVBrk;
-  }
-  if (MaskRegClassContains(DestReg) && X86::GR8RegClass.contains(SrcReg)) {
-    SrcReg = getX86SubSuperRegister(SrcReg, 32);
-    return X86::KMOVBkr;
-  }
-  return 0;
-}
-
-static
-unsigned copyPhysRegOpcode_AVX512_BW(unsigned& DestReg, unsigned& SrcReg) {
-  if (MaskRegClassContains(SrcReg) && MaskRegClassContains(DestReg))
-    return X86::KMOVQkk;
-  if (MaskRegClassContains(SrcReg) && X86::GR32RegClass.contains(DestReg))
-    return X86::KMOVDrk;
-  if (MaskRegClassContains(SrcReg) && X86::GR64RegClass.contains(DestReg))
-    return X86::KMOVQrk;
-  if (MaskRegClassContains(DestReg) && X86::GR32RegClass.contains(SrcReg))
-    return X86::KMOVDkr;
-  if (MaskRegClassContains(DestReg) && X86::GR64RegClass.contains(SrcReg))
-    return X86::KMOVQkr;
-  return 0;
-}
-
-static
-unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg,
-                                  const X86Subtarget &Subtarget)
-{
-  if (Subtarget.hasDQI())
-    if (auto Opc = copyPhysRegOpcode_AVX512_DQ(DestReg, SrcReg))
-      return Opc;
-  if (Subtarget.hasBWI())
-    if (auto Opc = copyPhysRegOpcode_AVX512_BW(DestReg, SrcReg))
-      return Opc;
-  if (MaskRegClassContains(DestReg) && MaskRegClassContains(SrcReg))
-    return X86::KMOVWkk;
-  if (MaskRegClassContains(DestReg) && GRRegClassContains(SrcReg)) {
-    SrcReg = getX86SubSuperRegister(SrcReg, 32);
-    return X86::KMOVWkr;
-  }
-  if (GRRegClassContains(DestReg) && MaskRegClassContains(SrcReg)) {
-    DestReg = getX86SubSuperRegister(DestReg, 32);
-    return X86::KMOVWrk;
-  }
-  return 0;
-}
-
 void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, unsigned DestReg,
                                unsigned SrcReg, bool KillSrc) const {
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
-  bool HasAVX512 = Subtarget.hasAVX512();
   bool HasVLX = Subtarget.hasVLX();
   unsigned Opc = 0;
   if (X86::GR64RegClass.contains(DestReg, SrcReg))
@@ -4547,8 +4531,9 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = HasVLX ? X86::VMOVAPSZ256rr : X86::VMOVAPSYrr;
   else if (X86::VR512RegClass.contains(DestReg, SrcReg))
     Opc = X86::VMOVAPSZrr;
-  else if (HasAVX512)
-    Opc = copyPhysRegOpcode_AVX512(DestReg, SrcReg, Subtarget);
+  // All KMASK RegClasses hold the same k registers, can be tested against anyone.
+  else if (X86::VK16RegClass.contains(DestReg, SrcReg))
+    Opc = Subtarget.hasBWI() ? X86::KMOVQkk : X86::KMOVWkk;
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
 

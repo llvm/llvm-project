@@ -488,12 +488,11 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::DEOPTIMIZE] = "__llvm_deoptimize";
 }
 
-/// InitLibcallCallingConvs - Set default libcall CallingConvs.
-///
-static void InitLibcallCallingConvs(CallingConv::ID *CCs) {
-  for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i) {
-    CCs[i] = CallingConv::C;
-  }
+/// Set default libcall CallingConvs.
+static void InitLibcallCallingConvs(CallingConv::ID *CCs, const Triple &T) {
+  bool IsARM = T.getArch() == Triple::arm || T.getArch() == Triple::thumb;
+  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
+    CCs[LC] = IsARM ? CallingConv::ARM_AAPCS : CallingConv::C;
 }
 
 /// getFPEXT - Return the FPEXT_*_* value for the given types, or
@@ -835,7 +834,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
 
   InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
-  InitLibcallCallingConvs(LibcallCallingConvs);
+  InitLibcallCallingConvs(LibcallCallingConvs, TM.getTargetTriple());
 }
 
 void TargetLoweringBase::initActions() {

@@ -37,8 +37,8 @@ class GoogleTest(TestFormat):
             lines = lines.split('\n')
         except Exception as exc:
             out = exc.output if isinstance(exc, subprocess.CalledProcessError) else ''
-            litConfig.error("unable to discover google-tests in %r: %s. Process output: %s"
-                            % (path, sys.exc_info()[1], out))
+            litConfig.warning("unable to discover google-tests in %r: %s. Process output: %s"
+                              % (path, sys.exc_info()[1], out))
             raise StopIteration
 
         nested_tests = []

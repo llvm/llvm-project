@@ -351,6 +351,8 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   bool HasSSE41 = Subtarget->hasSSE41();
   bool HasAVX = Subtarget->hasAVX();
   bool HasAVX2 = Subtarget->hasAVX2();
+  bool HasAVX512 = Subtarget->hasAVX512();
+  bool HasVLX = Subtarget->hasVLX();
   bool IsNonTemporal = MMO && MMO->isNonTemporal();
 
   // Get opcode and regclass of the output for the given load instruction.
@@ -378,7 +380,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     break;
   case MVT::f32:
     if (X86ScalarSSEf32) {
-      Opc = HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
+      Opc = HasAVX512 ? X86::VMOVSSZrm : HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
       RC  = &X86::FR32RegClass;
     } else {
       Opc = X86::LD_Fp32m;
@@ -387,7 +389,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     break;
   case MVT::f64:
     if (X86ScalarSSEf64) {
-      Opc = HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
+      Opc = HasAVX512 ? X86::VMOVSDZrm : HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
       RC  = &X86::FR64RegClass;
     } else {
       Opc = X86::LD_Fp64m;
@@ -399,20 +401,26 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     return false;
   case MVT::v4f32:
     if (IsNonTemporal && Alignment >= 16 && HasSSE41)
-      Opc = HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
+      Opc = HasVLX ? X86::VMOVNTDQAZ128rm :
+            HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
     else if (Alignment >= 16)
-      Opc = HasAVX ? X86::VMOVAPSrm : X86::MOVAPSrm;
+      Opc = HasVLX ? X86::VMOVAPSZ128rm :
+            HasAVX ? X86::VMOVAPSrm : X86::MOVAPSrm;
     else
-      Opc = HasAVX ? X86::VMOVUPSrm : X86::MOVUPSrm;
+      Opc = HasVLX ? X86::VMOVUPSZ128rm :
+            HasAVX ? X86::VMOVUPSrm : X86::MOVUPSrm;
     RC  = &X86::VR128RegClass;
     break;
   case MVT::v2f64:
     if (IsNonTemporal && Alignment >= 16 && HasSSE41)
-      Opc = HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
+      Opc = HasVLX ? X86::VMOVNTDQAZ128rm :
+            HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
     else if (Alignment >= 16)
-      Opc = HasAVX ? X86::VMOVAPDrm : X86::MOVAPDrm;
+      Opc = HasVLX ? X86::VMOVAPDZ128rm :
+            HasAVX ? X86::VMOVAPDrm : X86::MOVAPDrm;
     else
-      Opc = HasAVX ? X86::VMOVUPDrm : X86::MOVUPDrm;
+      Opc = HasVLX ? X86::VMOVUPDZ128rm :
+            HasAVX ? X86::VMOVUPDrm : X86::MOVUPDrm;
     RC  = &X86::VR128RegClass;
     break;
   case MVT::v4i32:
@@ -420,27 +428,34 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   case MVT::v8i16:
   case MVT::v16i8:
     if (IsNonTemporal && Alignment >= 16)
-      Opc = HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
+      Opc = HasVLX ? X86::VMOVNTDQAZ128rm :
+            HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
     else if (Alignment >= 16)
-      Opc = HasAVX ? X86::VMOVDQArm : X86::MOVDQArm;
+      Opc = HasVLX ? X86::VMOVDQA64Z128rm :
+            HasAVX ? X86::VMOVDQArm : X86::MOVDQArm;
     else
-      Opc = HasAVX ? X86::VMOVDQUrm : X86::MOVDQUrm;
+      Opc = HasVLX ? X86::VMOVDQU64Z128rm :
+            HasAVX ? X86::VMOVDQUrm : X86::MOVDQUrm;
     RC  = &X86::VR128RegClass;
     break;
   case MVT::v8f32:
     assert(HasAVX);
     if (IsNonTemporal && Alignment >= 32 && HasAVX2)
-      Opc = X86::VMOVNTDQAYrm;
+      Opc = HasVLX ? X86::VMOVNTDQAZ256rm : X86::VMOVNTDQAYrm;
+    else if (Alignment >= 32)
+      Opc = HasVLX ? X86::VMOVAPSZ256rm : X86::VMOVAPSYrm;
     else
-      Opc = (Alignment >= 32) ? X86::VMOVAPSYrm : X86::VMOVUPSYrm;
+      Opc = HasVLX ? X86::VMOVUPSZ256rm : X86::VMOVUPSYrm;
     RC  = &X86::VR256RegClass;
     break;
   case MVT::v4f64:
     assert(HasAVX);
     if (IsNonTemporal && Alignment >= 32 && HasAVX2)
       Opc = X86::VMOVNTDQAYrm;
+    else if (Alignment >= 32)
+      Opc = HasVLX ? X86::VMOVAPDZ256rm : X86::VMOVAPDYrm;
     else
-      Opc = (Alignment >= 32) ? X86::VMOVAPDYrm : X86::VMOVUPDYrm;
+      Opc = HasVLX ? X86::VMOVUPDZ256rm : X86::VMOVUPDYrm;
     RC  = &X86::VR256RegClass;
     break;
   case MVT::v8i32:
@@ -450,12 +465,14 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     assert(HasAVX);
     if (IsNonTemporal && Alignment >= 32 && HasAVX2)
       Opc = X86::VMOVNTDQAYrm;
+    else if (Alignment >= 32)
+      Opc = HasVLX ? X86::VMOVDQA64Z256rm : X86::VMOVDQAYrm;
     else
-      Opc = (Alignment >= 32) ? X86::VMOVDQAYrm : X86::VMOVDQUYrm;
+      Opc = HasVLX ? X86::VMOVDQU64Z256rm : X86::VMOVDQUYrm;
     RC  = &X86::VR256RegClass;
     break;
   case MVT::v16f32:
-    assert(Subtarget->hasAVX512());
+    assert(HasAVX512);
     if (IsNonTemporal && Alignment >= 64)
       Opc = X86::VMOVNTDQAZrm;
     else
@@ -463,7 +480,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     RC  = &X86::VR512RegClass;
     break;
   case MVT::v8f64:
-    assert(Subtarget->hasAVX512());
+    assert(HasAVX512);
     if (IsNonTemporal && Alignment >= 64)
       Opc = X86::VMOVNTDQAZrm;
     else
@@ -474,7 +491,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   case MVT::v16i32:
   case MVT::v32i16:
   case MVT::v64i8:
-    assert(Subtarget->hasAVX512());
+    assert(HasAVX512);
     // Note: There are a lot more choices based on type with AVX-512, but
     // there's really no advantage when the load isn't masked.
     if (IsNonTemporal && Alignment >= 64)
@@ -504,6 +521,8 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
   bool HasSSE2 = Subtarget->hasSSE2();
   bool HasSSE4A = Subtarget->hasSSE4A();
   bool HasAVX = Subtarget->hasAVX();
+  bool HasAVX512 = Subtarget->hasAVX512();
+  bool HasVLX = Subtarget->hasVLX();
   bool IsNonTemporal = MMO && MMO->isNonTemporal();
 
   // Get opcode and regclass of the output for the given store instruction.
@@ -534,7 +553,8 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
       if (IsNonTemporal && HasSSE4A)
         Opc = X86::MOVNTSS;
       else
-        Opc = HasAVX ? X86::VMOVSSmr : X86::MOVSSmr;
+        Opc = HasAVX512 ? X86::VMOVSSZmr :
+              HasAVX ? X86::VMOVSSmr : X86::MOVSSmr;
     } else
       Opc = X86::ST_Fp32m;
     break;
@@ -543,27 +563,34 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
       if (IsNonTemporal && HasSSE4A)
         Opc = X86::MOVNTSD;
       else
-        Opc = HasAVX ? X86::VMOVSDmr : X86::MOVSDmr;
+        Opc = HasAVX512 ? X86::VMOVSDZmr :
+              HasAVX ? X86::VMOVSDmr : X86::MOVSDmr;
     } else
       Opc = X86::ST_Fp64m;
     break;
   case MVT::v4f32:
     if (Aligned) {
       if (IsNonTemporal)
-        Opc = HasAVX ? X86::VMOVNTPSmr : X86::MOVNTPSmr;
+        Opc = HasVLX ? X86::VMOVNTPSZ128mr :
+              HasAVX ? X86::VMOVNTPSmr : X86::MOVNTPSmr;
       else
-        Opc = HasAVX ? X86::VMOVAPSmr : X86::MOVAPSmr;
+        Opc = HasVLX ? X86::VMOVAPSZ128mr :
+              HasAVX ? X86::VMOVAPSmr : X86::MOVAPSmr;
     } else
-      Opc = HasAVX ? X86::VMOVUPSmr : X86::MOVUPSmr;
+      Opc = HasVLX ? X86::VMOVUPSZ128mr :
+            HasAVX ? X86::VMOVUPSmr : X86::MOVUPSmr;
     break;
   case MVT::v2f64:
     if (Aligned) {
       if (IsNonTemporal)
-        Opc = HasAVX ? X86::VMOVNTPDmr : X86::MOVNTPDmr;
+        Opc = HasVLX ? X86::VMOVNTPDZ128mr :
+              HasAVX ? X86::VMOVNTPDmr : X86::MOVNTPDmr;
       else
-        Opc = HasAVX ? X86::VMOVAPDmr : X86::MOVAPDmr;
+        Opc = HasVLX ? X86::VMOVAPDZ128mr :
+              HasAVX ? X86::VMOVAPDmr : X86::MOVAPDmr;
     } else
-      Opc = HasAVX ? X86::VMOVUPDmr : X86::MOVUPDmr;
+      Opc = HasVLX ? X86::VMOVUPDZ128mr :
+            HasAVX ? X86::VMOVUPDmr : X86::MOVUPDmr;
     break;
   case MVT::v4i32:
   case MVT::v2i64:
@@ -571,45 +598,57 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
   case MVT::v16i8:
     if (Aligned) {
       if (IsNonTemporal)
-        Opc = HasAVX ? X86::VMOVNTDQmr : X86::MOVNTDQmr;
+        Opc = HasVLX ? X86::VMOVNTDQZ128mr :
+              HasAVX ? X86::VMOVNTDQmr : X86::MOVNTDQmr;
       else
-        Opc = HasAVX ? X86::VMOVDQAmr : X86::MOVDQAmr;
+        Opc = HasVLX ? X86::VMOVDQA64Z128mr :
+              HasAVX ? X86::VMOVDQAmr : X86::MOVDQAmr;
     } else
-      Opc = HasAVX ? X86::VMOVDQUmr : X86::MOVDQUmr;
+      Opc = HasVLX ? X86::VMOVDQU64Z128mr :
+            HasAVX ? X86::VMOVDQUmr : X86::MOVDQUmr;
     break;
   case MVT::v8f32:
     assert(HasAVX);
-    if (Aligned)
-      Opc = IsNonTemporal ? X86::VMOVNTPSYmr : X86::VMOVAPSYmr;
-    else
-      Opc = X86::VMOVUPSYmr;
+    if (Aligned) {
+      if (IsNonTemporal)
+        Opc = HasVLX ? X86::VMOVNTPSZ256mr : X86::VMOVNTPSYmr;
+      else
+        Opc = HasVLX ? X86::VMOVAPSZ256mr : X86::VMOVAPSYmr;
+    } else
+      Opc = HasVLX ? X86::VMOVUPSZ256mr : X86::VMOVUPSYmr;
     break;
   case MVT::v4f64:
     assert(HasAVX);
     if (Aligned) {
-      Opc = IsNonTemporal ? X86::VMOVNTPDYmr : X86::VMOVAPDYmr;
+      if (IsNonTemporal)
+        Opc = HasVLX ? X86::VMOVNTPDZ256mr : X86::VMOVNTPDYmr;
+      else
+        Opc = HasVLX ? X86::VMOVAPDZ256mr : X86::VMOVAPDYmr;
     } else
-      Opc = X86::VMOVUPDYmr;
+      Opc = HasVLX ? X86::VMOVUPDZ256mr : X86::VMOVUPDYmr;
     break;
   case MVT::v8i32:
   case MVT::v4i64:
   case MVT::v16i16:
   case MVT::v32i8:
     assert(HasAVX);
-    if (Aligned)
-      Opc = IsNonTemporal ? X86::VMOVNTDQYmr : X86::VMOVDQAYmr;
-    else
-      Opc = X86::VMOVDQUYmr;
+    if (Aligned) {
+      if (IsNonTemporal)
+        Opc = HasVLX ? X86::VMOVNTDQZ256mr : X86::VMOVNTDQYmr;
+      else
+        Opc = HasVLX ? X86::VMOVDQA64Z256mr : X86::VMOVDQAYmr;
+    } else
+      Opc = HasVLX ? X86::VMOVDQU64Z256mr : X86::VMOVDQUYmr;
     break;
   case MVT::v16f32:
-    assert(Subtarget->hasAVX512());
+    assert(HasAVX512);
     if (Aligned)
       Opc = IsNonTemporal ? X86::VMOVNTPSZmr : X86::VMOVAPSZmr;
     else
       Opc = X86::VMOVUPSZmr;
     break;
   case MVT::v8f64:
-    assert(Subtarget->hasAVX512());
+    assert(HasAVX512);
     if (Aligned) {
       Opc = IsNonTemporal ? X86::VMOVNTPDZmr : X86::VMOVAPDZmr;
     } else
@@ -619,7 +658,7 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
   case MVT::v16i32:
   case MVT::v32i16:
   case MVT::v64i8:
-    assert(Subtarget->hasAVX512());
+    assert(HasAVX512);
     // Note: There are a lot more choices based on type with AVX-512, but
     // there's really no advantage when the store isn't masked.
     if (Aligned)

@@ -23,6 +23,7 @@ def has32BankLDS : Predicate<"Subtarget->getLDSBankCount() == 32">;
 
 include "SOPInstructions.td"
 include "SMInstructions.td"
+include "FLATInstructions.td"
 
 let SubtargetPredicate = isGCN in {
 

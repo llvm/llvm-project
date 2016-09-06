@@ -118,37 +118,6 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
 >;
 
-//===----------------------------------------------------------------------===//
-// PatFrags for FLAT instructions
-//===----------------------------------------------------------------------===//
-
-class flat_ld <SDPatternOperator ld> : PatFrag<(ops node:$ptr),
-                                               (ld node:$ptr), [{
-  const MemSDNode *LD = cast<MemSDNode>(N);
-  return LD->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
-         LD->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-         LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
-}]>;
-
-def flat_load : flat_ld <load>;
-def atomic_flat_load : flat_ld<atomic_load>;
-def flat_az_extloadi8 : flat_ld <az_extloadi8>;
-def flat_sextloadi8 : flat_ld <sextloadi8>;
-def flat_az_extloadi16 : flat_ld <az_extloadi16>;
-def flat_sextloadi16 : flat_ld <sextloadi16>;
-
-class flat_st <SDPatternOperator st> : PatFrag<(ops node:$val, node:$ptr),
-                                               (st node:$val, node:$ptr), [{
-  const MemSDNode *ST = cast<MemSDNode>(N);
-  return ST->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
-         ST->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-}]>;
-
-def flat_store: flat_st <store>;
-def atomic_flat_store: flat_st <atomic_store>;
-def flat_truncstorei8 : flat_st <truncstorei8>;
-def flat_truncstorei16 : flat_st <truncstorei16>;
-
 class MubufLoad <SDPatternOperator op> : PatFrag <
   (ops node:$ptr), (op node:$ptr), [{
 
@@ -171,9 +140,6 @@ def mubuf_load_atomic : MubufLoad <atomic_load>;
 
 def atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
 def atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
-
-def atomic_inc_flat : flat_binary_atomic_op<SIatomic_inc>;
-def atomic_dec_flat : flat_binary_atomic_op<SIatomic_dec>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes and PatFrag for local loads and stores to enable s_mov_b32 m0, -1
@@ -522,7 +488,6 @@ def DS64Bit4ByteAligned : ComplexPattern<i32, 3, "SelectDS64Bit4ByteAligned">;
 def MUBUFAddr32 : ComplexPattern<i64, 9, "SelectMUBUFAddr32">;
 def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
 def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
-def FLATAtomic : ComplexPattern<i64, 3, "SelectFlat">;
 def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
 def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
@@ -2514,114 +2479,6 @@ multiclass MUBUF_Invalidate <mubuf op, string opName, SDPatternOperator node> {
       def _vi : MUBUF_Real_vi <op, opName, (outs), (ins), opName>;
     }
   } // End hasSideEffects = 1, mayStore = 1, AsmMatchConverter = ""
-}
-
-//===----------------------------------------------------------------------===//
-// FLAT classes
-//===----------------------------------------------------------------------===//
-
-class flat <bits<7> ci, bits<7> vi = ci> {
-  field bits<7> CI = ci;
-  field bits<7> VI = vi;
-}
-
-class FLAT_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
-     FLAT <0, outs, ins, "", pattern>,
-      SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
-
-class FLAT_Real_ci <bits<7> op, string opName, dag outs, dag ins, string asm> :
-    FLAT <op, outs, ins, asm, []>,
-    SIMCInstr<opName, SIEncodingFamily.SI> {
-  let AssemblerPredicate = isCIOnly;
-  let DecoderNamespace="CI";
-}
-
-class FLAT_Real_vi <bits<7> op, string opName, dag outs, dag ins, string asm> :
-    FLAT <op, outs, ins, asm, []>,
-    SIMCInstr<opName, SIEncodingFamily.VI> {
-  let AssemblerPredicate = VIAssemblerPredicate;
-  let DecoderNamespace="VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass FLAT_AtomicRet_m <flat op, dag outs, dag ins, string asm,
-                   list<dag> pattern> {
-  def "" : FLAT_Pseudo <NAME#"_RTN", outs, ins, pattern>,
-               AtomicNoRet <NAME, 1>;
-
-  def _ci : FLAT_Real_ci <op.CI, NAME#"_RTN", outs, ins, asm>;
-
-  def _vi : FLAT_Real_vi <op.VI, NAME#"_RTN", outs, ins, asm>;
-}
-
-multiclass FLAT_Load_Helper <flat op, string asm_name,
-    RegisterClass regClass,
-    dag outs = (outs regClass:$vdst),
-    dag ins = (ins VReg_64:$addr, glc:$glc, slc:$slc, tfe:$tfe),
-    string asm = asm_name#" $vdst, $addr$glc$slc$tfe"> {
-
-  let data = 0, mayLoad = 1 in {
-
-    def "" : FLAT_Pseudo <NAME, outs, ins, []>;
-
-    def _ci : FLAT_Real_ci <op.CI, NAME, outs, ins, asm>;
-
-    def _vi : FLAT_Real_vi <op.VI, NAME, outs, ins, asm>;
-  }
-}
-
-multiclass FLAT_Store_Helper <flat op, string asm_name,
-    RegisterClass vdataClass,
-    dag outs = (outs),
-    dag ins = (ins VReg_64:$addr, vdataClass:$data, glc:$glc,
-                   slc:$slc, tfe:$tfe),
-    string asm = asm_name#" $addr, $data$glc$slc$tfe"> {
-
-  let mayLoad = 0, mayStore = 1, vdst = 0 in {
-
-    def "" : FLAT_Pseudo <NAME, outs, ins, []>;
-
-    def _ci : FLAT_Real_ci <op.CI, NAME, outs, ins, asm>;
-
-    def _vi : FLAT_Real_vi <op.VI, NAME, outs, ins, asm>;
-  }
-}
-
-multiclass FLAT_ATOMIC <flat op, string asm_name, RegisterClass vdst_rc,
-    ValueType vt, SDPatternOperator atomic = null_frag,
-    ValueType data_vt = vt,
-    RegisterClass data_rc = vdst_rc,
-    string asm_noret = asm_name#" $addr, $data"#"$slc"#"$tfe"> {
-
-  let mayLoad = 1, mayStore = 1, glc = 0, vdst = 0 in {
-    def "" : FLAT_Pseudo <NAME, (outs),
-                          (ins VReg_64:$addr, data_rc:$data,
-                               slc:$slc, tfe:$tfe), []>,
-             AtomicNoRet <NAME, 0>;
-
-    def _ci : FLAT_Real_ci <op.CI, NAME, (outs),
-                            (ins VReg_64:$addr, data_rc:$data,
-                                 slc:$slc, tfe:$tfe),
-                            asm_noret>;
-
-    def _vi : FLAT_Real_vi <op.VI, NAME, (outs),
-                            (ins VReg_64:$addr, data_rc:$data,
-                                 slc:$slc, tfe:$tfe),
-                            asm_noret>;
-  }
-
-  let glc = 1, hasPostISelHook = 1 in {
-    defm _RTN : FLAT_AtomicRet_m <
-      op, (outs vdst_rc:$vdst),
-      (ins VReg_64:$addr, data_rc:$data, slc:$slc, tfe:$tfe),
-      asm_name#" $vdst, $addr, $data glc$slc$tfe",
-      [(set vt:$vdst,
-         (atomic (FLATAtomic i64:$addr, i1:$slc, i1:$tfe), data_vt:$data))]
-    >;
-  }
 }
 
 //===----------------------------------------------------------------------===//
