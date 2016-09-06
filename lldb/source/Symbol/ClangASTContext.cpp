@@ -1648,11 +1648,13 @@ CreateTemplateParameterList (ASTContext *ast,
         }
     }
 
+    clang::Expr *const requires_clause = nullptr; // TODO: Concepts
     TemplateParameterList *template_param_list = TemplateParameterList::Create (*ast,
                                                                                 SourceLocation(),
                                                                                 SourceLocation(),
                                                                                 template_param_decls,
-                                                                                SourceLocation());
+                                                                                SourceLocation(),
+                                                                                requires_clause);
     return template_param_list;
 }
 
