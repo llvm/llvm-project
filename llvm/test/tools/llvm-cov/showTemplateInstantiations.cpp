@@ -12,7 +12,7 @@ int func(T x) {      // ALL-NEXT:    [[@LINE]]| 2|int func(T x) {
   int j = 1;         // ALL-NEXT:    [[@LINE]]| 0|  int j = 1;
 }                    // ALL-NEXT:    [[@LINE]]| 2|}
 
-                     // SHARED:       {{^ *(\| )?}}_Z4funcIbEiT_:
+                     // SHARED:       {{^ *(\| )?}}Function: _Z4funcIbEiT_:
                      // SHARED:       [[@LINE-9]]| 1|int func(T x) {
                      // SHARED-NEXT:  [[@LINE-9]]| 1|  if(x)
                      // SHARED-NEXT:  [[@LINE-9]]| 1|    return 0;
@@ -21,8 +21,8 @@ int func(T x) {      // ALL-NEXT:    [[@LINE]]| 2|int func(T x) {
                      // SHARED-NEXT:  [[@LINE-9]]| 0|  int j = 1;
                      // SHARED-NEXT:  [[@LINE-9]]| 1|}
 
-                     // ALL:         {{^ *}}| _Z4funcIiEiT_:
-                     // FILTER-NOT:  {{^ *(\| )?}} _Z4funcIiEiT_:
+                     // ALL:         {{^ *}}| Function: _Z4funcIiEiT_:
+                     // FILTER-NOT:  {{^ *(\| )?}}Function: _Z4funcIiEiT_:
                      // ALL:         [[@LINE-19]]| 1|int func(T x) {
                      // ALL-NEXT:    [[@LINE-19]]| 1|  if(x)
                      // ALL-NEXT:    [[@LINE-19]]| 0|    return 0;

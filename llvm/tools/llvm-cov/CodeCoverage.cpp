@@ -669,7 +669,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
   // Show files
   bool ShowFilenames =
-      (SourceFiles.size() != 1) ||
+      (SourceFiles.size() != 1) || ViewOpts.hasOutputDirectory() ||
       (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML);
 
   if (SourceFiles.empty())

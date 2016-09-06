@@ -65,11 +65,11 @@ void SourceCoverageViewText::renderViewFooter(raw_ostream &) {}
 
 void SourceCoverageViewText::renderSourceName(raw_ostream &OS, bool WholeFile,
                                               unsigned FirstUncoveredLineNo) {
-  getOptions().colored_ostream(OS, raw_ostream::CYAN) << getSourceName()
+  getOptions().colored_ostream(OS, raw_ostream::CYAN) << getNativeSourceName()
                                                       << ":\n";
   if (WholeFile) {
     getOptions().colored_ostream(OS, raw_ostream::CYAN)
-        << getOptions().ObjectFilename << ":\n";
+        << "Binary: " << getOptions().ObjectFilename << ":\n";
   }
 }
 
