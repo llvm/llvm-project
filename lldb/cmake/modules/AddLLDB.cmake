@@ -62,16 +62,16 @@ macro(add_lldb_library name)
 
     if (PARAM_SHARED)
       if (LLDB_LINKER_SUPPORTS_GROUPS)
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
+        target_link_libraries(${name} PUBLIC
                     -Wl,--start-group ${SWIFT_ALL_LIBS} -Wl,--end-group)
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
+        target_link_libraries(${name} PUBLIC
                     -Wl,--start-group ${CLANG_ALL_LIBS} -Wl,--end-group)
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC}
+        target_link_libraries(${name} PUBLIC
                     -Wl,--start-group ${LLVM_ALL_LIBS} -Wl,--end-group)
       else()
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${SWIFT_ALL_LIBS})
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${CLANG_ALL_LIBS})
-        target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${LLVM_ALL_LIBS})
+        target_link_libraries(${name} PUBLIC ${SWIFT_ALL_LIBS})
+        target_link_libraries(${name} PUBLIC ${CLANG_ALL_LIBS})
+        target_link_libraries(${name} PUBLIC ${LLVM_ALL_LIBS})
       endif()
     endif()
     llvm_config(${name} ${LLVM_LINK_COMPONENTS} ${LLVM_PRIVATE_LINK_COMPONENTS})
