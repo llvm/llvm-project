@@ -316,7 +316,7 @@ class FlatLoadPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat
 
 class FlatLoadAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
   (vt (node i64:$addr)),
-  (inst $addr, 1, 0, 0)
+  (inst $addr, 0, 0, 0)
 >;
 
 class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : Pat <
@@ -328,7 +328,7 @@ class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
   // atomic store follows atomic binop convention so the address comes
   // first.
   (node i64:$addr, vt:$data),
-  (inst $addr, $data, 1, 0, 0)
+  (inst $addr, $data, 0, 0, 0)
 >;
 
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,

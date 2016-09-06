@@ -82,6 +82,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
   initializeSIInsertSkipsPass(*PR);
+  initializeSIMemoryLegalizerPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
 }
 
@@ -590,6 +591,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(createSIInsertWaitsPass());
   addPass(createSIShrinkInstructionsPass());
   addPass(&SIInsertSkipsPassID);
+  addPass(createSIMemoryLegalizerPass());
   addPass(createSIDebuggerInsertNopsPass());
 }
 
